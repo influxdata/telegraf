@@ -1,10 +1,8 @@
 package graphite
 
 import (
-	"bufio"
-	"bytes"
+	"errors"
 	"fmt"
-	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -63,42 +61,31 @@ func NewGraphiteParser(
 
 func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
-	buf = bytes.TrimPrefix(buf, []byte("\n"))
-	// add newline to end if not exists:
-	if len(buf) > 0 && !bytes.HasSuffix(buf, []byte("\n")) {
-		buf = append(buf, []byte("\n")...)
+	if len(buf) != 0 && buf[0] == '\n' {
+		buf = buf[1:]
 	}
 
-	metrics := make([]telegraf.Metric, 0)
+	var metrics []telegraf.Metric
+	var errs []string
 
-	var errStr string
-	buffer := bytes.NewBuffer(buf)
-	reader := bufio.NewReader(buffer)
-	for {
-		// Read up to the next newline.
-		buf, err := reader.ReadBytes('\n')
-		if err == io.EOF {
-			break
-		}
-		if err != nil && err != io.EOF {
-			return metrics, err
-		}
-
-		// Trim the buffer, even though there should be no padding
-		line := strings.TrimSpace(string(buf))
-		if line == "" {
-			continue
-		}
-		metric, err := p.ParseLine(line)
-		if err == nil {
+	// We eventually convert each line in buf to a string and it is
+	// faster to convert the entire buf and split on that.
+	//
+	// TODO(cev): stepping through buf line-by-line without allocating
+	// would be faster.
+	for _, line := range strings.Split(string(buf), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			metric, err := p.ParseLine(line)
+			if err != nil {
+				errs = append(errs, err.Error())
+				continue
+			}
 			metrics = append(metrics, metric)
-		} else {
-			errStr += err.Error() + "\n"
 		}
 	}
-
-	if errStr != "" {
-		return metrics, fmt.Errorf(strings.TrimSpace(errStr))
+	if len(errs) != 0 {
+		return metrics, errors.New(strings.Join(errs, "\n"))
 	}
 	return metrics, nil
 }
