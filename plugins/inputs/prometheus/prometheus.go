@@ -38,6 +38,8 @@ type Prometheus struct {
 
 	MetricVersion int `toml:"metric_version"`
 
+	UrlTag string `toml:"url_tag"`
+
 	tls.ClientConfig
 
 	client *http.Client
@@ -57,6 +59,9 @@ var sampleConfig = `
 
   ## Metric version (optional, default=1, supported values are 1 and 2)
   # metric_version = 2
+
+  ## Url tag name (tag containing scrapped url. optional, default is "url")
+  # url_tag = "scrapeUrl"
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -291,11 +296,17 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			u.URL, err)
 	}
 
+	var urltag = "url"
+	if p.UrlTag != "" {
+		urltag = p.UrlTag
+		log.Printf("prometheus: using url_tag = %v", urltag)
+	}
+
 	for _, metric := range metrics {
 		tags := metric.Tags()
 		// strip user and password from URL
 		u.OriginalURL.User = nil
-		tags["url"] = u.OriginalURL.String()
+		tags[urltag] = u.OriginalURL.String()
 		if u.Address != "" {
 			tags["address"] = u.Address
 		}
