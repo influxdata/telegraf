@@ -2,16 +2,17 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"sort"
 	"strings"
 
 	"archive/zip"
+	"archive/tar"
 	"compress/gzip"
 	"encoding/base64"
 	"go/build"
@@ -52,7 +53,7 @@ func main() {
 	cmdLine.Var((*listFlags)(&cmdLnBuildOpt.Outputs), "outputs", "comma-separated list of output plugins, defaults to `all`")
 	cmdLine.Var((*listFlags)(&cmdLnBuildOpt.Processors), "processors", "comma-separated list of processor plugins, defaults to `all`")
 	cmdLine.StringVar(&cmdLnBuildOpt.Compression, "compression", "", "which compression scheme to use, uncompressed is default")
-	cmdLine.BoolVar(&cmdLnBuildOpt.Strip, "strip", true, "strip out debugging statements")
+	cmdLine.BoolVar(&cmdLnBuildOpt.Upx, "upx", true, "strip out debugging statements")
 
 	serverFlgs := flag.NewFlagSet("server flags", flag.ExitOnError)
 	serverFlgs.StringVar(&server.bind, "bind", "localhost:8080", "the address to bind the server to")
@@ -84,7 +85,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		b.build(cmdLnBuildOpt, f)
+		b.build(context.Background(), cmdLnBuildOpt, f)
 	default:
 		//todo(docmerlin): display help page.
 	}
@@ -109,7 +110,9 @@ func (s *serverCfg) Serve() error {
 		return err
 	}
 	pageBuf := bytes.Buffer{}
-	tmpl.Execute(&pageBuf, &s.builder)
+	if err = tmpl.Execute(&pageBuf, s.builder); err != nil {
+		return err
+	}
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		pageBuf.WriteTo(w)
 	})
@@ -120,6 +123,7 @@ func (s *serverCfg) Serve() error {
 }
 
 func (s *serverCfg) build(w http.ResponseWriter, r *http.Request) {
+	fmt.Println()
 	q := r.URL.Query()
 	bo := buildOptions{}
 	bo.Aggregators = q["a"]
@@ -129,14 +133,16 @@ func (s *serverCfg) build(w http.ResponseWriter, r *http.Request) {
 	bo.GOOS = q.Get("GOOS")
 	bo.GOARCH = q.Get("GOARCH")
 	bo.Compression = q.Get("c")
-	bo.Strip = len(q["strip"]) > 0
+	bo.Upx = len(q["upx"]) > 0
+	log.Println("here", bo)
 	if err := s.builder.Validate(&bo); err != nil {
 		w.Write([]byte(err.Error()))
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	fmt.Println(bo)
 	buf := &bytes.Buffer{}
-	if err := s.builder.build(bo, buf); err != nil {
+	if err := s.builder.build(r.Context(), bo, buf); err != nil {
 		log.Println("E! " + err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -148,6 +154,9 @@ func (s *serverCfg) build(w http.ResponseWriter, r *http.Request) {
 	case "zip":
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", `attachment; filename="telegraf-lite.zip"`)
+	case "tgz":
+		w.Header().Set("Content-Type", "application/gzip")
+		w.Header().Set("Content-Disposition", `attachment; filename="telegraf-lite.tgz"`)
 	}
 	if _, err := buf.WriteTo(w); err != nil {
 		log.Println(err)
@@ -182,6 +191,7 @@ func newBuilder(encodedTemplate string) (*builder, error) {
 		Inputs:      map[string]string{},
 		Outputs:     map[string]string{},
 		Processors:  map[string]string{},
+		Compression map[string]string{},
 	}
 	p, err := build.Default.Import("github.com/influxdata/telegraf/plugins/aggregators/all", "all", build.IgnoreVendor)
 	if err != nil {
@@ -242,6 +252,12 @@ func newBuilder(encodedTemplate string) (*builder, error) {
 		"mips64le": "64 bit MIPS in little endian mode",
 		"s390x":    "IBM s390x mainframe architecture",
 	}
+	b.Packaging = map[string]string{
+		"gzip": "gzip",
+		"tgz":"tgz",
+		"zip":"zip",
+	}
+	// TODO(upx): check for UPX
 	return b, nil
 }
 
@@ -249,12 +265,14 @@ type builder struct {
 	template    *template.Template
 	gopkgtoml   []byte
 	gopkglock   []byte
-	Aggregators map[string]string
-	Inputs      map[string]string
-	Outputs     map[string]string
-	Processors  map[string]string
-	GOOS        map[string]string
-	GOARCH      map[string]string
+	Aggregators map[string]string `json:"a"`
+	Inputs      map[string]string `json:"i"`
+	Outputs     map[string]string	`json:"o"`
+	Processors  map[string]string	`json:"p"`
+	GOOS        map[string]string	`json:"GOOS"`
+	GOARCH      map[string]string	`json:"GOARCH"`
+	Packaging map[string]string `json:"packaging"`
+	Upx         bool	`json:"upx"`
 }
 
 type buildOptions struct {
@@ -264,8 +282,8 @@ type buildOptions struct {
 	Processors  []string `json:"processors"`
 	GOOS        string   `json:"goos"`
 	GOARCH      string   `json:"goarch"`
-	Compression string   `json:"compression"`
-	Strip       bool     `json:"strip"`
+	Packaging string   `json:"packaging"`
+	Upx         bool     `json:"upx"`
 }
 
 func (bo *buildOptions) SetDefaults() {
@@ -285,42 +303,44 @@ func (bo *buildOptions) SetDefaults() {
 
 func (b *builder) Validate(bo *buildOptions) error {
 	// if any of the options are "all" then just use "all"
-	if sort.SearchStrings(bo.Aggregators, "all") < len(bo.Aggregators) {
-		bo.Aggregators = []string{"all"}
-	} else {
-		for i := range bo.Aggregators {
-			if _, ok := b.Aggregators[bo.Aggregators[i]]; !ok {
-				return optionError{fmt.Errorf("aggregator plugin %s does not exist", bo.Aggregators[i])}
-			}
+	for i := range bo.Aggregators {
+		if bo.Aggregators[i] == "all" {
+			bo.Aggregators = append(bo.Aggregators[:0], "all")
+			break
+		}
+		if _, ok := b.Aggregators[bo.Aggregators[i]]; !ok {
+			return optionError{fmt.Errorf("aggregator plugin %s does not exist", bo.Aggregators[i])}
+		}
+	}
+
+	// if any of the options are "all" then just use "all"
+	for i := range bo.Inputs {
+		if bo.Inputs[i] == "all" {
+			bo.Inputs = append(bo.Inputs[:0], "all")
+			break
+		}
+		if _, ok := b.Inputs[bo.Inputs[i]]; !ok {
+			return optionError{fmt.Errorf("input plugin %s does not exist", bo.Inputs[i])}
 		}
 	}
 	// if any of the options are "all" then just use "all"
-	if sort.SearchStrings(bo.Inputs, "all") < len(bo.Inputs) {
-		bo.Inputs = []string{"all"}
-	} else {
-		for i := range bo.Inputs {
-			if _, ok := b.Inputs[bo.Inputs[i]]; !ok {
-				return optionError{fmt.Errorf("input plugin %s does not exist", bo.Inputs[i])}
-			}
+	for i := range bo.Outputs {
+		if bo.Outputs[i] == "all" {
+			bo.Outputs = append(bo.Outputs[:0], "all")
+			break
+		}
+		if _, ok := b.Outputs[bo.Outputs[i]]; !ok {
+			return optionError{fmt.Errorf("output plugin %s does not exist", bo.Outputs[i])}
 		}
 	}
-	// if any of the options are "all" then just use "all"
-	if sort.SearchStrings(bo.Outputs, "all") < len(bo.Outputs) {
-		bo.Inputs = []string{"all"}
-	} else {
-		for i := range bo.Outputs {
-			if _, ok := b.Outputs[bo.Outputs[i]]; !ok {
-				return optionError{fmt.Errorf("output plugin %s does not exist", bo.Outputs[i])}
-			}
+
+	for i := range bo.Processors {
+		if bo.Processors[i] == "all" {
+			bo.Processors = append(bo.Processors[:0], "all")
+			break
 		}
-	}
-	if sort.SearchStrings(bo.Processors, "all") < len(bo.Processors) {
-		bo.Inputs = []string{"all"}
-	} else {
-		for i := range bo.Processors {
-			if _, ok := b.Processors[bo.Processors[i]]; !ok {
-				return optionError{fmt.Errorf("processor plugin %s does not exist", bo.Processors[i])}
-			}
+		if _, ok := b.Processors[bo.Processors[i]]; !ok {
+			return optionError{fmt.Errorf("processor plugin %s does not exist", bo.Processors[i])}
 		}
 	}
 	if _, ok := b.GOOS[bo.GOOS]; !ok {
@@ -329,11 +349,8 @@ func (b *builder) Validate(bo *buildOptions) error {
 	if _, ok := b.GOARCH[bo.GOARCH]; !ok {
 		return optionError{fmt.Errorf("%s is not a supported architecture", bo.GOARCH)}
 	}
-	switch bo.Compression {
-	case "gzip", "zip":
-		return nil
-	default:
-		return optionError{errors.New("compression must be gzip or zip")}
+	if _, ok:= b.Packaging[bo.Packaging];!ok{
+		return optionError{errors.New("%s packaging not supported", bo.Packaging)}
 	}
 }
 
@@ -345,10 +362,7 @@ func (o *optionError) Unwrap() error {
 	return o.error
 }
 
-func (b *builder) build(bo buildOptions, w io.Writer) error {
-	if err := b.Validate(&bo); err != nil {
-		return err
-	}
+func (b *builder) build(ctx context.Context, bo buildOptions, w io.Writer) error {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		log.Fatal(err)
@@ -395,10 +409,12 @@ func (b *builder) build(bo buildOptions, w io.Writer) error {
 
 	goCache := filepath.Join(tmpDir, "gocache")
 	var cmd *exec.Cmd
-	if bo.Strip {
-		cmd = exec.Command("go", "build", `-ldflags=-s -w`, "-o", "/dev/stdout", in)
+	if bo.Upx {
+		// here we cheat and shell out.
+		command := []string{"-c", `cd ` + tmpDir + `&&go build -ldflags="-s -w" -o a.out && upx a.out -obuilt.out > /dev/null && cat built.out > /dev/stdout`, in}
+		cmd = exec.CommandContext(ctx, "sh", command...)
 	} else {
-		cmd = exec.Command("go", "build", `-ldflags="-s -w"`, "-o", "/dev/stdout", in)
+		cmd = exec.CommandContext(ctx, "go", "build", "-ldflags=-s -w", "-o", "/dev/stdout", in)
 	}
 	cmd.Env = []string{
 		"PATH=" + os.Getenv("PATH"), // we need this for clang.
@@ -423,6 +439,8 @@ func (b *builder) build(bo buildOptions, w io.Writer) error {
 		if err != nil {
 			return fmt.Errorf("error writing zip file %v", err)
 		}
+	case "tgz":
+		z:= tar.
 		cmd.Stdout = zfile
 	}
 	//TODO(docmerlin): make this provide more visibility into this sort of error
@@ -434,7 +452,6 @@ func (b *builder) build(bo buildOptions, w io.Writer) error {
 		res, _ := ioutil.ReadAll(r)
 		fmt.Println(string(res))
 	}()
-	fmt.Println(cmd.Args)
 	return cmd.Run()
 }
 
@@ -475,12 +492,10 @@ const page = `<!DOCTYPE html>
       <p>
         <input type="checkbox" name="p" value="{{- $plugin -}}">{{ $plugin }}
       </p>{{end}}
-	  <h3>Compression</h3>
+	  <h3>Packaging</h3>
+	  {{}}
       <p>
         <input type="radio" name="c" value="gzip" checked>gzip
-      </p>
-      <p>
-        <input type="radio" name="c" value="zip">zip
       </p>
       <h3>Architecture</h3>{{range $plugin, $desc := .GOARCH}}
       <p>
@@ -490,10 +505,17 @@ const page = `<!DOCTYPE html>
       <p>
         <input type="radio" name="GOOS" value="{{- $plugin -}}">{{ $desc }}
 	  </p>{{end}}
-	  Strip debuggigg information. (this makes for smaller binaries but makes debugging serious problems a little harder)
-	  <input type="checkbox" name="strip"> 
+	  <h3>Packaging</h3>{{range $plugin, $desc := .Packaging}}
+	  <p>
+	    <input type="radio" name="packaging" value="{{- $plugin -}}">{{ $desc }}
+	  </p>
+	  {{ if .Upx }}
+	  <h3>Compress with upx (slightly slower startup times, but much smaller binary).</h3> 
+	  <p>
+		<input type="checkbox" name="upx" checked>
+	  </p>{{ end }}
       <p>
-        <input type="submit">
+        <input type="submit" value="download">
       </p>
     </form>
   </body>
