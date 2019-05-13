@@ -10,6 +10,9 @@ This plugin sends metrics to services which speak the [Prometheus Remote Write](
   ## URL to send Prometheus remote write requests to.
   url = "http://localhost/push"
 
+  ## Optional Bearer token
+  # bearer_token = "bearer_token"
+
   ## HTTP asic auth credentials (optional).
   # basic_username = "username"
   # basic_password = "pa55w0rd"

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"regexp"
 	"sort"
 	"time"
 
@@ -18,6 +19,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 )
 
+var (
+	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
+	validNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
+)
+
 func init() {
 	outputs.Add("prometheus_remote_write", func() telegraf.Output {
 		return &PrometheusRemoteWrite{}
@@ -26,6 +32,7 @@ func init() {
 
 type PrometheusRemoteWrite struct {
 	URL           string `toml:"url"`
+	BearerToken   string `toml:"bearer_token"`
 	BasicUsername string `toml:"basic_username"`
 	BasicPassword string `toml:"basic_password"`
 	tls.ClientConfig
@@ -37,7 +44,10 @@ var sampleConfig = `
   ## URL to send Prometheus remote write requests to.
   url = "http://localhost/push"
 
-  ## Optional HTTP asic auth credentials.
+  ## Optional Bearer token
+  # bearer_token = "bearer_token"
+
+  ## Optional HTTP basic auth credentials.
   # basic_username = "username"
   # basic_password = "pa55w0rd"
 
@@ -78,7 +88,7 @@ func (p *PrometheusRemoteWrite) SampleConfig() string {
 func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	var req prompb.WriteRequest
 
-	for _, metric := range metrics {
+	for _, metric := range sorted(metrics) {
 		tags := metric.TagList()
 		commonLabels := make([]prompb.Label, 0, len(tags))
 		for _, tag := range tags {
@@ -89,11 +99,12 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, field := range metric.FieldList() {
+			metricName := getSanitizedMetricName(metric.Name(), field.Key)
 			labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 			copy(labels, commonLabels)
 			labels = append(labels, prompb.Label{
 				Name:  "__name__",
-				Value: metric.Name() + "_" + field.Key,
+				Value: metricName,
 			})
 			sort.Sort(byName(labels))
 
@@ -116,10 +127,11 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
+			ts := metric.Time().UnixNano() / int64(time.Millisecond)
 			req.Timeseries = append(req.Timeseries, prompb.TimeSeries{
 				Labels: labels,
 				Samples: []prompb.Sample{{
-					Timestamp: metric.Time().UnixNano() / int64(time.Millisecond),
+					Timestamp: ts,
 					Value:     value,
 				}},
 			})
@@ -140,6 +152,11 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	httpReq.Header.Set("Content-Type", "application/x-protobuf")
 	httpReq.Header.Set("X-Prometheus-Remote-Write-Version", "0.1.0")
 	httpReq.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+
+	if p.BearerToken != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+p.BearerToken)
+	}
+
 	if p.BasicUsername != "" || p.BasicPassword != "" {
 		httpReq.SetBasicAuth(p.BasicUsername, p.BasicPassword)
 	}
@@ -161,3 +178,25 @@ type byName []prompb.Label
 func (a byName) Len() int           { return len(a) }
 func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byName) Less(i, j int) bool { return a[i].Name < a[j].Name }
+
+// Sorted returns a copy of the metrics in time ascending order.  A copy is
+// made to avoid modifying the input metric slice since doing so is not
+// allowed.
+func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+	batch := make([]telegraf.Metric, 0, len(metrics))
+	for i := len(metrics) - 1; i >= 0; i-- {
+		batch = append(batch, metrics[i])
+	}
+	sort.Slice(batch, func(i, j int) bool {
+		return batch[i].Time().Before(batch[j].Time())
+	})
+	return batch
+}
+
+func getSanitizedMetricName(name, field string) string {
+	return sanitize(fmt.Sprintf("%s_%s", name, field))
+}
+
+func sanitize(value string) string {
+	return invalidNameCharRE.ReplaceAllString(value, "_")
+}
