@@ -1,6 +1,7 @@
 package graphite
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -68,21 +69,26 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var metrics []telegraf.Metric
 	var errs []string
 
-	// We eventually convert each line in buf to a string and it is
-	// faster to convert the entire buf and split on that.
-	//
-	// TODO(cev): stepping through buf line-by-line without allocating
-	// would be faster.
-	for _, line := range strings.Split(string(buf), "\n") {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			metric, err := p.ParseLine(line)
-			if err != nil {
-				errs = append(errs, err.Error())
-				continue
-			}
-			metrics = append(metrics, metric)
+	for {
+		n := bytes.IndexByte(buf, '\n')
+		var line []byte
+		if n != -1 {
+			line = bytes.TrimSpace(buf[:n:n])
+		} else {
+			line = bytes.TrimSpace(buf) // last line
 		}
+		if len(line) != 0 {
+			metric, err := p.ParseLine(string(line))
+			if err == nil {
+				metrics = append(metrics, metric)
+			} else {
+				errs = append(errs, err.Error())
+			}
+		}
+		if n == -1 {
+			break
+		}
+		buf = buf[n+1:]
 	}
 	if len(errs) != 0 {
 		return metrics, errors.New(strings.Join(errs, "\n"))
