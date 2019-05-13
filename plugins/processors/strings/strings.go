@@ -91,13 +91,15 @@ func (c *converter) convertTag(metric telegraf.Metric) {
 	var tags map[string]string
 	if c.Tag == "*" {
 		tags = metric.Tags()
-	} else {
-		tags = make(map[string]string)
-		tv, ok := metric.GetTag(c.Tag)
+	}
+
+	tags = make(map[string]string)
+	for _, tag := range []string{c.Tag, c.Dest} {
+		tv, ok := metric.GetTag(tag)
 		if !ok {
-			return
+			continue
 		}
-		tags[c.Tag] = tv
+		tags[tag] = tv
 	}
 
 	for key, value := range tags {
