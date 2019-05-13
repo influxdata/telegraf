@@ -439,19 +439,26 @@ func (b *builder) build(ctx context.Context, bo buildOptions, w io.Writer) error
 		if err != nil {
 			return fmt.Errorf("error writing zip file %v", err)
 		}
-	case "tgz":
-		z:= tar.
 		cmd.Stdout = zfile
+	case "tgz":
+		z:= tar.NewWriter(w)
+		defer z.Close()
+		if err := tw.WriteHeader(&tar.Header{
+			Name:
+		}); err != nil {
+			return err
+		}
+
 	}
 	//TODO(docmerlin): make this provide more visibility into this sort of error
-	go func() {
-		r, err := cmd.StderrPipe()
-		if err != nil {
-			fmt.Println(err)
-		}
-		res, _ := ioutil.ReadAll(r)
-		fmt.Println(string(res))
-	}()
+	// go func() {
+	// 	r, err := cmd.StderrPipe()
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 	}
+	// 	res, _ := ioutil.ReadAll(r)
+	// 	fmt.Println(string(res))
+	// }()
 	return cmd.Run()
 }
 
