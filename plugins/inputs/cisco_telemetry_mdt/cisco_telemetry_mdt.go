@@ -160,7 +160,9 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients() {
 	for c.ctx.Err() == nil {
 		conn, err := c.listener.Accept()
 		if err != nil {
-			c.acc.AddError(fmt.Errorf("Failed to accept TCP connection: %v", err))
+			if c.ctx.Err() == nil {
+				c.acc.AddError(fmt.Errorf("Failed to accept TCP connection: %v", err))
+			}
 			continue
 		}
 

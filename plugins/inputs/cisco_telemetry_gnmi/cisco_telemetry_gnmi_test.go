@@ -107,7 +107,7 @@ func TestGNMIError(t *testing.T) {
 	server.Stop()
 	c.Stop()
 
-	assert.Equal(t, acc.Errors, []error{errors.New("E! GNMI subscription aborted: rpc error: code = Unknown desc = testerror")})
+	assert.Equal(t, acc.Errors, []error{errors.New("GNMI subscription aborted: rpc error: code = Unknown desc = testerror")})
 }
 
 func mockGNMINotification() *gnmi.Notification {

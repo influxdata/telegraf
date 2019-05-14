@@ -42,7 +42,7 @@ func TestHandleTelemetryEmpty(t *testing.T) {
 	data, _ := proto.Marshal(telemetry)
 
 	c.handleTelemetry(data)
-	assert.Contains(t, acc.Errors, errors.New("I! Cisco MDT invalid field: encoding path or measurement empty"))
+	assert.Contains(t, acc.Errors, errors.New("Cisco MDT invalid field: encoding path or measurement empty"))
 	assert.Empty(t, acc.Metrics)
 }
 
@@ -207,7 +207,7 @@ func TestTCPDialoutOverflow(t *testing.T) {
 
 	c.Stop()
 
-	assert.Contains(t, acc.Errors, errors.New("E! Dialout packet too long: 1000000000"))
+	assert.Contains(t, acc.Errors, errors.New("Dialout packet too long: 1000000000"))
 }
 
 func mockTelemetryMessage() *telemetry.Telemetry {
@@ -315,7 +315,7 @@ func TestGRPCDialoutError(t *testing.T) {
 
 	c.Stop()
 
-	assert.Contains(t, acc.Errors, errors.New("E! GRPC dialout error: foobar"))
+	assert.Contains(t, acc.Errors, errors.New("GRPC dialout error: foobar"))
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
@@ -458,7 +458,7 @@ func TestGRPCDialinError(t *testing.T) {
 	server.Stop()
 	c.Stop()
 
-	assert.Equal(t, acc.Errors, []error{errors.New("E! GRPC dialin error: testerror")})
+	assert.Contains(t, acc.Errors, errors.New("GRPC dialin error: testerror"))
 }
 
 func TestGRPCDialinMultipleRedial(t *testing.T) {
