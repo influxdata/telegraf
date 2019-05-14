@@ -453,14 +453,16 @@ const sampleConfig = `
   ## Address and port to host telemetry listener on (dialout) or address to connect to (dialin)
   service_address = ":57000"
 
+  ## Enable TLS for transport
+  # tls = true
+
   ## grpc-dialin: define credentials and subscription
   # username = "cisco"
   # password = "cisco"
   # subscription = "subscription"
   # redial = "10s"
 
-  ## grpc-dialin: enable client-side TLS and define CA to authenticate the device
-  # tls = true
+  ## grpc-dialin: define TLS CA to authenticate the device
   # tls_ca = "/etc/telegraf/ca.pem"
   # insecure_skip_verify = true
 
@@ -469,8 +471,7 @@ const sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
 
 
-  ## grpc-dialout: enable server-side TLS and define certificate and key
-  # tls = true
+  ## grpc-dialout: define TLS certificate and key
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
