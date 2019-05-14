@@ -49,7 +49,7 @@ func (rs *RunningStats) AddValue(v float64) {
 	}
 
 	// These are used for the running mean and variance
-	rs.n += 1
+	rs.n++
 	rs.ex += v - rs.k
 	rs.ex2 += (v - rs.k) * (v - rs.k)
 
