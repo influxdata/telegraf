@@ -348,25 +348,18 @@ func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
 // format = "unix_ns": epoch is assumed to be in nanoseconds and can come as number or string. Cannot have a decimal part.
 func ParseTimestampWithLocation(timestamp interface{}, format string, location string) (time.Time, error) {
 	timeInt, timeFractional := int64(0), int64(0)
-	timeEpochStr, ok := timestamp.(string)
-	var err error
 
-	if !ok {
-		timeEpochFloat, ok := timestamp.(float64)
-		if !ok {
-			return time.Time{}, fmt.Errorf("time: %v could not be converted to string nor float64", timestamp)
-		}
-		intPart, frac := math.Modf(timeEpochFloat)
-		timeInt, timeFractional = int64(intPart), int64(frac*1e9)
-	} else {
-		splitted := regexp.MustCompile("[.,]").Split(timeEpochStr, 2)
+	switch ts := timestamp.(type) {
+	case string:
+		var err error
+		splitted := regexp.MustCompile("[.,]").Split(ts, 2)
 		timeInt, err = strconv.ParseInt(splitted[0], 10, 64)
 		if err != nil {
 			loc, err := time.LoadLocation(location)
 			if err != nil {
 				return time.Time{}, fmt.Errorf("location: %s could not be loaded as a location", location)
 			}
-			return time.ParseInLocation(format, timeEpochStr, loc)
+			return time.ParseInLocation(format, ts, loc)
 		}
 
 		if len(splitted) == 2 {
@@ -380,7 +373,15 @@ func ParseTimestampWithLocation(timestamp interface{}, format string, location s
 				return time.Time{}, err
 			}
 		}
+	case int64:
+		timeInt = ts
+	case float64:
+		intPart, frac := math.Modf(ts)
+		timeInt, timeFractional = int64(intPart), int64(frac*1e9)
+	default:
+		return time.Time{}, fmt.Errorf("time: %v could not be converted to string nor float64", timestamp)
 	}
+
 	if strings.EqualFold(format, "unix") {
 		return time.Unix(timeInt, timeFractional).UTC(), nil
 	} else if strings.EqualFold(format, "unix_ms") {
