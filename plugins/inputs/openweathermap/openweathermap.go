@@ -38,14 +38,16 @@ const defaultUnits string = "metric"
 var sampleConfig = `
   ## Root url of weather map REST API
   base_url = "https://api.openweathermap.org/"
-  # Your personal user token from openweathermap.org
+  ## Your personal user token from openweathermap.org
   app_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   city_id = ["2988507", "2988588"]
 
-  # HTTP response timeout (default: 5s)
+  ## HTTP response timeout (default: 5s)
   response_timeout = "5s"
   fetch = ["weather", "forecast"]
   units = "metric"
+  ## Limit OpenWeatherMap query interval. See calls per minute info at: https://openweathermap.org/price
+  interval = "10m"
 `
 
 func (n *OpenWeatherMap) SampleConfig() string {
