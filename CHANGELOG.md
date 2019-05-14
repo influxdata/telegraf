@@ -66,6 +66,7 @@
 - [#5782](https://github.com/influxdata/telegraf/pull/5782): Skip lines with missing refid in ntpq input.
 - [#5755](https://github.com/influxdata/telegraf/issues/5755): Add support for hex values to ipmi_sensor input.
 - [#5824](https://github.com/influxdata/telegraf/issues/5824): Fix parse of unix timestamp with more than ns precision.
+- [#5836](https://github.com/influxdata/telegraf/issues/5836): Restore field name case in interrupts input.
 
 ## v1.10.3 [2019-04-16]
 
