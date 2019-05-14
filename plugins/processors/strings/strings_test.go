@@ -438,6 +438,90 @@ func TestMultipleConversions(t *testing.T) {
 	assert.Equal(t, expectedTags, processed[0].Tags())
 }
 
+func TestMultipleEnumLikeConversionsTags(t *testing.T) {
+	plugin := &Strings{
+		Replace: []converter{
+			{
+				Tag:  "foo",
+				Old:  "a",
+				New:  "x",
+				Dest: "bar",
+			},
+			{
+				Tag:  "foo",
+				Old:  "b",
+				New:  "y",
+				Dest: "bar",
+			},
+		},
+	}
+
+	m, _ := metric.New("IIS_log",
+		map[string]string{
+			"foo": "a",
+		},
+		map[string]interface{}{
+			"request": "/replace/it",
+		},
+		time.Now(),
+	)
+
+	processed := plugin.Apply(m)
+
+	expectedFields := map[string]interface{}{
+		"request": "/replace/it",
+	}
+	expectedTags := map[string]string{
+		"foo": "a",
+		"bar": "x",
+	}
+
+	assert.Equal(t, expectedFields, processed[0].Fields())
+	assert.Equal(t, expectedTags, processed[0].Tags())
+}
+
+func TestMultipleEnumLikeConversionsFields(t *testing.T) {
+	plugin := &Strings{
+		Replace: []converter{
+			{
+				Field: "request",
+				Old:   "/replace/it",
+				New:   "/user",
+				Dest:  "req",
+			},
+			{
+				Field: "request",
+				Old:   "/replace/this",
+				New:   "/admin",
+				Dest:  "req",
+			},
+		},
+	}
+
+	m, _ := metric.New("IIS_log",
+		map[string]string{
+			"foo": "a",
+		},
+		map[string]interface{}{
+			"request": "/replace/it",
+		},
+		time.Now(),
+	)
+
+	processed := plugin.Apply(m)
+
+	expectedFields := map[string]interface{}{
+		"request": "/replace/it",
+		"req":     "/user",
+	}
+	expectedTags := map[string]string{
+		"foo": "a",
+	}
+
+	assert.Equal(t, expectedFields, processed[0].Fields())
+	assert.Equal(t, expectedTags, processed[0].Tags())
+}
+
 func TestReadmeExample(t *testing.T) {
 	plugin := &Strings{
 		Lowercase: []converter{
