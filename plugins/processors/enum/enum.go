@@ -1,6 +1,7 @@
 package enum
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -33,6 +34,7 @@ type EnumMapper struct {
 }
 
 type Mapping struct {
+	Tag           string
 	Field         string
 	Dest          string
 	Default       interface{}
@@ -56,10 +58,26 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	for _, mapping := range mapper.Mappings {
-		if originalValue, isPresent := metric.GetField(mapping.Field); isPresent == true {
-			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
-				if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
-					writeField(metric, mapping.getDestination(), mappedValue)
+		if mapping.Field != "" {
+			if originalValue, isPresent := metric.GetField(mapping.Field); isPresent == true {
+				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
+					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
+						writeField(metric, mapping.getDestination(), mappedValue)
+					}
+				}
+			}
+		}
+		if mapping.Tag != "" {
+			if originalValue, isPresent := metric.GetTag(mapping.Tag); isPresent == true {
+				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
+					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
+						switch val := mappedValue.(type) {
+						case string:
+							writeTag(metric, mapping.getDestinationTag(), val)
+						default:
+							writeTag(metric, mapping.getDestinationTag(), fmt.Sprintf("%v", val))
+						}
+					}
 				}
 			}
 		}
@@ -91,9 +109,21 @@ func (mapping *Mapping) getDestination() string {
 	return mapping.Field
 }
 
+func (mapping *Mapping) getDestinationTag() string {
+	if mapping.Dest != "" {
+		return mapping.Dest
+	}
+	return mapping.Tag
+}
+
 func writeField(metric telegraf.Metric, name string, value interface{}) {
 	metric.RemoveField(name)
 	metric.AddField(name, value)
+}
+
+func writeTag(metric telegraf.Metric, name string, value string) {
+	metric.RemoveTag(name)
+	metric.AddTag(name, value)
 }
 
 func init() {
