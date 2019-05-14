@@ -72,7 +72,7 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	for {
 		n := bytes.IndexByte(buf, '\n')
 		var line []byte
-		if n != -1 {
+		if n >= 0 {
 			line = bytes.TrimSpace(buf[:n:n])
 		} else {
 			line = bytes.TrimSpace(buf) // last line
@@ -85,7 +85,7 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				errs = append(errs, err.Error())
 			}
 		}
-		if n == -1 {
+		if n < 0 {
 			break
 		}
 		buf = buf[n+1:]
