@@ -157,14 +157,11 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients() {
 	var mutex sync.Mutex
 	clients := make(map[net.Conn]struct{})
 
-	for {
+	for c.ctx.Err() == nil {
 		conn, err := c.listener.Accept()
 		if err != nil {
-			if c.ctx.Err() != nil {
-				break
-			}
-
 			c.acc.AddError(fmt.Errorf("Failed to accept TCP connection: %v", err))
+			continue
 		}
 
 		mutex.Lock()
