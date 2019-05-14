@@ -54,7 +54,7 @@
 - [#5771](https://github.com/influxdata/telegraf/pull/5771): Fix only one job per storage target reported in lustre2 input.
 - [#5796](https://github.com/influxdata/telegraf/issues/5796): Set default timeout of 5s in fibaro input.
 
-## v1.10.4 [unreleased]
+## v1.10.4 [2019-05-14]
 
 #### Bugfixes
 
