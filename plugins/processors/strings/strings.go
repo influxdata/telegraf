@@ -115,13 +115,15 @@ func (c *converter) convertField(metric telegraf.Metric) {
 	var fields map[string]interface{}
 	if c.Field == "*" {
 		fields = metric.Fields()
-	} else {
-		fields = make(map[string]interface{})
-		fv, ok := metric.GetField(c.Field)
+	}
+
+	fields = make(map[string]interface{})
+	for _, field := range []string{c.Field, c.Dest} {
+		fv, ok := metric.GetField(field)
 		if !ok {
-			return
+			continue
 		}
-		fields[c.Field] = fv
+		fields[field] = fv
 	}
 
 	for key, value := range fields {
