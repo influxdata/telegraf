@@ -139,13 +139,13 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 
 		subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(c.ctx)
 		if err != nil {
-			c.acc.AddError(fmt.Errorf("E! GNMI subscription setup failed: %v", err))
+			c.acc.AddError(fmt.Errorf("GNMI subscription setup failed: %v", err))
 		} else {
 			err = subscribeClient.Send(request)
 		}
 
 		if err != nil {
-			c.acc.AddError(fmt.Errorf("E! GNMI subscription setup failed: %v", err))
+			c.acc.AddError(fmt.Errorf("GNMI subscription setup failed: %v", err))
 		} else {
 			log.Printf("D! Connection to GNMI device %s established", c.ServiceAddress)
 			for {
@@ -153,7 +153,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 
 				if err != nil {
 					if err != io.EOF && c.ctx.Err() == nil {
-						c.acc.AddError(fmt.Errorf("E! GNMI subscription aborted: %v", err))
+						c.acc.AddError(fmt.Errorf("GNMI subscription aborted: %v", err))
 					}
 					break
 				}
@@ -261,7 +261,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 						fields[builder.String()] = value
 					} else if jsondata != nil {
 						if err = json.Unmarshal(jsondata, &value); err != nil {
-							c.acc.AddError(fmt.Errorf("W! GNMI JSON data is invalid: %v", err))
+							c.acc.AddError(fmt.Errorf("GNMI JSON data is invalid: %v", err))
 							continue
 						}
 

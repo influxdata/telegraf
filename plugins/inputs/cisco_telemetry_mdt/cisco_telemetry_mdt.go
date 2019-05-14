@@ -164,7 +164,7 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients() {
 				break
 			}
 
-			c.acc.AddError(fmt.Errorf("E! Failed to accept TCP connection: %v", err))
+			c.acc.AddError(fmt.Errorf("Failed to accept TCP connection: %v", err))
 		}
 
 		mutex.Lock()
@@ -191,7 +191,7 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients() {
 				// Read and validate dialout telemetry header
 				if err := binary.Read(conn, binary.BigEndian, &hdr); err != nil {
 					if c.ctx.Err() == nil && err != io.EOF {
-						c.acc.AddError(fmt.Errorf("E! Unable to read dialout header: %v", err))
+						c.acc.AddError(fmt.Errorf("Unable to read dialout header: %v", err))
 					}
 					break
 				}
@@ -202,12 +202,12 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients() {
 				}
 
 				if hdr.MsgLen > maxMsgSize {
-					c.acc.AddError(fmt.Errorf("E! Dialout packet too long: %v", hdr.MsgLen))
+					c.acc.AddError(fmt.Errorf("Dialout packet too long: %v", hdr.MsgLen))
 					break
 				}
 
 				if hdr.MsgFlags != 0 {
-					c.acc.AddError(fmt.Errorf("E! Invalid dialout flags: %v", hdr.MsgFlags))
+					c.acc.AddError(fmt.Errorf("Invalid dialout flags: %v", hdr.MsgFlags))
 					break
 				}
 
@@ -216,9 +216,9 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients() {
 				if size, err := payload.ReadFrom(io.LimitReader(conn, int64(hdr.MsgLen))); size != int64(hdr.MsgLen) {
 					if c.ctx.Err() == nil {
 						if err != nil {
-							c.acc.AddError(fmt.Errorf("E! TCP dialout I/O error: %v", err))
+							c.acc.AddError(fmt.Errorf("TCP dialout I/O error: %v", err))
 						} else {
-							c.acc.AddError(fmt.Errorf("E! TCP dialout premature EOF"))
+							c.acc.AddError(fmt.Errorf("TCP dialout premature EOF"))
 						}
 					}
 					break
@@ -262,13 +262,13 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 		packet, err := stream.Recv()
 		if err != nil {
 			if err != io.EOF && c.ctx.Err() == nil {
-				c.acc.AddError(fmt.Errorf("E! GRPC dialout receive error: %v", err))
+				c.acc.AddError(fmt.Errorf("GRPC dialout receive error: %v", err))
 			}
 			break
 		}
 
 		if len(packet.Data) == 0 && len(packet.Errors) != 0 {
-			c.acc.AddError(fmt.Errorf("E! GRPC dialout error: %s", packet.Errors))
+			c.acc.AddError(fmt.Errorf("GRPC dialout error: %s", packet.Errors))
 			break
 		}
 
@@ -293,7 +293,7 @@ func (c *CiscoTelemetryMDT) subscribeMDTDialinDevice(client *grpc.ClientConn) {
 		client := ems.NewGRPCConfigOperClient(client)
 		stream, err := client.CreateSubs(c.ctx, request)
 		if err != nil {
-			c.acc.AddError(fmt.Errorf("E! GRPC dialin subscription failed: %v", err))
+			c.acc.AddError(fmt.Errorf("GRPC dialin subscription failed: %v", err))
 		} else {
 			log.Printf("D! Subscribed to Cisco MDT device %s", c.ServiceAddress)
 
@@ -305,14 +305,14 @@ func (c *CiscoTelemetryMDT) subscribeMDTDialinDevice(client *grpc.ClientConn) {
 				}
 
 				if len(packet.Errors) != 0 {
-					c.acc.AddError(fmt.Errorf("E! GRPC dialin error: %s", packet.Errors))
+					c.acc.AddError(fmt.Errorf("GRPC dialin error: %s", packet.Errors))
 				} else {
 					c.handleTelemetry(packet.Data)
 				}
 			}
 
 			if err != nil && err != io.EOF {
-				c.acc.AddError(fmt.Errorf("E! GRPC dialin subscription receive error: %v", err))
+				c.acc.AddError(fmt.Errorf("GRPC dialin subscription receive error: %v", err))
 			}
 
 			log.Printf("D! Connection to Cisco MDT device %s closed", c.ServiceAddress)
@@ -338,7 +338,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	telemetry := &telemetry.Telemetry{}
 	err := proto.Unmarshal(data, telemetry)
 	if err != nil {
-		c.acc.AddError(fmt.Errorf("E! Cisco MDT failed to decode: %v", err))
+		c.acc.AddError(fmt.Errorf("Cisco MDT failed to decode: %v", err))
 		return
 	}
 
@@ -380,7 +380,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		if len(fields) > 0 && len(tags) > 0 && len(telemetry.EncodingPath) > 0 {
 			c.acc.AddFields(telemetry.EncodingPath, fields, tags, timestamp)
 		} else {
-			c.acc.AddError(fmt.Errorf("I! Cisco MDT invalid field: encoding path or measurement empty"))
+			c.acc.AddError(fmt.Errorf("Cisco MDT invalid field: encoding path or measurement empty"))
 		}
 	}
 
