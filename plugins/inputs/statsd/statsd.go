@@ -74,7 +74,7 @@ type Statsd struct {
 	// Parses extensions to statsd in the datadog statsd format
 	// currently supports metrics and datadog tags.
 	// http://docs.datadoghq.com/guides/dogstatsd/
-	DataDogExtensions bool
+	DataDogExtensions bool `toml:"datadog_extensions"`
 
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
@@ -182,8 +182,6 @@ type cachedtimings struct {
 	fields map[string]RunningStats
 	tags   map[string]string
 }
-
-//this is used internally for building out an event
 
 func (_ *Statsd) Description() string {
 	return "Statsd UDP/TCP Server"
@@ -461,15 +459,21 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			return nil
 		default:
 			n, addr, err := conn.ReadFromUDP(buf)
-			if err != nil && !strings.Contains(err.Error(), "closed network") {
-				log.Printf("E! [inputs.statsd] Error READ: %s\n", err.Error())
-				continue
+			if err != nil {
+				if !strings.Contains(err.Error(), "closed network") {
+					log.Printf("E! [inputs.statsd] Error READ: %s\n", err.Error())
+					continue
+				}
+				return err
 			}
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
 			b.Write(buf[:n])
 			select {
-			case s.in <- input{Buffer: b, Time: time.Now(), Addr: addr.IP.String()}:
+			case s.in <- input{
+				Buffer: b,
+				Time:   time.Now(),
+				Addr:   addr.IP.String()}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {

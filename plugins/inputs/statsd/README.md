@@ -34,7 +34,6 @@
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
-
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -183,7 +182,6 @@ to allow. Used when protocol is set to tcp.
 - **delete_counters** boolean: Delete counters on every collection interval
 - **delete_sets** boolean: Delete set counters on every collection interval
 - **delete_timings** boolean: Delete timings on every collection interval
-
 - **percentiles** []int: Percentiles to calculate for timing & histogram stats
 - **allowed_pending_messages** integer: Number of messages allowed to queue up
 waiting to be processed. When this fills, messages will be dropped and logged.

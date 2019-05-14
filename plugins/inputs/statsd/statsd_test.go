@@ -1504,7 +1504,6 @@ func TestParseKeyValue(t *testing.T) {
 }
 
 // Test utility functions
-
 func testValidateSet(
 	name string,
 	value int64,
