@@ -234,27 +234,27 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 					var value interface{}
 					var jsondata []byte
 
-					switch update.Val.Value.(type) {
+					switch val := update.Val.Value.(type) {
 					case *gnmi.TypedValue_AsciiVal:
-						value = update.Val.Value.(*gnmi.TypedValue_AsciiVal).AsciiVal
+						value = val.AsciiVal
 					case *gnmi.TypedValue_BoolVal:
-						value = update.Val.Value.(*gnmi.TypedValue_BoolVal).BoolVal
+						value = val.BoolVal
 					case *gnmi.TypedValue_BytesVal:
-						value = update.Val.Value.(*gnmi.TypedValue_BytesVal).BytesVal
+						value = val.BytesVal
 					case *gnmi.TypedValue_DecimalVal:
-						value = update.Val.Value.(*gnmi.TypedValue_DecimalVal).DecimalVal
+						value = val.DecimalVal
 					case *gnmi.TypedValue_FloatVal:
-						value = update.Val.Value.(*gnmi.TypedValue_FloatVal).FloatVal
+						value = val.FloatVal
 					case *gnmi.TypedValue_IntVal:
-						value = update.Val.Value.(*gnmi.TypedValue_IntVal).IntVal
+						value = val.IntVal
 					case *gnmi.TypedValue_StringVal:
-						value = update.Val.Value.(*gnmi.TypedValue_StringVal).StringVal
+						value = val.StringVal
 					case *gnmi.TypedValue_UintVal:
-						value = update.Val.Value.(*gnmi.TypedValue_UintVal).UintVal
+						value = val.UintVal
 					case *gnmi.TypedValue_JsonIetfVal:
-						jsondata = update.Val.Value.(*gnmi.TypedValue_JsonIetfVal).JsonIetfVal
+						jsondata = val.JsonIetfVal
 					case *gnmi.TypedValue_JsonVal:
-						jsondata = update.Val.Value.(*gnmi.TypedValue_JsonVal).JsonVal
+						jsondata = val.JsonVal
 					}
 
 					if value != nil {

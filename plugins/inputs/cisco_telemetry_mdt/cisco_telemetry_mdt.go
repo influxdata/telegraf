@@ -395,25 +395,25 @@ func (c *CiscoTelemetryMDT) parseGPBKVField(field *telemetry.TelemetryField, nam
 
 	// Decode Telemetry field value if set
 	var value interface{}
-	switch field.ValueByType.(type) {
+	switch val := field.ValueByType.(type) {
 	case *telemetry.TelemetryField_BytesValue:
-		value = field.ValueByType.(*telemetry.TelemetryField_BytesValue).BytesValue
+		value = val.BytesValue
 	case *telemetry.TelemetryField_StringValue:
-		value = field.ValueByType.(*telemetry.TelemetryField_StringValue).StringValue
+		value = val.StringValue
 	case *telemetry.TelemetryField_BoolValue:
-		value = field.ValueByType.(*telemetry.TelemetryField_BoolValue).BoolValue
+		value = val.BoolValue
 	case *telemetry.TelemetryField_Uint32Value:
-		value = field.ValueByType.(*telemetry.TelemetryField_Uint32Value).Uint32Value
+		value = val.Uint32Value
 	case *telemetry.TelemetryField_Uint64Value:
-		value = field.ValueByType.(*telemetry.TelemetryField_Uint64Value).Uint64Value
+		value = val.Uint64Value
 	case *telemetry.TelemetryField_Sint32Value:
-		value = field.ValueByType.(*telemetry.TelemetryField_Sint32Value).Sint32Value
+		value = val.Sint32Value
 	case *telemetry.TelemetryField_Sint64Value:
-		value = field.ValueByType.(*telemetry.TelemetryField_Sint64Value).Sint64Value
+		value = val.Sint64Value
 	case *telemetry.TelemetryField_DoubleValue:
-		value = field.ValueByType.(*telemetry.TelemetryField_DoubleValue).DoubleValue
+		value = val.DoubleValue
 	case *telemetry.TelemetryField_FloatValue:
-		value = field.ValueByType.(*telemetry.TelemetryField_FloatValue).FloatValue
+		value = val.FloatValue
 	}
 
 	if value != nil {
