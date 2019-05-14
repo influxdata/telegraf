@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -52,14 +54,17 @@ func (f *File) Connect() error {
 			var of io.WriteCloser
 			var err error
 			if f.RotateMaxAge != "" {
-				of, err = NewRotatingWriter(file, f.RotateMaxAge)
-			} else {
-				if _, err := os.Stat(file); os.IsNotExist(err) {
-					of, err = os.Create(file)
+				maxAge, err := time.ParseDuration(f.RotateMaxAge)
+				if err != nil {
+					return err
 				}
-				of, err = os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-			}
 
+				// Only rotate by file age for now, keep no archives.
+				of, err = rotate.NewFileWriter(file, maxAge, 0, -1)
+			} else {
+				// Just open a normal file
+				of, err = rotate.NewFileWriter(file, 0, 0, -1)
+			}
 			if err != nil {
 				return err
 			}
