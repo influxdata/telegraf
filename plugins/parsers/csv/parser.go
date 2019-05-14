@@ -225,29 +225,25 @@ outer:
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
 	timestampColumn, timestampFormat string,
-) (metricTime time.Time, err error) {
-	metricTime = timeFunc()
-
+) (time.Time, error) {
 	if timestampColumn != "" {
 		if recordFields[timestampColumn] == nil {
-			err = fmt.Errorf("timestamp column: %v could not be found", timestampColumn)
-			return
+			return time.Time{}, fmt.Errorf("timestamp column: %v could not be found", timestampColumn)
 		}
-
-		tStr := fmt.Sprintf("%v", recordFields[timestampColumn])
 
 		switch timestampFormat {
 		case "":
-			err = fmt.Errorf("timestamp format must be specified")
-			return
+			return time.Time{}, fmt.Errorf("timestamp format must be specified")
 		default:
-			metricTime, err = internal.ParseTimestamp(tStr, timestampFormat)
+			metricTime, err := internal.ParseTimestamp(recordFields[timestampColumn], timestampFormat)
 			if err != nil {
-				return
+				return time.Time{}, err
 			}
+			return metricTime, err
 		}
 	}
-	return
+
+	return timeFunc(), nil
 }
 
 // SetDefaultTags set the DefaultTags
