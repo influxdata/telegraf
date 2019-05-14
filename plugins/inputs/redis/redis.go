@@ -27,7 +27,7 @@ type Redis struct {
 }
 
 type Client interface {
-	Info() *redis.StringCmd
+	Info(section ...string) *redis.StringCmd
 	BaseTags() map[string]string
 }
 
@@ -36,8 +36,8 @@ type RedisClient struct {
 	tags   map[string]string
 }
 
-func (r *RedisClient) Info() *redis.StringCmd {
-	return r.client.Info()
+func (r *RedisClient) Info(section ...string) *redis.StringCmd {
+	return r.client.Info(section...)
 }
 
 func (r *RedisClient) BaseTags() map[string]string {
@@ -188,7 +188,10 @@ func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	rdr := strings.NewReader(info)
+	// skip for commandstats if we can't retrieve it.
+	cmdstats, _ := client.Info("commandstats").Result()
+
+	rdr := strings.NewReader(info + "\n\n" + cmdstats)
 	return gatherInfoOutput(rdr, acc, client.BaseTags())
 }
 
@@ -246,6 +249,10 @@ func gatherInfoOutput(
 			if section == "Keyspace" {
 				kline := strings.TrimSpace(string(parts[1]))
 				gatherKeyspaceLine(name, kline, acc, tags)
+				continue
+			} else if section == "Commandstats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherCommandstatsLine(name, kline, acc, tags)
 				continue
 			}
 			metric = name
@@ -319,6 +326,46 @@ func gatherKeyspaceLine(
 		}
 		acc.AddFields("redis_keyspace", fields, tags)
 	}
+}
+
+// Parse the Commandstats line. The line looks something like:
+//     cmdstat_info:calls=4,usec=158,usec_per_call=39.50
+func gatherCommandstatsLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	global_tags map[string]string,
+) {
+	if !strings.Contains(line, "calls=") {
+		return
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+	tags["cmdstat"] = strings.TrimPrefix(name, "cmdstat_")
+	stats := strings.Split(line, ",")
+	for _, stat := range stats {
+		kv := strings.Split(stat, "=")
+		if len(kv) != 2 {
+			continue
+		}
+		var (
+			ival interface{}
+			err  error
+		)
+		if kv[0] == "calls" {
+			ival, err = strconv.ParseInt(kv[1], 10, 64)
+		} else {
+			ival, err = strconv.ParseFloat(kv[1], 64)
+		}
+		if err == nil {
+			fields[kv[0]] = ival
+		}
+	}
+	acc.AddFields("redis_commandstats", fields, tags)
 }
 
 func init() {

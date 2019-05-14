@@ -116,6 +116,22 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "redis", fields, tags)
 	acc.AssertContainsTaggedFields(t, "redis_keyspace", keyspaceFields, keyspaceTags)
+
+	cmdstatsTags := map[string]string{"host": "redis.net", "replication_role": "master", "cmdstat": "command"}
+	cmdstatsFields := map[string]interface{}{
+		"calls":         int64(1),
+		"usec":          float64(307),
+		"usec_per_call": float64(307.00),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_commandstats", cmdstatsFields, cmdstatsTags)
+
+	cmdstatsTags = map[string]string{"host": "redis.net", "replication_role": "master", "cmdstat": "info"}
+	cmdstatsFields = map[string]interface{}{
+		"calls":         int64(4),
+		"usec":          float64(158),
+		"usec_per_call": float64(39.50),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_commandstats", cmdstatsFields, cmdstatsTags)
 }
 
 const testOutput = `# Server
@@ -207,6 +223,10 @@ used_cpu_user_children:0.00
 
 # Keyspace
 db0:keys=2,expires=0,avg_ttl=0
+
+# Commandstats
+cmdstat_info:calls=4,usec=158,usec_per_call=39.50
+cmdstat_command:calls=1,usec=307,usec_per_call=307.00
 
 (error) ERR unknown command 'eof'
 `
