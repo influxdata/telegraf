@@ -11,6 +11,10 @@
 - [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
 - [powerdns_recursor](/plugins/inputs/powerdns_recursor/README.md) - Contributed by @dupondje
 
+#### New Aggregators
+
+- [final](/plugins/aggregators/final/README.md) - Contributed by @oplehto
+
 #### New Outputs
 
 - [syslog](/plugins/outputs/syslog/README.md) - Contributed by @javicrespo
