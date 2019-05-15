@@ -333,8 +333,9 @@ For documentation on the latest development code see the [documentation index][d
 ## Aggregator Plugins
 
 * [basicstats](./plugins/aggregators/basicstats)
-* [minmax](./plugins/aggregators/minmax)
+* [final](./plugins/aggregators/final)
 * [histogram](./plugins/aggregators/histogram)
+* [minmax](./plugins/aggregators/minmax)
 * [valuecounter](./plugins/aggregators/valuecounter)
 
 ## Output Plugins
