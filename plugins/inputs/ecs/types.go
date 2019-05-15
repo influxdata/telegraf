@@ -53,12 +53,6 @@ func unmarshalTask(r io.Reader) (*Task, error) {
 	return task, err
 }
 
-func unmarshalContainer(r io.Reader) (*Container, error) {
-	container := &Container{}
-	err := json.NewDecoder(r).Decode(container)
-	return container, err
-}
-
 // docker parsers
 func unmarshalStats(r io.Reader) (map[string]types.StatsJSON, error) {
 	var statsMap map[string]types.StatsJSON

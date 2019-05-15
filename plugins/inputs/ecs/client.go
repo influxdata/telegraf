@@ -1,19 +1,13 @@
 package ecs
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
-)
-
-const (
-	ecsMetaScheme = "http"
 )
 
 var (
@@ -23,7 +17,7 @@ var (
 
 // Client is the ECS client contract
 type Client interface {
-	Task() (Task, error)
+	Task() (*Task, error)
 	ContainerStats() (map[string]types.StatsJSON, error)
 }
 
@@ -65,7 +59,7 @@ type EcsClient struct {
 }
 
 // Task calls the ECS metadata endpoint and returns a populated Task
-func (c *EcsClient) Task() (Task, error) {
+func (c *EcsClient) Task() (*Task, error) {
 	if c.taskURL == "" {
 		c.taskURL = c.BaseURL.ResolveReference(ecsMetadataPath).String()
 	}
@@ -75,16 +69,16 @@ func (c *EcsClient) Task() (Task, error) {
 
 	if err != nil {
 		log.Println("failed to GET metadata endpoint", err)
-		return Task{}, err
+		return nil, err
 	}
 
 	task, err := unmarshalTask(resp.Body)
 	if err != nil {
 		log.Println("failed to decode response from metadata endpoint", err)
-		return Task{}, err
+		return nil, err
 	}
 
-	return *task, nil
+	return task, nil
 }
 
 // ContainerStats calls the ECS stats endpoint and returns a populated container stats map
@@ -112,41 +106,18 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.
 // If either errors, a single error is returned.
-func PollSync(c Client) (Task, map[string]types.StatsJSON, error) {
+func PollSync(c Client) (*Task, map[string]types.StatsJSON, error) {
 
-	var stats = map[string]types.StatsJSON{}
-	var statsErr error
-	var task Task
-	var taskErr error
+	var task *Task
+	var stats map[string]types.StatsJSON
+	var err error
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	if stats, err = c.ContainerStats(); err != nil {
+		return nil, nil, err
+	}
 
-	go func() {
-		defer wg.Done()
-		stats, statsErr = c.ContainerStats()
-
-		if statsErr != nil {
-			log.Println("Failed to poll ECS endpoint:", statsErr)
-			return
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		task, taskErr = c.Task()
-
-		if taskErr != nil {
-			log.Println("Failed to poll ECS endpoint:", taskErr)
-			return
-		}
-	}()
-
-	wg.Wait()
-
-	if statsErr != nil || taskErr != nil {
-		log.Printf("Stats or tasks polling failed. stats: %v, task: %v\n", statsErr, taskErr)
-		return Task{}, nil, errors.New("polling failed")
+	if task, err = c.Task(); err != nil {
+		return nil, nil, err
 	}
 
 	return task, stats, nil

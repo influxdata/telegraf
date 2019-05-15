@@ -13,9 +13,7 @@ This is similar to (and reuses a few pieces of) the [Docker](../docker/README.md
 ```toml
 # Read metrics about ECS containers
 [[inputs.ecs]]
-  ## Set to true to configure from env vars
-  envcfg = false
-
+  # endpoint_url = http://
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
   container_name_include = []

@@ -6,18 +6,18 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/stretchr/testify/assert"
 )
 
 type pollMock struct {
-	task  func() (Task, error)
+	task  func() (*Task, error)
 	stats func() (map[string]types.StatsJSON, error)
 }
 
-func (p *pollMock) Task() (Task, error) {
+func (p *pollMock) Task() (*Task, error) {
 	return p.task()
 }
 
@@ -30,28 +30,28 @@ func TestEcsClient_PollSync(t *testing.T) {
 	tests := []struct {
 		name    string
 		mock    *pollMock
-		want    Task
+		want    *Task
 		want1   map[string]types.StatsJSON
 		wantErr bool
 	}{
 		{
 			name: "success",
 			mock: &pollMock{
-				task: func() (Task, error) {
-					return validMeta, nil
+				task: func() (*Task, error) {
+					return &validMeta, nil
 				},
 				stats: func() (map[string]types.StatsJSON, error) {
 					return validStats, nil
 				},
 			},
-			want:  validMeta,
+			want:  &validMeta,
 			want1: validStats,
 		},
 		{
 			name: "task err",
 			mock: &pollMock{
-				task: func() (Task, error) {
-					return Task{}, errors.New("err")
+				task: func() (*Task, error) {
+					return nil, errors.New("err")
 				},
 				stats: func() (map[string]types.StatsJSON, error) {
 					return validStats, nil
@@ -62,8 +62,8 @@ func TestEcsClient_PollSync(t *testing.T) {
 		{
 			name: "stats err",
 			mock: &pollMock{
-				task: func() (Task, error) {
-					return validMeta, nil
+				task: func() (*Task, error) {
+					return &validMeta, nil
 				},
 				stats: func() (map[string]types.StatsJSON, error) {
 					return nil, errors.New("err")
@@ -75,16 +75,13 @@ func TestEcsClient_PollSync(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := PollSync(tt.mock)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("EcsClient.PollSync() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("EcsClient.PollSync() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("EcsClient.PollSync() got1 = %v, want %v", got1, tt.want1)
-			}
+			assert.Equal(t, tt.want, got, "EcsClient.PollSync() got = %v, want %v", got, tt.want)
+			assert.Equal(t, tt.want1, got1, "EcsClient.PollSync() got1 = %v, want %v", got1, tt.want1)
 		})
 	}
 }
@@ -102,7 +99,7 @@ func TestEcsClient_Task(t *testing.T) {
 	tests := []struct {
 		name    string
 		client  httpClient
-		want    Task
+		want    *Task
 		wantErr bool
 	}{
 		{
@@ -114,7 +111,7 @@ func TestEcsClient_Task(t *testing.T) {
 					}, nil
 				},
 			},
-			want: validMeta,
+			want: &validMeta,
 		},
 		{
 			name: "do err",
@@ -149,9 +146,7 @@ func TestEcsClient_Task(t *testing.T) {
 				t.Errorf("EcsClient.Task() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("EcsClient.Task() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "EcsClient.Task() = %v, want %v", got, tt.want)
 		})
 	}
 }
@@ -182,6 +177,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 					return nil, errors.New("err")
 				},
 			},
+			want:    map[string]types.StatsJSON{},
 			wantErr: true,
 		},
 		{
@@ -193,6 +189,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 					}, nil
 				},
 			},
+			want:    map[string]types.StatsJSON{},
 			wantErr: true,
 		},
 	}
@@ -208,9 +205,7 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 				t.Errorf("EcsClient.ContainerStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("EcsClient.ContainerStats() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got, "EcsClient.ContainerStats() = %v, want %v", got, tt.want)
 		})
 	}
 }

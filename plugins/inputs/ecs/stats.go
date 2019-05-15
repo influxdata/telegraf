@@ -10,19 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/docker"
 )
 
-func parseTaskStats(t Task, acc telegraf.Accumulator) {
-	taskFields := map[string]interface{}{
-		"revision":       t.Revision,
-		"desired_status": t.DesiredStatus,
-		"known_status":   t.KnownStatus,
-		"limit_cpu":      t.Limits["CPU"],
-		"limit_mem":      t.Limits["Memory"],
-	}
-
-	acc.AddFields("ecs_task", taskFields, taskTags(t), t.PullStoppedAt)
-}
-
-func parseContainerStats(c Container, acc telegraf.Accumulator, parentTags map[string]string) {
+func parseContainerStats(c Container, acc telegraf.Accumulator, tags map[string]string) {
 	id := c.ID
 	stats := c.Stats
 	tm := stats.Read
@@ -30,9 +18,6 @@ func parseContainerStats(c Container, acc telegraf.Accumulator, parentTags map[s
 	if tm.Before(time.Unix(0, 0)) {
 		tm = time.Now()
 	}
-
-	contTags := containerTags(c)
-	tags := mergeTags(parentTags, contTags)
 
 	metastats(id, c, acc, tags, tm)
 	memstats(id, stats, acc, tags, tm)

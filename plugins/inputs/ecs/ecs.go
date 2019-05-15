@@ -3,7 +3,6 @@ package ecs
 import (
 	"log"
 	"net/url"
-	"regexp"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -14,9 +13,9 @@ import (
 
 // Ecs config object
 type Ecs struct {
-	EcsV2   string `toml:"ecsv2_url"`
-	EnvCfg  bool   `toml:"envcfg"`
-	Timeout internal.Duration
+	EndpointURL string `toml:"endpoint_url"`
+	EnvCfg      bool   `toml:"envcfg"`
+	Timeout     internal.Duration
 
 	ContainerNameInclude []string `toml:"container_name_include"`
 	ContainerNameExclude []string `toml:"container_name_exclude"`
@@ -45,14 +44,9 @@ const (
 	PB = 1000 * TB
 )
 
-var (
-	sizeRegex       = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
-	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-)
-
 var sampleConfig = `
   ## ECS metadata url
-  # ecsv2_url = "169.254.170.2"
+  # endpoint_url = "http://169.254.170.2"
 
   ## Set to true to configure from env vars
   envcfg = false
@@ -98,11 +92,18 @@ func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	mergeTaskStats(&task, stats)
+	mergeTaskStats(task, stats)
+
+	taskTags := map[string]string{
+		"cluster":  task.Cluster,
+		"task_arn": task.TaskARN,
+		"family":   task.Family,
+		"revision": task.Revision,
+	}
 
 	// accumulate metrics
-	ecs.accTask(task, acc)
-	ecs.accContainers(task, acc)
+	ecs.accTask(task, taskTags, acc)
+	ecs.accContainers(task, taskTags, acc)
 
 	return nil
 }
@@ -120,9 +121,9 @@ func initSetup(ecs *Ecs) error {
 			return err
 		}
 
-		c.BaseURL = &url.URL{
-			Scheme: ecsMetaScheme,
-			Host:   ecs.EcsV2,
+		c.BaseURL, err = url.Parse(ecs.EndpointURL)
+		if err != nil {
+			return err
 		}
 
 		ecs.client = c
@@ -148,61 +149,44 @@ func initSetup(ecs *Ecs) error {
 	return nil
 }
 
-//region: metrics
+func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumulator) {
+	taskFields := map[string]interface{}{
+		"revision":       task.Revision,
+		"desired_status": task.DesiredStatus,
+		"known_status":   task.KnownStatus,
+		"limit_cpu":      task.Limits["CPU"],
+		"limit_mem":      task.Limits["Memory"],
+	}
 
-func (ecs *Ecs) accTask(task Task, acc telegraf.Accumulator) {
-	parseTaskStats(task, acc)
+	acc.AddFields("ecs_task", taskFields, tags, task.PullStoppedAt)
 }
 
-func (ecs *Ecs) accContainers(task Task, acc telegraf.Accumulator) {
-	taskTags := taskTags(task)
-
+func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegraf.Accumulator) {
 	for _, c := range task.Containers {
-		match := false
-		if ecs.containerNameFilter.Match(c.Name) {
-			match = true
-		}
-		if ecs.statusFilter.Match(c.KnownStatus) {
-			match = true
-		}
-		for k := range c.Labels {
-			if ecs.labelFilter.Match(k) {
-				match = true
-			}
-		}
-		if !match {
-			log.Printf("container %v did not match any filters", c.ID)
+		if !ecs.containerNameFilter.Match(c.Name) {
+			log.Printf("container %v did not match name filter", c.ID)
 			continue
 		}
-		parseContainerStats(c, acc, taskTags)
-	}
-}
 
-//endregion: metrics
+		if !ecs.statusFilter.Match(c.KnownStatus) {
+			log.Printf("container %v did not match status filter", c.ID)
+			continue
+		}
 
-//region: tags
+		// add matching ECS container Labels
+		containerTags := map[string]string{
+			"id":   c.ID,
+			"name": c.Name,
+		}
+		for k, v := range c.Labels {
+			if ecs.labelFilter.Match(k) {
+				containerTags[k] = v
+			}
+		}
+		tags := mergeTags(taskTags, containerTags)
 
-// taskTags accepts ECS task metadata and parses out tags for the task
-func taskTags(task Task) map[string]string {
-	return map[string]string{
-		"cluster":  task.Cluster,
-		"task_arn": task.TaskARN,
-		"family":   task.Family,
-		"revision": task.Revision,
+		parseContainerStats(c, acc, tags)
 	}
-}
-
-// containerTags accepts ECS container metadata and parses out tags for the container
-func containerTags(container Container) map[string]string {
-	tags := map[string]string{
-		"id":   container.ID,
-		"name": container.Name,
-	}
-	// add all ECS container Labels
-	for k, v := range container.Labels {
-		tags[k] = v
-	}
-	return tags
 }
 
 // returns a new map with the same content values as the input map
@@ -222,10 +206,6 @@ func mergeTags(a map[string]string, b map[string]string) map[string]string {
 	}
 	return c
 }
-
-//endregion: tags
-
-//region: filters
 
 func (ecs *Ecs) createContainerNameFilters() error {
 	filter, err := filter.NewIncludeExcludeFilter(ecs.ContainerNameInclude, ecs.ContainerNameExclude)
@@ -257,12 +237,10 @@ func (ecs *Ecs) createContainerStatusFilters() error {
 	return nil
 }
 
-//endregion: filters
-
 func init() {
 	inputs.Add("ecs", func() telegraf.Input {
 		return &Ecs{
-			EcsV2:          "169.254.170.2",
+			EndpointURL:    "http://169.254.170.2",
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
 			EnvCfg:         true,
 			newEnvClient:   NewEnvClient,
