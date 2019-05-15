@@ -55,18 +55,21 @@ type virtualMachineMetadata struct {
 }
 
 func (m *virtualMachineMetadata) ResourceID() string {
-	var template string
 	if m.Compute.VMScaleSetName == "" {
-		template = resourceIDTemplate
+		return fmt.Sprintf(
+			resourceIDScaleSetTemplate,
+			m.Compute.SubscriptionID,
+			m.Compute.ResourceGroupName,
+			m.Compute.VMScaleSetName,
+		)
 	} else {
-		template = resourceIDScaleSetTemplate
+		return fmt.Sprintf(
+			resourceIDTemplate,
+			m.Compute.SubscriptionID,
+			m.Compute.ResourceGroupName,
+			m.Compute.Name,
+		)
 	}
-	return fmt.Sprintf(
-		template,
-		m.Compute.SubscriptionID,
-		m.Compute.ResourceGroupName,
-		m.Compute.Name,
-	)
 }
 
 type dimension struct {
@@ -227,7 +230,8 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 		return "", "", err
 	}
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return "", "", fmt.Errorf("unable to fetch instance metadata: [%v] %s", resp.StatusCode, body)
+		return "", "", fmt.Errorf("unable to fetch instance metadata: [%s] %d",
+			vmInstanceMetadataURL, resp.StatusCode)
 	}
 
 	var metadata virtualMachineMetadata
