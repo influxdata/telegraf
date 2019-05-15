@@ -9,7 +9,7 @@ This is useful for getting the final value for data sources that produce
 discrete time series such as procstat, cgroup, kubernetes etc.
 
 When a series has not been updated within the time defined in
-`series_timeout`, the last metric is emttied with the `_last` appended.
+`series_timeout`, the last metric is emitted with the `_final` appended.
 
 ### Configuration
 
