@@ -59,24 +59,22 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	for _, mapping := range mapper.Mappings {
 		if mapping.Field != "" {
-			if originalValue, isPresent := metric.GetField(mapping.Field); isPresent == true {
-				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
-					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
+			if originalValue, isPresent := metric.GetField(mapping.Field); isPresent {
+				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString {
+					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
 						writeField(metric, mapping.getDestination(), mappedValue)
 					}
 				}
 			}
 		}
 		if mapping.Tag != "" {
-			if originalValue, isPresent := metric.GetTag(mapping.Tag); isPresent == true {
-				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
-					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
-						switch val := mappedValue.(type) {
-						case string:
-							writeTag(metric, mapping.getDestinationTag(), val)
-						default:
-							writeTag(metric, mapping.getDestinationTag(), fmt.Sprintf("%v", val))
-						}
+			if originalValue, isPresent := metric.GetTag(mapping.Tag); isPresent {
+				if mappedValue, isMappedValuePresent := mapping.mapValue(originalValue); isMappedValuePresent {
+					switch val := mappedValue.(type) {
+					case string:
+						writeTag(metric, mapping.getDestinationTag(), val)
+					default:
+						writeTag(metric, mapping.getDestinationTag(), fmt.Sprintf("%v", val))
 					}
 				}
 			}
