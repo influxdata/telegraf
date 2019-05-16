@@ -53,9 +53,12 @@ type CiscoTelemetryMDT struct {
 	MaxMsgSize   int `toml:"max_msg_size"`
 
 	// GRPC TLS settings
-	TLS bool
-	internaltls.ServerConfig
-	internaltls.ClientConfig
+	TLS                bool     `toml:"tls"`
+	TLSCA              string   `toml:"tls_ca"`
+	TLSCert            string   `toml:"tls_cert"`
+	TLSKey             string   `toml:"tls_key"`
+	InsecureSkipVerify bool     `toml:"insecure_skip_verify"`
+	TLSAllowedCACerts  []string `toml:"tls_allowed_cacerts"`
 
 	// Internal listener / client handle
 	listener net.Listener
@@ -88,7 +91,11 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		var opts []grpc.ServerOption
 
 		if c.TLS {
-			tlsConfig, err := c.ServerConfig.TLSConfig()
+			tlsConfig, err := (&internaltls.ServerConfig{
+				TLSCert:           c.TLSCert,
+				TLSKey:            c.TLSKey,
+				TLSAllowedCACerts: c.TLSAllowedCACerts,
+			}).TLSConfig()
 			if err != nil {
 				return err
 			}
@@ -119,7 +126,12 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		c.ctx = metadata.AppendToOutgoingContext(c.ctx, "username", c.Username, "password", c.Password)
 
 		if c.TLS {
-			tlsConfig, err := c.ClientConfig.TLSConfig()
+			tlsConfig, err := (&internaltls.ClientConfig{
+				TLSCA:              c.TLSCA,
+				TLSCert:            c.TLSCert,
+				TLSKey:             c.TLSKey,
+				InsecureSkipVerify: c.InsecureSkipVerify,
+			}).TLSConfig()
 			if err != nil {
 				return err
 			}
