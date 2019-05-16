@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vjeantet/grok"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/vjeantet/grok"
 )
 
 var timeLayouts = map[string]string{
@@ -86,6 +85,9 @@ type Parser struct {
 	Timezone string
 	loc      *time.Location
 
+	// UniqueTimestamp when set to "disable", timestamp will not incremented if there is a duplicate.
+	UniqueTimestamp string
+
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
 	//          "%{TESTLOG}":
@@ -132,6 +134,10 @@ func (p *Parser) Compile() error {
 	p.g, err = grok.NewWithConfig(&grok.Config{NamedCapturesOnly: true})
 	if err != nil {
 		return err
+	}
+
+	if p.UniqueTimestamp == "" {
+		p.UniqueTimestamp = "auto"
 	}
 
 	// Give Patterns fake names so that they can be treated as named
@@ -265,7 +271,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case TAG:
 			tags[k] = v
 		case STRING:
-			fields[k] = strings.Trim(v, `"`)
+			fields[k] = v
 		case EPOCH:
 			parts := strings.SplitN(v, ".", 2)
 			if len(parts) == 0 {
@@ -344,6 +350,9 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			v = strings.Replace(v, ",", ".", -1)
 			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
+				if ts.Year() == 0 {
+					ts = ts.AddDate(timestamp.Year(), 0, 0)
+				}
 				timestamp = ts
 			} else {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
@@ -351,8 +360,8 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
-	if len(fields) == 0 {
-		return nil, fmt.Errorf("grok: must have one or more fields")
+	if p.UniqueTimestamp != "auto" {
+		return metric.New(p.Measurement, tags, fields, timestamp)
 	}
 
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
@@ -485,6 +494,9 @@ type tsModder struct {
 // most significant time unit of ts.
 //   ie, if the input is at ms precision, it will increment it 1µs.
 func (t *tsModder) tsMod(ts time.Time) time.Time {
+	if ts.IsZero() {
+		return ts
+	}
 	defer func() { t.last = ts }()
 	// don't mod the time if we don't need to
 	if t.last.IsZero() || ts.IsZero() {
@@ -498,7 +510,6 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 		t.rollover = 0
 		return ts
 	}
-
 	if ts.Equal(t.last) {
 		t.dupe = ts
 	}

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -149,9 +150,19 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 			fields["status"] = 0
 		}
 
-		if strings.Index(ipmiFields["description"], " ") > 0 {
+		description := ipmiFields["description"]
+
+		// handle hex description field
+		if strings.HasPrefix(description, "0x") {
+			descriptionInt, err := strconv.ParseInt(description, 0, 64)
+			if err != nil {
+				continue
+			}
+
+			fields["value"] = float64(descriptionInt)
+		} else if strings.Index(description, " ") > 0 {
 			// split middle column into value and unit
-			valunit := strings.SplitN(ipmiFields["description"], " ", 2)
+			valunit := strings.SplitN(description, " ", 2)
 			var err error
 			fields["value"], err = aToFloat(valunit[0])
 			if err != nil {
@@ -228,7 +239,12 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 func extractFieldsFromRegex(re *regexp.Regexp, input string) map[string]string {
 	submatches := re.FindStringSubmatch(input)
 	results := make(map[string]string)
-	for i, name := range re.SubexpNames() {
+	subexpNames := re.SubexpNames()
+	if len(subexpNames) > len(submatches) {
+		log.Printf("D! No matches found in '%s'", input)
+		return results
+	}
+	for i, name := range subexpNames {
 		if name != input && name != "" && input != "" {
 			results[name] = trim(submatches[i])
 		}

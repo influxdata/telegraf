@@ -1,12 +1,15 @@
 package logger
 
 import (
+	"errors"
 	"io"
 	"log"
 	"os"
 	"regexp"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/wlog"
 )
 
@@ -15,12 +18,32 @@ var prefixRegex = regexp.MustCompile("^[DIWE]!")
 // newTelegrafWriter returns a logging-wrapped writer.
 func newTelegrafWriter(w io.Writer) io.Writer {
 	return &telegrafLog{
-		writer: wlog.NewWriter(w),
+		writer:         wlog.NewWriter(w),
+		internalWriter: w,
 	}
 }
 
+// LogConfig contains the log configuration settings
+type LogConfig struct {
+	// will set the log level to DEBUG
+	Debug bool
+	//will set the log level to ERROR
+	Quiet bool
+	// will direct the logging output to a file. Empty string is
+	// interpreted as stderr. If there is an error opening the file the
+	// logger will fallback to stderr
+	Logfile string
+	// will rotate when current file at the specified time interval
+	RotationInterval internal.Duration
+	// will rotate when current file size exceeds this parameter.
+	RotationMaxSize internal.Size
+	// maximum rotated files to keep (older ones will be deleted)
+	RotationMaxArchives int
+}
+
 type telegrafLog struct {
-	writer io.Writer
+	writer         io.Writer
+	internalWriter io.Writer
 }
 
 func (t *telegrafLog) Write(b []byte) (n int, err error) {
@@ -33,37 +56,40 @@ func (t *telegrafLog) Write(b []byte) (n int, err error) {
 	return t.writer.Write(line)
 }
 
+func (t *telegrafLog) Close() error {
+	closer, isCloser := t.internalWriter.(io.Closer)
+	if !isCloser {
+		return errors.New("the underlying writer cannot be closed")
+	}
+	return closer.Close()
+}
+
 // SetupLogging configures the logging output.
-//   debug   will set the log level to DEBUG
-//   quiet   will set the log level to ERROR
-//   logfile will direct the logging output to a file. Empty string is
-//           interpreted as stderr. If there is an error opening the file the
-//           logger will fallback to stderr.
-func SetupLogging(debug, quiet bool, logfile string) {
+func SetupLogging(config LogConfig) {
+	newLogWriter(config)
+}
+
+func newLogWriter(config LogConfig) io.Writer {
 	log.SetFlags(0)
-	if debug {
+	if config.Debug {
 		wlog.SetLevel(wlog.DEBUG)
 	}
-	if quiet {
+	if config.Quiet {
 		wlog.SetLevel(wlog.ERROR)
 	}
 
-	var oFile *os.File
-	if logfile != "" {
-		if _, err := os.Stat(logfile); os.IsNotExist(err) {
-			if oFile, err = os.Create(logfile); err != nil {
-				log.Printf("E! Unable to create %s (%s), using stderr", logfile, err)
-				oFile = os.Stderr
-			}
-		} else {
-			if oFile, err = os.OpenFile(logfile, os.O_APPEND|os.O_WRONLY, os.ModeAppend); err != nil {
-				log.Printf("E! Unable to append to %s (%s), using stderr", logfile, err)
-				oFile = os.Stderr
-			}
+	var writer io.Writer
+	if config.Logfile != "" {
+		var err error
+		if writer, err = rotate.NewFileWriter(config.Logfile, config.RotationInterval.Duration, config.RotationMaxSize.Size, config.RotationMaxArchives); err != nil {
+			log.Printf("E! Unable to open %s (%s), using stderr", config.Logfile, err)
+			writer = os.Stderr
 		}
 	} else {
-		oFile = os.Stderr
+		writer = os.Stderr
 	}
 
-	log.SetOutput(newTelegrafWriter(oFile))
+	telegrafLog := newTelegrafWriter(writer)
+	log.SetOutput(telegrafLog)
+	return telegrafLog
 }

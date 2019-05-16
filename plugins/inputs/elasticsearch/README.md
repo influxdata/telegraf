@@ -29,9 +29,11 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ##  - cluster
   # cluster_health_level = "indices"
 
-  ## Set cluster_stats to true when you want to also obtain cluster stats from the
-  ## Master node.
+  ## Set cluster_stats to true when you want to also obtain cluster stats.
   cluster_stats = false
+
+  ## Only gather cluster_stats from the master node. To work this require local = true
+  cluster_stats_only_from_master = true
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",

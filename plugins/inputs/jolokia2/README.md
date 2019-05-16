@@ -181,5 +181,6 @@ Both `jolokia2_agent` and `jolokia2_proxy` plugins support default configuration
 - [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
 - [Tomcat](/plugins/inputs/jolokia2/examples/tomcat.conf)
 - [Weblogic](/plugins/inputs/jolokia2/examples/weblogic.conf)
+- [ZooKeeper](/plugins/inputs/jolokia2/examples/zookeeper.conf)
 
 Please help improve this list and contribute new configuration files by opening an issue or pull request.

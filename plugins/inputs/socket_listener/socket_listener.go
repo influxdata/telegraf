@@ -2,17 +2,16 @@ package socket_listener
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
-
 	"time"
-
-	"crypto/tls"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -47,9 +46,9 @@ func (ssl *streamSocketListener) listen() {
 			break
 		}
 
-		if ssl.ReadBufferSize > 0 {
+		if ssl.ReadBufferSize.Size > 0 {
 			if srb, ok := c.(setReadBufferer); ok {
-				srb.SetReadBuffer(ssl.ReadBufferSize)
+				srb.SetReadBuffer(int(ssl.ReadBufferSize.Size))
 			} else {
 				log.Printf("W! Unable to set read buffer on a %s socket", ssl.sockType)
 			}
@@ -116,11 +115,11 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
 			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
-			//TODO rate limit
+			// TODO rate limit
 			continue
 		}
 		for _, m := range metrics {
-			ssl.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			ssl.AddMetric(m)
 		}
 	}
 
@@ -152,11 +151,11 @@ func (psl *packetSocketListener) listen() {
 		metrics, err := psl.Parse(buf[:n])
 		if err != nil {
 			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
-			//TODO rate limit
+			// TODO rate limit
 			continue
 		}
 		for _, m := range metrics {
-			psl.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			psl.AddMetric(m)
 		}
 	}
 }
@@ -164,9 +163,10 @@ func (psl *packetSocketListener) listen() {
 type SocketListener struct {
 	ServiceAddress  string             `toml:"service_address"`
 	MaxConnections  int                `toml:"max_connections"`
-	ReadBufferSize  int                `toml:"read_buffer_size"`
+	ReadBufferSize  internal.Size      `toml:"read_buffer_size"`
 	ReadTimeout     *internal.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
+	SocketMode      string             `toml:"socket_mode"`
 	tlsint.ServerConfig
 
 	parsers.Parser
@@ -192,6 +192,13 @@ func (sl *SocketListener) SampleConfig() string {
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
 
+  ## Change the file mode bits on unix sockets.  These permissions may not be
+  ## respected by some platforms, to safely restrict write permissions it is best
+  ## to place the socket into a directory that has previously been created
+  ## with the desired permissions.
+  ##   ex: socket_mode = "777"
+  # socket_mode = ""
+
   ## Maximum number of concurrent connections.
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
@@ -209,11 +216,11 @@ func (sl *SocketListener) SampleConfig() string {
   ## Enables client authentication if set.
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
-  ## Maximum socket buffer size in bytes.
+  ## Maximum socket buffer size (in bytes when no unit specified).
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
   ## For datagram sockets, once the buffer fills up, metrics will start dropping.
   ## Defaults to the OS default.
-  # read_buffer_size = 65535
+  # read_buffer_size = "64KiB"
 
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.
@@ -244,14 +251,17 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("invalid service address: %s", sl.ServiceAddress)
 	}
 
-	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+	protocol := spl[0]
+	addr := spl[1]
+
+	if protocol == "unix" || protocol == "unixpacket" || protocol == "unixgram" {
 		// no good way of testing for "file does not exist".
 		// Instead just ignore error and blow up when we try to listen, which will
 		// indicate "address already in use" if file existed and we couldn't remove.
-		os.Remove(spl[1])
+		os.Remove(addr)
 	}
 
-	switch spl[0] {
+	switch protocol {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		var (
 			err error
@@ -260,16 +270,29 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 		tlsCfg, err := sl.ServerConfig.TLSConfig()
 		if err != nil {
-			return nil
+			return err
 		}
 
 		if tlsCfg == nil {
-			l, err = net.Listen(spl[0], spl[1])
+			l, err = net.Listen(protocol, addr)
 		} else {
-			l, err = tls.Listen(spl[0], spl[1], tlsCfg)
+			l, err = tls.Listen(protocol, addr, tlsCfg)
 		}
 		if err != nil {
 			return err
+		}
+
+		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, l.Addr())
+
+		// Set permissions on socket
+		if (spl[0] == "unix" || spl[0] == "unixpacket") && sl.SocketMode != "" {
+			// Convert from octal in string to int
+			i, err := strconv.ParseUint(sl.SocketMode, 8, 32)
+			if err != nil {
+				return err
+			}
+
+			os.Chmod(spl[1], os.FileMode(uint32(i)))
 		}
 
 		ssl := &streamSocketListener{
@@ -281,18 +304,31 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.Closer = ssl
 		go ssl.listen()
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-		pc, err := net.ListenPacket(spl[0], spl[1])
+		pc, err := udpListen(protocol, addr)
 		if err != nil {
 			return err
 		}
 
-		if sl.ReadBufferSize > 0 {
+		// Set permissions on socket
+		if spl[0] == "unixgram" && sl.SocketMode != "" {
+			// Convert from octal in string to int
+			i, err := strconv.ParseUint(sl.SocketMode, 8, 32)
+			if err != nil {
+				return err
+			}
+
+			os.Chmod(spl[1], os.FileMode(uint32(i)))
+		}
+
+		if sl.ReadBufferSize.Size > 0 {
 			if srb, ok := pc.(setReadBufferer); ok {
-				srb.SetReadBuffer(sl.ReadBufferSize)
+				srb.SetReadBuffer(int(sl.ReadBufferSize.Size))
 			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", spl[0])
+				log.Printf("W! Unable to set read buffer on a %s socket", protocol)
 			}
 		}
+
+		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, pc.LocalAddr())
 
 		psl := &packetSocketListener{
 			PacketConn:     pc,
@@ -302,14 +338,39 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.Closer = psl
 		go psl.listen()
 	default:
-		return fmt.Errorf("unknown protocol '%s' in '%s'", spl[0], sl.ServiceAddress)
+		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, sl.ServiceAddress)
 	}
 
-	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+	if protocol == "unix" || protocol == "unixpacket" || protocol == "unixgram" {
 		sl.Closer = unixCloser{path: spl[1], closer: sl.Closer}
 	}
 
 	return nil
+}
+
+func udpListen(network string, address string) (net.PacketConn, error) {
+	switch network {
+	case "udp", "udp4", "udp6":
+		var addr *net.UDPAddr
+		var err error
+		var ifi *net.Interface
+		if spl := strings.SplitN(address, "%", 2); len(spl) == 2 {
+			address = spl[0]
+			ifi, err = net.InterfaceByName(spl[1])
+			if err != nil {
+				return nil, err
+			}
+		}
+		addr, err = net.ResolveUDPAddr(network, address)
+		if err != nil {
+			return nil, err
+		}
+		if addr.IP.IsMulticast() {
+			return net.ListenMulticastUDP(network, ifi, addr)
+		}
+		return net.ListenUDP(network, addr)
+	}
+	return net.ListenPacket(network, address)
 }
 
 func (sl *SocketListener) Stop() {

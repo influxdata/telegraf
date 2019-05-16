@@ -9,9 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/tidwall/gjson"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 )
 
 var (
@@ -26,6 +28,7 @@ type JSONParser struct {
 	JSONQuery      string
 	JSONTimeKey    string
 	JSONTimeFormat string
+	JSONTimezone   string
 	DefaultTags    map[string]string
 }
 
@@ -48,7 +51,6 @@ func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
-
 	tags := make(map[string]string)
 	for k, v := range p.DefaultTags {
 		tags[k] = v
@@ -62,7 +64,10 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 
 	//checks if json_name_key is set
 	if p.JSONNameKey != "" {
-		p.MetricName = f.Fields[p.JSONNameKey].(string)
+		switch field := f.Fields[p.JSONNameKey].(type) {
+		case string:
+			p.MetricName = field
+		}
 	}
 
 	//if time key is specified, set it to nTime
@@ -78,15 +83,12 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 
-		timeStr, ok := f.Fields[p.JSONTimeKey].(string)
-		if !ok {
-			err := fmt.Errorf("time: %v could not be converted to string", f.Fields[p.JSONTimeKey])
-			return nil, err
-		}
-		nTime, err = time.Parse(p.JSONTimeFormat, timeStr)
+		nTime, err = internal.ParseTimestampWithLocation(f.Fields[p.JSONTimeKey], p.JSONTimeFormat, p.JSONTimezone)
 		if err != nil {
 			return nil, err
 		}
+
+		delete(f.Fields, p.JSONTimeKey)
 
 		//if the year is 0, set to current year
 		if nTime.Year() == 0 {

@@ -14,8 +14,24 @@ in Prometheus format.
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
-  ## Use bearer token for authorization
-  # bearer_token = /path/to/bearer/token
+  ## Kubernetes config file to create client from.
+  # kube_config = "/path/to/kubernetes.config"
+
+  ## Scrape Kubernetes pods for the following prometheus annotations:
+  ## - prometheus.io/scrape: Enable scraping for this pod
+  ## - prometheus.io/scheme: If the metrics endpoint is secured then you will need to
+  ##     set this to `https` & most likely set the tls config.
+  ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
+  ## - prometheus.io/port: If port is not 9102 use this annotation
+  # monitor_kubernetes_pods = true
+  ## Restricts Kubernetes monitoring to a single namespace
+  ##   ex: monitor_kubernetes_pods_namespace = "default"
+  # monitor_kubernetes_pods_namespace = ""
+
+  ## Use bearer token for authorization. ('bearer_token' takes priority)
+  # bearer_token = "/path/to/bearer/token"
+  ## OR
+  # bearer_token_string = "abc_123"
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
@@ -28,6 +44,8 @@ in Prometheus format.
   # insecure_skip_verify = false
 ```
 
+`urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`
+
 #### Kubernetes Service Discovery
 
 URLs listed in the `kubernetes_services` parameter will be expanded
@@ -36,6 +54,20 @@ by looking up all A records assigned to the hostname as described in
 
 This method can be used to locate all
 [Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services).
+
+#### Kubernetes scraping
+
+Enabling this option will allow the plugin to scrape for prometheus annotation on Kubernetes
+pods. Currently, you can run this plugin in your kubernetes cluster, or we use the kubeconfig
+file to determine where to monitor.
+Currently the following annotation are supported:
+
+* `prometheus.io/scrape` Enable scraping for this pod.
+* `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
+* `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
+* `prometheus.io/port` Used to override the port. (default 9102)
+
+Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
 
 #### Bearer Token
 

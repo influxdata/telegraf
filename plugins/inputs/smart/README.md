@@ -31,34 +31,53 @@ smartctl -s on <device>
 [[inputs.smart]]
   ## Optionally specify the path to the smartctl executable
   # path = "/usr/bin/smartctl"
-  #
+
   ## On most platforms smartctl requires root access.
   ## Setting 'use_sudo' to true will make use of sudo to run smartctl.
   ## Sudo must be configured to to allow the telegraf user to run smartctl
-  ## with out password.
+  ## without a password.
   # use_sudo = false
-  #
+
   ## Skip checking disks in this power mode. Defaults to
   ## "standby" to not wake up disks that have stoped rotating.
-  ## See --nockeck in the man pages for smartctl.
+  ## See --nocheck in the man pages for smartctl.
   ## smartctl version 5.41 and 5.42 have faulty detection of
   ## power mode and might require changing this value to
-  ## "never" depending on your storage device.
+  ## "never" depending on your disks.
   # nocheck = "standby"
-  #
+
   ## Gather detailed metrics for each SMART Attribute.
-  ## Defaults to "false"
-  ##
   # attributes = false
-  #
+
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
-  #
+
   ## Optionally specify devices and device type, if unset
   ## a scan (smartctl --scan) for S.M.A.R.T. devices will
   ## done and all found will be included except for the
   ## excluded in excludes.
   # devices = [ "/dev/ada0 -d atacam" ]
+```
+
+### Permissions:
+
+It's important to note that this plugin references smartctl, which may require additional permissions to execute successfully.
+Depending on the user/group permissions of the telegraf user executing this plugin, you may need to  use sudo.
+
+
+You will need the following in your telegraf config:
+```toml
+[[inputs.smart]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias SMARTCTL = /usr/bin/smartctl
+telegraf  ALL=(ALL) NOPASSWD: SMARTCTL
+Defaults!SMARTCTL !logfile, !syslog, !pam_session
 ```
 
 ### Metrics:

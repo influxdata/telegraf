@@ -13,6 +13,8 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -35,7 +37,9 @@ type metric map[string]int64
 type poolStat map[string]metric
 
 type phpfpm struct {
-	Urls []string
+	Urls    []string
+	Timeout internal.Duration
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -58,9 +62,19 @@ var sampleConfig = `
   ##       "fcgi://10.0.0.12:9000/status"
   ##       "cgi://10.0.10.12:9001/status"
   ##
-  ## Example of multiple gathering from local socket and remove host
+  ## Example of multiple gathering from local socket and remote host
   ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
+
+  ## Duration allowed to complete HTTP requests.
+  # timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (r *phpfpm) SampleConfig() string {
@@ -96,8 +110,17 @@ func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
 // Request status page to get stat raw data and import it
 func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if g.client == nil {
-		client := &http.Client{}
-		g.client = client
+		tlsCfg, err := g.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+		tr := &http.Transport{
+			TLSClientConfig: tlsCfg,
+		}
+		g.client = &http.Client{
+			Transport: tr,
+			Timeout:   g.Timeout.Duration,
+		}
 	}
 
 	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
