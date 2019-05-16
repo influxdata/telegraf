@@ -47,6 +47,7 @@
 - [#5829](https://github.com/influxdata/telegraf/pull/5829): Add support for HTTP basic auth to solr input.
 - [#5791](https://github.com/influxdata/telegraf/pull/5791): Add support for datadog events to statsd input.
 - [#5817](https://github.com/influxdata/telegraf/pull/5817): Allow devices option to match against devlinks.
+- [#5855](https://github.com/influxdata/telegraf/pull/5855): Support tags in enum processor.
 
 #### Bugfixes
 
