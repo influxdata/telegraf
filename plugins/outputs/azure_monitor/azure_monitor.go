@@ -55,7 +55,7 @@ type virtualMachineMetadata struct {
 }
 
 func (m *virtualMachineMetadata) ResourceID() string {
-	if m.Compute.VMScaleSetName == "" {
+	if m.Compute.VMScaleSetName != "" {
 		return fmt.Sprintf(
 			resourceIDScaleSetTemplate,
 			m.Compute.SubscriptionID,
