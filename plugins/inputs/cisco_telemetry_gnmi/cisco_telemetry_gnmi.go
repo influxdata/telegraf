@@ -148,7 +148,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 			c.acc.AddError(fmt.Errorf("GNMI subscription setup failed: %v", err))
 		} else {
 			log.Printf("D! Connection to GNMI device %s established", c.ServiceAddress)
-			for {
+			for c.ctx.Err() == nil {
 				reply, err := subscribeClient.Recv()
 
 				if err != nil {

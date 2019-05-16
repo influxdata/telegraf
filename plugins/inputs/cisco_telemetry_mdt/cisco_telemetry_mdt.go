@@ -186,7 +186,7 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients() {
 
 			var payload bytes.Buffer
 
-			for {
+			for c.ctx.Err() == nil {
 				// Read and validate dialout telemetry header
 				if err := binary.Read(conn, binary.BigEndian, &hdr); err != nil {
 					if c.ctx.Err() == nil && err != io.EOF {
@@ -257,7 +257,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 		log.Printf("D! Accepted Cisco MDT GRPC dialout connection from %s", peer.Addr)
 	}
 
-	for {
+	for c.ctx.Err() == nil {
 		packet, err := stream.Recv()
 		if err != nil {
 			if err != io.EOF && c.ctx.Err() == nil {
@@ -297,7 +297,7 @@ func (c *CiscoTelemetryMDT) subscribeMDTDialinDevice(client *grpc.ClientConn) {
 			log.Printf("D! Subscribed to Cisco MDT device %s", c.ServiceAddress)
 
 			// After subscription is setup, read and handle telemetry packets
-			for {
+			for c.ctx.Err() == nil {
 				packet, err := stream.Recv()
 				if err != nil {
 					break
