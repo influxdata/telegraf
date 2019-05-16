@@ -13,9 +13,12 @@ var sampleConfig = `
     ## Name of the field to map
     field = "status"
 
-    ## Destination field to be used for the mapped value.  By default the source
-    ## field is used, overwriting the original value.
-    # dest = "status_code"
+    ## Name of the tag to map
+    # tag = "status"
+
+    ## Destination tag or field to be used for the mapped value.  By default the
+    ## source tag or field is used, overwriting the original value.
+    dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
     ## table.  When unset, the unmodified value for the field will be used if no
@@ -25,7 +28,7 @@ var sampleConfig = `
     ## Table of mappings
     [processors.enum.mapping.value_mappings]
       green = 1
-      yellow = 2
+      amber = 2
       red = 3
 `
 
