@@ -156,7 +156,7 @@
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
-  branch = "master"
+  version = "1.22.0"
 
 [[constraint]]
   name = "github.com/StackExchange/wmi"
