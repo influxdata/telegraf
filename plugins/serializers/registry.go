@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -24,6 +23,9 @@ type SerializerOutput interface {
 
 // Serializer is an interface defining functions that a serializer plugin must
 // satisfy.
+//
+// Implementations of this interface should be reentrant but are not required
+// to be thread-safe.
 type Serializer interface {
 	// Serialize takes a single telegraf metric and turns it into a byte buffer.
 	// separate metrics should be separated by a newline, and there should be
