@@ -98,7 +98,7 @@ func (a *AMQPConsumer) SampleConfig() string {
   # username = ""
   # password = ""
 
-  ## Exchange to declare and consume from.
+  ## Name of the exchange to declare.  If unset, no exchange will be declared.
   exchange = "telegraf"
 
   ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
@@ -123,7 +123,8 @@ func (a *AMQPConsumer) SampleConfig() string {
   ## If true, queue will be passively declared.
   # queue_passive = false
 
-  ## Binding Key.
+  ## A binding between the exchange and queue using this binding key is
+  ## created.  If unset, no binding is created.
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
