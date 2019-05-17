@@ -192,10 +192,6 @@ func (b *buffer) Copy() []byte {
 	return p
 }
 
-func (b *buffer) Write(p []byte) {
-	*b = append(*b, p...)
-}
-
 func (b *buffer) WriteString(s string) {
 	*b = append(*b, s...)
 }
