@@ -277,28 +277,30 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, fmt.Errorf("Failed to open a channel: %s", err)
 	}
 
-	var exchangeDurable = true
-	switch a.ExchangeDurability {
-	case "transient":
-		exchangeDurable = false
-	default:
-		exchangeDurable = true
-	}
+	if a.Exchange != "" {
+		var exchangeDurable = true
+		switch a.ExchangeDurability {
+		case "transient":
+			exchangeDurable = false
+		default:
+			exchangeDurable = true
+		}
 
-	exchangeArgs := make(amqp.Table, len(a.ExchangeArguments))
-	for k, v := range a.ExchangeArguments {
-		exchangeArgs[k] = v
-	}
+		exchangeArgs := make(amqp.Table, len(a.ExchangeArguments))
+		for k, v := range a.ExchangeArguments {
+			exchangeArgs[k] = v
+		}
 
-	err = declareExchange(
-		ch,
-		a.Exchange,
-		a.ExchangeType,
-		a.ExchangePassive,
-		exchangeDurable,
-		exchangeArgs)
-	if err != nil {
-		return nil, err
+		err = declareExchange(
+			ch,
+			a.Exchange,
+			a.ExchangeType,
+			a.ExchangePassive,
+			exchangeDurable,
+			exchangeArgs)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	q, err := declareQueue(
@@ -310,15 +312,17 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, err
 	}
 
-	err = ch.QueueBind(
-		q.Name,       // queue
-		a.BindingKey, // binding-key
-		a.Exchange,   // exchange
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to bind a queue: %s", err)
+	if a.BindingKey != "" {
+		err = ch.QueueBind(
+			q.Name,       // queue
+			a.BindingKey, // binding-key
+			a.Exchange,   // exchange
+			false,
+			nil,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to bind a queue: %s", err)
+		}
 	}
 
 	err = ch.Qos(
