@@ -98,7 +98,7 @@ Resulting output:
 ### Config parameters
 
 * `agents`: Default: `[]`
-List of SNMP agents to connect to in the form of `IP[:PORT]`. If `:PORT` is unspecified, it defaults to `161`.
+List of SNMP agents to connect to in the form of `[tcp://]IP[:PORT]`. If `:PORT` is unspecified, it defaults to `161`. When using the optional prefix `tcp://`, SNMP over TCP will be used. Otherwise UDP is used as the transport protocol.
 
 * `version`: Default: `2`
 SNMP protocol version to use.
