@@ -2,7 +2,6 @@ package amqp
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -189,23 +188,15 @@ func (q *AMQP) Connect() error {
 	}
 
 	var err error
-	switch q.ContentEncoding {
-	case "gzip":
-		q.encoder, err = internal.NewGzipEncoder()
-		if err != nil {
-			return err
-		}
-	case "identity", "":
-		q.encoder = internal.NewIdentityEncoder()
-	default:
-		return errors.New("invalid value for content_encoding")
-	}
-
-	client, err := q.connect(q.config)
+	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding)
 	if err != nil {
 		return err
 	}
-	q.client = client
+
+	q.client, err = q.connect(q.config)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

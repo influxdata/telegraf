@@ -3,8 +3,34 @@ package internal
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"io"
 )
+
+// NewContentEncoder returns a ContentEncoder for the encoding type.
+func NewContentEncoder(encoding string) (ContentEncoder, error) {
+	switch encoding {
+	case "gzip":
+		return NewGzipEncoder()
+
+	case "identity", "":
+		return NewIdentityEncoder(), nil
+	default:
+		return nil, errors.New("invalid value for content_encoding")
+	}
+}
+
+// NewContentDecoder returns a ContentDecoder for the encoding type.
+func NewContentDecoder(encoding string) (ContentDecoder, error) {
+	switch encoding {
+	case "gzip":
+		return NewGzipDecoder()
+	case "identity", "":
+		return NewIdentityDecoder(), nil
+	default:
+		return nil, errors.New("invalid value for content_encoding")
+	}
+}
 
 // ContentEncoder applies a wrapper encoding to byte buffers.
 type ContentEncoder interface {

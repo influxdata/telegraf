@@ -209,16 +209,9 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	switch a.ContentEncoding {
-	case "gzip":
-		a.decoder, err = internal.NewGzipDecoder()
-		if err != nil {
-			return err
-		}
-	case "identity", "":
-		a.decoder = internal.NewIdentityDecoder()
-	default:
-		return errors.New("invalid value for content_encoding")
+	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding)
+	if err != nil {
+		return err
 	}
 
 	msgs, err := a.connect(amqpConf)
