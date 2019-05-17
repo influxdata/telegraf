@@ -329,19 +329,6 @@ func BenchmarkSerialize(b *testing.B) {
 	}
 }
 
-func BenchmarkSerialize_Parallel(b *testing.B) {
-	var s WavefrontSerializer
-	metrics := benchmarkMetrics(b)
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		i := 0
-		for pb.Next() {
-			s.Serialize(metrics[i%len(metrics)])
-			i++
-		}
-	})
-}
-
 func BenchmarkSerializeBatch(b *testing.B) {
 	var s WavefrontSerializer
 	m := benchmarkMetrics(b)

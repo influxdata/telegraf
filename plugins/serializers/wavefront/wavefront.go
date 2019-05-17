@@ -1,13 +1,11 @@
 package wavefront
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs/wavefront"
@@ -18,6 +16,7 @@ type WavefrontSerializer struct {
 	Prefix         string
 	UseStrict      bool
 	SourceOverride []string
+	scratch        buffer
 }
 
 // catch many of the invalid chars that could appear in a metric or tag name
@@ -41,12 +40,6 @@ var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", ".")
 
-var bufPool = sync.Pool{
-	New: func() interface{} {
-		return new(bytes.Buffer)
-	},
-}
-
 func NewSerializer(prefix string, useStrict bool, sourceOverride []string) (*WavefrontSerializer, error) {
 	s := &WavefrontSerializer{
 		Prefix:         prefix,
@@ -56,11 +49,8 @@ func NewSerializer(prefix string, useStrict bool, sourceOverride []string) (*Wav
 	return s, nil
 }
 
-// Serialize : Serialize based on Wavefront format
-func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
+func (s *WavefrontSerializer) serialize(buf *buffer, m telegraf.Metric) {
 	const metricSeparator = "."
-	var out []byte
-	buf := pbFree.Get().(*buffer)
 
 	for fieldName, value := range m.Fields() {
 		var name string
@@ -92,23 +82,23 @@ func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
 			Source:    source,
 			Tags:      tags,
 		}
-		out = append(out, formatMetricPoint(buf, &metric, s)...)
+		formatMetricPoint(&s.scratch, &metric, s)
 	}
+}
 
-	pbFree.Put(buf)
-	return out, nil
+// Serialize : Serialize based on Wavefront format
+func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
+	s.scratch.Reset()
+	s.serialize(&s.scratch, m)
+	return s.scratch.Copy(), nil
 }
 
 func (s *WavefrontSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	var batch []byte
+	s.scratch.Reset()
 	for _, m := range metrics {
-		buf, err := s.Serialize(m)
-		if err != nil {
-			return nil, err
-		}
-		batch = append(batch, buf...)
+		s.serialize(&s.scratch, m)
 	}
-	return batch, nil
+	return s.scratch.Copy(), nil
 }
 
 func findSourceTag(mTags map[string]string, s *WavefrontSerializer) string {
@@ -164,8 +154,6 @@ func buildValue(v interface{}, name string) (float64, error) {
 }
 
 func formatMetricPoint(b *buffer, metricPoint *wavefront.MetricPoint, s *WavefrontSerializer) []byte {
-	b.Reset()
-
 	b.WriteChar('"')
 	b.WriteString(metricPoint.Metric)
 	b.WriteString(`" `)
@@ -193,18 +181,16 @@ func formatMetricPoint(b *buffer, metricPoint *wavefront.MetricPoint, s *Wavefro
 	return *b
 }
 
-// pbFree is the print buffer pool
-var pbFree = sync.Pool{
-	New: func() interface{} {
-		b := make(buffer, 0, 128)
-		return &b
-	},
-}
-
 // Use a fast and simple buffer for constructing statsd messages
 type buffer []byte
 
 func (b *buffer) Reset() { *b = (*b)[:0] }
+
+func (b *buffer) Copy() []byte {
+	p := make([]byte, len(*b))
+	copy(p, *b)
+	return p
+}
 
 func (b *buffer) Write(p []byte) {
 	*b = append(*b, p...)
