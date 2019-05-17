@@ -201,9 +201,8 @@ func TestTCPDialoutOverflow(t *testing.T) {
 
 	conn, _ := net.Dial("tcp", "127.0.0.1:57000")
 	binary.Write(conn, binary.BigEndian, hdr)
+	conn.Read([]byte{0})
 	conn.Close()
-
-	time.Sleep(time.Second)
 
 	c.Stop()
 
@@ -271,6 +270,8 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	hdr.MsgLen = uint32(len(data))
 	binary.Write(conn2, binary.BigEndian, hdr)
 	conn2.Write(data)
+	conn2.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	conn2.Read([]byte{0})
 	conn2.Close()
 
 	telemetry.EncodingPath = "type:model/other/path"
@@ -278,13 +279,13 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	hdr.MsgLen = uint32(len(data))
 	binary.Write(conn, binary.BigEndian, hdr)
 	conn.Write(data)
-
-	time.Sleep(time.Second)
-
+	conn.Write([]byte{0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0})
+	conn.Read([]byte{0})
 	c.Stop()
 	conn.Close()
 
-	assert.Empty(t, acc.Errors)
+	// We use the invalid dialout flags to let the server close the connection
+	assert.Equal(t, acc.Errors, []error{errors.New("Invalid dialout flags: 257"), errors.New("Invalid dialout flags: 257")})
 
 	tags := map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
@@ -311,11 +312,11 @@ func TestGRPCDialoutError(t *testing.T) {
 	args := &dialout.MdtDialoutArgs{Errors: "foobar"}
 	stream.Send(args)
 
-	time.Sleep(time.Second)
-
+	// Wait for the server to close
+	stream.Recv()
 	c.Stop()
 
-	assert.Contains(t, acc.Errors, errors.New("GRPC dialout error: foobar"))
+	assert.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
@@ -340,21 +341,21 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	data, _ = proto.Marshal(telemetry)
 	args = &dialout.MdtDialoutArgs{Data: data}
 	stream2.Send(args)
-	stream2.CloseSend()
-
-	time.Sleep(time.Second)
+	stream2.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
+	stream2.Recv()
 	conn2.Close()
 
 	telemetry.EncodingPath = "type:model/other/path"
 	data, _ = proto.Marshal(telemetry)
 	args = &dialout.MdtDialoutArgs{Data: data}
 	stream.Send(args)
-	time.Sleep(time.Second)
+	stream.Send(&dialout.MdtDialoutArgs{Errors: "testclose"})
+	stream.Recv()
 
 	c.Stop()
 	conn.Close()
 
-	assert.Empty(t, acc.Errors)
+	assert.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 
 	tags := map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
@@ -372,6 +373,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 
 type mockDialinServer struct {
 	t        *testing.T
+	server   *grpc.Server
 	scenario int
 }
 
@@ -412,6 +414,13 @@ func (m *mockDialinServer) GetOper(*ems.GetOperArgs, ems.GRPCConfigOper_GetOperS
 }
 
 func (m *mockDialinServer) CreateSubs(args *ems.CreateSubsArgs, server ems.GRPCConfigOper_CreateSubsServer) error {
+	defer func() {
+		if m.scenario >= 0 {
+			m.scenario = -1
+			time.AfterFunc(100*time.Millisecond, m.server.Stop)
+		}
+	}()
+
 	assert.Equal(m.t, args.GetSubidstr(), "thesubscription")
 	assert.Equal(m.t, args.GetEncode(), grpcEncodeGPBKV)
 
@@ -441,11 +450,9 @@ func (m *mockDialinServer) CreateSubs(args *ems.CreateSubsArgs, server ems.GRPCC
 }
 
 func TestGRPCDialinError(t *testing.T) {
-	m := &mockDialinServer{t: t, scenario: 2}
 	listener, _ := net.Listen("tcp", "127.0.0.1:57002")
 	server := grpc.NewServer()
-	ems.RegisterGRPCConfigOperServer(server, m)
-	go server.Serve(listener)
+	ems.RegisterGRPCConfigOperServer(server, &mockDialinServer{t: t, scenario: 2, server: server})
 
 	c := &CiscoTelemetryMDT{Transport: "grpc-dialin", ServiceAddress: "127.0.0.1:57002",
 		Username: "theuser", Password: "thepassword", Subscription: "thesubscription",
@@ -453,40 +460,30 @@ func TestGRPCDialinError(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
-	time.Sleep(1 * time.Second)
-
-	server.Stop()
+	server.Serve(listener)
 	c.Stop()
 
 	assert.Contains(t, acc.Errors, errors.New("GRPC dialin error: testerror"))
 }
 
 func TestGRPCDialinMultipleRedial(t *testing.T) {
-	m := &mockDialinServer{t: t}
 	listener, _ := net.Listen("tcp", "127.0.0.1:57002")
 	server := grpc.NewServer()
-	ems.RegisterGRPCConfigOperServer(server, m)
-	go server.Serve(listener)
+	ems.RegisterGRPCConfigOperServer(server, &mockDialinServer{t: t, server: server})
 
 	c := &CiscoTelemetryMDT{Transport: "grpc-dialin", ServiceAddress: "127.0.0.1:57002",
 		Username: "theuser", Password: "thepassword", Subscription: "thesubscription",
-		Redial: internal.Duration{Duration: 1 * time.Second}}
+		Redial: internal.Duration{Duration: 200 * time.Millisecond}}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
-	time.Sleep(1 * time.Second)
-
-	server.Stop()
-	m.scenario = 1
+	server.Serve(listener)
 
 	listener, _ = net.Listen("tcp", "127.0.0.1:57002")
 	server = grpc.NewServer()
-	ems.RegisterGRPCConfigOperServer(server, m)
-	go server.Serve(listener)
+	ems.RegisterGRPCConfigOperServer(server, &mockDialinServer{t: t, scenario: 1, server: server})
 
-	time.Sleep(1 * time.Second)
-
-	server.Stop()
+	server.Serve(listener)
 	c.Stop()
 
 	assert.Empty(t, acc.Errors)

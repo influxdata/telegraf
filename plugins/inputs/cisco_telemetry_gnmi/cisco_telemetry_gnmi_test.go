@@ -39,6 +39,7 @@ func TestParsePath(t *testing.T) {
 
 type mockGNMIServer struct {
 	t        *testing.T
+	server   *grpc.Server
 	scenario int
 }
 
@@ -55,6 +56,13 @@ func (m *mockGNMIServer) Set(context.Context, *gnmi.SetRequest) (*gnmi.SetRespon
 }
 
 func (m *mockGNMIServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
+	defer func() {
+		if m.scenario >= 0 {
+			m.scenario = -1
+			time.AfterFunc(100*time.Millisecond, m.server.Stop)
+		}
+	}()
+
 	metadata, ok := metadata.FromIncomingContext(server.Context())
 	assert.Equal(m.t, ok, true)
 	assert.Equal(m.t, metadata.Get("username"), []string{"theuser"})
@@ -89,11 +97,9 @@ func (m *mockGNMIServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
 }
 
 func TestGNMIError(t *testing.T) {
-	m := &mockGNMIServer{t: t, scenario: 0}
 	listener, _ := net.Listen("tcp", "127.0.0.1:57003")
 	server := grpc.NewServer()
-	gnmi.RegisterGNMIServer(server, m)
-	go server.Serve(listener)
+	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 0, server: server})
 
 	c := &CiscoTelemetryGNMI{ServiceAddress: "127.0.0.1:57003",
 		Username: "theuser", Password: "thepassword",
@@ -101,13 +107,10 @@ func TestGNMIError(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
-
-	time.Sleep(1 * time.Second)
-
-	server.Stop()
+	server.Serve(listener)
 	c.Stop()
 
-	assert.Equal(t, acc.Errors, []error{errors.New("GNMI subscription aborted: rpc error: code = Unknown desc = testerror")})
+	assert.Contains(t, acc.Errors, errors.New("GNMI subscription aborted: rpc error: code = Unknown desc = testerror"))
 }
 
 func mockGNMINotification() *gnmi.Notification {
@@ -149,11 +152,9 @@ func mockGNMINotification() *gnmi.Notification {
 }
 
 func TestGNMIMultiple(t *testing.T) {
-	m := &mockGNMIServer{t: t, scenario: 1}
 	listener, _ := net.Listen("tcp", "127.0.0.1:57004")
 	server := grpc.NewServer()
-	gnmi.RegisterGNMIServer(server, m)
-	go server.Serve(listener)
+	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 1, server: server})
 
 	c := &CiscoTelemetryGNMI{ServiceAddress: "127.0.0.1:57004",
 		Username: "theuser", Password: "thepassword",
@@ -163,9 +164,7 @@ func TestGNMIMultiple(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
-	time.Sleep(1 * time.Second)
-
-	server.Stop()
+	server.Serve(listener)
 	c.Stop()
 
 	assert.Empty(t, acc.Errors)
@@ -180,31 +179,23 @@ func TestGNMIMultiple(t *testing.T) {
 }
 
 func TestGNMIMultipleRedial(t *testing.T) {
-	m := &mockGNMIServer{t: t, scenario: 2}
 	listener, _ := net.Listen("tcp", "127.0.0.1:57004")
 	server := grpc.NewServer()
-	gnmi.RegisterGNMIServer(server, m)
-	go server.Serve(listener)
+	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 2, server: server})
 
 	c := &CiscoTelemetryGNMI{ServiceAddress: "127.0.0.1:57004",
 		Username: "theuser", Password: "thepassword",
-		Redial: internal.Duration{Duration: 1 * time.Second}}
+		Redial: internal.Duration{Duration: 200 * time.Millisecond}}
 
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
+	server.Serve(listener)
 
-	time.Sleep(1 * time.Second)
-
-	server.Stop()
-	m.scenario = 3
 	listener, _ = net.Listen("tcp", "127.0.0.1:57004")
 	server = grpc.NewServer()
-	gnmi.RegisterGNMIServer(server, m)
-	go server.Serve(listener)
+	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 3, server: server})
 
-	time.Sleep(1 * time.Second)
-
-	server.Stop()
+	server.Serve(listener)
 	c.Stop()
 
 	assert.Empty(t, acc.Errors)
