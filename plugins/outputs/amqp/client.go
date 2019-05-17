@@ -19,6 +19,7 @@ type ClientConfig struct {
 	exchangePassive   bool
 	exchangeDurable   bool
 	exchangeArguments amqp.Table
+	encoding          string
 	headers           amqp.Table
 	deliveryMode      uint8
 	tlsConfig         *tls.Config
@@ -114,10 +115,11 @@ func (c *client) Publish(key string, body []byte) error {
 		false,             // mandatory
 		false,             // immediate
 		amqp.Publishing{
-			Headers:      c.config.headers,
-			ContentType:  "text/plain",
-			Body:         body,
-			DeliveryMode: c.config.deliveryMode,
+			Headers:         c.config.headers,
+			ContentType:     "text/plain",
+			ContentEncoding: c.config.encoding,
+			Body:            body,
+			DeliveryMode:    c.config.deliveryMode,
 		})
 }
 

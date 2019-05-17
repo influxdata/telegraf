@@ -318,6 +318,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		exchange:        q.Exchange,
 		exchangeType:    q.ExchangeType,
 		exchangePassive: q.ExchangePassive,
+		encoding:        q.ContentEncoding,
 		timeout:         q.Timeout.Duration,
 	}
 
