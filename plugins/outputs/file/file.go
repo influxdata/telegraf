@@ -27,7 +27,7 @@ var sampleConfig = `
   files = ["stdout", "/tmp/metrics.out"]
 
   ## If this is defined, files will be rotated by the time.Duration specified
-  #rotate_max_age = "1m"
+  # rotate_max_age = "1m"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -105,7 +105,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		}
 
 		_, err = f.writer.Write(b)
-		if err != nil && f.writer != os.Stdout {
+		if err != nil {
 			writeErr = fmt.Errorf("E! failed to write message: %s, %s", b, err)
 		}
 	}
