@@ -166,7 +166,6 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 
 				// Unable to derive the individual measurements or subscription without a prefix
 				if response.Update.Prefix == nil {
-					c.acc.AddError(fmt.Errorf("GNMI update with missing prefix discarded"))
 					continue
 				}
 
