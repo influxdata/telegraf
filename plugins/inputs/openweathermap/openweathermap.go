@@ -239,7 +239,8 @@ func gatherWeatherUrl(r *bufio.Reader, forecast bool, acc telegraf.Accumulator) 
 
 func (s *Status) Gather(forecast bool, acc telegraf.Accumulator) {
 	tags := map[string]string{
-		"city_id": strconv.FormatInt(s.City.Id, 10),
+		"city_id":  strconv.FormatInt(s.City.Id, 10),
+		"forecast": "*",
 	}
 
 	for i, e := range s.List {

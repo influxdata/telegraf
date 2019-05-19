@@ -57,8 +57,8 @@ When run with:
 
 It produces data similar to:
 ```
-> weather,city_id=4303602,forecast=false humidity=51i,pressure=1012,rain=0,temperature=16.410000000000025,wind_degrees=170,wind_speed=2.6 1556393944000000000
-> weather,city_id=2988507,forecast=false humidity=87i,pressure=1020,rain=0,temperature=7.110000000000014,wind_degrees=260,wind_speed=5.1 1556393841000000000
+> weather,city_id=4303602,forecast=* humidity=51i,pressure=1012,rain=0,temperature=16.410000000000025,wind_degrees=170,wind_speed=2.6 1556393944000000000
+> weather,city_id=2988507,forecast=* humidity=87i,pressure=1020,rain=0,temperature=7.110000000000014,wind_degrees=260,wind_speed=5.1 1556393841000000000
 > weather,city_id=2988507,forecast=3h humidity=69i,pressure=1020.38,rain=0,temperature=5.650000000000034,wind_degrees=268.456,wind_speed=5.83 1556398800000000000
 > weather,city_id=2988507,forecast=* humidity=69i,pressure=1020.38,rain=0,temperature=5.650000000000034,wind_degrees=268.456,wind_speed=5.83 1556398800000000000
 > weather,city_id=2988507,forecast=6h humidity=74i,pressure=1020.87,rain=0,temperature=5.810000000000002,wind_degrees=261.296,wind_speed=5.43 1556409600000000000
