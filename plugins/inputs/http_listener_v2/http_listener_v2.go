@@ -9,14 +9,13 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -26,19 +25,20 @@ import (
 // 500 MB
 const defaultMaxBodySize = 500 * 1024 * 1024
 
-const inputName = "http_listener_v2"
+const (
+	body  = "body"
+	query = "query"
+)
 
 // TimeFunc provides a timestamp for the metrics
 type TimeFunc func() time.Time
 
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
-	ServiceAddress       string
-	Path                 string
-	Methods              []string
-	CollectQueryParams   bool
-	QueryParamsWhitelist []string
-	QueryParamsTagKeys   []string
+	ServiceAddress string
+	Path           string
+	Methods        []string
+	DataSource     string
 
 	ReadTimeout  internal.Duration
 	WriteTimeout internal.Duration
@@ -98,15 +98,11 @@ const sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Setting this option to true will collect tags and values from query params.
-  # collect_query_params = true
-
-  ## Which query params should be collected.
-  ## Leaving an empty list means all parameters will be collected.
-  # query_params_whitelist = []
-
-  ## Which query params should be collected as tags.
-  # query_params_tag_keys = []
+  ## Part of the request to consume.
+  ## Available options are "body" and "query".
+  ## Note that the data source and data format are independent properties.
+  ## To consume standard query params and POST forms - use "formdata" as a data_format.
+  # data_source = "body"
 `
 
 func (h *HTTPListenerV2) SampleConfig() string {
@@ -214,23 +210,17 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	// Handle gzip request bodies
-	body := req.Body
-	if req.Header.Get("Content-Encoding") == "gzip" {
-		var err error
-		body, err = gzip.NewReader(req.Body)
-		if err != nil {
-			log.Println("D! " + err.Error())
-			badRequest(res)
-			return
-		}
-		defer body.Close()
+	var bytes []byte
+	var ok bool
+
+	switch strings.ToLower(h.DataSource) {
+	case query:
+		bytes, ok = h.collectQuery(res, req)
+	default:
+		bytes, ok = h.collectBody(res, req)
 	}
 
-	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
-	bytes, err := ioutil.ReadAll(body)
-	if err != nil {
-		tooLarge(res)
+	if !ok {
 		return
 	}
 
@@ -241,82 +231,49 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	query := req.URL.Query()
-	queryTags := make(map[string]string)
-	queryFields := make(map[string]float64)
-
-	if h.CollectQueryParams && len(query) > 0 {
-		collectedCount := h.collectQueryParams(query, queryTags, queryFields)
-
-		if len(metrics) == 0 && collectedCount > 0 {
-			emptyMetric, err := metric.New(inputName, nil, nil, h.TimeFunc())
-
-			if err != nil {
-				log.Println("D!" + err.Error())
-				internalServerError(res)
-				return
-			}
-
-			metrics = []telegraf.Metric{emptyMetric}
-		}
-	}
-
 	for _, m := range metrics {
-		appendToMetric(m, queryTags, queryFields)
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
 	res.WriteHeader(http.StatusNoContent)
 }
 
-func (h *HTTPListenerV2) collectQueryParams(query url.Values, tags map[string]string, fields map[string]float64) int {
-	count := 0
-	params := query
+func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
+	body := req.Body
 
-	if len(h.QueryParamsWhitelist) > 0 {
-		params = make(url.Values)
-
-		for _, key := range h.QueryParamsWhitelist {
-			param, exists := query[key]
-
-			if !exists {
-				continue
-			}
-
-			params[key] = param
-		}
-	}
-
-	for _, tagKey := range h.QueryParamsTagKeys {
-		tagValues, exists := params[tagKey]
-
-		if !exists {
-			continue
-		}
-
-		tags[tagKey] = tagValues[0]
-		delete(params, tagKey)
-
-		count++
-	}
-
-	for key, values := range params {
-		if len(values) == 0 {
-			continue
-		}
-
-		field, err := strconv.ParseFloat(values[0], 64)
-
+	// Handle gzip request bodies
+	if req.Header.Get("Content-Encoding") == "gzip" {
+		var err error
+		body, err = gzip.NewReader(req.Body)
 		if err != nil {
-			continue
+			log.Println("D! " + err.Error())
+			badRequest(res)
+			return nil, false
 		}
-
-		fields[key] = field
-
-		count++
+		defer body.Close()
 	}
 
-	return count
+	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
+	bytes, err := ioutil.ReadAll(body)
+	if err != nil {
+		tooLarge(res)
+		return nil, false
+	}
+
+	return bytes, true
+}
+
+func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
+	rawQuery := req.URL.RawQuery
+
+	query, err := url.QueryUnescape(rawQuery)
+	if err != nil {
+		log.Println("D! " + err.Error())
+		badRequest(res)
+		return nil, false
+	}
+
+	return []byte(query), true
 }
 
 func appendToMetric(m telegraf.Metric, tags map[string]string, fields map[string]float64) {
@@ -369,13 +326,13 @@ func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.Re
 }
 
 func init() {
-	inputs.Add(inputName, func() telegraf.Input {
+	inputs.Add("http_listener_v2", func() telegraf.Input {
 		return &HTTPListenerV2{
-			ServiceAddress:     ":8080",
-			TimeFunc:           time.Now,
-			Path:               "/telegraf",
-			Methods:            []string{"POST", "PUT"},
-			CollectQueryParams: false,
+			ServiceAddress: ":8080",
+			TimeFunc:       time.Now,
+			Path:           "/telegraf",
+			Methods:        []string{"POST", "PUT"},
+			DataSource:     body,
 		}
 	})
 }

@@ -53,6 +53,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 		Parser:         parser,
 		TimeFunc:       time.Now,
 		MaxBodySize:    internal.Size{Size: 70000},
+		DataSource:     "body",
 	}
 	return listener
 }
@@ -377,71 +378,49 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
-func TestWriteHTTPQueryParamsEmptyBody(t *testing.T) {
+func TestWriteHTTPQueryParams(t *testing.T) {
+	parser, _ := parsers.NewFormDataParser("query_measurement", nil, nil, []string{"tagKey"})
 	listener := newTestHTTPListenerV2()
-	listener.CollectQueryParams = true
-	listener.QueryParamsTagKeys = []string{"queryTag"}
+	listener.DataSource = "query"
+	listener.Parser = parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "http", "/write", "queryTag=tagValue&queryField=42"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "tagKey=tagValue&fieldKey=42"), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "http_listener_v2",
-		map[string]interface{}{"queryField": float64(42)},
-		map[string]string{"queryTag": "tagValue"},
+	acc.AssertContainsTaggedFields(t, "query_measurement",
+		map[string]interface{}{"fieldKey": float64(42)},
+		map[string]string{"tagKey": "tagValue"},
 	)
 }
 
-func TestWriteHTTPQueryParamsWithBody(t *testing.T) {
+func TestWriteHTTPFormData(t *testing.T) {
+	parser, _ := parsers.NewFormDataParser("query_measurement", nil, nil, []string{"tagKey"})
 	listener := newTestHTTPListenerV2()
-	listener.CollectQueryParams = true
-	listener.QueryParamsTagKeys = []string{"queryTag"}
+	listener.Parser = parser
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post multiple message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "queryTag=tagValue&queryField=42"), "", bytes.NewBuffer([]byte(testMsgs)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 204, resp.StatusCode)
-
-	acc.Wait(2)
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12), "queryField": float64(42)},
-			map[string]string{"host": hostTag, "queryTag": "tagValue"},
-		)
-	}
-}
-
-func TestWriteHTTPQueryParamsWhitelist(t *testing.T) {
-	listener := newTestHTTPListenerV2()
-	listener.CollectQueryParams = true
-	listener.QueryParamsWhitelist = []string{"whiteField"}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	resp, err := http.Post(createURL(listener, "http", "/write", "whiteField=15&blackField=25"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.PostForm(createURL(listener, "http", "/write", ""), url.Values{
+		"tagKey":   {"tagValue"},
+		"fieldKey": {"42"},
+	})
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "http_listener_v2",
-		map[string]interface{}{"whiteField": float64(15)},
-		map[string]string{},
+	acc.AssertContainsTaggedFields(t, "query_measurement",
+		map[string]interface{}{"fieldKey": float64(42)},
+		map[string]string{"tagKey": "tagValue"},
 	)
 }
 

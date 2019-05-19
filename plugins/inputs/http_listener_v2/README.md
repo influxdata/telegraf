@@ -1,7 +1,7 @@
 # HTTP Listener v2 Input Plugin
 
 HTTP Listener v2 is a service input plugin that listens for metrics sent via
-HTTP.  Metrics may be sent in any supported [data format][data_format].
+HTTP. Metrics may be sent in any supported [data format][data_format].
 
 **Note:** The plugin previously known as `http_listener` has been renamed
 `influxdb_listener`.  If you would like Telegraf to act as a proxy/relay for
@@ -50,22 +50,16 @@ This is a sample configuration for the plugin.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Setting this option to true will collect tags and values from query params.
-  # collect_query_params = true
-
-  ## Which query params should be collected.
-  ## Leaving an empty list means all parameters will be collected.
-  # query_params_whitelist = []
-
-  ## Which query params should be collected as tags.
-  # query_params_tag_keys = []
+  ## Part of the request to consume.
+  ## Available options are "body" and "query".
+  ## Note that the data source and data format are independent properties.
+  ## To consume standard query params and POST forms - use "formdata" as a data_format.
+  # data_source = "body"
 ```
 
 ### Metrics:
 
-Metrics are created from the request body and are dependant on the value of `data_format`.
-
-Setting `collect_query_params` option to true, will append fields from the URL query parameters to the metrics collected from the request body. It can also be used with an empty request body which will create a single metric from the query parameters only.
+Metrics are collected from the part of the request specified by the `data_source` param and are parsed depending on the value of `data_format`.
 
 ### Troubleshooting:
 
@@ -85,4 +79,5 @@ curl -i -XGET 'http://localhost:8080/telegraf?host=server01&value=0.42'
 ```
 
 [data_format]: /docs/DATA_FORMATS_INPUT.md
+[form_data_format]: /plugins/parsers/formdata/README.md
 [influxdb_listener]: /plugins/inputs/influxdb_listener/README.md
