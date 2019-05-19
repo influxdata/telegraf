@@ -3,16 +3,16 @@ package logzio
 import (
 	. "bytes"
 	"compress/gzip"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf/internal"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -40,15 +40,16 @@ type Logzio struct {
 	Token   string            `toml:"token"`
 	URL     string            `toml:"url"`
 	Timeout internal.Duration `toml:"timeout"`
+	tls.ClientConfig
 
 	client *http.Client
 }
 
 // Connect to the Output
 func (l *Logzio) Connect() error {
-	log.Printf("D! [logzio] Connecting to logz.io output...\n")
+	log.Printf("D! [outputs.logzio] Connecting to logz.io output...\n")
 	if l.Token == "" || l.Token == "your logz.io token" {
-		return fmt.Errorf("[logzio] token is required")
+		return fmt.Errorf("token is required")
 	}
 
 	if l.URL == "" {
@@ -59,23 +60,26 @@ func (l *Logzio) Connect() error {
 		l.Timeout.Duration = defaultLogzioRequestTimeout
 	}
 
-	tlsConfig := &tls.Config{}
-	transport := &http.Transport{
-		TLSClientConfig: tlsConfig,
+	tlsCfg, err := l.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
 	}
 
 	l.client = &http.Client{
-		Transport: transport,
-		Timeout:   l.Timeout.Duration,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			Proxy:           http.ProxyFromEnvironment,
+		},
+		Timeout: l.Timeout.Duration,
 	}
 
-	log.Printf("I! [logzio] Successfuly created Logz.io sender: %s\n", l.URL)
+	log.Printf("I! [outputs.logzio] Successfuly created Logz.io sender: %s\n", l.URL)
 	return nil
 }
 
 // Close any connections to the Output
 func (l *Logzio) Close() error {
-	log.Printf("D! [logzio] Closing logz.io output\n")
+	log.Printf("D! [outputs.logzio] Closing logz.io output\n")
 	return nil
 }
 
@@ -95,7 +99,7 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	log.Printf("D! [logzio] Recived %d metrics\n", len(metrics))
+	log.Printf("D! [outputs.logzio] Recived %d metrics\n", len(metrics))
 	var body []byte
 	for _, metric := range metrics {
 		var name = metric.Name()
@@ -112,7 +116,7 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 
 		serialized, err := json.Marshal(m)
 		if err != nil {
-			return fmt.Errorf("E! [logzio] Failed to marshal: %+v\n", m)
+			return fmt.Errorf("failed to marshal: %+v\n", m)
 		}
 		// Logz.io maximum request body size of 10MB. Send bulks that
 		// exceed this size (with safety buffer) via separate write requests.
@@ -123,7 +127,7 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 			}
 			body = nil
 		}
-		log.Printf("D! [logzio] Adding metric to the bulk: %+v\n", m)
+		log.Printf("D! [outputs.logzio] Adding metric to the bulk: %+v\n", m)
 		body = append(body, serialized...)
 		body = append(body, '\n')
 	}
@@ -162,7 +166,7 @@ func (l *Logzio) sendBulk(body []byte) error {
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}
-	log.Printf("D! [logzio] Successfully sent bulk to logz.io\n")
+	log.Printf("D! [outputs.logzio] Successfully sent bulk to logz.io\n")
 
 	return nil
 }
