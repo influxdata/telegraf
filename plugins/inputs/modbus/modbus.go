@@ -25,6 +25,7 @@ type Modbus struct {
 	Comm         serial
 	Results      []byte
 	err          error
+	CX           modbusClients
 }
 
 type serial struct {
@@ -32,6 +33,13 @@ type serial struct {
 	Databits int
 	Parity   string
 	Stopbits int
+}
+
+type modbusClients struct {
+	connected  bool
+	TCPhandler *modbus.TCPClientHandler
+	RTUhandler *modbus.RTUClientHandler
+	client     modbus.Client
 }
 
 // ModbusConfig example
@@ -65,25 +73,28 @@ var sampleConfig = `
 	TimeOut = 5
 `
 
+// SampleConfig of modbus plugin
 func (s *Modbus) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description of modbus plugin
 func (s *Modbus) Description() string {
 	return "Fault-tolerant, fail-fast implementation of Modbus protocol in Go."
 }
 
-func (s *Modbus) Gather(acc telegraf.Accumulator) error {
+// Gather TCP or RTU modbus parameters
+func (s *Modbus) Gather(acc telegraf.Accumulator) (err error) {
 
 	var inits bool
 	// Modbus TCP
 	if strings.Contains(s.Client, ":") {
 		inits = true
-		s.Results, s.err = getTCPdata(s)
+		err = s.getTCPdata()
 
 	} else if strings.ContainsAny(s.Client, "/") {
 		inits = true
-		s.Results, s.err = getRTUdata(s)
+		err = s.getRTUdata()
 	} else {
 		inits = false
 	}
@@ -115,120 +126,152 @@ func (s *Modbus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func getTCPdata(s *Modbus) (results []byte, err error) {
+func (s *Modbus) createTCPClient() error {
+	if s.CX.TCPhandler == nil && !s.CX.connected {
+		s.CX.TCPhandler = modbus.NewTCPClientHandler(s.Client)
+		s.CX.TCPhandler.Timeout = time.Duration(s.TimeOut) * time.Second
+		s.CX.TCPhandler.SlaveId = s.SlaveAddress
 
-	handler := modbus.NewTCPClientHandler(s.Client)
-	handler.Timeout = time.Duration(s.TimeOut) * time.Second
-	handler.SlaveId = s.SlaveAddress
-	handler.Logger = log.New(os.Stdout, "TCP: ", log.LstdFlags)
+		s.CX.TCPhandler.Logger = log.New(os.Stdout, "TCP: ", log.LstdFlags)
 
-	err = handler.Connect()
-	if err != nil {
-		return []byte{}, err
-	}
-	defer handler.Close()
+		s.err = s.CX.TCPhandler.Connect()
+		if s.err != nil {
+			s.CX.connected = false
+			return s.err
+		}
 
-	client := modbus.NewClient(handler)
-	// Function Codes
-	switch s.FunctionCode {
-	// FC01 = Read Coil Status
-	case 1:
-		results, err = client.ReadCoils(s.Address, s.Quantity)
+		defer s.CX.TCPhandler.Close()
 
-	// FC02 = Read Input Status
-	case 2:
-		results, err = client.ReadDiscreteInputs(s.Address, s.Quantity)
-
-	// FC03 = Read Holding Registers
-	case 3:
-		results, err = client.ReadHoldingRegisters(s.Address, s.Quantity)
-
-	// FC04 = Read Input Registers
-	case 4:
-		results, err = client.ReadInputRegisters(s.Address, s.Quantity)
-
-	// FC05 = Write Single Coil
-	case 5:
-		results, err = client.WriteSingleCoil(s.Address, binary.BigEndian.Uint16(s.Values))
-
-		// FC06	= Write Single Register
-	case 6:
-		results, err = client.WriteSingleRegister(s.Address, binary.BigEndian.Uint16(s.Values))
-
-	// FC15 = Write Multiple Coils
-	case 15:
-		results, err = client.WriteMultipleCoils(s.Address, s.Quantity, s.Values)
-
-	// FC16 = Write Multiple Registers
-	case 16:
-		results, err = client.WriteMultipleRegisters(s.Address, s.Quantity, s.Values)
-
-	default:
-		//do nothing
+		if s.CX.client == nil && !s.CX.connected {
+			s.CX.client = modbus.NewClient(s.CX.TCPhandler)
+			s.CX.connected = true
+		}
 	}
 
-	return results, err
+	return s.err
 }
 
-func getRTUdata(s *Modbus) (results []byte, err error) {
-
-	handler := modbus.NewRTUClientHandler(s.Client)
-	handler.BaudRate = s.Comm.BaudRate
-	handler.DataBits = s.Comm.Databits
-	handler.Parity = s.Comm.Parity
-	handler.StopBits = s.Comm.Stopbits
-	handler.SlaveId = s.SlaveAddress
-	handler.Timeout = time.Duration(s.TimeOut) * time.Second
-
-	handler.Logger = log.New(os.Stdout, "RTU: ", log.LstdFlags)
-
-	err = handler.Connect()
-	if err != nil {
-		return []byte{}, err
+func (s *Modbus) getTCPdata() (err error) {
+	// create TCPClient connection if not already done
+	s.err = s.createTCPClient()
+	if s.err != nil {
+		return s.err
 	}
-	defer handler.Close()
-
-	client := modbus.NewClient(handler)
-
 	// Function Codes
 	switch s.FunctionCode {
 	// FC01 = Read Coil Status
 	case 1:
-		results, err = client.ReadCoils(s.Address, s.Quantity)
+		s.Results, s.err = s.CX.client.ReadCoils(s.Address, s.Quantity)
 
 	// FC02 = Read Input Status
 	case 2:
-		results, err = client.ReadDiscreteInputs(s.Address, s.Quantity)
+		s.Results, s.err = s.CX.client.ReadDiscreteInputs(s.Address, s.Quantity)
 
 	// FC03 = Read Holding Registers
 	case 3:
-		results, err = client.ReadHoldingRegisters(s.Address, s.Quantity)
+		s.Results, s.err = s.CX.client.ReadHoldingRegisters(s.Address, s.Quantity)
 
 	// FC04 = Read Input Registers
 	case 4:
-		results, err = client.ReadInputRegisters(s.Address, s.Quantity)
+		s.Results, s.err = s.CX.client.ReadInputRegisters(s.Address, s.Quantity)
 
 	// FC05 = Write Single Coil
 	case 5:
-		results, err = client.WriteSingleCoil(s.Address, binary.BigEndian.Uint16(s.Values))
+		s.Results, s.err = s.CX.client.WriteSingleCoil(s.Address, binary.BigEndian.Uint16(s.Values))
 
 		// FC06	= Write Single Register
 	case 6:
-		results, err = client.WriteSingleRegister(s.Address, binary.BigEndian.Uint16(s.Values))
+		s.Results, s.err = s.CX.client.WriteSingleRegister(s.Address, binary.BigEndian.Uint16(s.Values))
 
 	// FC15 = Write Multiple Coils
 	case 15:
-		results, err = client.WriteMultipleCoils(s.Address, s.Quantity, s.Values)
+		s.Results, s.err = s.CX.client.WriteMultipleCoils(s.Address, s.Quantity, s.Values)
 
 	// FC16 = Write Multiple Registers
 	case 16:
-		results, err = client.WriteMultipleRegisters(s.Address, s.Quantity, s.Values)
+		s.Results, s.err = s.CX.client.WriteMultipleRegisters(s.Address, s.Quantity, s.Values)
 
 	default:
 		//do nothing
 	}
 
-	return results, err
+	return s.err
+}
+
+func (s *Modbus) createRTUClient() (err error) {
+
+	if s.CX.RTUhandler == nil && !s.CX.connected {
+		s.CX.RTUhandler = modbus.NewRTUClientHandler(s.Client)
+		s.CX.RTUhandler.BaudRate = s.Comm.BaudRate
+		s.CX.RTUhandler.DataBits = s.Comm.Databits
+		s.CX.RTUhandler.Parity = s.Comm.Parity
+		s.CX.RTUhandler.StopBits = s.Comm.Stopbits
+		s.CX.RTUhandler.SlaveId = s.SlaveAddress
+		s.CX.RTUhandler.Timeout = time.Duration(s.TimeOut) * time.Second
+
+		s.CX.RTUhandler.Logger = log.New(os.Stdout, "RTU: ", log.LstdFlags)
+
+		s.err = s.CX.RTUhandler.Connect()
+		if s.err != nil {
+			s.CX.connected = false
+			return s.err
+		}
+		defer s.CX.RTUhandler.Close()
+
+		if s.CX.client == nil && !s.CX.connected {
+			s.CX.client = modbus.NewClient(s.CX.RTUhandler)
+			s.CX.connected = true
+		}
+	}
+
+	return nil
+}
+
+func (s *Modbus) getRTUdata() (err error) {
+	// create RTUClient connection if not already done
+	s.err = s.createRTUClient()
+	if s.err != nil {
+		return s.err
+	}
+	// Function Codes
+	switch s.FunctionCode {
+	// FC01 = Read Coil Status
+	case 1:
+		s.Results, s.err = s.CX.client.ReadCoils(s.Address, s.Quantity)
+
+	// FC02 = Read Input Status
+	case 2:
+		s.Results, s.err = s.CX.client.ReadDiscreteInputs(s.Address, s.Quantity)
+
+	// FC03 = Read Holding Registers
+	case 3:
+		s.Results, s.err = s.CX.client.ReadHoldingRegisters(s.Address, s.Quantity)
+
+	// FC04 = Read Input Registers
+	case 4:
+		s.Results, s.err = s.CX.client.ReadInputRegisters(s.Address, s.Quantity)
+
+	// FC05 = Write Single Coil
+	case 5:
+		s.Results, s.err = s.CX.client.WriteSingleCoil(s.Address, binary.BigEndian.Uint16(s.Values))
+
+		// FC06	= Write Single Register
+	case 6:
+		s.Results, s.err = s.CX.client.WriteSingleRegister(s.Address, binary.BigEndian.Uint16(s.Values))
+
+	// FC15 = Write Multiple Coils
+	case 15:
+		s.Results, s.err = s.CX.client.WriteMultipleCoils(s.Address, s.Quantity, s.Values)
+
+	// FC16 = Write Multiple Registers
+	case 16:
+		s.Results, s.err = s.CX.client.WriteMultipleRegisters(s.Address, s.Quantity, s.Values)
+
+	default:
+		//do nothing
+	}
+
+	return err
 }
 
 func init() {

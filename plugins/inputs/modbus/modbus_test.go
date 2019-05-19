@@ -22,13 +22,14 @@ func TestGetTCPdataReadCoils(t *testing.T) {
 	update(&test)
 	test.FunctionCode = 1
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if results[0] != 1 {
-		t.Errorf("Expected value of 1 @ modbus address 00001, but it was %d instead", results[0])
+	if test.Results[0] != 1 {
+		t.Errorf("Expected value of 1 @ modbus address 00001, but it was %d instead", test.Results[0])
 	}
 }
 
@@ -37,13 +38,13 @@ func TestGetTCPdataReadDiscreteInputs(t *testing.T) {
 	update(&test)
 	test.FunctionCode = 2
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if results[0] != 1 {
-		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", results[0])
+	if test.Results[0] != 1 {
+		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", test.Results[0])
 	}
 }
 
@@ -52,13 +53,14 @@ func TestGetTCPdataReadHoldingRegister(t *testing.T) {
 	update(&test)
 	test.FunctionCode = 3
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != 65535 {
-		t.Errorf("Expected value of 65535 @ modbus address 40001, but it was %d instead", binary.BigEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != 65535 {
+		t.Errorf("Expected value of 65535 @ modbus address 40001, but it was %d instead", binary.BigEndian.Uint16(test.Results))
 	}
 }
 
@@ -67,13 +69,13 @@ func TestGetTCPdataReadInputRegister(t *testing.T) {
 	update(&test)
 	test.FunctionCode = 4
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != 65535 {
-		t.Errorf("Expected value of 65535 @ modbus address 30001, but it was %d instead", binary.BigEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != 65535 {
+		t.Errorf("Expected value of 65535 @ modbus address 30001, but it was %d instead", binary.BigEndian.Uint16(test.Results))
 	}
 }
 
@@ -84,13 +86,13 @@ func TestGetTCPdataWriteSingleCoil(t *testing.T) {
 	test.Address = 1
 	test.Values = []byte{0xff, 0x00}
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.LittleEndian.Uint16(results) != 255 {
-		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.LittleEndian.Uint16(test.Results) != 255 {
+		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
 
@@ -101,13 +103,13 @@ func TestGetTCPdataWriteSingleRegister(t *testing.T) {
 	test.Address = 1
 	test.Values = []byte{0xff, 0x00}
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.LittleEndian.Uint16(results) != 255 {
-		t.Errorf("Expected value of 255 @ modbus address 30001, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.LittleEndian.Uint16(test.Results) != 255 {
+		t.Errorf("Expected value of 255 @ modbus address 30001, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
 
@@ -121,13 +123,13 @@ func TestGetTCPdataWriteMultipleCoils(t *testing.T) {
 	//BigEndian = two bytes per register
 	test.Values = []byte{0xAA, 0xAA, 0x55, 0x55}
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != test.Quantity {
-		t.Errorf("Expected value of 32 @ modbus address 10000, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != test.Quantity {
+		t.Errorf("Expected value of 32 @ modbus address 10000, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
 
@@ -140,13 +142,13 @@ func TestGetTCPdataWriteMultipleRegisters(t *testing.T) {
 	//BigEndian = two bytes per register
 	test.Values = []byte{0xAA, 0xAA, 0x55, 0x55, 0xFF, 0xFF}
 
-	results, err := getTCPdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getTCPdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != test.Quantity {
-		t.Errorf("Expected value of 3 @ modbus address 40001, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != test.Quantity {
+		t.Errorf("Expected value of 3 @ modbus address 40001, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
 
@@ -170,13 +172,14 @@ func TestGetRTUdataReadCoils(t *testing.T) {
 	update2(&test)
 	test.FunctionCode = 1
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if results[0] != 1 {
-		t.Errorf("Expected value of 1 @ modbus address 00001, but it was %d instead", results[0])
+	if test.Results[0] != 1 {
+		t.Errorf("Expected value of 1 @ modbus address 00001, but it was %d instead", test.Results[0])
 	}
 }
 
@@ -185,13 +188,13 @@ func TestGetRTUdataReadDiscreteInputs(t *testing.T) {
 	update2(&test)
 	test.FunctionCode = 2
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if results[0] != 1 {
-		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", results[0])
+	if test.Results[0] != 1 {
+		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", test.Results[0])
 	}
 }
 
@@ -200,13 +203,13 @@ func TestGetRTUdataReadHoldingRegister(t *testing.T) {
 	update2(&test)
 	test.FunctionCode = 3
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != 65535 {
-		t.Errorf("Expected value of 65535 @ modbus address 40001, but it was %d instead", binary.BigEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != 65535 {
+		t.Errorf("Expected value of 65535 @ modbus address 40001, but it was %d instead", binary.BigEndian.Uint16(test.Results))
 	}
 }
 
@@ -215,13 +218,13 @@ func TestGetRTUdataReadInputRegister(t *testing.T) {
 	update2(&test)
 	test.FunctionCode = 4
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != 65535 {
-		t.Errorf("Expected value of 65535 @ modbus address 30001, but it was %d instead", binary.BigEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != 65535 {
+		t.Errorf("Expected value of 65535 @ modbus address 30001, but it was %d instead", binary.BigEndian.Uint16(test.Results))
 	}
 }
 
@@ -232,13 +235,13 @@ func TestGetRTUdataWriteSingleCoil(t *testing.T) {
 	test.Address = 1
 	test.Values = []byte{0xff, 0x00}
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.LittleEndian.Uint16(results) != 255 {
-		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.LittleEndian.Uint16(test.Results) != 255 {
+		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
 
@@ -249,13 +252,13 @@ func TestGetRTUdataWriteSingleRegister(t *testing.T) {
 	test.Address = 1
 	test.Values = []byte{0xff, 0x00}
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.LittleEndian.Uint16(results) != 255 {
-		t.Errorf("Expected value of 255 @ modbus address 30001, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.LittleEndian.Uint16(test.Results) != 255 {
+		t.Errorf("Expected value of 255 @ modbus address 30001, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
 
@@ -269,13 +272,13 @@ func TestGetRTUdataWriteMultipleCoils(t *testing.T) {
 	//BigEndian = two bytes per register
 	test.Values = []byte{0xAA, 0xAA, 0x55, 0x55}
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != test.Quantity {
-		t.Errorf("Expected value of 32 @ modbus address 10000, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != test.Quantity {
+		t.Errorf("Expected value of 32 @ modbus address 10000, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
 
@@ -288,12 +291,12 @@ func TestGetRTUdataWriteMultipleRegisters(t *testing.T) {
 	//BigEndian = two bytes per register
 	test.Values = []byte{0xAA, 0xAA, 0x55, 0x55, 0xFF, 0xFF}
 
-	results, err := getRTUdata(&test)
-	t.Log(results)
-	if err != nil || results == nil {
-		t.Fatal(err, results)
+	test.err = test.getRTUdata()
+	t.Log(test.Results)
+	if test.err != nil || test.Results == nil {
+		t.Fatal(test.err, test.Results)
 	}
-	if binary.BigEndian.Uint16(results) != test.Quantity {
-		t.Errorf("Expected value of 3 @ modbus address 40001, but it was %d instead", binary.LittleEndian.Uint16(results))
+	if binary.BigEndian.Uint16(test.Results) != test.Quantity {
+		t.Errorf("Expected value of 3 @ modbus address 40001, but it was %d instead", binary.LittleEndian.Uint16(test.Results))
 	}
 }
