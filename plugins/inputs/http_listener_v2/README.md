@@ -79,5 +79,4 @@ curl -i -XGET 'http://localhost:8080/telegraf?host=server01&value=0.42'
 ```
 
 [data_format]: /docs/DATA_FORMATS_INPUT.md
-[form_data_format]: /plugins/parsers/formdata/README.md
 [influxdb_listener]: /plugins/inputs/influxdb_listener/README.md
