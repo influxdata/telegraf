@@ -54,6 +54,7 @@ type AMQP struct {
 	Headers            map[string]string `toml:"headers"`
 	Timeout            internal.Duration `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
+	ContentEncoding    string            `toml:"content_encoding"`
 	tls.ClientConfig
 
 	serializer   serializers.Serializer
@@ -61,6 +62,7 @@ type AMQP struct {
 	client       Client
 	config       *ClientConfig
 	sentMessages int
+	encoder      internal.ContentEncoder
 }
 
 type Client interface {
@@ -149,6 +151,14 @@ var sampleConfig = `
   ## Recommended to set to true.
   # use_batch_format = false
 
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  ##
+  ## Please note that when use_batch_format = false each amqp message contains only
+  ## a single metric, it is recommended to use compression with batch format
+  ## for best results.
+  # content_encoding = "identity"
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -177,11 +187,16 @@ func (q *AMQP) Connect() error {
 		q.config = config
 	}
 
-	client, err := q.connect(q.config)
+	var err error
+	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding)
 	if err != nil {
 		return err
 	}
-	q.client = client
+
+	q.client, err = q.connect(q.config)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -223,6 +238,11 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	first := true
 	for key, metrics := range batches {
 		body, err := q.serialize(metrics)
+		if err != nil {
+			return err
+		}
+
+		body, err = q.encoder.Encode(body)
 		if err != nil {
 			return err
 		}
@@ -298,6 +318,7 @@ func (q *AMQP) makeClientConfig() (*ClientConfig, error) {
 		exchange:        q.Exchange,
 		exchangeType:    q.ExchangeType,
 		exchangePassive: q.ExchangePassive,
+		encoding:        q.ContentEncoding,
 		timeout:         q.Timeout.Duration,
 	}
 

@@ -92,6 +92,14 @@ For an introduction to AMQP see:
   ## Recommended to set to true.
   # use_batch_format = false
 
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  ##
+  ## Please note that when use_batch_format = false each amqp message contains only
+  ## a single metric, it is recommended to use compression with batch format
+  ## for best results.
+  # content_encoding = "identity"
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
