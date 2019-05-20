@@ -8,16 +8,18 @@ import (
 var test Modbus
 
 func update(test *Modbus) {
-	test.Client = "localhost:502"
+	test.Client = "127.0.0.1:502"
 	test.SlaveAddress = 1
 	test.FunctionCode = 0
-	test.Address = 1
+	test.Address = 0
 	test.Quantity = 1
 	test.TimeOut = 5
 }
 
 // Testing Code for TCP Client
 func TestGetTCPdataReadCoils(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set bit @ address to query
 	t.Log("Testing TCPClient Connections: Read Coils")
 	update(&test)
 	test.FunctionCode = 1
@@ -28,27 +30,34 @@ func TestGetTCPdataReadCoils(t *testing.T) {
 	if test.err != nil || test.Results == nil {
 		t.Fatal(test.err, test.Results)
 	}
-	if test.Results[0] != 1 {
+	if test.Results == nil {
 		t.Errorf("Expected value of 1 @ modbus address 00001, but it was %d instead", test.Results[0])
 	}
 }
 
 func TestGetTCPdataReadDiscreteInputs(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set bits @ address to query
+	// Results will be in Byte format not binary
 	t.Log("Testing TCPClient Connections: Read Discrete Inputs")
 	update(&test)
 	test.FunctionCode = 2
+	test.Address = 0
+	test.Quantity = 3
 
 	test.err = test.getTCPdata()
 	t.Log(test.Results)
 	if test.err != nil || test.Results == nil {
 		t.Fatal(test.err, test.Results)
 	}
-	if test.Results[0] != 1 {
-		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", test.Results[0])
+	if test.Results == nil {
+		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", test.Results)
 	}
 }
 
 func TestGetTCPdataReadHoldingRegister(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set HoldingRegister address to xFF FF or b1111 1111 1111 1111 or d65535
 	t.Log("Testing TCPClient Connections: Read Holding Registers")
 	update(&test)
 	test.FunctionCode = 3
@@ -65,6 +74,8 @@ func TestGetTCPdataReadHoldingRegister(t *testing.T) {
 }
 
 func TestGetTCPdataReadInputRegister(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InpuRegister address to xFF FF or b1111 1111 1111 1111 or d65535
 	t.Log("Testing TCPClient Connections: Read Input Register")
 	update(&test)
 	test.FunctionCode = 4
@@ -80,10 +91,12 @@ func TestGetTCPdataReadInputRegister(t *testing.T) {
 }
 
 func TestGetTCPdataWriteSingleCoil(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InputCoils address to xFF or b1111 1111  or d255
 	t.Log("Testing TCPClient Connections: Write Single Coil")
 	update(&test)
 	test.FunctionCode = 5
-	test.Address = 1
+	test.Address = 0
 	test.Values = []byte{0xff, 0x00}
 
 	test.err = test.getTCPdata()
@@ -97,6 +110,8 @@ func TestGetTCPdataWriteSingleCoil(t *testing.T) {
 }
 
 func TestGetTCPdataWriteSingleRegister(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InputRegister address to xFF or b1111 1111  or d255
 	t.Log("Testing TCPClient Connections: Write Single Register")
 	update(&test)
 	test.FunctionCode = 6
@@ -114,6 +129,9 @@ func TestGetTCPdataWriteSingleRegister(t *testing.T) {
 }
 
 func TestGetTCPdataWriteMultipleCoils(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InputRegister addresses 0-15  to xAA AA or b1010 1010 1010 1010  or d43690
+	// Set InputRegister addresses 16-32 to x55 55 or b0101 0101 0101 0101  or d21845
 	t.Log("Testing TCPClient Connections: Write Single Register")
 	update(&test)
 	test.FunctionCode = 15
@@ -134,6 +152,10 @@ func TestGetTCPdataWriteMultipleCoils(t *testing.T) {
 }
 
 func TestGetTCPdataWriteMultipleRegisters(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InputRegister addresses 0 to xAA AA or b1010 1010 1010 1010  or d43690
+	// Set InputRegister addresses 1 to x55 55 or b0101 0101 0101 0101  or d21845
+	// Set InputRegister addresses 2 to xFF FF or b1111 1111 1111 1111  or d65535
 	t.Log("Testing TCPClient Connections: Write Multiple Register")
 	update(&test)
 	test.FunctionCode = 16
@@ -168,6 +190,8 @@ func update2(test *Modbus) {
 
 // Testing Code for RTU Client
 func TestGetRTUdataReadCoils(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set bit @ address to query
 	t.Log("Testing RTUClient Connections: Read Coils")
 	update2(&test)
 	test.FunctionCode = 1
@@ -178,27 +202,34 @@ func TestGetRTUdataReadCoils(t *testing.T) {
 	if test.err != nil || test.Results == nil {
 		t.Fatal(test.err, test.Results)
 	}
-	if test.Results[0] != 1 {
+	if test.Results == nil {
 		t.Errorf("Expected value of 1 @ modbus address 00001, but it was %d instead", test.Results[0])
 	}
 }
 
 func TestGetRTUdataReadDiscreteInputs(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set bits @ address to query
+	// Results will be in Byte format not binary
 	t.Log("Testing RTUClient Connections: Read Discrete Inputs")
 	update2(&test)
 	test.FunctionCode = 2
+	test.Address = 0
+	test.Quantity = 3
 
 	test.err = test.getRTUdata()
 	t.Log(test.Results)
 	if test.err != nil || test.Results == nil {
 		t.Fatal(test.err, test.Results)
 	}
-	if test.Results[0] != 1 {
+	if test.Results == nil {
 		t.Errorf("Expected value of 1 @ modbus address 10001, but it was %d instead", test.Results[0])
 	}
 }
 
 func TestGetRTUdataReadHoldingRegister(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set HoldingRegister address to xFF FF or b1111 1111 1111 1111 or d65535
 	t.Log("Testing RTUClient Connections: Read Holding Registers")
 	update2(&test)
 	test.FunctionCode = 3
@@ -214,6 +245,8 @@ func TestGetRTUdataReadHoldingRegister(t *testing.T) {
 }
 
 func TestGetRTUdataReadInputRegister(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InpuRegister address to xFF FF or b1111 1111 1111 1111 or d65535
 	t.Log("Testing RTUClient Connections: Read Input Register")
 	update2(&test)
 	test.FunctionCode = 4
@@ -229,6 +262,8 @@ func TestGetRTUdataReadInputRegister(t *testing.T) {
 }
 
 func TestGetRTUdataWriteSingleCoil(t *testing.T) {
+		// Note: Address may be offset by 1
+	// Set InputCoils address to xFF or b1111 1111  or d255
 	t.Log("Testing RTUClient Connections: Write Single Coil")
 	update2(&test)
 	test.FunctionCode = 5
@@ -246,6 +281,8 @@ func TestGetRTUdataWriteSingleCoil(t *testing.T) {
 }
 
 func TestGetRTUdataWriteSingleRegister(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InputRegister address to xFF or b1111 1111  or d255
 	t.Log("Testing RTUClient Connections: Write Single Register")
 	update2(&test)
 	test.FunctionCode = 6
@@ -263,6 +300,9 @@ func TestGetRTUdataWriteSingleRegister(t *testing.T) {
 }
 
 func TestGetRTUdataWriteMultipleCoils(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InputRegister addresses 0-15  to xAA AA or b1010 1010 1010 1010  or d43690
+	// Set InputRegister addresses 16-32 to x55 55 or b0101 0101 0101 0101  or d21845
 	t.Log("Testing RTUClient Connections: Write Single Register")
 	update2(&test)
 	test.FunctionCode = 15
@@ -283,6 +323,10 @@ func TestGetRTUdataWriteMultipleCoils(t *testing.T) {
 }
 
 func TestGetRTUdataWriteMultipleRegisters(t *testing.T) {
+	// Note: Address may be offset by 1
+	// Set InputRegister addresses 0 to xAA AA or b1010 1010 1010 1010  or d43690
+	// Set InputRegister addresses 1 to x55 55 or b0101 0101 0101 0101  or d21845
+	// Set InputRegister addresses 2 to xFF FF or b1111 1111 1111 1111  or d65535
 	t.Log("Testing RTUClient Connections: Write Multiple Register")
 	update2(&test)
 	test.FunctionCode = 16
