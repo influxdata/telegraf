@@ -26,6 +26,9 @@ The commands & flags are:
   --processor-filter <filter>    filter the processors to enable, separator is :
   --quiet                        run in quiet mode
   --sample-config                print out full sample configuration
+  --section-filter               filter config sections to output, separator is :
+                                 Valid values are 'agent', 'global_tags', 'outputs',
+                                 'processors', 'aggregators' and 'inputs'
   --test                         gather metrics, print them out, and exit;
                                  processors, aggregators, and outputs are not run
   --usage <plugin>               print usage for a plugin, ie, 'telegraf --usage mysql'
@@ -34,6 +37,7 @@ The commands & flags are:
   --console                      run as console application (windows only)
   --service <service>            operate on the service (windows only)
   --service-name                 service name (windows only)
+  --service-display-name         service display name (windows only)
 
 Examples:
 
@@ -62,5 +66,5 @@ Examples:
   telegraf --service install --config "C:\Program Files\Telegraf\telegraf.conf"
 
   # install telegraf service with custom name
-  telegraf --service install --service-name=my-telegraf
+  telegraf --service install --service-name=my-telegraf --service-display-name="My Telegraf"
 `

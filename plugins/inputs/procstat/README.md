@@ -41,6 +41,9 @@ Processes can be selected for monitoring using one of several methods:
   ## Field name prefix
   # prefix = ""
 
+  ## When true add the full cmdline as a tag.
+  # cmdline_tag = false
+
   ## Add PID as a tag instead of a field; useful to differentiate between
   ## processes whose tags are otherwise the same.  Can create a large number
   ## of series, use judiciously.
@@ -72,6 +75,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
 - procstat
   - tags:
     - pid (when `pid_tag` is true)
+    - cmdline (when 'cmdline_tag' is true)
     - process_name
     - pidfile (when defined)
     - exe (when defined)
@@ -81,6 +85,8 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - cgroup (when defined)
     - win_service (when defined)
   - fields:
+    - child_major_faults (int)
+    - child_minor_faults (int)
     - cpu_time (int)
     - cpu_time_guest (float)
     - cpu_time_guest_nice (float)
@@ -95,12 +101,14 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - cpu_time_user (float)
     - cpu_usage (float)
     - involuntary_context_switches (int)
+    - major_faults (int)
     - memory_data (int)
     - memory_locked (int)
     - memory_rss (int)
     - memory_stack (int)
     - memory_swap (int)
     - memory_vms (int)
+    - minor_faults (int)
     - nice_priority (int)
     - num_fds (int, *telegraf* may need to be ran as **root**)
     - num_threads (int)

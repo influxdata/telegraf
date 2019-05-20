@@ -9,11 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/load"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/load"
 )
 
 type SystemStats struct{}
@@ -22,7 +21,12 @@ func (_ *SystemStats) Description() string {
 	return "Read metrics about system load & uptime"
 }
 
-func (_ *SystemStats) SampleConfig() string { return "" }
+func (_ *SystemStats) SampleConfig() string {
+	return `
+  ## Uncomment to remove deprecated metrics.
+  # fielddrop = ["uptime_format"]
+`
+}
 
 func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()

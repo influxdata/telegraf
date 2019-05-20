@@ -41,6 +41,8 @@ var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fSectionFilters = flag.String("section-filter", "",
+	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
 var fInputList = flag.Bool("input-list", false,
@@ -58,6 +60,7 @@ var fUsage = flag.String("usage", "",
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
+var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
@@ -112,7 +115,7 @@ func runAgent(ctx context.Context,
 ) error {
 	// Setup default logging. This may need to change after reading the config
 	// file, but we can configure it to use our logger implementation now.
-	logger.SetupLogging(false, false, "")
+	logger.SetupLogging(logger.LogConfig{})
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
@@ -153,11 +156,16 @@ func runAgent(ctx context.Context,
 	}
 
 	// Setup logging as configured.
-	logger.SetupLogging(
-		ag.Config.Agent.Debug || *fDebug,
-		ag.Config.Agent.Quiet || *fQuiet,
-		ag.Config.Agent.Logfile,
-	)
+	logConfig := logger.LogConfig{
+		Debug:               ag.Config.Agent.Debug || *fDebug,
+		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
+		Logfile:             ag.Config.Agent.Logfile,
+		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
+		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+	}
+
+	logger.SetupLogging(logConfig)
 
 	if *fTest {
 		return ag.Test(ctx)
@@ -249,7 +257,10 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	inputFilters, outputFilters := []string{}, []string{}
+	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
+	if *fSectionFilters != "" {
+		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
+	}
 	if *fInputFilters != "" {
 		inputFilters = strings.Split(":"+strings.TrimSpace(*fInputFilters)+":", ":")
 	}
@@ -289,6 +300,7 @@ func main() {
 			return
 		case "config":
 			config.PrintSampleConfig(
+				sectionFilters,
 				inputFilters,
 				outputFilters,
 				aggregatorFilters,
@@ -317,6 +329,7 @@ func main() {
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
+			sectionFilters,
 			inputFilters,
 			outputFilters,
 			aggregatorFilters,
@@ -345,7 +358,7 @@ func main() {
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
-			DisplayName: "Telegraf Data Collector Service",
+			DisplayName: *fServiceDisplayName,
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
 			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},

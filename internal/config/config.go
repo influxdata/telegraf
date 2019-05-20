@@ -32,6 +32,10 @@ import (
 )
 
 var (
+	// Default sections
+	sectionDefaults = []string{"agent", "global_tags", "outputs",
+		"processors", "aggregators", "inputs"}
+
 	// Default input plugins
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
 		"processes", "disk", "diskio"}
@@ -68,9 +72,10 @@ func NewConfig() *Config {
 	c := &Config{
 		// Agent defaults:
 		Agent: &AgentConfig{
-			Interval:      internal.Duration{Duration: 10 * time.Second},
-			RoundInterval: true,
-			FlushInterval: internal.Duration{Duration: 10 * time.Second},
+			Interval:                   internal.Duration{Duration: 10 * time.Second},
+			RoundInterval:              true,
+			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
+			LogfileRotationMaxArchives: 5,
 		},
 
 		Tags:          make(map[string]string),
@@ -136,13 +141,26 @@ type AgentConfig struct {
 	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
-	Debug bool
-
-	// Logfile specifies the file to send logs to
-	Logfile string
+	Debug bool `toml:"debug"`
 
 	// Quiet is the option for running in quiet mode
-	Quiet        bool
+	Quiet bool `toml:"quiet"`
+
+	// Log file name, the empty string means to log to stderr.
+	Logfile string `toml:"logfile"`
+
+	// The logfile will be rotated when it becomes larger than the specified
+	// size.  When set to 0 no size based rotation is performed.
+	LogfileRotationInterval internal.Duration `toml:"logfile_rotation_interval"`
+
+	// Maximum number of rotated archives to keep, any older logs are deleted.
+	// If set to -1, no archives are removed.
+	LogfileRotationMaxSize internal.Size `toml:"logfile_rotation_max_size"`
+
+	// Maximum number of rotated archives to keep, any older logs are deleted.
+	// If set to -1, no archives are removed.
+	LogfileRotationMaxArchives int `toml:"logfile_rotation_max_archives"`
+
 	Hostname     string
 	OmitHostname bool
 }
@@ -212,7 +230,8 @@ var header = `# Telegraf Configuration
 # them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
 # for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
 
-
+`
+var globalTagsConfig = `
 # Global tags can be specified here in key="value" format.
 [global_tags]
   # dc = "us-east-1" # will tag all metrics with dc=us-east-1
@@ -220,7 +239,8 @@ var header = `# Telegraf Configuration
   ## Environment variables can be used as tags, and throughout the config file
   # user = "$USER"
 
-
+`
+var agentConfig = `
 # Configuration for telegraf agent
 [agent]
   ## Default data collection interval for all inputs
@@ -234,10 +254,7 @@ var header = `# Telegraf Configuration
   ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
 
-  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
-  ## output, and will flush this buffer on a successful write. Oldest metrics
-  ## are dropped first when this buffer fills.
-  ## This buffer only fills when writes fail to output plugin(s).
+  ## Maximum number of unwritten metrics per output.
   metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
@@ -263,119 +280,162 @@ var header = `# Telegraf Configuration
   ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
 
-  ## Logging configuration:
-  ## Run telegraf with debug log messages.
-  debug = false
-  ## Run telegraf in quiet mode (error log messages only).
-  quiet = false
-  ## Specify the log file name. The empty string means to log to stderr.
-  logfile = ""
+  ## Log at debug level.
+  # debug = false
+  ## Log only error level messages.
+  # quiet = false
+
+  ## Log file name, the empty string means to log to stderr.
+  # logfile = ""
+
+  ## The logfile will be rotated after the time interval specified.  When set
+  ## to 0 no time based rotation is performed.
+  # logfile_rotation_interval = "0d"
+
+  ## The logfile will be rotated when it becomes larger than the specified
+  ## size.  When set to 0 no size based rotation is performed.
+  # logfile_rotation_max_size = "0MB"
+
+  ## Maximum number of rotated archives to keep, any older logs are deleted.
+  ## If set to -1, no archives are removed.
+  # logfile_rotation_max_archives = 5
 
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
 
+`
 
+var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
 ###############################################################################
+
 `
 
 var processorHeader = `
-
 ###############################################################################
 #                            PROCESSOR PLUGINS                                #
 ###############################################################################
+
 `
 
 var aggregatorHeader = `
-
 ###############################################################################
 #                            AGGREGATOR PLUGINS                               #
 ###############################################################################
+
 `
 
 var inputHeader = `
-
 ###############################################################################
 #                            INPUT PLUGINS                                    #
 ###############################################################################
+
 `
 
 var serviceInputHeader = `
-
 ###############################################################################
 #                            SERVICE INPUT PLUGINS                            #
 ###############################################################################
+
 `
 
 // PrintSampleConfig prints the sample config
 func PrintSampleConfig(
+	sectionFilters []string,
 	inputFilters []string,
 	outputFilters []string,
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
+	// print headers
 	fmt.Printf(header)
 
+	if len(sectionFilters) == 0 {
+		sectionFilters = sectionDefaults
+	}
+	printFilteredGlobalSections(sectionFilters)
+
 	// print output plugins
-	if len(outputFilters) != 0 {
-		printFilteredOutputs(outputFilters, false)
-	} else {
-		printFilteredOutputs(outputDefaults, false)
-		// Print non-default outputs, commented
-		var pnames []string
-		for pname := range outputs.Outputs {
-			if !sliceContains(pname, outputDefaults) {
-				pnames = append(pnames, pname)
+	if sliceContains("outputs", sectionFilters) {
+		if len(outputFilters) != 0 {
+			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
+				fmt.Printf(outputHeader)
 			}
+			printFilteredOutputs(outputFilters, false)
+		} else {
+			fmt.Printf(outputHeader)
+			printFilteredOutputs(outputDefaults, false)
+			// Print non-default outputs, commented
+			var pnames []string
+			for pname := range outputs.Outputs {
+				if !sliceContains(pname, outputDefaults) {
+					pnames = append(pnames, pname)
+				}
+			}
+			sort.Strings(pnames)
+			printFilteredOutputs(pnames, true)
 		}
-		sort.Strings(pnames)
-		printFilteredOutputs(pnames, true)
 	}
 
 	// print processor plugins
-	fmt.Printf(processorHeader)
-	if len(processorFilters) != 0 {
-		printFilteredProcessors(processorFilters, false)
-	} else {
-		pnames := []string{}
-		for pname := range processors.Processors {
-			pnames = append(pnames, pname)
+	if sliceContains("processors", sectionFilters) {
+		if len(processorFilters) != 0 {
+			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
+				fmt.Printf(processorHeader)
+			}
+			printFilteredProcessors(processorFilters, false)
+		} else {
+			fmt.Printf(processorHeader)
+			pnames := []string{}
+			for pname := range processors.Processors {
+				pnames = append(pnames, pname)
+			}
+			sort.Strings(pnames)
+			printFilteredProcessors(pnames, true)
 		}
-		sort.Strings(pnames)
-		printFilteredProcessors(pnames, true)
 	}
 
-	// pring aggregator plugins
-	fmt.Printf(aggregatorHeader)
-	if len(aggregatorFilters) != 0 {
-		printFilteredAggregators(aggregatorFilters, false)
-	} else {
-		pnames := []string{}
-		for pname := range aggregators.Aggregators {
-			pnames = append(pnames, pname)
+	// print aggregator plugins
+	if sliceContains("aggregators", sectionFilters) {
+		if len(aggregatorFilters) != 0 {
+			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
+				fmt.Printf(aggregatorHeader)
+			}
+			printFilteredAggregators(aggregatorFilters, false)
+		} else {
+			fmt.Printf(aggregatorHeader)
+			pnames := []string{}
+			for pname := range aggregators.Aggregators {
+				pnames = append(pnames, pname)
+			}
+			sort.Strings(pnames)
+			printFilteredAggregators(pnames, true)
 		}
-		sort.Strings(pnames)
-		printFilteredAggregators(pnames, true)
 	}
 
 	// print input plugins
-	fmt.Printf(inputHeader)
-	if len(inputFilters) != 0 {
-		printFilteredInputs(inputFilters, false)
-	} else {
-		printFilteredInputs(inputDefaults, false)
-		// Print non-default inputs, commented
-		var pnames []string
-		for pname := range inputs.Inputs {
-			if !sliceContains(pname, inputDefaults) {
-				pnames = append(pnames, pname)
+	if sliceContains("inputs", sectionFilters) {
+		if len(inputFilters) != 0 {
+			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
+				fmt.Printf(inputHeader)
 			}
+			printFilteredInputs(inputFilters, false)
+		} else {
+			fmt.Printf(inputHeader)
+			printFilteredInputs(inputDefaults, false)
+			// Print non-default inputs, commented
+			var pnames []string
+			for pname := range inputs.Inputs {
+				if !sliceContains(pname, inputDefaults) {
+					pnames = append(pnames, pname)
+				}
+			}
+			sort.Strings(pnames)
+			printFilteredInputs(pnames, true)
 		}
-		sort.Strings(pnames)
-		printFilteredInputs(pnames, true)
 	}
 }
 
@@ -450,6 +510,7 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 		return
 	}
 	sort.Strings(servInputNames)
+
 	fmt.Printf(serviceInputHeader)
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented)
@@ -471,6 +532,16 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 		creator := outputs.Outputs[oname]
 		output := creator()
 		printConfig(oname, output, "outputs", commented)
+	}
+}
+
+func printFilteredGlobalSections(sectionFilters []string) {
+	if sliceContains("agent", sectionFilters) {
+		fmt.Printf(agentConfig)
+	}
+
+	if sliceContains("global_tags", sectionFilters) {
+		fmt.Printf(globalTagsConfig)
 	}
 }
 
@@ -1810,6 +1881,30 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["wavefront_source_override"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.WavefrontSourceOverride = append(c.WavefrontSourceOverride, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["wavefront_use_strict"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.WavefrontUseStrict, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
@@ -1819,6 +1914,8 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
 	delete(tbl.Fields, "splunkmetric_hec_routing")
+	delete(tbl.Fields, "wavefront_source_override")
+	delete(tbl.Fields, "wavefront_use_strict")
 	return serializers.NewSerializer(c)
 }
 

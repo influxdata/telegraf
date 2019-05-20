@@ -88,7 +88,8 @@ func TestDiskIOStats_diskName(t *testing.T) {
 		s := DiskIO{
 			NameTemplates: tc.templates,
 		}
-		assert.Equal(t, tc.expected, s.diskName("null"), "Templates: %#v", tc.templates)
+		name, _ := s.diskName("null")
+		assert.Equal(t, tc.expected, name, "Templates: %#v", tc.templates)
 	}
 }
 

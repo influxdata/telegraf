@@ -405,14 +405,11 @@ func (a *Agent) runAggregators(
 
 				acc := NewAccumulator(agg, aggregations)
 				acc.SetPrecision(a.Precision())
-				fmt.Println(1)
 				a.push(ctx, agg, acc)
-				fmt.Println(2)
 			}(agg)
 		}
 
 		aggWg.Wait()
-		fmt.Println(3)
 		close(aggregations)
 	}()
 
@@ -422,10 +419,8 @@ func (a *Agent) runAggregators(
 			dst <- metric
 		}
 	}
-	fmt.Println(4)
 
 	wg.Wait()
-	fmt.Println(5)
 	return nil
 }
 

@@ -806,9 +806,17 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	localNow := time.Now()
 	estInterval := time.Duration(time.Minute)
 	if !res.lastColl.IsZero() {
-		estInterval = localNow.Sub(res.lastColl).Truncate(time.Duration(res.sampling) * time.Second)
+		s := time.Duration(res.sampling) * time.Second
+		rawInterval := localNow.Sub(res.lastColl)
+		paddedInterval := rawInterval + time.Duration(res.sampling/2)*time.Second
+		estInterval = paddedInterval.Truncate(s)
+		if estInterval < s {
+			estInterval = s
+		}
+		log.Printf("D! [inputs.vsphere] Raw interval %s, padded: %s, estimated: %s", rawInterval, paddedInterval, estInterval)
 	}
 	log.Printf("D! [inputs.vsphere] Interval estimated to %s", estInterval)
+	res.lastColl = localNow
 
 	latest := res.latestSample
 	if !latest.IsZero() {

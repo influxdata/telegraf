@@ -12,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
 	"github.com/streadway/amqp"
 )
 
@@ -206,8 +205,8 @@ func (q *AMQP) routingKey(metric telegraf.Metric) string {
 
 func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	batches := make(map[string][]telegraf.Metric)
-	if q.ExchangeType == "direct" || q.ExchangeType == "header" {
-		// Since the routing_key is ignored for these exchange types send as a
+	if q.ExchangeType == "header" {
+		// Since the routing_key is ignored for this exchange type send as a
 		// single batch.
 		batches[""] = metrics
 	} else {

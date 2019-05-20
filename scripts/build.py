@@ -18,6 +18,8 @@ import argparse
 
 # Packaging variables
 PACKAGE_NAME = "telegraf"
+USER = "telegraf"
+GROUP = "telegraf"
 INSTALL_ROOT_DIR = "/usr/bin"
 LOG_DIR = "/var/log/telegraf"
 SCRIPT_DIR = "/usr/lib/telegraf/scripts"
@@ -66,6 +68,7 @@ fpm_common_args = "-f -s dir --log error \
  --before-install {} \
  --after-remove {} \
  --before-remove {} \
+ --rpm-attr 755,{},{}:{} \
  --description \"{}\"".format(
     VENDOR,
     PACKAGE_URL,
@@ -77,6 +80,7 @@ fpm_common_args = "-f -s dir --log error \
     PREINST_SCRIPT,
     POSTREMOVE_SCRIPT,
     PREREMOVE_SCRIPT,
+    USER, GROUP, LOG_DIR,
     DESCRIPTION)
 
 targets = {
@@ -156,8 +160,7 @@ def go_get(branch, update=False, no_uncommitted=False):
         logging.error("There are uncommitted changes in the current directory.")
         return False
     logging.info("Retrieving dependencies with `dep`...")
-    run("{}/bin/dep ensure -v -vendor-only".format(os.environ.get("GOPATH",
-        os.path.expanduser("~/go"))))
+    run("dep ensure -v -vendor-only")
     return True
 
 def run_tests(race, parallel, timeout, no_vet):

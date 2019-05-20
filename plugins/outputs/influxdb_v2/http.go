@@ -228,10 +228,11 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 
 	switch resp.StatusCode {
-	case http.StatusBadRequest, http.StatusUnauthorized,
-		http.StatusForbidden, http.StatusRequestEntityTooLarge:
+	case http.StatusBadRequest, http.StatusRequestEntityTooLarge:
 		log.Printf("E! [outputs.influxdb_v2] Failed to write metric: %s\n", desc)
 		return nil
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return fmt.Errorf("failed to write metric: %s", desc)
 	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
