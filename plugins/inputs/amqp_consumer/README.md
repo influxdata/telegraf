@@ -77,6 +77,10 @@ The following defaults are known to work with RabbitMQ:
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

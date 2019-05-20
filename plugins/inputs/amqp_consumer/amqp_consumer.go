@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -52,12 +53,15 @@ type AMQPConsumer struct {
 	AuthMethod string
 	tls.ClientConfig
 
+	ContentEncoding string `toml:"content_encoding"`
+
 	deliveries map[telegraf.TrackingID]amqp.Delivery
 
-	parser parsers.Parser
-	conn   *amqp.Connection
-	wg     *sync.WaitGroup
-	cancel context.CancelFunc
+	parser  parsers.Parser
+	conn    *amqp.Connection
+	wg      *sync.WaitGroup
+	cancel  context.CancelFunc
+	decoder internal.ContentDecoder
 }
 
 type externalAuth struct{}
@@ -147,6 +151,10 @@ func (a *AMQPConsumer) SampleConfig() string {
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -197,6 +205,11 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 // Start satisfies the telegraf.ServiceInput interface
 func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	amqpConf, err := a.createConfig()
+	if err != nil {
+		return err
+	}
+
+	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding)
 	if err != nil {
 		return err
 	}
@@ -428,8 +441,7 @@ func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, a
 }
 
 func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delivery) error {
-	metrics, err := a.parser.Parse(d.Body)
-	if err != nil {
+	onError := func() {
 		// Discard the message from the queue; will never be able to process
 		// this message.
 		rejErr := d.Ack(false)
@@ -438,6 +450,17 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 				d.DeliveryTag, rejErr)
 			a.conn.Close()
 		}
+	}
+
+	body, err := a.decoder.Decode(d.Body)
+	if err != nil {
+		onError()
+		return err
+	}
+
+	metrics, err := a.parser.Parse(body)
+	if err != nil {
+		onError()
 		return err
 	}
 
