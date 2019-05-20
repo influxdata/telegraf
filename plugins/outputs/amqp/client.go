@@ -78,6 +78,10 @@ func Connect(config *ClientConfig) (*client, error) {
 }
 
 func (c *client) DeclareExchange() error {
+	if c.config.exchange == "" {
+		return nil
+	}
+
 	var err error
 	if c.config.exchangePassive {
 		err = c.channel.ExchangeDeclarePassive(

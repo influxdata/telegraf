@@ -92,7 +92,7 @@ var sampleConfig = `
   # exchange_type = "topic"
 
   ## If true, exchange will be passively declared.
-  # exchange_declare_passive = false
+  # exchange_passive = false
 
   ## Exchange durability can be either "transient" or "durable".
   # exchange_durability = "durable"
