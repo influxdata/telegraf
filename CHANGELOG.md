@@ -48,6 +48,8 @@
 - [#5791](https://github.com/influxdata/telegraf/pull/5791): Add support for datadog events to statsd input.
 - [#5817](https://github.com/influxdata/telegraf/pull/5817): Allow devices option to match against devlinks.
 - [#5855](https://github.com/influxdata/telegraf/pull/5855): Support tags in enum processor.
+- [#5830](https://github.com/influxdata/telegraf/pull/5830): Add support for gzip compression to amqp plugins.
+- [#5831](https://github.com/influxdata/telegraf/pull/5831): Support passive queue declaration in amqp_consumer.
 
 #### Bugfixes
 
