@@ -1,6 +1,6 @@
 # Logz.io Output Plugin
 
-This plugin sends metrics to Logz.io over HTTPs.
+This plugin sends metrics to [Logz.io](https://logz.io/) over HTTPs.
 
 ### Configuration:
 
@@ -14,12 +14,11 @@ This plugin sends metrics to Logz.io over HTTPs.
   
   ## Timeout for HTTP requests
   # timeout = "5s"
+  
+  ## Optional TLS Config for use on HTTP connections
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
-
-### Required parameters:
-
-* `token`: Your Logz.io token, which can be found under "settings" in your account.
-
-### Optional parameters:
-* `url`: Logz.io listener URL.
-* `timeout` : Time limit for requests made by Logz.io client
