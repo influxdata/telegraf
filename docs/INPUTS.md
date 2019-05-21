@@ -52,6 +52,10 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
+func (s *Simple) Init() error {
+	return nil
+}
+
 func (s *Simple) Gather(acc telegraf.Accumulator) error {
     if s.Ok {
         acc.AddFields("state", map[string]interface{}{"value": "pretty good"}, nil)
