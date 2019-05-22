@@ -151,12 +151,6 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 	if err != nil {
 		return err
 	}
-	// verify that a connection can be made before making a query
-	err = conn.Ping()
-	if err != nil {
-		// Handle error
-		return err
-	}
 	defer conn.Close()
 
 	// execute query
