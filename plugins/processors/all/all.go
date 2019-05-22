@@ -10,4 +10,5 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/rename"
 	_ "github.com/influxdata/telegraf/plugins/processors/strings"
 	_ "github.com/influxdata/telegraf/plugins/processors/topk"
+	_ "github.com/influxdata/telegraf/plugins/processors/enrichment"
 )
