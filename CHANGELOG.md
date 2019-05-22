@@ -66,6 +66,7 @@
 - [#5661](https://github.com/influxdata/telegraf/issues/5661): Fix direct exchange routing key in amqp output.
 - [#5819](https://github.com/influxdata/telegraf/issues/5819): Fix scale set resource id with azure_monitor output.
 - [#5883](https://github.com/influxdata/telegraf/issues/5883): Skip invalid power times in apex_neptune input.
+- [#3485](https://github.com/influxdata/telegraf/issues/3485): Fix sqlserver connection closing on error.
 
 ## v1.10.4 [2019-05-14]
 
