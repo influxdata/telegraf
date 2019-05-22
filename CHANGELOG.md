@@ -65,6 +65,7 @@
 - [#5835](https://github.com/influxdata/telegraf/issues/5835): Fix docker input does not parse image name correctly.
 - [#5661](https://github.com/influxdata/telegraf/issues/5661): Fix direct exchange routing key in amqp output.
 - [#5819](https://github.com/influxdata/telegraf/issues/5819): Fix scale set resource id with azure_monitor output.
+- [#5883](https://github.com/influxdata/telegraf/issues/5883): Skip invalid power times in apex_neptune input.
 
 ## v1.10.4 [2019-05-14]
 
