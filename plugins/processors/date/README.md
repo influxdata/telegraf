@@ -1,4 +1,4 @@
-# Rename Processor Plugin
+# Date Processor Plugin
 
 The `date` processor adds the months and years as tags to your data.
 
