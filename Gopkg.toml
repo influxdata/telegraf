@@ -288,3 +288,15 @@
 [[constraint]]
   name = "github.com/google/go-github"
   version = "24.0.1"
+
+[[constraint]]
+  version = "v10.0.0"
+  name = "k8s.io/client-go"
+
+[[constraint]]
+  version = "kubernetes-1.13.3"
+  name = "k8s.io/apimachinery"
+
+[[constraint]]
+  version = "kubernetes-1.13.3"
+  name = "k8s.io/api"
