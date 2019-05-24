@@ -50,6 +50,7 @@
 - [#5855](https://github.com/influxdata/telegraf/pull/5855): Support tags in enum processor.
 - [#5830](https://github.com/influxdata/telegraf/pull/5830): Add support for gzip compression to amqp plugins.
 - [#5831](https://github.com/influxdata/telegraf/pull/5831): Support passive queue declaration in amqp_consumer.
+- [#5901](https://github.com/influxdata/telegraf/pull/5901): Set user agent in stackdriver output.
 
 #### Bugfixes
 
