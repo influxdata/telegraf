@@ -66,6 +66,7 @@ var sampleConfig = `
   #   node_id = "$HOSTNAME"
   #   namespace = "myapp"
   #   location = "eu-north0"
+`
 
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
