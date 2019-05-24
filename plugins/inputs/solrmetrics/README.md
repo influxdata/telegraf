@@ -1,6 +1,6 @@
-# Solr input plugin
+# Solrmetrics input plugin
 
-The [solr](http://lucene.apache.org/solr/) plugin collects stats via the
+The `solrmetrics` plugin collects stats of [Solr](http://lucene.apache.org/solr/) servers via the
 [Metrics API](https://lucene.apache.org/solr/guide/metrics-reporting.html#metrics-api)
 
 Solr Metrics API was introduced with Solr of version 6.4. The plugin supports ONLY usage of `key` and `prefix` parameters for `/solr/admin/metrics` endpoint.
