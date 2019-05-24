@@ -159,7 +159,7 @@ func formatMetricPoint(b *buffer, metricPoint *wavefront.MetricPoint, s *Wavefro
 	b.WriteString(`" `)
 	b.WriteFloat64(metricPoint.Value)
 	b.WriteChar(' ')
-	b.WriteUnit64(uint64(metricPoint.Timestamp))
+	b.WriteUint64(uint64(metricPoint.Timestamp))
 	b.WriteString(` source="`)
 	b.WriteString(metricPoint.Source)
 	b.WriteChar('"')
@@ -204,7 +204,7 @@ func (b *buffer) WriteChar(c byte) {
 	*b = append(*b, c)
 }
 
-func (b *buffer) WriteUnit64(val uint64) {
+func (b *buffer) WriteUint64(val uint64) {
 	*b = strconv.AppendUint(*b, val, 10)
 }
 
