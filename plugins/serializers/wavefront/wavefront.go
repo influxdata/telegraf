@@ -1,8 +1,6 @@
 package wavefront
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -71,8 +69,8 @@ func (s *WavefrontSerializer) serialize(buf *buffer, m telegraf.Metric) {
 
 		name = pathReplacer.Replace(name)
 
-		metricValue, buildError := buildValue(value, name)
-		if buildError != nil {
+		metricValue, valid := buildValue(value, name)
+		if !valid {
 			// bad value continue to next metric
 			continue
 		}
@@ -136,28 +134,27 @@ func buildTags(mTags map[string]string, s *WavefrontSerializer) (string, map[str
 	return tagValueReplacer.Replace(source), mTags
 }
 
-func buildValue(v interface{}, name string) (float64, error) {
+func buildValue(v interface{}, name string) (val float64, valid bool) {
 	switch p := v.(type) {
 	case bool:
 		if p {
-			return 1, nil
-		} else {
-			return 0, nil
+			return 1, true
 		}
+		return 0, true
 	case int64:
-		return float64(p), nil
+		return float64(p), true
 	case uint64:
-		return float64(p), nil
+		return float64(p), true
 	case float64:
-		return p, nil
+		return p, true
 	case string:
-		// return an error but don't log
-		return 0, errors.New("string type not supported")
+		// return false but don't log
+		return 0, false
 	default:
-		// return an error and log a debug message
-		err := fmt.Errorf("unexpected type: %T, with value: %v, for :%s", v, v, name)
-		log.Printf("D! Serializer [wavefront] %s\n", err.Error())
-		return 0, err
+		// log a debug message
+		log.Printf("D! Serializer [wavefront] unexpected type: %T, with value: %v, for :%s\n",
+			v, v, name)
+		return 0, false
 	}
 }
 
