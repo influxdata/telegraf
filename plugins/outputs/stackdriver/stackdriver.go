@@ -66,8 +66,6 @@ var sampleConfig = `
   #   node_id = "$HOSTNAME"
   #   namespace = "myapp"
   #   location = "eu-north0"
-`
-var userAgent = fmt.Sprintf("telegraf %s", internal.Version())
 
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
@@ -91,7 +89,7 @@ func (s *Stackdriver) Connect() error {
 
 	if s.client == nil {
 		ctx := context.Background()
-		client, err := monitoring.NewMetricClient(ctx, option.WithUserAgent(userAgent))
+		client, err := monitoring.NewMetricClient(ctx, option.WithUserAgent(internal.ProductToken()))
 		if err != nil {
 			return err
 		}
