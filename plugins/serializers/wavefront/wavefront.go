@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs/wavefront"
@@ -17,6 +18,7 @@ type WavefrontSerializer struct {
 	UseStrict      bool
 	SourceOverride []string
 	scratch        buffer
+	mu             sync.Mutex // buffer mutex
 }
 
 // catch many of the invalid chars that could appear in a metric or tag name
@@ -88,17 +90,23 @@ func (s *WavefrontSerializer) serialize(buf *buffer, m telegraf.Metric) {
 
 // Serialize : Serialize based on Wavefront format
 func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
+	s.mu.Lock()
 	s.scratch.Reset()
 	s.serialize(&s.scratch, m)
-	return s.scratch.Copy(), nil
+	out := s.scratch.Copy()
+	s.mu.Unlock()
+	return out, nil
 }
 
 func (s *WavefrontSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	s.mu.Lock()
 	s.scratch.Reset()
 	for _, m := range metrics {
 		s.serialize(&s.scratch, m)
 	}
-	return s.scratch.Copy(), nil
+	out := s.scratch.Copy()
+	s.mu.Unlock()
+	return out, nil
 }
 
 func findSourceTag(mTags map[string]string, s *WavefrontSerializer) string {
