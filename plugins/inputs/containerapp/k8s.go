@@ -225,7 +225,7 @@ func (k8s *K8s) syncClinets() error {
 	options.FieldSelector = fmt.Sprintf("spec.nodeName=%s", k8s.nodename)
 	pods, err := k8s.kubeClient.CoreV1().Pods(meta_v1.NamespaceAll).List(options)
 	if err != nil {
-		log.Printf("E! containerapp input: %s", err.Error())
+		log.Printf("E! ContainerApp input: %s", err.Error())
 		return err
 	}
 
@@ -273,7 +273,7 @@ func (k8s *K8s) checkInformer() {
 func (k8s *K8s) Run() {
 
 	defer func() {
-		log.Printf("E! containerapp: k8s connect error, restart")
+		log.Printf("E! ContainerApp: k8s connect error, restart")
 		time.Sleep(5 * time.Second)
 		go k8s.Run()
 	}()

@@ -25,7 +25,7 @@ func TestGatherHTTP(t *testing.T) {
 		client:  &RealHTTPClient{client: &http.Client{}},
 	}
 
-	dapp := Newcontainerapp()
+	dapp := NewContainerApp()
 	d := internal.Duration{
 		Duration: 1 * time.Millisecond,
 	}
@@ -47,8 +47,8 @@ func TestGatherHTTP(t *testing.T) {
 
 }
 
-func TestcontainerappClients(t *testing.T) {
-	dapp := Newcontainerapp()
+func TestContainerAppClients(t *testing.T) {
+	dapp := NewContainerApp()
 	dapp.Tags = []string{"db"}
 	dapp.TagsMandatory = []string{"db"}
 	dapp.TagsPrefix = "tag."
@@ -108,7 +108,7 @@ func TestGatherHTTPError(t *testing.T) {
 		client:  &RealHTTPClient{client: &http.Client{}},
 	}
 
-	dapp := Newcontainerapp()
+	dapp := NewContainerApp()
 	d := internal.Duration{
 		Duration: 1 * time.Millisecond,
 	}
@@ -124,7 +124,7 @@ func TestGatherHTTPError(t *testing.T) {
 }
 
 func TestNewHTTPGather(t *testing.T) {
-	dapp := Newcontainerapp()
+	dapp := NewContainerApp()
 	cfg := &HTTPConfig{
 		NameOverride:    "test",
 		IP:              "127.0.0.1",
@@ -176,7 +176,7 @@ func TestHttpGatherConf(t *testing.T) {
 
 	cfg, _ := CreateHTTPGatherConf("c", settings, map[string]string{}, values)
 	cfg.IP = "127.0.0.1"
-	dapp := Newcontainerapp()
+	dapp := NewContainerApp()
 	hg, err := NewHTTPGather(dapp, "test", cfg)
 
 	assert.Equal(t, err, nil, "err")

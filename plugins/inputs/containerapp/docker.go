@@ -177,7 +177,7 @@ func (dc *Docker) syncClinets(ctx context.Context, opts types.ContainerListOptio
 
 	containers, err := dc.containerList(ctx, opts)
 	if err != nil {
-		log.Printf("E! containerapp input: %s", err.Error())
+		log.Printf("E! ContainerApp input: %s", err.Error())
 		return err
 	}
 
@@ -200,7 +200,7 @@ func (dc *Docker) syncClinets(ctx context.Context, opts types.ContainerListOptio
 func (dc *Docker) Run() {
 
 	defer func() {
-		log.Printf("E! containerapp: docker connect error, restart")
+		log.Printf("E! ContainerApp: docker connect error, restart")
 		for containerID := range dc.containers {
 			dc.del(containerID)
 		}
@@ -215,7 +215,7 @@ func (dc *Docker) Run() {
 
 	err := dc.syncClinets(ctx, opts)
 	if err != nil {
-		log.Printf("E! containerapp input: %s", err.Error())
+		log.Printf("E! ContainerApp input: %s", err.Error())
 		return
 	}
 
@@ -239,14 +239,14 @@ func (dc *Docker) Run() {
 			}
 
 		case err := <-errEventsCh:
-			log.Printf("E! containerapp events: %s", err.Error())
+			log.Printf("E! ContainerApp events: %s", err.Error())
 			dc.error(err)
 			return
 
 		case <-ticker.C:
 			err := dc.syncClinets(ctx, opts)
 			if err != nil {
-				log.Printf("E! containerapp input: %s", err.Error())
+				log.Printf("E! ContainerApp input: %s", err.Error())
 				return
 			}
 		}

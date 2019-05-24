@@ -19,8 +19,8 @@ type Config struct {
 	SystemTags map[string]string
 }
 
-// containerapp struct
-type containerapp struct {
+// ContainerApp struct
+type ContainerApp struct {
 	ConfigType    string            `toml:"config_type"`
 	StartInterval internal.Duration `toml:"start_interval"`
 	SyncInterval  internal.Duration `toml:"sync_interval"`
@@ -40,13 +40,13 @@ type containerapp struct {
 	errCh       chan error
 }
 
-func Newcontainerapp() *containerapp {
+func NewContainerApp() *ContainerApp {
 	metrics := []Metric{}
 	clients := make(map[string]*HTTPGather)
 	metricsCh := make(chan Metric)
 	errCh := make(chan error)
 
-	return &containerapp{
+	return &ContainerApp{
 		metrics:   metrics,
 		clients:   clients,
 		metricsCh: metricsCh,
@@ -80,7 +80,7 @@ OUTER:
 	return nil, fmt.Errorf("there is no applicable values")
 }
 
-func (s *containerapp) Add(id string, conf *Config) error {
+func (s *ContainerApp) Add(id string, conf *Config) error {
 
 	metaValues, err := checkMandatoryTags(s.TagsMandatory, conf.Values)
 
@@ -134,7 +134,7 @@ func (s *containerapp) Add(id string, conf *Config) error {
 	return nil
 }
 
-func (s *containerapp) Del(id string) {
+func (s *ContainerApp) Del(id string) {
 	if _, ok := s.clients[id]; ok {
 		log.Println("Delete client")
 		s.clients[id].Close()
@@ -143,20 +143,20 @@ func (s *containerapp) Del(id string) {
 	}
 }
 
-func (s *containerapp) Error(err error) {
+func (s *ContainerApp) Error(err error) {
 	s.errors = append(s.errors, err)
 }
 
-func (s *containerapp) Store(msg Metric) {
+func (s *ContainerApp) Store(msg Metric) {
 	s.metricsCh <- msg
 }
 
-func (s *containerapp) Run() {
+func (s *ContainerApp) Run() {
 	go s.run()
 }
 
-func (s *containerapp) run() {
-	log.Println("I! Init containerapp")
+func (s *ContainerApp) run() {
+	log.Println("I! Init ContainerApp")
 	var err error
 	if s.ConfigType == "docker_env" {
 		docker, err := NewDocker(
@@ -171,7 +171,7 @@ func (s *containerapp) run() {
 			go docker.Run()
 		}
 	} else if s.ConfigType == "kubernetes" {
-		log.Println("I! Using k8s api as source for containerapp")
+		log.Println("I! Using k8s api as source for ContainerApp")
 
 		kubeconfig, ok := s.Kubernetes["kubeconfig"]
 		if !ok {
@@ -191,12 +191,12 @@ func (s *containerapp) run() {
 			go k8s.Run()
 		}
 	} else {
-		log.Panic("E! Unsupported containerapp")
+		log.Panic("E! Unsupported ContainerApp")
 		return
 	}
 
 	if err != nil {
-		log.Panicf("E! containerapp input: %s", err.Error())
+		log.Panicf("E! ContainerApp input: %s", err.Error())
 		return
 	}
 
@@ -307,16 +307,16 @@ var sampleConfig = `
      http_method  = "metrics"
 `
 
-func (h *containerapp) SampleConfig() string {
+func (h *ContainerApp) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *containerapp) Description() string {
+func (h *ContainerApp) Description() string {
 	return "Read flattened metrics from docker containers JSON HTTP endpoints"
 }
 
 // Gathers data for all containers.
-func (s *containerapp) Gather(acc telegraf.Accumulator) error {
+func (s *ContainerApp) Gather(acc telegraf.Accumulator) error {
 	s.metricsLock.Lock()
 	metrics := s.metrics[:]
 	s.metrics = s.metrics[:0]
@@ -351,8 +351,8 @@ func (s *containerapp) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("containerapp", func() telegraf.Input {
-		containerapp := Newcontainerapp()
-		containerapp.Run()
-		return containerapp
+		ContainerApp := NewContainerApp()
+		ContainerApp.Run()
+		return ContainerApp
 	})
 }

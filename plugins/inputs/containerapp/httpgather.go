@@ -35,7 +35,7 @@ type HTTPConfig struct {
 
 type HTTPGather struct {
 	id             string
-	server         *containerapp
+	server         *ContainerApp
 	interval       internal.Duration
 	cfg            *HTTPConfig
 	httpjsonclient *HttpJson
@@ -153,7 +153,7 @@ func formatDuration(id string, name string, duration string) (internal.Duration,
 	return d, nil
 }
 
-func NewHTTPGather(server *containerapp, id string, cfg *HTTPConfig) (*HTTPGather, error) {
+func NewHTTPGather(server *ContainerApp, id string, cfg *HTTPConfig) (*HTTPGather, error) {
 	closeCh := make(chan bool)
 	httpjsonclient := NewHttpJson()
 
