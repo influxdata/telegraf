@@ -181,7 +181,6 @@ func formatMetricPoint(b *buffer, metricPoint *wavefront.MetricPoint, s *Wavefro
 	return *b
 }
 
-// Use a fast and simple buffer for constructing statsd messages
 type buffer []byte
 
 func (b *buffer) Reset() { *b = (*b)[:0] }
