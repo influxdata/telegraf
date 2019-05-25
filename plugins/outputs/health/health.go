@@ -17,15 +17,18 @@ import (
 )
 
 const (
-	defaultReadTimeout  = 5 * time.Second
-	defaultWriteTimeout = 5 * time.Second
+	defaultServiceAddress = "tcp://:8080"
+	defaultReadTimeout    = 5 * time.Second
+	defaultWriteTimeout   = 5 * time.Second
 )
 
 var sampleConfig = `
-  ## Address and port to listen on
-  # service_address = ":8080"
+  ## Address and port to listen on.
+  ##   ex: service_address = "tcp://localhost:8080"
+  ##       service_address = "unix:///var/run/telegraf-health.sock"
+  # service_address = "tcp://:8080"
 
-  ## The maximum duration for reading the entire ## request.
+  ## The maximum duration for reading the entire request.
   # read_timeout = "5s"
   ## The maximum duration for writing the entire response.
   # write_timeout = "5s"
@@ -59,6 +62,7 @@ var sampleConfig = `
 `
 
 type Checker interface {
+	// Check returns true if the metrics meet its criteria.
 	Check(metrics []telegraf.Metric) bool
 }
 
@@ -76,7 +80,7 @@ type Health struct {
 
 	wg     sync.WaitGroup
 	server *http.Server
-	origin *url.URL
+	origin string
 
 	mu      sync.Mutex
 	healthy bool
@@ -90,6 +94,7 @@ func (h *Health) Description() string {
 	return "Configurable HTTP health check resource based on metrics"
 }
 
+// Connect starts the HTTP server.
 func (h *Health) Connect() error {
 	h.checkers = make([]Checker, 0)
 	for i := range h.Compares {
@@ -114,28 +119,23 @@ func (h *Health) Connect() error {
 		TLSConfig:    tlsConf,
 	}
 
-	var listener net.Listener
-	if tlsConf != nil {
-		listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
-		h.origin = &url.URL{Scheme: "https", Host: listener.Addr().String()}
-	} else {
-		listener, err = net.Listen("tcp", h.ServiceAddress)
-		h.origin = &url.URL{Scheme: "http", Host: listener.Addr().String()}
-	}
+	listener, err := h.listen(tlsConf)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("I! [outputs.health] Listening on %s", h.Origin())
+	h.origin = h.getOrigin(listener, tlsConf)
+
+	log.Printf("I! [outputs.health] Listening on %s", h.origin)
 
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
 		err := h.server.Serve(listener)
 		if err != http.ErrServerClosed {
-			log.Printf("E! [outputs.health] Serve error on %s: %v", h.Origin(), err)
+			log.Printf("E! [outputs.health] Serve error on %s: %v", h.origin, err)
 		}
-		h.origin = nil
+		h.origin = ""
 	}()
 
 	return nil
@@ -143,6 +143,27 @@ func (h *Health) Connect() error {
 
 func onAuthError(rw http.ResponseWriter, code int) {
 	http.Error(rw, http.StatusText(code), code)
+}
+
+func (h *Health) listen(tlsConf *tls.Config) (net.Listener, error) {
+	u, err := url.Parse(h.ServiceAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	network := "tcp"
+	address := u.Host
+	if u.Host == "" {
+		network = "unix"
+		address = u.Path
+	}
+
+	if tlsConf != nil {
+		return tls.Listen(network, address, tlsConf)
+	} else {
+		return net.Listen(network, address)
+	}
+
 }
 
 func (h *Health) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -157,6 +178,7 @@ func (h *Health) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	http.Error(rw, http.StatusText(code), code)
 }
 
+// Write runs all checks over the metric batch and adjust health state.
 func (h *Health) Write(metrics []telegraf.Metric) error {
 	healthy := true
 	for _, checker := range h.checkers {
@@ -170,6 +192,7 @@ func (h *Health) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+// Close shuts down the HTTP server.
 func (h *Health) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -181,10 +204,26 @@ func (h *Health) Close() error {
 
 // Origin returns the URL of the HTTP server.
 func (h *Health) Origin() string {
-	if h.origin == nil {
+	return h.origin
+}
+
+func (h *Health) getOrigin(listener net.Listener, tlsConf *tls.Config) string {
+	switch listener.Addr().Network() {
+	case "tcp":
+		scheme := "http"
+		if tlsConf != nil {
+			scheme = "https"
+		}
+		origin := &url.URL{
+			Scheme: scheme,
+			Host:   listener.Addr().String(),
+		}
+		return origin.String()
+	case "unix":
+		return listener.Addr().String()
+	default:
 		return ""
 	}
-	return h.origin.String()
 }
 
 func (h *Health) setHealthy(healthy bool) {
@@ -201,7 +240,7 @@ func (h *Health) isHealthy() bool {
 
 func NewHealth() *Health {
 	return &Health{
-		ServiceAddress: ":8080",
+		ServiceAddress: defaultServiceAddress,
 		ReadTimeout:    internal.Duration{Duration: defaultReadTimeout},
 		WriteTimeout:   internal.Duration{Duration: defaultWriteTimeout},
 		healthy:        true,

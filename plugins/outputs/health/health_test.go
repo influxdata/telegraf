@@ -101,7 +101,7 @@ func TestHealth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			output := health.NewHealth()
-			output.ServiceAddress = "127.0.0.1:0"
+			output.ServiceAddress = "tcp://127.0.0.1:0"
 			output.Compares = tt.options.Compares
 			output.Contains = tt.options.Contains
 
