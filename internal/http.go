@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// ErrorFunc is a callback for writing an error response.
 type ErrorFunc func(rw http.ResponseWriter, code int)
 
 // AuthHandler returns a http handler that requires HTTP basic auth
