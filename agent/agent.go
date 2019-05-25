@@ -178,7 +178,10 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 
 	if hasServiceInputs {
 		log.Printf("D! [agent] Starting service inputs")
-		a.startServiceInputs(ctx, metricC)
+		err := a.startServiceInputs(ctx, metricC)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, input := range a.Config.Inputs {
