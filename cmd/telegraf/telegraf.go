@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal"
@@ -33,7 +34,8 @@ var pprofAddr = flag.String("pprof-addr", "",
 	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
-var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
+var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
+var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -167,8 +169,9 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
-	if *fTest {
-		return ag.Test(ctx)
+	if *fTest || *fTestWait != 0 {
+		testWaitDuration := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, testWaitDuration)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
