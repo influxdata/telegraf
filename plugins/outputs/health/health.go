@@ -167,10 +167,8 @@ func (h *Health) listen(tlsConf *tls.Config) (net.Listener, error) {
 }
 
 func (h *Health) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	var code int
-	if h.isHealthy() {
-		code = http.StatusOK
-	} else {
+	var code = http.StatusOK
+	if !h.isHealthy() {
 		code = http.StatusServiceUnavailable
 	}
 
