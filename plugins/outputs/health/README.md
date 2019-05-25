@@ -10,8 +10,10 @@ must fail in order for the resource to enter the failed state.
 ### Configuration
 ```toml
 [[outputs.health]]
-  ## Address and port to listen on
-  # service_address = ":8080"
+  ## Address and port to listen on.
+  ##   ex: service_address = "tcp://localhost:8080"
+  ##       service_address = "unix:///var/run/telegraf-health.sock"
+  # service_address = "tcp://:8080"
 
   ## The maximum duration for reading the entire request.
   # read_timeout = "5s"
