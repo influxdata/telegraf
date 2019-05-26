@@ -30,7 +30,12 @@ var condorOutputRegex = regexp.MustCompile(`(?m)(?P<jobs>\d+\s*jobs);\s*(?P<comp
 // Gather outputs.
 func (htc *HTCondor) Gather(acc telegraf.Accumulator) error {
 	c := exec.Command("condor_q")
-	out, _ := c.Output()
+	out, err := c.Output()
+
+	// htcondor notfound
+	if err != nil {
+		return err
+	}
 
 	var regexGroupMatch = condorOutputRegex.FindAllStringSubmatch(string(out), -1)
 	fields := make(map[string]interface{})
