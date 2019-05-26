@@ -15,7 +15,6 @@ import (
 
 type Interrupts struct {
 	CpuAsTag bool `toml:"cpu_as_tag"`
-	Spurious bool `toml:"spurious"`
 }
 
 type IRQ struct {
@@ -24,7 +23,6 @@ type IRQ struct {
 	Device            string
 	Total             int64
 	Cpus              []int64
-	HasSpurious       bool
 	SpuriousCount     uint64
 	SpuriousUnhandled uint64
 }
@@ -42,9 +40,6 @@ const sampleConfig = `
   ## deployments.
   # cpu_as_tag = false
 
-  ## spurious interrupt counters can be collected
-  # spurious = false
-
   ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
   # [inputs.interrupts.tagdrop]
   #   irq = [ "NET_RX", "TASKLET" ]
@@ -58,7 +53,7 @@ func (s *Interrupts) SampleConfig() string {
 	return sampleConfig
 }
 
-func parseInterrupts(r io.Reader, spurious bool) ([]IRQ, error) {
+func parseInterrupts(r io.Reader) ([]IRQ, error) {
 	var irqs []IRQ
 	var cpucount int
 	scanner := bufio.NewScanner(r)
@@ -98,13 +93,12 @@ scan:
 		} else if len(fields) > cpucount {
 			irq.Type = strings.Join(fields[cpucount+1:], " ")
 		}
-		if spurious {
-			file := filepath.Join("/proc/irq", irq.ID, "spurious")
-			f, err := os.Open(file)
-			if err == nil {
-				irq.HasSpurious, irq.SpuriousCount, irq.SpuriousUnhandled = parseSpurious(f)
-				_ = f.Close()
-			}
+
+		// collect spurious interrupt data for this irq.ID
+		file := filepath.Join("/proc/irq", irq.ID, "spurious")
+		f, err := os.Open(file)
+		if err == nil {
+			irq.SpuriousCount, irq.SpuriousUnhandled = parseSpurious(f)
 		}
 		irqs = append(irqs, *irq)
 	}
@@ -112,7 +106,15 @@ scan:
 		return nil, fmt.Errorf("error scanning file: %s", scanner.Err())
 	}
 
-	// determine the rightmost CPU column with non-zero data
+	// For some Linux systems there can be fixed, large number of CPUs reported in
+	// the `/proc/softirqs` file. This number could be much larger than the actual number of
+	// CPUs in the system. The fields for these phantom CPUs contain zeroes. The approach
+	// taken to remove these phantom CPUs is to remove the columns containing all zeros
+	// to the right (higher CPU numbers). For systems where CPUs are dynamically enabled,
+	// this can lead to CPUs not being reported until enabled. However, this is preferable
+	// to collecting metrics for tens or hundreds of phantom CPUs.
+
+	// First, determine the rightmost CPU column with non-zero data
 	validCpuIndex := 0
 	for _, irq := range irqs {
 		var i int
@@ -122,7 +124,7 @@ scan:
 			validCpuIndex = i
 		}
 	}
-	// remove data for any CPUs above the validCpuIndex
+	// Secondly, remove data for any CPUs above the validCpuIndex
 	validCpuCount := validCpuIndex + 1
 	for i := 0; i < len(irqs); i++ {
 		if len(irqs[i].Cpus) > validCpuCount {
@@ -133,10 +135,9 @@ scan:
 	return irqs, nil
 }
 
-func parseSpurious(r io.Reader) (bool, uint64, uint64) {
+func parseSpurious(r io.Reader) (uint64, uint64) {
 	count := uint64(0)
 	unhandled := uint64(0)
-	foundData := false
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		s := strings.Fields(scanner.Text())
@@ -146,13 +147,11 @@ func parseSpurious(r io.Reader) (bool, uint64, uint64) {
 		switch s[0] {
 		case "count":
 			count, _ = strconv.ParseUint(s[1], 10, 64)
-			foundData = true
 		case "unhandled":
 			unhandled, _ = strconv.ParseUint(s[1], 10, 64)
-			foundData = true
 		}
 	}
-	return foundData, count, unhandled
+	return count, unhandled
 }
 
 func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
@@ -172,16 +171,14 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("could not open file: %s", file))
 			continue
 		}
-		irqs, err := parseInterrupts(f, s.Spurious)
+		irqs, err := parseInterrupts(f)
 		_ = f.Close()
 		if err != nil {
 			acc.AddError(fmt.Errorf("parsing %s: %s", file, err))
 			continue
 		}
 		reportMetrics(measurement, irqs, acc, s.CpuAsTag)
-		if s.Spurious {
-			reportSpuriousMetrics(irqs, acc)
-		}
+		reportSpuriousMetrics(irqs, acc)
 	}
 	return nil
 }
@@ -205,9 +202,6 @@ func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpu
 
 func reportSpuriousMetrics(irqs []IRQ, acc telegraf.Accumulator) {
 	for _, irq := range irqs {
-		if !irq.HasSpurious {
-			continue
-		}
 		tags, _ := gatherTagsFields(irq)
 		spuriousFields := map[string]interface{}{
 			"count":     irq.SpuriousCount,
