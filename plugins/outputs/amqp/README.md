@@ -33,7 +33,7 @@ For an introduction to AMQP see:
   # exchange_type = "topic"
 
   ## If true, exchange will be passively declared.
-  # exchange_declare_passive = false
+  # exchange_passive = false
 
   ## Exchange durability can be either "transient" or "durable".
   # exchange_durability = "durable"
@@ -91,6 +91,14 @@ For an introduction to AMQP see:
   ## Only applies to data formats which are not line based such as JSON.
   ## Recommended to set to true.
   # use_batch_format = false
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  ##
+  ## Please note that when use_batch_format = false each amqp message contains only
+  ## a single metric, it is recommended to use compression with batch format
+  ## for best results.
+  # content_encoding = "identity"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read

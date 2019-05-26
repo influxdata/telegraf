@@ -312,7 +312,68 @@ func convertField(v interface{}) interface{} {
 		return uint64(v)
 	case float32:
 		return float64(v)
+	case *float64:
+		if v != nil {
+			return *v
+		}
+	case *int64:
+		if v != nil {
+			return *v
+		}
+	case *string:
+		if v != nil {
+			return *v
+		}
+	case *bool:
+		if v != nil {
+			return *v
+		}
+	case *int:
+		if v != nil {
+			return int64(*v)
+		}
+	case *uint:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint64:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *[]byte:
+		if v != nil {
+			return string(*v)
+		}
+	case *int32:
+		if v != nil {
+			return int64(*v)
+		}
+	case *int16:
+		if v != nil {
+			return int64(*v)
+		}
+	case *int8:
+		if v != nil {
+			return int64(*v)
+		}
+	case *uint32:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint16:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint8:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *float32:
+		if v != nil {
+			return float64(*v)
+		}
 	default:
 		return nil
 	}
+	return nil
 }

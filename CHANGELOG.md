@@ -1,4 +1,134 @@
-## v1.10 [unreleased]
+## v1.11 [unreleased]
+
+#### Release Notes
+
+- The `uptime_format` field in the system input has been deprecated, use the
+  `uptime` field instead.
+
+#### New Inputs
+
+- [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
+- [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
+- [powerdns_recursor](/plugins/inputs/powerdns_recursor/README.md) - Contributed by @dupondje
+
+#### New Aggregators
+
+- [final](/plugins/aggregators/final/README.md) - Contributed by @oplehto
+
+#### New Outputs
+
+- [syslog](/plugins/outputs/syslog/README.md) - Contributed by @javicrespo
+
+#### New Serializers
+
+- [wavefront](/plugins/serializers/wavefront/README.md) - Contributed by @puckpuck
+
+#### Features
+
+- [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.
+- [#5569](https://github.com/influxdata/telegraf/pull/5569): Add hexadecimal string to integer conversion to converter processor.
+- [#5601](https://github.com/influxdata/telegraf/pull/5601): Add support for multiple line text and perfdata to nagios parser.
+- [#5648](https://github.com/influxdata/telegraf/pull/5648): Allow env vars ${} expansion syntax in configuration file.
+- [#5641](https://github.com/influxdata/telegraf/pull/5641): Add option to reset buckets on flush to histogram aggregator.
+- [#5664](https://github.com/influxdata/telegraf/pull/5664): Add option to use strict sanitization rules to wavefront output.
+- [#5697](https://github.com/influxdata/telegraf/pull/5697): Add namespace restriction to prometheus input plugin.
+- [#5681](https://github.com/influxdata/telegraf/pull/5681): Add cmdline tag to procstat input.
+- [#5704](https://github.com/influxdata/telegraf/pull/5704): Support verbose query param in ping endpoint of influxdb_listener.
+- [#5713](https://github.com/influxdata/telegraf/pull/5713): Enhance HTTP connection options for phpfpm input plugin.
+- [#5544](https://github.com/influxdata/telegraf/pull/5544): Use more efficient GetMetricData API to collect cloudwatch metrics.
+- [#5544](https://github.com/influxdata/telegraf/pull/5544): Allow selection of collected statistic types in cloudwatch input.
+- [#5757](https://github.com/influxdata/telegraf/pull/5757): Speed up interface stat collection in net input.
+- [#5769](https://github.com/influxdata/telegraf/pull/5769): Add pagefault data to procstat input plugin.
+- [#5760](https://github.com/influxdata/telegraf/pull/5760): Add option to set permissions for unix domain sockets to socket_listener.
+- [#5585](https://github.com/influxdata/telegraf/pull/5585): Add cli support for outputting sections of the config.
+- [#5770](https://github.com/influxdata/telegraf/pull/5770): Add service-display-name option for use with Windows service.
+- [#5778](https://github.com/influxdata/telegraf/pull/5778): Add support for log rotation.
+- [#5765](https://github.com/influxdata/telegraf/pull/5765): Support more drive types in smart input.
+- [#5829](https://github.com/influxdata/telegraf/pull/5829): Add support for HTTP basic auth to solr input.
+- [#5791](https://github.com/influxdata/telegraf/pull/5791): Add support for datadog events to statsd input.
+- [#5817](https://github.com/influxdata/telegraf/pull/5817): Allow devices option to match against devlinks.
+- [#5855](https://github.com/influxdata/telegraf/pull/5855): Support tags in enum processor.
+- [#5830](https://github.com/influxdata/telegraf/pull/5830): Add support for gzip compression to amqp plugins.
+- [#5831](https://github.com/influxdata/telegraf/pull/5831): Support passive queue declaration in amqp_consumer.
+- [#5901](https://github.com/influxdata/telegraf/pull/5901): Set user agent in stackdriver output.
+
+#### Bugfixes
+
+- [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
+- [#5730](https://github.com/influxdata/telegraf/pull/5730): Don't start telegraf when stale pidfile found.
+- [#5477](https://github.com/influxdata/telegraf/pull/5477): Support Minecraft server 1.13 and newer in minecraft input.
+- [#4098](https://github.com/influxdata/telegraf/issues/4098): Fix inline table support in configuration file.
+- [#1598](https://github.com/influxdata/telegraf/issues/1598): Fix multi-line basic strings support in configuration file.
+- [#5746](https://github.com/influxdata/telegraf/issues/5746): Verify a process passed by pid_file exists in procstat input.
+- [#5455](https://github.com/influxdata/telegraf/issues/5455): Fix unsupported pkt type error in pgbouncer.
+- [#5771](https://github.com/influxdata/telegraf/pull/5771): Fix only one job per storage target reported in lustre2 input.
+- [#5796](https://github.com/influxdata/telegraf/issues/5796): Set default timeout of 5s in fibaro input.
+- [#5835](https://github.com/influxdata/telegraf/issues/5835): Fix docker input does not parse image name correctly.
+- [#5661](https://github.com/influxdata/telegraf/issues/5661): Fix direct exchange routing key in amqp output.
+- [#5819](https://github.com/influxdata/telegraf/issues/5819): Fix scale set resource id with azure_monitor output.
+- [#5883](https://github.com/influxdata/telegraf/issues/5883): Skip invalid power times in apex_neptune input.
+- [#3485](https://github.com/influxdata/telegraf/issues/3485): Fix sqlserver connection closing on error.
+
+## v1.10.4 [2019-05-14]
+
+#### Bugfixes
+
+- [#5764](https://github.com/influxdata/telegraf/pull/5764): Fix race condition in the Wavefront parser.
+- [#5783](https://github.com/influxdata/telegraf/pull/5783): Create telegraf user in pre-install rpm scriptlet.
+- [#5792](https://github.com/influxdata/telegraf/pull/5792): Don't discard metrics on forbidden error in influxdb_v2 output.
+- [#5803](https://github.com/influxdata/telegraf/issues/5803): Fix http output cannot set Host header.
+- [#5619](https://github.com/influxdata/telegraf/issues/5619): Fix interval estimation in vsphere input.
+- [#5782](https://github.com/influxdata/telegraf/pull/5782): Skip lines with missing refid in ntpq input.
+- [#5755](https://github.com/influxdata/telegraf/issues/5755): Add support for hex values to ipmi_sensor input.
+- [#5824](https://github.com/influxdata/telegraf/issues/5824): Fix parse of unix timestamp with more than ns precision.
+- [#5836](https://github.com/influxdata/telegraf/issues/5836): Restore field name case in interrupts input.
+
+## v1.10.3 [2019-04-16]
+
+#### Bugfixes
+
+- [#5680](https://github.com/influxdata/telegraf/pull/5680): Allow colons in metric names in prometheus_client output.
+- [#5716](https://github.com/influxdata/telegraf/pull/5716): Set log directory attributes in rpm spec.
+
+## v1.10.2 [2019-04-02]
+
+#### Release Notes
+
+- String fields no longer have leading and trailing quotation marks removed in
+  the grok parser.  If you are capturing quoted strings you may need to update
+  the patterns.
+
+#### Bugfixes
+
+- [#5612](https://github.com/influxdata/telegraf/pull/5612): Fix deadlock when Telegraf is aligning aggregators.
+- [#5523](https://github.com/influxdata/telegraf/issues/5523): Fix missing cluster stats in ceph input.
+- [#5566](https://github.com/influxdata/telegraf/pull/5566): Fix reading major and minor block devices identifiers in diskio input.
+- [#5607](https://github.com/influxdata/telegraf/pull/5607): Add owned directories to rpm package spec.
+- [#4998](https://github.com/influxdata/telegraf/issues/4998): Fix last character removed from string field in grok parser.
+- [#5632](https://github.com/influxdata/telegraf/pull/5632): Fix drop tracking of metrics removed with aggregator drop_original.
+- [#5540](https://github.com/influxdata/telegraf/pull/5540): Fix open file error handling in file output.
+- [#5626](https://github.com/influxdata/telegraf/issues/5626): Fix plugin name in influxdb_v2 output logging.
+- [#5621](https://github.com/influxdata/telegraf/issues/5621): Fix basedir check and parent dir extraction in filecount input.
+- [#5618](https://github.com/influxdata/telegraf/issues/5618): Listen before leaving start in statsd.
+- [#5595](https://github.com/influxdata/telegraf/issues/5595): Fix aggregator window alignment.
+- [#5637](https://github.com/influxdata/telegraf/issues/5637): Fix panic during shutdown of multiple aggregators.
+- [#5642](https://github.com/influxdata/telegraf/issues/5642): Fix parsing of kube config certificate-authority-data in prometheus input.
+- [#5636](https://github.com/influxdata/telegraf/issues/5636): Fix tags applied to wrong metric on parse error.
+- [#5522](https://github.com/influxdata/telegraf/issues/5522): Remove tags that would create invalid label names in prometheus output.
+
+## v1.10.1 [2019-03-19]
+
+#### Bugfixes
+
+- [#5448](https://github.com/influxdata/telegraf/issues/5448): Show error when TLS configuration cannot be loaded.
+- [#5543](https://github.com/influxdata/telegraf/pull/5543): Add Base64-encoding/decoding for Google Cloud PubSub plugins.
+- [#5565](https://github.com/influxdata/telegraf/issues/5565): Fix type compatibility in vsphere plugin with use_int_samples option.
+- [#5492](https://github.com/influxdata/telegraf/issues/5492): Fix vsphere input shows failed task in vCenter.
+- [#5530](https://github.com/influxdata/telegraf/issues/5530): Fix invalid measurement name and skip column in csv parser.
+- [#5589](https://github.com/influxdata/telegraf/issues/5589): Fix system input causing high cpu usage on Raspbian.
+- [#5575](https://github.com/influxdata/telegraf/issues/5575): Don't add empty healthcheck tags to consul input.
+
+## v1.10 [2019-03-05]
 
 #### New Inputs
 
@@ -56,6 +186,7 @@
 - [#4308](https://github.com/influxdata/telegraf/pull/4308): Add additional metrics to rabbitmq input.
 - [#5388](https://github.com/influxdata/telegraf/pull/5388): Add multicast support to socket_listener input.
 - [#5490](https://github.com/influxdata/telegraf/pull/5490): Add tag based routing in influxdb/influxdb_v2 outputs.
+- [#5533](https://github.com/influxdata/telegraf/pull/5533): Allow grok parser to produce metrics with no fields.
 
 #### Bugfixes
 
@@ -67,6 +198,9 @@
 - [#5449](https://github.com/influxdata/telegraf/issues/5449): Log permission error and ignore in filecount input.
 - [#5497](https://github.com/influxdata/telegraf/pull/5497): Create log file in append mode.
 - [#5325](https://github.com/influxdata/telegraf/issues/5325): Ignore tracking for metrics added to aggregator.
+- [#5514](https://github.com/influxdata/telegraf/issues/5514): Fix panic when rejecting empty batch.
+- [#5518](https://github.com/influxdata/telegraf/pull/5518): Fix conversion from string float to integer.
+- [#5431](https://github.com/influxdata/telegraf/pull/5431): Sort metrics by timestamp in prometheus output.
 
 ## v1.9.5 [2019-02-26]
 

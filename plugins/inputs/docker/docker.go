@@ -346,6 +346,39 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func parseImage(image string) (string, string) {
+	// Adapts some of the logic from the actual Docker library's image parsing
+	// routines:
+	// https://github.com/docker/distribution/blob/release/2.7/reference/normalize.go
+	domain := ""
+	remainder := ""
+
+	i := strings.IndexRune(image, '/')
+
+	if i == -1 || (!strings.ContainsAny(image[:i], ".:") && image[:i] != "localhost") {
+		remainder = image
+	} else {
+		domain, remainder = image[:i], image[i+1:]
+	}
+
+	imageName := ""
+	imageVersion := "unknown"
+
+	i = strings.LastIndex(remainder, ":")
+	if i > -1 {
+		imageVersion = remainder[i+1:]
+		imageName = remainder[:i]
+	} else {
+		imageName = remainder
+	}
+
+	if domain != "" {
+		imageName = domain + "/" + imageName
+	}
+
+	return imageName, imageVersion
+}
+
 func (d *Docker) gatherContainer(
 	container types.Container,
 	acc telegraf.Accumulator,
@@ -366,17 +399,7 @@ func (d *Docker) gatherContainer(
 		return nil
 	}
 
-	// the image name sometimes has a version part, or a private repo
-	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
-	imageName := ""
-	imageVersion := "unknown"
-	i := strings.LastIndex(container.Image, ":") // index of last ':' character
-	if i > -1 {
-		imageVersion = container.Image[i+1:]
-		imageName = container.Image[:i]
-	} else {
-		imageName = container.Image
-	}
+	imageName, imageVersion := parseImage(container.Image)
 
 	tags := map[string]string{
 		"engine_host":       d.engine_host,

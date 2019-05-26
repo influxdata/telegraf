@@ -40,6 +40,7 @@ type VSphere struct {
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
 	Separator               string
+	UseIntSamples           bool
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -89,7 +90,7 @@ var sampleConfig = `
     "net.droppedRx.summation",
     "net.droppedTx.summation",
     "net.usage.average",
-    "power.power.average",    
+    "power.power.average",
     "virtualDisk.numberReadAveraged.average",
     "virtualDisk.numberWriteAveraged.average",
     "virtualDisk.read.average",
@@ -104,7 +105,7 @@ var sampleConfig = `
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
 
-  ## Hosts 
+  ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   host_metric_include = [
     "cpu.coreUtilization.average",
@@ -157,12 +158,12 @@ var sampleConfig = `
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
-  ## Clusters 
+  ## Clusters
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
-  ## Datastores 
+  ## Datastores
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default for Datastores only
@@ -172,7 +173,7 @@ var sampleConfig = `
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default for Datastores only
 
-  ## Plugin Settings  
+  ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
@@ -198,6 +199,14 @@ var sampleConfig = `
 
   ## timeout applies to any of the api request made to vcenter
   # timeout = "60s"
+
+  ## When set to true, all samples are sent as integers. This makes the output
+  ## data types backwards compatible with Telegraf 1.9 or lower. Normally all
+  ## samples from vCenter, with the exception of percentages, are integer
+  ## values, but under some conditions, some averaging takes place internally in
+  ## the plugin. Setting this flag to "false" will send values as floats to
+  ## preserve the full precision when averaging takes place.
+  # use_int_samples = true
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -312,6 +321,7 @@ func init() {
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
 			Separator:               "_",
+			UseIntSamples:           true,
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

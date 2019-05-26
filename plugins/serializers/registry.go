@@ -5,13 +5,13 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
+	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -23,6 +23,9 @@ type SerializerOutput interface {
 
 // Serializer is an interface defining functions that a serializer plugin must
 // satisfy.
+//
+// Implementations of this interface should be reentrant but are not required
+// to be thread-safe.
 type Serializer interface {
 	// Serialize takes a single telegraf metric and turns it into a byte buffer.
 	// separate metrics should be separated by a newline, and there should be
@@ -66,6 +69,13 @@ type Config struct {
 
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool
+
+	// Point tags to use as the source name for Wavefront (if none found, host will be used).
+	WavefrontSourceOverride []string
+
+	// Use Strict rules to sanitize metric and tag names from invalid characters for Wavefront
+	// When enabled forward slash (/) and comma (,) will be accepted
+	WavefrontUseStrict bool
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -85,10 +95,16 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewNowSerializer()
 	case "carbon2":
 		serializer, err = NewCarbon2Serializer()
+	case "wavefront":
+		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
+}
+
+func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []string) (Serializer, error) {
+	return wavefront.NewSerializer(prefix, useStrict, sourceOverride)
 }
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {

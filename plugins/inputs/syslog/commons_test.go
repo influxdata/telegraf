@@ -2,6 +2,7 @@ package syslog
 
 import (
 	"github.com/influxdata/telegraf/internal"
+	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
 	"time"
 )
@@ -37,7 +38,7 @@ func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
 	}
 }
 
-func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool, f Framing) *Syslog {
+func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool, f framing.Framing) *Syslog {
 	d := &internal.Duration{
 		Duration: defaultReadTimeout,
 	}
