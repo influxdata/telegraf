@@ -5,7 +5,7 @@ docker containers.
 
 The docker plugin uses the [Official Docker Client](https://github.com/moby/moby/tree/master/client)
 to gather logs from the [Engine API](https://docs.docker.com/engine/api/v1.24/).
-Note: This plugin works only for containers with the `json-file` or `journald` logging driver.
+Note: This plugin works only for containers with the `local` or  `json-file` or `journald` logging driver.
 ### Configuration:
 
 ```toml
@@ -47,10 +47,11 @@ When using the `"ENV"` endpoint, the connection is configured using the
 
 - docker_log
   - tags:
-    - containerId
-    - containerName
+    - container_id
+    - container_name
+    - stream
   - fields:
-    - log
+    - message
 ### Example Output:
 
 ```

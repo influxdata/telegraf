@@ -3,13 +3,8 @@ package docker_log
 import (
 	"context"
 	"crypto/tls"
-	"io"
-	"log"
-	"strings"
-	"sync"
-	"time"
-
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -18,6 +13,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"io"
+	"strings"
+	"sync"
+	"time"
 )
 
 type StdType byte
@@ -34,7 +33,9 @@ const (
 
 	startingBufLen = 32*1024 + stdWriterPrefixLen + 1
 
-	ERR_PREFIX = "E! [inputs.docker_log]"
+	ERR_PREFIX      = "E! [inputs.docker_log]"
+	defaultEndpoint = "unix:///var/run/docker.sock"
+	logBytesMax     = 1000
 )
 
 type DockerLogs struct {
@@ -66,11 +67,6 @@ type DockerLogs struct {
 	mu              sync.Mutex
 	containerList   map[string]io.ReadCloser
 }
-
-const (
-	defaultEndpoint = "unix:///var/run/docker.sock"
-	LOG_BYTES_MAX   = 1000
-)
 
 var (
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
@@ -113,8 +109,7 @@ func (d *DockerLogs) SampleConfig() string {
 
 func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	/*Check to see if any new containers have been created since last time*/
-	d.containerListUpdate(acc)
-	return nil
+	return d.containerListUpdate(acc)
 }
 
 /*Following few functions have been inherited from telegraf docker input plugin*/
@@ -156,6 +151,8 @@ func (d *DockerLogs) addToContainerList(containerId string, logReader io.ReadClo
 }
 
 func (d *DockerLogs) removeFromContainerList(containerId string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	delete(d.containerList, containerId)
 	return nil
 }
@@ -178,12 +175,10 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	if d.client == nil {
-		log.Printf("%s : Dock client is null", ERR_PREFIX)
-		return nil
+		return errors.New(fmt.Sprintf("%s : Dock client is null", ERR_PREFIX))
 	}
 	containers, err := d.client.ContainerList(ctx, d.opts)
 	if err != nil {
-		log.Printf("%s : %s ", ERR_PREFIX, err.Error())
 		return err
 	}
 	for _, container := range containers {
@@ -194,9 +189,23 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 		/*Start a new goroutine for every new container that has logs to collect*/
 		go func(c types.Container) {
 			defer d.wg.Done()
-			err := d.getContainerLogs(c, acc)
+			logOptions := types.ContainerLogsOptions{
+				ShowStdout: true,
+				ShowStderr: true,
+				Timestamps: false,
+				Details:    true,
+				Follow:     true,
+				Tail:       "0",
+			}
+			logReader, err := d.client.ContainerLogs(context.Background(), c.ID, logOptions)
 			if err != nil {
-				log.Printf("%s : %s ", ERR_PREFIX, err.Error())
+				acc.AddError(err)
+				return
+			}
+			d.addToContainerList(c.ID, logReader)
+			err = d.tailContainerLogs(c, logReader, acc)
+			if err != nil {
+				acc.AddError(fmt.Errorf("%s : %s ", ERR_PREFIX, err.Error()))
 			}
 			d.removeFromContainerList(c.ID)
 			return
@@ -205,40 +214,36 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *DockerLogs) getContainerLogs(
-	container types.Container,
+func (d *DockerLogs) tailContainerLogs(
+	container types.Container, logReader io.ReadCloser,
 	acc telegraf.Accumulator,
 ) error {
 	c, err := d.client.ContainerInspect(context.Background(), container.ID)
 	if err != nil {
-		log.Printf("%s : %s", ERR_PREFIX, err.Error())
-		return err
-	}
-	logOptions := types.ContainerLogsOptions{
-		ShowStdout: true,
-		ShowStderr: true,
-		Timestamps: false,
-		Details:    true,
-		Follow:     true,
-		Tail:       "0",
-	}
-	logReader, err := d.client.ContainerLogs(context.Background(), container.ID, logOptions)
-	d.addToContainerList(container.ID, logReader)
-	if err != nil {
-		log.Printf("%s : %s", ERR_PREFIX, err.Error())
 		return err
 	}
 	/* Parse container name */
-	cname := "unknown"
-	if len(container.Names) > 0 {
-		/*Pick first container name*/
-		cname = strings.TrimPrefix(container.Names[0], "/")
+	var cname string
+	for _, name := range container.Names {
+		trimmedName := strings.TrimPrefix(name, "/")
+		match := d.containerFilter.Match(trimmedName)
+		if match {
+			cname = trimmedName
+			break
+		}
 	}
 
-	tags := map[string]string{
-		"containerId":   container.ID,
-		"containerName": cname,
+	if cname == "" {
+		return errors.New(fmt.Sprintf("%s : container name is null", ERR_PREFIX))
 	}
+	imageName, imageVersion := parseImage(container.Image)
+	tags := map[string]string{
+		"container_name":    cname,
+		"container_image":   imageName,
+		"container_version": imageVersion,
+	}
+	fields := map[string]interface{}{}
+	fields["container_id"] = container.ID
 	// Add labels to tags
 	for k, label := range container.Labels {
 		if d.labelFilter.Match(k) {
@@ -246,41 +251,37 @@ func (d *DockerLogs) getContainerLogs(
 		}
 	}
 	if c.Config.Tty {
-		_, err = pushTtyLogs(acc, tags, logReader)
+		err = pushTtyLogs(acc, tags, fields, logReader)
 	} else {
-		_, err = pushLogs(acc, tags, logReader)
+		_, err = pushLogs(acc, tags, fields, logReader)
 	}
 	if err != nil {
-		log.Printf("%s : %s", ERR_PREFIX, err.Error())
 		return err
 	}
 	return nil
 }
-func pushTtyLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader) (written int64, err error) {
+func pushTtyLogs(acc telegraf.Accumulator, tags map[string]string, fields map[string]interface{}, src io.Reader) (err error) {
 	tags["logType"] = "unknown" //in tty mode we wont be able to differentiate b/w stdout and stderr hence unknown
-	fields := map[string]interface{}{}
-	data := make([]byte, LOG_BYTES_MAX)
+	data := make([]byte, logBytesMax)
 	for {
 		num, err := src.Read(data)
-		if err != nil {
-			if err == io.EOF {
-				written += int64(num)
-				fields["log"] = data[1:num]
-				acc.AddFields("docker_log", fields, tags)
-				return written, nil
-			}
-			return written, err
-		}
-		written += int64(num)
-		if len(data) > 0 {
-			fields["log"] = data[1:num]
+		if num > 0 {
+			fields["message"] = data[1:num]
 			acc.AddFields("docker_log", fields, tags)
+		}
+		if err == io.EOF {
+			fields["message"] = data[1:num]
+			acc.AddFields("docker_log", fields, tags)
+			return nil
+		}
+		if err != nil {
+			return err
 		}
 	}
 }
 
 /* Inspired from https://github.com/moby/moby/blob/master/pkg/stdcopy/stdcopy.go */
-func pushLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader) (written int64, err error) {
+func pushLogs(acc telegraf.Accumulator, tags map[string]string, fields map[string]interface{}, src io.Reader) (written int64, err error) {
 	var (
 		buf       = make([]byte, startingBufLen)
 		bufLen    = len(buf)
@@ -354,9 +355,8 @@ func pushLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader) (
 			return written, fmt.Errorf("error from daemon in stream: %s", string(buf[stdWriterPrefixLen:frameSize+stdWriterPrefixLen]))
 		}
 
-		tags["logType"] = logType
-		fields := map[string]interface{}{}
-		fields["log"] = buf[stdWriterPrefixLen+1 : frameSize+stdWriterPrefixLen]
+		tags["stream"] = logType
+		fields["message"] = buf[stdWriterPrefixLen+1 : frameSize+stdWriterPrefixLen]
 		acc.AddFields("docker_log", fields, tags)
 		written += int64(frameSize)
 
@@ -368,8 +368,6 @@ func pushLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader) (
 }
 
 func (d *DockerLogs) Start(acc telegraf.Accumulator) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
 	var c Client
 	var err error
 	if d.Endpoint == "ENV" {
@@ -419,10 +417,44 @@ func (d *DockerLogs) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
+/* Inspired from https://github.com/influxdata/telegraf/blob/master/plugins/inputs/docker/docker.go */
+func parseImage(image string) (string, string) {
+	// Adapts some of the logic from the actual Docker library's image parsing
+	// routines:
+	// https://github.com/docker/distribution/blob/release/2.7/reference/normalize.go
+	domain := ""
+	remainder := ""
+
+	i := strings.IndexRune(image, '/')
+
+	if i == -1 || (!strings.ContainsAny(image[:i], ".:") && image[:i] != "localhost") {
+		remainder = image
+	} else {
+		domain, remainder = image[:i], image[i+1:]
+	}
+
+	imageName := ""
+	imageVersion := "unknown"
+
+	i = strings.LastIndex(remainder, ":")
+	if i > -1 {
+		imageVersion = remainder[i+1:]
+		imageName = remainder[:i]
+	} else {
+		imageName = remainder
+	}
+
+	if domain != "" {
+		imageName = domain + "/" + imageName
+	}
+
+	return imageName, imageVersion
+}
+
 func (d *DockerLogs) Stop() {
 	d.mu.Lock()
-	defer d.mu.Unlock()
 	d.stopAllReaders()
+	d.mu.Unlock()
 	d.wg.Wait()
 }
 
