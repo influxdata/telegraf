@@ -165,7 +165,7 @@ For documentation on the latest development code see the [documentation index][d
 * [dns query time](./plugins/inputs/dns_query)
 * [docker](./plugins/inputs/docker)
 * [dovecot](./plugins/inputs/dovecot)
-* [ecs](./plugins/inputs/ecs)
+* [ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
