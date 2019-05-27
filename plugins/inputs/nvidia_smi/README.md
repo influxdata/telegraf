@@ -35,6 +35,15 @@ On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corpor
     - `temperature_gpu` (integer, degrees C)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)
+    - `pcie_link_gen_current` (integer)
+    - `pcie_link_width_current` (integer)
+    - `encoder_stats_session_count` (integer)
+    - `encoder_stats_average_fps` (integer)
+    - `encoder_stats_average_latency` (integer)
+    - `clocks_current_graphics` (integer, MHz)
+    - `clocks_current_sm` (integer, MHz)
+    - `clocks_current_memory` (integer, MHz)
+    - `clocks_current_video` (integer, MHz)
 
 ### Sample Query
 
