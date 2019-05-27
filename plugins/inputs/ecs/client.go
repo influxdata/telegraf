@@ -1,10 +1,8 @@
 package ecs
 
 import (
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -23,20 +21,6 @@ type Client interface {
 
 type httpClient interface {
 	Do(req *http.Request) (*http.Response, error)
-}
-
-// NewEnvClient configures a new Client from the env
-func NewEnvClient() (*EcsClient, error) {
-	timeout := 5 * time.Second
-	if t := os.Getenv("ECS_TIMEOUT"); t != "" {
-		if d, err := time.ParseDuration(t); err == nil {
-			timeout = d
-		}
-	}
-
-	return NewClient(
-		timeout,
-	)
 }
 
 // NewClient constructs an ECS client with the passed configuration params
@@ -68,13 +52,11 @@ func (c *EcsClient) Task() (*Task, error) {
 	resp, err := c.client.Do(req)
 
 	if err != nil {
-		log.Println("failed to GET metadata endpoint", err)
 		return nil, err
 	}
 
 	task, err := unmarshalTask(resp.Body)
 	if err != nil {
-		log.Println("failed to decode response from metadata endpoint", err)
 		return nil, err
 	}
 
@@ -91,13 +73,11 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 	resp, err := c.client.Do(req)
 
 	if err != nil {
-		log.Println("failed to GET stats endpoint", err)
 		return map[string]types.StatsJSON{}, err
 	}
 
 	statsMap, err := unmarshalStats(resp.Body)
 	if err != nil {
-		log.Println("failed to decode response from stats endpoint")
 		return map[string]types.StatsJSON{}, err
 	}
 

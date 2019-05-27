@@ -4,58 +4,44 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_parseTask(t *testing.T) {
 	r, err := os.Open("testdata/metadata.golden")
-	if err != nil {
-		t.Errorf("error opening test files")
-	}
+	require.NoError(t, err)
+
 	parsed, err := unmarshalTask(r)
-	if err != nil {
-		t.Errorf("error parsing task %v", err)
-	}
-	assert.Equal(t, validMeta, *parsed, "Got = %v, want = %v", parsed, validMeta)
+	require.NoError(t, err)
+
+	require.Equal(t, validMeta, *parsed)
 }
 
 func Test_parseStats(t *testing.T) {
 	r, err := os.Open("testdata/stats.golden")
-	if err != nil {
-		t.Errorf("error opening test files")
-	}
+	require.NoError(t, err)
 
 	parsed, err := unmarshalStats(r)
-	if err != nil {
-		t.Errorf("error parsing stats %v", err)
-	}
-	assert.Equal(t, validStats, parsed, "Got = %v, want = %v", parsed, validStats)
+	require.NoError(t, err)
+	require.Equal(t, validStats, parsed)
 }
 
 func Test_mergeTaskStats(t *testing.T) {
 	metadata, err := os.Open("testdata/metadata.golden")
-	if err != nil {
-		t.Errorf("error opening test files")
-	}
+	require.NoError(t, err)
 
 	parsedMetadata, err := unmarshalTask(metadata)
-	if err != nil {
-		t.Errorf("error parsing task %v", err)
-	}
+	require.NoError(t, err)
 
 	stats, err := os.Open("testdata/stats.golden")
-	if err != nil {
-		t.Errorf("error opening test files")
-	}
+	require.NoError(t, err)
 
 	parsedStats, err := unmarshalStats(stats)
-	if err != nil {
-		t.Errorf("error parsing stats %v", err)
-	}
+	require.NoError(t, err)
 
 	mergeTaskStats(parsedMetadata, parsedStats)
 
 	for _, cont := range parsedMetadata.Containers {
-		assert.Equal(t, validStats[cont.ID], cont.Stats, "Got = %v, want = %v", cont.Stats, validStats[cont.ID])
+		require.Equal(t, validStats[cont.ID], cont.Stats)
 	}
 }

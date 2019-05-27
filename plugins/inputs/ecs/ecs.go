@@ -1,7 +1,6 @@
 package ecs
 
 import (
-	"log"
 	"net/url"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 // Ecs config object
 type Ecs struct {
 	EndpointURL string `toml:"endpoint_url"`
-	EnvCfg      bool   `toml:"envcfg"`
 	Timeout     internal.Duration
 
 	ContainerNameInclude []string `toml:"container_name_include"`
@@ -26,8 +24,7 @@ type Ecs struct {
 	LabelInclude []string `toml:"ecs_label_include"`
 	LabelExclude []string `toml:"ecs_label_exclude"`
 
-	newEnvClient func() (*EcsClient, error)
-	newClient    func(timeout time.Duration) (*EcsClient, error)
+	newClient func(timeout time.Duration) (*EcsClient, error)
 
 	client              Client
 	filtersCreated      bool
@@ -48,13 +45,10 @@ var sampleConfig = `
   ## ECS metadata url
   # endpoint_url = "http://169.254.170.2"
 
-  ## Set to true to configure from env vars
-  envcfg = false
-
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
-  container_name_include = []
-  container_name_exclude = []
+  # container_name_include = []
+  # container_name_exclude = []
 
   ## Container states to include and exclude. Globs accepted.
   ## When empty only containers in the "running" state will be captured.
@@ -110,13 +104,9 @@ func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {
 
 func initSetup(ecs *Ecs) error {
 	if ecs.client == nil {
-		var c *EcsClient
 		var err error
-		if ecs.EnvCfg {
-			c, err = ecs.newEnvClient()
-		} else {
-			c, err = ecs.newClient(ecs.Timeout.Duration)
-		}
+		var c *EcsClient
+		c, err = ecs.newClient(ecs.Timeout.Duration)
 		if err != nil {
 			return err
 		}
@@ -164,12 +154,10 @@ func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumul
 func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegraf.Accumulator) {
 	for _, c := range task.Containers {
 		if !ecs.containerNameFilter.Match(c.Name) {
-			log.Printf("container %v did not match name filter", c.ID)
 			continue
 		}
 
 		if !ecs.statusFilter.Match(c.KnownStatus) {
-			log.Printf("container %v did not match status filter", c.ID)
 			continue
 		}
 
@@ -242,8 +230,6 @@ func init() {
 		return &Ecs{
 			EndpointURL:    "http://169.254.170.2",
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
-			EnvCfg:         true,
-			newEnvClient:   NewEnvClient,
 			newClient:      NewClient,
 			filtersCreated: false,
 		}
