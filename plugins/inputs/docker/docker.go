@@ -549,10 +549,10 @@ func parseContainerStats(
 		memfields["limit"] = stat.MemoryStats.Limit
 		memfields["max_usage"] = stat.MemoryStats.MaxUsage
 
-		mem := calculateMemUsageUnixNoCache(stat.MemoryStats)
+		mem := CalculateMemUsageUnixNoCache(stat.MemoryStats)
 		memLimit := float64(stat.MemoryStats.Limit)
 		memfields["usage"] = uint64(mem)
-		memfields["usage_percent"] = calculateMemPercentUnixNoCache(memLimit, mem)
+		memfields["usage_percent"] = CalculateMemPercentUnixNoCache(memLimit, mem)
 	} else {
 		memfields["commit_bytes"] = stat.MemoryStats.Commit
 		memfields["commit_peak_bytes"] = stat.MemoryStats.CommitPeak
@@ -575,7 +575,7 @@ func parseContainerStats(
 	if daemonOSType != "windows" {
 		previousCPU := stat.PreCPUStats.CPUUsage.TotalUsage
 		previousSystem := stat.PreCPUStats.SystemUsage
-		cpuPercent := calculateCPUPercentUnix(previousCPU, previousSystem, stat)
+		cpuPercent := CalculateCPUPercentUnix(previousCPU, previousSystem, stat)
 		cpufields["usage_percent"] = cpuPercent
 	} else {
 		cpuPercent := calculateCPUPercentWindows(stat)
