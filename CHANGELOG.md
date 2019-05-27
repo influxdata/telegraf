@@ -51,6 +51,7 @@
 - [#5830](https://github.com/influxdata/telegraf/pull/5830): Add support for gzip compression to amqp plugins.
 - [#5831](https://github.com/influxdata/telegraf/pull/5831): Support passive queue declaration in amqp_consumer.
 - [#5901](https://github.com/influxdata/telegraf/pull/5901): Set user agent in stackdriver output.
+- [#5885](https://github.com/influxdata/telegraf/pull/5885): Extend metrics collected from Nvidia GPUs.
 
 #### Bugfixes
 
