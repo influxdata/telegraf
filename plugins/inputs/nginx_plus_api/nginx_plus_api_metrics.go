@@ -30,11 +30,11 @@ func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
 	resp, err := n.client.Get(url)
 
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
+		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	switch contentType {

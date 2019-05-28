@@ -27,9 +27,20 @@ func calculateProcessedValues(mapper EnumMapper, metric telegraf.Metric) map[str
 	return processed[0].Fields()
 }
 
+func calculateProcessedTags(mapper EnumMapper, metric telegraf.Metric) map[string]string {
+	processed := mapper.Apply(metric)
+	return processed[0].Tags()
+}
+
 func assertFieldValue(t *testing.T, expected interface{}, field string, fields map[string]interface{}) {
 	value, present := fields[field]
 	assert.True(t, present, "value of field '"+field+"' was not present")
+	assert.EqualValues(t, expected, value)
+}
+
+func assertTagValue(t *testing.T, expected interface{}, tag string, tags map[string]string) {
+	value, present := tags[tag]
+	assert.True(t, present, "value of tag '"+tag+"' was not present")
 	assert.EqualValues(t, expected, value)
 }
 
@@ -54,6 +65,14 @@ func TestMapsSingleStringValue(t *testing.T) {
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, 1, "string_value", fields)
+}
+
+func TestMapsSingleStringValueTag(t *testing.T) {
+	mapper := EnumMapper{Mappings: []Mapping{{Tag: "tag", ValueMappings: map[string]interface{}{"tag_value": "valuable"}}}}
+
+	tags := calculateProcessedTags(mapper, createTestMetric())
+
+	assertTagValue(t, "valuable", "tag", tags)
 }
 
 func TestNoFailureOnMappingsOnNonStringValuedFields(t *testing.T) {
