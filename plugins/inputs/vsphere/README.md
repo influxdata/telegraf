@@ -118,6 +118,9 @@ vm_metric_exclude = [ "*" ]
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
+  ## Only consider IPv4 addresses when trying to map NICs to IP addresses.
+  # ipv4_only = true
+  
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 

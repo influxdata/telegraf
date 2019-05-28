@@ -26,6 +26,8 @@ import (
 
 var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
 
+var isIPv4 = regexp.MustCompile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")
+
 const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
 
 const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
@@ -90,6 +92,7 @@ type objectRef struct {
 	guest        string
 	dcname       string
 	customValues map[string]string
+	lookup       map[string]string
 }
 
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -645,6 +648,28 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 		guest := "unknown"
 		uuid := ""
 
+		// Collect network information
+		lookup := make(map[string]string)
+		for _, net := range r.Guest.Net {
+			if net.DeviceConfigId == -1 {
+				continue
+			}
+			s := ""
+			first := true
+			for _, ip := range net.IpAddress {
+				if e.Parent.Ipv4Only && !isIPv4.MatchString(ip) {
+					continue
+				}
+				if !first {
+					s += ","
+				} else {
+					first = false
+				}
+				s += ip
+			}
+			lookup["nic/" + strconv.Itoa(int(net.DeviceConfigId))] = s
+		}
+
 		// Sometimes Config is unknown and returns a nil pointer
 		if r.Config != nil {
 			guest = cleanGuestID(r.Config.GuestId)
@@ -668,7 +693,14 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest, altID: uuid, customValues: cvs}
+			name: r.Name,
+			ref: r.ExtensibleManagedObject.Reference(),
+			parentRef: r.Runtime.Host,
+			guest: guest,
+			altID: uuid,
+			customValues: cvs,
+			lookup: lookup,
+		}
 	}
 	return m, nil
 }
@@ -1106,6 +1138,18 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		t["disk"] = cleanDiskTag(instance)
 	} else if strings.HasPrefix(name, "net.") {
 		t["interface"] = instance
+
+		// Add IP addresses to NIC data
+		if resourceType == "vm" && objectRef.lookup != nil {
+			key := "nic/" + t["interface"]
+			index := 0
+			if ip, ok := objectRef.lookup[key]; ok {
+				for _, s := range strings.Split(ip, ",") {
+					t["ip" + strconv.Itoa(index)] = s
+					index++
+				}
+			}
+		}
 	} else if strings.HasPrefix(name, "storageAdapter.") {
 		t["adapter"] = instance
 	} else if strings.HasPrefix(name, "storagePath.") {
