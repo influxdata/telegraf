@@ -205,7 +205,7 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 			d.addToContainerList(c.ID, logReader)
 			err = d.tailContainerLogs(c, logReader, acc)
 			if err != nil {
-				acc.AddError(fmt.Errorf("%s : %s ", ERR_PREFIX, err.Error()))
+				acc.AddError(err)
 			}
 			d.removeFromContainerList(c.ID)
 			return
