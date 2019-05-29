@@ -75,6 +75,10 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
 
+	if c.Redial.Duration.Nanoseconds() <= 0 {
+		return fmt.Errorf("redial duration must be positive")
+	}
+
 	if c.EnableTLS {
 		tlsConfig, err := c.ClientConfig.TLSConfig()
 		if err != nil {
@@ -90,205 +94,207 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
 	}
 
-	client, err := grpc.Dial(c.ServiceAddress, opts...)
+	client, err := grpc.DialContext(ctx, c.ServiceAddress, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to dial GNMI: %v", err)
 	}
 
 	// Dialin client telemetry stream reading routine
 	c.wg.Add(1)
-	go c.subscribeGNMI(ctx, client)
+	go func() {
+		defer c.wg.Done()
+		defer client.Close()
 
-	log.Printf("I! Started Cisco GNMI service for %s", c.ServiceAddress)
+		for ctx.Err() == nil {
+			if err := c.subscribeGNMI(ctx, client); err != nil {
+				acc.AddError(err)
+			}
 
+			select {
+			case <-ctx.Done():
+			case <-time.After(c.Redial.Duration):
+			}
+		}
+	}()
 	return nil
 }
 
 // SubscribeGNMI and extract telemetry data
-func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.ClientConn) {
-	for ctx.Err() == nil {
-		// Create subscription objects
-		subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
-		for i, subscription := range c.Subscriptions {
-			subscriptions[i] = &gnmi.Subscription{
-				Path:              parsePath(subscription.Origin, subscription.Path, subscription.Target),
-				Mode:              gnmi.SubscriptionMode(gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]),
-				SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
-				SuppressRedundant: subscription.SuppressRedundant,
-				HeartbeatInterval: uint64(subscription.HeartbeatInterval.Duration.Nanoseconds()),
-			}
-		}
-
-		// Construct subscribe request
-		request := &gnmi.SubscribeRequest{
-			Request: &gnmi.SubscribeRequest_Subscribe{
-				Subscribe: &gnmi.SubscriptionList{
-					Prefix:       parsePath(c.Origin, c.Prefix, c.Target),
-					Mode:         gnmi.SubscriptionList_STREAM,
-					Encoding:     gnmi.Encoding(gnmi.Encoding_value[strings.ToUpper(c.Encoding)]),
-					Subscription: subscriptions,
-					UpdatesOnly:  c.UpdatesOnly,
-				},
-			},
-		}
-
-		subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
-		if err != nil {
-			c.acc.AddError(fmt.Errorf("GNMI subscription setup failed: %v", err))
-		} else {
-			err = subscribeClient.Send(request)
-		}
-
-		if err != nil {
-			c.acc.AddError(fmt.Errorf("GNMI subscription setup failed: %v", err))
-		} else {
-			log.Printf("D! Connection to GNMI device %s established", c.ServiceAddress)
-			for ctx.Err() == nil {
-				reply, err := subscribeClient.Recv()
-
-				if err != nil {
-					if err != io.EOF && ctx.Err() == nil {
-						c.acc.AddError(fmt.Errorf("GNMI subscription aborted: %v", err))
-					}
-					break
-				}
-
-				// Check for Update message, if not skip (e.g. Sync message)
-				response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
-				if !ok {
-					continue
-				}
-
-				// Unable to derive the individual measurements or subscription without a prefix
-				if response.Update.Prefix == nil {
-					continue
-				}
-
-				timestamp := time.Unix(0, response.Update.Timestamp)
-				fields := make(map[string]interface{})
-				tags := make(map[string]string)
-
-				var builder bytes.Buffer
-
-				if len(response.Update.Prefix.Origin) > 0 {
-					builder.WriteString(response.Update.Prefix.Origin)
-					builder.WriteRune(':')
-				}
-				builder.WriteRune('/')
-
-				// Parse generic keys from prefix
-				for _, elem := range response.Update.Prefix.Elem {
-					builder.WriteString(elem.Name)
-					builder.WriteRune('/')
-
-					for key, val := range elem.Key {
-						// Use short-form of key if possible
-						if _, exists := tags[key]; exists {
-							tags[builder.String()+key] = val
-						} else {
-							tags[key] = val
-						}
-					}
-				}
-
-				tags["Producer"] = c.ServiceAddress
-				tags["Target"] = response.Update.Prefix.Target
-				builder.Truncate(builder.Len() - 1)
-				prefix := builder.String()
-
-				// Parse individual Update message and create measurement
-				for _, update := range response.Update.Update {
-					builder.Reset()
-					if len(update.Path.Origin) > 0 {
-						builder.WriteString(update.Path.Origin)
-						builder.WriteRune(':')
-					}
-
-					parts := update.Path.Elem
-
-					// Compatibility with old GNMI
-					if len(parts) == 0 {
-						parts = make([]*gnmi.PathElem, len(update.Path.Element))
-						for i, part := range update.Path.Element {
-							parts[i] = &gnmi.PathElem{Name: part}
-						}
-					}
-
-					for i, elem := range parts {
-						builder.WriteString(elem.Name)
-
-						var keys []string
-						for key, val := range elem.Key {
-							keys = append(keys, "["+key+"="+val+"]")
-						}
-						sort.Strings(keys)
-						for _, key := range keys {
-							builder.WriteString(key)
-						}
-
-						if i < len(parts)-1 {
-							builder.WriteRune('/')
-						}
-					}
-
-					var value interface{}
-					var jsondata []byte
-
-					switch val := update.Val.Value.(type) {
-					case *gnmi.TypedValue_AsciiVal:
-						value = val.AsciiVal
-					case *gnmi.TypedValue_BoolVal:
-						value = val.BoolVal
-					case *gnmi.TypedValue_BytesVal:
-						value = val.BytesVal
-					case *gnmi.TypedValue_DecimalVal:
-						value = val.DecimalVal
-					case *gnmi.TypedValue_FloatVal:
-						value = val.FloatVal
-					case *gnmi.TypedValue_IntVal:
-						value = val.IntVal
-					case *gnmi.TypedValue_StringVal:
-						value = val.StringVal
-					case *gnmi.TypedValue_UintVal:
-						value = val.UintVal
-					case *gnmi.TypedValue_JsonIetfVal:
-						jsondata = val.JsonIetfVal
-					case *gnmi.TypedValue_JsonVal:
-						jsondata = val.JsonVal
-					}
-
-					if value != nil {
-						fields[builder.String()] = value
-					} else if jsondata != nil {
-						if err = json.Unmarshal(jsondata, &value); err != nil {
-							c.acc.AddError(fmt.Errorf("GNMI JSON data is invalid: %v", err))
-							continue
-						}
-
-						flattener := jsonparser.JSONFlattener{Fields: fields}
-						flattener.FullFlattenJSON(builder.String(), value, true, true)
-					}
-				}
-
-				// Finally add measurements
-				c.acc.AddFields(prefix, fields, tags, timestamp)
-			}
-
-			log.Printf("D! Connection to GNMI device %s closed", c.ServiceAddress)
-		}
-
-		if c.Redial.Duration.Nanoseconds() <= 0 {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-		case <-time.After(c.Redial.Duration):
+func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.ClientConn) error {
+	// Create subscription objects
+	subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
+	for i, subscription := range c.Subscriptions {
+		subscriptions[i] = &gnmi.Subscription{
+			Path:              parsePath(subscription.Origin, subscription.Path, subscription.Target),
+			Mode:              gnmi.SubscriptionMode(gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]),
+			SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
+			SuppressRedundant: subscription.SuppressRedundant,
+			HeartbeatInterval: uint64(subscription.HeartbeatInterval.Duration.Nanoseconds()),
 		}
 	}
 
-	client.Close()
-	c.wg.Done()
+	// Construct subscribe request
+	request := &gnmi.SubscribeRequest{
+		Request: &gnmi.SubscribeRequest_Subscribe{
+			Subscribe: &gnmi.SubscriptionList{
+				Prefix:       parsePath(c.Origin, c.Prefix, c.Target),
+				Mode:         gnmi.SubscriptionList_STREAM,
+				Encoding:     gnmi.Encoding(gnmi.Encoding_value[strings.ToUpper(c.Encoding)]),
+				Subscription: subscriptions,
+				UpdatesOnly:  c.UpdatesOnly,
+			},
+		},
+	}
+
+	subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
+	if err != nil {
+		return fmt.Errorf("GNMI subscription setup failed: %v", err)
+	}
+
+	err = subscribeClient.Send(request)
+	if err != nil {
+		return fmt.Errorf("GNMI subscription setup failed: %v", err)
+	}
+
+	log.Printf("D! Connection to GNMI device %s established", c.ServiceAddress)
+	for ctx.Err() == nil {
+		reply, err := subscribeClient.Recv()
+		if err != nil {
+			if err != io.EOF && ctx.Err() == nil {
+				err = fmt.Errorf("GNMI subscription aborted: %v", err)
+			} else {
+				err = nil
+			}
+			break
+		}
+
+		c.handleSubscribeResponse(reply)
+	}
+	log.Printf("D! Connection to GNMI device %s closed", c.ServiceAddress)
+	return err
+}
+
+// HandleSubscribeResponse message from GNMI and parse contained telemetry data
+func (c *CiscoTelemetryGNMI) handleSubscribeResponse(reply *gnmi.SubscribeResponse) {
+	// Check if response is a GNMI Update and if we have a prefix to derive the measurement name
+	response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
+	if !ok || response.Update.Prefix == nil {
+		return
+	}
+
+	timestamp := time.Unix(0, response.Update.Timestamp)
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+
+	var builder bytes.Buffer
+
+	if len(response.Update.Prefix.Origin) > 0 {
+		builder.WriteString(response.Update.Prefix.Origin)
+		builder.WriteRune(':')
+	}
+	builder.WriteRune('/')
+
+	// Parse generic keys from prefix
+	for _, elem := range response.Update.Prefix.Elem {
+		builder.WriteString(elem.Name)
+		builder.WriteRune('/')
+
+		for key, val := range elem.Key {
+			// Use short-form of key if possible
+			if _, exists := tags[key]; exists {
+				tags[builder.String()+key] = val
+			} else {
+				tags[key] = val
+			}
+		}
+	}
+
+	tags["Producer"] = c.ServiceAddress
+	tags["Target"] = response.Update.Prefix.Target
+	builder.Truncate(builder.Len() - 1)
+	prefix := builder.String()
+
+	// Parse individual Update message and create measurement
+	for _, update := range response.Update.Update {
+		c.handleTelemetryField(fields, update)
+	}
+
+	// Finally add measurements
+	c.acc.AddFields(prefix, fields, tags, timestamp)
+}
+
+// HandleTelemetryField and add it to a measurement
+func (c *CiscoTelemetryGNMI) handleTelemetryField(fields map[string]interface{}, update *gnmi.Update) {
+	var builder bytes.Buffer
+	if len(update.Path.Origin) > 0 {
+		builder.WriteString(update.Path.Origin)
+		builder.WriteRune(':')
+	}
+
+	parts := update.Path.Elem
+
+	// Compatibility with old GNMI
+	if len(parts) == 0 {
+		parts = make([]*gnmi.PathElem, len(update.Path.Element))
+		for i, part := range update.Path.Element {
+			parts[i] = &gnmi.PathElem{Name: part}
+		}
+	}
+
+	for i, elem := range parts {
+		builder.WriteString(elem.Name)
+
+		var keys []string
+		for key, val := range elem.Key {
+			keys = append(keys, "["+key+"="+val+"]")
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			builder.WriteString(key)
+		}
+
+		if i < len(parts)-1 {
+			builder.WriteRune('/')
+		}
+	}
+
+	var value interface{}
+	var jsondata []byte
+
+	switch val := update.Val.Value.(type) {
+	case *gnmi.TypedValue_AsciiVal:
+		value = val.AsciiVal
+	case *gnmi.TypedValue_BoolVal:
+		value = val.BoolVal
+	case *gnmi.TypedValue_BytesVal:
+		value = val.BytesVal
+	case *gnmi.TypedValue_DecimalVal:
+		value = val.DecimalVal
+	case *gnmi.TypedValue_FloatVal:
+		value = val.FloatVal
+	case *gnmi.TypedValue_IntVal:
+		value = val.IntVal
+	case *gnmi.TypedValue_StringVal:
+		value = val.StringVal
+	case *gnmi.TypedValue_UintVal:
+		value = val.UintVal
+	case *gnmi.TypedValue_JsonIetfVal:
+		jsondata = val.JsonIetfVal
+	case *gnmi.TypedValue_JsonVal:
+		jsondata = val.JsonVal
+	}
+
+	if value != nil {
+		fields[builder.String()] = value
+	} else if jsondata != nil {
+		if err := json.Unmarshal(jsondata, &value); err != nil {
+			c.acc.AddError(fmt.Errorf("GNMI JSON data is invalid: %v", err))
+			return
+		}
+
+		flattener := jsonparser.JSONFlattener{Fields: fields}
+		flattener.FullFlattenJSON(builder.String(), value, true, true)
+	}
 }
 
 //ParsePath from XPath-like string to GNMI path structure
@@ -347,8 +353,6 @@ func parsePath(origin string, path string, target string) *gnmi.Path {
 func (c *CiscoTelemetryGNMI) Stop() {
 	c.cancel()
 	c.wg.Wait()
-
-	log.Println("I! Stopped GNMI service on ", c.ServiceAddress)
 }
 
 const sampleConfig = `
