@@ -6,13 +6,6 @@ import (
 	"errors"
 	"net"
 	"testing"
-	"time"
-
-	"github.com/influxdata/telegraf/internal"
-
-	"google.golang.org/grpc/metadata"
-
-	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/ems"
 
 	"github.com/golang/protobuf/proto"
 
@@ -182,7 +175,7 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 }
 
 func TestTCPDialoutOverflow(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "tcp-dialout", ServiceAddress: "127.0.0.1:57000"}
+	c := &CiscoTelemetryMDT{Transport: "tcp", ServiceAddress: "127.0.0.1:57000"}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
@@ -238,7 +231,7 @@ func mockTelemetryMessage() *telemetry.Telemetry {
 }
 
 func TestTCPDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "tcp-dialout", ServiceAddress: "127.0.0.1:57000"}
+	c := &CiscoTelemetryMDT{Transport: "tcp", ServiceAddress: "127.0.0.1:57000"}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
@@ -296,7 +289,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 }
 
 func TestGRPCDialoutError(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "grpc-dialout", ServiceAddress: "127.0.0.1:57001"}
+	c := &CiscoTelemetryMDT{Transport: "grpc", ServiceAddress: "127.0.0.1:57001"}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
@@ -315,7 +308,7 @@ func TestGRPCDialoutError(t *testing.T) {
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "grpc-dialout", ServiceAddress: "127.0.0.1:57001"}
+	c := &CiscoTelemetryMDT{Transport: "grpc", ServiceAddress: "127.0.0.1:57001"}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 	telemetry := mockTelemetryMessage()
@@ -364,134 +357,4 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "type:model/other/path", fields, tags)
 
-}
-
-type mockDialinServer struct {
-	t        *testing.T
-	server   *grpc.Server
-	scenario int
-}
-
-func (m *mockDialinServer) GetConfig(*ems.ConfigGetArgs, ems.GRPCConfigOper_GetConfigServer) error {
-	return nil
-}
-
-func (m *mockDialinServer) MergeConfig(context.Context, *ems.ConfigArgs) (*ems.ConfigReply, error) {
-	return nil, nil
-}
-
-func (m *mockDialinServer) DeleteConfig(context.Context, *ems.ConfigArgs) (*ems.ConfigReply, error) {
-	return nil, nil
-}
-
-func (m *mockDialinServer) ReplaceConfig(context.Context, *ems.ConfigArgs) (*ems.ConfigReply, error) {
-	return nil, nil
-}
-
-func (m *mockDialinServer) CliConfig(context.Context, *ems.CliConfigArgs) (*ems.CliConfigReply, error) {
-	return nil, nil
-}
-
-func (m *mockDialinServer) CommitReplace(context.Context, *ems.CommitReplaceArgs) (*ems.CommitReplaceReply, error) {
-	return nil, nil
-}
-
-func (m *mockDialinServer) CommitConfig(context.Context, *ems.CommitArgs) (*ems.CommitReply, error) {
-	return nil, nil
-}
-
-func (m *mockDialinServer) ConfigDiscardChanges(context.Context, *ems.DiscardChangesArgs) (*ems.DiscardChangesReply, error) {
-	return nil, nil
-}
-
-func (m *mockDialinServer) GetOper(*ems.GetOperArgs, ems.GRPCConfigOper_GetOperServer) error {
-	return nil
-}
-
-func (m *mockDialinServer) CreateSubs(args *ems.CreateSubsArgs, server ems.GRPCConfigOper_CreateSubsServer) error {
-	defer func() {
-		if m.scenario >= 0 {
-			m.scenario = -1
-			time.AfterFunc(100*time.Millisecond, m.server.Stop)
-		}
-	}()
-
-	assert.Equal(m.t, args.GetSubidstr(), "thesubscription")
-	assert.Equal(m.t, args.GetEncode(), grpcEncodeGPBKV)
-
-	metadata, ok := metadata.FromIncomingContext(server.Context())
-	assert.Equal(m.t, ok, true)
-	assert.Equal(m.t, metadata.Get("username"), []string{"theuser"})
-	assert.Equal(m.t, metadata.Get("password"), []string{"thepassword"})
-
-	if m.scenario == 0 {
-		telemetry := mockTelemetryMessage()
-		data, _ := proto.Marshal(telemetry)
-		server.Send(&ems.CreateSubsReply{Data: data})
-
-		telemetry.EncodingPath = "type:model/parallel/path"
-		data, _ = proto.Marshal(telemetry)
-		server.Send(&ems.CreateSubsReply{Data: data})
-	} else if m.scenario == 1 {
-		telemetry := mockTelemetryMessage()
-		telemetry.EncodingPath = "type:model/other/path"
-		data, _ := proto.Marshal(telemetry)
-		server.Send(&ems.CreateSubsReply{Data: data})
-	} else if m.scenario == 2 {
-		server.Send(&ems.CreateSubsReply{Errors: "testerror"})
-	}
-
-	return nil
-}
-
-func TestGRPCDialinError(t *testing.T) {
-	listener, _ := net.Listen("tcp", "127.0.0.1:57002")
-	server := grpc.NewServer()
-	ems.RegisterGRPCConfigOperServer(server, &mockDialinServer{t: t, scenario: 2, server: server})
-
-	c := &CiscoTelemetryMDT{Transport: "grpc-dialin", ServiceAddress: "127.0.0.1:57002",
-		Username: "theuser", Password: "thepassword", Subscription: "thesubscription",
-		Redial: internal.Duration{Duration: 1 * time.Second}}
-	acc := &testutil.Accumulator{}
-	assert.Nil(t, c.Start(acc))
-
-	server.Serve(listener)
-	c.Stop()
-
-	assert.Contains(t, acc.Errors, errors.New("GRPC dialin error: testerror"))
-}
-
-func TestGRPCDialinMultipleRedial(t *testing.T) {
-	listener, _ := net.Listen("tcp", "127.0.0.1:57002")
-	server := grpc.NewServer()
-	ems.RegisterGRPCConfigOperServer(server, &mockDialinServer{t: t, server: server})
-
-	c := &CiscoTelemetryMDT{Transport: "grpc-dialin", ServiceAddress: "127.0.0.1:57002",
-		Username: "theuser", Password: "thepassword", Subscription: "thesubscription",
-		Redial: internal.Duration{Duration: 200 * time.Millisecond}}
-	acc := &testutil.Accumulator{}
-	assert.Nil(t, c.Start(acc))
-
-	server.Serve(listener)
-
-	listener, _ = net.Listen("tcp", "127.0.0.1:57002")
-	server = grpc.NewServer()
-	ems.RegisterGRPCConfigOperServer(server, &mockDialinServer{t: t, scenario: 1, server: server})
-
-	server.Serve(listener)
-	c.Stop()
-
-	assert.Empty(t, acc.Errors)
-
-	tags := map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
-	fields := map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "type:model/some/path", fields, tags)
-
-	tags = map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
-	fields = map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "type:model/parallel/path", fields, tags)
-
-	tags = map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
-	fields = map[string]interface{}{"value": int64(-1)}
-	acc.AssertContainsTaggedFields(t, "type:model/other/path", fields, tags)
 }

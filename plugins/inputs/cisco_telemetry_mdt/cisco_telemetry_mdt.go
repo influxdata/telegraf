@@ -2,7 +2,6 @@ package cisco_telemetry_mdt
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -11,14 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/metadata"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	internaltls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/ems"
 	dialout "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/mdt_dialout"
 	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/telemetry"
 	"google.golang.org/grpc"
@@ -29,9 +24,6 @@ import (
 const (
 	// Maximum telemetry payload size (in bytes) to accept for GRPC dialout transport
 	tcpMaxMsgLen uint32 = 1024 * 1024
-
-	// IOS XR EMS dialin telemetry GPBKV encoding
-	grpcEncodeGPBKV int64 = 3
 )
 
 // CiscoTelemetryMDT plugin for IOS XR, IOS XE and NXOS platforms
@@ -39,59 +31,44 @@ type CiscoTelemetryMDT struct {
 	// Common configuration
 	Transport      string
 	ServiceAddress string `toml:"service_address"`
-
-	// GRPC dialin settings
-	Username     string
-	Password     string
-	Subscription string
-	Redial       internal.Duration
-	MaxMsgSize   int `toml:"max_msg_size"`
+	MaxMsgSize     int    `toml:"max_msg_size"`
 
 	// GRPC TLS settings
-	EnableTLS          bool     `toml:"enable_tls"`
-	TLSCA              string   `toml:"tls_ca"`
-	TLSCert            string   `toml:"tls_cert"`
-	TLSKey             string   `toml:"tls_key"`
-	InsecureSkipVerify bool     `toml:"insecure_skip_verify"`
-	TLSAllowedCACerts  []string `toml:"tls_allowed_cacerts"`
+	EnableTLS bool `toml:"enable_tls"`
+	internaltls.ServerConfig
 
 	// Internal listener / client handle
 	grpcServer *grpc.Server
 	listener   net.Listener
 
 	// Internal state
-	acc    telegraf.Accumulator
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	acc telegraf.Accumulator
+	wg  sync.WaitGroup
 }
 
 // Start the Cisco MDT service
 func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	var err error
-	var ctx context.Context
 	c.acc = acc
-	ctx, c.cancel = context.WithCancel(context.Background())
+	c.listener, err = net.Listen("tcp", c.ServiceAddress)
+	if err != nil {
+		return err
+	}
 
 	switch c.Transport {
-	case "tcp-dialout":
-		c.listener, err = net.Listen("tcp", c.ServiceAddress)
-		if err != nil {
-			return err
-		}
-
+	case "tcp":
 		// TCP dialout server accept routine
 		c.wg.Add(1)
-		go c.acceptTCPDialoutClients(ctx)
+		go func() {
+			c.acceptTCPClients()
+			c.wg.Done()
+		}()
 
-	case "grpc-dialout":
+	case "grpc":
 		var opts []grpc.ServerOption
 
 		if c.EnableTLS {
-			tlsConfig, err := (&internaltls.ServerConfig{
-				TLSCert:           c.TLSCert,
-				TLSKey:            c.TLSKey,
-				TLSAllowedCACerts: c.TLSAllowedCACerts,
-			}).TLSConfig()
+			tlsConfig, err := c.ServerConfig.TLSConfig()
 			if err != nil {
 				return err
 			}
@@ -103,11 +80,6 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 			opts = append(opts, grpc.MaxRecvMsgSize(c.MaxMsgSize))
 		}
 
-		c.listener, err = net.Listen("tcp", c.ServiceAddress)
-		if err != nil {
-			return err
-		}
-
 		c.grpcServer = grpc.NewServer(opts...)
 		dialout.RegisterGRPCMdtDialoutServer(c.grpcServer, c)
 
@@ -117,61 +89,26 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 			c.wg.Done()
 		}()
 
-	case "grpc-dialin":
-		var opts []grpc.DialOption
-		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
-
-		if c.EnableTLS {
-			tlsConfig, err := (&internaltls.ClientConfig{
-				TLSCA:              c.TLSCA,
-				TLSCert:            c.TLSCert,
-				TLSKey:             c.TLSKey,
-				InsecureSkipVerify: c.InsecureSkipVerify,
-			}).TLSConfig()
-			if err != nil {
-				return err
-			}
-
-			opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
-		} else {
-			opts = append(opts, grpc.WithInsecure())
-		}
-
-		if c.MaxMsgSize > 0 {
-			opts = append(opts, grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(c.MaxMsgSize)))
-		}
-
-		client, err := grpc.DialContext(ctx, c.ServiceAddress, opts...)
-		if err != nil {
-			return fmt.Errorf("failed to dial Cisco MDT: %v", err)
-		}
-
-		// Dialin client telemetry stream reading routine
-		c.wg.Add(1)
-		go c.subscribeMDTDialinDevice(ctx, client)
-
 	default:
+		c.listener.Close()
 		return fmt.Errorf("invalid Cisco MDT transport: %s", c.Transport)
 	}
-
-	log.Printf("I! Started Cisco MDT service on %s", c.ServiceAddress)
 
 	return nil
 }
 
 // AcceptTCPDialoutClients defines the TCP dialout server main routine
-func (c *CiscoTelemetryMDT) acceptTCPDialoutClients(ctx context.Context) {
+func (c *CiscoTelemetryMDT) acceptTCPClients() {
 	// Keep track of all active connections, so we can close them if necessary
 	var mutex sync.Mutex
 	clients := make(map[net.Conn]struct{})
 
-	for ctx.Err() == nil {
+	for {
 		conn, err := c.listener.Accept()
-		if err != nil {
-			if ctx.Err() == nil {
-				c.acc.AddError(fmt.Errorf("failed to accept TCP connection: %v", err))
-			}
+		if neterr, ok := err.(*net.OpError); ok && (neterr.Timeout() || neterr.Temporary()) {
 			continue
+		} else if err != nil {
+			break // Stop() will close the connection so Accept() will fail here
 		}
 
 		mutex.Lock()
@@ -182,58 +119,9 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients(ctx context.Context) {
 		c.wg.Add(1)
 		go func() {
 			log.Printf("D! Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
-
-			// TCP Dialout telemetry framing header
-			var hdr struct {
-				MsgType       uint16
-				MsgEncap      uint16
-				MsgHdrVersion uint16
-				MsgFlags      uint16
-				MsgLen        uint32
+			if err := c.handleTCPClient(conn); err != nil {
+				c.acc.AddError(err)
 			}
-
-			var payload bytes.Buffer
-
-			for ctx.Err() == nil {
-				// Read and validate dialout telemetry header
-				if err := binary.Read(conn, binary.BigEndian, &hdr); err != nil {
-					if ctx.Err() == nil && err != io.EOF {
-						c.acc.AddError(fmt.Errorf("unable to read dialout header: %v", err))
-					}
-					break
-				}
-
-				maxMsgSize := tcpMaxMsgLen
-				if c.MaxMsgSize > 0 {
-					maxMsgSize = uint32(c.MaxMsgSize)
-				}
-
-				if hdr.MsgLen > maxMsgSize {
-					c.acc.AddError(fmt.Errorf("dialout packet too long: %v", hdr.MsgLen))
-					break
-				}
-
-				if hdr.MsgFlags != 0 {
-					c.acc.AddError(fmt.Errorf("Invalid dialout flags: %v", hdr.MsgFlags))
-					break
-				}
-
-				// Read and handle telemetry packet
-				payload.Reset()
-				if size, err := payload.ReadFrom(io.LimitReader(conn, int64(hdr.MsgLen))); size != int64(hdr.MsgLen) {
-					if ctx.Err() == nil {
-						if err != nil {
-							c.acc.AddError(fmt.Errorf("TCP dialout I/O error: %v", err))
-						} else {
-							c.acc.AddError(fmt.Errorf("TCP dialout premature EOF"))
-						}
-					}
-					break
-				}
-
-				c.handleTelemetry(payload.Bytes())
-			}
-
 			log.Printf("D! Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 
 			mutex.Lock()
@@ -253,9 +141,56 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients(ctx context.Context) {
 		}
 	}
 	mutex.Unlock()
+}
 
-	c.listener.Close()
-	c.wg.Done()
+// Handle a TCP telemetry client
+func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
+	var err error
+
+	// TCP Dialout telemetry framing header
+	var hdr struct {
+		MsgType       uint16
+		MsgEncap      uint16
+		MsgHdrVersion uint16
+		MsgFlags      uint16
+		MsgLen        uint32
+	}
+
+	var payload bytes.Buffer
+
+	for {
+		// Read and validate dialout telemetry header
+		if err = binary.Read(conn, binary.BigEndian, &hdr); err != nil {
+			break
+		}
+
+		maxMsgSize := tcpMaxMsgLen
+		if c.MaxMsgSize > 0 {
+			maxMsgSize = uint32(c.MaxMsgSize)
+		}
+
+		if hdr.MsgLen > maxMsgSize {
+			err = fmt.Errorf("dialout packet too long: %v", hdr.MsgLen)
+			break
+		} else if hdr.MsgFlags != 0 {
+			err = fmt.Errorf("invalid dialout flags: %v", hdr.MsgFlags)
+			break
+		}
+
+		// Read and handle telemetry packet
+		var size int64
+		payload.Reset()
+		if size, err = payload.ReadFrom(io.LimitReader(conn, int64(hdr.MsgLen))); size != int64(hdr.MsgLen) {
+			if err == nil {
+				err = fmt.Errorf("TCP dialout premature EOF")
+			}
+			break
+		}
+
+		c.handleTelemetry(payload.Bytes())
+	}
+
+	return err
 }
 
 // MdtDialout RPC server method for grpc-dialout transport
@@ -289,56 +224,6 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 	return nil
 }
 
-// SubscribeMDTDialinDevice and extract GPB telemetry data
-func (c *CiscoTelemetryMDT) subscribeMDTDialinDevice(ctx context.Context, client *grpc.ClientConn) {
-	for ctx.Err() == nil {
-		request := &ems.CreateSubsArgs{
-			ReqId:    1,
-			Encode:   grpcEncodeGPBKV,
-			Subidstr: c.Subscription,
-		}
-		client := ems.NewGRPCConfigOperClient(client)
-		stream, err := client.CreateSubs(ctx, request)
-		if err != nil {
-			c.acc.AddError(fmt.Errorf("GRPC dialin subscription failed: %v", err))
-		} else {
-			log.Printf("D! Subscribed to Cisco MDT device %s", c.ServiceAddress)
-
-			// After subscription is setup, read and handle telemetry packets
-			for ctx.Err() == nil {
-				packet, err := stream.Recv()
-				if err != nil {
-					break
-				}
-
-				if len(packet.Errors) != 0 {
-					c.acc.AddError(fmt.Errorf("GRPC dialin error: %s", packet.Errors))
-				} else {
-					c.handleTelemetry(packet.Data)
-				}
-			}
-
-			if err != nil && err != io.EOF {
-				c.acc.AddError(fmt.Errorf("GRPC dialin subscription receive error: %v", err))
-			}
-
-			log.Printf("D! Connection to Cisco MDT device %s closed", c.ServiceAddress)
-		}
-
-		if c.Redial.Duration.Nanoseconds() <= 0 {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-		case <-time.After(c.Redial.Duration):
-		}
-	}
-
-	client.Close()
-	c.wg.Done()
-}
-
 // Handle telemetry packet from any transport, decode and add as measurement
 func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 	var namebuf bytes.Buffer
@@ -368,8 +253,8 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 			switch field.Name {
 			case "keys":
 				tags = make(map[string]string, len(field.Fields)+2)
-				tags["Producer"] = telemetry.GetNodeIdStr()
-				tags["Target"] = telemetry.GetSubscriptionIdStr()
+				tags["source"] = telemetry.GetNodeIdStr()
+				tags["subscription"] = telemetry.GetSubscriptionIdStr()
 				for _, subfield := range field.Fields {
 					c.parseGPBKVField(subfield, &namebuf, telemetry.EncodingPath, timestamp, tags, nil)
 				}
@@ -444,7 +329,6 @@ func (c *CiscoTelemetryMDT) parseGPBKVField(field *telemetry.TelemetryField, nam
 
 // Stop listener and cleanup
 func (c *CiscoTelemetryMDT) Stop() {
-	c.cancel()
 	if c.grpcServer != nil {
 		// Stop server and terminate all running dialout routines
 		c.grpcServer.Stop()
@@ -453,41 +337,22 @@ func (c *CiscoTelemetryMDT) Stop() {
 		c.listener.Close()
 	}
 	c.wg.Wait()
-
-	log.Println("I! Stopped Cisco MDT service on ", c.ServiceAddress)
 }
 
 const sampleConfig = `
-  ## Telemetry transport (one of: tcp-dialout, grpc-dialout, grpc-dialin)
-  transport = "grpc-dialout"
+ ## Telemetry transport (one of: tcp, grpc)
+ transport = "grpc"
 
-  ## Address and port to host telemetry listener on (dialout) or address to connect to (dialin)
-  service_address = ":57000"
+ ## Address and port to host telemetry listener
+ service_address = ":57000"
 
-  ## Enable TLS for transport
-  # enable_tls = true
+ ## Enable TLS for GRPC transport
+ # enable_tls = true
+ # tls_cert = "/etc/telegraf/cert.pem"
+ # tls_key = "/etc/telegraf/key.pem"
 
-  ## grpc-dialin: define credentials and subscription
-  # username = "cisco"
-  # password = "cisco"
-  # subscription = "subscription"
-  # redial = "10s"
-
-  ## grpc-dialin: define TLS CA to authenticate the device
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # insecure_skip_verify = true
-
-  ## grpc-dialin: define client-side TLS certificate & key to authenticate to the device
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-
-  ## grpc-dialout: define TLS certificate and key
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
-
-  ## grpc-dialout: enable TLS client authentication and define allowed CA certificates
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+ ## Enable TLS client authentication and define allowed CA certificates
+ # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 `
 
 // SampleConfig of plugin
@@ -508,9 +373,8 @@ func (c *CiscoTelemetryMDT) Gather(_ telegraf.Accumulator) error {
 func init() {
 	inputs.Add("cisco_telemetry_mdt", func() telegraf.Input {
 		return &CiscoTelemetryMDT{
-			Transport:      "grpc-dialout",
+			Transport:      "grpc",
 			ServiceAddress: ":57000",
-			Redial:         internal.Duration{Duration: 10 * time.Second},
 		}
 	})
 }
