@@ -162,7 +162,8 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 
 	log.Printf("D! Connection to GNMI device %s established", c.Address)
 	for ctx.Err() == nil {
-		reply, err := subscribeClient.Recv()
+		var reply *gnmi.SubscribeResponse
+		reply, err = subscribeClient.Recv()
 		if err != nil {
 			if err != io.EOF && ctx.Err() == nil {
 				err = fmt.Errorf("GNMI subscription aborted: %v", err)

@@ -100,11 +100,11 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	c.handleTelemetry(data)
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"name": "str", "uint64": "1234", "Producer": "hostname", "Target": "subscription"}
+	tags := map[string]string{"name": "str", "uint64": "1234", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"bool": true}
 	acc.AssertContainsTaggedFields(t, "type:model/some/path", fields, tags)
 
-	tags = map[string]string{"name": "str2", "Producer": "hostname", "Target": "subscription"}
+	tags = map[string]string{"name": "str2", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"bool": false}
 	acc.AssertContainsTaggedFields(t, "type:model/some/path", fields, tags)
 }
@@ -169,7 +169,7 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 	c.handleTelemetry(data)
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"nested/key/level": "3", "Producer": "hostname", "Target": "subscription"}
+	tags := map[string]string{"nested/key/level": "3", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"nested/value/foo": "bar"}
 	acc.AssertContainsTaggedFields(t, "type:model/nested/path", fields, tags)
 }
@@ -194,7 +194,7 @@ func TestTCPDialoutOverflow(t *testing.T) {
 
 	c.Stop()
 
-	assert.Contains(t, acc.Errors, errors.New("Dialout packet too long: 1000000000"))
+	assert.Contains(t, acc.Errors, errors.New("dialout packet too long: 1000000000"))
 }
 
 func mockTelemetryMessage() *telemetry.Telemetry {
@@ -273,17 +273,17 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	conn.Close()
 
 	// We use the invalid dialout flags to let the server close the connection
-	assert.Equal(t, acc.Errors, []error{errors.New("Invalid dialout flags: 257"), errors.New("Invalid dialout flags: 257")})
+	assert.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
 
-	tags := map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
+	tags := map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "type:model/some/path", fields, tags)
 
-	tags = map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
+	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "type:model/parallel/path", fields, tags)
 
-	tags = map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
+	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "type:model/other/path", fields, tags)
 }
@@ -345,15 +345,15 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 
 	assert.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 
-	tags := map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
+	tags := map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "type:model/some/path", fields, tags)
 
-	tags = map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
+	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "type:model/parallel/path", fields, tags)
 
-	tags = map[string]string{"name": "str", "Producer": "hostname", "Target": "subscription"}
+	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "type:model/other/path", fields, tags)
 
