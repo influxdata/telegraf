@@ -71,6 +71,7 @@
 - [#5883](https://github.com/influxdata/telegraf/issues/5883): Skip invalid power times in apex_neptune input.
 - [#3485](https://github.com/influxdata/telegraf/issues/3485): Fix sqlserver connection closing on error.
 - [#5917](https://github.com/influxdata/telegraf/issues/5917): Fix toml option name in nginx_upstream_check.
+- [#5920](https://github.com/influxdata/telegraf/issues/5920): Fixed datastore name mapping in vsphere input.
 
 ## v1.10.4 [2019-05-14]
 
