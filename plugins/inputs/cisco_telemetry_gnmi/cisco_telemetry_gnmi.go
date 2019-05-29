@@ -43,7 +43,7 @@ type CiscoTelemetryGNMI struct {
 	Redial internal.Duration
 
 	// GRPC TLS settings
-	TLS bool
+	EnableTLS bool `toml:"enable_tls"`
 	internaltls.ClientConfig
 
 	// Internal state
@@ -75,7 +75,7 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	c.acc = acc
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 
-	if c.TLS {
+	if c.EnableTLS {
 		tlsConfig, err := c.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
@@ -363,7 +363,7 @@ const sampleConfig = `
   redial = "10s"
 
   ## enable client-side TLS and define CA to authenticate the device
-  # tls = true
+  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # insecure_skip_verify = true
 

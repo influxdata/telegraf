@@ -23,7 +23,7 @@ This is a sample configuration for the plugin.
   redial = "10s"
 
   ## enable client-side TLS and define CA to authenticate the device
-  # tls = true
+  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # insecure_skip_verify = true
 

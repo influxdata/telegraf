@@ -25,7 +25,7 @@ This is a sample configuration for the plugin.
   service_address = ":57000"
 
   ## Enable TLS for transport
-  # tls = true
+  # enable_tls = true
 
   ## grpc-dialin: define credentials and subscription
   # username = "cisco"

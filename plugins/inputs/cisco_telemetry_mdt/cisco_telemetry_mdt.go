@@ -48,7 +48,7 @@ type CiscoTelemetryMDT struct {
 	MaxMsgSize   int `toml:"max_msg_size"`
 
 	// GRPC TLS settings
-	TLS                bool     `toml:"tls"`
+	EnableTLS          bool     `toml:"enable_tls"`
 	TLSCA              string   `toml:"tls_ca"`
 	TLSCert            string   `toml:"tls_cert"`
 	TLSKey             string   `toml:"tls_key"`
@@ -85,7 +85,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	case "grpc-dialout":
 		var opts []grpc.ServerOption
 
-		if c.TLS {
+		if c.EnableTLS {
 			tlsConfig, err := (&internaltls.ServerConfig{
 				TLSCert:           c.TLSCert,
 				TLSKey:            c.TLSKey,
@@ -120,7 +120,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		var opts []grpc.DialOption
 		c.ctx = metadata.AppendToOutgoingContext(c.ctx, "username", c.Username, "password", c.Password)
 
-		if c.TLS {
+		if c.EnableTLS {
 			tlsConfig, err := (&internaltls.ClientConfig{
 				TLSCA:              c.TLSCA,
 				TLSCert:            c.TLSCert,
@@ -460,7 +460,7 @@ const sampleConfig = `
   service_address = ":57000"
 
   ## Enable TLS for transport
-  # tls = true
+  # enable_tls = true
 
   ## grpc-dialin: define credentials and subscription
   # username = "cisco"
