@@ -92,7 +92,7 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 
 	client, err := grpc.Dial(c.ServiceAddress, opts...)
 	if err != nil {
-		return fmt.Errorf("E! Failed to dial GNMI: %v", err)
+		return fmt.Errorf("failed to dial GNMI: %v", err)
 	}
 
 	// Dialin client telemetry stream reading routine

@@ -143,7 +143,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 		client, err := grpc.DialContext(ctx, c.ServiceAddress, opts...)
 		if err != nil {
-			return fmt.Errorf("E! Failed to dial Cisco MDT: %v", err)
+			return fmt.Errorf("failed to dial Cisco MDT: %v", err)
 		}
 
 		// Dialin client telemetry stream reading routine
@@ -151,7 +151,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 		go c.subscribeMDTDialinDevice(ctx, client)
 
 	default:
-		return fmt.Errorf("E! Invalid Cisco MDT transport: %s", c.Transport)
+		return fmt.Errorf("invalid Cisco MDT transport: %s", c.Transport)
 	}
 
 	log.Printf("I! Started Cisco MDT service on %s", c.ServiceAddress)
@@ -169,7 +169,7 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients(ctx context.Context) {
 		conn, err := c.listener.Accept()
 		if err != nil {
 			if ctx.Err() == nil {
-				c.acc.AddError(fmt.Errorf("Failed to accept TCP connection: %v", err))
+				c.acc.AddError(fmt.Errorf("failed to accept TCP connection: %v", err))
 			}
 			continue
 		}
@@ -198,7 +198,7 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients(ctx context.Context) {
 				// Read and validate dialout telemetry header
 				if err := binary.Read(conn, binary.BigEndian, &hdr); err != nil {
 					if ctx.Err() == nil && err != io.EOF {
-						c.acc.AddError(fmt.Errorf("Unable to read dialout header: %v", err))
+						c.acc.AddError(fmt.Errorf("unable to read dialout header: %v", err))
 					}
 					break
 				}
@@ -209,7 +209,7 @@ func (c *CiscoTelemetryMDT) acceptTCPDialoutClients(ctx context.Context) {
 				}
 
 				if hdr.MsgLen > maxMsgSize {
-					c.acc.AddError(fmt.Errorf("Dialout packet too long: %v", hdr.MsgLen))
+					c.acc.AddError(fmt.Errorf("dialout packet too long: %v", hdr.MsgLen))
 					break
 				}
 
