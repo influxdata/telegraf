@@ -13,7 +13,7 @@ This is a sample configuration for the plugin.
 ```toml
 [[inputs.cisco_telemetry_gnmi]]
   ## Address and port of the GNMI GRPC server
-  service_address = "10.49.234.114:57777"
+  address = "10.49.234.114:57777"
 
   ## define credentials
   username = "cisco"
@@ -31,7 +31,21 @@ This is a sample configuration for the plugin.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
+  ## GNMI encoding requested (usually one of: "proto", "json", "json_ietf")
+  # encoding = "proto"
+
+  ## GNMI subscription prefix (optional, platform dependent)
+  ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
+  # origin = "oc-if"
+  # prefix = "interfaces/interface"
+  # target = ""
+
+
   [[inputs.cisco_telemetry_gnmi.subscription]]
+    ## Origin and path of the subscription
+    ## origin usually refers to a (YANG) data model implemented by the device
+    ## and path to a specific substructe inside it (similar to an XPath) that should be subscribed to
+    ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
     origin = "Cisco-IOS-XR-infra-statsd-oper"
     path = "infra-statistics/interfaces/interface/latest/generic-counters"
 

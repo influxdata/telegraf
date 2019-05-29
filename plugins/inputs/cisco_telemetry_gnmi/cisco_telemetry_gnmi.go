@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -25,8 +26,8 @@ import (
 
 // CiscoTelemetryGNMI plugin instance
 type CiscoTelemetryGNMI struct {
-	ServiceAddress string         `toml:"service_address"`
-	Subscriptions  []Subscription `toml:"subscription"`
+	Address       string         `toml:"address"`
+	Subscriptions []Subscription `toml:"subscription"`
 
 	// Optional subscription configuration
 	Encoding    string
@@ -56,7 +57,6 @@ type CiscoTelemetryGNMI struct {
 type Subscription struct {
 	Origin string
 	Path   string
-	Target string
 
 	// Subscription mode and interval
 	SubscriptionMode string            `toml:"subscription_mode"`
@@ -94,7 +94,7 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
 	}
 
-	client, err := grpc.DialContext(ctx, c.ServiceAddress, opts...)
+	client, err := grpc.DialContext(ctx, c.Address, opts...)
 	if err != nil {
 		return fmt.Errorf("failed to dial GNMI: %v", err)
 	}
@@ -126,7 +126,7 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() *gnmi.SubscribeRequest {
 	subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
 	for i, subscription := range c.Subscriptions {
 		subscriptions[i] = &gnmi.Subscription{
-			Path:              parsePath(subscription.Origin, subscription.Path, subscription.Target),
+			Path:              parsePath(subscription.Origin, subscription.Path, ""),
 			Mode:              gnmi.SubscriptionMode(gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]),
 			SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
 			SuppressRedundant: subscription.SuppressRedundant,
@@ -160,7 +160,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 		return fmt.Errorf("GNMI subscription setup failed: %v", err)
 	}
 
-	log.Printf("D! Connection to GNMI device %s established", c.ServiceAddress)
+	log.Printf("D! Connection to GNMI device %s established", c.Address)
 	for ctx.Err() == nil {
 		reply, err := subscribeClient.Recv()
 		if err != nil {
@@ -174,7 +174,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 
 		c.handleSubscribeResponse(reply)
 	}
-	log.Printf("D! Connection to GNMI device %s closed", c.ServiceAddress)
+	log.Printf("D! Connection to GNMI device %s closed", c.Address)
 	return err
 }
 
@@ -213,8 +213,7 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(reply *gnmi.SubscribeRespon
 		}
 	}
 
-	tags["Producer"] = c.ServiceAddress
-	tags["Target"] = response.Update.Prefix.Target
+	tags["source"], _, _ = net.SplitHostPort(c.Address)
 	builder.Truncate(builder.Len() - 1)
 	prefix := builder.String()
 
@@ -360,38 +359,52 @@ func (c *CiscoTelemetryGNMI) Stop() {
 }
 
 const sampleConfig = `
-  ## Address and port of the GNMI GRPC server
-  service_address = "10.49.234.114:57777"
+## Address and port of the GNMI GRPC server
+address = "10.49.234.114:57777"
 
-  ## define credentials
-  username = "cisco"
-  password = "cisco"
+## define credentials
+username = "cisco"
+password = "cisco"
 
-  ## redial in case of failures after
-  redial = "10s"
+## redial in case of failures after
+redial = "10s"
 
-  ## enable client-side TLS and define CA to authenticate the device
-  # enable_tls = true
-  # tls_ca = "/etc/telegraf/ca.pem"
-  # insecure_skip_verify = true
+## enable client-side TLS and define CA to authenticate the device
+# enable_tls = true
+# tls_ca = "/etc/telegraf/ca.pem"
+# insecure_skip_verify = true
 
-  ## define client-side TLS certificate & key to authenticate to the device
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
+## define client-side TLS certificate & key to authenticate to the device
+# tls_cert = "/etc/telegraf/cert.pem"
+# tls_key = "/etc/telegraf/key.pem"
 
-  [[inputs.cisco_telemetry_gnmi.subscription]]
-	origin = "Cisco-IOS-XR-infra-statsd-oper"
-	path = "infra-statistics/interfaces/interface/latest/generic-counters"
+## GNMI encoding requested (usually one of: "proto", "json", "json_ietf")
+# encoding = "proto"
 
-	# Subscription mode (one of: "target_defined", "sample", "on_change") and interval
-	subscription_mode = "sample"
-	sample_interval = "10s"
+## GNMI subscription prefix (optional, platform dependent)
+## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
+# origin = "oc-if"
+# prefix = "interfaces/interface"
+# target = ""
 
-	## Suppress redundant transmissions when measured values are unchanged
-	# suppress_redundant = false
 
-	## If suppression is enabled, send updates at least every X seconds anyway
-	# heartbeat_interval = "60s"
+[[inputs.cisco_telemetry_gnmi.subscription]]
+  ## Origin and path of the subscription
+  ## origin usually refers to a (YANG) data model implemented by the device
+  ## and path to a specific substructe inside it (similar to an XPath) that should be subscribed to
+  ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
+  origin = "Cisco-IOS-XR-infra-statsd-oper"
+  path = "infra-statistics/interfaces/interface/latest/generic-counters"
+
+  # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
+  subscription_mode = "sample"
+  sample_interval = "10s"
+
+  ## Suppress redundant transmissions when measured values are unchanged
+  # suppress_redundant = false
+
+  ## If suppression is enabled, send updates at least every X seconds anyway
+  # heartbeat_interval = "60s"
 `
 
 // SampleConfig of plugin
