@@ -104,9 +104,10 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer c.wg.Done()
 		defer client.Close()
+		request := c.newSubscribeRequest()
 
 		for ctx.Err() == nil {
-			if err := c.subscribeGNMI(ctx, client); err != nil {
+			if err := c.subscribeGNMI(ctx, client, request); err != nil {
 				acc.AddError(err)
 			}
 
@@ -119,8 +120,8 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// SubscribeGNMI and extract telemetry data
-func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.ClientConn) error {
+// Create a new GNMI SubscribeRequest
+func (c *CiscoTelemetryGNMI) newSubscribeRequest() *gnmi.SubscribeRequest {
 	// Create subscription objects
 	subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
 	for i, subscription := range c.Subscriptions {
@@ -134,7 +135,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 	}
 
 	// Construct subscribe request
-	request := &gnmi.SubscribeRequest{
+	return &gnmi.SubscribeRequest{
 		Request: &gnmi.SubscribeRequest_Subscribe{
 			Subscribe: &gnmi.SubscriptionList{
 				Prefix:       parsePath(c.Origin, c.Prefix, c.Target),
@@ -145,7 +146,10 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 			},
 		},
 	}
+}
 
+// SubscribeGNMI and extract telemetry data
+func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.ClientConn, request *gnmi.SubscribeRequest) error {
 	subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
 	if err != nil {
 		return fmt.Errorf("GNMI subscription setup failed: %v", err)
