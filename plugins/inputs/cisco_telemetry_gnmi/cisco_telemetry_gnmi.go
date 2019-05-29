@@ -75,6 +75,11 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
 
+	request, err := c.newSubscribeRequest()
+	if err != nil {
+		return err
+	}
+
 	if c.Redial.Duration.Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
 	}
@@ -104,7 +109,6 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer c.wg.Done()
 		defer client.Close()
-		request := c.newSubscribeRequest()
 
 		for ctx.Err() == nil {
 			if err := c.subscribeGNMI(ctx, client, request); err != nil {
@@ -121,12 +125,16 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 }
 
 // Create a new GNMI SubscribeRequest
-func (c *CiscoTelemetryGNMI) newSubscribeRequest() *gnmi.SubscribeRequest {
+func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 	// Create subscription objects
 	subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
 	for i, subscription := range c.Subscriptions {
+		gnmiPath, err := parsePath(subscription.Origin, subscription.Path, "")
+		if err != nil {
+			return nil, err
+		}
 		subscriptions[i] = &gnmi.Subscription{
-			Path:              parsePath(subscription.Origin, subscription.Path, ""),
+			Path:              gnmiPath,
 			Mode:              gnmi.SubscriptionMode(gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]),
 			SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
 			SuppressRedundant: subscription.SuppressRedundant,
@@ -135,17 +143,21 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() *gnmi.SubscribeRequest {
 	}
 
 	// Construct subscribe request
+	gnmiPath, err := parsePath(c.Origin, c.Prefix, c.Target)
+	if err != nil {
+		return nil, err
+	}
 	return &gnmi.SubscribeRequest{
 		Request: &gnmi.SubscribeRequest_Subscribe{
 			Subscribe: &gnmi.SubscriptionList{
-				Prefix:       parsePath(c.Origin, c.Prefix, c.Target),
+				Prefix:       gnmiPath,
 				Mode:         gnmi.SubscriptionList_STREAM,
 				Encoding:     gnmi.Encoding(gnmi.Encoding_value[strings.ToUpper(c.Encoding)]),
 				Subscription: subscriptions,
 				UpdatesOnly:  c.UpdatesOnly,
 			},
 		},
-	}
+	}, nil
 }
 
 // SubscribeGNMI and extract telemetry data
@@ -302,7 +314,8 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(fields map[string]interface{},
 }
 
 //ParsePath from XPath-like string to GNMI path structure
-func parsePath(origin string, path string, target string) *gnmi.Path {
+func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
+	var err error
 	gnmiPath := gnmi.Path{Origin: origin, Target: target}
 
 	elem := &gnmi.PathElem{}
@@ -311,28 +324,30 @@ func parsePath(origin string, path string, target string) *gnmi.Path {
 	path = path + "/"
 
 	for i := 0; i < len(path); i++ {
-		switch path[i] {
-		case '[':
+		if path[i] == '[' {
+			if name >= 0 {
+				fmt.Println(path, i, name, start, end)
+				break
+			}
 			if end < 0 {
 				end = i
 				elem.Key = make(map[string]string)
 			}
-			if name < 0 {
-				name = i + 1
+			name = i + 1
+		} else if path[i] == '=' {
+			if name <= 0 || value >= 0 {
+				fmt.Println(path, i, name, start, end)
+				break
 			}
-
-		case '=':
-			if name > 0 && value < 0 {
-				value = i + 1
+			value = i + 1
+		} else if path[i] == ']' {
+			if name <= 0 || value <= name {
+				fmt.Println(path, i, name, start, end)
+				break
 			}
-
-		case ']':
-			if name > 0 && value > name {
-				elem.Key[path[name:value-1]] = strings.Trim(path[value:i], "'\"")
-			}
+			elem.Key[path[name:value-1]] = strings.Trim(path[value:i], "'\"")
 			name, value = -1, -1
-
-		case '/':
+		} else if path[i] == '/' {
 			if name < 0 {
 				if end < 0 {
 					end = i
@@ -350,7 +365,15 @@ func parsePath(origin string, path string, target string) *gnmi.Path {
 		}
 	}
 
-	return &gnmiPath
+	if name >= 0 || value >= 0 {
+		err = fmt.Errorf("Invalid GNMI path: %s", path)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &gnmiPath, nil
 }
 
 // Stop listener and cleanup

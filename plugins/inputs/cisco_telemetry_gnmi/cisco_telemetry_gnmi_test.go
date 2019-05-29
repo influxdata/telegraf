@@ -20,16 +20,22 @@ import (
 
 func TestParsePath(t *testing.T) {
 	path := "/foo/bar/bla[shoo=woo][shoop=/woop/]/z"
-	parsed := parsePath("theorigin", path, "thetarget")
+	parsed, err := parsePath("theorigin", path, "thetarget")
 
+	assert.Nil(t, err)
 	assert.Equal(t, parsed.Origin, "theorigin")
 	assert.Equal(t, parsed.Target, "thetarget")
 	assert.Equal(t, parsed.Element, []string{"foo", "bar", "bla[shoo=woo][shoop=/woop/]", "z"})
 	assert.Equal(t, parsed.Elem, []*gnmi.PathElem{{Name: "foo"}, {Name: "bar"},
 		{Name: "bla", Key: map[string]string{"shoo": "woo", "shoop": "/woop/"}}, {Name: "z"}})
 
-	parsed = parsePath("", "", "")
+	parsed, err = parsePath("", "", "")
+	assert.Nil(t, err)
 	assert.Equal(t, *parsed, gnmi.Path{})
+
+	parsed, err = parsePath("", "/foo[[", "")
+	assert.Nil(t, parsed)
+	assert.Equal(t, errors.New("Invalid GNMI path: /foo[[/"), err)
 }
 
 type mockGNMIServer struct {
