@@ -49,7 +49,6 @@ type CiscoTelemetryGNMI struct {
 	// Internal state
 	acc    telegraf.Accumulator
 	cancel context.CancelFunc
-	ctx    context.Context
 	wg     sync.WaitGroup
 }
 
@@ -71,9 +70,10 @@ type Subscription struct {
 // Start the http listener service
 func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	var err error
+	var ctx context.Context
 	var opts []grpc.DialOption
 	c.acc = acc
-	c.ctx, c.cancel = context.WithCancel(context.Background())
+	ctx, c.cancel = context.WithCancel(context.Background())
 
 	if c.EnableTLS {
 		tlsConfig, err := c.ClientConfig.TLSConfig()
@@ -87,7 +87,7 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	}
 
 	if len(c.Username) > 0 {
-		c.ctx = metadata.AppendToOutgoingContext(c.ctx, "username", c.Username, "password", c.Password)
+		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
 	}
 
 	client, err := grpc.Dial(c.ServiceAddress, opts...)
@@ -97,7 +97,7 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 
 	// Dialin client telemetry stream reading routine
 	c.wg.Add(1)
-	go c.subscribeGNMI(client)
+	go c.subscribeGNMI(ctx, client)
 
 	log.Printf("I! Started Cisco GNMI service for %s", c.ServiceAddress)
 
@@ -105,8 +105,8 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 }
 
 // SubscribeGNMI and extract telemetry data
-func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
-	for c.ctx.Err() == nil {
+func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.ClientConn) {
+	for ctx.Err() == nil {
 		// Create subscription objects
 		subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
 		for i, subscription := range c.Subscriptions {
@@ -132,7 +132,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 			},
 		}
 
-		subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(c.ctx)
+		subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
 		if err != nil {
 			c.acc.AddError(fmt.Errorf("GNMI subscription setup failed: %v", err))
 		} else {
@@ -143,11 +143,11 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 			c.acc.AddError(fmt.Errorf("GNMI subscription setup failed: %v", err))
 		} else {
 			log.Printf("D! Connection to GNMI device %s established", c.ServiceAddress)
-			for c.ctx.Err() == nil {
+			for ctx.Err() == nil {
 				reply, err := subscribeClient.Recv()
 
 				if err != nil {
-					if err != io.EOF && c.ctx.Err() == nil {
+					if err != io.EOF && ctx.Err() == nil {
 						c.acc.AddError(fmt.Errorf("GNMI subscription aborted: %v", err))
 					}
 					break
@@ -282,7 +282,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(client *grpc.ClientConn) {
 		}
 
 		select {
-		case <-c.ctx.Done():
+		case <-ctx.Done():
 		case <-time.After(c.Redial.Duration):
 		}
 	}
