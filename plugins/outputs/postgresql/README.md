@@ -28,9 +28,9 @@ This output plugin writes all metrics to PostgreSQL.
   # schema = "public"
 
   ## Use jsonb datatype for tags. Default is true.
-  # tags_as_jsonb = true
+  # tags_as_jsonb = false
 
   ## Use jsonb datatype for fields. Default is true.
-  # fields_as_jsonb = true
+  # fields_as_jsonb = false
 
 ```
