@@ -1,8 +1,3 @@
-/**
- * Copyright (c) 2018 Cisco Systems
- * Author: Steven Barth <stbarth@cisco.com>
- */
-
 package cisco_telemetry_mdt
 
 import (
