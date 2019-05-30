@@ -450,5 +450,11 @@ func makeQueryURL(loc *url.URL) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	c.client.CloseIdleConnections()
+	type closeIdler interface {
+		CloseIdleConnections()
+	}
+
+	if tr, ok := c.client.Transport.(closeIdler); ok {
+		tr.CloseIdleConnections()
+	}
 }
