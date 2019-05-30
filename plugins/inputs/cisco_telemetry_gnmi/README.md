@@ -19,6 +19,9 @@ This is a sample configuration for the plugin.
   username = "cisco"
   password = "cisco"
 
+  ## GNMI encoding requested (one of: "proto", "json", "json_ietf")
+  # encoding = "proto"
+
   ## redial in case of failures after
   redial = "10s"
 
@@ -31,23 +34,22 @@ This is a sample configuration for the plugin.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
-  ## GNMI encoding requested (usually one of: "proto", "json", "json_ietf")
-  # encoding = "proto"
-
-  ## GNMI subscription prefix (optional, platform dependent)
+  ## GNMI subscription prefix (optional, can usually be left empty)
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
-  # origin = "oc-if"
-  # prefix = "interfaces/interface"
+  # origin = ""
+  # prefix = ""
   # target = ""
 
 
   [[inputs.cisco_telemetry_gnmi.subscription]]
     ## Origin and path of the subscription
-    ## origin usually refers to a (YANG) data model implemented by the device
-    ## and path to a specific substructe inside it (similar to an XPath) that should be subscribed to
     ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
-    origin = "Cisco-IOS-XR-infra-statsd-oper"
-    path = "infra-statistics/interfaces/interface/latest/generic-counters"
+    ##
+    ## origin usually refers to a (YANG) data model implemented by the device
+    ## and path to a specific substructe inside it that should be subscribed to (similar to an XPath)
+    ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
+    origin = "openconfig-interfaces"
+    path = "/interfaces/interface/state/counters"
 
     # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
     subscription_mode = "sample"

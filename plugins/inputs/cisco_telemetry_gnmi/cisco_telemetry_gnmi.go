@@ -72,16 +72,17 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	var err error
 	var ctx context.Context
 	var opts []grpc.DialOption
+	var request *gnmi.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
 
-	request, err := c.newSubscribeRequest()
-	if err != nil {
+	// Validate configuration
+	if request, err = c.newSubscribeRequest(); err != nil {
 		return err
-	}
-
-	if c.Redial.Duration.Nanoseconds() <= 0 {
+	} else if c.Redial.Duration.Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
+	} else if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" {
+		return fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
 	if c.EnableTLS {
@@ -133,9 +134,13 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, erro
 		if err != nil {
 			return nil, err
 		}
+		mode, ok := gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]
+		if !ok {
+			return nil, fmt.Errorf("invalid subscription mode %s", subscription.SubscriptionMode)
+		}
 		subscriptions[i] = &gnmi.Subscription{
 			Path:              gnmiPath,
-			Mode:              gnmi.SubscriptionMode(gnmi.SubscriptionMode_value[strings.ToUpper(subscription.SubscriptionMode)]),
+			Mode:              gnmi.SubscriptionMode(mode),
 			SampleInterval:    uint64(subscription.SampleInterval.Duration.Nanoseconds()),
 			SuppressRedundant: subscription.SuppressRedundant,
 			HeartbeatInterval: uint64(subscription.HeartbeatInterval.Duration.Nanoseconds()),
@@ -326,7 +331,6 @@ func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 	for i := 0; i < len(path); i++ {
 		if path[i] == '[' {
 			if name >= 0 {
-				fmt.Println(path, i, name, start, end)
 				break
 			}
 			if end < 0 {
@@ -336,13 +340,11 @@ func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 			name = i + 1
 		} else if path[i] == '=' {
 			if name <= 0 || value >= 0 {
-				fmt.Println(path, i, name, start, end)
 				break
 			}
 			value = i + 1
 		} else if path[i] == ']' {
 			if name <= 0 || value <= name {
-				fmt.Println(path, i, name, start, end)
 				break
 			}
 			elem.Key[path[name:value-1]] = strings.Trim(path[value:i], "'\"")
@@ -390,6 +392,9 @@ address = "10.49.234.114:57777"
 username = "cisco"
 password = "cisco"
 
+## GNMI encoding requested (one of: "proto", "json", "json_ietf")
+# encoding = "proto"
+
 ## redial in case of failures after
 redial = "10s"
 
@@ -402,23 +407,22 @@ redial = "10s"
 # tls_cert = "/etc/telegraf/cert.pem"
 # tls_key = "/etc/telegraf/key.pem"
 
-## GNMI encoding requested (usually one of: "proto", "json", "json_ietf")
-# encoding = "proto"
-
-## GNMI subscription prefix (optional, platform dependent)
+## GNMI subscription prefix (optional, can usually be left empty)
 ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
-# origin = "oc-if"
-# prefix = "interfaces/interface"
+# origin = ""
+# prefix = ""
 # target = ""
 
 
 [[inputs.cisco_telemetry_gnmi.subscription]]
   ## Origin and path of the subscription
-  ## origin usually refers to a (YANG) data model implemented by the device
-  ## and path to a specific substructe inside it (similar to an XPath) that should be subscribed to
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
-  origin = "Cisco-IOS-XR-infra-statsd-oper"
-  path = "infra-statistics/interfaces/interface/latest/generic-counters"
+  ##
+  ## origin usually refers to a (YANG) data model implemented by the device
+  ## and path to a specific substructe inside it that should be subscribed to (similar to an XPath)
+  ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
+  origin = "openconfig-interfaces"
+  path = "/interfaces/interface/state/counters"
 
   # Subscription mode (one of: "target_defined", "sample", "on_change") and interval
   subscription_mode = "sample"
