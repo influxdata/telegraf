@@ -34,7 +34,6 @@ type CiscoTelemetryMDT struct {
 	MaxMsgSize     int    `toml:"max_msg_size"`
 
 	// GRPC TLS settings
-	EnableTLS bool `toml:"enable_tls"`
 	internaltls.ServerConfig
 
 	// Internal listener / client handle
@@ -66,13 +65,10 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 
 	case "grpc":
 		var opts []grpc.ServerOption
-
-		if c.EnableTLS {
-			tlsConfig, err := c.ServerConfig.TLSConfig()
-			if err != nil {
-				return err
-			}
-
+		tlsConfig, err := c.ServerConfig.TLSConfig()
+		if err != nil {
+			return err
+		} else if tlsConfig != nil {
 			opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
 		}
 
@@ -118,11 +114,11 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 		// Individual client connection routine
 		c.wg.Add(1)
 		go func() {
-			log.Printf("D! Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
+			log.Printf("D! [inputs.cisco_telemetry_mdt]: Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 			if err := c.handleTCPClient(conn); err != nil {
 				c.acc.AddError(err)
 			}
-			log.Printf("D! Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
+			log.Printf("D! [inputs.cisco_telemetry_mdt]: Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 
 			mutex.Lock()
 			delete(clients, conn)
@@ -137,7 +133,7 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 	mutex.Lock()
 	for client := range clients {
 		if err := client.Close(); err != nil {
-			log.Printf("E! Failed to close TCP dialout client: %v", err)
+			log.Printf("E! [inputs.cisco_telemetry_mdt]: Failed to close TCP dialout client: %v", err)
 		}
 	}
 	mutex.Unlock()
@@ -145,8 +141,6 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 
 // Handle a TCP telemetry client
 func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
-	var err error
-
 	// TCP Dialout telemetry framing header
 	var hdr struct {
 		MsgType       uint16
@@ -160,8 +154,8 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 
 	for {
 		// Read and validate dialout telemetry header
-		if err = binary.Read(conn, binary.BigEndian, &hdr); err != nil {
-			break
+		if err := binary.Read(conn, binary.BigEndian, &hdr); err != nil {
+			return err
 		}
 
 		maxMsgSize := tcpMaxMsgLen
@@ -170,34 +164,31 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 		}
 
 		if hdr.MsgLen > maxMsgSize {
-			err = fmt.Errorf("dialout packet too long: %v", hdr.MsgLen)
-			break
+			return fmt.Errorf("dialout packet too long: %v", hdr.MsgLen)
 		} else if hdr.MsgFlags != 0 {
-			err = fmt.Errorf("invalid dialout flags: %v", hdr.MsgFlags)
-			break
+			return fmt.Errorf("invalid dialout flags: %v", hdr.MsgFlags)
 		}
 
 		// Read and handle telemetry packet
-		var size int64
 		payload.Reset()
-		if size, err = payload.ReadFrom(io.LimitReader(conn, int64(hdr.MsgLen))); size != int64(hdr.MsgLen) {
-			if err == nil {
-				err = fmt.Errorf("TCP dialout premature EOF")
+		if size, err := payload.ReadFrom(io.LimitReader(conn, int64(hdr.MsgLen))); size != int64(hdr.MsgLen) {
+			if err != nil {
+				return err
 			}
-			break
+			return fmt.Errorf("TCP dialout premature EOF")
 		}
 
 		c.handleTelemetry(payload.Bytes())
 	}
 
-	return err
+	return nil
 }
 
 // MdtDialout RPC server method for grpc-dialout transport
 func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
 	peer, peerOK := peer.FromContext(stream.Context())
 	if peerOK {
-		log.Printf("D! Accepted Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		log.Printf("D! [inputs.cisco_telemetry_mdt]: Accepted Cisco MDT GRPC dialout connection from %s", peer.Addr)
 	}
 
 	for {
@@ -218,7 +209,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 	}
 
 	if peerOK {
-		log.Printf("D! Closed Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		log.Printf("D! [inputs.cisco_telemetry_mdt]: Closed Cisco MDT GRPC dialout connection from %s", peer.Addr)
 	}
 
 	return nil
@@ -264,7 +255,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 					c.parseGPBKVField(subfield, &namebuf, telemetry.EncodingPath, timestamp, tags, fields)
 				}
 			default:
-				log.Printf("I! Unexpected top-level MDT field: %s", field.Name)
+				log.Printf("I! [inputs.cisco_telemetry_mdt]: Unexpected top-level MDT field: %s", field.Name)
 			}
 		}
 
@@ -347,7 +338,6 @@ const sampleConfig = `
  service_address = ":57000"
 
  ## Enable TLS for GRPC transport
- # enable_tls = true
  # tls_cert = "/etc/telegraf/cert.pem"
  # tls_key = "/etc/telegraf/key.pem"
 

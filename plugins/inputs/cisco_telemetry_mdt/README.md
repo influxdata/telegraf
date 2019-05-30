@@ -23,7 +23,6 @@ This is a sample configuration for the plugin.
   service_address = ":57000"
 
   ## Enable TLS for GRPC transport
-  # enable_tls = true
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
