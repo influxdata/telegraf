@@ -357,6 +357,7 @@ For documentation on the latest development code see the [documentation index][d
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
+* [health](./plugins/outputs/health)
 * [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)

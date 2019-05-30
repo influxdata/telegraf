@@ -19,6 +19,7 @@
 #### New Outputs
 
 - [syslog](/plugins/outputs/syslog/README.md) - Contributed by @javicrespo
+- [health](/plugins/outputs/health/README.md) - Contributed by @influxdata
 
 #### New Serializers
 
