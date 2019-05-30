@@ -64,7 +64,8 @@ func Version() string {
 
 // ProductToken returns a tag for Telegraf that can be used in user agents.
 func ProductToken() string {
-	return fmt.Sprintf("Telegraf/%s Go/%s", Version(), runtime.Version())
+	return fmt.Sprintf("Telegraf/%s Go/%s",
+		Version(), strings.TrimPrefix(runtime.Version(), "go"))
 }
 
 // UnmarshalTOML parses the duration from the TOML config file
