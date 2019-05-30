@@ -180,8 +180,6 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 
 		c.handleTelemetry(payload.Bytes())
 	}
-
-	return nil
 }
 
 // MdtDialout RPC server method for grpc-dialout transport
