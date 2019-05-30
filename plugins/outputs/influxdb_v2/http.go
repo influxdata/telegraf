@@ -309,11 +309,5 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	type closeIdler interface {
-		CloseIdleConnections()
-	}
-
-	if tr, ok := c.client.Transport.(closeIdler); ok {
-		tr.CloseIdleConnections()
-	}
+	internal.CloseIdleConnections(c.client)
 }
