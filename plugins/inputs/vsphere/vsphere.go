@@ -42,7 +42,7 @@ type VSphere struct {
 	VSANEnabled             bool     `toml:"vsan_enabled"`
 	VSANPerfMetricInclude   []string `toml:"vsan_perf_metric_include"`
 	VSANPerfMetricExclude   []string `toml:"vsan_perf_metric_exclude"`
-	VSANClusterInclude      []string
+	VSANClusterInclude      []string `toml:"vsan_cluster_include"`
 	Separator               string
 	UseIntSamples           bool
 
