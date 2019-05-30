@@ -127,7 +127,13 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-1.11-386':
+      - 'test-go-1.12':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1.12-386':
           requires:
             - 'deps'
           filters:
@@ -138,7 +144,8 @@ workflows:
             - 'test-go-1.9'
             - 'test-go-1.10'
             - 'test-go-1.11'
-            - 'test-go-1.11-386'
+            - 'test-go-1.12'
+            - 'test-go-1.12-386'
       - 'release':
           requires:
             - 'test-go-1.9'
