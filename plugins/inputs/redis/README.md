@@ -130,6 +130,9 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
 - The redis_keyspace measurement has an additional database tag:
     - database
 
+- The redis_cmdstat measurement has an additional tag:
+    - command
+
 ### Example Output:
 
 Using this configuration:
@@ -160,4 +163,9 @@ It produces:
 redis_keyspace:
 ```
 > redis_keyspace,database=db1,host=host,server=localhost,port=6379,replication_role=master keys=1i,expires=0i,avg_ttl=0i 1493101350000000000
+```
+
+redis_command:
+```
+> redis_cmdstat,command=publish,host=host,port=6379,replication_role=master,server=localhost calls=68113i,usec=325146i,usec_per_call=4.77 1559227136000000000
 ```
