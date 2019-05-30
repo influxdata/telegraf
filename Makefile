@@ -132,7 +132,7 @@ plugin-%:
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
 .PHONY: ci-1.12
-ci-1.11:
+ci-1.12:
 	docker build -t quay.io/influxdb/telegraf-ci:1.12.5 - < scripts/ci-1.12.docker
 	docker push quay.io/influxdb/telegraf-ci:1.12.5
 
