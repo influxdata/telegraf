@@ -169,31 +169,29 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, erro
 func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.ClientConn, request *gnmi.SubscribeRequest) error {
 	subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
 	if err != nil {
-		return fmt.Errorf("GNMI subscription setup failed: %v", err)
+		return fmt.Errorf("failed to setup subscription: %v", err)
 	}
 
 	err = subscribeClient.Send(request)
 	if err != nil {
-		return fmt.Errorf("GNMI subscription setup failed: %v", err)
+		return fmt.Errorf("failed to send subscription request: %v", err)
 	}
 
-	log.Printf("D! Connection to GNMI device %s established", c.Address)
+	log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s established", c.Address)
+	defer log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s closed", c.Address)
 	for ctx.Err() == nil {
 		var reply *gnmi.SubscribeResponse
-		reply, err = subscribeClient.Recv()
+		reply, err := subscribeClient.Recv()
 		if err != nil {
 			if err != io.EOF && ctx.Err() == nil {
-				err = fmt.Errorf("GNMI subscription aborted: %v", err)
-			} else {
-				err = nil
+				return fmt.Errorf("aborted GNMI subscription: %v", err)
 			}
 			break
 		}
 
 		c.handleSubscribeResponse(reply)
 	}
-	log.Printf("D! Connection to GNMI device %s closed", c.Address)
-	return err
+	return nil
 }
 
 // HandleSubscribeResponse message from GNMI and parse contained telemetry data
