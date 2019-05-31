@@ -292,3 +292,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/openconfig/gnmi"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cisco-ie/nx-telemetry-proto"

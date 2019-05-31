@@ -221,6 +221,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:3845bdce61338e4e57cb7a1fe2022ccb69fa07c6cbb856238356148470220810"
+  name = "github.com/cisco-ie/nx-telemetry-proto"
+  packages = [
+    "mdt_dialout",
+    "telemetry_bis",
+  ]
+  pruneopts = ""
+  revision = "f5b7f9a098c6bbdb02a3a97d55f6b89cd336030a"
+
+[[projects]]
+  branch = "master"
   digest = "1:298e42868718da06fc0899ae8fdb99c48a14477045234c9274d81caa79af6a8f"
   name = "github.com/couchbase/go-couchbase"
   packages = ["."]
@@ -1568,6 +1579,8 @@
     "github.com/aws/aws-sdk-go/service/dynamodb",
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
+    "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout",
+    "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis",
     "github.com/couchbase/go-couchbase",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
