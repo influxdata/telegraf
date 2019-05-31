@@ -27,6 +27,7 @@ type Client interface {
 	CreateDatabase(ctx context.Context, database string) error
 	Database() string
 	URL() string
+	Close()
 }
 
 // InfluxDB struct is the primary data structure for the plugin
@@ -183,6 +184,9 @@ func (i *InfluxDB) Connect() error {
 }
 
 func (i *InfluxDB) Close() error {
+	for _, client := range i.clients {
+		client.Close()
+	}
 	return nil
 }
 

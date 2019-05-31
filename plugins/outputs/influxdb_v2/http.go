@@ -307,3 +307,7 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	loc.RawQuery = params.Encode()
 	return loc.String(), nil
 }
+
+func (c *httpClient) Close() {
+	internal.CloseIdleConnections(c.client)
+}
