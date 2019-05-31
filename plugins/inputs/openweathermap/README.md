@@ -27,8 +27,8 @@ https://openweathermap.org/city/2643743
   ## Timeout for HTTP response.
   # response_timeout = "5s"
 
-  ## Unit system for return values. Can be one of "metric", "imperial", or
-  ## "standard".
+  ## Preferred unit system for temperature and wind speed. Can be one of
+  ## "metric", "imperial", or "standard".
   # units = "metric"
 
   ## Query interval; OpenWeatherMap weather data is updated every 10
