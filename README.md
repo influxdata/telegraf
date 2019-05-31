@@ -256,6 +256,7 @@ For documentation on the latest development code see the [documentation index][d
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
 * [redis](./plugins/inputs/redis)
+* [redis_sentinel](./plugins/inputs/redis_sentinel)
 * [rethinkdb](./plugins/inputs/rethinkdb)
 * [riak](./plugins/inputs/riak)
 * [salesforce](./plugins/inputs/salesforce)
