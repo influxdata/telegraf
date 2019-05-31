@@ -136,3 +136,6 @@ func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	}
 	return 0, nil, nil
 }
+
+func (c *udpClient) Close() {
+}

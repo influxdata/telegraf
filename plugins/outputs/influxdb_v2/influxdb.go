@@ -74,6 +74,7 @@ type Client interface {
 	Write(context.Context, []telegraf.Metric) error
 
 	URL() string // for logging
+	Close()
 }
 
 type InfluxDB struct {
@@ -137,6 +138,9 @@ func (i *InfluxDB) Connect() error {
 }
 
 func (i *InfluxDB) Close() error {
+	for _, client := range i.clients {
+		client.Close()
+	}
 	return nil
 }
 
