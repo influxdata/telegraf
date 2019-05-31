@@ -9,8 +9,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	dialout "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/mdt_dialout"
-	"github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt/telemetry"
+	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"

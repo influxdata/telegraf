@@ -221,14 +221,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3845bdce61338e4e57cb7a1fe2022ccb69fa07c6cbb856238356148470220810"
+  digest = "1:ed5e77e0626ed76b7e7a2554bc4586aae768612381c5f62738f16a2dfa48763b"
   name = "github.com/cisco-ie/nx-telemetry-proto"
   packages = [
     "mdt_dialout",
     "telemetry_bis",
   ]
   pruneopts = ""
-  revision = "f5b7f9a098c6bbdb02a3a97d55f6b89cd336030a"
+  revision = "82441e232cf6af9be0f808bf0c6421ee8519880e"
 
 [[projects]]
   branch = "master"
