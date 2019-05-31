@@ -50,8 +50,8 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 		log.Printf("I! [inputs.vsphere][vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 		return nil
 	}
-	vsanPerfMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "performance"}, e.Parent.Separator)
-	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "summary"}, e.Parent.Separator)
+	vsanPerfMetricsName = strings.Join([]string{"vsphere", "vsan", "performance"}, e.Parent.Separator)
+	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "vsan", "summary"}, e.Parent.Separator)
 	res := e.resourceKinds[resourceType]
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {

@@ -181,6 +181,16 @@ var sampleConfig = `
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default for Datastores only
 
+  ## VSAN
+  vsan_enabled = false ## vSAN metrics is not enabled by default
+  vsan_perf_metric_include = [] ## if omitted or empty, all metrics are collected
+  vsan_perf_metric_exclude = [] ## Nothing excluded by default
+
+  ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
+  ## this option is given because not all vSAN metrics are returned by the API
+  ## When set to true, queried metrics will be identical to vsan_perf_metric_include and exclude array will be ignored.
+  vsan_metric_skip_verify = false ## false by default.
+
   ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
