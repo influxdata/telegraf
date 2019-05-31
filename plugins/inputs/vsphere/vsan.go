@@ -101,8 +101,11 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectR
 
 // getVsanPerfMetadata returns a string list of the performance entity types that will be queried.
 func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client, res *resourceKind) []string {
+	if res.simple { // Skip getting supported Entity types from vCenter. Using user defined metrics without verifying.
+		return res.include
+	}
 	vsanClient := client.NewServiceClient(vsanPath, vsanNamespace)
-	entityRes, err := vsanmethods.VsanPerfGetSupportedEntityTypes(ctx, vsanClient,
+	resp, err := vsanmethods.VsanPerfGetSupportedEntityTypes(ctx, vsanClient,
 		&vsantypes.VsanPerfGetSupportedEntityTypes{
 			This: perfManagerRef,
 		})
@@ -113,7 +116,7 @@ func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client
 		return metrics
 	}
 	// Use the include & exclude configuration to filter all supported metrics
-	for _, entity := range entityRes.Returnval {
+	for _, entity := range resp.Returnval {
 		if res.filters.Match(entity.Name) {
 			metrics = append(metrics, entity.Name)
 		}

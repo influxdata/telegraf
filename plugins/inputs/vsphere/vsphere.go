@@ -42,6 +42,7 @@ type VSphere struct {
 	VSANEnabled             bool     `toml:"vsan_enabled"`
 	VSANPerfMetricInclude   []string `toml:"vsan_perf_metric_include"`
 	VSANPerfMetricExclude   []string `toml:"vsan_perf_metric_exclude"`
+	VSANMetricSkipVerify    bool     `toml:"vsan_metric_skip_verify"`
 	VSANClusterInclude      []string `toml:"vsan_cluster_include"`
 	Separator               string
 	UseIntSamples           bool
@@ -333,6 +334,7 @@ func init() {
 			VSANEnabled:             false,
 			VSANPerfMetricInclude:   nil,
 			VSANPerfMetricExclude:   nil,
+			VSANMetricSkipVerify:    false,
 			VSANClusterInclude:      []string{"/*/host/**"},
 			Separator:               "_",
 			UseIntSamples:           true,
