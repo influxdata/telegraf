@@ -10,6 +10,7 @@
 - [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
 - [ecs](/plugins/inputs/ecs/README.md) - Contributed by @rbtr
 - [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
+- [openweathermap](/plugins/inputs/openweathermap/README.md) - Contributed by @regel
 - [powerdns_recursor](/plugins/inputs/powerdns_recursor/README.md) - Contributed by @dupondje
 
 #### New Aggregators

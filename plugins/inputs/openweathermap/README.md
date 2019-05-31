@@ -1,73 +1,68 @@
-# Telegraf Plugin: openweathermap
+# OpenWeatherMap Input Plugin
 
-OpenWeatherMap provides the current weather and forecasts for more than 200,000 cities. To use this plugin you will need a token. For more information [click here](https://openweathermap.org/appid).
+Collect current weather and forecast data from OpenWeatherMap.
 
-Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.list.json.gz). You can also use this [url](https://openweathermap.org/find) as an alternative to downloading a file. The ID is in the url of the city: `https://openweathermap.org/city/2643743`
+To use this plugin you will need an [api key][] (app_id).
 
-### Configuration:
+City identifiers can be found in the [city list][]. Alternately you can
+[search][] by name; the `city_id` can be found as the last digits of the URL:
+https://openweathermap.org/city/2643743
+
+### Configuration
 
 ```toml
 [[inputs.openweathermap]]
-  ## Root url of API to pull stats
-  # base_url = "https://api.openweathermap.org/data/2.5/"
-  ## Your personal user token from openweathermap.org
-  # app_id = "xxxxxxxxxxxxxxxxxxxxxxx"
-  ## List of city identifiers
-  # city_id = ["2988507", "519188"]
-  ## HTTP response timeout (default: 5s)
+  ## OpenWeatherMap API key.
+  app_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+  ## City ID's to collect weather data from.
+  city_id = ["5391959"]
+
+  ## APIs to fetch; can contain "weather" or "forecast".
+  fetch = ["weather", "forecast"]
+
+  ## OpenWeatherMap base URL
+  # base_url = "https://api.openweathermap.org/"
+
+  ## Timeout for HTTP response.
   # response_timeout = "5s"
-  ## Query the current weather and future forecast
-  # fetch = ["weather", "forecast"]
-  ## For temperature in Fahrenheit use units=imperial
-  ## For temperature in Celsius use units=metric (default)
+
+  ## Preferred unit system for temperature and wind speed. Can be one of
+  ## "metric", "imperial", or "standard".
   # units = "metric"
+
+  ## Query interval; OpenWeatherMap weather data is updated every 10
+  ## minutes.
+  interval = "10m"
 ```
 
-### Metrics:
+### Metrics
 
-+ weather
-  - fields:
-    - humidity (int, Humidity percentage)
-    - temperature (float, Unit: Celcius)
-    - pressure (float, Atmospheric pressure in hPa)
-    - rain (float, Rain volume for the last 3 hours, mm)
-    - wind_speed (float, Wind speed. Unit Default: meter/sec)
-    - wind_degrees (float,  Wind direction, degrees)
+- weather
   - tags:
     - city_id
     - forecast
+  - fields:
+    - cloudiness (int, percent)
+    - humidity (int, percent)
+    - pressure (float, atmospheric pressure hPa)
+    - rain (float, rain volume for the last 3 hours in mm)
+    - sunrise (int, nanoseconds since unix epoch)
+    - sunset (int, nanoseconds since unix epoch)
+    - temperature (float, degrees)
+    - visibility (int, meters, not available on forecast data)
+    - wind_degrees (float, wind direction in degrees)
+    - wind_speed (float, wind speed in meters/sec or miles/sec)
 
-### Example Output:
 
-Using this configuration:
-```toml
-[[inputs.openweathermap]]
-  base_url = "https://api.openweathermap.org/data/2.5/"
-  app_id = "change_this_with_your_appid"
-  city_id = ["2988507", "519188"]
-  response_timeout = "5s"
-  fetch = ["weather", "forecast"]
-  units = "metric"
+### Example Output
+
+```
+> weather,city=San\ Francisco,city_id=5391959,country=US,forecast=* cloudiness=40i,humidity=72i,pressure=1013,rain=0,sunrise=1559220629000000000i,sunset=1559273058000000000i,temperature=13.31,visibility=16093i,wind_degrees=280,wind_speed=4.6 1559268695000000000
+> weather,city=San\ Francisco,city_id=5391959,country=US,forecast=3h cloudiness=0i,humidity=86i,pressure=1012.03,rain=0,temperature=10.69,wind_degrees=222.855,wind_speed=2.76 1559271600000000000
+> weather,city=San\ Francisco,city_id=5391959,country=US,forecast=6h cloudiness=11i,humidity=93i,pressure=1012.79,rain=0,temperature=9.34,wind_degrees=212.685,wind_speed=1.85 1559282400000000000
 ```
 
-When run with:
-```
-./telegraf -config telegraf.conf -input-filter openweathermap -test
-```
-
-It produces data similar to:
-```
-> weather,city_id=4303602,forecast=* humidity=51i,pressure=1012,rain=0,temperature=16.410000000000025,wind_degrees=170,wind_speed=2.6 1556393944000000000
-> weather,city_id=2988507,forecast=* humidity=87i,pressure=1020,rain=0,temperature=7.110000000000014,wind_degrees=260,wind_speed=5.1 1556393841000000000
-> weather,city_id=2988507,forecast=3h humidity=69i,pressure=1020.38,rain=0,temperature=5.650000000000034,wind_degrees=268.456,wind_speed=5.83 1556398800000000000
-> weather,city_id=2988507,forecast=* humidity=69i,pressure=1020.38,rain=0,temperature=5.650000000000034,wind_degrees=268.456,wind_speed=5.83 1556398800000000000
-> weather,city_id=2988507,forecast=6h humidity=74i,pressure=1020.87,rain=0,temperature=5.810000000000002,wind_degrees=261.296,wind_speed=5.43 1556409600000000000
-> weather,city_id=2988507,forecast=* humidity=74i,pressure=1020.87,rain=0,temperature=5.810000000000002,wind_degrees=261.296,wind_speed=5.43 1556409600000000000
-> weather,city_id=4303602,forecast=9h humidity=66i,pressure=1010.63,rain=0,temperature=14.740000000000009,wind_degrees=196.264,wind_speed=4.3 1556398800000000000
-> weather,city_id=4303602,forecast=* humidity=66i,pressure=1010.63,rain=0,temperature=14.740000000000009,wind_degrees=196.264,wind_speed=4.3 1556398800000000000
-```
-
-
-
-
-
+[api key]: https://openweathermap.org/appid
+[city list]: http://bulk.openweathermap.org/sample/city.list.json.gz
+[search]: https://openweathermap.org/find
