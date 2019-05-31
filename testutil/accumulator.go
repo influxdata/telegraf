@@ -320,26 +320,6 @@ func (a *Accumulator) WaitError(n int) {
 	a.Unlock()
 }
 
-func (a *Accumulator) assertContainsTaggedFields(
-	t *testing.T,
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-) {
-	for _, p := range a.Metrics {
-		if !reflect.DeepEqual(tags, p.Tags) {
-			continue
-		}
-
-		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
-			return
-		}
-	}
-	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
-	assert.Fail(t, msg)
-}
-
 func (a *Accumulator) AssertContainsTaggedFields(
 	t *testing.T,
 	measurement string,
@@ -357,7 +337,8 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			return
 		}
 	}
-	a.assertContainsTaggedFields(t, measurement, fields, tags)
+	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	assert.Fail(t, msg)
 }
 
 func (a *Accumulator) AssertDoesNotContainsTaggedFields(

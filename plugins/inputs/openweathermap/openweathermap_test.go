@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -105,6 +106,9 @@ const groupWeatherResponse = `
 {
     "cnt": 1,
     "list": [{
+		"clouds": {
+			"all": 0
+		},
         "coord": {
             "lat": 48.85,
             "lon": 2.35
@@ -282,13 +286,20 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err_openweathermap := n.Gather(&acc)
-	require.NoError(t, err_openweathermap)
-	for _, forecast_tag := range []string{"*", "3h"} {
-		acc.AssertContainsTaggedFields(
-			t,
+	err := n.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
 			"weather",
+			map[string]string{
+				"city_id":  "2988507",
+				"forecast": "3h",
+				"city":     "Paris",
+				"country":  "FR",
+			},
 			map[string]interface{}{
+				"cloudiness":   int64(88),
 				"humidity":     int64(91),
 				"pressure":     1018.65,
 				"temperature":  6.71,
@@ -296,16 +307,18 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 				"wind_degrees": 228.501,
 				"wind_speed":   3.76,
 			},
+			time.Unix(1543622400, 0),
+		),
+		testutil.MustMetric(
+			"weather",
 			map[string]string{
 				"city_id":  "2988507",
-				"forecast": forecast_tag,
-			})
-	}
-	for _, forecast_tag := range []string{"*", "6h"} {
-		acc.AssertContainsTaggedFields(
-			t,
-			"weather",
+				"forecast": "6h",
+				"city":     "Paris",
+				"country":  "FR",
+			},
 			map[string]interface{}{
+				"cloudiness":   int64(92),
 				"humidity":     int64(98),
 				"pressure":     1032.18,
 				"temperature":  6.38,
@@ -313,11 +326,13 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 				"wind_degrees": 335.005,
 				"wind_speed":   2.66,
 			},
-			map[string]string{
-				"city_id":  "2988507",
-				"forecast": forecast_tag,
-			})
+			time.Unix(1544043600, 0),
+		),
 	}
+
+	testutil.RequireMetricsEqual(t,
+		expected, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics())
 }
 
 func TestWeatherGeneratesMetrics(t *testing.T) {
@@ -346,25 +361,34 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err_openweathermap := n.Gather(&acc)
+	err := n.Gather(&acc)
+	require.NoError(t, err)
 
-	require.NoError(t, err_openweathermap)
-
-	acc.AssertContainsTaggedFields(
-		t,
-		"weather",
-		map[string]interface{}{
-			"humidity":     int64(87),
-			"pressure":     1007.0,
-			"temperature":  9.25,
-			"wind_degrees": 290.0,
-			"wind_speed":   8.7,
-			"rain":         0.0,
-		},
-		map[string]string{
-			"city_id":  "2988507",
-			"forecast": "*",
-		})
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":  "2988507",
+				"forecast": "*",
+				"city":     "Paris",
+				"country":  "FR",
+			},
+			map[string]interface{}{
+				"cloudiness":   int64(0),
+				"humidity":     int64(87),
+				"pressure":     1007.0,
+				"temperature":  9.25,
+				"rain":         0.0,
+				"sunrise":      int64(1544167818000000000),
+				"sunset":       int64(1544198047000000000),
+				"wind_degrees": 290.0,
+				"wind_speed":   8.7,
+				"visibility":   10000,
+			},
+			time.Unix(1544194800, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
 func TestBatchWeatherGeneratesMetrics(t *testing.T) {
@@ -393,90 +417,78 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err_openweathermap := n.Gather(&acc)
+	err := n.Gather(&acc)
+	require.NoError(t, err)
 
-	require.NoError(t, err_openweathermap)
-
-	acc.AssertContainsTaggedFields(
-		t,
-		"weather",
-		map[string]interface{}{
-			"humidity":     int64(46),
-			"pressure":     1014.0,
-			"temperature":  9.57,
-			"wind_degrees": 60.0,
-			"wind_speed":   5.0,
-			"rain":         0.0,
-		},
-		map[string]string{
-			"city_id":  "524901",
-			"forecast": "*",
-		})
-	acc.AssertContainsTaggedFields(
-		t,
-		"weather",
-		map[string]interface{}{
-			"humidity":     int64(63),
-			"pressure":     1009.0,
-			"temperature":  19.29,
-			"wind_degrees": 0.0,
-			"wind_speed":   1.0,
-			"rain":         0.0,
-		},
-		map[string]string{
-			"city_id":  "703448",
-			"forecast": "*",
-		})
-	acc.AssertContainsTaggedFields(
-		t,
-		"weather",
-		map[string]interface{}{
-			"humidity":     int64(66),
-			"pressure":     1019.0,
-			"temperature":  10.62,
-			"wind_degrees": 290.0,
-			"wind_speed":   6.2,
-			"rain":         0.072,
-		},
-		map[string]string{
-			"city_id":  "2643743",
-			"forecast": "*",
-		})
-}
-
-func TestResponseTimeout(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var rsp string
-		if r.URL.Path == "/data/2.5/group" {
-			rsp = groupWeatherResponse
-			w.Header()["Content-Type"] = []string{"application/json"}
-		} else if r.URL.Path == "/data/2.5/forecast" {
-			rsp = sampleStatusResponse
-			w.Header()["Content-Type"] = []string{"application/json"}
-		} else {
-			panic("Cannot handle request")
-		}
-
-		time.Sleep(time.Second * 6) // Cause timeout
-		fmt.Fprintln(w, rsp)
-	}))
-	defer ts.Close()
-
-	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
-		AppId:   "noappid",
-		CityId:  []string{"2988507"},
-		Fetch:   []string{"weather"},
-		Units:   "metric",
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":  "524901",
+				"forecast": "*",
+				"city":     "Moscow",
+				"country":  "RU",
+			},
+			map[string]interface{}{
+				"cloudiness":   40,
+				"humidity":     int64(46),
+				"pressure":     1014.0,
+				"temperature":  9.57,
+				"wind_degrees": 60.0,
+				"wind_speed":   5.0,
+				"rain":         0.0,
+				"sunrise":      int64(1556416455000000000),
+				"sunset":       int64(1556470779000000000),
+				"visibility":   10000,
+			},
+			time.Unix(1556444155, 0),
+		),
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":  "703448",
+				"forecast": "*",
+				"city":     "Kiev",
+				"country":  "UA",
+			},
+			map[string]interface{}{
+				"cloudiness":   0,
+				"humidity":     int64(63),
+				"pressure":     1009.0,
+				"temperature":  19.29,
+				"wind_degrees": 0.0,
+				"wind_speed":   1.0,
+				"rain":         0.0,
+				"sunrise":      int64(1556419155000000000),
+				"sunset":       int64(1556471486000000000),
+				"visibility":   10000,
+			},
+			time.Unix(1556444155, 0),
+		),
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":  "2643743",
+				"forecast": "*",
+				"city":     "London",
+				"country":  "GB",
+			},
+			map[string]interface{}{
+				"cloudiness":   75,
+				"humidity":     int64(66),
+				"pressure":     1019.0,
+				"temperature":  10.62,
+				"wind_degrees": 290.0,
+				"wind_speed":   6.2,
+				"rain":         0.072,
+				"sunrise":      int64(1556426319000000000),
+				"sunset":       int64(1556479032000000000),
+				"visibility":   10000,
+			},
+			time.Unix(1556444155, 0),
+		),
 	}
-
-	var acc testutil.Accumulator
-
-	err_openweathermap := n.Gather(&acc)
-
-	require.NoError(t, err_openweathermap)
-	acc.AssertDoesNotContainMeasurement(
-		t,
-		"weather",
-	)
+	testutil.RequireMetricsEqual(t,
+		expected, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics())
 }
