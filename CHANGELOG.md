@@ -75,6 +75,7 @@
 - [#5917](https://github.com/influxdata/telegraf/issues/5917): Fix toml option name in nginx_upstream_check.
 - [#5920](https://github.com/influxdata/telegraf/issues/5920): Fixed datastore name mapping in vsphere input.
 - [#5879](https://github.com/influxdata/telegraf/issues/5879): Fix multiple SIGHUP causes Telegraf to shutdown.
+- [#5891](https://github.com/influxdata/telegraf/issues/5891): Fix connection leak in influxdb outputs on reload.
 
 ## v1.10.4 [2019-05-14]
 
