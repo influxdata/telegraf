@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -259,7 +260,12 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 
 		// Emit measurement
 		if len(fields) > 0 && len(tags) > 0 && len(telemetry.EncodingPath) > 0 {
-			c.acc.AddFields(telemetry.EncodingPath, fields, tags, timestamp)
+			path := telemetry.EncodingPath
+			if prefix := strings.Index(path, ":"); prefix > 0 {
+				tags["path"] = path[prefix+1:]
+				path = path[0:prefix]
+			}
+			c.acc.AddFields(path, fields, tags, timestamp)
 		} else {
 			c.acc.AddError(fmt.Errorf("Cisco MDT invalid field: encoding path or measurement empty"))
 		}
@@ -362,7 +368,7 @@ func init() {
 	inputs.Add("cisco_telemetry_mdt", func() telegraf.Input {
 		return &CiscoTelemetryMDT{
 			Transport:      "grpc",
-			ServiceAddress: ":57000",
+			ServiceAddress: "127.0.0.1:57000",
 		}
 	})
 }

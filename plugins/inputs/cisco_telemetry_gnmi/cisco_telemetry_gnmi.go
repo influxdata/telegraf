@@ -81,8 +81,6 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 		return err
 	} else if c.Redial.Duration.Nanoseconds() <= 0 {
 		return fmt.Errorf("redial duration must be positive")
-	} else if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" {
-		return fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
 	if c.EnableTLS {
@@ -152,6 +150,13 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, erro
 	if err != nil {
 		return nil, err
 	}
+
+	if c.Encoding == "" {
+		c.Encoding = "proto"
+	} else if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" {
+		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
+	}
+
 	return &gnmi.SubscribeRequest{
 		Request: &gnmi.SubscribeRequest_Subscribe{
 			Subscribe: &gnmi.SubscriptionList{
@@ -172,8 +177,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 		return fmt.Errorf("failed to setup subscription: %v", err)
 	}
 
-	err = subscribeClient.Send(request)
-	if err != nil {
+	if err = subscribeClient.Send(request); err != nil {
 		return fmt.Errorf("failed to send subscription request: %v", err)
 	}
 
@@ -181,8 +185,7 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 	defer log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s closed", c.Address)
 	for ctx.Err() == nil {
 		var reply *gnmi.SubscribeResponse
-		reply, err := subscribeClient.Recv()
-		if err != nil {
+		if reply, err = subscribeClient.Recv(); err != nil {
 			if err != io.EOF && ctx.Err() == nil {
 				return fmt.Errorf("aborted GNMI subscription: %v", err)
 			}
@@ -207,11 +210,6 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(reply *gnmi.SubscribeRespon
 	tags := make(map[string]string)
 
 	var builder bytes.Buffer
-
-	if len(response.Update.Prefix.Origin) > 0 {
-		builder.WriteString(response.Update.Prefix.Origin)
-		builder.WriteRune(':')
-	}
 	builder.WriteRune('/')
 
 	// Parse generic keys from prefix
@@ -239,7 +237,12 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(reply *gnmi.SubscribeRespon
 	}
 
 	// Finally add measurements
-	c.acc.AddFields(prefix, fields, tags, timestamp)
+	if len(response.Update.Prefix.Origin) > 0 {
+		tags["path"] = prefix
+		c.acc.AddFields(response.Update.Prefix.Origin, fields, tags, timestamp)
+	} else {
+		c.acc.AddFields(prefix, fields, tags, timestamp)
+	}
 }
 
 // HandleTelemetryField and add it to a measurement

@@ -111,7 +111,7 @@ func TestGNMIError(t *testing.T) {
 	server.Serve(listener)
 	c.Stop()
 
-	assert.Contains(t, acc.Errors, errors.New("GNMI subscription aborted: rpc error: code = Unknown desc = testerror"))
+	assert.Contains(t, acc.Errors, errors.New("aborted GNMI subscription: rpc error: code = Unknown desc = testerror"))
 }
 
 func mockGNMINotification() *gnmi.Notification {
@@ -170,13 +170,13 @@ func TestGNMIMultiple(t *testing.T) {
 
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"source": "127.0.0.1", "foo": "bar"}
+	tags := map[string]string{"path": "/model", "source": "127.0.0.1", "foo": "bar"}
 	fields := map[string]interface{}{"some/path[name=str][uint64=1234]": int64(5678), "other/path": "foobar"}
-	acc.AssertContainsTaggedFields(t, "type:/model", fields, tags)
+	acc.AssertContainsTaggedFields(t, "type", fields, tags)
 
-	tags = map[string]string{"foo": "bar2", "source": "127.0.0.1"}
+	tags = map[string]string{"path": "/model", "foo": "bar2", "source": "127.0.0.1"}
 	fields = map[string]interface{}{"some/path[name=str2][uint64=1234]": "123", "other/path": "foobar"}
-	acc.AssertContainsTaggedFields(t, "type:/model", fields, tags)
+	acc.AssertContainsTaggedFields(t, "type", fields, tags)
 }
 
 func TestGNMIMultipleRedial(t *testing.T) {
@@ -201,11 +201,11 @@ func TestGNMIMultipleRedial(t *testing.T) {
 
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"source": "127.0.0.1", "foo": "bar"}
+	tags := map[string]string{"path": "/model", "source": "127.0.0.1", "foo": "bar"}
 	fields := map[string]interface{}{"other/path": "foobar", "some/path[name=str][uint64=1234]": int64(5678)}
-	acc.AssertContainsTaggedFields(t, "type:/model", fields, tags)
+	acc.AssertContainsTaggedFields(t, "type", fields, tags)
 
-	tags = map[string]string{"foo": "bar2", "source": "127.0.0.1"}
+	tags = map[string]string{"path": "/model", "foo": "bar2", "source": "127.0.0.1"}
 	fields = map[string]interface{}{"some/path[name=str2][uint64=1234]": false, "other/path": "foobar"}
-	acc.AssertContainsTaggedFields(t, "type:/model", fields, tags)
+	acc.AssertContainsTaggedFields(t, "type", fields, tags)
 }
