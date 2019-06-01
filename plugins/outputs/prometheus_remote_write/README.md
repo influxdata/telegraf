@@ -13,6 +13,9 @@ This plugin sends metrics to services which speak the [Prometheus Remote Write](
   ## HTTP asic auth credentials (optional).
   # basic_username = "username"
   # basic_password = "pa55w0rd"
+
+	## Optional Bearer token
+	# bearer_token = "bearer_token"
 ```
 
 ## TODO

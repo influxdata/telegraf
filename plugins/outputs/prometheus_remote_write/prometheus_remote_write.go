@@ -31,6 +31,7 @@ var (
 
 type PrometheusRemoteWrite struct {
 	URL           string `toml:"url"`
+	BearerToken   string `toml:"bearer_token"`
 	BasicUsername string `toml:"basic_username"`
 	BasicPassword string `toml:"basic_password"`
 	tls.ClientConfig
@@ -52,6 +53,8 @@ var sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+	## Optional Bearer token
+  # bearer_token = "bearer_token"
 `
 
 func (p *PrometheusRemoteWrite) Connect() error {
@@ -145,6 +148,10 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	httpReq.Header.Set("Content-Type", "application/x-protobuf")
 	httpReq.Header.Set("X-Prometheus-Remote-Write-Version", "0.1.0")
 	httpReq.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	if p.BearerToken != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+p.BearerToken)
+	}
+
 	if p.BasicUsername != "" || p.BasicPassword != "" {
 		httpReq.SetBasicAuth(p.BasicUsername, p.BasicPassword)
 	}
