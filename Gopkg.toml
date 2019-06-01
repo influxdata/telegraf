@@ -47,6 +47,10 @@
   version = "0.2.3"
 
 [[constraint]]
+  name = "github.com/golang/protobuf"
+  version = "1.1.0"
+
+[[constraint]]
   name = "github.com/google/go-cmp"
   version = "0.2.0"
 
@@ -215,6 +219,10 @@
 [[override]]
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
   name = "gopkg.in/fsnotify.v1"
+
+[[constraint]]
+  branch = "master"
+  name = "google.golang.org/genproto"
 
 [[constraint]]
   name = "github.com/vmware/govmomi"
