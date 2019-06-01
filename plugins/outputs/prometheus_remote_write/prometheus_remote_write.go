@@ -86,7 +86,7 @@ func (p *PrometheusRemoteWrite) SampleConfig() string {
 func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	var req prompb.WriteRequest
 
-	for _, metric := range metrics {
+	for _, metric := range sorted(metrics) {
 		tags := metric.TagList()
 		commonLabels := make([]prompb.Label, 0, len(tags))
 		for _, tag := range tags {
@@ -97,11 +97,12 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 		}
 
 		for _, field := range metric.FieldList() {
+			metricName := getSanitizedMetricName(metric.Name(), field.Key)
 			labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 			copy(labels, commonLabels)
 			labels = append(labels, prompb.Label{
 				Name:  "__name__",
-				Value: metric.Name() + "_" + field.Key,
+				Value: metricName,
 			})
 			sort.Sort(byName(labels))
 
@@ -124,10 +125,11 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
+			ts := metric.Time().UnixNano() / int64(time.Millisecond)
 			req.Timeseries = append(req.Timeseries, prompb.TimeSeries{
 				Labels: labels,
 				Samples: []prompb.Sample{{
-					Timestamp: metric.Time().UnixNano() / int64(time.Millisecond),
+					Timestamp: ts,
 					Value:     value,
 				}},
 			})
@@ -166,6 +168,24 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 		return fmt.Errorf("server returned HTTP status %s (%d)", resp.Status, resp.StatusCode)
 	}
 	return nil
+}
+
+// Sorted returns a copy of the metrics in time ascending order.  A copy is
+// made to avoid modifying the input metric slice since doing so is not
+// allowed.
+func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+	batch := make([]telegraf.Metric, 0, len(metrics))
+	for i := len(metrics) - 1; i >= 0; i-- {
+		batch = append(batch, metrics[i])
+	}
+	sort.Slice(batch, func(i, j int) bool {
+		return batch[i].Time().Before(batch[j].Time())
+	})
+	return batch
+}
+
+func getSanitizedMetricName(name, field string) string {
+	return sanitize(fmt.Sprintf("%s_%s", name, field))
 }
 
 func sanitize(value string) string {
