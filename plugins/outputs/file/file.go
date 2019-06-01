@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -79,7 +80,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		b, err := f.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("failed to serialize message: %s", err)
+			log.Printf("D! [outputs.file] Could not serialize metric: %v", err)
 		}
 
 		for _, writer := range f.writers {
