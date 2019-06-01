@@ -3,6 +3,7 @@ package prometheus_remote_write
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"sort"
@@ -30,10 +31,11 @@ var (
 )
 
 type PrometheusRemoteWrite struct {
-	URL           string `toml:"url"`
-	BearerToken   string `toml:"bearer_token"`
-	BasicUsername string `toml:"basic_username"`
-	BasicPassword string `toml:"basic_password"`
+	URL                  string `toml:"url"`
+	BearerToken          string `toml:"bearer_token"`
+	BasicUsername        string `toml:"basic_username"`
+	BasicPassword        string `toml:"basic_password"`
+	RetryForClientErrors bool   `toml:"retry_for_client_errors"`
 	tls.ClientConfig
 
 	client http.Client
@@ -55,6 +57,8 @@ var sampleConfig = `
   # insecure_skip_verify = false
 	## Optional Bearer token
   # bearer_token = "bearer_token"
+  ## Disable retry for 4XX http status codes
+  # retry_for_client_errors = false
 `
 
 func (p *PrometheusRemoteWrite) Connect() error {
@@ -164,10 +168,22 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode/100 != 2 {
+	if resp.StatusCode/100 != 2 && p.retryClientErrors(resp.StatusCode) {
 		return fmt.Errorf("server returned HTTP status %s (%d)", resp.Status, resp.StatusCode)
 	}
 	return nil
+}
+
+func (p *PrometheusRemoteWrite) retryClientErrors(statusCode int) bool {
+	retryFlag := true
+	if p.RetryForClientErrors == false {
+		retryFlag = false
+	}
+	if retryFlag == false && (statusCode == http.StatusTooManyRequests || statusCode == http.StatusBadRequest) {
+		log.Printf("E! [outputs.prometheus_remote_write] dropped a batch of metrics.\n")
+		return false
+	}
+	return true
 }
 
 // Sorted returns a copy of the metrics in time ascending order.  A copy is

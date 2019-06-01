@@ -16,6 +16,9 @@ This plugin sends metrics to services which speak the [Prometheus Remote Write](
 
 	## Optional Bearer token
 	# bearer_token = "bearer_token"
+
+  ## Disable retry for 4XX http status codes
+  # retry_for_client_errors = false
 ```
 
 ## TODO
