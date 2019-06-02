@@ -13,7 +13,7 @@ This is a sample configuration for the plugin.
 ```toml
 [[inputs.cisco_telemetry_gnmi]]
   ## Address and port of the GNMI GRPC server
-  address = "10.49.234.114:57777"
+  addresses = ["10.49.234.114:57777"]
 
   ## define credentials
   username = "cisco"

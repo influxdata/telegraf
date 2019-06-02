@@ -3,6 +3,7 @@ package cisco_telemetry_gnmi
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/credentials"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	internaltls "github.com/influxdata/telegraf/internal/tls"
@@ -20,13 +23,12 @@ import (
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
 
 // CiscoTelemetryGNMI plugin instance
 type CiscoTelemetryGNMI struct {
-	Address       string         `toml:"address"`
+	Addresses     []string       `toml:"addresses"`
 	Subscriptions []Subscription `toml:"subscription"`
 
 	// Optional subscription configuration
@@ -71,7 +73,7 @@ type Subscription struct {
 func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	var err error
 	var ctx context.Context
-	var opts []grpc.DialOption
+	var tlscfg *tls.Config
 	var request *gnmi.SubscribeRequest
 	c.acc = acc
 	ctx, c.cancel = context.WithCancel(context.Background())
@@ -83,43 +85,34 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("redial duration must be positive")
 	}
 
+	// Parse TLS config
 	if c.EnableTLS {
-		tlsConfig, err := c.ClientConfig.TLSConfig()
-		if err != nil {
+		if tlscfg, err = c.ClientConfig.TLSConfig(); err != nil {
 			return err
 		}
-
-		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
-	} else {
-		opts = append(opts, grpc.WithInsecure())
 	}
 
 	if len(c.Username) > 0 {
 		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
 	}
 
-	client, err := grpc.DialContext(ctx, c.Address, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to dial GNMI: %v", err)
+	// Create a goroutine for each device, dial and subscribe
+	c.wg.Add(len(c.Addresses))
+	for _, addr := range c.Addresses {
+		go func(address string) {
+			defer c.wg.Done()
+			for ctx.Err() == nil {
+				if err := c.subscribeGNMI(ctx, address, tlscfg, request); err != nil {
+					acc.AddError(err)
+				}
+
+				select {
+				case <-ctx.Done():
+				case <-time.After(c.Redial.Duration):
+				}
+			}
+		}(addr)
 	}
-
-	// Dialin client telemetry stream reading routine
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		defer client.Close()
-
-		for ctx.Err() == nil {
-			if err := c.subscribeGNMI(ctx, client, request); err != nil {
-				acc.AddError(err)
-			}
-
-			select {
-			case <-ctx.Done():
-			case <-time.After(c.Redial.Duration):
-			}
-		}
-	}()
 	return nil
 }
 
@@ -171,7 +164,20 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, erro
 }
 
 // SubscribeGNMI and extract telemetry data
-func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.ClientConn, request *gnmi.SubscribeRequest) error {
+func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmi.SubscribeRequest) error {
+	var opt grpc.DialOption
+	if tlscfg != nil {
+		opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
+	} else {
+		opt = grpc.WithInsecure()
+	}
+
+	client, err := grpc.DialContext(ctx, address, opt)
+	if err != nil {
+		return fmt.Errorf("failed to dial: %v", err)
+	}
+	defer client.Close()
+
 	subscribeClient, err := gnmi.NewGNMIClient(client).Subscribe(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to setup subscription: %v", err)
@@ -181,8 +187,8 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 		return fmt.Errorf("failed to send subscription request: %v", err)
 	}
 
-	log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s established", c.Address)
-	defer log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s closed", c.Address)
+	log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s established", address)
+	defer log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s closed", address)
 	for ctx.Err() == nil {
 		var reply *gnmi.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
@@ -192,13 +198,13 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, client *grpc.Cli
 			break
 		}
 
-		c.handleSubscribeResponse(reply)
+		c.handleSubscribeResponse(address, reply)
 	}
 	return nil
 }
 
 // HandleSubscribeResponse message from GNMI and parse contained telemetry data
-func (c *CiscoTelemetryGNMI) handleSubscribeResponse(reply *gnmi.SubscribeResponse) {
+func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
 	// Check if response is a GNMI Update and if we have a prefix to derive the measurement name
 	response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
 	if !ok || response.Update.Prefix == nil {
@@ -227,7 +233,7 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(reply *gnmi.SubscribeRespon
 		}
 	}
 
-	tags["source"], _, _ = net.SplitHostPort(c.Address)
+	tags["source"], _, _ = net.SplitHostPort(address)
 	builder.Truncate(builder.Len() - 1)
 	prefix := builder.String()
 
@@ -387,7 +393,7 @@ func (c *CiscoTelemetryGNMI) Stop() {
 
 const sampleConfig = `
 ## Address and port of the GNMI GRPC server
-address = "10.49.234.114:57777"
+addresses = ["10.49.234.114:57777"]
 
 ## define credentials
 username = "cisco"

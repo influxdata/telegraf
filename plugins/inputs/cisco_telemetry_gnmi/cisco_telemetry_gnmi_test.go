@@ -102,7 +102,7 @@ func TestGNMIError(t *testing.T) {
 	server := grpc.NewServer()
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 0, server: server})
 
-	c := &CiscoTelemetryGNMI{Address: "127.0.0.1:57003",
+	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57003"},
 		Username: "theuser", Password: "thepassword",
 		Redial: internal.Duration{Duration: 1 * time.Second}}
 
@@ -157,7 +157,7 @@ func TestGNMIMultiple(t *testing.T) {
 	server := grpc.NewServer()
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 1, server: server})
 
-	c := &CiscoTelemetryGNMI{Address: "127.0.0.1:57004",
+	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
 		Username: "theuser", Password: "thepassword",
 		Redial: internal.Duration{Duration: 1 * time.Second},
 	}
@@ -184,7 +184,7 @@ func TestGNMIMultipleRedial(t *testing.T) {
 	server := grpc.NewServer()
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 2, server: server})
 
-	c := &CiscoTelemetryGNMI{Address: "127.0.0.1:57004",
+	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
 		Username: "theuser", Password: "thepassword",
 		Redial: internal.Duration{Duration: 200 * time.Millisecond}}
 
