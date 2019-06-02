@@ -55,6 +55,7 @@
 - [#5831](https://github.com/influxdata/telegraf/pull/5831): Support passive queue declaration in amqp_consumer.
 - [#5901](https://github.com/influxdata/telegraf/pull/5901): Set user agent in stackdriver output.
 - [#5885](https://github.com/influxdata/telegraf/pull/5885): Extend metrics collected from Nvidia GPUs.
+- [#5547](https://github.com/influxdata/telegraf/pull/5547): Add file rotation support to the file output.
 
 #### Bugfixes
 
