@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -288,7 +289,7 @@ func (c *CiscoTelemetryMDT) parseGPBKVField(field *telemetry.TelemetryField, nam
 	if namelen > 0 {
 		namebuf.WriteRune('/')
 	}
-	namebuf.WriteString(field.Name)
+	namebuf.WriteString(strings.ReplaceAll(field.Name, "-", "_"))
 
 	// Decode Telemetry field value if set
 	var value interface{}

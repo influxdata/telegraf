@@ -224,6 +224,8 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 		builder.WriteRune('/')
 
 		for key, val := range elem.Key {
+			key = strings.ReplaceAll(key, "-", "_")
+
 			// Use short-form of key if possible
 			if _, exists := tags[key]; exists {
 				tags[builder.String()+key] = val
@@ -312,8 +314,9 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(fields map[string]interface{},
 		jsondata = val.JsonVal
 	}
 
+	name := strings.ReplaceAll(builder.String(), "-", "_")
 	if value != nil {
-		fields[builder.String()] = value
+		fields[name] = value
 	} else if jsondata != nil {
 		if err := json.Unmarshal(jsondata, &value); err != nil {
 			c.acc.AddError(fmt.Errorf("GNMI JSON data is invalid: %v", err))
@@ -321,7 +324,7 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(fields map[string]interface{},
 		}
 
 		flattener := jsonparser.JSONFlattener{Fields: fields}
-		flattener.FullFlattenJSON(builder.String(), value, true, true)
+		flattener.FullFlattenJSON(name, value, true, true)
 	}
 }
 
