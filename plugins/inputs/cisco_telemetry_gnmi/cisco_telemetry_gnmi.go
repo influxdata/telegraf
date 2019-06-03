@@ -313,7 +313,7 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 		jsondata = val.JsonVal
 	}
 
-	name := strings.ReplaceAll(builder.String(), "-", "_")
+	name := strings.Replace(builder.String(), "-", "_", -1)
 	fields := make(map[string]interface{})
 	if value != nil {
 		fields[name] = value
@@ -350,7 +350,7 @@ func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string,
 		}
 
 		for key, val := range elem.Key {
-			key = strings.ReplaceAll(key, "-", "_")
+			key = strings.Replace(key, "-", "_", -1)
 
 			// Use short-form of key if possible
 			if _, exists := tags[key]; exists {

@@ -289,7 +289,7 @@ func (c *CiscoTelemetryMDT) parseGPBKVField(field *telemetry.TelemetryField, nam
 	if namelen > 0 {
 		namebuf.WriteRune('/')
 	}
-	namebuf.WriteString(strings.ReplaceAll(field.Name, "-", "_"))
+	namebuf.WriteString(strings.Replace(field.Name, "-", "_", -1))
 
 	// Decode Telemetry field value if set
 	var value interface{}
