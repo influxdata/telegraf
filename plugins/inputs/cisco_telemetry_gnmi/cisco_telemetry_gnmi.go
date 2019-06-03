@@ -105,8 +105,13 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 		if len(subscription.Origin) > 0 {
 			path = subscription.Origin + ":" + path
 		}
-		if len(subscription.Name) > 0 {
-			c.aliases[path] = subscription.Name
+
+		name := subscription.Name
+		if len(name) == 0 {
+			name = path[strings.LastIndexByte(path, '/')+1:]
+		}
+		if len(name) > 0 {
+			c.aliases[path] = name
 		}
 	}
 	for alias, path := range c.Aliases {
