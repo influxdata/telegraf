@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -31,8 +30,9 @@ const (
 type CiscoTelemetryMDT struct {
 	// Common configuration
 	Transport      string
-	ServiceAddress string `toml:"service_address"`
-	MaxMsgSize     int    `toml:"max_msg_size"`
+	ServiceAddress string            `toml:"service_address"`
+	MaxMsgSize     int               `toml:"max_msg_size"`
+	Aliases        map[string]string `toml:"aliases"`
 
 	// GRPC TLS settings
 	internaltls.ServerConfig
@@ -54,6 +54,13 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+
+	// Invert aliases list
+	aliases := make(map[string]string)
+	for alias, path := range c.Aliases {
+		aliases[path] = alias
+	}
+	c.Aliases = aliases
 
 	switch c.Transport {
 	case "tcp":
@@ -258,19 +265,19 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 			}
 		}
 
-		// Emit measurement
+		// Find best alias for encoding path and emit measurement
 		if len(fields) > 0 && len(tags) > 0 && len(telemetry.EncodingPath) > 0 {
-			path := telemetry.EncodingPath
-			if prefix := strings.Index(path, ":"); prefix > 0 {
-				tags["path"] = path[prefix+1:]
-				path = path[0:prefix]
+			name := telemetry.EncodingPath
+			if alias, ok := c.Aliases[name]; ok {
+				name = alias
+			} else {
+				log.Printf("D! [inputs.cisco_telemetry_mdt]: No measurement alias for encoding path: %s", name)
 			}
-			c.acc.AddFields(path, fields, tags, timestamp)
+			c.acc.AddFields(name, fields, tags, timestamp)
 		} else {
-			c.acc.AddError(fmt.Errorf("Cisco MDT invalid field: encoding path or measurement empty"))
+			c.acc.AddError(fmt.Errorf("empty encoding path or measurement"))
 		}
 	}
-
 }
 
 // Recursively parse GPBKV field structure into fields or tags
@@ -311,7 +318,11 @@ func (c *CiscoTelemetryMDT) parseGPBKVField(field *telemetry.TelemetryField, nam
 		if fields != nil {
 			fields[namebuf.String()] = value
 		} else {
-			tags[namebuf.String()] = fmt.Sprint(value)
+			if _, exists := tags[field.Name]; !exists { // Use short keys whenever possible
+				tags[field.Name] = fmt.Sprint(value)
+			} else {
+				tags[namebuf.String()] = fmt.Sprint(value)
+			}
 		}
 	}
 
@@ -347,6 +358,10 @@ const sampleConfig = `
 
  ## Enable TLS client authentication and define allowed CA certificates
  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+ ## Define aliases to map telemetry encoding paths to simple measurement names
+ [inputs.cisco_telemetry_mdt.aliases]
+   ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
 `
 
 // SampleConfig of plugin
