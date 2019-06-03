@@ -60,7 +60,7 @@ func (m *mockGNMIServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
 	defer func() {
 		if m.scenario >= 0 {
 			m.scenario = -1
-			time.AfterFunc(100*time.Millisecond, m.server.Stop)
+			time.AfterFunc(250*time.Millisecond, m.server.Stop)
 		}
 	}()
 
@@ -204,7 +204,7 @@ func TestGNMIMultipleRedial(t *testing.T) {
 
 	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
 		Username: "theuser", Password: "thepassword", Encoding: "proto",
-		Redial:        internal.Duration{Duration: 200 * time.Millisecond},
+		Redial:        internal.Duration{Duration: 500 * time.Millisecond},
 		Subscriptions: []Subscription{{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
 	}
 
