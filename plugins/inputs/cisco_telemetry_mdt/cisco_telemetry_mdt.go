@@ -270,6 +270,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		if len(fields) > 0 && len(tags) > 0 && len(telemetry.EncodingPath) > 0 {
 			name := telemetry.EncodingPath
 			if alias, ok := c.aliases[name]; ok {
+				tags["path"] = name
 				name = alias
 			} else {
 				log.Printf("D! [inputs.cisco_telemetry_mdt]: No measurement alias for encoding path: %s", name)

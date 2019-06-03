@@ -367,6 +367,7 @@ func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string,
 // Emit measurements, honoring defined aliases
 func (c *CiscoTelemetryGNMI) addFields(name, aliasPath string, fields map[string]interface{}, tags map[string]string, timestamp time.Time) {
 	if alias, ok := c.aliases[aliasPath]; ok {
+		tags["path"] = name
 		name = alias
 	} else {
 		log.Printf("D! [inputs.cisco_telemetry_gnmi]: No measurement alias for GNMI path: %s", name)

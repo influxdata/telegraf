@@ -180,19 +180,19 @@ func TestGNMIMultiple(t *testing.T) {
 
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"source": "127.0.0.1", "foo": "bar", "name": "str", "uint64": "1234"}
+	tags := map[string]string{"path": "type:/model", "source": "127.0.0.1", "foo": "bar", "name": "str", "uint64": "1234"}
 	fields := map[string]interface{}{"some/path": int64(5678)}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"source": "127.0.0.1", "foo": "bar"}
+	tags = map[string]string{"path": "type:/model", "source": "127.0.0.1", "foo": "bar"}
 	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"foo": "bar2", "source": "127.0.0.1", "name": "str2", "uint64": "1234"}
+	tags = map[string]string{"path": "type:/model", "foo": "bar2", "source": "127.0.0.1", "name": "str2", "uint64": "1234"}
 	fields = map[string]interface{}{"some/path": "123"}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"source": "127.0.0.1", "foo": "bar2"}
+	tags = map[string]string{"path": "type:/model", "source": "127.0.0.1", "foo": "bar2"}
 	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }
@@ -221,19 +221,19 @@ func TestGNMIMultipleRedial(t *testing.T) {
 
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"source": "127.0.0.1", "foo": "bar", "name": "str", "uint64": "1234"}
+	tags := map[string]string{"path": "type:/model", "source": "127.0.0.1", "foo": "bar", "name": "str", "uint64": "1234"}
 	fields := map[string]interface{}{"some/path": int64(5678)}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"source": "127.0.0.1", "foo": "bar"}
+	tags = map[string]string{"path": "type:/model", "source": "127.0.0.1", "foo": "bar"}
 	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"foo": "bar2", "source": "127.0.0.1", "name": "str2", "uint64": "1234"}
+	tags = map[string]string{"path": "type:/model", "foo": "bar2", "source": "127.0.0.1", "name": "str2", "uint64": "1234"}
 	fields = map[string]interface{}{"some/path": false}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"source": "127.0.0.1", "foo": "bar2"}
+	tags = map[string]string{"path": "type:/model", "source": "127.0.0.1", "foo": "bar2"}
 	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }

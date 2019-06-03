@@ -100,11 +100,11 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	c.handleTelemetry(data)
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"name": "str", "uint64": "1234", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{"path": "type:model/some/path", "name": "str", "uint64": "1234", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"bool": true}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"name": "str2", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{"path": "type:model/some/path", "name": "str2", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"bool": false}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }
@@ -169,7 +169,7 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 	c.handleTelemetry(data)
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"level": "3", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{"path": "type:model/nested/path", "level": "3", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"nested/value/foo": "bar"}
 	acc.AssertContainsTaggedFields(t, "nested", fields, tags)
 }
@@ -276,15 +276,15 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	// We use the invalid dialout flags to let the server close the connection
 	assert.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
 
-	tags := map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{"path": "type:model/some/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "some", fields, tags)
 
-	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{"path": "type:model/parallel/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "parallel", fields, tags)
 
-	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
 }
@@ -347,15 +347,15 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 
 	assert.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 
-	tags := map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
+	tags := map[string]string{"path": "type:model/some/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "some", fields, tags)
 
-	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{"path": "type:model/parallel/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "parallel", fields, tags)
 
-	tags = map[string]string{"name": "str", "source": "hostname", "subscription": "subscription"}
+	tags = map[string]string{"path": "type:model/other/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields = map[string]interface{}{"value": int64(-1)}
 	acc.AssertContainsTaggedFields(t, "other", fields, tags)
 
