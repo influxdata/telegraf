@@ -169,7 +169,7 @@ func TestGNMIMultiple(t *testing.T) {
 	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
 		Username: "theuser", Password: "thepassword", Encoding: "proto",
 		Redial:        internal.Duration{Duration: 1 * time.Second},
-		Subscriptions: []Subscription{Subscription{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
+		Subscriptions: []Subscription{{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
 	}
 
 	acc := &testutil.Accumulator{}
@@ -205,7 +205,7 @@ func TestGNMIMultipleRedial(t *testing.T) {
 	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
 		Username: "theuser", Password: "thepassword", Encoding: "proto",
 		Redial:        internal.Duration{Duration: 200 * time.Millisecond},
-		Subscriptions: []Subscription{Subscription{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
+		Subscriptions: []Subscription{{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
 	}
 
 	acc := &testutil.Accumulator{}
