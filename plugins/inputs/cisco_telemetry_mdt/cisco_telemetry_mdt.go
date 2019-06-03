@@ -43,8 +43,9 @@ type CiscoTelemetryMDT struct {
 	listener   net.Listener
 
 	// Internal state
-	acc telegraf.Accumulator
-	wg  sync.WaitGroup
+	aliases map[string]string
+	acc     telegraf.Accumulator
+	wg      sync.WaitGroup
 }
 
 // Start the Cisco MDT service
@@ -57,11 +58,10 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Invert aliases list
-	aliases := make(map[string]string)
+	c.aliases = make(map[string]string, len(c.Aliases))
 	for alias, path := range c.Aliases {
-		aliases[path] = alias
+		c.aliases[path] = alias
 	}
-	c.Aliases = aliases
 
 	switch c.Transport {
 	case "tcp":
@@ -269,7 +269,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 		// Find best alias for encoding path and emit measurement
 		if len(fields) > 0 && len(tags) > 0 && len(telemetry.EncodingPath) > 0 {
 			name := telemetry.EncodingPath
-			if alias, ok := c.Aliases[name]; ok {
+			if alias, ok := c.aliases[name]; ok {
 				name = alias
 			} else {
 				log.Printf("D! [inputs.cisco_telemetry_mdt]: No measurement alias for encoding path: %s", name)

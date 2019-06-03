@@ -103,7 +103,7 @@ func TestGNMIError(t *testing.T) {
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 0, server: server})
 
 	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57003"},
-		Username: "theuser", Password: "thepassword",
+		Username: "theuser", Password: "thepassword", Encoding: "proto",
 		Redial: internal.Duration{Duration: 1 * time.Second}}
 
 	acc := &testutil.Accumulator{}
@@ -148,6 +148,15 @@ func mockGNMINotification() *gnmi.Notification {
 				},
 				Val: &gnmi.TypedValue{Value: &gnmi.TypedValue_StringVal{StringVal: "foobar"}},
 			},
+			{
+				Path: &gnmi.Path{
+					Elem: []*gnmi.PathElem{
+						{Name: "other"},
+						{Name: "this"},
+					},
+				},
+				Val: &gnmi.TypedValue{Value: &gnmi.TypedValue_StringVal{StringVal: "that"}},
+			},
 		},
 	}
 }
@@ -158,8 +167,9 @@ func TestGNMIMultiple(t *testing.T) {
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 1, server: server})
 
 	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
-		Username: "theuser", Password: "thepassword",
-		Redial: internal.Duration{Duration: 1 * time.Second},
+		Username: "theuser", Password: "thepassword", Encoding: "proto",
+		Redial:        internal.Duration{Duration: 1 * time.Second},
+		Subscriptions: []Subscription{Subscription{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
 	}
 
 	acc := &testutil.Accumulator{}
@@ -170,13 +180,21 @@ func TestGNMIMultiple(t *testing.T) {
 
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"path": "/model", "source": "127.0.0.1", "foo": "bar"}
-	fields := map[string]interface{}{"some/path[name=str][uint64=1234]": int64(5678), "other/path": "foobar"}
-	acc.AssertContainsTaggedFields(t, "type", fields, tags)
+	tags := map[string]string{"source": "127.0.0.1", "foo": "bar", "name": "str", "uint64": "1234"}
+	fields := map[string]interface{}{"some/path": int64(5678)}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"path": "/model", "foo": "bar2", "source": "127.0.0.1"}
-	fields = map[string]interface{}{"some/path[name=str2][uint64=1234]": "123", "other/path": "foobar"}
-	acc.AssertContainsTaggedFields(t, "type", fields, tags)
+	tags = map[string]string{"source": "127.0.0.1", "foo": "bar"}
+	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+
+	tags = map[string]string{"foo": "bar2", "source": "127.0.0.1", "name": "str2", "uint64": "1234"}
+	fields = map[string]interface{}{"some/path": "123"}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+
+	tags = map[string]string{"source": "127.0.0.1", "foo": "bar2"}
+	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }
 
 func TestGNMIMultipleRedial(t *testing.T) {
@@ -185,8 +203,10 @@ func TestGNMIMultipleRedial(t *testing.T) {
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 2, server: server})
 
 	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
-		Username: "theuser", Password: "thepassword",
-		Redial: internal.Duration{Duration: 200 * time.Millisecond}}
+		Username: "theuser", Password: "thepassword", Encoding: "proto",
+		Redial:        internal.Duration{Duration: 200 * time.Millisecond},
+		Subscriptions: []Subscription{Subscription{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
+	}
 
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
@@ -201,11 +221,19 @@ func TestGNMIMultipleRedial(t *testing.T) {
 
 	assert.Empty(t, acc.Errors)
 
-	tags := map[string]string{"path": "/model", "source": "127.0.0.1", "foo": "bar"}
-	fields := map[string]interface{}{"other/path": "foobar", "some/path[name=str][uint64=1234]": int64(5678)}
-	acc.AssertContainsTaggedFields(t, "type", fields, tags)
+	tags := map[string]string{"source": "127.0.0.1", "foo": "bar", "name": "str", "uint64": "1234"}
+	fields := map[string]interface{}{"some/path": int64(5678)}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 
-	tags = map[string]string{"path": "/model", "foo": "bar2", "source": "127.0.0.1"}
-	fields = map[string]interface{}{"some/path[name=str2][uint64=1234]": false, "other/path": "foobar"}
-	acc.AssertContainsTaggedFields(t, "type", fields, tags)
+	tags = map[string]string{"source": "127.0.0.1", "foo": "bar"}
+	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+
+	tags = map[string]string{"foo": "bar2", "source": "127.0.0.1", "name": "str2", "uint64": "1234"}
+	fields = map[string]interface{}{"some/path": false}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+
+	tags = map[string]string{"source": "127.0.0.1", "foo": "bar2"}
+	fields = map[string]interface{}{"other/path": "foobar", "other/this": "that"}
+	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
 }

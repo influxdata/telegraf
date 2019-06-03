@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -28,8 +27,9 @@ import (
 
 // CiscoTelemetryGNMI plugin instance
 type CiscoTelemetryGNMI struct {
-	Addresses     []string       `toml:"addresses"`
-	Subscriptions []Subscription `toml:"subscription"`
+	Addresses     []string          `toml:"addresses"`
+	Subscriptions []Subscription    `toml:"subscription"`
+	Aliases       map[string]string `toml:"aliases"`
 
 	// Optional subscription configuration
 	Encoding    string
@@ -50,13 +50,15 @@ type CiscoTelemetryGNMI struct {
 	internaltls.ClientConfig
 
 	// Internal state
-	acc    telegraf.Accumulator
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	aliases map[string]string
+	acc     telegraf.Accumulator
+	cancel  context.CancelFunc
+	wg      sync.WaitGroup
 }
 
 // Subscription for a GNMI client
 type Subscription struct {
+	Name   string
 	Origin string
 	Path   string
 
@@ -94,6 +96,21 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 
 	if len(c.Username) > 0 {
 		ctx = metadata.AppendToOutgoingContext(ctx, "username", c.Username, "password", c.Password)
+	}
+
+	// Invert explicit alias list and prefill subscription names
+	c.aliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
+	for _, subscription := range c.Subscriptions {
+		path := subscription.Path
+		if len(subscription.Origin) > 0 {
+			path = subscription.Origin + ":" + path
+		}
+		if len(subscription.Name) > 0 {
+			c.aliases[path] = subscription.Name
+		}
+	}
+	for alias, path := range c.Aliases {
+		c.aliases[path] = alias
 	}
 
 	// Create a goroutine for each device, dial and subscribe
@@ -144,9 +161,7 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, erro
 		return nil, err
 	}
 
-	if c.Encoding == "" {
-		c.Encoding = "proto"
-	} else if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" {
+	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" {
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
@@ -207,86 +222,70 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, 
 func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
 	// Check if response is a GNMI Update and if we have a prefix to derive the measurement name
 	response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
-	if !ok || response.Update.Prefix == nil {
+	if !ok {
 		return
 	}
 
+	var aliasPath string
 	timestamp := time.Unix(0, response.Update.Timestamp)
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
 	var builder bytes.Buffer
-	builder.WriteRune('/')
-
-	// Parse generic keys from prefix
-	for _, elem := range response.Update.Prefix.Elem {
-		builder.WriteString(elem.Name)
-		builder.WriteRune('/')
-
-		for key, val := range elem.Key {
-			key = strings.ReplaceAll(key, "-", "_")
-
-			// Use short-form of key if possible
-			if _, exists := tags[key]; exists {
-				tags[builder.String()+key] = val
-			} else {
-				tags[key] = val
-			}
-		}
+	if response.Update.Prefix != nil {
+		aliasPath = c.handlePath(response.Update.Prefix, tags, &builder)
 	}
 
 	tags["source"], _, _ = net.SplitHostPort(address)
-	builder.Truncate(builder.Len() - 1)
-	prefix := builder.String()
 
-	// Parse individual Update message and create measurement
+	// Parse individual Update message and create measurements
+	var lastTags map[string]string
+	var lastAliasPath string
 	for _, update := range response.Update.Update {
-		c.handleTelemetryField(fields, update)
+		// Prepare tags from prefix
+		currentTags := make(map[string]string, len(tags))
+		for key, val := range tags {
+			currentTags[key] = val
+		}
+		currentAliasPath, currentFields := c.handleTelemetryField(update, currentTags, &builder)
+
+		// Inherent valid alias from prefix parsing
+		if len(aliasPath) > 0 && len(currentAliasPath) == 0 {
+			currentAliasPath = aliasPath
+		}
+
+		// If tags have not changed aggregate fields, if not commit existing before starting anew
+		tagsChanged := len(lastTags) != len(currentTags)
+		for key, val1 := range lastTags {
+			if val2, ok := currentTags[key]; !ok || val2 != val1 {
+				tagsChanged = true
+				break
+			}
+		}
+		if (tagsChanged || currentAliasPath != lastAliasPath) && len(fields) > 0 {
+			c.addFields(builder.String(), lastAliasPath, fields, lastTags, timestamp)
+			fields = make(map[string]interface{})
+		}
+
+		// Copy measurements to aggregated field-map
+		for key, val := range currentFields {
+			fields[key[len(currentAliasPath)+1:]] = val
+		}
+
+		lastTags = currentTags
+		lastAliasPath = currentAliasPath
 	}
 
-	// Finally add measurements
-	if len(response.Update.Prefix.Origin) > 0 {
-		tags["path"] = prefix
-		c.acc.AddFields(response.Update.Prefix.Origin, fields, tags, timestamp)
-	} else {
-		c.acc.AddFields(prefix, fields, tags, timestamp)
+	// Add final measurements
+	if len(fields) > 0 {
+		c.addFields(builder.String(), lastAliasPath, fields, lastTags, timestamp)
 	}
 }
 
 // HandleTelemetryField and add it to a measurement
-func (c *CiscoTelemetryGNMI) handleTelemetryField(fields map[string]interface{}, update *gnmi.Update) {
-	var builder bytes.Buffer
-	if len(update.Path.Origin) > 0 {
-		builder.WriteString(update.Path.Origin)
-		builder.WriteRune(':')
-	}
-
-	parts := update.Path.Elem
-
-	// Compatibility with old GNMI
-	if len(parts) == 0 {
-		parts = make([]*gnmi.PathElem, len(update.Path.Element))
-		for i, part := range update.Path.Element {
-			parts[i] = &gnmi.PathElem{Name: part}
-		}
-	}
-
-	for i, elem := range parts {
-		builder.WriteString(elem.Name)
-
-		var keys []string
-		for key, val := range elem.Key {
-			keys = append(keys, "["+key+"="+val+"]")
-		}
-		sort.Strings(keys)
-		for _, key := range keys {
-			builder.WriteString(key)
-		}
-
-		if i < len(parts)-1 {
-			builder.WriteRune('/')
-		}
-	}
+func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, builder *bytes.Buffer) (string, map[string]interface{}) {
+	namelen := builder.Len()
+	aliasPath := c.handlePath(update.Path, tags, builder)
 
 	var value interface{}
 	var jsondata []byte
@@ -315,23 +314,74 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(fields map[string]interface{},
 	}
 
 	name := strings.ReplaceAll(builder.String(), "-", "_")
+	fields := make(map[string]interface{})
 	if value != nil {
 		fields[name] = value
 	} else if jsondata != nil {
 		if err := json.Unmarshal(jsondata, &value); err != nil {
-			c.acc.AddError(fmt.Errorf("GNMI JSON data is invalid: %v", err))
-			return
+			c.acc.AddError(fmt.Errorf("failed to parse JSON value: %v", err))
+		} else {
+			flattener := jsonparser.JSONFlattener{Fields: fields}
+			flattener.FullFlattenJSON(name, value, true, true)
+		}
+	}
+	builder.Truncate(namelen)
+	return aliasPath, fields
+}
+
+// Parse path to path-buffer and tag-field
+func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string, builder *bytes.Buffer) string {
+	var aliasPath string
+
+	// Prefix with origin
+	if len(path.Origin) > 0 {
+		builder.WriteString(path.Origin)
+		builder.WriteRune(':')
+	}
+
+	// Parse generic keys from prefix
+	for _, elem := range path.Elem {
+		builder.WriteRune('/')
+		builder.WriteString(elem.Name)
+		name := builder.String()
+
+		if _, exists := c.aliases[name]; exists {
+			aliasPath = name
 		}
 
-		flattener := jsonparser.JSONFlattener{Fields: fields}
-		flattener.FullFlattenJSON(name, value, true, true)
+		for key, val := range elem.Key {
+			key = strings.ReplaceAll(key, "-", "_")
+
+			// Use short-form of key if possible
+			if _, exists := tags[key]; exists {
+				tags[name+"/"+key] = val
+			} else {
+				tags[key] = val
+			}
+		}
 	}
+
+	return aliasPath
+}
+
+// Emit measurements, honoring defined aliases
+func (c *CiscoTelemetryGNMI) addFields(name, aliasPath string, fields map[string]interface{}, tags map[string]string, timestamp time.Time) {
+	if alias, ok := c.aliases[aliasPath]; ok {
+		name = alias
+	} else {
+		log.Printf("D! [inputs.cisco_telemetry_gnmi]: No measurement alias for GNMI path: %s", name)
+	}
+	c.acc.AddFields(name, fields, tags, timestamp)
 }
 
 //ParsePath from XPath-like string to GNMI path structure
 func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 	var err error
 	gnmiPath := gnmi.Path{Origin: origin, Target: target}
+
+	if len(path) > 0 && path[0] != '/' {
+		return nil, fmt.Errorf("path does not start with a '/': %s", path)
+	}
 
 	elem := &gnmi.PathElem{}
 	start, name, value, end := 0, -1, -1, -1
@@ -395,36 +445,42 @@ func (c *CiscoTelemetryGNMI) Stop() {
 }
 
 const sampleConfig = `
-## Address and port of the GNMI GRPC server
-addresses = ["10.49.234.114:57777"]
+ ## Address and port of the GNMI GRPC server
+ addresses = ["10.49.234.114:57777"]
 
-## define credentials
-username = "cisco"
-password = "cisco"
+ ## define credentials
+ username = "cisco"
+ password = "cisco"
 
-## GNMI encoding requested (one of: "proto", "json", "json_ietf")
-# encoding = "proto"
+ ## GNMI encoding requested (one of: "proto", "json", "json_ietf")
+ # encoding = "proto"
 
-## redial in case of failures after
-redial = "10s"
+ ## redial in case of failures after
+ redial = "10s"
 
-## enable client-side TLS and define CA to authenticate the device
-# enable_tls = true
-# tls_ca = "/etc/telegraf/ca.pem"
-# insecure_skip_verify = true
+ ## enable client-side TLS and define CA to authenticate the device
+ # enable_tls = true
+ # tls_ca = "/etc/telegraf/ca.pem"
+ # insecure_skip_verify = true
 
-## define client-side TLS certificate & key to authenticate to the device
-# tls_cert = "/etc/telegraf/cert.pem"
-# tls_key = "/etc/telegraf/key.pem"
+ ## define client-side TLS certificate & key to authenticate to the device
+ # tls_cert = "/etc/telegraf/cert.pem"
+ # tls_key = "/etc/telegraf/key.pem"
 
-## GNMI subscription prefix (optional, can usually be left empty)
-## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
-# origin = ""
-# prefix = ""
-# target = ""
+ ## GNMI subscription prefix (optional, can usually be left empty)
+ ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
+ # origin = ""
+ # prefix = ""
+ # target = ""
 
+ ## Define additional aliases to map telemetry encoding paths to simple measurement names
+ #[inputs.cisco_telemetry_gnmi.aliases]
+ #  ifcounters = "openconfig:/interfaces/interface/state/counters"
 
-[[inputs.cisco_telemetry_gnmi.subscription]]
+ [[inputs.cisco_telemetry_gnmi.subscription]]
+  ## Name of the measurement that will be emitted
+  name = "ifcounters"
+
   ## Origin and path of the subscription
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
   ##
