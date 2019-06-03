@@ -35,6 +35,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fail2ban"
+	_ "github.com/influxdata/telegraf/plugins/inputs/fastly"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fibaro"
 	_ "github.com/influxdata/telegraf/plugins/inputs/file"
 	_ "github.com/influxdata/telegraf/plugins/inputs/filecount"
