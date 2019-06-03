@@ -9,13 +9,16 @@ import (
 	"time"
 )
 
+const statPrefix = "fastly."
+
 type Fastly struct {
 	ApiKey              string            `toml:"api_key"`
 	ServiceUpdatePeriod internal.Duration `toml:"service_update_period"`
 
-	client   *fastly.Client
-	rtClient *fastly.RTSClient
-	services []*fastly.Service
+	client          *fastly.Client
+	services        []*fastly.Service
+	rtClient        *fastly.RTSClient
+	rtUpdateTracker *realtimeUpdateTracker
 }
 
 var sampleConfig = `
@@ -41,6 +44,9 @@ func (f *Fastly) Gather(acc telegraf.Accumulator) error {
 	if err := f.ensureFastlyServiceList(); err != nil {
 		return err
 	}
+	if err := f.collectRealtimeStats(acc); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -49,6 +55,7 @@ func init() {
 		ServiceUpdatePeriod: internal.Duration{
 			Duration: time.Duration(1 * time.Minute),
 		},
+		rtUpdateTracker: newRealtimeUpdateTracker(),
 	}
 	inputs.Add("fastly", func() telegraf.Input { return &fastlyInput })
 }
