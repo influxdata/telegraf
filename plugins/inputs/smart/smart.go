@@ -125,7 +125,6 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	log.Printf("D! [inputs.smart] devices: %+#v", devices)
 
 	m.getAttributes(acc, devices)
 	return nil
@@ -215,8 +214,6 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 	deviceTags["device"] = path.Base(deviceNode)
 	deviceFields := make(map[string]interface{})
 	deviceFields["exit_status"] = exitStatus
-
-	log.Printf("D! [inputs.smart] gatherDisk '%s'", deviceNode)
 
 	scanner := bufio.NewScanner(strings.NewReader(outStr))
 
