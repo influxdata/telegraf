@@ -117,6 +117,14 @@
   version = "v1.27.0"
 
 [[projects]]
+  digest = "1:e8f914c174ebc670d1713986d5e4f47a21f349209ac929d00558a496f59c7384"
+  name = "github.com/ajg/form"
+  packages = ["."]
+  pruneopts = ""
+  revision = "5c4e22684113ffc2a77577c178189940925f9aef"
+  version = "v1.5.1"
+
+[[projects]]
   branch = "master"
   digest = "1:8483994d21404c8a1d489f6be756e25bfccd3b45d65821f25695577791a08e68"
   name = "github.com/alecthomas/units"
@@ -404,6 +412,14 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:9fc6d1f44231b3828225eead7fe95b510c3d4f37c28ba7bf969a82dad05e2709"
+  name = "github.com/fastly/go-fastly"
+  packages = ["fastly"]
+  pruneopts = ""
+  revision = "34cf54e1b3e5ba514b51d82659c442f447ad2f25"
+  version = "v0.4.3"
+
+[[projects]]
   branch = "master"
   digest = "1:ec95c1c49fbec27ab5383b9c47fae5c2fe1d97ac5b41d36d78e17588a44e9f3f"
   name = "github.com/ghodss/yaml"
@@ -543,6 +559,14 @@
   pruneopts = ""
   revision = "44c6ddd0a2342c386950e880b658017258da92fc"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:ec6c80b25440f994fd5d8c3b8d6593543134e967b56ad52e0dda88e13515a49d"
+  name = "github.com/google/jsonapi"
+  packages = ["."]
+  pruneopts = ""
+  revision = "46d3ced0434461be12e555852e2f1a9ed382e139"
+  version = "1.0.0"
 
 [[projects]]
   digest = "1:c1d7e883c50a26ea34019320d8ae40fad86c9e5d56e63a1ba2cb618cef43e986"
@@ -1576,6 +1600,7 @@
     "github.com/ericchiang/k8s/apis/meta/v1",
     "github.com/ericchiang/k8s/apis/resource",
     "github.com/ericchiang/k8s/util/intstr",
+    "github.com/fastly/go-fastly/fastly",
     "github.com/ghodss/yaml",
     "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
