@@ -77,6 +77,7 @@
 - [#5920](https://github.com/influxdata/telegraf/issues/5920): Fixed datastore name mapping in vsphere input.
 - [#5879](https://github.com/influxdata/telegraf/issues/5879): Fix multiple SIGHUP causes Telegraf to shutdown.
 - [#5891](https://github.com/influxdata/telegraf/issues/5891): Fix connection leak in influxdb outputs on reload.
+- [#5858](https://github.com/influxdata/telegraf/issues/5858): Fix batch fails when single metric is unserializable.
 
 ## v1.10.4 [2019-05-14]
 
