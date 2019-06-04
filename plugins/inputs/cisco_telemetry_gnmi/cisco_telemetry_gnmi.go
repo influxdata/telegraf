@@ -124,7 +124,7 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 		go func(address string) {
 			defer c.wg.Done()
 			for ctx.Err() == nil {
-				if err := c.subscribeGNMI(ctx, address, tlscfg, request); err != nil {
+				if err := c.subscribeGNMI(ctx, address, tlscfg, request); err != nil && ctx.Err() == nil {
 					acc.AddError(err)
 				}
 
