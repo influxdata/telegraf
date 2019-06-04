@@ -14,6 +14,7 @@ type Disk struct {
 	Temperature int32
 	Unit        string
 	Status      string
+	DiskHost    string
 }
 
 type hddtemp struct {
@@ -61,6 +62,7 @@ func (h *hddtemp) Fetch(address string) ([]Disk, error) {
 			Temperature: int32(temperature),
 			Unit:        fields[offset+4],
 			Status:      status,
+			DiskHost:    address,
 		})
 	}
 
