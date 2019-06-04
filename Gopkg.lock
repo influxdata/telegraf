@@ -221,6 +221,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:ed5e77e0626ed76b7e7a2554bc4586aae768612381c5f62738f16a2dfa48763b"
+  name = "github.com/cisco-ie/nx-telemetry-proto"
+  packages = [
+    "mdt_dialout",
+    "telemetry_bis",
+  ]
+  pruneopts = ""
+  revision = "82441e232cf6af9be0f808bf0c6421ee8519880e"
+
+[[projects]]
+  branch = "master"
   digest = "1:298e42868718da06fc0899ae8fdb99c48a14477045234c9274d81caa79af6a8f"
   name = "github.com/couchbase/go-couchbase"
   packages = ["."]
@@ -857,6 +868,17 @@
   pruneopts = ""
   revision = "eee57a3ac4174c55924125bb15eeeda8cffb6e6f"
   version = "v1.0.7"
+
+[[projects]]
+  branch = "master"
+  digest = "1:06ee57a6252cc9c3a1650be9888e8df796d86947ec75bff7e2c4ac5689baa086"
+  name = "github.com/openconfig/gnmi"
+  packages = [
+    "proto/gnmi",
+    "proto/gnmi_ext",
+  ]
+  pruneopts = ""
+  revision = "33a1865c302903e7a2e06f35960e6bc31e84b9f6"
 
 [[projects]]
   digest = "1:5d9b668b0b4581a978f07e7d2e3314af18eb27b3fb5d19b70185b7c575723d11"
@@ -1558,6 +1580,8 @@
     "github.com/aws/aws-sdk-go/service/dynamodb",
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
+    "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout",
+    "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis",
     "github.com/couchbase/go-couchbase",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
@@ -1613,6 +1637,7 @@
     "github.com/nats-io/gnatsd/server",
     "github.com/nats-io/go-nats",
     "github.com/nsqio/go-nsq",
+    "github.com/openconfig/gnmi/proto/gnmi",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",
     "github.com/pkg/errors",
@@ -1669,6 +1694,7 @@
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/metadata",
+    "google.golang.org/grpc/peer",
     "google.golang.org/grpc/status",
     "gopkg.in/gorethink/gorethink.v3",
     "gopkg.in/ldap.v2",

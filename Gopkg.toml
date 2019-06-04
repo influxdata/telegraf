@@ -288,3 +288,11 @@
 [[constraint]]
   name = "github.com/google/go-github"
   version = "24.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/openconfig/gnmi"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cisco-ie/nx-telemetry-proto"
