@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf/metric"
+
 	"google.golang.org/grpc/credentials"
 
 	"github.com/influxdata/telegraf"
@@ -231,57 +233,53 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 		return
 	}
 
-	var prefix, aliasPath string
+	var prefix, prefixAliasPath string
+	grouper := metric.NewSeriesGrouper()
 	timestamp := time.Unix(0, response.Update.Timestamp)
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
+	prefixTags := make(map[string]string)
 
 	if response.Update.Prefix != nil {
-		prefix, aliasPath = c.handlePath(response.Update.Prefix, tags, "")
+		prefix, prefixAliasPath = c.handlePath(response.Update.Prefix, prefixTags, "")
 	}
-	tags["source"], _, _ = net.SplitHostPort(address)
+	prefixTags["source"], _, _ = net.SplitHostPort(address)
+	prefixTags["path"] = prefix
 
 	// Parse individual Update message and create measurements
-	var lastTags map[string]string
-	var lastAliasPath string
+	var name, lastAliasPath string
 	for _, update := range response.Update.Update {
 		// Prepare tags from prefix
-		currentTags := make(map[string]string, len(tags))
-		for key, val := range tags {
-			currentTags[key] = val
+		tags := make(map[string]string, len(prefixTags))
+		for key, val := range prefixTags {
+			tags[key] = val
 		}
-		currentAliasPath, currentFields := c.handleTelemetryField(update, currentTags, prefix)
+		aliasPath, fields := c.handleTelemetryField(update, tags, prefix)
 
 		// Inherent valid alias from prefix parsing
-		if len(aliasPath) > 0 && len(currentAliasPath) == 0 {
-			currentAliasPath = aliasPath
+		if len(prefixAliasPath) > 0 && len(aliasPath) == 0 {
+			aliasPath = prefixAliasPath
 		}
 
-		// If tags have not changed aggregate fields, if not commit existing before starting anew
-		tagsChanged := len(lastTags) != len(currentTags)
-		for key, val1 := range lastTags {
-			if val2, ok := currentTags[key]; !ok || val2 != val1 {
-				tagsChanged = true
-				break
+		// Lookup alias if alias-path has changed
+		if aliasPath != lastAliasPath {
+			name = prefix
+			if alias, ok := c.aliases[aliasPath]; ok {
+				name = alias
+			} else {
+				log.Printf("D! [inputs.cisco_telemetry_gnmi]: No measurement alias for GNMI path: %s", name)
 			}
 		}
-		if (tagsChanged || currentAliasPath != lastAliasPath) && len(fields) > 0 {
-			c.addFields(prefix, lastAliasPath, fields, lastTags, timestamp)
-			fields = make(map[string]interface{})
+
+		// Group metrics
+		for key, val := range fields {
+			grouper.Add(name, tags, timestamp, key[len(aliasPath)+1:], val)
 		}
 
-		// Copy measurements to aggregated field-map
-		for key, val := range currentFields {
-			fields[key[len(currentAliasPath)+1:]] = val
-		}
-
-		lastTags = currentTags
-		lastAliasPath = currentAliasPath
+		lastAliasPath = aliasPath
 	}
 
-	// Add final measurements
-	if len(fields) > 0 {
-		c.addFields(prefix, lastAliasPath, fields, lastTags, timestamp)
+	// Add grouped measurements
+	for _, metric := range grouper.Metrics() {
+		c.acc.AddMetric(metric)
 	}
 }
 
@@ -364,17 +362,6 @@ func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string,
 	}
 
 	return builder.String(), aliasPath
-}
-
-// Emit measurements, honoring defined aliases
-func (c *CiscoTelemetryGNMI) addFields(name, aliasPath string, fields map[string]interface{}, tags map[string]string, timestamp time.Time) {
-	if alias, ok := c.aliases[aliasPath]; ok {
-		tags["path"] = name
-		name = alias
-	} else {
-		log.Printf("D! [inputs.cisco_telemetry_gnmi]: No measurement alias for GNMI path: %s", name)
-	}
-	c.acc.AddFields(name, fields, tags, timestamp)
 }
 
 //ParsePath from XPath-like string to GNMI path structure
