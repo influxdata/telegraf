@@ -5,21 +5,22 @@ import (
 	"io"
 	"log"
 	"os"
-	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type File struct {
-	Files        []string
-	RotateMaxAge string
+	Files               []string          `toml:"files"`
+	RotationInterval    internal.Duration `toml:"rotation_interval"`
+	RotationMaxSize     internal.Size     `toml:"rotation_max_size"`
+	RotationMaxArchives int               `toml:"rotation_max_archives"`
 
-	writer  io.Writer
-	closers []io.Closer
-
+	writer     io.Writer
+	closers    []io.Closer
 	serializer serializers.Serializer
 }
 
@@ -27,8 +28,17 @@ var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
 
-  ## If this is defined, files will be rotated by the time.Duration specified
-  # rotate_max_age = "1m"
+  ## The file will be rotated after the time interval specified.  When set
+  ## to 0 no time based rotation is performed.
+  # rotation_interval = "0d"
+
+  ## The logfile will be rotated when it becomes larger than the specified
+  ## size.  When set to 0 no size based rotation is performed.
+  # rotation_max_size = "0MB"
+
+  ## Maximum number of rotated archives to keep, any older logs are deleted.
+  ## If set to -1, no archives are removed.
+  # rotation_max_archives = 5
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -52,23 +62,12 @@ func (f *File) Connect() error {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
 		} else {
-			var of io.WriteCloser
-			var err error
-			if f.RotateMaxAge != "" {
-				maxAge, err := time.ParseDuration(f.RotateMaxAge)
-				if err != nil {
-					return err
-				}
-
-				// Only rotate by file age for now, keep no archives.
-				of, err = rotate.NewFileWriter(file, maxAge, 0, -1)
-			} else {
-				// Just open a normal file
-				of, err = rotate.NewFileWriter(file, 0, 0, -1)
-			}
+			of, err := rotate.NewFileWriter(
+				file, f.RotationInterval.Duration, f.RotationMaxSize.Size, f.RotationMaxArchives)
 			if err != nil {
 				return err
 			}
+
 			writers = append(writers, of)
 			f.closers = append(f.closers, of)
 		}
@@ -107,7 +106,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 
 		_, err = f.writer.Write(b)
 		if err != nil {
-			writeErr = fmt.Errorf("E! failed to write message: %s, %s", b, err)
+			writeErr = fmt.Errorf("E! [outputs.file] failed to write message: %v", err)
 		}
 	}
 
