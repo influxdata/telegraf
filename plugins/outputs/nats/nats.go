@@ -2,13 +2,13 @@ package nats
 
 import (
 	"fmt"
-
-	nats_client "github.com/nats-io/go-nats"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	nats_client "github.com/nats-io/go-nats"
 )
 
 type NATS struct {
@@ -108,7 +108,8 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.nats] Could not serialize metric: %v", err)
+			continue
 		}
 
 		err = n.conn.Publish(n.Subject, buf)

@@ -6,13 +6,12 @@ import (
 	"log"
 	"strings"
 
+	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/Shopify/sarama"
 )
 
 var ValidTopicSuffixMethods = []string{
@@ -294,7 +293,8 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.kafka] Could not serialize metric: %v", err)
+			continue
 		}
 
 		m := &sarama.ProducerMessage{

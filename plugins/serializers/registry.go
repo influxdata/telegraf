@@ -30,6 +30,9 @@ type Serializer interface {
 	// Serialize takes a single telegraf metric and turns it into a byte buffer.
 	// separate metrics should be separated by a newline, and there should be
 	// a newline at the end of the buffer.
+	//
+	// New plugins should use SerializeBatch instead to allow for non-line
+	// delimited metrics.
 	Serialize(metric telegraf.Metric) ([]byte, error)
 
 	// SerializeBatch takes an array of telegraf metric and serializes it into
@@ -41,7 +44,7 @@ type Serializer interface {
 // Config is a struct that covers the data types needed for all serializer types,
 // and can be used to instantiate _any_ of the serializers.
 type Config struct {
-	// Dataformat can be one of: influx, graphite, or json
+	// Dataformat can be one of the serializer types listed in NewSerializer.
 	DataFormat string
 
 	// Support tags in graphite protocol

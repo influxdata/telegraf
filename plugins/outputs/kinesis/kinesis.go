@@ -6,12 +6,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/satori/go.uuid"
-
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/satori/go.uuid"
 )
 
 type (
@@ -221,7 +220,8 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			continue
 		}
 
 		partitionKey := k.getPartitionKey(metric)
