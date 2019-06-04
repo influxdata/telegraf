@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
 
@@ -101,7 +102,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		b, err := f.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("failed to serialize message: %s", err)
+			log.Printf("D! [outputs.file] Could not serialize metric: %v", err)
 		}
 
 		_, err = f.writer.Write(b)
