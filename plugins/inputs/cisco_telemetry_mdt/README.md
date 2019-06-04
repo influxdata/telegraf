@@ -12,8 +12,6 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
 
 ### Configuration:
 
-This is a sample configuration for the plugin.
-
 ```toml
 [[inputs.cisco_telemetry_mdt]]
   ## Telemetry transport (one of: tcp, grpc)

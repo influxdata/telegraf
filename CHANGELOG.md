@@ -8,6 +8,8 @@
 #### New Inputs
 
 - [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
+- [cisco_telemetry_gnmi](/plugins/inputs/cisco_telemetry_gnmi/README.md) - Contributed by @sbyx
+- [cisco_telemetry_mdt](/plugins/inputs/cisco_telemetry_mdt/README.md) - Contributed by @sbyx
 - [ecs](/plugins/inputs/ecs/README.md) - Contributed by @rbtr
 - [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
 - [openweathermap](/plugins/inputs/openweathermap/README.md) - Contributed by @regel
