@@ -149,12 +149,12 @@ type AgentConfig struct {
 	// Log file name, the empty string means to log to stderr.
 	Logfile string `toml:"logfile"`
 
-	// The logfile will be rotated when it becomes larger than the specified
-	// size.  When set to 0 no size based rotation is performed.
+	// The file will be rotated after the time interval specified.  When set
+	// to 0 no time based rotation is performed.
 	LogfileRotationInterval internal.Duration `toml:"logfile_rotation_interval"`
 
-	// Maximum number of rotated archives to keep, any older logs are deleted.
-	// If set to -1, no archives are removed.
+	// The logfile will be rotated when it becomes larger than the specified
+	// size.  When set to 0 no size based rotation is performed.
 	LogfileRotationMaxSize internal.Size `toml:"logfile_rotation_max_size"`
 
 	// Maximum number of rotated archives to keep, any older logs are deleted.
