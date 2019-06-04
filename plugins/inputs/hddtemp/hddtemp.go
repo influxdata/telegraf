@@ -56,6 +56,7 @@ func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {
 					"model":  disk.Model,
 					"unit":   disk.Unit,
 					"status": disk.Status,
+					"diskHost" : disk.diskHost,
 				}
 
 				fields := map[string]interface{}{
