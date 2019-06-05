@@ -549,6 +549,13 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
+
+		switch key {
+		case "max_binlog_cache_size", "max_binlog_stmt_cache_size",
+			"max_join_size", "sql_select_limit", "max_binlog_size":
+			continue
+		}
+
 		key = strings.ToLower(key)
 		// parse mysql version and put into field and tag
 		if strings.Contains(key, "version") {
