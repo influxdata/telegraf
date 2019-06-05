@@ -91,12 +91,12 @@ func (m *mockGNMIServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
 }
 
 func TestGNMIError(t *testing.T) {
-	listener, _ := net.Listen("tcp", "127.0.0.1:57003")
+	listener, _ := net.Listen("tcp", "127.0.0.1:0")
 	server := grpc.NewServer()
 	acc := &testutil.Accumulator{}
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 0, server: server, acc: acc})
 
-	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57003"},
+	c := &CiscoTelemetryGNMI{Addresses: []string{listener.Addr().String()},
 		Username: "theuser", Password: "thepassword", Encoding: "proto",
 		Redial: internal.Duration{Duration: 1 * time.Second}}
 
@@ -157,12 +157,12 @@ func mockGNMINotification() *gnmi.Notification {
 }
 
 func TestGNMIMultiple(t *testing.T) {
-	listener, _ := net.Listen("tcp", "127.0.0.1:57004")
+	listener, _ := net.Listen("tcp", "127.0.0.1:0")
 	server := grpc.NewServer()
 	acc := &testutil.Accumulator{}
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 1, server: server, acc: acc})
 
-	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
+	c := &CiscoTelemetryGNMI{Addresses: []string{listener.Addr().String()},
 		Username: "theuser", Password: "thepassword", Encoding: "proto",
 		Redial:        internal.Duration{Duration: 1 * time.Second},
 		Subscriptions: []Subscription{{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
@@ -195,12 +195,12 @@ func TestGNMIMultiple(t *testing.T) {
 }
 
 func TestGNMIMultipleRedial(t *testing.T) {
-	listener, _ := net.Listen("tcp", "127.0.0.1:57004")
+	listener, _ := net.Listen("tcp", "127.0.0.1:0")
 	server := grpc.NewServer()
 	acc := &testutil.Accumulator{}
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 2, server: server, acc: acc})
 
-	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
+	c := &CiscoTelemetryGNMI{Addresses: []string{listener.Addr().String()},
 		Username: "theuser", Password: "thepassword", Encoding: "proto",
 		Redial:        internal.Duration{Duration: 10 * time.Millisecond},
 		Subscriptions: []Subscription{{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
@@ -212,7 +212,7 @@ func TestGNMIMultipleRedial(t *testing.T) {
 	acc.Wait(2)
 	server.Stop()
 
-	listener, _ = net.Listen("tcp", "127.0.0.1:57004")
+	listener, _ = net.Listen("tcp", listener.Addr().String())
 	server = grpc.NewServer()
 	gnmi.RegisterGNMIServer(server, &mockGNMIServer{t: t, scenario: 3, server: server, acc: acc})
 
