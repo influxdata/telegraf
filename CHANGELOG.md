@@ -58,6 +58,7 @@
 - [#5901](https://github.com/influxdata/telegraf/pull/5901): Set user agent in stackdriver output.
 - [#5885](https://github.com/influxdata/telegraf/pull/5885): Extend metrics collected from Nvidia GPUs.
 - [#5547](https://github.com/influxdata/telegraf/pull/5547): Add file rotation support to the file output.
+- [#5955](https://github.com/influxdata/telegraf/pull/5955): Add source tag to hddtemp plugin.
 
 #### Bugfixes
 
@@ -80,6 +81,7 @@
 - [#5879](https://github.com/influxdata/telegraf/issues/5879): Fix multiple SIGHUP causes Telegraf to shutdown.
 - [#5891](https://github.com/influxdata/telegraf/issues/5891): Fix connection leak in influxdb outputs on reload.
 - [#5858](https://github.com/influxdata/telegraf/issues/5858): Fix batch fails when single metric is unserializable.
+- [#5536](https://github.com/influxdata/telegraf/issues/5536): Log a warning on write if the metric buffer has overflowed.
 
 ## v1.10.4 [2019-05-14]
 
