@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -51,7 +52,9 @@ var sampleConfig = `
   # container_name_exclude = []
 
   ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
+  ## When empty only containers in the "RUNNING" state will be captured.
+  ## Possible values are "NONE", "PULLED", "CREATED", "RUNNING",
+  ## "RESOURCES_PROVISIONED", "STOPPED".
   # container_status_include = []
   # container_status_exclude = []
 
@@ -60,8 +63,8 @@ var sampleConfig = `
   ecs_label_include = [ "com.amazonaws.ecs.*" ]
   ecs_label_exclude = []
 
-  ## Timeout for docker list, info, and stats commands
-  timeout = "5s"
+  ## Timeout for queries.
+  # timeout = "5s"
 `
 
 // Description describes ECS plugin
@@ -157,7 +160,7 @@ func (ecs *Ecs) accContainers(task *Task, taskTags map[string]string, acc telegr
 			continue
 		}
 
-		if !ecs.statusFilter.Match(c.KnownStatus) {
+		if !ecs.statusFilter.Match(strings.ToUpper(c.KnownStatus)) {
 			continue
 		}
 
@@ -215,8 +218,17 @@ func (ecs *Ecs) createLabelFilters() error {
 
 func (ecs *Ecs) createContainerStatusFilters() error {
 	if len(ecs.ContainerStatusInclude) == 0 && len(ecs.ContainerStatusExclude) == 0 {
-		ecs.ContainerStatusInclude = []string{"running"}
+		ecs.ContainerStatusInclude = []string{"RUNNING"}
 	}
+
+	// ECS uses uppercase status names, normalizing for comparison.
+	for i, include := range ecs.ContainerStatusInclude {
+		ecs.ContainerStatusInclude[i] = strings.ToUpper(include)
+	}
+	for i, exclude := range ecs.ContainerStatusExclude {
+		ecs.ContainerStatusExclude[i] = strings.ToUpper(exclude)
+	}
+
 	filter, err := filter.NewIncludeExcludeFilter(ecs.ContainerStatusInclude, ecs.ContainerStatusExclude)
 	if err != nil {
 		return err
