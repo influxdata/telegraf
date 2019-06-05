@@ -48,6 +48,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/hddtemp"
+	_ "github.com/influxdata/telegraf/plugins/inputs/hobolink"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_response"
