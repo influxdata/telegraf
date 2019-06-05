@@ -5,7 +5,9 @@ import (
 	"hash/fnv"
 	"sort"
 	"time"
-
+	"net"
+        "strings" 
+        "os"
 	"github.com/influxdata/telegraf"
 )
 
@@ -41,6 +43,8 @@ func New(
 		tp:     vtype,
 	}
 
+
+
 	if len(tags) > 0 {
 		m.tags = make([]*telegraf.Tag, 0, len(tags))
 		for k, v := range tags {
@@ -59,8 +63,47 @@ func New(
 		m.AddField(k, v)
 	}
 
+
+	// add hostname
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+	m.AddTag("hostname", hostname)
+	//m.AddField("hostname", hostname)
+	if m.name == "cpu" || m.name == "mem" || m.name == "net" || m.name == "disk" {
+	        m.AddTag("categroy","infrastructure")
+		//m.AddField("categroy","infrastructure")
+	} else  {
+		m.AddTag("categroy", "platform")
+	}
+        // ip
+	addrs, err := net.InterfaceAddrs()
+
+	    if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	    }
+	    for _, address := range addrs {
+
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+		    
+		    if ipnet.IP.To4() != nil {
+ 			if  strings.HasPrefix(ipnet.IP.String(), "10.") || strings.HasPrefix(ipnet.IP.String(), "192.") || strings.HasPrefix(ipnet.IP.String(), "172."){
+	                      m.AddTag("localIP", ipnet.IP.String())
+			}
+		    }
+
+		}
+	    }
+
+
 	return m, nil
 }
+
+
+
+
 
 // FromMetric returns a deep copy of the metric with any tracking information
 // removed.
@@ -188,6 +231,7 @@ func (m *metric) RemoveTag(key string) {
 
 func (m *metric) AddField(key string, value interface{}) {
 	for i, field := range m.fields {
+
 		if key == field.Key {
 			m.fields[i] = &telegraf.Field{Key: key, Value: convertField(value)}
 			return
@@ -278,6 +322,11 @@ func (m *metric) Reject() {
 
 func (m *metric) Drop() {
 }
+
+
+
+
+
 
 // Convert field to a supported type or nil if unconvertible
 func convertField(v interface{}) interface{} {

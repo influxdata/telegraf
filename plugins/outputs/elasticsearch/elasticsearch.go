@@ -3,6 +3,7 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -170,13 +171,14 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	bulkRequest := a.Client.Bulk()
 
+	var mm map[string]interface{}
 	for _, metric := range metrics {
 		var name = metric.Name()
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
-
+		indexName := a.GetIndexName(a.IndexName, name, metric.Time(), a.TagKeys, metric.Tags())
+ 		fmt.Println(indexName)
 		m := make(map[string]interface{})
 
 		m["@timestamp"] = metric.Time()
@@ -184,6 +186,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		m["tag"] = metric.Tags()
 		m[name] = metric.Fields()
 
+		mm = m
+
+		//fmt.Println(m)
 		bulkRequest.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
 			Type("metrics").
@@ -201,6 +206,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	}
 
 	if res.Errors {
+		log.Printf("DEBUGGING: metric: %+v\n", mm)
+		buff, _ := json.Marshal(mm)
+		log.Printf("DEBUGGING: metric json: %s\n", buff)
 		for id, err := range res.Failed() {
 			log.Printf("E! Elasticsearch indexing failure, id: %d, error: %s, caused by: %s, %s", id, err.Error.Reason, err.Error.CausedBy["reason"], err.Error.CausedBy["type"])
 		}
@@ -339,7 +347,7 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 	return indexName, tagKeys
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
+func (a *Elasticsearch) GetIndexName(indexName , typeName  string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -348,6 +356,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 			"%d", eventTime.UTC().Format("02"),
 			"%H", eventTime.UTC().Format("15"),
 			"%V", getISOWeek(eventTime.UTC()),
+			"%t", typeName,
 		)
 
 		indexName = dateReplacer.Replace(indexName)
