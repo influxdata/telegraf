@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/easedbautil"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -172,8 +173,11 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	for _, metric := range metrics {
 		var name = metric.Name()
-		Add
-		metric.AddTag("a", "b")
+
+		err := easedbautl.AddGlobalTags(name, &metric)
+		if err != nil {
+			return fmt.Errorf("error adding global tags: %s", err)
+		}
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
