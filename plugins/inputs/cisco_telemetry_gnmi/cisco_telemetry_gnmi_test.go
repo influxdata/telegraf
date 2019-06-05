@@ -202,7 +202,7 @@ func TestGNMIMultipleRedial(t *testing.T) {
 
 	c := &CiscoTelemetryGNMI{Addresses: []string{"127.0.0.1:57004"},
 		Username: "theuser", Password: "thepassword", Encoding: "proto",
-		Redial:        internal.Duration{Duration: 500 * time.Millisecond},
+		Redial:        internal.Duration{Duration: 10 * time.Millisecond},
 		Subscriptions: []Subscription{{Name: "alias", Origin: "type", Path: "/model", SubscriptionMode: "sample"}},
 	}
 
