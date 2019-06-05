@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -550,9 +551,11 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			return err
 		}
 
+
 		switch key {
 		case "max_binlog_cache_size", "max_binlog_stmt_cache_size",
 			"max_join_size", "sql_select_limit", "max_binlog_size":
+				log.Printf("skip uint key: %s, ", key )
 			continue
 		}
 
@@ -564,7 +567,10 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 		}
 		if value, ok := m.parseValue(val); ok {
 			fields[key] = value
+			log.Printf("variable, key %s, val: %v", key, value)
 		}
+
+
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_variables", fields, tags)

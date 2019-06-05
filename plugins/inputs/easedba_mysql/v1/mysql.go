@@ -182,8 +182,20 @@ var Mappings = []*Mapping{
 	},
 }
 
-var ThroughtMappings = map[string]string {
-
+var ThroughtMappings = map[string]string{
+"Com_insert":         "com_insert	",
+"Com_select":         "com_select	",
+"Com_insert_select	":  "com_insert_select	",
+"Com_replace	":        "com_replace	",
+"Com_replace_select	": "com_replace_select	",
+"Com_update	":         "com_update	",
+"Com_update_multi	":   "com_update_multi	",
+"Com_delete	":         "com_delete	",
+"Com_delete_multi	":   "com_delete_multi	",
+"Com_commit	":         "com_commit	",
+"Com_rollback	":       "com_rollback	",
+"Com_stmt_exexute	":   "com_stmt_exexute	",
+"Com_call_procedure	": "com_call_procedure	",
 }
 
 func ParseValue(value sql.RawBytes) (float64, bool) {
