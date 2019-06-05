@@ -95,13 +95,10 @@ func (w *FileWriter) Close() (err error) {
 	defer w.Unlock()
 
 	// Rotate before closing
-	if err = w.rotateIfNeeded(); err != nil {
+	if err = w.rotate(); err != nil {
 		return err
 	}
 
-	if err = w.current.Close(); err != nil {
-		return err
-	}
 	w.current = nil
 	return nil
 }
