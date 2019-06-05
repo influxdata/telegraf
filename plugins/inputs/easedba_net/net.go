@@ -128,7 +128,7 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("net", func() telegraf.Input {
+	inputs.Add("easedba_net", func() telegraf.Input {
 		return &NetIOStats{ps: system.NewSystemPS()}
 	})
 }

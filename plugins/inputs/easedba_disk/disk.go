@@ -107,7 +107,7 @@ func parseOptions(opts string) MountOptions {
 
 func init() {
 	ps := system.NewSystemPS()
-	inputs.Add("disk", func() telegraf.Input {
+	inputs.Add("easedba_disk", func() telegraf.Input {
 		return &DiskStats{ps: ps}
 	})
 }

@@ -143,7 +143,7 @@ func activeCpuTime(t cpu.TimesStat) float64 {
 }
 
 func init() {
-	inputs.Add("cpu", func() telegraf.Input {
+	inputs.Add("easedba_cpu", func() telegraf.Input {
 		return &CPUStats{
 			PerCPU:   true,
 			TotalCPU: true,

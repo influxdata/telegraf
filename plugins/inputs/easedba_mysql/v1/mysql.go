@@ -182,6 +182,10 @@ var Mappings = []*Mapping{
 	},
 }
 
+var ThroughtMappings = map[string]string {
+
+}
+
 func ParseValue(value sql.RawBytes) (float64, bool) {
 	if bytes.Compare(value, []byte("Yes")) == 0 || bytes.Compare(value, []byte("ON")) == 0 {
 		return 1, true

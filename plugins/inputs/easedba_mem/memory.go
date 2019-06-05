@@ -66,7 +66,7 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	ps := system.NewSystemPS()
-	inputs.Add("mem", func() telegraf.Input {
+	inputs.Add("easedba_mem", func() telegraf.Input {
 		return &MemStats{ps: ps}
 	})
 }

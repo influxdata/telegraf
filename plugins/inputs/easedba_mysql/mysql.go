@@ -1734,7 +1734,7 @@ func getDSNTag(dsn string) string {
 }
 
 func init() {
-	inputs.Add("mysql", func() telegraf.Input {
+	inputs.Add("easedba_mysql", func() telegraf.Input {
 		return &Mysql{}
 	})
 }

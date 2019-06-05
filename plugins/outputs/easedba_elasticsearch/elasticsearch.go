@@ -393,7 +393,7 @@ func (a *Elasticsearch) Close() error {
 }
 
 func init() {
-	outputs.Add("elasticsearch", func() telegraf.Output {
+	outputs.Add("easedba_elasticsearch", func() telegraf.Output {
 		return &Elasticsearch{
 			Timeout:             internal.Duration{Duration: time.Second * 5},
 			HealthCheckInterval: internal.Duration{Duration: time.Second * 10},

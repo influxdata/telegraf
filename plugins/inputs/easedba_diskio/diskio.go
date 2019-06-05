@@ -215,7 +215,7 @@ func (s *DiskIO) diskTags(devName string) map[string]string {
 
 func init() {
 	ps := system.NewSystemPS()
-	inputs.Add("diskio", func() telegraf.Input {
+	inputs.Add("easedba_diskio", func() telegraf.Input {
 		return &DiskIO{ps: ps, SkipSerialNumber: true}
 	})
 }
