@@ -28,7 +28,9 @@ present in the metadata/stats endpoints.
   # container_name_exclude = []
 
   ## Container states to include and exclude. Globs accepted.
-  ## When empty only containers in the "running" state will be captured.
+  ## When empty only containers in the "RUNNING" state will be captured.
+  ## Possible values are "NONE", "PULLED", "CREATED", "RUNNING",
+  ## "RESOURCES_PROVISIONED", "STOPPED".
   # container_status_include = []
   # container_status_exclude = []
 
@@ -37,8 +39,8 @@ present in the metadata/stats endpoints.
   ecs_label_include = [ "com.amazonaws.ecs.*" ]
   ecs_label_exclude = []
 
-  ## Timeout for docker list, info, and stats commands
-  timeout = "5s"
+  ## Timeout for queries.
+  # timeout = "5s"
 ```
 
 ### Metrics
