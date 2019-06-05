@@ -13,17 +13,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/metric"
-
-	"google.golang.org/grpc/credentials"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	internaltls "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 )
 
