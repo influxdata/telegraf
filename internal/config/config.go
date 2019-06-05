@@ -33,7 +33,7 @@ import (
 
 var (
 	// Default sections
-	sectionDefaults = []string{"agent", "global_tags", "outputs",
+	sectionDefaults = []string{"global_tags", "agent", "outputs",
 		"processors", "aggregators", "inputs"}
 
 	// Default input plugins
@@ -536,12 +536,12 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 }
 
 func printFilteredGlobalSections(sectionFilters []string) {
-	if sliceContains("agent", sectionFilters) {
-		fmt.Printf(agentConfig)
-	}
-
 	if sliceContains("global_tags", sectionFilters) {
 		fmt.Printf(globalTagsConfig)
+	}
+
+	if sliceContains("agent", sectionFilters) {
+		fmt.Printf(agentConfig)
 	}
 }
 
