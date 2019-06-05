@@ -99,9 +99,6 @@ func (w *FileWriter) Close() (err error) {
 		return err
 	}
 
-	if err = w.current.Close(); err != nil {
-		return err
-	}
 	w.current = nil
 	return nil
 }
