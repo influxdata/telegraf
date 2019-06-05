@@ -10,6 +10,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
+	_ "github.com/influxdata/telegraf/plugins/outputs/easedba_elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
