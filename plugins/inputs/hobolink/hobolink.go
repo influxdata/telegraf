@@ -38,6 +38,7 @@ func NewHOBOlink() *HOBOlink {
 	return &HOBOlink{
 		HttpTimeout: internal.Duration{Duration: time.Second * 5},
 		Server:      fmt.Sprintf("https://webservice.hobolink.com/restv2%s", dataPath),
+		Window:      1,
 		Timezone:    "UTC",
 	}
 }
@@ -99,7 +100,7 @@ func (h *HOBOlink) parseJSON() (*Observations, error) {
 		},
 		Query: Query{
 			EndDateTime:   ts.Format("2006-01-02 15:04:05"),
-			StartDateTime: ts.Add(-1 * time.Hour).Format("2006-01-02 15:04:05"),
+			StartDateTime: ts.Add(-(time.Duration(h.Window)) * time.Hour).Format("2006-01-02 15:04:05"),
 			Loggers:       h.SerialNumbers,
 		},
 	})
@@ -237,6 +238,10 @@ const sampleConfig = `
   ##       provided list of serial numbers will be queried
   serial_numbers = [""]
 
+  ## Define the window, in hours, of metrics to query from the API
+  ## NOTE: default is 1 hour
+  window = 12
+
   ## Timeout for HTTP requests to the HOBOlink API URL 
   # http_timeout = "5s"
 
@@ -259,8 +264,9 @@ type HOBOlink struct {
 	Password      string
 	Server        string
 	Token         string
-	SerialNumbers []string          `json:"serial_numbers"`
-	HttpTimeout   internal.Duration `json:"http_timeout"`
+	SerialNumbers []string
+	HttpTimeout   internal.Duration
+	Window        int64
 	Timezone      string
 
 	client *http.Client
