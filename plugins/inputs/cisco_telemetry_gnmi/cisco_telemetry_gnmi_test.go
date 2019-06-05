@@ -221,8 +221,6 @@ func TestGNMIMultipleRedial(t *testing.T) {
 	c.Stop()
 	server.Stop()
 
-	require.Empty(t, acc.Errors)
-
 	tags := map[string]string{"path": "type:/model", "source": "127.0.0.1", "foo": "bar", "name": "str", "uint64": "1234"}
 	fields := map[string]interface{}{"some/path": int64(5678)}
 	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
