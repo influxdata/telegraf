@@ -227,8 +227,11 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 func logMetric(metric telegraf.Metric) {
 	log.Printf("submit metric ... name: %s", metric.Name())
 	log.Printf("submit metric ... fields: ")
-	for _, f := range metric.FieldList() {
+	for i, f := range metric.FieldList() {
 		log.Printf("field: %s, value: %v, type: %v", f.Key, f.Value, reflect.TypeOf(f.Value).Elem() )
+		if i >= 10 {
+			log.Printf( "only log the firts 10 lines, skip the rest." )
+		}
 	}
 }
 
