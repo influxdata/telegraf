@@ -37,9 +37,9 @@ type Mysql struct {
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
-	GatherInnodb                        bool     `toml:"gather_Innodb"`
+	GatherInnodb                        bool     `toml:"gather_innodb"`
 	GatherGlobalStatuses                bool     `toml:"gather_global_statuses"`
-	GatherConnection                    bool     `toml:"gather_Connection_statuses"`
+	GatherConnection                    bool     `toml:"gather_connection_statuses"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 	tls.ClientConfig
