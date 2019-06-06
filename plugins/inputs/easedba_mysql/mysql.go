@@ -797,10 +797,11 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accum
 				}
 			}
 		}
+		acc.AddFields("throughput", fields, tags)
+		fields = make(map[string]interface{})
 
 	}
-	acc.AddFields("throughput", fields, tags)
-	fields = make(map[string]interface{})
+
 
 	return nil
 }
@@ -847,11 +848,11 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 				}
 			}
 		}
-
+		acc.AddFields("connection", fields, tags)
+		fields = make(map[string]interface{})
 
 	}
-	acc.AddFields("connection", fields, tags)
-	fields = make(map[string]interface{})
+
 
 
 	return nil
@@ -902,10 +903,11 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 				}
 			}
 		}
+		acc.AddFields("innodb", fields, tags)
+		fields = make(map[string]interface{})
 	}
 
-	acc.AddFields("innodb", fields, tags)
-	fields = make(map[string]interface{})
+
 
 
 	return nil
