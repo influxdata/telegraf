@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -190,6 +192,8 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		m["tag"] = metric.Tags()
 		m[name] = metric.Fields()
 
+		warnTooBigValues(metric.FieldList())
+
 		bulkRequest.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
 			Type("metrics").
@@ -215,6 +219,17 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	return nil
 
+}
+
+func warnTooBigValues(fields []*telegraf.Field) {
+	for _, f := range fields {
+		if reflect.TypeOf(f.Value).Kind() == reflect.Uint64 {
+			val, _ := f.Value.(uint64)
+			if val > math.MaxInt64 {
+				log.Printf("error: too big value: key: %s, val: %d", f.Key, val)
+			}
+		}
+	}
 }
 
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
@@ -384,7 +399,7 @@ func (a *Elasticsearch) SampleConfig() string {
 }
 
 func (a *Elasticsearch) Description() string {
-	return "Configuration for Elasticsearch to send metrics to."
+	return "Configuration for Elasticsearch to send metrics to.t "
 }
 
 func (a *Elasticsearch) Close() error {
