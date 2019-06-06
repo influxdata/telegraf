@@ -782,7 +782,7 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			return err
 		}
 
-		if converted, ok := easedba_v1.InnodbMappings[key]; ok {
+		if converted, ok := easedba_v1.ThroughtMappings[key]; ok {
 			i, _ := strconv.Atoi(string(val))
 			fields[converted] = i
 		}
