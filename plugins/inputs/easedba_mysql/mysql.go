@@ -842,7 +842,7 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	Megafiles := []string{"Innodb_rows_read", "Innodb_rows_read_ratio", "Innodb_rows_deleted", "Innodb_rows_deleted_ratio", "Innodb_rows_inserted", "Innodb_rows_inserted_ratio", "Innodb_rows_updated", "Innodb_rows_updated_ratio", "Innodb_buffer_pool_reads", "Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_write_requests", "Innodb_buffer_pool_pages_flushed", "Innodb_buffer_pool_wait_free", "Innodb_row_lock_current_waits"}
+	//Megafiles := []string{"Innodb_rows_read", "Innodb_rows_read_ratio", "Innodb_rows_deleted", "Innodb_rows_deleted_ratio", "Innodb_rows_inserted", "Innodb_rows_inserted_ratio", "Innodb_rows_updated", "Innodb_rows_updated_ratio", "Innodb_buffer_pool_reads", "Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_write_requests", "Innodb_buffer_pool_pages_flushed", "Innodb_buffer_pool_wait_free", "Innodb_row_lock_current_waits"}
 
 	for rows.Next() {
 		var key string
@@ -852,24 +852,13 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 			return err
 		}
 
-		//var found bool
-		for _, mapped := range v1.Mappings {
-			if strings.HasPrefix(key, mapped.OnServer) {
-				// convert numeric values to integer
-				i, _ := strconv.Atoi(string(val))
-				//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
 
-				// get some fileds for easedba
-				for _, r := range Megafiles {
-					if key == r {
-						fields[key] = i
-					}
-				}
-			}
+		if converted, ok := easedba_v1.InnodbMappings[key];ok {
+			i, _ := strconv.Atoi(string(val))
+			fields[converted] = i
 		}
-		acc.AddFields("innodb", fields, tags)
-		fields = make(map[string]interface{})
 	}
+	acc.AddFields("mysql-innodb", fields, tags)
 
 	return nil
 }
