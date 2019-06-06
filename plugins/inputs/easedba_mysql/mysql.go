@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/easedba_mysql/v1"
 	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
 
 	"github.com/go-sql-driver/mysql"
@@ -141,12 +142,6 @@ var sampleConfig = `
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
-
-
-
-
-
-
 
 func (m *Mysql) SampleConfig() string {
 	return sampleConfig
@@ -448,7 +443,6 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	defer db.Close()
 
-
 	//throughput index
 	if m.GatherGlobalStatuses {
 		err = m.gatherGlobalStatuses(db, serv, acc)
@@ -456,8 +450,6 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
-
 
 	//add megaeasdba index
 	if m.GatherConnection {
@@ -467,20 +459,12 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		}
 	}
 
-
 	if m.GatherInnodb {
 		err = m.gatherInnodb(db, serv, acc)
 		if err != nil {
 			return err
+		}
 	}
-	}
-
-
-
-
-
-
-
 
 	// Global Variables may be gathered less often
 	if len(m.IntervalSlow) > 0 {
@@ -585,7 +569,7 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 	}
 
 	if m.GatherDbSizes {
-		err = m.gatherDbSizes( db, serv, acc )
+		err = m.gatherDbSizes(db, serv, acc)
 
 	}
 
@@ -729,7 +713,7 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	return nil
 }
 
-func getBinaryLogs(db *sql.DB ) ( size int64, count int64, err error) {
+func getBinaryLogs(db *sql.DB) (size int64, count int64, err error) {
 	rows, err := db.Query(binaryLogsQuery)
 	if err != nil {
 		return 0, 0, err
@@ -759,7 +743,7 @@ func getBinaryLogs(db *sql.DB ) ( size int64, count int64, err error) {
 // gatherGlobalStatuses can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
-func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(globalStatusQuery)
 	if err != nil {
@@ -767,12 +751,12 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accum
 	}
 	defer rows.Close()
 
-
 	// parse the DSN and save host name as a tag
+
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	Megafiles :=[]string{"Com_insert","Com_select","Com_insert_select", "Com_replace","Com_replace_select","Com_update","Com_update_multi", "Com_delete","Com_delete_multi","Com_commit","Com_rollback","Com_stmt_exexute","Com_call_procedure"}
+	allFound := 0
 
 	for rows.Next() {
 		var key string
@@ -782,32 +766,21 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accum
 			return err
 		}
 
-		//var found bool
-		for _, mapped := range v1.Mappings {
-			if strings.HasPrefix(key, mapped.OnServer) {
-				// convert numeric values to integer
-				i, _ := strconv.Atoi(string(val))
-				//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+		if converted, ok := easedba_v1.InnodbMappings[key]; ok {
+			i, _ := strconv.Atoi(string(val))
+			fields[converted] = i
 
-				// get some fileds for easedba
-				for _, r := range Megafiles {
-					if key == r {
-						fields[key] = i
-					}
-				}
+			allFound ++
+			if allFound >= len(easedba_v1.InnodbMappings) {
+				break
 			}
 		}
-		acc.AddFields("throughput", fields, tags)
-		fields = make(map[string]interface{})
-
 	}
 
+	acc.AddFields("mysql-throughput", fields, tags)
 
 	return nil
 }
-
-
-
 
 // gatherconnection can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
@@ -824,7 +797,7 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	Megafiles :=[]string{"Connections","Aborted_clients","Aborted_connects","Locked_connects"}
+	Megafiles := []string{"Connections", "Aborted_clients", "Aborted_connects", "Locked_connects"}
 	for rows.Next() {
 		var key string
 		var val sql.RawBytes
@@ -853,13 +826,8 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 
 	}
 
-
-
 	return nil
 }
-
-
-
 
 // gathercinnodb can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
@@ -876,7 +844,7 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	Megafiles :=[]string{"Innodb_rows_read","Innodb_rows_read_ratio","Innodb_rows_deleted", "Innodb_rows_deleted_ratio","Innodb_rows_inserted","Innodb_rows_inserted_ratio","Innodb_rows_updated", "Innodb_rows_updated_ratio","Innodb_buffer_pool_reads","Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_write_requests","Innodb_buffer_pool_pages_flushed","Innodb_buffer_pool_wait_free", "Innodb_row_lock_current_waits"}
+	Megafiles := []string{"Innodb_rows_read", "Innodb_rows_read_ratio", "Innodb_rows_deleted", "Innodb_rows_deleted_ratio", "Innodb_rows_inserted", "Innodb_rows_inserted_ratio", "Innodb_rows_updated", "Innodb_rows_updated_ratio", "Innodb_buffer_pool_reads", "Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_write_requests", "Innodb_buffer_pool_pages_flushed", "Innodb_buffer_pool_wait_free", "Innodb_row_lock_current_waits"}
 
 	for rows.Next() {
 		var key string
@@ -885,8 +853,6 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 		if err = rows.Scan(&key, &val); err != nil {
 			return err
 		}
-
-
 
 		//var found bool
 		for _, mapped := range v1.Mappings {
@@ -907,15 +873,8 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 		fields = make(map[string]interface{})
 	}
 
-
-
-
 	return nil
 }
-
-
-
-
 
 // GatherProcessList can be used to collect metrics on each running command
 // and its state with its running count
@@ -1810,7 +1769,6 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 		"binary_log_count": binLogCount,
 	}
 
-
 	// table data and index size
 	rows, err := db.Query(tableAndIndexSizeQuery)
 	if err != nil {
@@ -1819,7 +1777,7 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 	defer rows.Close()
 
 	var (
-		table_data_size int64
+		table_data_size  int64
 		table_index_size int64
 	)
 
@@ -1835,7 +1793,7 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 
 	// dis cache and tmp table size
 	var (
-		key string
+		key   string
 		value int64
 		//allFound int = 0
 	)
@@ -1852,7 +1810,6 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 			return fmt.Errorf("error scaning table and index size %s", err)
 		}
 	}
-
 
 	accumulator.AddGauge("mysql-dbsize", fields, tags)
 

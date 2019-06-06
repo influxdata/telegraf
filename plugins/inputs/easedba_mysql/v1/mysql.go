@@ -1,4 +1,4 @@
-package v1
+package easedba_v1
 
 import (
 	"bytes"
@@ -199,7 +199,7 @@ var ThroughtMappings = map[string]string{
 }
 
 var ConnectionMappings = map[string]string{
-	"Connections":      "connections",
+	"Threads_connected":      "threads_connected",
 	"Aborted_clients":  "aborted_clients",
 	"Aborted_connects": "aborted_connects",
 	"Locked_connects":  "locked_connects",
