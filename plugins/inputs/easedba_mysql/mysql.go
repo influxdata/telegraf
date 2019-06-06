@@ -303,7 +303,7 @@ const (
         FROM information_schema.user_statistics`
 	infoSchemaAutoIncQuery = `
         SELECT table_schema, table_name, column_name, auto_increment,
-          CAST(pow(2, case data_type
+          CAST(pow(2, case e
             when 'tinyint'   then 7
             when 'smallint'  then 15
             when 'mediumint' then 23
@@ -714,8 +714,25 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 }
 
 func getBinaryLogs(db *sql.DB) (size int64, count int64, err error) {
-	rows, err := db.Query(binaryLogsQuery)
+	rows, err := db.Query("SHOW VARIABLES LIKE 'log_bin'")
 	if err != nil {
+		return 0, 0, err
+	}
+	defer rows.Close()
+
+	key := ""
+	val := ""
+	rows.NextResultSet()
+	if rows.Scan(&key, &val); val != "ON" {
+		return 0, 0, nil
+	}
+
+	rows, err = db.Query(binaryLogsQuery)
+	if err != nil {
+		log.Printf("============" + err.Error() + "=========")
+		if strings.Contains(err.Error(), "1381") {
+			return 0, 0, nil
+		}
 		return 0, 0, err
 	}
 	defer rows.Close()
@@ -756,7 +773,6 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	allFound := 0
 
 	for rows.Next() {
 		var key string
@@ -769,11 +785,6 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 		if converted, ok := easedba_v1.InnodbMappings[key]; ok {
 			i, _ := strconv.Atoi(string(val))
 			fields[converted] = i
-
-			allFound ++
-			if allFound >= len(easedba_v1.InnodbMappings) {
-				break
-			}
 		}
 	}
 
@@ -797,7 +808,6 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	Megafiles := []string{"Connections", "Aborted_clients", "Aborted_connects", "Locked_connects"}
 	for rows.Next() {
 		var key string
 		var val sql.RawBytes
@@ -806,26 +816,14 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 			return err
 		}
 
-		//var found bool
-		for _, mapped := range v1.Mappings {
-			if strings.HasPrefix(key, mapped.OnServer) {
-				// convert numeric values to integer
-				i, _ := strconv.Atoi(string(val))
-				//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
-
-				// get some fileds for easedba
-				for _, r := range Megafiles {
-					if key == r {
-						fields[key] = i
-					}
-				}
-			}
+		if converted, ok := easedba_v1.ConnectionMappings[key]; ok {
+			i, _ := strconv.Atoi(string(val))
+			fields[converted] = i
 		}
-		acc.AddFields("connection", fields, tags)
-		fields = make(map[string]interface{})
 
 	}
 
+	acc.AddFields("mysql-connection", fields, tags)
 	return nil
 }
 
