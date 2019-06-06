@@ -231,6 +231,7 @@ func logMetric(metric telegraf.Metric) {
 		log.Printf("field: %s, value: %v, ", f.Key, f.Value)
 		if i >= 10 {
 			log.Printf("only log the firts 10 lines, skip the rest.")
+			return
 		}
 	}
 }
