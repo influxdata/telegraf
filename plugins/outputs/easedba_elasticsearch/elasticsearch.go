@@ -182,7 +182,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		// for debug trace
-		logMetric( metric )
+		logMetric(metric)
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
@@ -228,9 +228,9 @@ func logMetric(metric telegraf.Metric) {
 	log.Printf("submit metric ... name: %s", metric.Name())
 	log.Printf("submit metric ... fields: ")
 	for i, f := range metric.FieldList() {
-		log.Printf("field: %s, value: %v, type: %v", f.Key, f.Value, reflect.TypeOf(f.Value).Elem() )
+		log.Printf("field: %s, value: %v, ", f.Key, f.Value)
 		if i >= 10 {
-			log.Printf( "only log the firts 10 lines, skip the rest." )
+			log.Printf("only log the firts 10 lines, skip the rest.")
 		}
 	}
 }
