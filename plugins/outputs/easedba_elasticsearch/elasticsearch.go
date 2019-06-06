@@ -181,6 +181,9 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("error adding global tags: %s", err)
 		}
 
+		// for debug trace
+		logMetric( metric )
+
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
 		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
@@ -219,6 +222,14 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 	return nil
 
+}
+
+func logMetric(metric telegraf.Metric) {
+	log.Printf("submit metric ... name: %s", metric.Name())
+	log.Printf("submit metric ... fields: ")
+	for _, f := range metric.FieldList() {
+		log.Printf("field: %s, value: %v, type: %v", f.Key, f.Value, reflect.TypeOf(f.Value).Elem() )
+	}
 }
 
 func warnTooBigValues(fields []*telegraf.Field) {
