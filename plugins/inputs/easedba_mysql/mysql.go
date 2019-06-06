@@ -772,6 +772,8 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accum
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
+	Megafiles :=[]string{"Com_insert","Com_select","Com_insert_select", "Com_replace","Com_replace_select","Com_update","Com_update_multi", "Com_delete","Com_delete_multi","Com_commit","Com_rollback","Com_stmt_exexute","Com_call_procedure"}
+
 	for rows.Next() {
 		var key string
 		var val sql.RawBytes
@@ -780,30 +782,27 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accum
 			return err
 		}
 
-		Megafiles :=[]string{"Com_insert","Com_select","Com_insert_select", "Com_replace","Com_replace_select","Com_update","Com_update_multi", "Com_delete","Com_delete_multi","Com_commit","Com_rollback","Com_stmt_exexute","Com_call_procedure"}
-		if m.MetricVersion < 2 {
-			//var found bool
-			for _, mapped := range v1.Mappings {
-				if strings.HasPrefix(key, mapped.OnServer) {
-					// convert numeric values to integer
-					i, _ := strconv.Atoi(string(val))
-					//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+		//var found bool
+		for _, mapped := range v1.Mappings {
+			if strings.HasPrefix(key, mapped.OnServer) {
+				// convert numeric values to integer
+				i, _ := strconv.Atoi(string(val))
+				//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
 
-					// get some fileds for easedba
-					for _, r := range Megafiles {
-						if key == r {
-							fields[key] = i
-						}
+				// get some fileds for easedba
+				for _, r := range Megafiles {
+					if key == r {
+						fields[key] = i
 					}
 				}
 			}
-			// Send 20 fields at a time
-			if len(fields) >= 20 {
-				acc.AddFields("throughput", fields, tags)
-				fields = make(map[string]interface{})
-			}
-
 		}
+		// Send 20 fields at a time
+
+		acc.AddFields("throughput", fields, tags)
+		fields = make(map[string]interface{})
+
+
 
 	}
 
@@ -828,6 +827,7 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
+	Megafiles :=[]string{"Connections","Aborted_clients","Aborted_connects","Locked_connects"}
 	for rows.Next() {
 		var key string
 		var val sql.RawBytes
@@ -836,31 +836,28 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 			return err
 		}
 
-		Megafiles :=[]string{"Connections","Aborted_clients","Aborted_connects","Locked_connects"}
+		//var found bool
+		for _, mapped := range v1.Mappings {
+			if strings.HasPrefix(key, mapped.OnServer) {
+				// convert numeric values to integer
+				i, _ := strconv.Atoi(string(val))
+				//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
 
-		if m.MetricVersion < 2 {
-			//var found bool
-			for _, mapped := range v1.Mappings {
-				if strings.HasPrefix(key, mapped.OnServer) {
-					// convert numeric values to integer
-					i, _ := strconv.Atoi(string(val))
-					//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
-
-					// get some fileds for easedba
-					for _, r := range Megafiles {
-						if key == r {
-							fields[key] = i
-						}
+				// get some fileds for easedba
+				for _, r := range Megafiles {
+					if key == r {
+						fields[key] = i
 					}
 				}
 			}
-			// Send 20 fields at a time
-			if len(fields) >= 20 {
-				acc.AddFields("connection", fields, tags)
-				fields = make(map[string]interface{})
-			}
-
 		}
+		// Send 20 fields at a time
+
+		acc.AddFields("connection", fields, tags)
+		fields = make(map[string]interface{})
+
+
+
 
 	}
 
@@ -885,6 +882,8 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
+	Megafiles :=[]string{"Innodb_rows_read","Innodb_rows_read_ratio","Innodb_rows_deleted", "Innodb_rows_deleted_ratio","Innodb_rows_inserted","Innodb_rows_inserted_ratio","Innodb_rows_updated", "Innodb_rows_updated_ratio","Innodb_buffer_pool_reads","Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_write_requests","Innodb_buffer_pool_pages_flushed","Innodb_buffer_pool_wait_free", "Innodb_row_lock_current_waits"}
+
 	for rows.Next() {
 		var key string
 		var val sql.RawBytes
@@ -893,31 +892,29 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 			return err
 		}
 
-		Megafiles :=[]string{"Innodb_rows_read","Innodb_rows_read_ratio","Innodb_rows_deleted", "Innodb_rows_deleted_ratio","Innodb_rows_inserted","Innodb_rows_inserted_ratio","Innodb_rows_updated", "Innodb_rows_updated_ratio","Innodb_buffer_pool_reads","Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_write_requests","Innodb_buffer_pool_pages_flushed","Innodb_buffer_pool_wait_free", "Innodb_row_lock_current_waits"}
 
-		if m.MetricVersion < 2 {
-			//var found bool
-			for _, mapped := range v1.Mappings {
-				if strings.HasPrefix(key, mapped.OnServer) {
-					// convert numeric values to integer
-					i, _ := strconv.Atoi(string(val))
-					//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
 
-					// get some fileds for easedba
-					for _, r := range Megafiles {
-						if key == r {
-							fields[key] = i
-						}
+		//var found bool
+		for _, mapped := range v1.Mappings {
+			if strings.HasPrefix(key, mapped.OnServer) {
+				// convert numeric values to integer
+				i, _ := strconv.Atoi(string(val))
+				//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+
+				// get some fileds for easedba
+				for _, r := range Megafiles {
+					if key == r {
+						fields[key] = i
 					}
 				}
 			}
-			// Send 20 fields at a time
-			if len(fields) >= 20 {
-				acc.AddFields("innodb", fields, tags)
-				fields = make(map[string]interface{})
-			}
-
 		}
+		// Send 20 fields at a time
+
+		acc.AddFields("innodb", fields, tags)
+		fields = make(map[string]interface{})
+		
+
 
 	}
 
