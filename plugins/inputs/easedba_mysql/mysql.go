@@ -37,6 +37,9 @@ type Mysql struct {
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
+	GatherInnodb                        bool     `toml:"gather_Innodb"`
+	GatherGlobalStatuses                bool     `toml:"gather_global_statuses"`
+	GatherConnection                    bool     `toml:"gather_Connection_statuses"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 	tls.ClientConfig
@@ -125,6 +128,12 @@ var sampleConfig = `
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
+
+
+
+
+
+
 
 func (m *Mysql) SampleConfig() string {
 	return sampleConfig
@@ -422,20 +431,29 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 
 	//throughput index
-	err = m.gatherGlobalStatuses(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherGlobalStatuses {
+		err = m.gatherGlobalStatuses(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
+
+
 
 	//add megaeasdba index
-	err = m.gatherConnection(db, serv, acc)
-	if err != nil {
-		return err
+	if m.GatherConnection {
+		err = m.gatherConnection(db, serv, acc)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = m.gatherInnodb(db, serv, acc)
-	if err != nil {
-		return err
+
+	if m.GatherInnodb {
+		err = m.gatherInnodb(db, serv, acc)
+		if err != nil {
+			return err
+	}
 	}
 
 
@@ -715,7 +733,6 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accum
 		}
 
 		Megafiles :=[]string{"Com_insert","Com_select","Com_insert_select", "Com_replace","Com_replace_select","Com_update","Com_update_multi", "Com_delete","Com_delete_multi","Com_commit","Com_rollback","Com_stmt_exexute","Com_call_procedure"}
-
 		if m.MetricVersion < 2 {
 			//var found bool
 			for _, mapped := range v1.Mappings {
