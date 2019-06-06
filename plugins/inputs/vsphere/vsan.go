@@ -68,6 +68,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 			e.collectVsanPerCluster(ctx, clusterObj, vimClient, metrics, acc)
 		}(obj)
 	}
+	waitGroup.Wait()
 	return nil
 }
 
