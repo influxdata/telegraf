@@ -37,6 +37,9 @@ type Mysql struct {
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
+	GatherDbSizes                       bool     ` toml: "gather_db_sizes"`
+	GatherReplication                   bool     `toml:"gather_replication"`
+	GatherSnapshot                      bool     `toml:"gather_snapshot"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 	tls.ClientConfig
@@ -112,6 +115,16 @@ var sampleConfig = `
   #
   ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_DIGEST
   gather_perf_events_statements             = false
+
+  ## gather metrics of total table size, total index size, binlog size 
+  gather_db_sizes							= true
+
+  ## gather slave and master status
+  gather_replication						= true
+
+  ## gather the sql ,transcation snapshots
+  gather_snapshot							= true
+
   #
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   interval_slow                   = "30m"
@@ -405,6 +418,12 @@ const (
 			FROM information_schema.tables
 		WHERE table_schema = 'performance_schema' AND table_name = ?
 	`
+
+	tableAndIndexSizeQuery = `
+	SELECT TRUNCATE(SUM(data_length) / 1024 / 1024, 0)  AS Table_data_size, 
+		   TRUNCATE(SUM(index_length) / 1024 / 1024, 0) AS Table_index_size 
+	FROM   information_schema.TABLES 
+	`
 )
 
 func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
@@ -526,6 +545,12 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+
+	if m.GatherDbSizes {
+		err = m.gatherDbSizes( db, serv, acc )
+
+	}
+
 	return nil
 }
 
@@ -551,11 +576,10 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			return err
 		}
 
-
 		switch key {
 		case "max_binlog_cache_size", "max_binlog_stmt_cache_size",
 			"max_join_size", "sql_select_limit", "max_binlog_size":
-				log.Printf("skip uint key: %s, ", key )
+			log.Printf("skip uint key: %s, ", key)
 			continue
 		}
 
@@ -569,7 +593,6 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			fields[key] = value
 			log.Printf("variable, key %s, val: %v", key, value)
 		}
-
 
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
@@ -667,6 +690,34 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	acc.AddFields("mysql", fields, tags)
 	return nil
 }
+
+func getBinaryLogs(db *sql.DB ) ( size int64, count int64, err error) {
+	rows, err := db.Query(binaryLogsQuery)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer rows.Close()
+
+	var (
+		fileSize int64
+		fileName string
+	)
+
+	// iterate over rows and count the size and count of files
+	for rows.Next() {
+		if err := rows.Scan(&fileName, &fileSize); err != nil {
+			return 0, 0, err
+		}
+		size += fileSize
+		count++
+	}
+
+	// convert to MB
+	size = size / 1024 / 1024
+
+	return size, count, nil
+}
+
 
 // gatherGlobalStatuses can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
@@ -1651,6 +1702,69 @@ func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
 	} else {
 		return parseValue(value)
 	}
+}
+
+func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accumulator) error {
+	// parse DSN and save host as a tag
+	servtag := getDSNTag(serv)
+	tags := map[string]string{"server": servtag}
+
+	// binary log size
+	binLogSize, binLogCount, err := getBinaryLogs(db)
+	if err != nil {
+		return fmt.Errorf("error gathering binary log size: %s", err)
+	}
+
+	fields := map[string]interface{}{
+		"binary_log_size":  binLogSize,
+		"binary_log_count": binLogCount,
+	}
+
+
+	// table data and index size
+	rows, err := db.Query(tableAndIndexSizeQuery)
+	if err != nil {
+		return fmt.Errorf("error querying table and index size: %s", err)
+	}
+	defer rows.Close()
+
+	var (
+		table_data_size int64
+		table_index_size int64
+	)
+
+	for rows.Next() {
+		err := rows.Scan(&table_data_size, &table_index_size)
+		if err != nil {
+			return fmt.Errorf("error scaning table and index size %s", err)
+		}
+	}
+
+	fields["table_data_size"] = table_data_size
+	fields["table_index_size"] = table_index_size
+
+	// dis cache and tmp table size
+	var (
+		key string
+		value int64
+		allFound int = 0
+	)
+
+	rows, err = db.Query(globalStatusQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&key, &value)
+		if err != nil {
+			return fmt.Errorf("error scaning table and index size %s", err)
+		}
+	}
+
+
+	accumulator.AddGauge("mysql-dbsize", fields, tags)
 }
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1

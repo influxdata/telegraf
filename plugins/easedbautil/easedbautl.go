@@ -20,7 +20,7 @@ func AddGlobalTags(measurement string, metric *telegraf.Metric) error {
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return err
+		return erql
 	}
 
 	(*metric).AddTag("category", category)
