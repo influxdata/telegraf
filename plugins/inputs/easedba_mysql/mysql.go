@@ -420,10 +420,30 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	defer db.Close()
 
+
+	//throughput index
 	err = m.gatherGlobalStatuses(db, serv, acc)
 	if err != nil {
 		return err
 	}
+
+	//add megaeasdba index
+	err = m.gatherConnection(db, serv, acc)
+	if err != nil {
+		return err
+	}
+
+	err = m.gatherInnodb(db, serv, acc)
+	if err != nil {
+		return err
+	}
+
+
+
+
+
+
+
 
 	// Global Variables may be gathered less often
 	if len(m.IntervalSlow) > 0 {
@@ -668,10 +688,70 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	return nil
 }
 
+
+
 // gatherGlobalStatuses can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
-func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherGlobalStatuses(db *sql.DB ,serv string, acc telegraf.Accumulator) error {
+	// run query
+	rows, err := db.Query(globalStatusQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+
+	// parse the DSN and save host name as a tag
+	servtag := getDSNTag(serv)
+	tags := map[string]string{"server": servtag}
+	fields := make(map[string]interface{})
+	for rows.Next() {
+		var key string
+		var val sql.RawBytes
+
+		if err = rows.Scan(&key, &val); err != nil {
+			return err
+		}
+
+		Megafiles :=[]string{"Com_insert","Com_select","Com_insert_select", "Com_replace","Com_replace_select","Com_update","Com_update_multi", "Com_delete","Com_delete_multi","Com_commit","Com_rollback","Com_stmt_exexute","Com_call_procedure"}
+
+		if m.MetricVersion < 2 {
+			//var found bool
+			for _, mapped := range v1.Mappings {
+				if strings.HasPrefix(key, mapped.OnServer) {
+					// convert numeric values to integer
+					i, _ := strconv.Atoi(string(val))
+					//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+
+					// get some fileds for easedba
+					for _, r := range Megafiles {
+						if key == r {
+							fields[key] = i
+						}
+					}
+				}
+			}
+			// Send 20 fields at a time
+			if len(fields) >= 20 {
+				acc.AddFields("throughput", fields, tags)
+				fields = make(map[string]interface{})
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
+
+
+
+// gatherconnection can be used to get MySQL status metrics
+// the mappings of actual names and names of each status to be exported
+// to output is provided on mappings variable
+func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(globalStatusQuery)
 	if err != nil {
@@ -691,90 +771,97 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			return err
 		}
 
+		Megafiles :=[]string{"Connections","Aborted_clients","Aborted_connects","Locked_connects"}
+
 		if m.MetricVersion < 2 {
-			var found bool
+			//var found bool
 			for _, mapped := range v1.Mappings {
 				if strings.HasPrefix(key, mapped.OnServer) {
 					// convert numeric values to integer
 					i, _ := strconv.Atoi(string(val))
-					fields[mapped.InExport+key[len(mapped.OnServer):]] = i
-					found = true
+					//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+
+					// get some fileds for easedba
+					for _, r := range Megafiles {
+						if key == r {
+							fields[key] = i
+						}
+					}
 				}
 			}
 			// Send 20 fields at a time
 			if len(fields) >= 20 {
-				acc.AddFields("mysql", fields, tags)
+				acc.AddFields("connection", fields, tags)
 				fields = make(map[string]interface{})
 			}
-			if found {
-				continue
-			}
 
-			// search for specific values
-			switch key {
-			case "Queries":
-				i, err := strconv.ParseInt(string(val), 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
-				} else {
-					fields["queries"] = i
-				}
-			case "Questions":
-				i, err := strconv.ParseInt(string(val), 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
-				} else {
-					fields["questions"] = i
-				}
-			case "Slow_queries":
-				i, err := strconv.ParseInt(string(val), 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
-				} else {
-					fields["slow_queries"] = i
-				}
-			case "Connections":
-				i, err := strconv.ParseInt(string(val), 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
-				} else {
-					fields["connections"] = i
-				}
-			case "Syncs":
-				i, err := strconv.ParseInt(string(val), 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
-				} else {
-					fields["syncs"] = i
-				}
-			case "Uptime":
-				i, err := strconv.ParseInt(string(val), 10, 64)
-				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
-				} else {
-					fields["uptime"] = i
-				}
-			}
-		} else {
-			key = strings.ToLower(key)
-			if value, ok := m.parseValue(val); ok {
-				fields[key] = value
-			}
 		}
 
-		// Send 20 fields at a time
-		if len(fields) >= 20 {
-			acc.AddFields("mysql", fields, tags)
-			fields = make(map[string]interface{})
-		}
-	}
-	// Send any remaining fields
-	if len(fields) > 0 {
-		acc.AddFields("mysql", fields, tags)
 	}
 
 	return nil
 }
+
+
+
+
+// gathercinnodb can be used to get MySQL status metrics
+// the mappings of actual names and names of each status to be exported
+// to output is provided on mappings variable
+func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	// run query
+	rows, err := db.Query(globalStatusQuery)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// parse the DSN and save host name as a tag
+	servtag := getDSNTag(serv)
+	tags := map[string]string{"server": servtag}
+	fields := make(map[string]interface{})
+	for rows.Next() {
+		var key string
+		var val sql.RawBytes
+
+		if err = rows.Scan(&key, &val); err != nil {
+			return err
+		}
+
+		Megafiles :=[]string{"Innodb_rows_read","Innodb_rows_read_ratio","Innodb_rows_deleted", "Innodb_rows_deleted_ratio","Innodb_rows_inserted","Innodb_rows_inserted_ratio","Innodb_rows_updated", "Innodb_rows_updated_ratio","Innodb_buffer_pool_reads","Innodb_buffer_pool_read_requests", "Innodb_buffer_pool_write_requests","Innodb_buffer_pool_pages_flushed","Innodb_buffer_pool_wait_free", "Innodb_row_lock_current_waits"}
+
+		if m.MetricVersion < 2 {
+			//var found bool
+			for _, mapped := range v1.Mappings {
+				if strings.HasPrefix(key, mapped.OnServer) {
+					// convert numeric values to integer
+					i, _ := strconv.Atoi(string(val))
+					//fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+
+					// get some fileds for easedba
+					for _, r := range Megafiles {
+						if key == r {
+							fields[key] = i
+						}
+					}
+				}
+			}
+			// Send 20 fields at a time
+			if len(fields) >= 20 {
+				acc.AddFields("innodb", fields, tags)
+				fields = make(map[string]interface{})
+			}
+
+		}
+
+	}
+
+	return nil
+}
+
+
+
+
 
 // GatherProcessList can be used to collect metrics on each running command
 // and its state with its running count
