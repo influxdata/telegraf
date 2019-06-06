@@ -200,6 +200,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
 	}
 
+	faults, err := proc.PageFaults()
+	if err == nil {
+		fields[prefix+"minor_faults"] = faults.MinorFaults
+		fields[prefix+"major_faults"] = faults.MajorFaults
+		fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
+		fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
+	}
+
 	io, err := proc.IOCounters()
 	if err == nil {
 		fields[prefix+"read_count"] = io.ReadCount
@@ -287,11 +295,19 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 	for _, pid := range pids {
 		info, ok := prevInfo[pid]
 		if ok {
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := info.Name(); name == "" {
+				continue
+			}
 			procs[pid] = info
 		} else {
 			proc, err := p.createProcess(pid)
 			if err != nil {
 				// No problem; process may have ended after we found it
+				continue
+			}
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := proc.Name(); name == "" {
 				continue
 			}
 			procs[pid] = proc

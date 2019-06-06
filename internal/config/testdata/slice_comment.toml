@@ -1,0 +1,5 @@
+[[outputs.http]]
+  scopes = [
+    # comment
+    "test" # comment
+  ]

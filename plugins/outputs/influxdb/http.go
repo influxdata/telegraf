@@ -448,3 +448,7 @@ func makeQueryURL(loc *url.URL) (string, error) {
 	}
 	return u.String(), nil
 }
+
+func (c *httpClient) Close() {
+	internal.CloseIdleConnections(c.client)
+}

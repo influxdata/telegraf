@@ -80,7 +80,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/toml"
-  branch = "master"
+  branch = "telegraf"
 
 [[constraint]]
   name = "github.com/influxdata/wlog"
@@ -88,7 +88,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.2.0"
+  version = "3.4.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
@@ -288,3 +288,11 @@
 [[constraint]]
   name = "github.com/google/go-github"
   version = "24.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/openconfig/gnmi"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cisco-ie/nx-telemetry-proto"
