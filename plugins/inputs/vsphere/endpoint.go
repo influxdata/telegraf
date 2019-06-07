@@ -666,7 +666,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 				}
 				s += ip
 			}
-			lookup["nic/" + strconv.Itoa(int(net.DeviceConfigId))] = s
+			lookup["nic/"+strconv.Itoa(int(net.DeviceConfigId))] = s
 		}
 
 		// Sometimes Config is unknown and returns a nil pointer
@@ -692,13 +692,13 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name,
-			ref: r.ExtensibleManagedObject.Reference(),
-			parentRef: r.Runtime.Host,
-			guest: guest,
-			altID: uuid,
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Runtime.Host,
+			guest:        guest,
+			altID:        uuid,
 			customValues: cvs,
-			lookup: lookup,
+			lookup:       lookup,
 		}
 	}
 	return m, nil
@@ -1152,7 +1152,7 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			index := 0
 			if ip, ok := objectRef.lookup[key]; ok {
 				for _, s := range strings.Split(ip, ",") {
-					t["ip" + strconv.Itoa(index)] = s
+					t["ip"+strconv.Itoa(index)] = s
 					index++
 				}
 			}
