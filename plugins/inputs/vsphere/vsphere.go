@@ -178,10 +178,6 @@ var sampleConfig = `
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default for Datastores only
 
-  ## Send custom attributes of hosts and VMs as tags
-  # custom_attributes_include = [] ## if omitted or empty, all custom attributes are collected
-  custom_attributes_exclude = ["*] ## By default, all custom attributes are excluded, i.e. none are collected
-
   ## Plugin Settings  
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
@@ -223,7 +219,7 @@ var sampleConfig = `
   ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
   # custom_attribute_include = []
-  # custom_attribute_exclude = ["*"] # Default is to exclude everything
+  # custom_attribute_exclude = ["*"] 
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
