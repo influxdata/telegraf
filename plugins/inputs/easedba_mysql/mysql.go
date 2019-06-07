@@ -38,6 +38,7 @@ type Mysql struct {
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
+
 	GatherDbSizes                       bool     ` toml: "gather_db_sizes"`
 	GatherReplication                   bool     `toml:"gather_replication"`
 	GatherSnapshot                      bool     `toml:"gather_snapshot"`
@@ -566,6 +567,14 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	if m.GatherDbSizes {
 		err = m.gatherDbSizes(db, serv, acc)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	if m.GatherReplication {
+		err = m.gatherReplication(db, serv, acc)
 		if err != nil {
 			return err
 		}
