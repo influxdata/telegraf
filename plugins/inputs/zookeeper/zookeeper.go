@@ -17,6 +17,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+var zookeeperFormatRE = regexp.MustCompile(`^zk_(\w+)\s+([\w\.\-]+)`)
+
 // Zookeeper is a zookeeper plugin
 type Zookeeper struct {
 	Servers []string
@@ -136,9 +138,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	fields := make(map[string]interface{})
 	for scanner.Scan() {
 		line := scanner.Text()
-
-		re := regexp.MustCompile(`^zk_(\w+)\s+([\w\.\-]+)`)
-		parts := re.FindStringSubmatch(string(line))
+		parts := zookeeperFormatRE.FindStringSubmatch(string(line))
 
 		if len(parts) != 3 {
 			return fmt.Errorf("unexpected line in mntr response: %q", line)
