@@ -39,14 +39,14 @@ type Mysql struct {
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 
-	GatherDbSizes                       bool     ` toml: "gather_db_sizes"`
-	GatherReplication                   bool     `toml:"gather_replication"`
-	GatherSnapshot                      bool     `toml:"gather_snapshot"`
-	GatherInnodb                        bool     `toml:"gather_innodb"`
-	GatherGlobalStatuses                bool     `toml:"gather_global_statuses"`
-	GatherConnection                    bool     `toml:"gather_connection_statuses"`
-	IntervalSlow                        string   `toml:"interval_slow"`
-	MetricVersion                       int      `toml:"metric_version"`
+	GatherDbSizes        bool   ` toml: "gather_db_sizes"`
+	GatherReplication    bool   `toml:"gather_replication"`
+	GatherSnapshot       bool   `toml:"gather_snapshot"`
+	GatherInnodb         bool   `toml:"gather_innodb"`
+	GatherGlobalStatuses bool   `toml:"gather_global_statuses"`
+	GatherConnection     bool   `toml:"gather_connection_statuses"`
+	IntervalSlow         string `toml:"interval_slow"`
+	MetricVersion        int    `toml:"metric_version"`
 	tls.ClientConfig
 }
 
@@ -423,8 +423,6 @@ const (
 			FROM information_schema.tables
 		WHERE table_schema = 'performance_schema' AND table_name = ?
 	`
-
-
 )
 
 func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
@@ -581,6 +579,13 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	}
 
+	if m.GatherSnapshot {
+		err = m.gatherSnapshot(db, serv, acc)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -721,7 +726,6 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 	return nil
 }
 
-
 // gatherGlobalStatuses can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
@@ -817,8 +821,7 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 			return err
 		}
 
-
-		if converted, ok := easedba_v1.InnodbMappings[key];ok {
+		if converted, ok := easedba_v1.InnodbMappings[key]; ok {
 			i, _ := strconv.Atoi(string(val))
 			fields[converted] = i
 		}
@@ -1704,7 +1707,6 @@ func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
 		return parseValue(value)
 	}
 }
-
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
 func parseValue(value sql.RawBytes) (interface{}, bool) {

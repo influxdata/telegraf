@@ -7,12 +7,13 @@ import (
 )
 
 var (
-	SchemaThroughput  = "mysql-throughput"
-	SchemaConnection  = "mysql-connection"
-	SchemaInnodb      = "mysql-innodb"
-	SchemaDbSize      = "mysql-dbsize"
-	SchemaReplication = "mysql-replication"
-	SchemaSnapshot    = "mysql-snapshot"
+	SchemaThroughput    = "mysql-throughput"
+	SchemaConnection    = "mysql-connection"
+	SchemaInnodb        = "mysql-innodb"
+	SchemaDbSize        = "mysql-dbsize"
+	SchemaReplication   = "mysql-replication"
+	SchemaSnapshot      = "mysql-snapshot"
+	SchemaLongSqlAndTrx = "mysql-longsql"
 
 	SchemaCpu    = "cpu"
 	SchemaDisk   = "disk"
@@ -34,6 +35,7 @@ var ThroughtMappings = map[string]string{
 	"Com_rollback":       "com_rollback",
 	"Com_stmt_exexute":   "com_stmt_exexute",
 	"Com_call_procedure": "com_call_procedure",
+	"Slow_queries":       "slow_queries",
 }
 
 var ConnectionMappings = map[string]string{
@@ -70,17 +72,17 @@ var DbsizeMappings = map[string]string{
 }
 
 var ReplicationMappings = map[string]string{
-	"Slave_IO_Running":         "slave_IO_Running",
-	"Slave_SQL_Running":        "slave_SQL_Running",
-	"Seconds_Behind_Master":    "seconds_Behind_Master",
-	"Read_Master_Log_Pos":      "read_Master_Log_Pos",
-	"Exec_Master_Log_Pos":      "exec_Master_Log_Pos",
-	"SQL_Delay":                "sQL_Delay",
-	"Last_SQL_Errno":           "last_SQL_Errno",
-	"Last_IO_Errno":            "last_IO_Errno",
-	"Last_SQL_Error":           "last_SQL_Error",
-	"Last_IO_Error":            "last_IO_Error",
-	"Master_position":          "master_position",
+	"Slave_IO_Running":      "slave_IO_Running",
+	"Slave_SQL_Running":     "slave_SQL_Running",
+	"Seconds_Behind_Master": "seconds_Behind_Master",
+	"Read_Master_Log_Pos":   "read_Master_Log_Pos",
+	"Exec_Master_Log_Pos":   "exec_Master_Log_Pos",
+	"SQL_Delay":             "sQL_Delay",
+	"Last_SQL_Errno":        "last_SQL_Errno",
+	"Last_IO_Errno":         "last_IO_Errno",
+	"Last_SQL_Error":        "last_SQL_Error",
+	"Last_IO_Error":         "last_IO_Error",
+	"Master_position":       "master_position",
 }
 
 var SnapshotMappings = map[string]string{
@@ -88,6 +90,54 @@ var SnapshotMappings = map[string]string{
 	"Slow_query_count": "slow_query_count",
 	"Long_trx_count":   "long_trx_count",
 	"Trx_snapshot":     "trx_snapshot",
+}
+
+type RunningSql struct {
+	ProcessId uint64         `json:pricess_id`
+	User      string         `json:"user"`
+	Host      string         `json:"host"`
+	Db        sql.NullString `json:"db"`
+	Time      int            `json:"time"`
+	SqlText   sql.NullString `json:"sql_text"`
+	State     sql.NullString `json:"state"`
+}
+
+type RunningSqls struct {
+	RunningSqlList []RunningSql `json:"running_sql_list"`
+}
+
+type RunningTransaction struct {
+	ProcessId           uint64         `json:"process_id"`
+	ThreadId            uint64         `json:"thread_id"`
+	TrxId               string         `json:"trx_id"`
+	TrxState            string         `json:"trx_state"`
+	TrxStarted          string         `json:"trx_started"`
+	TrxWaitStarted      sql.NullString `json:"trx_wait_started"`
+	TrxQuery            sql.NullString `json:"trx_query"`
+	TrxIsolationLevel   string         `json:"trx_isolation_level"`
+	Blocking_trx_id     sql.NullString `json:"blocking_trx_id"`
+	Blocking_thread_id  sql.NullInt64  `json:"blocking_thread_id"`
+	Blocking_process_id sql.NullInt64  `json:"blocking_process_id"`
+	User                string         `json:"user"`
+	Client              string         `json:"client"`
+	Db                  sql.NullString `json:"db"`
+}
+
+type RunningTransactions struct {
+	RunningTransactionList []RunningTransaction `json:"running_transaction_list"`
+}
+
+type TransactionHistory struct {
+	ProcessId uint64         `json:"process_id"`
+	ThreadId  uint64         `json:"thread_id"`
+	SqlText   sql.NullString `json:"sql_text"`
+	User      string         `json:"user"`
+	Client    string         `json:"client"`
+	Db        sql.NullString `json:"db"`
+}
+
+type TransactionHistories struct {
+	TransactionHistoryList []TransactionHistory `json:"transaction_history_list"`
 }
 
 func ParseValue(value sql.RawBytes) (float64, bool) {

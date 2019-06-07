@@ -12,8 +12,8 @@ var (
 	logbinWarningFrequency = 0
 
 	tableAndIndexSizeQuery = `
-	SELECT TRUNCATE(SUM(data_length) / 1024 / 1024, 0)  AS Table_data_size, 
-		   TRUNCATE(SUM(index_length) / 1024 / 1024, 0) AS Table_index_size 
+	SELECT TRUNCATE(SUM(data_length) , 0)  AS Table_data_size, 
+		   TRUNCATE(SUM(index_length), 0) AS Table_index_size 
 	FROM   information_schema.TABLES 
 	`
 )
@@ -78,7 +78,7 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 	return nil
 }
 
-// get the total binary log size in MBytes
+// get the total binary log size in bytes
 func getBinaryLogs(db *sql.DB) (size int64, err error) {
 	rows, err := db.Query("SHOW VARIABLES LIKE 'log_bin'")
 	if err != nil {
@@ -111,9 +111,6 @@ func getBinaryLogs(db *sql.DB) (size int64, err error) {
 		}
 		size += fileSize
 	}
-
-	// convert to MB
-	size = size / 1024 / 1024
 
 	return size, nil
 }
