@@ -217,6 +217,14 @@ var sampleConfig = `
   ## preserve the full precision when averaging takes place.
   # use_int_samples = true
 
+  ## Custom attributes from vCenter can be very useful for queries in order to slice the
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  # by default, since they can add a considerable amount of tags to the resulting metrics. To
+  # enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  # to select the attributes you want to include. 
+  # custom_attribute_include = []
+  # custom_attribute_exclude = ["*"] # Default is to exclude everything
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
