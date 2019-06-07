@@ -183,6 +183,9 @@ vm_metric_exclude = [ "*" ]
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
   ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include. 
+  # by default, since they can add a considerable amount of tags to the resulting metrics. To
+  # enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  # to select the attributes you want to include. 
   # custom_attribute_include = []
   # custom_attribute_exclude = ["*"] # Default is to exclude everything
 

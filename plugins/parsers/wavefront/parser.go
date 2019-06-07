@@ -57,7 +57,6 @@ func NewWavefrontParser(defaultTags map[string]string) *WavefrontParser {
 	wp := &WavefrontParser{defaultTags: defaultTags}
 	wp.parsers = &sync.Pool{
 		New: func() interface{} {
-			log.Printf("D! [parsers.wavefront] Creating new parser for %s", wp)
 			return NewPointParser(wp)
 		},
 	}
