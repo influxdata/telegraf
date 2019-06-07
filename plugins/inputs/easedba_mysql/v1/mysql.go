@@ -222,7 +222,7 @@ var InnodbMappings = map[string]string{
 	"Innodb_row_lock_current_waits":     "innodb_row_lock_current_waits",
 }
 
-var dbsizeMappings = map[string]string{
+var DbsizeMappings = map[string]string{
 	"Binlog_cache_disk_use":      "binlog_cache_disk_use",
 	"Binlog_stmt_cache_disk_use": "binlog_stmt_cache_disk_use",
 	"Created_tmp_disk_tables":    "created_tmp_disk_tables",
@@ -231,7 +231,7 @@ var dbsizeMappings = map[string]string{
 	"Binary_log_size":            "binary_log_size",
 }
 
-var replicationMappings = map[string]string{
+var ReplicationMappings = map[string]string{
 	"Slave_IO_State":           "slave_IO_State",
 	"Slave_IO_Running":         "slave_IO_Running",
 	"Slave_SQL_Running":        "slave_SQL_Running",
@@ -247,7 +247,7 @@ var replicationMappings = map[string]string{
 	"Master_Executed_Gtid_Set": "master_Executed_Gtid_Set",
 }
 
-var snapshotMappings = map[string]string{
+var SnapshotMappings = map[string]string{
 	"Sql_snapshot":     "sql_snapshot",
 	"Slow_query_count": "slow_query_count",
 	"Long_trx_count":   "long_trx_count",
