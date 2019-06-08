@@ -18,9 +18,7 @@ var (
 	`
 )
 
-func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accumulator) error {
-	// parse DSN and save host as a tag
-	servtag := getDSNTag(serv)
+func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accumulator, servtag string) error {
 	tags := map[string]string{"server": servtag}
 
 	// binary log size
@@ -90,7 +88,7 @@ func getBinaryLogs(db *sql.DB) (size int64, err error) {
 	rows.NextResultSet()
 	if rows.Scan(&key, &val); string(val) != "ON" {
 		if logbinWarningFrequency%10 == 0 {
-			log.Printf("WARNING: binary log not open, skip metrics collection.")
+			log.Printf("INFO: binary log not open, skip metrics collection.")
 		}
 		logbinWarningFrequency++
 

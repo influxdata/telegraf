@@ -14,9 +14,7 @@ var (
 	showMasterStatus = `SHOW MASTER STATUS`
 )
 
-func (m *Mysql) gatherReplication(db *sql.DB, serv string, accumulator telegraf.Accumulator) error {
-	// parse DSN and save host as a tag
-	servtag := getDSNTag(serv)
+func (m *Mysql) gatherReplication(db *sql.DB, serv string, accumulator telegraf.Accumulator, servtag string) error {
 	tags := map[string]string{"server": servtag}
 
 	fields := make(map[string]interface{})

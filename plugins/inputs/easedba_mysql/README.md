@@ -1,318 +1,320 @@
-# MySQL Input Plugin
 
-This plugin gathers the statistic data from MySQL server
 
-* Global statuses
-* Global variables
-* Slave statuses
-* Binlog size
-* Process list
-* User Statistics
-* Info schema auto increment columns
-* InnoDB metrics
-* Table I/O waits
-* Index I/O waits
-* Perf Schema table lock waits
-* Perf Schema event waits
-* Perf Schema events statements
-* File events statistics
-* Table schema statistics
+- [Mysql Monitoring Scheam](#mysql-monitoring-scheam)
+  - [1 Indices](#1-indices)
+    - [1.1 Document json schema](#11-document-json-schema)
+  - [2 global tags](#2-global-tags)
+  - [3 Metric fields](#3-metric-fields)
+    - [3.1 Throughtput Index](#31-throughtput-index)
+    - [3.2 Connection Index](#32-connection-index)
+    - [3.3 innodb Index](#33-innodb-index)
+    - [3.4 disk index](#34-disk-index)
+    - [3.5 replication index](#35-replication-index)
+    - [3.6 snapshot index](#36-snapshot-index)
+    - [3.7 network index](#37-network-index)
+    - [3.8 disk index](#38-disk-index)
+    - [3.9 cpu index](#39-cpu-index)
+    - [3.10 Mem index](#310-mem-index)
 
-### Configuration
 
-```toml
-# Read metrics from one or many mysql servers
-[[inputs.mysql]]
-  ## specify servers via a url matching:
-  ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify]]
-  ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
-  ##  e.g.
-  ##    servers = ["user:passwd@tcp(127.0.0.1:3306)/?tls=false"]
-  ##    servers = ["user@tcp(127.0.0.1:3306)/?tls=false"]
-  #
-  ## If no servers are specified, then localhost is used as the host.
-  servers = ["tcp(127.0.0.1:3306)/"]
-  ## the limits for metrics form perf_events_statements
-  perf_events_statements_digest_text_limit  = 120
-  perf_events_statements_limit              = 250
-  perf_events_statements_time_limit         = 86400
-  #
-  ## if the list is empty, then metrics are gathered from all database tables
-  table_schema_databases                    = []
-  #
-  ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
-  gather_table_schema                       = false
-  #
-  ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
-  gather_process_list                       = true
-  #
-  ## gather thread state counts from INFORMATION_SCHEMA.USER_STATISTICS
-  gather_user_statistics                    = true
-  #
-  ## gather auto_increment columns and max values from information schema
-  gather_info_schema_auto_inc               = true
-  #
-  ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
-  gather_innodb_metrics                     = true
-  #
-  ## gather metrics from SHOW SLAVE STATUS command output
-  gather_slave_status                       = true
-  #
-  ## gather metrics from SHOW BINARY LOGS command output
-  gather_binary_logs                        = false
-  #
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
-  gather_table_io_waits                     = false
-  #
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
-  gather_table_lock_waits                   = false
-  #
-  ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_INDEX_USAGE
-  gather_index_io_waits                     = false
-  #
-  ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
-  gather_event_waits                        = false
-  #
-  ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
-  gather_file_events_stats                  = false
-  #
-  ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_DIGEST
-  gather_perf_events_statements             = false
-  #
-  ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
-  interval_slow                             = "30m"
 
-  ## Optional TLS Config (will be used if tls=custom parameter specified in server uri)
-  tls_ca = "/etc/telegraf/ca.pem"
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
+# Mysql Monitoring Scheam
+
+
+> ATTENTION: For convenience, all fields in the document are reserve the same form with DataBase raw resultset, but in the Elasticsearch, all fields are converted to snake case to save.
+
+
+
+
+## 1 Indices
+
+| Index mapping template               | Index pattern                                    | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| :----------------------------------- | :----------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| easedba-monitor-metrics-\*           | easedba-monitor-metrics-\*-YYYY.MM.DD*           | Saves time series based metrics of monitored object from different categories. The metrics from different monitored object will be saved into a dedicated document type.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| easedba-monitor-aggregate-metrics-\* | easedba-monitor-aggregate-metrics-\*-YYYY.MM.DD* | Saves calculated performance statistics from different dimensions monitoring requirement needed. The statistics from different dimensions will be saved into a dedicated document type. Due to the statistic calculation are executed on these input metrics directly as streaming and the results will be saved into this index in advance, so the statistics can be loaded and used without any further aggregation（e.g. grouping and computing). This will definitely help the performance of ad-hoc query on the fine-grained metrics ES stored, especially on a large metrics data volume. This index was  designed only to save these statistics ones can be calculated by a simple (fast) and fixed (can be implemented on product design stage instead of runtime stage) functions. |
+| easedba-monitor-logs-\*              | easedba-monitor-logs-\*-YYYY.MM.DD*              | Saves the logs outputted from OS, middleware and application. The different logs will be saved into a dedicated document type.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+### 1.1 Document json schema
+
+
+The data collected from the agent were saved as documents in the Elasticsearch. According to current technical selection(telegraf), in order to decrease the modification of agent, we make the documents JSON schema consistent with the [telegraf metrics model](!https://docs.influxdata.com/telegraf/v1.10/concepts/metrics/). We will try our best to leverage this model to organize our data.
+
+In our scene, we have two part of monitoring data. One is base configuration and another is monitor metrics. The configuration we described as **global tags**, the metrics are **metrics fields**.
+
+So,  the data sent by the agent must follow JSON formation.
+
+```
+{
+    "fields":{
+      METRIC FIELDS 
+      ...
+    },
+    "name":"mysql",
+    "tags":{
+      GLOBAL TAGS
+      ...
+    },
+    "timestamp":1559118730
+}
 ```
 
-#### Metric Version
+The follow chapters will describe details inforamtion about global tags and  metric fields.
 
-When `metric_version = 2`, a variety of field type issues are corrected as well
-as naming inconsistencies.  If you have existing data on the original version
-enabling this feature will cause a `field type error` when inserted into
-InfluxDB due to the change of types.  For this reason, you should keep the
-`metric_version` unset until you are ready to migrate to the new format.
 
-If preserving your old data is not required you may wish to drop conflicting
-measurements:
-```
-DROP SERIES from mysql
-DROP SERIES from mysql_variables
-DROP SERIES from mysql_innodb
-```
 
-Otherwise, migration can be performed using the following steps:
+## 2 global tags
 
-1. Duplicate your `mysql` plugin configuration and add a `name_suffix` and
-`metric_version = 2`, this will result in collection using both the old and new
-style concurrently:
-   ```toml
-   [[inputs.mysql]]
-     servers = ["tcp(127.0.0.1:3306)/"]
+| Field       |  Type  | Indexed? | Analyzed? | Required? | Description                                                                                                                                                                            |
+| :---------- | :----: | :------: | :-------: | :-------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| timestamp   |  date  |   true   |   false   |   true    | The timestamp of current document saved into ES, collectd or SM provided timestamp should be applied to this field, otherwise uses ES generated one. This field uses **UTC** timezone. |
+| category    | string |   true   |   false   |   true    | In our case, the value of this field is ``infrastructure``, ``platform`` or ``application``.                                                                                           |
+| host_name   | string |   true   |   false   |   true    | The name of host original data collected from. For example, it could be used to indicates a particular application instance.                                                           |
+| host_ipv4   | string |   true   |   false   |   true    | The IPv4 address of the host original data collected from. For instance, it could be used to indicates a deployed application instance.                                                |
+| system      | string |   true   |   false   |   true    | The name of monitored system.  The busisness domain name is recommended for mysql instance, e.g. CRM, ORDER etc.                                                                       |
+| db_instance | string |   true   |   false   |   true    | A name to indicate a single db instace. A `system` (CRM) may contains 1 writing `db_instance` and 2 read-only `db_instance`                                                            |
 
-   [[inputs.mysql]]
-     name_suffix = "_v2"
-     metric_version = 2
 
-     servers = ["tcp(127.0.0.1:3306)/"]
-   ```
 
-2. Upgrade all affected Telegraf clients to version >=1.6.
+## 3 Metric fields
 
-   New measurements will be created with the `name_suffix`, for example::
-   - `mysql_v2`
-   - `mysql_variables_v2`
+### 3.1 Throughtput Index
 
-3. Update charts, alerts, and other supporting code to the new format.
-4. You can now remove the old `mysql` plugin configuration and remove old
-   measurements.
+* Index mapping template: `easedba-monitor-metrics-mysql-throughput`
+* Category: ``platform``
+* SQL : `show global status`
 
-If you wish to remove the `name_suffix` you may use Kapacitor to copy the
-historical data to the default name.  Do this only after retiring the old
-measurement name.
+| Field              |  Type   | Indexed? | Analyzed? | doc_values | Required? | Unit | Description |
+| :----------------- | :-----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| Com_insert         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_select         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_insert_select  | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_replace        | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_replace_select | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_update         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_update_multi   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_delete         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_delete_multi   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_commit         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_rollback       | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_stmt_exexute   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Com_call_procedure | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Slow_sql_count     | integer |    no    |    yes    |     no     | yes       | hnum |             |
 
-1. Use the techinique described above to write to multiple locations:
-   ```toml
-   [[inputs.mysql]]
-     servers = ["tcp(127.0.0.1:3306)/"]
-     metric_version = 2
 
-   [[inputs.mysql]]
-     name_suffix = "_v2"
-     metric_version = 2
+### 3.2 Connection Index
+* Index mapping template: `easedba-monitor-metrics-mysql-connection`
+* Category: ``platform``
+* SQL : `show global status`
 
-     servers = ["tcp(127.0.0.1:3306)/"]
-   ```
-2. Create a TICKScript to copy the historical data:
-   ```
-   dbrp "telegraf"."autogen"
+| Field             |  Type   | Indexed? | Analyzed? | doc_values | Required? | Unit | Description |
+| :---------------- | :-----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| Threads_connected | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Aborted_clients   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Aborted_connects  | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Locked_connects   | integer |    no    |    no     |    yes     | yes       | hnum |             |
 
-   batch
-       |query('''
-           SELECT * FROM "telegraf"."autogen"."mysql_v2"
-       ''')
-           .period(5m)
-           .every(5m)
-           |influxDBOut()
-                   .database('telegraf')
-                   .retentionPolicy('autogen')
-                   .measurement('mysql')
-   ```
-3. Define a task for your script:
-   ```sh
-   kapacitor define copy-measurement -tick copy-measurement.task
-   ```
-4. Run the task over the data you would like to migrate:
-   ```sh
-   kapacitor replay-live batch -start 2018-03-30T20:00:00Z -stop 2018-04-01T12:00:00Z -rec-time -task copy-measurement
-   ```
-5. Verify copied data and repeat for other measurements.
 
-### Metrics:
-* Global statuses - all numeric and boolean values of `SHOW GLOBAL STATUSES`
-* Global variables - all numeric and boolean values of `SHOW GLOBAL VARIABLES`
-* Slave status - metrics from `SHOW SLAVE STATUS` the metrics are gathered when
-the single-source replication is on. If the multi-source replication is set,
-then everything works differently, this metric does not work with multi-source
-replication.
-    * slave_[column name]()
-* Binary logs - all metrics including size and count of all binary files.
-Requires to be turned on in configuration.
-    * binary_size_bytes(int, number)
-    * binary_files_count(int, number)
-* Process list - connection metrics from processlist for each user. It has the following tags
-    * connections(int, number)
-* User Statistics - connection metrics from user statistics for each user. It has the following fields
-    * access_denied
-    * binlog_bytes_written
-    * busy_time
-    * bytes_received
-    * bytes_sent
-    * commit_transactions
-    * concurrent_connections
-    * connected_time
-    * cpu_time
-    * denied_connections
-    * empty_queries
-    * hostlost_connections
-    * other_commands
-    * rollback_transactions
-    * rows_fetched
-    * rows_updated
-    * select_commands
-    * server
-    * table_rows_read
-    * total_connections
-    * total_ssl_connections
-    * update_commands
-    * user
-* Perf Table IO waits - total count and time of I/O waits event for each table
-and process. It has following fields:
-    * table_io_waits_total_fetch(float, number)
-    * table_io_waits_total_insert(float, number)
-    * table_io_waits_total_update(float, number)
-    * table_io_waits_total_delete(float, number)
-    * table_io_waits_seconds_total_fetch(float, milliseconds)
-    * table_io_waits_seconds_total_insert(float, milliseconds)
-    * table_io_waits_seconds_total_update(float, milliseconds)
-    * table_io_waits_seconds_total_delete(float, milliseconds)
-* Perf index IO waits - total count and time of I/O waits event for each index
-and process. It has following fields:
-    * index_io_waits_total_fetch(float, number)
-    * index_io_waits_seconds_total_fetch(float, milliseconds)
-    * index_io_waits_total_insert(float, number)
-    * index_io_waits_total_update(float, number)
-    * index_io_waits_total_delete(float, number)
-    * index_io_waits_seconds_total_insert(float, milliseconds)
-    * index_io_waits_seconds_total_update(float, milliseconds)
-    * index_io_waits_seconds_total_delete(float, milliseconds)
-* Info schema autoincrement statuses - autoincrement fields and max values
-for them. It has following fields:
-    * auto_increment_column(int, number)
-    * auto_increment_column_max(int, number)
-* InnoDB metrics - all metrics of information_schema.INNODB_METRICS with a status "enabled"
-* Perf table lock waits - gathers total number and time for SQL and external
-lock waits events for each table and operation. It has following fields.
-The unit of fields varies by the tags.
-    * read_normal(float, number/milliseconds)
-    * read_with_shared_locks(float, number/milliseconds)
-    * read_high_priority(float, number/milliseconds)
-    * read_no_insert(float, number/milliseconds)
-    * write_normal(float, number/milliseconds)
-    * write_allow_write(float, number/milliseconds)
-    * write_concurrent_insert(float, number/milliseconds)
-    * write_low_priority(float, number/milliseconds)
-    * read(float, number/milliseconds)
-    * write(float, number/milliseconds)
-* Perf events waits - gathers total time and number of event waits
-    * events_waits_total(float, number)
-    * events_waits_seconds_total(float, milliseconds)
-* Perf file events statuses - gathers file events statuses
-    * file_events_total(float,number)
-    * file_events_seconds_total(float, milliseconds)
-    * file_events_bytes_total(float, bytes)
-* Perf events statements - gathers attributes of each event
-    * events_statements_total(float, number)
-    * events_statements_seconds_total(float, millieconds)
-    * events_statements_errors_total(float, number)
-    * events_statements_warnings_total(float, number)
-    * events_statements_rows_affected_total(float, number)
-    * events_statements_rows_sent_total(float, number)
-    * events_statements_rows_examined_total(float, number)
-    * events_statements_tmp_tables_total(float, number)
-    * events_statements_tmp_disk_tables_total(float, number)
-    * events_statements_sort_merge_passes_totales(float, number)
-    * events_statements_sort_rows_total(float, number)
-    * events_statements_no_index_used_total(float, number)
-* Table schema - gathers statistics of each schema. It has following measurements
-    * info_schema_table_rows(float, number)
-    * info_schema_table_size_data_length(float, number)
-    * info_schema_table_size_index_length(float, number)
-    * info_schema_table_size_data_free(float, number)
-    * info_schema_table_version(float, number)
 
-## Tags
-* All measurements has following tags
-    * server (the host name from which the metrics are gathered)
-* Process list measurement has following tags
-    * user (username for whom the metrics are gathered)
-* User Statistics measurement has following tags
-    * user (username for whom the metrics are gathered)
-* Perf table IO waits measurement has following tags
-    * schema
-    * name (object name for event or process)
-* Perf index IO waits has following tags
-    * schema
-    * name
-    * index
-* Info schema autoincrement statuses has following tags
-    * schema
-    * table
-    * column
-* Perf table lock waits has following tags
-    * schema
-    * table
-    * sql_lock_waits_total(fields including this tag have numeric unit)
-    * external_lock_waits_total(fields including this tag have numeric unit)
-    * sql_lock_waits_seconds_total(fields including this tag have millisecond unit)
-    * external_lock_waits_seconds_total(fields including this tag have millisecond unit)
-* Perf events statements has following tags
-    * event_name
-* Perf file events statuses has following tags
-    * event_name
-    * mode
-* Perf file events statements has following tags
-    * schema
-    * digest
-    * digest_text
-* Table schema has following tags
-    * schema
-    * table
-    * component
-    * type
-    * engine
-    * row_format
-    * create_options
+### 3.3 innodb  Index
+* Index mapping template: `easedba-monitor-metrics-mysql-innodb`
+* Category: ``platform``
+* SQL : `show global status`
+* telegraf should calcualte ratio
+
+| Field                             |  Type   | Indexed? | Analyzed? | doc_values | Required? | Unit | Description |
+| :-------------------------------- | :-----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| Innodb_rows_read                  | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_rows_read_ratio            | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_rows_deleted               | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_rows_deleted_ratio         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_rows_inserted              | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_rows_inserted_ratio        | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_rows_updated               | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_rows_updated_ratio         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_buffer_pool_reads          | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_buffer_pool_read_requests  | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_buffer_pool_write_requests | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_buffer_pool_pages_flushed  | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_buffer_pool_wait_free      | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Innodb_row_lock_current_waits     | integer |    no    |    no     |    yes     | yes       | hnum |             |
+
+
+### 3.4 disk  index
+* index mapping template: `easedba-monitor-metrics-mysql-disk`
+* category: `platform`
+* sql : `show global status`
+* sql : `select truncate(sum(data_length)/1024/1024,0) as data_size, truncate(sum(index_length)/1024/1024,0) as index_size from information_schema.tables;`
+* sql : sum of `show binary logs` 
+
+| field                      |  type   | indexed? | analyzed? | doc_values | required? | Unit | Description |
+| :------------------------- | :-----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| Binlog_cache_disk_use      | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Binlog_stmt_cache_disk_use | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Created_tmp_disk_tables    | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Table_data_size            | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Table_index_size           | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Binary_log_size            | integer |    no    |    no     |    yes     | yes       | hnum |             |
+
+
+### 3.5 replication index
+* index mapping template: `easedba-monitor-metrics-mysql-replication`
+* category: `platform`
+* SQL : `show slave status`
+
+| field                 |  type   | indexed? | analyzed? | doc_values | required? | Unit | Description |
+| :-------------------- | :-----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| Slave_IO_Running      |  bool   |    no    |    no     |    yes     | yes       | hnum |             |
+| Slave_SQL_Running     |  bool   |    no    |    no     |    yes     | yes       | hnum |             |
+| Seconds_Behind_Master | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Read_Master_Log_Pos   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Exec_Master_Log_Pos   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| SQL_Delay             | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Last_SQL_Errno        | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Last_IO_Errno         | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| Last_SQL_Error        | string  |    no    |    no     |    yes     | yes       | hnum |             |
+| Last_IO_Error         | string  |    no    |    no     |    yes     | yes       | hnum |             |
+
+### 3.6 snapshot index
+* index mapping template: `easedba-monitor-metrics-mysql-slapshot`
+* category: ``platform``
+* Running SQL : 
+
+  ```
+  SELECT
+      id process_id,
+      user,
+      host,
+      db,
+      time,
+      info sql_text,
+      state 
+  FROM
+      information_schema.processlist 
+  WHERE
+      info IS NOT NULL;
+  ```
+* Blocked Transactions :
+
+  ```
+  SELECT
+    a.trx_mysql_thread_id process_id,
+    d.thread_id,
+    a.trx_id,
+    a.trx_state,
+    a.trx_started,
+    a.trx_wait_started,
+    a.trx_query,
+    a.trx_isolation_level,
+    b.blocking_trx_id,
+    e.thread_id blocking_thread_id,
+    c.trx_mysql_thread_id blocking_process_id,
+    d.processlist_user user,
+    d.processlist_host client,
+    d.processlist_db db 
+FROM
+    information_schema.innodb_trx a 
+    LEFT JOIN
+        information_schema.innodb_lock_waits b 
+        ON a.trx_id = b.requesting_trx_id 
+    LEFT JOIN
+        information_schema.innodb_trx c 
+        ON b.blocking_trx_id = c.trx_id 
+    LEFT JOIN
+        performance_schema.threads d 
+        ON a.trx_mysql_thread_id = d.processlist_id 
+    LEFT JOIN
+        performance_schema.threads e 
+        ON c.trx_mysql_thread_id = e.processlist_id
+  ```
+
+* History sqls in blocking transactions:
+
+  ```
+  SELECT
+    b.processlist_id process_id,
+    a.thread_id,
+    a.sql_text,
+    b.processlist_user USER,
+    b.processlist_host client,
+    b.processlist_db db 
+FROM
+    performance_schema.events_statements_history a 
+    LEFT JOIN
+        performance_schema.threads b 
+        ON a.thread_id = b.thread_id 
+WHERE
+    a.thread_id IN ( %s )
+ORDER BY
+    a.event_id DESC LIMIT 20;
+  ```
+
+
+| field        |  type  | indexed? | analyzed? | doc_values | required? | Unit | Description |
+| :----------- | :----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| Sql_snapshot | object |    no    |    yes    |     no     | yes       | hnum |             |
+| Trx_snapshot | object |    no    |    yes    |     no     | yes       | hnum |             |
+| Trx_history  | object |    no    |    yes    |     no     | yes       | hnum |             |
+
+
+
+### 3.7 network index
+* index mapping template: `easedba-monitor-metrics-mysql-net`
+* category: `infrastructure`
+* bytes in MBytes
+
+| field        |  type   | indexed? | analyzed? | doc_values | required? | Unit | Description |
+| :----------- | :-----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| bytes_sent   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| bytes_recv   | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| packets_sent | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| packets_recv | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| err_in       | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| err_out      | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| drop_in      | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| drop_out     | integer |    no    |    no     |    yes     | yes       | hnum |             |
+
+
+### 3.8 disk index
+* index mapping template: `easedba-monitor-metrics-mysql-disk`
+* category: `infrastructure`
+* size in MBytes
+
+| field            |  type   | indexed? | analyzed? | doc_values | required? | Unit | Description |
+| :--------------- | :-----: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| free             | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| total            | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| used             | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| used_percent     |  float  |    no    |    no     |    yes     | yes       | hnum |             |
+| inodes_free      | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| inodes_total     | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| inodes_used      | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| io_time          | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| weighted_io_time | integer |    no    |    no     |    yes     | yes       | hnum |             |
+| iops_in_progress | integer |    no    |    no     |    yes     | yes       | hnum |             |
+
+### 3.9 cpu index
+* index mapping template: `easedba-monitor-metrics-mysql-disk`
+* category: `infrastructure`
+* size in MBytes
+
+| field            | type  | indexed? | analyzed? | doc_values | required? | Unit | Description |
+| :--------------- | :---: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| cpu_usage_user   | float |    no    |    no     |    yes     | yes       | hnum |             |
+| cpu_usage_system | float |    no    |    no     |    yes     | yes       | hnum |             |
+| cpu_usage_idle   | float |    no    |    no     |    yes     | yes       | hnum |             |
+| cpu_usage_nice   | float |    no    |    no     |    yes     | yes       | hnum |             |
+
+
+
+### 3.10 Mem index
+* index mapping template: `easedba-monitor-metrics-mysql-disk`
+* category: `infrastructure`
+* size in MBytes
+
+| field        | type  | indexed? | analyzed? | doc_values | required? | Unit | Description |
+| :----------- | :---: | :------: | :-------: | :--------: | :-------- | :--- | :---------- |
+| total        | float |    no    |    no     |    yes     | yes       | hnum |             |
+| used         | float |    no    |    no     |    yes     | yes       | hnum |             |
+| used_percent | float |    no    |    no     |    yes     | yes       | hnum |             |
+| buffered     | float |    no    |    no     |    yes     | yes       | hnum |             |
+| cached       | float |    no    |    no     |    yes     | yes       | hnum |             |
+
