@@ -99,6 +99,7 @@ func (m *Mysql) gatherServer(server string, acc telegraf.Accumulator) error {
 	//throughput index
 	if m.GatherGlobalStatuses {
 		err = m.gatherGlobalStatuses(db, server, acc, servtag)
+
 		if err != nil {
 			return err
 		}

@@ -22,7 +22,7 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 	tags := map[string]string{"server": servtag}
 
 	// binary log size
-	binLogSize, err := getBinaryLogs(db)
+	binLogSize, err := getBinaryLogs(db, servtag)
 	if err != nil {
 		return fmt.Errorf("error gathering binary log size: %s", err)
 	}
@@ -77,22 +77,23 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 }
 
 // get the total binary log size in bytes
-func getBinaryLogs(db *sql.DB) (size int64, err error) {
+func getBinaryLogs(db *sql.DB, servtag string) (size int64, err error) {
 	rows, err := db.Query("SHOW VARIABLES LIKE 'log_bin'")
 	if err != nil {
 		return 0, err
 	}
 	defer rows.Close()
 
-	key, val := "", ""
-	rows.NextResultSet()
-	if rows.Scan(&key, &val); string(val) != "ON" {
-		if logbinWarningFrequency%10 == 0 {
-			log.Printf("INFO: binary log not open, skip metrics collection.")
-		}
-		logbinWarningFrequency++
+	key, val := "", sql.RawBytes{}
+	if rows.Next() {
+		if rows.Scan(&key, &val); string(val) != "ON" {
+			if logbinWarningFrequency%10 == 0 {
+				log.Printf("INFO: [%s] binary log not open, skip metrics collection. atrr: %s, value: %s", servtag, key, string(val))
+			}
+			logbinWarningFrequency++
 
-		return 0, nil
+			return 0, nil
+		}
 	}
 
 	rows, err = db.Query(binaryLogsQuery)

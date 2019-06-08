@@ -70,16 +70,16 @@ var DbsizeMappings = map[string]string{
 }
 
 var ReplicationMappings = map[string]string{
-	"Slave_IO_Running":      "slave_IO_Running",
-	"Slave_SQL_Running":     "slave_SQL_Running",
+	"Slave_IO_Running":      "slave_io_running",
+	"Slave_SQL_Running":     "slave_sql_running",
 	"Seconds_Behind_Master": "seconds_Behind_Master",
-	"Read_Master_Log_Pos":   "read_Master_Log_Pos",
-	"Exec_Master_Log_Pos":   "exec_Master_Log_Pos",
-	"SQL_Delay":             "sQL_Delay",
-	"Last_SQL_Errno":        "last_SQL_Errno",
-	"Last_IO_Errno":         "last_IO_Errno",
-	"Last_SQL_Error":        "last_SQL_Error",
-	"Last_IO_Error":         "last_IO_Error",
+	"Read_Master_Log_Pos":   "read_master_log_pos",
+	"Exec_Master_Log_Pos":   "exec_master_log_pos",
+	"SQL_Delay":             "sql_delay",
+	"Last_SQL_Errno":        "last_sql_errno",
+	"Last_IO_Errno":         "last_io_errno",
+	"Last_SQL_Error":        "last_sql_error",
+	"Last_IO_Error":         "last_io_error",
 	"Master_position":       "master_position",
 }
 
