@@ -3,6 +3,7 @@ package easedba_mysql
 import (
 	"database/sql"
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/easedbautil"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -42,7 +43,7 @@ func (m *Mysql) gatherReplication(db *sql.DB, serv string, accumulator telegraf.
 		return err
 	}
 
-	accumulator.AddGauge(easedba_v1.SchemaReplication, fields, tags)
+	accumulator.AddGauge(easedbautl.SchemaReplication, fields, tags)
 	return nil
 }
 

@@ -5,6 +5,21 @@ import (
 	"os"
 )
 
+var (
+	SchemaThroughput  = "mysql-throughput"
+	SchemaConnection  = "mysql-connection"
+	SchemaInnodb      = "mysql-innodb"
+	SchemaDbSize      = "mysql-dbsize"
+	SchemaReplication = "mysql-replication"
+	SchemaSnapshot    = "mysql-snapshot"
+
+	SchemaCpu    = "cpu"
+	SchemaMem    = "mem"
+	SchemaDisk   = "disk"
+	SchemaDiskIO = "diskio"
+	SchemaNet    = "net"
+)
+
 // Add global tags.
 //  The input parameter, measurement, will be add as a tag too, then the output plugin elasticsearch has chance to embedded
 //  The measurement name into the index name
@@ -12,9 +27,10 @@ import (
 func AddGlobalTags(measurement string, metric *telegraf.Metric) error {
 	category := "platform";
 	switch measurement {
-	case "cpu", "mem", "disk", "diskio", "net":
+	case SchemaCpu, SchemaMem, SchemaDisk, SchemaDiskIO, SchemaNet:
 		category = "infrastructure"
-	case "mysql-throughput", "mysql-connections", "mysql-innodb", "mysql-snapshot":
+	case SchemaThroughput, SchemaConnection, SchemaInnodb,
+			SchemaDbSize, SchemaReplication, SchemaSnapshot:
 		category = "platform"
 	}
 

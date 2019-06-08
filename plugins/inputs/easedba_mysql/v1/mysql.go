@@ -2,22 +2,9 @@ package easedba_v1
 
 import (
 	"database/sql"
+	"github.com/influxdata/telegraf/plugins/inputs/easedba_mysql/global"
 )
 
-var (
-	SchemaThroughput    = "mysql-throughput"
-	SchemaConnection    = "mysql-connection"
-	SchemaInnodb        = "mysql-innodb"
-	SchemaDbSize        = "mysql-dbsize"
-	SchemaReplication   = "mysql-replication"
-	SchemaSnapshot      = "mysql-snapshot"
-	SchemaLongSqlAndTrx = "mysql-longsql"
-
-	SchemaCpu    = "cpu"
-	SchemaDisk   = "disk"
-	SchemaDiskIO = "diskio"
-	SchemaNet    = "net"
-)
 
 var ThroughtMappings = map[string]string{
 	"Com_insert":         "com_insert",
@@ -137,3 +124,8 @@ type TransactionHistory struct {
 type TransactionHistories struct {
 	TransactionHistoryList []TransactionHistory `json:"transaction_history_list"`
 }
+
+// { key: schemaName, value: { key: attribute, value: value }
+// some of the status attribute are accumulated in msyql. needs to
+var GlobalStatus = map[string]*global.Status{}
+

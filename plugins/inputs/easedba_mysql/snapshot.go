@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/easedbautil"
 	"github.com/influxdata/telegraf/plugins/inputs/easedba_mysql/v1"
 )
 
@@ -182,7 +183,7 @@ func (m *Mysql) gatherSnapshot(db *sql.DB, serv string, accumulator telegraf.Acc
 		}
 	}
 
-	accumulator.AddFields(easedba_v1.SchemaSnapshot, fields, tags)
+	accumulator.AddFields(easedbautl.SchemaSnapshot, fields, tags)
 
 	return nil
 }

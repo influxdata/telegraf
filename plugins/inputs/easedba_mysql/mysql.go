@@ -3,7 +3,8 @@ package easedba_mysql
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
+	"github.com/influxdata/telegraf/plugins/easedbautil"
+	"github.com/influxdata/telegraf/plugins/inputs/easedba_mysql/global"
 	"sync"
 	"time"
 
@@ -14,13 +15,13 @@ import (
 )
 
 type Mysql struct {
-	Servers                             []string `toml:"servers"`
-	GatherDbSizes        bool   ` toml: "gather_db_sizes"`
-	GatherReplication    bool   `toml:"gather_replication"`
-	GatherSnapshot       bool   `toml:"gather_snapshot"`
-	GatherInnodb         bool   `toml:"gather_innodb"`
-	GatherGlobalStatuses bool   `toml:"gather_global_statuses"`
-	GatherConnection     bool   `toml:"gather_connection_statuses"`
+	Servers              []string `toml:"servers"`
+	GatherDbSizes        bool     ` toml: "gather_db_sizes"`
+	GatherReplication    bool     `toml:"gather_replication"`
+	GatherSnapshot       bool     `toml:"gather_snapshot"`
+	GatherInnodb         bool     `toml:"gather_innodb"`
+	GatherGlobalStatuses bool     `toml:"gather_global_statuses"`
+	GatherConnection     bool     `toml:"gather_connection_statuses"`
 }
 
 var sampleConfig = `
@@ -57,7 +58,7 @@ func (m *Mysql) Description() string {
 
 func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	if len(m.Servers) == 0 {
-		return fmt.Errorf("error: not found any mysql servers for monitoring." )
+		return fmt.Errorf("error: not found any mysql servers for monitoring.")
 	}
 
 	var wg sync.WaitGroup
@@ -76,8 +77,8 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 }
 
 const (
-	globalStatusQuery          = `SHOW GLOBAL STATUS`
-	binaryLogsQuery            = `SHOW BINARY LOGS`
+	globalStatusQuery = `SHOW GLOBAL STATUS`
+	binaryLogsQuery   = `SHOW BINARY LOGS`
 )
 
 func (m *Mysql) gatherServer(server string, acc telegraf.Accumulator) error {
@@ -85,7 +86,6 @@ func (m *Mysql) gatherServer(server string, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
 
 	db, err := sql.Open("mysql", server)
 	if err != nil {
@@ -96,9 +96,20 @@ func (m *Mysql) gatherServer(server string, acc telegraf.Accumulator) error {
 
 	servtag := getDSNTag(server)
 
+	status, ok := easedba_v1.GlobalStatus[servtag]
+	if !ok {
+		status = global.New(servtag)
+		easedba_v1.GlobalStatus[servtag] = status
+	}
+
+	err = status.Fill(db)
+	if err != nil {
+		return err
+	}
+
 	//throughput index
 	if m.GatherGlobalStatuses {
-		err = m.gatherGlobalStatuses(db, server, acc, servtag)
+		err = m.gatherThroughput(db, server, acc, servtag)
 
 		if err != nil {
 			return err
@@ -146,38 +157,26 @@ func (m *Mysql) gatherServer(server string, acc telegraf.Accumulator) error {
 	return nil
 }
 
-
-// gatherGlobalStatuses can be used to get MySQL status metrics
+// gatherThroughput can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
-func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accumulator, servtag string) error {
-	// run query
-	rows, err := db.Query(globalStatusQuery)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	// parse the DSN and save host name as a tag
+func (m *Mysql) gatherThroughput(db *sql.DB, serv string, acc telegraf.Accumulator, servtag string) error {
+	status, _ := easedba_v1.GlobalStatus[servtag]
 
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	for rows.Next() {
-		var key string
-		var val sql.RawBytes
-
-		if err = rows.Scan(&key, &val); err != nil {
-			return err
-		}
-
+	for key := range status.CurrStatus {
 		if converted, ok := easedba_v1.ThroughtMappings[key]; ok {
-			i, _ := strconv.Atoi(string(val))
-			fields[converted] = i
+			delta, err := status.GetPropertyDelta(key)
+			if err != nil {
+				return fmt.Errorf("error getting %s throughput mertics:  %s", servtag, err)
+			}
+			fields[converted] = delta
 		}
 	}
 
-	acc.AddFields("mysql-throughput", fields, tags)
+	acc.AddFields(easedbautl.SchemaThroughput, fields, tags)
 
 	return nil
 }
@@ -186,32 +185,22 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
 func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulator, servtag string) error {
-	// run query
-	rows, err := db.Query(globalStatusQuery)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
+	status, _ := easedba_v1.GlobalStatus[servtag]
 
-	// parse the DSN and save host name as a tag
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	for rows.Next() {
-		var key string
-		var val sql.RawBytes
-
-		if err = rows.Scan(&key, &val); err != nil {
-			return err
-		}
-
+	for key := range status.CurrStatus {
 		if converted, ok := easedba_v1.ConnectionMappings[key]; ok {
-			i, _ := strconv.Atoi(string(val))
-			fields[converted] = i
+			val, err := status.GetPropertyDelta(key)
+			if err != nil {
+				return fmt.Errorf("error getting %s, connection metrics: %s", servtag, err)
+			}
+			fields[converted] = val
 		}
 
 	}
 
-	acc.AddFields("mysql-connection", fields, tags)
+	acc.AddFields(easedbautl.SchemaConnection, fields, tags)
 	return nil
 }
 
@@ -219,37 +208,23 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
 func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator, servtag string) error {
-	// run query
-	rows, err := db.Query(globalStatusQuery)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	// parse the DSN and save host name as a tag
+	status, _ := easedba_v1.GlobalStatus[servtag]
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	for rows.Next() {
-		var key string
-		var val sql.RawBytes
-
-		if err = rows.Scan(&key, &val); err != nil {
-			return err
-		}
-
+	for key := range status.CurrStatus {
 		if converted, ok := easedba_v1.InnodbMappings[key]; ok {
-			i, _ := strconv.Atoi(string(val))
-			fields[converted] = i
+			val, err := status.GetPropertyDelta(key)
+			if err != nil {
+				return fmt.Errorf("error getting %s innodb metrics: %s", servtag, err)
+			}
+			fields[converted] = val
 		}
 	}
-	acc.AddFields("mysql-innodb", fields, tags)
+	acc.AddFields(easedbautl.SchemaInnodb, fields, tags)
 
 	return nil
 }
-
-
-
 
 func dsnAddTimeout(dsn string) (string, error) {
 	conf, err := mysql.ParseDSN(dsn)

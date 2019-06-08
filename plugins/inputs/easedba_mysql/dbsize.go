@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/easedbautil"
 	"github.com/influxdata/telegraf/plugins/inputs/easedba_mysql/v1"
 	"log"
 )
@@ -51,27 +52,20 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 	fields["table_index_size"] = tableIndexSize
 
 	// disk cache and tmp table size
-	log.Printf("collect disk cache and tmp table size ...")
-	key, val := "", sql.RawBytes{}
-	rows, err = db.Query(globalStatusQuery)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
+	status, _ := easedba_v1.GlobalStatus[servtag]
 
-	for rows.Next() {
-		err := rows.Scan(&key, &val)
+	for key := range status.CurrStatus {
+		val, err := status.GetProperty(key)
 		if err != nil {
-			return fmt.Errorf("error scaning for disk cache and tmp table size %s", err)
+			return fmt.Errorf("error scaning %s for disk cache and tmp table size %s", servtag, err)
 		}
 		if convertedName, ok := easedba_v1.DbsizeMappings[key]; ok {
-			fields[convertedName] = string(val)
+			fields[convertedName] = val
 		}
 	}
 
 
-	log.Printf("add for mysql-dbsize ...")
-	accumulator.AddGauge("mysql-dbsize", fields, tags)
+	accumulator.AddGauge(easedbautl.SchemaDbSize, fields, tags)
 
 	return nil
 }
