@@ -17,7 +17,7 @@ var ThroughtMappings = map[string]string{
 	"Com_delete_multi":   "com_delete_multi",
 	"Com_commit":         "com_commit",
 	"Com_rollback":       "com_rollback",
-	"Com_stmt_exexute":   "com_stmt_exexute",
+	"Com_stmt_execute":   "com_stmt_execute",
 	"Com_call_procedure": "com_call_procedure",
 	"Slow_queries":       "slow_queries",
 }
