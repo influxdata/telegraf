@@ -166,14 +166,12 @@ func (m *Mysql) gatherThroughput(db *sql.DB, serv string, acc telegraf.Accumulat
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	for key := range status.CurrStatus {
-		if converted, ok := easedba_v1.ThroughtMappings[key]; ok {
-			delta, err := status.GetPropertyDelta(key)
-			if err != nil {
-				return fmt.Errorf("error getting %s throughput mertics:  %s", servtag, err)
-			}
-			fields[converted] = delta
+	for key, convertedName := range easedba_v1.ThroughputMappings {
+		delta, err := status.GetPropertyDelta(key)
+		if err != nil {
+			return fmt.Errorf("error getting %s throughput mertics:  %s", servtag, err)
 		}
+		fields[convertedName] = delta
 	}
 
 	for comKey := range easedba_v1.InnodbRatio {
@@ -204,15 +202,12 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
-	for key := range status.CurrStatus {
-		if converted, ok := easedba_v1.ConnectionMappings[key]; ok {
-			val, err := status.GetPropertyDelta(key)
-			if err != nil {
-				return fmt.Errorf("error getting %s, connection metrics: %s", servtag, err)
-			}
-			fields[converted] = val
+	for key, convertedName := range easedba_v1.ConnectionMappings {
+		val, err := status.GetPropertyDelta(key)
+		if err != nil {
+			return fmt.Errorf("error getting %s, connection metrics: %s", servtag, err)
 		}
-
+		fields[convertedName] = val
 	}
 
 	acc.AddFields(easedbautl.SchemaConnection, fields, tags)
@@ -227,14 +222,12 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator, 
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	for key := range status.CurrStatus {
-		if converted, ok := easedba_v1.InnodbMappings[key]; ok {
-			val, err := status.GetPropertyDelta(key)
-			if err != nil {
-				return fmt.Errorf("error getting %s innodb metrics: %s", servtag, err)
-			}
-			fields[converted] = val
+	for key, convertedName := range easedba_v1.InnodbMappings {
+		val, err := status.GetPropertyDelta(key)
+		if err != nil {
+			return fmt.Errorf("error getting %s innodb metrics: %s", servtag, err)
 		}
+		fields[convertedName] = val
 	}
 	acc.AddFields(easedbautl.SchemaInnodb, fields, tags)
 

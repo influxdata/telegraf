@@ -5,7 +5,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/easedba_mysql/global"
 )
 
-var ThroughtMappings = map[string]string{
+var ThroughputMappings = map[string]string{
+	//fields from show global status
 	"Com_insert":         "com_insert",
 	"Com_select":         "com_select",
 	"Com_insert_select":  "com_insert_select",
@@ -23,6 +24,7 @@ var ThroughtMappings = map[string]string{
 }
 
 var ConnectionMappings = map[string]string{
+	//fields from show global status
 	"Threads_connected": "threads_connected",
 	"Aborted_clients":   "aborted_clients",
 	"Aborted_connects":  "aborted_connects",
@@ -30,29 +32,36 @@ var ConnectionMappings = map[string]string{
 }
 
 var InnodbMappings = map[string]string{
+	//fields from show global status
 	"Innodb_rows_read":                  "innodb_rows_read",
-	"Innodb_rows_read_ratio":            "innodb_rows_read_ratio",
 	"Innodb_rows_deleted":               "innodb_rows_deleted",
-	"Innodb_rows_deleted_ratio":         "innodb_rows_deleted_ratio",
 	"Innodb_rows_inserted":              "innodb_rows_inserted",
-	"Innodb_rows_inserted_ratio":        "innodb_rows_inserted_ratio",
 	"Innodb_rows_updated":               "innodb_rows_updated",
-	"Innodb_rows_updated_ratio":         "innodb_rows_updated_ratio",
 	"Innodb_buffer_pool_reads":          "innodb_buffer_pool_reads",
 	"Innodb_buffer_pool_read_requests":  "innodb_buffer_pool_read_requests",
 	"Innodb_buffer_pool_write_requests": "innodb_buffer_pool_write_requests",
 	"Innodb_buffer_pool_pages_flushed":  "innodb_buffer_pool_pages_flushed",
 	"Innodb_buffer_pool_wait_free":      "innodb_buffer_pool_wait_free",
 	"Innodb_row_lock_current_waits":     "innodb_row_lock_current_waits",
+
+	/* do not remove these lines, keep lines as references. these are calculated fields
+	"Innodb_rows_read_ratio":            "innodb_rows_read_ratio",
+	"Innodb_rows_inserted_ratio":        "innodb_rows_inserted_ratio",
+	"Innodb_rows_updated_ratio":         "innodb_rows_updated_ratio",
+	"Innodb_rows_deleted_ratio":         "innodb_rows_deleted_ratio",
+	*/
 }
 
 var DbsizeMappings = map[string]string{
 	"Binlog_cache_disk_use":      "binlog_cache_disk_use",
 	"Binlog_stmt_cache_disk_use": "binlog_stmt_cache_disk_use",
 	"Created_tmp_disk_tables":    "created_tmp_disk_tables",
+
+	/* do not remove these lines, keep lines as references. these are calculated fields
 	"Table_data_size":            "table_data_size",
 	"Table_index_size":           "table_index_size",
 	"Binary_log_size":            "binary_log_size",
+	*/
 }
 
 var ReplicationMappings = map[string]string{

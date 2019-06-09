@@ -54,14 +54,13 @@ func (m *Mysql) gatherDbSizes(db *sql.DB, serv string, accumulator telegraf.Accu
 	// disk cache and tmp table size
 	status, _ := easedba_v1.GlobalStatus[servtag]
 
-	for key := range status.CurrStatus {
+	for key, convertedName := range easedba_v1.DbsizeMappings {
 		val, err := status.GetProperty(key)
 		if err != nil {
 			return fmt.Errorf("error scaning %s for disk cache and tmp table size %s", servtag, err)
 		}
-		if convertedName, ok := easedba_v1.DbsizeMappings[key]; ok {
-			fields[convertedName] = val
-		}
+
+		fields[convertedName] = val
 	}
 
 
