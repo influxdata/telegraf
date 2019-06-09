@@ -138,7 +138,7 @@ The follow chapters will describe details inforamtion about global tags and  met
 | Innodb_row_lock_current_waits     | integer |    no    |    no     |    yes     | yes       | hnum |             |
 
 
-### 3.4 disk  index
+### 3.4 dbsize  index
 * index mapping template: `easedba-monitor-metrics-mysql-disk`
 * category: `platform`
 * sql : `show global status`
@@ -257,7 +257,7 @@ ORDER BY
 
 
 ### 3.7 network index
-* index mapping template: `easedba-monitor-metrics-mysql-net`
+* index mapping template: `easedtba-monitor-metrics-mysql-net`
 * category: `infrastructure`
 * bytes in MBytes
 
@@ -284,15 +284,9 @@ ORDER BY
 | total            | integer |    no    |    no     |    yes     | yes       | hnum |             |
 | used             | integer |    no    |    no     |    yes     | yes       | hnum |             |
 | used_percent     |  float  |    no    |    no     |    yes     | yes       | hnum |             |
-| inodes_free      | integer |    no    |    no     |    yes     | yes       | hnum |             |
-| inodes_total     | integer |    no    |    no     |    yes     | yes       | hnum |             |
-| inodes_used      | integer |    no    |    no     |    yes     | yes       | hnum |             |
-| io_time          | integer |    no    |    no     |    yes     | yes       | hnum |             |
-| weighted_io_time | integer |    no    |    no     |    yes     | yes       | hnum |             |
-| iops_in_progress | integer |    no    |    no     |    yes     | yes       | hnum |             |
 
 ### 3.9 cpu index
-* index mapping template: `easedba-monitor-metrics-mysql-disk`
+* index mapping template: `easedba-monitor-metrics-mysql-cpu`
 * category: `infrastructure`
 * size in MBytes
 
@@ -303,10 +297,8 @@ ORDER BY
 | cpu_usage_idle   | float |    no    |    no     |    yes     | yes       | hnum |             |
 | cpu_usage_nice   | float |    no    |    no     |    yes     | yes       | hnum |             |
 
-
-
 ### 3.10 Mem index
-* index mapping template: `easedba-monitor-metrics-mysql-disk`
+* index mapping template: `easedba-monitor-metrics-mysql-mem`
 * category: `infrastructure`
 * size in MBytes
 
