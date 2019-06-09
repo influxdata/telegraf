@@ -5,7 +5,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/easedba_mysql/global"
 )
 
-
 var ThroughtMappings = map[string]string{
 	"Com_insert":         "com_insert",
 	"Com_select":         "com_select",
@@ -125,7 +124,13 @@ type TransactionHistories struct {
 	TransactionHistoryList []TransactionHistory `json:"transaction_history_list"`
 }
 
+var InnodbRatio = map[string]string{
+	"Com_select": "Innodb_rows_read",
+	"Com_update": "Innodb_rows_updated",
+	"Com_insert": "Innodb_rows_inserted",
+	"Com_delete": "Innodb_rows_deleted",
+}
+
 // { key: schemaName, value: { key: attribute, value: value }
 // some of the status attribute are accumulated in msyql. needs to
 var GlobalStatus = map[string]*global.Status{}
-

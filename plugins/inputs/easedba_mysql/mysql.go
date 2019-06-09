@@ -176,6 +176,21 @@ func (m *Mysql) gatherThroughput(db *sql.DB, serv string, acc telegraf.Accumulat
 		}
 	}
 
+	for comKey := range easedba_v1.InnodbRatio {
+		comVal, errCom := status.GetPropertyDelta(comKey)
+		innodbVal, errInnodb := status.GetPropertyDelta(easedba_v1.InnodbRatio[comKey])
+		if errCom != nil || errInnodb != nil {
+			return fmt.Errorf("error getting ratio for %s, errCom: %s, errInnodb: %s", comKey, errCom, errInnodb)
+		}
+
+		ratioField := easedba_v1.InnodbMappings[easedba_v1.InnodbRatio[comKey]] + "_ratio"
+		if comVal != 0 {
+			fields[ratioField] = 100 * innodbVal / comVal
+		} else {
+			fields[ratioField] = 0
+		}
+	}
+
 	acc.AddFields(easedbautl.SchemaThroughput, fields, tags)
 
 	return nil

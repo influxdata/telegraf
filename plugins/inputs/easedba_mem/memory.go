@@ -29,7 +29,7 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		"used":              vm.Used,
 		"cached":            vm.Cached,
 		"buffered":          vm.Buffers,
-		"used_percent":      100 * float64(vm.Used) / float64(vm.Total),s
+		"used_percent":      100 * float64(vm.Used) / float64(vm.Total),
 	}
 	acc.AddGauge("mem", fields, nil)
 

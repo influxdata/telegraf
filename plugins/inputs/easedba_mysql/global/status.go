@@ -93,7 +93,7 @@ func (g *Status) GetPropertyDelta( property string ) (int64, error) {
 		return 0, fmt.Errorf("errror getting [%s] property: CurrStatus is nil", g.servertag)
 	}
 
-	lastVal, ok := g.CurrStatus[property]
+	lastVal, ok := g.lastStatus[property]
 	if ! ok {
 		return 0, fmt.Errorf("errror getting [%s] property delta, history property  %s doesnot exist", g.servertag, property)
 	}
