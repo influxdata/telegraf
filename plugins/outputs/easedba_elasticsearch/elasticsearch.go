@@ -1,25 +1,52 @@
-package easedba_elasticsearch
+package easedbaelasticsearch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
+	"net"
 	"net/http"
-	"reflect"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/plugins/easedbautil"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"gopkg.in/olivere/elastic.v5"
+	elastic "gopkg.in/olivere/elastic.v5"
 )
 
-type Elasticsearch struct {
+var (
+	// keys: hostname, localIP
+	globalTagsPool = make(map[string]string)
+)
+
+func init() {
+	hostName, _ := os.Hostname()
+	globalTagsPool["hostname"] = hostName
+
+	addrs, _ := net.InterfaceAddrs()
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			ipstr := ipnet.IP.String()
+			// FIXME: Not accurate.
+			if strings.HasPrefix(ipstr, "10.") ||
+				strings.HasPrefix(ipstr, "192.") ||
+				strings.HasPrefix(ipstr, "172.") {
+				globalTagsPool["localIP"] = ipstr
+				return
+			}
+		}
+	}
+}
+
+type EaseDBAElasticsearch struct {
+	Debug               bool
 	URLs                []string `toml:"urls"`
 	IndexName           string
 	DefaultTagValue     string
@@ -34,10 +61,119 @@ type Elasticsearch struct {
 	OverwriteTemplate   bool
 	tls.ClientConfig
 
+	Filters MetricFilters
+
 	Client *elastic.Client
 }
 
+type MetricFilters struct {
+	once sync.Once
+
+	GlobalTags []string
+	//  	    metricName
+	Metrics map[string]*MetricFilter
+}
+
+type MetricFilter struct {
+	Fields     []string
+	Tags       []string
+	CustomTags map[string]string
+
+	allTags   map[string]struct{}
+	allFields map[string]struct{}
+}
+
+func (mf MetricFilters) init() {
+	for _, filter := range mf.Metrics {
+		allTags := make(map[string]struct{})
+		for _, tagKey := range mf.GlobalTags {
+			allTags[tagKey] = struct{}{}
+		}
+		for _, tagKey := range filter.Tags {
+			allTags[tagKey] = struct{}{}
+		}
+
+		allFields := make(map[string]struct{})
+		for _, field := range filter.Fields {
+			allFields[field] = struct{}{}
+		}
+
+		filter.allTags, filter.allFields = allTags, allFields
+	}
+}
+
+func (mf MetricFilters) filter(metrics []telegraf.Metric) []telegraf.Metric {
+	mf.once.Do(mf.init)
+
+	newMetrics := make([]telegraf.Metric, 0)
+	for _, metric := range metrics {
+		filter, exists := mf.Metrics[metric.Name()]
+		if !exists {
+			continue
+		}
+		newMetrics = append(newMetrics, metric)
+
+		var tagKeysToDelete []string
+		for _, tag := range metric.TagList() {
+			if _, exists := filter.allTags[tag.Key]; !exists {
+				tagKeysToDelete = append(tagKeysToDelete, tag.Key)
+			}
+		}
+		for _, tagKey := range tagKeysToDelete {
+			metric.RemoveTag(tagKey)
+		}
+
+		for tagKey := range filter.allTags {
+			if metric.HasTag(tagKey) {
+				continue
+			}
+			if tagValue, exists := globalTagsPool[tagKey]; exists {
+				metric.AddTag(tagKey, tagValue)
+			}
+		}
+
+		for k, v := range filter.CustomTags {
+			metric.AddTag(k, v)
+		}
+
+		var fieldKeysToDelete []string
+		for _, field := range metric.FieldList() {
+			if _, exists := filter.allFields[field.Key]; exists {
+				continue
+			}
+			fieldKeysToDelete = append(fieldKeysToDelete, field.Key)
+		}
+		for _, fieldKey := range fieldKeysToDelete {
+			metric.RemoveField(fieldKey)
+		}
+	}
+
+	return newMetrics
+}
+
+func (a *EaseDBAElasticsearch) doLog(metric map[string]interface{}) {
+	if a.Debug {
+		buff, err := json.Marshal(metric)
+		if err != nil {
+			log.Printf("marshal %#v failed: %v", metric, err)
+		}
+		log.Printf("%s\n", buff)
+	}
+
+	for _, value := range metric {
+		v, ok := value.(uint64)
+		if !ok {
+			continue
+		}
+		if v > math.MaxInt64 {
+			log.Printf("%+v got value larger than %d", metric, v)
+		}
+	}
+}
+
 var sampleConfig = `
+  ## The debug flag specify whether to log print metrics.
+  debug = false
   ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
@@ -64,6 +200,7 @@ var sampleConfig = `
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
   # %V - week of the year (ISO week) (01..53)
+  # %t - name of metric (cpu,mem,net,disk..)
   ## Additionally, you can specify a tag name using the notation {{tag_name}}
   ## which will be used as part of the index name. If the tag does not exist,
   ## the default tag value will be used.
@@ -88,7 +225,7 @@ var sampleConfig = `
   overwrite_template = false
 `
 
-func (a *Elasticsearch) Connect() error {
+func (a *EaseDBAElasticsearch) Connect() error {
 	if a.URLs == nil || a.IndexName == "" {
 		return fmt.Errorf("Elasticsearch urls or index_name is not defined")
 	}
@@ -166,27 +303,21 @@ func (a *Elasticsearch) Connect() error {
 	return nil
 }
 
-func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
+func (a *EaseDBAElasticsearch) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
+
+	metrics = a.Filters.filter(metrics)
 
 	bulkRequest := a.Client.Bulk()
 
 	for _, metric := range metrics {
 		var name = metric.Name()
 
-		err := easedbautl.AddGlobalTags(name, &metric)
-		if err != nil {
-			return fmt.Errorf("error adding global tags: %s", err)
-		}
-
-		// for debug trace
-		logMetric(metric)
-
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
+		indexName := a.GetIndexName(a.IndexName, name, metric.Time(), a.TagKeys, metric.Tags())
 
 		m := make(map[string]interface{})
 
@@ -195,7 +326,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		m["tag"] = metric.Tags()
 		m[name] = metric.Fields()
 
-		warnTooBigValues(metric.FieldList())
+		a.doLog(m)
 
 		bulkRequest.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
@@ -224,30 +355,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 }
 
-func logMetric(metric telegraf.Metric) {
-	log.Printf("submit metric ... name: %s", metric.Name())
-	log.Printf("submit metric ... fields: ")
-	for i, f := range metric.FieldList() {
-		log.Printf("field: %s, value: %v, ", f.Key, f.Value)
-		if i >= 10 {
-			log.Printf("only log the firts 10 lines, skip the rest.")
-			return
-		}
-	}
-}
-
-func warnTooBigValues(fields []*telegraf.Field) {
-	for _, f := range fields {
-		if reflect.TypeOf(f.Value).Kind() == reflect.Uint64 {
-			val, _ := f.Value.(uint64)
-			if val > math.MaxInt64 {
-				log.Printf("error: too big value: key: %s, val: %d", f.Key, val)
-			}
-		}
-	}
-}
-
-func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
+func (a *EaseDBAElasticsearch) manageTemplate(ctx context.Context) error {
 	if a.TemplateName == "" {
 		return fmt.Errorf("Elasticsearch template_name configuration not defined")
 	}
@@ -347,7 +455,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	return nil
 }
 
-func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
+func (a *EaseDBAElasticsearch) GetTagKeys(indexName string) (string, []string) {
 
 	tagKeys := []string{}
 	startTag := strings.Index(indexName, "{{")
@@ -375,7 +483,7 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 	return indexName, tagKeys
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
+func (a *EaseDBAElasticsearch) GetIndexName(indexName, metricName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -384,6 +492,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 			"%d", eventTime.UTC().Format("02"),
 			"%H", eventTime.UTC().Format("15"),
 			"%V", getISOWeek(eventTime.UTC()),
+			"%t", metricName,
 		)
 
 		indexName = dateReplacer.Replace(indexName)
@@ -409,22 +518,22 @@ func getISOWeek(eventTime time.Time) string {
 	return strconv.Itoa(week)
 }
 
-func (a *Elasticsearch) SampleConfig() string {
+func (a *EaseDBAElasticsearch) SampleConfig() string {
 	return sampleConfig
 }
 
-func (a *Elasticsearch) Description() string {
-	return "Configuration for Elasticsearch to send metrics to.t "
+func (a *EaseDBAElasticsearch) Description() string {
+	return "Configuration for Elasticsearch to send metrics to."
 }
 
-func (a *Elasticsearch) Close() error {
+func (a *EaseDBAElasticsearch) Close() error {
 	a.Client = nil
 	return nil
 }
 
 func init() {
 	outputs.Add("easedba_elasticsearch", func() telegraf.Output {
-		return &Elasticsearch{
+		return &EaseDBAElasticsearch{
 			Timeout:             internal.Duration{Duration: time.Second * 5},
 			HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
 		}

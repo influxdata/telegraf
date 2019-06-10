@@ -419,7 +419,6 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	defer db.Close()
 
-
 	//throughput index
 	err = m.gatherGlobalStatuses(db, serv, acc)
 	if err != nil {
@@ -436,9 +435,6 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
-
-
 
 	// Global Variables may be gathered less often
 	if len(m.IntervalSlow) > 0 {
@@ -694,12 +690,11 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			return err
 		}
 
-		Megafiles :=[]string("Com_insert","Com_select","Com_insert_select",
-			"Com_replace","Com_replace_select","Com_update","Com_update_multi",
-			"Com_delete","Com_delete_multi","Com_commit","Com_rollback","Com_stmt_exexute","Com_call_procedure")
+		Megafiles := []string{"Com_insert", "Com_select", "Com_insert_select",
+			"Com_replace", "Com_replace_select", "Com_update", "Com_update_multi",
+			"Com_delete", "Com_delete_multi", "Com_commit", "Com_rollback", "Com_stmt_exexute", "Com_call_procedure"}
 
 		if m.MetricVersion < 2 {
-			var found bool
 			for _, mapped := range v1.Mappings {
 				if strings.HasPrefix(key, mapped.OnServer) {
 					// convert numeric values to integer
@@ -727,9 +722,6 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	return nil
 }
 
-
-
-
 // gatherconnection can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
@@ -753,10 +745,9 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 			return err
 		}
 
-		Megafiles :=[]string("Connections","Aborted_clients","Aborted_connects","Locked_connects")
+		Megafiles := []string{"Connections", "Aborted_clients", "Aborted_connects", "Locked_connects"}
 
 		if m.MetricVersion < 2 {
-			var found bool
 			for _, mapped := range v1.Mappings {
 				if strings.HasPrefix(key, mapped.OnServer) {
 					// convert numeric values to integer
@@ -784,9 +775,6 @@ func (m *Mysql) gatherConnection(db *sql.DB, serv string, acc telegraf.Accumulat
 	return nil
 }
 
-
-
-
 // gathercinnodb can be used to get MySQL status metrics
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
@@ -810,14 +798,13 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 			return err
 		}
 
-		Megafiles :=[]string("Innodb_rows_read","Innodb_rows_read_ratio","Innodb_rows_deleted",
-			"Innodb_rows_deleted_ratio","Innodb_rows_inserted","Innodb_rows_inserted_ratio","Innodb_rows_updated",
-			"Innodb_rows_updated_ratio","Innodb_buffer_pool_reads","Innodb_buffer_pool_read_requests",
-			"Innodb_buffer_pool_write_requests","Innodb_buffer_pool_pages_flushed","Innodb_buffer_pool_wait_free",
-			"Innodb_row_lock_current_waits")
+		Megafiles := []string{"Innodb_rows_read", "Innodb_rows_read_ratio", "Innodb_rows_deleted",
+			"Innodb_rows_deleted_ratio", "Innodb_rows_inserted", "Innodb_rows_inserted_ratio", "Innodb_rows_updated",
+			"Innodb_rows_updated_ratio", "Innodb_buffer_pool_reads", "Innodb_buffer_pool_read_requests",
+			"Innodb_buffer_pool_write_requests", "Innodb_buffer_pool_pages_flushed", "Innodb_buffer_pool_wait_free",
+			"Innodb_row_lock_current_waits"}
 
 		if m.MetricVersion < 2 {
-			var found bool
 			for _, mapped := range v1.Mappings {
 				if strings.HasPrefix(key, mapped.OnServer) {
 					// convert numeric values to integer
@@ -844,14 +831,6 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator) 
 
 	return nil
 }
-
-
-
-
-
-
-
-
 
 // GatherProcessList can be used to collect metrics on each running command
 // and its state with its running count

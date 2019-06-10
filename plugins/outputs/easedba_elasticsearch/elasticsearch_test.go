@@ -1,4 +1,4 @@
-package easedba_elasticsearch
+package easedbaelasticsearch
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func TestConnectAndWrite(t *testing.T) {
 
 	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
 
-	e := &Elasticsearch{
+	e := &EaseDBAElasticsearch{
 		URLs:                urls,
 		IndexName:           "test-%Y.%m.%d",
 		Timeout:             internal.Duration{Duration: time.Second * 5},
@@ -47,7 +47,7 @@ func TestTemplateManagementEmptyTemplate(t *testing.T) {
 
 	ctx := context.Background()
 
-	e := &Elasticsearch{
+	e := &EaseDBAElasticsearch{
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
 		Timeout:           internal.Duration{Duration: time.Second * 5},
@@ -68,7 +68,7 @@ func TestTemplateManagement(t *testing.T) {
 
 	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
 
-	e := &Elasticsearch{
+	e := &EaseDBAElasticsearch{
 		URLs:              urls,
 		IndexName:         "test-%Y.%m.%d",
 		Timeout:           internal.Duration{Duration: time.Second * 5},
@@ -94,7 +94,7 @@ func TestTemplateInvalidIndexPattern(t *testing.T) {
 
 	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
 
-	e := &Elasticsearch{
+	e := &EaseDBAElasticsearch{
 		URLs:              urls,
 		IndexName:         "{{host}}-%Y.%m.%d",
 		Timeout:           internal.Duration{Duration: time.Second * 5},
@@ -108,7 +108,7 @@ func TestTemplateInvalidIndexPattern(t *testing.T) {
 }
 
 func TestGetTagKeys(t *testing.T) {
-	e := &Elasticsearch{
+	e := &EaseDBAElasticsearch{
 		DefaultTagValue: "none",
 	}
 
@@ -168,7 +168,7 @@ func TestGetTagKeys(t *testing.T) {
 }
 
 func TestGetIndexName(t *testing.T) {
-	e := &Elasticsearch{
+	e := &EaseDBAElasticsearch{
 		DefaultTagValue: "none",
 	}
 
@@ -251,7 +251,7 @@ func TestGetIndexName(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		indexName := e.GetIndexName(test.IndexName, test.EventTime, test.TagKeys, test.Tags)
+		indexName := e.GetIndexName(test.IndexName, "metricName", test.EventTime, test.TagKeys, test.Tags)
 		if indexName != test.Expected {
 			t.Errorf("Expected indexname %s, got %s\n", test.Expected, indexName)
 		}
