@@ -174,20 +174,7 @@ func (m *Mysql) gatherThroughput(db *sql.DB, serv string, acc telegraf.Accumulat
 		fields[convertedName] = delta
 	}
 
-	for comKey := range easedba_v1.InnodbRatio {
-		comVal, errCom := status.GetPropertyDelta(comKey)
-		innodbVal, errInnodb := status.GetPropertyDelta(easedba_v1.InnodbRatio[comKey])
-		if errCom != nil || errInnodb != nil {
-			return fmt.Errorf("error getting ratio for %s, errCom: %s, errInnodb: %s", comKey, errCom, errInnodb)
-		}
 
-		ratioField := easedba_v1.InnodbMappings[easedba_v1.InnodbRatio[comKey]] + "_ratio"
-		if comVal != 0 {
-			fields[ratioField] = 100 * innodbVal / comVal
-		} else {
-			fields[ratioField] = 0
-		}
-	}
 
 	acc.AddFields(easedbautl.SchemaThroughput, fields, tags)
 
@@ -229,6 +216,22 @@ func (m *Mysql) gatherInnodb(db *sql.DB, serv string, acc telegraf.Accumulator, 
 		}
 		fields[convertedName] = val
 	}
+
+	for comKey := range easedba_v1.InnodbRatio {
+		comVal, errCom := status.GetPropertyDelta(comKey)
+		innodbVal, errInnodb := status.GetPropertyDelta(easedba_v1.InnodbRatio[comKey])
+		if errCom != nil || errInnodb != nil {
+			return fmt.Errorf("error getting ratio for %s, errCom: %s, errInnodb: %s", comKey, errCom, errInnodb)
+		}
+
+		ratioField := easedba_v1.InnodbMappings[easedba_v1.InnodbRatio[comKey]] + "_ratio"
+		if comVal != 0 {
+			fields[ratioField] = 100 * innodbVal / comVal
+		} else {
+			fields[ratioField] = 0
+		}
+	}
+
 	acc.AddFields(easedbautl.SchemaInnodb, fields, tags)
 
 	return nil
