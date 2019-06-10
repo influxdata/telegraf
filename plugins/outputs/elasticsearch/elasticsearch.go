@@ -4,43 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	elastic "gopkg.in/olivere/elastic.v5"
+	"gopkg.in/olivere/elastic.v5"
 )
-
-var (
-	globalTagsPool = make(map[string]string)
-)
-
-func init() {
-	hostName, _ := os.Hostname()
-	globalTagsPool["hostname"] = hostName
-
-	addrs, _ := net.InterfaceAddrs()
-	for _, address := range addrs {
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			ipstr := ipnet.IP.String()
-			// FIXME: Not accurate.
-			if strings.HasPrefix(ipstr, "10.") ||
-				strings.HasPrefix(ipstr, "192.") ||
-				strings.HasPrefix(ipstr, "172.") {
-				globalTagsPool["localIP"] = ipstr
-				return
-			}
-		}
-	}
-}
 
 type Elasticsearch struct {
 	URLs                []string `toml:"urls"`
@@ -57,94 +31,7 @@ type Elasticsearch struct {
 	OverwriteTemplate   bool
 	tls.ClientConfig
 
-	Filters MetricFilters
-
 	Client *elastic.Client
-}
-
-type MetricFilters struct {
-	once sync.Once
-
-	GlobalTags []string
-	//  	    metricName
-	Metrics map[string]*MetricFilter
-}
-
-type MetricFilter struct {
-	Fields     []string
-	Tags       []string
-	CustomTags map[string]string
-
-	allTags   map[string]struct{}
-	allFields map[string]struct{}
-}
-
-func (mf MetricFilters) init() {
-	for _, filter := range mf.Metrics {
-		allTags := make(map[string]struct{})
-		for _, tagKey := range mf.GlobalTags {
-			allTags[tagKey] = struct{}{}
-		}
-		for _, tagKey := range filter.Tags {
-			allTags[tagKey] = struct{}{}
-		}
-
-		allFields := make(map[string]struct{})
-		for _, field := range filter.Fields {
-			allFields[field] = struct{}{}
-		}
-
-		filter.allTags, filter.allFields = allTags, allFields
-	}
-}
-
-func (mf MetricFilters) filter(metrics []telegraf.Metric) []telegraf.Metric {
-	mf.once.Do(mf.init)
-
-	newMetrics := make([]telegraf.Metric, 0)
-	for _, metric := range metrics {
-		filter, exists := mf.Metrics[metric.Name()]
-		if !exists {
-			continue
-		}
-		newMetrics = append(newMetrics, metric)
-
-		var tagKeysToDelete []string
-		for _, tag := range metric.TagList() {
-			if _, exists := filter.allTags[tag.Key]; !exists {
-				tagKeysToDelete = append(tagKeysToDelete, tag.Key)
-			}
-		}
-		for _, tagKey := range tagKeysToDelete {
-			metric.RemoveTag(tagKey)
-		}
-
-		for tagKey := range filter.allTags {
-			if metric.HasTag(tagKey) {
-				continue
-			}
-			if tagValue, exists := globalTagsPool[tagKey]; exists {
-				metric.AddTag(tagKey, tagValue)
-			}
-		}
-
-		for k, v := range filter.CustomTags {
-			metric.AddTag(k, v)
-		}
-
-		var fieldKeysToDelete []string
-		for _, field := range metric.FieldList() {
-			if _, exists := filter.allFields[field.Key]; exists {
-				continue
-			}
-			fieldKeysToDelete = append(fieldKeysToDelete, field.Key)
-		}
-		for _, fieldKey := range fieldKeysToDelete {
-			metric.RemoveField(fieldKey)
-		}
-	}
-
-	return newMetrics
 }
 
 var sampleConfig = `
@@ -174,7 +61,6 @@ var sampleConfig = `
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
   # %V - week of the year (ISO week) (01..53)
-  # %t - name of metric (cpu,mem,net,disk..)
   ## Additionally, you can specify a tag name using the notation {{tag_name}}
   ## which will be used as part of the index name. If the tag does not exist,
   ## the default tag value will be used.
@@ -282,8 +168,6 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	metrics = a.Filters.filter(metrics)
-
 	bulkRequest := a.Client.Bulk()
 
 	for _, metric := range metrics {
@@ -291,7 +175,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, name, metric.Time(), a.TagKeys, metric.Tags())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
 
 		m := make(map[string]interface{})
 
@@ -455,7 +339,7 @@ func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 	return indexName, tagKeys
 }
 
-func (a *Elasticsearch) GetIndexName(indexName, metricName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
+func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -464,7 +348,6 @@ func (a *Elasticsearch) GetIndexName(indexName, metricName string, eventTime tim
 			"%d", eventTime.UTC().Format("02"),
 			"%H", eventTime.UTC().Format("15"),
 			"%V", getISOWeek(eventTime.UTC()),
-			"%t", metricName,
 		)
 
 		indexName = dateReplacer.Replace(indexName)
