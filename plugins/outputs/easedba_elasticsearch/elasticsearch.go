@@ -321,10 +321,10 @@ func (a *EaseDBAElasticsearch) Write(metrics []telegraf.Metric) error {
 
 		m := make(map[string]interface{})
 
-		m["@timestamp"] = metric.Time()
+		m["timestamp"] = metric.Time()
 		m["measurement_name"] = name
-		m["tag"] = metric.Tags()
-		m[name] = metric.Fields()
+		m["tags"] = metric.Tags()
+		m["fields"] = metric.Fields()
 
 		a.doLog(m)
 
