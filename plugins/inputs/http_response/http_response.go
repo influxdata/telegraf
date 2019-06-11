@@ -294,7 +294,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		if h.Address == "" {
 			h.URLs = []string{"http://localhost"}
 		} else {
-			log.Printf("E! [inputs.http_response] 'address' deprecated in telegraf 1.12, please use 'urls'")
+			log.Printf("W! [inputs.http_response] 'address' deprecated in telegraf 1.12, please use 'urls'")
 			h.URLs = []string{h.Address}
 		}
 	}
