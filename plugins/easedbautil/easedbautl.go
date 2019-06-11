@@ -6,12 +6,18 @@ import (
 )
 
 var (
-	SchemaThroughput  = "mysql-throughput"
-	SchemaConnection  = "mysql-connection"
-	SchemaInnodb      = "mysql-innodb"
-	SchemaDbSize      = "mysql-dbsize"
-	SchemaReplication = "mysql-replication"
-	SchemaSnapshot    = "mysql-snapshot"
+	//SchemaThroughput  = "mysql-throughput"
+	//SchemaConnection  = "mysql-connection"
+	//SchemaInnodb      = "mysql-innodb"
+	//SchemaDbSize      = "mysql-dbsize"
+	//SchemaReplication = "mysql-replication"
+	//SchemaSnapshot    = "mysql-snapshot"
+	SchemaThroughput  = "throughput"
+	SchemaConnection  = "connection"
+	SchemaInnodb      = "innodb"
+	SchemaDbSize      = "dbsize"
+	SchemaReplication = "replication"
+	SchemaSnapshot    = "snapshot"
 
 	SchemaCpu    = "cpu"
 	SchemaMem    = "mem"
