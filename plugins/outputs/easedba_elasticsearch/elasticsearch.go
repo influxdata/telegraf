@@ -309,6 +309,9 @@ func (a *EaseDBAElasticsearch) Write(metrics []telegraf.Metric) error {
 	}
 
 	metrics = a.Filters.filter(metrics)
+	if len(metrics) == 0 {
+		return nil
+	}
 
 	bulkRequest := a.Client.Bulk()
 
