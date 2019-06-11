@@ -268,11 +268,13 @@ status if configured.
   - tags:
     - engine_host
     - server_version
+    - container_id
     - container_image
     - container_name
     - container_status
     - container_version
   - fields:
+    - container_id
     - oomkilled (boolean)
     - pid (integer)
     - exitcode (integer)

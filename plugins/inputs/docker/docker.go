@@ -429,6 +429,7 @@ func (d *Docker) gatherContainer(
 	if v.Name != "" {
 		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
 	}
+	tags["container_id"] = container.ID
 
 	// Add labels to tags
 	for k, label := range container.Labels {
@@ -461,6 +462,7 @@ func (d *Docker) gatherContainer(
 			"oomkilled": info.State.OOMKilled,
 			"pid":       info.State.Pid,
 			"exitcode":  info.State.ExitCode,
+			"container_id": container.ID,
 		}
 		container_time, err := time.Parse(time.RFC3339, info.State.StartedAt)
 		if err == nil && !container_time.IsZero() {
