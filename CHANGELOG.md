@@ -4,6 +4,9 @@
 
 - The `uptime_format` field in the system input has been deprecated, use the
   `uptime` field instead.
+- The `cloudwatch` input has been updated to use a more efficient API, it now
+  requires `GetMetricData` permissions instead of `GetMetricStatistics`.  The
+  `units` tag is not available from this API and is no longer collected.
 
 #### New Inputs
 
