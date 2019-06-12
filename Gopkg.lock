@@ -1050,6 +1050,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:8f832efb46d0a00e227dfe26281c07471d35555b96dc3a83b990cfa6d20faced"
+  name = "github.com/sparrc/go-ping"
+  packages = ["."]
+  pruneopts = ""
+  revision = "e33cfb8ae7ed4ebbfd07bad9d9994f466c6f4b2e"
+
+[[projects]]
+  branch = "master"
   digest = "1:4e8f1cae8e6d83af9000d82566efb8823907dae77ba4f1d76ff28fdd197c3c90"
   name = "github.com/streadway/amqp"
   packages = ["."]
@@ -1242,6 +1250,7 @@
     "http/httpguts",
     "http2",
     "http2/hpack",
+    "icmp",
     "idna",
     "internal/iana",
     "internal/socket",
@@ -1623,6 +1632,7 @@
     "github.com/shirou/gopsutil/net",
     "github.com/shirou/gopsutil/process",
     "github.com/soniah/gosnmp",
+    "github.com/sparrc/go-ping",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
@@ -1645,6 +1655,7 @@
     "github.com/wvanbergen/kafka/consumergroup",
     "golang.org/x/net/context",
     "golang.org/x/net/html/charset",
+    "golang.org/x/net/icmp",
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/clientcredentials",
     "golang.org/x/oauth2/google",
