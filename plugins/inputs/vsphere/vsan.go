@@ -357,6 +357,9 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	}
 
 	resp, err := vsanmethods.VsanQuerySyncingVsanObjects(ctx, vsanClient, &request)
+	if err != nil {
+		return err
+	}
 	fields := make(map[string]interface{})
 	fields["TotalBytesToSync"] = resp.Returnval.TotalBytesToSync
 	fields["TotalObjectsToSync"] = resp.Returnval.TotalObjectsToSync
@@ -435,7 +438,9 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 				newTags["hostname"] = c["hostname"].(string)
 			}
 		}
-	} else {
+	}
+	// If no tags are added in previous steps, we add uuid for it
+	if len(newTags) == len(tags) {
 		newTags["uuid"] = uuid
 	}
 	return newTags

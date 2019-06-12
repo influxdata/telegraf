@@ -187,8 +187,9 @@ var sampleConfig = `
   vsan_perf_metric_exclude = [] ## Nothing excluded by default
 
   ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
-  ## this option is given because not all vSAN metrics are returned by the API
-  ## When set to true, queried metrics will be identical to vsan_perf_metric_include and exclude array will be ignored.
+  ## This option is given because not all vSAN performance entities are returned by the API.
+  ## When set false, anything not in supported entity list will be filtered out. 
+  ## When set true, queried metrics will be identical to vsan_perf_metric_include and the exclude won't be used.
   vsan_metric_skip_verify = false ## false by default.
 
   ## Plugin Settings
