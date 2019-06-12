@@ -3,13 +3,13 @@ package ping
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"os/exec"
 	"sync"
 	"time"
 
 	ping "github.com/sparrc/go-ping"
-	"golang.org/x/net/icmp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -72,7 +72,7 @@ const sampleConfig = `
   ## Interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
   # ping_interval = 1.0
 
-  ## Per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
+  ## Per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>) Deprecated in 1.12
   # timeout = 1.0
 
   ## Total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
@@ -98,11 +98,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		p.listenAddr = getAddr(p.Interface)
 	}
 
+	if p.Timeout > 0 {
+		log.Println("W! [inputs.ping] 'timeout' deprecated in telegraf 1.12")
+	}
+
 	for _, url := range p.Urls {
 		_, err := net.LookupHost(url)
 		if err != nil {
 			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": url})
-			// todo: return err?
 			acc.AddError(err)
 			return nil
 		}
@@ -130,24 +133,13 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				pinger.Timeout = time.Duration(p.Deadline) * time.Second
 			}
 
-			if p.Timeout <= 0 {
-				p.Timeout = 1
-			}
-			pinger.Deadline = time.Nanosecond * time.Duration(p.Timeout*1000000000)
+			pinger.Size = 56
 
-			pinger.Size = 64
-
-			// TODO: determine need for privileged flag
 			pinger.SetPrivileged(true)
-
-			conn, err := pinger.Listen(p.listenAddr)
-			if err != nil {
-				return err
-			}
+			pinger.Source = p.listenAddr
 
 			p.wg.Add(1)
-
-			go p.pingToURLNative(url, pinger, conn, acc)
+			go p.pingToURLNative(url, pinger, acc)
 		}
 	}
 
@@ -222,19 +214,12 @@ type pingResults struct {
 // 	return n
 // }
 
-func (p *Ping) pingToURLNative(u string, pinger *ping.Pinger, conn *icmp.PacketConn, acc telegraf.Accumulator) {
-
+func (p *Ping) pingToURLNative(u string, pinger *ping.Pinger, acc telegraf.Accumulator) {
 	defer p.wg.Done()
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
 
-	results, err := p.pingHostNative(pinger, conn)
-	if err != nil {
-		acc.AddError(fmt.Errorf("%s: %s", err, u))
-		fields["result_code"] = 2
-		acc.AddFields("ping", fields, tags)
-		return
-	}
+	results := p.pingHostNative(pinger)
 
 	fields["packets_transmitted"] = results.transmitted
 	fields["packets_received"] = results.received
@@ -258,7 +243,7 @@ func (p *Ping) pingToURLNative(u string, pinger *ping.Pinger, conn *icmp.PacketC
 	acc.AddFields("ping", fields, tags)
 }
 
-func (p *Ping) pingHostNative(pinger *ping.Pinger, conn *icmp.PacketConn) (*pingResults, error) {
+func (p *Ping) pingHostNative(pinger *ping.Pinger) *pingResults {
 	results := &pingResults{}
 
 	pinger.OnRecv = func(pkt *ping.Packet) {
@@ -275,7 +260,23 @@ func (p *Ping) pingHostNative(pinger *ping.Pinger, conn *icmp.PacketConn) (*ping
 		results.stddev = float64(stats.StdDevRtt.Nanoseconds()) / float64(time.Millisecond)
 	}
 
-	return results, pinger.DoPing(p.ctx, conn)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		pinger.Run()
+		cancel()
+		cancel()
+	}()
+	select {
+	case <-ctx.Done():
+		break
+	case <-time.After(time.Duration(p.Deadline) * time.Second):
+		fmt.Println("PING TIMED OUT")
+		pinger.Stop()
+	}
+
+	return results
 }
 
 func init() {
