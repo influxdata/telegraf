@@ -1,3 +1,9 @@
+## v1.11.1 [unreleased]
+
+#### Bugfixes
+
+- [#5980](https://github.com/influxdata/telegraf/issues/5980): Cannot set mount_points option in disk input.
+
 ## v1.11 [2019-06-11]
 
 #### Release Notes
