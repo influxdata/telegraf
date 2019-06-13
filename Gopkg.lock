@@ -881,6 +881,35 @@
   revision = "33a1865c302903e7a2e06f35960e6bc31e84b9f6"
 
 [[projects]]
+  branch = "master"
+  digest = "1:cb52c597bc400e6e28c1c6570be1ac2edb67f3288c5f3966fee7ea583949b09a"
+  name = "github.com/aristanetworks/goarista"
+  packages = [
+    "areflect",
+    "dscp",
+    "elasticsearch",
+    "gnmi",
+    "kafka",
+    "kafka/openconfig",
+    "kafka/producer",
+    "key",
+    "lanz",
+    "lanz/proto",
+    "monitor",
+    "monitor/stats",
+    "monotime",
+    "netns",
+    "openconfig",
+    "openconfig/client",
+    "path",
+    "test",
+    "value",
+  ]
+  pruneopts = ""
+  revision = "2e9fd846018e44d112471ae33a76a683b34e61d3"
+
+
+[[projects]]
   digest = "1:5d9b668b0b4581a978f07e7d2e3314af18eb27b3fb5d19b70185b7c575723d11"
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
