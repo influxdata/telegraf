@@ -27,14 +27,16 @@ const sampleConfig = `
   #   key = "resp_code"
   #   ## Regular expression to match on a tag value
   #   pattern = "^(\\d)\\d\\d$"
-  #   ## Pattern for constructing a new value (${1} represents first subgroup)
+  #   ## Matches of the pattern will be replaced with this string.  Use ${1}
+  #   ## notation to use the text of the first submatch.
   #   replacement = "${1}xx"
 
   # [[processors.regex.fields]]
+  #   ## Field to change
   #   key = "request"
   #   ## All the power of the Go regular expressions available here
   #   ## For example, named subgroups
-  #   pattern = "^/api(?P<method>/[\\w/]+)\\S*" 
+  #   pattern = "^/api(?P<method>/[\\w/]+)\\S*"
   #   replacement = "${method}"
   #   ## If result_key is present, a new field will be created
   #   ## instead of changing existing field
