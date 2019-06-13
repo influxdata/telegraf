@@ -101,11 +101,13 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	// Invert explicit alias list and prefill subscription names
 	c.aliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
 	for _, subscription := range c.Subscriptions {
-		path := subscription.Path
-		if len(subscription.Origin) > 0 {
-			path = subscription.Origin + ":" + path
+		var path string
+		// Build the subscription path without keys
+		if parsed, _ := parsePath(subscription.Origin, subscription.Path, ""); parsed != nil {
+			path, _ = c.handlePath(parsed, nil, "")
 		}
 
+		// If the user didn't provide a measurement name, use last path element
 		name := subscription.Name
 		if len(name) == 0 {
 			name = path[strings.LastIndexByte(path, '/')+1:]
@@ -269,7 +271,10 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 
 		// Group metrics
 		for key, val := range fields {
-			grouper.Add(name, tags, timestamp, key[len(aliasPath)+1:], val)
+			if len(aliasPath) > 0 {
+				key = key[len(aliasPath)+1:]
+			}
+			grouper.Add(name, tags, timestamp, key, val)
 		}
 
 		lastAliasPath = aliasPath
@@ -347,14 +352,17 @@ func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string,
 			aliasPath = name
 		}
 
-		for key, val := range elem.Key {
-			key = strings.Replace(key, "-", "_", -1)
+		if tags != nil {
+			for key, val := range elem.Key {
+				key = strings.Replace(key, "-", "_", -1)
 
-			// Use short-form of key if possible
-			if _, exists := tags[key]; exists {
-				tags[name+"/"+key] = val
-			} else {
-				tags[key] = val
+				// Use short-form of key if possible
+				if _, exists := tags[key]; exists {
+					tags[name+"/"+key] = val
+				} else {
+					tags[key] = val
+				}
+
 			}
 		}
 	}
