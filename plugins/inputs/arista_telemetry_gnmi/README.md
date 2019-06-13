@@ -46,6 +46,6 @@ This plugin has been developed to support gNMI telemetry as produced by Arista 4
   # heartbeat_interval = "60s"
 ```
 
-### Example Output: /interfaces/interface/state/counters,host=telegraf-01,name=Ethernet3/4/2,path=/interfaces/interface/state/counters/in-broadcast-pkts,source=10.82.100.0 /in_broadcast_pkts=43i 1558796832439786099
+# Example Output: /interfaces/interface/state/counters,host=telegraf-01,name=Ethernet3/4/2,path=/interfaces/interface/state/counters/in-broadcast-pkts,source=10.82.100.0 /in_broadcast_pkts=43i 1558796832439786099
 
 
