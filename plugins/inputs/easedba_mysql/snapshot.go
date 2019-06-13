@@ -183,7 +183,10 @@ func (m *Mysql) gatherSnapshot(db *sql.DB, serv string, accumulator telegraf.Acc
 			}
 		}
 		fields["trx_history"] = text
+
+
 	}
+	fields["trx_history"] = "{}"
 
 	accumulator.AddFields(easedbautl.SchemaSnapshot, fields, tags)
 

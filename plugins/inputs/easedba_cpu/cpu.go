@@ -97,7 +97,15 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
-			err = fmt.Errorf("Error: current total CPU time is less than previous total CPU time")
+			fieldsG := map[string]interface{}{
+				"cpu_usage_user":       float64(-1),
+				"cpu_usage_system":     float64(-1),
+				"cpu_usage_idle":       float64(-1),
+				"cpu_usage_nice":       float64(-1),
+
+			}
+			acc.AddGauge("cpu", fieldsG, tags, now)
+			err = fmt.Errorf("Error: current total CPU time is less than previous total CPU time,totalDelta :%d ", totalDelta)
 			break
 		}
 
