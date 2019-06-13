@@ -43,5 +43,5 @@ This plugin has been developed to support gNMI telemetry as produced by Juniper 
 
 ```
 
-# Example Output:/interfaces/interface,host=telegraf-01,name=ae65,path=/interfaces/interface,source=192.229.214.0 __timestamp__=1560456200258i,__junos_re_stream_creation_timestamp__=1560456200252i,__junos_re_payload_get_timestamp__=1560456200252i,aggregation/state/lag_type="LACP",aggregation/state/min_links=1i,aggregation/state/lag_speed=0i,aggregation/state/member/member="xe-7/0/3:0" 1560456200253338871
+ Example Output:/interfaces/interface,host=telegraf-01,name=ae65,path=/interfaces/interface,source=192.229.214.0 __timestamp__=1560456200258i,__junos_re_stream_creation_timestamp__=1560456200252i,__junos_re_payload_get_timestamp__=1560456200252i,aggregation/state/lag_type="LACP",aggregation/state/min_links=1i,aggregation/state/lag_speed=0i,aggregation/state/member/member="xe-7/0/3:0" 1560456200253338871
 
