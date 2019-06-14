@@ -68,9 +68,9 @@ func (m *Mysql) getReplicationFields(fields map[string]interface{}, rows *sql.Ro
 			switch columns[i] {
 			case "Slave_IO_Running", "Slave_SQL_Running":
 				if string(*(val.(*sql.RawBytes))) == "Yes" {
-					fields[convertedName] = 1
+					fields[convertedName] = true
 				} else {
-					fields[convertedName] = 0
+					fields[convertedName] = false
 				}
 
 			case "Seconds_Behind_Master", "Read_Master_Log_Pos", "Exec_Master_Log_Pos",
