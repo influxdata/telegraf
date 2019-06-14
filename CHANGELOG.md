@@ -1,5 +1,9 @@
 ## v1.12 [unreleased]
 
+#### New Processors
+
+- [date](/plugins/processors/date/README.md) - Contributed by @influxdata
+
 #### Features
 
 - [#5842](https://github.com/influxdata/telegraf/pull/5842): Improve performance of wavefront serializer.
