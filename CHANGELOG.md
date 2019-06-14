@@ -14,6 +14,7 @@
 
 - [#5980](https://github.com/influxdata/telegraf/issues/5980): Cannot set mount_points option in disk input.
 - [#5983](https://github.com/influxdata/telegraf/issues/5983): Omit keys when creating measurement names for GNMI telemetry.
+- [#5972](https://github.com/influxdata/telegraf/issues/5972): Don't consider pid of 0 when using systemd lookup in procstat.
 
 ## v1.11 [2019-06-11]
 
