@@ -252,6 +252,7 @@ For documentation on the latest development code see the [documentation index][d
 * [processes](./plugins/inputs/processes)
 * [procstat](./plugins/inputs/procstat)
 * [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
+* [proxysql](./plugins/inputs/proxysql)
 * [puppetagent](./plugins/inputs/puppetagent)
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
