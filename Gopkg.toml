@@ -298,5 +298,6 @@
   name = "github.com/cisco-ie/nx-telemetry-proto"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/signalfx/golib"
-  version = "2.0.0"
+  # version = "2.0.0" TODO: bump this to 2.3.5 or later once available
