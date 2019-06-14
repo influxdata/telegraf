@@ -18,6 +18,7 @@ type converter struct {
 	Pattern     string
 	Replacement string
 	ResultKey   string
+	Append      bool
 }
 
 const sampleConfig = `
@@ -70,6 +71,11 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		for _, converter := range r.Tags {
 			if value, ok := metric.GetTag(converter.Key); ok {
 				if key, newValue := r.convert(converter, value); newValue != "" {
+					if converter.Append {
+						if v, ok := metric.GetTag(key); ok {
+							newValue = v + newValue
+						}
+					}
 					metric.AddTag(key, newValue)
 				}
 			}
