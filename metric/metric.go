@@ -240,11 +240,11 @@ func (m *metric) Copy() telegraf.Metric {
 	}
 
 	for i, tag := range m.tags {
-		m2.tags[i] = tag
+		m2.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
 	}
 
 	for i, field := range m.fields {
-		m2.fields[i] = field
+		m2.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
 	}
 	return m2
 }
