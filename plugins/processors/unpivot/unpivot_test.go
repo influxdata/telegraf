@@ -84,7 +84,7 @@ func TestUnpivot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := tt.unpivot.Apply(tt.metrics...)
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.SortMetrics())
 		})
 	}
 }
