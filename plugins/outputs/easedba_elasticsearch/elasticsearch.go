@@ -49,6 +49,7 @@ type EaseDBAElasticsearch struct {
 	Debug               bool
 	URLs                []string `toml:"urls"`
 	IndexName           string
+	Type                string
 	DefaultTagValue     string
 	TagKeys             []string
 	Username            string
@@ -333,7 +334,7 @@ func (a *EaseDBAElasticsearch) Write(metrics []telegraf.Metric) error {
 
 		bulkRequest.Add(elastic.NewBulkIndexRequest().
 			Index(indexName).
-			Type("metrics").
+			Type(a.Type).
 			Doc(m))
 
 	}
@@ -537,6 +538,7 @@ func (a *EaseDBAElasticsearch) Close() error {
 func init() {
 	outputs.Add("easedba_elasticsearch", func() telegraf.Output {
 		return &EaseDBAElasticsearch{
+			Type:                "_doc",
 			Timeout:             internal.Duration{Duration: time.Second * 5},
 			HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
 		}
