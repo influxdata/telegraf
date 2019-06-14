@@ -1,31 +1,29 @@
 # Date Processor Plugin
 
-The `date` processor adds the months and years as tags to your data.
+Use the `date` processor to add the metric timestamp as a human readable tag.
 
-Provides the ability to group by months or years. 
+A common use is to add a tag that can be used to group by month or year.
 
-A few example usecases include: 
-1) consumption data for utilities on per month basis 
+A few example usecases include:
+1) consumption data for utilities on per month basis
 2) bandwith capacity per month
-3) compare energy production or sales on a yearly or monthly basis 
+3) compare energy production or sales on a yearly or monthly basis
 
-
-### Configuration:
+### Configuration
 
 ```toml
 [[processors.date]]
-  ##Specify the date tags to add rename operation.
-  tagKey = "month"
-  dateFormat = "Jan"
+  ## New tag to create
+  tag_key = "month"
+
+  ## Date format string, must be a representation of the Go "reference time"
+  ## which is "Mon Jan 2 15:04:05 -0700 MST 2006".
+  date_format = "Jan"
 ```
 
-### Tags:
+### Example
 
-Tags are applied by this processor. 
-
-### Example processing:
-
-```
-- throughput, hostname=example.com lower=10i,upper=1000i,mean=500i 1502489900000000000
-+ throughput,host=backend.example.com,month=Mar min=10i,max=1000i,mean=500i 1502489900000000000
+```diff
+- throughput lower=10i,upper=1000i,mean=500i 1560540094000000000
++ throughput,month=Jun lower=10i,upper=1000i,mean=500i 1560540094000000000
 ```

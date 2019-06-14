@@ -6,15 +6,17 @@ import (
 )
 
 const sampleConfig = `
-##Specify the date tags to add
-tagKey = "month"
-dateFormat = "%m"
+  ## New tag to create
+  tag_key = "month"
 
+  ## Date format string, must be a representation of the Go "reference time"
+  ## which is "Mon Jan 2 15:04:05 -0700 MST 2006".
+  date_format = "Jan"
 `
 
 type Date struct {
-	TagKey     string `toml:"tagKey"`
-	DateFormat string `toml:"dateFormat"`
+	TagKey     string `toml:"tag_key"`
+	DateFormat string `toml:"date_format"`
 }
 
 func (d *Date) SampleConfig() string {
@@ -28,11 +30,9 @@ func (d *Date) Description() string {
 func (d *Date) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
 		point.AddTag(d.TagKey, point.Time().Format(d.DateFormat))
-
 	}
 
 	return in
-
 }
 
 func init() {
@@ -40,30 +40,3 @@ func init() {
 		return &Date{}
 	})
 }
-
-/**
- *
-
-[processors.date]
-  jdfj
-
-  ##Set Months to True or False
-  tagKey = "month"
-  dateFormat = "%m" // January
-
-[processors.date]
-  jdfj
-
-  ##Set Months to True or False
-  tagKey = "day_of_week"
-  dateFormat = "%d" // Wednesday
-
-
-  # [[processors.regex.fields]]
-  #   key = "request"
-  #   pattern = ".*category=(\\w+).*"
-  #   replacement = "${1}"
-  #   result_key = "search_category"
-
-
-*/
