@@ -1,8 +1,24 @@
+## v1.12 [unreleased]
+
+#### New Processors
+
+- [date](/plugins/processors/date/README.md) - Contributed by @influxdata
+
+#### Features
+
+- [#5842](https://github.com/influxdata/telegraf/pull/5842): Improve performance of wavefront serializer.
+
+#### Bugfixes
+
+- [#5692](https://github.com/influxdata/telegraf/issues/5692): Fix sensor read error stops reporting of all sensors in temp input.
+
 ## v1.11.1 [unreleased]
 
 #### Bugfixes
 
 - [#5980](https://github.com/influxdata/telegraf/issues/5980): Cannot set mount_points option in disk input.
+- [#5983](https://github.com/influxdata/telegraf/issues/5983): Omit keys when creating measurement names for GNMI telemetry.
+- [#5972](https://github.com/influxdata/telegraf/issues/5972): Don't consider pid of 0 when using systemd lookup in procstat.
 
 ## v1.11 [2019-06-11]
 
@@ -71,6 +87,7 @@
 
 #### Bugfixes
 
+- [#5692](https://github.com/influxdata/telegraf/pull/5692): Temperature input plugin stops working when WiFi is turned off.
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
 - [#5730](https://github.com/influxdata/telegraf/pull/5730): Don't start telegraf when stale pidfile found.
 - [#5477](https://github.com/influxdata/telegraf/pull/5477): Support Minecraft server 1.13 and newer in minecraft input.

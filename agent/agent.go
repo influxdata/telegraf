@@ -136,7 +136,7 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 // Test runs the inputs once and prints the output to stdout in line protocol.
-func (a *Agent) Test(ctx context.Context) error {
+func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 	var wg sync.WaitGroup
 	metricC := make(chan telegraf.Metric)
 	nulC := make(chan telegraf.Metric)
@@ -156,8 +156,8 @@ func (a *Agent) Test(ctx context.Context) error {
 			octets, err := s.Serialize(metric)
 			if err == nil {
 				fmt.Print("> ", string(octets))
-
 			}
+			metric.Reject()
 		}
 	}()
 
@@ -168,41 +168,59 @@ func (a *Agent) Test(ctx context.Context) error {
 		}
 	}()
 
+	hasServiceInputs := false
+	for _, input := range a.Config.Inputs {
+		if _, ok := input.Input.(telegraf.ServiceInput); ok {
+			hasServiceInputs = true
+			break
+		}
+	}
+
+	if hasServiceInputs {
+		log.Printf("D! [agent] Starting service inputs")
+		err := a.startServiceInputs(ctx, metricC)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, input := range a.Config.Inputs {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			if _, ok := input.Input.(telegraf.ServiceInput); ok {
-				log.Printf("W!: [agent] skipping plugin [[%s]]: service inputs not supported in --test mode",
-					input.Name())
-				continue
+			break
+		}
+
+		acc := NewAccumulator(input, metricC)
+		acc.SetPrecision(a.Precision())
+
+		// Special instructions for some inputs. cpu, for example, needs to be
+		// run twice in order to return cpu usage percentages.
+		switch input.Name() {
+		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
+			nulAcc := NewAccumulator(input, nulC)
+			nulAcc.SetPrecision(a.Precision())
+			if err := input.Input.Gather(nulAcc); err != nil {
+				acc.AddError(err)
 			}
 
-			acc := NewAccumulator(input, metricC)
-			acc.SetPrecision(a.Precision())
-			input.SetDefaultTags(a.Config.Tags)
-
-			// Special instructions for some inputs. cpu, for example, needs to be
-			// run twice in order to return cpu usage percentages.
-			switch input.Name() {
-			case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
-				nulAcc := NewAccumulator(input, nulC)
-				nulAcc.SetPrecision(a.Precision())
-				if err := input.Input.Gather(nulAcc); err != nil {
-					return err
-				}
-
-				time.Sleep(500 * time.Millisecond)
-				if err := input.Input.Gather(acc); err != nil {
-					return err
-				}
-			default:
-				if err := input.Input.Gather(acc); err != nil {
-					return err
-				}
+			time.Sleep(500 * time.Millisecond)
+			if err := input.Input.Gather(acc); err != nil {
+				acc.AddError(err)
+			}
+		default:
+			if err := input.Input.Gather(acc); err != nil {
+				acc.AddError(err)
 			}
 		}
+	}
+
+	if hasServiceInputs {
+		log.Printf("D! [agent] Waiting for service inputs")
+		internal.SleepContext(ctx, waitDuration)
+		log.Printf("D! [agent] Stopping service inputs")
+		a.stopServiceInputs()
 	}
 
 	return nil

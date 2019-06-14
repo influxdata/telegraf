@@ -14,10 +14,12 @@ The `regex` plugin transforms tag and field values with regex pattern. If `resul
     key = "resp_code"
     ## Regular expression to match on a tag value
     pattern = "^(\\d)\\d\\d$"
-    ## Pattern for constructing a new value (${1} represents first subgroup)
+    ## Matches of the pattern will be replaced with this string.  Use ${1}
+    ## notation to use the text of the first submatch.
     replacement = "${1}xx"
 
   [[processors.regex.fields]]
+    ## Field to change
     key = "request"
     ## All the power of the Go regular expressions available here
     ## For example, named subgroups
