@@ -1,7 +1,7 @@
 package juniper_telemetry_gnmi
 
 import (
-	"sync"
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -9,56 +9,53 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
-	"bufio"
-	"time"
 	"os"
-
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/internal"
+	internaltls "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
-	internaltls "github.com/influxdata/telegraf/internal/tls"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/credentials"
 	"github.com/openconfig/gnmi/proto/gnmi"
-
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 // JuniperTelemetryGNMI plugin instance
 type JuniperTelemetryGNMI struct {
-	Servers    	  	[]string          `toml:"servers"`
-	Username 		string
-	Password 		string
-	Origin 			string
-	Paths  			[]string
-	SubscriptionMode string            `toml:"subscription_mode"`
-	SampleInterval   internal.Duration `toml:"sample_interval"`
+	Servers           []string `toml:"servers"`
+	Username          string
+	Password          string
+	Origin            string
+	Paths             []string
+	SubscriptionMode  string            `toml:"subscription_mode"`
+	SampleInterval    internal.Duration `toml:"sample_interval"`
 	SuppressRedundant bool              `toml:"suppress_redundant"`
 
 	// Optional subscription configuration
-	Encoding    	string  
-	Prefix      	string
-	Target      	string
-	UpdatesOnly 	bool 				`toml:"updates_only"`
+	Encoding    string
+	Prefix      string
+	Target      string
+	UpdatesOnly bool `toml:"updates_only"`
 
 	// Redial
 	Redial internal.Duration
 
 	// GRPC settings
-	EnableTLS 		bool `toml:"enable_tls"`
+	EnableTLS bool `toml:"enable_tls"`
 	internaltls.ClientConfig
 
 	// Internal state
-	acc     		telegraf.Accumulator
-	cancel  		context.CancelFunc
-	wg      		sync.WaitGroup
+	acc    telegraf.Accumulator
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
-
 
 const sampleConfig = `
  ## Address and port of the GNMI GRPC server
@@ -154,7 +151,7 @@ func (j *JuniperTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 			defer j.wg.Done()
 			for ctx.Err() == nil {
 				if err := j.CollectData(ctx, server, tlscfg, acc); err != nil && ctx.Err() == nil {
-					acc.AddError(fmt.Errorf("failed to collect data from:%s %v",server, err))
+					acc.AddError(fmt.Errorf("failed to collect data from:%s %v", server, err))
 				}
 
 				select {
@@ -167,14 +164,12 @@ func (j *JuniperTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-
-
 // Create a new GNMI SubscribeRequest
 func (j *JuniperTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 	// Create subscription objects
 	mode, ok := gnmi.SubscriptionMode_value[strings.ToUpper(j.SubscriptionMode)]
 	if !ok {
-			return nil, fmt.Errorf("invalid subscription mode %s", j.SubscriptionMode)
+		return nil, fmt.Errorf("invalid subscription mode %s", j.SubscriptionMode)
 	}
 
 	//prefixPath, _ := parsePath(j.Origin,j.Prefix,j.Target)    ---- Juniper does not support Prefix
@@ -182,23 +177,22 @@ func (j *JuniperTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, er
 	subList := &gnmi.SubscriptionList{
 		Subscription: make([]*gnmi.Subscription, len(j.Paths)),
 		Mode:         gnmi.SubscriptionList_STREAM,
-		Encoding:	  gnmi.Encoding(gnmi.Encoding_value[strings.ToUpper(j.Encoding)]),
+		Encoding:     gnmi.Encoding(gnmi.Encoding_value[strings.ToUpper(j.Encoding)]),
 		UpdatesOnly:  j.UpdatesOnly,
 		//Prefix:       prefixPath,
 	}
 	for i, path := range j.Paths {
-		gnmiPath, err := parsePath(j.Origin,path,j.Target)
+		gnmiPath, err := parsePath(j.Origin, path, j.Target)
 		if err != nil {
 			return nil, err
 		}
-		subList.Subscription[i]  = &gnmi.Subscription{
+		subList.Subscription[i] = &gnmi.Subscription{
 			Path:              gnmiPath,
 			Mode:              gnmi.SubscriptionMode(mode),
 			SampleInterval:    uint64(j.SampleInterval.Duration.Nanoseconds()),
 			SuppressRedundant: j.SuppressRedundant,
 		}
 	}
-
 
 	//Juniper only supports proto as the encoding for gNMI
 	if j.Encoding != "proto" {
@@ -207,10 +201,10 @@ func (j *JuniperTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, er
 
 	return &gnmi.SubscribeRequest{
 		Request: &gnmi.SubscribeRequest_Subscribe{
-		Subscribe: subList}}, nil
+			Subscribe: subList}}, nil
 }
 
-// Subscribes and collects OpenConfig telemetry data from given server
+// CollectData collects OpenConfig telemetry data from given server
 func (j *JuniperTelemetryGNMI) CollectData(ctx context.Context, server string, tlscfg *tls.Config, acc telegraf.Accumulator) error {
 	var opts []grpc.DialOption
 
@@ -219,16 +213,16 @@ func (j *JuniperTelemetryGNMI) CollectData(ctx context.Context, server string, t
 	} else {
 		opts = append(opts, grpc.WithInsecure())
 	}
-	
+
 	grpcclient, err := grpc.DialContext(ctx, server, opts...)
 	if err != nil {
-		acc.AddError(fmt.Errorf("failed to dial:%s %v",server, err))
+		acc.AddError(fmt.Errorf("failed to dial:%s %v", server, err))
 	}
 	gnmiclient := gnmi.NewGNMIClient(grpcclient)
 	respChan := make(chan *gnmi.SubscribeResponse)
 	errChan := make(chan error)
-	go j.Subscribe(ctx , gnmiclient, respChan, errChan)
-	for ctx.Err() == nil{
+	go j.Subscribe(ctx, gnmiclient, respChan, errChan)
+	for ctx.Err() == nil {
 		select {
 		case resp, open := <-respChan:
 			if !open {
@@ -241,7 +235,7 @@ func (j *JuniperTelemetryGNMI) CollectData(ctx context.Context, server string, t
 			}
 			j.handleSubscribeResponseUpdate(update, server)
 		case err := <-errChan:
-			acc.AddError(fmt.Errorf("E! Failed to read from %s: %v", server,err))
+			acc.AddError(fmt.Errorf("E! Failed to read from %s: %v", server, err))
 		}
 	}
 	return nil
@@ -301,7 +295,6 @@ func (j *JuniperTelemetryGNMI) Subscribe(ctx context.Context, client gnmi.GNMICl
 	}
 }
 
-
 // HandleSubscribeResponse message from GNMI and parse contained telemetry data
 func (j *JuniperTelemetryGNMI) handleSubscribeResponseUpdate(update *gnmi.SubscribeResponse_Update, server string) {
 
@@ -315,7 +308,6 @@ func (j *JuniperTelemetryGNMI) handleSubscribeResponseUpdate(update *gnmi.Subscr
 	prefixTags["source"], _, _ = net.SplitHostPort(server)
 	prefixTags["path"] = prefix
 
-
 	// Parse individual Update message and create measurements
 	for _, update := range update.Update.Update {
 		// Prepare tags from prefix
@@ -323,9 +315,7 @@ func (j *JuniperTelemetryGNMI) handleSubscribeResponseUpdate(update *gnmi.Subscr
 		for key, val := range prefixTags {
 			tags[key] = val
 		}
-	 	fields := j.handleTelemetryField(update, tags, prefix)
-
-
+		fields := j.handleTelemetryField(update, tags, prefix)
 		// Group metrics
 		for key, val := range fields {
 			grouper.Add(prefix, tags, timestamp, key[len(prefix)+1:], val)
@@ -340,7 +330,7 @@ func (j *JuniperTelemetryGNMI) handleSubscribeResponseUpdate(update *gnmi.Subscr
 }
 
 // HandleTelemetryField and add it to a measurement
-func (j *JuniperTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) (map[string]interface{}) {
+func (j *JuniperTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) map[string]interface{} {
 	path := j.handlePath(update.Path, tags, prefix)
 
 	var value interface{}
@@ -381,11 +371,11 @@ func (j *JuniperTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags ma
 			flattener.FullFlattenJSON(name, value, true, true)
 		}
 	}
-	return  fields
+	return fields
 }
 
 // Parse path to path-buffer and tag-field
-func (j *JuniperTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string) {
+func (j *JuniperTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) string {
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin
@@ -399,7 +389,6 @@ func (j *JuniperTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]strin
 		builder.WriteRune('/')
 		builder.WriteString(elem.Name)
 		name := builder.String()
-
 
 		for key, val := range elem.Key {
 			key = strings.Replace(key, "-", "_", -1)
@@ -480,11 +469,10 @@ func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 	return &gnmiPath, nil
 }
 
-
 func init() {
 	inputs.Add("juniper_telemetry_gnmi", func() telegraf.Input {
 		return &JuniperTelemetryGNMI{
-			Encoding: "proto",  	//Juniper only supports proto as the encoding for gNMI
+			Encoding: "proto", //Juniper only supports proto as the encoding for gNMI
 			Redial:   internal.Duration{Duration: 10 * time.Second},
 		}
 	})

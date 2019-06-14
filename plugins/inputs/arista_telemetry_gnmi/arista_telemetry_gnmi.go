@@ -1,24 +1,25 @@
 package arista_telemetry_gnmi
 
 import (
+	"bytes"
+	"context"
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"net"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
-	"bytes"
-	"context"
-	"encoding/json"
-	"crypto/tls"
-	"fmt"
 
 	"github.com/aristanetworks/goarista/gnmi"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	internaltls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
-	internaltls "github.com/influxdata/telegraf/internal/tls"
 
 	pb "github.com/openconfig/gnmi/proto/gnmi"
 
@@ -27,12 +28,13 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// AristaTelemetryGNMI plugin instance
 type AristaTelemetryGNMI struct {
-	Servers   []string
-	Username  string
-	Password  string
-	Origin            string
-	Paths             []string
+	Servers  []string
+	Username string
+	Password string
+	Origin   string
+	Paths    []string
 
 	Compression       string
 	UpdatesOnly       bool
@@ -45,17 +47,19 @@ type AristaTelemetryGNMI struct {
 	Redial internal.Duration
 
 	// GRPC TLS settings
-	EnableTLS 		bool `toml:"enable_tls"`
+	EnableTLS bool `toml:"enable_tls"`
 	internaltls.ClientConfig
-	
+
 	// Internal state
-	acc     		telegraf.Accumulator
-	cancel  		context.CancelFunc
-	wg      		sync.WaitGroup
-	
+	acc    telegraf.Accumulator
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
-var sampleConfig = `
+var (
+	// Regex to match and extract data points from path value in received key
+	keyPathRegex = regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
+	sampleConfig = `
 ## Address and port of the GNMI GRPC server
  servers = ["127.0.0.1:6030"]
  ## define credentials
@@ -92,7 +96,7 @@ var sampleConfig = `
   ## If suppression is enabled, send updates at least every X seconds anyway
   # heartbeat_interval = "60s"
 `
-
+)
 
 func (a *AristaTelemetryGNMI) SampleConfig() string {
 	return sampleConfig
@@ -117,7 +121,6 @@ func (a *AristaTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	var ctx context.Context
 	var tlscfg *tls.Config
 
-	
 	a.acc = acc
 
 	ctx, a.cancel = context.WithCancel(context.Background())
@@ -142,7 +145,8 @@ func (a *AristaTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 			defer a.wg.Done()
 			for ctx.Err() == nil {
 				if err := a.CollectData(ctx, server, tlscfg, acc); err != nil && ctx.Err() == nil {
-					acc.AddError(fmt.Errorf("failed to collect data from:%s %v",server, err))				}
+					acc.AddError(fmt.Errorf("failed to collect data from:%s %v", server, err))
+				}
 
 				select {
 				case <-ctx.Done():
@@ -155,7 +159,7 @@ func (a *AristaTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 
 }
 
-// Subscribes and collects OpenConfig telemetry data from given server
+// CollectData collects OpenConfig telemetry data from given server
 func (a *AristaTelemetryGNMI) CollectData(ctx context.Context, server string, tlscfg *tls.Config, acc telegraf.Accumulator) error {
 	var opts []grpc.DialOption
 
@@ -166,7 +170,7 @@ func (a *AristaTelemetryGNMI) CollectData(ctx context.Context, server string, tl
 	} else {
 		opts = append(opts, grpc.WithInsecure())
 	}
-	
+
 	subscribeoptions.SampleInterval = uint64(a.SampleInterval.Duration / time.Millisecond)
 	subscribeoptions.HeartbeatInterval = uint64(a.HeartbeatInterval.Duration / time.Millisecond)
 	subscribeoptions.Mode = a.Mode
@@ -174,13 +178,13 @@ func (a *AristaTelemetryGNMI) CollectData(ctx context.Context, server string, tl
 
 	grpcclient, err := grpc.DialContext(ctx, server, opts...)
 	if err != nil {
-		acc.AddError(fmt.Errorf("failed to dial:%s %v",server, err))
+		acc.AddError(fmt.Errorf("failed to dial:%s %v", server, err))
 	}
 	gnmiclient := pb.NewGNMIClient(grpcclient)
 	respChan := make(chan *pb.SubscribeResponse)
 	errChan := make(chan error)
-	go gnmi.Subscribe(ctx , gnmiclient, subscribeoptions , respChan, errChan)
-	for ctx.Err() == nil{
+	go gnmi.Subscribe(ctx, gnmiclient, subscribeoptions, respChan, errChan)
+	for ctx.Err() == nil {
 		select {
 		case resp, open := <-respChan:
 			if !open {
@@ -194,7 +198,7 @@ func (a *AristaTelemetryGNMI) CollectData(ctx context.Context, server string, tl
 			}
 			a.handleSubscribeResponseUpdate(update, server, a.Paths)
 		case err := <-errChan:
-			acc.AddError(fmt.Errorf("E! Failed to read from %s: %v", server,err))
+			acc.AddError(fmt.Errorf("E! Failed to read from %s: %v", server, err))
 		}
 	}
 	return nil
@@ -213,7 +217,7 @@ func (a *AristaTelemetryGNMI) handleSubscribeResponseUpdate(update *pb.Subscribe
 	}
 	prefixTags["source"], _, _ = net.SplitHostPort(server)
 
-// Parse individual Update message and create measurements
+	// Parse individual Update message and create measurements
 	for _, update := range update.Update.Update {
 		// Prepare tags from prefix
 		tags := make(map[string]string, len(prefixTags)+1)
@@ -221,17 +225,18 @@ func (a *AristaTelemetryGNMI) handleSubscribeResponseUpdate(update *pb.Subscribe
 			tags[key] = val
 		}
 		fields := a.handleTelemetryField(update, tags, prefix)
-		prefix =  a.handlePath(update.Path, prefixTags, "")
-		for _,path := range paths {
-			if strings.HasPrefix (prefix, path) {
-				measurementname = path
-				tags["path"] = prefix
+		prefix = a.handlePath(update.Path, prefixTags, "")
+		for _, path := range paths {
+			newpath := spitPath(path)
+			if strings.HasPrefix(prefix, newpath) {
+				measurementname = newpath
+				tags["path"] = newpath
 			}
 		}
-	
+
 		// Group metrics
 		for key, val := range fields {
-			grouper.Add(measurementname, tags, timestamp, key[len(measurementname):], val)
+			grouper.Add(measurementname, tags, timestamp, key[len(measurementname)+1:], val)
 		}
 
 	}
@@ -242,8 +247,23 @@ func (a *AristaTelemetryGNMI) handleSubscribeResponseUpdate(update *pb.Subscribe
 	}
 }
 
+// Takes in path with predicates and returns a path without predicates.
+func spitPath(xpath string) string {
+	subs := keyPathRegex.FindAllStringSubmatch(xpath, -1)
+
+	// Given XML path, this will spit out final path without predicates
+	if len(subs) > 0 {
+		for _, sub := range subs {
+			xpath = strings.Replace(xpath, sub[0], "/"+strings.TrimSpace(sub[1]), 1)
+		}
+	}
+	xpath = strings.TrimSuffix(xpath, "/")
+
+	return xpath
+}
+
 // HandleTelemetryField and add it to a measurement
-func (a *AristaTelemetryGNMI) handleTelemetryField(update *pb.Update, tags map[string]string, prefix string) (map[string]interface{}) {
+func (a *AristaTelemetryGNMI) handleTelemetryField(update *pb.Update, tags map[string]string, prefix string) map[string]interface{} {
 	path := a.handlePath(update.Path, tags, prefix)
 
 	var value interface{}
@@ -284,11 +304,11 @@ func (a *AristaTelemetryGNMI) handleTelemetryField(update *pb.Update, tags map[s
 			flattener.FullFlattenJSON(name, value, true, true)
 		}
 	}
-	return  fields
+	return fields
 }
 
 // Parse path to path-buffer and tag-field
-func (a *AristaTelemetryGNMI) handlePath(path *pb.Path, tags map[string]string, prefix string) (string) {
+func (a *AristaTelemetryGNMI) handlePath(path *pb.Path, tags map[string]string, prefix string) string {
 	builder := bytes.NewBufferString(prefix)
 
 	// Prefix with origin
@@ -302,7 +322,6 @@ func (a *AristaTelemetryGNMI) handlePath(path *pb.Path, tags map[string]string, 
 		builder.WriteRune('/')
 		builder.WriteString(elem.Name)
 		name := builder.String()
-
 
 		for key, val := range elem.Key {
 			key = strings.Replace(key, "-", "_", -1)
@@ -321,8 +340,7 @@ func (a *AristaTelemetryGNMI) handlePath(path *pb.Path, tags map[string]string, 
 func init() {
 	inputs.Add("arista_telemetry_gnmi", func() telegraf.Input {
 		return &AristaTelemetryGNMI{
-			Redial:   internal.Duration{Duration: 10 * time.Second},
+			Redial: internal.Duration{Duration: 10 * time.Second},
 		}
 	})
 }
-
