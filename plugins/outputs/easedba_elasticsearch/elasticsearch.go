@@ -325,7 +325,7 @@ func (a *EaseDBAElasticsearch) Write(metrics []telegraf.Metric) error {
 
 		m := make(map[string]interface{})
 
-		m["timestamp"] = metric.Time()
+		m["timestamp"] = metric.Time().UnixNano() / 1000000
 		m["measurement_name"] = name
 		m["tags"] = metric.Tags()
 		m["fields"] = metric.Fields()
