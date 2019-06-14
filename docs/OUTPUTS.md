@@ -43,6 +43,10 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
+func (s *Simple) Init() error {
+	return nil
+}
+
 func (s *Simple) Connect() error {
     // Make a connection to the URL here
     return nil

@@ -71,6 +71,16 @@ func (r *RunningAggregator) Name() string {
 	return "aggregators." + r.Config.Name
 }
 
+func (r *RunningAggregator) Init() error {
+	if p, ok := r.Aggregator.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *RunningAggregator) Period() time.Duration {
 	return r.Config.Period
 }

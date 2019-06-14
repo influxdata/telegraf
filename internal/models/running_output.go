@@ -97,6 +97,16 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
+func (ro *RunningOutput) Init() error {
+	if p, ok := ro.Output.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // AddMetric adds a metric to the output.
 //
 // Takes ownership of metric

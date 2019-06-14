@@ -1,7 +1,6 @@
 package http
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -89,27 +88,25 @@ func (*HTTP) Description() string {
 	return "Read formatted metrics from one or more HTTP endpoints"
 }
 
+func (h *HTTP) Init() error {
+	tlsCfg, err := h.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	h.client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			Proxy:           http.ProxyFromEnvironment,
+		},
+		Timeout: h.Timeout.Duration,
+	}
+	return nil
+}
+
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval"
 func (h *HTTP) Gather(acc telegraf.Accumulator) error {
-	if h.parser == nil {
-		return errors.New("Parser is not set")
-	}
-
-	if h.client == nil {
-		tlsCfg, err := h.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		h.client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsCfg,
-				Proxy:           http.ProxyFromEnvironment,
-			},
-			Timeout: h.Timeout.Duration,
-		}
-	}
-
 	var wg sync.WaitGroup
 	for _, u := range h.URLs {
 		wg.Add(1)

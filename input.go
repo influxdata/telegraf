@@ -1,5 +1,14 @@
 package telegraf
 
+// Initializer is an interface that all plugin types: Inputs, Outputs,
+// Processors, and Aggregators can optionally implement to initialize the
+// plugin.
+type Initializer interface {
+	// Init performs one time setup of the plugin and returns an error if the
+	// configuration is invalid.
+	Init() error
+}
+
 type Input interface {
 	// SampleConfig returns the default configuration of the Input
 	SampleConfig() string

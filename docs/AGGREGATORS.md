@@ -52,6 +52,10 @@ var sampleConfig = `
   drop_original = false
 `
 
+func (m *Min) Init() error {
+	return nil
+}
+
 func (m *Min) SampleConfig() string {
 	return sampleConfig
 }

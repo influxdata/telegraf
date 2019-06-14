@@ -46,6 +46,10 @@ func (p *Printer) Description() string {
 	return "Print all metrics that pass through this filter."
 }
 
+func (p *Printer) Init() error {
+	return nil
+}
+
 func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		fmt.Println(metric.String())
