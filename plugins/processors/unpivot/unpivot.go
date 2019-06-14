@@ -59,6 +59,7 @@ func (p *Unpivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			newMetric.AddTag(p.TagKey, field.Key)
 			results = append(results, newMetric)
 		}
+		m.Accept()
 	}
 	return results
 }
