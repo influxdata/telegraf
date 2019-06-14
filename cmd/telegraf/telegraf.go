@@ -10,6 +10,9 @@ import (
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
+	"path"
+	"path/filepath"
+	"plugin"
 	"runtime"
 	"strings"
 	"syscall"
@@ -64,6 +67,8 @@ var fService = flag.String("service", "",
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
+var fPlugins = flag.String("plugin-directory", "",
+	"path to directory containing external plugins")
 
 var (
 	version string
@@ -111,6 +116,45 @@ func reloadLoop(
 	}
 }
 
+// loadExternalPlugins loads external plugins from shared libraries (.so, .dll, etc.)
+// in the specified directory.
+func loadExternalPlugins(rootDir string) error {
+	return filepath.Walk(rootDir, func(pth string, info os.FileInfo, err error) error {
+		// Stop if there was an error.
+		if err != nil {
+			return err
+		}
+
+		// Ignore directories.
+		if info.IsDir() {
+			return nil
+		}
+
+		// Ignore files that aren't shared libraries.
+		ext := strings.ToLower(path.Ext(pth))
+		if ext != ".so" && ext != ".dll" {
+			return nil
+		}
+
+		// name will be the path to the plugin file beginning at the root
+		// directory, minus the extension.
+		// ie, if the plugin file is ./telegraf-plugins/foo.so, name
+		// will be "telegraf-plugins/foo"
+		name := strings.TrimPrefix(strings.TrimPrefix(pth, rootDir), string(os.PathSeparator))
+		name = strings.TrimSuffix(name, filepath.Ext(pth))
+
+		// Load plugin.
+		_, err = plugin.Open(pth)
+		if err != nil {
+			errorMsg := fmt.Sprintf("error loading [%s]: %s", pth, err)
+			log.Printf(errorMsg)
+			return errors.New(errorMsg)
+		}
+
+		return nil
+	})
+}
+
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
@@ -138,7 +182,7 @@ func runAgent(ctx context.Context,
 	if !*fTest && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
-	if len(c.Inputs) == 0 {
+	if *fPlugins == "" && len(c.Inputs) == 0 {
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
@@ -277,6 +321,14 @@ func main() {
 	}
 	if *fProcessorFilters != "" {
 		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
+	}
+
+	// Load external plugins, if requested.
+	if *fPlugins != "" {
+		log.Printf("Loading external plugins from: %s\n", *fPlugins)
+		if err := loadExternalPlugins(*fPlugins); err != nil {
+			log.Fatal(err.Error())
+		}
 	}
 
 	if *pprofAddr != "" {
