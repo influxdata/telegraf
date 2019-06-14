@@ -1,4 +1,4 @@
-## v1.11.1 [unreleased]
+## v1.12 [unreleased]
 
 #### Features
 
@@ -6,7 +6,14 @@
 
 #### Bugfixes
 
+- [#5692](https://github.com/influxdata/telegraf/issues/5692): Fix sensor read error stops reporting of all sensors in temp input.
+
+## v1.11.1 [unreleased]
+
+#### Bugfixes
+
 - [#5980](https://github.com/influxdata/telegraf/issues/5980): Cannot set mount_points option in disk input.
+- [#5983](https://github.com/influxdata/telegraf/issues/5983): Omit keys when creating measurement names for GNMI telemetry.
 
 ## v1.11 [2019-06-11]
 
