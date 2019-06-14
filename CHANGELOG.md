@@ -3,6 +3,8 @@
 #### New Processors
 
 - [date](/plugins/processors/date/README.md) - Contributed by @influxdata
+- [pivot](/plugins/processors/pivot/README.md) - Contributed by @influxdata
+- [unpivot](/plugins/processors/unpivot/README.md) - Contributed by @influxdata
 
 #### Features
 
