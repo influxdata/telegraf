@@ -397,7 +397,7 @@ func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 		if !bytes.Equal(kv[0], []byte("MainPID")) {
 			continue
 		}
-		if len(kv[1]) == 0 {
+		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
 		pid, err := strconv.Atoi(string(kv[1]))
