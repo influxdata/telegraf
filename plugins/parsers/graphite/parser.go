@@ -1,10 +1,9 @@
 package graphite
 
 import (
-	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -63,42 +62,36 @@ func NewGraphiteParser(
 
 func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// parse even if the buffer begins with a newline
-	buf = bytes.TrimPrefix(buf, []byte("\n"))
-	// add newline to end if not exists:
-	if len(buf) > 0 && !bytes.HasSuffix(buf, []byte("\n")) {
-		buf = append(buf, []byte("\n")...)
+	if len(buf) != 0 && buf[0] == '\n' {
+		buf = buf[1:]
 	}
 
-	metrics := make([]telegraf.Metric, 0)
+	var metrics []telegraf.Metric
+	var errs []string
 
-	var errStr string
-	buffer := bytes.NewBuffer(buf)
-	reader := bufio.NewReader(buffer)
 	for {
-		// Read up to the next newline.
-		buf, err := reader.ReadBytes('\n')
-		if err == io.EOF {
+		n := bytes.IndexByte(buf, '\n')
+		var line []byte
+		if n >= 0 {
+			line = bytes.TrimSpace(buf[:n:n])
+		} else {
+			line = bytes.TrimSpace(buf) // last line
+		}
+		if len(line) != 0 {
+			metric, err := p.ParseLine(string(line))
+			if err == nil {
+				metrics = append(metrics, metric)
+			} else {
+				errs = append(errs, err.Error())
+			}
+		}
+		if n < 0 {
 			break
 		}
-		if err != nil && err != io.EOF {
-			return metrics, err
-		}
-
-		// Trim the buffer, even though there should be no padding
-		line := strings.TrimSpace(string(buf))
-		if line == "" {
-			continue
-		}
-		metric, err := p.ParseLine(line)
-		if err == nil {
-			metrics = append(metrics, metric)
-		} else {
-			errStr += err.Error() + "\n"
-		}
+		buf = buf[n+1:]
 	}
-
-	if errStr != "" {
-		return metrics, fmt.Errorf(strings.TrimSpace(errStr))
+	if len(errs) != 0 {
+		return metrics, errors.New(strings.Join(errs, "\n"))
 	}
 	return metrics, nil
 }
