@@ -22,8 +22,9 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address             string
-	HTTPProxy           string `toml:"http_proxy"`
+	Address             string   // deprecated in 1.12
+	URLs                []string `toml:"urls"`
+	HTTPProxy           string   `toml:"http_proxy"`
 	Body                string
 	Method              string
 	ResponseTimeout     internal.Duration
@@ -42,8 +43,12 @@ func (h *HTTPResponse) Description() string {
 }
 
 var sampleConfig = `
+  ## Deprecated in 1.12, use 'urls'
   ## Server address (default http://localhost)
   # address = "http://localhost"
+
+  ## List of urls to query.
+  # urls = ["http://localhost"]
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
   # http_proxy = "http://localhost:8888"
@@ -171,16 +176,16 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 }
 
 // HTTPGather gathers all fields and returns any errors it encounters
-func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, error) {
+func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]string, error) {
 	// Prepare fields and tags
 	fields := make(map[string]interface{})
-	tags := map[string]string{"server": h.Address, "method": h.Method}
+	tags := map[string]string{"server": u, "method": h.Method}
 
 	var body io.Reader
 	if h.Body != "" {
 		body = strings.NewReader(h.Body)
 	}
-	request, err := http.NewRequest(h.Method, h.Address, body)
+	request, err := http.NewRequest(h.Method, u, body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -201,7 +206,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
 		// Log error
-		log.Printf("D! Network error while polling %s: %s", h.Address, err.Error())
+		log.Printf("D! Network error while polling %s: %s", u, err.Error())
 
 		// Get error details
 		netErr := setError(err, fields, tags)
@@ -284,20 +289,15 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	if h.Method == "" {
 		h.Method = "GET"
 	}
-	if h.Address == "" {
-		h.Address = "http://localhost"
-	}
-	addr, err := url.Parse(h.Address)
-	if err != nil {
-		return err
-	}
-	if addr.Scheme != "http" && addr.Scheme != "https" {
-		return errors.New("Only http and https are supported")
-	}
 
-	// Prepare data
-	var fields map[string]interface{}
-	var tags map[string]string
+	if len(h.URLs) == 0 {
+		if h.Address == "" {
+			h.URLs = []string{"http://localhost"}
+		} else {
+			log.Printf("W! [inputs.http_response] 'address' deprecated in telegraf 1.12, please use 'urls'")
+			h.URLs = []string{h.Address}
+		}
+	}
 
 	if h.client == nil {
 		client, err := h.createHttpClient()
@@ -307,14 +307,33 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		h.client = client
 	}
 
-	// Gather data
-	fields, tags, err = h.httpGather()
-	if err != nil {
-		return err
+	for _, u := range h.URLs {
+		addr, err := url.Parse(u)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		if addr.Scheme != "http" && addr.Scheme != "https" {
+			acc.AddError(errors.New("Only http and https are supported"))
+			continue
+		}
+
+		// Prepare data
+		var fields map[string]interface{}
+		var tags map[string]string
+
+		// Gather data
+		fields, tags, err = h.httpGather(u)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		// Add metrics
+		acc.AddFields("http_response", fields, tags)
 	}
 
-	// Add metrics
-	acc.AddFields("http_response", fields, tags)
 	return nil
 }
 

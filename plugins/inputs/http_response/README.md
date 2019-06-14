@@ -7,8 +7,12 @@ This input plugin checks HTTP/HTTPS connections.
 ```
 # HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
+  ## Deprecated in 1.12, use 'urls'
   ## Server address (default http://localhost)
   # address = "http://localhost"
+
+  ## List of urls to query.
+  # urls = ["http://localhost"]
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
   # http_proxy = "http://localhost:8888"
