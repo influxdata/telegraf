@@ -464,29 +464,18 @@ func (d *Docker) gatherContainer(
 			"exitcode":  info.State.ExitCode,
 		}
 
-		parseTime := func(v string) (time.Time, bool) {
-			target, err := time.Parse(time.RFC3339, v)
-			if err != nil || target.IsZero() {
-				return time.Time{}, false
-			}
-
-			return target, true
-		}
-
-		finished, finishedSet := parseTime(info.State.FinishedAt)
-		if started, ok := parseTime(info.State.StartedAt); ok {
-			statefields["started_at"] = started.UnixNano()
-
-			end := now()
-			if finishedSet {
-				end = finished
-			}
-
-			statefields["uptime_ns"] = int64(end.Sub(started))
-		}
-
-		if finishedSet {
+		finished, err := time.Parse(time.RFC3339, info.State.FinishedAt)
+		if err == nil && !finished.IsZero() {
 			statefields["finished_at"] = finished.UnixNano()
+		} else {
+			// set finished to now for use in uptime
+			finished = now()
+		}
+
+		started, err := time.Parse(time.RFC3339, info.State.StartedAt)
+		if err == nil && !started.IsZero() {
+			statefields["started_at"] = started.UnixNano()
+			statefields["uptime_ns"] = int64(finished.Sub(started))
 		}
 
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
