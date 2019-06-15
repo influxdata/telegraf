@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"io/ioutil"
 	"sort"
 	"strings"
@@ -550,15 +549,20 @@ func TestContainerStatus(t *testing.T) {
 		ExitCode   int
 		StartedAt  time.Time
 		FinishedAt time.Time
+		UptimeNs   int64
 	}
 
 	var tests = []struct {
 		name    string
+		now     func() time.Time
 		inspect types.ContainerJSON
 		expect  expectation
 	}{
 		{
-			name:    "finished_at is zero value",
+			name: "finished_at is zero value",
+			now: func() time.Time {
+				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
+			},
 			inspect: containerInspect(),
 			expect: expectation{
 				Status:    "running",
@@ -566,6 +570,7 @@ func TestContainerStatus(t *testing.T) {
 				Pid:       1234,
 				ExitCode:  0,
 				StartedAt: time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
+				UptimeNs:  int64(3 * time.Minute),
 			},
 		},
 		{
@@ -582,26 +587,34 @@ func TestContainerStatus(t *testing.T) {
 				ExitCode:   0,
 				StartedAt:  time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
 				FinishedAt: time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+				UptimeNs:   int64(5 * time.Minute),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var acc testutil.Accumulator
+			var (
+				acc           testutil.Accumulator
+				newClientFunc = func(string, *tls.Config) (Client, error) {
+					client := baseClient
+					client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+						return containerList[:1], nil
+					}
+					client.ContainerInspectF = func(c context.Context, s string) (types.ContainerJSON, error) {
+						return tt.inspect, nil
+					}
 
-			newClientFunc := func(string, *tls.Config) (Client, error) {
-				client := baseClient
-				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
-					return containerList[:1], nil
+					return &client, nil
 				}
-				client.ContainerInspectF = func(c context.Context, s string) (types.ContainerJSON, error) {
-					return tt.inspect, nil
-				}
+				d = Docker{newClient: newClientFunc}
+			)
 
-				return &client, nil
+			if tt.now != nil {
+				now = tt.now
 			}
-
-			d := Docker{newClient: newClientFunc}
+			defer func() {
+				now = time.Now
+			}()
 
 			err := acc.GatherError(d.Gather)
 			require.NoError(t, err)
@@ -611,6 +624,7 @@ func TestContainerStatus(t *testing.T) {
 				"pid":        tt.expect.Pid,
 				"exitcode":   tt.expect.ExitCode,
 				"started_at": tt.expect.StartedAt.UnixNano(),
+				"uptime_ns":  tt.expect.UptimeNs,
 			}
 
 			if finished := tt.expect.FinishedAt; !finished.IsZero() {
@@ -630,8 +644,6 @@ func TestContainerStatus(t *testing.T) {
 					"server_version":    "17.09.0-ce",
 					"container_status":  tt.expect.Status,
 				})
-
-			fmt.Printf("%q\n", acc.Metrics)
 		})
 	}
 }
