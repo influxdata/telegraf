@@ -65,25 +65,6 @@ func TestParseValidFormDataWithTags(t *testing.T) {
 	}, metrics[0].Fields())
 }
 
-func TestParseValidFormDataAllowedKeys(t *testing.T) {
-	parser := Parser{
-		MetricName:  "formdata_test",
-		AllowedKeys: []string{"tag1", "field1"},
-		TagKeys:     []string{"tag1", "tag2"},
-	}
-
-	metrics, err := parser.Parse([]byte(validFormData))
-	require.NoError(t, err)
-	require.Len(t, metrics, 1)
-	require.Equal(t, "formdata_test", metrics[0].Name())
-	require.Equal(t, map[string]string{
-		"tag1": "foo",
-	}, metrics[0].Tags())
-	require.Equal(t, map[string]interface{}{
-		"field1": float64(42),
-	}, metrics[0].Fields())
-}
-
 func TestParseValidFormDataDefaultTags(t *testing.T) {
 	parser := Parser{
 		MetricName:  "formdata_test",

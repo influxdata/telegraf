@@ -276,16 +276,6 @@ func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request
 	return []byte(query), true
 }
 
-func appendToMetric(m telegraf.Metric, tags map[string]string, fields map[string]float64) {
-	for key, value := range tags {
-		m.AddTag(key, value)
-	}
-
-	for key, value := range fields {
-		m.AddField(key, value)
-	}
-}
-
 func tooLarge(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)

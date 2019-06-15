@@ -144,8 +144,7 @@ type Config struct {
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 
 	// FormData configuration
-	FormDataTagKeys     []string `toml:"form_data_tag_keys"`
-	FormDataAllowedKeys []string `toml:"form_data_allowed_keys"`
+	FormDataTagKeys []string `toml:"form_data_tag_keys"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -218,7 +217,6 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewFormDataParser(
 			config.MetricName,
 			config.DefaultTags,
-			config.FormDataAllowedKeys,
 			config.FormDataTagKeys,
 		)
 	default:
@@ -416,13 +414,11 @@ func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
 func NewFormDataParser(
 	metricName string,
 	defaultTags map[string]string,
-	allowedKeys []string,
 	tagKeys []string,
 ) (Parser, error) {
 	return &formdata.Parser{
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
-		AllowedKeys: allowedKeys,
 		TagKeys:     tagKeys,
 	}, nil
 }

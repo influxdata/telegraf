@@ -23,10 +23,6 @@ Common use case is to pair it with http listener input plugin to parse request b
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "formdata"
 
-  ## Array of allowed key names. Not specified keys will be ignored.
-  ## Leaving an empty list means all keys will be collected.
-  form_data_allowed_keys = ["field1", "tag1"]
-
   ## Array of key names which should be collected as tags.
   ## By default, keys with string value are ignored if not marked as tags.
   form_data_tag_keys = ["tag1"]
@@ -63,7 +59,7 @@ Config:
   data_source = "query"
   data_format = "formdata"
   name_override = "mymetric"
-  form_data_allowed_keys = ["tag1", "field1"]
+  fielddrop = ["tag2", "field2"]
   form_data_tag_keys = ["tag1"]
 ```
 
