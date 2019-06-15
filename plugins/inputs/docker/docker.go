@@ -463,14 +463,32 @@ func (d *Docker) gatherContainer(
 			"pid":       info.State.Pid,
 			"exitcode":  info.State.ExitCode,
 		}
-		container_time, err := time.Parse(time.RFC3339, info.State.StartedAt)
-		if err == nil && !container_time.IsZero() {
-			statefields["started_at"] = container_time.UnixNano()
+
+		parseTime := func(v string) (time.Time, bool) {
+			target, err := time.Parse(time.RFC3339, v)
+			if err != nil || target.IsZero() {
+				return time.Time{}, false
+			}
+
+			return target, true
 		}
-		container_time, err = time.Parse(time.RFC3339, info.State.FinishedAt)
-		if err == nil && !container_time.IsZero() {
-			statefields["finished_at"] = container_time.UnixNano()
+
+		finished, finishedSet := parseTime(info.State.FinishedAt)
+		if started, ok := parseTime(info.State.StartedAt); ok {
+			statefields["started_at"] = started.UnixNano()
+
+			end := now()
+			if finishedSet {
+				end = finished
+			}
+
+			statefields["uptime_ns"] = int64(end.Sub(started))
 		}
+
+		if finishedSet {
+			statefields["finished_at"] = finished.UnixNano()
+		}
+
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
 
 		if info.State.Health != nil {

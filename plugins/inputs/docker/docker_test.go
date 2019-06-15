@@ -609,6 +609,7 @@ func TestContainerStatus(t *testing.T) {
 				d = Docker{newClient: newClientFunc}
 			)
 
+			// mock time
 			if tt.now != nil {
 				now = tt.now
 			}
