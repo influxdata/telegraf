@@ -590,6 +590,22 @@ func TestContainerStatus(t *testing.T) {
 				UptimeNs:   int64(5 * time.Minute),
 			},
 		},
+		{
+			name: "started_at is zero value",
+			inspect: func() types.ContainerJSON {
+				i := containerInspect()
+				i.ContainerJSONBase.State.StartedAt = ""
+				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
+				return i
+			}(),
+			expect: expectation{
+				Status:     "running",
+				OOMKilled:  false,
+				Pid:        1234,
+				ExitCode:   0,
+				FinishedAt: time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -621,11 +637,14 @@ func TestContainerStatus(t *testing.T) {
 			require.NoError(t, err)
 
 			fields := map[string]interface{}{
-				"oomkilled":  tt.expect.OOMKilled,
-				"pid":        tt.expect.Pid,
-				"exitcode":   tt.expect.ExitCode,
-				"started_at": tt.expect.StartedAt.UnixNano(),
-				"uptime_ns":  tt.expect.UptimeNs,
+				"oomkilled": tt.expect.OOMKilled,
+				"pid":       tt.expect.Pid,
+				"exitcode":  tt.expect.ExitCode,
+			}
+
+			if started := tt.expect.StartedAt; !started.IsZero() {
+				fields["started_at"] = started.UnixNano()
+				fields["uptime_ns"] = tt.expect.UptimeNs
 			}
 
 			if finished := tt.expect.FinishedAt; !finished.IsZero() {
