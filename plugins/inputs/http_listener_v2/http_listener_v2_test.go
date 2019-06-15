@@ -379,7 +379,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 }
 
 func TestWriteHTTPQueryParams(t *testing.T) {
-	parser, _ := parsers.NewFormDataParser("query_measurement", nil, nil, []string{"tagKey"})
+	parser, _ := parsers.NewFormDataParser("query_measurement", nil, []string{"tagKey"})
 	listener := newTestHTTPListenerV2()
 	listener.DataSource = "query"
 	listener.Parser = parser
@@ -401,7 +401,7 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 }
 
 func TestWriteHTTPFormData(t *testing.T) {
-	parser, _ := parsers.NewFormDataParser("query_measurement", nil, nil, []string{"tagKey"})
+	parser, _ := parsers.NewFormDataParser("query_measurement", nil, []string{"tagKey"})
 	listener := newTestHTTPListenerV2()
 	listener.Parser = parser
 
