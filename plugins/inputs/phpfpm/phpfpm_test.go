@@ -44,6 +44,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),
@@ -85,6 +86,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),
@@ -130,6 +132,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),
@@ -175,6 +178,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),

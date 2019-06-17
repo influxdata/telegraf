@@ -21,6 +21,7 @@ import (
 const (
 	PF_POOL                 = "pool"
 	PF_PROCESS_MANAGER      = "process manager"
+	PF_START_SINCE          = "start since"
 	PF_ACCEPTED_CONN        = "accepted conn"
 	PF_LISTEN_QUEUE         = "listen queue"
 	PF_MAX_LISTEN_QUEUE     = "max listen queue"
@@ -242,7 +243,8 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) (poolStat,
 
 		// Start to parse metric for current pool
 		switch fieldName {
-		case PF_ACCEPTED_CONN,
+		case PF_START_SINCE,
+			PF_ACCEPTED_CONN,
 			PF_LISTEN_QUEUE,
 			PF_MAX_LISTEN_QUEUE,
 			PF_LISTEN_QUEUE_LEN,
