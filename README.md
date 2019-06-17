@@ -304,6 +304,7 @@ For documentation on the latest development code see the [documentation index][d
 - [Collectd](/plugins/parsers/collectd)
 - [CSV](/plugins/parsers/csv)
 - [Dropwizard](/plugins/parsers/dropwizard)
+- [FormUrlencoded](/plugins/parser/form_urlencoded)
 - [Graphite](/plugins/parsers/graphite)
 - [Grok](/plugins/parsers/grok)
 - [JSON](/plugins/parsers/json)

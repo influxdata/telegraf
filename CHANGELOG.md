@@ -1,5 +1,9 @@
 ## v1.12 [unreleased]
 
+#### New Parsers
+
+- [form_urlencoded](/plugins/processors/form_urlencoded/README.md) - Contributed by @byonchev
+
 #### New Processors
 
 - [date](/plugins/processors/date/README.md) - Contributed by @influxdata
