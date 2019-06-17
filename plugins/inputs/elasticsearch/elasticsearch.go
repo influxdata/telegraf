@@ -50,6 +50,7 @@ type clusterHealth struct {
 	RelocatingShards            int                    `json:"relocating_shards"`
 	InitializingShards          int                    `json:"initializing_shards"`
 	UnassignedShards            int                    `json:"unassigned_shards"`
+	DelayedUnassignedShards     int                    `json:"delayed_unassigned_shards"`
 	NumberOfPendingTasks        int                    `json:"number_of_pending_tasks"`
 	TaskMaxWaitingInQueueMillis int                    `json:"task_max_waiting_in_queue_millis"`
 	ActiveShardsPercentAsNumber float64                `json:"active_shards_percent_as_number"`
@@ -340,6 +341,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 		"relocating_shards":                healthStats.RelocatingShards,
 		"initializing_shards":              healthStats.InitializingShards,
 		"unassigned_shards":                healthStats.UnassignedShards,
+		"delayed_unassigned_shards":        healthStats.DelayedUnassignedShards,
 		"number_of_pending_tasks":          healthStats.NumberOfPendingTasks,
 		"task_max_waiting_in_queue_millis": healthStats.TaskMaxWaitingInQueueMillis,
 		"active_shards_percent_as_number":  healthStats.ActiveShardsPercentAsNumber,
@@ -366,7 +368,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 		acc.AddFields(
 			"elasticsearch_indices",
 			indexFields,
-			map[string]string{"index": name},
+			map[string]string{"index": name, "name": healthStats.ClusterName},
 			measurementTime,
 		)
 	}
