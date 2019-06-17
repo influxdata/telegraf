@@ -31,6 +31,10 @@ This is a sample configuration for the plugin.
   ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
   # max_body_size = "500MB"
 
+  ## Part of the request to consume.  Available options are "body" and
+  ## "query".
+  # data_source = "body"
+
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
@@ -49,12 +53,6 @@ This is a sample configuration for the plugin.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-
-  ## Part of the request to consume.
-  ## Available options are "body" and "query".
-  ## Note that the data source and data format are independent properties.
-  ## To consume standard query params and POST forms - use "formdata" as a data_format.
-  # data_source = "body"
 ```
 
 ### Metrics:

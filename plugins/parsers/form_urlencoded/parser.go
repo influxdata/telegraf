@@ -1,4 +1,4 @@
-package formdata
+package form_urlencoded
 
 import (
 	"bytes"
@@ -32,7 +32,6 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	values, err := url.ParseQuery(string(buf))
-
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +48,6 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	metric, err := metric.New(p.MetricName, tags, fields, time.Now().UTC())
-
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +58,6 @@ func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 // ParseLine delegates a single line of text to the Parse function
 func (p Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
-
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +79,6 @@ func (p Parser) filterAllowedKeys(original url.Values) url.Values {
 
 	for _, key := range p.AllowedKeys {
 		value, exists := original[key]
-
 		if !exists {
 			continue
 		}
@@ -118,7 +114,6 @@ func (p Parser) parseFields(values url.Values) map[string]interface{} {
 		}
 
 		field, err := strconv.ParseFloat(value[0], 64)
-
 		if err != nil {
 			continue
 		}
