@@ -368,7 +368,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 		acc.AddFields(
 			"elasticsearch_indices",
 			indexFields,
-			map[string]string{"index": name},
+			map[string]string{"index": name, "name": healthStats.ClusterName},
 			measurementTime,
 		)
 	}
