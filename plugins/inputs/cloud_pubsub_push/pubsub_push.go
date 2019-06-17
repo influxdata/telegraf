@@ -315,8 +315,8 @@ func (p *PubSubPush) AuthenticateIfSet(handler http.HandlerFunc, res http.Respon
 func init() {
 	inputs.Add("cloud_pubsub_push", func() telegraf.Input {
 		return &PubSubPush{
-			ServiceAddress:         ":8080",
-			Path:                   "/",
+			ServiceAddress: ":8080",
+			Path:           "/",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})

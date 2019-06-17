@@ -458,7 +458,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 			"stackdriver", "list_timeseries_calls", tags)
 
 		s.client = &stackdriverMetricClient{
-			conn:                       client,
+			conn: client,
 			listMetricDescriptorsCalls: listMetricDescriptorsCalls,
 			listTimeSeriesCalls:        listTimeSeriesCalls,
 		}
@@ -697,9 +697,9 @@ func (s *Stackdriver) addDistribution(
 func init() {
 	f := func() telegraf.Input {
 		return &Stackdriver{
-			CacheTTL:                        defaultCacheTTL,
-			RateLimit:                       defaultRateLimit,
-			Delay:                           defaultDelay,
+			CacheTTL:  defaultCacheTTL,
+			RateLimit: defaultRateLimit,
+			Delay:     defaultDelay,
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
 		}
