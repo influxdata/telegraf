@@ -10,6 +10,7 @@
 
 - [#5842](https://github.com/influxdata/telegraf/pull/5842): Improve performance of wavefront serializer.
 - [#5863](https://github.com/influxdata/telegraf/pull/5863): Allow regex processor to append tag values.
+- [#5997](https://github.com/influxdata/telegraf/pull/5997): Add starttime field to phpfpm input.
 
 #### Bugfixes
 
