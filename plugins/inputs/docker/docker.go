@@ -429,7 +429,6 @@ func (d *Docker) gatherContainer(
 	if v.Name != "" {
 		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
 	}
-	tags["container_id"] = container.ID
 
 	// Add labels to tags
 	for k, label := range container.Labels {

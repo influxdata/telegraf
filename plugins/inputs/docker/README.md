@@ -268,7 +268,6 @@ status if configured.
   - tags:
     - engine_host
     - server_version
-    - container_id
     - container_image
     - container_name
     - container_status
