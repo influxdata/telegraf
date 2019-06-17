@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
+	"github.com/influxdata/telegraf/plugins/parsers/formdata"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -141,6 +142,9 @@ type Config struct {
 	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
+
+	// FormData configuration
+	FormDataTagKeys []string `toml:"form_data_tag_keys"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -209,6 +213,12 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
+	case "formdata":
+		parser, err = NewFormDataParser(
+			config.MetricName,
+			config.DefaultTags,
+			config.FormDataTagKeys,
+		)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -399,4 +409,16 @@ func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, 
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
 	return wavefront.NewWavefrontParser(defaultTags), nil
+}
+
+func NewFormDataParser(
+	metricName string,
+	defaultTags map[string]string,
+	tagKeys []string,
+) (Parser, error) {
+	return &formdata.Parser{
+		MetricName:  metricName,
+		DefaultTags: defaultTags,
+		TagKeys:     tagKeys,
+	}, nil
 }
