@@ -35,20 +35,17 @@ type TimeFunc func() time.Time
 
 // HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
-	ServiceAddress string
-	Path           string
-	Methods        []string
-	DataSource     string
-
-	ReadTimeout  internal.Duration
-	WriteTimeout internal.Duration
-	MaxBodySize  internal.Size
-	Port         int
-
+	ServiceAddress string            `toml:"service_address"`
+	Path           string            `toml:"path"`
+	Methods        []string          `toml:"methods"`
+	DataSource     string            `toml:"data_source"`
+	ReadTimeout    internal.Duration `toml:"read_timeout"`
+	WriteTimeout   internal.Duration `toml:"write_timeout"`
+	MaxBodySize    internal.Size     `toml:"max_body_size"`
+	Port           int               `toml:"port"`
+	BasicUsername  string            `toml:"basic_username"`
+	BasicPassword  string            `toml:"basic_password"`
 	tlsint.ServerConfig
-
-	BasicUsername string
-	BasicPassword string
 
 	TimeFunc
 
@@ -79,7 +76,11 @@ const sampleConfig = `
   ## 0 means to use the default of 524,288,00 bytes (500 mebibytes)
   # max_body_size = "500MB"
 
-  ## Set one or more allowed client CA certificate file names to 
+  ## Part of the request to consume.  Available options are "body" and
+  ## "query".
+  # data_source = "body"
+
+  ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
@@ -97,12 +98,6 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-
-  ## Part of the request to consume.
-  ## Available options are "body" and "query".
-  ## Note that the data source and data format are independent properties.
-  ## To consume standard query params and POST forms - use "formdata" as a data_format.
-  # data_source = "body"
 `
 
 func (h *HTTPListenerV2) SampleConfig() string {
@@ -167,7 +162,7 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! Started HTTP listener V2 service on %s\n", h.ServiceAddress)
+	log.Printf("I! [inputs.http_listener_v2] Listening on %s", listener.Addr().String())
 
 	return nil
 }
@@ -176,8 +171,6 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 func (h *HTTPListenerV2) Stop() {
 	h.listener.Close()
 	h.wg.Wait()
-
-	log.Println("I! Stopped HTTP listener V2 service on ", h.ServiceAddress)
 }
 
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -226,13 +219,13 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 	metrics, err := h.Parse(bytes)
 	if err != nil {
-		log.Println("D! " + err.Error())
+		log.Printf("D! [inputs.http_listener_v2] Parse error: %v", err)
 		badRequest(res)
 		return
 	}
 
 	for _, m := range metrics {
-		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		h.acc.AddMetric(m)
 	}
 
 	res.WriteHeader(http.StatusNoContent)
@@ -268,7 +261,7 @@ func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request
 
 	query, err := url.QueryUnescape(rawQuery)
 	if err != nil {
-		log.Println("D! " + err.Error())
+		log.Printf("D! [inputs.http_listener_v2] Error parsing query: %v", err)
 		badRequest(res)
 		return nil, false
 	}

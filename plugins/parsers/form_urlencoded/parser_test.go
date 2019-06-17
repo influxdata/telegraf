@@ -1,4 +1,4 @@
-package formdata
+package form_urlencoded
 
 import (
 	"testing"
@@ -16,13 +16,13 @@ const (
 
 func TestParseValidFormData(t *testing.T) {
 	parser := Parser{
-		MetricName: "formdata_test",
+		MetricName: "form_urlencoded_test",
 	}
 
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
-	require.Equal(t, "formdata_test", metrics[0].Name())
+	require.Equal(t, "form_urlencoded_test", metrics[0].Name())
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
 	require.Equal(t, map[string]interface{}{
 		"field1": float64(42),
@@ -32,12 +32,12 @@ func TestParseValidFormData(t *testing.T) {
 
 func TestParseLineValidFormData(t *testing.T) {
 	parser := Parser{
-		MetricName: "formdata_test",
+		MetricName: "form_urlencoded_test",
 	}
 
 	metric, err := parser.ParseLine(validFormData)
 	require.NoError(t, err)
-	require.Equal(t, "formdata_test", metric.Name())
+	require.Equal(t, "form_urlencoded_test", metric.Name())
 	require.Equal(t, map[string]string{}, metric.Tags())
 	require.Equal(t, map[string]interface{}{
 		"field1": float64(42),
@@ -47,14 +47,14 @@ func TestParseLineValidFormData(t *testing.T) {
 
 func TestParseValidFormDataWithTags(t *testing.T) {
 	parser := Parser{
-		MetricName: "formdata_test",
+		MetricName: "form_urlencoded_test",
 		TagKeys:    []string{"tag1", "tag2"},
 	}
 
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
-	require.Equal(t, "formdata_test", metrics[0].Name())
+	require.Equal(t, "form_urlencoded_test", metrics[0].Name())
 	require.Equal(t, map[string]string{
 		"tag1": "foo",
 		"tag2": "bar",
@@ -67,7 +67,7 @@ func TestParseValidFormDataWithTags(t *testing.T) {
 
 func TestParseValidFormDataDefaultTags(t *testing.T) {
 	parser := Parser{
-		MetricName:  "formdata_test",
+		MetricName:  "form_urlencoded_test",
 		TagKeys:     []string{"tag1", "tag2"},
 		DefaultTags: map[string]string{"tag4": "default"},
 	}
@@ -75,7 +75,7 @@ func TestParseValidFormDataDefaultTags(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
-	require.Equal(t, "formdata_test", metrics[0].Name())
+	require.Equal(t, "form_urlencoded_test", metrics[0].Name())
 	require.Equal(t, map[string]string{
 		"tag1": "foo",
 		"tag2": "bar",
@@ -89,7 +89,7 @@ func TestParseValidFormDataDefaultTags(t *testing.T) {
 
 func TestParseValidFormDataDefaultTagsOverride(t *testing.T) {
 	parser := Parser{
-		MetricName:  "formdata_test",
+		MetricName:  "form_urlencoded_test",
 		TagKeys:     []string{"tag1", "tag2"},
 		DefaultTags: map[string]string{"tag1": "default"},
 	}
@@ -97,7 +97,7 @@ func TestParseValidFormDataDefaultTagsOverride(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validFormData))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
-	require.Equal(t, "formdata_test", metrics[0].Name())
+	require.Equal(t, "form_urlencoded_test", metrics[0].Name())
 	require.Equal(t, map[string]string{
 		"tag1": "default",
 		"tag2": "bar",
@@ -110,14 +110,14 @@ func TestParseValidFormDataDefaultTagsOverride(t *testing.T) {
 
 func TestParseEncodedFormData(t *testing.T) {
 	parser := Parser{
-		MetricName: "formdata_test",
+		MetricName: "form_urlencoded_test",
 		TagKeys:    []string{"tag1"},
 	}
 
 	metrics, err := parser.Parse([]byte(encodedFormData))
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
-	require.Equal(t, "formdata_test", metrics[0].Name())
+	require.Equal(t, "form_urlencoded_test", metrics[0].Name())
 	require.Equal(t, map[string]string{
 		"tag1": "$$$",
 	}, metrics[0].Tags())
@@ -128,7 +128,7 @@ func TestParseEncodedFormData(t *testing.T) {
 
 func TestParseInvalidFormDataError(t *testing.T) {
 	parser := Parser{
-		MetricName: "formdata_test",
+		MetricName: "form_urlencoded_test",
 	}
 
 	metrics, err := parser.Parse([]byte(notEscapedProperlyFormData))
@@ -138,7 +138,7 @@ func TestParseInvalidFormDataError(t *testing.T) {
 
 func TestParseInvalidFormDataEmptyKey(t *testing.T) {
 	parser := Parser{
-		MetricName: "formdata_test",
+		MetricName: "form_urlencoded_test",
 	}
 
 	// Empty key for field
@@ -163,7 +163,7 @@ func TestParseInvalidFormDataEmptyKey(t *testing.T) {
 
 func TestParseInvalidFormDataEmptyString(t *testing.T) {
 	parser := Parser{
-		MetricName: "formdata_test",
+		MetricName: "form_urlencoded_test",
 	}
 
 	metrics, err := parser.Parse([]byte(emptyFormData))
