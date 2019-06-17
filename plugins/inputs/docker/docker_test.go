@@ -246,7 +246,6 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_id": "123456789",
 	}
 	acc.AssertDoesNotContainsTaggedFields(t, "docker_container_cpu", cpu3fields, cputags)
-
 }
 
 func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
