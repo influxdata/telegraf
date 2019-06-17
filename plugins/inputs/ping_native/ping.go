@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"time"
 
-	ping "github.com/glinton/go-ping"
+	ping "github.com/glinton/ping"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -24,6 +24,7 @@ type Ping struct {
 	network    string                 // network is the network to listen on ("udp4", "udp6", "ip4:icmp", "ip6:ip6-icmp")
 	listenAddr string                 // listenAddr is the address associated with the interface defined.
 	hostCache  []net.Addr             // hosts to ping
+	hosts      map[string]string      // ip to host map
 	rcvdCache  map[string]pingResults // cache of echo responses received
 }
 
@@ -109,14 +110,21 @@ func (p *Ping) buildHostCache(acc telegraf.Accumulator) {
 	}
 
 	p.hostCache = []net.Addr{}
+	p.hosts = map[string]string{}
 
-	for _, url := range p.Hosts {
+	for _, host := range p.Hosts {
 		var addr net.Addr
 		var err error
 		if p.IPV6 {
-			addr, err = net.ResolveIPAddr("ip6", url)
+			addr, err = net.ResolveIPAddr("ip6", host)
 		} else {
-			addr, err = net.ResolveIPAddr("ip4", url)
+			addr, err = net.ResolveIPAddr("ip4", host)
+		}
+
+		if p.IPV6 {
+			p.hosts["["+addr.String()+"]:0"] = host
+		} else {
+			p.hosts[addr.String()+":0"] = host
 		}
 
 		if a, ok := addr.(*net.IPAddr); ok && runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
@@ -124,7 +132,7 @@ func (p *Ping) buildHostCache(acc telegraf.Accumulator) {
 		}
 
 		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": url})
+			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"source": host})
 			acc.AddError(err)
 			continue
 		}
@@ -146,7 +154,7 @@ func (p *Ping) onFinish(acc telegraf.Accumulator) func(stats *ping.Statistics) {
 		max := float64(stats.MaxRTT.Nanoseconds()) / float64(time.Millisecond)
 		stddev := float64(stats.StdDevRTT.Nanoseconds()) / float64(time.Millisecond)
 
-		tags := map[string]string{"ip": stats.Addr}
+		tags := map[string]string{"source": p.hosts[stats.Addr]}
 		fields := map[string]interface{}{
 			"result_code":         0,
 			"packets_transmitted": int(stats.PacketsSent),
