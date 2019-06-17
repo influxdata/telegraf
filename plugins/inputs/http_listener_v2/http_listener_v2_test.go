@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -379,7 +378,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 }
 
 func TestWriteHTTPQueryParams(t *testing.T) {
-	parser, _ := parsers.NewFormDataParser("query_measurement", nil, []string{"tagKey"})
+	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
 	listener := newTestHTTPListenerV2()
 	listener.DataSource = "query"
 	listener.Parser = parser
@@ -401,7 +400,7 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 }
 
 func TestWriteHTTPFormData(t *testing.T) {
-	parser, _ := parsers.NewFormDataParser("query_measurement", nil, []string{"tagKey"})
+	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
 	listener := newTestHTTPListenerV2()
 	listener.Parser = parser
 
