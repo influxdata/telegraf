@@ -423,6 +423,14 @@
   revision = "25d852aebe32c875e9c044af3eef9c7dc6bc777f"
 
 [[projects]]
+  branch = "master"
+  digest = "1:6e331b87796a124ca648d7db9f720b8537ff526980d70ef108e95a275d751f23"
+  name = "github.com/glinton/ping"
+  packages = ["."]
+  pruneopts = ""
+  revision = "b1f885736f7f10060c0c638ff70334a4ef7ef552"
+
+[[projects]]
   digest = "1:858b7fe7b0f4bc7ef9953926828f2816ea52d01a88d72d1c45bc8c108f23c356"
   name = "github.com/go-ini/ini"
   packages = ["."]
@@ -1265,6 +1273,7 @@
     "http/httpguts",
     "http2",
     "http2/hpack",
+    "icmp",
     "idna",
     "internal/iana",
     "internal/socket",
@@ -1601,6 +1610,7 @@
     "github.com/ericchiang/k8s/apis/resource",
     "github.com/ericchiang/k8s/util/intstr",
     "github.com/ghodss/yaml",
+    "github.com/glinton/ping",
     "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
