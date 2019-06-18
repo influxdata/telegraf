@@ -137,9 +137,16 @@ type Elasticsearch struct {
 	NodeStats                  []string
 	tls.ClientConfig
 
-	client                  *http.Client
-	catMasterResponseTokens []string
-	isMaster                bool
+	client     *http.Client
+	serverInfo map[string]serverInfo
+}
+type serverInfo struct {
+	nodeID   string
+	masterID string
+}
+
+func (i serverInfo) isMaster() bool {
+	return i.nodeID == i.masterID
 }
 
 // NewElasticsearch return a new instance of Elasticsearch
@@ -186,6 +193,28 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		e.client = client
 	}
 
+	if e.ClusterStats {
+		e.serverInfo = make(map[string]serverInfo)
+		for _, serv := range e.Servers {
+			go func(s string, acc telegraf.Accumulator) {
+				info := serverInfo{}
+
+				// Gather node ID
+				if err := e.gatherNodeID(&info, s+"/_nodes/_local/name"); err != nil {
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					return
+				}
+
+				// get cat/master information here so NodeStats can determine
+				// whether this node is the Master
+				if err := e.setCatMaster(&info, s+"/_cat/master"); err != nil {
+					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+					return
+				}
+			}(serv, acc)
+		}
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(e.Servers))
 
@@ -193,18 +222,8 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		go func(s string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			url := e.nodeStatsUrl(s)
-			e.isMaster = false
 
-			if e.ClusterStats {
-				// get cat/master information here so NodeStats can determine
-				// whether this node is the Master
-				if err := e.setCatMaster(s + "/_cat/master"); err != nil {
-					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
-					return
-				}
-			}
-
-			// Always gather node states
+			// Always gather node stats
 			if err := e.gatherNodeStats(url, acc); err != nil {
 				acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 				return
@@ -221,7 +240,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
-			if e.ClusterStats && (e.isMaster || !e.ClusterStatsOnlyFromMaster || !e.Local) {
+			if e.ClusterStats && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
 				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
 					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
@@ -267,6 +286,22 @@ func (e *Elasticsearch) nodeStatsUrl(baseUrl string) string {
 	return fmt.Sprintf("%s/%s", url, strings.Join(e.NodeStats, ","))
 }
 
+func (e *Elasticsearch) gatherNodeID(info *serverInfo, url string) error {
+	nodeStats := &struct {
+		ClusterName string               `json:"cluster_name"`
+		Nodes       map[string]*nodeStat `json:"nodes"`
+	}{}
+	if err := e.gatherJsonData(url, nodeStats); err != nil {
+		return err
+	}
+
+	// Only 1 should be returned
+	for id := range nodeStats.Nodes {
+		info.nodeID = id
+	}
+	return nil
+}
+
 func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) error {
 	nodeStats := &struct {
 		ClusterName string               `json:"cluster_name"`
@@ -282,11 +317,6 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			"node_host":    n.Host,
 			"node_name":    n.Name,
 			"cluster_name": nodeStats.ClusterName,
-		}
-
-		if e.ClusterStats {
-			// check for master
-			e.isMaster = (id == e.catMasterResponseTokens[0])
 		}
 
 		for k, v := range n.Attributes {
@@ -405,7 +435,7 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 	return nil
 }
 
-func (e *Elasticsearch) setCatMaster(url string) error {
+func (e *Elasticsearch) setCatMaster(info *serverInfo, url string) error {
 	r, err := e.client.Get(url)
 	if err != nil {
 		return err
@@ -423,7 +453,7 @@ func (e *Elasticsearch) setCatMaster(url string) error {
 		return err
 	}
 
-	e.catMasterResponseTokens = strings.Split(string(response), " ")
+	info.masterID = strings.Split(string(response), " ")[0]
 
 	return nil
 }
