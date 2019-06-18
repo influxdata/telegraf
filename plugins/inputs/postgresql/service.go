@@ -122,6 +122,26 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 						Name:  "int8OID",
 						OID:   pgtype.Int8OID,
 					})
+					info.RegisterDataType(pgtype.DataType{
+						Value: &pgtype.OIDValue{},
+						Name:  "zerroTypeOID",
+						OID:   0,
+					})
+					info.RegisterDataType(pgtype.DataType{
+						Value: &pgtype.OIDValue{},
+						Name:  "numericTypeOID",
+						OID:   pgtype.NumericOID,
+					})
+					info.RegisterDataType(pgtype.DataType{
+						Value: &pgtype.OIDValue{},
+						Name:  "float8TypeOID",
+						OID:   pgtype.Float8OID,
+					})
+					info.RegisterDataType(pgtype.DataType{
+						Value: &pgtype.OIDValue{},
+						Name:  "timestamptzTypeOID",
+						OID:   pgtype.TimestamptzOID,
+					})
 
 					return info, nil
 				},
