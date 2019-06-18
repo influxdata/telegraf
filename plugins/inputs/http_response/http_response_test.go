@@ -1,8 +1,10 @@
 package http_response
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -192,6 +194,69 @@ func TestFields(t *testing.T) {
 
 	var acc testutil.Accumulator
 	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func findInterface() (net.Interface, error) {
+	potential, _ := net.Interfaces()
+
+	for _, i := range potential {
+		// ignore interfaces which are down or not used for broadcast
+		if (i.Flags&net.FlagUp == 0) || (i.Flags&net.FlagBroadcast == 0) {
+			continue
+		}
+
+		if addrs, _ := i.Addrs(); len(addrs) > 0 {
+			// return interface if it has at least one unicast address
+			return i, nil
+		}
+	}
+
+	return net.Interface{}, errors.New("cannot find suitable interface")
+}
+
+func TestInterface(t *testing.T) {
+	var (
+		mux = setUpTestMux()
+		ts  = httptest.NewServer(mux)
+	)
+
+	defer ts.Close()
+
+	intf, err := findInterface()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := &HTTPResponse{
+		Address:         ts.URL + "/good",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+		Interface:       intf.Name,
+	}
+
+	var acc testutil.Accumulator
+	err = h.Gather(&acc)
 	require.NoError(t, err)
 
 	expectedFields := map[string]interface{}{
