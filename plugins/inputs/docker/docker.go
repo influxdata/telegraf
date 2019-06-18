@@ -475,7 +475,7 @@ func (d *Docker) gatherContainer(
 		started, err := time.Parse(time.RFC3339, info.State.StartedAt)
 		if err == nil && !started.IsZero() {
 			statefields["started_at"] = started.UnixNano()
-			statefields["uptime_ns"] = int64(finished.Sub(started))
+			statefields["uptime_ns"] = finished.Sub(started).Nanoseconds()
 		}
 
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
