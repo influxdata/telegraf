@@ -121,10 +121,15 @@ func (p *Ping) buildHostCache(acc telegraf.Accumulator) {
 			addr, err = net.ResolveIPAddr("ip4", host)
 		}
 
-		if p.IPV6 {
-			p.hosts["["+addr.String()+"]:0"] = host
-		} else {
-			p.hosts[addr.String()+":0"] = host
+		switch runtime.GOOS {
+		case "js", "nacl", "plan9", "windows":
+			p.hosts[addr.String()] = host
+		default:
+			if p.IPV6 {
+				p.hosts["["+addr.String()+"]:0"] = host
+			} else {
+				p.hosts[addr.String()+":0"] = host
+			}
 		}
 
 		if a, ok := addr.(*net.IPAddr); ok && runtime.GOOS == "darwin" || runtime.GOOS == "linux" {
