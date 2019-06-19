@@ -217,7 +217,7 @@ func findInterface() (net.Interface, error) {
 
 	for _, i := range potential {
 		// ignore interfaces which are down or not used for broadcast
-		if (i.Flags&net.FlagUp == 0) || (i.Flags&net.FlagBroadcast == 0) {
+		if (i.Flags&net.FlagUp == 0) || (i.Flags&net.FlagLoopback == 0) {
 			continue
 		}
 
@@ -239,9 +239,7 @@ func TestInterface(t *testing.T) {
 	defer ts.Close()
 
 	intf, err := findInterface()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	h := &HTTPResponse{
 		Address:         ts.URL + "/good",
