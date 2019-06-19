@@ -278,6 +278,7 @@ status if configured.
     - exitcode (integer)
     - started_at (integer)
     - finished_at (integer)
+    - uptime_ns (integer)
 
 - docker_swarm
   - tags:
