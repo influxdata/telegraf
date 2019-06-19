@@ -1,5 +1,9 @@
 ## v1.12 [unreleased]
 
+#### New Inputs
+
+- [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
+
 #### New Parsers
 
 - [form_urlencoded](/plugins/processors/form_urlencoded/README.md) - Contributed by @byonchev
@@ -16,6 +20,7 @@
 - [#5863](https://github.com/influxdata/telegraf/pull/5863): Allow regex processor to append tag values.
 - [#5997](https://github.com/influxdata/telegraf/pull/5997): Add starttime field to phpfpm input.
 - [#5998](https://github.com/influxdata/telegraf/pull/5998): Add cluster name tag to elasticsearch indices.
+- [#6006](https://github.com/influxdata/telegraf/pull/6006): Add support for interface field in http_response input plugin.
 
 #### Bugfixes
 
@@ -28,6 +33,7 @@
 - [#5980](https://github.com/influxdata/telegraf/issues/5980): Cannot set mount_points option in disk input.
 - [#5983](https://github.com/influxdata/telegraf/issues/5983): Omit keys when creating measurement names for GNMI telemetry.
 - [#5972](https://github.com/influxdata/telegraf/issues/5972): Don't consider pid of 0 when using systemd lookup in procstat.
+- [#5807](https://github.com/influxdata/telegraf/issues/5807): Skip 404 error reporting in nginx_plus_api input.
 
 ## v1.11 [2019-06-11]
 
