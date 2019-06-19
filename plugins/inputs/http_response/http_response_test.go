@@ -216,7 +216,7 @@ func findInterface() (net.Interface, error) {
 	potential, _ := net.Interfaces()
 
 	for _, i := range potential {
-		// ignore interfaces which are down or not used for broadcast
+		// we are only interest in loopback interfaces which are up
 		if (i.Flags&net.FlagUp == 0) || (i.Flags&net.FlagLoopback == 0) {
 			continue
 		}
@@ -227,7 +227,7 @@ func findInterface() (net.Interface, error) {
 		}
 	}
 
-	return net.Interface{}, errors.New("cannot find suitable interface")
+	return net.Interface{}, errors.New("cannot find suitable loopback interface")
 }
 
 func TestInterface(t *testing.T) {
