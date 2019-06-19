@@ -73,6 +73,7 @@ const (
 var (
 	sizeRegex       = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	now             = time.Now
 )
 
 var sampleConfig = `
@@ -462,14 +463,21 @@ func (d *Docker) gatherContainer(
 			"pid":       info.State.Pid,
 			"exitcode":  info.State.ExitCode,
 		}
-		container_time, err := time.Parse(time.RFC3339, info.State.StartedAt)
-		if err == nil && !container_time.IsZero() {
-			statefields["started_at"] = container_time.UnixNano()
+
+		finished, err := time.Parse(time.RFC3339, info.State.FinishedAt)
+		if err == nil && !finished.IsZero() {
+			statefields["finished_at"] = finished.UnixNano()
+		} else {
+			// set finished to now for use in uptime
+			finished = now()
 		}
-		container_time, err = time.Parse(time.RFC3339, info.State.FinishedAt)
-		if err == nil && !container_time.IsZero() {
-			statefields["finished_at"] = container_time.UnixNano()
+
+		started, err := time.Parse(time.RFC3339, info.State.StartedAt)
+		if err == nil && !started.IsZero() {
+			statefields["started_at"] = started.UnixNano()
+			statefields["uptime_ns"] = finished.Sub(started).Nanoseconds()
 		}
+
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
 
 		if info.State.Health != nil {

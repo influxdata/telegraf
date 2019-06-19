@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 
@@ -83,7 +84,7 @@ var baseClient = MockClient{
 		return containerStats(s), nil
 	},
 	ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
-		return containerInspect, nil
+		return containerInspect(), nil
 	},
 	ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
 		return ServiceList, nil
@@ -264,7 +265,7 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 					return containerStatsWindows(), nil
 				},
 				ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-					return containerInspect, nil
+					return containerInspect(), nil
 				},
 				ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
 					return ServiceList, nil
@@ -534,6 +535,135 @@ func TestContainerNames(t *testing.T) {
 			}
 
 			require.Equal(t, expected, actual)
+		})
+	}
+}
+
+func TestContainerStatus(t *testing.T) {
+	type expectation struct {
+		// tags
+		Status string
+		// fields
+		OOMKilled  bool
+		Pid        int
+		ExitCode   int
+		StartedAt  time.Time
+		FinishedAt time.Time
+		UptimeNs   int64
+	}
+
+	var tests = []struct {
+		name    string
+		now     func() time.Time
+		inspect types.ContainerJSON
+		expect  expectation
+	}{
+		{
+			name: "finished_at is zero value",
+			now: func() time.Time {
+				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
+			},
+			inspect: containerInspect(),
+			expect: expectation{
+				Status:    "running",
+				OOMKilled: false,
+				Pid:       1234,
+				ExitCode:  0,
+				StartedAt: time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
+				UptimeNs:  int64(3 * time.Minute),
+			},
+		},
+		{
+			name: "finished_at is non-zero value",
+			inspect: func() types.ContainerJSON {
+				i := containerInspect()
+				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
+				return i
+			}(),
+			expect: expectation{
+				Status:     "running",
+				OOMKilled:  false,
+				Pid:        1234,
+				ExitCode:   0,
+				StartedAt:  time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
+				FinishedAt: time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+				UptimeNs:   int64(5 * time.Minute),
+			},
+		},
+		{
+			name: "started_at is zero value",
+			inspect: func() types.ContainerJSON {
+				i := containerInspect()
+				i.ContainerJSONBase.State.StartedAt = ""
+				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
+				return i
+			}(),
+			expect: expectation{
+				Status:     "running",
+				OOMKilled:  false,
+				Pid:        1234,
+				ExitCode:   0,
+				FinishedAt: time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var (
+				acc           testutil.Accumulator
+				newClientFunc = func(string, *tls.Config) (Client, error) {
+					client := baseClient
+					client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+						return containerList[:1], nil
+					}
+					client.ContainerInspectF = func(c context.Context, s string) (types.ContainerJSON, error) {
+						return tt.inspect, nil
+					}
+
+					return &client, nil
+				}
+				d = Docker{newClient: newClientFunc}
+			)
+
+			// mock time
+			if tt.now != nil {
+				now = tt.now
+			}
+			defer func() {
+				now = time.Now
+			}()
+
+			err := acc.GatherError(d.Gather)
+			require.NoError(t, err)
+
+			fields := map[string]interface{}{
+				"oomkilled": tt.expect.OOMKilled,
+				"pid":       tt.expect.Pid,
+				"exitcode":  tt.expect.ExitCode,
+			}
+
+			if started := tt.expect.StartedAt; !started.IsZero() {
+				fields["started_at"] = started.UnixNano()
+				fields["uptime_ns"] = tt.expect.UptimeNs
+			}
+
+			if finished := tt.expect.FinishedAt; !finished.IsZero() {
+				fields["finished_at"] = finished.UnixNano()
+			}
+
+			acc.AssertContainsTaggedFields(t,
+				"docker_container_status",
+				fields,
+				map[string]string{
+					"container_name":    "etcd",
+					"container_image":   "quay.io/coreos/etcd",
+					"container_version": "v2.2.2",
+					"engine_host":       "absol",
+					"label1":            "test_value_1",
+					"label2":            "test_value_2",
+					"server_version":    "17.09.0-ce",
+					"container_status":  tt.expect.Status,
+				})
 		})
 	}
 }
