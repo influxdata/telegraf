@@ -21,6 +21,7 @@
 - [#5997](https://github.com/influxdata/telegraf/pull/5997): Add starttime field to phpfpm input.
 - [#5998](https://github.com/influxdata/telegraf/pull/5998): Add cluster name tag to elasticsearch indices.
 - [#6006](https://github.com/influxdata/telegraf/pull/6006): Add support for interface field in http_response input plugin.
+- [#5996](https://github.com/influxdata/telegraf/pull/5996): Add container uptime_ns in docker input plugin.
 
 #### Bugfixes
 
