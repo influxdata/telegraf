@@ -1,86 +1,44 @@
 package docker_log
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"strings"
 	"sync"
 	"time"
-)
+	"unicode"
 
-type StdType byte
-
-const (
-	Stdin StdType = iota
-	Stdout
-	Stderr
-	Systemerr
-
-	stdWriterPrefixLen = 8
-	stdWriterFdIndex   = 0
-	stdWriterSizeIndex = 4
-
-	startingBufLen = 32*1024 + stdWriterPrefixLen + 1
-
-	ERR_PREFIX      = "E! [inputs.docker_log]"
-	defaultEndpoint = "unix:///var/run/docker.sock"
-	logBytesMax     = 1000
-)
-
-type DockerLogs struct {
-	Endpoint string
-
-	Timeout internal.Duration
-
-	LabelInclude []string `toml:"docker_label_include"`
-	LabelExclude []string `toml:"docker_label_exclude"`
-
-	ContainerInclude []string `toml:"container_name_include"`
-	ContainerExclude []string `toml:"container_name_exclude"`
-
-	ContainerStateInclude []string `toml:"container_state_include"`
-	ContainerStateExclude []string `toml:"container_state_exclude"`
-
-	tlsint.ClientConfig
-
-	newEnvClient func() (Client, error)
-	newClient    func(string, *tls.Config) (Client, error)
-
-	client          Client
-	filtersCreated  bool
-	labelFilter     filter.Filter
-	containerFilter filter.Filter
-	stateFilter     filter.Filter
-	opts            types.ContainerListOptions
-	wg              sync.WaitGroup
-	mu              sync.Mutex
-	containerList   map[string]io.ReadCloser
-}
-
-var (
-	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/docker"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 var sampleConfig = `
   ## Docker Endpoint
-  ## To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ## To use environment variables (ie, docker-machine), set endpoint = "ENV"
-  endpoint = "unix:///var/run/docker.sock"
+  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
+  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  # endpoint = "unix:///var/run/docker.sock"
+
+  ## When true, container logs are read from the beginning; otherwise
+  ## reading begins at the end of the log.
+  # from_beginning = false
+
+  ## Timeout for Docker API calls.
+  # timeout = "5s"
+
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
-  container_name_include = []
-  container_name_exclude = []
+  # container_name_include = []
+  # container_name_exclude = []
+
   ## Container states to include and exclude. Globs accepted.
   ## When empty only containers in the "running" state will be captured.
   # container_state_include = []
@@ -88,8 +46,8 @@ var sampleConfig = `
 
   ## docker labels to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all labels as tags
-  docker_label_include = []
-  docker_label_exclude = []
+  # docker_label_include = []
+  # docker_label_exclude = []
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -99,20 +57,336 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
+const (
+	defaultEndpoint = "unix:///var/run/docker.sock"
+
+	// Maximum bytes of a log line before it will be split, size is mirroring
+	// docker code:
+	// https://github.com/moby/moby/blob/master/daemon/logger/copier.go#L21
+	maxLineBytes = 16 * 1024
+)
+
+var (
+	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+)
+
+type DockerLogs struct {
+	Endpoint              string            `toml:"endpoint"`
+	FromBeginning         bool              `toml:"from_beginning"`
+	Timeout               internal.Duration `toml:"timeout"`
+	LabelInclude          []string          `toml:"docker_label_include"`
+	LabelExclude          []string          `toml:"docker_label_exclude"`
+	ContainerInclude      []string          `toml:"container_name_include"`
+	ContainerExclude      []string          `toml:"container_name_exclude"`
+	ContainerStateInclude []string          `toml:"container_state_include"`
+	ContainerStateExclude []string          `toml:"container_state_exclude"`
+
+	tlsint.ClientConfig
+
+	newEnvClient func() (Client, error)
+	newClient    func(string, *tls.Config) (Client, error)
+
+	client          Client
+	labelFilter     filter.Filter
+	containerFilter filter.Filter
+	stateFilter     filter.Filter
+	opts            types.ContainerListOptions
+	wg              sync.WaitGroup
+	mu              sync.Mutex
+	containerList   map[string]context.CancelFunc
+}
+
 func (d *DockerLogs) Description() string {
-	return "Plugin to get docker logs"
+	return "Read logging output from the Docker engine"
 }
 
 func (d *DockerLogs) SampleConfig() string {
 	return sampleConfig
 }
 
-func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
-	/*Check to see if any new containers have been created since last time*/
-	return d.containerListUpdate(acc)
+func (d *DockerLogs) Init() error {
+	var err error
+	if d.Endpoint == "ENV" {
+		d.client, err = d.newEnvClient()
+		if err != nil {
+			return err
+		}
+	} else {
+		tlsConfig, err := d.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+		d.client, err = d.newClient(d.Endpoint, tlsConfig)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Create filters
+	err = d.createLabelFilters()
+	if err != nil {
+		return err
+	}
+	err = d.createContainerFilters()
+	if err != nil {
+		return err
+	}
+	err = d.createContainerStateFilters()
+	if err != nil {
+		return err
+	}
+
+	filterArgs := filters.NewArgs()
+	for _, state := range containerStates {
+		if d.stateFilter.Match(state) {
+			filterArgs.Add("status", state)
+		}
+	}
+
+	if filterArgs.Len() != 0 {
+		d.opts = types.ContainerListOptions{
+			Filters: filterArgs,
+		}
+	}
+
+	return nil
 }
 
-/*Following few functions have been inherited from telegraf docker input plugin*/
+func (d *DockerLogs) addToContainerList(containerId string, cancel context.CancelFunc) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.containerList[containerId] = cancel
+	return nil
+}
+
+func (d *DockerLogs) removeFromContainerList(containerId string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.containerList, containerId)
+	return nil
+}
+
+func (d *DockerLogs) containerInContainerList(containerId string) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	_, ok := d.containerList[containerId]
+	return ok
+}
+
+func (d *DockerLogs) cancelTails() error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, cancel := range d.containerList {
+		cancel()
+	}
+	return nil
+}
+
+func (d *DockerLogs) matchedContainerName(names []string) string {
+	// Check if all container names are filtered; in practice I believe
+	// this array is always of length 1.
+	for _, name := range names {
+		trimmedName := strings.TrimPrefix(name, "/")
+		match := d.containerFilter.Match(trimmedName)
+		if match {
+			return trimmedName
+		}
+	}
+	return ""
+}
+
+func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
+	ctx := context.Background()
+
+	cctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
+	defer cancel()
+	containers, err := d.client.ContainerList(cctx, d.opts)
+	if err != nil {
+		return err
+	}
+
+	for _, container := range containers {
+		if d.containerInContainerList(container.ID) {
+			continue
+		}
+
+		containerName := d.matchedContainerName(container.Names)
+		if containerName == "" {
+			continue
+		}
+
+		ctx, cancel := context.WithCancel(ctx)
+		d.addToContainerList(container.ID, cancel)
+
+		// Start a new goroutine for every new container that has logs to collect
+		d.wg.Add(1)
+		go func(container types.Container) {
+			defer d.wg.Done()
+			defer d.removeFromContainerList(container.ID)
+
+			imageName, imageVersion := docker.ParseImage(container.Image)
+			tags := map[string]string{
+				"container_name":    containerName,
+				"container_image":   imageName,
+				"container_version": imageVersion,
+			}
+
+			// Add matching container labels as tags
+			for k, label := range container.Labels {
+				if d.labelFilter.Match(k) {
+					tags[k] = label
+				}
+			}
+
+			err = d.tailContainerLogs(ctx, acc, container, tags)
+			if err != nil {
+				acc.AddError(err)
+			}
+
+		}(container)
+	}
+	return nil
+}
+
+func (d *DockerLogs) hasTTY(ctx context.Context, container types.Container) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
+	defer cancel()
+	c, err := d.client.ContainerInspect(ctx, container.ID)
+	if err != nil {
+		return false, err
+	}
+	return c.Config.Tty, nil
+}
+
+func (d *DockerLogs) tailContainerLogs(
+	ctx context.Context,
+	acc telegraf.Accumulator,
+	container types.Container,
+	tags map[string]string,
+) error {
+	hasTTY, err := d.hasTTY(ctx, container)
+	if err != nil {
+		return err
+	}
+
+	tail := "0"
+	if d.FromBeginning {
+		tail = "all"
+	}
+
+	logOptions := types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Timestamps: false,
+		Details:    false,
+		Follow:     true,
+		Tail:       tail,
+	}
+
+	logReader, err := d.client.ContainerLogs(ctx, container.ID, logOptions)
+	if err != nil {
+		return err
+	}
+
+	// If the container is using a TTY, there is only a single stream
+	// (stdout), and data is copied directly from the container output stream,
+	// no extra multiplexing or headers.
+	//
+	// If the container is *not* using a TTY, streams for stdout and stderr are
+	// multiplexed.
+	if hasTTY {
+		return tailStream(acc, tags, container.ID, logReader, "tty")
+	} else {
+		return tailMultiplexed(acc, tags, container.ID, logReader)
+	}
+}
+
+func tailStream(
+	acc telegraf.Accumulator,
+	baseTags map[string]string,
+	containerID string,
+	reader io.ReadCloser,
+	stream string,
+) error {
+	defer reader.Close()
+
+	tags := make(map[string]string, len(baseTags)+1)
+	for k, v := range baseTags {
+		tags[k] = v
+	}
+	tags["stream"] = stream
+
+	r := bufio.NewReaderSize(reader, 64*1024)
+
+	var err error
+	var message string
+	for {
+		message, err = r.ReadString('\n')
+
+		// Keep any leading space, but remove whitespace from end of line.
+		// This preserves space in, for example, stacktraces, while removing
+		// annoying end of line characters and is similar to how other logging
+		// plugins such as syslog behave.
+		message = strings.TrimRightFunc(message, unicode.IsSpace)
+
+		if len(message) != 0 {
+			acc.AddFields("docker_log", map[string]interface{}{
+				"container_id": containerID,
+				"message":      message,
+			}, tags)
+		}
+
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
+}
+
+func tailMultiplexed(
+	acc telegraf.Accumulator,
+	tags map[string]string,
+	containerID string,
+	src io.ReadCloser,
+) error {
+	outReader, outWriter := io.Pipe()
+	errReader, errWriter := io.Pipe()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := tailStream(acc, tags, containerID, outReader, "stdout")
+		if err != nil {
+			acc.AddError(err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err := tailStream(acc, tags, containerID, errReader, "stderr")
+		if err != nil {
+			acc.AddError(err)
+		}
+	}()
+
+	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
+	outWriter.Close()
+	errWriter.Close()
+	src.Close()
+	wg.Wait()
+	return err
+}
+
+func (d *DockerLogs) Stop() {
+	d.cancelTails()
+	d.wg.Wait()
+}
+
+// Following few functions have been inherited from telegraf docker input plugin
 func (d *DockerLogs) createContainerFilters() error {
 	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
 	if err != nil {
@@ -143,330 +417,14 @@ func (d *DockerLogs) createContainerStateFilters() error {
 	return nil
 }
 
-func (d *DockerLogs) addToContainerList(containerId string, logReader io.ReadCloser) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.containerList[containerId] = logReader
-	return nil
-}
-
-func (d *DockerLogs) removeFromContainerList(containerId string) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	delete(d.containerList, containerId)
-	return nil
-}
-
-func (d *DockerLogs) containerInContainerList(containerId string) bool {
-	if _, ok := d.containerList[containerId]; ok {
-		return true
-	}
-	return false
-}
-
-func (d *DockerLogs) stopAllReaders() error {
-	for _, container := range d.containerList {
-		container.Close()
-	}
-	return nil
-}
-
-func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
-	defer cancel()
-	if d.client == nil {
-		return errors.New(fmt.Sprintf("%s : Dock client is null", ERR_PREFIX))
-	}
-	containers, err := d.client.ContainerList(ctx, d.opts)
-	if err != nil {
-		return err
-	}
-	for _, container := range containers {
-		if d.containerInContainerList(container.ID) {
-			continue
-		}
-		d.wg.Add(1)
-		/*Start a new goroutine for every new container that has logs to collect*/
-		go func(c types.Container) {
-			defer d.wg.Done()
-			logOptions := types.ContainerLogsOptions{
-				ShowStdout: true,
-				ShowStderr: true,
-				Timestamps: false,
-				Details:    true,
-				Follow:     true,
-				Tail:       "0",
-			}
-			logReader, err := d.client.ContainerLogs(context.Background(), c.ID, logOptions)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-			d.addToContainerList(c.ID, logReader)
-			err = d.tailContainerLogs(c, logReader, acc)
-			if err != nil {
-				acc.AddError(err)
-			}
-			d.removeFromContainerList(c.ID)
-			return
-		}(container)
-	}
-	return nil
-}
-
-func (d *DockerLogs) tailContainerLogs(
-	container types.Container, logReader io.ReadCloser,
-	acc telegraf.Accumulator,
-) error {
-	c, err := d.client.ContainerInspect(context.Background(), container.ID)
-	if err != nil {
-		return err
-	}
-	/* Parse container name */
-	var cname string
-	for _, name := range container.Names {
-		trimmedName := strings.TrimPrefix(name, "/")
-		match := d.containerFilter.Match(trimmedName)
-		if match {
-			cname = trimmedName
-			break
-		}
-	}
-
-	if cname == "" {
-		return errors.New(fmt.Sprintf("%s : container name is null", ERR_PREFIX))
-	}
-	imageName, imageVersion := parseImage(container.Image)
-	tags := map[string]string{
-		"container_name":    cname,
-		"container_image":   imageName,
-		"container_version": imageVersion,
-	}
-	fields := map[string]interface{}{}
-	fields["container_id"] = container.ID
-	// Add labels to tags
-	for k, label := range container.Labels {
-		if d.labelFilter.Match(k) {
-			tags[k] = label
-		}
-	}
-	if c.Config.Tty {
-		err = pushTtyLogs(acc, tags, fields, logReader)
-	} else {
-		_, err = pushLogs(acc, tags, fields, logReader)
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-func pushTtyLogs(acc telegraf.Accumulator, tags map[string]string, fields map[string]interface{}, src io.Reader) (err error) {
-	tags["logType"] = "unknown" //in tty mode we wont be able to differentiate b/w stdout and stderr hence unknown
-	data := make([]byte, logBytesMax)
-	for {
-		num, err := src.Read(data)
-		if num > 0 {
-			fields["message"] = data[1:num]
-			acc.AddFields("docker_log", fields, tags)
-		}
-		if err == io.EOF {
-			fields["message"] = data[1:num]
-			acc.AddFields("docker_log", fields, tags)
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-	}
-}
-
-/* Inspired from https://github.com/moby/moby/blob/master/pkg/stdcopy/stdcopy.go */
-func pushLogs(acc telegraf.Accumulator, tags map[string]string, fields map[string]interface{}, src io.Reader) (written int64, err error) {
-	var (
-		buf       = make([]byte, startingBufLen)
-		bufLen    = len(buf)
-		nr        int
-		er        error
-		frameSize int
-	)
-	for {
-		// Make sure we have at least a full header
-		for nr < stdWriterPrefixLen {
-			var nr2 int
-			nr2, er = src.Read(buf[nr:])
-			nr += nr2
-			if er == io.EOF {
-				if nr < stdWriterPrefixLen {
-					return written, nil
-				}
-				break
-			}
-			if er != nil {
-				return 0, er
-			}
-		}
-		stream := StdType(buf[stdWriterFdIndex])
-		// Check the first byte to know where to write
-		var logType string
-		switch stream {
-		case Stdin:
-			logType = "stdin"
-			break
-		case Stdout:
-			logType = "stdout"
-			break
-		case Stderr:
-			logType = "stderr"
-			break
-		case Systemerr:
-			fallthrough
-		default:
-			return 0, fmt.Errorf("Unrecognized input header: %d", buf[stdWriterFdIndex])
-		}
-		// Retrieve the size of the frame
-		frameSize = int(binary.BigEndian.Uint32(buf[stdWriterSizeIndex : stdWriterSizeIndex+4]))
-
-		// Check if the buffer is big enough to read the frame.
-		// Extend it if necessary.
-		if frameSize+stdWriterPrefixLen > bufLen {
-			buf = append(buf, make([]byte, frameSize+stdWriterPrefixLen-bufLen+1)...)
-			bufLen = len(buf)
-		}
-
-		// While the amount of bytes read is less than the size of the frame + header, we keep reading
-		for nr < frameSize+stdWriterPrefixLen {
-			var nr2 int
-			nr2, er = src.Read(buf[nr:])
-			nr += nr2
-			if er == io.EOF {
-				if nr < frameSize+stdWriterPrefixLen {
-					return written, nil
-				}
-				break
-			}
-			if er != nil {
-				return 0, er
-			}
-		}
-
-		// we might have an error from the source mixed up in our multiplexed
-		// stream. if we do, return it.
-		if stream == Systemerr {
-			return written, fmt.Errorf("error from daemon in stream: %s", string(buf[stdWriterPrefixLen:frameSize+stdWriterPrefixLen]))
-		}
-
-		tags["stream"] = logType
-		fields["message"] = buf[stdWriterPrefixLen+1 : frameSize+stdWriterPrefixLen]
-		acc.AddFields("docker_log", fields, tags)
-		written += int64(frameSize)
-
-		// Move the rest of the buffer to the beginning
-		copy(buf, buf[frameSize+stdWriterPrefixLen:])
-		// Move the index
-		nr -= frameSize + stdWriterPrefixLen
-	}
-}
-
-func (d *DockerLogs) Start(acc telegraf.Accumulator) error {
-	var c Client
-	var err error
-	if d.Endpoint == "ENV" {
-		c, err = d.newEnvClient()
-	} else {
-		tlsConfig, err := d.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		c, err = d.newClient(d.Endpoint, tlsConfig)
-	}
-	if err != nil {
-		return err
-	}
-	d.client = c
-	// Create label filters if not already created
-	if !d.filtersCreated {
-		err := d.createLabelFilters()
-		if err != nil {
-			return err
-		}
-		err = d.createContainerFilters()
-		if err != nil {
-			return err
-		}
-		err = d.createContainerStateFilters()
-		if err != nil {
-			return err
-		}
-		d.filtersCreated = true
-	}
-	filterArgs := filters.NewArgs()
-	for _, state := range containerStates {
-		if d.stateFilter.Match(state) {
-			filterArgs.Add("status", state)
-		}
-	}
-
-	// All container states were excluded
-	if filterArgs.Len() == 0 {
-		return nil
-	}
-
-	d.opts = types.ContainerListOptions{
-		Filters: filterArgs,
-	}
-	return nil
-}
-
-/* Inspired from https://github.com/influxdata/telegraf/blob/master/plugins/inputs/docker/docker.go */
-func parseImage(image string) (string, string) {
-	// Adapts some of the logic from the actual Docker library's image parsing
-	// routines:
-	// https://github.com/docker/distribution/blob/release/2.7/reference/normalize.go
-	domain := ""
-	remainder := ""
-
-	i := strings.IndexRune(image, '/')
-
-	if i == -1 || (!strings.ContainsAny(image[:i], ".:") && image[:i] != "localhost") {
-		remainder = image
-	} else {
-		domain, remainder = image[:i], image[i+1:]
-	}
-
-	imageName := ""
-	imageVersion := "unknown"
-
-	i = strings.LastIndex(remainder, ":")
-	if i > -1 {
-		imageVersion = remainder[i+1:]
-		imageName = remainder[:i]
-	} else {
-		imageName = remainder
-	}
-
-	if domain != "" {
-		imageName = domain + "/" + imageName
-	}
-
-	return imageName, imageVersion
-}
-
-func (d *DockerLogs) Stop() {
-	d.mu.Lock()
-	d.stopAllReaders()
-	d.mu.Unlock()
-	d.wg.Wait()
-}
-
 func init() {
 	inputs.Add("docker_log", func() telegraf.Input {
 		return &DockerLogs{
-			Timeout:        internal.Duration{Duration: time.Second * 5},
-			Endpoint:       defaultEndpoint,
-			newEnvClient:   NewEnvClient,
-			newClient:      NewClient,
-			filtersCreated: false,
-			containerList:  make(map[string]io.ReadCloser),
+			Timeout:       internal.Duration{Duration: time.Second * 5},
+			Endpoint:      defaultEndpoint,
+			newEnvClient:  NewEnvClient,
+			newClient:     NewClient,
+			containerList: make(map[string]context.CancelFunc),
 		}
 	})
 }
