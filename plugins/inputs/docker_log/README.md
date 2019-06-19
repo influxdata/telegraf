@@ -3,11 +3,16 @@
 The docker log plugin uses the Docker Engine API to get logs on running
 docker containers.
 
-The docker plugin uses the [Official Docker Client](https://github.com/moby/moby/tree/master/client)
-to gather logs from the [Engine API](https://docs.docker.com/engine/api/v1.24/).
-Note: This plugin works only for containers with the `local` or  `json-file` or `journald` logging driver.
+The docker plugin uses the [Official Docker Client][] to gather logs from the
+[Engine API][].
 
-### Configuration:
+**Note:** This plugin works only for containers with the `local` or
+`json-file` or `journald` logging driver.
+
+[Official Docker Client]: https://github.com/moby/moby/tree/master/client
+[Engine API]: https://docs.docker.com/engine/api/v1.24/
+
+### Configuration
 
 ```toml
 [[inputs.docker_log]]
@@ -49,19 +54,31 @@ Note: This plugin works only for containers with the `local` or  `json-file` or 
 #### Environment Configuration
 
 When using the `"ENV"` endpoint, the connection is configured using the
-[cli Docker environment variables](https://godoc.org/github.com/moby/moby/client#NewEnvClient).
+[CLI Docker environment variables][env]
 
-### Metrics:
+[env]: https://godoc.org/github.com/moby/moby/client#NewEnvClient
+
+### Metrics
 
 - docker_log
   - tags:
-    - container_id
+    - container_image
+    - container_version
     - container_name
-    - stream
+    - stream (stdout, stderr, or tty)
   - fields:
+    - container_id
     - message
 
-### Example Output:
+### Example Output
 
 ```
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! [agent] Config: Interval:10s, Quiet:false, Hostname:\"371ee5d3e587\", Flush Interval:10s" 1560913872000000000
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Tags enabled: host=371ee5d3e587" 1560913872000000000
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Loaded outputs: file" 1560913872000000000
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Loaded processors:" 1560913872000000000
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Loaded aggregators:" 1560913872000000000
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Loaded inputs: net" 1560913872000000000
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Using config file: /etc/telegraf/telegraf.conf" 1560913872000000000
+docker_log,container_image=telegraf,container_name=sharp_bell,container_version=alpine,stream=stderr container_id="371ee5d3e58726112f499be62cddef800138ca72bbba635ed2015fbf475b1023",message="2019-06-19T03:11:11Z I! Starting Telegraf 1.10.4" 1560913872000000000
 ```
