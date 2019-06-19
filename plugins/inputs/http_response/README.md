@@ -46,6 +46,9 @@ This input plugin checks HTTP/HTTPS connections.
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Interface to use when dialing an address
+  # interface = "eth0"
 ```
 
 ### Metrics:

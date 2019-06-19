@@ -31,6 +31,7 @@ type HTTPResponse struct {
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
+	Interface           string
 	tls.ClientConfig
 
 	compiledStringMatch *regexp.Regexp
@@ -82,6 +83,9 @@ var sampleConfig = `
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Interface to use when dialing an address
+  # interface = "eth0"
 `
 
 // SampleConfig returns the plugin SampleConfig
@@ -108,16 +112,27 @@ func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
 	}
 }
 
-// CreateHttpClient creates an http client which will timeout at the specified
+// createHttpClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
 func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
+
+	dialer := &net.Dialer{}
+
+	if h.Interface != "" {
+		dialer.LocalAddr, err = localAddress(h.Interface)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy:             getProxyFunc(h.HTTPProxy),
+			DialContext:       dialer.DialContext,
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},
@@ -130,6 +145,27 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 		}
 	}
 	return client, nil
+}
+
+func localAddress(interfaceName string) (net.Addr, error) {
+	i, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs, err := i.Addrs()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, addr := range addrs {
+		if naddr, ok := addr.(*net.IPNet); ok {
+			// leaving port set to zero to let kernel pick
+			return &net.TCPAddr{IP: naddr.IP}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("cannot create local address for interface %q", interfaceName)
 }
 
 func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
