@@ -198,9 +198,9 @@ func (d *DockerLogs) matchedContainerName(names []string) string {
 func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
-	cctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
+	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
 	defer cancel()
-	containers, err := d.client.ContainerList(cctx, d.opts)
+	containers, err := d.client.ContainerList(ctx, d.opts)
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		ctx, cancel := context.WithCancel(ctx)
+		ctx, cancel := context.WithCancel(context.Background())
 		d.addToContainerList(container.ID, cancel)
 
 		// Start a new goroutine for every new container that has logs to collect
@@ -224,25 +224,10 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			defer d.wg.Done()
 			defer d.removeFromContainerList(container.ID)
 
-			imageName, imageVersion := docker.ParseImage(container.Image)
-			tags := map[string]string{
-				"container_name":    containerName,
-				"container_image":   imageName,
-				"container_version": imageVersion,
-			}
-
-			// Add matching container labels as tags
-			for k, label := range container.Labels {
-				if d.labelFilter.Match(k) {
-					tags[k] = label
-				}
-			}
-
-			err = d.tailContainerLogs(ctx, acc, container, tags)
+			err = d.tailContainerLogs(ctx, acc, container, containerName)
 			if err != nil {
 				acc.AddError(err)
 			}
-
 		}(container)
 	}
 	return nil
@@ -262,8 +247,22 @@ func (d *DockerLogs) tailContainerLogs(
 	ctx context.Context,
 	acc telegraf.Accumulator,
 	container types.Container,
-	tags map[string]string,
+	containerName string,
 ) error {
+	imageName, imageVersion := docker.ParseImage(container.Image)
+	tags := map[string]string{
+		"container_name":    containerName,
+		"container_image":   imageName,
+		"container_version": imageVersion,
+	}
+
+	// Add matching container labels as tags
+	for k, label := range container.Labels {
+		if d.labelFilter.Match(k) {
+			tags[k] = label
+		}
+	}
+
 	hasTTY, err := d.hasTTY(ctx, container)
 	if err != nil {
 		return err
