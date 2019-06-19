@@ -326,6 +326,7 @@
     "api/types/versions",
     "api/types/volume",
     "client",
+    "pkg/stdcopy",
   ]
   pruneopts = ""
   revision = "ed7b6428c133e7c59404251a09b7d6b02fa83cc2"
@@ -1591,6 +1592,7 @@
     "github.com/docker/docker/api/types/registry",
     "github.com/docker/docker/api/types/swarm",
     "github.com/docker/docker/client",
+    "github.com/docker/docker/pkg/stdcopy",
     "github.com/docker/libnetwork/ipvs",
     "github.com/eclipse/paho.mqtt.golang",
     "github.com/ericchiang/k8s",
