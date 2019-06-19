@@ -152,24 +152,24 @@ func (d *DockerLogs) Init() error {
 	return nil
 }
 
-func (d *DockerLogs) addToContainerList(containerId string, cancel context.CancelFunc) error {
+func (d *DockerLogs) addToContainerList(containerID string, cancel context.CancelFunc) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	d.containerList[containerId] = cancel
+	d.containerList[containerID] = cancel
 	return nil
 }
 
-func (d *DockerLogs) removeFromContainerList(containerId string) error {
+func (d *DockerLogs) removeFromContainerList(containerID string) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	delete(d.containerList, containerId)
+	delete(d.containerList, containerID)
 	return nil
 }
 
-func (d *DockerLogs) containerInContainerList(containerId string) bool {
+func (d *DockerLogs) containerInContainerList(containerID string) bool {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	_, ok := d.containerList[containerId]
+	_, ok := d.containerList[containerID]
 	return ok
 }
 
