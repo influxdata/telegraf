@@ -52,7 +52,7 @@ func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	switch resp.StatusCode{
+	switch resp.StatusCode {
 	case http.StatusOK:
 	case http.StatusNotFound:
 		// format as special error to catch and ignore as some nginx API
