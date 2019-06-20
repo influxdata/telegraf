@@ -20,7 +20,6 @@ func TestPgBouncerGeneratesMetrics(t *testing.T) {
 				"host=%s user=pgbouncer password=pgbouncer dbname=pgbouncer port=6432 sslmode=disable",
 				testutil.GetLocalHost(),
 			),
-			IsPgBouncer: true,
 		},
 	}
 

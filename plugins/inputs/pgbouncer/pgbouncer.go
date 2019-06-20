@@ -172,7 +172,6 @@ func init() {
 				MaxLifetime: internal.Duration{
 					Duration: 0,
 				},
-				IsPgBouncer: true,
 			},
 		}
 	})

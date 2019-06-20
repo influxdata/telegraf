@@ -93,7 +93,6 @@ type Service struct {
 	MaxOpen       int
 	MaxLifetime   internal.Duration
 	DB            *sql.DB
-	IsPgBouncer   bool
 }
 
 // Start starts the ServiceInput's service, whatever that may be
@@ -104,54 +103,50 @@ func (p *Service) Start(telegraf.Accumulator) (err error) {
 		p.Address = localhost
 	}
 
-	connectionString := p.Address
-
 	// Specific support to make it work with PgBouncer too
 	// See https://github.com/influxdata/telegraf/issues/3253#issuecomment-357505343
-	if p.IsPgBouncer {
-		d := &stdlib.DriverConfig{
-			ConnConfig: pgx.ConnConfig{
-				PreferSimpleProtocol: true,
-				RuntimeParams: map[string]string{
-					"client_encoding": "UTF8",
-				},
-				CustomConnInfo: func(c *pgx.Conn) (*pgtype.ConnInfo, error) {
-					info := c.ConnInfo.DeepCopy()
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "int8OID",
-						OID:   pgtype.Int8OID,
-					})
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "zerroTypeOID",
-						OID:   0,
-					})
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "numericTypeOID",
-						OID:   pgtype.NumericOID,
-					})
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "float8TypeOID",
-						OID:   pgtype.Float8OID,
-					})
-					info.RegisterDataType(pgtype.DataType{
-						Value: &pgtype.OIDValue{},
-						Name:  "timestamptzTypeOID",
-						OID:   pgtype.TimestamptzOID,
-					})
-
-					return info, nil
-				},
+	// Enhanced pgx data types for fully working with any pgbouncer request
+	driverConfig := &stdlib.DriverConfig{
+		ConnConfig: pgx.ConnConfig{
+			PreferSimpleProtocol: true,
+			RuntimeParams: map[string]string{
+				"client_encoding": "UTF8",
 			},
-		}
-		stdlib.RegisterDriverConfig(d)
-		connectionString = d.ConnectionString(p.Address)
-	}
+			CustomConnInfo: func(c *pgx.Conn) (*pgtype.ConnInfo, error) {
+				info := c.ConnInfo.DeepCopy()
+				info.RegisterDataType(pgtype.DataType{
+					Value: &pgtype.OIDValue{},
+					Name:  "int8OID",
+					OID:   pgtype.Int8OID,
+				})
+				info.RegisterDataType(pgtype.DataType{
+					Value: &pgtype.OIDValue{},
+					Name:  "zerroTypeOID",
+					OID:   0,
+				})
+				info.RegisterDataType(pgtype.DataType{
+					Value: &pgtype.OIDValue{},
+					Name:  "numericTypeOID",
+					OID:   pgtype.NumericOID,
+				})
+				info.RegisterDataType(pgtype.DataType{
+					Value: &pgtype.OIDValue{},
+					Name:  "float8TypeOID",
+					OID:   pgtype.Float8OID,
+				})
+				info.RegisterDataType(pgtype.DataType{
+					Value: &pgtype.OIDValue{},
+					Name:  "timestamptzTypeOID",
+					OID:   pgtype.TimestamptzOID,
+				})
 
-	if p.DB, err = sql.Open("pgx", connectionString); err != nil {
+				return info, nil
+			},
+		},
+	}
+	stdlib.RegisterDriverConfig(driverConfig)
+
+	if p.DB, err = sql.Open("pgx", driverConfig.ConnectionString(p.Address)); err != nil {
 		return err
 	}
 
