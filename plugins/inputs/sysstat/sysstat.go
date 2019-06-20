@@ -335,6 +335,7 @@ func (s *Sysstat) sadfOptions(activityOption string) []string {
 // escape removes % and / chars in field names
 func escape(dirty string) string {
 	var fieldEscaper = strings.NewReplacer(
+		`%%`, "pct_",
 		`%`, "pct_",
 		`/`, "_per_",
 	)
