@@ -4,9 +4,7 @@ This PgBouncer plugin provides metrics for your PgBouncer load balancer.
 
 More information about the meaning of these metrics can be found in the [PgBouncer Documentation](https://pgbouncer.github.io/usage.html)
 
-Deprecated (_NEXT_VERSION_): use the [postgresql_extensible](../postgresql_extensible) input.
-
-## Migration to the postgresql_extensible input
+## Reproduce behaviour with postgresql_extensible input
 
 ```
 [[inputs.postgresql_extensible]]
