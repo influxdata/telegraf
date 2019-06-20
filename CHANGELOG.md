@@ -22,6 +22,7 @@
 - [#5998](https://github.com/influxdata/telegraf/pull/5998): Add cluster name tag to elasticsearch indices.
 - [#6006](https://github.com/influxdata/telegraf/pull/6006): Add support for interface field in http_response input plugin.
 - [#5996](https://github.com/influxdata/telegraf/pull/5996): Add container uptime_ns in docker input plugin.
+- [#6016](https://github.com/influxdata/telegraf/pull/6016): Add better user-facing errors for API timeouts in docker input.
 
 #### Bugfixes
 
