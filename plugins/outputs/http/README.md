@@ -9,7 +9,7 @@ data formats.  For data_formats that support batching, metrics are sent in batch
 # A plugin that can transmit metrics over HTTP
 [[outputs.http]]
   ## URL is the address to send metrics to
-  url = "http://127.0.0.1:8080/metric"
+  url = "http://127.0.0.1:8080/telegraf"
 
   ## Timeout for HTTP message
   # timeout = "5s"
@@ -40,12 +40,12 @@ data formats.  For data_formats that support batching, metrics are sent in batch
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
 
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Additional HTTP headers
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
-
-  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
-  ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
 ```

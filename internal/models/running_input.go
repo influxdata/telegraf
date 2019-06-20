@@ -56,6 +56,16 @@ func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
+func (r *RunningInput) Init() error {
+	if p, ok := r.Input.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	if ok := r.Config.Filter.Select(metric); !ok {
 		r.metricFiltered(metric)

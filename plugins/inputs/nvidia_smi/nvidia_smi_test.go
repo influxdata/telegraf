@@ -7,15 +7,15 @@ import (
 )
 
 func TestParseLineStandard(t *testing.T) {
-	line := "85, 8114, 553, 7561, P2, 61, GeForce GTX 1070 Ti, GPU-d1911b8a-f5c8-5e66-057c-486561269de8, Default, 100, 93, 1, 0.0\n"
+	line := "41, 11264, 1074, 10190, P8, 32, GeForce RTX 2080 Ti, GPU-c97b7f88-c06d-650f-5339-f8dd0c1315c0, Default, 1, 4, 0, 24.33, 1, 16, 0, 0, 0, 300, 300, 405, 540\n"
 	tags, fields, err := parseLine(line)
 	if err != nil {
 		t.Fail()
 	}
-	if tags["name"] != "GeForce GTX 1070 Ti" {
+	if tags["name"] != "GeForce RTX 2080 Ti" {
 		t.Fail()
 	}
-	if temp, ok := fields["temperature_gpu"].(int); ok && temp == 61 {
+	if temp, ok := fields["temperature_gpu"].(int); ok && temp != 32 {
 		t.Fail()
 	}
 }
@@ -37,7 +37,7 @@ func TestParseLineBad(t *testing.T) {
 }
 
 func TestParseLineNotSupported(t *testing.T) {
-	line := "[Not Supported], 7606, 0, 7606, P0, 38, Tesla P4, GPU-xxx, Default, 0, 0, 0, 0.0\n"
+	line := "[Not Supported], 11264, 1074, 10190, P8, 32, GeForce RTX 2080 Ti, GPU-c97b7f88-c06d-650f-5339-f8dd0c1315c0, Default, 1, 4, 0, 24.33, 1, 16, 0, 0, 0, 300, 300, 405, 540\n"
 	_, fields, err := parseLine(line)
 	require.NoError(t, err)
 	require.Equal(t, nil, fields["fan_speed"])
