@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/docker"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -361,44 +362,12 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func parseImage(image string) (string, string) {
-	// Adapts some of the logic from the actual Docker library's image parsing
-	// routines:
-	// https://github.com/docker/distribution/blob/release/2.7/reference/normalize.go
-	domain := ""
-	remainder := ""
-
-	i := strings.IndexRune(image, '/')
-
-	if i == -1 || (!strings.ContainsAny(image[:i], ".:") && image[:i] != "localhost") {
-		remainder = image
-	} else {
-		domain, remainder = image[:i], image[i+1:]
-	}
-
-	imageName := ""
-	imageVersion := "unknown"
-
-	i = strings.LastIndex(remainder, ":")
-	if i > -1 {
-		imageVersion = remainder[i+1:]
-		imageName = remainder[:i]
-	} else {
-		imageName = remainder
-	}
-
-	if domain != "" {
-		imageName = domain + "/" + imageName
-	}
-
-	return imageName, imageVersion
-}
-
 func (d *Docker) gatherContainer(
 	container types.Container,
 	acc telegraf.Accumulator,
 ) error {
 	var v *types.StatsJSON
+
 	// Parse container name
 	var cname string
 	for _, name := range container.Names {
@@ -414,7 +383,7 @@ func (d *Docker) gatherContainer(
 		return nil
 	}
 
-	imageName, imageVersion := parseImage(container.Image)
+	imageName, imageVersion := docker.ParseImage(container.Image)
 
 	tags := map[string]string{
 		"engine_host":       d.engineHost,

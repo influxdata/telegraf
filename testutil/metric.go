@@ -123,6 +123,11 @@ func SortMetrics() cmp.Option {
 	return cmpopts.SortSlices(lessFunc)
 }
 
+// IgnoreTime disables comparison of timestamp.
+func IgnoreTime() cmp.Option {
+	return cmpopts.IgnoreFields(metricDiff{}, "Time")
+}
+
 // MetricEqual returns true if the metrics are equal.
 func MetricEqual(expected, actual telegraf.Metric) bool {
 	var lhs, rhs *metricDiff
