@@ -152,7 +152,7 @@ func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, int, 
 	if err != nil {
 		return dnsQueryTime, -1, err
 	}
-	if r.Rcode != dns.RcodeSuccess {
+	if r.Rcode != dns.RcodeSuccess || len(r.Answer) == 0{
 		return dnsQueryTime, r.Rcode, fmt.Errorf("Invalid answer (%s) from %s after %s query for %s", dns.RcodeToString[r.Rcode], server, d.RecordType, domain)
 	}
 	dnsQueryTime = float64(rtt.Nanoseconds()) / 1e6
