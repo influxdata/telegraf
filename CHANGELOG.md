@@ -27,6 +27,7 @@
 #### Bugfixes
 
 - [#5692](https://github.com/influxdata/telegraf/issues/5692): Fix sensor read error stops reporting of all sensors in temp input.
+- [#4356](https://github.com/influxdata/telegraf/issues/4356): Fix double pct replacement in sysstat input.
 
 ## v1.11.1 [unreleased]
 
@@ -36,6 +37,7 @@
 - [#5983](https://github.com/influxdata/telegraf/issues/5983): Omit keys when creating measurement names for GNMI telemetry.
 - [#5972](https://github.com/influxdata/telegraf/issues/5972): Don't consider pid of 0 when using systemd lookup in procstat.
 - [#5807](https://github.com/influxdata/telegraf/issues/5807): Skip 404 error reporting in nginx_plus_api input.
+- [#5999](https://github.com/influxdata/telegraf/issues/5999): Fix panic if pool_mode column does not exist.
 
 ## v1.11 [2019-06-11]
 
