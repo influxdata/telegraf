@@ -180,7 +180,7 @@ func (p *PrometheusRemoteWrite) retryClientErrors(statusCode int) bool {
 		retryFlag = false
 	}
 	if retryFlag == false && (statusCode == http.StatusTooManyRequests || statusCode == http.StatusBadRequest) {
-		log.Printf("E! [outputs.prometheus_remote_write] dropped a batch of metrics.\n")
+		log.Printf("E! [outputs.prometheus_remote_write] dropped metrics because of bad request or rate limit.\n")
 		return false
 	}
 	return true
