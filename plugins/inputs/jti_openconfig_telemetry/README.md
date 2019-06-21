@@ -42,6 +42,7 @@ This plugin reads Juniper Networks implementation of OpenConfig telemetry data f
   ]
 
   ## Optional TLS Config
+  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
