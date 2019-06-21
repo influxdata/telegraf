@@ -273,6 +273,7 @@ status if configured.
     - container_status
     - container_version
   - fields:
+    - container_id
     - oomkilled (boolean)
     - pid (integer)
     - exitcode (integer)

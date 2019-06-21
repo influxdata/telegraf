@@ -463,9 +463,10 @@ func (d *Docker) gatherContainerInspect(
 	if info.State != nil {
 		tags["container_status"] = info.State.Status
 		statefields := map[string]interface{}{
-			"oomkilled": info.State.OOMKilled,
-			"pid":       info.State.Pid,
-			"exitcode":  info.State.ExitCode,
+			"oomkilled":    info.State.OOMKilled,
+			"pid":          info.State.Pid,
+			"exitcode":     info.State.ExitCode,
+			"container_id": container.ID,
 		}
 
 		finished, err := time.Parse(time.RFC3339, info.State.FinishedAt)
