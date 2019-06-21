@@ -80,13 +80,12 @@ var (
    "/interfaces",
   ]
 
-  ## enable client-side TLS and define CA to authenticate the device
-  # enable_tls = true
+  ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
-  # insecure_skip_verify = true
-  ## define client-side TLS certificate & key to authenticate to the device
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
   
   ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
   ## Failed streams/calls will not be retried if 0 is provided
@@ -355,6 +354,7 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 	var tlscfg *tls.Config
+	var opts []grpc.DialOption
 	var err error
 
 	// Build sensors config
@@ -367,6 +367,12 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		if tlscfg, err = m.ClientConfig.TLSConfig(); err != nil {
 			return err
 		}
+	}
+
+	if tlscfg != nil {
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
+	} else {
+		opts = append(opts, grpc.WithInsecure())
 	}
 
 	// Connect to given list of servers and start collecting data
@@ -382,12 +388,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		// If a certificate is provided, open a secure channel. Else open insecure one
-		if tlscfg != nil {
-			grpcClientConn, err = grpc.Dial(server, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
-		} else {
-			grpcClientConn, err = grpc.Dial(server, grpc.WithInsecure())
-		}
+		grpcClientConn, err = grpc.Dial(server, opts...)
 		if err != nil {
 			log.Printf("E! Failed to connect to %s: %v", server, err)
 		} else {
