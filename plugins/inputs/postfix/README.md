@@ -29,7 +29,8 @@ $ sudo chmod g+r /var/spool/postfix/maildrop
 
 Posix ACL:
 ```sh
-$ sudo setfacl -Rdm g:telegraf:rX /var/spool/postfix/{active,hold,incoming,deferred,maildrop}
+$ sudo setfacl -m g:telegraf:rX /var/spool/postfix/{,active,hold,incoming,deferred,maildrop}
+$ sudo setfacl -Rdm g:telegraf:rX /var/spool/postfix/{,active,hold,incoming,deferred,maildrop}
 ```
 
 ### Measurements & Fields:
