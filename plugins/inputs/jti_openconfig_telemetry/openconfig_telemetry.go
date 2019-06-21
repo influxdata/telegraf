@@ -1,6 +1,7 @@
 package jti_openconfig_telemetry
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	internaltls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
@@ -28,13 +30,17 @@ type OpenConfigTelemetry struct {
 	Password        string
 	ClientID        string            `toml:"client_id"`
 	SampleFrequency internal.Duration `toml:"sample_frequency"`
-	SSLCert         string            `toml:"ssl_cert"`
 	StrAsTags       bool              `toml:"str_as_tags"`
 	RetryDelay      internal.Duration `toml:"retry_delay"`
 
-	sensorsConfig   []sensorConfig
+	sensorsConfig []sensorConfig
+
+	// GRPC settings
 	grpcClientConns []*grpc.ClientConn
-	wg              *sync.WaitGroup
+	EnableTLS       bool `toml:"enable_tls"`
+	internaltls.ClientConfig
+
+	wg *sync.WaitGroup
 }
 
 var (
@@ -74,10 +80,14 @@ var (
    "/interfaces",
   ]
 
-  ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
-  ## channel will be opened with server
-  ssl_cert = "/etc/telegraf/cert.pem"
-
+  ## enable client-side TLS and define CA to authenticate the device
+  # enable_tls = true
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # insecure_skip_verify = true
+  ## define client-side TLS certificate & key to authenticate to the device
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  
   ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
   ## Failed streams/calls will not be retried if 0 is provided
   retry_delay = "1000ms"
@@ -343,21 +353,20 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
+
+	var tlscfg *tls.Config
+	var err error
+
 	// Build sensors config
 	if m.splitSensorConfig() == 0 {
 		return fmt.Errorf("E! No valid sensor configuration available")
 	}
 
-	// If SSL certificate is provided, use transport credentials
-	var err error
-	var transportCredentials credentials.TransportCredentials
-	if m.SSLCert != "" {
-		transportCredentials, err = credentials.NewClientTLSFromFile(m.SSLCert, "")
-		if err != nil {
-			return fmt.Errorf("E! Failed to read certificate: %v", err)
+	// Parse TLS config
+	if m.EnableTLS {
+		if tlscfg, err = m.ClientConfig.TLSConfig(); err != nil {
+			return err
 		}
-	} else {
-		transportCredentials = nil
 	}
 
 	// Connect to given list of servers and start collecting data
@@ -374,8 +383,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		}
 
 		// If a certificate is provided, open a secure channel. Else open insecure one
-		if transportCredentials != nil {
-			grpcClientConn, err = grpc.Dial(server, grpc.WithTransportCredentials(transportCredentials))
+		if tlscfg != nil {
+			grpcClientConn, err = grpc.Dial(server, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
 		} else {
 			grpcClientConn, err = grpc.Dial(server, grpc.WithInsecure())
 		}

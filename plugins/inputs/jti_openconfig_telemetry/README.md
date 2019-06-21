@@ -41,9 +41,13 @@ This plugin reads Juniper Networks implementation of OpenConfig telemetry data f
    "/interfaces",
   ]
 
-  ## x509 Certificate to use with TLS connection. If it is not provided, an insecure
-  ## channel will be opened with server
-  ssl_cert = "/etc/telegraf/cert.pem"
+  ## enable client-side TLS and define CA to authenticate the device
+  # enable_tls = true
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # insecure_skip_verify = true
+  ## define client-side TLS certificate & key to authenticate to the device
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 
   ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
   ## Failed streams/calls will not be retried if 0 is provided
