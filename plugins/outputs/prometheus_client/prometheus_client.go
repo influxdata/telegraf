@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
-	validNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
+	InvalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
+	ValidNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
 )
 
 // SampleID uniquely identifies a Sample
@@ -342,12 +342,12 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func sanitize(value string) string {
-	return invalidNameCharRE.ReplaceAllString(value, "_")
+func Sanitize(value string) string {
+	return InvalidNameCharRE.ReplaceAllString(value, "_")
 }
 
 func isValidTagName(tag string) bool {
-	return validNameCharRE.MatchString(tag)
+	return ValidNameCharRE.MatchString(tag)
 }
 
 func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
@@ -398,7 +398,7 @@ func (p *PrometheusClient) addMetricFamily(point telegraf.Metric, sample *Sample
 // Sorted returns a copy of the metrics in time ascending order.  A copy is
 // made to avoid modifying the input metric slice since doing so is not
 // allowed.
-func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+func Sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	batch := make([]telegraf.Metric, 0, len(metrics))
 	for i := len(metrics) - 1; i >= 0; i-- {
 		batch = append(batch, metrics[i])
@@ -415,13 +415,13 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 	now := p.now()
 
-	for _, point := range sorted(metrics) {
+	for _, point := range Sorted(metrics) {
 		tags := point.Tags()
 		sampleID := CreateSampleID(tags)
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			tName := sanitize(k)
+			tName := Sanitize(k)
 			if !isValidTagName(tName) {
 				continue
 			}
@@ -434,7 +434,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			for fn, fv := range point.Fields() {
 				switch fv := fv.(type) {
 				case string:
-					tName := sanitize(fn)
+					tName := Sanitize(fn)
 					if !isValidTagName(tName) {
 						continue
 					}
@@ -482,7 +482,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				Timestamp:    point.Time(),
 				Expiration:   now.Add(p.ExpirationInterval.Duration),
 			}
-			mname = sanitize(point.Name())
+			mname = Sanitize(point.Name())
 
 			if !isValidTagName(mname) {
 				continue
@@ -528,7 +528,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				Timestamp:      point.Time(),
 				Expiration:     now.Add(p.ExpirationInterval.Duration),
 			}
-			mname = sanitize(point.Name())
+			mname = Sanitize(point.Name())
 
 			if !isValidTagName(mname) {
 				continue
@@ -564,18 +564,18 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				switch point.Type() {
 				case telegraf.Counter:
 					if fn == "counter" {
-						mname = sanitize(point.Name())
+						mname = Sanitize(point.Name())
 					}
 				case telegraf.Gauge:
 					if fn == "gauge" {
-						mname = sanitize(point.Name())
+						mname = Sanitize(point.Name())
 					}
 				}
 				if mname == "" {
 					if fn == "value" {
-						mname = sanitize(point.Name())
+						mname = Sanitize(point.Name())
 					} else {
-						mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
+						mname = Sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
 					}
 				}
 				if !isValidTagName(mname) {

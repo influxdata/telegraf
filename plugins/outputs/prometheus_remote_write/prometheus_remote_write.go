@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"sort"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 )
 
 func init() {
@@ -24,11 +24,6 @@ func init() {
 		return &PrometheusRemoteWrite{}
 	})
 }
-
-var (
-	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
-	validNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
-)
 
 type PrometheusRemoteWrite struct {
 	URL                  string `toml:"url"`
@@ -90,12 +85,12 @@ func (p *PrometheusRemoteWrite) SampleConfig() string {
 func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	var req prompb.WriteRequest
 
-	for _, metric := range sorted(metrics) {
+	for _, metric := range prometheus_client.Sorted(metrics) {
 		tags := metric.TagList()
 		commonLabels := make([]prompb.Label, 0, len(tags))
 		for _, tag := range tags {
 			commonLabels = append(commonLabels, prompb.Label{
-				Name:  sanitize(tag.Key),
+				Name:  prometheus_client.Sanitize(tag.Key),
 				Value: tag.Value,
 			})
 		}
@@ -186,26 +181,8 @@ func (p *PrometheusRemoteWrite) retryClientErrors(statusCode int) bool {
 	return true
 }
 
-// Sorted returns a copy of the metrics in time ascending order.  A copy is
-// made to avoid modifying the input metric slice since doing so is not
-// allowed.
-func sorted(metrics []telegraf.Metric) []telegraf.Metric {
-	batch := make([]telegraf.Metric, 0, len(metrics))
-	for i := len(metrics) - 1; i >= 0; i-- {
-		batch = append(batch, metrics[i])
-	}
-	sort.Slice(batch, func(i, j int) bool {
-		return batch[i].Time().Before(batch[j].Time())
-	})
-	return batch
-}
-
 func getSanitizedMetricName(name, field string) string {
-	return sanitize(fmt.Sprintf("%s_%s", name, field))
-}
-
-func sanitize(value string) string {
-	return invalidNameCharRE.ReplaceAllString(value, "_")
+	return prometheus_client.Sanitize(fmt.Sprintf("%s_%s", name, field))
 }
 
 type byName []prompb.Label
