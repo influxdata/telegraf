@@ -8,8 +8,7 @@ and number of users logged in. It is similar to the unix `uptime` command.
 ```toml
 # Read metrics about system load & uptime
 [[inputs.system]]
-  ## Print out when utmp is not available for n_users
-  # warn_on_missing = true
+ # no configuration
 ```
 #### Permissions:
 
