@@ -8,7 +8,7 @@ and number of users logged in. It is similar to the unix `uptime` command.
 ```toml
 # Read metrics about system load & uptime
 [[inputs.system]]
- # no configuration
+  # no configuration
 ```
 #### Permissions:
 
