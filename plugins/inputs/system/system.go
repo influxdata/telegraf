@@ -46,8 +46,8 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	if err == nil {
 		fields["n_users"] = len(users)
 	} else if os.IsNotExist(err) {
-		log.Printf("D! [inputs.system] Error reading users: %v, err")
-	} else if !os.IsPermission(err) {
+		log.Printf("D! [inputs.system] Error reading users: %v", err)
+	} else if os.IsPermission(err) {
 		return err
 	}
 
