@@ -16,9 +16,7 @@ import (
 	"github.com/shirou/gopsutil/load"
 )
 
-type SystemStats struct {
-	WarnOnMissing bool
-}
+type SystemStats struct{}
 
 func (_ *SystemStats) Description() string {
 	return "Read metrics about system load & uptime"
@@ -28,12 +26,10 @@ func (_ *SystemStats) SampleConfig() string {
 	return `
   ## Uncomment to remove deprecated metrics.
   # fielddrop = ["uptime_format"]
-  ## Print out when utmp is not available for n_users
-  # warn_on_missing = true
 `
 }
 
-func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
+func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err
@@ -49,9 +45,9 @@ func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	users, err := host.Users()
 	if err == nil {
 		fields["n_users"] = len(users)
-	} else if os.IsNotExist(err) && s.WarnOnMissing {
-		log.Printf("[inputs.system]: %s\n", err.Error())
-	} else if !os.IsPermission(err) && !os.IsNotExist(err) {
+	} else if os.IsNotExist(err) {
+		log.Printf("D! [inputs.system] Error reading users: %v, err")
+	} else if !os.IsPermission(err) {
 		return err
 	}
 
