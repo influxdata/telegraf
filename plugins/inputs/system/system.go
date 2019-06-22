@@ -48,7 +48,7 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	} else if os.IsNotExist(err) {
 		log.Printf("D! [inputs.system] Error reading users: %v", err)
 	} else if os.IsPermission(err) {
-		return err
+		log.Printf("D! [inputs.system] %v", err)
 	}
 
 	now := time.Now()
