@@ -142,10 +142,10 @@ func getTestdataDir() string {
 
 	if runtime.GOOS == "windows" {
 		chunks = strings.Split(dir, "\\")
-		testDirectory = strings.Join(chunks[:len(chunks)], "\\") + "\\testdata"
+		testDirectory = strings.Join(chunks[:], "\\") + "\\testdata"
 	} else {
 		chunks = strings.Split(dir, "/")
-		testDirectory = strings.Join(chunks[:len(chunks)], "/") + "/testdata"
+		testDirectory = strings.Join(chunks[:], "/") + "/testdata"
 	}
 	return testDirectory
 }
@@ -165,16 +165,16 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 
 	// create a lookup map for getting "files" from the "filesystem"
 	fileList := map[string]fakeFileInfo{
-		basePath:                         fakeFileInfo{name: "testdata", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
-		basePath + "/foo":                fakeFileInfo{name: "foo", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/bar":                fakeFileInfo{name: "bar", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/baz":                fakeFileInfo{name: "baz", filemode: uint32(fmask), modtime: olderMtime},
-		basePath + "/qux":                fakeFileInfo{name: "qux", size: int64(400), filemode: uint32(fmask), modtime: mtime},
-		basePath + "/subdir":             fakeFileInfo{name: "subdir", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
-		basePath + "/subdir/quux":        fakeFileInfo{name: "quux", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/subdir/quuz":        fakeFileInfo{name: "quuz", filemode: uint32(fmask), modtime: mtime},
-		basePath + "/subdir/nested2":     fakeFileInfo{name: "nested2", size: int64(200), filemode: uint32(dmask), modtime: mtime, isdir: true},
-		basePath + "/subdir/nested2/qux": fakeFileInfo{name: "qux", filemode: uint32(fmask), modtime: mtime, size: int64(400)},
+		basePath:                         {name: "testdata", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
+		basePath + "/foo":                {name: "foo", filemode: uint32(fmask), modtime: mtime},
+		basePath + "/bar":                {name: "bar", filemode: uint32(fmask), modtime: mtime},
+		basePath + "/baz":                {name: "baz", filemode: uint32(fmask), modtime: olderMtime},
+		basePath + "/qux":                {name: "qux", size: int64(400), filemode: uint32(fmask), modtime: mtime},
+		basePath + "/subdir":             {name: "subdir", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
+		basePath + "/subdir/quux":        {name: "quux", filemode: uint32(fmask), modtime: mtime},
+		basePath + "/subdir/quuz":        {name: "quuz", filemode: uint32(fmask), modtime: mtime},
+		basePath + "/subdir/nested2":     {name: "nested2", size: int64(200), filemode: uint32(dmask), modtime: mtime, isdir: true},
+		basePath + "/subdir/nested2/qux": {name: "qux", filemode: uint32(fmask), modtime: mtime, size: int64(400)},
 	}
 
 	fs := fakeFileSystem{files: fileList}
