@@ -253,18 +253,21 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
+		if collectAttributes {
+			deviceNode := strings.Split(device, " ")[0]
+			tags["device"] = path.Base(deviceNode)
+
+			if serial, ok := deviceTags["serial_no"]; ok {
+				tags["serial_no"] = serial
+			}
+			if wwn, ok := deviceTags["wwn"]; ok {
+				tags["wwn"] = wwn
+			}
+		}
+
 		attr := attribute.FindStringSubmatch(line)
 		if len(attr) > 1 {
 			if collectAttributes {
-				deviceNode := strings.Split(device, " ")[0]
-				tags["device"] = path.Base(deviceNode)
-
-				if serial, ok := deviceTags["serial_no"]; ok {
-					tags["serial_no"] = serial
-				}
-				if wwn, ok := deviceTags["wwn"]; ok {
-					tags["wwn"] = wwn
-				}
 				tags["id"] = attr[1]
 				tags["name"] = attr[2]
 				tags["flags"] = attr[3]
