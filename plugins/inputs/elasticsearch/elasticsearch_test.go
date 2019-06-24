@@ -219,16 +219,17 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	es.ClusterStats = true
 	es.Servers = []string{"http://example.com:9200"}
 	es.serverInfo = make(map[string]serverInfo)
-	es.serverInfo["http://example.com:9200"] = serverInfo{nodeID: "SDFsfSDFsdfFSDSDfSFDSDF", masterID: ""}
+	info := serverInfo{nodeID: "SDFsfSDFsdfFSDSDfSFDSDF", masterID: ""}
 
 	// first get catMaster
 	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
-	info := es.serverInfo["http://example.com:9200"]
-	require.NoError(t, es.setCatMaster(&info, "junk"))
+	masterID, err := es.getCatMaster("junk")
+	require.NoError(t, err)
+	info.masterID = masterID
 	es.serverInfo["http://example.com:9200"] = info
 
 	IsMasterResultTokens := strings.Split(string(IsMasterResult), " ")
-	if es.serverInfo["http://example.com:9200"].masterID != IsMasterResultTokens[0] {
+	if masterID != IsMasterResultTokens[0] {
 		msg := fmt.Sprintf("catmaster is incorrect")
 		assert.Fail(t, msg)
 	}
@@ -268,12 +269,11 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 
 	// first get catMaster
 	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
-	info := es.serverInfo["http://example.com:9200"]
-	require.NoError(t, es.setCatMaster(&info, "junk"))
-	es.serverInfo["http://example.com:9200"] = info
+	masterID, err := es.getCatMaster("junk")
+	require.NoError(t, err)
 
 	IsNotMasterResultTokens := strings.Split(string(IsNotMasterResult), " ")
-	if es.serverInfo["http://example.com:9200"].masterID != IsNotMasterResultTokens[0] {
+	if masterID != IsNotMasterResultTokens[0] {
 		msg := fmt.Sprintf("catmaster is incorrect")
 		assert.Fail(t, msg)
 	}
