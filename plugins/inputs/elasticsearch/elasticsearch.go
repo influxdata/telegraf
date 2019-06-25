@@ -196,9 +196,13 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if e.ClusterStats {
+		var wgC sync.WaitGroup
+		wgC.Add(len(e.Servers))
+
 		e.serverInfo = make(map[string]serverInfo)
 		for _, serv := range e.Servers {
 			go func(s string, acc telegraf.Accumulator) {
+				defer wgC.Done()
 				info := serverInfo{}
 
 				var err error
@@ -222,6 +226,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 
 			}(serv, acc)
 		}
+		wgC.Wait()
 	}
 
 	var wg sync.WaitGroup
