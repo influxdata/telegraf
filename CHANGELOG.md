@@ -30,7 +30,7 @@
 - [#5692](https://github.com/influxdata/telegraf/issues/5692): Fix sensor read error stops reporting of all sensors in temp input.
 - [#4356](https://github.com/influxdata/telegraf/issues/4356): Fix double pct replacement in sysstat input.
 
-## v1.11.1 [unreleased]
+## v1.11.1 [2019-06-25]
 
 #### Bugfixes
 
