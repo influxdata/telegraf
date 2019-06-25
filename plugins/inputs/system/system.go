@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -44,8 +45,10 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	users, err := host.Users()
 	if err == nil {
 		fields["n_users"] = len(users)
-	} else if !os.IsPermission(err) {
-		return err
+	} else if os.IsNotExist(err) {
+		log.Printf("D! [inputs.system] Error reading users: %v", err)
+	} else if os.IsPermission(err) {
+		log.Printf("D! [inputs.system] %v", err)
 	}
 
 	now := time.Now()
