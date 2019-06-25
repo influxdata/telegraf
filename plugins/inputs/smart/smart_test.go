@@ -4,7 +4,9 @@ import (
 	"errors"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -443,8 +445,61 @@ func TestGatherNvme(t *testing.T) {
 
 	wg.Add(1)
 	gatherDisk(acc, true, true, "", "", "", wg)
-	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("smart_device",
+			map[string]string{
+				"device":    ".",
+				"model":     "TS128GMTE850",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"exit_status": 0,
+				"health_ok":   true,
+				"temp_c":      38,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"id":        "9",
+				"name":      "Power_On_Hours",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": 6038,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"id":        "12",
+				"name":      "Power_Cycle_Count",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": 472,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"id":        "194",
+				"name":      "Temperature_Celsius",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": 38,
+			},
+			time.Now(),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 // smartctl output
