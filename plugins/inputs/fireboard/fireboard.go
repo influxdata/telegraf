@@ -31,29 +31,29 @@ func NewFireboard() *Fireboard {
 
 // Type fireboardStats represents the data that is received from Fireboard
 type fireboardStats struct {
-	ID          int64                    `json:id`
-	Title       string                   `json:title`
-	Owner       fireboardOwner           `json:owner`
-	Created     string                   `json:created`
-	UUID        string                   `json:uuid`
-	HardwareID  string                   `json:hardware_id`
-	LatestTemps []fireboardRealTimeTemps `json:latest_temps`
-	LastTempLog string                   `json:last_templog`
-	Model       string                   `json:model`
-	ChanelCount int64                    `json:channel_count`
-	DegreeType  int64                    `json:degreetype`
+	ID          int64           `json:id`
+	Title       string          `json:title`
+	Owner       Owner           `json:owner`
+	Created     string          `json:created`
+	UUID        string          `json:uuid`
+	HardwareID  string          `json:hardware_id`
+	LatestTemps []RealTimeTemps `json:latest_temps`
+	LastTempLog string          `json:last_templog`
+	Model       string          `json:model`
+	ChanelCount int64           `json:channel_count`
+	DegreeType  int64           `json:degreetype`
 }
 
-type fireboardOwner struct {
-	Username    string                `json:username`
-	Email       string                `json:email`
-	FirstName   string                `json:first_name`
-	LastName    string                `json:last_name`
-	OwnerID     string                `json:id`
-	UserProfile fireboardOwnerProfile `json:userprofile`
+type Owner struct {
+	Username    string       `json:username`
+	Email       string       `json:email`
+	FirstName   string       `json:first_name`
+	LastName    string       `json:last_name`
+	OwnerID     string       `json:id`
+	UserProfile OwnerProfile `json:userprofile`
 }
 
-type fireboardOwnerProfile struct {
+type OwnerProfile struct {
 	Company          string `json:company`
 	AlertSms         string `json:alert_sms`
 	AlertEmails      string `json:alert_emails`
@@ -64,7 +64,7 @@ type fireboardOwnerProfile struct {
 	CommercialUser   string `json:commercial_user`
 }
 
-type fireboardRealTimeTemps struct {
+type RealTimeTemps struct {
 	Channel    string  `json:channel`
 	Created    string  `json:created`
 	Temp       float64 `json:temp`
@@ -130,15 +130,14 @@ func (r *Fireboard) gatherServer(s string, acc telegraf.Accumulator) error {
 
 	// Build a map of tags
 	tags := map[string]string{
-		"title": stats.Title,
-		"uuid":  stats.UUID,
+		"title":   stats.Title,
+		"uuid":    stats.UUID,
+		"channel": stats.LatestTemps.Channel,
 	}
 
 	// Build a map of field values
 	fields := map[string]interface{}{
-		"cpu_avg1":  stats.CpuAvg1,
-		"cpu_avg15": stats.CpuAvg15,
-		"cpu_avg5":  stats.CpuAvg5,
+		"temp": stats.LatestTemps.Temp,
 	}
 
 	// Accumulate the tags and values
