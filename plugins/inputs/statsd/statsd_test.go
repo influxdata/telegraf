@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,19 +15,6 @@ import (
 const (
 	testMsg = "test.tcp.msg:100|c"
 )
-
-func newTestTCPListener() (*Statsd, chan input) {
-	in := make(chan input, 1500)
-	listener := &Statsd{
-		Protocol:               "tcp",
-		ServiceAddress:         "localhost:8125",
-		AllowedPendingMessages: 10000,
-		MaxTCPConnections:      250,
-		in:                     in,
-		done:                   make(chan struct{}),
-	}
-	return listener, in
-}
 
 func NewTestStatsd() *Statsd {
 	s := Statsd{}
@@ -1595,4 +1583,50 @@ func testValidateGauge(
 		return fmt.Errorf("Measurement: %s, expected %f, actual %f", name, valueExpected, valueActual)
 	}
 	return nil
+}
+
+func TestTCP(t *testing.T) {
+	statsd := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         "localhost:0",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      2,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	defer statsd.Stop()
+
+	addr := statsd.TCPlistener.Addr().String()
+
+	conn, err := net.Dial("tcp", addr)
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+	err = conn.Close()
+	require.NoError(t, err)
+
+	for {
+		err = statsd.Gather(&acc)
+		require.NoError(t, err)
+
+		if len(acc.Metrics) > 0 {
+			break
+		}
+	}
+
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"cpu_time_idle",
+				map[string]string{
+					"metric_type": "counter",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+			),
+		},
+		acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(),
+	)
 }

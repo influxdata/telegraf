@@ -143,7 +143,7 @@ func MetricEqual(expected, actual telegraf.Metric) bool {
 
 // RequireMetricEqual halts the test with an error if the metrics are not
 // equal.
-func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric) {
+func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric, opts ...cmp.Option) {
 	t.Helper()
 
 	var lhs, rhs *metricDiff
@@ -154,7 +154,7 @@ func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric) {
 		rhs = newMetricDiff(actual)
 	}
 
-	if diff := cmp.Diff(lhs, rhs); diff != "" {
+	if diff := cmp.Diff(lhs, rhs, opts...); diff != "" {
 		t.Fatalf("telegraf.Metric\n--- expected\n+++ actual\n%s", diff)
 	}
 }

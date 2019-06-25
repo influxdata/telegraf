@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -817,14 +816,12 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 		s.forget(id)
 		s.CurrentConnections.Incr(-1)
 	}()
-	addr := conn.RemoteAddr()
-	parsedURL, err := url.Parse(addr.String())
-	if err != nil {
-		// this should never happen because the conn handler should give us parsable addresses,
-		// but if it does we will know
-		log.Printf("E! [inputs.statsd] failed to parse %s\n", addr)
-		return // close the connetion and return
+
+	var remoteIP string
+	if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+		remoteIP = addr.IP.String()
 	}
+
 	var n int
 	scanner := bufio.NewScanner(conn)
 	for {
@@ -848,7 +845,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			b.WriteByte('\n')
 
 			select {
-			case s.in <- input{Buffer: b, Time: time.Now(), Addr: parsedURL.Host}:
+			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {

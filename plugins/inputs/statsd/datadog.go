@@ -76,7 +76,9 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	fields := make(map[string]interface{}, 9)
 	fields["alert_type"] = eventInfo // default event type
 	fields["text"] = uncommenter.Replace(string(rawText))
-	tags["source"] = defaultHostname // Use source tag because host is reserved tag key in Telegraf.
+	if defaultHostname != "" {
+		tags["source"] = defaultHostname
+	}
 	fields["priority"] = priorityNormal
 	ts := now
 	if len(message) < 2 {
