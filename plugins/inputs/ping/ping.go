@@ -2,14 +2,13 @@ package ping
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"math"
 	"net"
 	"os/exec"
 	"sync"
 	"time"
 
-	ping "github.com/sparrc/go-ping"
+	"github.com/glinton/ping"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -42,12 +41,18 @@ type Ping struct {
 	// URLs to ping
 	Urls []string
 
+	// Method defines how to ping (native or exec)
+	Method string
+
 	// Ping executable binary
 	Binary string
 
 	// Arguments for ping command. When arguments is not empty, system binary will be used and
 	// other options (ping_interval, timeout, etc) will be ignored
 	Arguments []string
+
+	// Whether to resolve addresses using ipv6 or not.
+	IPv6 bool
 
 	// host ping function
 	pingHost HostPinger
@@ -58,7 +63,7 @@ type Ping struct {
 	ctx context.Context
 }
 
-func (_ *Ping) Description() string {
+func (*Ping) Description() string {
 	return "Ping given url(s) and return statistics"
 }
 
@@ -72,7 +77,7 @@ const sampleConfig = `
   ## Interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
   # ping_interval = 1.0
 
-  ## Per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>) Deprecated in 1.12
+  ## Per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
   # timeout = 1.0
 
   ## Total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
@@ -81,15 +86,21 @@ const sampleConfig = `
   ## Interface or source address to send ping from (ping -I[-S] <INTERFACE/SRC_ADDR>)
   # interface = ""
 
+  ## How to ping. "native" doesn't have external dependencies, while "exec" depends on 'ping'.
+  # method = "exec"
+
   ## Specify the ping executable binary, default is "ping"
-  # binary = "ping"
+	# binary = "ping"
 
   ## Arguments for ping command. When arguments is not empty, system binary will be used and
-  ## other options (ping_interval, timeout, etc) will be ignored
+  ## other options (ping_interval, timeout, etc) will be ignored.
   # arguments = ["-c", "3"]
+
+  ## Use only ipv6 addresses when resolving hostnames.
+  # ipv6 = false
 `
 
-func (_ *Ping) SampleConfig() string {
+func (*Ping) SampleConfig() string {
 	return sampleConfig
 }
 
@@ -98,48 +109,20 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		p.listenAddr = getAddr(p.Interface)
 	}
 
-	if p.Timeout > 0 {
-		log.Println("W! [inputs.ping] 'timeout' deprecated in telegraf 1.12")
-	}
-
-	for _, url := range p.Urls {
-		_, err := net.LookupHost(url)
+	for _, ip := range p.Urls {
+		_, err := net.LookupHost(ip)
 		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": url})
+			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"ip": ip})
 			acc.AddError(err)
 			return nil
 		}
 
-		if len(p.Arguments) > 0 {
+		if len(p.Arguments) > 0 || p.Method == "exec" {
 			p.wg.Add(1)
-
-			go p.pingToURL(url, acc)
+			go p.pingToURL(ip, acc)
 		} else {
-			pinger, err := ping.NewPinger(url)
-			if err != nil {
-				acc.AddError(fmt.Errorf("%v: %s", err, url))
-				acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": url})
-				continue
-			}
-
-			pinger.Count = p.Count
-
-			if p.PingInterval < 0.2 {
-				p.PingInterval = 1
-			}
-			pinger.Interval = time.Nanosecond * time.Duration(p.PingInterval*1000000000)
-
-			if p.Deadline > 0 {
-				pinger.Timeout = time.Duration(p.Deadline) * time.Second
-			}
-
-			pinger.Size = 56
-
-			pinger.SetPrivileged(true)
-			pinger.Source = p.listenAddr
-
 			p.wg.Add(1)
-			go p.pingToURLNative(url, pinger, acc)
+			go p.pingToURLNative(ip, acc)
 		}
 	}
 
@@ -194,89 +177,144 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 	return string(out), err
 }
 
-type pingResults struct {
-	transmitted int
-	received    int
-	pktLoss     float64
-	ttl         int
-	min         float64
-	avg         float64
-	max         float64
-	stddev      float64
-}
-
-// func getGID() uint64 {
-// 	b := make([]byte, 64)
-// 	b = b[:runtime.Stack(b, false)]
-// 	b = bytes.TrimPrefix(b, []byte("goroutine "))
-// 	b = b[:bytes.IndexByte(b, ' ')]
-// 	n, _ := strconv.ParseUint(string(b), 10, 64)
-// 	return n
-// }
-
-func (p *Ping) pingToURLNative(u string, pinger *ping.Pinger, acc telegraf.Accumulator) {
+func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	defer p.wg.Done()
-	tags := map[string]string{"url": u}
-	fields := map[string]interface{}{"result_code": 0}
+	ctx := context.Background()
 
-	results := p.pingHostNative(pinger)
-
-	fields["packets_transmitted"] = results.transmitted
-	fields["packets_received"] = results.received
-	fields["percent_packet_loss"] = results.pktLoss
-	if results.ttl > 0 {
-		fields["ttl"] = results.ttl
-	}
-	if results.min >= 0 {
-		fields["minimum_response_ms"] = results.min
-	}
-	if results.avg >= 0 {
-		fields["average_response_ms"] = results.avg
-	}
-	if results.max >= 0 {
-		fields["maximum_response_ms"] = results.max
-	}
-	if results.stddev >= 0 {
-		fields["standard_deviation_ms"] = results.stddev
+	network := "ip4"
+	if p.IPv6 {
+		network = "ip6"
 	}
 
+	host, err := net.ResolveIPAddr(network, destination)
+	if err != nil {
+		acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"source": destination})
+		acc.AddError(err)
+		return
+	}
+
+	if p.PingInterval < 0.2 {
+		p.PingInterval = 0.2
+	}
+
+	tick := time.NewTicker(time.Duration(p.PingInterval * float64(time.Second)))
+	defer tick.Stop()
+
+	wg := &sync.WaitGroup{}
+	if p.Deadline > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Deadline)*time.Second)
+		defer cancel()
+	}
+
+	chanLength := 100
+	if p.Count > 0 {
+		chanLength = p.Count
+	}
+
+	resps := make(chan *ping.Response, chanLength)
+	packetsSent := 0
+	c := ping.Client{}
+
+	for p.Count <= 0 || packetsSent < p.Count {
+		select {
+		case <-ctx.Done():
+			goto finish
+		case <-tick.C:
+			ctx := context.Background()
+			if p.Timeout > 0 {
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Timeout)*time.Second)
+				defer cancel()
+			}
+
+			packetsSent++
+			wg.Add(1)
+			go func(seq int) {
+				defer wg.Done()
+				resp, err := c.Do(ctx, ping.Request{
+					Dst: net.ParseIP(host.String()),
+					Src: net.ParseIP(p.listenAddr),
+					Seq: seq,
+				})
+				if err != nil {
+					// likely a timeout error, ignore
+					return
+				}
+
+				resps <- resp
+			}(packetsSent)
+		}
+	}
+
+finish:
+	wg.Wait()
+	close(resps)
+
+	rsps := []*ping.Response{}
+	for res := range resps {
+		rsps = append(rsps, res)
+	}
+
+	tags, fields := onFin(packetsSent, rsps, destination)
 	acc.AddFields("ping", fields, tags)
 }
 
-func (p *Ping) pingHostNative(pinger *ping.Pinger) *pingResults {
-	results := &pingResults{}
+func onFin(packetsSent int, resps []*ping.Response, destination string) (map[string]string, map[string]interface{}) {
+	packetsRcvd := len(resps)
+	loss := float64(packetsSent-packetsRcvd) / float64(packetsSent) * 100
 
-	pinger.OnRecv = func(pkt *ping.Packet) {
-		results.ttl = pkt.Ttl
+	tags := map[string]string{"source": destination}
+	fields := map[string]interface{}{
+		"result_code":         0,
+		"packets_transmitted": packetsSent,
+		"packets_received":    packetsRcvd,
+		"percent_packet_loss": loss,
 	}
 
-	pinger.OnFinish = func(stats *ping.Statistics) {
-		results.received = stats.PacketsRecv
-		results.transmitted = stats.PacketsSent
-		results.pktLoss = stats.PacketLoss
-		results.min = float64(stats.MinRtt.Nanoseconds()) / float64(time.Millisecond)
-		results.avg = float64(stats.AvgRtt.Nanoseconds()) / float64(time.Millisecond)
-		results.max = float64(stats.MaxRtt.Nanoseconds()) / float64(time.Millisecond)
-		results.stddev = float64(stats.StdDevRtt.Nanoseconds()) / float64(time.Millisecond)
+	if packetsRcvd == 0 || packetsSent == 0 {
+		return tags, fields
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ttl := resps[0].TTL
 
-	go func() {
-		pinger.Run()
-		cancel()
-		cancel()
-	}()
-	select {
-	case <-ctx.Done():
-		break
-	case <-time.After(time.Duration(p.Deadline) * time.Second):
-		fmt.Println("PING TIMED OUT")
-		pinger.Stop()
+	var min, max, avg, total time.Duration
+	min = resps[0].RTT
+	max = resps[0].RTT
+
+	for _, res := range resps {
+		if res.RTT < min {
+			min = res.RTT
+		}
+		if res.RTT > max {
+			max = res.RTT
+		}
+		total += res.RTT
 	}
 
-	return results
+	avg = total / time.Duration(packetsRcvd)
+	var sumsquares time.Duration
+	for _, res := range resps {
+		sumsquares += (res.RTT - avg) * (res.RTT - avg)
+	}
+	stdDev := time.Duration(math.Sqrt(float64(sumsquares / time.Duration(packetsRcvd))))
+	if ttl > 0 {
+		fields["ttl"] = ttl
+	}
+	if min > 0 {
+		fields["minimum_response_ms"] = float64(min.Nanoseconds()) / float64(time.Millisecond)
+	}
+	if avg > 0 {
+		fields["average_response_ms"] = float64(avg.Nanoseconds()) / float64(time.Millisecond)
+	}
+	if max > 0 {
+		fields["maximum_response_ms"] = float64(max.Nanoseconds()) / float64(time.Millisecond)
+	}
+	if stdDev > 0 {
+		fields["standard_deviation_ms"] = float64(stdDev.Nanoseconds()) / float64(time.Millisecond)
+	}
+
+	return tags, fields
 }
 
 func init() {
@@ -287,6 +325,7 @@ func init() {
 			Count:        1,
 			Timeout:      1.0,
 			Deadline:     10,
+			Method:       "exec",
 			Binary:       "ping",
 			Arguments:    []string{},
 			ctx:          context.Background(),

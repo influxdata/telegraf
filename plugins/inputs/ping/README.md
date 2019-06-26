@@ -33,12 +33,18 @@ apt-get install iputils-ping
   ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
 
+  ## How to ping. "native" doesn't have external dependencies, while "exec" depends on 'ping'.
+  # method = "exec"
+
   ## Specify the ping executable binary, default is "ping"
   # binary = "ping"
 
   ## Arguments for ping command. When arguments is not empty, system binary will be used and
   ## other options (ping_interval, timeout, etc) will be ignored
   # arguments = ["-c", "3"]
+
+  ## Use only ipv6 addresses when resolving hostnames.
+  # ipv6 = false
 ```
 
 #### File Limit
