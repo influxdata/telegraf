@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal"
@@ -33,7 +34,8 @@ var pprofAddr = flag.String("pprof-addr", "",
 	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
-var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
+var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
+var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -60,6 +62,7 @@ var fUsage = flag.String("usage", "",
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
+var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
@@ -102,7 +105,7 @@ func reloadLoop(
 		}()
 
 		err := runAgent(ctx, inputFilters, outputFilters)
-		if err != nil {
+		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
@@ -114,7 +117,7 @@ func runAgent(ctx context.Context,
 ) error {
 	// Setup default logging. This may need to change after reading the config
 	// file, but we can configure it to use our logger implementation now.
-	logger.SetupLogging(false, false, "")
+	logger.SetupLogging(logger.LogConfig{})
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
@@ -155,14 +158,20 @@ func runAgent(ctx context.Context,
 	}
 
 	// Setup logging as configured.
-	logger.SetupLogging(
-		ag.Config.Agent.Debug || *fDebug,
-		ag.Config.Agent.Quiet || *fQuiet,
-		ag.Config.Agent.Logfile,
-	)
+	logConfig := logger.LogConfig{
+		Debug:               ag.Config.Agent.Debug || *fDebug,
+		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
+		Logfile:             ag.Config.Agent.Logfile,
+		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
+		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+	}
 
-	if *fTest {
-		return ag.Test(ctx)
+	logger.SetupLogging(logConfig)
+
+	if *fTest || *fTestWait != 0 {
+		testWaitDuration := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, testWaitDuration)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -352,7 +361,7 @@ func main() {
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
-			DisplayName: "Telegraf Data Collector Service",
+			DisplayName: *fServiceDisplayName,
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
 			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},

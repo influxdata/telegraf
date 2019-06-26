@@ -492,32 +492,34 @@ func containerStatsWindows() types.ContainerStats {
 	return stat
 }
 
-var containerInspect = types.ContainerJSON{
-	Config: &container.Config{
-		Env: []string{
-			"ENVVAR1=loremipsum",
-			"ENVVAR1FOO=loremipsum",
-			"ENVVAR2=dolorsitamet",
-			"ENVVAR3==ubuntu:10.04",
-			"ENVVAR4",
-			"ENVVAR5=",
-			"ENVVAR6= ",
-			"ENVVAR7=ENVVAR8=ENVVAR9",
-			"PATH=/bin:/sbin",
-		},
-	},
-	ContainerJSONBase: &types.ContainerJSONBase{
-		State: &types.ContainerState{
-			Health: &types.Health{
-				FailingStreak: 1,
-				Status:        "Unhealthy",
+func containerInspect() types.ContainerJSON {
+	return types.ContainerJSON{
+		Config: &container.Config{
+			Env: []string{
+				"ENVVAR1=loremipsum",
+				"ENVVAR1FOO=loremipsum",
+				"ENVVAR2=dolorsitamet",
+				"ENVVAR3==ubuntu:10.04",
+				"ENVVAR4",
+				"ENVVAR5=",
+				"ENVVAR6= ",
+				"ENVVAR7=ENVVAR8=ENVVAR9",
+				"PATH=/bin:/sbin",
 			},
-			Status:     "running",
-			OOMKilled:  false,
-			Pid:        1234,
-			ExitCode:   0,
-			StartedAt:  "2018-06-14T05:48:53.266176036Z",
-			FinishedAt: "0001-01-01T00:00:00Z",
 		},
-	},
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Health: &types.Health{
+					FailingStreak: 1,
+					Status:        "Unhealthy",
+				},
+				Status:     "running",
+				OOMKilled:  false,
+				Pid:        1234,
+				ExitCode:   0,
+				StartedAt:  "2018-06-14T05:48:53.266176036Z",
+				FinishedAt: "0001-01-01T00:00:00Z",
+			},
+		},
+	}
 }

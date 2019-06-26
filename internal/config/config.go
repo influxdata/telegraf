@@ -33,7 +33,7 @@ import (
 
 var (
 	// Default sections
-	sectionDefaults = []string{"agent", "global_tags", "outputs",
+	sectionDefaults = []string{"global_tags", "agent", "outputs",
 		"processors", "aggregators", "inputs"}
 
 	// Default input plugins
@@ -72,9 +72,10 @@ func NewConfig() *Config {
 	c := &Config{
 		// Agent defaults:
 		Agent: &AgentConfig{
-			Interval:      internal.Duration{Duration: 10 * time.Second},
-			RoundInterval: true,
-			FlushInterval: internal.Duration{Duration: 10 * time.Second},
+			Interval:                   internal.Duration{Duration: 10 * time.Second},
+			RoundInterval:              true,
+			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
+			LogfileRotationMaxArchives: 5,
 		},
 
 		Tags:          make(map[string]string),
@@ -140,13 +141,26 @@ type AgentConfig struct {
 	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
-	Debug bool
-
-	// Logfile specifies the file to send logs to
-	Logfile string
+	Debug bool `toml:"debug"`
 
 	// Quiet is the option for running in quiet mode
-	Quiet        bool
+	Quiet bool `toml:"quiet"`
+
+	// Log file name, the empty string means to log to stderr.
+	Logfile string `toml:"logfile"`
+
+	// The file will be rotated after the time interval specified.  When set
+	// to 0 no time based rotation is performed.
+	LogfileRotationInterval internal.Duration `toml:"logfile_rotation_interval"`
+
+	// The logfile will be rotated when it becomes larger than the specified
+	// size.  When set to 0 no size based rotation is performed.
+	LogfileRotationMaxSize internal.Size `toml:"logfile_rotation_max_size"`
+
+	// Maximum number of rotated archives to keep, any older logs are deleted.
+	// If set to -1, no archives are removed.
+	LogfileRotationMaxArchives int `toml:"logfile_rotation_max_archives"`
+
 	Hostname     string
 	OmitHostname bool
 }
@@ -266,13 +280,25 @@ var agentConfig = `
   ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
 
-  ## Logging configuration:
-  ## Run telegraf with debug log messages.
-  debug = false
-  ## Run telegraf in quiet mode (error log messages only).
-  quiet = false
-  ## Specify the log file name. The empty string means to log to stderr.
-  logfile = ""
+  ## Log at debug level.
+  # debug = false
+  ## Log only error level messages.
+  # quiet = false
+
+  ## Log file name, the empty string means to log to stderr.
+  # logfile = ""
+
+  ## The logfile will be rotated after the time interval specified.  When set
+  ## to 0 no time based rotation is performed.
+  # logfile_rotation_interval = "0d"
+
+  ## The logfile will be rotated when it becomes larger than the specified
+  ## size.  When set to 0 no size based rotation is performed.
+  # logfile_rotation_max_size = "0MB"
+
+  ## Maximum number of rotated archives to keep, any older logs are deleted.
+  ## If set to -1, no archives are removed.
+  # logfile_rotation_max_archives = 5
 
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
@@ -510,12 +536,12 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 }
 
 func printFilteredGlobalSections(sectionFilters []string) {
-	if sliceContains("agent", sectionFilters) {
-		fmt.Printf(agentConfig)
-	}
-
 	if sliceContains("global_tags", sectionFilters) {
 		fmt.Printf(globalTagsConfig)
+	}
+
+	if sliceContains("agent", sectionFilters) {
+		fmt.Printf(agentConfig)
 	}
 }
 
@@ -1700,6 +1726,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["form_urlencoded_tag_keys"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.FormUrlencodedTagKeys = append(c.FormUrlencodedTagKeys, str.Value)
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1741,6 +1779,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
+	delete(tbl.Fields, "form_urlencoded_tag_keys")
 
 	return c, nil
 }

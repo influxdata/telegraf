@@ -24,14 +24,6 @@ function install_chkconfig {
     chkconfig --add telegraf
 }
 
-if ! grep "^telegraf:" /etc/group &>/dev/null; then
-    groupadd -r telegraf
-fi
-
-if ! id telegraf &>/dev/null; then
-    useradd -r -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
-fi
-
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
     rm -f /etc/init.d/telegraf
