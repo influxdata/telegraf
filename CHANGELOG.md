@@ -1,5 +1,12 @@
 ## v1.12 [unreleased]
 
+#### Release Notes
+
+- The cluster health related fields in the elasticsearch input have been split
+  out from the `elasticsearch_indices` mesasurement into the new
+  `elasticsearch_cluster_health_indices` measurement as they were originally
+  combined by error.
+
 #### New Inputs
 
 - [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
@@ -29,6 +36,7 @@
 
 - [#5692](https://github.com/influxdata/telegraf/issues/5692): Fix sensor read error stops reporting of all sensors in temp input.
 - [#4356](https://github.com/influxdata/telegraf/issues/4356): Fix double pct replacement in sysstat input.
+- [#6004](https://github.com/influxdata/telegraf/issues/6004): Fix race in master node detection in elasticsearch input.
 
 ## v1.11.1 [2019-06-25]
 
