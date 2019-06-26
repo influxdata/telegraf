@@ -2,7 +2,6 @@ package procstat
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 	"strconv"
 	"strings"
