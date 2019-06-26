@@ -24,18 +24,8 @@ func NewPgrep() (PIDFinder, error) {
 }
 
 func (pg *Pgrep) PidFile(path string) ([]PID, error) {
-	var pids []PID
-	pidString, err := ioutil.ReadFile(path)
-	if err != nil {
-		return pids, fmt.Errorf("Failed to read pidfile '%s'. Error: '%s'",
-			path, err)
-	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(pidString)))
-	if err != nil {
-		return pids, err
-	}
-	pids = append(pids, PID(pid))
-	return pids, nil
+	args := []string{"-F", path}
+	return find(pg.path, args)
 }
 
 func (pg *Pgrep) Pattern(pattern string) ([]PID, error) {

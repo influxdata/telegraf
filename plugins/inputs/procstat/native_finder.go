@@ -51,7 +51,16 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	if err != nil {
 		return pids, err
 	}
-	pids = append(pids, PID(pid))
+
+	procs, err := process.Processes()
+	if err != nil {
+		return pids, err
+	}
+	for _, p := range procs {
+		if pid == int(p.Pid) {
+			pids = append(pids, PID(p.Pid))
+		}
+	}
 	return pids, nil
 
 }
