@@ -1,3 +1,22 @@
+## v1.7.0.sfx1 [2018-06-27]
+
+### Release Notes
+
+- Fix bug in SignalFx Output Plugin that resulted in metrics with "value" field
+  to be dropped
+
+## v1.7.0.sfx0 [2018-06-22]
+
+### Release Notes
+
+- SignalFx Packaging for Telegraf 1.7.0
+## v1.8 [unreleased]
+
+### Release Notes
+
+### New Inputs
+
+- [tengine](./plugins/inputs/tengine/README.md) - Contirbuted by @ertaoxu
 ## v1.11.1 [2019-06-25]
 
 #### Bugfixes
@@ -459,6 +478,8 @@
 - [#4160](https://github.com/influxdata/telegraf/pull/4160): Add tengine input plugin.
 - [#4262](https://github.com/influxdata/telegraf/pull/4262): Add power draw field to nvidia_smi plugin.
 - [#4271](https://github.com/influxdata/telegraf/pull/4271): Add support for solr 7 to the solr input.
+
+## v1.7.1 [unreleased]
 - [#4281](https://github.com/influxdata/telegraf/pull/4281): Add owner tag on partitions in burrow input.
 - [#4259](https://github.com/influxdata/telegraf/pull/4259): Add container status tag to docker input.
 - [#3523](https://github.com/influxdata/telegraf/pull/3523): Add valuecounter aggregator plugin.
@@ -709,6 +730,12 @@
 - [#4063](https://github.com/influxdata/telegraf/issues/4063): Fix handling of floats with multiple leading zeroes.
 - [#4064](https://github.com/influxdata/telegraf/issues/4064): Return errors in mongodb SSL/TLS configuration.
 
+## v1.6.0-sfx0 [2018-04-16]
+
+### Release Notes
+
+- SignalFx Packaging for Telegraf 1.6.0
+
 ## v1.6 [2018-04-16]
 
 ### Release Notes
@@ -846,6 +873,28 @@
 - [#3710](https://github.com/influxdata/telegraf/issues/3710): Add timeout to wavefront output write.
 - [#3725](https://github.com/influxdata/telegraf/issues/3725): Exclude master_replid fields from redis input.
 
+## v1.5.1.sfx2 [2018-03-13]
+
+### Release Notes
+
+- Minor bug fix in SignalFx output plugin to default to metric type gauge when no metric type can be mapped
+
+## v1.5.1.sfx1 [2018-01-16]
+
+### Release Notes
+
+- Minor bug fix to correctly batch metrics in SignalFx output plugin
+- Minor enhancement to ensure SignalFx metadata plugin has at least 1 go routine to gather process list information
+
+## v1.5.1.sfx0 [2018-01-12]
+
+### Release Notes
+
+- Rebase with upstream v1.5.1 release
+- Fixed bug in SignalFx Utilization plugin where disk.summary_utilization was reported with out a hostname
+- Distribute SignalFx metadata and process info collection across multiple go routines
+- Batch metric output to SignalFx
+
 ## v1.5.1 [2018-01-10]
 
 ### Bugfixes
@@ -856,6 +905,14 @@
 - [#3594](https://github.com/influxdata/telegraf/pull/3594): Document permissions setup for postfix input.
 - [#3633](https://github.com/influxdata/telegraf/pull/3633): Fix deliver_get field in rabbitmq input.
 - [#3607](https://github.com/influxdata/telegraf/issues/3607): Escape environment variables during config toml parsing.
+
+## v1.5.0.sfx0 [2018-01-08]
+
+### Release Notes
+
+- Rebase with upstream v1.5.0 release
+- Fixed bug in SignalFx Utilization plugin where disk.summary_utilization was reported with out a hostname
+- Distribute SignalFx metadata and process info collection across multiple go routines
 
 ## v1.5 [2017-12-14]
 
@@ -1021,6 +1078,14 @@
 - [#3175](https://github.com/influxdata/telegraf/issues/3175): Fix duplicate keys in perf counters sqlserver query.
 - [#3230](https://github.com/influxdata/telegraf/issues/3230): Fix panic in statsd p100 calculation.
 - [#3242](https://github.com/influxdata/telegraf/issues/3242): Fix arm64 packages contain 32-bit executable.
+
+## v1.4.0.sfx0 [2017-09-08]
+
+### Release Notes
+
+- This update disables all string type metrics (emitted as events) by default.
+  Please refer to the example config for information on enabling specific 
+  string metrics / events.
 
 ## v1.4 [2017-09-05]
 

@@ -5,5 +5,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/aggregators/final"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/histogram"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/minmax"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/signalfxutil"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/valuecounter"
 )
