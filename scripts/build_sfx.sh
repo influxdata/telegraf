@@ -1,36 +1,39 @@
 #!/bin/bash
 
-set -e
+set -eo pipefail
 
 echo "Installing zip"
 apt-get update
 apt-get install -y zip
 
+echo "Installing dep"
+curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
 # create new directories inside of the container
 mkdir -p /output
-mkdir -p /usr/local/go/src/github.com/influxdata
+mkdir -p /go/src/github.com/influxdata
 
+# This seems to be a lot faster than copying /src.
 echo "Copying /src to /gopath/src/github.com/influxdata/telegraf"
-cp -r /src /usr/local/go/src/github.com/influxdata/telegraf
+git clone /src /go/src/github.com/influxdata/telegraf
+
+echo "Applying diffs to tree..."
+(cd /src && git diff HEAD | (cd /go/src/github.com/influxdata/telegraf && git apply))
 
 # change to build directory
-cd /usr/local/go/src/github.com/influxdata/telegraf
+cd /go/src/github.com/influxdata/telegraf
 
 echo "Cleaning Build Directory..."
 make clean
 
-echo "Restoring Dependencies..."
-make deps
-
 echo "Linting Telegraf..."
 make lint
 
-echo "Testing Telegraf..."
+#echo "Testing Telegraf..."
 #make test
 
 echo "Making Telegraf..."
 make
-ls
 
 echo "Archiving Telegraf..."
 # remove existing builds
@@ -41,6 +44,6 @@ fi
 mkdir -p Linux-x86_64
 cp telegraf ./Linux-x86_64/
 zip Linux-x86_64.zip Linux-x86_64/telegraf
-cp /usr/local/go/src/github.com/influxdata/telegraf/Linux-x86_64.zip /output/Linux-x86_64.zip
+cp /go/src/github.com/influxdata/telegraf/Linux-x86_64.zip /output/Linux-x86_64.zip
 ls /output
 echo "Done!"

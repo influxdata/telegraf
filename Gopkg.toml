@@ -1,4 +1,8 @@
 [[constraint]]
+  name = "github.com/signalfx/golib"
+  version = "v2.4.0"
+
+[[constraint]]
   name = "collectd.org"
   version = "0.3.0"
 
@@ -50,7 +54,7 @@
   name = "github.com/gobwas/glob"
   version = "0.2.3"
 
-[[constraint]]
+[[override]]
   name = "github.com/golang/protobuf"
   version = "1.1.0"
 
@@ -126,7 +130,7 @@
   name = "github.com/nsqio/go-nsq"
   version = "1.0.7"
 
-[[constraint]]
+[[override]]
   name = "github.com/openzipkin/zipkin-go-opentracing"
   version = "0.3.4"
 
@@ -265,7 +269,7 @@
   branch = "master"
   name = "github.com/kubernetes/apimachinery"
 
-[[constraint]]
+[[override]]
   name = "github.com/go-logfmt/logfmt"
   version = "0.4.0"
 

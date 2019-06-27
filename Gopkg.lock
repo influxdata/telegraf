@@ -475,6 +475,14 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:a01080d20c45c031c13f3828c56e58f4f51d926a482ad10cc0316225097eb7ea"
+  name = "github.com/go-stack/stack"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a"
+  version = "v1.8.0"
+
+[[projects]]
   digest = "1:9ab1b1c637d7c8f49e39d8538a650d7eb2137b076790cff69d160823b505964c"
   name = "github.com/gobwas/glob"
   packages = [
@@ -767,8 +775,7 @@
   revision = "299bdde78165d4ca4bc7d064d8d6a4f39ac6de8c"
 
 [[projects]]
-  branch = "master"
-  digest = "1:7e9956922e349af0190afa0b6621befcd201072679d8e51a9047ff149f2afe93"
+  digest = "1:d9e483f4b9e306facf126bd90b02d512bd22ea4471e1568867e32221a8abbb16"
   name = "github.com/mailru/easyjson"
   packages = [
     ".",
@@ -777,7 +784,7 @@
     "jwriter",
   ]
   pruneopts = ""
-  revision = "efc7eb8984d6655c26b5c9d2e65c024e5767c37c"
+  revision = "3fdea8d05856a0c8df22ed4bc71b3219245e4485"
 
 [[projects]]
   digest = "1:63722a4b1e1717be7b98fc686e0b30d5e7f734b9e93d7dee86293b6deab7ea28"
@@ -908,7 +915,7 @@
   revision = "a52f2342449246d5bcc273e65cbdcfa5f7d6c63c"
 
 [[projects]]
-  digest = "1:78fb99d6011c2ae6c72f3293a83951311147b12b06a5ffa43abf750c4fab6ac5"
+  digest = "1:1fc4897d3cc482d070651563c16a51489296cd9150e6d53fb7ff4d59a24334bc"
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",
@@ -916,8 +923,8 @@
     "log",
   ]
   pruneopts = ""
-  revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
-  version = "v1.0.2"
+  revision = "659c90643e714681897ec2521c60567dd21da733"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:fea0e67285d900e5a0a7ec19ff4b4c82865a28dddbee8454c5360ad908f7069c"
@@ -1054,6 +1061,41 @@
   packages = ["."]
   pruneopts = ""
   revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
+
+[[projects]]
+  digest = "1:67e5aaa6325ce91f7fd1a6d90a889a49c1b832c3b3ff841e9d4d78554f1aeb14"
+  name = "github.com/signalfx/com_signalfx_metrics_protobuf"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1fb69526e88429e6c60a556f4637caf45d132fff"
+
+[[projects]]
+  branch = "master"
+  digest = "1:970b1463f5a08bf6790ad497c47ffe87ca75d37f0dd76bd7cd24b1318900a93e"
+  name = "github.com/signalfx/gohistogram"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1ccfd2ff508314074672f4450a917011a2060408"
+
+[[projects]]
+  digest = "1:655280a1b460433f43ad210987db90984c42d67f314489ceca9648f001fbab27"
+  name = "github.com/signalfx/golib"
+  packages = [
+    "datapoint",
+    "datapoint/dpsink",
+    "errors",
+    "event",
+    "eventcounter",
+    "log",
+    "sfxclient",
+    "sfxclient/spanfilter",
+    "timekeeper",
+    "trace",
+    "trace/format",
+  ]
+  pruneopts = ""
+  revision = "801c88406bf41fe1a96bda8319f9667a60e4e3c6"
+  version = "v2.4.0"
 
 [[projects]]
   digest = "1:8cf46b6c18a91068d446e26b67512cf16f1540b45d90b28b9533706a127f0ca6"
@@ -1653,6 +1695,10 @@
     "github.com/shirou/gopsutil/mem",
     "github.com/shirou/gopsutil/net",
     "github.com/shirou/gopsutil/process",
+    "github.com/signalfx/golib/datapoint",
+    "github.com/signalfx/golib/datapoint/dpsink",
+    "github.com/signalfx/golib/event",
+    "github.com/signalfx/golib/sfxclient",
     "github.com/soniah/gosnmp",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
