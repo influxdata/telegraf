@@ -117,12 +117,12 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 
-		if len(p.Arguments) > 0 || p.Method == "exec" {
-			p.wg.Add(1)
-			go p.pingToURL(ip, acc)
-		} else {
+		if len(p.Arguments) == 0 && p.Method == "native" {
 			p.wg.Add(1)
 			go p.pingToURLNative(ip, acc)
+		} else {
+			p.wg.Add(1)
+			go p.pingToURL(ip, acc)
 		}
 	}
 
@@ -188,19 +188,24 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 
 	host, err := net.ResolveIPAddr(network, destination)
 	if err != nil {
-		acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"source": destination})
+		acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": destination})
 		acc.AddError(err)
 		return
 	}
 
-	if p.PingInterval < 0.2 {
-		p.PingInterval = 0.2
+	interval := p.PingInterval
+	if interval < 0.2 {
+		interval = 0.2
 	}
 
-	tick := time.NewTicker(time.Duration(p.PingInterval * float64(time.Second)))
+	timeout := p.Timeout
+	if timeout == 0 {
+		timeout = 5
+	}
+
+	tick := time.NewTicker(time.Duration(interval * float64(time.Second)))
 	defer tick.Stop()
 
-	wg := &sync.WaitGroup{}
 	if p.Deadline > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Deadline)*time.Second)
@@ -213,7 +218,19 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	}
 
 	resps := make(chan *ping.Response, chanLength)
+	rsps := []*ping.Response{}
+
+	r := &sync.WaitGroup{}
+	r.Add(1)
+	go func() {
+		for res := range resps {
+			rsps = append(rsps, res)
+		}
+		r.Done()
+	}()
+
 	packetsSent := 0
+	wg := &sync.WaitGroup{}
 	c := ping.Client{}
 
 	for p.Count <= 0 || packetsSent < p.Count {
@@ -221,12 +238,8 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		case <-ctx.Done():
 			goto finish
 		case <-tick.C:
-			ctx := context.Background()
-			if p.Timeout > 0 {
-				var cancel context.CancelFunc
-				ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Timeout)*time.Second)
-				defer cancel()
-			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout*float64(time.Second)))
+			defer cancel()
 
 			packetsSent++
 			wg.Add(1)
@@ -251,11 +264,7 @@ finish:
 	wg.Wait()
 	close(resps)
 
-	rsps := []*ping.Response{}
-	for res := range resps {
-		rsps = append(rsps, res)
-	}
-
+	r.Wait()
 	tags, fields := onFin(packetsSent, rsps, destination)
 	acc.AddFields("ping", fields, tags)
 }
@@ -264,7 +273,7 @@ func onFin(packetsSent int, resps []*ping.Response, destination string) (map[str
 	packetsRcvd := len(resps)
 	loss := float64(packetsSent-packetsRcvd) / float64(packetsSent) * 100
 
-	tags := map[string]string{"source": destination}
+	tags := map[string]string{"url": destination}
 	fields := map[string]interface{}{
 		"result_code":         0,
 		"packets_transmitted": packetsSent,

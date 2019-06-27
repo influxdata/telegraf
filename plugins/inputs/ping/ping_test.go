@@ -187,10 +187,10 @@ func TestPingGather(t *testing.T) {
 	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
-		"packets_transmitted":   5,
-		"packets_received":      5,
-		"percent_packet_loss":   0.0,
-		"ttl":                   63,
+		"packets_transmitted": 5,
+		"packets_received":    5,
+		"percent_packet_loss": 0.0,
+		"ttl": 63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   43.628,
 		"maximum_response_ms":   51.806,
@@ -229,10 +229,10 @@ func TestLossyPingGather(t *testing.T) {
 	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
-		"packets_transmitted":   5,
-		"packets_received":      3,
-		"percent_packet_loss":   40.0,
-		"ttl":                   63,
+		"packets_transmitted": 5,
+		"packets_received":    3,
+		"percent_packet_loss": 40.0,
+		"ttl": 63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   44.033,
 		"maximum_response_ms":   51.806,
@@ -338,4 +338,21 @@ func TestPingBinary(t *testing.T) {
 		},
 	}
 	acc.GatherError(p.Gather)
+}
+
+// Test that Gather function works using native ping
+func TestPingGatherNative(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to permission requirements.")
+	}
+
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:   []string{"www.google.com", "www.reddit.com"},
+		Method: "native",
+		Count:  5,
+	}
+
+	assert.NoError(t, acc.GatherError(p.Gather))
+	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "www.google.com"}, "packets_transmitted", 5))
 }
