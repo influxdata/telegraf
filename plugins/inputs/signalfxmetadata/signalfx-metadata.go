@@ -17,7 +17,7 @@ var sampleConfig = `
   ## SignalFx metadata plugin reports metadata properties for the host
   ## Process List Collection Settings
   ## boolean indicating whether to emit proccess list information
-  # ProcessInfo = true
+  # ProcessInfo = false
   ## number of go routines used to collect the process list (must be 1 or greater)
   # NumberOfGoRoutines = 3
   ## The buffer size should be greater than or equal to the length of all 
@@ -31,7 +31,7 @@ func NewSFXMeta() *SFXMeta {
 	return &SFXMeta{
 		BufferSize:         10000,
 		NumberOfGoRoutines: 3,
-		ProcessInfo:        true,
+		ProcessInfo:        false,
 		nextMetadataSend:   0,
 		nextMetadataSendInterval: []int64{
 			r.Int63n(60),
