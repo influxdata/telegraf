@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -13,8 +13,8 @@ import (
 
 // Fireboard gathers statistics from the fireboard.io servers
 type Fireboard struct {
-	AuthToken []string
-	UUID      []string
+	AuthToken string
+	URL       string
 
 	client *http.Client
 }
@@ -29,52 +29,36 @@ func NewFireboard() *Fireboard {
 	return &Fireboard{client: client}
 }
 
-// Type fireboardStats represents the data that is received from Fireboard
+// RTT fireboardStats represents the data that is received from Fireboard
+type RTT struct {
+	Temp       float64
+	Channel    int64
+	Degreetype int64
+	Created    string
+}
+
 type fireboardStats struct {
-	ID          int64           `json:id`
-	Title       string          `json:title`
-	Owner       Owner           `json:owner`
-	Created     string          `json:created`
-	UUID        string          `json:uuid`
-	HardwareID  string          `json:hardware_id`
-	LatestTemps []RealTimeTemps `json:latest_temps`
-	LastTempLog string          `json:last_templog`
-	Model       string          `json:model`
-	ChanelCount int64           `json:channel_count`
-	DegreeType  int64           `json:degreetype`
-}
-
-type Owner struct {
-	Username    string       `json:username`
-	Email       string       `json:email`
-	FirstName   string       `json:first_name`
-	LastName    string       `json:last_name`
-	OwnerID     string       `json:id`
-	UserProfile OwnerProfile `json:userprofile`
-}
-
-type OwnerProfile struct {
-	Company          string `json:company`
-	AlertSms         string `json:alert_sms`
-	AlertEmails      string `json:alert_emails`
-	NotificationTone string `json:notification_tone`
-	User             string `json:user`
-	Picture          string `json:picture`
-	LastTemplog      string `json:last_templog`
-	CommercialUser   string `json:commercial_user`
-}
-
-type RealTimeTemps struct {
-	Channel    string  `json:channel`
-	Created    string  `json:created`
-	Temp       float64 `json:temp`
-	DegreeType int64   `json:degreetype`
+	ID           int64
+	Title        string
+	Created      string
+	UUID         string
+	HardwareID   string `json:"hardware_id"`
+	Latesttemps  []RTT  `json:"latest_temps"`
+	Lasttemplog  string `json:"last_templog"`
+	Model        string
+	Channelcount int64 `json:"channel_count"`
+	Degreetype   int64
 }
 
 // A sample configuration to only gather stats from localhost, default port.
 const sampleConfig = `
   # Specify auth token for your account
-  authToken = ["ec7b2c09b5b2122151e934f6a69d6e3210be6cc6"]
+  # https://docs.fireboard.io/reference/restapi.html#Authentication
+  # authToken = "b4bb6e6a7b6231acb9f71b304edb2274693d8849"
+  #
+  # You can override the fireboard server URL if necessary
+  # URL = https://fireboard.io/api/v1/devices.json
+  #
 `
 
 // SampleConfig Returns a sample configuration for the plugin
@@ -84,34 +68,26 @@ func (r *Fireboard) SampleConfig() string {
 
 // Description Returns a description of the plugin
 func (r *Fireboard) Description() string {
-	return "Read metrics from fireboard.io servers"
+	return "Read real time temps from fireboard.io servers"
 }
 
 // Gather Reads stats from all configured servers.
 func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
 	// Default to a single server at localhost (default port) if none specified
 	if len(r.AuthToken) == 0 {
-		return nil
+		return fmt.Errorf("You must specify an authToken")
+	}
+	if len(r.URL) == 0 {
+		r.URL = "https://fireboard.io/api/v1/devices.json"
 	}
 
-	// Range over all servers, gathering stats. Returns early in case of any error.
-	for _, s := range r.AuthToken {
-		acc.AddError(r.gatherServer(s, acc))
-	}
-
-	return nil
-}
-
-// Gathers stats from a single server, adding them to the accumulator
-func (r *Fireboard) gatherServer(s string, acc telegraf.Accumulator) error {
-	// Parse the given URL to extract the server tag
-	u, err := url.Parse(s)
+	// Perform the GET request to the fireboard servers
+	req, err := http.NewRequest("GET", r.URL, nil)
 	if err != nil {
-		return fmt.Errorf("riak unable to parse given server url %s: %s", s, err)
+		return err
 	}
-
-	// Perform the GET request to the riak /stats endpoint
-	resp, err := r.client.Get(s + "/stats")
+	req.Header.Set("Authorization", "Token "+r.AuthToken)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -119,30 +95,38 @@ func (r *Fireboard) gatherServer(s string, acc telegraf.Accumulator) error {
 
 	// Successful responses will always return status code 200
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("riak responded with unexepcted status code %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusForbidden {
+			return fmt.Errorf("fireboard server responded with %d [Forbidden], verify your authToken", resp.StatusCode)
+		}
+		return fmt.Errorf("fireboard responded with unexepcted status code %d", resp.StatusCode)
 	}
-
 	// Decode the response JSON into a new stats struct
-	stats := &fireboardStats{}
-	if err := json.NewDecoder(resp.Body).Decode(stats); err != nil {
-		return fmt.Errorf("unable to decode riak response: %s", err)
+	var stats []fireboardStats
+	if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
+		return fmt.Errorf("unable to decode fireboard response: %s", err)
 	}
-
-	// Build a map of tags
-	tags := map[string]string{
-		"title":   stats.Title,
-		"uuid":    stats.UUID,
-		"channel": stats.LatestTemps.Channel,
+	// Range over all devices, gathering stats. Returns early in case of any error.
+	for _, s := range stats {
+		acc.AddError(r.gatherTemps(s, acc))
 	}
+	return nil
+}
 
-	// Build a map of field values
-	fields := map[string]interface{}{
-		"temp": stats.LatestTemps.Temp,
+// Gathers stats from a single device, adding them to the accumulator
+func (r *Fireboard) gatherTemps(s fireboardStats, acc telegraf.Accumulator) error {
+
+	for _, t := range s.Latesttemps {
+		tags := map[string]string{
+			"title":   s.Title,
+			"uuid":    s.UUID,
+			"channel": strconv.FormatInt(t.Channel, 10),
+			"scale":   strconv.FormatInt(t.Degreetype, 10),
+		}
+		fields := map[string]interface{}{
+			"temperature": t.Temp,
+		}
+		acc.AddFields("fireboard", fields, tags)
 	}
-
-	// Accumulate the tags and values
-	acc.AddFields("fireboard", fields, tags)
-
 	return nil
 }
 
