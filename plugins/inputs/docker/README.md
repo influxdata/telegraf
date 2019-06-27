@@ -273,11 +273,13 @@ status if configured.
     - container_status
     - container_version
   - fields:
+    - container_id
     - oomkilled (boolean)
     - pid (integer)
     - exitcode (integer)
     - started_at (integer)
     - finished_at (integer)
+    - uptime_ns (integer)
 
 - docker_swarm
   - tags:

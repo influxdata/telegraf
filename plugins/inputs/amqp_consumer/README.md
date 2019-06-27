@@ -27,7 +27,7 @@ The following defaults are known to work with RabbitMQ:
   # username = ""
   # password = ""
 
-  ## Exchange to declare and consume from.
+  ## Name of the exchange to declare.  If unset, no exchange will be declared.
   exchange = "telegraf"
 
   ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
@@ -49,7 +49,11 @@ The following defaults are known to work with RabbitMQ:
   ## AMQP queue durability can be "transient" or "durable".
   queue_durability = "durable"
 
-  ## Binding Key
+  ## If true, queue will be passively declared.
+  # queue_passive = false
+
+  ## A binding between the exchange and queue using this binding key is
+  ## created.  If unset, no binding is created.
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
@@ -76,6 +80,10 @@ The following defaults are known to work with RabbitMQ:
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
