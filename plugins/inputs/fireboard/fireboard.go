@@ -38,27 +38,19 @@ type RTT struct {
 }
 
 type fireboardStats struct {
-	ID           int64
-	Title        string
-	Created      string
-	UUID         string
-	HardwareID   string `json:"hardware_id"`
-	Latesttemps  []RTT  `json:"latest_temps"`
-	Lasttemplog  string `json:"last_templog"`
-	Model        string
-	Channelcount int64 `json:"channel_count"`
-	Degreetype   int64
+	Title       string
+	UUID        string
+	Latesttemps []RTT `json:"latest_temps"`
+	Degreetype  int64
 }
 
 // A sample configuration to only gather stats from localhost, default port.
 const sampleConfig = `
-  # Specify auth token for your account
-  # https://docs.fireboard.io/reference/restapi.html#Authentication
+  ## Specify auth token for your account
+  ## https://docs.fireboard.io/reference/restapi.html#Authentication
   # authToken = "b4bb6e6a7b6231acb9f71b304edb2274693d8849"
-  #
-  # You can override the fireboard server URL if necessary
+  ## You can override the fireboard server URL if necessary
   # URL = https://fireboard.io/api/v1/devices.json
-  #
 `
 
 // SampleConfig Returns a sample configuration for the plugin
@@ -73,7 +65,6 @@ func (r *Fireboard) Description() string {
 
 // Gather Reads stats from all configured servers.
 func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
-	// Default to a single server at localhost (default port) if none specified
 	if len(r.AuthToken) == 0 {
 		return fmt.Errorf("You must specify an authToken")
 	}
@@ -107,14 +98,13 @@ func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
 	}
 	// Range over all devices, gathering stats. Returns early in case of any error.
 	for _, s := range stats {
-		acc.AddError(r.gatherTemps(s, acc))
+		r.gatherTemps(s, acc)
 	}
 	return nil
 }
 
 // Gathers stats from a single device, adding them to the accumulator
-func (r *Fireboard) gatherTemps(s fireboardStats, acc telegraf.Accumulator) error {
-
+func (r *Fireboard) gatherTemps(s fireboardStats, acc telegraf.Accumulator) {
 	for _, t := range s.Latesttemps {
 		tags := map[string]string{
 			"title":   s.Title,
@@ -127,7 +117,6 @@ func (r *Fireboard) gatherTemps(s fireboardStats, acc telegraf.Accumulator) erro
 		}
 		acc.AddFields("fireboard", fields, tags)
 	}
-	return nil
 }
 
 func init() {
