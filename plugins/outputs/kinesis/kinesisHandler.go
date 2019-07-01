@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	uuid "github.com/satori/go.uuid"
 )
@@ -14,9 +15,15 @@ const (
 	// MaxOutputRecords is the maximum number of records that we can send in a single send to Kinesis.
 	maxOutputRecords = 5
 	// maxRecordSizeBytes is the maximum size for a record when sending to Kinesis.
-	// 1020KB for they payload and 4KB for the partition key.
+	// 1020KB for the payload and 4KB for the partition key.
 	maxRecordSizeBytes = 1020 * 1024
 	randomPartitionKey = "-random-"
+)
+
+var (
+	// gzipCompressionLevel sets the compression level. Tests indicate that 7 gives the best trade off
+	// between speed and compression.
+	gzipCompressionLevel = 7
 )
 
 type slug struct {
@@ -54,7 +61,7 @@ func (handler *putRecordsHandler) setSerializer(serializer serializers.Serialize
 
 func (handler *putRecordsHandler) addMetric(partition string, metric telegraf.Metric) error {
 	if handler.readyToSendLock {
-		return fmt.Errorf("Already pacakged current metrics. Send first then add more")
+		return fmt.Errorf("Already packaged current metrics. Send first then add more")
 	}
 	if _, ok := handler.rawMetrics[partition]; !ok {
 		handler.rawMetrics[partition] = make([]telegraf.Metric, 0)
@@ -74,16 +81,18 @@ func (handler *putRecordsHandler) addSlugs(partitionKey string, slugs ...[]byte)
 	}
 }
 
-// packageMetrics is responsible to get the metrics split into payloads that we no larger than 1020kb.
-// Each partition key will have metrics that need to then be split into payloads.
+// packageMetrics is responsible to get the metrics split into payloads that are no larger than 1020kb.
+// Each partition key will have metrics that need to be split into payloads.
 // If the partition key is random then it will create payloads ready to be split between as many shards
 // that you have available.
-// packageMetrics can't be called again until init is called. Really it is designed to be used once.
+// packageMetrics can't be called again until init is called.
+// Really it is designed to be used once and then thrown away.
 func (handler *putRecordsHandler) packageMetrics(shards int64) error {
 	if handler.readyToSendLock {
-		return fmt.Errorf("Already setup to send data")
+		return fmt.Errorf("Waiting to send data, can't accept more metrics currently")
 	}
-	splitIntoBlocks := func(howManyBlocks int64, partitionKey string, metrics []telegraf.Metric) error {
+
+	splitIntoBlocks := func(howManyBlocks int, partitionKey string, metrics []telegraf.Metric) [][]telegraf.Metric {
 		blocks := make([][]telegraf.Metric, howManyBlocks)
 		for index := range blocks {
 			blocks[index] = make([]telegraf.Metric, 0)
@@ -98,15 +107,11 @@ func (handler *putRecordsHandler) packageMetrics(shards int64) error {
 			}
 		}
 
-		for _, metrics := range blocks {
-			metricsBytes, err := handler.serializer.SerializeBatch(metrics)
-			if err != nil {
-				return err
-			}
-			handler.addSlugs(partitionKey, metricsBytes)
-		}
+		return blocks
+	}
 
-		return nil
+	requiredBlocks := func(currentSize int) int {
+		return (currentSize / maxRecordSizeBytes) + 1
 	}
 
 	// At this point we need to know if the metrics will fit in a single push to kinesis
@@ -115,15 +120,44 @@ func (handler *putRecordsHandler) packageMetrics(shards int64) error {
 	// If that doesn't work we will then know how many block we would need.
 	// Split again into x blocks, serialize and return.
 	for partitionKey, metrics := range handler.rawMetrics {
-
 		if partitionKey == randomPartitionKey {
-			blocks := int64(shards)
+			// for Random partition keys we need to split the data first then check that it
+			// will fit into the payloads. If not we need to split it again, but we know how many
+			// blocks to make.
+
+			// Make as many blocks as there is shards
+			blocks := int(shards)
+			// If we have less metrics than shards, we reduce the block count to 1
+			// It will be faster to send one block in this case.
 			if int64(len(metrics)) < shards {
-				blocks = int64(len(metrics))
+				blocks = 1
 			}
-			if err := splitIntoBlocks(blocks, partitionKey, metrics); err != nil {
-				return err
+			safeBlocks := make([][]byte, 0)
+			splitBlocks := splitIntoBlocks(blocks, partitionKey, metrics)
+
+			for _, block := range splitBlocks {
+				metricsEncoded, err := handler.serializer.SerializeBatch(block)
+				if err != nil {
+					return err
+				}
+
+				blocksNeeded := requiredBlocks(len(metricsEncoded))
+				if blocksNeeded == 1 {
+					safeBlocks = append(safeBlocks, metricsEncoded)
+				} else {
+					newBlocks := splitIntoBlocks(blocksNeeded, partitionKey, block)
+					for _, newBlock := range newBlocks {
+						metricsEncoded, err := handler.serializer.SerializeBatch(newBlock)
+						if err != nil {
+							return err
+						}
+						safeBlocks = append(safeBlocks, metricsEncoded)
+					}
+				}
 			}
+			handler.slugs[randomPartitionKey] = safeBlocks
+			// clear splitBlocks because we don't need it
+			splitBlocks = nil
 
 			// Now we need to move the data into its own partition keys
 			for _, metricBytes := range handler.slugs[randomPartitionKey] {
@@ -135,48 +169,61 @@ func (handler *putRecordsHandler) packageMetrics(shards int64) error {
 			continue
 		}
 
+		// Try one for static keys
 		tryOne, err := handler.serializer.SerializeBatch(metrics)
 		if err != nil {
 			return err
 		}
 
-		requiredBlocks := (len(tryOne) / maxRecordSizeBytes) + 1
+		// We always need a single block.
+		// (len(tryOne) / maxRecordSizeBytes) will give a int due to maxRecordSizeBytes being a const
+		// If tryOne is smaller than maxRecordSizeBytes we get zero.
+		// or we get how many blocks we need + the starting 1.
+		blocksNeeded := requiredBlocks(len(tryOne))
 
-		if requiredBlocks == 1 {
-			// we are ok and we can carry on
+		if blocksNeeded == 1 {
+			// The single block is large enough to carry all the metrics.
 			handler.addSlugs(partitionKey, tryOne)
 			continue
 		}
 
-		// sad times we need to make more blocks and split the data between them
-		if err := splitIntoBlocks(int64(requiredBlocks), partitionKey, metrics); err != nil {
-			return err
-		}
-		continue
-	}
-
-	return nil
-}
-
-func (handler *putRecordsHandler) snappyCompressSlugs() error {
-	for partitionKey, slugs := range handler.slugs {
-		for index, slug := range slugs {
-			// snappy doesn't return errors
-			compressedBytes, _ := snappyMetrics(slug)
-			handler.slugs[partitionKey][index] = compressedBytes
-		}
-	}
-	return nil
-}
-
-func (handler *putRecordsHandler) gzipCompressSlugs() error {
-	for partitionKey, slugs := range handler.slugs {
-		for index, slug := range slugs {
-			compressedBytes, err := gzipMetrics(slug)
+		// We now know how many blocks we need, but need to redistribute the metrics into the blocks
+		blocks := splitIntoBlocks(blocksNeeded, partitionKey, metrics)
+		for _, metrics := range blocks {
+			metricsBytes, err := handler.serializer.SerializeBatch(metrics)
 			if err != nil {
 				return err
 			}
-			handler.slugs[partitionKey][index] = compressedBytes
+			handler.addSlugs(partitionKey, metricsBytes)
+		}
+	}
+
+	return nil
+}
+
+func newGzipEncoder() (*internal.GzipEncoder, error) {
+	// Grab the Gzip encoder directly because we need to set the level.
+	gz, err := internal.NewGzipEncoder()
+	if err != nil {
+		return nil, err
+	}
+	err = gz.SetLevel(gzipCompressionLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	return gz, nil
+}
+
+func (handler *putRecordsHandler) encodeSlugs(encoder internal.ContentEncoder) error {
+	for partitionKey, slugs := range handler.slugs {
+		for index, slug := range slugs {
+			// snappy doesn't return errors
+			encodedBytes, err := encoder.Encode(slug)
+			if err != nil {
+				return err
+			}
+			handler.slugs[partitionKey][index] = encodedBytes
 		}
 	}
 	return nil
@@ -185,7 +232,7 @@ func (handler *putRecordsHandler) gzipCompressSlugs() error {
 // convertToKinesisPutRequests will return a slice that contains a []*kinesis.PutRecordsRequestEntry
 // sized to fit into a PutRecords calls. The number of of outer slices is how many times you would
 // need to call kinesis.PutRecords.
-// The Inner slices ad hear to the current rules. No more than 500 records at once and no more than
+// The Inner slices adheres to the following rules. No more than 500 records at once and no more than
 // 5MB of data including the partition keys.
 func (handler *putRecordsHandler) convertToKinesisPutRequests() [][]*kinesis.PutRecordsRequestEntry {
 	putRequests := make([][]*kinesis.PutRecordsRequestEntry, 0)

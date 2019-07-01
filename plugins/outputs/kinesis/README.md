@@ -29,8 +29,7 @@ will attempt to authenticate.
   region = "eu-west-1"
   streamname = "KinesisStreamName"
   aggregate_metrics = true
-  # Either "gzip", "snappy"
-  compress_metrics_with = "gzip"
+  content_encoding = "gzip"
   partition = { method = "random" }
   debug = true
 ```
@@ -124,21 +123,19 @@ This will make the plugin gather the metrics and send them as blocks of metrics 
 1. If a random key is in use then a block for each shard in the stream will be created unless there isn't enough metrics then as many blocks as metrics.
 1. Each record will be 1020kb in size + partition key
 
-### compress_metrics_with
+### content_encoding
 
-`compress_metrics_with` has the following values. If no value is set then compression is skipped.
+`content_encoding` can be anything that telegraf supports.
+
+Examples below
 
 * gzip
 * snappy
-
-They are explained below.
 
 #### gzip
 
 This will make the plugin compress the data using GZip before the data is shipped to Kinesis.
 GZip is slower than snappy but generally fast enough and gives much better compression. Use GZip in most cases.
-
-If both gzip and snappy are true. GZip wins.
 
 #### snappy
 

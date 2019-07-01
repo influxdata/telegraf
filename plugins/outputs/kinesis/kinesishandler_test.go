@@ -69,20 +69,24 @@ func TestAddSlugs(t *testing.T) {
 }
 
 func TestKinesisPackagedMetrics(t *testing.T) {
+	// A slug is a records data set that has a maximum size set by maxRecordSizeBytes
+	// If we have random keys then we expect there to be many keys and record sets
+	// this allows for spreading the load around shards.
+	// The test will look for the amount of records and that each generated record is
+	// or is lower than the maximum record size.
 	tests := []struct {
 		name          string
 		shards        int64
 		nMetrics      int
 		staticKey     string
 		expectedSlugs int
-		snappy        bool
-		gzip          bool
+		encoding      string
 	}{
 		{
-			name:          "micro Random expect 2 slugs",
+			name:          "micro Random expect 1 slugs",
 			shards:        4,
 			nMetrics:      2,
-			expectedSlugs: 2,
+			expectedSlugs: 1,
 		},
 		{
 			name:          "large Random expect 4 slugs",
@@ -104,20 +108,25 @@ func TestKinesisPackagedMetrics(t *testing.T) {
 			staticKey:     "static_key",
 		},
 		{
-			name:          "vary large random expect 2 slugs",
-			shards:        2,
-			nMetrics:      51200,
+			name:          "vary large static expect 1 slugs",
+			shards:        4,
+			nMetrics:      8081 * 2,
 			expectedSlugs: 1,
-			snappy:        true,
 			staticKey:     "static_key",
 		},
 		{
-			name:          "vary large random expect 2 slugs",
+			name:          "vary large random expect 6 slugs with snappy",
 			shards:        2,
 			nMetrics:      51200,
-			expectedSlugs: 1,
-			gzip:          true,
-			staticKey:     "static_key",
+			expectedSlugs: 6,
+			encoding:      "snappy",
+		},
+		{
+			name:          "vary large random expect 6 slugs with gzip",
+			shards:        2,
+			nMetrics:      51200,
+			expectedSlugs: 6,
+			encoding:      "gzip",
 		},
 	}
 
@@ -144,16 +153,22 @@ func TestKinesisPackagedMetrics(t *testing.T) {
 			t.Fail()
 		}
 
-		if test.snappy {
-			// Snappy doesn't error, just testing for panic :(
-			h.snappyCompressSlugs()
+		for key, slug := range h.slugs {
+			for index, recordSet := range slug {
+				if len(recordSet) > maxRecordSizeBytes {
+					t.Logf("%s: recordSet %d of slug %s is too large. Is: %d, max size is: %d", test.name, index, key, len(recordSet), maxRecordSizeBytes)
+				}
+			}
 		}
 
-		if test.gzip {
-			if err := h.gzipCompressSlugs(); err != nil {
-				t.Logf("%s: Error when gzip compressing slug. Error: %s", test.name, err)
-				t.FailNow()
-			}
+		encoder, err := makeEncoder(test.encoding)
+		if err != nil {
+			t.Logf("Failed to make encoder. You have put something bad into the test")
+			t.Fail()
+		}
+		if err := h.encodeSlugs(encoder); err != nil {
+			t.Logf("Failed to encoder the data")
+			t.Fail()
 		}
 
 		// We need to make sure that we don't get panics here.

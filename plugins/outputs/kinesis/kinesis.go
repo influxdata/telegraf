@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -36,12 +37,15 @@ type (
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
 		AggregateMetrics   bool       `toml:"aggregate_metrics"`
-		CompressWith       string     `toml:"compress_metrics_with"`
+		UseBatchFormat     bool       `toml:"use_batch_format"`
+		ContentEncoding    string     `toml:"content_encoding"`
 
 		svc     *kinesis.Kinesis
 		nShards int64
 
 		serializer serializers.Serializer
+
+		encoder internal.ContentEncoder
 	}
 
 	Partition struct {
@@ -123,11 +127,21 @@ var sampleConfig = `
 	# valid options: "gzip", "snappy"
 	# See https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kinesis
 	# for more details on each compression method.
-	compress_metrics_with = "gzip"
+	content_encoding = "gzip"
 
   ## debug will show upstream aws messages.
   debug = false
 `
+
+func makeEncoder(encoderType string) (internal.ContentEncoder, error) {
+	switch encoderType {
+	case "gzip":
+		// Special handling for gzip because we need to change the level of compression.
+		return newGzipEncoder()
+	default:
+		return internal.NewContentEncoder(encoderType)
+	}
+}
 
 func (k *KinesisOutput) SampleConfig() string {
 	return sampleConfig
@@ -147,6 +161,12 @@ func (k *KinesisOutput) Connect() error {
 	if k.Debug {
 		log.Printf("I! kinesis: Establishing a connection to Kinesis in %s", k.Region)
 	}
+
+	encoder, err := makeEncoder(k.ContentEncoding)
+	if err != nil {
+		return err
+	}
+	k.encoder = encoder
 
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      k.Region,
@@ -300,17 +320,10 @@ func (k *KinesisOutput) aggregatedWrite(metrics []telegraf.Metric) error {
 	}
 	handler.packageMetrics(k.nShards)
 
-	switch k.CompressWith {
-	case "gzip":
-		if err := handler.gzipCompressSlugs(); err != nil {
-			log.Printf("E! Failed to compress with gzip")
-			return err
-		}
-	case "snappy":
-		if err := handler.snappyCompressSlugs(); err != nil {
-			log.Printf("E! Failed to compress with snappy")
-			return err
-		}
+	// encode the messages if required.
+	err := handler.encodeSlugs(k.encoder)
+	if err != nil {
+		return err
 	}
 
 	var elapsed time.Duration

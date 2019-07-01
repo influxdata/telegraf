@@ -56,3 +56,17 @@ func TestIdentityEncodeDecode(t *testing.T) {
 
 	require.Equal(t, "howdy", string(actual))
 }
+
+func TestSnappyEncodeDecode(t *testing.T) {
+	enc, err := NewSnappyEncoder()
+	require.NoError(t, err)
+	dec, err := NewSnappyDecoder()
+	require.NoError(t, err)
+
+	payload := []byte("Snappy Test!!££$$")
+	encoded, err := enc.Encode(payload)
+	require.NoError(t, err)
+	decoded, err := dec.Decode(encoded)
+	require.NoError(t, err)
+	require.Equal(t, string(payload), string(decoded))
+}
