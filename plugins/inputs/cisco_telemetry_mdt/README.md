@@ -14,22 +14,24 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
 
 ```toml
 [[inputs.cisco_telemetry_mdt]]
-  ## Telemetry transport (one of: tcp, grpc)
-  transport = "grpc"
+ ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
+ ## using the grpc transport.
+ transport = "grpc"
 
-  ## Address and port to host telemetry listener
-  service_address = ":57000"
+ ## Address and port to host telemetry listener
+ service_address = ":57000"
 
-  ## Enable TLS for GRPC transport
-  # tls_cert = "/etc/telegraf/cert.pem"
-  # tls_key = "/etc/telegraf/key.pem"
+ ## Enable TLS; grpc transport only.
+ # tls_cert = "/etc/telegraf/cert.pem"
+ # tls_key = "/etc/telegraf/key.pem"
 
-  ## Enable TLS client authentication and define allowed CA certificates
-  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+ ## Enable TLS client authentication and define allowed CA certificates; grpc
+ ##  transport only.
+ # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
-  ## Define aliases to map telemetry encoding paths to simple measurement names
-  [inputs.cisco_telemetry_mdt.aliases]
-    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
+ ## Define aliases to map telemetry encoding paths to simple measurement names
+ [inputs.cisco_telemetry_mdt.aliases]
+   ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
 ```
 
 ### Example Output:
