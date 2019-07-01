@@ -22,10 +22,11 @@ import (
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project        string
-	Namespace      string
-	ResourceType   string            `toml:"resource_type"`
-	ResourceLabels map[string]string `toml:"resource_labels"`
+	Project         string
+	Namespace       string
+	ResourceType    string            `toml:"resource_type"`
+	ResourceLabels  map[string]string `toml:"resource_labels"`
+	PreferredLabels string            `toml:"preferred_labels"`
 
 	client *monitoring.MetricClient
 }
@@ -51,12 +52,20 @@ const (
 	errStringPointsTooFrequent = "One or more points were written more frequently than the maximum sampling period configured for the metric"
 )
 
-var sampleConfig = `
+var (
+	sampleConfig = `
   ## GCP Project
   project = "erudite-bloom-151019"
 
   ## The namespace for the metric descriptor
   namespace = "telegraf"
+
+  ## Preferred labels:
+  ## Stackdriver custom metrics are limited to 10 labels total;
+  ## if there are >10 tags associated with the input data, we
+  ## will attempt to preserve these tags while staying under
+	## the stackdriver quota.
+	preferred_labels = "foo,bar,baz"
 
   ## Custom resource type
   # resource_type = "generic_node"
@@ -67,6 +76,8 @@ var sampleConfig = `
   #   namespace = "myapp"
   #   location = "eu-north0"
 `
+	preferredLabels map[string]string
+)
 
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
@@ -87,6 +98,14 @@ func (s *Stackdriver) Connect() error {
 	}
 
 	s.ResourceLabels["project_id"] = s.Project
+
+	preferredLabels = make(map[string]string)
+	if s.PreferredLabels != "" {
+		// split preferredlabels by comma and build a map to both de-dup and make for easy lookups
+		for _, lab := range strings.Split(s.PreferredLabels, ",") {
+			preferredLabels[strings.Trim(lab, " ")] = ""
+		}
+	}
 
 	if s.client == nil {
 		ctx := context.Background()
@@ -323,6 +342,39 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	}
 }
 
+func trimStackdriverLabels(labels map[string]string) map[string]string {
+	excess := len(labels) - QuotaLabelsPerMetricDescriptor
+	log.Printf(
+		"W! [outputs.stackdriver] tag count [%d] exceeds quota for stackdriver labels [%d] by [%d]: trimming",
+		len(labels),
+		QuotaLabelsPerMetricDescriptor,
+		excess,
+	)
+	trimmedLabels := make(map[string]string)
+	// first, populate all of the preferred labels
+	for k := range labels {
+		if len(trimmedLabels) < QuotaLabelsPerMetricDescriptor {
+			if _, ok := preferredLabels[k]; ok {
+				trimmedLabels[k] = labels[k]
+				delete(labels, k)
+			}
+		} else {
+			break
+		}
+	}
+	// adding in remaining labels while we have room
+	for k := range labels {
+		if len(trimmedLabels) < QuotaLabelsPerMetricDescriptor {
+			trimmedLabels[k] = labels[k]
+			delete(labels, k)
+		} else {
+			break
+		}
+	}
+
+	return trimmedLabels
+}
+
 func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 	labels := make(map[string]string)
 	for _, t := range tags {
@@ -349,20 +401,7 @@ func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 		}
 	}
 	if len(labels) > QuotaLabelsPerMetricDescriptor {
-		excess := len(labels) - QuotaLabelsPerMetricDescriptor
-		log.Printf(
-			"W! [outputs.stackdriver] tag count [%d] exceeds quota for stackdriver labels [%d] removing [%d] random tags",
-			len(labels),
-			QuotaLabelsPerMetricDescriptor,
-			excess,
-		)
-		for k := range labels {
-			if excess == 0 {
-				break
-			}
-			excess--
-			delete(labels, k)
-		}
+		labels = trimStackdriverLabels(labels)
 	}
 
 	return labels

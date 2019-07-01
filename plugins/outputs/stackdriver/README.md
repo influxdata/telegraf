@@ -21,6 +21,13 @@ Additional resource labels can be configured by `resource_labels`. By default th
   ## The namespace for the metric descriptor
   namespace = "telegraf"
 
+  ## Preferred labels:
+  ## Stackdriver custom metrics are limited to 10 labels total;
+  ## if there are >10 tags associated with the input data, we
+  ## will attempt to preserve these tags while staying under
+	## the stackdriver quota.
+  # preferred_labels = "foo,bar,baz"
+
   ## Custom resource type
   # resource_type = "generic_node"
 
