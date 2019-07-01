@@ -24,12 +24,13 @@ services:
     depends_on:
       - zookeeper
   elasticsearch:
-    image: elasticsearch:5
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.2.0
     environment:
-    - JAVA_OPTS="-Xms256m -Xmx256m"
+    - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    - discovery.type=single-node
+    - xpack.security.enabled=false
     ports:
       - "9200:9200"
-      - "9300:9300"
   mysql:
     image: mysql
     environment:

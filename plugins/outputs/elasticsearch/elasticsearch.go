@@ -1,12 +1,14 @@
 package elasticsearch
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -29,6 +31,7 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
+	MajorReleaseNumber  int
 	tls.ClientConfig
 
 	Client *elastic.Client
@@ -47,7 +50,7 @@ var sampleConfig = `
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
-  ## HTTP basic authentication details (eg. when using Shield)
+  ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
 
@@ -84,6 +87,81 @@ var sampleConfig = `
   ## Set to true if you want telegraf to overwrite an existing template
   overwrite_template = false
 `
+
+const telegrafTemplate = `
+{
+	{{ if (lt .Version 6) }}
+	"template": "{{.TemplatePattern}}",
+	{{ else }}
+	"index_patterns" : [ "{{.TemplatePattern}}" ],
+	{{ end }}
+	"settings": {
+		"index": {
+			"refresh_interval": "10s",
+			"mapping.total_fields.limit": 5000,
+			"auto_expand_replicas" : "0-1",
+			"codec" : "best_compression"
+		}
+	},
+	"mappings" : {
+		{{ if (lt .Version 7) }}
+		"metrics" : {
+			{{ if (lt .Version 6) }}
+			"_all": { "enabled": false },
+			{{ end }}
+		{{ end }}
+		"properties" : {
+			"@timestamp" : { "type" : "date" },
+			"measurement_name" : { "type" : "keyword" }
+		},
+		"dynamic_templates": [
+			{
+				"tags": {
+					"match_mapping_type": "string",
+					"path_match": "tag.*",
+					"mapping": {
+						"ignore_above": 512,
+						"type": "keyword"
+					}
+				}
+			},
+			{
+				"metrics_long": {
+					"match_mapping_type": "long",
+					"mapping": {
+						"type": "float",
+						"index": false
+					}
+				}
+			},
+			{
+				"metrics_double": {
+					"match_mapping_type": "double",
+					"mapping": {
+						"type": "float",
+						"index": false
+					}
+				}
+			},
+			{
+				"text_fields": {
+					"match": "*",
+					"mapping": {
+						"norms": false
+					}
+				}
+			}
+		]
+		{{ if (lt .Version 7) }}
+		}
+		{{ end }}
+	}
+}`
+
+type templatePart struct {
+	TemplatePattern string
+	Version         int
+}
 
 func (a *Elasticsearch) Connect() error {
 	if a.URLs == nil || a.IndexName == "" {
@@ -142,14 +220,15 @@ func (a *Elasticsearch) Connect() error {
 	}
 
 	// quit if ES version is not supported
-	i, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
-	if err != nil || i < 5 {
+	majorReleaseNumber, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
+	if err != nil || majorReleaseNumber < 5 {
 		return fmt.Errorf("Elasticsearch version not supported: %s", esVersion)
 	}
 
 	log.Println("I! Elasticsearch version: " + esVersion)
 
 	a.Client = client
+	a.MajorReleaseNumber = majorReleaseNumber
 
 	if a.ManageTemplate {
 		err := a.manageTemplate(ctx)
@@ -184,10 +263,13 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		m["tag"] = metric.Tags()
 		m[name] = metric.Fields()
 
-		bulkRequest.Add(elastic.NewBulkIndexRequest().
-			Index(indexName).
-			Type("metrics").
-			Doc(m))
+		br := elastic.NewBulkIndexRequest().Index(indexName).Doc(m)
+
+		if a.MajorReleaseNumber <= 6 {
+			br.Type("metrics")
+		}
+
+		bulkRequest.Add(br)
 
 	}
 
@@ -237,65 +319,16 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	}
 
 	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
-		// Create or update the template
-		tmpl := fmt.Sprintf(`
-			{
-				"template":"%s",
-				"settings": {
-					"index": {
-						"refresh_interval": "10s",
-						"mapping.total_fields.limit": 5000
-					}
-				},
-				"mappings" : {
-					"_default_" : {
-						"_all": { "enabled": false	  },
-						"properties" : {
-							"@timestamp" : { "type" : "date" },
-							"measurement_name" : { "type" : "keyword" }
-						},
-						"dynamic_templates": [
-							{
-								"tags": {
-									"match_mapping_type": "string",
-									"path_match": "tag.*",
-									"mapping": {
-										"ignore_above": 512,
-										"type": "keyword"
-									}
-								}
-							},
-							{
-								"metrics_long": {
-									"match_mapping_type": "long",
-									"mapping": {
-										"type": "float",
-										"index": false
-									}
-								}
-							},
-							{
-								"metrics_double": {
-									"match_mapping_type": "double",
-									"mapping": {
-										"type": "float",
-										"index": false
-									}
-								}
-							},
-							{
-								"text_fields": {
-									"match": "*",
-									"mapping": {
-										"norms": false
-									}
-								}
-							}
-						]
-					}
-				}
-			}`, templatePattern+"*")
-		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx)
+		tp := templatePart{
+			TemplatePattern: templatePattern + "*",
+			Version:         a.MajorReleaseNumber,
+		}
+
+		t := template.Must(template.New("template").Parse(telegrafTemplate))
+		var tmpl bytes.Buffer
+
+		t.Execute(&tmpl, tp)
+		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl.String()).Do(ctx)
 
 		if errCreateTemplate != nil {
 			return fmt.Errorf("Elasticsearch failed to create index template %s : %s", a.TemplateName, errCreateTemplate)
