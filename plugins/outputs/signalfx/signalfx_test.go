@@ -66,42 +66,42 @@ func TestSignalFx_SignalFx(t *testing.T) {
 			name:   "add datapoints of all types",
 			fields: fields{},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Counter,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Gauge,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Summary,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Histogram,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Untyped,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
@@ -186,42 +186,42 @@ func TestSignalFx_SignalFx(t *testing.T) {
 				Include: []string{"event.mymeasurement"},
 			},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Counter,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Gauge,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Summary,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Histogram,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Untyped,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
@@ -318,14 +318,14 @@ func TestSignalFx_SignalFx(t *testing.T) {
 				Exclude: []string{"datapoint"},
 			},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"value": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Gauge,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"value": "hello world"},
@@ -342,7 +342,7 @@ func TestSignalFx_SignalFx(t *testing.T) {
 			name:   "add datapoint with field named value",
 			fields: fields{},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"value": float64(3.14)},
@@ -373,7 +373,7 @@ func TestSignalFx_SignalFx(t *testing.T) {
 				Include: []string{"event.mymeasurement"},
 			},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
@@ -404,7 +404,7 @@ func TestSignalFx_SignalFx(t *testing.T) {
 			name:   "exclude events that are not explicitly included",
 			fields: fields{},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"value": "hello world"},
@@ -421,7 +421,7 @@ func TestSignalFx_SignalFx(t *testing.T) {
 			name:   "malformed metadata event",
 			fields: fields{},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1", "sf_metric": "objects.host-meta-data"},
 					fields: map[string]interface{}{"value": "hello world"},
@@ -504,42 +504,42 @@ func TestSignalFx_Errors(t *testing.T) {
 			name:   "add datapoints of all types",
 			fields: fields{},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Counter,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Gauge,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Summary,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Histogram,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Untyped,
 				},
-				&measurement{
+				{
 					name:   "datapoint",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": float64(3.14)},
@@ -557,42 +557,42 @@ func TestSignalFx_Errors(t *testing.T) {
 				Include: []string{"event.mymeasurement"},
 			},
 			measurements: []*measurement{
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Counter,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Gauge,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Summary,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Histogram,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
 					time:   time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 					tp:     telegraf.Untyped,
 				},
-				&measurement{
+				{
 					name:   "event",
 					tags:   map[string]string{"host": "192.168.0.1"},
 					fields: map[string]interface{}{"mymeasurement": "hello world"},
