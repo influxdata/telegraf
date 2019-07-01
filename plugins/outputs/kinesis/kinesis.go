@@ -165,9 +165,12 @@ func (k *KinesisOutput) Connect() error {
 	describeOutput, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
 		StreamName: aws.String(k.StreamName),
 	})
+	if err != nil {
+		return err
+	}
 	k.svc = svc
 	k.nShards = *describeOutput.StreamDescriptionSummary.OpenShardCount
-	return err
+	return nil
 }
 
 func (k *KinesisOutput) Close() error {
