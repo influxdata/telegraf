@@ -136,11 +136,25 @@ The agent table configures Telegraf and the defaults used across all plugins.
   service input to set the timestamp at the appropriate precision.
 
 - **debug**:
-  Run telegraf with debug log messages.
+  Log at debug level.
+
 - **quiet**:
-  Run telegraf in quiet mode (error log messages only).
+  Log only error level messages.
+
 - **logfile**:
-  Specify the log file name. The empty string means to log to stderr.
+  Log file name, the empty string means to log to stderr.
+
+- **logfile_rotation_interval**:
+  The logfile will be rotated after the time interval specified.  When set to
+  0 no time based rotation is performed.
+
+- **logfile_rotation_max_size**:
+  The logfile will be rotated when it becomes larger than the specified size.
+  When set to 0 no size based rotation is performed.
+
+- **logfile_rotation_max_archives**:
+  Maximum number of rotated archives to keep, any older logs are deleted.  If
+  set to -1, no archives are removed.
 
 - **hostname**:
   Override default hostname, if empty use os.Hostname()

@@ -221,6 +221,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:ed5e77e0626ed76b7e7a2554bc4586aae768612381c5f62738f16a2dfa48763b"
+  name = "github.com/cisco-ie/nx-telemetry-proto"
+  packages = [
+    "mdt_dialout",
+    "telemetry_bis",
+  ]
+  pruneopts = ""
+  revision = "82441e232cf6af9be0f808bf0c6421ee8519880e"
+
+[[projects]]
+  branch = "master"
   digest = "1:298e42868718da06fc0899ae8fdb99c48a14477045234c9274d81caa79af6a8f"
   name = "github.com/couchbase/go-couchbase"
   packages = ["."]
@@ -315,6 +326,7 @@
     "api/types/versions",
     "api/types/volume",
     "client",
+    "pkg/stdcopy",
   ]
   pruneopts = ""
   revision = "ed7b6428c133e7c59404251a09b7d6b02fa83cc2"
@@ -518,6 +530,7 @@
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
+    "cmp/cmpopts",
     "cmp/internal/diff",
     "cmp/internal/function",
     "cmp/internal/value",
@@ -653,15 +666,15 @@
   revision = "c43482518d410361b6c383d7aebce33d0471d7bc"
 
 [[projects]]
-  branch = "master"
-  digest = "1:7fb6cc9607eaa6ef309edebc42b57f704244bd4b9ab23bff128829c4ad09b95d"
+  branch = "telegraf"
+  digest = "1:65e98c3d449a34fe4644b503148d3a7244ceabe13f8bf71c2cfecfc2bdce05e9"
   name = "github.com/influxdata/toml"
   packages = [
     ".",
     "ast",
   ]
   pruneopts = ""
-  revision = "2a2e3012f7cfbef64091cc79776311e65dfa211b"
+  revision = "270119a8ce653b297f12189c9099ef1409979f2b"
 
 [[projects]]
   branch = "master"
@@ -672,7 +685,7 @@
   revision = "7c63b0a71ef8300adc255344d275e10e5c3a71ec"
 
 [[projects]]
-  digest = "1:5544f7badae00bc5b9ec6829857bc08f88fce4d3ef73fb616ee57d49abbf7f48"
+  digest = "1:a7998e19ebb78fdd341cdaf3825fded9030ae27af9c70d298c05d88744e16a0b"
   name = "github.com/jackc/pgx"
   packages = [
     ".",
@@ -684,8 +697,8 @@
     "stdlib",
   ]
   pruneopts = ""
-  revision = "89f1e6ac7276b61d885db5e5aed6fcbedd1c7e31"
-  version = "v3.2.0"
+  revision = "8faa4453fc7051d1076053f8854077753ab912f2"
+  version = "v3.4.0"
 
 [[projects]]
   digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
@@ -857,6 +870,17 @@
   version = "v1.0.7"
 
 [[projects]]
+  branch = "master"
+  digest = "1:06ee57a6252cc9c3a1650be9888e8df796d86947ec75bff7e2c4ac5689baa086"
+  name = "github.com/openconfig/gnmi"
+  packages = [
+    "proto/gnmi",
+    "proto/gnmi_ext",
+  ]
+  pruneopts = ""
+  revision = "33a1865c302903e7a2e06f35960e6bc31e84b9f6"
+
+[[projects]]
   digest = "1:5d9b668b0b4581a978f07e7d2e3314af18eb27b3fb5d19b70185b7c575723d11"
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
@@ -1007,7 +1031,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:d77a85cf43b70ae61fa2543d402d782b40dca0f5f41413839b5f916782b0fab9"
+  digest = "1:8b478b1d29180a608666c36ea8dc160000e3466abb5a5354e571429679e972c0"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -1020,8 +1044,8 @@
     "process",
   ]
   pruneopts = ""
-  revision = "6c6abd6d1666d6b27f1c261e0f850441ba22aa3a"
-  version = "v2.19.02"
+  revision = "5335e3fd506df4cb63de0a8239c7461d23063be6"
+  version = "v2.19.05"
 
 [[projects]]
   branch = "master"
@@ -1305,6 +1329,7 @@
   digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
   name = "golang.org/x/text"
   packages = [
+    "cases",
     "collate",
     "collate/build",
     "encoding",
@@ -1317,6 +1342,7 @@
     "encoding/simplifiedchinese",
     "encoding/traditionalchinese",
     "encoding/unicode",
+    "internal",
     "internal/colltab",
     "internal/gen",
     "internal/tag",
@@ -1326,11 +1352,13 @@
     "language",
     "runes",
     "secure/bidirule",
+    "secure/precis",
     "transform",
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
     "unicode/rangetable",
+    "width",
   ]
   pruneopts = ""
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
@@ -1552,6 +1580,8 @@
     "github.com/aws/aws-sdk-go/service/dynamodb",
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
+    "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout",
+    "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis",
     "github.com/couchbase/go-couchbase",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
@@ -1561,6 +1591,7 @@
     "github.com/docker/docker/api/types/registry",
     "github.com/docker/docker/api/types/swarm",
     "github.com/docker/docker/client",
+    "github.com/docker/docker/pkg/stdcopy",
     "github.com/docker/libnetwork/ipvs",
     "github.com/eclipse/paho.mqtt.golang",
     "github.com/ericchiang/k8s",
@@ -1581,6 +1612,7 @@
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/golang/snappy",
     "github.com/google/go-cmp/cmp",
+    "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/go-github/github",
     "github.com/gorilla/mux",
     "github.com/harlow/kinesis-consumer",
@@ -1607,6 +1639,7 @@
     "github.com/nats-io/gnatsd/server",
     "github.com/nats-io/go-nats",
     "github.com/nsqio/go-nsq",
+    "github.com/openconfig/gnmi/proto/gnmi",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",
     "github.com/pkg/errors",
@@ -1663,6 +1696,7 @@
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/metadata",
+    "google.golang.org/grpc/peer",
     "google.golang.org/grpc/status",
     "gopkg.in/gorethink/gorethink.v3",
     "gopkg.in/ldap.v2",

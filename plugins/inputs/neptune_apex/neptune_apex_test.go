@@ -226,7 +226,22 @@ func TestParseXML(t *testing.T) {
 				`<status><date>12/22/2018 21:55:37</date>
 				<timezone>-8.0</timezone><power><failed>a</failed>
 				<restored>12/22/2018 22:55:37</restored></power></status>`),
-			wantErr: true,
+			wantMetrics: []*testutil.Metric{
+				{
+					Measurement: Measurement,
+					Time:        goodTime,
+					Tags: map[string]string{
+						"source":   "",
+						"type":     "controller",
+						"hardware": "",
+						"software": "",
+					},
+					Fields: map[string]interface{}{
+						"serial":         "",
+						"power_restored": int64(1545548137000000000),
+					},
+				},
+			},
 		},
 		{
 			name: "Power restored time failure",
@@ -234,7 +249,22 @@ func TestParseXML(t *testing.T) {
 				`<status><date>12/22/2018 21:55:37</date>
 				<timezone>-8.0</timezone><power><restored>a</restored>
 				<failed>12/22/2018 22:55:37</failed></power></status>`),
-			wantErr: true,
+			wantMetrics: []*testutil.Metric{
+				{
+					Measurement: Measurement,
+					Time:        goodTime,
+					Tags: map[string]string{
+						"source":   "",
+						"type":     "controller",
+						"hardware": "",
+						"software": "",
+					},
+					Fields: map[string]interface{}{
+						"serial":       "",
+						"power_failed": int64(1545548137000000000),
+					},
+				},
+			},
 		},
 		{
 			name: "Power failed failure",

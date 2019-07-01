@@ -2,12 +2,12 @@ package nsq
 
 import (
 	"fmt"
-
-	"github.com/nsqio/go-nsq"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/nsqio/go-nsq"
 )
 
 type NSQ struct {
@@ -68,7 +68,8 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.nsq] Could not serialize metric: %v", err)
+			continue
 		}
 
 		err = n.producer.Publish(n.Topic, buf)
