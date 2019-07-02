@@ -27,6 +27,7 @@ const statsPathLocal = "/_nodes/_local/stats"
 type nodeStat struct {
 	Host       string            `json:"host"`
 	Name       string            `json:"name"`
+	Roles      []string          `json:"roles"`
 	Attributes map[string]string `json:"attributes"`
 	Indices    interface{}       `json:"indices"`
 	OS         interface{}       `json:"os"`
@@ -331,6 +332,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 			"node_host":    n.Host,
 			"node_name":    n.Name,
 			"cluster_name": nodeStats.ClusterName,
+			"node_roles":   strings.Join(n.Roles, ","),
 		}
 
 		for k, v := range n.Attributes {
