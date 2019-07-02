@@ -1,14 +1,75 @@
-## v1.11 [unreleased]
+## v1.12 [unreleased]
+
+#### Release Notes
+
+- The cluster health related fields in the elasticsearch input have been split
+  out from the `elasticsearch_indices` mesasurement into the new
+  `elasticsearch_cluster_health_indices` measurement as they were originally
+  combined by error.
+
+#### New Inputs
+
+- [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
+
+#### New Parsers
+
+- [form_urlencoded](/plugins/processors/form_urlencoded/README.md) - Contributed by @byonchev
+
+#### New Processors
+
+- [date](/plugins/processors/date/README.md) - Contributed by @influxdata
+- [pivot](/plugins/processors/pivot/README.md) - Contributed by @influxdata
+- [unpivot](/plugins/processors/unpivot/README.md) - Contributed by @influxdata
+
+#### Features
+
+- [#5842](https://github.com/influxdata/telegraf/pull/5842): Improve performance of wavefront serializer.
+- [#5863](https://github.com/influxdata/telegraf/pull/5863): Allow regex processor to append tag values.
+- [#5997](https://github.com/influxdata/telegraf/pull/5997): Add starttime field to phpfpm input.
+- [#5998](https://github.com/influxdata/telegraf/pull/5998): Add cluster name tag to elasticsearch indices.
+- [#6006](https://github.com/influxdata/telegraf/pull/6006): Add support for interface field in http_response input plugin.
+- [#5996](https://github.com/influxdata/telegraf/pull/5996): Add container uptime_ns in docker input plugin.
+- [#6016](https://github.com/influxdata/telegraf/pull/6016): Add better user-facing errors for API timeouts in docker input.
+- [#6027](https://github.com/influxdata/telegraf/pull/6027): Add TLS mutal auth support to jti_openconfig_telemetry input.
+
+#### Bugfixes
+
+- [#5692](https://github.com/influxdata/telegraf/issues/5692): Fix sensor read error stops reporting of all sensors in temp input.
+- [#4356](https://github.com/influxdata/telegraf/issues/4356): Fix double pct replacement in sysstat input.
+- [#6004](https://github.com/influxdata/telegraf/issues/6004): Fix race in master node detection in elasticsearch input.
+
+## v1.11.1 [2019-06-25]
+
+#### Bugfixes
+
+- [#5980](https://github.com/influxdata/telegraf/issues/5980): Cannot set mount_points option in disk input.
+- [#5983](https://github.com/influxdata/telegraf/issues/5983): Omit keys when creating measurement names for GNMI telemetry.
+- [#5972](https://github.com/influxdata/telegraf/issues/5972): Don't consider pid of 0 when using systemd lookup in procstat.
+- [#5807](https://github.com/influxdata/telegraf/issues/5807): Skip 404 error reporting in nginx_plus_api input.
+- [#5999](https://github.com/influxdata/telegraf/issues/5999): Fix panic if pool_mode column does not exist.
+- [#6019](https://github.com/influxdata/telegraf/issues/6019): Add missing container_id field to docker_container_status metrics.
+- [#5742](https://github.com/influxdata/telegraf/issues/5742): Ignore error when utmp is missing in system input.
+- [#6032](https://github.com/influxdata/telegraf/issues/6032): Add device, serial_no, and wwn tags to synthetic attributes.
+- [#6012](https://github.com/influxdata/telegraf/issues/6012): Fix parsing of remote tcp address in statsd input.
+
+## v1.11 [2019-06-11]
 
 #### Release Notes
 
 - The `uptime_format` field in the system input has been deprecated, use the
   `uptime` field instead.
+- The `cloudwatch` input has been updated to use a more efficient API, it now
+  requires `GetMetricData` permissions instead of `GetMetricStatistics`.  The
+  `units` tag is not available from this API and is no longer collected.
 
 #### New Inputs
 
 - [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
+- [cisco_telemetry_gnmi](/plugins/inputs/cisco_telemetry_gnmi/README.md) - Contributed by @sbyx
+- [cisco_telemetry_mdt](/plugins/inputs/cisco_telemetry_mdt/README.md) - Contributed by @sbyx
+- [ecs](/plugins/inputs/ecs/README.md) - Contributed by @rbtr
 - [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
+- [openweathermap](/plugins/inputs/openweathermap/README.md) - Contributed by @regel
 - [powerdns_recursor](/plugins/inputs/powerdns_recursor/README.md) - Contributed by @dupondje
 
 #### New Aggregators
@@ -18,6 +79,7 @@
 #### New Outputs
 
 - [syslog](/plugins/outputs/syslog/README.md) - Contributed by @javicrespo
+- [health](/plugins/outputs/health/README.md) - Contributed by @influxdata
 
 #### New Serializers
 
@@ -48,9 +110,16 @@
 - [#5791](https://github.com/influxdata/telegraf/pull/5791): Add support for datadog events to statsd input.
 - [#5817](https://github.com/influxdata/telegraf/pull/5817): Allow devices option to match against devlinks.
 - [#5855](https://github.com/influxdata/telegraf/pull/5855): Support tags in enum processor.
+- [#5830](https://github.com/influxdata/telegraf/pull/5830): Add support for gzip compression to amqp plugins.
+- [#5831](https://github.com/influxdata/telegraf/pull/5831): Support passive queue declaration in amqp_consumer.
+- [#5901](https://github.com/influxdata/telegraf/pull/5901): Set user agent in stackdriver output.
+- [#5885](https://github.com/influxdata/telegraf/pull/5885): Extend metrics collected from Nvidia GPUs.
+- [#5547](https://github.com/influxdata/telegraf/pull/5547): Add file rotation support to the file output.
+- [#5955](https://github.com/influxdata/telegraf/pull/5955): Add source tag to hddtemp plugin.
 
 #### Bugfixes
 
+- [#5692](https://github.com/influxdata/telegraf/pull/5692): Temperature input plugin stops working when WiFi is turned off.
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
 - [#5730](https://github.com/influxdata/telegraf/pull/5730): Don't start telegraf when stale pidfile found.
 - [#5477](https://github.com/influxdata/telegraf/pull/5477): Support Minecraft server 1.13 and newer in minecraft input.
@@ -62,6 +131,15 @@
 - [#5796](https://github.com/influxdata/telegraf/issues/5796): Set default timeout of 5s in fibaro input.
 - [#5835](https://github.com/influxdata/telegraf/issues/5835): Fix docker input does not parse image name correctly.
 - [#5661](https://github.com/influxdata/telegraf/issues/5661): Fix direct exchange routing key in amqp output.
+- [#5819](https://github.com/influxdata/telegraf/issues/5819): Fix scale set resource id with azure_monitor output.
+- [#5883](https://github.com/influxdata/telegraf/issues/5883): Skip invalid power times in apex_neptune input.
+- [#3485](https://github.com/influxdata/telegraf/issues/3485): Fix sqlserver connection closing on error.
+- [#5917](https://github.com/influxdata/telegraf/issues/5917): Fix toml option name in nginx_upstream_check.
+- [#5920](https://github.com/influxdata/telegraf/issues/5920): Fixed datastore name mapping in vsphere input.
+- [#5879](https://github.com/influxdata/telegraf/issues/5879): Fix multiple SIGHUP causes Telegraf to shutdown.
+- [#5891](https://github.com/influxdata/telegraf/issues/5891): Fix connection leak in influxdb outputs on reload.
+- [#5858](https://github.com/influxdata/telegraf/issues/5858): Fix batch fails when single metric is unserializable.
+- [#5536](https://github.com/influxdata/telegraf/issues/5536): Log a warning on write if the metric buffer has overflowed.
 
 ## v1.10.4 [2019-05-14]
 

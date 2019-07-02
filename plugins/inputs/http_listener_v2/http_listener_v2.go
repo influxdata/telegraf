@@ -8,6 +8,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,21 +25,27 @@ import (
 // 500 MB
 const defaultMaxBodySize = 500 * 1024 * 1024
 
+const (
+	body  = "body"
+	query = "query"
+)
+
+// TimeFunc provides a timestamp for the metrics
 type TimeFunc func() time.Time
 
+// HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
-	ServiceAddress string
-	Path           string
-	Methods        []string
-	ReadTimeout    internal.Duration
-	WriteTimeout   internal.Duration
-	MaxBodySize    internal.Size
-	Port           int
-
+	ServiceAddress string            `toml:"service_address"`
+	Path           string            `toml:"path"`
+	Methods        []string          `toml:"methods"`
+	DataSource     string            `toml:"data_source"`
+	ReadTimeout    internal.Duration `toml:"read_timeout"`
+	WriteTimeout   internal.Duration `toml:"write_timeout"`
+	MaxBodySize    internal.Size     `toml:"max_body_size"`
+	Port           int               `toml:"port"`
+	BasicUsername  string            `toml:"basic_username"`
+	BasicPassword  string            `toml:"basic_password"`
 	tlsint.ServerConfig
-
-	BasicUsername string
-	BasicPassword string
 
 	TimeFunc
 
@@ -68,7 +76,11 @@ const sampleConfig = `
   ## 0 means to use the default of 524,288,00 bytes (500 mebibytes)
   # max_body_size = "500MB"
 
-  ## Set one or more allowed client CA certificate file names to 
+  ## Part of the request to consume.  Available options are "body" and
+  ## "query".
+  # data_source = "body"
+
+  ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
@@ -150,7 +162,7 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! Started HTTP listener V2 service on %s\n", h.ServiceAddress)
+	log.Printf("I! [inputs.http_listener_v2] Listening on %s", listener.Addr().String())
 
 	return nil
 }
@@ -159,16 +171,16 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 func (h *HTTPListenerV2) Stop() {
 	h.listener.Close()
 	h.wg.Wait()
-
-	log.Println("I! Stopped HTTP listener V2 service on ", h.ServiceAddress)
 }
 
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	if req.URL.Path == h.Path {
-		h.AuthenticateIfSet(h.serveWrite, res, req)
-	} else {
-		h.AuthenticateIfSet(http.NotFound, res, req)
+	handler := h.serveWrite
+
+	if req.URL.Path != h.Path {
+		handler = http.NotFound
 	}
+
+	h.authenticateIfSet(handler, res, req)
 }
 
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
@@ -191,15 +203,45 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	// Handle gzip request bodies
+	var bytes []byte
+	var ok bool
+
+	switch strings.ToLower(h.DataSource) {
+	case query:
+		bytes, ok = h.collectQuery(res, req)
+	default:
+		bytes, ok = h.collectBody(res, req)
+	}
+
+	if !ok {
+		return
+	}
+
+	metrics, err := h.Parse(bytes)
+	if err != nil {
+		log.Printf("D! [inputs.http_listener_v2] Parse error: %v", err)
+		badRequest(res)
+		return
+	}
+
+	for _, m := range metrics {
+		h.acc.AddMetric(m)
+	}
+
+	res.WriteHeader(http.StatusNoContent)
+}
+
+func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
 	body := req.Body
+
+	// Handle gzip request bodies
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		var err error
 		body, err = gzip.NewReader(req.Body)
 		if err != nil {
 			log.Println("D! " + err.Error())
 			badRequest(res)
-			return
+			return nil, false
 		}
 		defer body.Close()
 	}
@@ -208,19 +250,23 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 	bytes, err := ioutil.ReadAll(body)
 	if err != nil {
 		tooLarge(res)
-		return
+		return nil, false
 	}
 
-	metrics, err := h.Parse(bytes)
+	return bytes, true
+}
+
+func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
+	rawQuery := req.URL.RawQuery
+
+	query, err := url.QueryUnescape(rawQuery)
 	if err != nil {
-		log.Println("D! " + err.Error())
+		log.Printf("D! [inputs.http_listener_v2] Error parsing query: %v", err)
 		badRequest(res)
-		return
+		return nil, false
 	}
-	for _, m := range metrics {
-		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-	res.WriteHeader(http.StatusNoContent)
+
+	return []byte(query), true
 }
 
 func tooLarge(res http.ResponseWriter) {
@@ -246,7 +292,7 @@ func badRequest(res http.ResponseWriter) {
 	res.Write([]byte(`{"error":"http: bad request"}`))
 }
 
-func (h *HTTPListenerV2) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
 	if h.BasicUsername != "" && h.BasicPassword != "" {
 		reqUsername, reqPassword, ok := req.BasicAuth()
 		if !ok ||
@@ -269,6 +315,7 @@ func init() {
 			TimeFunc:       time.Now,
 			Path:           "/telegraf",
 			Methods:        []string{"POST", "PUT"},
+			DataSource:     body,
 		}
 	})
 }

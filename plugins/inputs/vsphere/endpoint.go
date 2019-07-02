@@ -369,7 +369,6 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	log.Printf("D! [inputs.vsphere]: Discover new objects for %s", e.URL.Host)
-	resourceKinds := make(map[string]resourceKind)
 	dcNameCache := make(map[string]string)
 
 	numRes := int64(0)
@@ -418,9 +417,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	// Build lun2ds map
-	dss := resourceKinds["datastore"]
+	dss := newObjects["datastore"]
 	l2d := make(map[string]string)
-	for _, ds := range dss.objects {
+	for _, ds := range dss {
 		url := ds.altID
 		m := isolateLUN.FindStringSubmatch(url)
 		if m != nil {

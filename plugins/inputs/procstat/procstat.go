@@ -226,7 +226,6 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"cpu_time_irq"] = cpu_time.Irq
 		fields[prefix+"cpu_time_soft_irq"] = cpu_time.Softirq
 		fields[prefix+"cpu_time_steal"] = cpu_time.Steal
-		fields[prefix+"cpu_time_stolen"] = cpu_time.Stolen
 		fields[prefix+"cpu_time_guest"] = cpu_time.Guest
 		fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
 	}
@@ -398,7 +397,7 @@ func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 		if !bytes.Equal(kv[0], []byte("MainPID")) {
 			continue
 		}
-		if len(kv[1]) == 0 {
+		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
 		pid, err := strconv.Atoi(string(kv[1]))

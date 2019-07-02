@@ -234,7 +234,7 @@ func (p *Ping) args(url string, system string) []string {
 		case "darwin":
 			args = append(args, "-I", p.Interface)
 		case "freebsd", "netbsd", "openbsd":
-			args = append(args, "-s", p.Interface)
+			args = append(args, "-S", p.Interface)
 		case "linux":
 			args = append(args, "-I", p.Interface)
 		default:

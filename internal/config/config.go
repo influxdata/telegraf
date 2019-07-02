@@ -33,7 +33,7 @@ import (
 
 var (
 	// Default sections
-	sectionDefaults = []string{"agent", "global_tags", "outputs",
+	sectionDefaults = []string{"global_tags", "agent", "outputs",
 		"processors", "aggregators", "inputs"}
 
 	// Default input plugins
@@ -149,12 +149,12 @@ type AgentConfig struct {
 	// Log file name, the empty string means to log to stderr.
 	Logfile string `toml:"logfile"`
 
-	// The logfile will be rotated when it becomes larger than the specified
-	// size.  When set to 0 no size based rotation is performed.
+	// The file will be rotated after the time interval specified.  When set
+	// to 0 no time based rotation is performed.
 	LogfileRotationInterval internal.Duration `toml:"logfile_rotation_interval"`
 
-	// Maximum number of rotated archives to keep, any older logs are deleted.
-	// If set to -1, no archives are removed.
+	// The logfile will be rotated when it becomes larger than the specified
+	// size.  When set to 0 no size based rotation is performed.
 	LogfileRotationMaxSize internal.Size `toml:"logfile_rotation_max_size"`
 
 	// Maximum number of rotated archives to keep, any older logs are deleted.
@@ -536,12 +536,12 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 }
 
 func printFilteredGlobalSections(sectionFilters []string) {
-	if sliceContains("agent", sectionFilters) {
-		fmt.Printf(agentConfig)
-	}
-
 	if sliceContains("global_tags", sectionFilters) {
 		fmt.Printf(globalTagsConfig)
+	}
+
+	if sliceContains("agent", sectionFilters) {
+		fmt.Printf(agentConfig)
 	}
 }
 
@@ -1726,6 +1726,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["form_urlencoded_tag_keys"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.FormUrlencodedTagKeys = append(c.FormUrlencodedTagKeys, str.Value)
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1767,6 +1779,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
+	delete(tbl.Fields, "form_urlencoded_tag_keys")
 
 	return c, nil
 }

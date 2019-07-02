@@ -226,6 +226,10 @@ func TestEscape(t *testing.T) {
 			"pct_util",
 		},
 		{
+			"%%util",
+			"pct_util",
+		},
+		{
 			"bread/s",
 			"bread_per_s",
 		},

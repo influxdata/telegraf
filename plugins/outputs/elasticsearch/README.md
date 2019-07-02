@@ -1,8 +1,8 @@
-## Elasticsearch Output Plugin for Telegraf
+# Elasticsearch Output Plugin for Telegraf
 
-This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (http://olivere.github.io/elastic/).
+This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (<http://olivere.github.io/elastic/).>
 
-Currently it only supports Elasticsearch 5.x series.
+It supports Elasticsearch releases from 5.x up to 7.x.
 
 ## Elasticsearch indexes and templates
 
@@ -22,7 +22,7 @@ For more information on how this works, see https://www.elastic.co/guide/en/elas
 This plugin can create a working template for use with telegraf metrics. It uses Elasticsearch dynamic templates feature to set proper types for the tags and metrics fields.
 If the template specified already exists, it will not overwrite unless you configure this plugin to do so. Thus you can customize this template after its creation if necessary.
 
-Example of an index template created by telegraf:
+Example of an index template created by telegraf on Elasticsearch 5.x:
 
 ```json
 {
@@ -35,6 +35,8 @@ Example of an index template created by telegraf:
           "limit": "5000"
         }
       },
+      "auto_expand_replicas" : "0-1",
+      "codec" : "best_compression",
       "refresh_interval": "10s"
     }
   },
@@ -159,7 +161,7 @@ This plugin will format the events in the following way:
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
-  ## HTTP basic authentication details (eg. when using Shield)
+  ## HTTP basic authentication details
   # username = "telegraf"
   # password = "mypassword"
 
@@ -209,6 +211,7 @@ This plugin will format the events in the following way:
   %H - hour (00..23)
   %V - week of the year (ISO week) (01..53)
 ```
+
 Additionally, you can specify dynamic index names by using tags with the notation ```{{tag_name}}```. This will store the metrics with different tag values in different indices. If the tag does not exist in a particular metric, the `default_tag_value` will be used instead.
 
 ### Optional parameters:

@@ -1,4 +1,4 @@
-# Example
+# Wavefront
 
 The `wavefront` serializer translates the Telegraf metric format to the [Wavefront Data Format](https://docs.wavefront.com/wavefront_data_format.html).
 
