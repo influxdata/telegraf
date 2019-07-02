@@ -77,13 +77,13 @@ LimitNOFILE=4096
 It is preferred that this plugin listen on privileged ICMP sockets. To do so, telegraf can either be run as the root user or the root user can add the capability to access raw sockets to telegraf by running the following commant:
 
 ```
-setcap cap_net_raw=eip /home/test/telegraf
+setcap cap_net_raw=eip /path/to/telegraf
 ```
 
 Another option (doesn't work as well or in all circumstances) is to listen on unprivileged raw sockets (non-Windows only). The system group of the user running telegraf must be allowed to create ICMP Echo sockets. [See man pages icmp(7) for `ping_group_range`](http://man7.org/linux/man-pages/man7/icmp.7.html). On Linux hosts, run the following to give a group the proper permissions:
 
 ```
-sudo sysctl -w net.ipv4.ping_group_range="GROUPID   GROUPID"
+sudo sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
 ```
 
 
