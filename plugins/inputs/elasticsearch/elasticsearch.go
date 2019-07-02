@@ -79,10 +79,10 @@ type clusterStats struct {
 	Nodes       interface{} `json:"nodes"`
 }
 
-type catMaster struct {
-	NodeID   string `json:"id"`
-	NodeIP   string `json:"ip"`
-	NodeName string `json:"node"`
+type indexStat struct {
+	Primaries interface{}              `json:"primaries"`
+	Total     interface{}              `json:"total"`
+	Shards    map[string][]interface{} `json:"shards"`
 }
 
 const sampleConfig = `
@@ -114,6 +114,13 @@ const sampleConfig = `
   ## Only gather cluster_stats from the master node. To work this require local = true
   cluster_stats_only_from_master = true
 
+  ## Set indices_stats to true when you want to obtain indices stats from the Master node.
+  indices_stats = false
+
+  ## Set shards_stats to true when you want to obtain shards stats from the Master node.
+  ## If set, then indices_stats is considered true as they are also provided with shard stats.
+  # shards_stats = false
+
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
   ## "breaker". Per default, all stats are gathered.
@@ -141,6 +148,8 @@ type Elasticsearch struct {
 	ClusterHealthLevel         string
 	ClusterStats               bool
 	ClusterStatsOnlyFromMaster bool
+	IndicesStats               bool
+	ShardsStats                bool
 	NodeStats                  []string
 	Username                   string `toml:"username"`
 	Password                   string `toml:"password"`
@@ -203,7 +212,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		e.client = client
 	}
 
-	if e.ClusterStats {
+	if e.ClusterStats || e.IndicesStats || e.ShardsStats {
 		var wgC sync.WaitGroup
 		wgC.Add(len(e.Servers))
 
@@ -266,6 +275,20 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
 					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
+				}
+			}
+
+			if e.IndicesStats && (e.serverInfo[s].isMaster()) {
+				if !e.ShardsStats {
+					if err := e.gatherIndicesStats(s+"/_all/_stats", acc); err != nil {
+						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						return
+					}
+				} else {
+					if err := e.gatherIndicesStats(s+"/_all/_stats?level=shards", acc); err != nil {
+						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						return
+					}
 				}
 			}
 		}(serv, acc)
@@ -455,6 +478,86 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 			return err
 		}
 		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator) error {
+	indicesStats := &struct {
+		Shards  map[string]interface{} `json:"_shards"`
+		All     map[string]interface{} `json:"_all"`
+		Indices map[string]indexStat   `json:"indices"`
+	}{}
+
+	if err := e.gatherJsonData(url, indicesStats); err != nil {
+		return err
+	}
+	now := time.Now()
+
+	// Total Shards Stats
+	shardsStats := map[string]interface{}{}
+	for k, v := range indicesStats.Shards {
+		shardsStats[k] = v
+	}
+	acc.AddFields("elasticsearch_indicestats_shards_total", shardsStats, map[string]string{"name": ""}, now)
+
+	// All Stats
+	for m, s := range indicesStats.All {
+		// parse Json, ignoring strings and bools
+		jsonParser := jsonparser.JSONFlattener{}
+		err := jsonParser.FullFlattenJSON("_", s, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields("elasticsearch_indicestats_"+m, jsonParser.Fields, map[string]string{"index_name": "all"}, now)
+	}
+
+	// Individual Indices stats
+	for id, index := range indicesStats.Indices {
+		indexTag := map[string]string{"index_name": id}
+		stats := map[string]interface{}{
+			"primaries": index.Primaries,
+			"total":     index.Total,
+		}
+		for m, s := range stats {
+			f := jsonparser.JSONFlattener{}
+			// parse Json, getting strings and bools
+			err := f.FullFlattenJSON("", s, true, true)
+			if err != nil {
+				return err
+			}
+			acc.AddFields("elasticsearch_indicestats_"+m, f.Fields, indexTag, now)
+		}
+
+		if e.ShardsStats {
+			for shardNumber, shard := range index.Shards {
+
+				// Get Shard Stats
+				flattened := jsonparser.JSONFlattener{}
+				err := flattened.FullFlattenJSON("", shard[0], true, true)
+				if err != nil {
+					return err
+				}
+
+				// determine shard tag and primary/replica designation
+				shardType := "replica"
+				if flattened.Fields["routing_primary"] == true {
+					shardType = "primary"
+				}
+
+				shardTags := map[string]string{
+					"index_name": id,
+					"shard_name": string(shardNumber),
+					"type":       shardType,
+				}
+
+				acc.AddFields("elasticsearch_indicestats_shards",
+					flattened.Fields,
+					shardTags,
+					now)
+			}
+		}
 	}
 
 	return nil

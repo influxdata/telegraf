@@ -1,15 +1,32 @@
 # Elasticsearch Input Plugin
 
 The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
-[node](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
-and optionally [cluster-health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
-or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html) metrics.
+[Node Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
+and optionally
+[Cluster-Health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
+metrics.
+
+In addition, the following optional queries are only made by the master node:
+ [Cluster Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html)
+ [Indices Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
+ [Shard Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
+
+Specific Elasticsearch endpoints that are queried:
+- Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local' configuration setting
+- Cluster Heath:  /_cluster/health?level=indices
+- Cluster Stats:  /_cluster/stats
+- Indices Stats:  /_all/_stats
+- Shard Stats:  /_all/_stats?level=shards
+
+Note that specific statistics information can change between Elassticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
 
 ### Configuration
 
 ```toml
 [[inputs.elasticsearch]]
   ## specify a list of one or more Elasticsearch servers
+  ## you can add username and password to your url to use basic authentication:
+  ## servers = ["http://user:pass@localhost:9200"]
   servers = ["http://localhost:9200"]
 
   ## Timeout for HTTP requests to the elastic search server(s)
@@ -20,20 +37,27 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## of the cluster.
   local = true
 
-  ## Set cluster_health to true when you want to also obtain cluster health stats
+  ## Set cluster_health to true when you want to obtain cluster health stats
   cluster_health = false
 
-  ## Adjust cluster_health_level when you want to also obtain detailed health stats
+  ## Adjust cluster_health_level when you want to obtain detailed health stats
   ## The options are
   ##  - indices (default)
   ##  - cluster
   # cluster_health_level = "indices"
 
-  ## Set cluster_stats to true when you want to also obtain cluster stats.
+  ## Set cluster_stats to true when you want to obtain cluster stats.
   cluster_stats = false
 
   ## Only gather cluster_stats from the master node. To work this require local = true
   cluster_stats_only_from_master = true
+
+  ## Set indices_stats to true when you want to obtain indices stats from the Master node.
+  indices_stats = false
+
+  ## Set shards_stats to true when you want to obtain shards stats from the Master node.
+  ## If set, then indices_stats is considered true as they are also provided with shard stats.
+  # shards_stats = false
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
