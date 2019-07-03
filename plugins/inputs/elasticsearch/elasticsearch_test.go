@@ -21,6 +21,7 @@ func defaultTags() map[string]string {
 		"node_id":               "SDFsfSDFsdfFSDSDfSFDSDF",
 		"node_name":             "test.host.com",
 		"node_host":             "test",
+		"node_roles":            "data,ingest,master",
 	}
 }
 func defaultServerInfo() serverInfo {
