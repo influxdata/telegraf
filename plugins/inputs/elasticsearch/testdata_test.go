@@ -117,6 +117,11 @@ const nodeStatsResponse = `
         "inet[/127.0.0.1:9300]",
         "NONE"
       ],
+      "roles": [
+        "master",
+        "data",
+        "ingest"
+      ],
       "attributes": {
         "master": "true"
       },
@@ -944,6 +949,11 @@ const nodeStatsResponseJVMProcess = `
       "ip": [
         "inet[/127.0.0.1:9300]",
         "NONE"
+      ],
+      "roles": [
+        "master",
+        "data",
+        "ingest"
       ],
       "attributes": {
         "master": "true"

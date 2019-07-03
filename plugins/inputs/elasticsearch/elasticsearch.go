@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ const statsPathLocal = "/_nodes/_local/stats"
 type nodeStat struct {
 	Host       string            `json:"host"`
 	Name       string            `json:"name"`
+	Roles      []string          `json:"roles"`
 	Attributes map[string]string `json:"attributes"`
 	Indices    interface{}       `json:"indices"`
 	OS         interface{}       `json:"os"`
@@ -326,11 +328,13 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 	}
 
 	for id, n := range nodeStats.Nodes {
+		sort.Strings(n.Roles)
 		tags := map[string]string{
 			"node_id":      id,
 			"node_host":    n.Host,
 			"node_name":    n.Name,
 			"cluster_name": nodeStats.ClusterName,
+			"node_roles":   strings.Join(n.Roles, ","),
 		}
 
 		for k, v := range n.Attributes {
