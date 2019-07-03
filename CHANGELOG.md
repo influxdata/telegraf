@@ -31,12 +31,22 @@
 - [#5996](https://github.com/influxdata/telegraf/pull/5996): Add container uptime_ns in docker input plugin.
 - [#6016](https://github.com/influxdata/telegraf/pull/6016): Add better user-facing errors for API timeouts in docker input.
 - [#6027](https://github.com/influxdata/telegraf/pull/6027): Add TLS mutal auth support to jti_openconfig_telemetry input.
+- [#6053](https://github.com/influxdata/telegraf/pull/6053): Add support for ES 7.x to elasticsearch output
+- [#6062](https://github.com/influxdata/telegraf/pull/6062): Add basic auth to prometheus input plugin
+- [#6064](https://github.com/influxdata/telegraf/pull/6064): Add node roles tag to elasticsearch input
 
 #### Bugfixes
 
 - [#5692](https://github.com/influxdata/telegraf/issues/5692): Fix sensor read error stops reporting of all sensors in temp input.
 - [#4356](https://github.com/influxdata/telegraf/issues/4356): Fix double pct replacement in sysstat input.
 - [#6004](https://github.com/influxdata/telegraf/issues/6004): Fix race in master node detection in elasticsearch input.
+
+## v1.11.2 [unreleased]
+
+#### Bugfixes
+
+- [#6056](https://github.com/influxdata/telegraf/pull/6056): Fix source address ping flag on BSD.
+- [#6059](https://github.com/influxdata/telegraf/issues/6059): Fix value out of range error on 32-bit systems in bind input.
 
 ## v1.11.1 [2019-06-25]
 
