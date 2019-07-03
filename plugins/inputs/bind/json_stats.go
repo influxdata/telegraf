@@ -23,16 +23,16 @@ type jsonStats struct {
 }
 
 type jsonMemory struct {
-	TotalUse    int
-	InUse       int
-	BlockSize   int
-	ContextSize int
-	Lost        int
+	TotalUse    int64
+	InUse       int64
+	BlockSize   int64
+	ContextSize int64
+	Lost        int64
 	Contexts    []struct {
 		Id    string
 		Name  string
-		Total int
-		InUse int
+		Total int64
+		InUse int64
 	}
 }
 
