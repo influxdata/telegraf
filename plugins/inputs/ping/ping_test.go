@@ -180,17 +180,17 @@ func mockHostPinger(binary string, timeout float64, args ...string) (string, err
 func TestPingGather(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
-		Urls:     []string{"www.google.com", "www.reddit.com"},
+		Urls:     []string{"localhost", "influxdata.com"},
 		pingHost: mockHostPinger,
 	}
 
 	acc.GatherError(p.Gather)
-	tags := map[string]string{"url": "www.google.com"}
+	tags := map[string]string{"url": "localhost"}
 	fields := map[string]interface{}{
-		"packets_transmitted":   5,
-		"packets_received":      5,
-		"percent_packet_loss":   0.0,
-		"ttl":                   63,
+		"packets_transmitted": 5,
+		"packets_received":    5,
+		"percent_packet_loss": 0.0,
+		"ttl": 63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   43.628,
 		"maximum_response_ms":   51.806,
@@ -199,7 +199,7 @@ func TestPingGather(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
-	tags = map[string]string{"url": "www.reddit.com"}
+	tags = map[string]string{"url": "influxdata.com"}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
@@ -229,10 +229,10 @@ func TestLossyPingGather(t *testing.T) {
 	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
-		"packets_transmitted":   5,
-		"packets_received":      3,
-		"percent_packet_loss":   40.0,
-		"ttl":                   63,
+		"packets_transmitted": 5,
+		"packets_received":    3,
+		"percent_packet_loss": 40.0,
+		"ttl": 63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   44.033,
 		"maximum_response_ms":   51.806,
@@ -348,11 +348,11 @@ func TestPingGatherNative(t *testing.T) {
 
 	var acc testutil.Accumulator
 	p := Ping{
-		Urls:   []string{"www.google.com", "www.reddit.com"},
+		Urls:   []string{"localhost", "127.0.0.2"},
 		Method: "native",
 		Count:  5,
 	}
 
 	assert.NoError(t, acc.GatherError(p.Gather))
-	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "www.google.com"}, "packets_transmitted", 5))
+	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
 }

@@ -17,8 +17,6 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		p.Count = 1
 	}
 
-	defer p.wg.Done()
-
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
 

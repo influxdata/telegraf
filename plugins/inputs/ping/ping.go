@@ -2,6 +2,7 @@ package ping
 
 import (
 	"context"
+	"errors"
 	"math"
 	"net"
 	"os/exec"
@@ -59,8 +60,6 @@ type Ping struct {
 
 	// listenAddr is the address associated with the interface defined.
 	listenAddr string
-
-	ctx context.Context
 }
 
 func (*Ping) Description() string {
@@ -117,12 +116,18 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 
-		if len(p.Arguments) == 0 && p.Method == "native" {
+		if p.Method == "native" {
 			p.wg.Add(1)
-			go p.pingToURLNative(ip, acc)
+			go func(ip string) {
+				defer p.wg.Done()
+				p.pingToURLNative(ip, acc)
+			}(ip)
 		} else {
 			p.wg.Add(1)
-			go p.pingToURL(ip, acc)
+			go func(ip string) {
+				defer p.wg.Done()
+				p.pingToURL(ip, acc)
+			}(ip)
 		}
 	}
 
@@ -178,7 +183,6 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 }
 
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
-	defer p.wg.Done()
 	ctx := context.Background()
 
 	network := "ip4"
@@ -212,12 +216,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		defer cancel()
 	}
 
-	chanLength := 100
-	if p.Count > 0 {
-		chanLength = p.Count
-	}
-
-	resps := make(chan *ping.Response, chanLength)
+	resps := make(chan *ping.Response)
 	rsps := []*ping.Response{}
 
 	r := &sync.WaitGroup{}
@@ -229,34 +228,34 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		r.Done()
 	}()
 
-	packetsSent := 0
 	wg := &sync.WaitGroup{}
 	c := ping.Client{}
 
-	for p.Count <= 0 || packetsSent < p.Count {
+	var i int
+	for i = 0; i < p.Count; i++ {
 		select {
 		case <-ctx.Done():
 			goto finish
 		case <-tick.C:
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout*float64(time.Second)))
+			ctx, cancel := context.WithTimeout(ctx, time.Duration(timeout*float64(time.Second)))
 			defer cancel()
 
-			packetsSent++
 			wg.Add(1)
 			go func(seq int) {
 				defer wg.Done()
-				resp, err := c.Do(ctx, ping.Request{
+				resp, err := c.Do(ctx, &ping.Request{
 					Dst: net.ParseIP(host.String()),
 					Src: net.ParseIP(p.listenAddr),
 					Seq: seq,
 				})
 				if err != nil {
-					// likely a timeout error, ignore
+					acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": destination})
+					acc.AddError(err)
 					return
 				}
 
 				resps <- resp
-			}(packetsSent)
+			}(i + 1)
 		}
 	}
 
@@ -265,26 +264,30 @@ finish:
 	close(resps)
 
 	r.Wait()
-	tags, fields := onFin(packetsSent, rsps, destination)
+	tags, fields := onFin(i, rsps, destination)
 	acc.AddFields("ping", fields, tags)
 }
 
 func onFin(packetsSent int, resps []*ping.Response, destination string) (map[string]string, map[string]interface{}) {
 	packetsRcvd := len(resps)
-	loss := float64(packetsSent-packetsRcvd) / float64(packetsSent) * 100
 
 	tags := map[string]string{"url": destination}
 	fields := map[string]interface{}{
 		"result_code":         0,
 		"packets_transmitted": packetsSent,
 		"packets_received":    packetsRcvd,
-		"percent_packet_loss": loss,
 	}
 
-	if packetsRcvd == 0 || packetsSent == 0 {
+	if packetsSent == 0 {
 		return tags, fields
 	}
 
+	if packetsRcvd == 0 {
+		fields["percent_packet_loss"] = float64(100)
+		return tags, fields
+	}
+
+	fields["percent_packet_loss"] = float64(packetsSent-packetsRcvd) / float64(packetsSent) * 100
 	ttl := resps[0].TTL
 
 	var min, max, avg, total time.Duration
@@ -326,6 +329,15 @@ func onFin(packetsSent int, resps []*ping.Response, destination string) (map[str
 	return tags, fields
 }
 
+// Init ensures the plugin is configured correctly.
+func (p *Ping) Init() error {
+	if p.Count < 1 {
+		return errors.New("bad number of packets to transmit")
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{
@@ -337,7 +349,6 @@ func init() {
 			Method:       "exec",
 			Binary:       "ping",
 			Arguments:    []string{},
-			ctx:          context.Background(),
 		}
 	})
 }
