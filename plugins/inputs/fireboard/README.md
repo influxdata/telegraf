@@ -13,22 +13,28 @@ generate it using `telegraf --usage <plugin-name>`.
 ```toml
 [[inputs.fireboard]]
   ## Specify auth token for your account
-  ## https://docs.fireboard.io/reference/restapi.html#Authentication
-  # authToken = "b4bb6e6a7b6231acb9f71b304edb2274693d8849"
+  auth_token = "invalidAuthToken"
   ## You can override the fireboard server URL if necessary
-  # URL = https://fireboard.io/api/v1/devices.json
+  # url = https://fireboard.io/api/v1/devices.json
+  ## You can set a different http_timeout if you need to
+  # http_timeout = 4
 ```
 
-#### authToken
+#### auth_token
 
 In lieu of requiring a username and password, this plugin requires the
 authToken that you can generate using the Fireboard REST API as described
 in their docs [https://docs.fireboard.io/reference/restapi.html#Authentication]
 
-#### URL
+#### url
 
 While there should be no reason to override the URL, the option is available
 in case Fireboard changes their site, etc.
+
+#### http_timeout
+
+If you need to increase the HTTP timeout, you can do so here. You can set this
+value in seconds. The default value is four (4) seconds.
 
 ### Metrics
 
@@ -39,9 +45,9 @@ values are included if they are less than a minute old.
 - fireboard
   - tags:
     - channel
-    - scale (1=celcius; 2=farenheit)
-    - title (name of the Firebaord)
-    - uuid (UUID of the Firebaord)
+    - scale (Celcius; Farenheit)
+    - title (name of the Fireboard)
+    - uuid (UUID of the Fireboard)
   - fields:
     - temperature (float, unit)
 
@@ -52,5 +58,5 @@ This section shows example output in Line Protocol format.  You can often use
 this information.
 
 ```
-fireboard,channel=2,host=patas-mbp,scale=2,title=telegraf-FireBoard,uuid=b55e766c-b308-49b5-93a4-df89fe31efd0 temperature=78.2 1561690040000000000
+fireboard,channel=2,host=patas-mbp,scale=Farenheit,title=telegraf-FireBoard,uuid=b55e766c-b308-49b5-93a4-df89fe31efd0 temperature=78.2 1561690040000000000
 ```

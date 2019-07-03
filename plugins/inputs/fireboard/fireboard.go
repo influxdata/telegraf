@@ -13,8 +13,9 @@ import (
 
 // Fireboard gathers statistics from the fireboard.io servers
 type Fireboard struct {
-	AuthToken string
-	URL       string
+	AuthToken   string `toml:"auth_token"`
+	URL         string `toml:"url"`
+	HTTPTimeout int64  `toml:"http_timeout"`
 
 	client *http.Client
 }
@@ -31,26 +32,26 @@ func NewFireboard() *Fireboard {
 
 // RTT fireboardStats represents the data that is received from Fireboard
 type RTT struct {
-	Temp       float64
-	Channel    int64
-	Degreetype int64
-	Created    string
+	Temp       float64 `json:"temp"`
+	Channel    int64   `json:"channel"`
+	Degreetype int64   `json:"degreetype"`
+	Created    string  `json:"created"`
 }
 
 type fireboardStats struct {
-	Title       string
-	UUID        string
-	Latesttemps []RTT `json:"latest_temps"`
-	Degreetype  int64
+	Title       string `json:"title"`
+	UUID        string `json:"uuid"`
+	Latesttemps []RTT  `json:"latest_temps"`
 }
 
 // A sample configuration to only gather stats from localhost, default port.
 const sampleConfig = `
   ## Specify auth token for your account
-  ## https://docs.fireboard.io/reference/restapi.html#Authentication
-  # authToken = "b4bb6e6a7b6231acb9f71b304edb2274693d8849"
+  auth_token = "invalidAuthToken"
   ## You can override the fireboard server URL if necessary
-  # URL = https://fireboard.io/api/v1/devices.json
+  # url = https://fireboard.io/api/v1/devices.json
+  ## You can set a different http_timeout if you need to
+  # http_timeout = 4
 `
 
 // SampleConfig Returns a sample configuration for the plugin
@@ -63,14 +64,27 @@ func (r *Fireboard) Description() string {
 	return "Read real time temps from fireboard.io servers"
 }
 
-// Gather Reads stats from all configured servers.
-func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
+// Init the things
+func (r *Fireboard) Init() error {
+
 	if len(r.AuthToken) == 0 {
 		return fmt.Errorf("You must specify an authToken")
 	}
 	if len(r.URL) == 0 {
 		r.URL = "https://fireboard.io/api/v1/devices.json"
 	}
+	// Have a default timeout of 4s
+	if r.HTTPTimeout == 0 {
+		r.HTTPTimeout = 4
+	}
+
+	r.client.Timeout = time.Duration(r.HTTPTimeout) * time.Second
+
+	return nil
+}
+
+// Gather Reads stats from all configured servers.
+func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
 
 	// Perform the GET request to the fireboard servers
 	req, err := http.NewRequest("GET", r.URL, nil)
@@ -105,12 +119,15 @@ func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
 
 // Gathers stats from a single device, adding them to the accumulator
 func (r *Fireboard) gatherTemps(s fireboardStats, acc telegraf.Accumulator) {
+	// Construct lookup for scale values
+	scale := []string{"", "Celcius", "Farenheit"}
+
 	for _, t := range s.Latesttemps {
 		tags := map[string]string{
 			"title":   s.Title,
 			"uuid":    s.UUID,
 			"channel": strconv.FormatInt(t.Channel, 10),
-			"scale":   strconv.FormatInt(t.Degreetype, 10),
+			"scale":   scale[t.Degreetype],
 		}
 		fields := map[string]interface{}{
 			"temperature": t.Temp,
