@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -127,20 +126,19 @@ func TestBindJsonStats(t *testing.T) {
 		}
 
 		fields := map[string]interface{}{
-			"block_size":   13893632,
-			"context_size": 3685480,
-			"in_use":       3064368,
-			"lost":         0,
-			"total_use":    18206566,
+			"block_size":   int64(13893632),
+			"context_size": int64(3685480),
+			"in_use":       int64(3064368),
+			"lost":         int64(0),
+			"total_use":    int64(18206566),
 		}
-
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
 	})
 
 	// Subtest for per-context memory stats
 	t.Run("memory_context", func(t *testing.T) {
-		assert.True(t, acc.HasIntField("bind_memory_context", "total"))
-		assert.True(t, acc.HasIntField("bind_memory_context", "in_use"))
+		assert.True(t, acc.HasInt64Field("bind_memory_context", "total"))
+		assert.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
 	})
 }
 
@@ -329,11 +327,11 @@ func TestBindXmlStatsV2(t *testing.T) {
 		}
 
 		fields := map[string]interface{}{
-			"block_size":   77070336,
-			"context_size": 6663840,
-			"in_use":       20772579,
-			"lost":         0,
-			"total_use":    81804609,
+			"block_size":   int64(77070336),
+			"context_size": int64(6663840),
+			"in_use":       int64(20772579),
+			"lost":         int64(0),
+			"total_use":    int64(81804609),
 		}
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
@@ -341,8 +339,8 @@ func TestBindXmlStatsV2(t *testing.T) {
 
 	// Subtest for per-context memory stats
 	t.Run("memory_context", func(t *testing.T) {
-		assert.True(t, acc.HasIntField("bind_memory_context", "total"))
-		assert.True(t, acc.HasIntField("bind_memory_context", "in_use"))
+		assert.True(t, acc.HasInt64Field("bind_memory_context", "total"))
+		assert.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
 	})
 }
 
@@ -553,11 +551,11 @@ func TestBindXmlStatsV3(t *testing.T) {
 		}
 
 		fields := map[string]interface{}{
-			"block_size":   45875200,
-			"context_size": 10037400,
-			"in_use":       6000232,
-			"lost":         0,
-			"total_use":    777821909,
+			"block_size":   int64(45875200),
+			"context_size": int64(10037400),
+			"in_use":       int64(6000232),
+			"lost":         int64(0),
+			"total_use":    int64(777821909),
 		}
 
 		acc.AssertContainsTaggedFields(t, "bind_memory", fields, tags)
@@ -565,8 +563,8 @@ func TestBindXmlStatsV3(t *testing.T) {
 
 	// Subtest for per-context memory stats
 	t.Run("memory_context", func(t *testing.T) {
-		assert.True(t, acc.HasIntField("bind_memory_context", "total"))
-		assert.True(t, acc.HasIntField("bind_memory_context", "in_use"))
+		assert.True(t, acc.HasInt64Field("bind_memory_context", "total"))
+		assert.True(t, acc.HasInt64Field("bind_memory_context", "in_use"))
 	})
 }
 
