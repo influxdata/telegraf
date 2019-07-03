@@ -187,10 +187,10 @@ func TestPingGather(t *testing.T) {
 	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "localhost"}
 	fields := map[string]interface{}{
-		"packets_transmitted": 5,
-		"packets_received":    5,
-		"percent_packet_loss": 0.0,
-		"ttl": 63,
+		"packets_transmitted":   5,
+		"packets_received":      5,
+		"percent_packet_loss":   0.0,
+		"ttl":                   63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   43.628,
 		"maximum_response_ms":   51.806,
@@ -229,10 +229,10 @@ func TestLossyPingGather(t *testing.T) {
 	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
-		"packets_transmitted": 5,
-		"packets_received":    3,
-		"percent_packet_loss": 40.0,
-		"ttl": 63,
+		"packets_transmitted":   5,
+		"packets_received":      3,
+		"percent_packet_loss":   40.0,
+		"ttl":                   63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   44.033,
 		"maximum_response_ms":   51.806,
