@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -327,6 +328,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 	}
 
 	for id, n := range nodeStats.Nodes {
+		sort.Strings(n.Roles)
 		tags := map[string]string{
 			"node_id":      id,
 			"node_host":    n.Host,
