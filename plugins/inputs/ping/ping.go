@@ -6,6 +6,7 @@ import (
 	"math"
 	"net"
 	"os/exec"
+	"runtime"
 	"sync"
 	"time"
 
@@ -310,21 +311,17 @@ func onFin(packetsSent int, resps []*ping.Response, destination string) (map[str
 		sumsquares += (res.RTT - avg) * (res.RTT - avg)
 	}
 	stdDev := time.Duration(math.Sqrt(float64(sumsquares / time.Duration(packetsRcvd))))
-	if ttl > 0 {
+
+	// Set TTL only on supported platform. See golang.org/x/net/ipv4/payload_cmsg.go
+	switch runtime.GOOS {
+	case "aix", "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris":
 		fields["ttl"] = ttl
 	}
-	if min > 0 {
-		fields["minimum_response_ms"] = float64(min.Nanoseconds()) / float64(time.Millisecond)
-	}
-	if avg > 0 {
-		fields["average_response_ms"] = float64(avg.Nanoseconds()) / float64(time.Millisecond)
-	}
-	if max > 0 {
-		fields["maximum_response_ms"] = float64(max.Nanoseconds()) / float64(time.Millisecond)
-	}
-	if stdDev > 0 {
-		fields["standard_deviation_ms"] = float64(stdDev.Nanoseconds()) / float64(time.Millisecond)
-	}
+
+	fields["minimum_response_ms"] = float64(min.Nanoseconds()) / float64(time.Millisecond)
+	fields["average_response_ms"] = float64(avg.Nanoseconds()) / float64(time.Millisecond)
+	fields["maximum_response_ms"] = float64(max.Nanoseconds()) / float64(time.Millisecond)
+	fields["standard_deviation_ms"] = float64(stdDev.Nanoseconds()) / float64(time.Millisecond)
 
 	return tags, fields
 }
