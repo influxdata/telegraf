@@ -1,3 +1,10 @@
+## v1.11.2 [unreleased]
+
+#### Bugfixes
+
+- [#6056](https://github.com/influxdata/telegraf/pull/6056): Fix source address ping flag on BSD.
+- [#6059](https://github.com/influxdata/telegraf/issues/6059): Fix value out of range error on 32-bit systems in bind input.
+
 ## v1.11.1 [2019-06-25]
 
 #### Bugfixes
