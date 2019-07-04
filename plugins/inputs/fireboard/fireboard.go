@@ -34,7 +34,7 @@ func NewFireboard() *Fireboard {
 type RTT struct {
 	Temp       float64 `json:"temp"`
 	Channel    int64   `json:"channel"`
-	Degreetype int64   `json:"degreetype"`
+	Degreetype int     `json:"degreetype"`
 	Created    string  `json:"created"`
 }
 
@@ -117,17 +117,28 @@ func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// Return text description of degree type (scale)
+func scale(n int) string {
+	switch n {
+	case 1:
+		return "celcius"
+	case 2:
+		return "farenheit"
+	default:
+		return ""
+	}
+}
+
 // Gathers stats from a single device, adding them to the accumulator
 func (r *Fireboard) gatherTemps(s fireboardStats, acc telegraf.Accumulator) {
 	// Construct lookup for scale values
-	scale := []string{"", "Celcius", "Farenheit"}
 
 	for _, t := range s.Latesttemps {
 		tags := map[string]string{
 			"title":   s.Title,
 			"uuid":    s.UUID,
 			"channel": strconv.FormatInt(t.Channel, 10),
-			"scale":   scale[t.Degreetype],
+			"scale":   scale(t.Degreetype),
 		}
 		fields := map[string]interface{}{
 			"temperature": t.Temp,
