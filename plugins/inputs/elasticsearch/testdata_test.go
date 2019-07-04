@@ -1291,7 +1291,7 @@ var nodestatsTransportExpected = map[string]interface{}{
 	"tx_size_in_bytes": float64(1380),
 }
 
-var nodestatsHttpExpected = map[string]interface{}{
+var nodestatsHTTPExpected = map[string]interface{}{
 	"current_open": float64(3),
 	"total_opened": float64(3),
 }

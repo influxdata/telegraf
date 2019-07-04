@@ -143,7 +143,7 @@ const sampleConfig = `
 type Elasticsearch struct {
 	Local                      bool
 	Servers                    []string
-	HttpTimeout                internal.Duration
+	HTTPTimeout                internal.Duration
 	ClusterHealth              bool
 	ClusterHealthLevel         string
 	ClusterStats               bool
@@ -171,7 +171,7 @@ func (i serverInfo) isMaster() bool {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HttpTimeout:                internal.Duration{Duration: time.Second * 5},
+		HTTPTimeout:                internal.Duration{Duration: time.Second * 5},
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
 	}
@@ -204,7 +204,7 @@ func (e *Elasticsearch) Description() string {
 // Accumulator.
 func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	if e.client == nil {
-		client, err := e.createHttpClient()
+		client, err := e.createHTTPClient()
 
 		if err != nil {
 			return err
@@ -252,7 +252,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	for _, serv := range e.Servers {
 		go func(s string, acc telegraf.Accumulator) {
 			defer wg.Done()
-			url := e.nodeStatsUrl(s)
+			url := e.nodeStatsURL(s)
 
 			// Always gather node stats
 			if err := e.gatherNodeStats(url, acc); err != nil {
@@ -298,30 +298,30 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
+func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := e.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: e.HttpTimeout.Duration,
+		ResponseHeaderTimeout: e.HTTPTimeout.Duration,
 		TLSClientConfig:       tlsCfg,
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   e.HttpTimeout.Duration,
+		Timeout:   e.HTTPTimeout.Duration,
 	}
 
 	return client, nil
 }
 
-func (e *Elasticsearch) nodeStatsUrl(baseUrl string) string {
+func (e *Elasticsearch) nodeStatsURL(baseURL string) string {
 	var url string
 
 	if e.Local {
-		url = baseUrl + statsPathLocal
+		url = baseURL + statsPathLocal
 	} else {
-		url = baseUrl + statsPath
+		url = baseURL + statsPath
 	}
 
 	if len(e.NodeStats) == 0 {
@@ -336,7 +336,7 @@ func (e *Elasticsearch) gatherNodeID(url string) (string, error) {
 		ClusterName string               `json:"cluster_name"`
 		Nodes       map[string]*nodeStat `json:"nodes"`
 	}{}
-	if err := e.gatherJsonData(url, nodeStats); err != nil {
+	if err := e.gatherJSONData(url, nodeStats); err != nil {
 		return "", err
 	}
 
@@ -352,7 +352,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 		ClusterName string               `json:"cluster_name"`
 		Nodes       map[string]*nodeStat `json:"nodes"`
 	}{}
-	if err := e.gatherJsonData(url, nodeStats); err != nil {
+	if err := e.gatherJSONData(url, nodeStats); err != nil {
 		return err
 	}
 
@@ -403,7 +403,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 
 func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator) error {
 	healthStats := &clusterHealth{}
-	if err := e.gatherJsonData(url, healthStats); err != nil {
+	if err := e.gatherJSONData(url, healthStats); err != nil {
 		return err
 	}
 	measurementTime := time.Now()
@@ -455,7 +455,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 
 func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator) error {
 	clusterStats := &clusterStats{}
-	if err := e.gatherJsonData(url, clusterStats); err != nil {
+	if err := e.gatherJSONData(url, clusterStats); err != nil {
 		return err
 	}
 	now := time.Now()
@@ -490,7 +490,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 		Indices map[string]indexStat   `json:"indices"`
 	}{}
 
-	if err := e.gatherJsonData(url, indicesStats); err != nil {
+	if err := e.gatherJSONData(url, indicesStats); err != nil {
 		return err
 	}
 	now := time.Now()
@@ -596,7 +596,7 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 	return masterID, nil
 }
 
-func (e *Elasticsearch) gatherJsonData(url string, v interface{}) error {
+func (e *Elasticsearch) gatherJSONData(url string, v interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
