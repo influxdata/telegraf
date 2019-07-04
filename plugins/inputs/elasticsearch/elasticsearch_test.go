@@ -292,6 +292,54 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	checkNodeStatsResult(t, &acc)
 }
 
+func TestGatherClusterIndicesStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.IndicesStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesResponse)
+	es.serverInfo = make(map[string]serverInfo)
+	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+
+	var acc testutil.Accumulator
+	if err := es.gatherIndicesStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicestats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter"})
+}
+
+func TestGatherClusterIndiceShardsStats(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.ShardsStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesShardsResponse)
+	es.serverInfo = make(map[string]serverInfo)
+	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+
+	var acc testutil.Accumulator
+	if err := es.gatherIndicesStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicestats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter"})
+
+	tags := map[string]string{
+		"index_name": "twitter",
+		"node_name":  "oqvR8I1dTpONvwRM30etww",
+		"shard_name": "1",
+		"type":       "replica",
+	}
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indicestats_shards",
+		clusterIndicesShardsExpected,
+		tags)
+
+}
+
 func newElasticsearchWithClient() *Elasticsearch {
 	es := NewElasticsearch()
 	es.client = &http.Client{}

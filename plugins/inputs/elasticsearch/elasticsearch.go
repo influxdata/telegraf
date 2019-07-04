@@ -278,7 +278,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
-			if e.IndicesStats && (e.serverInfo[s].isMaster()) {
+			if e.IndicesStats && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
 				if !e.ShardsStats {
 					if err := e.gatherIndicesStats(s+"/_all/_stats", acc); err != nil {
 						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
@@ -548,6 +548,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 
 				shardTags := map[string]string{
 					"index_name": id,
+					"node_name":  flattened.Fields["routing_node"].(string),
 					"shard_name": string(shardNumber),
 					"type":       shardType,
 				}
