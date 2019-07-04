@@ -16,21 +16,30 @@ import (
 
 var (
 	measurement = "nvidia_smi"
-	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw"
+	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw,pcie.link.gen.current,pcie.link.width.current,encoder.stats.sessionCount,encoder.stats.averageFps,encoder.stats.averageLatency,clocks.current.graphics,clocks.current.sm,clocks.current.memory,clocks.current.video"
 	metricNames = [][]string{
-		[]string{"fan_speed", "integer"},
-		[]string{"memory_total", "integer"},
-		[]string{"memory_used", "integer"},
-		[]string{"memory_free", "integer"},
-		[]string{"pstate", "tag"},
-		[]string{"temperature_gpu", "integer"},
-		[]string{"name", "tag"},
-		[]string{"uuid", "tag"},
-		[]string{"compute_mode", "tag"},
-		[]string{"utilization_gpu", "integer"},
-		[]string{"utilization_memory", "integer"},
-		[]string{"index", "tag"},
-		[]string{"power_draw", "float"},
+		{"fan_speed", "integer"},
+		{"memory_total", "integer"},
+		{"memory_used", "integer"},
+		{"memory_free", "integer"},
+		{"pstate", "tag"},
+		{"temperature_gpu", "integer"},
+		{"name", "tag"},
+		{"uuid", "tag"},
+		{"compute_mode", "tag"},
+		{"utilization_gpu", "integer"},
+		{"utilization_memory", "integer"},
+		{"index", "tag"},
+		{"power_draw", "float"},
+		{"pcie_link_gen_current", "integer"},
+		{"pcie_link_width_current", "integer"},
+		{"encoder_stats_session_count", "integer"},
+		{"encoder_stats_average_fps", "integer"},
+		{"encoder_stats_average_latency", "integer"},
+		{"clocks_current_graphics", "integer"},
+		{"clocks_current_sm", "integer"},
+		{"clocks_current_memory", "integer"},
+		{"clocks_current_video", "integer"},
 	}
 )
 
@@ -50,11 +59,11 @@ func (smi *NvidiaSMI) Description() string {
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
 func (smi *NvidiaSMI) SampleConfig() string {
 	return `
-## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-# bin_path = /usr/bin/nvidia-smi
+  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  # bin_path = "/usr/bin/nvidia-smi"
 
-## Optional: timeout for GPU polling
-# timeout = 5s
+  ## Optional: timeout for GPU polling
+  # timeout = "5s"
 `
 }
 

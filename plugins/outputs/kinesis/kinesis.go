@@ -2,28 +2,27 @@ package kinesis
 
 import (
 	"log"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/satori/go.uuid"
-
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/satori/go.uuid"
 )
 
 type (
 	KinesisOutput struct {
-		Region    string `toml:"region"`
-		AccessKey string `toml:"access_key"`
-		SecretKey string `toml:"secret_key"`
-		RoleARN   string `toml:"role_arn"`
-		Profile   string `toml:"profile"`
-		Filename  string `toml:"shared_credential_file"`
-		Token     string `toml:"token"`
+		Region      string `toml:"region"`
+		AccessKey   string `toml:"access_key"`
+		SecretKey   string `toml:"secret_key"`
+		RoleARN     string `toml:"role_arn"`
+		Profile     string `toml:"profile"`
+		Filename    string `toml:"shared_credential_file"`
+		Token       string `toml:"token"`
+		EndpointURL string `toml:"endpoint_url"`
 
 		StreamName         string     `toml:"streamname"`
 		PartitionKey       string     `toml:"partitionkey"`
@@ -36,8 +35,9 @@ type (
 	}
 
 	Partition struct {
-		Method string `toml:"method"`
-		Key    string `toml:"key"`
+		Method  string `toml:"method"`
+		Key     string `toml:"key"`
+		Default string `toml:"default"`
 	}
 )
 
@@ -59,6 +59,12 @@ var sampleConfig = `
   #role_arn = ""
   #profile = ""
   #shared_credential_file = ""
+
+  ## Endpoint to make request against, the correct endpoint is automatically
+  ## determined and this option should only be set if you wish to override the
+  ## default.
+  ##   ex: endpoint_url = "http://localhost:8000"
+  # endpoint_url = ""
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
@@ -84,10 +90,11 @@ var sampleConfig = `
   #    method = "measurement"
   #
   ## Use the value of a tag for all writes, if the tag is not set the empty
-  ## string will be used:
+  ## default option will be used. When no default, defaults to "telegraf"
   #  [outputs.kinesis.partition]
   #    method = "tag"
   #    key = "host"
+  #    default = "mykey"
 
 
   ## Data format to output.
@@ -108,58 +115,34 @@ func (k *KinesisOutput) Description() string {
 	return "Configuration for the AWS Kinesis output."
 }
 
-func checkstream(l []*string, s string) bool {
-	// Check if the StreamName exists in the slice returned from the ListStreams API request.
-	for _, stream := range l {
-		if *stream == s {
-			return true
-		}
-	}
-	return false
-}
-
 func (k *KinesisOutput) Connect() error {
+	if k.Partition == nil {
+		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
+	}
+
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
-		log.Printf("E! kinesis: Establishing a connection to Kinesis in %+v", k.Region)
+		log.Printf("I! kinesis: Establishing a connection to Kinesis in %s", k.Region)
 	}
 
 	credentialConfig := &internalaws.CredentialConfig{
-		Region:    k.Region,
-		AccessKey: k.AccessKey,
-		SecretKey: k.SecretKey,
-		RoleARN:   k.RoleARN,
-		Profile:   k.Profile,
-		Filename:  k.Filename,
-		Token:     k.Token,
+		Region:      k.Region,
+		AccessKey:   k.AccessKey,
+		SecretKey:   k.SecretKey,
+		RoleARN:     k.RoleARN,
+		Profile:     k.Profile,
+		Filename:    k.Filename,
+		Token:       k.Token,
+		EndpointURL: k.EndpointURL,
 	}
 	configProvider := credentialConfig.Credentials()
 	svc := kinesis.New(configProvider)
 
-	KinesisParams := &kinesis.ListStreamsInput{
-		Limit: aws.Int64(100),
-	}
-
-	resp, err := svc.ListStreams(KinesisParams)
-
-	if err != nil {
-		log.Printf("E! kinesis: Error in ListSteams API call : %+v \n", err)
-	}
-
-	if checkstream(resp.StreamNames, k.StreamName) {
-		if k.Debug {
-			log.Printf("E! kinesis: Stream Exists")
-		}
-		k.svc = svc
-		return nil
-	} else {
-		log.Printf("E! kinesis : You have configured a StreamName %+v which does not exist. exiting.", k.StreamName)
-		os.Exit(1)
-	}
-	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
-	}
+	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+		StreamName: aws.String(k.StreamName),
+	})
+	k.svc = svc
 	return err
 }
 
@@ -181,14 +164,14 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 	if k.Debug {
 		resp, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
 		}
-		log.Printf("E! %+v \n", resp)
+		log.Printf("I! Wrote: '%+v'", resp)
 
 	} else {
 		_, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
 		}
 	}
 	return time.Since(start)
@@ -205,12 +188,15 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		case "measurement":
 			return metric.Name()
 		case "tag":
-			if metric.HasTag(k.Partition.Key) {
-				return metric.Tags()[k.Partition.Key]
+			if t, ok := metric.GetTag(k.Partition.Key); ok {
+				return t
+			} else if len(k.Partition.Default) > 0 {
+				return k.Partition.Default
 			}
-			log.Printf("E! kinesis : You have configured a Partition using tag %+v which does not exist.", k.Partition.Key)
+			// Default partition name if default is not set
+			return "telegraf"
 		default:
-			log.Printf("E! kinesis : You have configured a Partition method of %+v which is not supported", k.Partition.Method)
+			log.Printf("E! kinesis : You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
 		}
 	}
 	if k.RandomPartitionKey {
@@ -234,7 +220,8 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			continue
 		}
 
 		partitionKey := k.getPartitionKey(metric)
@@ -249,7 +236,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		if sz == 500 {
 			// Max Messages Per PutRecordRequest is 500
 			elapsed := writekinesis(k, r)
-			log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
+			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
 			r = nil
 		}
@@ -257,7 +244,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	}
 	if sz > 0 {
 		elapsed := writekinesis(k, r)
-		log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
+		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 	}
 
 	return nil

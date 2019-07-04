@@ -5,11 +5,9 @@ import (
 	"sync"
 	"time"
 
+	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	// go-mssqldb initialization
-	_ "github.com/zensqlmonitor/go-mssqldb"
 )
 
 // SQLServer struct
@@ -90,7 +88,7 @@ func initQueries(s *SQLServer) {
 
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
-		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: true}
+		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: false}
 	}
 
 	// Decide if we want to run version 1 or version 2 queries
@@ -151,12 +149,6 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 	// deferred opening
 	conn, err := sql.Open("mssql", server)
 	if err != nil {
-		return err
-	}
-	// verify that a connection can be made before making a query
-	err = conn.Ping()
-	if err != nil {
-		// Handle error
 		return err
 	}
 	defer conn.Close()
@@ -244,7 +236,8 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT	
+const sqlMemoryClerkV2 = `SET DEADLOCK_PRIORITY -10;
+DECLARE @SQL NVARCHAR(MAX) = 'SELECT
 "sqlserver_memory_clerks" As [measurement],
 REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
@@ -348,7 +341,10 @@ ELSE
 EXEC(@SQL)
 `
 
-const sqlDatabaseIOV2 = `SELECT
+const sqlDatabaseIOV2 = `SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5
+BEGIN
+SELECT
 'sqlserver_database_io' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 DB_NAME([vfs].[database_id]) [database_name],
@@ -358,46 +354,113 @@ vfs.num_of_bytes_read AS read_bytes,
 vfs.io_stall_write_ms AS write_latency_ms,
 vfs.num_of_writes AS writes,
 vfs.num_of_bytes_written AS write_bytes,
-CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'ROWS' END AS file_type
+b.name as logical_filename,
+b.physical_name as physical_filename,
+CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
 FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-OPTION( RECOMPILE );
+inner join sys.database_files b on  b.file_id = vfs.file_id
+END
+ELSE
+BEGIN
+SELECT
+'sqlserver_database_io' As [measurement],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+DB_NAME([vfs].[database_id]) [database_name],
+vfs.io_stall_read_ms AS read_latency_ms,
+vfs.num_of_reads AS reads,
+vfs.num_of_bytes_read AS read_bytes,
+vfs.io_stall_write_ms AS write_latency_ms,
+vfs.num_of_writes AS writes,
+vfs.num_of_bytes_written AS write_bytes,
+b.name as logical_filename,
+b.physical_name as physical_filename,
+CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
+FROM
+[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
+END
 `
 
-const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
+const sqlServerPropertiesV2 = `SET DEADLOCK_PRIORITY -10;
+DECLARE @sys_info TABLE (
 	cpu_count INT,
-	server_memory INT,
+	server_memory BIGINT,
+	sku NVARCHAR(64),
+	engine_edition SMALLINT,
+	hardware_type VARCHAR(16),
+	total_storage_mb BIGINT,
+	available_storage_mb BIGINT,
 	uptime INT
 )
 
 IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
 BEGIN
-	INSERT INTO @sys_info ( cpu_count, server_memory, uptime )
-	EXEC('SELECT cpu_count, (select total_physical_memory_kb from sys.dm_os_sys_memory) AS physical_memory_kb, DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) FROM sys.dm_os_sys_info')
-END
+	IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
+		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
+		SELECT 	TOP(1)
+				virtual_core_count AS cpu_count,
+				(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
+				sku,
+				cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
+				hardware_generation AS hardware_type,
+				reserved_storage_mb AS total_storage_mb,
+				(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
+				(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
+		FROM	sys.server_resource_stats
+		ORDER BY start_time DESC
 
-SELECT
-'sqlserver_server_properties' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
-SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
-SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
-SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
-SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-SUM( CASE WHEN state = 10 THEN 1 ELSE 0 END ) AS db_offline,
-MAX( sinfo.cpu_count ) AS cpu_count,
-MAX( sinfo.server_memory ) AS server_memory,
-MAX( sinfo.uptime ) AS uptime,
-SERVERPROPERTY('ProductVersion') AS sql_version
-FROM	sys.databases
-CROSS APPLY (
-	SELECT	*
-	FROM	@sys_info
-) AS sinfo
-OPTION( RECOMPILE );
+	ELSE
+	BEGIN
+		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
+		SELECT	cpu_count,
+				(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
+				CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
+				CAST(SERVERPROPERTY('EngineEdition') as smallint) as engine_edition,
+				CASE virtual_machine_type_desc
+					WHEN 'NONE' THEN 'PHYSICAL Machine'
+					ELSE virtual_machine_type_desc
+				END AS hardware_type,
+				NULL,
+				NULL,
+				 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
+		FROM	sys.dm_os_sys_info
+	END
+END
+SELECT	'sqlserver_server_properties' AS [measurement],
+		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		s.cpu_count,
+		s.server_memory,
+		s.sku,
+		s.engine_edition,
+		s.hardware_type,
+		s.total_storage_mb,
+		s.available_storage_mb,
+		s.uptime,
+		SERVERPROPERTY('ProductVersion') AS sql_version,
+		db_online,
+		db_restoring,
+		db_recovering,
+		db_recoveryPending,
+		db_suspect,
+		db_offline
+FROM	(
+			SELECT	SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
+					SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
+					SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
+					SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
+					SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
+					SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
+			FROM	sys.databases
+		) AS dbs
+		CROSS APPLY (
+			SELECT	cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime
+			FROM	@sys_info
+		) AS s
+OPTION( RECOMPILE )
 `
 
-const sqlPerformanceCountersV2 string = `
+const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -416,52 +479,45 @@ SELECT	DISTINCT
 		spi.cntr_type
 FROM	sys.dm_os_performance_counters AS spi
 WHERE	(
-		counter_name IN (
-			'SQL Compilations/sec',
-			'SQL Re-Compilations/sec',
-			'User Connections',
-			'Batch Requests/sec',
-			'Logouts/sec',
-			'Logins/sec',
-			'Processes blocked',
-			'Latch Waits/sec',
-			'Full Scans/sec',
-			'Index Searches/sec',
-			'Page Splits/sec',
-			'Page Lookups/sec',
-			'Page Reads/sec',
-			'Page Writes/sec',
-			'Readahead Pages/sec',
-			'Lazy Writes/sec',
-			'Checkpoint Pages/sec',
-			'Page life expectancy',
-			'Log File(s) Size (KB)',
-			'Log File(s) Used Size (KB)',
-			'Data File(s) Size (KB)',
-			'Transactions/sec',
-			'Write Transactions/sec',
-			'Active Temp Tables',
-			'Temp Tables Creation Rate',
-			'Temp Tables For Destruction',
-			'Free Space in tempdb (KB)',
-			'Version Store Size (KB)',
-			'Memory Grants Pending',
-			'Free list stalls/sec',
-			'Buffer cache hit ratio',
-			'Buffer cache hit ratio base',
-			'Backup/Restore Throughput/sec',
-			'Total Server Memory (KB)',
-			'Target Server Memory (KB)'
-		)
-		) OR (
-			instance_name IN ('_Total','Column store object pool')
-			AND counter_name IN (
+			counter_name IN (
+				'SQL Compilations/sec',
+				'SQL Re-Compilations/sec',
+				'User Connections',
+				'Batch Requests/sec',
+				'Logouts/sec',
+				'Logins/sec',
+				'Processes blocked',
+				'Latch Waits/sec',
+				'Full Scans/sec',
+				'Index Searches/sec',
+				'Page Splits/sec',
+				'Page Lookups/sec',
+				'Page Reads/sec',
+				'Page Writes/sec',
+				'Readahead Pages/sec',
+				'Lazy Writes/sec',
+				'Checkpoint Pages/sec',
+				'Page life expectancy',
+				'Log File(s) Size (KB)',
+				'Log File(s) Used Size (KB)',
+				'Data File(s) Size (KB)',
+				'Transactions/sec',
+				'Write Transactions/sec',
+				'Active Temp Tables',
+				'Temp Tables Creation Rate',
+				'Temp Tables For Destruction',
+				'Free Space in tempdb (KB)',
+				'Version Store Size (KB)',
+				'Memory Grants Pending',
+				'Memory Grants Outstanding',
+				'Free list stalls/sec',
+				'Buffer cache hit ratio',
+				'Buffer cache hit ratio base',
+				'Backup/Restore Throughput/sec',
+				'Total Server Memory (KB)',
+				'Target Server Memory (KB)',
 				'Log Flushes/sec',
 				'Log Flush Wait Time',
-				'Lock Timeouts/sec',
-				'Number of Deadlocks/sec',
-				'Lock Waits/sec',
-				'Latch Waits/sec',
 				'Memory broker clerk size',
 				'Log Bytes Flushed/sec',
 				'Bytes Sent to Replica/sec',
@@ -476,29 +532,18 @@ WHERE	(
 				'Flow Control/sec',
 				'Resent Messages/sec',
 				'Redone Bytes/sec',
-				'XTP Memory Used (KB)'
-			) OR ( 
-				counter_name IN (
-					'Log Bytes Received/sec',
-					'Log Apply Pending Queue',
-					'Redone Bytes/sec',
-					'Recovery Queue',
-					'Log Apply Ready Queue'
-				)
-				AND instance_name = '_Total'
-			)
-		) OR (
-			counter_name IN ('Transaction Delay')
-		) OR (
-			counter_name IN (
+				'XTP Memory Used (KB)',
+				'Transaction Delay',
+				'Log Bytes Received/sec',
+				'Log Apply Pending Queue',
+				'Redone Bytes/sec',
+				'Recovery Queue',
+				'Log Apply Ready Queue',
 				'CPU usage %',
 				'CPU usage % base',
 				'Queued requests',
 				'Requests completed/sec',
-				'Blocked tasks'
-			)
-		) OR (
-			counter_name IN (
+				'Blocked tasks',
 				'Active memory grant amount (KB)',
 				'Disk Read Bytes/sec',
 				'Disk Read IO Throttled/sec',
@@ -506,11 +551,24 @@ WHERE	(
 				'Disk Write Bytes/sec',
 				'Disk Write IO Throttled/sec',
 				'Disk Write IO/sec',
-				'Used memory (KB)'
+				'Used memory (KB)',
+				'Forwarded Records/sec',
+				'Background Writer pages/sec',
+				'Percent Log Used',
+				'Log Send Queue KB',
+				'Redo Queue KB'
 			)
-		) OR  (
+		) OR (
 			object_name LIKE '%User Settable%'
 			OR object_name LIKE '%SQL Errors%'
+		) OR (
+			instance_name IN ('_Total')
+			AND counter_name IN (
+				'Lock Timeouts/sec',
+				'Number of Deadlocks/sec',
+				'Lock Waits/sec',
+				'Latch Waits/sec'
+			)
 		)
 
 DECLARE @SQL NVARCHAR(MAX)
@@ -523,7 +581,7 @@ CAST(vs.value AS BIGINT) AS value,
 1
 FROM
 (
-    SELECT 
+    SELECT
     rgwg.name AS instance,
     rgwg.total_request_count AS "Request Count",
     rgwg.total_queued_request_count AS "Queued Request Count",
@@ -564,7 +622,8 @@ WHERE	pc.counter_name NOT LIKE '% base'
 OPTION(RECOMPILE);
 `
 
-const sqlWaitStatsCategorizedV2 string = `SELECT
+const sqlWaitStatsCategorizedV2 string = `SET DEADLOCK_PRIORITY -10;
+SELECT
 'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 ws.wait_type,
@@ -616,6 +675,7 @@ LEFT OUTER JOIN ( VALUES
 ('CMEMPARTITIONED','Memory'),
 ('CMEMTHREAD','Memory'),
 ('CXPACKET','Parallelism'),
+('CXCONSUMER','Parallelism'),
 ('DBMIRROR_DBM_EVENT','Mirroring'),
 ('DBMIRROR_DBM_MUTEX','Mirroring'),
 ('DBMIRROR_EVENTS_QUEUE','Mirroring'),
@@ -1090,17 +1150,15 @@ ws.wait_type NOT IN (
 	N'DBMIRROR_DBM_EVENT', N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_WORKER_QUEUE',
 	N'DBMIRRORING_CMD', N'DIRTY_PAGE_POLL', N'DISPATCHER_QUEUE_SEMAPHORE',
 	N'EXECSYNC', N'FSAGENT', N'FT_IFTS_SCHEDULER_IDLE_WAIT', N'FT_IFTSHC_MUTEX',
-	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT', 
+	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT',
 	N'HADR_NOTIFICATION_DEQUEUE', N'HADR_TIMER_TASK', N'HADR_WORK_QUEUE',
-	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE', 
+	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE',
 	N'MEMORY_ALLOCATION_EXT', N'ONDEMAND_TASK_QUEUE',
 	N'PARALLEL_REDO_WORKER_WAIT_WORK',
 	N'PREEMPTIVE_HADR_LEASE_MECHANISM', N'PREEMPTIVE_SP_SERVER_DIAGNOSTICS',
 	N'PREEMPTIVE_OS_LIBRARYOPS', N'PREEMPTIVE_OS_COMOPS', N'PREEMPTIVE_OS_CRYPTOPS',
-	N'PREEMPTIVE_OS_PIPEOPS', N'PREEMPTIVE_OS_AUTHENTICATIONOPS',
-	N'PREEMPTIVE_OS_GENERICOPS', N'PREEMPTIVE_OS_VERIFYTRUST',
-	N'PREEMPTIVE_OS_FILEOPS', N'PREEMPTIVE_OS_DEVICEOPS', N'PREEMPTIVE_OS_QUERYREGISTRY',
-	N'PREEMPTIVE_OS_WRITEFILE',
+	N'PREEMPTIVE_OS_PIPEOPS','PREEMPTIVE_OS_GENERICOPS', N'PREEMPTIVE_OS_VERIFYTRUST',
+	N'PREEMPTIVE_OS_DEVICEOPS',
 	N'PREEMPTIVE_XE_CALLBACKEXECUTE', N'PREEMPTIVE_XE_DISPATCHER',
 	N'PREEMPTIVE_XE_GETTARGETSTATE', N'PREEMPTIVE_XE_SESSIONCOMMIT',
 	N'PREEMPTIVE_XE_TARGETINIT', N'PREEMPTIVE_XE_TARGETFINALIZE',
@@ -1112,18 +1170,20 @@ ws.wait_type NOT IN (
 	N'SLEEP_DCOMSTARTUP', N'SLEEP_MASTERDBREADY', N'SLEEP_MASTERMDREADY',
 	N'SLEEP_MASTERUPGRADED', N'SLEEP_MSDBSTARTUP', N'SLEEP_SYSTEMTASK', N'SLEEP_TASK',
 	N'SLEEP_TEMPDBSTARTUP', N'SNI_HTTP_ACCEPT', N'SP_SERVER_DIAGNOSTICS_SLEEP',
-	N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP', N'SQLTRACE_WAIT_ENTRIES',
+	N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
+	N'SQLTRACE_WAIT_ENTRIES',
 	N'WAIT_FOR_RESULTS', N'WAITFOR', N'WAITFOR_TASKSHUTDOWN', N'WAIT_XTP_HOST_WAIT',
 	N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE',
 	N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
-	N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT')
+	N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
+	N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
 AND waiting_tasks_count > 0
-ORDER BY
-waiting_tasks_count DESC
+AND wait_time_ms > 100
 OPTION (RECOMPILE);
 `
 
-const sqlAzureDB string = `IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
+const sqlAzureDB string = `SET DEADLOCK_PRIORITY -10;
+IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
 BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
@@ -1137,9 +1197,9 @@ BEGIN
 		max_session_percent,
 		dtu_limit,
 		avg_login_rate_percent,
-		end_time 
+		end_time
 	FROM
-		sys.dm_db_resource_stats WITH (NOLOCK) 
+		sys.dm_db_resource_stats WITH (NOLOCK)
 	ORDER BY
 		end_time DESC
 	OPTION (RECOMPILE)
@@ -1150,7 +1210,8 @@ BEGIN
 END`
 
 // Queries V1
-const sqlPerformanceMetrics string = `SET NOCOUNT ON;
+const sqlPerformanceMetrics string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
@@ -1243,7 +1304,8 @@ PIVOT(SUM(cntr_value) FOR counter_name IN (' + @ColumnName + ')) AS PVTTable
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlMemoryClerk string = `SET NOCOUNT ON;
+const sqlMemoryClerk string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 DECLARE @sqlVers numeric(4,2)
@@ -1356,7 +1418,8 @@ PIVOT
 ) as T;
 `
 
-const sqlDatabaseSize string = `SET NOCOUNT ON;
+const sqlDatabaseSize string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
@@ -1449,7 +1512,8 @@ PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseStats string = `SET NOCOUNT ON;
+const sqlDatabaseStats string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
@@ -1583,7 +1647,8 @@ PIVOT(SUM(AvgBytesPerWrite) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTab
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseIO string = `SET NOCOUNT ON;
+const sqlDatabaseIO string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 DECLARE @secondsBetween tinyint = 5;
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
@@ -1720,7 +1785,8 @@ PIVOT(SUM(num_of_reads_persec) FOR database_name IN (' + @ColumnName + ')) AS PV
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseProperties string = `SET NOCOUNT ON;
+const sqlDatabaseProperties string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
@@ -1935,7 +2001,8 @@ PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlCPUHistory string = `SET NOCOUNT ON;
+const sqlCPUHistory string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -1971,7 +2038,8 @@ ORDER BY timestamp_ms Desc
 ) as T;
 `
 
-const sqlPerformanceCounters string = `SET NOCOUNT ON;
+const sqlPerformanceCounters string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters
 CREATE TABLE #PCounters
@@ -2034,10 +2102,10 @@ SELECT
 -- value
 , value = CAST(CASE cc.cntr_type
     When 65792 Then cc.cntr_value -- Count
-    When 537003264 Then IsNull(Cast(cc.cntr_value as Money) / NullIf(cbc.cntr_value, 0), 0) -- Ratio
+    When 537003264 Then IsNull(Cast(cc.cntr_value as decimal(19,4)) / NullIf(cbc.cntr_value, 0), 0) -- Ratio
     When 272696576 Then cc.cntr_value - pc.cntr_value -- Per Second
-    When 1073874176 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as Money) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg
-    When 272696320 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as Money) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg/sec
+    When 1073874176 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as decimal(19,4)) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg
+    When 272696320 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as decimal(19,4)) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg/sec
     When 1073939712 Then cc.cntr_value - pc.cntr_value -- Base
     Else cc.cntr_value End as bigint)
 --, currentvalue= CAST(cc.cntr_value as bigint)
@@ -2070,7 +2138,8 @@ IF OBJECT_ID('tempdb..#CCounters') IS NOT NULL DROP TABLE #CCounters;
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters;
 `
 
-const sqlWaitStatsCategorized string = `SET NOCOUNT ON;
+const sqlWaitStatsCategorized string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 DECLARE @secondsBetween tinyint = 5
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
@@ -2475,7 +2544,8 @@ PIVOT
 ) as T;
 `
 
-const sqlVolumeSpace string = `SET NOCOUNT ON;
+const sqlVolumeSpace string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 IF OBJECT_ID('tempdb..#volumestats') IS NOT NULL

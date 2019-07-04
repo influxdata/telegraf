@@ -27,8 +27,7 @@ func TestTailFromBeginning(t *testing.T) {
 	tt := NewTail()
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
@@ -43,6 +42,7 @@ func TestTailFromBeginning(t *testing.T) {
 		},
 		map[string]string{
 			"mytag": "foo",
+			"path":  tmpfile.Name(),
 		})
 }
 
@@ -59,8 +59,7 @@ func TestTailFromEnd(t *testing.T) {
 
 	tt := NewTail()
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
@@ -84,6 +83,7 @@ func TestTailFromEnd(t *testing.T) {
 		},
 		map[string]string{
 			"othertag": "foo",
+			"path":     tmpfile.Name(),
 		})
 	assert.Len(t, acc.Metrics, 1)
 }
@@ -96,8 +96,7 @@ func TestTailBadLine(t *testing.T) {
 	tt := NewTail()
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
@@ -122,8 +121,7 @@ func TestTailDosLineendings(t *testing.T) {
 	tt := NewTail()
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 

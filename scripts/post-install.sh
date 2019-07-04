@@ -24,18 +24,6 @@ function install_chkconfig {
     chkconfig --add telegraf
 }
 
-if ! grep "^telegraf:" /etc/group &>/dev/null; then
-    groupadd -r telegraf
-fi
-
-if ! id telegraf &>/dev/null; then
-    useradd -r -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
-fi
-
-test -d $LOG_DIR || mkdir -p $LOG_DIR
-chown -R -L telegraf:telegraf $LOG_DIR
-chmod 755 $LOG_DIR
-
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
     rm -f /etc/init.d/telegraf
@@ -72,6 +60,14 @@ if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     fi
 elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
+
+    # Ownership for RH-based platforms is set in build.py via the `rmp-attr` option.
+    # We perform ownership change only for Debian-based systems.
+    # Moving these lines out of this if statement would make `rmp -V` fail after installation.
+    test -d $LOG_DIR || mkdir -p $LOG_DIR
+    chown -R -L telegraf:telegraf $LOG_DIR
+    chmod 755 $LOG_DIR
+
     if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
         install_systemd /lib/systemd/system/telegraf.service
         deb-systemd-invoke restart telegraf.service || echo "WARNING: systemd not running."
@@ -88,7 +84,10 @@ elif [[ -f /etc/debian_version ]]; then
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
-    if [[ $ID = "amzn" ]]; then
+    if [[ "$NAME" = "Amazon Linux" ]]; then
+        # Amazon Linux 2+ logic
+        install_systemd /usr/lib/systemd/system/telegraf.service
+    elif [[ "$NAME" = "Amazon Linux AMI" ]]; then
         # Amazon Linux logic
         install_init
         # Run update-rc.d or fallback to chkconfig if not available

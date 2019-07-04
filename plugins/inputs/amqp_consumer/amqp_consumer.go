@@ -1,6 +1,7 @@
 package amqp_consumer
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -9,28 +10,39 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streadway/amqp"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/streadway/amqp"
 )
+
+const (
+	defaultMaxUndeliveredMessages = 1000
+)
+
+type empty struct{}
+type semaphore chan empty
 
 // AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
-	URL                string            `toml:"url"` // deprecated in 1.7; use brokers
-	Brokers            []string          `toml:"brokers"`
-	Username           string            `toml:"username"`
-	Password           string            `toml:"password"`
-	Exchange           string            `toml:"exchange"`
-	ExchangeType       string            `toml:"exchange_type"`
-	ExchangeDurability string            `toml:"exchange_durability"`
-	ExchangePassive    bool              `toml:"exchange_passive"`
-	ExchangeArguments  map[string]string `toml:"exchange_arguments"`
+	URL                    string            `toml:"url"` // deprecated in 1.7; use brokers
+	Brokers                []string          `toml:"brokers"`
+	Username               string            `toml:"username"`
+	Password               string            `toml:"password"`
+	Exchange               string            `toml:"exchange"`
+	ExchangeType           string            `toml:"exchange_type"`
+	ExchangeDurability     string            `toml:"exchange_durability"`
+	ExchangePassive        bool              `toml:"exchange_passive"`
+	ExchangeArguments      map[string]string `toml:"exchange_arguments"`
+	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
 
 	// Queue Name
-	Queue string
+	Queue           string `toml:"queue"`
+	QueueDurability string `toml:"queue_durability"`
+	QueuePassive    bool   `toml:"queue_passive"`
+
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
 
@@ -42,9 +54,15 @@ type AMQPConsumer struct {
 	AuthMethod string
 	tls.ClientConfig
 
-	parser parsers.Parser
-	conn   *amqp.Connection
-	wg     *sync.WaitGroup
+	ContentEncoding string `toml:"content_encoding"`
+
+	deliveries map[telegraf.TrackingID]amqp.Delivery
+
+	parser  parsers.Parser
+	conn    *amqp.Connection
+	wg      *sync.WaitGroup
+	cancel  context.CancelFunc
+	decoder internal.ContentDecoder
 }
 
 type externalAuth struct{}
@@ -64,6 +82,8 @@ const (
 	DefaultExchangeType       = "topic"
 	DefaultExchangeDurability = "durable"
 
+	DefaultQueueDurability = "durable"
+
 	DefaultPrefetchCount = 50
 )
 
@@ -82,7 +102,7 @@ func (a *AMQPConsumer) SampleConfig() string {
   # username = ""
   # password = ""
 
-  ## Exchange to declare and consume from.
+  ## Name of the exchange to declare.  If unset, no exchange will be declared.
   exchange = "telegraf"
 
   ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
@@ -98,14 +118,31 @@ func (a *AMQPConsumer) SampleConfig() string {
   # exchange_arguments = { }
   # exchange_arguments = {"hash_propery" = "timestamp"}
 
-  ## AMQP queue name
+  ## AMQP queue name.
   queue = "telegraf"
 
-  ## Binding Key
+  ## AMQP queue durability can be "transient" or "durable".
+  queue_durability = "durable"
+
+  ## If true, queue will be passively declared.
+  # queue_passive = false
+
+  ## A binding between the exchange and queue using this binding key is
+  ## created.  If unset, no binding is created.
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
   # prefetch_count = 50
+
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
@@ -118,6 +155,10 @@ func (a *AMQPConsumer) SampleConfig() string {
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -173,14 +214,25 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	a.decoder, err = internal.NewContentDecoder(a.ContentEncoding)
+	if err != nil {
+		return err
+	}
+
 	msgs, err := a.connect(amqpConf)
 	if err != nil {
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	a.cancel = cancel
+
 	a.wg = &sync.WaitGroup{}
 	a.wg.Add(1)
-	go a.process(msgs, acc)
+	go func() {
+		defer a.wg.Done()
+		a.process(ctx, msgs, acc)
+	}()
 
 	go func() {
 		for {
@@ -189,7 +241,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 				break
 			}
 
-			log.Printf("I! AMQP consumer connection closed: %s; trying to reconnect", err)
+			log.Printf("I! [inputs.amqp_consumer] connection closed: %s; trying to reconnect", err)
 			for {
 				msgs, err := a.connect(amqpConf)
 				if err != nil {
@@ -199,7 +251,10 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 				}
 
 				a.wg.Add(1)
-				go a.process(msgs, acc)
+				go func() {
+					defer a.wg.Done()
+					a.process(ctx, msgs, acc)
+				}()
 				break
 			}
 		}
@@ -217,14 +272,14 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	p := rand.Perm(len(brokers))
 	for _, n := range p {
 		broker := brokers[n]
-		log.Printf("D! [amqp_consumer] connecting to %q", broker)
+		log.Printf("D! [inputs.amqp_consumer] connecting to %q", broker)
 		conn, err := amqp.DialConfig(broker, *amqpConf)
 		if err == nil {
 			a.conn = conn
-			log.Printf("D! [amqp_consumer] connected to %q", broker)
+			log.Printf("D! [inputs.amqp_consumer] connected to %q", broker)
 			break
 		}
-		log.Printf("D! [amqp_consumer] error connecting to %q", broker)
+		log.Printf("D! [inputs.amqp_consumer] error connecting to %q", broker)
 	}
 
 	if a.conn == nil {
@@ -236,51 +291,52 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, fmt.Errorf("Failed to open a channel: %s", err)
 	}
 
-	var exchangeDurable = true
-	switch a.ExchangeDurability {
-	case "transient":
-		exchangeDurable = false
-	default:
-		exchangeDurable = true
+	if a.Exchange != "" {
+		var exchangeDurable = true
+		switch a.ExchangeDurability {
+		case "transient":
+			exchangeDurable = false
+		default:
+			exchangeDurable = true
+		}
+
+		exchangeArgs := make(amqp.Table, len(a.ExchangeArguments))
+		for k, v := range a.ExchangeArguments {
+			exchangeArgs[k] = v
+		}
+
+		err = declareExchange(
+			ch,
+			a.Exchange,
+			a.ExchangeType,
+			a.ExchangePassive,
+			exchangeDurable,
+			exchangeArgs)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	exchangeArgs := make(amqp.Table, len(a.ExchangeArguments))
-	for k, v := range a.ExchangeArguments {
-		exchangeArgs[k] = v
-	}
-
-	err = declareExchange(
+	q, err := declareQueue(
 		ch,
-		a.Exchange,
-		a.ExchangeType,
-		a.ExchangePassive,
-		exchangeDurable,
-		exchangeArgs)
+		a.Queue,
+		a.QueueDurability,
+		a.QueuePassive)
 	if err != nil {
 		return nil, err
 	}
 
-	q, err := ch.QueueDeclare(
-		a.Queue, // queue
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to declare a queue: %s", err)
-	}
-
-	err = ch.QueueBind(
-		q.Name,       // queue
-		a.BindingKey, // binding-key
-		a.Exchange,   // exchange
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to bind a queue: %s", err)
+	if a.BindingKey != "" {
+		err = ch.QueueBind(
+			q.Name,       // queue
+			a.BindingKey, // binding-key
+			a.Exchange,   // exchange
+			false,
+			nil,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to bind a queue: %s", err)
+		}
 	}
 
 	err = ch.Qos(
@@ -305,7 +361,6 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, fmt.Errorf("Failed establishing connection to queue: %s", err)
 	}
 
-	log.Println("I! Started AMQP consumer")
 	return msgs, err
 }
 
@@ -345,42 +400,162 @@ func declareExchange(
 	return nil
 }
 
+func declareQueue(
+	channel *amqp.Channel,
+	queueName string,
+	queueDurability string,
+	queuePassive bool,
+) (*amqp.Queue, error) {
+	var queue amqp.Queue
+	var err error
+
+	var queueDurable = true
+	switch queueDurability {
+	case "transient":
+		queueDurable = false
+	default:
+		queueDurable = true
+	}
+
+	if queuePassive {
+		queue, err = channel.QueueDeclarePassive(
+			queueName,    // queue
+			queueDurable, // durable
+			false,        // delete when unused
+			false,        // exclusive
+			false,        // no-wait
+			nil,          // arguments
+		)
+	} else {
+		queue, err = channel.QueueDeclare(
+			queueName,    // queue
+			queueDurable, // durable
+			false,        // delete when unused
+			false,        // exclusive
+			false,        // no-wait
+			nil,          // arguments
+		)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error declaring queue: %v", err)
+	}
+	return &queue, nil
+}
+
 // Read messages from queue and add them to the Accumulator
-func (a *AMQPConsumer) process(msgs <-chan amqp.Delivery, acc telegraf.Accumulator) {
-	defer a.wg.Done()
-	for d := range msgs {
-		metrics, err := a.parser.Parse(d.Body)
-		if err != nil {
-			log.Printf("E! %v: error parsing metric - %v", err, string(d.Body))
-		} else {
-			for _, m := range metrics {
-				acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, ac telegraf.Accumulator) {
+	a.deliveries = make(map[telegraf.TrackingID]amqp.Delivery)
+
+	acc := ac.WithTracking(a.MaxUndeliveredMessages)
+	sem := make(semaphore, a.MaxUndeliveredMessages)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case track := <-acc.Delivered():
+			if a.onDelivery(track) {
+				<-sem
+			}
+		case sem <- empty{}:
+			select {
+			case <-ctx.Done():
+				return
+			case track := <-acc.Delivered():
+				if a.onDelivery(track) {
+					<-sem
+					<-sem
+				}
+			case d, ok := <-msgs:
+				if !ok {
+					return
+				}
+				err := a.onMessage(acc, d)
+				if err != nil {
+					acc.AddError(err)
+					<-sem
+				}
 			}
 		}
-
-		d.Ack(false)
 	}
-	log.Printf("I! AMQP consumer queue closed")
+}
+
+func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delivery) error {
+	onError := func() {
+		// Discard the message from the queue; will never be able to process
+		// this message.
+		rejErr := d.Ack(false)
+		if rejErr != nil {
+			log.Printf("E! [inputs.amqp_consumer] Unable to reject message: %d: %v",
+				d.DeliveryTag, rejErr)
+			a.conn.Close()
+		}
+	}
+
+	body, err := a.decoder.Decode(d.Body)
+	if err != nil {
+		onError()
+		return err
+	}
+
+	metrics, err := a.parser.Parse(body)
+	if err != nil {
+		onError()
+		return err
+	}
+
+	id := acc.AddTrackingMetricGroup(metrics)
+	a.deliveries[id] = d
+	return nil
+}
+
+func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
+	delivery, ok := a.deliveries[track.ID()]
+	if !ok {
+		// Added by a previous connection
+		return false
+	}
+
+	if track.Delivered() {
+		err := delivery.Ack(false)
+		if err != nil {
+			log.Printf("E! [inputs.amqp_consumer] Unable to ack written delivery: %d: %v",
+				delivery.DeliveryTag, err)
+			a.conn.Close()
+		}
+	} else {
+		err := delivery.Reject(false)
+		if err != nil {
+			log.Printf("E! [inputs.amqp_consumer] Unable to reject failed delivery: %d: %v",
+				delivery.DeliveryTag, err)
+			a.conn.Close()
+		}
+	}
+
+	delete(a.deliveries, track.ID())
+	return true
 }
 
 func (a *AMQPConsumer) Stop() {
+	a.cancel()
+	a.wg.Wait()
 	err := a.conn.Close()
 	if err != nil && err != amqp.ErrClosed {
-		log.Printf("E! Error closing AMQP connection: %s", err)
+		log.Printf("E! [inputs.amqp_consumer] Error closing AMQP connection: %s", err)
 		return
 	}
-	a.wg.Wait()
-	log.Println("I! Stopped AMQP service")
 }
 
 func init() {
 	inputs.Add("amqp_consumer", func() telegraf.Input {
 		return &AMQPConsumer{
-			URL:                DefaultBroker,
-			AuthMethod:         DefaultAuthMethod,
-			ExchangeType:       DefaultExchangeType,
-			ExchangeDurability: DefaultExchangeDurability,
-			PrefetchCount:      DefaultPrefetchCount,
+			URL:                    DefaultBroker,
+			AuthMethod:             DefaultAuthMethod,
+			ExchangeType:           DefaultExchangeType,
+			ExchangeDurability:     DefaultExchangeDurability,
+			QueueDurability:        DefaultQueueDurability,
+			PrefetchCount:          DefaultPrefetchCount,
+			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})
 }

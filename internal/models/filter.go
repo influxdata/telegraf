@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 )
 
@@ -78,13 +79,13 @@ func (f *Filter) Compile() error {
 		return fmt.Errorf("Error compiling 'taginclude', %s", err)
 	}
 
-	for i, _ := range f.TagDrop {
+	for i := range f.TagDrop {
 		f.TagDrop[i].filter, err = filter.Compile(f.TagDrop[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagdrop', %s", err)
 		}
 	}
-	for i, _ := range f.TagPass {
+	for i := range f.TagPass {
 		f.TagPass[i].filter, err = filter.Compile(f.TagPass[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagpass', %s", err)
@@ -93,43 +94,33 @@ func (f *Filter) Compile() error {
 	return nil
 }
 
-// Apply applies the filter to the given measurement name, fields map, and
-// tags map. It will return false if the metric should be "filtered out", and
-// true if the metric should "pass".
-// It will modify tags & fields in-place if they need to be deleted.
-func (f *Filter) Apply(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-) bool {
+// Select returns true if the metric matches according to the
+// namepass/namedrop and tagpass/tagdrop filters.  The metric is not modified.
+func (f *Filter) Select(metric telegraf.Metric) bool {
 	if !f.isActive {
 		return true
 	}
 
-	// check if the measurement name should pass
-	if !f.shouldNamePass(measurement) {
+	if !f.shouldNamePass(metric.Name()) {
 		return false
 	}
 
-	// check if the tags should pass
-	if !f.shouldTagsPass(tags) {
+	if !f.shouldTagsPass(metric.TagList()) {
 		return false
 	}
-
-	// filter fields
-	for fieldkey, _ := range fields {
-		if !f.shouldFieldPass(fieldkey) {
-			delete(fields, fieldkey)
-		}
-	}
-	if len(fields) == 0 {
-		return false
-	}
-
-	// filter tags
-	f.filterTags(tags)
 
 	return true
+}
+
+// Modify removes any tags and fields from the metric according to the
+// fieldpass/fielddrop and taginclude/tagexclude filters.
+func (f *Filter) Modify(metric telegraf.Metric) {
+	if !f.isActive {
+		return
+	}
+
+	f.filterFields(metric)
+	f.filterTags(metric)
 }
 
 // IsActive checking if filter is active
@@ -140,7 +131,6 @@ func (f *Filter) IsActive() bool {
 // shouldNamePass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
 func (f *Filter) shouldNamePass(key string) bool {
-
 	pass := func(f *Filter) bool {
 		if f.namePass.Match(key) {
 			return true
@@ -169,44 +159,29 @@ func (f *Filter) shouldNamePass(key string) bool {
 // shouldFieldPass returns true if the metric should pass, false if should drop
 // based on the drop/pass filter parameters
 func (f *Filter) shouldFieldPass(key string) bool {
-
-	pass := func(f *Filter) bool {
-		if f.fieldPass.Match(key) {
-			return true
-		}
-		return false
-	}
-
-	drop := func(f *Filter) bool {
-		if f.fieldDrop.Match(key) {
-			return false
-		}
-		return true
-	}
-
 	if f.fieldPass != nil && f.fieldDrop != nil {
-		return pass(f) && drop(f)
+		return f.fieldPass.Match(key) && !f.fieldDrop.Match(key)
 	} else if f.fieldPass != nil {
-		return pass(f)
+		return f.fieldPass.Match(key)
 	} else if f.fieldDrop != nil {
-		return drop(f)
+		return !f.fieldDrop.Match(key)
 	}
-
 	return true
 }
 
 // shouldTagsPass returns true if the metric should pass, false if should drop
 // based on the tagdrop/tagpass filter parameters
-func (f *Filter) shouldTagsPass(tags map[string]string) bool {
-
+func (f *Filter) shouldTagsPass(tags []*telegraf.Tag) bool {
 	pass := func(f *Filter) bool {
 		for _, pat := range f.TagPass {
 			if pat.filter == nil {
 				continue
 			}
-			if tagval, ok := tags[pat.Name]; ok {
-				if pat.filter.Match(tagval) {
-					return true
+			for _, tag := range tags {
+				if tag.Key == pat.Name {
+					if pat.filter.Match(tag.Value) {
+						return true
+					}
 				}
 			}
 		}
@@ -218,9 +193,11 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 			if pat.filter == nil {
 				continue
 			}
-			if tagval, ok := tags[pat.Name]; ok {
-				if pat.filter.Match(tagval) {
-					return false
+			for _, tag := range tags {
+				if tag.Key == pat.Name {
+					if pat.filter.Match(tag.Value) {
+						return false
+					}
 				}
 			}
 		}
@@ -242,22 +219,42 @@ func (f *Filter) shouldTagsPass(tags map[string]string) bool {
 	return true
 }
 
-// Apply TagInclude and TagExclude filters.
-// modifies the tags map in-place.
-func (f *Filter) filterTags(tags map[string]string) {
-	if f.tagInclude != nil {
-		for k, _ := range tags {
-			if !f.tagInclude.Match(k) {
-				delete(tags, k)
-			}
+// filterFields removes fields according to fieldpass/fielddrop.
+func (f *Filter) filterFields(metric telegraf.Metric) {
+	filterKeys := []string{}
+	for _, field := range metric.FieldList() {
+		if !f.shouldFieldPass(field.Key) {
+			filterKeys = append(filterKeys, field.Key)
 		}
 	}
 
-	if f.tagExclude != nil {
-		for k, _ := range tags {
-			if f.tagExclude.Match(k) {
-				delete(tags, k)
+	for _, key := range filterKeys {
+		metric.RemoveField(key)
+	}
+}
+
+// filterTags removes tags according to taginclude/tagexclude.
+func (f *Filter) filterTags(metric telegraf.Metric) {
+	filterKeys := []string{}
+	if f.tagInclude != nil {
+		for _, tag := range metric.TagList() {
+			if !f.tagInclude.Match(tag.Key) {
+				filterKeys = append(filterKeys, tag.Key)
 			}
 		}
+	}
+	for _, key := range filterKeys {
+		metric.RemoveTag(key)
+	}
+
+	if f.tagExclude != nil {
+		for _, tag := range metric.TagList() {
+			if f.tagExclude.Match(tag.Key) {
+				filterKeys = append(filterKeys, tag.Key)
+			}
+		}
+	}
+	for _, key := range filterKeys {
+		metric.RemoveTag(key)
 	}
 }

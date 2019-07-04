@@ -28,12 +28,18 @@ const sampleConfig = `
 
   ## specify a list of one or more Solr cores (default - all)
   # cores = ["main"]
+
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
 `
 
 // Solr is a plugin to read stats from one or many Solr servers
 type Solr struct {
 	Local       bool
 	Servers     []string
+	Username    string
+	Password    string
 	HTTPTimeout internal.Duration
 	Cores       []string
 	client      *http.Client
@@ -471,7 +477,18 @@ func (s *Solr) createHTTPClient() *http.Client {
 }
 
 func (s *Solr) gatherData(url string, v interface{}) error {
-	r, err := s.client.Get(url)
+	req, reqErr := http.NewRequest(http.MethodGet, url, nil)
+	if reqErr != nil {
+		return reqErr
+	}
+
+	if s.Username != "" {
+		req.SetBasicAuth(s.Username, s.Password)
+	}
+
+	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+
+	r, err := s.client.Do(req)
 	if err != nil {
 		return err
 	}

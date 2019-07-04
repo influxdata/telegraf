@@ -397,13 +397,11 @@ func (b *burrow) genGroupStatusMetrics(r *apiResponse, cluster, group string, ac
 		partitionCount = len(r.Status.Partitions)
 	}
 
-	// get max timestamp and offset from partitions list
+	// get max timestamp and total offset from partitions list
 	offset := int64(0)
 	timestamp := int64(0)
 	for _, partition := range r.Status.Partitions {
-		if partition.End.Offset > offset {
-			offset = partition.End.Offset
-		}
+		offset += partition.End.Offset
 		if partition.End.Timestamp > timestamp {
 			timestamp = partition.End.Timestamp
 		}

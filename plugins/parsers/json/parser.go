@@ -9,7 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tidwall/gjson"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -18,9 +21,15 @@ var (
 )
 
 type JSONParser struct {
-	MetricName  string
-	TagKeys     []string
-	DefaultTags map[string]string
+	MetricName     string
+	TagKeys        []string
+	StringFields   []string
+	JSONNameKey    string
+	JSONQuery      string
+	JSONTimeKey    string
+	JSONTimeFormat string
+	JSONTimezone   string
+	DefaultTags    map[string]string
 }
 
 func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
@@ -34,12 +43,14 @@ func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
 	}
 	for _, item := range jsonOut {
 		metrics, err = p.parseObject(metrics, item)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return metrics, nil
 }
 
 func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
-
 	tags := make(map[string]string)
 	for k, v := range p.DefaultTags {
 		tags[k] = v
@@ -51,10 +62,42 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		return nil, err
 	}
 
+	//checks if json_name_key is set
+	if p.JSONNameKey != "" {
+		switch field := f.Fields[p.JSONNameKey].(type) {
+		case string:
+			p.MetricName = field
+		}
+	}
+
+	//if time key is specified, set it to nTime
+	nTime := time.Now().UTC()
+	if p.JSONTimeKey != "" {
+		if p.JSONTimeFormat == "" {
+			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
+			return nil, err
+		}
+
+		if f.Fields[p.JSONTimeKey] == nil {
+			err := fmt.Errorf("JSON time key could not be found")
+			return nil, err
+		}
+
+		nTime, err = internal.ParseTimestampWithLocation(f.Fields[p.JSONTimeKey], p.JSONTimeFormat, p.JSONTimezone)
+		if err != nil {
+			return nil, err
+		}
+
+		delete(f.Fields, p.JSONTimeKey)
+
+		//if the year is 0, set to current year
+		if nTime.Year() == 0 {
+			nTime = nTime.AddDate(time.Now().Year(), 0, 0)
+		}
+	}
+
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-
-	metric, err := metric.New(p.MetricName, tags, nFields, time.Now().UTC())
-
+	metric, err := metric.New(p.MetricName, tags, nFields, nTime)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +131,17 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 
 	//remove any additional string/bool values from fields
 	for k := range fields {
+		//check if field is in StringFields
+		sField := false
+		for _, v := range p.StringFields {
+			if v == k {
+				sField = true
+			}
+		}
+		if sField {
+			continue
+		}
+
 		switch fields[k].(type) {
 		case string:
 			delete(fields, k)
@@ -99,6 +153,15 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 }
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	if p.JSONQuery != "" {
+		result := gjson.GetBytes(buf, p.JSONQuery)
+		buf = []byte(result.Raw)
+		if !result.IsArray() && !result.IsObject() {
+			err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
+			return nil, err
+		}
+	}
+
 	buf = bytes.TrimSpace(buf)
 	buf = bytes.TrimPrefix(buf, utf8BOM)
 	if len(buf) == 0 {
@@ -126,7 +189,7 @@ func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("Can not parse the line: %s, for data format: influx ", line)
+		return nil, fmt.Errorf("can not parse the line: %s, for data format: json ", line)
 	}
 
 	return metrics[0], nil

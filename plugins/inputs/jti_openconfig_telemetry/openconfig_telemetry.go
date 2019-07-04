@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	internaltls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
@@ -22,15 +23,16 @@ import (
 )
 
 type OpenConfigTelemetry struct {
-	Servers         []string
-	Sensors         []string
-	Username        string
-	Password        string
+	Servers         []string          `toml:"servers"`
+	Sensors         []string          `toml:"sensors"`
+	Username        string            `toml:"username"`
+	Password        string            `toml:"password"`
 	ClientID        string            `toml:"client_id"`
 	SampleFrequency internal.Duration `toml:"sample_frequency"`
-	SSLCert         string            `toml:"ssl_cert"`
 	StrAsTags       bool              `toml:"str_as_tags"`
 	RetryDelay      internal.Duration `toml:"retry_delay"`
+	EnableTLS       bool              `toml:"enable_tls"`
+	internaltls.ClientConfig
 
 	sensorsConfig   []sensorConfig
 	grpcClientConns []*grpc.ClientConn
@@ -44,8 +46,8 @@ var (
   ## List of device addresses to collect telemetry from
   servers = ["localhost:1883"]
 
-  ## Authentication details. Username and password are must if device expects 
-  ## authentication. Client ID must be unique when connecting from multiple instances 
+  ## Authentication details. Username and password are must if device expects
+  ## authentication. Client ID must be unique when connecting from multiple instances
   ## of telegraf to the same device
   username = "user"
   password = "pass"
@@ -57,16 +59,16 @@ var (
   ## Sensors to subscribe for
   ## A identifier for each sensor can be provided in path by separating with space
   ## Else sensor path will be used as identifier
-  ## When identifier is used, we can provide a list of space separated sensors. 
-  ## A single subscription will be created with all these sensors and data will 
+  ## When identifier is used, we can provide a list of space separated sensors.
+  ## A single subscription will be created with all these sensors and data will
   ## be saved to measurement with this identifier name
   sensors = [
    "/interfaces/",
    "collection /components/ /lldp",
   ]
 
-  ## We allow specifying sensor group level reporting rate. To do this, specify the 
-  ## reporting rate in Duration at the beginning of sensor paths / collection 
+  ## We allow specifying sensor group level reporting rate. To do this, specify the
+  ## reporting rate in Duration at the beginning of sensor paths / collection
   ## name. For entries without reporting rate, we use configured sample frequency
   sensors = [
    "1000ms customReporting /interfaces /lldp",
@@ -74,9 +76,13 @@ var (
    "/interfaces",
   ]
 
-  ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
-  ## channel will be opened with server
-  ssl_cert = "/etc/telegraf/cert.pem"
+  ## Optional TLS Config
+  # enable_tls = true
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
   ## Failed streams/calls will not be retried if 0 is provided
@@ -343,21 +349,22 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
+
 	// Build sensors config
 	if m.splitSensorConfig() == 0 {
 		return fmt.Errorf("E! No valid sensor configuration available")
 	}
 
-	// If SSL certificate is provided, use transport credentials
-	var err error
-	var transportCredentials credentials.TransportCredentials
-	if m.SSLCert != "" {
-		transportCredentials, err = credentials.NewClientTLSFromFile(m.SSLCert, "")
+	// Parse TLS config
+	var opts []grpc.DialOption
+	if m.EnableTLS {
+		tlscfg, err := m.ClientConfig.TLSConfig()
 		if err != nil {
-			return fmt.Errorf("E! Failed to read certificate: %v", err)
+			return err
 		}
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
 	} else {
-		transportCredentials = nil
+		opts = append(opts, grpc.WithInsecure())
 	}
 
 	// Connect to given list of servers and start collecting data
@@ -373,12 +380,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		// If a certificate is provided, open a secure channel. Else open insecure one
-		if transportCredentials != nil {
-			grpcClientConn, err = grpc.Dial(server, grpc.WithTransportCredentials(transportCredentials))
-		} else {
-			grpcClientConn, err = grpc.Dial(server, grpc.WithInsecure())
-		}
+		grpcClientConn, err = grpc.Dial(server, opts...)
 		if err != nil {
 			log.Printf("E! Failed to connect to %s: %v", server, err)
 		} else {
@@ -394,7 +396,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				&authentication.LoginRequest{UserName: m.Username,
 					Password: m.Password, ClientId: m.ClientID})
 			if loginErr != nil {
-				log.Printf("E! Could not initiate login check for %s: %v", server, err)
+				log.Printf("E! Could not initiate login check for %s: %v", server, loginErr)
 				continue
 			}
 

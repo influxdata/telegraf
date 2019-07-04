@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/docker"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -51,7 +52,7 @@ type Docker struct {
 
 	client          Client
 	httpClient      *http.Client
-	engine_host     string
+	engineHost      string
 	serverVersion   string
 	filtersCreated  bool
 	labelFilter     filter.Filter
@@ -73,6 +74,7 @@ const (
 var (
 	sizeRegex       = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	now             = time.Now
 )
 
 var sampleConfig = `
@@ -121,26 +123,18 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
+// SampleConfig returns the default Docker TOML configuration.
+func (d *Docker) SampleConfig() string { return sampleConfig }
+
+// Description the metrics returned.
 func (d *Docker) Description() string {
 	return "Read metrics about docker containers"
 }
 
-func (d *Docker) SampleConfig() string { return sampleConfig }
-
+// Gather metrics from the docker server.
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	if d.client == nil {
-		var c Client
-		var err error
-		if d.Endpoint == "ENV" {
-			c, err = d.newEnvClient()
-		} else {
-			tlsConfig, err := d.ClientConfig.TLSConfig()
-			if err != nil {
-				return err
-			}
-
-			c, err = d.newClient(d.Endpoint, tlsConfig)
-		}
+		c, err := d.getNewClient()
 		if err != nil {
 			return err
 		}
@@ -195,7 +189,11 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
+
 	containers, err := d.client.ContainerList(ctx, opts)
+	if err == context.DeadlineExceeded {
+		return errListTimeout
+	}
 	if err != nil {
 		return err
 	}
@@ -206,10 +204,8 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	for _, container := range containers {
 		go func(c types.Container) {
 			defer wg.Done()
-			err := d.gatherContainer(c, acc)
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Error gathering container %s stats: %s\n",
-					c.Names, err.Error()))
+			if err := d.gatherContainer(c, acc); err != nil {
+				acc.AddError(err)
 			}
 		}(container)
 	}
@@ -219,16 +215,18 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
-
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
+
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
+	if err == context.DeadlineExceeded {
+		return errServiceTimeout
+	}
 	if err != nil {
 		return err
 	}
 
 	if len(services) > 0 {
-
 		tasks, err := d.client.TaskList(ctx, types.TaskListOptions{})
 		if err != nil {
 			return err
@@ -292,19 +290,24 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	dataFields := make(map[string]interface{})
 	metadataFields := make(map[string]interface{})
 	now := time.Now()
+
 	// Get info from docker daemon
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
+
 	info, err := d.client.Info(ctx)
+	if err == context.DeadlineExceeded {
+		return errInfoTimeout
+	}
 	if err != nil {
 		return err
 	}
 
-	d.engine_host = info.Name
+	d.engineHost = info.Name
 	d.serverVersion = info.ServerVersion
 
 	tags := map[string]string{
-		"engine_host":    d.engine_host,
+		"engine_host":    d.engineHost,
 		"server_version": d.serverVersion,
 	}
 
@@ -364,52 +367,57 @@ func (d *Docker) gatherContainer(
 	acc telegraf.Accumulator,
 ) error {
 	var v *types.StatsJSON
+
 	// Parse container name
-	cname := "unknown"
-	if len(container.Names) > 0 {
-		// Not sure what to do with other names, just take the first.
-		cname = strings.TrimPrefix(container.Names[0], "/")
+	var cname string
+	for _, name := range container.Names {
+		trimmedName := strings.TrimPrefix(name, "/")
+		match := d.containerFilter.Match(trimmedName)
+		if match {
+			cname = trimmedName
+			break
+		}
 	}
 
-	// the image name sometimes has a version part, or a private repo
-	//   ie, rabbitmq:3-management or docker.someco.net:4443/rabbitmq:3-management
-	imageName := ""
-	imageVersion := "unknown"
-	i := strings.LastIndex(container.Image, ":") // index of last ':' character
-	if i > -1 {
-		imageVersion = container.Image[i+1:]
-		imageName = container.Image[:i]
-	} else {
-		imageName = container.Image
+	if cname == "" {
+		return nil
 	}
+
+	imageName, imageVersion := docker.ParseImage(container.Image)
 
 	tags := map[string]string{
-		"engine_host":       d.engine_host,
+		"engine_host":       d.engineHost,
 		"server_version":    d.serverVersion,
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
 	}
 
-	if !d.containerFilter.Match(cname) {
-		return nil
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
+
 	r, err := d.client.ContainerStats(ctx, container.ID, false)
-	if err != nil {
-		return fmt.Errorf("Error getting docker stats: %s", err.Error())
+	if err == context.DeadlineExceeded {
+		return errStatsTimeout
 	}
+	if err != nil {
+		return fmt.Errorf("error getting docker stats: %v", err)
+	}
+
 	defer r.Body.Close()
 	dec := json.NewDecoder(r.Body)
 	if err = dec.Decode(&v); err != nil {
 		if err == io.EOF {
 			return nil
 		}
-		return fmt.Errorf("Error decoding: %s", err.Error())
+		return fmt.Errorf("error decoding: %v", err)
 	}
 	daemonOSType := r.OSType
+
+	// use common (printed at `docker ps`) name for container
+	if v.Name != "" {
+		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
+	}
 
 	// Add labels to tags
 	for k, label := range container.Labels {
@@ -418,55 +426,80 @@ func (d *Docker) gatherContainer(
 		}
 	}
 
+	return d.gatherContainerInspect(container, acc, tags, daemonOSType, v)
+}
+
+func (d *Docker) gatherContainerInspect(
+	container types.Container,
+	acc telegraf.Accumulator,
+	tags map[string]string,
+	daemonOSType string,
+	v *types.StatsJSON,
+) error {
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer cancel()
+
 	info, err := d.client.ContainerInspect(ctx, container.ID)
+	if err == context.DeadlineExceeded {
+		return errInspectTimeout
+	}
 	if err != nil {
-		return fmt.Errorf("Error inspecting docker container: %s", err.Error())
+		return fmt.Errorf("error inspecting docker container: %v", err)
 	}
 
 	// Add whitelisted environment variables to tags
 	if len(d.TagEnvironment) > 0 {
 		for _, envvar := range info.Config.Env {
 			for _, configvar := range d.TagEnvironment {
-				dock_env := strings.SplitN(envvar, "=", 2)
+				dockEnv := strings.SplitN(envvar, "=", 2)
 				//check for presence of tag in whitelist
-				if len(dock_env) == 2 && len(strings.TrimSpace(dock_env[1])) != 0 && configvar == dock_env[0] {
-					tags[dock_env[0]] = dock_env[1]
+				if len(dockEnv) == 2 && len(strings.TrimSpace(dockEnv[1])) != 0 && configvar == dockEnv[0] {
+					tags[dockEnv[0]] = dockEnv[1]
 				}
 			}
 		}
 	}
+
 	if info.State != nil {
 		tags["container_status"] = info.State.Status
 		statefields := map[string]interface{}{
-			"oomkilled": info.State.OOMKilled,
-			"pid":       info.State.Pid,
-			"exitcode":  info.State.ExitCode,
+			"oomkilled":    info.State.OOMKilled,
+			"pid":          info.State.Pid,
+			"exitcode":     info.State.ExitCode,
+			"container_id": container.ID,
 		}
-		container_time, err := time.Parse(time.RFC3339, info.State.StartedAt)
-		if err == nil && !container_time.IsZero() {
-			statefields["started_at"] = container_time.UnixNano()
+
+		finished, err := time.Parse(time.RFC3339, info.State.FinishedAt)
+		if err == nil && !finished.IsZero() {
+			statefields["finished_at"] = finished.UnixNano()
+		} else {
+			// set finished to now for use in uptime
+			finished = now()
 		}
-		container_time, err = time.Parse(time.RFC3339, info.State.FinishedAt)
-		if err == nil && !container_time.IsZero() {
-			statefields["finished_at"] = container_time.UnixNano()
+
+		started, err := time.Parse(time.RFC3339, info.State.StartedAt)
+		if err == nil && !started.IsZero() {
+			statefields["started_at"] = started.UnixNano()
+			statefields["uptime_ns"] = finished.Sub(started).Nanoseconds()
 		}
+
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
-	}
 
-	if info.State.Health != nil {
-		healthfields := map[string]interface{}{
-			"health_status":  info.State.Health.Status,
-			"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+		if info.State.Health != nil {
+			healthfields := map[string]interface{}{
+				"health_status":  info.State.Health.Status,
+				"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+			}
+			acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 		}
-		acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 	}
 
-	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
+	parseContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
 
 	return nil
 }
 
-func gatherContainerStats(
+func parseContainerStats(
 	stat *types.StatsJSON,
 	acc telegraf.Accumulator,
 	tags map[string]string,
@@ -527,12 +560,12 @@ func gatherContainerStats(
 
 	if daemonOSType != "windows" {
 		memfields["limit"] = stat.MemoryStats.Limit
-		memfields["usage"] = stat.MemoryStats.Usage
 		memfields["max_usage"] = stat.MemoryStats.MaxUsage
 
-		mem := calculateMemUsageUnixNoCache(stat.MemoryStats)
+		mem := CalculateMemUsageUnixNoCache(stat.MemoryStats)
 		memLimit := float64(stat.MemoryStats.Limit)
-		memfields["usage_percent"] = calculateMemPercentUnixNoCache(memLimit, mem)
+		memfields["usage"] = uint64(mem)
+		memfields["usage_percent"] = CalculateMemPercentUnixNoCache(memLimit, mem)
 	} else {
 		memfields["commit_bytes"] = stat.MemoryStats.Commit
 		memfields["commit_peak_bytes"] = stat.MemoryStats.CommitPeak
@@ -555,7 +588,7 @@ func gatherContainerStats(
 	if daemonOSType != "windows" {
 		previousCPU := stat.PreCPUStats.CPUUsage.TotalUsage
 		previousSystem := stat.PreCPUStats.SystemUsage
-		cpuPercent := calculateCPUPercentUnix(previousCPU, previousSystem, stat)
+		cpuPercent := CalculateCPUPercentUnix(previousCPU, previousSystem, stat)
 		cpufields["usage_percent"] = cpuPercent
 	} else {
 		cpuPercent := calculateCPUPercentWindows(stat)
@@ -772,7 +805,7 @@ func sliceContains(in string, sl []string) bool {
 func parseSize(sizeStr string) (int64, error) {
 	matches := sizeRegex.FindStringSubmatch(sizeStr)
 	if len(matches) != 4 {
-		return -1, fmt.Errorf("invalid size: '%s'", sizeStr)
+		return -1, fmt.Errorf("invalid size: %s", sizeStr)
 	}
 
 	size, err := strconv.ParseFloat(matches[1], 64)
@@ -822,6 +855,19 @@ func (d *Docker) createContainerStateFilters() error {
 	}
 	d.stateFilter = filter
 	return nil
+}
+
+func (d *Docker) getNewClient() (Client, error) {
+	if d.Endpoint == "ENV" {
+		return d.newEnvClient()
+	}
+
+	tlsConfig, err := d.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return d.newClient(d.Endpoint, tlsConfig)
 }
 
 func init() {
