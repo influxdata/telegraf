@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf"
 	"github.com/stretchr/testify/assert"
 )
@@ -335,6 +336,13 @@ func (a *Accumulator) AssertContainsTaggedFields(
 
 		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
 			return
+		}
+
+		//Show diff if measurement matches
+		if p.Measurement == measurement {
+			if diff := cmp.Diff(fields, p.Fields); diff != "" {
+				fmt.Printf("Fields mismatch (-want +got):\n%s", diff)
+			}
 		}
 	}
 	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
