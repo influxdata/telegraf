@@ -19,6 +19,11 @@ const (
 	defaultWatchMethod = "inotify"
 )
 
+var (
+	offsets      = make(map[string]int64)
+	offsetsMutex = new(sync.Mutex)
+)
+
 type Tail struct {
 	Files         []string
 	FromBeginning bool
@@ -87,22 +92,24 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	t.acc = acc
 	t.tailers = make(map[string]*tail.Tail)
 
-	return t.tailNewFiles(t.FromBeginning)
+	err := t.tailNewFiles(t.FromBeginning)
+
+	// clear resume offsets after starting
+	offsetsMutex.Lock()
+	offsets = make(map[string]int64)
+	offsetsMutex.Unlock()
+
+	return err
 }
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {
-	var seek *tail.SeekInfo
-	if !t.Pipe && !fromBeginning {
-		seek = &tail.SeekInfo{
-			Whence: 2,
-			Offset: 0,
-		}
-	}
-
 	var poll bool
 	if t.WatchMethod == "poll" {
 		poll = true
 	}
+
+	offsetsMutex.Lock()
+	defer offsetsMutex.Unlock()
 
 	// Create a "tailer" for each file
 	for _, filepath := range t.Files {
@@ -114,6 +121,22 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			if _, ok := t.tailers[file]; ok {
 				// we're already tailing this file
 				continue
+			}
+
+			var seek *tail.SeekInfo
+			if !t.Pipe && !fromBeginning {
+				if offset, ok := offsets[file]; ok {
+					log.Printf("D! [inputs.tail] using offset %d for file: %v", offset, file)
+					seek = &tail.SeekInfo{
+						Whence: 0,
+						Offset: offset,
+					}
+				} else {
+					seek = &tail.SeekInfo{
+						Whence: 2,
+						Offset: 0,
+					}
+				}
 			}
 
 			tailer, err := tail.TailFile(file,
@@ -205,7 +228,20 @@ func (t *Tail) Stop() {
 	t.Lock()
 	defer t.Unlock()
 
+	offsetsMutex.Lock()
+	defer offsetsMutex.Unlock()
+
 	for _, tailer := range t.tailers {
+		if !t.Pipe && !t.FromBeginning {
+			// store offset for resume
+			offset, err := tailer.Tell()
+			if err == nil {
+				offsets[tailer.Filename] = offset
+				log.Printf("D! [inputs.tail] recording offset %d for file: %v", offset, tailer.Filename)
+			} else {
+				t.acc.AddError(fmt.Errorf("E! Error recording offset for file %s\n", tailer.Filename))
+			}
+		}
 		err := tailer.Stop()
 		if err != nil {
 			t.acc.AddError(fmt.Errorf("E! Error stopping tail on file %s\n", tailer.Filename))

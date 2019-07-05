@@ -3,6 +3,7 @@
 package logparser
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -17,6 +18,11 @@ import (
 
 const (
 	defaultWatchMethod = "inotify"
+)
+
+var (
+	offsets      = make(map[string]int64)
+	offsetsMutex = new(sync.Mutex)
 )
 
 // LogParser in the primary interface for the plugin
@@ -161,22 +167,26 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.wg.Add(1)
 	go l.parser()
 
-	return l.tailNewfiles(l.FromBeginning)
+	err = l.tailNewfiles(l.FromBeginning)
+
+	// clear resume offsets after starting
+	offsetsMutex.Lock()
+	offsets = make(map[string]int64)
+	offsetsMutex.Unlock()
+
+	return err
 }
 
 // check the globs against files on disk, and start tailing any new files.
 // Assumes l's lock is held!
 func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
-	var seek tail.SeekInfo
-	if !fromBeginning {
-		seek.Whence = 2
-		seek.Offset = 0
-	}
-
 	var poll bool
 	if l.WatchMethod == "poll" {
 		poll = true
 	}
+
+	offsetsMutex.Lock()
+	defer offsetsMutex.Unlock()
 
 	// Create a "tailer" for each file
 	for _, filepath := range l.Files {
@@ -193,11 +203,27 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 				continue
 			}
 
+			var seek *tail.SeekInfo
+			if !fromBeginning {
+				if offset, ok := offsets[file]; ok {
+					log.Printf("D! [inputs.tail] using offset %d for file: %v", offset, file)
+					seek = &tail.SeekInfo{
+						Whence: 0,
+						Offset: offset,
+					}
+				} else {
+					seek = &tail.SeekInfo{
+						Whence: 2,
+						Offset: 0,
+					}
+				}
+			}
+
 			tailer, err := tail.TailFile(file,
 				tail.Config{
 					ReOpen:    true,
 					Follow:    true,
-					Location:  &seek,
+					Location:  seek,
 					MustExist: true,
 					Poll:      poll,
 					Logger:    tail.DiscardingLogger,
@@ -285,7 +311,20 @@ func (l *LogParserPlugin) Stop() {
 	l.Lock()
 	defer l.Unlock()
 
+	offsetsMutex.Lock()
+	defer offsetsMutex.Unlock()
+
 	for _, t := range l.tailers {
+		if !l.FromBeginning {
+			// store offset for resume
+			offset, err := t.Tell()
+			if err == nil {
+				offsets[t.Filename] = offset
+				log.Printf("D! [inputs.logparser] recording offset %d for file: %v", offset, t.Filename)
+			} else {
+				l.acc.AddError(fmt.Errorf("E! Error recording offset for file %s\n", t.Filename))
+			}
+		}
 		err := t.Stop()
 
 		//message for a stopped tailer
