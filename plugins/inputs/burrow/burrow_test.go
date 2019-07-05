@@ -262,7 +262,7 @@ func TestFilterGroups(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	plugin.Gather(acc)
 
-	require.Exactly(t, 4, len(acc.Metrics))
+	require.Exactly(t, 1, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
 }
 
