@@ -8,14 +8,15 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Fireboard gathers statistics from the fireboard.io servers
 type Fireboard struct {
-	AuthToken   string `toml:"auth_token"`
-	URL         string `toml:"url"`
-	HTTPTimeout int64  `toml:"http_timeout"`
+	AuthToken   string            `toml:"auth_token"`
+	URL         string            `toml:"url"`
+	HTTPTimeout internal.Duration `toml:"http_timeout"`
 
 	client *http.Client
 }
@@ -51,7 +52,9 @@ const sampleConfig = `
   ## You can override the fireboard server URL if necessary
   # url = https://fireboard.io/api/v1/devices.json
   ## You can set a different http_timeout if you need to
-  # http_timeout = 4
+  ## You should set a string using an number and time indicator
+  ## for example "12s" for 12 seconds.
+  # http_timeout = "4s"
 `
 
 // SampleConfig Returns a sample configuration for the plugin
@@ -74,11 +77,11 @@ func (r *Fireboard) Init() error {
 		r.URL = "https://fireboard.io/api/v1/devices.json"
 	}
 	// Have a default timeout of 4s
-	if r.HTTPTimeout == 0 {
-		r.HTTPTimeout = 4
+	if r.HTTPTimeout.Duration == 0 {
+		r.HTTPTimeout.Duration = 4 * 1000000000
 	}
 
-	r.client.Timeout = time.Duration(r.HTTPTimeout) * time.Second
+	r.client.Timeout = r.HTTPTimeout.Duration
 
 	return nil
 }
@@ -121,9 +124,9 @@ func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
 func scale(n int) string {
 	switch n {
 	case 1:
-		return "celcius"
+		return "Celcius"
 	case 2:
-		return "farenheit"
+		return "Fahrenheit"
 	default:
 		return ""
 	}

@@ -45,7 +45,7 @@ func TestFireboard(t *testing.T) {
 		"title":   "telegraf-FireBoard",
 		"uuid":    "b55e766c-b308-49b5-93a4-df89fe31efd0",
 		"channel": strconv.FormatInt(1, 10),
-		"scale":   "farenheit",
+		"scale":   "Fahrenheit",
 	}
 
 	acc.AssertContainsTaggedFields(t, "fireboard", expectFields, expectTags)
