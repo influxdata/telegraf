@@ -78,7 +78,7 @@ func (r *Fireboard) Init() error {
 	}
 	// Have a default timeout of 4s
 	if r.HTTPTimeout.Duration == 0 {
-		r.HTTPTimeout.Duration = 4 * 1000000000
+		r.HTTPTimeout.Duration = time.Second * 4
 	}
 
 	r.client.Timeout = r.HTTPTimeout.Duration
