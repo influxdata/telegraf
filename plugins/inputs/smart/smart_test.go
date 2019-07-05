@@ -487,6 +487,17 @@ func TestGatherNvme(t *testing.T) {
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
 				"device":    ".",
+				"name":      "Media_and_Data_Integrity_Errors",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
 				"id":        "194",
 				"name":      "Temperature_Celsius",
 				"serial_no": "D704940282?",
