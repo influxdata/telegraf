@@ -3,3 +3,5 @@
 /telegraf.exe
 /telegraf.gz
 /vendor
+*.swp
+*.swo
