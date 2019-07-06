@@ -50,6 +50,8 @@ var (
 	nvmePowerOnAttr = regexp.MustCompile("^Power On Hours:\\s+(.*)$")
 	// Media and Data Integrity Errors: 0
 	nvmeIntegrityErrAttr = regexp.MustCompile("^Media and Data Integrity Errors:\\s+(.*)$")
+	// Error Information Log Entries: 119699
+	nvmeErrorLogAttr = regexp.MustCompile("^Error Information Log Entries:\\s+(.*)$")
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
@@ -344,6 +346,18 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 				if errors := nvmeIntegrityErrAttr.FindStringSubmatch(line); len(errors) > 1 {
 					tags["name"] = "Media_and_Data_Integrity_Errors"
 					i, err := strconv.ParseInt(strings.Replace(errors[1], ",", "", -1), 10, 64)
+					if err != nil {
+						continue
+					}
+					fields["raw_value"] = i
+
+					acc.AddFields("smart_attribute", fields, tags)
+					continue
+				}
+
+				if entries := nvmeErrorLogAttr.FindStringSubmatch(line); len(entries) > 1 {
+					tags["name"] = "Error_Information_Log_Entries"
+					i, err := strconv.ParseInt(strings.Replace(entries[1], ",", "", -1), 10, 64)
 					if err != nil {
 						continue
 					}
