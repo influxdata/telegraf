@@ -316,3 +316,130 @@ The unit of fields varies by the tags.
     * engine
     * row_format
     * create_options
+
+
+#### mysql_metadatalock_session
+
+> 元锁会话明细
+
+| mysql_metadatalock_session | key         | 数据类型 | 说明                    |
+| -------------------------- | ----------- | -------- | ----------------------- |
+| `Tags`                     | `server`    | `string` | `数据库url地址或主机名` |
+| `Fields`                   | `id`        | `int64`  | `会话id`                |
+|                            | `user`      | `string` | `会话的登录用户名`      |
+|                            | `host`      | `string` | `会话的来源地址`        |
+|                            | `db`        | `string` | `会话访问的数据库名`    |
+|                            | `command`   | `string` | `会话执行的语句类型`    |
+|                            | `conn_time` | `int64`  | `会话持续时间`          |
+|                            | `state`     | `string` | `会话状态`              |
+|                            | `info`      | `string` | `会话执行的具体SQL语句` |
+
+#### mysql_metadatalock_count
+
+> 元锁个数
+
+| mysql_metadatalock_count | key      | 数据类型 | 说明                    |
+| ------------------------ | -------- | -------- | ----------------------- |
+| `Tags`                   | `server` | `string` | `数据库url地址或主机名` |
+| `Fields`                 | `count`  | `int64`  | `会话总数`              |
+
+#### mysql_metadatalock_trx_id
+
+>  导致元锁冲突的长时间未提交的事务会话id
+
+| mysql_metadatalock_trx_id | key      | 数据类型 | 说明                    |
+| ------------------------- | -------- | -------- | ----------------------- |
+| `Tags`                    | `server` | `string` | `数据库url地址或主机名` |
+| `Fields`                  | `id`     | `int64`  | `会话id`                |
+
+
+
+#### mysql_innodb_blocking_trx_id
+
+>  获取到innodb事务锁冲突的会话明细,以及一共阻塞了多少事务，用于快速解决行锁冲突
+
+| mysql_innodb_blocking_trx_id | key                          | 数据类型 | 说明                                                         |
+| ---------------------------- | ---------------------------- | -------- | ------------------------------------------------------------ |
+| `Tags`                       | `server`                     | `string` | `数据库url地址或主机名`                                      |
+| `Fields`                     | `id`                         | `int64`  | `会话id`                                                     |
+|                              | `user`                       | `string` | `会话的登录用户名`                                           |
+|                              | `host`                       | `string` | `会话的来源地址`                                             |
+|                              | `db`                         | `string` | `会话访问的数据库名`                                         |
+|                              | `command`                    | `string` | `会话执行的语句类型`                                         |
+|                              | `time`                       | `int64`  | `会话持续时间`                                               |
+|                              | `state`                      | `string` | `会话状态`                                                   |
+|                              | `info`                       | `string` | `会话执行的具体SQL语句`                                      |
+|                              | `trx_id`                     | `int64`  | `事务id`                                                     |
+|                              | `trx_state string`           | `string` | `事务状态`                                                   |
+|                              | `trx_started`                | `string` | `事务开始时间`                                               |
+|                              | `trx_requested_lock_id`      | `string` | `等待事务的锁id`                                             |
+|                              | `trx_wait_started`           | `string` | `事务等待开始的事件`                                         |
+|                              | `trx_weight`                 | `int64`  | `事务的权重`                                                 |
+|                              | `trx_mysql_thread_id`        | `int64`  | `事务线程id`                                                 |
+|                              | `trx_query`                  | `string` | `事务运行的SQL`                                              |
+|                              | `trx_operation_state`        | `string` | `事务的操作轧辊台`                                           |
+|                              | `trx_tables_in_use`          | `int64`  | `事务使用的表`                                               |
+|                              | `trx_tables_locked`          | `int64`  | `被锁住的表`                                                 |
+|                              | `trx_lock_structs`           | `int64`  | `事务保留的锁`                                               |
+|                              | `trx_lock_memory_bytes`      | `int64`  | `事务锁定的内存大小`                                         |
+|                              | `trx_rows_locked`            | `int64`  | `事物锁定的最大行树`                                         |
+|                              | `trx_rows_modified`          | `int64`  | `事务修改的行数`                                             |
+|                              | `trx_concurrency_tickets`    | `int64`  | ``                                                           |
+|                              | `trx_isolation_level`        | `string` | `事务隔离级别`                                               |
+|                              | `trx_unique_checks`          | `int64`  | `事务的唯一键检查是打开还是关闭`                             |
+|                              | `trx_foreign_key_checks`     | `int64`  | `事务的外键检查是否开启`                                     |
+|                              | `trx_last_foreign_key_error` | `string` | `事务最近一次外键错误`                                       |
+|                              | `trx_adaptive_hash_latched`  | `int64`  | `自适应哈希索引是否被当前事务锁定`                           |
+|                              | `trx_adaptive_hash_timeout`  | `int64`  | ``                                                           |
+|                              | `trx_is_read_only`           | `int64`  | `1表示事务是只读的`                                          |
+|                              | `trx_autocommit_non_locking` | `int64`  | `值1表示事务是不使用for update或lock in shared mode子句的select语句，并且在启用autocommit设置的情况下执行，因此事务将只包含此语句。（5.6.4及更高版本。）当此列和trx_均为只读时，innodb会优化事务，以减少与更改表数据的事务相关的开销。` |
+|                              | ` countnum`                  | `int64`  | `该事务阻塞了多少其他事务`                                   |
+
+#### mysql_innodb_lock_waits
+
+> ​	获取到innodb事务锁冲突锁信息,用于分析行所锁原因
+
+| mysql_innodb_lock_waits | key           | 数据类型 | 说明                    |
+| ----------------------- | ------------- | -------- | ----------------------- |
+| `Tags`                  | `server`      | `string` | `数据库url地址或主机名` |
+| `Fields`                | `lock_id`     | `string` | `锁id`                  |
+|                         | `lock_trx_id` | `int64`  | `事务id`                |
+|                         | `lock_mode`  | `string` | `锁的模式`              |
+|                         | `lock_type`  | `string` | `锁的类型`              |
+|                         | `lock_table` | `string` | `申请锁的表`            |
+|                         | `lock_index` | `string` | `锁住的索引`            |
+|                         | `lock_space` | `int64`  | `锁对象的space id`      |
+|                         | `lock_page`  | `int64`  | `事务锁定页的数量`      |
+|                         | `lock_rec`   | `int64`  | `事务锁定行的数量`      |
+|                         | `lock_data`  | `int64`  | `事务锁定记录的主键值`  |
+
+#### mysql_innodb_locks_counts
+
+> 仅获取到innodb事务锁冲突的会话id，会话持续时间，以及一共阻塞了多少事务，用于告警使用
+
+| mysql_innodb_locks_counts | key                          | 数据类型 | 说明                                                         |
+| ---------------------------- | ---------------------------- | -------- | ------------------------------------------------------------ |
+| `Tags`                       | `server`                     | `string` | `数据库url地址或主机名`                                      |
+| `Fields`                     | `id`                    | `int64` | `会话id`                                          |
+|                              | `time`                    | `int64` | `会话持续时间`                                       |
+|                              | `countnum`                  | `int64` | `该事务阻塞事务数量`                      |
+
+#### mysql_innodb_status
+
+> 获取到死锁信息,用于分析行死锁原因
+
+| mysql_innodb_status | key      | 数据类型 | 说明                    |
+| ------------------- | -------- | -------- | ----------------------- |
+| `Tags`              | `server` | `string` | `数据库url地址或主机名` |
+| `Fields`            | `type`   | `string` | `engine类型`            |
+|                     | `name`   | `string` | `engine别名`            |
+|                     | `innodb` | `string` | `具体状态`              |
+
+#### mysql_dead_lock_rows
+
+> 判断当前是否存在死锁，用于告警
+
+| mysql_dead_lock_rows | key        | 数据类型 | 说明                          |
+| -------------------- | ---------- | -------- | ----------------------------- |
+| `Tags`               | `server`   | `string` | `数据库url地址或主机名`       |
+| `Fields`             | `deadlock` | `int64`  | `0代表没有死锁 1代表存在死锁` |

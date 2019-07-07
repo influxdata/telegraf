@@ -832,6 +832,521 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 		acc.AddFields("mysql_users", fields, tags)
 	}
 
+	////////////////////
+	// get MetaDataLock of connections
+	// select * from information_schema.processlist where State='Waiting for table metadata lock';
+	//+-------+------+-----------+------+---------+------+---------------------------------+----------------------------------+
+	//| ID    | USER | HOST      | DB   | COMMAND | TIME | STATE                           | INFO                             |
+	//+-------+------+-----------+------+---------+------+---------------------------------+----------------------------------+
+	//| 46435 | root | localhost | test | Query   |  222 | Waiting for table metadata lock | alter table t1 add column xx int |
+	//+-------+------+-----------+------+---------+------+---------------------------------+----------------------------------+
+
+	metadata_rows, err := db.Query("select * from information_schema.processlist where State='Waiting for table metadata lock'")
+	if err != nil {
+		return err
+	}
+	defer metadata_rows.Close()
+
+	for metadata_rows.Next() {
+		var id int64
+		var user string
+		var host string
+		var db string
+		var command string
+		var conn_time int64
+		var state string
+		var info string
+
+		err = metadata_rows.Scan(&id, &user, &host, &db, &command, &conn_time, &state, &info)
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["id"] = id
+		fields["user"] = user
+		fields["host"] = host
+		fields["db"] = db
+		fields["command"] = command
+		fields["time"] = conn_time
+		fields["state"] = state
+		fields["info"] = info
+
+		acc.AddFields("mysql_metadatalock_session", fields, tags)
+	}
+
+	////////////////////
+	// get MetaDataLock count
+	// select count(*) count from information_schema.processlist where State='Waiting for table metadata lock';
+	//+----------+
+	//| count    |
+	//+----------+
+	//|        1 |
+	//+----------+
+
+	metadatalockcount_rows, err := db.Query("select count(*) from information_schema.processlist where State='Waiting for table metadata lock'")
+	if err != nil {
+		return err
+	}
+	defer metadatalockcount_rows.Close()
+
+	for metadatalockcount_rows.Next() {
+		var count int64
+
+		err = metadatalockcount_rows.Scan(&count)
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["count"] = count
+
+		acc.AddFields("mysql_metadatalock_count", fields, tags)
+	}
+
+	////////////////////
+	// A long unfinished trx_mysql_thread_id
+	//select i.trx_mysql_thread_id from information_schema.innodb_trx i,
+	//  (select
+	//         id, time
+	//     from
+	//         information_schema.processlist
+	//     where
+	//         time = (select
+	//                 max(time)
+	//             from
+	//                 information_schema.processlist
+	//             where
+	//                 state = 'Waiting for table metadata lock'
+	//                     and substring(info, 1, 5) in ('alter' , 'optim', 'repai', 'lock ', 'drop ', 'creat'))) p
+	//  where timestampdiff(second, i.trx_started, now()) > p.time
+	//  and i.trx_mysql_thread_id  not in (connection_id(),p.id);
+	//+---------------------+
+	//| trx_mysql_thread_id |
+	//+---------------------+
+	//|               47473 |
+	//+---------------------+
+
+	metadatalock_trx_rows, err := db.Query(`select i.trx_mysql_thread_id from information_schema.innodb_trx i,
+  (select
+         id, time
+     from
+         information_schema.processlist
+     where
+         time = (select
+                 max(time)
+             from
+                 information_schema.processlist
+             where
+                 state = 'Waiting for table metadata lock'
+                     and substring(info, 1, 5) in ('alter' , 'optim', 'repai', 'lock ', 'drop ', 'creat'))) p
+  where timestampdiff(second, i.trx_started, now()) > p.time
+  and i.trx_mysql_thread_id  not in (connection_id(),p.id)`)
+
+	if err != nil {
+		return err
+	}
+	defer metadatalock_trx_rows.Close()
+
+	for metadatalock_trx_rows.Next() {
+		var trx_mysql_thread_id int64
+
+		err = metadatalock_trx_rows.Scan(&trx_mysql_thread_id)
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["id"] = trx_mysql_thread_id
+
+		acc.AddFields("mysql_metadatalock_trx_id", fields, tags)
+	}
+
+	////////////////////////////////innodb_lock_waits
+	//获取到innodb事务锁冲突的会话明细,以及一共阻塞了多少事务，用于快速解决行锁冲突
+	//
+	// *************************** 1. row ***************************
+	//                         ID: 62216
+	//                       USER: root
+	//                       HOST: localhost
+	//                         DB: test
+	//                    COMMAND: Sleep
+	//                       TIME: 1739
+	//                      STATE:
+	//                       INFO: NULL
+	//                     trx_id: 7396
+	//                  trx_state: RUNNING
+	//                trx_started: 2019-05-20 12:38:11
+	//      trx_requested_lock_id: NULL
+	//           trx_wait_started: NULL
+	//                 trx_weight: 2
+	//        trx_mysql_thread_id: 62216
+	//                  trx_query: NULL
+	//        trx_operation_state: NULL
+	//          trx_tables_in_use: 0
+	//          trx_tables_locked: 1
+	//           trx_lock_structs: 2
+	//      trx_lock_memory_bytes: 1136
+	//            trx_rows_locked: 9
+	//          trx_rows_modified: 0
+	//    trx_concurrency_tickets: 0
+	//        trx_isolation_level: REPEATABLE READ
+	//          trx_unique_checks: 1
+	//     trx_foreign_key_checks: 1
+	// trx_last_foreign_key_error: NULL
+	//  trx_adaptive_hash_latched: 0
+	//  trx_adaptive_hash_timeout: 0
+	//           trx_is_read_only: 0
+	// trx_autocommit_non_locking: 0
+	//                   countnum: 1
+
+	blocking_trx_rows, err := db.Query(`select
+		a1.ID,a1.USER,a1.HOST,a1.DB,a1.COMMAND,a1.TIME,a1.STATE,ifnull(a1.INFO,'') INFO
+		,a3.trx_id
+		,a3.trx_state
+		,a3.trx_started
+		,ifnull(a3.trx_requested_lock_id,'')
+		,ifnull(a3.trx_wait_started,'')
+		,a3.trx_weight
+		,a3.trx_mysql_thread_id
+		,ifnull(a3.trx_query,'')
+		,ifnull(a3.trx_operation_state,'')
+		,a3.trx_tables_in_use
+		,a3.trx_tables_locked
+		,a3.trx_lock_structs
+		,a3.trx_lock_memory_bytes
+		,a3.trx_rows_locked
+		,a3.trx_rows_modified
+		,a3.trx_concurrency_tickets
+		,a3.trx_isolation_level
+		,a3.trx_unique_checks
+		,ifnull(a3.trx_foreign_key_checks,'')
+		,ifnull(a3.trx_last_foreign_key_error,'')
+		,a3.trx_adaptive_hash_latched
+		,a3.trx_adaptive_hash_timeout
+		,a3.trx_is_read_only
+		,a3.trx_autocommit_non_locking
+		,a2.countnum
+             from information_schema.processlist a1
+             join
+             (select blocking_trx_id, trx_mysql_thread_id,count(blocking_trx_id) as countnum
+             from (
+                 select a.trx_id,a.trx_state,b.requesting_trx_id,b.blocking_trx_id,a.trx_mysql_thread_id
+                 from information_schema.innodb_lock_waits as  b
+                 left join information_schema.innodb_trx as a
+                 on a.trx_id=b.requesting_trx_id) as t1
+                 group by blocking_trx_id,trx_mysql_thread_id
+                 order by countnum  desc
+                 limit 1
+             ) a2
+             on a1.id=a2.trx_mysql_thread_id
+						 join
+						 information_schema.innodb_trx a3
+						 on a2.blocking_trx_id = a3.trx_id
+		`)
+
+	if err != nil {
+		return err
+	}
+	defer blocking_trx_rows.Close()
+
+	for blocking_trx_rows.Next() {
+		var ID int64
+		var USER string
+		var HOST string
+		var DB string
+		var COMMAND string
+		var TIME int64
+		var STATE string
+		var INFO string
+		var trx_id int64
+		var trx_state string
+		var trx_started string
+		var trx_requested_lock_id string
+		var trx_wait_started string
+		var trx_weight int64
+		var trx_mysql_thread_id int64
+		var trx_query string
+		var trx_operation_state string
+		var trx_tables_in_use int64
+		var trx_tables_locked int64
+		var trx_lock_structs int64
+		var trx_lock_memory_bytes int64
+		var trx_rows_locked int64
+		var trx_rows_modified int64
+		var trx_concurrency_tickets int64
+		var trx_isolation_level string
+		var trx_unique_checks int64
+		var trx_foreign_key_checks int64
+		var trx_last_foreign_key_error string
+		var trx_adaptive_hash_latched int64
+		var trx_adaptive_hash_timeout int64
+		var trx_is_read_only int64
+		var trx_autocommit_non_locking int64
+		var countnum int64
+
+		err = blocking_trx_rows.Scan(
+			&ID,
+			&USER,
+			&HOST,
+			&DB,
+			&COMMAND,
+			&TIME,
+			&STATE,
+			&INFO,
+			&trx_id,
+			&trx_state,
+			&trx_started,
+			&trx_requested_lock_id,
+			&trx_wait_started,
+			&trx_weight,
+			&trx_mysql_thread_id,
+			&trx_query,
+			&trx_operation_state,
+			&trx_tables_in_use,
+			&trx_tables_locked,
+			&trx_lock_structs,
+			&trx_lock_memory_bytes,
+			&trx_rows_locked,
+			&trx_rows_modified,
+			&trx_concurrency_tickets,
+			&trx_isolation_level,
+			&trx_unique_checks,
+			&trx_foreign_key_checks,
+			&trx_last_foreign_key_error,
+			&trx_adaptive_hash_latched,
+			&trx_adaptive_hash_timeout,
+			&trx_is_read_only,
+			&trx_autocommit_non_locking,
+			&countnum,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["id"] = ID
+		fields["user"] = USER
+		fields["host"] = HOST
+		fields["db"] = DB
+		fields["command"] = COMMAND
+		fields["time"] = TIME
+		fields["state"] = STATE
+		fields["info"] = INFO
+		fields["trx_id"] = trx_id
+		fields["trx_state"] = trx_state
+		fields["trx_started"] = trx_started
+		fields["trx_requested_lock_id"] = trx_requested_lock_id
+		fields["trx_wait_started"] = trx_wait_started
+		fields["trx_weight"] = trx_weight
+		fields["trx_mysql_thread_id"] = trx_mysql_thread_id
+		fields["trx_query"] = trx_query
+		fields["trx_operation_state"] = trx_operation_state
+		fields["trx_tables_in_use"] = trx_tables_in_use
+		fields["trx_tables_locked"] = trx_tables_locked
+		fields["trx_lock_structs"] = trx_lock_structs
+		fields["trx_lock_memory_bytes"] = trx_lock_memory_bytes
+		fields["trx_rows_locked"] = trx_rows_locked
+		fields["trx_rows_modified"] = trx_rows_modified
+		fields["trx_concurrency_tickets"] = trx_concurrency_tickets
+		fields["trx_isolation_level"] = trx_isolation_level
+		fields["trx_unique_checks"] = trx_unique_checks
+		fields["trx_foreign_key_checks"] = trx_foreign_key_checks
+		fields["trx_last_foreign_key_error"] = trx_last_foreign_key_error
+		fields["trx_adaptive_hash_latched"] = trx_adaptive_hash_latched
+		fields["trx_adaptive_hash_timeout"] = trx_adaptive_hash_timeout
+		fields["trx_is_read_only"] = trx_is_read_only
+		fields["trx_autocommit_non_locking"] = trx_autocommit_non_locking
+		fields["countnum"] = countnum
+
+		acc.AddFields("mysql_innodb_blocking_trx_id", fields, tags)
+	}
+
+	////////////////////////////////innodb_lock_waits
+	//获取到innodb事务锁冲突锁信息,用于分析行所锁原因
+	//select * from information_schema.innodb_locks;
+	// +-------------+-------------+-----------+-----------+-------------+------------+------------+-----------+----------+-----------+
+	// | lock_id     | lock_trx_id | lock_mode | lock_type | lock_table  | lock_index | lock_space | lock_page | lock_rec | lock_data |
+	// +-------------+-------------+-----------+-----------+-------------+------------+------------+-----------+----------+-----------+
+	// | 7397:54:3:2 | 7397        | X         | RECORD    | `test`.`t1` | PRIMARY    |         54 |         3 |        2 | 1         |
+	// | 7396:54:3:2 | 7396        | X         | RECORD    | `test`.`t1` | PRIMARY    |         54 |         3 |        2 | 1         |
+	// +-------------+-------------+-----------+-----------+-------------+------------+------------+-----------+----------+-----------+
+
+	innodb_lock_waits_rows, err := db.Query("select * from information_schema.innodb_locks")
+
+	if err != nil {
+		return err
+	}
+	defer innodb_lock_waits_rows.Close()
+
+	for innodb_lock_waits_rows.Next() {
+		var lock_id string
+		var lock_trx_id int64
+		var lock_mode string
+		var lock_type string
+		var lock_table string
+		var lock_index string
+		var lock_space int64
+		var lock_page int64
+		var lock_rec int64
+		var lock_data int64
+
+		err = innodb_lock_waits_rows.Scan(&lock_id, &lock_trx_id, &lock_mode, &lock_type, &lock_table, &lock_index, &lock_space, &lock_page, &lock_rec, &lock_data)
+
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["lock_id"] = lock_id
+		fields["lock_trx_id"] = lock_trx_id
+		fields["lock_mode"] = lock_mode
+		fields["lock_type"] = lock_type
+		fields["lock_table"] = lock_table
+		fields["lock_index"] = lock_index
+		fields["lock_space"] = lock_space
+		fields["lock_page"] = lock_page
+		fields["lock_rec"] = lock_rec
+		fields["lock_data"] = lock_data
+
+		acc.AddFields("mysql_innodb_lock_waits", fields, tags)
+	}
+
+	////////////////////////////////innodb_locks_count
+	//仅获取到innodb事务锁冲突的会话id，会话持续时间，以及一共阻塞了多少事务，用于告警使用
+	//select * from information_schema.innodb_locks;
+	// +-------+------+----------+
+	// | id    | time | countnum |
+	// +-------+------+----------+
+	// | 62859 |    3 |        1 |
+	// +-------+------+----------+
+
+	innodb_locks_counts_row, err := db.Query(`select a1.id,a1.time,a2.countnum
+						 from information_schema.processlist a1
+						 join
+						 (select blocking_trx_id, trx_mysql_thread_id,count(blocking_trx_id) as countnum
+						 from (
+								 select a.trx_id,a.trx_state,b.requesting_trx_id,b.blocking_trx_id,a.trx_mysql_thread_id
+								 from information_schema.innodb_lock_waits as  b
+								 left join information_schema.innodb_trx as a
+								 on a.trx_id=b.requesting_trx_id) as t1
+								 group by blocking_trx_id,trx_mysql_thread_id
+								 order by countnum  desc
+								 limit 1
+						 ) a2
+						 on a1.id=a2.trx_mysql_thread_id
+						 join
+						 information_schema.innodb_trx a3
+						 on a2.blocking_trx_id = a3.trx_id
+						 `)
+
+	if err != nil {
+		return err
+	}
+	defer innodb_locks_counts_row.Close()
+
+	for innodb_locks_counts_row.Next() {
+		var id int64
+		var time int64
+		var countnum int64
+
+		err = innodb_locks_counts_row.Scan(&id, &time, &countnum)
+
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["id"] = id
+		fields["time"] = time
+		fields["countnum"] = countnum
+
+		acc.AddFields("mysql_innodb_locks_counts", fields, tags)
+	}
+
+	////////////////////////////////LATEST DETECTED DEADLOCK
+	//获取到死锁信息,用于分析行死锁原因
+	//show engine innodb status;
+	//| Type   | Name | Status|
+	//| InnoDB |			| xxxx	|
+	innodb_status_rows, err := db.Query("show engine innodb status")
+
+	if err != nil {
+		return err
+	}
+	defer innodb_status_rows.Close()
+
+	for innodb_status_rows.Next() {
+		var Type string
+		var Name string
+		var Status string
+
+		err = innodb_status_rows.Scan(&Type, &Name, &Status)
+
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["type"] = Type
+		fields["name"] = Name
+		fields["status"] = Status
+
+		acc.AddFields("mysql_innodb_status", fields, tags)
+	}
+
+	////////////////////////////////LATEST DETECTED DEADLOCK
+	//判断当前是否存在死锁，用于告警
+	dead_lock_rows, err := db.Query("show engine innodb status")
+
+	if err != nil {
+		return err
+	}
+	defer dead_lock_rows.Close()
+
+	for dead_lock_rows.Next() {
+		var Type string
+		var Name string
+		var Status string
+		var deadlock int64
+
+		err = dead_lock_rows.Scan(&Type, &Name, &Status)
+
+		if err != nil {
+			return err
+		}
+
+		// 如果不包含字符串“LATEST DETECTED DEADLOCK”说明 不存在死锁，否则存在死锁
+		if strings.Index(Status, "LATEST DETECTED DEADLOCK") == -1 {
+			deadlock = 0
+		} else {
+			deadlock = 1
+		}
+
+		tags := map[string]string{"server": servtag}
+		fields := make(map[string]interface{})
+
+		fields["deadlock"] = deadlock
+
+		acc.AddFields("mysql_dead_lock_rows", fields, tags)
+		break
+	}
+
 	return nil
 }
 
