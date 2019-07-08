@@ -703,6 +703,29 @@ func TestDockerGatherInfo(t *testing.T) {
 	)
 
 	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"memory_total": int64(3840757760),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"pool_blocksize": int64(65540),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
 		"docker_data",
 		map[string]interface{}{
 			"used":      int64(17300000000),
@@ -710,11 +733,26 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit":           "bytes",
 			"engine_host":    "absol",
 			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
 		},
 	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_metadata",
+		map[string]interface{}{
+			"used":      int64(20970000),
+			"total":     int64(2146999999),
+			"available": int64(2126999999),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
 	acc.AssertContainsTaggedFields(t,
 		"docker_container_cpu",
 		map[string]interface{}{
