@@ -343,6 +343,11 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 				map[string]interface{}{"pool_blocksize": value},
 				tags,
 				now)
+		} else if name == "thin_pool_minimum_free_space" {
+			acc.AddFields("docker_thin_pool",
+				map[string]interface{}{"minimum_free_space": value},
+				tags,
+				now)
 		} else if strings.HasPrefix(name, "data_space_") {
 			// data space
 			fieldName := strings.TrimPrefix(name, "data_space_")

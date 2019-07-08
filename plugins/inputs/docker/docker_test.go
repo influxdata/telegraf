@@ -754,7 +754,7 @@ func TestDockerGatherInfo(t *testing.T) {
 	)
 
 	acc.AssertContainsTaggedFields(t,
-		"docker_thinpool",
+		"docker_thin_pool",
 		map[string]interface{}{
 			"minimum_free_space": int64(10740000000),
 		},
