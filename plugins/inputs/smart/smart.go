@@ -405,7 +405,7 @@ func parseInt(str string) int64 {
 	return 0
 }
 
-func parseCommaSeperatedInt(fields, deviceFields map[string]interface{}, str string) error {
+func parseCommaSeperatedInt(fields, _ map[string]interface{}, str string) error {
 	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
 	if err != nil {
 		return err
