@@ -138,6 +138,10 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 }
 
 func parseDataDogTags(tags map[string]string, message string) {
+	if len(message) == 0 {
+		return
+	}
+
 	start, i := 0, 0
 	var k string
 	var inVal bool // check if we are parsing the value part of the tag
