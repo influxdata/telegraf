@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/influxdata/tail"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -213,9 +212,6 @@ func (t *Tail) Stop() {
 		}
 	}
 
-	for _, tailer := range t.tailers {
-		tailer.Cleanup()
-	}
 	t.wg.Wait()
 }
 
