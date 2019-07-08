@@ -21,9 +21,9 @@ type Openldap struct {
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string
-	SearchBase	   string `toml:"searchBase"`
-	RetAttr		   string
-	Filter		   string
+	SearchBase         string `toml:"searchBase"`
+	RetAttr            string
+	Filter             string
 }
 
 const sampleConfig string = `
@@ -65,7 +65,6 @@ func (o *Openldap) Description() string {
 	return "LDAP Count by Org plugin"
 }
 
-
 // return an initialized Openldap
 func NewOpenldap() *Openldap {
 	return &Openldap{
@@ -78,9 +77,9 @@ func NewOpenldap() *Openldap {
 		TLSCA:              "",
 		BindDn:             "",
 		BindPassword:       "",
-        	SearchBase:         "",
-        	RetAttr:            "",
-		Filter:		    "",
+		SearchBase:         "",
+		RetAttr:            "",
+		Filter:             "",
 	}
 }
 
@@ -143,7 +142,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var searchFilter = fmt.Sprintf("(%s=*)", o.RetAttr)
-	var searchAttrs = []string{ o.RetAttr }
+	var searchAttrs = []string{o.RetAttr}
 	metrics := make(map[string]int)
 
 	searchRequest := ldap.NewSearchRequest(
@@ -175,23 +174,22 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 			0,
 			false,
 			o.Filter,
-			[]string{ "dn" },
+			[]string{"dn"},
 			nil,
 		)
-		
+
 		second_sr, err := l.Search(secondSearchRequest)
 		if err != nil {
 			acc.AddError(err)
 			return nil
 		}
-		
+
 		metrics[metric_name] = len(second_sr.Entries)
 	}
 
 	gatherSearchResult(metrics, o, acc)
 	return nil
 }
-
 
 func gatherSearchResult(measures map[string]int, o *Openldap, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{}
@@ -207,7 +205,6 @@ func gatherSearchResult(measures map[string]int, o *Openldap, acc telegraf.Accum
 	acc.AddFields("ldap_org", fields, tags)
 	return
 }
-
 
 func init() {
 	inputs.Add("ldap_org", func() telegraf.Input { return NewOpenldap() })

@@ -22,7 +22,7 @@ type Openldap struct {
 	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string
-	Status		   bool
+	Status             bool
 }
 
 const sampleConfig string = `
@@ -72,7 +72,7 @@ func NewOpenldap() *Openldap {
 		TLSCA:              "",
 		BindDn:             "",
 		BindPassword:       "",
-		Status:	            false,
+		Status:             false,
 	}
 }
 
@@ -168,7 +168,7 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 			if attr.Name == "version" {
 				tags[attr.Name] = attr.Values[0]
 			}
-			if (attr.Name == "connection" && o.Status) {
+			if attr.Name == "connection" && o.Status {
 				for _, thisAttr := range attr.Values {
 					elements := strings.Split(thisAttr, ":")
 					if fd, err := strconv.ParseInt(elements[0], 10, 64); err == nil {
@@ -178,7 +178,7 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 						conn_opscompleted := fmt.Sprintf("%s.%s", conn, "opscompleted")
 						conn_rw := fmt.Sprintf("%s.%s", conn, "rw")
 						conn_binddn := fmt.Sprintf("%s.%s", conn, "binddn")
-					
+
 						fields[conn_opentime] = elements[1]
 						fields[conn_opsinitiated], err = strconv.ParseInt(elements[2], 10, 64)
 						fields[conn_opscompleted], err = strconv.ParseInt(elements[3], 10, 64)
@@ -191,7 +191,7 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 					}
 				}
 			}
-					
+
 			if len(attr.Values[0]) >= 1 {
 				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
 					fields[attr.Name] = v
