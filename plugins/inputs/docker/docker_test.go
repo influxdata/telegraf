@@ -754,6 +754,18 @@ func TestDockerGatherInfo(t *testing.T) {
 	)
 
 	acc.AssertContainsTaggedFields(t,
+		"docker_thinpool",
+		map[string]interface{}{
+			"minimum_free_space": int64(10740000000),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
 		"docker_container_cpu",
 		map[string]interface{}{
 			"usage_total":  uint64(1231652),
