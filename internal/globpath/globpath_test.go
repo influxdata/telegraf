@@ -87,3 +87,14 @@ func TestMatch_ErrPermission(t *testing.T) {
 		require.Equal(t, test.expected, actual)
 	}
 }
+
+func TestWindowsSeparator(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows only test")
+	}
+
+	glob, err := Compile("testdata/nested1")
+	require.NoError(t, err)
+	ok := glob.MatchString("testdata\\nested1")
+	require.True(t, ok)
+}
