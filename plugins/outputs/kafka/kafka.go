@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/Shopify/sarama"
@@ -205,6 +206,7 @@ func (k *Kafka) Connect() error {
 		return err
 	}
 	config := sarama.NewConfig()
+	sarama.Logger = log.New(os.Stderr, "[Sarama] ", log.LstdFlags)
 
 	if k.Version != "" {
 		version, err := sarama.ParseKafkaVersion(k.Version)
