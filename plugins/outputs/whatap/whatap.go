@@ -37,8 +37,8 @@ type Whatap struct {
 }
 
 type TcpSession struct {
-	client net.Conn
-	dest   int
+	Client net.Conn
+	Dest   int
 }
 
 var sampleConfig = `
@@ -63,32 +63,32 @@ var sampleConfig = `
 `
 
 func (w *Whatap) Connect() error {
-	log.Println("WhaTap. Connect.")
+	log.Println("[outputs.whatap] Connect")
 	hosts := strings.Split(w.Server, "/")
-	w.Session.dest += 1
-	if w.Session.dest >= len(hosts) {
-		w.Session.dest = 0
+	w.Session.Dest += 1
+	if w.Session.Dest >= len(hosts) {
+		w.Session.Dest = 0
 	}
-	addr := fmt.Sprintf("%s:%d", hosts[w.Session.dest], w.Port)
+	addr := fmt.Sprintf("%s:%d", hosts[w.Session.Dest], w.Port)
 	t := w.Timeout * time.Millisecond
 	if client, err := net.DialTimeout("tcp", addr, t); err != nil {
-		//w.Close()
 		return err
 	} else {
-		w.Session.client = client
-		log.Println("WhaTap. connected TCP to ", addr)
+		w.Session.Client = client.(*net.TCPConn)
+		log.Println("[outputs.whatap] Connected tcp to ", addr)
 	}
+
 	return nil
 
 }
 
 func (w *Whatap) Close() error {
-	log.Println("WhaTap. Closed.")
-	if w.Session.client == nil {
+	log.Println("[outputs.whatap] Closed")
+	if w.Session.Client == nil {
 		return nil
 	}
-	err := w.Session.client.Close()
-	w.Session.client = nil
+	err := w.Session.Client.Close()
+	w.Session.Client = nil
 	return err
 }
 
@@ -101,18 +101,17 @@ func (w *Whatap) SampleConfig() string {
 }
 
 func (w *Whatap) Write(metrics []telegraf.Metric) error {
+	log.Println("[outputs.whatap] Write len=", len(metrics))
 	if len(metrics) == 0 {
 		return nil
 	}
-	if w.Session.client == nil {
+	if w.Session.Client == nil {
 		if err := w.Connect(); err != nil {
 			w.Close()
 			return err
 		}
 	}
 	for _, m := range metrics {
-		log.Println("WhaTap", " name=", m.Name(), "hash=", m.HashID(),
-			",time=", m.Time().UnixNano()/int64(time.Millisecond))
 		p := NewTagCountPack()
 		p.Pcode = w.Pcode
 		p.Oid = w.Oid
@@ -141,7 +140,7 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 func (w *Whatap) send(code byte, b []byte) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("Recover send: %s", r)
+			err = fmt.Errorf("Recover Whatap: %s", r)
 		}
 	}()
 
@@ -159,18 +158,19 @@ func (w *Whatap) send(code byte, b []byte) (err error) {
 	pos := 0
 	for 0 < nbyteleft {
 		nbytethistime := 0
-		nbytethistime, err = w.Session.client.Write(sendbuf[pos : pos+nbyteleft])
+		// Set Deadline
+		err = w.Session.Client.SetWriteDeadline(time.Now().Add(5 * time.Millisecond))
 		if err != nil {
-			if err, ok := err.(net.Error); !ok || !err.Temporary() {
-				log.Println("WhaTap. TCP socket error:", err) //, string(debug.Stack()))
-				w.Close()
-				return err
-			}
+			log.Println("[outputs.whatap] cannot set tcp write deadline:", err)
+		}
+		nbytethistime, err = w.Session.Client.Write(sendbuf[pos : pos+nbyteleft])
+		if err != nil {
+			w.Close()
+			return err
 		}
 		nbyteleft -= nbytethistime
 		pos += nbytethistime
 	}
-	//log.Println("WhaTap", "Send pcode=", w.Pcode, ", oid=", w.Oid, ", len=", len(sendbuf))
 	return err
 
 }
