@@ -63,7 +63,7 @@ var sampleConfig = `
 `
 
 func (w *Whatap) Connect() error {
-	log.Println("[outputs.whatap] Connect")
+	//log.Println("[outputs.whatap] Connect")
 	hosts := strings.Split(w.Server, "/")
 	w.Session.Dest += 1
 	if w.Session.Dest >= len(hosts) {
@@ -83,7 +83,7 @@ func (w *Whatap) Connect() error {
 }
 
 func (w *Whatap) Close() error {
-	log.Println("[outputs.whatap] Closed")
+	//log.Println("[outputs.whatap] Closed")
 	if w.Session.Client == nil {
 		return nil
 	}
@@ -101,7 +101,7 @@ func (w *Whatap) SampleConfig() string {
 }
 
 func (w *Whatap) Write(metrics []telegraf.Metric) error {
-	log.Println("[outputs.whatap] Write len=", len(metrics))
+	//log.Println("[outputs.whatap] Write len=", len(metrics))
 	if len(metrics) == 0 {
 		return nil
 	}
