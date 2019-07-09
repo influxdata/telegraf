@@ -37,7 +37,7 @@ var (
 	smartOverallHealth = regexp.MustCompile("^(SMART overall-health self-assessment test result|SMART Health Status):\\s+(\\w+).*$")
 
 	// sasNvmeAttr is a SAS or NVME SMART attribute
-	sasNvmeAttr = regexp.MustCompile(`^([^:]*):\s+(.*)$`)
+	sasNvmeAttr = regexp.MustCompile(`^([^:]+):\s+(.+)$`)
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
@@ -93,11 +93,7 @@ var (
 		"Available Spare": {
 			Name: "Available_Spare",
 			Parse: func(fields, deviceFields map[string]interface{}, str string) error {
-				if str[len(str)-1] == '%' {
-					str = str[:len(str)-1]
-				}
-
-				return parseCommaSeperatedInt(fields, deviceFields, str)
+				return parseCommaSeperatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
 			},
 		},
 	}
