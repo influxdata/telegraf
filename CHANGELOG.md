@@ -1,3 +1,9 @@
+## v1.11.3 [unreleased]
+
+#### Bugfixes
+
+- [#6054](https://github.com/influxdata/telegraf/issues/6054): Fix unable to reconnect after vCenter reboot in vsphere input.
+
 ## v1.11.2 [2019-07-09]
 
 #### Bugfixes
