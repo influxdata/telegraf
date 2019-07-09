@@ -754,14 +754,21 @@ func TestDockerGatherInfo(t *testing.T) {
 	)
 
 	acc.AssertContainsTaggedFields(t,
-		"docker_thin_pool",
+		"docker_devicemapper",
 		map[string]interface{}{
-			"minimum_free_space": int64(10740000000),
+			"pool_blocksize_bytes":               int64(65540),
+			"data_space_used_bytes":              int64(17300000000),
+			"data_space_total_bytes":             int64(107400000000),
+			"data_space_available_bytes":         int64(36530000000),
+			"metadata_space_used_bytes":          int64(20970000),
+			"metadata_space_total_bytes":         int64(2146999999),
+			"metadata_space_available_bytes":     int64(2126999999),
+			"thin_pool_minimum_free_space_bytes": int64(10740000000),
 		},
 		map[string]string{
 			"engine_host":    "absol",
 			"server_version": "17.09.0-ce",
-			"unit":           "bytes",
+			"pool_name":      "docker-8:1-1182287-pool",
 		},
 	)
 
