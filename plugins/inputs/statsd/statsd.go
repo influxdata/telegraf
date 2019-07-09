@@ -55,7 +55,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []int
+	Percentiles     []internal.Number
 	PercentileLimit int
 
 	DeleteGauges   bool
@@ -217,7 +217,7 @@ const sampleConfig = `
   delete_timings = true
 
   ## Percentiles to calculate for timing & histogram stats
-  percentiles = [90]
+  percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
 
   ## separator to use between elements of a statsd metric
   metric_separator = "_"
@@ -271,8 +271,8 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			fields[prefix+"lower"] = stats.Lower()
 			fields[prefix+"count"] = stats.Count()
 			for _, percentile := range s.Percentiles {
-				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
-				fields[name] = stats.Percentile(percentile)
+				name := fmt.Sprintf("%s%v_percentile", prefix, percentile.Value)
+				fields[name] = stats.Percentile(percentile.Value)
 			}
 		}
 
