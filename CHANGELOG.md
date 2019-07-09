@@ -47,6 +47,10 @@
 
 - [#6056](https://github.com/influxdata/telegraf/pull/6056): Fix source address ping flag on BSD.
 - [#6059](https://github.com/influxdata/telegraf/issues/6059): Fix value out of range error on 32-bit systems in bind input.
+- [#3573](https://github.com/influxdata/telegraf/issues/3573): Fix tail and logparser stop working after reload.
+- [#6077](https://github.com/influxdata/telegraf/pull/6077): Fix filecount path separator handling in Windows.
+- [#6075](https://github.com/influxdata/telegraf/issues/6075): Fix panic with empty datadog tag string.
+- [#6069](https://github.com/influxdata/telegraf/issues/6069): Apply topic filter to partition metrics in burrow input.
 
 ## v1.11.1 [2019-06-25]
 
