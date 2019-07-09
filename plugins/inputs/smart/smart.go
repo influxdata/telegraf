@@ -18,6 +18,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	// NVME Critical Warnings as per https://nvmexpress.org
+	// critical warning spare threshold
+	criticalWarningST uint8 = 1 << iota
+	// critical warning temperature above or under threshold
+	criticalWarningTAUT
+	// critical warning reliability degraded
+	criticalWarningRD
+	// critical warning read only
+	criticalWarningRO
+	// critical warning volatile backup memory failed
+	criticalWarningVMBF
+)
+
 var (
 	// Device Model:     APPLE SSD SM256E
 	// Product:              HUH721212AL5204
@@ -51,6 +65,14 @@ var (
 		"190": "temp_c",
 		"194": "temp_c",
 		"199": "udma_crc_errors",
+	}
+
+	nvmeCriticalWarnings = map[uint8]string{
+		criticalWarningST:   "Critical_Warning_Spare_Treshold",
+		criticalWarningTAUT: "Critical_Warning_Temperature_Above_or_Under_Threshold",
+		criticalWarningRD:   "Critical_Warning_Reliability_Degraded",
+		criticalWarningRO:   "Critical_Warning_Read_Only",
+		criticalWarningVMBF: "Critical_Warning_Volative_Memory_Backup_Failed",
 	}
 
 	sasNvmeAttributes = map[string]struct {
@@ -336,6 +358,23 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		} else {
 			if collectAttributes {
 				if matches := sasNvmeAttr.FindStringSubmatch(line); len(matches) > 2 {
+					if matches[1] == "Critical Warning" {
+						var flags uint8
+						if _, err := fmt.Sscanf(matches[2], "0x%x", &flags); err != nil {
+							continue
+						}
+
+						for flag, name := range nvmeCriticalWarnings {
+							tags["name"] = name
+
+							acc.AddFields("smart_attribute", map[string]interface{}{
+								"raw_value": flags&flag > 0,
+							}, tags)
+						}
+
+						continue
+					}
+
 					if attr, ok := sasNvmeAttributes[matches[1]]; ok {
 						tags["name"] = attr.Name
 						if attr.ID != "" {
