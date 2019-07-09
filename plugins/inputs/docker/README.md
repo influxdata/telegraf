@@ -117,12 +117,12 @@ may prefer to exclude them:
     - n_goroutines
     - n_listener_events
     - memory_total
-    - pool_blocksize (requires devicemapper storage driver)
+    - pool_blocksize (requires devicemapper storage driver) (deprecated see: `docker_devicemapper`)
 
 The `docker_data` and `docker_metadata` measurements are available only for
 some storage drivers such as devicemapper.
 
-- docker_data
+- docker_data (deprecated see: `docker_devicemapper`)
   - tags:
     - unit
     - engine_host
@@ -132,7 +132,7 @@ some storage drivers such as devicemapper.
     - total
     - used
 
-- docker_metadata
+- docker_metadata (deprecated see: `docker_devicemapper`)
   - tags:
     - unit
     - engine_host
@@ -141,6 +141,23 @@ some storage drivers such as devicemapper.
     - available
     - total
     - used
+
+The above measurements for the devicemapper storage driver can now be found in the new `docker_devicemapper` measurement
+
+- docker_devicemapper
+  - tags:
+    - engine_host
+    - server_version
+    - pool_name
+  - fields:
+    - pool_blocksize_bytes
+    - data_space_used_bytes
+    - data_space_total_bytes
+    - data_space_available_bytes
+    - metadata_space_used_bytes
+    - metadata_space_total_bytes
+    - metadata_space_available_bytes
+    - thin_pool_minimum_free_space_bytes
 
 - docker_container_mem
   - tags:
