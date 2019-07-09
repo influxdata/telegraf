@@ -46,6 +46,7 @@
 #### Bugfixes
 
 - [#6054](https://github.com/influxdata/telegraf/issues/6054): Fix unable to reconnect after vCenter reboot in vsphere input.
+- [#6073](https://github.com/influxdata/telegraf/issues/6073): Handle unknown error in nvidia-smi output.
 
 ## v1.11.2 [2019-07-09]
 
