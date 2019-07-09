@@ -529,6 +529,61 @@ func TestGatherNvme(t *testing.T) {
 			},
 			time.Now(),
 		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Critical_Warning_Spare_Treshold",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": true,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Critical_Warning_Temperature_Above_or_Under_Threshold",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": false,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Critical_Warning_Reliability_Degraded",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": false,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Critical_Warning_Read_Only",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": true,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Critical_Warning_Volative_Memory_Backup_Failed",
+				"serial_no": "D704940282?",
+			},
+			map[string]interface{}{
+				"raw_value": false,
+			},
+			time.Now(),
+		),
 	}
 
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
@@ -967,7 +1022,7 @@ Local Time is: Fri Jun 15 11:41:35 2018 UTC
 SMART overall-health self-assessment test result: PASSED
 
 SMART/Health Information (NVMe Log 0x02, NSID 0xffffffff)
-Critical Warning: 0x00
+Critical Warning: 0x09
 Temperature: 38 Celsius
 Available Spare: 100%
 Available Spare Threshold: 10%
