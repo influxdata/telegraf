@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/tail"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -31,6 +32,7 @@ type Tail struct {
 	WatchMethod   string
 
 	tailers    map[string]*tail.Tail
+	offsets    map[string]int64
 	parserFunc parsers.ParserFunc
 	wg         sync.WaitGroup
 	acc        telegraf.Accumulator
@@ -39,8 +41,16 @@ type Tail struct {
 }
 
 func NewTail() *Tail {
+	offsetsMutex.Lock()
+	offsetsCopy := make(map[string]int64, len(offsets))
+	for k, v := range offsets {
+		offsetsCopy[k] = v
+	}
+	offsetsMutex.Unlock()
+
 	return &Tail{
 		FromBeginning: false,
+		offsets:       offsetsCopy,
 	}
 }
 
@@ -92,14 +102,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	t.acc = acc
 	t.tailers = make(map[string]*tail.Tail)
 
-	err := t.tailNewFiles(t.FromBeginning)
-
-	// clear resume offsets after starting
-	offsetsMutex.Lock()
-	offsets = make(map[string]int64)
-	offsetsMutex.Unlock()
-
-	return err
+	return t.tailNewFiles(t.FromBeginning)
 }
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {
@@ -108,14 +111,11 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 		poll = true
 	}
 
-	offsetsMutex.Lock()
-	defer offsetsMutex.Unlock()
-
 	// Create a "tailer" for each file
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("E! Error Glob %s failed to compile, %s", filepath, err))
+			t.acc.AddError(fmt.Errorf("glob %s failed to compile, %s", filepath, err))
 		}
 		for _, file := range g.Match() {
 			if _, ok := t.tailers[file]; ok {
@@ -125,7 +125,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 			var seek *tail.SeekInfo
 			if !t.Pipe && !fromBeginning {
-				if offset, ok := offsets[file]; ok {
+				if offset, ok := t.offsets[file]; ok {
 					log.Printf("D! [inputs.tail] using offset %d for file: %v", offset, file)
 					seek = &tail.SeekInfo{
 						Whence: 0,
@@ -182,8 +182,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	var line *tail.Line
 	for line = range tailer.Lines {
 		if line.Err != nil {
-			t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
-				tailer.Filename, err))
+			t.acc.AddError(fmt.Errorf("error tailing file %s, Error: %s", tailer.Filename, err))
 			continue
 		}
 		// Fix up files with Windows line endings.
@@ -211,7 +210,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 				t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
 		} else {
-			t.acc.AddError(fmt.Errorf("E! Malformed log line in %s: [%s], Error: %s\n",
+			t.acc.AddError(fmt.Errorf("malformed log line in %s: [%s], Error: %s",
 				tailer.Filename, line.Text, err))
 		}
 	}
@@ -219,8 +218,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	log.Printf("D! [inputs.tail] tail removed for file: %v", tailer.Filename)
 
 	if err := tailer.Err(); err != nil {
-		t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
-			tailer.Filename, err))
+		t.acc.AddError(fmt.Errorf("error tailing file %s, Error: %s", tailer.Filename, err))
 	}
 }
 
@@ -228,27 +226,30 @@ func (t *Tail) Stop() {
 	t.Lock()
 	defer t.Unlock()
 
-	offsetsMutex.Lock()
-	defer offsetsMutex.Unlock()
-
 	for _, tailer := range t.tailers {
 		if !t.Pipe && !t.FromBeginning {
 			// store offset for resume
 			offset, err := tailer.Tell()
 			if err == nil {
-				offsets[tailer.Filename] = offset
 				log.Printf("D! [inputs.tail] recording offset %d for file: %v", offset, tailer.Filename)
 			} else {
-				t.acc.AddError(fmt.Errorf("E! Error recording offset for file %s\n", tailer.Filename))
+				t.acc.AddError(fmt.Errorf("error recording offset for file %s", tailer.Filename))
 			}
 		}
 		err := tailer.Stop()
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("E! Error stopping tail on file %s\n", tailer.Filename))
+			t.acc.AddError(fmt.Errorf("error stopping tail on file %s", tailer.Filename))
 		}
 	}
 
 	t.wg.Wait()
+
+	// persist offsets
+	offsetsMutex.Lock()
+	for k, v := range t.offsets {
+		offsets[k] = v
+	}
+	offsetsMutex.Unlock()
 }
 
 func (t *Tail) SetParserFunc(fn parsers.ParserFunc) {
