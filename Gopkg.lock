@@ -270,14 +270,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7fdc54859cd901c25b9d8db964410a4e0d98fa0dca267fe4cf49c0eede5e06c2"
+  digest = "1:44330613a423ea575a90180ee9bf6f49de87df42725488764da71e18865c1469"
   name = "github.com/denisenkom/go-mssqldb"
   packages = [
     ".",
     "internal/cp",
   ]
   pruneopts = ""
-  revision = "1eb28afdf9b6e56cf673badd47545f844fe81103"
+  revision = "2be1aa521ff4499e74b7861a2779ba1e96e3e2c5"
 
 [[projects]]
   digest = "1:6098222470fe0172157ce9bbef5d2200df4edde17ee649c5d6e48330e4afa4c6"
