@@ -59,3 +59,7 @@ nvidia_smi,compute_mode=Default,host=8218cf,index=0,name=GeForce\ GTX\ 1070,psta
 nvidia_smi,compute_mode=Default,host=8218cf,index=1,name=GeForce\ GTX\ 1080,pstate=P2,uuid=GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665 fan_speed=100i,memory_free=7557i,memory_total=8114i,memory_used=557i,temperature_gpu=50i,utilization_gpu=100i,utilization_memory=85i 1523991122000000000
 nvidia_smi,compute_mode=Default,host=8218cf,index=2,name=GeForce\ GTX\ 1080,pstate=P2,uuid=GPU-d4cfc28d-0481-8d07-b81a-ddfc63d74adf fan_speed=100i,memory_free=7557i,memory_total=8114i,memory_used=557i,temperature_gpu=58i,utilization_gpu=100i,utilization_memory=86i 1523991122000000000
 ```
+
+### Limitations
+Note that there seems to be an issue with getting current memory clock values when the memory is overclocked.
+This may or may not apply to everyone but it's confirmed to be an issue on an EVGA 2080 Ti.
