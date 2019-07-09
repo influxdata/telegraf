@@ -32,6 +32,7 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
 
   ## Container states to include and exclude. Globs accepted.
   ## When empty only containers in the "running" state will be captured.
+  ## example: container_state_include = ["running", "exited", "paused"]
   # container_state_include = []
   # container_state_exclude = []
 
