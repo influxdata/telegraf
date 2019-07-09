@@ -31,9 +31,10 @@
 - [#5996](https://github.com/influxdata/telegraf/pull/5996): Add container uptime_ns in docker input plugin.
 - [#6016](https://github.com/influxdata/telegraf/pull/6016): Add better user-facing errors for API timeouts in docker input.
 - [#6027](https://github.com/influxdata/telegraf/pull/6027): Add TLS mutal auth support to jti_openconfig_telemetry input.
-- [#6053](https://github.com/influxdata/telegraf/pull/6053): Add support for ES 7.x to elasticsearch output
-- [#6062](https://github.com/influxdata/telegraf/pull/6062): Add basic auth to prometheus input plugin
-- [#6064](https://github.com/influxdata/telegraf/pull/6064): Add node roles tag to elasticsearch input
+- [#6053](https://github.com/influxdata/telegraf/pull/6053): Add support for ES 7.x to elasticsearch output.
+- [#6062](https://github.com/influxdata/telegraf/pull/6062): Add basic auth to prometheus input plugin.
+- [#6064](https://github.com/influxdata/telegraf/pull/6064): Add node roles tag to elasticsearch input.
+- [#5572](https://github.com/influxdata/telegraf/pull/5572): Support floats in statsd percentiles.
 
 #### Bugfixes
 
