@@ -42,3 +42,10 @@ func TestParseLineNotSupported(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, nil, fields["fan_speed"])
 }
+
+func TestParseLineUnknownError(t *testing.T) {
+	line := "[Unknown Error], 11264, 1074, 10190, P8, 32, GeForce RTX 2080 Ti, GPU-c97b7f88-c06d-650f-5339-f8dd0c1315c0, Default, 1, 4, 0, 24.33, 1, 16, 0, 0, 0, 300, 300, 405, 540\n"
+	_, fields, err := parseLine(line)
+	require.NoError(t, err)
+	require.Equal(t, nil, fields["fan_speed"])
+}
