@@ -99,7 +99,7 @@ func (rs *RunningStats) Count() int64 {
 	return rs.n
 }
 
-func (rs *RunningStats) Percentile(n int) float64 {
+func (rs *RunningStats) Percentile(n float64) float64 {
 	if n > 100 {
 		n = 100
 	}
@@ -109,16 +109,16 @@ func (rs *RunningStats) Percentile(n int) float64 {
 		rs.sorted = true
 	}
 
-	i := int(float64(len(rs.perc)) * float64(n) / float64(100))
+	i := float64(len(rs.perc)) * n / float64(100)
 	return rs.perc[clamp(i, 0, len(rs.perc)-1)]
 }
 
-func clamp(i int, min int, max int) int {
-	if i < min {
+func clamp(i float64, min int, max int) int {
+	if i < float64(min) {
 		return min
 	}
-	if i > max {
+	if i > float64(max) {
 		return max
 	}
-	return i
+	return int(i)
 }
