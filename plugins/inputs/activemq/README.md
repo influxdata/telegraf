@@ -1,4 +1,4 @@
-# Telegraf Input Plugin: ActiveMQ
+# ActiveMQ Input Plugin
 
 This plugin gather queues, topics & subscribers metrics using ActiveMQ Console API.
 
@@ -7,12 +7,14 @@ This plugin gather queues, topics & subscribers metrics using ActiveMQ Console A
 ```toml
 # Description
 [[inputs.activemq]]
-  ## Required ActiveMQ Endpoint
-  # server = "192.168.50.10"
+  ## ActiveMQ WebConsole URL
+  url = "http://127.0.0.1:8161"
 
-  ## Required ActiveMQ port
+  ## Required ActiveMQ Endpoint
+  ##   deprecated in 1.11; use the url option
+  # server = "192.168.50.10"
   # port = 8161
-  
+
   ## Credentials for basic HTTP authentication
   # username = "admin"
   # password = "admin"
@@ -22,46 +24,41 @@ This plugin gather queues, topics & subscribers metrics using ActiveMQ Console A
 
   ## Maximum time to receive response.
   # response_timeout = "5s"
-  
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
-### Measurements & Fields:
+### Metrics
 
 Every effort was made to preserve the names based on the XML response from the ActiveMQ Console API.
 
-- activemq_queues:
+- activemq_queues
+  - tags:
+    - name
+    - source
+    - port
+  - fields:
     - size
     - consumer_count
     - enqueue_count
     - dequeue_count
-  - activemq_topics:
++ activemq_topics
+  - tags:
+    - name
+    - source
+    - port
+  - fields:
     - size
     - consumer_count
     - enqueue_count
     - dequeue_count
-  - subscribers_metrics:
-    - pending_queue_size
-    - dispatched_queue_size
-    - dispatched_counter
-    - enqueue_counter
-    - dequeue_counter
-
-### Tags:
-
-- activemq_queues:
-    - name
-    - source
-    - port
-- activemq_topics:
-    - name
-    - source
-    - port
-- activemq_subscribers:
+- activemq_subscribers
+  - tags:
     - client_id
     - subscription_name
     - connection_id
@@ -70,11 +67,16 @@ Every effort was made to preserve the names based on the XML response from the A
     - active
     - source
     - port
+  - fields:
+    - pending_queue_size
+    - dispatched_queue_size
+    - dispatched_counter
+    - enqueue_counter
+    - dequeue_counter
 
-### Example Output:
+### Example Output
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter activemq -test
 activemq_queues,name=sandra,host=88284b2fe51b,source=localhost,port=8161 consumer_count=0i,enqueue_count=0i,dequeue_count=0i,size=0i 1492610703000000000
 activemq_queues,name=Test,host=88284b2fe51b,source=localhost,port=8161 dequeue_count=0i,size=0i,consumer_count=0i,enqueue_count=0i 1492610703000000000
 activemq_topics,name=ActiveMQ.Advisory.MasterBroker\ ,host=88284b2fe51b,source=localhost,port=8161 size=0i,consumer_count=0i,enqueue_count=1i,dequeue_count=0i 1492610703000000000
