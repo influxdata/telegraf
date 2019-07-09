@@ -41,6 +41,12 @@
 - [#4356](https://github.com/influxdata/telegraf/issues/4356): Fix double pct replacement in sysstat input.
 - [#6004](https://github.com/influxdata/telegraf/issues/6004): Fix race in master node detection in elasticsearch input.
 
+## v1.11.3 [unreleased]
+
+#### Bugfixes
+
+- [#6054](https://github.com/influxdata/telegraf/issues/6054): Fix unable to reconnect after vCenter reboot in vsphere input.
+
 ## v1.11.2 [2019-07-09]
 
 #### Bugfixes
