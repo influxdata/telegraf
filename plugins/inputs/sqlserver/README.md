@@ -35,7 +35,7 @@ GO
 
   ## Optional parameter, setting this to 2 will use a new version
   ## of the collection queries that break compatibility with the original
-  ## dashboards.
+  ## dashboards. All new functionality is under V2
   query_version = 2
 
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
@@ -52,6 +52,9 @@ GO
   ## - DatabaseStats
   ## - MemoryClerk
   ## - VolumeSpace
+  ## - Schedulers
+  ## - AzureDBResourceStats
+  ## - AzureDBResourceGovernance 
   exclude_query = [ 'DatabaseIO' ]
 ```
 
@@ -79,7 +82,7 @@ If you are using the original queries all stats have the following tags:
 
 #### Version 2:
 The new (version 2) metrics provide:
-- *AzureDB*: AzureDB resource utilization from `sys.dm_db_resource_stats`
+- *AzureDB*: AzureDB resource utilization from `sys.dm_db_resource_stats` and `sys.dm_user_db_resource_governance`.
 - *Database IO*: IO stats from `sys.dm_io_virtual_file_stats`
 - *Memory Clerk*: Memory clerk breakdown from `sys.dm_os_memory_clerks`, most clerks have been given a friendly name.
 - *Performance Counters*: A select list of performance counters from `sys.dm_os_performance_counters`. Some of the important metrics included:
@@ -89,7 +92,7 @@ The new (version 2) metrics provide:
   - *Memory*: PLE, Page reads/sec, Page writes/sec, + more
   - *TempDB*: Free space, Version store usage, Active temp tables, temp table creation rate, + more
   - *Resource Governor*: CPU Usage, Requests/sec, Queued Requests, and Blocked tasks per workload group + more
-- *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version
+- *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version. In the case of Azure SQL relevent properties such as Tier, #Vcores, Memory etc.
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
 - *Azure Managed Instances*
   - Stats from `sys.server_resource_stats`:

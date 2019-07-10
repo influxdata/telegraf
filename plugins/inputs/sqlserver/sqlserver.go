@@ -484,7 +484,6 @@ FROM	(
 			SELECT	cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime
 			FROM	@sys_info
 		) AS s
-OPTION( RECOMPILE )
 `
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
@@ -1220,8 +1219,7 @@ ws.wait_type NOT IN (
 	N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
 	N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
 AND waiting_tasks_count > 0
-AND wait_time_ms > 100
-OPTION (RECOMPILE);
+AND wait_time_ms > 100;
 
 ELSE
 	SELECT
@@ -1272,8 +1270,7 @@ ELSE
 		N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
 		N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
 	AND waiting_tasks_count > 0
-	AND wait_time_ms > 100
-	OPTION (RECOMPILE);
+	AND wait_time_ms > 100;
 `
 
 // Only executed if AzureDB flag is set
@@ -1300,11 +1297,11 @@ BEGIN
 		sys.dm_db_resource_stats WITH (NOLOCK)
 	ORDER BY
 		end_time DESC
-	OPTION (RECOMPILE)
 END`
 
 //Only executed if AzureDB Flag is set
 const sqlAzureDBResourceGovernance string  = `
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
   'dm_user_db_resource_governance' AS [measurement],
    server_name AS [sql_instance],
@@ -1330,11 +1327,31 @@ SELECT
 	primary_pool_max_workers,
 	pool_max_io
     FROM
-    sys.dm_user_db_resource_governance WITH (NOLOCK)
-    where cast(database_name as nvarchar(256)) = DB_NAME();
-   `
-
-
+    sys.dm_user_db_resource_governance WITH (NOLOCK);
+ELSE
+  IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
+  BEGIN
+  	 SELECT
+	  'dm_instance_resource_governance' AS [measurement],
+	   server_name AS [sql_instance],
+	   instance_cap_cpu,
+	   instance_max_log_rate,
+	   instance_max_worker_threads,
+	   volume_local_iops,
+	   volume_external_xstore_iops,
+	   volume_managed_xstore_iops,
+	   volume_type_local_iops,
+	   volume_type_managed_xstore_iops,
+	   volume_type_external_xstore_iops,
+	   volume_external_xstore_iops,
+	   volume_local_max_oustanding_io,
+	   volume_managed_xstore_max_oustanding_io,
+	   volume_external_xstore_max_oustanding_io,
+	   tempdb_log_file_number
+	  from
+	   sys.dm_instance_resource_governance
+  END;
+`
 
 
 // Queries V1
