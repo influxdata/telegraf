@@ -361,7 +361,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 			"metadata_space_total",
 			"metadata_space_available",
 			"thin_pool_minimum_free_space":
-			deviceMapperFields[fmt.Sprintf("%s_bytes", name)] = value
+			deviceMapperFields[name+"_bytes"] = value
 		}
 
 		// Legacy devicemapper measurements

@@ -756,6 +756,7 @@ func TestDockerGatherInfo(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"docker_devicemapper",
 		map[string]interface{}{
+			"base_device_size_bytes":             int64(107400000000),
 			"pool_blocksize_bytes":               int64(65540),
 			"data_space_used_bytes":              int64(17300000000),
 			"data_space_total_bytes":             int64(107400000000),
