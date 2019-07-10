@@ -106,7 +106,7 @@ may prefer to exclude them:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - n_used_file_descriptors
     - n_cpus
     - n_containers
@@ -122,12 +122,12 @@ may prefer to exclude them:
 The `docker_data` and `docker_metadata` measurements are available only for
 some storage drivers such as devicemapper.
 
-- docker_data (deprecated see: `docker_devicemapper`)
++ docker_data (deprecated see: `docker_devicemapper`)
   - tags:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - available
     - total
     - used
@@ -137,7 +137,7 @@ some storage drivers such as devicemapper.
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - available
     - total
     - used
@@ -149,7 +149,7 @@ The above measurements for the devicemapper storage driver can now be found in t
     - engine_host
     - server_version
     - pool_name
-  - fields:
+  + fields:
     - pool_blocksize_bytes
     - data_space_used_bytes
     - data_space_total_bytes
