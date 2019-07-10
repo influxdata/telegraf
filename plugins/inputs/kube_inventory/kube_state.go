@@ -117,6 +117,7 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
 	"pods":         collectPods,
+	"services":     collectServices,
 	"statefulsets": collectStatefulSets,
 }
 
@@ -166,6 +167,7 @@ var (
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
 	podContainerMeasurement          = "kubernetes_pod_container"
+	serviceMeasurement               = "kubernetes_service"
 	statefulSetMeasurement           = "kubernetes_statefulset"
 )
 
