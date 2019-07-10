@@ -50,7 +50,7 @@ func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumula
 			tags["cluster_ip"] = s.GetSpec().GetClusterIP()
 		}
 
-		acc.AddFields(endpointMeasurement, fields, tags)
+		acc.AddFields(serviceMeasurement, fields, tags)
 	}
 
 	return nil
@@ -88,7 +88,7 @@ func (ki *KubernetesInventory) gatherServiceWithExternIps(s v1.Service, acc tele
 					tags["cluster_ip"] = s.GetSpec().GetClusterIP()
 				}
 
-				acc.AddFields(endpointMeasurement, fields, tags)
+				acc.AddFields(serviceMeasurement, fields, tags)
 			}
 		}
 	} else {
@@ -104,7 +104,7 @@ func (ki *KubernetesInventory) gatherServiceWithExternIps(s v1.Service, acc tele
 				tags["cluster_ip"] = s.GetSpec().GetClusterIP()
 			}
 
-			acc.AddFields(endpointMeasurement, fields, tags)
+			acc.AddFields(serviceMeasurement, fields, tags)
 		}
 	}
 
