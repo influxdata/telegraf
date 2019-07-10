@@ -159,7 +159,7 @@ The above measurements for the devicemapper storage driver can now be found in t
     - metadata_space_available_bytes
     - thin_pool_minimum_free_space_bytes
 
-- docker_container_mem
++ docker_container_mem
   - tags:
     - engine_host
     - server_version
@@ -167,7 +167,7 @@ The above measurements for the devicemapper storage driver can now be found in t
     - container_name
     - container_status
     - container_version
-  - fields:
+  + fields:
     - total_pgmafault
     - cache
     - mapped_file
@@ -212,7 +212,7 @@ The above measurements for the devicemapper storage driver can now be found in t
     - container_status
     - container_version
     - cpu
-  - fields:
+  + fields:
     - throttling_periods
     - throttling_throttled_periods
     - throttling_throttled_time
@@ -223,7 +223,7 @@ The above measurements for the devicemapper storage driver can now be found in t
     - usage_percent
     - container_id
 
-- docker_container_net
++ docker_container_net
   - tags:
     - engine_host
     - server_version
@@ -232,7 +232,7 @@ The above measurements for the devicemapper storage driver can now be found in t
     - container_status
     - container_version
     - network
-  - fields:
+  + fields:
     - rx_dropped
     - rx_bytes
     - rx_errors
