@@ -119,7 +119,7 @@ func (o *ds389) Description() string {
 	return "ds389 cn=Monitor plugin"
 }
 
-// return an initialized ds389
+// Newds389 return an initialized
 func Newds389() *ds389 {
 	return &ds389{
 		Host:               "localhost",
