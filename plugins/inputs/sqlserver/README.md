@@ -21,6 +21,10 @@ GO
 ### Configuration:
 
 ```toml
+[agent]
+  ## Default data collection interval for all inputs, can be changed as per collection interval needs
+  interval = "10s"
+
 # Read metrics from Microsoft SQL Server
 [[inputs.sqlserver]]
   ## Specify instances to monitor with a list of connection strings.
@@ -143,3 +147,4 @@ The following metrics can be used directly, with no delta calculations:
 
 Version 2 queries have the following tags:
 - `sql_instance`: Physical host and instance name (hostname:instance)
+- database_name:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
