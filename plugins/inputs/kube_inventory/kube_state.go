@@ -111,6 +111,7 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory){
 	"daemonsets":             collectDaemonSets,
 	"deployments":            collectDeployments,
+	"ingress":                collectIngress,
 	"nodes":                  collectNodes,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
@@ -158,6 +159,7 @@ func convertQuantity(s string, m float64) int64 {
 var (
 	daemonSetMeasurement             = "kubernetes_daemonset"
 	deploymentMeasurement            = "kubernetes_deployment"
+	ingressMeasurement               = "kubernetes_ingress"
 	nodeMeasurement                  = "kubernetes_node"
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
