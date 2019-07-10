@@ -74,6 +74,7 @@ type Client interface {
 	Write(context.Context, []telegraf.Metric) error
 
 	URL() string // for logging
+	Close()
 }
 
 type InfluxDB struct {
@@ -137,6 +138,9 @@ func (i *InfluxDB) Connect() error {
 }
 
 func (i *InfluxDB) Close() error {
+	for _, client := range i.clients {
+		client.Close()
+	}
 	return nil
 }
 
@@ -165,7 +169,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		log.Printf("E! [outputs.influxdb_v2] when writing to [%s]: %v", client.URL(), err)
 	}
 
-	return errors.New("could not write any address")
+	return err
 }
 
 func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {

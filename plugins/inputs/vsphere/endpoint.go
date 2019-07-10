@@ -369,7 +369,6 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	log.Printf("D! [inputs.vsphere]: Discover new objects for %s", e.URL.Host)
-	resourceKinds := make(map[string]resourceKind)
 	dcNameCache := make(map[string]string)
 
 	numRes := int64(0)
@@ -418,9 +417,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	// Build lun2ds map
-	dss := resourceKinds["datastore"]
+	dss := newObjects["datastore"]
 	l2d := make(map[string]string)
-	for _, ds := range dss.objects {
+	for _, ds := range dss {
 		url := ds.altID
 		m := isolateLUN.FindStringSubmatch(url)
 		if m != nil {
@@ -806,9 +805,17 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	localNow := time.Now()
 	estInterval := time.Duration(time.Minute)
 	if !res.lastColl.IsZero() {
-		estInterval = localNow.Sub(res.lastColl).Truncate(time.Duration(res.sampling) * time.Second)
+		s := time.Duration(res.sampling) * time.Second
+		rawInterval := localNow.Sub(res.lastColl)
+		paddedInterval := rawInterval + time.Duration(res.sampling/2)*time.Second
+		estInterval = paddedInterval.Truncate(s)
+		if estInterval < s {
+			estInterval = s
+		}
+		log.Printf("D! [inputs.vsphere] Raw interval %s, padded: %s, estimated: %s", rawInterval, paddedInterval, estInterval)
 	}
 	log.Printf("D! [inputs.vsphere] Interval estimated to %s", estInterval)
+	res.lastColl = localNow
 
 	latest := res.latestSample
 	if !latest.IsZero() {

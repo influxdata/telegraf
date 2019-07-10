@@ -44,15 +44,15 @@ type v2Statistics struct {
 			// Omitted nodes: references, maxinuse, blocksize, pools, hiwater, lowater
 			Id    string `xml:"id"`
 			Name  string `xml:"name"`
-			Total int    `xml:"total"`
-			InUse int    `xml:"inuse"`
+			Total int64  `xml:"total"`
+			InUse int64  `xml:"inuse"`
 		} `xml:"contexts>context"`
 		Summary struct {
-			TotalUse    int
-			InUse       int
-			BlockSize   int
-			ContextSize int
-			Lost        int
+			TotalUse    int64
+			InUse       int64
+			BlockSize   int64
+			ContextSize int64
+			Lost        int64
 		} `xml:"summary"`
 	} `xml:"memory"`
 }

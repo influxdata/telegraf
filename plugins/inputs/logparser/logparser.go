@@ -294,7 +294,6 @@ func (l *LogParserPlugin) Stop() {
 		if err != nil {
 			log.Printf("E! Error stopping tail on file %s\n", t.Filename)
 		}
-		t.Cleanup()
 	}
 	close(l.done)
 	l.wg.Wait()
