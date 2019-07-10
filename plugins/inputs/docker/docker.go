@@ -354,6 +354,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 
 		switch name {
 		case "pool_blocksize",
+			"base_device_size",
 			"data_space_used",
 			"data_space_total",
 			"data_space_available",
