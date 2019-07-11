@@ -66,7 +66,10 @@ var sampleConfig = `
   ## - MemoryClerk
   ## - VolumeSpace
   ## - PerformanceMetrics
-  # exclude_query = [ 'DatabaseIO' ]
+  ## - Schedulers
+  ## - AzureDBResourceStats
+  ## - AzureDBResourceGovernance
+  exclude_query = [ 'Schedulers' ]
 `
 
 // SampleConfig return the sample configuration

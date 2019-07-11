@@ -18,6 +18,14 @@ GRANT VIEW ANY DEFINITION TO [telegraf];
 GO
 ```
 
+For Azure SQL Database, you require the View Database State permission and can create a user with a password directly in the database.
+```sql
+CREATE USER [telegraf] WITH PASSWORD = N'mystrongpassword';
+GO
+GRANT VIEW DATABASE STATE TO [telegraf];
+GO
+```
+
 ### Configuration:
 
 ```toml
@@ -59,7 +67,7 @@ GO
   ## - Schedulers
   ## - AzureDBResourceStats
   ## - AzureDBResourceGovernance 
-  exclude_query = [ 'DatabaseIO' ]
+  exclude_query = [ 'Schedulers' ]
 ```
 
 ### Metrics:
@@ -86,7 +94,6 @@ If you are using the original queries all stats have the following tags:
 
 #### Version 2:
 The new (version 2) metrics provide:
-- *AzureDB*: AzureDB resource utilization from `sys.dm_db_resource_stats` and `sys.dm_user_db_resource_governance`.
 - *Database IO*: IO stats from `sys.dm_io_virtual_file_stats`
 - *Memory Clerk*: Memory clerk breakdown from `sys.dm_os_memory_clerks`, most clerks have been given a friendly name.
 - *Performance Counters*: A select list of performance counters from `sys.dm_os_performance_counters`. Some of the important metrics included:
@@ -98,6 +105,7 @@ The new (version 2) metrics provide:
   - *Resource Governor*: CPU Usage, Requests/sec, Queued Requests, and Blocked tasks per workload group + more
 - *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version. In the case of Azure SQL relevent properties such as Tier, #Vcores, Memory etc.
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
+- *Schedulers* - This captures sys.dm_os_schedulers.
 - *Azure Managed Instances*
   - Stats from `sys.server_resource_stats`:
     - cpu_count
@@ -108,6 +116,11 @@ The new (version 2) metrics provide:
     - total_storage_mb
     - available_storage_mb
     - uptime
+  - Resource governance stats from sys.dm_instance_resource_governance
+- *Azure SQL Database*
+  - Stats from sys.dm_db_wait_stats
+  - Resource governance stats from sys.dm_user_db_resource_governance
+  - Stats from sys.dm_db_resource_stats
 
 The following metrics can be used directly, with no delta calculations:
  - SQLServer:Buffer Manager\Buffer cache hit ratio
