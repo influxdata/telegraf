@@ -92,7 +92,7 @@ func initQueries(s *SQLServer) {
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
 		queries["AzureDBResourceStats"] = Query{Script: sqlAzureDBResourceStats, ResultByRow: false}
-                queries["AzureDBResourceGovernance"] = Query{Script: sqlAzureDBResourceGovernance, ResultByRow: false}
+		queries["AzureDBResourceGovernance"] = Query{Script: sqlAzureDBResourceGovernance, ResultByRow: false}
 	}
 
 	// Decide if we want to run version 1 or version 2 queries
@@ -103,7 +103,7 @@ func initQueries(s *SQLServer) {
 		queries["ServerProperties"] = Query{Script: sqlServerPropertiesV2, ResultByRow: false}
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
-	} else{ 
+	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
 		queries["CPUHistory"] = Query{Script: sqlCPUHistory, ResultByRow: false}
@@ -492,7 +492,6 @@ SELECT  'sqlserver_schedulers' AS [measurement],
   , active_workers_count,work_queue_count, pending_disk_io_count,load_factor,yield_count, total_cpu_usage_ms, total_scheduler_delay_ms
 from sys.dm_os_schedulers
 `
-
 
 const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
 DECLARE @PCounters TABLE
@@ -1297,7 +1296,7 @@ BEGIN
 END`
 
 //Only executed if AzureDB Flag is set
-const sqlAzureDBResourceGovernance string  = `
+const sqlAzureDBResourceGovernance string = `
 IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
   'dm_user_db_resource_governance' AS [measurement],
@@ -1359,7 +1358,6 @@ ELSE
 	   sys.dm_instance_resource_governance
   END;
 `
-
 
 // Queries V1
 const sqlPerformanceMetrics string = `SET DEADLOCK_PRIORITY -10;
