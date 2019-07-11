@@ -39,12 +39,20 @@ func runeInList(a rune) bool {
 
 func extractNumeric(digitString string, isLast bool) (int64, error) {
 	/*
-		basic helper that takes a series of characters, and removes leading + trailing non-numeric chars.
-		so the following transformations take place:
-		v1 -> 1
-		V12 -> 12
-		123~somestring -> 123
-		1-blsbla-v2 -> 1
+		basic helper that takes a string, parses it character by character, and expects to find only numerics, unless "isLast" is true
+		in which case it will check that the next character is a specific one - otherwise error.
+
+		so, these are ok:
+		1
+		1-
+		1~
+
+		but not these:
+		-123
+		v1
+		1b
+
+		once pafrsing completes, it will return the numerics, and any error that occurred
 	*/
 	var sb strings.Builder
 
