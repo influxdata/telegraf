@@ -25,7 +25,19 @@ type agentMetaData struct {
 	tags          map[string]string
 }
 
-func extractNumeric(digitString string) (int64, bool, error) {
+func runeInList(a rune) bool {
+	// return true if a in found within our list of "ok runes"
+	ok := []rune{'_', '-', '~', '+'}
+	for _, r := range ok {
+		if a == r {
+			return true
+		}
+
+	}
+	return false
+}
+
+func extractNumeric(digitString string, isLast bool) (int64, error) {
 	/*
 		basic helper that takes a series of characters, and removes leading + trailing non-numeric chars.
 		so the following transformations take place:
@@ -35,34 +47,40 @@ func extractNumeric(digitString string) (int64, bool, error) {
 		1-blsbla-v2 -> 1
 	*/
 	var sb strings.Builder
-	foundNumeric := false
+
+	valid := true
+
 	for i, digit := range digitString {
 		if unicode.IsDigit(digit) {
-			foundNumeric = true
 			sb.WriteRune(digit)
 		} else {
+			valid = false
 			if i > 0 {
-				break
+				if isLast {
+					valid = runeInList(digit)
+					break
+				}
+
 			}
+			break
 		}
 
 	}
 
-	if !foundNumeric {
-		// no numerics found, but this is not an error; only means that supplied string contained no numerics
-		return 0, foundNumeric, nil
+	if !valid {
+		return 0, errors.New("invalid string found within version string: " + digitString)
 	}
 
 	d, err := strconv.ParseInt(sb.String(), 0, 64)
 	if err != nil {
 		// found something that looks numeric, but failed to parse, which is definitely and error
-		return 0, foundNumeric, err
+		return 0, err
 	}
 
-	return d, foundNumeric, nil
+	return d, nil
 }
 
-func getNumericVersion(versionString string) ([]int64, error) {
+func getAsSemVer(versionString string) ([]int64, error) {
 	/*
 		this function verfies that the supplied string represents a semantic version string:
 
@@ -92,34 +110,19 @@ func getNumericVersion(versionString string) ([]int64, error) {
 	// verify that the version string contains 2 "." characters as we expect to find
 	dotsFound := strings.Count(versionString, ".")
 	if dotsFound != 2 {
-		return numerics, errors.New("version string is not of expected semantic format: " + versionString)
+		return []int64{}, errors.New("version string is not of expected semantic format: " + versionString)
 	}
 
 	chunks := strings.Split(versionString, ".")
-	numericsFound := 0
-	// now loop through and strip any non-numeric characters
-	for _, c := range chunks {
-		d, found, err := extractNumeric(c)
-		if err != nil {
-			// this is a parse fail - need to bubble this up
-			return numerics, err
-		}
-		if found {
-			numericsFound++
-			numerics = append(numerics, d)
-		}
-	}
 
-	/*
-		sanity check that chunks only contains numerics, so avoid stuff like this:
-		1.donkey.20
-		v1.2.cows
-	*/
-	if len(chunks) != numericsFound {
-		return []int64{}, errors.New("version string contains nonsensical character sequence: " + versionString)
+	for i, chunk := range chunks {
+		d, err := extractNumeric(chunk, i == 2)
+		if err != nil {
+			return []int64{}, err
+		}
+		numerics = append(numerics, d)
 	}
 	return numerics, nil
-
 }
 
 func (a *agentMetaData) addMetaData(conf *config.Config) error {
@@ -142,7 +145,7 @@ func (a *agentMetaData) addVersion(conf *config.Config) error {
 	a.fields["version_string"] = version
 
 	// now that we have set the string version, we need to extract the numerics - and error if this fails
-	numericVersionChunks, err := getNumericVersion(version)
+	numericVersionChunks, err := getAsSemVer(version)
 	if err != nil {
 		if !conf.Agent.IgnoreInvalidVersion {
 			return err

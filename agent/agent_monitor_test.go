@@ -28,53 +28,75 @@ func panicOnReceive(signals chan os.Signal, tick <-chan time.Time) {
 }
 
 func TestExtractNumeric(t *testing.T) {
-	d, ok, err := extractNumeric("v1")
-	require.Nil(t, err)
-	require.Equal(t, true, ok)
-	require.Equal(t, int64(1), d)
-
-	d, ok, err = extractNumeric("1Garbage2")
-	require.Nil(t, err)
-	require.Equal(t, true, ok)
-	require.Equal(t, int64(1), d)
-
-	d, ok, err = extractNumeric("mon~2keyGa-rbage.")
-	require.Nil(t, err)
-	require.Equal(t, false, ok)
+	d, err := extractNumeric("v1", false)
+	require.NotNil(t, err)
 	require.Equal(t, int64(0), d)
 
-	d, ok, err = extractNumeric("13~123bvdbc1")
+	d, err = extractNumeric("1", false)
 	require.Nil(t, err)
-	require.Equal(t, true, ok)
+	require.Equal(t, int64(1), d)
+
+	d, err = extractNumeric("100", false)
+	require.Nil(t, err)
+	require.Equal(t, int64(100), d)
+
+	d, err = extractNumeric("1Garbage2", false)
+	require.NotNil(t, err)
+	require.Equal(t, int64(0), d)
+
+	d, err = extractNumeric("mon~2keyGa-rbage.", false)
+	require.NotNil(t, err)
+	require.Equal(t, int64(0), d)
+
+	d, err = extractNumeric("13~123bvdbc1", false)
+	require.NotNil(t, err)
+	require.Equal(t, int64(0), d)
+
+	d, err = extractNumeric("13~123bvdbc1", true)
+	require.Nil(t, err)
 	require.Equal(t, int64(13), d)
 }
 
-func TestGetNumericVersion(t *testing.T) {
-	numerics, err := getNumericVersion("v1.2.3")
+func TestGetAsSemVer(t *testing.T) {
+	numerics, err := getAsSemVer("1.2.3")
 	require.Nil(t, err)
 	require.Equal(t, []int64{1, 2, 3}, numerics)
 
-	numerics, err = getNumericVersion("1.2.3~123bvdbc1")
+	numerics, err = getAsSemVer("1.2.3~123bvdbc1")
 	require.Nil(t, err)
 	require.Equal(t, []int64{1, 2, 3}, numerics)
 
-	numerics, err = getNumericVersion("1.1.9-alpha")
+	numerics, err = getAsSemVer("1.1.9-alpha")
 	require.Nil(t, err)
 	require.Equal(t, []int64{1, 1, 9}, numerics)
 
-	numerics, err = getNumericVersion("1.2-banana")
+	numerics, err = getAsSemVer("1.2-banana")
 	require.NotNil(t, err)
 	require.Equal(t, "version string is not of expected semantic format: 1.2-banana", err.Error())
 	require.Equal(t, []int64{}, numerics)
 
-	numerics, err = getNumericVersion("1.2")
+	numerics, err = getAsSemVer("1.2b.3")
+	require.NotNil(t, err)
+	require.Equal(t, "invalid string found within version string: 2b", err.Error())
+	require.Equal(t, []int64{}, numerics)
+
+	numerics, err = getAsSemVer("v1.2.3")
+	require.NotNil(t, err)
+	require.Equal(t, "invalid string found within version string: v1", err.Error())
+	require.Equal(t, []int64{}, numerics)
+
+	numerics, err = getAsSemVer("1.2.3+ghghgfh")
+	require.Nil(t, err)
+	require.Equal(t, []int64{1, 2, 3}, numerics)
+
+	numerics, err = getAsSemVer("1.2")
 	require.NotNil(t, err)
 	require.Equal(t, "version string is not of expected semantic format: 1.2", err.Error())
 	require.Equal(t, []int64{}, numerics)
 
-	numerics, err = getNumericVersion("1.banana.2")
+	numerics, err = getAsSemVer("1.banana.2")
 	require.NotNil(t, err)
-	require.Equal(t, "version string contains nonsensical character sequence: 1.banana.2", err.Error())
+	require.Equal(t, "invalid string found within version string: banana", err.Error())
 	require.Equal(t, []int64{}, numerics)
 }
 
