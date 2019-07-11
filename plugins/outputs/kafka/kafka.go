@@ -8,6 +8,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/kafka"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -44,11 +45,7 @@ type (
 		CA string
 
 		tlsint.ClientConfig
-
-		// SASL Username
-		SASLUsername string `toml:"sasl_username"`
-		// SASL Password
-		SASLPassword string `toml:"sasl_password"`
+		kafka.SASLConfig
 
 		tlsConfig tls.Config
 		producer  sarama.SyncProducer
@@ -174,7 +171,8 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional SASL Config
+  ## Can be one of "PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"
+  # sasl_mechanism = "PLAIN"
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
@@ -266,10 +264,9 @@ func (k *Kafka) Connect() error {
 		config.Net.TLS.Enable = true
 	}
 
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
-		config.Net.SASL.Enable = true
+	err = k.SASLConfig.SetSaramaSASLConfig(config)
+	if err != nil {
+		return err
 	}
 
 	producer, err := sarama.NewSyncProducer(k.Brokers, config)

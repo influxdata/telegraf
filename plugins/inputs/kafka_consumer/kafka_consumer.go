@@ -10,6 +10,7 @@ import (
 	"github.com/Shopify/sarama"
 	cluster "github.com/bsm/sarama-cluster"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/kafka"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -38,11 +39,10 @@ type Kafka struct {
 	Version                string   `toml:"version"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
 	Offset                 string   `toml:"offset"`
-	SASLUsername           string   `toml:"sasl_username"`
-	SASLPassword           string   `toml:"sasl_password"`
 	TopicTag               string   `toml:"topic_tag"`
 
 	tls.ClientConfig
+	kafka.SASLConfig
 
 	cluster Consumer
 	parser  parsers.Parser
@@ -81,7 +81,8 @@ var sampleConfig = `
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional SASL Config
+  ## Can be one of "PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"
+  # sasl_mechanism = "PLAIN"
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
@@ -153,12 +154,10 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 		config.Net.TLS.Config = tlsConfig
 		config.Net.TLS.Enable = true
 	}
-	if k.SASLUsername != "" && k.SASLPassword != "" {
-		log.Printf("D! Using SASL auth with username '%s',",
-			k.SASLUsername)
-		config.Net.SASL.User = k.SASLUsername
-		config.Net.SASL.Password = k.SASLPassword
-		config.Net.SASL.Enable = true
+
+	err = k.SASLConfig.SetSaramaSASLConfig(&config.Config)
+	if err != nil {
+		return err
 	}
 
 	switch strings.ToLower(k.Offset) {
