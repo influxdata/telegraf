@@ -102,7 +102,16 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	t.acc = acc
 	t.tailers = make(map[string]*tail.Tail)
 
-	return t.tailNewFiles(t.FromBeginning)
+	err := t.tailNewFiles(t.FromBeginning)
+
+	// clear offsets
+	t.offsets = make(map[string]int64)
+	// assumption that once Start is called, all parallel plugins have already been initialized
+	offsetsMutex.Lock()
+	offsets = make(map[string]int64)
+	offsetsMutex.Unlock()
+
+	return err
 }
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {

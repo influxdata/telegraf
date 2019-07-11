@@ -183,7 +183,16 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.wg.Add(1)
 	go l.parser()
 
-	return l.tailNewfiles(l.FromBeginning)
+	err = l.tailNewfiles(l.FromBeginning)
+
+	// clear offsets
+	l.offsets = make(map[string]int64)
+	// assumption that once Start is called, all parallel plugins have already been initialized
+	offsetsMutex.Lock()
+	offsets = make(map[string]int64)
+	offsetsMutex.Unlock()
+
+	return err
 }
 
 // check the globs against files on disk, and start tailing any new files.
