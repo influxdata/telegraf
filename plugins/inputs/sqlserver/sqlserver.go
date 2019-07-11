@@ -1319,7 +1319,17 @@ SELECT
 	primary_group_min_cpu,
 	primary_group_max_cpu,
 	primary_pool_max_workers,
-	pool_max_io
+	pool_max_io,
+	checkpoint_rate_mbps,
+	checkpoint_rate_io,
+	volume_local_iops,
+	volume_managed_xstore_iops,
+	volume_external_xstore_iops,
+	volume_type_local_iops,
+	volume_type_managed_xstore_iops,
+	volume_type_external_xstore_iops,
+	volume_pfs_iops,
+	volume_type_pfs_iops
     FROM
     sys.dm_user_db_resource_governance WITH (NOLOCK);
 ELSE
