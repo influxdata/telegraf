@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
 	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
 
 	"github.com/influxdata/telegraf"
@@ -17,7 +16,7 @@ func collectIngress(ctx context.Context, acc telegraf.Accumulator, ki *Kubernete
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherIngress(*i, acc); err != nil {
+		if err = ki.gatherIngressWithIps(*i, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
@@ -42,9 +41,11 @@ func (ki *KubernetesInventory) gatherIngress(i v1beta1EXT.Ingress, acc telegraf.
 	for _, rule := range i.GetSpec().GetRules() {
 		for _, path := range rule.GetIngressRuleValue().GetHttp().GetPaths() {
 			fields["backend_service_port"] = path.GetBackend().GetServicePort().GetIntVal()
+			fields["tls"] = i.GetSpec().GetTls() != nil
 
 			tags["backend_service_name"] = path.GetBackend().GetServiceName()
 			tags["path"] = path.GetPath()
+			tags["host"] = rule.GetHost()
 
 			acc.AddFields(ingressMeasurement, fields, tags)
 		}
@@ -70,14 +71,17 @@ func (ki *KubernetesInventory) gatherIngressWithIps(i v1beta1EXT.Ingress, acc te
 	}
 
 	for _, ingress := range i.GetStatus().GetLoadBalancer().GetIngress() {
-		tags["ip"] = getHostOrIP(ingress)
+		tags["hostname"] = ingress.GetHostname()
+		tags["ip"] = ingress.GetIp()
 
 		for _, rule := range i.GetSpec().GetRules() {
 			for _, path := range rule.GetIngressRuleValue().GetHttp().GetPaths() {
 				fields["backend_service_port"] = path.GetBackend().GetServicePort().GetIntVal()
+				fields["tls"] = i.GetSpec().GetTls() != nil
 
 				tags["backend_service_name"] = path.GetBackend().GetServiceName()
 				tags["path"] = path.GetPath()
+				tags["host"] = rule.GetHost()
 
 				acc.AddFields(ingressMeasurement, fields, tags)
 			}
@@ -85,12 +89,4 @@ func (ki *KubernetesInventory) gatherIngressWithIps(i v1beta1EXT.Ingress, acc te
 	}
 
 	return nil
-}
-
-func getHostOrIP(ingress *v1.LoadBalancerIngress) string {
-	if name := ingress.GetHostname(); name != "" {
-		return name
-	}
-
-	return ingress.GetIp()
 }

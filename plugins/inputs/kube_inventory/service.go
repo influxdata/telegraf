@@ -16,7 +16,7 @@ func collectServices(ctx context.Context, acc telegraf.Accumulator, ki *Kubernet
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherService(*i, acc); err != nil {
+		if err = ki.gatherServiceWithExternIps(*i, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
@@ -40,6 +40,7 @@ func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumula
 
 	for _, port := range s.GetSpec().GetPorts() {
 		fields["port"] = port.GetPort()
+		fields["target_port"] = port.GetTargetPort()
 
 		tags["port_name"] = port.GetName()
 		tags["port_protocol"] = port.GetProtocol()
@@ -78,6 +79,7 @@ func (ki *KubernetesInventory) gatherServiceWithExternIps(s v1.Service, acc tele
 
 			for _, port := range s.GetSpec().GetPorts() {
 				fields["port"] = port.GetPort()
+				fields["target_port"] = port.GetTargetPort()
 
 				tags["port_name"] = port.GetName()
 				tags["port_protocol"] = port.GetProtocol()

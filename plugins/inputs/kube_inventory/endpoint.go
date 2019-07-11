@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/ericchiang/k8s/apis/core/v1"
@@ -16,7 +17,7 @@ func collectEndpoints(ctx context.Context, acc telegraf.Accumulator, ki *Kuberne
 		return
 	}
 	for _, i := range list.Items {
-		if err = ki.gatherEndpoint(*i, acc); err != nil {
+		if err = ki.gatherEndpointWithHosts(*i, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
@@ -72,8 +73,12 @@ func (ki *KubernetesInventory) gatherEndpointWithHosts(e v1.Endpoints, acc teleg
 		for _, readyAddr := range endpoint.GetAddresses() {
 			fields["ready"] = true
 
-			// tags["hostname"]readyAddr.GetHostname()
-			tags["hostname"] = readyAddr.GetIp()
+			// todo: do we want tags["hostname"] = readyAddr.GetHostname()
+			tags["ip"] = readyAddr.GetIp()
+			tags["node_name"] = readyAddr.GetNodeName()
+			if readyAddr.TargetRef != nil {
+				tags[strings.ToLower(readyAddr.GetTargetRef().GetKind())] = readyAddr.GetTargetRef().GetName()
+			}
 
 			for _, port := range endpoint.GetPorts() {
 				fields["port"] = port.GetPort()
@@ -87,7 +92,12 @@ func (ki *KubernetesInventory) gatherEndpointWithHosts(e v1.Endpoints, acc teleg
 		for _, notReadyAddr := range endpoint.GetNotReadyAddresses() {
 			fields["ready"] = false
 
-			tags["hostname"] = notReadyAddr.GetIp()
+			// todo: do we want tags["hostname"] = readyAddr.GetHostname()
+			tags["ip"] = notReadyAddr.GetIp()
+			tags["node_name"] = notReadyAddr.GetNodeName()
+			if notReadyAddr.TargetRef != nil {
+				tags[strings.ToLower(notReadyAddr.GetTargetRef().GetKind())] = notReadyAddr.GetTargetRef().GetName()
+			}
 
 			for _, port := range endpoint.GetPorts() {
 				fields["port"] = port.GetPort()
