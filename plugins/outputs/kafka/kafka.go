@@ -62,6 +62,26 @@ type (
 	}
 )
 
+// DebugLogger logs messages from sarama at the debug level.
+type DebugLogger struct {
+}
+
+func (*DebugLogger) Print(v ...interface{}) {
+	args := make([]interface{}, 0, len(v)+1)
+	args = append(args, "D! [sarama] ")
+	log.Print(v...)
+}
+
+func (*DebugLogger) Printf(format string, v ...interface{}) {
+	log.Printf("D! [sarama] "+format, v...)
+}
+
+func (*DebugLogger) Println(v ...interface{}) {
+	args := make([]interface{}, 0, len(v)+1)
+	args = append(args, "D! [sarama] ")
+	log.Println(args...)
+}
+
 var sampleConfig = `
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
@@ -327,6 +347,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
+	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
 			MaxRetry:     3,
