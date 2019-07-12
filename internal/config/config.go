@@ -1065,6 +1065,18 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
+	if node, ok := tbl.Fields["allow_historical"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				conf.AllowHistorical, err = strconv.ParseBool(b.Value)
+				if err != nil {
+					log.Printf("Error parsing boolean value for %s: %s\n", name, err)
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["name_prefix"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1101,6 +1113,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	delete(tbl.Fields, "period")
 	delete(tbl.Fields, "delay")
 	delete(tbl.Fields, "drop_original")
+	delete(tbl.Fields, "allow_historical")
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")

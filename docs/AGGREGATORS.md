@@ -50,6 +50,8 @@ var sampleConfig = `
   ## If true drop_original will drop the original metrics and
   ## only send aggregates.
   drop_original = false
+  ## If true, metrics that fall outside the period won't be ignored.
+  # allow_historical = false
 `
 
 func (m *Min) Init() error {

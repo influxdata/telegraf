@@ -52,6 +52,8 @@ var sampleConfig = `
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
+  ## If true, metrics that fall outside the period won't be ignored.
+  # allow_historical = false
 
   ## Configures which basic stats to push as fields
   # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]

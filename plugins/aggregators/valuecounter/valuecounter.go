@@ -36,6 +36,8 @@ var sampleConfig = `
   drop_original = false
   ## The fields for which the values will be counted
   fields = []
+  ## If true, metrics that fall outside the period won't be ignored.
+  # allow_historical = false
 `
 
 // SampleConfig generates a sample config for the ValueCounter plugin

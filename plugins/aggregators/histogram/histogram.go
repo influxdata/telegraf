@@ -73,6 +73,9 @@ var sampleConfig = `
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
 
+  ## If true, metrics that fall outside the period won't be ignored.
+  # allow_historical = false
+
   ## If true, the histogram will be reset on flush instead
   ## of accumulating the results.
   reset = false

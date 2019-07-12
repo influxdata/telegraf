@@ -89,6 +89,57 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
 
+func TestAllowHistorical(t *testing.T) {
+	a := &TestAggregator{}
+	ra := NewRunningAggregator(a, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			NamePass: []string{"*"},
+		},
+		Period:          time.Millisecond * 500,
+		AllowHistorical: true,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+	acc := testutil.Accumulator{}
+	now := time.Now()
+	ra.UpdateWindow(now, now.Add(ra.Config.Period))
+
+	m := testutil.MustMetric("RITest",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		now.Add(-time.Hour),
+		telegraf.Untyped,
+	)
+	require.False(t, ra.Add(m))
+
+	// metric after current period
+	m = testutil.MustMetric("RITest",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		now.Add(time.Hour),
+		telegraf.Untyped,
+	)
+	require.False(t, ra.Add(m))
+
+	// "now" metric
+	m = testutil.MustMetric("RITest",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		time.Now().Add(time.Millisecond*50),
+		telegraf.Untyped)
+	require.False(t, ra.Add(m))
+
+	ra.Push(&acc)
+	require.Equal(t, 1, len(acc.Metrics))
+	require.Equal(t, int64(303), acc.Metrics[0].Fields["sum"])
+}
+
 func TestAddAndPushOnePeriod(t *testing.T) {
 	a := &TestAggregator{}
 	ra := NewRunningAggregator(a, &AggregatorConfig{

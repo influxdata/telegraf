@@ -14,6 +14,8 @@ var sampleConfig = `
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
+  ## If true, metrics that fall outside the period won't be ignored.
+  # allow_historical = false
 
   ## The time that a series is not updated until considering it final.
   series_timeout = "5m"
