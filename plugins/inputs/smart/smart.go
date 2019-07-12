@@ -36,18 +36,8 @@ var (
 	// PASSED, FAILED, UNKNOWN
 	smartOverallHealth = regexp.MustCompile("^(SMART overall-health self-assessment test result|SMART Health Status):\\s+(\\w+).*$")
 
-	// Accumulated start-stop cycles:  7
-	sasStartStopAttr = regexp.MustCompile("^Accumulated start-stop cycles:\\s+(.*)$")
-	// Accumulated load-unload cycles:  39
-	sasLoadCycleAttr = regexp.MustCompile("^Accumulated load-unload cycles:\\s+(.*)$")
-	// Current Drive Temperature:     34 C
-	sasTempAttr = regexp.MustCompile("^Current Drive Temperature:\\s+(.*)\\s+C(.*)$")
-	// Temperature: 38 Celsius
-	nvmeTempAttr = regexp.MustCompile("^Temperature:\\s+(.*)\\s+(.*)$")
-	// Power Cycles: 472
-	nvmePowerCycleAttr = regexp.MustCompile("^Power Cycles:\\s+(.*)$")
-	// Power On Hours: 6,038
-	nvmePowerOnAttr = regexp.MustCompile("^Power On Hours:\\s+(.*)$")
+	// sasNvmeAttr is a SAS or NVME SMART attribute
+	sasNvmeAttr = regexp.MustCompile(`^([^:]+):\s+(.+)$`)
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
@@ -61,6 +51,64 @@ var (
 		"190": "temp_c",
 		"194": "temp_c",
 		"199": "udma_crc_errors",
+	}
+
+	sasNvmeAttributes = map[string]struct {
+		ID    string
+		Name  string
+		Parse func(fields, deviceFields map[string]interface{}, str string) error
+	}{
+		"Accumulated start-stop cycles": {
+			ID:   "4",
+			Name: "Start_Stop_Count",
+		},
+		"Accumulated load-unload cycles": {
+			ID:   "193",
+			Name: "Load_Cycle_Count",
+		},
+		"Current Drive Temperature": {
+			ID:    "194",
+			Name:  "Temperature_Celsius",
+			Parse: parseTemperature,
+		},
+		"Temperature": {
+			ID:    "194",
+			Name:  "Temperature_Celsius",
+			Parse: parseTemperature,
+		},
+		"Power Cycles": {
+			ID:   "12",
+			Name: "Power_Cycle_Count",
+		},
+		"Power On Hours": {
+			ID:   "9",
+			Name: "Power_On_Hours",
+		},
+		"Media and Data Integrity Errors": {
+			Name: "Media_and_Data_Integrity_Errors",
+		},
+		"Error Information Log Entries": {
+			Name: "Error_Information_Log_Entries",
+		},
+		"Critical Warning": {
+			Name: "Critical_Warning",
+			Parse: func(fields, _ map[string]interface{}, str string) error {
+				var value int64
+				if _, err := fmt.Sscanf(str, "0x%x", &value); err != nil {
+					return err
+				}
+
+				fields["raw_value"] = value
+
+				return nil
+			},
+		},
+		"Available Spare": {
+			Name: "Available_Spare",
+			Parse: func(fields, deviceFields map[string]interface{}, str string) error {
+				return parseCommaSeperatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
+			},
+		},
 	}
 )
 
@@ -300,82 +348,24 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 			}
 		} else {
 			if collectAttributes {
-				if startStop := sasStartStopAttr.FindStringSubmatch(line); len(startStop) > 1 {
-					tags["id"] = "4"
-					tags["name"] = "Start_Stop_Count"
-					i, err := strconv.ParseInt(strings.Replace(startStop[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
+				if matches := sasNvmeAttr.FindStringSubmatch(line); len(matches) > 2 {
+					if attr, ok := sasNvmeAttributes[matches[1]]; ok {
+						tags["name"] = attr.Name
+						if attr.ID != "" {
+							tags["id"] = attr.ID
+						}
+
+						parse := parseCommaSeperatedInt
+						if attr.Parse != nil {
+							parse = attr.Parse
+						}
+
+						if err := parse(fields, deviceFields, matches[2]); err != nil {
+							continue
+						}
+
+						acc.AddFields("smart_attribute", fields, tags)
 					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if powerCycle := nvmePowerCycleAttr.FindStringSubmatch(line); len(powerCycle) > 1 {
-					tags["id"] = "12"
-					tags["name"] = "Power_Cycle_Count"
-					i, err := strconv.ParseInt(strings.Replace(powerCycle[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if powerOn := nvmePowerOnAttr.FindStringSubmatch(line); len(powerOn) > 1 {
-					tags["id"] = "9"
-					tags["name"] = "Power_On_Hours"
-					i, err := strconv.ParseInt(strings.Replace(powerOn[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if loadCycle := sasLoadCycleAttr.FindStringSubmatch(line); len(loadCycle) > 1 {
-					tags["id"] = "193"
-					tags["name"] = "Load_Cycle_Count"
-					i, err := strconv.ParseInt(strings.Replace(loadCycle[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if temp := sasTempAttr.FindStringSubmatch(line); len(temp) > 1 {
-					tags["id"] = "194"
-					tags["name"] = "Temperature_Celsius"
-					tempC, err := strconv.ParseInt(temp[1], 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = tempC
-					deviceFields["temp_c"] = tempC
-
-					acc.AddFields("smart_attribute", fields, tags)
-				}
-
-				if temp := nvmeTempAttr.FindStringSubmatch(line); len(temp) > 1 {
-					tags["id"] = "194"
-					tags["name"] = "Temperature_Celsius"
-					tempC, err := strconv.ParseInt(temp[1], 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = tempC
-					deviceFields["temp_c"] = tempC
-
-					acc.AddFields("smart_attribute", fields, tags)
 				}
 			}
 		}
@@ -422,6 +412,29 @@ func parseInt(str string) int64 {
 		return i
 	}
 	return 0
+}
+
+func parseCommaSeperatedInt(fields, _ map[string]interface{}, str string) error {
+	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	fields["raw_value"] = i
+
+	return nil
+}
+
+func parseTemperature(fields, deviceFields map[string]interface{}, str string) error {
+	var temp int64
+	if _, err := fmt.Sscanf(str, "%d C", &temp); err != nil {
+		return err
+	}
+
+	fields["raw_value"] = temp
+	deviceFields["temp_c"] = temp
+
+	return nil
 }
 
 func init() {
