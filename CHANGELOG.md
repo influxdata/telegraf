@@ -36,6 +36,7 @@
 - [#6064](https://github.com/influxdata/telegraf/pull/6064): Add node roles tag to elasticsearch input.
 - [#5572](https://github.com/influxdata/telegraf/pull/5572): Support floats in statsd percentiles.
 - [#6050](https://github.com/influxdata/telegraf/pull/6050): Add native Go ping method to ping input plugin.
+- [#6074](https://github.com/influxdata/telegraf/pull/6074): Resume from last known offset in tail inputwhen reloading Telegraf.
 
 #### Bugfixes
 
