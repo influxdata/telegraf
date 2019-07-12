@@ -1299,7 +1299,7 @@ END`
 const sqlAzureDBResourceGovernance string = `
 IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
-  'dm_user_db_resource_governance' AS [measurement],
+  'sqlserver_db_resource_governance' AS [measurement],
    server_name AS [sql_instance],
    DB_NAME() as [database_name],
    slo_name,
@@ -1338,7 +1338,7 @@ ELSE
   IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
   BEGIN
   	 SELECT
-	  'dm_instance_resource_governance' AS [measurement],
+	  'sqlserver_instance_resource_governance' AS [measurement],
 	   server_name AS [sql_instance],
 	   instance_cap_cpu,
 	   instance_max_log_rate,
