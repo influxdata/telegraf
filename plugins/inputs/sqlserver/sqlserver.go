@@ -66,7 +66,10 @@ var sampleConfig = `
   ## - MemoryClerk
   ## - VolumeSpace
   ## - PerformanceMetrics
-  # exclude_query = [ 'DatabaseIO' ]
+  ## - Schedulers
+  ## - AzureDBResourceStats
+  ## - AzureDBResourceGovernance
+  exclude_query = [ 'Schedulers' ]
 `
 
 // SampleConfig return the sample configuration
@@ -88,7 +91,8 @@ func initQueries(s *SQLServer) {
 
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
-		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: false}
+		queries["AzureDBResourceStats"] = Query{Script: sqlAzureDBResourceStats, ResultByRow: false}
+		queries["AzureDBResourceGovernance"] = Query{Script: sqlAzureDBResourceGovernance, ResultByRow: false}
 	}
 
 	// Decide if we want to run version 1 or version 2 queries
@@ -98,6 +102,7 @@ func initQueries(s *SQLServer) {
 		queries["DatabaseIO"] = Query{Script: sqlDatabaseIOV2, ResultByRow: false}
 		queries["ServerProperties"] = Query{Script: sqlServerPropertiesV2, ResultByRow: false}
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
+		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -240,6 +245,7 @@ const sqlMemoryClerkV2 = `SET DEADLOCK_PRIORITY -10;
 DECLARE @SQL NVARCHAR(MAX) = 'SELECT
 "sqlserver_memory_clerks" As [measurement],
 REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
+DB_NAME() as [database_name],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
 SUM({pages_kb}) AS size_kb
 FROM
@@ -341,6 +347,8 @@ ELSE
 EXEC(@SQL)
 `
 
+// Conditional check based on Azure SQL DB OR On-prem SQL Server
+// EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') = 5
 BEGIN
@@ -382,6 +390,9 @@ inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id =
 END
 `
 
+// Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
+// EngineEdition=5 is Azure SQL DB, EngineEdition=8 is Managed instance
+
 const sqlServerPropertiesV2 = `SET DEADLOCK_PRIORITY -10;
 DECLARE @sys_info TABLE (
 	cpu_count INT,
@@ -394,41 +405,54 @@ DECLARE @sys_info TABLE (
 	uptime INT
 )
 
-IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
-BEGIN
-	IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
-		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-		SELECT 	TOP(1)
-				virtual_core_count AS cpu_count,
-				(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
-				sku,
-				cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
-				hardware_generation AS hardware_type,
-				reserved_storage_mb AS total_storage_mb,
-				(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
-				(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
-		FROM	sys.server_resource_stats
-		ORDER BY start_time DESC
+IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
+ 	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
+	SELECT 	TOP(1)
+			virtual_core_count AS cpu_count,
+			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
+			sku,
+			cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
+			hardware_generation AS hardware_type,
+			reserved_storage_mb AS total_storage_mb,
+			(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
+			(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
+	FROM	sys.server_resource_stats
+	ORDER BY start_time DESC
 
-	ELSE
-	BEGIN
-		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-		SELECT	cpu_count,
-				(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
-				CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
-				CAST(SERVERPROPERTY('EngineEdition') as smallint) as engine_edition,
-				CASE virtual_machine_type_desc
-					WHEN 'NONE' THEN 'PHYSICAL Machine'
-					ELSE virtual_machine_type_desc
-				END AS hardware_type,
-				NULL,
-				NULL,
-				 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
-		FROM	sys.dm_os_sys_info
-	END
+IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
+	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
+	SELECT 	TOP(1)
+			(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS cpu_count,
+			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
+			slo.edition as sku,
+			cast(SERVERPROPERTY('EngineEdition') as smallint)  AS engine_edition,
+			slo.service_objective AS hardware_type,
+                        cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)  AS total_storage_mb,
+			NULL AS available_storage_mb,  -- Can we find out storage?
+			NULL as uptime
+	FROM	 sys.databases d   
+			JOIN sys.database_service_objectives slo    
+			ON d.database_id = slo.database_id
+
+ELSE
+BEGIN
+	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
+	SELECT	cpu_count,
+			(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
+			CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
+			CAST(SERVERPROPERTY('EngineEdition') as smallint) as engine_edition,
+			CASE virtual_machine_type_desc
+				WHEN 'NONE' THEN 'PHYSICAL Machine'
+				ELSE virtual_machine_type_desc
+			END AS hardware_type,
+			NULL,
+			NULL,
+			 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
+	FROM	sys.dm_os_sys_info
 END
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		DB_NAME() as [database_name],
 		s.cpu_count,
 		s.server_memory,
 		s.sku,
@@ -457,7 +481,16 @@ FROM	(
 			SELECT	cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime
 			FROM	@sys_info
 		) AS s
-OPTION( RECOMPILE )
+`
+
+//Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
+const sqlServerSchedulersV2 string = `SET DEADLOCK_PRIORITY -10;
+SELECT  'sqlserver_schedulers' AS [measurement],
+                REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+                DB_NAME() as [database_name],
+  cast(scheduler_id as varchar(4)) as scheduler_id, cast(cpu_id as varchar(4)) as cpu_id,is_online,is_idle,preemptive_switches_count,context_switches_count,current_tasks_count,runnable_tasks_count,current_workers_count
+  , active_workers_count,work_queue_count, pending_disk_io_count,load_factor,yield_count, total_cpu_usage_ms, total_scheduler_delay_ms
+from sys.dm_os_schedulers
 `
 
 const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
@@ -572,8 +605,7 @@ WHERE	(
 		)
 
 DECLARE @SQL NVARCHAR(MAX)
-SET  @SQL = REPLACE('
-SELECT
+SET  @SQL = REPLACE('SELECT
 "SQLServer:Workload Group Stats" AS object,
 counter,
 instance,
@@ -605,6 +637,7 @@ EXEC( @SQL )
 
 SELECT	'sqlserver_performance' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		DB_NAME() as [database_name],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
@@ -622,10 +655,14 @@ WHERE	pc.counter_name NOT LIKE '% base'
 OPTION(RECOMPILE);
 `
 
+// Conditional check based on Azure SQL DB v/s the rest aka (Azure SQL Managed instance OR On-prem SQL Server)
+// EngineEdition=5 is Azure SQL DB
 const sqlWaitStatsCategorizedV2 string = `SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') != 5
 SELECT
-'sqlserver_waitstats' AS [measurement],
+	'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+DB_NAME() as [database_name],
 ws.wait_type,
 wait_time_ms,
 wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
@@ -1178,16 +1215,68 @@ ws.wait_type NOT IN (
 	N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
 	N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
 AND waiting_tasks_count > 0
-AND wait_time_ms > 100
-OPTION (RECOMPILE);
+AND wait_time_ms > 100;
+
+ELSE
+	SELECT
+	'sqlserver_azuredb_waitstats' AS [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	DB_NAME() as [database_name'],
+	dbws.wait_type,
+	dbws.wait_time_ms,
+	dbws.wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
+	dbws.signal_wait_time_ms,
+	dbws.max_wait_time_ms,
+	dbws.waiting_tasks_count
+	FROM
+	sys.dm_db_wait_stats AS dbws WITH (NOLOCK)
+	WHERE
+		dbws.wait_type NOT IN (
+		N'BROKER_EVENTHANDLER', N'BROKER_RECEIVE_WAITFOR', N'BROKER_TASK_STOP',
+		N'BROKER_TO_FLUSH', N'BROKER_TRANSMITTER', N'CHECKPOINT_QUEUE',
+		N'CHKPT', N'CLR_AUTO_EVENT', N'CLR_MANUAL_EVENT', N'CLR_SEMAPHORE',
+		N'DBMIRROR_DBM_EVENT', N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_WORKER_QUEUE',
+		N'DBMIRRORING_CMD', N'DIRTY_PAGE_POLL', N'DISPATCHER_QUEUE_SEMAPHORE',
+		N'EXECSYNC', N'FSAGENT', N'FT_IFTS_SCHEDULER_IDLE_WAIT', N'FT_IFTSHC_MUTEX',
+		N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT',
+		N'HADR_NOTIFICATION_DEQUEUE', N'HADR_TIMER_TASK', N'HADR_WORK_QUEUE',
+		N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE',
+		N'MEMORY_ALLOCATION_EXT', N'ONDEMAND_TASK_QUEUE',
+		N'PARALLEL_REDO_WORKER_WAIT_WORK',
+		N'PREEMPTIVE_HADR_LEASE_MECHANISM', N'PREEMPTIVE_SP_SERVER_DIAGNOSTICS',
+		N'PREEMPTIVE_OS_LIBRARYOPS', N'PREEMPTIVE_OS_COMOPS', N'PREEMPTIVE_OS_CRYPTOPS',
+		N'PREEMPTIVE_OS_PIPEOPS','PREEMPTIVE_OS_GENERICOPS', N'PREEMPTIVE_OS_VERIFYTRUST',
+		N'PREEMPTIVE_OS_DEVICEOPS',
+		N'PREEMPTIVE_XE_CALLBACKEXECUTE', N'PREEMPTIVE_XE_DISPATCHER',
+		N'PREEMPTIVE_XE_GETTARGETSTATE', N'PREEMPTIVE_XE_SESSIONCOMMIT',
+		N'PREEMPTIVE_XE_TARGETINIT', N'PREEMPTIVE_XE_TARGETFINALIZE',
+		N'PWAIT_ALL_COMPONENTS_INITIALIZED', N'PWAIT_DIRECTLOGCONSUMER_GETNEXT',
+		N'QDS_PERSIST_TASK_MAIN_LOOP_SLEEP',
+		N'QDS_ASYNC_QUEUE',
+		N'QDS_CLEANUP_STALE_QUERIES_TASK_MAIN_LOOP_SLEEP', N'REQUEST_FOR_DEADLOCK_SEARCH',
+		N'RESOURCE_QUEUE', N'SERVER_IDLE_CHECK', N'SLEEP_BPOOL_FLUSH', N'SLEEP_DBSTARTUP',
+		N'SLEEP_DCOMSTARTUP', N'SLEEP_MASTERDBREADY', N'SLEEP_MASTERMDREADY',
+		N'SLEEP_MASTERUPGRADED', N'SLEEP_MSDBSTARTUP', N'SLEEP_SYSTEMTASK', N'SLEEP_TASK',
+		N'SLEEP_TEMPDBSTARTUP', N'SNI_HTTP_ACCEPT', N'SP_SERVER_DIAGNOSTICS_SLEEP',
+		N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
+		N'SQLTRACE_WAIT_ENTRIES',
+		N'WAIT_FOR_RESULTS', N'WAITFOR', N'WAITFOR_TASKSHUTDOWN', N'WAIT_XTP_HOST_WAIT',
+		N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE',
+		N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
+		N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
+		N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
+	AND waiting_tasks_count > 0
+	AND wait_time_ms > 100;
 `
 
-const sqlAzureDB string = `SET DEADLOCK_PRIORITY -10;
-IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
+// Only executed if AzureDB flag is set
+const sqlAzureDBResourceStats string = `SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		DB_NAME() as [database_name],
 		avg_cpu_percent,
 		avg_data_io_percent,
 		avg_log_write_percent,
@@ -1197,17 +1286,78 @@ BEGIN
 		max_session_percent,
 		dtu_limit,
 		avg_login_rate_percent,
-		end_time
+		end_time,
+		avg_instance_memory_percent,
+		avg_instance_cpu_percent
 	FROM
 		sys.dm_db_resource_stats WITH (NOLOCK)
 	ORDER BY
 		end_time DESC
-	OPTION (RECOMPILE)
-END
-ELSE
-BEGIN
-	RAISERROR('This does not seem to be an AzureDB instance. Set "azureDB = false" in your telegraf configuration.',16,1)
 END`
+
+//Only executed if AzureDB Flag is set
+const sqlAzureDBResourceGovernance string = `
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+SELECT
+  'sqlserver_db_resource_governance' AS [measurement],
+   server_name AS [sql_instance],
+   DB_NAME() as [database_name],
+   slo_name,
+	dtu_limit,
+	max_cpu,
+	cap_cpu,
+	instance_cap_cpu,
+	max_db_memory,
+	max_db_max_size_in_mb,
+	db_file_growth_in_mb,
+	log_size_in_mb,
+	instance_max_worker_threads,
+	primary_group_max_workers,
+	instance_max_log_rate,
+	primary_min_log_rate,
+	primary_max_log_rate,
+	primary_group_min_io,
+	primary_group_max_io,
+	primary_group_min_cpu,
+	primary_group_max_cpu,
+	primary_pool_max_workers,
+	pool_max_io,
+	checkpoint_rate_mbps,
+	checkpoint_rate_io,
+	volume_local_iops,
+	volume_managed_xstore_iops,
+	volume_external_xstore_iops,
+	volume_type_local_iops,
+	volume_type_managed_xstore_iops,
+	volume_type_external_xstore_iops,
+	volume_pfs_iops,
+	volume_type_pfs_iops
+    FROM
+    sys.dm_user_db_resource_governance WITH (NOLOCK);
+ELSE
+  IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
+  BEGIN
+  	 SELECT
+	  'sqlserver_instance_resource_governance' AS [measurement],
+	   server_name AS [sql_instance],
+	   instance_cap_cpu,
+	   instance_max_log_rate,
+	   instance_max_worker_threads,
+	   volume_local_iops,
+	   volume_external_xstore_iops,
+	   volume_managed_xstore_iops,
+	   volume_type_local_iops,
+	   volume_type_managed_xstore_iops,
+	   volume_type_external_xstore_iops,
+	   volume_external_xstore_iops,
+	   volume_local_max_oustanding_io,
+	   volume_managed_xstore_max_oustanding_io,
+	   volume_external_xstore_max_oustanding_io,
+	   tempdb_log_file_number
+	  from
+	   sys.dm_instance_resource_governance
+  END;
+`
 
 // Queries V1
 const sqlPerformanceMetrics string = `SET DEADLOCK_PRIORITY -10;
