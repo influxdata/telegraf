@@ -532,55 +532,11 @@ func TestGatherNvme(t *testing.T) {
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
 				"device":    ".",
-				"name":      "Critical_Warning_Spare_Treshold",
+				"name":      "Critical_Warning",
 				"serial_no": "D704940282?",
 			},
 			map[string]interface{}{
-				"raw_value": true,
-			},
-			time.Now(),
-		),
-		testutil.MustMetric("smart_attribute",
-			map[string]string{
-				"device":    ".",
-				"name":      "Critical_Warning_Temperature_Above_or_Under_Threshold",
-				"serial_no": "D704940282?",
-			},
-			map[string]interface{}{
-				"raw_value": false,
-			},
-			time.Now(),
-		),
-		testutil.MustMetric("smart_attribute",
-			map[string]string{
-				"device":    ".",
-				"name":      "Critical_Warning_Reliability_Degraded",
-				"serial_no": "D704940282?",
-			},
-			map[string]interface{}{
-				"raw_value": false,
-			},
-			time.Now(),
-		),
-		testutil.MustMetric("smart_attribute",
-			map[string]string{
-				"device":    ".",
-				"name":      "Critical_Warning_Read_Only",
-				"serial_no": "D704940282?",
-			},
-			map[string]interface{}{
-				"raw_value": true,
-			},
-			time.Now(),
-		),
-		testutil.MustMetric("smart_attribute",
-			map[string]string{
-				"device":    ".",
-				"name":      "Critical_Warning_Volative_Memory_Backup_Failed",
-				"serial_no": "D704940282?",
-			},
-			map[string]interface{}{
-				"raw_value": false,
+				"raw_value": int64(9),
 			},
 			time.Now(),
 		),
