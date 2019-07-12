@@ -360,7 +360,7 @@ func TestLustre2CanParseConfiguration(t *testing.T) {
 
 	assert.Equal(t, Lustre2{
 		Ost_procfiles: []string{
-			"/proc/fs/lustre2/obdfilter/*/stats",
+			"/proc/fs/lustre/obdfilter/*/stats",
 			"/proc/fs/lustre/osd-ldiskfs/*/stats",
 		},
 		Mds_procfiles: []string{
