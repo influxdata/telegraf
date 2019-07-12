@@ -38,6 +38,7 @@
 - [#6050](https://github.com/influxdata/telegraf/pull/6050): Add native Go ping method to ping input plugin.
 - [#6074](https://github.com/influxdata/telegraf/pull/6074): Resume from last known offset in tail inputwhen reloading Telegraf.
 - [#6111](https://github.com/influxdata/telegraf/pull/6111): Add improved support for Azure SQL Database to sqlserver input.
+- [#6079](https://github.com/influxdata/telegraf/pull/6079): Add extra attributes for NVMe devices to smart input.
 
 #### Bugfixes
 
