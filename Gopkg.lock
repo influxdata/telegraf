@@ -533,6 +533,14 @@
   version = "1.3.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e1822d37be8e11e101357a27170527b1056c99182407f270e080f76409adbd9a"
+  name = "github.com/golang/groupcache"
+  packages = ["lru"]
+  pruneopts = ""
+  revision = "869f871628b6baa9cfbc11732cdf6546b17c1298"
+
+[[projects]]
   digest = "1:f958a1c137db276e52f0b50efee41a1a389dcdded59a69711f3e872757dab34b"
   name = "github.com/golang/protobuf"
   packages = [
@@ -1762,8 +1770,12 @@
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
+<<<<<<< HEAD
     "github.com/gofrs/uuid",
     "github.com/gogo/protobuf/proto",
+=======
+    "github.com/golang/groupcache/lru",
+>>>>>>> Optimize insert performance of metrics and tag_id lookup
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/duration",
     "github.com/golang/protobuf/ptypes/empty",

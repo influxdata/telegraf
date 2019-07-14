@@ -1,36 +1,44 @@
 # PostgreSQL Output Plugin
 
-This output plugin writes all metrics to PostgreSQL.
+This output plugin writes all metrics to PostgreSQL. 
+The plugin manages the schema automatically updating missing columns, and checking if existing ones are of the proper type. 
 
 ### Configuration:
 
 ```toml
 # Send metrics to postgres
 [[outputs.postgresql]]
-  address = "host=localhost user=postgres sslmode=verify-full"
+    address = "host=localhost user=postgres sslmode=verify-full"
 
-  ## Store tags as foreign keys in the metrics table. Default is false.
-  # tags_as_foreignkeys = false
+    ## Update existing tables to match the incoming metrics. Default is true
+    # do_schema_updates = true
 
-  ## Template to use for generating tables
-  ## Available Variables:
-  ##   {TABLE} - tablename as identifier
-  ##   {TABLELITERAL} - tablename as string literal
-  ##   {COLUMNS} - column definitions
-  ##   {KEY_COLUMNS} - comma-separated list of key columns (time + tags)
+    ## Store tags as foreign keys in the metrics table. Default is false.
+    # tags_as_foreignkeys = false
+  
+    ## If tags_as_foreignkeys is set to true you can choose the number of tag sets to cache
+    ## per measurement (metric name). Default is 1000, if set to 0 => cache has no limit.
+    # cached_tagsets_per_measurement = 1000
 
-  ## Default template
-  # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})"
-  ## Example for timescaledb
-  # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval, if_not_exists := true);"
+    ## Template to use for generating tables
+    ## Available Variables:
+    ##   {TABLE} - tablename as identifier
+    ##   {TABLELITERAL} - tablename as string literal
+    ##   {COLUMNS} - column definitions
+    ##   {KEY_COLUMNS} - comma-separated list of key columns (time + tags)
 
-  ## Schema to create the tables into
-  # schema = "public"
+    ## Default template
+    # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})"
+    ## Example for timescaledb
+    # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval, if_not_exists := true);"
 
-  ## Use jsonb datatype for tags. Default is true.
-  # tags_as_jsonb = false
+    ## Schema to create the tables into
+    # schema = "public"
 
-  ## Use jsonb datatype for fields. Default is true.
-  # fields_as_jsonb = false
+    ## Use jsonb datatype for tags. Default is false.
+    # tags_as_jsonb = false
+
+    ## Use jsonb datatype for fields. Default is false.
+    # fields_as_jsonb = false
 
 ```

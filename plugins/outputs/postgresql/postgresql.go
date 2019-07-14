@@ -2,27 +2,30 @@ package postgresql
 
 import (
 	"log"
-	"sort"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-)
-
-const (
-	tagsJSONColumn   = "tags"
-	fieldsJSONColumn = "fields"
+	"github.com/influxdata/telegraf/plugins/outputs/postgresql/columns"
+	"github.com/influxdata/telegraf/plugins/outputs/postgresql/db"
+	"github.com/influxdata/telegraf/plugins/outputs/postgresql/tables"
+	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 )
 
 type Postgresql struct {
-	db                dbWrapper
-	Address           string
-	Schema            string
-	TagsAsForeignkeys bool
-	TagsAsJsonb       bool
-	FieldsAsJsonb     bool
-	TableTemplate     string
-	TagTableSuffix    string
-	tables            tableKeeper
+	db                          db.Wrapper
+	Address                     string
+	Schema                      string
+	DoSchemaUpdates             bool
+	TagsAsForeignkeys           bool
+	CachedTagsetsPerMeasurement int
+	TagsAsJsonb                 bool
+	FieldsAsJsonb               bool
+	TableTemplate               string
+	TagTableSuffix              string
+	tables                      tables.Manager
+	tagCache                    tagsCache
+	rows                        transformer
+	columns                     columns.Mapper
 }
 
 func init() {
@@ -31,30 +34,37 @@ func init() {
 
 func newPostgresql() *Postgresql {
 	return &Postgresql{
-		Schema:         "public",
-		TableTemplate:  "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})",
-		TagTableSuffix: "_tag",
+		Schema:                      "public",
+		TableTemplate:               "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})",
+		TagTableSuffix:              "_tag",
+		CachedTagsetsPerMeasurement: 1000,
+		DoSchemaUpdates:             true,
 	}
 }
 
 // Connect establishes a connection to the target database and prepares the cache
 func (p *Postgresql) Connect() error {
-	db, err := newDbWrapper(p.Address)
+	db, err := db.NewWrapper(p.Address)
 	if err != nil {
 		return err
 	}
 	p.db = db
-	p.tables = newTableKeeper(db)
+	p.tables = tables.NewManager(db, p.Schema, p.TableTemplate)
+
+	if p.TagsAsForeignkeys {
+		p.tagCache = newTagsCache(p.CachedTagsetsPerMeasurement, p.TagsAsJsonb, p.TagTableSuffix, p.Schema, p.db)
+	}
+	p.rows = newRowTransformer(p.TagsAsForeignkeys, p.TagsAsJsonb, p.FieldsAsJsonb, p.tagCache)
+	p.columns = columns.NewMapper(p.TagsAsForeignkeys, p.TagsAsJsonb, p.FieldsAsJsonb)
 	return nil
 }
 
 // Close closes the connection to the database
 func (p *Postgresql) Close() error {
+	p.tagCache = nil
+	p.tagCache = nil
+	p.tables = nil
 	return p.db.Close()
-}
-
-func (p *Postgresql) fullTableName(name string) string {
-	return quoteIdent(p.Schema) + "." + quoteIdent(name)
 }
 
 var sampleConfig = `
@@ -73,8 +83,16 @@ var sampleConfig = `
   ##
   address = "host=localhost user=postgres sslmode=verify-full"
 
+  ## Update existing tables to match the incoming metrics automatically. Default is true
+  # do_schema_updates = true
+
   ## Store tags as foreign keys in the metrics table. Default is false.
   # tags_as_foreignkeys = false
+  
+  ## If tags_as_foreignkeys is set to true you can choose the number of tag sets to cache
+  ## per measurement (metric name). Default is 1000, if set to 0 => cache has no limit.
+  ## Has no effect if tags_as_foreignkeys = false
+  # cached_tagsets_per_measurement = 1000
 
   ## Template to use for generating tables
   ## Available Variables:
@@ -103,149 +121,64 @@ func (p *Postgresql) SampleConfig() string { return sampleConfig }
 func (p *Postgresql) Description() string  { return "Send metrics to PostgreSQL" }
 
 func (p *Postgresql) Write(metrics []telegraf.Metric) error {
-	toInsert := make(map[string][]*colsAndValues)
-	for _, metric := range metrics {
-		tablename := metric.Name()
-
-		// create table if needed
-		if p.tables.exists(p.Schema, tablename) == false {
-			createStmt := p.generateCreateTable(metric)
-			_, err := p.db.Exec(createStmt)
-			if err != nil {
-				log.Printf("E! Creating table failed: statement: %v, error: %v", createStmt, err)
-				return err
-			}
-			p.tables.add(tablename)
-		}
-
-		columns := []string{"time"}
-		values := []interface{}{metric.Time()}
-		tagColumns, tagValues, err := p.prepareTags(metric)
+	metricsByMeasurement := utils.GroupMetricsByMeasurement(metrics)
+	for measureName, indices := range metricsByMeasurement {
+		err := p.writeMetricsFromMeasure(measureName, indices, metrics)
 		if err != nil {
 			return err
 		}
-		if tagColumns != nil {
-			columns = append(columns, tagColumns...)
-			values = append(values, tagValues...)
-		}
-
-		if p.FieldsAsJsonb {
-			d, err := buildJsonb(metric.Fields())
-			if err != nil {
-				return err
-			}
-
-			columns = append(columns, fieldsJSONColumn)
-			values = append(values, d)
-		} else {
-			var keys []string
-			fields := metric.Fields()
-			for column := range fields {
-				keys = append(keys, column)
-			}
-			sort.Strings(keys)
-			for _, column := range keys {
-				columns = append(columns, column)
-				values = append(values, fields[column])
-			}
-		}
-
-		newValues := &colsAndValues{
-			cols: columns,
-			vals: values,
-		}
-		toInsert[tablename] = append(toInsert[tablename], newValues)
 	}
-
-	return p.insertBatches(toInsert)
-}
-
-func (p *Postgresql) prepareTags(metric telegraf.Metric) ([]string, []interface{}, error) {
-	if len(metric.Tags()) == 0 {
-		return nil, nil, nil
-	}
-
-	if p.TagsAsForeignkeys {
-		// tags in separate table
-		tagID, err := p.getTagID(metric)
-		if err != nil {
-			return nil, nil, err
-		}
-		return []string{tagIDColumn}, []interface{}{tagID}, nil
-	}
-	// tags in measurement table
-	if p.TagsAsJsonb {
-		d, err := buildJsonbTags(metric.Tags())
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if d != nil {
-			return []string{tagsJSONColumn}, []interface{}{d}, nil
-		}
-		return nil, nil, nil
-
-	}
-
-	var keys []string
-	tags := metric.Tags()
-	for column := range tags {
-		keys = append(keys, column)
-	}
-	sort.Strings(keys)
-	numColumns := len(keys)
-	var columns = make([]string, numColumns)
-	var values = make([]interface{}, numColumns)
-	for i, column := range keys {
-		columns[i] = column
-		values[i] = tags[column]
-	}
-	return columns, values, nil
-}
-
-type colsAndValues struct {
-	cols []string
-	vals []interface{}
-}
-
-// insertBatches takes batches of data to be inserted. The batches are mapped
-// by the target table, and each batch contains the columns and values for those
-// columns that will generate the INSERT statement.
-// On column mismatch an attempt is made to create the column and try to reinsert.
-func (p *Postgresql) insertBatches(batches map[string][]*colsAndValues) error {
-	for tableName, colsAndValues := range batches {
-		for _, row := range colsAndValues {
-			sql := p.generateInsert(tableName, row.cols)
-			_, err := p.db.Exec(sql, row.vals...)
-			if err == nil {
-				continue
-			}
-
-			// check if insert error was caused by column mismatch
-			if p.FieldsAsJsonb {
-				return err
-			}
-
-			log.Printf("W! Possible column mismatch while inserting new metrics: %v", err)
-
-			retry := false
-			retry, err = p.addMissingColumns(tableName, row.cols, row.vals)
-			if err != nil {
-				log.Printf("E! Could not fix column mismatch: %v", err)
-				return err
-			}
-
-			// We added some columns and insert might work now. Try again immediately to
-			// avoid long lead time in getting metrics when there are several columns missing
-			// from the original create statement and they get added in small drops.
-			if retry {
-				_, err = p.db.Exec(sql, row.vals...)
-			}
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
+}
+
+// Writes only the metrics from a specified measure. 'metricIndices' is an array
+// of the metrics that belong to the selected 'measureName' for faster lookup.
+// If schema updates are enabled the target db tables are updated to be able
+// to hold the new values.
+func (p *Postgresql) writeMetricsFromMeasure(measureName string, metricIndices []int, metrics []telegraf.Metric) error {
+	targetColumns, targetTagColumns := p.columns.Target(metricIndices, metrics)
+
+	if p.DoSchemaUpdates {
+		if err := p.prepareTable(measureName, targetColumns); err != nil {
+			return err
+		}
+		if p.TagsAsForeignkeys {
+			tagTableName := p.tagCache.tagsTableName(measureName)
+			if err := p.prepareTable(tagTableName, targetTagColumns); err != nil {
+				return err
+			}
+		}
+	}
+	numColumns := len(targetColumns.Names)
+	values := make([][]interface{}, len(metricIndices))
+	var rowTransformErr error
+	for rowNum, metricIndex := range metricIndices {
+		values[rowNum], rowTransformErr = p.rows.createRowFromMetric(numColumns, metrics[metricIndex], targetColumns, targetTagColumns)
+		if rowTransformErr != nil {
+			log.Printf("E! Could not transform metric to proper row\n%v", rowTransformErr)
+			return rowTransformErr
+		}
+	}
+
+	fullTableName := utils.FullTableName(p.Schema, measureName)
+	return p.db.DoCopy(fullTableName, targetColumns.Names, values)
+}
+
+// Checks if a table exists in the db, and then validates if all the required columns
+// are present or some are missing (if metrics changed their field or tag sets).
+func (p *Postgresql) prepareTable(tableName string, details *utils.TargetColumns) error {
+	tableExists := p.tables.Exists(tableName)
+
+	if !tableExists {
+		return p.tables.CreateTable(tableName, details)
+	}
+
+	missingColumns, err := p.tables.FindColumnMismatch(tableName, details)
+	if err != nil {
+		return err
+	}
+	if len(missingColumns) == 0 {
+		return nil
+	}
+	return p.tables.AddColumnsToTable(tableName, missingColumns, details)
 }

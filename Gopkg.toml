@@ -19,6 +19,10 @@
   version = "1.19.41"
 
 [[constraint]]
+  name = "github.com/bsm/sarama-cluster"
+  version = "2.1.13"
+
+[[constraint]]
   name = "github.com/couchbase/go-couchbase"
   branch = "master"
 
@@ -36,7 +40,7 @@
 
 [[constraint]]
   name = "github.com/eclipse/paho.mqtt.golang"
-  version = "1"
+  version = "~1.1.1"
 
 [[constraint]]
   name = "github.com/go-sql-driver/mysql"
@@ -308,3 +312,8 @@
 [[override]]
   name = "github.com/satori/go.uuid"
   revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
+
+[[constraint]]  
+  branch = "master"
+  name = "github.com/golang/groupcache"
+
