@@ -1300,7 +1300,7 @@ const sqlAzureDBResourceGovernance string = `
 IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
   'sqlserver_db_resource_governance' AS [measurement],
-   server_name AS [sql_instance],
+   @@servername AS [sql_instance],
    DB_NAME() as [database_name],
    slo_name,
 	dtu_limit,
@@ -1335,27 +1335,24 @@ SELECT
     FROM
     sys.dm_user_db_resource_governance WITH (NOLOCK);
 ELSE
-  IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
-  BEGIN
-  	 SELECT
-	  'sqlserver_instance_resource_governance' AS [measurement],
-	   server_name AS [sql_instance],
-	   instance_cap_cpu,
-	   instance_max_log_rate,
-	   instance_max_worker_threads,
-	   volume_local_iops,
-	   volume_external_xstore_iops,
-	   volume_managed_xstore_iops,
-	   volume_type_local_iops,
-	   volume_type_managed_xstore_iops,
-	   volume_type_external_xstore_iops,
-	   volume_external_xstore_iops,
-	   volume_local_max_oustanding_io,
-	   volume_managed_xstore_max_oustanding_io,
-	   volume_external_xstore_max_oustanding_io,
-	   tempdb_log_file_number
-	  from
-	   sys.dm_instance_resource_governance
+BEGIN
+        IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
+         SELECT
+           'sqlserver_instance_resource_governance' AS [measurement],
+           @@SERVERNAME AS [sql_instance],
+           instance_cap_cpu,
+           instance_max_log_rate,
+           instance_max_worker_threads,
+           tempdb_log_file_number,
+           volume_local_iops,
+           volume_external_xstore_iops,
+           volume_managed_xstore_iops,
+           volume_type_local_iops as voltype_local_iops,
+           volume_type_managed_xstore_iops as voltype_man_xtore_iops,
+           volume_type_external_xstore_iops as voltype_ext_xtore_iops,
+           volume_external_xstore_iops  as vol_ext_xtore_iops
+           from
+            sys.dm_instance_resource_governance
   END;
 `
 
