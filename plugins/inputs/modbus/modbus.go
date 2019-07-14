@@ -113,7 +113,7 @@ var ModbusConfig = `
     ]
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Frecuency"
+    name = "Frequency"
     order ="AB"	
     scale = "/10"
     address = [
