@@ -58,7 +58,7 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
     ]
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Frecuency"
+    name = "Frequency"
     order ="AB"	
     scale = "/10"
     address = [
