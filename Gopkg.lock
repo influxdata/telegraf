@@ -1109,12 +1109,12 @@
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:e139a0dfe24e723193005b291ed82a975041718cfcab9136aa6c9540df70a4ff"
+  digest = "1:d2e45c5ed1c65576448b7adca867fc826f0c4710299d560819f1fa376189b70f"
   name = "github.com/tidwall/gjson"
   packages = ["."]
   pruneopts = ""
-  revision = "f123b340873a0084cb27267eddd8ff615115fbff"
-  version = "v1.1.2"
+  revision = "d7c940e59395fdcaff4584cb442b2e7808f6711e"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
@@ -1123,6 +1123,14 @@
   packages = ["."]
   pruneopts = ""
   revision = "1731857f09b1f38450e2c12409748407822dc6be"
+
+[[projects]]
+  digest = "1:1d7cab09854959fe179fe2f209400626f3dda9ec8e8b719c661d7b2add7b54b5"
+  name = "github.com/tidwall/pretty"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1166b9ac2b65e46a43d8618d30d1554f4652d49b"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:026b6ceaabbacaa147e94a63579efc3d3c73e00c73b67fa5c43ab46191ed04eb"
