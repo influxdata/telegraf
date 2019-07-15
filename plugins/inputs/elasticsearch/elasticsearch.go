@@ -119,6 +119,10 @@ const sampleConfig = `
   ## "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
+  ## HTTP Basic Authentication username and password.
+  # username = ""
+  # password = ""
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -138,6 +142,8 @@ type Elasticsearch struct {
 	ClusterStats               bool
 	ClusterStatsOnlyFromMaster bool
 	NodeStats                  []string
+	Username                   string `toml:"username"`
+	Password                   string `toml:"password"`
 	tls.ClientConfig
 
 	client          *http.Client
@@ -455,7 +461,16 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 }
 
 func (e *Elasticsearch) getCatMaster(url string) (string, error) {
-	r, err := e.client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	if e.Username != "" || e.Password != "" {
+		req.SetBasicAuth(e.Username, e.Password)
+	}
+
+	r, err := e.client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -478,7 +493,16 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 }
 
 func (e *Elasticsearch) gatherJsonData(url string, v interface{}) error {
-	r, err := e.client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	if e.Username != "" || e.Password != "" {
+		req.SetBasicAuth(e.Username, e.Password)
+	}
+
+	r, err := e.client.Do(req)
 	if err != nil {
 		return err
 	}
