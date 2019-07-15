@@ -2,9 +2,9 @@ package ds389
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 
 	"github.com/influxdata/telegraf/internal/tls"
 	ldap "gopkg.in/ldap.v2"
@@ -143,8 +143,8 @@ func Newds389() *ds389 {
 		BindDn:             "",
 		BindPassword:       "",
 		Dbtomonitor:        []string{},
-		AllDbmonitor:	    false,
-		Status:		    false,
+		AllDbmonitor:       false,
+		Status:             false,
 	}
 }
 
@@ -226,7 +226,7 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 	}
 
 	version := sr.Entries[0].GetAttributeValue("version")
-	field := gatherSearchResult(sr,o.Status)
+	field := gatherSearchResult(sr, o.Status)
 
 	searchLdbmRequest := ldap.NewSearchRequest(
 		searchLdbmMonitor,
@@ -247,33 +247,33 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	for k, v := range gatherSearchResult(sldbmr,false) {
+	for k, v := range gatherSearchResult(sldbmr, false) {
 		field[k] = v
 	}
 
-	if (o.AllDbmonitor) {
+	if o.AllDbmonitor {
 		for _, searchDbMonitor := range sr.Entries[0].GetAttributeValues("backendmonitordn") {
 			searchDbRequest := ldap.NewSearchRequest(
-                                searchDbMonitor,
-                                ldap.ScopeWholeSubtree,
-                                ldap.NeverDerefAliases,
-                                0,
-                                0,
-                                false,
-                                searchFilter,
-                                searchDbAttrs,
-                                nil,
-                        )
+				searchDbMonitor,
+				ldap.ScopeWholeSubtree,
+				ldap.NeverDerefAliases,
+				0,
+				0,
+				false,
+				searchFilter,
+				searchDbAttrs,
+				nil,
+			)
 
-                        sdbr, err := l.Search(searchDbRequest)
-                        if err != nil {
-                                acc.AddError(err)
-                                return nil
-                        }
+			sdbr, err := l.Search(searchDbRequest)
+			if err != nil {
+				acc.AddError(err)
+				return nil
+			}
 			r := regexp.MustCompile(`cn=monitor,cn=(?P<db>\w+),cn=ldbm database,cn=plugins,cn=config`)
 			db := r.FindStringSubmatch(searchDbMonitor)[1]
-			for k, v := range gatherDbSearchResult(sdbr,db) {
-                        	field[k] = v
+			for k, v := range gatherDbSearchResult(sdbr, db) {
+				field[k] = v
 			}
 		}
 	} else {
@@ -297,7 +297,7 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 					acc.AddError(err)
 					return nil
 				}
-				for k, v := range gatherDbSearchResult(sdbr,db) {
+				for k, v := range gatherDbSearchResult(sdbr, db) {
 					field[k] = v
 				}
 			}
@@ -306,41 +306,41 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 
 	// Add metrics
 	tags := map[string]string{
-		"server": o.Host,
-		"port":   strconv.Itoa(o.Port),
+		"server":  o.Host,
+		"port":    strconv.Itoa(o.Port),
 		"version": version,
 	}
 	acc.AddFields("ds389", field, tags)
 	return nil
 }
 
-func gatherSearchResult(sr *ldap.SearchResult, status bool) map[string]interface{} { 
+func gatherSearchResult(sr *ldap.SearchResult, status bool) map[string]interface{} {
 	fields := map[string]interface{}{}
 	for _, entry := range sr.Entries {
 		for _, attr := range entry.Attributes {
-                        if attr.Name == "connection" && status {
-                                for _, thisAttr := range attr.Values {
-                                        elements := strings.Split(thisAttr, ":")
-                                        if fd, err := strconv.ParseInt(elements[0], 10, 64); err == nil {
-                                                conn := fmt.Sprintf("conn.%d", fd)
-                                                conn_opentime := fmt.Sprintf("%s.%s", conn, "opentime")
-                                                conn_opsinitiated := fmt.Sprintf("%s.%s", conn, "opsinitiated")
-                                                conn_opscompleted := fmt.Sprintf("%s.%s", conn, "opscompleted")
-                                                conn_rw := fmt.Sprintf("%s.%s", conn, "rw")
-                                                conn_binddn := fmt.Sprintf("%s.%s", conn, "binddn")
+			if attr.Name == "connection" && status {
+				for _, thisAttr := range attr.Values {
+					elements := strings.Split(thisAttr, ":")
+					if fd, err := strconv.ParseInt(elements[0], 10, 64); err == nil {
+						conn := fmt.Sprintf("conn.%d", fd)
+						conn_opentime := fmt.Sprintf("%s.%s", conn, "opentime")
+						conn_opsinitiated := fmt.Sprintf("%s.%s", conn, "opsinitiated")
+						conn_opscompleted := fmt.Sprintf("%s.%s", conn, "opscompleted")
+						conn_rw := fmt.Sprintf("%s.%s", conn, "rw")
+						conn_binddn := fmt.Sprintf("%s.%s", conn, "binddn")
 
-                                                fields[conn_opentime] = elements[1]
-                                                fields[conn_opsinitiated], err = strconv.ParseInt(elements[2], 10, 64)
-                                                fields[conn_opscompleted], err = strconv.ParseInt(elements[3], 10, 64)
-                                                fields[conn_rw] = elements[4]
-                                                fields[conn_binddn] = elements[5]
-                                                if len(elements) == 11 {
-                                                        conn_ip := fmt.Sprintf("%s.%s", conn, "ip")
-                                                        fields[conn_ip] = strings.TrimPrefix(elements[10], "ip=")
-                                                }
-                                        }
-                                }
-                        }
+						fields[conn_opentime] = elements[1]
+						fields[conn_opsinitiated], err = strconv.ParseInt(elements[2], 10, 64)
+						fields[conn_opscompleted], err = strconv.ParseInt(elements[3], 10, 64)
+						fields[conn_rw] = elements[4]
+						fields[conn_binddn] = elements[5]
+						if len(elements) == 11 {
+							conn_ip := fmt.Sprintf("%s.%s", conn, "ip")
+							fields[conn_ip] = strings.TrimPrefix(elements[10], "ip=")
+						}
+					}
+				}
+			}
 
 			if len(attr.Values[0]) >= 1 {
 				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
