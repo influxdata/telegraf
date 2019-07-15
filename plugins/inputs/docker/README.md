@@ -106,7 +106,7 @@ may prefer to exclude them:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - n_used_file_descriptors
     - n_cpus
     - n_containers
@@ -117,32 +117,49 @@ may prefer to exclude them:
     - n_goroutines
     - n_listener_events
     - memory_total
-    - pool_blocksize (requires devicemapper storage driver)
+    - pool_blocksize (requires devicemapper storage driver) (deprecated see: `docker_devicemapper`)
 
 The `docker_data` and `docker_metadata` measurements are available only for
 some storage drivers such as devicemapper.
 
-- docker_data
++ docker_data (deprecated see: `docker_devicemapper`)
   - tags:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - available
     - total
     - used
 
-- docker_metadata
+- docker_metadata (deprecated see: `docker_devicemapper`)
   - tags:
     - unit
     - engine_host
     - server_version
-  - fields:
+  + fields:
     - available
     - total
     - used
 
-- docker_container_mem
+The above measurements for the devicemapper storage driver can now be found in the new `docker_devicemapper` measurement
+
+- docker_devicemapper
+  - tags:
+    - engine_host
+    - server_version
+    - pool_name
+  + fields:
+    - pool_blocksize_bytes
+    - data_space_used_bytes
+    - data_space_total_bytes
+    - data_space_available_bytes
+    - metadata_space_used_bytes
+    - metadata_space_total_bytes
+    - metadata_space_available_bytes
+    - thin_pool_minimum_free_space_bytes
+
++ docker_container_mem
   - tags:
     - engine_host
     - server_version
@@ -150,7 +167,7 @@ some storage drivers such as devicemapper.
     - container_name
     - container_status
     - container_version
-  - fields:
+  + fields:
     - total_pgmafault
     - cache
     - mapped_file
@@ -195,7 +212,7 @@ some storage drivers such as devicemapper.
     - container_status
     - container_version
     - cpu
-  - fields:
+  + fields:
     - throttling_periods
     - throttling_throttled_periods
     - throttling_throttled_time
@@ -206,7 +223,7 @@ some storage drivers such as devicemapper.
     - usage_percent
     - container_id
 
-- docker_container_net
++ docker_container_net
   - tags:
     - engine_host
     - server_version
@@ -215,7 +232,7 @@ some storage drivers such as devicemapper.
     - container_status
     - container_version
     - network
-  - fields:
+  + fields:
     - rx_dropped
     - rx_bytes
     - rx_errors

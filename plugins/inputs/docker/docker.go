@@ -322,21 +322,50 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 		"n_goroutines":            info.NGoroutines,
 		"n_listener_events":       info.NEventsListener,
 	}
+
 	// Add metrics
 	acc.AddFields("docker", fields, tags, now)
 	acc.AddFields("docker",
 		map[string]interface{}{"memory_total": info.MemTotal},
 		tags,
 		now)
+
 	// Get storage metrics
 	tags["unit"] = "bytes"
+
+	var (
+		// "docker_devicemapper" measurement fields
+		poolName           string
+		deviceMapperFields = map[string]interface{}{}
+	)
+
 	for _, rawData := range info.DriverStatus {
+		name := strings.ToLower(strings.Replace(rawData[0], " ", "_", -1))
+		if name == "pool_name" {
+			poolName = rawData[1]
+			continue
+		}
+
 		// Try to convert string to int (bytes)
 		value, err := parseSize(rawData[1])
 		if err != nil {
 			continue
 		}
-		name := strings.ToLower(strings.Replace(rawData[0], " ", "_", -1))
+
+		switch name {
+		case "pool_blocksize",
+			"base_device_size",
+			"data_space_used",
+			"data_space_total",
+			"data_space_available",
+			"metadata_space_used",
+			"metadata_space_total",
+			"metadata_space_available",
+			"thin_pool_minimum_free_space":
+			deviceMapperFields[name+"_bytes"] = value
+		}
+
+		// Legacy devicemapper measurements
 		if name == "pool_blocksize" {
 			// pool blocksize
 			acc.AddFields("docker",
@@ -353,12 +382,28 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 			metadataFields[fieldName] = value
 		}
 	}
+
 	if len(dataFields) > 0 {
 		acc.AddFields("docker_data", dataFields, tags, now)
 	}
+
 	if len(metadataFields) > 0 {
 		acc.AddFields("docker_metadata", metadataFields, tags, now)
 	}
+
+	if len(deviceMapperFields) > 0 {
+		tags := map[string]string{
+			"engine_host":    d.engineHost,
+			"server_version": d.serverVersion,
+		}
+
+		if poolName != "" {
+			tags["pool_name"] = poolName
+		}
+
+		acc.AddFields("docker_devicemapper", deviceMapperFields, tags, now)
+	}
+
 	return nil
 }
 
