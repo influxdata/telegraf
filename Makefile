@@ -33,7 +33,7 @@ all:
 
 .PHONY: deps
 deps:
-	dep ensure -vendor-only
+	go mod download
 
 .PHONY: telegraf
 telegraf:
