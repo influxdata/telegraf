@@ -40,6 +40,10 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
+  ## HTTP Basic Authentication username and password.
+  # username = ""
+  # password = ""
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
