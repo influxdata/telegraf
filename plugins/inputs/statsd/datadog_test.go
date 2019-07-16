@@ -74,7 +74,8 @@ func TestEventGather(t *testing.T) {
 	}
 	acc := &testutil.Accumulator{}
 	s := NewTestStatsd()
-	s.acc = acc
+	require.NoError(t, s.Start(acc))
+	defer s.Stop()
 
 	for i := range tests {
 		t.Run(tests[i].name, func(t *testing.T) {
@@ -379,11 +380,13 @@ func TestEvents(t *testing.T) {
 			},
 		},
 	}
+	s := NewTestStatsd()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, s.Start(acc))
+	defer s.Stop()
 	for i := range tests {
 		t.Run(tests[i].name, func(t *testing.T) {
-			s := NewTestStatsd()
-			acc := &testutil.Accumulator{}
-			s.acc = acc
+			acc.ClearMetrics()
 			err := s.parseEventMessage(tests[i].args.now, tests[i].args.message, tests[i].args.hostname)
 			require.Nil(t, err)
 			m := acc.Metrics[0]
@@ -406,7 +409,10 @@ func TestEvents(t *testing.T) {
 func TestEventError(t *testing.T) {
 	now := time.Now()
 	s := NewTestStatsd()
-	s.acc = &testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
+	require.NoError(t, s.Start(acc))
+	defer s.Stop()
+
 	// missing length header
 	err := s.parseEventMessage(now, "_e:title|text", "default-hostname")
 	require.Error(t, err)
