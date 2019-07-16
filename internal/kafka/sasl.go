@@ -32,12 +32,12 @@ func (c *SASLConfig) SetSaramaSASLConfig(config *sarama.Config) error {
 	case "SCRAM-SHA-256":
 		sasl.Mechanism = sarama.SASLTypeSCRAMSHA256
 		sasl.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-			return &XDGSCRAMClient{HashGeneratorFcn: SHA512}
+			return &XDGSCRAMClient{HashGeneratorFcn: SHA256}
 		}
 	case "SCRAM-SHA-512":
 		sasl.Mechanism = sarama.SASLTypeSCRAMSHA512
 		sasl.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
-			return &XDGSCRAMClient{HashGeneratorFcn: SHA256}
+			return &XDGSCRAMClient{HashGeneratorFcn: SHA512}
 		}
 	default:
 		return ErrUnknownMechanism
