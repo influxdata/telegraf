@@ -97,10 +97,10 @@ the operation and keep the old name.
 ```toml
 [[processors.strings]]
   [[processors.strings.lowercase]]
-    field = "uri_stem"
+    tag = "uri_stem"
 
   [[processors.strings.trim_prefix]]
-    field = "uri_stem"
+    tag = "uri_stem"
     prefix = "/api/"
 
   [[processors.strings.uppercase]]
@@ -110,12 +110,12 @@ the operation and keep the old name.
 
 **Input**
 ```
-iis_log,method=get,uri_stem=/API/HealthCheck cs-host="MIXEDCASE_host",referrer="-",ident="-",http_version=1.1,agent="UserAgent",resp_bytes=270i 1519652321000000000
+iis_log,method=get,uri_stem=/API/HealthCheck cs-host="MIXEDCASE_host",http_version=1.1 1519652321000000000
 ```
 
 **Output**
 ```
-iis_log,method=get,uri_stem=healthcheck cs-host="MIXEDCASE_host",cs-host_normalised="MIXEDCASE_HOST",referrer="-",ident="-",http_version=1.1,agent="UserAgent",resp_bytes=270i 1519652321000000000
+iis_log,method=get,uri_stem=healthcheck cs-host="MIXEDCASE_host",http_version=1.1,cs-host_normalised="MIXEDCASE_HOST" 1519652321000000000
 ```
 
 ### Example 2
@@ -123,10 +123,10 @@ iis_log,method=get,uri_stem=healthcheck cs-host="MIXEDCASE_host",cs-host_normali
 ```toml
 [[processors.strings]]
   [[processors.strings.lowercase]]
-    field_key = "URI-Stem"
+    tag_key = "URI-Stem"
 
   [[processors.strings.replace]]
-    field_key = "uri-stem"
+    tag_key = "uri-stem"
     old = "-"
     new = "_"
 ```
@@ -138,5 +138,5 @@ iis_log,URI-Stem=/API/HealthCheck http_version=1.1 1519652321000000000
 
 **Output**
 ```
-iis_log,uri_stem=/API/HealthCheck,URI-Stem=/API/HealthCheck http_version=1.1 1519652321000000000
+iis_log,URI-Stem=/API/HealthCheck,uri-stem=/API/HealthCheck,uri_stem=/API/HealthCheck http_version=1.1 1519652321000000000
 ```
