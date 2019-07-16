@@ -14,41 +14,59 @@ Implemented functions are:
 
 Please note that in this implementation these are processed in the order that they appear above.
 
-Specify the `measurement`, `tag` or `field` that you want processed in each section and optionally a `dest` if you want the result stored in a new tag or field. You can specify lots of transformations on data with a single strings processor.
+Specify the `measurement`, `tag`, `tag_key`, `field`, or `field_key` that you want processed in each section and optionally a `dest` if you want the result stored in a new tag or field. You can specify lots of transformations on data with a single strings processor.
 
-If you'd like to apply the change to every `tag`, `field`, or `measurement`, use the value "*" for each respective field. Note that the `dest` field will be ignored if "*" is used
+If you'd like to apply the change to every `tag`, `tag_key`, `field`, `field_key`, or `measurement`, use the value "*" for each respective field. Note that the `dest` field will be ignored if "*" is used.
+
+If you'd like to apply multiple processings to the same `tag_key` or `field_key`, the config must follow the exection order. This order is as follows:
+  1. Lowercase
+  1. Uppercase
+  1. Trim
+  1. TrimLeft
+  1. TrimRight
+  1. TrimPrefix
+  1. TrimSuffix
+  1. Replace
+See [Example 2]() for an example.
 
 ### Configuration:
 
 ```toml
 [[processors.strings]]
-  # [[processors.strings.uppercase]]
-  #   tag = "method"
-
+  ## Convert a field value to lowercase and store in a new field
   # [[processors.strings.lowercase]]
   #   field = "uri_stem"
   #   dest = "uri_stem_normalised"
 
-  ## Convert a tag value to lowercase
+  ## Convert a tag value to uppercase
+  # [[processors.strings.uppercase]]
+  #   tag = "method"
+
+  ## Trim leading and trailing whitespace using the default cutset
   # [[processors.strings.trim]]
   #   field = "message"
 
+  ## Trim leading characters in cutset
   # [[processors.strings.trim_left]]
   #   field = "message"
   #   cutset = "\t"
 
+  ## Trim trailing characters in cutset
   # [[processors.strings.trim_right]]
   #   field = "message"
   #   cutset = "\r\n"
 
+  ## Trim the given prefix from the field
   # [[processors.strings.trim_prefix]]
   #   field = "my_value"
   #   prefix = "my_"
 
+  ## Trim the given suffix from the field
   # [[processors.strings.trim_suffix]]
   #   field = "read_count"
   #   suffix = "_count"
 
+  ## Replace all non-overlapping instances of old with new
   # [[processors.strings.replace]]
   #   measurement = "*"
   #   old = ":"
@@ -79,7 +97,7 @@ the operation and keep the old name.
 ```toml
 [[processors.strings]]
   [[processors.strings.lowercase]]
-    field = "uri-stem"
+    field = "uri_stem"
 
   [[processors.strings.trim_prefix]]
     field = "uri_stem"
@@ -98,4 +116,27 @@ iis_log,method=get,uri_stem=/API/HealthCheck cs-host="MIXEDCASE_host",referrer="
 **Output**
 ```
 iis_log,method=get,uri_stem=healthcheck cs-host="MIXEDCASE_host",cs-host_normalised="MIXEDCASE_HOST",referrer="-",ident="-",http_version=1.1,agent="UserAgent",resp_bytes=270i 1519652321000000000
+```
+
+### Example 2
+**Config**
+```toml
+[[processors.strings]]
+  [[processors.strings.lowercase]]
+    field_key = "URI-Stem"
+
+  [[processors.strings.replace]]
+    field_key = "uri-stem"
+    old = "-"
+    new = "_"
+```
+
+**Input**
+```
+iis_log,URI-Stem=/API/HealthCheck http_version=1.1 1519652321000000000
+```
+
+**Output**
+```
+iis_log,uri_stem=/API/HealthCheck,URI-Stem=/API/HealthCheck http_version=1.1 1519652321000000000
 ```
