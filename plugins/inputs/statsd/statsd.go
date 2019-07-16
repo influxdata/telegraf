@@ -309,11 +309,14 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Statsd) Start(_ telegraf.Accumulator) error {
+func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	if s.ParseDataDogTags {
 		s.DataDogExtensions = true
 		log.Printf("W! [inputs.statsd] The parse_data_dog_tags option is deprecated, use datadog_extensions instead.")
 	}
+
+	s.acc = ac
+
 	// Make data structures
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
