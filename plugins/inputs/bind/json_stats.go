@@ -81,7 +81,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	addJSONCounter(acc, tags, stats.OpCodes)
 
 	// RCodes stats
-	tags["type"] = "rcodes"
+	tags["type"] = "rcode"
 	addJSONCounter(acc, tags, stats.RCodes)
 
 	// Query RDATA types
@@ -97,7 +97,7 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	addJSONCounter(acc, tags, stats.SockStats)
 
 	// Zonestats
-	tags["type"] = "zonestats"
+	tags["type"] = "zonestat"
 	addJSONCounter(acc, tags, stats.ZoneStats)
 
 	// Memory stats
