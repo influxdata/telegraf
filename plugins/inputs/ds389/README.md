@@ -104,7 +104,7 @@ If `status = true` the `connection` attribute will be parsed in this metric:
 
 Format:
 
-conn.<fd>.<param> = <value>
+`conn.<fd>.<param> = <value>`
 
 ### Tags:
 
