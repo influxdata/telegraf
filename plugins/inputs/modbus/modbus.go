@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"math"
 	
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
@@ -43,11 +44,12 @@ type register struct {
 }
 
 type tag struct {
-	Name    string
-	Order   string	
-	Scale   string
-	Address []int
-	Value   interface{}
+	Name     string
+	Order    string
+	DataType string
+	Scale    string
+	Address  []int
+	Value    interface{}
 }
 
 type chunk struct {
@@ -57,7 +59,7 @@ type chunk struct {
 
 const (
     C_DIGITAL	= "digital"
-	C_ANALOG	= "analog"    
+    C_ANALOG	= "analog"    
 )
 
 var ModbusConfig = `
@@ -79,7 +81,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
    name = "Voltage"
-   order ="AB"	
+   order ="AB"
+   datatype = "int16"
    scale = "/10"
    address = [
     0      
@@ -87,7 +90,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
    name = "Current"
-   order ="CDAB"	
+   order ="CDAB"
+   datatype = "int32"
    scale = "/1000"
    address = [
     1,
@@ -96,7 +100,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Power"
-    order ="CDAB"	
+    order ="CDAB"
+    datatype = "int32"
     scale = "/10"
     address = [
      3,
@@ -105,7 +110,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Energy"
-    order ="CDAB"	
+    order ="CDAB"
+    datatype = "int32"	
     scale = "/1000"
     address = [
      5,
@@ -114,7 +120,7 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Frequency"
-    order ="AB"	
+    order ="AB"	    
     scale = "/10"
     address = [
      7
@@ -122,7 +128,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "PowerFactor"
-    order ="AB"	
+    order ="AB"
+    datatype = "int32"
     scale = "/100"
     address = [
      8
@@ -348,8 +355,11 @@ func setTag(s string, t []tag, r map[int]int) {
 			for _, rv := range t[i].Address {				
 				rawValues = append(rawValues, r[rv])
 			}
-
-			t[i].Value = scale(t[i].Scale, convertEndianness(t[i].Order, rawValues))
+			if t[i].DataType == "float32" {
+				t[i].Value = math.Float32frombits(uint32(convertEndianness(t[i].Order, rawValues)))
+			} else {
+				t[i].Value = scale(t[i].Scale, convertEndianness(t[i].Order, rawValues))
+			}
 		}
 	}
 }
