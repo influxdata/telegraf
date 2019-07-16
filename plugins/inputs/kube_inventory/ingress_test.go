@@ -83,7 +83,7 @@ func TestIngress(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Fields: map[string]interface{}{
-							"tls": false,
+							"tls":                  false,
 							"backend_service_port": int32(8080),
 							"generation":           int64(12),
 							"created":              now.UnixNano(),
