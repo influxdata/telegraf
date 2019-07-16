@@ -34,8 +34,8 @@ func (ki *KubernetesInventory) gatherIngress(i v1beta1EXT.Ingress, acc telegraf.
 	}
 
 	tags := map[string]string{
-		"name":      i.Metadata.GetName(),
-		"namespace": i.Metadata.GetNamespace(),
+		"ingress_name": i.Metadata.GetName(),
+		"namespace":    i.Metadata.GetNamespace(),
 	}
 
 	for _, rule := range i.GetSpec().GetRules() {
@@ -66,8 +66,8 @@ func (ki *KubernetesInventory) gatherIngressWithIps(i v1beta1EXT.Ingress, acc te
 	}
 
 	tags := map[string]string{
-		"name":      i.Metadata.GetName(),
-		"namespace": i.Metadata.GetNamespace(),
+		"ingress_name": i.Metadata.GetName(),
+		"namespace":    i.Metadata.GetNamespace(),
 	}
 
 	for _, ingress := range i.GetStatus().GetLoadBalancer().GetIngress() {

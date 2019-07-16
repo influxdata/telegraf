@@ -34,8 +34,8 @@ func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumula
 	}
 
 	tags := map[string]string{
-		"name":      s.Metadata.GetName(),
-		"namespace": s.Metadata.GetNamespace(),
+		"service_name": s.Metadata.GetName(),
+		"namespace":    s.Metadata.GetNamespace(),
 	}
 
 	for _, port := range s.GetSpec().GetPorts() {
@@ -69,8 +69,8 @@ func (ki *KubernetesInventory) gatherServiceWithExternIps(s v1.Service, acc tele
 	}
 
 	tags := map[string]string{
-		"name":      s.Metadata.GetName(),
-		"namespace": s.Metadata.GetNamespace(),
+		"service_name": s.Metadata.GetName(),
+		"namespace":    s.Metadata.GetNamespace(),
 	}
 
 	if externIPs := s.GetSpec().GetExternalIPs(); externIPs != nil {
