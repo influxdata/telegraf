@@ -57,6 +57,7 @@
 
 - [#6054](https://github.com/influxdata/telegraf/issues/6054): Fix unable to reconnect after vCenter reboot in vsphere input.
 - [#6073](https://github.com/influxdata/telegraf/issues/6073): Handle unknown error in nvidia-smi output.
+- [#6121](https://github.com/influxdata/telegraf/pull/6121): Fix panic in statd input when processing datadog events.
 
 ## v1.11.2 [2019-07-09]
 
