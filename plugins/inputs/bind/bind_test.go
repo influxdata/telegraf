@@ -48,7 +48,7 @@ func TestBindJsonStats(t *testing.T) {
 			},
 		},
 		{
-			"rcodes",
+			"rcode",
 			[]fieldSet{
 				{"NOERROR", 1732},
 				{"FORMERR", 0},
@@ -127,7 +127,7 @@ func TestBindJsonStats(t *testing.T) {
 			},
 		},
 		{
-			"zonestats",
+			"zonestat",
 			[]fieldSet{
 				{"NotifyOutv4", 8},
 				{"NotifyInv4", 5},
