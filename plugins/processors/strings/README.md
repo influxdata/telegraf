@@ -16,7 +16,7 @@ Please note that in this implementation these are processed in the order that th
 
 Specify the `measurement`, `tag`, `tag_key`, `field`, or `field_key` that you want processed in each section and optionally a `dest` if you want the result stored in a new tag or field. You can specify lots of transformations on data with a single strings processor.
 
-If you'd like to apply the change to every `tag`, `tag_key`, `field`, `field_key`, or `measurement`, use the value "*" for each respective field. Note that the `dest` field will be ignored if "*" is used.
+If you'd like to apply the change to every `tag`, `tag_key`, `field`, `field_key`, or `measurement`, use the value `"*"` for each respective field. Note that the `dest` field will be ignored if `"*"` is used.
 
 If you'd like to apply multiple processings to the same `tag_key` or `field_key`, note the process order stated above. See [Example 2]() for an example.
 
