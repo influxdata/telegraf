@@ -346,7 +346,7 @@ func TestLustre2CanParseConfiguration(t *testing.T) {
    ]`)
 
 	table, err := toml.Parse([]byte(config))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	inputs, ok := table.Fields["inputs"]
 	require.True(t, ok)
