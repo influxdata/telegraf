@@ -79,6 +79,13 @@ This plugin gathers the statistic data from MySQL server
   ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_DIGEST
   gather_perf_events_statements             = false
   #
+  ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_ACCOUNT_BY_EVENT_NAME
+  gather_perf_sum_per_acc_per_event         = false
+  #
+  ## list of events to be gathered for gather_perf_sum_per_acc_per_event
+  ## in case of empty list all events will be gathered
+  perf_summary_events                       = []
+  #
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   interval_slow                             = "30m"
 
