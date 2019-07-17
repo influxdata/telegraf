@@ -18,16 +18,7 @@ Specify the `measurement`, `tag`, `tag_key`, `field`, or `field_key` that you wa
 
 If you'd like to apply the change to every `tag`, `tag_key`, `field`, `field_key`, or `measurement`, use the value "*" for each respective field. Note that the `dest` field will be ignored if "*" is used.
 
-If you'd like to apply multiple processings to the same `tag_key` or `field_key`, the config must follow the exection order. This order is as follows:
-  1. Lowercase
-  1. Uppercase
-  1. Trim
-  1. TrimLeft
-  1. TrimRight
-  1. TrimPrefix
-  1. TrimSuffix
-  1. Replace
-See [Example 2]() for an example.
+If you'd like to apply multiple processings to the same `tag_key` or `field_key`, note the process order stated above. See [Example 2]() for an example.
 
 ### Configuration:
 
