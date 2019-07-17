@@ -3,21 +3,22 @@ package json
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/tidwall/gjson"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/tidwall/gjson"
 )
 
 var (
-	utf8BOM = []byte("\xef\xbb\xbf")
+	utf8BOM      = []byte("\xef\xbb\xbf")
+	ErrWrongType = errors.New("must be an object or an array of objects")
 )
 
 type JSONParser struct {
@@ -32,32 +33,34 @@ type JSONParser struct {
 	DefaultTags    map[string]string
 }
 
-func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
+func (p *JSONParser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
+	results := make([]telegraf.Metric, 0)
 
-	var jsonOut []map[string]interface{}
-	err := json.Unmarshal(buf, &jsonOut)
-	if err != nil {
-		err = fmt.Errorf("unable to parse out as JSON Array, %s", err)
-		return nil, err
-	}
-	for _, item := range jsonOut {
-		metrics, err = p.parseObject(metrics, item)
-		if err != nil {
-			return nil, err
+	for _, item := range data {
+		switch v := item.(type) {
+		case map[string]interface{}:
+			metrics, err := p.parseObject(v)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, metrics...)
+		default:
+			return nil, ErrWrongType
+
 		}
 	}
-	return metrics, nil
+
+	return results, nil
 }
 
-func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
+func (p *JSONParser) parseObject(data map[string]interface{}) ([]telegraf.Metric, error) {
 	tags := make(map[string]string)
 	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}
 
 	f := JSONFlattener{}
-	err := f.FullFlattenJSON("", jsonOut, true, true)
+	err := f.FullFlattenJSON("", data, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +104,7 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 	if err != nil {
 		return nil, err
 	}
-	return append(metrics, metric), nil
+	return []telegraf.Metric{metric}, nil
 }
 
 //will take in field map with strings and bools,
@@ -168,17 +171,20 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return make([]telegraf.Metric, 0), nil
 	}
 
-	if !isarray(buf) {
-		metrics := make([]telegraf.Metric, 0)
-		var jsonOut map[string]interface{}
-		err := json.Unmarshal(buf, &jsonOut)
-		if err != nil {
-			err = fmt.Errorf("unable to parse out as JSON, %s", err)
-			return nil, err
-		}
-		return p.parseObject(metrics, jsonOut)
+	var data interface{}
+	err := json.Unmarshal(buf, &data)
+	if err != nil {
+		return nil, err
 	}
-	return p.parseArray(buf)
+
+	switch v := data.(type) {
+	case map[string]interface{}:
+		return p.parseObject(v)
+	case []interface{}:
+		return p.parseArray(v)
+	default:
+		return nil, ErrWrongType
+	}
 }
 
 func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
@@ -262,14 +268,4 @@ func (f *JSONFlattener) FullFlattenJSON(
 			t, t, fieldname)
 	}
 	return nil
-}
-
-func isarray(buf []byte) bool {
-	ia := bytes.IndexByte(buf, '[')
-	ib := bytes.IndexByte(buf, '{')
-	if ia > -1 && ia < ib {
-		return true
-	} else {
-		return false
-	}
 }
