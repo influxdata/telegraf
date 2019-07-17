@@ -55,32 +55,42 @@ func (n *node) search(line string) *Template {
 
 // recursiveSearch performs the actual recursive search
 func (n *node) recursiveSearch(lineParts []string) *Template {
-	// Nothing to search
+	// nothing to search
 	if len(lineParts) == 0 || len(n.children) == 0 {
 		return n.template
 	}
 
-	// If last element is a wildcard, don't include it in this search since it's sorted
-	// to the end but lexicographically it would not always be and sort.Search assumes
-	// the slice is sorted.
-	length := len(n.children)
-	if n.children[length-1].value == "*" {
+	var (
+		hasWildcard bool
+		length      = len(n.children)
+	)
+
+	// search children excluding wildcard match has been
+	// artifically sorted to the end of the children set
+	if hasWildcard = n.children[length-1].value == "*"; hasWildcard {
 		length--
 	}
 
-	// Find the index of child with an exact match
 	i := sort.Search(length, func(i int) bool {
 		return n.children[i].value >= lineParts[0]
 	})
 
-	// Found an exact match, so search that child sub-tree
-	if i < len(n.children) && n.children[i].value == lineParts[0] {
-		return n.children[i].recursiveSearch(lineParts[1:])
+	// given an exact match is found within children set
+	if i < length && n.children[i].value == lineParts[0] {
+		// decend into the matching node
+		if tmpl := n.children[i].recursiveSearch(lineParts[1:]); tmpl != nil {
+			// given a template is found return it
+			return tmpl
+		}
 	}
-	// Not an exact match, see if we have a wildcard child to search
-	if n.children[len(n.children)-1].value == "*" {
-		return n.children[len(n.children)-1].recursiveSearch(lineParts[1:])
+
+	// if last child is a wildcard
+	if hasWildcard {
+		// descend the wildcard node
+		return n.children[length].recursiveSearch(lineParts[1:])
 	}
+
+	// fallback to returning template at this node
 	return n.template
 }
 
