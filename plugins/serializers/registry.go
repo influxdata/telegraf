@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
+	"github.com/influxdata/telegraf/plugins/serializers/flattenjson"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -100,6 +101,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewCarbon2Serializer()
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
+	case "flattenjson":
+		serializer, err = NewFlattenjsonSerializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -154,4 +157,8 @@ func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serialize
 		Template:   template,
 		TagSupport: tag_support,
 	}, nil
+}
+
+func NewFlattenjsonSerializer() (Serializer, error) {
+	return flattenjson.NewSerializer()
 }
