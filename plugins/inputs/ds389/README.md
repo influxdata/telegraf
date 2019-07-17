@@ -39,7 +39,7 @@ Metric names are attributes name.
 
 If dbtomonitor array is provided , it can gather metrics for each dbfilename like uniquemember, memberof, givename indexes. 
 
-An 389DS 1.3.7 server will provide these metrics:
+A 389DS 1.3.7 server will provide these metrics:
 
 - currentconnections
 - totalconnections
