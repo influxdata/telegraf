@@ -73,7 +73,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 
 		// Build tags parameter
 		for n, t := range metric.Tags() {
-			dataGroup["tags_" + n] = t
+			dataGroup["tags_"+n] = t
 		}
 
 		// Build fields parameter

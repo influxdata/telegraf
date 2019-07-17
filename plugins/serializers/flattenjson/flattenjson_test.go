@@ -1,9 +1,9 @@
 package flattenjson
 
 import (
+	"fmt"
 	"testing"
 	"time"
-	"fmt"
 
 	"github.com/stretchr/testify/assert"
 
@@ -137,4 +137,3 @@ func TestSerializeBatch(t *testing.T) {
 	expS := []byte(fmt.Sprintf(`{"metric_family":"cpu","metric_name":"value","metric_value":42,"tags_cpu":"cpu0","timestamp":0}`) + "\n" + `{"metric_family":"cpu","metric_name":"value","metric_value":92,"timestamp":0}` + "\n")
 	assert.Equal(t, string(expS), string(buf))
 }
-
