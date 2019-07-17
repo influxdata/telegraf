@@ -2,7 +2,6 @@ package json
 
 import (
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -496,7 +495,7 @@ func TestJSONParseNestedArray(t *testing.T) {
 	require.NoError(t, err)
 
 	metrics, err := parser.Parse([]byte(testString))
-	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
+	require.Len(t, metrics, 1)
 	require.NoError(t, err)
 	require.Equal(t, 3, len(metrics[0].Tags()))
 }
@@ -754,7 +753,6 @@ func TestTimeErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	metrics, err = parser.Parse([]byte(testString2))
-	log.Printf("err: %v", err)
 	require.Error(t, err)
 	require.Equal(t, 0, len(metrics))
 	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
@@ -839,4 +837,52 @@ func TestStringFieldGlob(t *testing.T) {
 	}
 
 	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestParseEmptyArray(t *testing.T) {
+	data := `[]`
+
+	parser, err := New(&Config{})
+	require.NoError(t, err)
+
+	actual, err := parser.Parse([]byte(data))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{}
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
+
+func TestParseSimpleArray(t *testing.T) {
+	data := `[{"answer": 42}]`
+
+	parser, err := New(&Config{
+		MetricName: "json",
+	})
+	require.NoError(t, err)
+
+	actual, err := parser.Parse([]byte(data))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"json",
+			map[string]string{},
+			map[string]interface{}{
+				"answer": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+}
+
+func TestParseArrayWithWrongType(t *testing.T) {
+	data := `[{"answer": 42}, 123]`
+
+	parser, err := New(&Config{})
+	require.NoError(t, err)
+
+	_, err = parser.Parse([]byte(data))
+	require.Error(t, err)
 }
