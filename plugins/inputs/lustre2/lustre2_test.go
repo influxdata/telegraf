@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -329,4 +332,39 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 
 	err = os.RemoveAll(os.TempDir() + "/telegraf")
 	require.NoError(t, err)
+}
+
+func TestLustre2CanParseConfiguration(t *testing.T) {
+	config := []byte(`
+[[inputs.lustre2]]
+   ost_procfiles = [
+     "/proc/fs/lustre/obdfilter/*/stats",
+     "/proc/fs/lustre/osd-ldiskfs/*/stats",
+   ]
+   mds_procfiles = [
+     "/proc/fs/lustre/mdt/*/md_stats",
+   ]`)
+
+	table, err := toml.Parse([]byte(config))
+	require.NoError(t, err)
+
+	inputs, ok := table.Fields["inputs"]
+	require.True(t, ok)
+
+	lustre2, ok := inputs.(*ast.Table).Fields["lustre2"]
+	require.True(t, ok)
+
+	var plugin Lustre2
+
+	require.NoError(t, toml.UnmarshalTable(lustre2.([]*ast.Table)[0], &plugin))
+
+	assert.Equal(t, Lustre2{
+		Ost_procfiles: []string{
+			"/proc/fs/lustre/obdfilter/*/stats",
+			"/proc/fs/lustre/osd-ldiskfs/*/stats",
+		},
+		Mds_procfiles: []string{
+			"/proc/fs/lustre/mdt/*/md_stats",
+		},
+	}, plugin)
 }
