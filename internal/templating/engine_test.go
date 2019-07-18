@@ -29,38 +29,49 @@ func TestEngineWithWildcardTemplate(t *testing.T) {
 			"taskmanagerTask.alarm-detector.Assign.alarmDefinitionId metricsType.process.nodeId.x.alarmDefinitionId.measurement.field rule=1",
 			"taskmanagerTask.*.*.*.*                                 metricsType.process.nodeId.measurement rule=2",
 		}
-
-		lineOne = "taskmanagerTask.alarm-detector.Assign.alarmDefinitionId.timeout_errors.duration.p75"
-		lineTwo = "taskmanagerTask.alarm-detector.Assign.numRecordsInPerSecond.m5_rate"
 	)
 	require.NoError(t, err)
 
 	engine, err := NewEngine(".", defaultTmpl, templates)
 	require.NoError(t, err)
 
-	measurement, tags, field, err := engine.Apply(lineOne)
-	require.NoError(t, err)
+	for _, testCase := range []struct {
+		line        string
+		measurement string
+		field       string
+		tags        map[string]string
+	}{
+		{
+			line:        "taskmanagerTask.alarm-detector.Assign.alarmDefinitionId.timeout_errors.duration.p75",
+			measurement: "duration",
+			field:       "p75",
+			tags: map[string]string{
+				"metricsType":       "taskmanagerTask",
+				"process":           "alarm-detector",
+				"nodeId":            "Assign",
+				"x":                 "alarmDefinitionId",
+				"alarmDefinitionId": "timeout_errors",
+				"rule":              "1",
+			},
+		},
+		{
+			line:        "taskmanagerTask.alarm-detector.Assign.numRecordsInPerSecond.m5_rate",
+			measurement: "numRecordsInPerSecond",
+			tags: map[string]string{
+				"metricsType": "taskmanagerTask",
+				"process":     "alarm-detector",
+				"nodeId":      "Assign",
+				"rule":        "2",
+			},
+		},
+	} {
+		t.Run(testCase.line, func(t *testing.T) {
+			measurement, tags, field, err := engine.Apply(testCase.line)
+			require.NoError(t, err)
 
-	assert.Equal(t, "duration", measurement)
-	assert.Equal(t, "p75", field)
-	assert.Equal(t, map[string]string{
-		"metricsType":       "taskmanagerTask",
-		"process":           "alarm-detector",
-		"nodeId":            "Assign",
-		"x":                 "alarmDefinitionId",
-		"alarmDefinitionId": "timeout_errors",
-		"rule":              "1",
-	}, tags)
-
-	measurement, tags, field, err = engine.Apply(lineTwo)
-	require.NoError(t, err)
-
-	assert.Equal(t, "numRecordsInPerSecond", measurement)
-	assert.Equal(t, "", field)
-	assert.Equal(t, map[string]string{
-		"metricsType": "taskmanagerTask",
-		"process":     "alarm-detector",
-		"nodeId":      "Assign",
-		"rule":        "2",
-	}, tags)
+			assert.Equal(t, testCase.measurement, measurement)
+			assert.Equal(t, testCase.field, field)
+			assert.Equal(t, testCase.tags, tags)
+		})
+	}
 }

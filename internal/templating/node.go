@@ -65,8 +65,10 @@ func (n *node) recursiveSearch(lineParts []string) *Template {
 		length      = len(n.children)
 	)
 
-	// search children excluding wildcard match has been
-	// artifically sorted to the end of the children set
+	// exclude last child from search if it is a wildcard. sort.Search expects
+	// a lexicographically sorted set of children and we have artificially sorted
+	// wildcards to the end of the child set
+	// wildcards will be searched seperately if no exact match is found
 	if hasWildcard = n.children[length-1].value == "*"; hasWildcard {
 		length--
 	}
@@ -84,9 +86,9 @@ func (n *node) recursiveSearch(lineParts []string) *Template {
 		}
 	}
 
-	// if last child is a wildcard
+	// given no template is found and the last child is a wildcard
 	if hasWildcard {
-		// descend the wildcard node
+		// also search the wildcard child node
 		return n.children[length].recursiveSearch(lineParts[1:])
 	}
 
