@@ -300,7 +300,10 @@ func TestFieldKeyConversions(t *testing.T) {
 				},
 			},
 			check: func(t *testing.T, actual telegraf.Metric) {
-				fv, ok := actual.GetField("REQUEST")
+				fv, ok := actual.GetField("Request")
+				require.False(t, ok)
+
+				fv, ok = actual.GetField("REQUEST")
 				require.True(t, ok)
 				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
 			},
@@ -611,8 +614,7 @@ func TestTagKeyConversions(t *testing.T) {
 				require.Equal(t, "GET", tv)
 
 				tv, ok = actual.GetTag("S-ComputerName")
-				require.True(t, ok)
-				require.Equal(t, "MIXEDCASE_hostname", tv)
+				require.False(t, ok)
 
 				tv, ok = actual.GetTag("s-computername")
 				require.True(t, ok)
@@ -634,8 +636,7 @@ func TestTagKeyConversions(t *testing.T) {
 				require.Equal(t, "GET", tv)
 
 				tv, ok = actual.GetTag("S-ComputerName")
-				require.True(t, ok)
-				require.Equal(t, "MIXEDCASE_hostname", tv)
+				require.False(t, ok)
 
 				tv, ok = actual.GetTag("S-COMPUTERNAME")
 				require.True(t, ok)
