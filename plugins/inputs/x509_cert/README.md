@@ -3,6 +3,8 @@
 This plugin provides information about X509 certificate accessible via local
 file or network connection.
 
+In order to always fetch cert information, it is suggested that you use `insecure_skip_verify = true` as telegraf fails to collect information on invalid certs without it.
+
 
 ### Configuration
 

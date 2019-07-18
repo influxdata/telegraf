@@ -52,6 +52,7 @@ func TestGatherRemote(t *testing.T) {
 		{name: "successful https", server: "https://example.org:443", timeout: 5},
 		{name: "successful file", server: "file://" + tmpfile.Name(), timeout: 5},
 		{name: "unsupported scheme", server: "foo://", timeout: 5, error: true},
+		{name: "expired certificate", server: "https://expired.badssl.com:443", timeout: 5},
 		{name: "no certificate", timeout: 5, unset: true, error: true},
 		{name: "closed connection", close: true, error: true},
 		{name: "no handshake", timeout: 5, noshake: true, error: true},
