@@ -60,6 +60,7 @@
 - [#6121](https://github.com/influxdata/telegraf/pull/6121): Fix panic in statd input when processing datadog events.
 - [#6125](https://github.com/influxdata/telegraf/issues/6125): Treat empty array as successful parse in json parser.
 - [#6094](https://github.com/influxdata/telegraf/issues/6094): Add missing rcode and zonestat to bind input.
+- [#6114](https://github.com/influxdata/telegraf/issues/6114): Fix lustre2 input plugin config parse regression.
 
 ## v1.11.2 [2019-07-09]
 
