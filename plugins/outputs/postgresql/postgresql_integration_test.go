@@ -19,12 +19,12 @@ func prepareAndConnect(t *testing.T, foreignTags, jsonTags, jsonFields bool) (te
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	testAddress := "postgres://postgres@localhost:5432/postgres?sslmode=disable"
+	testAddress := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
 	testMetric := testMetric("metric name", "tag1", int(1))
 
 	postgres := &Postgresql{
-		Address:           testAddress,
+		Connection:        testAddress,
 		Schema:            "public",
 		TagsAsForeignkeys: foreignTags,
 		TagsAsJsonb:       jsonTags,

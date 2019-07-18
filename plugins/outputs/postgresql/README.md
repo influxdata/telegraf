@@ -8,7 +8,16 @@ The plugin manages the schema automatically updating missing columns, and checki
 ```toml
 # Send metrics to postgres
 [[outputs.postgresql]]
-    address = "host=localhost user=postgres sslmode=verify-full"
+    ## specify address via a url:
+    ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
+    ##       ?sslmode=[disable|verify-ca|verify-full]
+    ## or a simple string:
+    ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+    ##
+    ## All connection parameters are optional. Also supported are PG environment vars
+    ## e.g. PGPASSWORD, PGHOST, PGUSER, PGDATABASE 
+    ## all supported vars here: https://www.postgresql.org/docs/current/libpq-envars.html
+    connection = "host=localhost user=postgres sslmode=verify-full"
 
     ## Update existing tables to match the incoming metrics. Default is true
     # do_schema_updates = true

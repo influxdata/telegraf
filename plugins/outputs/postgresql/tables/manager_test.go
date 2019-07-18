@@ -31,6 +31,8 @@ func (m *mockDb) Close() error {
 	return nil
 }
 
+func (m *mockDb) IsAlive() bool { return true }
+
 func TestNewManager(t *testing.T) {
 	db := &mockDb{}
 	res := NewManager(db, "schema", "table template").(*defTableManager)

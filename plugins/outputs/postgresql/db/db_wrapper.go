@@ -8,6 +8,8 @@ import (
 	_ "github.com/jackc/pgx/stdlib"
 )
 
+const checkConnQuery = "SELECT 1"
+
 // Wrapper defines an interface that encapsulates communication with a DB.
 type Wrapper interface {
 	Exec(query string, args ...interface{}) (pgx.CommandTag, error)
@@ -15,6 +17,7 @@ type Wrapper interface {
 	Query(query string, args ...interface{}) (*pgx.Rows, error)
 	QueryRow(query string, args ...interface{}) *pgx.Row
 	Close() error
+	IsAlive() bool
 }
 
 type defaultDbWrapper struct {
@@ -23,13 +26,12 @@ type defaultDbWrapper struct {
 
 // NewWrapper returns an implementation of the db.Wrapper interface
 // that issues queries to a PG database.
-func NewWrapper(address string) (Wrapper, error) {
-	connConfig, err := pgx.ParseConnectionString(address)
+func NewWrapper(connection string) (Wrapper, error) {
+	connConfig, err := parseConnectionString(connection)
 	if err != nil {
-		log.Printf("E! Couldn't parse connection address: %s\n%v", address, err)
 		return nil, err
 	}
-	db, err := pgx.Connect(connConfig)
+	db, err := pgx.Connect(*connConfig)
 	if err != nil {
 		log.Printf("E! Couldn't connect to server\n%v", err)
 		return nil, err
@@ -62,4 +64,34 @@ func (d *defaultDbWrapper) Query(query string, args ...interface{}) (*pgx.Rows, 
 
 func (d *defaultDbWrapper) QueryRow(query string, args ...interface{}) *pgx.Row {
 	return d.db.QueryRow(query, args...)
+}
+
+func (d *defaultDbWrapper) IsAlive() bool {
+	if !d.db.IsAlive() {
+		return false
+	}
+	row := d.db.QueryRow(checkConnQuery)
+	var one int64
+	if err := row.Scan(&one); err != nil {
+		log.Printf("W! Error given on 'is conn alive':\n%v", err)
+		return false
+	}
+	return true
+}
+
+func parseConnectionString(connection string) (*pgx.ConnConfig, error) {
+	envConnConfig, err := pgx.ParseEnvLibpq()
+	if err != nil {
+		log.Println("E! couldn't check PG environment variables")
+		return nil, err
+	}
+
+	connConfig, err := pgx.ParseConnectionString(connection)
+	if err != nil {
+		log.Printf("E! Couldn't parse connection string: %s\n%v", connection, err)
+		return nil, err
+	}
+
+	connConfig = envConnConfig.Merge(connConfig)
+	return &connConfig, nil
 }

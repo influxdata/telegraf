@@ -41,6 +41,7 @@ type Manager interface {
 	// From the column details (colDetails) of a given measurement, 'columnIndices' specifies which are missing in the DB.
 	// this function will add the new columns with the required data type.
 	AddColumnsToTable(tableName string, columnIndices []int, colDetails *utils.TargetColumns) error
+	SetConnection(db db.Wrapper)
 }
 
 type defTableManager struct {
@@ -59,6 +60,13 @@ func NewManager(db db.Wrapper, schema, tableTemplate string) Manager {
 		tableTemplate: tableTemplate,
 		schema:        schema,
 	}
+}
+
+// SetConnection to db, used only when previous was killed or restarted.
+// It will also clear the local cache of which table exists.
+func (t *defTableManager) SetConnection(db db.Wrapper) {
+	t.db = db
+	t.Tables = make(map[string]bool)
 }
 
 // Exists checks if a table with the given name already is present in the DB.

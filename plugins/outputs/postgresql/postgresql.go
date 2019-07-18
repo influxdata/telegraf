@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"log"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -12,8 +13,7 @@ import (
 )
 
 type Postgresql struct {
-	db                          db.Wrapper
-	Address                     string
+	Connection                  string
 	Schema                      string
 	DoSchemaUpdates             bool
 	TagsAsForeignkeys           bool
@@ -22,10 +22,16 @@ type Postgresql struct {
 	FieldsAsJsonb               bool
 	TableTemplate               string
 	TagTableSuffix              string
-	tables                      tables.Manager
-	tagCache                    tagsCache
-	rows                        transformer
-	columns                     columns.Mapper
+
+	// lock for the assignment of the dbWrapper,
+	// table manager and tags cache
+	dbConnLock sync.Mutex
+	db         db.Wrapper
+	tables     tables.Manager
+	tagCache   tagsCache
+
+	rows    transformer
+	columns columns.Mapper
 }
 
 func init() {
@@ -44,12 +50,16 @@ func newPostgresql() *Postgresql {
 
 // Connect establishes a connection to the target database and prepares the cache
 func (p *Postgresql) Connect() error {
-	db, err := db.NewWrapper(p.Address)
+	p.dbConnLock.Lock()
+	defer p.dbConnLock.Unlock()
+
+	// set p.db with a lock
+	db, err := db.NewWrapper(p.Connection)
 	if err != nil {
 		return err
 	}
 	p.db = db
-	p.tables = tables.NewManager(db, p.Schema, p.TableTemplate)
+	p.tables = tables.NewManager(p.db, p.Schema, p.TableTemplate)
 
 	if p.TagsAsForeignkeys {
 		p.tagCache = newTagsCache(p.CachedTagsetsPerMeasurement, p.TagsAsJsonb, p.TagTableSuffix, p.Schema, p.db)
@@ -61,7 +71,8 @@ func (p *Postgresql) Connect() error {
 
 // Close closes the connection to the database
 func (p *Postgresql) Close() error {
-	p.tagCache = nil
+	p.dbConnLock.Lock()
+	defer p.dbConnLock.Unlock()
 	p.tagCache = nil
 	p.tables = nil
 	return p.db.Close()
@@ -74,14 +85,16 @@ var sampleConfig = `
   ## or a simple string:
   ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
   ##
-  ## All connection parameters are optional.
+  ## All connection parameters are optional. Also supported are PG environment vars
+  ## e.g. PGPASSWORD, PGHOST, PGUSER, PGDATABASE 
+  ## all supported vars here: https://www.postgresql.org/docs/current/libpq-envars.html
   ##
   ## Without the dbname parameter, the driver will default to a database
   ## with the same name as the user. This dbname is just for instantiating a
   ## connection with the server and doesn't restrict the databases we are trying
   ## to grab metrics for.
   ##
-  address = "host=localhost user=postgres sslmode=verify-full"
+  connection = "host=localhost user=postgres sslmode=verify-full"
 
   ## Update existing tables to match the incoming metrics automatically. Default is true
   # do_schema_updates = true
@@ -121,6 +134,14 @@ func (p *Postgresql) SampleConfig() string { return sampleConfig }
 func (p *Postgresql) Description() string  { return "Send metrics to PostgreSQL" }
 
 func (p *Postgresql) Write(metrics []telegraf.Metric) error {
+	if !p.checkConnection() {
+		log.Println("W! Connection is not alive, attempting reset")
+		if err := p.resetConnection(); err != nil {
+			log.Printf("E! Could not reset connection:\n%v", err)
+			return err
+		}
+		log.Println("I! Connection established again")
+	}
 	metricsByMeasurement := utils.GroupMetricsByMeasurement(metrics)
 	for measureName, indices := range metricsByMeasurement {
 		err := p.writeMetricsFromMeasure(measureName, indices, metrics)
@@ -181,4 +202,22 @@ func (p *Postgresql) prepareTable(tableName string, details *utils.TargetColumns
 		return nil
 	}
 	return p.tables.AddColumnsToTable(tableName, missingColumns, details)
+}
+
+func (p *Postgresql) checkConnection() bool {
+	p.dbConnLock.Lock()
+	defer p.dbConnLock.Unlock()
+	return p.db != nil && p.db.IsAlive()
+}
+
+func (p *Postgresql) resetConnection() error {
+	p.dbConnLock.Lock()
+	defer p.dbConnLock.Unlock()
+	var err error
+	p.db, err = db.NewWrapper(p.Connection)
+	p.tables.SetConnection(p.db)
+	if p.tagCache != nil {
+		p.tagCache.setDb(p.db)
+	}
+	return err
 }

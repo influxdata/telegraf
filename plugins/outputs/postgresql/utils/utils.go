@@ -62,6 +62,8 @@ func FullTableName(schema, name string) *pgx.Identifier {
 	return &pgx.Identifier{name}
 }
 
+// Constants for naming PostgreSQL data types both in
+// their short and long versions.
 const (
 	PgBool                     = "boolean"
 	PgInt8                     = "int8"
@@ -85,21 +87,11 @@ func DerivePgDatatype(value interface{}) PgDataType {
 	switch value.(type) {
 	case bool:
 		return PgBool
-	case uint64:
+	case uint64, int64, int, uint:
 		return PgInt8
-	case int64:
-		return PgInt8
-	case int:
-		return PgInt8
-	case uint:
-		return PgInt8
-	case uint32:
+	case uint32, int32:
 		return PgInt4
-	case int32:
-		return PgInt4
-	case float64:
-		return PgFloat8
-	case float32:
+	case float64, float32:
 		return PgFloat8
 	case string:
 		return PgText

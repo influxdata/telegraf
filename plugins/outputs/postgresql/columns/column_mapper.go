@@ -7,7 +7,7 @@ import (
 
 // Mapper knows how to generate the column details for the main and tags table in the db
 type Mapper interface {
-	// Iterate through an array of 'metrics' visiting only those indexed by 'indices'
+	// Target iterates through an array of 'metrics' visiting only those indexed by 'indices'
 	// and depending on 'tagsAsFK', 'tagsAsJSON', and 'fieldsAsJSON' generate the
 	// desired columns (their name, type and which role they play) for both the
 	// main metrics table in the DB, and if tagsAsFK == true for the tags table.
@@ -32,7 +32,7 @@ func NewMapper(tagsAsFK, tagsAsJSON, fieldsAsJSON bool) Mapper {
 	}
 }
 
-// Iterate through an array of 'metrics' visiting only those indexed by 'indices'
+// Target iterates through an array of 'metrics' visiting only those indexed by 'indices'
 // and depending on 'tagsAsFK', 'tagsAsJSON', and 'fieldsAsJSON' generate the
 // desired columns (their name, type and which role they play) for both the
 // main metrics table in the DB, and if tagsAsFK == true for the tags table.

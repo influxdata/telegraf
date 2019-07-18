@@ -23,6 +23,7 @@ const (
 type tagsCache interface {
 	getTagID(target *utils.TargetColumns, metric telegraf.Metric) (int, error)
 	tagsTableName(measureName string) string
+	setDb(db db.Wrapper)
 }
 
 type defTagsCache struct {
@@ -44,6 +45,10 @@ func newTagsCache(numItemsInCachePerMetric int, tagsAsJSONb bool, tagTableSuffix
 		db:             db,
 		itemsToCache:   numItemsInCachePerMetric,
 	}
+}
+
+func (c *defTagsCache) setDb(db db.Wrapper) {
+	c.db = db
 }
 
 // Checks the cache for the tag set of the metric, if present returns immediately.
