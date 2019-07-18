@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	_tls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -272,4 +273,34 @@ func TestGatherCert(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestGatherExpiredCert(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &X509Cert{
+		Sources: []string{"https://expired.badssl.com:443"},
+	}
+
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+
+	assert.False(t, acc.HasMeasurement("x509_cert"))
+
+	m = &X509Cert{
+		Sources: []string{"https://expired.badssl.com:443"},
+		ClientConfig: _tls.ClientConfig{
+			InsecureSkipVerify: true,
+		},
+	}
+
+	acc = testutil.Accumulator{}
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasMeasurement("x509_cert"))
+
 }
