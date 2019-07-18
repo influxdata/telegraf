@@ -127,6 +127,7 @@ func (c *converter) convertTagKey(metric telegraf.Metric) {
 	for key, value := range tags {
 		if k := c.fn(key); k != "" {
 			metric.AddTag(k, value)
+			metric.RemoveTag(key)
 		}
 	}
 }
@@ -171,7 +172,7 @@ func (c *converter) convertFieldKey(metric telegraf.Metric) {
 	for key, value := range fields {
 		if k := c.fn(key); k != "" {
 			metric.AddField(k, value)
-		} else {
+			metric.RemoveField(key)
 		}
 	}
 }
