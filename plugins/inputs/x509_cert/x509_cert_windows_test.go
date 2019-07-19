@@ -1,18 +1,14 @@
-// +build !windows
+// +build windows
 
 package x509_cert
 
 import (
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -131,64 +127,6 @@ func TestGatherRemote(t *testing.T) {
 	}
 }
 
-func TestGatherLocal(t *testing.T) {
-	wrongCert := fmt.Sprintf("-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n", base64.StdEncoding.EncodeToString([]byte("test")))
-
-	tests := []struct {
-		name    string
-		mode    os.FileMode
-		content string
-		error   bool
-	}{
-		{name: "permission denied", mode: 0001, error: true},
-		{name: "not a certificate", mode: 0640, content: "test", error: true},
-		{name: "wrong certificate", mode: 0640, content: wrongCert, error: true},
-		{name: "correct certificate", mode: 0640, content: pki.ReadServerCert()},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			f, err := ioutil.TempFile("", "x509_cert")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			_, err = f.Write([]byte(test.content))
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = f.Chmod(test.mode)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = f.Close()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			defer os.Remove(f.Name())
-
-			sc := X509Cert{
-				Sources: []string{f.Name()},
-			}
-
-			error := false
-
-			acc := testutil.Accumulator{}
-			err = sc.Gather(&acc)
-			if len(acc.Errors) > 0 {
-				error = true
-			}
-
-			if error != test.error {
-				t.Errorf("%s", err)
-			}
-		})
-	}
-}
-
 func TestGatherChain(t *testing.T) {
 	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
 
@@ -275,4 +213,16 @@ func TestGatherCert(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("x509_cert"))
+}
+
+func TestGatherWinStore(t *testing.T) {
+	sc := X509Cert{
+		Sources: []string{"LocalMachine/Root"},
+	}
+	t.Run("try to open LocalMachine/Root and load certs", func(t *testing.T) {
+		var acc testutil.Accumulator
+		err := sc.Gather(&acc)
+		require.NoError(t, err)
+		assert.True(t, acc.HasMeasurement("x509_cert"))
+	})
 }
