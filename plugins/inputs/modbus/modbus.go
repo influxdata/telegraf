@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 	"math"
+	"encoding/binary"	
 	
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
@@ -40,7 +41,7 @@ type registers struct {
 type register struct {
 	Tags      []tag
 	Chunks    []chunk
-	RawValues map[int]int
+	RawValues map[int]uint16
 }
 
 type tag struct {
@@ -81,8 +82,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
    name = "Voltage"
-   order ="AB"
-   datatype = "int16"
+   order = "AB"
+   datatype = "FLOAT32"
    scale = "/10"
    address = [
     0      
@@ -91,7 +92,7 @@ var ModbusConfig = `
   [[inputs.modbus.Registers.InputRegisters.Tags]]
    name = "Current"
    order ="CDAB"
-   datatype = "int32"
+   datatype = "FLOAT32"
    scale = "/1000"
    address = [
     1,
@@ -100,8 +101,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Power"
-    order ="CDAB"
-    datatype = "int32"
+    order = "CDAB"
+    datatype = "FLOAT32"
     scale = "/10"
     address = [
      3,
@@ -110,8 +111,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Energy"
-    order ="CDAB"
-    datatype = "int32"	
+    order = "CDAB"
+    datatype = "FLOAT32"	
     scale = "/1000"
     address = [
      5,
@@ -120,7 +121,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "Frequency"
-    order ="AB"	    
+	order = "AB"	
+	datatype = "FLOAT32"	    
     scale = "/10"
     address = [
      7
@@ -128,8 +130,8 @@ var ModbusConfig = `
 
   [[inputs.modbus.Registers.InputRegisters.Tags]]
     name = "PowerFactor"
-    order ="AB"
-    datatype = "int32"
+    order = "AB"
+    datatype = "FLOAT32"
     scale = "/100"
     address = [
      8
@@ -159,7 +161,7 @@ func removeDuplicates(elements []int) []int {
 	return result
 }
 
-func createRawValueMap(r []tag, rawValue map[int]int) {
+func createRawValueMap(r []tag, rawValue map[int]uint16) {
 	addr := []int{}
 	
 	for _, element := range r {
@@ -176,7 +178,7 @@ func createRawValueMap(r []tag, rawValue map[int]int) {
 	}
 }
 
-func createChunks(ch *[]chunk, rawValue map[int]int) {
+func createChunks(ch *[]chunk, rawValue map[int]uint16) {
 	r := []int{}
 	chunks := [][]int{}
 	chunk_t := []int{}
@@ -213,10 +215,10 @@ func createChunks(ch *[]chunk, rawValue map[int]int) {
 }
 
 func initialization(m *Modbus) {
-	m.Registers.DiscreteInputs.RawValues = make(map[int]int)
-	m.Registers.Coils.RawValues = make(map[int]int)
-	m.Registers.HoldingRegisters.RawValues = make(map[int]int)
-	m.Registers.InputRegisters.RawValues = make(map[int]int)
+	m.Registers.DiscreteInputs.RawValues = make(map[int]uint16)
+	m.Registers.Coils.RawValues = make(map[int]uint16)
+	m.Registers.HoldingRegisters.RawValues = make(map[int]uint16)
+	m.Registers.InputRegisters.RawValues = make(map[int]uint16)
 
 	createRawValueMap(m.Registers.DiscreteInputs.Tags, m.Registers.DiscreteInputs.RawValues)
 	createRawValueMap(m.Registers.Coils.Tags, m.Registers.Coils.RawValues)
@@ -265,17 +267,19 @@ func connect(m *Modbus) error {
 }
 
 type fn func(uint16, uint16) ([]byte, error)
-func getRawValue(t string, f fn, ch []chunk, r map[int]int) error {
+func getRawValue(t string, f fn, ch []chunk, r map[int]uint16) error {
+	//fmt.Printf("getRawValue Chunks - Type:%T, Value:%v, Hexa:0x%x\n", ch, ch, ch)
 	for _, chunk_t := range ch {		
 		results, err := f(uint16(chunk_t.Address), uint16(chunk_t.Length))
 		if err != nil {
 			return err
 		}
 
+		//fmt.Printf("getRawValue results - Type:%T, Value:%v, Hexa:0x%x\n", results, results, results)
 		if t == C_DIGITAL {
 			for i := 0; i < len(results); i++ {				
 				for b := 0; b < chunk_t.Length; b++ {				
-					r[chunk_t.Address + b] = int(results[i] >> uint(b) & 0x01)
+					r[chunk_t.Address + b] = uint16(results[i] >> uint(b) & 0x01)
 				}
 
 			}
@@ -284,7 +288,9 @@ func getRawValue(t string, f fn, ch []chunk, r map[int]int) error {
 		if t == C_ANALOG {
 			for i := 0; i < len(results); i += 2 {
 				register := uint16(results[i]) << 8 | uint16(results[i + 1])
-				r[chunk_t.Address + i / 2] = int(register)
+				//fmt.Printf("getRawValue register - Type:%T, Value:%v, Hexa:0x%x\n", register, register, register)
+				r[chunk_t.Address + i / 2] = uint16(register)
+				//fmt.Printf("getRawValue r - Type:%T, Value:%v, Hexa:0x%x\n", r, r, r)
 			}
 		}
 	}
@@ -292,36 +298,60 @@ func getRawValue(t string, f fn, ch []chunk, r map[int]int) error {
 	return nil
 }
 
-func BA(x int) int {
-	return int(x & 0xFF00 >> 8 | x & 0x00FF << 8)
-}
-
-func joinBytes(x int, s uint, y int) int {
-	return int(x << s | y)
-}
-
-func convertEndianness(o string, r []int) int {
+func convertEndianness16(o string, r []byte) interface{} {
 	switch o {
 	case "AB":
-		return int(r[0])
+		//fmt.Printf("convertEndianness16 - Type:%T, Value:%v, Hexa:0x%x\n", r, r, r)
+		return binary.BigEndian.Uint16(r)
 	case "BA":
-		return BA(r[0])
-	case "ABCD":
-		return joinBytes(int(r[0]), 16, int(r[1]))
-	case "CDAB":
-		return joinBytes(int(r[1]), 16, int(r[0]))
-	case "BADC":
-		return joinBytes(BA(r[0]), 16, BA(r[1]))
-	case "DCBA":
-		return joinBytes(BA(r[1]), 16, BA(r[0]))
+		return binary.LittleEndian.Uint16(r)	
 	default:
-		return int(r[0])
+		return r
 	}
 }
 
-func scale(s string, v int) interface{} {
+func convertEndianness32(o string, r []byte) interface{} {
+	switch o {
+	case "ABCD":
+		return binary.BigEndian.Uint32(r)
+	case "DCBA":
+		return binary.LittleEndian.Uint32(r)
+	case "BADC":			
+		return uint32(binary.LittleEndian.Uint16(r[0:])) << 16 | uint32(binary.LittleEndian.Uint16(r[2:]))
+	case "CDAB":
+		return uint32(binary.BigEndian.Uint16(r[2:])) << 16 | uint32(binary.BigEndian.Uint16(r[0:]))
+	default:
+		return r
+	}
+}
+
+func format16(f string, r uint16)  interface{}{
+	switch f{
+	case "UINT16":
+		return r
+	case "INT16":
+		return int16(r)
+	default:
+		return r
+	}
+}
+
+func format32(f string, r uint32)  interface{}{
+	switch f{
+	case "UINT32":
+		return r
+	case "INT32":
+		return int32(r)
+	case "FLOAT32-IEEE":
+		return math.Float32frombits(r)
+	default:
+		return r
+	}
+}
+
+func scale16(s string, v uint16) interface{} {
 	if len(s) == 0 {
-		return 0
+		return v
 	}
 	operator := s[0]
 	switch operator {
@@ -334,7 +364,7 @@ func scale(s string, v int) interface{} {
 	case '*':
 		div, err := strconv.Atoi(s[1:len(s)])
 		if err == nil {			
-			return v * int(div)
+			return v * uint16(div)
 		}
 		return 0
 	default:
@@ -342,7 +372,30 @@ func scale(s string, v int) interface{} {
 	}
 }
 
-func setTag(s string, t []tag, r map[int]int) {
+func scale32(s string, v uint32) interface{} {
+	if len(s) == 0 {
+		return v
+	}
+	operator := s[0]
+	switch operator {
+	case '/':
+		div, err := strconv.Atoi(s[1:len(s)])
+		if err == nil {		
+			return float32(v) / float32(div)
+		}
+		return 0
+	case '*':
+		div, err := strconv.Atoi(s[1:len(s)])
+		if err == nil {			
+			return v * uint32(div)
+		}
+		return 0
+	default:
+		return 0
+	}
+}
+
+func setTag(s string, t []tag, r map[int]uint16) {
 	if s == C_DIGITAL {
 		for i := 0; i < len(t); i++ {
 			t[i].Value = r[t[i].Address[0]]
@@ -351,14 +404,64 @@ func setTag(s string, t []tag, r map[int]int) {
 
 	if s == C_ANALOG {
 		for i := 0; i < len(t); i++ {		
-			rawValues := []int{}
-			for _, rv := range t[i].Address {				
-				rawValues = append(rawValues, r[rv])
+			rawValues := []byte{}
+			for _, rv := range t[i].Address {								
+				rawValues = append(rawValues, byte(r[rv] >> 8) )
+				rawValues = append(rawValues, byte(r[rv] & 0x00FF) )
 			}
-			if t[i].DataType == "float32" {
-				t[i].Value = math.Float32frombits(uint32(convertEndianness(t[i].Order, rawValues)))
-			} else {
-				t[i].Value = scale(t[i].Scale, convertEndianness(t[i].Order, rawValues))
+			
+			switch t[i].DataType {
+			case "UINT16":							
+				e := convertEndianness16(t[i].Order, rawValues)
+				e16, _ := e.(uint16)
+				f := format16(t[i].DataType, e16)	
+				f16 := f.(uint16)			
+				s := scale16(t[i].Scale, f16)
+				t[i].Value = s
+			case "INT16":							
+				e := convertEndianness16(t[i].Order, rawValues)
+				e16, _ := e.(uint16)
+				f := format16(t[i].DataType, e16)					
+				t[i].Value = f
+			case "UINT32":							
+				e := convertEndianness32(t[i].Order, rawValues)
+				e32, _ := e.(uint32)
+				f := format32(t[i].DataType, e32)
+				f32 := f.(uint32)
+				s := scale32(t[i].Scale, f32)
+				t[i].Value = s	
+			case "INT32":							
+				e := convertEndianness32(t[i].Order, rawValues)
+				e32, _ := e.(uint32)
+				f := format32(t[i].DataType, e32)				
+				t[i].Value = f
+			case "FLOAT32-IEEE":
+				e := convertEndianness32(t[i].Order, rawValues)
+				e32, _ := e.(uint32)
+				f := format32(t[i].DataType, e32)				
+				t[i].Value = f
+			case "FLOAT32":
+				//fmt.Printf("Values :%x, Len:%v \n", rawValues , len(rawValues))
+				if len(rawValues) == 2 {
+					//fmt.Println("16")
+					e := convertEndianness16(t[i].Order, rawValues)
+					e16, _ := e.(uint16)
+					f := format16(t[i].DataType, e16)	
+					f16 := f.(uint16)			
+					s := scale16(t[i].Scale, f16)
+					t[i].Value = s
+				} else {
+					//fmt.Println("32")
+					e := convertEndianness32(t[i].Order, rawValues)
+					e32, _ := e.(uint32)
+					//f := format32(t[i].DataType, e32)
+					//f32 := f.(uint32)
+					s := scale32(t[i].Scale, e32)
+					t[i].Value = s	
+				}
+				
+			default:
+				t[i].Value = 0				
 			}
 		}
 	}
