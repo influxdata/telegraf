@@ -55,32 +55,44 @@ func (n *node) search(line string) *Template {
 
 // recursiveSearch performs the actual recursive search
 func (n *node) recursiveSearch(lineParts []string) *Template {
-	// Nothing to search
+	// nothing to search
 	if len(lineParts) == 0 || len(n.children) == 0 {
 		return n.template
 	}
 
-	// If last element is a wildcard, don't include it in this search since it's sorted
-	// to the end but lexicographically it would not always be and sort.Search assumes
-	// the slice is sorted.
-	length := len(n.children)
-	if n.children[length-1].value == "*" {
+	var (
+		hasWildcard bool
+		length      = len(n.children)
+	)
+
+	// exclude last child from search if it is a wildcard. sort.Search expects
+	// a lexicographically sorted set of children and we have artificially sorted
+	// wildcards to the end of the child set
+	// wildcards will be searched seperately if no exact match is found
+	if hasWildcard = n.children[length-1].value == "*"; hasWildcard {
 		length--
 	}
 
-	// Find the index of child with an exact match
 	i := sort.Search(length, func(i int) bool {
 		return n.children[i].value >= lineParts[0]
 	})
 
-	// Found an exact match, so search that child sub-tree
-	if i < len(n.children) && n.children[i].value == lineParts[0] {
-		return n.children[i].recursiveSearch(lineParts[1:])
+	// given an exact match is found within children set
+	if i < length && n.children[i].value == lineParts[0] {
+		// decend into the matching node
+		if tmpl := n.children[i].recursiveSearch(lineParts[1:]); tmpl != nil {
+			// given a template is found return it
+			return tmpl
+		}
 	}
-	// Not an exact match, see if we have a wildcard child to search
-	if n.children[len(n.children)-1].value == "*" {
-		return n.children[len(n.children)-1].recursiveSearch(lineParts[1:])
+
+	// given no template is found and the last child is a wildcard
+	if hasWildcard {
+		// also search the wildcard child node
+		return n.children[length].recursiveSearch(lineParts[1:])
 	}
+
+	// fallback to returning template at this node
 	return n.template
 }
 
