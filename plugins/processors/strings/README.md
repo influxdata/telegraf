@@ -129,5 +129,5 @@ iis_log,URI-Stem=/API/HealthCheck http_version=1.1 1519652321000000000
 
 **Output**
 ```
-iis_log,URI-Stem=/API/HealthCheck,uri-stem=/API/HealthCheck,uri_stem=/API/HealthCheck http_version=1.1 1519652321000000000
+iis_log,uri_stem=/API/HealthCheck http_version=1.1 1519652321000000000
 ```
