@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ericchiang/k8s/util/intstr"
 	"github.com/influxdata/telegraf/internal/tls"
 )
 
@@ -27,6 +28,13 @@ func toBoolPtr(b bool) *bool {
 	return &b
 }
 
+func toIntStrPtrS(s string) *intstr.IntOrString {
+	return &intstr.IntOrString{StrVal: &s}
+}
+
+func toIntStrPtrI(i int32) *intstr.IntOrString {
+	return &intstr.IntOrString{IntVal: &i}
+}
 func TestNewClient(t *testing.T) {
 	_, err := newClient("https://127.0.0.1:443/", "default", "abc123", time.Second, tls.ClientConfig{})
 	if err != nil {
