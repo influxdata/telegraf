@@ -46,8 +46,9 @@ type HTTPListener struct {
 
 	tlsint.ServerConfig
 
-	BasicUsername string
-	BasicPassword string
+	BasicUsername            string
+	BasicPassword            string
+	NanoIncrementWithinBatch bool
 
 	TimeFunc
 
@@ -106,6 +107,13 @@ const sampleConfig = `
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
   # basic_password = "barfoo"
+
+  ## Optional flag to indicate whether a batch Point members should have their timestamp
+  ## auto incremented by 1 nano second each. This is useful in cases where a batch is received with no 
+  ## timestampts for Points withint the batch and a batch timestamp is assigned. In some cases the batch may
+  ## contain what are otherwise considered to be duplicates (measurement name, tags set and "batch timestamp").
+  ## Setting this flag to true will auto increment the nano second digits of the batch timestamp for each point
+  # nano_increment_within_batch = false
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -256,6 +264,8 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	now := h.TimeFunc()
+	seqNo := 0
+	newSeqNo := 0
 
 	precision := req.URL.Query().Get("precision")
 
@@ -315,7 +325,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-			err = h.parse(buf[:n+bufStart], now, precision)
+			newSeqNo, err = h.parse(buf[:n+bufStart], now, precision, seqNo)
 			if err != nil {
 				log.Println("D! "+err.Error(), bufStart+n)
 				return400 = true
@@ -327,6 +337,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 					badRequest(res, "")
 				}
 			} else {
+				seqNo = newSeqNo
 				res.WriteHeader(http.StatusNoContent)
 			}
 			return
@@ -346,10 +357,11 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i+1], now, precision); err != nil {
+		if newSeqNo, err = h.parse(buf[:i+1], now, precision, seqNo); err != nil {
 			log.Println("D! " + err.Error())
 			return400 = true
 		}
+		seqNo = newSeqNo
 		// rotate the bit remaining after the last newline to the front of the buffer
 		i++ // start copying after the newline
 		bufStart = len(buf) - i
@@ -359,7 +371,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
+func (h *HTTPListener) parse(b []byte, t time.Time, precision string, seqNo int) (int, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -367,14 +379,20 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
 	h.handler.SetTimeFunc(func() time.Time { return t })
 	metrics, err := h.parser.Parse(b)
 	if err != nil {
-		return fmt.Errorf("unable to parse: %s", err.Error())
+		return 0, fmt.Errorf("unable to parse: %s", err.Error())
 	}
 
+	newSeqNo := seqNo
 	for _, m := range metrics {
-		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		if h.NanoIncrementWithinBatch {
+			h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time().Add(time.Duration(newSeqNo)))
+			newSeqNo++
+		} else {
+			h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		}
 	}
 
-	return nil
+	return newSeqNo, nil
 }
 
 func tooLarge(res http.ResponseWriter) {
