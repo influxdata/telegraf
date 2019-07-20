@@ -30,9 +30,6 @@ const sampleConfig = `
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
-
-  ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
 `
 const description = "Reads metrics from a SSL certificate"
 
@@ -53,14 +50,26 @@ func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Certificate, error) {
+func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
 	if strings.HasPrefix(location, "/") {
 		location = "file://" + location
 	}
 
 	u, err := url.Parse(location)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse cert location - %s\n", err.Error())
+		return nil, fmt.Errorf("failed to parse cert location - %s", err.Error())
+	}
+
+	return u, nil
+}
+
+func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certificate, *tls.Config, error) {
+	tlsCfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, nil, err
+	}
+	if tlsCfg == nil {
+		tlsCfg = &tls.Config{}
 	}
 
 	switch u.Scheme {
@@ -70,51 +79,44 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 	case "udp", "udp4", "udp6":
 		fallthrough
 	case "tcp", "tcp4", "tcp6":
-		tlsCfg, err := c.ClientConfig.TLSConfig()
-		if err != nil {
-			return nil, err
-		}
-
 		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer ipConn.Close()
 
-		if tlsCfg == nil {
-			tlsCfg = &tls.Config{}
-		}
 		tlsCfg.ServerName = u.Hostname()
+		tlsCfg.InsecureSkipVerify = true
 		conn := tls.Client(ipConn, tlsCfg)
 		defer conn.Close()
 
 		hsErr := conn.Handshake()
 		if hsErr != nil {
-			return nil, hsErr
+			return nil, nil, hsErr
 		}
 
 		certs := conn.ConnectionState().PeerCertificates
 
-		return certs, nil
+		return certs, tlsCfg, nil
 	case "file":
 		content, err := ioutil.ReadFile(u.Path)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		block, _ := pem.Decode(content)
 		if block == nil {
-			return nil, fmt.Errorf("failed to parse certificate PEM")
+			return nil, nil, fmt.Errorf("failed to parse certificate PEM")
 		}
 
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		return []*x509.Certificate{cert}, nil
+		return []*x509.Certificate{cert}, tlsCfg, nil
 	default:
-		return nil, fmt.Errorf("unsuported scheme '%s' in location %s\n", u.Scheme, location)
+		return nil, nil, fmt.Errorf("unsuported scheme '%s' in location %s", u.Scheme, u.String())
 	}
 }
 
@@ -164,14 +166,37 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, location := range c.Sources {
-		certs, err := c.getCert(location, c.Timeout.Duration*time.Second)
+		u, err := c.locationToURL(location)
+		if err != nil {
+			acc.AddError(err)
+		}
+
+		certs, tlsCfg, err := c.getCert(u, c.Timeout.Duration*time.Second)
 		if err != nil {
 			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
 
-		for _, cert := range certs {
+		for i, cert := range certs {
 			fields := getFields(cert, now)
 			tags := getTags(cert.Subject, location)
+
+			opts := x509.VerifyOptions{}
+			if i == 0 {
+				opts.DNSName = u.Hostname()
+			}
+			if tlsCfg.RootCAs != nil {
+				opts.Roots = tlsCfg.RootCAs
+			}
+
+			_, err = cert.Verify(opts)
+			if err == nil {
+				tags["validation"] = "success"
+				fields["validation"] = 0
+			} else {
+				tags["validation"] = "fail"
+				fields["validation"] = 1
+				fields["validation_error"] = err.Error()
+			}
 
 			acc.AddFields("x509_cert", fields, tags)
 		}
