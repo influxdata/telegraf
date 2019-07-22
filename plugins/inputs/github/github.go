@@ -148,9 +148,9 @@ func splitRepositoryName(repositoryName string) (string, string, error) {
 	return splits[0], splits[1], nil
 }
 
-func getLicense(repositoryInfo *github.Repository) string {
-	if repositoryInfo.GetLicense() != nil {
-		return *repositoryInfo.License.Name
+func getLicense(rI *github.Repository) string {
+	if licenseName := rI.GetLicense().GetName(); licenseName != "" {
+		return licenseName
 	}
 
 	return "None"
@@ -158,19 +158,19 @@ func getLicense(repositoryInfo *github.Repository) string {
 
 func getTags(repositoryInfo *github.Repository) map[string]string {
 	return map[string]string{
-		"owner":    *repositoryInfo.Owner.Login,
-		"name":     *repositoryInfo.Name,
-		"language": *repositoryInfo.Language,
+		"owner":    repositoryInfo.GetOwner().GetLogin(),
+		"name":     repositoryInfo.GetName(),
+		"language": repositoryInfo.GetLanguage(),
 		"license":  getLicense(repositoryInfo),
 	}
 }
 
 func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 	return map[string]interface{}{
-		"stars":       *repositoryInfo.StargazersCount,
-		"forks":       *repositoryInfo.ForksCount,
-		"open_issues": *repositoryInfo.OpenIssuesCount,
-		"size":        *repositoryInfo.Size,
+		"stars":       repositoryInfo.GetStargazersCount(),
+		"forks":       repositoryInfo.GetForksCount(),
+		"open_issues": repositoryInfo.GetOpenIssuesCount(),
+		"size":        repositoryInfo.GetSize(),
 	}
 }
 
