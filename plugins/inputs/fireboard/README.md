@@ -1,14 +1,10 @@
 # Fireboard Input Plugin
 
 The fireboard plugin gathers the real time temperature data from fireboard
-thermometers.  In order to use this input plugin, you'll need to sign up
-to use their REST API, you can find more information on their website
-here [https://docs.fireboard.io/reference/restapi.html]
+thermometers.  In order to use this input plugin, you'll need to sign up to use
+the [Fireboard REST API](https://docs.fireboard.io/reference/restapi.html).
 
 ### Configuration
-
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage <plugin-name>`.
 
 ```toml
 [[inputs.fireboard]]
@@ -22,9 +18,9 @@ generate it using `telegraf --usage <plugin-name>`.
 
 #### auth_token
 
-In lieu of requiring a username and password, this plugin requires the
-authToken that you can generate using the Fireboard REST API as described
-in their docs [https://docs.fireboard.io/reference/restapi.html#Authentication]
+In lieu of requiring a username and password, this plugin requires an
+authentication token that you can generate using the [Fireboard REST
+API](https://docs.fireboard.io/reference/restapi.html#Authentication).
 
 #### url
 
@@ -39,7 +35,7 @@ value in seconds. The default value is four (4) seconds.
 ### Metrics
 
 The Fireboard REST API docs have good examples of the data that is available,
-currently this input only returns the real time temperatures. Temperature 
+currently this input only returns the real time temperatures. Temperature
 values are included if they are less than a minute old.
 
 - fireboard
