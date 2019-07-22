@@ -47,6 +47,7 @@
 - [#6144](https://github.com/influxdata/telegraf/pull/6144): Add support for collecting SQL Requests to identify waits and blocking to sqlserver input.
 - [#6105](https://github.com/influxdata/telegraf/pull/6105): Collect k8s endpoints, ingress, and services in kube_inventory plugin.
 - [#6129](https://github.com/influxdata/telegraf/pull/6129): Add support for field/tag keys to strings processor.
+- [#6143](https://github.com/influxdata/telegraf/pull/6143): Add certificate verification status to x509_cert input.
 
 #### Bugfixes
 
@@ -67,6 +68,7 @@
 - [#6094](https://github.com/influxdata/telegraf/issues/6094): Add missing rcode and zonestat to bind input.
 - [#6114](https://github.com/influxdata/telegraf/issues/6114): Fix lustre2 input plugin config parse regression.
 - [#5894](https://github.com/influxdata/telegraf/issues/5894): Fix template pattern partial wildcard matching.
+- [#6151](https://github.com/influxdata/telegraf/issues/6151): Fix panic in github input.
 
 ## v1.11.2 [2019-07-09]
 
