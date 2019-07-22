@@ -9,6 +9,7 @@
 - [#6094](https://github.com/influxdata/telegraf/issues/6094): Add missing rcode and zonestat to bind input.
 - [#6114](https://github.com/influxdata/telegraf/issues/6114): Fix lustre2 input plugin config parse regression.
 - [#5894](https://github.com/influxdata/telegraf/issues/5894): Fix template pattern partial wildcard matching.
+- [#6151](https://github.com/influxdata/telegraf/issues/6151): Fix panic in github input.
 
 ## v1.11.2 [2019-07-09]
 
