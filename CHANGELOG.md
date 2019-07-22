@@ -10,6 +10,7 @@
 #### New Inputs
 
 - [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
+- [fireboard](/plugins/inputs/fireboard) - Contributed by @ronnocol
 
 #### New Parsers
 
@@ -43,6 +44,9 @@
 - [#6122](https://github.com/influxdata/telegraf/pull/6122): Add basic auth support to elasticsearch input.
 - [#6102](https://github.com/influxdata/telegraf/pull/6102): Support string field glob matching in json parser.
 - [#6101](https://github.com/influxdata/telegraf/pull/6101): Update gjson to allow multipath syntax in json parser.
+- [#6144](https://github.com/influxdata/telegraf/pull/6144): Add support for collecting SQL Requests to identify waits and blocking to sqlserver input.
+- [#6105](https://github.com/influxdata/telegraf/pull/6105): Collect k8s endpoints, ingress, and services in kube_inventory plugin.
+- [#6129](https://github.com/influxdata/telegraf/pull/6129): Add support for field/tag keys to strings processor.
 
 #### Bugfixes
 
@@ -50,6 +54,7 @@
 - [#4356](https://github.com/influxdata/telegraf/issues/4356): Fix double pct replacement in sysstat input.
 - [#6004](https://github.com/influxdata/telegraf/issues/6004): Fix race in master node detection in elasticsearch input.
 - [#6100](https://github.com/influxdata/telegraf/issues/6100): Fix SSPI authentication not working in sqlserver input.
+- [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
 
 ## v1.11.3 [unreleased]
 
@@ -61,6 +66,7 @@
 - [#6125](https://github.com/influxdata/telegraf/issues/6125): Treat empty array as successful parse in json parser.
 - [#6094](https://github.com/influxdata/telegraf/issues/6094): Add missing rcode and zonestat to bind input.
 - [#6114](https://github.com/influxdata/telegraf/issues/6114): Fix lustre2 input plugin config parse regression.
+- [#5894](https://github.com/influxdata/telegraf/issues/5894): Fix template pattern partial wildcard matching.
 
 ## v1.11.2 [2019-07-09]
 
