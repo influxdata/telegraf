@@ -110,6 +110,7 @@ func TestGatherRemote(t *testing.T) {
 				Sources: []string{test.server},
 				Timeout: internal.Duration{Duration: test.timeout},
 			}
+			sc.Init()
 
 			sc.InsecureSkipVerify = true
 			testErr := false
@@ -169,6 +170,7 @@ func TestGatherLocal(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
+			sc.Init()
 
 			error := false
 
@@ -218,6 +220,7 @@ func TestGatherChain(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
+			sc.Init()
 
 			error := false
 
@@ -237,6 +240,7 @@ func TestGatherChain(t *testing.T) {
 
 func TestStrings(t *testing.T) {
 	sc := X509Cert{}
+	sc.Init()
 
 	tests := []struct {
 		name     string
@@ -265,6 +269,7 @@ func TestGatherCert(t *testing.T) {
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
 	}
+	m.Init()
 
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
