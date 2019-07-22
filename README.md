@@ -176,6 +176,7 @@ For documentation on the latest development code see the [documentation index][d
 * [file](./plugins/inputs/file)
 * [filestat](./plugins/inputs/filestat)
 * [filecount](./plugins/inputs/filecount)
+* [fireboard](/plugins/inputs/fireboard)
 * [fluentd](./plugins/inputs/fluentd)
 * [github](./plugins/inputs/github)
 * [graylog](./plugins/inputs/graylog)
