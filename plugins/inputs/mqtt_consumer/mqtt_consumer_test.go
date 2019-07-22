@@ -90,6 +90,10 @@ func (m *message) Duplicate() bool {
 	return m.duplicate
 }
 
+func (m *message) Ack() {
+	return
+}
+
 func (m *message) Qos() byte {
 	return m.qos
 }
