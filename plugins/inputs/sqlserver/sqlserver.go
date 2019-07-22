@@ -69,6 +69,7 @@ var sampleConfig = `
   ## - Schedulers
   ## - AzureDBResourceStats
   ## - AzureDBResourceGovernance
+  ## - SqlRequests
   exclude_query = [ 'Schedulers' ]
 `
 
@@ -103,6 +104,7 @@ func initQueries(s *SQLServer) {
 		queries["ServerProperties"] = Query{Script: sqlServerPropertiesV2, ResultByRow: false}
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
+		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1354,6 +1356,64 @@ BEGIN
            from
             sys.dm_instance_resource_governance
   END;
+`
+
+const sqlServerRequestsV2 string = `
+SET NOCOUNT ON; 
+SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHERE blocking_session_id != 0
+create index ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
+SELECT	
+   'sqlserver_requests' AS [measurement],
+    @@servername AS [sql_instance],
+    DB_NAME() as [database_name],
+	r.session_id
+	, r.request_id
+	, DB_NAME(s.database_id) as session_db_name
+	, r.status
+	, r.cpu_time as cpu_time_ms
+	, r.total_elapsed_time as total_elasped_time_ms
+	, r.logical_reads
+	, r.writes
+	, r.command
+	, wait_time as wait_time_ms
+	, wait_type
+	, wait_resource
+	, blocking_session_id
+	, s.program_name
+	, s.host_name
+	, s.nt_user_name
+	 , r.open_transaction_count  AS open_transaction
+	 , 	LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_level)
+		WHEN 0 THEN '0-Read Committed' 
+		WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
+		WHEN 2 THEN '2-Read Committed' 
+		WHEN 3 THEN '3-Repeatable Read' 
+		WHEN 4 THEN '4-Serializable' 
+		WHEN 5 THEN '5-Snapshot' 
+		ELSE CONVERT (varchar(30), r.transaction_isolation_level) + '-UNKNOWN' 
+	END, 30) AS transaction_isolation_level
+	,r.granted_query_memory as granted_query_memory_pages
+	, r.percent_complete
+	, (SUBSTRING(qt.text, r.statement_start_offset / 2 + 1,
+											(CASE WHEN r.statement_end_offset = -1
+													THEN LEN(CONVERT(NVARCHAR(MAX), qt.text)) * 2
+													ELSE r.statement_end_offset
+											END - r.statement_start_offset) / 2)
+		) AS statement_text
+	, qt.objectid
+	, QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + '.' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
+	, DB_NAME(qt.dbid) stmt_db_name
+	, r.query_hash
+	, r.query_plan_hash
+	FROM	sys.dm_exec_requests r
+		LEFT OUTER JOIN sys.dm_exec_sessions s ON (s.session_id = r.session_id)
+		OUTER APPLY sys.dm_exec_sql_text(sql_handle) AS qt
+		
+	WHERE	1=1
+	 AND (r.session_id IS NOT NULL AND (s.is_user_process = 1 OR r.status COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')))
+	 OR (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
+	 OPTION(MAXDOP 1)
+
 `
 
 // Queries V1
