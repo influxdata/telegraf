@@ -94,30 +94,119 @@ func TestRegisters(t *testing.T){
 		Registers : registers { 
 			HoldingRegisters : register {
 				Tags: []tag{
-					{ Name : "Register0",    Order : "AB",   DataType : "FLOAT32",      Address : []int{0},    Scale : "/10", },
-					{ Name : "Register1-2",  Order : "ABCD", DataType : "FLOAT32",      Address : []int{1, 2}, Scale : "/1000",},
-					{ Name : "Register3-4",  Order : "ABCD", DataType : "FLOAT32",      Address : []int{3, 4}, Scale : "/10",},
-					{ Name : "Register7",    Order : "AB",   DataType : "FLOAT32",      Address : []int{7},    Scale : "/10", },
-					{ Name : "Uint16AB",     Order : "AB",   DataType : "UINT16",	    Address : []int{10},},
-					{ Name : "Uint16BA",     Order : "BA",   DataType : "UINT16",       Address : []int{10},},
-					{ Name : "Int16AB",      Order : "AB",   DataType : "INT16",        Address : []int{10}, },
-					{ Name : "Int16BA",      Order : "BA",   DataType : "INT16",        Address : []int{10}, },	
-					{ Name : "Int32ABCD",    Order : "ABCD", DataType : "INT32",        Address : []int{10, 11},},
-					{ Name : "Int32DCBA",    Order : "DCBA", DataType : "INT32",        Address : []int{10, 11},},
-					{ Name : "Int32BADC",    Order : "BADC", DataType : "INT32",        Address : []int{10, 11},},
-					{ Name : "Int32CDAB",    Order : "CDAB", DataType : "INT32",        Address : []int{10, 11},},
-					{ Name : "Uint32ABCD",   Order : "ABCD", DataType : "UINT32",       Address : []int{10, 11},},
-					{ Name : "Uint32DCBA",   Order : "DCBA", DataType : "UINT32",       Address : []int{10, 11},},
-					{ Name : "Uint32BADC",   Order : "BADC", DataType : "UINT32",	    Address : []int{10, 11},},
-					{ Name : "Uint32CDAB",   Order : "CDAB", DataType : "UINT32",       Address : []int{10, 11},},
-					{ Name : "FLOAT32-IEEE", Order : "ABCD", DataType : "FLOAT32-IEEE",	Address : []int{10, 11},},										
+					{ 
+						Name : "Register0",    
+					        Order : "AB",   
+					        DataType : "FLOAT32",      
+					        Address : []int{0},    
+					        Scale : "/10", 
+					},
+					{ 
+						Name : "Register1-2",  
+					        Order : "ABCD", 
+					        DataType : "FLOAT32",       
+					        Address : []int{1, 2}, 
+					        Scale : "/1000",
+					},
+					{ 
+						Name : "Register3-4",  
+					  	Order : "ABCD", 
+					  	DataType : "FLOAT32",      
+						Address : []int{3, 4}, 
+						Scale : "/10",
+					},
+					{ 
+						Name : "Register7",    
+						Order : "AB",   
+						DataType : "FLOAT32",      
+						Address : []int{7},    
+						Scale : "/10", 
+					},
+					{ 
+						Name : "Uint16AB",     
+						Order : "AB",   
+						DataType : "UINT16",	    
+						Address : []int{10},
+					},
+					{ 
+						Name : "Uint16BA",     
+						Order : "BA",   
+						DataType : "UINT16",       
+						Address : []int{10},
+					},
+					{ 
+						Name : "Int16AB",      
+					 	Order : "AB",   
+						DataType : "INT16",        
+						Address : []int{10}, 
+					},
+					{ 
+						Name : "Int16BA",      
+						Order : "BA",   
+						DataType : "INT16",        
+						Address : []int{10}, 
+					},	
+					{ 
+						Name : "Int32ABCD",    
+						Order : "ABCD", 
+						DataType : "INT32",        
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "Int32DCBA",    
+						Order : "DCBA", 
+						DataType : "INT32",        
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "Int32BADC",    
+						Order : "BADC", 
+						DataType : "INT32",        
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "Int32CDAB",    
+						Order : "CDAB", 
+						DataType : "INT32",        
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "Uint32ABCD",   
+						Order : "ABCD", 
+						DataType : "UINT32",       
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "Uint32DCBA",   
+						Order : "DCBA", 
+						DataType : "UINT32",       
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "Uint32BADC",   
+						Order : "BADC", 
+						DataType : "UINT32",	    
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "Uint32CDAB",   
+						Order : "CDAB", 
+						DataType : "UINT32",       
+						Address : []int{10, 11},
+					},
+					{ 
+						Name : "FLOAT32-IEEE", 
+						Order : "ABCD", 
+						DataType : "FLOAT32-IEEE",	
+						Address : []int{10, 11},
+					},										
 				},				
 			},
 		},
 	}
 
 	regTests := []mbTest{}
-	regTest := mbTest {Name : "Register0", Address : 0, Quantity : 1, WriteValue: []byte{0x08, 0x98,}, ExpectValue : float32(220) }	
+	regTest := mbTest { Name : "Register0", Address : 0, Quantity : 1, WriteValue: []byte{0x08, 0x98,}, ExpectValue : float32(220) }	
 	regTests = append(regTests, regTest)
 	regTest = mbTest {Name : "Register1-2", Address : 1, Quantity : 2, WriteValue: []byte{0x00, 0x00, 0x03, 0xE8,}, ExpectValue : float32(1)}	
 	regTests = append(regTests, regTest)
