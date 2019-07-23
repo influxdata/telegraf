@@ -268,14 +268,12 @@ func connect(m *Modbus) error {
 
 type fn func(uint16, uint16) ([]byte, error)
 func getRawValue(t string, f fn, ch []chunk, r map[int]uint16) error {
-	//fmt.Printf("getRawValue Chunks - Type:%T, Value:%v, Hexa:0x%x\n", ch, ch, ch)
 	for _, chunk_t := range ch {		
 		results, err := f(uint16(chunk_t.Address), uint16(chunk_t.Length))
 		if err != nil {
 			return err
 		}
-
-		//fmt.Printf("getRawValue results - Type:%T, Value:%v, Hexa:0x%x\n", results, results, results)
+		
 		if t == C_DIGITAL {
 			for i := 0; i < len(results); i++ {				
 				for b := 0; b < chunk_t.Length; b++ {				
@@ -288,9 +286,7 @@ func getRawValue(t string, f fn, ch []chunk, r map[int]uint16) error {
 		if t == C_ANALOG {
 			for i := 0; i < len(results); i += 2 {
 				register := uint16(results[i]) << 8 | uint16(results[i + 1])
-				//fmt.Printf("getRawValue register - Type:%T, Value:%v, Hexa:0x%x\n", register, register, register)
-				r[chunk_t.Address + i / 2] = uint16(register)
-				//fmt.Printf("getRawValue r - Type:%T, Value:%v, Hexa:0x%x\n", r, r, r)
+				r[chunk_t.Address + i / 2] = uint16(register)				
 			}
 		}
 	}
@@ -300,8 +296,7 @@ func getRawValue(t string, f fn, ch []chunk, r map[int]uint16) error {
 
 func convertEndianness16(o string, r []byte) interface{} {
 	switch o {
-	case "AB":
-		//fmt.Printf("convertEndianness16 - Type:%T, Value:%v, Hexa:0x%x\n", r, r, r)
+	case "AB":		
 		return binary.BigEndian.Uint16(r)
 	case "BA":
 		return binary.LittleEndian.Uint16(r)	
@@ -441,21 +436,16 @@ func setTag(s string, t []tag, r map[int]uint16) {
 				f := format32(t[i].DataType, e32)				
 				t[i].Value = f
 			case "FLOAT32":
-				//fmt.Printf("Values :%x, Len:%v \n", rawValues , len(rawValues))
-				if len(rawValues) == 2 {
-					//fmt.Println("16")
+				if len(rawValues) == 2 {					
 					e := convertEndianness16(t[i].Order, rawValues)
 					e16, _ := e.(uint16)
 					f := format16(t[i].DataType, e16)	
 					f16 := f.(uint16)			
 					s := scale16(t[i].Scale, f16)
 					t[i].Value = s
-				} else {
-					//fmt.Println("32")
+				} else {					
 					e := convertEndianness32(t[i].Order, rawValues)
-					e32, _ := e.(uint32)
-					//f := format32(t[i].DataType, e32)
-					//f32 := f.(uint32)
+					e32, _ := e.(uint32)										
 					s := scale32(t[i].Scale, e32)
 					t[i].Value = s	
 				}
@@ -505,25 +495,37 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Get Raw Values
-	err := getRawValue(C_DIGITAL, m.Client.ReadDiscreteInputs, m.Registers.DiscreteInputs.Chunks, m.Registers.DiscreteInputs.RawValues)
+	err := getRawValue(C_DIGITAL, 
+			   m.Client.ReadDiscreteInputs, 
+			   m.Registers.DiscreteInputs.Chunks, 
+			   m.Registers.DiscreteInputs.RawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
 	}
 
-	err = getRawValue(C_DIGITAL, m.Client.ReadCoils, m.Registers.Coils.Chunks, m.Registers.Coils.RawValues)
+	err = getRawValue(C_DIGITAL, 
+			  m.Client.ReadCoils, 
+			  m.Registers.Coils.Chunks, 
+			  m.Registers.Coils.RawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
 	}
 
-	err = getRawValue(C_ANALOG, m.Client.ReadHoldingRegisters, m.Registers.HoldingRegisters.Chunks, m.Registers.HoldingRegisters.RawValues)
+	err = getRawValue(C_ANALOG, 
+			  m.Client.ReadHoldingRegisters, 
+			  m.Registers.HoldingRegisters.Chunks, 
+			  m.Registers.HoldingRegisters.RawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
 	}
 
-	err = getRawValue(C_ANALOG, m.Client.ReadInputRegisters, m.Registers.InputRegisters.Chunks, m.Registers.InputRegisters.RawValues)
+	err = getRawValue(C_ANALOG, 
+			  m.Client.ReadInputRegisters, 
+			  m.Registers.InputRegisters.Chunks, 
+			  m.Registers.InputRegisters.RawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
