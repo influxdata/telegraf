@@ -11,8 +11,8 @@ import (
 )
 
 type File struct {
-	Files  []string `toml:"files"`
-	parser parsers.Parser
+	Files      []string `toml:"files"`
+	parserFunc func() parsers.Parser
 
 	filenames []string
 }
@@ -60,8 +60,8 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (f *File) SetParser(p parsers.Parser) {
-	f.parser = p
+func (f *File) SetParserFunc(fn func() parsers.Parser) {
+	f.parserFunc = fn
 }
 
 func (f *File) refreshFilePaths() error {
@@ -87,8 +87,8 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}
-	return f.parser.Parse(fileContents)
 
+	return f.parserFunc().Parse(fileContents)
 }
 
 func init() {
