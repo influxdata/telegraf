@@ -57,7 +57,7 @@
 - [#6100](https://github.com/influxdata/telegraf/issues/6100): Fix SSPI authentication not working in sqlserver input.
 - [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
 
-## v1.11.3 [unreleased]
+## v1.11.3 [2019-07-23]
 
 #### Bugfixes
 
