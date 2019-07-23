@@ -184,43 +184,25 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	defer t.wg.Done()
 
-	var firstLine = true
-	var metrics []telegraf.Metric
-	var m telegraf.Metric
-	var err error
-	var line *tail.Line
-	for line = range tailer.Lines {
+	for line := range tailer.Lines {
 		if line.Err != nil {
-			t.acc.AddError(fmt.Errorf("error tailing file %s, Error: %s", tailer.Filename, err))
+			t.acc.AddError(fmt.Errorf("error tailing file %s, Error: %s", tailer.Filename, line.Err))
 			continue
 		}
+
 		// Fix up files with Windows line endings.
 		text := strings.TrimRight(line.Text, "\r")
 
-		if firstLine {
-			metrics, err = parser.Parse([]byte(text))
-			if err == nil {
-				if len(metrics) == 0 {
-					firstLine = false
-					continue
-				} else {
-					m = metrics[0]
-				}
-			}
-			firstLine = false
-		} else {
-			m, err = parser.ParseLine(text)
-		}
-
-		if err == nil {
-			if m != nil {
-				tags := m.Tags()
-				tags["path"] = tailer.Filename
-				t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
-			}
-		} else {
+		metrics, err := parser.Parse([]byte(text))
+		if err != nil {
 			t.acc.AddError(fmt.Errorf("malformed log line in %s: [%s], Error: %s",
 				tailer.Filename, line.Text, err))
+			continue
+		}
+
+		for _, m := range metrics {
+			m.AddTag("path", tailer.Filename)
+			t.acc.AddMetric(m)
 		}
 	}
 
