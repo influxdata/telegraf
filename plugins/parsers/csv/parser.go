@@ -29,6 +29,8 @@ type Parser struct {
 	TimestampFormat   string
 	DefaultTags       map[string]string
 	TimeFunc          func() time.Time
+
+	parseCalled bool
 }
 
 func (p *Parser) SetTimeFunc(fn metric.TimeFunc) {
@@ -54,38 +56,16 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	// skip first rows
-	for i := 0; i < p.SkipRows; i++ {
-		csvReader.Read()
-	}
-	// if there is a header and nothing in DataColumns
-	// set DataColumns to names extracted from the header
-	headerNames := make([]string, 0)
-	if len(p.ColumnNames) == 0 {
-		for i := 0; i < p.HeaderRowCount; i++ {
-			header, err := csvReader.Read()
-			if err != nil {
-				return nil, err
-			}
-			//concatenate header names
-			for i := range header {
-				name := header[i]
-				if p.TrimSpace {
-					name = strings.Trim(name, " ")
-				}
-				if len(headerNames) <= i {
-					headerNames = append(headerNames, name)
-				} else {
-					headerNames[i] = headerNames[i] + name
-				}
-			}
+
+	// if parse has not been called before
+	if !p.parseCalled {
+		// parse the header if required
+		if err := p.parseHeader(csvReader); err != nil {
+			return nil, err
 		}
-		p.ColumnNames = headerNames[p.SkipColumns:]
-	} else {
-		// if columns are named, just skip header rows
-		for i := 0; i < p.HeaderRowCount; i++ {
-			csvReader.Read()
-		}
+
+		// marked that parse has been called
+		p.parseCalled = true
 	}
 
 	table, err := csvReader.ReadAll()
@@ -99,9 +79,56 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if err != nil {
 			return metrics, err
 		}
+
 		metrics = append(metrics, m)
 	}
+
 	return metrics, nil
+}
+
+func (p *Parser) parseHeader(csvReader *csv.Reader) error {
+	// skip first rows
+	for i := 0; i < p.SkipRows; i++ {
+		csvReader.Read()
+	}
+
+	// if there is a header and nothing in DataColumns
+	// set DataColumns to names extracted from the header
+	headerNames := make([]string, 0)
+	for i := 0; i < p.HeaderRowCount; i++ {
+		header, err := csvReader.Read()
+		// if column names already set then simply read
+		// and discard HeaderRowCount rows
+		if len(p.ColumnNames) != 0 {
+			continue
+		}
+
+		if err != nil {
+			return err
+		}
+
+		// concatenate header names
+		for i := range header {
+			name := header[i]
+			if p.TrimSpace {
+				name = strings.Trim(name, " ")
+			}
+
+			if len(headerNames) <= i {
+				headerNames = append(headerNames, name)
+				continue
+			}
+
+			headerNames[i] = headerNames[i] + name
+		}
+	}
+
+	// if any header names were found then set them on p
+	if len(headerNames) > 0 {
+		p.ColumnNames = headerNames[p.SkipColumns:]
+	}
+
+	return nil
 }
 
 // ParseLine does not use any information in header and assumes DataColumns is set

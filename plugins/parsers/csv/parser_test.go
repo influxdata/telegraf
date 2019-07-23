@@ -305,23 +305,37 @@ func TestParseStream(t *testing.T) {
 	}
 
 	csvHeader := "a,b,c"
-	csvBody := "1,2,3"
+	csvBody := `1,2,3
+4,5,6`
 
 	metrics, err := p.Parse([]byte(csvHeader))
 	require.NoError(t, err)
 	require.Len(t, metrics, 0)
-	metric, err := p.ParseLine(csvBody)
-	testutil.RequireMetricEqual(t,
-		testutil.MustMetric(
-			"csv",
-			map[string]string{},
-			map[string]interface{}{
-				"a": int64(1),
-				"b": int64(2),
-				"c": int64(3),
-			},
-			DefaultTime(),
-		), metric)
+
+	metrics, err = p.Parse([]byte(csvBody))
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"csv",
+				map[string]string{},
+				map[string]interface{}{
+					"a": int64(1),
+					"b": int64(2),
+					"c": int64(3),
+				},
+				DefaultTime(),
+			),
+			testutil.MustMetric(
+				"csv",
+				map[string]string{},
+				map[string]interface{}{
+					"a": int64(4),
+					"b": int64(5),
+					"c": int64(6),
+				},
+				DefaultTime(),
+			),
+		}, metrics)
 }
 
 func TestTimestampUnixFloatPrecision(t *testing.T) {
