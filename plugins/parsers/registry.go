@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
+	"github.com/influxdata/telegraf/plugins/parsers/hep"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
@@ -70,7 +71,7 @@ type Config struct {
 
 	// TagKeys only apply to JSON data
 	TagKeys []string `toml:"tag_keys"`
-	// Array of glob pattern strings keys that should be added as string fields.
+	// FieldKeys only apply to JSON
 	JSONStringFields []string `toml:"json_string_fields"`
 
 	JSONNameKey string `toml:"json_name_key"`
@@ -143,6 +144,9 @@ type Config struct {
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 
+	//Hep configuration
+	HepHeader          []string `toml:"hep_header"`
+	HepMeasurementNAme string   `toml:"hep_measurement_name"`
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 }
@@ -153,19 +157,15 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
-		parser, err = json.New(
-			&json.Config{
-				MetricName:   config.MetricName,
-				TagKeys:      config.TagKeys,
-				NameKey:      config.JSONNameKey,
-				StringFields: config.JSONStringFields,
-				Query:        config.JSONQuery,
-				TimeKey:      config.JSONTimeKey,
-				TimeFormat:   config.JSONTimeFormat,
-				Timezone:     config.JSONTimezone,
-				DefaultTags:  config.DefaultTags,
-			},
-		)
+		parser = newJSONParser(config.MetricName,
+			config.TagKeys,
+			config.JSONNameKey,
+			config.JSONStringFields,
+			config.JSONQuery,
+			config.JSONTimeKey,
+			config.JSONTimeFormat,
+			config.JSONTimezone,
+			config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -200,6 +200,19 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatternFiles,
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
+	case "hep":
+		parser, err = newHEPParser(config.MetricName,
+			config.HepMeasurementNAme,
+			config.TagKeys,
+			config.JSONNameKey,
+			config.JSONStringFields,
+			config.JSONQuery,
+			config.JSONTimeKey,
+			config.JSONTimeFormat,
+			config.JSONTimezone,
+			config.DefaultTags,
+			config.HepHeader)
+
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeaderRowCount,
@@ -287,6 +300,60 @@ func newCSVParser(metricName string,
 	return parser, nil
 }
 
+func newHEPParser(metricName string,
+	hepMeasurementName string,
+	tagKeys []string,
+	jsonNameKey string,
+	stringFields []string,
+	jsonQuery string,
+	timeKey string,
+	timeFormat string,
+	timezone string,
+	defaultTags map[string]string,
+	hepHeader []string) (Parser, error) {
+
+	parser := &hep.Parser{
+		MetricName:         metricName,
+		HepMeasurementName: hepMeasurementName,
+		TagKeys:            tagKeys,
+		StringFields:       stringFields,
+		JSONNameKey:        jsonNameKey,
+		JSONQuery:          jsonQuery,
+		JSONTimeKey:        timeKey,
+		JSONTimeFormat:     timeFormat,
+		JSONTimezone:       timezone,
+		DefaultTags:        defaultTags,
+		HepHeader:          hepHeader,
+	}
+
+	return parser, nil
+}
+
+func newJSONParser(
+	metricName string,
+	tagKeys []string,
+	jsonNameKey string,
+	stringFields []string,
+	jsonQuery string,
+	timeKey string,
+	timeFormat string,
+	timezone string,
+	defaultTags map[string]string,
+) Parser {
+	parser := &json.JSONParser{
+		MetricName:     metricName,
+		TagKeys:        tagKeys,
+		StringFields:   stringFields,
+		JSONNameKey:    jsonNameKey,
+		JSONQuery:      jsonQuery,
+		JSONTimeKey:    timeKey,
+		JSONTimeFormat: timeFormat,
+		JSONTimezone:   timezone,
+		DefaultTags:    defaultTags,
+	}
+	return parser
+}
+
 func newGrokParser(metricName string,
 	patterns []string, nPatterns []string,
 	cPatterns string, cPatternFiles []string,
@@ -300,7 +367,6 @@ func newGrokParser(metricName string,
 		Timezone:           tZone,
 		UniqueTimestamp:    uniqueTimestamp,
 	}
-
 	err := parser.Compile()
 	return &parser, err
 }
