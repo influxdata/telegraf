@@ -68,6 +68,8 @@ const (
 
 var (
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	// ensure *DockerLogs implements telegaf.ServiceInput
+	_ telegraf.ServiceInput = (*DockerLogs)(nil)
 )
 
 type DockerLogs struct {
@@ -378,6 +380,12 @@ func tailMultiplexed(
 	src.Close()
 	wg.Wait()
 	return err
+}
+
+// Start is a noop which is required for a *DockerLogs to implement
+// the telegraf.ServiceInput interface
+func (d *DockerLogs) Start(telegraf.Accumulator) error {
+	return nil
 }
 
 func (d *DockerLogs) Stop() {
