@@ -1726,6 +1726,27 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	//for hep parser
+	if node, ok := tbl.Fields["hep_header"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.HepHeader = append(c.HepHeader, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["hep_measurement_name"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.HepMeasurementNAme = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["form_urlencoded_tag_keys"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1779,6 +1800,8 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
+	delete(tbl.Fields, "hep_header")
+	delete(tbl.Fields, "hep_measurement_name")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
 
 	return c, nil

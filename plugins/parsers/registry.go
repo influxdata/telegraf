@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
+	"github.com/influxdata/telegraf/plugins/parsers/hep"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
@@ -143,6 +144,10 @@ type Config struct {
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 
+	//Hep configuration
+	HepHeader          []string `toml:"hep_header"`
+	HepMeasurementNAme string   `toml:"hep_measurement_name"`
+
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 }
@@ -200,6 +205,17 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatternFiles,
 			config.GrokTimezone,
 			config.GrokUniqueTimestamp)
+	case "hep":
+		parser, err = newHEPParser(config.MetricName,
+			config.HepMeasurementNAme,
+			config.TagKeys,
+			config.JSONNameKey,
+			config.JSONQuery,
+			config.JSONTimeKey,
+			config.JSONTimeFormat,
+			config.JSONTimezone,
+			config.DefaultTags,
+			config.HepHeader)
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeaderRowCount,
@@ -303,6 +319,33 @@ func newGrokParser(metricName string,
 
 	err := parser.Compile()
 	return &parser, err
+}
+
+func newHEPParser(metricName string,
+	hepMeasurementName string,
+	tagKeys []string,
+	jsonNameKey string,
+	jsonQuery string,
+	timeKey string,
+	timeFormat string,
+	timezone string,
+	defaultTags map[string]string,
+	hepHeader []string) (Parser, error) {
+
+	parser := &hep.Parser{
+		MetricName:         metricName,
+		HepMeasurementName: hepMeasurementName,
+		TagKeys:            tagKeys,
+		JSONNameKey:        jsonNameKey,
+		JSONQuery:          jsonQuery,
+		JSONTimeKey:        timeKey,
+		JSONTimeFormat:     timeFormat,
+		JSONTimezone:       timezone,
+		DefaultTags:        defaultTags,
+		HepHeader:          hepHeader,
+	}
+
+	return parser, nil
 }
 
 func NewNagiosParser() (Parser, error) {
