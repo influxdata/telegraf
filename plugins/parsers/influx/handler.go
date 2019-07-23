@@ -118,3 +118,7 @@ func (h *MetricHandler) SetTimestamp(tm []byte) error {
 	h.builder.SetTime(time.Unix(0, ns))
 	return nil
 }
+
+func (h *MetricHandler) Reset() {
+	h.builder.Reset()
+}

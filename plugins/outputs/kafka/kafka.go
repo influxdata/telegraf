@@ -6,13 +6,12 @@ import (
 	"log"
 	"strings"
 
+	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/Shopify/sarama"
 )
 
 var ValidTopicSuffixMethods = []string{
@@ -62,6 +61,26 @@ type (
 		Separator string   `toml:"separator"`
 	}
 )
+
+// DebugLogger logs messages from sarama at the debug level.
+type DebugLogger struct {
+}
+
+func (*DebugLogger) Print(v ...interface{}) {
+	args := make([]interface{}, 0, len(v)+1)
+	args = append(args, "D! [sarama] ")
+	log.Print(v...)
+}
+
+func (*DebugLogger) Printf(format string, v ...interface{}) {
+	log.Printf("D! [sarama] "+format, v...)
+}
+
+func (*DebugLogger) Println(v ...interface{}) {
+	args := make([]interface{}, 0, len(v)+1)
+	args = append(args, "D! [sarama] ")
+	log.Println(args...)
+}
 
 var sampleConfig = `
   ## URLs of kafka brokers
@@ -294,7 +313,8 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.kafka] Could not serialize metric: %v", err)
+			continue
 		}
 
 		m := &sarama.ProducerMessage{
@@ -327,6 +347,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
+	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
 			MaxRetry:     3,

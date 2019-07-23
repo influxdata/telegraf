@@ -8,6 +8,7 @@ import (
 	"github.com/ericchiang/k8s/apis/apps/v1beta1"
 	"github.com/ericchiang/k8s/apis/apps/v1beta2"
 	"github.com/ericchiang/k8s/apis/core/v1"
+	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
 
 	"github.com/influxdata/telegraf/internal/tls"
 )
@@ -61,6 +62,20 @@ func (c *client) getDeployments(ctx context.Context) (*v1beta1.DeploymentList, e
 	return list, c.List(ctx, c.namespace, list)
 }
 
+func (c *client) getEndpoints(ctx context.Context) (*v1.EndpointsList, error) {
+	list := new(v1.EndpointsList)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return list, c.List(ctx, c.namespace, list)
+}
+
+func (c *client) getIngress(ctx context.Context) (*v1beta1EXT.IngressList, error) {
+	list := new(v1beta1EXT.IngressList)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return list, c.List(ctx, c.namespace, list)
+}
+
 func (c *client) getNodes(ctx context.Context) (*v1.NodeList, error) {
 	list := new(v1.NodeList)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
@@ -84,6 +99,13 @@ func (c *client) getPersistentVolumeClaims(ctx context.Context) (*v1.PersistentV
 
 func (c *client) getPods(ctx context.Context) (*v1.PodList, error) {
 	list := new(v1.PodList)
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return list, c.List(ctx, c.namespace, list)
+}
+
+func (c *client) getServices(ctx context.Context) (*v1.ServiceList, error) {
+	list := new(v1.ServiceList)
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 	return list, c.List(ctx, c.namespace, list)
