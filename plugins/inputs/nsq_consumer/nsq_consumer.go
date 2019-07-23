@@ -73,9 +73,9 @@ var sampleConfig = `
   data_format = "influx"
 `
 
-// SetParser takes the data_format from the config and finds the right parser for that format
-func (n *NSQConsumer) SetParser(parser parsers.Parser) {
-	n.parser = parser
+// SetParserFunc takes the data_format from the config and finds the right parser for that format
+func (n *NSQConsumer) SetParserFunc(fn func() parsers.Parser) {
+	n.parser = fn()
 }
 
 // SampleConfig returns config values for generating a sample configuration file

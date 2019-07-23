@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
@@ -129,8 +129,8 @@ func (m *MQTTConsumer) Description() string {
 	return "Read metrics from MQTT topic(s)"
 }
 
-func (m *MQTTConsumer) SetParser(parser parsers.Parser) {
-	m.parser = parser
+func (m *MQTTConsumer) SetParserFunc(fn func() parsers.Parser) {
+	m.parser = fn()
 }
 
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {

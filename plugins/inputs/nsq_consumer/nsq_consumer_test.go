@@ -45,7 +45,7 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	}
 
 	p, _ := parsers.NewInfluxParser()
-	consumer.SetParser(p)
+	consumer.SetParserFunc(func() parsers.Parser { return p })
 	var acc testutil.Accumulator
 	assert.Equal(t, 0, len(acc.Metrics), "There should not be any points")
 	if err := consumer.Start(&acc); err != nil {

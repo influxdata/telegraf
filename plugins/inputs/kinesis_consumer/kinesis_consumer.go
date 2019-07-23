@@ -133,8 +133,8 @@ func (k *KinesisConsumer) Description() string {
 	return "Configuration for the AWS Kinesis input."
 }
 
-func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
-	k.parser = parser
+func (k *KinesisConsumer) SetParserFunc(fn func() parsers.Parser) {
+	k.parser = fn()
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {

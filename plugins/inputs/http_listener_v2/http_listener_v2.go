@@ -112,8 +112,8 @@ func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *HTTPListenerV2) SetParser(parser parsers.Parser) {
-	h.Parser = parser
+func (h *HTTPListenerV2) SetParserFunc(fn func() parsers.Parser) {
+	h.Parser = fn()
 }
 
 // Start starts the http listener service.

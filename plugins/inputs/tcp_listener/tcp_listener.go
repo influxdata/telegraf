@@ -77,8 +77,8 @@ func (t *TcpListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *TcpListener) SetParser(parser parsers.Parser) {
-	t.parser = parser
+func (t *TcpListener) SetParserFunc(fn func() parsers.Parser) {
+	t.parser = fn()
 }
 
 // Start starts the tcp listener service.

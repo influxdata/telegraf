@@ -178,8 +178,8 @@ func (e *Exec) Description() string {
 	return "Read metrics from one or more commands that can output to stdout"
 }
 
-func (e *Exec) SetParser(parser parsers.Parser) {
-	e.parser = parser
+func (e *Exec) SetParserFunc(fn func() parsers.Parser) {
+	e.parser = fn()
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {

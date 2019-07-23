@@ -240,8 +240,8 @@ func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (sl *SocketListener) SetParser(parser parsers.Parser) {
-	sl.Parser = parser
+func (sl *SocketListener) SetParserFunc(fn func() parsers.Parser) {
+	sl.Parser = fn()
 }
 
 func (sl *SocketListener) Start(acc telegraf.Accumulator) error {

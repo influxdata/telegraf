@@ -44,7 +44,7 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 		Offset:         "oldest",
 	}
 	p, _ := parsers.NewInfluxParser()
-	k.SetParser(p)
+	k.SetParserFunc(func() parsers.Parser { return p })
 
 	// Verify that we can now gather the sent message
 	var acc testutil.Accumulator

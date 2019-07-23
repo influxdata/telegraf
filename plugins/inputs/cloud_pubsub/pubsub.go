@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"sync"
 
-	"cloud.google.com/go/pubsub"
 	"encoding/base64"
+	"log"
+	"time"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
-	"log"
-	"time"
 )
 
 type empty struct{}
@@ -69,9 +70,9 @@ func (ps *PubSub) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// SetParser implements ParserInput interface.
-func (ps *PubSub) SetParser(parser parsers.Parser) {
-	ps.parser = parser
+// SetParserFunc implements ParserFuncInput interface.
+func (ps *PubSub) SetParserFunc(fn func() parsers.Parser) {
+	ps.parser = fn()
 }
 
 // Start initializes the plugin and processing messages from Google PubSub.

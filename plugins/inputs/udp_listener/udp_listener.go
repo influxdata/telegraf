@@ -86,8 +86,8 @@ func (u *UdpListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *UdpListener) SetParser(parser parsers.Parser) {
-	u.parser = parser
+func (u *UdpListener) SetParserFunc(fn func() parsers.Parser) {
+	u.parser = fn()
 }
 
 func (u *UdpListener) Start(acc telegraf.Accumulator) error {

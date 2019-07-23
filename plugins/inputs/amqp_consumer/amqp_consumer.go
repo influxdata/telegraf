@@ -172,8 +172,8 @@ func (a *AMQPConsumer) Description() string {
 	return "AMQP consumer plugin"
 }
 
-func (a *AMQPConsumer) SetParser(parser parsers.Parser) {
-	a.parser = parser
+func (a *AMQPConsumer) SetParserFunc(fn func() parsers.Parser) {
+	a.parser = fn()
 }
 
 // All gathering is done in the Start function

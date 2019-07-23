@@ -77,8 +77,8 @@ func (k *Kafka) Description() string {
 	return "Read metrics from Kafka topic(s)"
 }
 
-func (k *Kafka) SetParser(parser parsers.Parser) {
-	k.parser = parser
+func (k *Kafka) SetParserFunc(fn func() parsers.Parser) {
+	k.parser = fn()
 }
 
 func (k *Kafka) Start(acc telegraf.Accumulator) error {

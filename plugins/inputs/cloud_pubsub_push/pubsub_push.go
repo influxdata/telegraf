@@ -125,8 +125,8 @@ func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *PubSubPush) SetParser(parser parsers.Parser) {
-	p.Parser = parser
+func (p *PubSubPush) SetParserFunc(fn func() parsers.Parser) {
+	p.Parser = fn()
 }
 
 // Start starts the http listener service.
