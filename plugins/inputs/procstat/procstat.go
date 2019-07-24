@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -34,6 +35,7 @@ type Procstat struct {
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
 	WinService  string `toml:"win_service"`
+	Mode        string
 
 	finder PIDFinder
 
@@ -232,7 +234,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 
 	cpu_perc, err := proc.Percent(time.Duration(0))
 	if err == nil {
-		fields[prefix+"cpu_usage"] = cpu_perc
+		if p.Mode != "non-irix" {
+			fields[prefix+"cpu_usage"] = cpu_perc
+		} else {
+			fields[prefix+"cpu_usage"] = cpu_perc / float64(runtime.NumCPU())
+		}
 	}
 
 	mem, err := proc.MemoryInfo()
