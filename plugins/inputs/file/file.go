@@ -10,9 +10,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+var _ parsers.ParserFuncInput = (*File)(nil)
+
 type File struct {
 	Files      []string `toml:"files"`
-	parserFunc func() parsers.Parser
+	parserFunc parsers.ParserFunc
 
 	filenames []string
 }
@@ -60,7 +62,7 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (f *File) SetParserFunc(fn func() parsers.Parser) {
+func (f *File) SetParserFunc(fn parsers.ParserFunc) {
 	f.parserFunc = fn
 }
 
@@ -88,7 +90,12 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}
 
-	return f.parserFunc().Parse(fileContents)
+	parser, err := f.parserFunc()
+	if err != nil {
+		return nil, err
+	}
+
+	return parser.Parse(fileContents)
 }
 
 func init() {

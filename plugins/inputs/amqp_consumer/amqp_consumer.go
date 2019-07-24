@@ -22,6 +22,8 @@ const (
 	defaultMaxUndeliveredMessages = 1000
 )
 
+var _ parsers.ParserFuncInput = (*AMQPConsumer)(nil)
+
 type empty struct{}
 type semaphore chan empty
 
@@ -172,8 +174,8 @@ func (a *AMQPConsumer) Description() string {
 	return "AMQP consumer plugin"
 }
 
-func (a *AMQPConsumer) SetParserFunc(fn func() parsers.Parser) {
-	a.parser = fn()
+func (a *AMQPConsumer) SetParserFunc(fn parsers.ParserFunc) {
+	a.parser, _ = fn()
 }
 
 // All gathering is done in the Start function

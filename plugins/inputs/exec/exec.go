@@ -20,6 +20,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 )
 
+var _ parsers.ParserFuncInput = (*Exec)(nil)
+
 const sampleConfig = `
   ## Commands array
   commands = [
@@ -178,8 +180,8 @@ func (e *Exec) Description() string {
 	return "Read metrics from one or more commands that can output to stdout"
 }
 
-func (e *Exec) SetParserFunc(fn func() parsers.Parser) {
-	e.parser = fn()
+func (e *Exec) SetParserFunc(fn parsers.ParserFunc) {
+	e.parser, _ = fn()
 }
 
 func (e *Exec) Gather(acc telegraf.Accumulator) error {

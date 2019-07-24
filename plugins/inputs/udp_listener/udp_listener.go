@@ -13,6 +13,8 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+var _ parsers.ParserFuncInput = (*UdpListener)(nil)
+
 // UdpListener main struct for the collector
 type UdpListener struct {
 	ServiceAddress string
@@ -86,8 +88,8 @@ func (u *UdpListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (u *UdpListener) SetParserFunc(fn func() parsers.Parser) {
-	u.parser = fn()
+func (u *UdpListener) SetParserFunc(fn parsers.ParserFunc) {
+	u.parser, _ = fn()
 }
 
 func (u *UdpListener) Start(acc telegraf.Accumulator) error {

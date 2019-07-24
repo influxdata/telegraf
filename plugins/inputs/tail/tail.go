@@ -23,6 +23,8 @@ const (
 var (
 	offsets      = make(map[string]int64)
 	offsetsMutex = new(sync.Mutex)
+
+	_ parsers.ParserFuncInput = (*Tail)(nil)
 )
 
 type Tail struct {

@@ -24,6 +24,8 @@ type semaphore chan empty
 const defaultMaxUndeliveredMessages = 1000
 const defaultRetryDelaySeconds = 5
 
+var _ parsers.ParserFuncInput = (*PubSub)(nil)
+
 type PubSub struct {
 	sync.Mutex
 
@@ -71,8 +73,8 @@ func (ps *PubSub) Gather(acc telegraf.Accumulator) error {
 }
 
 // SetParserFunc implements ParserFuncInput interface.
-func (ps *PubSub) SetParserFunc(fn func() parsers.Parser) {
-	ps.parser = fn()
+func (ps *PubSub) SetParserFunc(fn parsers.ParserFunc) {
+	ps.parser, _ = fn()
 }
 
 // Start initializes the plugin and processing messages from Google PubSub.

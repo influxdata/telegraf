@@ -14,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+var _ parsers.ParserFuncInput = (*TcpListener)(nil)
+
 type TcpListener struct {
 	ServiceAddress         string
 	AllowedPendingMessages int
@@ -77,8 +79,8 @@ func (t *TcpListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (t *TcpListener) SetParserFunc(fn func() parsers.Parser) {
-	t.parser = fn()
+func (t *TcpListener) SetParserFunc(fn parsers.ParserFunc) {
+	t.parser, _ = fn()
 }
 
 // Start starts the tcp listener service.

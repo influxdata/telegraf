@@ -19,6 +19,8 @@ const (
 	defaultMaxUndeliveredMessages = 1000
 )
 
+var _ parsers.ParserFuncInput = (*Kafka)(nil)
+
 type empty struct{}
 type semaphore chan empty
 
@@ -118,8 +120,8 @@ func (k *Kafka) Description() string {
 	return "Read metrics from Kafka topic(s)"
 }
 
-func (k *Kafka) SetParserFunc(fn func() parsers.Parser) {
-	k.parser = fn()
+func (k *Kafka) SetParserFunc(fn parsers.ParserFunc) {
+	k.parser, _ = fn()
 }
 
 func (k *Kafka) Start(acc telegraf.Accumulator) error {

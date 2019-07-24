@@ -30,6 +30,8 @@ const (
 	query = "query"
 )
 
+var _ parsers.ParserFuncInput = (*HTTPListenerV2)(nil)
+
 // TimeFunc provides a timestamp for the metrics
 type TimeFunc func() time.Time
 
@@ -112,8 +114,8 @@ func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *HTTPListenerV2) SetParserFunc(fn func() parsers.Parser) {
-	h.Parser = fn()
+func (h *HTTPListenerV2) SetParserFunc(fn parsers.ParserFunc) {
+	h.Parser, _ = fn()
 }
 
 // Start starts the http listener service.

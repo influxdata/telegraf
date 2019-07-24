@@ -15,6 +15,8 @@ const (
 	defaultMaxUndeliveredMessages = 1000
 )
 
+var _ parsers.ParserFuncInput = (*NSQConsumer)(nil)
+
 type empty struct{}
 type semaphore chan empty
 
@@ -74,8 +76,8 @@ var sampleConfig = `
 `
 
 // SetParserFunc takes the data_format from the config and finds the right parser for that format
-func (n *NSQConsumer) SetParserFunc(fn func() parsers.Parser) {
-	n.parser = fn()
+func (n *NSQConsumer) SetParserFunc(fn parsers.ParserFunc) {
+	n.parser, _ = fn()
 }
 
 // SampleConfig returns config values for generating a sample configuration file

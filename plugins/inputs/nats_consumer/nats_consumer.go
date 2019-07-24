@@ -14,6 +14,8 @@ import (
 
 var (
 	defaultMaxUndeliveredMessages = 1000
+
+	_ parsers.ParserFuncInput = (*natsConsumer)(nil)
 )
 
 type empty struct{}
@@ -98,8 +100,8 @@ func (n *natsConsumer) Description() string {
 	return "Read metrics from NATS subject(s)"
 }
 
-func (n *natsConsumer) SetParserFunc(fn func() parsers.Parser) {
-	n.parser = fn()
+func (n *natsConsumer) SetParserFunc(fn parsers.ParserFunc) {
+	n.parser, _ = fn()
 }
 
 func (n *natsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e error) {

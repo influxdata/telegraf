@@ -139,7 +139,7 @@ func TestServeHTTP(t *testing.T) {
 			MetricName: "cloud_pubsub_push",
 			DataFormat: "influx",
 		})
-		pubPush.SetParserFunc(func() parsers.Parser { return p })
+		pubPush.SetParserFunc(func() (parsers.Parser, error) { return p, nil })
 
 		dst := make(chan telegraf.Metric, 1)
 		ro := models.NewRunningOutput("test", &testOutput{failWrite: test.fail}, &models.OutputConfig{}, 1, 1)

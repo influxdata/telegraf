@@ -21,6 +21,8 @@ var (
 	defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
 
 	defaultMaxUndeliveredMessages = 1000
+
+	_ parsers.ParserFuncInput = (*MQTTConsumer)(nil)
 )
 
 type ConnectionState int
@@ -129,8 +131,8 @@ func (m *MQTTConsumer) Description() string {
 	return "Read metrics from MQTT topic(s)"
 }
 
-func (m *MQTTConsumer) SetParserFunc(fn func() parsers.Parser) {
-	m.parser = fn()
+func (m *MQTTConsumer) SetParserFunc(fn parsers.ParserFunc) {
+	m.parser, _ = fn()
 }
 
 func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {

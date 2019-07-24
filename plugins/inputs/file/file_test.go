@@ -33,8 +33,8 @@ func TestJSONParserCompile(t *testing.T) {
 	}
 	nParser, err := parsers.NewParser(&parserConfig)
 	assert.NoError(t, err)
-	r.parserFunc = func() parsers.Parser {
-		return nParser
+	r.parserFunc = func() (parsers.Parser, error) {
+		return nParser, nil
 	}
 
 	r.Gather(&acc)
@@ -55,7 +55,7 @@ func TestGrokParser(t *testing.T) {
 	}
 
 	nParser, err := parsers.NewParser(&parserConfig)
-	r.parserFunc = func() parsers.Parser { return nParser }
+	r.parserFunc = func() (parsers.Parser, error) { return nParser, nil }
 	assert.NoError(t, err)
 
 	err = r.Gather(&acc)

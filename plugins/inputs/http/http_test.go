@@ -34,7 +34,7 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 		DataFormat: "json",
 		MetricName: "metricName",
 	})
-	plugin.SetParserFunc(func() parsers.Parser { return p })
+	plugin.SetParserFunc(func() (parsers.Parser, error) { return p, nil })
 
 	var acc testutil.Accumulator
 	plugin.Init()
@@ -76,7 +76,7 @@ func TestHTTPHeaders(t *testing.T) {
 		DataFormat: "json",
 		MetricName: "metricName",
 	})
-	plugin.SetParserFunc(func() parsers.Parser { return p })
+	plugin.SetParserFunc(func() (parsers.Parser, error) { return p, nil })
 
 	var acc testutil.Accumulator
 	plugin.Init()
@@ -99,7 +99,7 @@ func TestInvalidStatusCode(t *testing.T) {
 		DataFormat: "json",
 		MetricName: metricName,
 	})
-	plugin.SetParserFunc(func() parsers.Parser { return p })
+	plugin.SetParserFunc(func() (parsers.Parser, error) { return p, nil })
 
 	var acc testutil.Accumulator
 	plugin.Init()
@@ -125,7 +125,7 @@ func TestMethod(t *testing.T) {
 		DataFormat: "json",
 		MetricName: "metricName",
 	})
-	plugin.SetParserFunc(func() parsers.Parser { return p })
+	plugin.SetParserFunc(func() (parsers.Parser, error) { return p, nil })
 
 	var acc testutil.Accumulator
 	plugin.Init()
@@ -219,7 +219,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 			p, err := parsers.NewParser(&parsers.Config{DataFormat: "influx"})
 			require.NoError(t, err)
 
-			tt.plugin.SetParserFunc(func() parsers.Parser { return p })
+			tt.plugin.SetParserFunc(func() (parsers.Parser, error) { return p, nil })
 
 			var acc testutil.Accumulator
 			tt.plugin.Init()

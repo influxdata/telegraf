@@ -156,7 +156,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/ech* metric_value"}
-	e.SetParserFunc(func() parsers.Parser { return parser })
+	e.SetParserFunc(func() (parsers.Parser, error) { return parser, nil })
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
@@ -172,7 +172,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", nil)
 	e := NewExec()
 	e.Commands = []string{"/bin/echo metric_value"}
-	e.SetParserFunc(func() parsers.Parser { return parser })
+	e.SetParserFunc(func() (parsers.Parser, error) { return parser, nil })
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)
@@ -188,7 +188,7 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", nil)
 	e := NewExec()
 	e.Commands = []string{"echo metric_value"}
-	e.SetParserFunc(func() parsers.Parser { return parser })
+	e.SetParserFunc(func() (parsers.Parser, error) { return parser, nil })
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(e.Gather)

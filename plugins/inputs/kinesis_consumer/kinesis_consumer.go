@@ -20,6 +20,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+var _ parsers.ParserFuncInput = (*KinesisConsumer)(nil)
+
 type (
 	DynamoDB struct {
 		AppName   string `toml:"app_name"`
@@ -133,8 +135,8 @@ func (k *KinesisConsumer) Description() string {
 	return "Configuration for the AWS Kinesis input."
 }
 
-func (k *KinesisConsumer) SetParserFunc(fn func() parsers.Parser) {
-	k.parser = fn()
+func (k *KinesisConsumer) SetParserFunc(fn parsers.ParserFunc) {
+	k.parser, _ = fn()
 }
 
 func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {

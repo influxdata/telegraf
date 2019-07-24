@@ -20,6 +20,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+var _ parsers.ParserFuncInput = (*streamSocketListener)(nil)
+
 type setReadBufferer interface {
 	SetReadBuffer(bytes int) error
 }
@@ -240,8 +242,8 @@ func (sl *SocketListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (sl *SocketListener) SetParserFunc(fn func() parsers.Parser) {
-	sl.Parser = fn()
+func (sl *SocketListener) SetParserFunc(fn parsers.ParserFunc) {
+	sl.Parser, _ = fn()
 }
 
 func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
