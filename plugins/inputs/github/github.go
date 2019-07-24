@@ -168,6 +168,9 @@ func getTags(repositoryInfo *github.Repository) map[string]string {
 func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 	return map[string]interface{}{
 		"stars":       repositoryInfo.GetStargazersCount(),
+		"subscribers": repositoryInfo.GetSubscribersCount(),
+		"watchers":    repositoryInfo.GetWatchersCount(),
+		"networks":    repositoryInfo.GetNetworkCount(),
 		"forks":       repositoryInfo.GetForksCount(),
 		"open_issues": repositoryInfo.GetOpenIssuesCount(),
 		"size":        repositoryInfo.GetSize(),
