@@ -109,6 +109,16 @@ func (m *WinServices) SampleConfig() string {
 	return sampleConfig
 }
 
+func stopSvcCollect(svcs []string, svc string) []string {
+	for i := range svcs {
+		if svcs[i] == svc {
+			svcs[i] = svcs[len(svcs)-1]
+			return svcs[:len(svcs)-1]
+		}
+	}
+	return svcs
+}
+
 func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 	scmgr, err := m.mgrProvider.Connect()
 	if err != nil {
@@ -129,6 +139,7 @@ func (m *WinServices) Gather(acc telegraf.Accumulator) error {
 			} else {
 				acc.AddError(err)
 			}
+			m.ServiceNames = stopSvcCollect(m.ServiceNames, srvName)
 			continue
 		}
 
