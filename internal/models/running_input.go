@@ -39,6 +39,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 // InputConfig is the common config for all inputs.
 type InputConfig struct {
 	Name     string
+	LogID    string
 	Interval time.Duration
 
 	NameOverride      string
@@ -50,6 +51,13 @@ type InputConfig struct {
 
 func (r *RunningInput) Name() string {
 	return "inputs." + r.Config.Name
+}
+
+func (r *RunningInput) LogName() string {
+	if r.Config.LogID == "" {
+		return r.Name()
+	}
+	return r.Name() + "::" + r.Config.LogID
 }
 
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {

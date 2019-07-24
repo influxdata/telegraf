@@ -71,6 +71,10 @@ func (r *RunningAggregator) Name() string {
 	return "aggregators." + r.Config.Name
 }
 
+func (r *RunningAggregator) LogName() string {
+	return r.Name()
+}
+
 func (r *RunningAggregator) Init() error {
 	if p, ok := r.Aggregator.(telegraf.Initializer); ok {
 		err := p.Init()
@@ -92,7 +96,7 @@ func (r *RunningAggregator) EndPeriod() time.Time {
 func (r *RunningAggregator) UpdateWindow(start, until time.Time) {
 	r.periodStart = start
 	r.periodEnd = until
-	log.Printf("D! [%s] Updated aggregation range [%s, %s]", r.Name(), start, until)
+	log.Printf("D! [%s] Updated aggregation range [%s, %s]", r.LogName(), start, until)
 }
 
 func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
@@ -137,7 +141,7 @@ func (r *RunningAggregator) Add(m telegraf.Metric) bool {
 
 	if m.Time().Before(r.periodStart) || m.Time().After(r.periodEnd.Add(r.Config.Delay)) {
 		log.Printf("D! [%s] metric is outside aggregation window; discarding. %s: m: %s e: %s",
-			r.Name(), m.Time(), r.periodStart, r.periodEnd)
+			r.LogName(), m.Time(), r.periodStart, r.periodEnd)
 		r.MetricsDropped.Incr(1)
 		return r.Config.DropOriginal
 	}

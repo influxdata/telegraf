@@ -334,7 +334,7 @@ func (a *Agent) gatherOnce(
 			return err
 		case <-ticker.C:
 			log.Printf("W! [agent] input %q did not complete within its interval",
-				input.Name())
+				input.LogName())
 		}
 	}
 }
@@ -690,7 +690,7 @@ func (a *Agent) startServiceInputs(
 			err := si.Start(acc)
 			if err != nil {
 				log.Printf("E! [agent] Service for input %s failed to start: %v",
-					input.Name(), err)
+					input.LogName(), err)
 
 				for _, si := range started {
 					si.Stop()
@@ -742,7 +742,7 @@ func panicRecover(input *models.RunningInput) {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
 		log.Printf("E! FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
-			input.Name(), err, trace)
+			input.LogName(), err, trace)
 		log.Println("E! PLEASE REPORT THIS PANIC ON GITHUB with " +
 			"stack trace, configuration, and OS information: " +
 			"https://github.com/influxdata/telegraf/issues/new/choose")

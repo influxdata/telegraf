@@ -1319,6 +1319,14 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["log_id"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				cp.LogID = str.Value
+			}
+		}
+	}
+
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1331,6 +1339,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "log_id")
 	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
 	var err error
