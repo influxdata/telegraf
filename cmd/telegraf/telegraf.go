@@ -88,11 +88,15 @@ func reloadLoop(
 		ctx, cancel := context.WithCancel(context.Background())
 
 		signals := make(chan os.Signal)
+		signalsMonitorAgent := make(chan os.Signal, 10) // allows us to bubble the signal through to the monitor agent, add buffer to prevent blocking
+
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
 		go func() {
 			select {
 			case sig := <-signals:
+				// push signal down to the monitor agent
+				signalsMonitorAgent <- sig
 				if sig == syscall.SIGHUP {
 					log.Printf("I! Reloading Telegraf config")
 					<-reload
@@ -104,7 +108,7 @@ func reloadLoop(
 			}
 		}()
 
-		err := runAgent(ctx, inputFilters, outputFilters)
+		err := runAgent(ctx, inputFilters, outputFilters, signalsMonitorAgent)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
@@ -114,6 +118,7 @@ func reloadLoop(
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
+	signalsMonitorAgent chan os.Signal,
 ) error {
 	// Setup default logging. This may need to change after reading the config
 	// file, but we can configure it to use our logger implementation now.
@@ -151,6 +156,8 @@ func runAgent(ctx context.Context,
 		return fmt.Errorf("Agent flush_interval must be positive; found %s",
 			c.Agent.Interval.Duration)
 	}
+	// set version here
+	c.Agent.Version = version
 
 	ag, err := agent.NewAgent(c)
 	if err != nil {
@@ -171,7 +178,7 @@ func runAgent(ctx context.Context,
 
 	if *fTest || *fTestWait != 0 {
 		testWaitDuration := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, testWaitDuration)
+		return ag.Test(ctx, testWaitDuration, signalsMonitorAgent)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -198,7 +205,7 @@ func runAgent(ctx context.Context,
 		}
 	}
 
-	return ag.Run(ctx)
+	return ag.Run(ctx, signalsMonitorAgent)
 }
 
 func usageExit(rc int) {
@@ -217,6 +224,7 @@ func (p *program) Start(s service.Service) error {
 	go p.run()
 	return nil
 }
+
 func (p *program) run() {
 	stop = make(chan struct{})
 	reloadLoop(

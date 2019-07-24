@@ -68,6 +68,7 @@ type Config struct {
 	Processors models.RunningProcessors
 }
 
+// NewConfig returns a Config object, with defaults initialized
 func NewConfig() *Config {
 	c := &Config{
 		// Agent defaults:
@@ -76,6 +77,10 @@ func NewConfig() *Config {
 			RoundInterval:              true,
 			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
 			LogfileRotationMaxArchives: 5,
+			EnableMeta:                 true,
+			MetaCollectionInterval:     internal.Duration{Duration: 3600 * time.Second},
+			EnableStateChange:          true,
+			IgnoreInvalidVersion:       false,
 		},
 
 		Tags:          make(map[string]string),
@@ -161,11 +166,17 @@ type AgentConfig struct {
 	// If set to -1, no archives are removed.
 	LogfileRotationMaxArchives int `toml:"logfile_rotation_max_archives"`
 
-	Hostname     string
-	OmitHostname bool
+	Hostname               string
+	OmitHostname           bool
+	Version                string
+	EnableMeta             bool              `toml:"report_meta_data"`
+	MetaCollectionInterval internal.Duration `toml:"meta_reporting_interval"`
+	EnableStateChange      bool              `toml:"report_state_change"`
+	IgnoreInvalidVersion   bool              `toml:"ignore_invalid_version"`
+	signal                 chan os.Signal
 }
 
-// Inputs returns a list of strings of the configured inputs.
+// InputNames returns a list of strings of the configured inputs.
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
@@ -304,6 +315,24 @@ var agentConfig = `
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
+
+  ## Enable reporting of version
+  ## defaults to true
+  # report_meta_data = true
+
+  ## Ignore invalid version string
+  ## this can happen if testing builds etc, and not using a semantic version schema. defaults to false
+  ## which means that the agent monitor will NOT send the version unless valid
+  # ignore_invalid_version = false
+
+  ## Meta data reporting interval
+  ## only applies if "report_meta_data" is true, and defaults to every 60m
+  # meta_reporting_interval = "60m"
+
+  ## Enable state-change reporting
+  ## when agent changes run state, it will, if enabled (the default), report 
+  ## the change, when it takes place
+  # report_state_change = true
 
 `
 

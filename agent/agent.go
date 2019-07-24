@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -29,7 +30,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 }
 
 // Run starts and runs the Agent until the context is done.
-func (a *Agent) Run(ctx context.Context) error {
+func (a *Agent) Run(ctx context.Context, signalsMonitorAgent chan os.Signal) error {
 	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
@@ -56,6 +57,20 @@ func (a *Agent) Run(ctx context.Context) error {
 	outputC := make(chan telegraf.Metric, 100)
 
 	startTime := time.Now()
+
+	// start internal monitor
+	log.Printf("D! [agent] Creating agent monitor")
+	agentMonitor, err := NewAgentMonitor(ctx, a.Config, signalsMonitorAgent, inputC)
+	if err != nil {
+		/*
+			we should NOT cause telegraf agent to fail here - this can be due to nonesense version string (or total lack of one - while testing etc)
+			log it, and die quietly
+		*/
+		log.Printf("D! [agent] agent monitor returned: " + err.Error())
+	} else {
+		log.Printf("D! [agent] Starting agent monitor")
+		go agentMonitor.Run() //this will look after itself from this point
+	}
 
 	log.Printf("D! [agent] Starting service inputs")
 	err = a.startServiceInputs(ctx, inputC)
@@ -142,7 +157,7 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 // Test runs the inputs once and prints the output to stdout in line protocol.
-func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
+func (a *Agent) Test(ctx context.Context, waitDuration time.Duration, signalsMonitorAgent chan os.Signal) error {
 	var wg sync.WaitGroup
 	metricC := make(chan telegraf.Metric)
 	nulC := make(chan telegraf.Metric)
@@ -180,6 +195,20 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 			hasServiceInputs = true
 			break
 		}
+	}
+
+	// start agent monitor
+	log.Printf("D! [agent] Creating agent monitor")
+	agentMonitor, err := NewAgentMonitor(ctx, a.Config, signalsMonitorAgent, metricC)
+	if err != nil {
+		/*
+			we should NOT cause telegraf agent to fail here - this can be due to nonesense version string (or total lack of one - while testing etc)
+			log it, and die quietly
+		*/
+		log.Printf("D! [agent] agent monitor returned: " + err.Error())
+	} else {
+		log.Printf("D! [agent] Starting agent monitor...")
+		go agentMonitor.Run() //this will look after itself from this point, and operates autonomously. main should not need to do anything else.
 	}
 
 	if hasServiceInputs {
