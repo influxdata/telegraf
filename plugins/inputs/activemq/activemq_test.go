@@ -2,9 +2,12 @@ package activemq
 
 import (
 	"encoding/xml"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGatherQueuesMetrics(t *testing.T) {
@@ -47,6 +50,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
+	activeMQ.Init()
 
 	activeMQ.GatherQueuesMetrics(&acc, queues)
 	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
@@ -93,6 +97,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
+	activeMQ.Init()
 
 	activeMQ.GatherTopicsMetrics(&acc, topics)
 	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
@@ -133,7 +138,43 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
+	activeMQ.Init()
 
 	activeMQ.GatherSubscribersMetrics(&acc, subscribers)
 	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
+}
+
+func TestURLs(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/admin/xml/queues.jsp":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("<queues></queues>"))
+		case "/admin/xml/topics.jsp":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("<topics></topics>"))
+		case "/admin/xml/subscribers.jsp":
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("<subscribers></subscribers>"))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			t.Fatalf("unexpected path: " + r.URL.Path)
+		}
+	})
+
+	plugin := ActiveMQ{
+		URL:      "http://" + ts.Listener.Addr().String(),
+		Webadmin: "admin",
+	}
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	require.Len(t, acc.GetTelegrafMetrics(), 0)
 }

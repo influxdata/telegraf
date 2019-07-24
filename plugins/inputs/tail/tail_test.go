@@ -108,7 +108,7 @@ func TestTailBadLine(t *testing.T) {
 	require.NoError(t, err)
 
 	acc.WaitError(1)
-	assert.Contains(t, acc.Errors[0].Error(), "E! Malformed log line")
+	assert.Contains(t, acc.Errors[0].Error(), "malformed log line")
 }
 
 func TestTailDosLineendings(t *testing.T) {

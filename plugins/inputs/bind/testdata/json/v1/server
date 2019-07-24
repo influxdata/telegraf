@@ -21,6 +21,32 @@
     "RESERVED14":0,
     "RESERVED15":0
   },
+  "rcodes":{
+	"NOERROR":1732,
+	"FORMERR":0,
+	"SERVFAIL":6,
+	"NXDOMAIN":200,
+	"NOTIMP":0,
+	"REFUSED":0,
+	"YXDOMAIN":0,
+	"YXRRSET":0,
+	"NXRRSET":0,
+	"NOTAUTH":0,
+	"NOTZONE":0,
+	"RESERVED11":0,
+	"RESERVED12":0,
+	"RESERVED13":0,
+	"RESERVED14":0,
+	"RESERVED15":0,
+	"BADVERS":0,
+	"17":0,
+	"18":0,
+	"19":0,
+	"20":0,
+	"21":0,
+	"22":0,
+	"BADCOOKIE":0
+  },
   "qtypes":{
     "A":2,
     "PTR":7,
@@ -39,6 +65,11 @@
     "QryRecursion":12,
     "QryDuplicate":1,
     "QryUDP":13
+  },
+  "zonestats":{
+	"NotifyOutv4":8,
+	"NotifyInv4":5,
+	"SOAOutv4":5
   },
   "views":{
     "_default":{

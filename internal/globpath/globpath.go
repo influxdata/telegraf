@@ -21,7 +21,7 @@ func Compile(path string) (*GlobPath, error) {
 	out := GlobPath{
 		hasMeta:      hasMeta(path),
 		HasSuperMeta: hasSuperMeta(path),
-		path:         path,
+		path:         filepath.FromSlash(path),
 	}
 
 	// if there are no glob meta characters in the path, don't bother compiling
@@ -41,8 +41,9 @@ func Compile(path string) (*GlobPath, error) {
 	return &out, nil
 }
 
-// Match returns all files matching the expression
-// If it's a static path, returns path
+// Match returns all files matching the expression.
+// If it's a static path, returns path.
+// All returned path will have the host platform separator.
 func (g *GlobPath) Match() []string {
 	if !g.hasMeta {
 		return []string{g.path}
@@ -82,7 +83,8 @@ func (g *GlobPath) Match() []string {
 	return out
 }
 
-// MatchString test a string against the glob
+// MatchString tests the path string against the glob.  The path should contain
+// the host platform separator.
 func (g *GlobPath) MatchString(path string) bool {
 	if !g.HasSuperMeta {
 		res, _ := filepath.Match(g.path, path)
@@ -96,6 +98,7 @@ func (g *GlobPath) MatchString(path string) bool {
 // - any directory under these roots may contain a matching file
 // - no file outside of these roots can match the pattern
 // Note that it returns both files and directories.
+// All returned path will have the host platform separator.
 func (g *GlobPath) GetRoots() []string {
 	if !g.hasMeta {
 		return []string{g.path}

@@ -240,7 +240,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			v, ok := toFloat(value)
 			if !ok {
 				metric.RemoveField(key)
-				logPrintf("error converting to integer [%T]: %v\n", value, value)
+				logPrintf("error converting to float [%T]: %v\n", value, value)
 				continue
 			}
 

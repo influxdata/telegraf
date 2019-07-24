@@ -9,6 +9,10 @@ use the iputils-ping implementation:
 apt-get install iputils-ping
 ```
 
+When using `method = "native"` a ping is sent and the results are reported in pure go, eliminating the need to execute the system `ping` command. Not using the system binary allows the use of this plugin on non-english systems.
+
+There is currently no support for TTL on windows with `"native"`; track progress at https://github.com/golang/go/issues/7175 and https://github.com/golang/go/issues/7174
+
 ### Configuration:
 
 ```toml
@@ -33,12 +37,18 @@ apt-get install iputils-ping
   ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
 
+  ## How to ping. "native" doesn't have external dependencies, while "exec" depends on 'ping'.
+  # method = "exec"
+
   ## Specify the ping executable binary, default is "ping"
   # binary = "ping"
 
-  ## Arguments for ping command
-  ## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
+  ## Arguments for ping command. When arguments is not empty, system binary will be used and
+  ## other options (ping_interval, timeout, etc) will be ignored
   # arguments = ["-c", "3"]
+
+  ## Use only ipv6 addresses when resolving hostnames.
+  # ipv6 = false
 ```
 
 #### File Limit
@@ -62,6 +72,21 @@ Set the file number limit:
 LimitNOFILE=4096
 ```
 
+#### Permission Caveat (non Windows)
+
+It is preferred that this plugin listen on privileged ICMP sockets. To do so, telegraf can either be run as the root user or the root user can add the capability to access raw sockets to telegraf by running the following commant:
+
+```
+setcap cap_net_raw=eip /path/to/telegraf
+```
+
+Another option (doesn't work as well or in all circumstances) is to listen on unprivileged raw sockets (non-Windows only). The system group of the user running telegraf must be allowed to create ICMP Echo sockets. [See man pages icmp(7) for `ping_group_range`](http://man7.org/linux/man-pages/man7/icmp.7.html). On Linux hosts, run the following to give a group the proper permissions:
+
+```
+sudo sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
+```
+
+
 ### Metrics:
 
 - ping
@@ -75,15 +100,15 @@ LimitNOFILE=4096
     - average_response_ms (integer)
     - minimum_response_ms (integer)
     - maximum_response_ms (integer)
-    - standard_deviation_ms (integer, Not available on Windows)
+    - standard_deviation_ms (integer, Available on Windows only with native ping)
     - errors (float, Windows only)
-    - reply_received (integer, Windows only)
-    - percent_reply_loss (float, Windows only)
+    - reply_received (integer, Windows only*)
+    - percent_reply_loss (float, Windows only*)
     - result_code (int, success = 0, no such host = 1, ping error = 2)
 
 ##### reply_received vs packets_received
 
-On Windows systems, "Destination net unreachable" reply will increment `packets_received` but not `reply_received`.
+On Windows systems, "Destination net unreachable" reply will increment `packets_received` but not `reply_received`*
 
 ### Example Output:
 
@@ -96,3 +121,5 @@ ping,url=example.org result_code=0i,average_response_ms=7i,maximum_response_ms=9
 ```
 ping,url=example.org average_response_ms=23.066,ttl=63,maximum_response_ms=24.64,minimum_response_ms=22.451,packets_received=5i,packets_transmitted=5i,percent_packet_loss=0,result_code=0i,standard_deviation_ms=0.809 1535747258000000000
 ```
+
+*not when `method = "native"` is used
