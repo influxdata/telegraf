@@ -2,7 +2,6 @@ package valuecounter
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -20,7 +19,7 @@ type ValueCounter struct {
 	Fields []string
 }
 
-// NewValueCounter create a new aggregation plugin which counts the occurances
+// NewValueCounter create a new aggregation plugin which counts the occurrences
 // of fields and emits the count.
 func NewValueCounter() telegraf.Aggregator {
 	vc := &ValueCounter{}
@@ -46,7 +45,7 @@ func (vc *ValueCounter) SampleConfig() string {
 
 // Description returns the description of the ValueCounter plugin
 func (vc *ValueCounter) Description() string {
-	return "Count the occurance of values in fields."
+	return "Count the occurrence of values in fields."
 }
 
 // Add is run on every metric which passes the plugin
@@ -68,14 +67,6 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 	for fk, fv := range in.Fields() {
 		for _, cf := range vc.Fields {
 			if fk == cf {
-				// Do not process float types to prevent memory from blowing up
-				switch fv.(type) {
-				default:
-					log.Printf("I! Valuecounter: Unsupported field type. " +
-						"Must be an int, string or bool. Ignoring.")
-					continue
-				case uint64, int64, string, bool:
-				}
 				fn := fmt.Sprintf("%v_%v", fk, fv)
 				vc.cache[id].fieldCount[fn]++
 			}

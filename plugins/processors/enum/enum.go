@@ -1,6 +1,7 @@
 package enum
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -8,13 +9,16 @@ import (
 )
 
 var sampleConfig = `
-  [[processors.enum.fields]]
+  [[processors.enum.mapping]]
     ## Name of the field to map
-    source = "name"
+    field = "status"
 
-    ## Destination field to be used for the mapped value.  By default the source
-    ## field is used, overwriting the original value.
-    # destination = "mapped"
+    ## Name of the tag to map
+    # tag = "status"
+
+    ## Destination tag or field to be used for the mapped value.  By default the
+    ## source tag or field is used, overwriting the original value.
+    dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
     ## table.  When unset, the unmodified value for the field will be used if no
@@ -22,18 +26,20 @@ var sampleConfig = `
     # default = 0
 
     ## Table of mappings
-    [processors.enum.fields.value_mappings]
-      value1 = 1
-      value2 = 2
+    [processors.enum.mapping.value_mappings]
+      green = 1
+      amber = 2
+      red = 3
 `
 
 type EnumMapper struct {
-	Fields []Mapping
+	Mappings []Mapping `toml:"mapping"`
 }
 
 type Mapping struct {
-	Source        string
-	Destination   string
+	Tag           string
+	Field         string
+	Dest          string
 	Default       interface{}
 	ValueMappings map[string]interface{}
 }
@@ -54,11 +60,25 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
-	for _, mapping := range mapper.Fields {
-		if originalValue, isPresent := metric.GetField(mapping.Source); isPresent == true {
-			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
-				if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
-					writeField(metric, mapping.getDestination(), mappedValue)
+	for _, mapping := range mapper.Mappings {
+		if mapping.Field != "" {
+			if originalValue, isPresent := metric.GetField(mapping.Field); isPresent {
+				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString {
+					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
+						writeField(metric, mapping.getDestination(), mappedValue)
+					}
+				}
+			}
+		}
+		if mapping.Tag != "" {
+			if originalValue, isPresent := metric.GetTag(mapping.Tag); isPresent {
+				if mappedValue, isMappedValuePresent := mapping.mapValue(originalValue); isMappedValuePresent {
+					switch val := mappedValue.(type) {
+					case string:
+						writeTag(metric, mapping.getDestinationTag(), val)
+					default:
+						writeTag(metric, mapping.getDestinationTag(), fmt.Sprintf("%v", val))
+					}
 				}
 			}
 		}
@@ -84,17 +104,27 @@ func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
 }
 
 func (mapping *Mapping) getDestination() string {
-	if mapping.Destination != "" {
-		return mapping.Destination
+	if mapping.Dest != "" {
+		return mapping.Dest
 	}
-	return mapping.Source
+	return mapping.Field
+}
+
+func (mapping *Mapping) getDestinationTag() string {
+	if mapping.Dest != "" {
+		return mapping.Dest
+	}
+	return mapping.Tag
 }
 
 func writeField(metric telegraf.Metric, name string, value interface{}) {
-	if metric.HasField(name) {
-		metric.RemoveField(name)
-	}
+	metric.RemoveField(name)
 	metric.AddField(name, value)
+}
+
+func writeTag(metric telegraf.Metric, name string, value string) {
+	metric.RemoveTag(name)
+	metric.AddTag(name, value)
 }
 
 func init() {

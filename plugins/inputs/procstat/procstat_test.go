@@ -76,6 +76,10 @@ func (pg *testPgrep) PidFile(path string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
+func (p *testProc) Cmdline() (string, error) {
+	return "test_proc", nil
+}
+
 func (pg *testPgrep) Pattern(pattern string) ([]PID, error) {
 	return pg.pids, pg.err
 }
@@ -110,6 +114,10 @@ func (p *testProc) Username() (string, error) {
 
 func (p *testProc) Tags() map[string]string {
 	return p.tags
+}
+
+func (p *testProc) PageFaults() (*process.PageFaultsStat, error) {
+	return &process.PageFaultsStat{}, nil
 }
 
 func (p *testProc) IOCounters() (*process.IOCountersStat, error) {

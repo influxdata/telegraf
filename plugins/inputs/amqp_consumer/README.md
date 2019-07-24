@@ -13,7 +13,6 @@ For an introduction to AMQP see:
 The following defaults are known to work with RabbitMQ:
 
 ```toml
-# AMQP consumer plugin
 [[inputs.amqp_consumer]]
   ## Broker to consume from.
   ##   deprecated in 1.7; use the brokers option
@@ -28,7 +27,7 @@ The following defaults are known to work with RabbitMQ:
   # username = ""
   # password = ""
 
-  ## Exchange to declare and consume from.
+  ## Name of the exchange to declare.  If unset, no exchange will be declared.
   exchange = "telegraf"
 
   ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
@@ -46,11 +45,29 @@ The following defaults are known to work with RabbitMQ:
 
   ## AMQP queue name
   queue = "telegraf"
-  ## Binding Key
+
+  ## AMQP queue durability can be "transient" or "durable".
+  queue_durability = "durable"
+
+  ## If true, queue will be passively declared.
+  # queue_passive = false
+
+  ## A binding between the exchange and queue using this binding key is
+  ## created.  If unset, no binding is created.
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
   # prefetch_count = 50
+
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
@@ -63,6 +80,10 @@ The following defaults are known to work with RabbitMQ:
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

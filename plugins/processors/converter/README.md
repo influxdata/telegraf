@@ -12,7 +12,7 @@ will overwrite one another.
 ### Configuration:
 ```toml
 # Convert values to another metric value type
-[processors.converter]
+[[processors.converter]]
   ## Tags to convert
   ##
   ## The table key determines the target type, and the array of key-values
@@ -42,13 +42,13 @@ will overwrite one another.
 ### Examples:
 
 ```toml
-[processors.converter]
+[[processors.converter]]
   [processors.converter.tags]
     string = ["port"]
 
   [processors.converter.fields]
     integer = ["scboard_*"]
-    tag = ["ParseServerConfigGeneration"]
+    tag = ["ParentServerConfigGeneration"]
 ```
 
 ```diff

@@ -24,36 +24,34 @@ To enable SMART on a storage device run:
 smartctl -s on <device>
 ```
 
-### Configuration:
+### Configuration
 
 ```toml
 # Read metrics from storage devices supporting S.M.A.R.T.
 [[inputs.smart]]
   ## Optionally specify the path to the smartctl executable
   # path = "/usr/bin/smartctl"
-  #
+
   ## On most platforms smartctl requires root access.
   ## Setting 'use_sudo' to true will make use of sudo to run smartctl.
   ## Sudo must be configured to to allow the telegraf user to run smartctl
-  ## with out password.
+  ## without a password.
   # use_sudo = false
-  #
+
   ## Skip checking disks in this power mode. Defaults to
   ## "standby" to not wake up disks that have stoped rotating.
-  ## See --nockeck in the man pages for smartctl.
+  ## See --nocheck in the man pages for smartctl.
   ## smartctl version 5.41 and 5.42 have faulty detection of
   ## power mode and might require changing this value to
-  ## "never" depending on your storage device.
+  ## "never" depending on your disks.
   # nocheck = "standby"
-  #
+
   ## Gather detailed metrics for each SMART Attribute.
-  ## Defaults to "false"
-  ##
   # attributes = false
-  #
+
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
-  #
+
   ## Optionally specify devices and device type, if unset
   ## a scan (smartctl --scan) for S.M.A.R.T. devices will
   ## done and all found will be included except for the
@@ -61,7 +59,28 @@ smartctl -s on <device>
   # devices = [ "/dev/ada0 -d atacam" ]
 ```
 
-### Metrics:
+### Permissions
+
+It's important to note that this plugin references smartctl, which may require additional permissions to execute successfully.
+Depending on the user/group permissions of the telegraf user executing this plugin, you may need to  use sudo.
+
+
+You will need the following in your telegraf config:
+```toml
+[[inputs.smart]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias SMARTCTL = /usr/bin/smartctl
+telegraf  ALL=(ALL) NOPASSWD: SMARTCTL
+Defaults!SMARTCTL !logfile, !syslog, !pam_session
+```
+
+### Metrics
 
 - smart_device:
   - tags:
@@ -123,7 +142,21 @@ devices can be referenced by the WWN in the following location:
 To run `smartctl` with `sudo` create a wrapper script and use `path` in
 the configuration to execute that.
 
-### Output
+### Troubleshooting
+
+If this plugin is not working as expected for your SMART enabled device,
+please run these commands and include the output in a bug report:
+```
+smartctl --scan
+```
+
+Run the following command replacing your configuration setting for NOCHECK and
+the DEVICE from the previous command:
+```
+smartctl --info --health --attributes --tolerance=verypermissive --nocheck NOCHECK --format=brief -d DEVICE
+```
+
+### Example Output
 
 ```
 smart_device,enabled=Enabled,host=mbpro.local,device=rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000

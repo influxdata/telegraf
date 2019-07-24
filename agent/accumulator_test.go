@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,7 +74,6 @@ func TestSetPrecision(t *testing.T) {
 		name      string
 		unset     bool
 		precision time.Duration
-		interval  time.Duration
 		timestamp time.Time
 		expected  time.Time
 	}{
@@ -88,13 +85,13 @@ func TestSetPrecision(t *testing.T) {
 		},
 		{
 			name:      "second interval",
-			interval:  time.Second,
+			precision: time.Second,
 			timestamp: time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC),
 			expected:  time.Date(2006, time.February, 10, 12, 0, 0, 0, time.UTC),
 		},
 		{
 			name:      "microsecond interval",
-			interval:  time.Microsecond,
+			precision: time.Microsecond,
 			timestamp: time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC),
 			expected:  time.Date(2006, time.February, 10, 12, 0, 0, 82913000, time.UTC),
 		},
@@ -111,7 +108,7 @@ func TestSetPrecision(t *testing.T) {
 
 			a := NewAccumulator(&TestMetricMaker{}, metrics)
 			if !tt.unset {
-				a.SetPrecision(tt.precision, tt.interval)
+				a.SetPrecision(tt.precision)
 			}
 
 			a.AddFields("acctest",
@@ -128,32 +125,28 @@ func TestSetPrecision(t *testing.T) {
 	}
 }
 
+func TestAddTrackingMetricGroupEmpty(t *testing.T) {
+	ch := make(chan telegraf.Metric, 10)
+	metrics := []telegraf.Metric{}
+	acc := NewAccumulator(&TestMetricMaker{}, ch).WithTracking(1)
+
+	id := acc.AddTrackingMetricGroup(metrics)
+
+	select {
+	case tracking := <-acc.Delivered():
+		require.Equal(t, tracking.ID(), id)
+	default:
+		t.Fatal("empty group should be delivered immediately")
+	}
+}
+
 type TestMetricMaker struct {
 }
 
 func (tm *TestMetricMaker) Name() string {
 	return "TestPlugin"
 }
-func (tm *TestMetricMaker) MakeMetric(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-	mType telegraf.ValueType,
-	t time.Time,
-) telegraf.Metric {
-	switch mType {
-	case telegraf.Untyped:
-		if m, err := metric.New(measurement, tags, fields, t); err == nil {
-			return m
-		}
-	case telegraf.Counter:
-		if m, err := metric.New(measurement, tags, fields, t, telegraf.Counter); err == nil {
-			return m
-		}
-	case telegraf.Gauge:
-		if m, err := metric.New(measurement, tags, fields, t, telegraf.Gauge); err == nil {
-			return m
-		}
-	}
-	return nil
+
+func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
+	return metric
 }

@@ -28,10 +28,20 @@ Since telegraf will fork a process to run iptables, `AmbientCapabilities` is req
 
 ### Using sudo
 
-You may edit your sudo configuration with the following:
+You will need the following in your telegraf config:
+```toml
+[[inputs.iptables]]
+  use_sudo = true
+```
 
-```sudo
-telegraf ALL=(root) NOPASSWD: /usr/bin/iptables -nvL *
+You will also need to update your sudoers file:
+
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias IPTABLESSHOW = /usr/bin/iptables -nvL *
+telegraf  ALL=(root) NOPASSWD: IPTABLESSHOW
+Defaults!IPTABLESSHOW !logfile, !syslog, !pam_session
 ```
 
 ### Using IPtables lock feature
@@ -45,6 +55,8 @@ Defining multiple instances of this plugin in telegraf.conf can lead to concurre
   use_sudo = false
   # run iptables with the lock option
   use_lock = false
+  # Define an alternate executable, such as "ip6tables". Default is "iptables".
+  # binary = "ip6tables"
   # defines the table to monitor:
   table = "filter"
   # defines the chains to monitor:

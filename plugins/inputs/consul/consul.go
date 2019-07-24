@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/api"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -16,7 +17,8 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
-	Datacentre string
+	Datacentre string // deprecated in 1.10; use Datacenter
+	Datacenter string
 	tls.ClientConfig
 	TagDelimiter string
 
@@ -38,8 +40,8 @@ var sampleConfig = `
   # username = ""
   # password = ""
 
-  ## Data centre to query the health checks from
-  # datacentre = ""
+  ## Data center to query the health checks from
+  # datacenter = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -75,6 +77,10 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	if c.Datacentre != "" {
 		config.Datacenter = c.Datacentre
+	}
+
+	if c.Datacenter != "" {
+		config.Datacenter = c.Datacenter
 	}
 
 	if c.Token != "" {
@@ -121,12 +127,12 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		for _, checkTag := range check.ServiceTags {
 			if c.TagDelimiter != "" {
 				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
-				if len(splittedTag) == 1 {
+				if len(splittedTag) == 1 && checkTag != "" {
 					tags[checkTag] = checkTag
-				} else if len(splittedTag) == 2 {
+				} else if len(splittedTag) == 2 && splittedTag[1] != "" {
 					tags[splittedTag[0]] = splittedTag[1]
 				}
-			} else {
+			} else if checkTag != "" {
 				tags[checkTag] = checkTag
 			}
 		}

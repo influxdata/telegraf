@@ -62,6 +62,28 @@ func New(
 	return m, nil
 }
 
+// FromMetric returns a deep copy of the metric with any tracking information
+// removed.
+func FromMetric(other telegraf.Metric) telegraf.Metric {
+	m := &metric{
+		name:      other.Name(),
+		tags:      make([]*telegraf.Tag, len(other.TagList())),
+		fields:    make([]*telegraf.Field, len(other.FieldList())),
+		tm:        other.Time(),
+		tp:        other.Type(),
+		aggregate: other.IsAggregate(),
+	}
+
+	for i, tag := range other.TagList() {
+		m.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
+	}
+
+	for i, field := range other.FieldList() {
+		m.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
+	}
+	return m
+}
+
 func (m *metric) String() string {
 	return fmt.Sprintf("%s %v %v %d", m.name, m.Tags(), m.Fields(), m.tm.UnixNano())
 }
@@ -218,11 +240,11 @@ func (m *metric) Copy() telegraf.Metric {
 	}
 
 	for i, tag := range m.tags {
-		m2.tags[i] = tag
+		m2.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
 	}
 
 	for i, field := range m.fields {
-		m2.fields[i] = field
+		m2.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
 	}
 	return m2
 }
@@ -246,6 +268,15 @@ func (m *metric) HashID() uint64 {
 		h.Write([]byte("\n"))
 	}
 	return h.Sum64()
+}
+
+func (m *metric) Accept() {
+}
+
+func (m *metric) Reject() {
+}
+
+func (m *metric) Drop() {
 }
 
 // Convert field to a supported type or nil if unconvertible
@@ -281,7 +312,68 @@ func convertField(v interface{}) interface{} {
 		return uint64(v)
 	case float32:
 		return float64(v)
+	case *float64:
+		if v != nil {
+			return *v
+		}
+	case *int64:
+		if v != nil {
+			return *v
+		}
+	case *string:
+		if v != nil {
+			return *v
+		}
+	case *bool:
+		if v != nil {
+			return *v
+		}
+	case *int:
+		if v != nil {
+			return int64(*v)
+		}
+	case *uint:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint64:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *[]byte:
+		if v != nil {
+			return string(*v)
+		}
+	case *int32:
+		if v != nil {
+			return int64(*v)
+		}
+	case *int16:
+		if v != nil {
+			return int64(*v)
+		}
+	case *int8:
+		if v != nil {
+			return int64(*v)
+		}
+	case *uint32:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint16:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *uint8:
+		if v != nil {
+			return uint64(*v)
+		}
+	case *float32:
+		if v != nil {
+			return float64(*v)
+		}
 	default:
 		return nil
 	}
+	return nil
 }
