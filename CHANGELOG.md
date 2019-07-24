@@ -48,6 +48,7 @@
 - [#6105](https://github.com/influxdata/telegraf/pull/6105): Collect k8s endpoints, ingress, and services in kube_inventory plugin.
 - [#6129](https://github.com/influxdata/telegraf/pull/6129): Add support for field/tag keys to strings processor.
 - [#6143](https://github.com/influxdata/telegraf/pull/6143): Add certificate verification status to x509_cert input.
+- [#6163](https://github.com/influxdata/telegraf/pull/6163): Support percentage value parsing in redis input.
 
 #### Bugfixes
 
