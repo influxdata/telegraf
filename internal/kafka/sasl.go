@@ -27,6 +27,9 @@ type SaramaSASL struct {
 func (c *SASLConfig) SetSaramaSASLConfig(config *sarama.Config) error {
 	sasl := config.Net.SASL
 	switch c.SASLMechanism {
+	case "":
+		// SASL is not enabled
+		return nil
 	case "PLAIN":
 		sasl.Mechanism = sarama.SASLTypePlaintext
 	case "SCRAM-SHA-256":
