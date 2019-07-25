@@ -49,7 +49,7 @@ func (ns *Wireless) SampleConfig() string {
 func exe_cmd(cmd string, wg *sync.WaitGroup) ([]byte, error) {
 	parts := strings.Fields(cmd)
 	head := parts[0]
-	parts = parts[1:len(parts)]
+	parts = parts[1:]
 	out, err := exec.Command(head, parts...).Output()
 	wg.Done() // Need to signal to waitgroup that this goroutine is done
 	return out, err
@@ -224,6 +224,7 @@ func loadLinuxWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) 
 	wd.Data = data
 	return wd, nil
 }
+
 // proc can be used to read file paths from env
 func proc(env, path string) string {
 	// try to read full file path
@@ -243,7 +244,3 @@ func init() {
 		return &Wireless{}
 	})
 }
-
-
-
-
