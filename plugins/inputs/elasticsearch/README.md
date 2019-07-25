@@ -52,12 +52,11 @@ Note that specific statistics information can change between Elassticsearch vers
   ## Only gather cluster_stats from the master node. To work this require local = true
   cluster_stats_only_from_master = true
 
-  ## Set indices_stats to true when you want to obtain indices stats from the Master node.
-  indices_stats = false
+  ## Indices to collect; can be one or more indices names or _all
+  indices_include = ["_all"]
 
-  ## Set shards_stats to true when you want to obtain shards stats from the Master node.
-  ## If set, then indices_stats is considered true as they are also provided with shard stats.
-  # shards_stats = false
+  ## One of "shards", "cluster", "indices"
+  indices_level = "shards"
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
@@ -821,7 +820,6 @@ Emitted when the appropriate `shards_stats` options are set.
     - retention_leases_primary_term (float)
     - retention_leases_version (float)
     - routing_node (string)
-    - routing_primary (bool)
     - routing_state (string)
     - search_fetch_current (float)
     - search_fetch_time_in_millis (float)

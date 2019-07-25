@@ -3719,7 +3719,6 @@ var clusterIndicesShardsExpected = map[string]interface{}{
 	"retention_leases_primary_term":                 float64(1),
 	"retention_leases_version":                      float64(0),
 	"routing_node":                                  "oqvR8I1dTpONvwRM30etww",
-	"routing_primary":                               false,
 	"routing_state":                                 "STARTED",
 	"search_fetch_current":                          float64(0),
 	"search_fetch_time_in_millis":                   float64(0),

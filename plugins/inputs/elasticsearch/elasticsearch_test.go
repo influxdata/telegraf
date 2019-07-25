@@ -294,7 +294,7 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 
 func TestGatherClusterIndicesStats(t *testing.T) {
 	es := newElasticsearchWithClient()
-	es.IndicesStats = true
+	es.IndicesInclude = []string{"_all"}
 	es.Servers = []string{"http://example.com:9200"}
 	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesResponse)
 	es.serverInfo = make(map[string]serverInfo)
@@ -305,14 +305,14 @@ func TestGatherClusterIndicesStats(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_indicestats_primaries",
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
 		clusterIndicesExpected,
 		map[string]string{"index_name": "twitter"})
 }
 
 func TestGatherClusterIndiceShardsStats(t *testing.T) {
 	es := newElasticsearchWithClient()
-	es.ShardsStats = true
+	es.IndicesLevel = "shards"
 	es.Servers = []string{"http://example.com:9200"}
 	es.client.Transport = newTransportMock(http.StatusOK, clusterIndicesShardsResponse)
 	es.serverInfo = make(map[string]serverInfo)
@@ -323,7 +323,7 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_indicestats_primaries",
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
 		clusterIndicesExpected,
 		map[string]string{"index_name": "twitter"})
 
@@ -334,7 +334,7 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 		"type":       "replica",
 	}
 
-	acc.AssertContainsTaggedFields(t, "elasticsearch_indicestats_shards",
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_shards",
 		clusterIndicesShardsExpected,
 		tags)
 

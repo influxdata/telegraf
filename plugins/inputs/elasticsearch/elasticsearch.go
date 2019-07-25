@@ -114,12 +114,11 @@ const sampleConfig = `
   ## Only gather cluster_stats from the master node. To work this require local = true
   cluster_stats_only_from_master = true
 
-  ## Set indices_stats to true when you want to obtain indices stats from the Master node.
-  indices_stats = false
+  ## Indices to collect; can be one or more indices names or _all
+  indices_include = ["_all"]
 
-  ## Set shards_stats to true when you want to obtain shards stats from the Master node.
-  ## If set, then indices_stats is considered true as they are also provided with shard stats.
-  # shards_stats = false
+  ## One of "shards", "cluster", "indices"
+  indices_level = "shards"
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
@@ -141,18 +140,18 @@ const sampleConfig = `
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local                      bool
-	Servers                    []string
-	HTTPTimeout                internal.Duration
-	ClusterHealth              bool
-	ClusterHealthLevel         string
-	ClusterStats               bool
-	ClusterStatsOnlyFromMaster bool
-	IndicesStats               bool
-	ShardsStats                bool
-	NodeStats                  []string
-	Username                   string `toml:"username"`
-	Password                   string `toml:"password"`
+	Local                      bool              `toml:"local"`
+	Servers                    []string          `toml:"servers"`
+	HTTPTimeout                internal.Duration `toml:"http_timeout"`
+	ClusterHealth              bool              `toml:"cluster_health"`
+	ClusterHealthLevel         string            `toml:"cluster_health_level"`
+	ClusterStats               bool              `toml:"cluster_stats"`
+	ClusterStatsOnlyFromMaster bool              `toml:"cluster_stats_only_from_master"`
+	IndicesInclude             []string          `toml:"indices_include"`
+	IndicesLevel               string            `toml:"indices_level"`
+	NodeStats                  []string          `toml:"node_stats"`
+	Username                   string            `toml:"username"`
+	Password                   string            `toml:"password"`
 	tls.ClientConfig
 
 	client          *http.Client
@@ -212,7 +211,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		e.client = client
 	}
 
-	if e.ClusterStats || e.IndicesStats || e.ShardsStats {
+	if e.ClusterStats || len(e.IndicesInclude) > 0 || len(e.IndicesLevel) > 0 {
 		var wgC sync.WaitGroup
 		wgC.Add(len(e.Servers))
 
@@ -278,14 +277,14 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
-			if e.IndicesStats && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
-				if !e.ShardsStats {
-					if err := e.gatherIndicesStats(s+"/_all/_stats", acc); err != nil {
+			if len(e.IndicesInclude) > 0 && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
+				if e.IndicesLevel != "shards" {
+					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats", acc); err != nil {
 						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 						return
 					}
 				} else {
-					if err := e.gatherIndicesStats(s+"/_all/_stats?level=shards", acc); err != nil {
+					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats?level=shards", acc); err != nil {
 						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 						return
 					}
@@ -500,7 +499,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 	for k, v := range indicesStats.Shards {
 		shardsStats[k] = v
 	}
-	acc.AddFields("elasticsearch_indicestats_shards_total", shardsStats, map[string]string{"name": ""}, now)
+	acc.AddFields("elasticsearch_indices_stats_shards_total", shardsStats, map[string]string{}, now)
 
 	// All Stats
 	for m, s := range indicesStats.All {
@@ -510,7 +509,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 		if err != nil {
 			return err
 		}
-		acc.AddFields("elasticsearch_indicestats_"+m, jsonParser.Fields, map[string]string{"index_name": "all"}, now)
+		acc.AddFields("elasticsearch_indices_stats_"+m, jsonParser.Fields, map[string]string{"index_name": "all"}, now)
 	}
 
 	// Individual Indices stats
@@ -527,36 +526,39 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 			if err != nil {
 				return err
 			}
-			acc.AddFields("elasticsearch_indicestats_"+m, f.Fields, indexTag, now)
+			acc.AddFields("elasticsearch_indices_stats_"+m, f.Fields, indexTag, now)
 		}
 
-		if e.ShardsStats {
+		if e.IndicesLevel == "shards" {
 			for shardNumber, shard := range index.Shards {
+				if len(shard) > 0 {
+					// Get Shard Stats
+					flattened := jsonparser.JSONFlattener{}
+					err := flattened.FullFlattenJSON("", shard[0], true, true)
+					if err != nil {
+						return err
+					}
 
-				// Get Shard Stats
-				flattened := jsonparser.JSONFlattener{}
-				err := flattened.FullFlattenJSON("", shard[0], true, true)
-				if err != nil {
-					return err
+					// determine shard tag and primary/replica designation
+					shardType := "replica"
+					if flattened.Fields["routing_primary"] == true {
+						shardType = "primary"
+					}
+					delete(flattened.Fields, "routing_primary")
+
+					routingNode, _ := flattened.Fields["routing_node"].(string)
+					shardTags := map[string]string{
+						"index_name": id,
+						"node_name":  routingNode,
+						"shard_name": string(shardNumber),
+						"type":       shardType,
+					}
+
+					acc.AddFields("elasticsearch_indices_stats_shards",
+						flattened.Fields,
+						shardTags,
+						now)
 				}
-
-				// determine shard tag and primary/replica designation
-				shardType := "replica"
-				if flattened.Fields["routing_primary"] == true {
-					shardType = "primary"
-				}
-
-				shardTags := map[string]string{
-					"index_name": id,
-					"node_name":  flattened.Fields["routing_node"].(string),
-					"shard_name": string(shardNumber),
-					"type":       shardType,
-				}
-
-				acc.AddFields("elasticsearch_indicestats_shards",
-					flattened.Fields,
-					shardTags,
-					now)
 			}
 		}
 	}
