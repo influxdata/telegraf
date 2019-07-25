@@ -2,8 +2,8 @@
 	"name": "Go",
 	"dockerFile": "Dockerfile",
 	"appPort": 9000,
-	"workspaceMount": "src=c:\\Dev\\github\\telegraf,dst=/go/src/github.com/influxdata,type=bind",
-	"workspaceFolder": "/go/src/github.com/influxdata",
+	"workspaceMount": "src=d:\\Dev\\Github\\telegraf,dst=/go/src/github.com/influxdata/telegraf,type=bind,consistency=cached",
+	"workspaceFolder": "/go/src/github.com/influxdata/telegraf",
 	"extensions": [
 		"ms-vscode.go"
 	],

@@ -210,13 +210,15 @@ func (q *AMQP) Close() error {
 
 func (q *AMQP) routingKey(metric telegraf.Metric) string {
 	if q.RoutingTag != "" {
-		routingTags := strings.split(q.RoutingTag, ".")
-		var validTags make([]string, len(routingTags))
+		k := 0
+		var routingTags = strings.Split(q.RoutingTag, ".")
+		var validTags = make([]string, len(routingTags))
 		for _, tag := range routingTags {
 			if tag != ""{
 				key, ok := metric.GetTag(tag)
 				if ok {
-					validTags.append()
+					validTags[k] = key
+					k++
 				}
 			}	
 		}
