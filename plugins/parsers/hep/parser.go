@@ -130,7 +130,7 @@ func (h *Parser) Parse(packet []byte) ([]telegraf.Metric, error) {
 		headerTags = h.addHeaders(headerArray, hep)
 	} else {
 		var headerArray []int
-		for k, _ := range headerReverseMap {
+		for k := range headerReverseMap {
 			headerArray = append(headerArray, k)
 			headerTags = h.addHeaders(headerArray, hep)
 		}
