@@ -7,8 +7,6 @@ import (
 )
 
 type RunningProcessor struct {
-	Name string
-
 	sync.Mutex
 	Processor telegraf.Processor
 	Config    *ProcessorConfig
@@ -23,8 +21,20 @@ func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp
 // FilterConfig containing a name and filter
 type ProcessorConfig struct {
 	Name   string
+	Alias  string
 	Order  int64
 	Filter Filter
+}
+
+func (rp *RunningProcessor) Name() string {
+	return "processors." + rp.Config.Name
+}
+
+func (rp *RunningProcessor) LogName() string {
+	if rp.Config.Alias == "" {
+		return rp.Name()
+	}
+	return rp.Name() + "::" + rp.Config.Alias
 }
 
 func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {

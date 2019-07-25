@@ -56,6 +56,7 @@ func NewRunningAggregator(
 // AggregatorConfig is the common config for all aggregators.
 type AggregatorConfig struct {
 	Name         string
+	Alias        string
 	DropOriginal bool
 	Period       time.Duration
 	Delay        time.Duration
@@ -72,7 +73,10 @@ func (r *RunningAggregator) Name() string {
 }
 
 func (r *RunningAggregator) LogName() string {
-	return r.Name()
+	if r.Config.Alias == "" {
+		return r.Name()
+	}
+	return r.Name() + "::" + r.Config.Alias
 }
 
 func (r *RunningAggregator) Init() error {

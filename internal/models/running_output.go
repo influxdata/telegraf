@@ -21,6 +21,7 @@ const (
 // OutputConfig containing name and filter
 type OutputConfig struct {
 	Name   string
+	Alias  string
 	Filter Filter
 
 	FlushInterval     time.Duration
@@ -34,7 +35,6 @@ type RunningOutput struct {
 	newMetricsCount int64
 	droppedMetrics  int64
 
-	Name              string
 	Output            telegraf.Output
 	Config            *OutputConfig
 	MetricBufferLimit int
@@ -69,8 +69,8 @@ func NewRunningOutput(
 	if batchSize == 0 {
 		batchSize = DEFAULT_METRIC_BATCH_SIZE
 	}
+
 	ro := &RunningOutput{
-		Name:              name,
 		buffer:            NewBuffer(name, bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
@@ -90,6 +90,17 @@ func NewRunningOutput(
 	}
 
 	return ro
+}
+
+func (ro *RunningOutput) Name() string {
+	return "outputs." + ro.Config.Name
+}
+
+func (ro *RunningOutput) LogName() string {
+	if ro.Config.Alias == "" {
+		return ro.Name()
+	}
+	return ro.Name() + "::" + ro.Config.Alias
 }
 
 func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
@@ -195,15 +206,15 @@ func (ro *RunningOutput) WriteBatch() error {
 func (ro *RunningOutput) Close() {
 	err := ro.Output.Close()
 	if err != nil {
-		log.Printf("E! [outputs.%s] Error closing output: %v", ro.Name, err)
+		log.Printf("E! [%s] Error closing output: %v", ro.LogName(), err)
 	}
 }
 
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	dropped := atomic.LoadInt64(&ro.droppedMetrics)
 	if dropped > 0 {
-		log.Printf("W! [outputs.%s] Metric buffer overflow; %d metrics have been dropped",
-			ro.Name, dropped)
+		log.Printf("W! [%s] Metric buffer overflow; %d metrics have been dropped",
+			ro.LogName(), dropped)
 		atomic.StoreInt64(&ro.droppedMetrics, 0)
 	}
 
@@ -213,14 +224,14 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	ro.WriteTime.Incr(elapsed.Nanoseconds())
 
 	if err == nil {
-		log.Printf("D! [outputs.%s] wrote batch of %d metrics in %s\n",
-			ro.Name, len(metrics), elapsed)
+		log.Printf("D! [%s] wrote batch of %d metrics in %s",
+			ro.LogName(), len(metrics), elapsed)
 	}
 	return err
 }
 
 func (ro *RunningOutput) LogBufferStatus() {
 	nBuffer := ro.buffer.Len()
-	log.Printf("D! [outputs.%s] buffer fullness: %d / %d metrics. ",
-		ro.Name, nBuffer, ro.MetricBufferLimit)
+	log.Printf("D! [%s] buffer fullness: %d / %d metrics",
+		ro.LogName(), nBuffer, ro.MetricBufferLimit)
 }
