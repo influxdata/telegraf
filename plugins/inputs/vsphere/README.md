@@ -6,7 +6,7 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * Hosts
 * VMs
 * Datastores
-* [vSAN](README-VSAN.md:)
+* [vSAN](README-VSAN.md)
 
 ## Configuration
 
@@ -139,6 +139,12 @@ vm_metric_exclude = [ "*" ]
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default
+  
+  ## VSAN
+  vsan_metric_include = [] ## if omitted or empty, all metrics are collected
+  vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
+  ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
+  vsan_metric_skip_verify = false ## false by default.
 
   ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
@@ -284,6 +290,7 @@ This will disrupt the metric collection and can result in missed samples. The be
   datastore_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
   datacenter_metric_exclude = ["*"]
+  vsan_metric_exclude = ["*"]
 
   collect_concurrency = 5
   discover_concurrency = 5

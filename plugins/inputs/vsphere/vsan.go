@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -25,6 +25,7 @@ const (
 	vsanNamespace = "vsan"
 	vsanPath      = "/vsanHealth"
 	hwMarksKey    = "vsan-perf"
+	perfPrefix    = "performance."
 )
 
 var (
@@ -57,73 +58,92 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	if err != nil {
 		return fmt.Errorf("fail to get client when collect vsan: %v", err)
 	}
+	// Create vSAN client
 	vimClient := client.Client.Client
-	metrics := e.getVsanPerfMetadata(ctx, vimClient, res)
-	// Iterate over all clusters, run a goroutine for each cluster
-	var waitGroup sync.WaitGroup
-	for _, obj := range res.objects {
-		waitGroup.Add(1)
-		go func(clusterObj objectRef) {
-			defer waitGroup.Done()
-			e.collectVsanPerCluster(ctx, clusterObj, vimClient, metrics, acc)
-		}(obj)
+	vsanClient := vimClient.NewServiceClient(vsanPath, vsanNamespace)
+	if e.Parent.TLSCA != "" {
+		if err := vsanClient.SetRootCAs(e.Parent.TLSCA); err != nil {
+			return err
+		}
 	}
-	waitGroup.Wait()
+	// vSAN Metrics to collect
+	metrics := e.getVsanMetadata(ctx, vsanClient, res)
+	// Iterate over all clusters, run a goroutine for each cluster
+	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
+	for _, obj := range res.objects {
+		te.Run(ctx, func() {
+			e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
+		})
+	}
+	te.Wait()
 	return nil
 }
 
 // collectVsanPerCluster is called by goroutines in collectVsan function.
-func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectRef, client *vim25.Client, metrics []string, acc telegraf.Accumulator) {
-	// 1. Construct a map for cmmds
-	cluster := object.NewClusterComputeResource(client, clusterRef.ref)
-	cmmds, err := getCmmdsMap(ctx, client, cluster)
+func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectRef, vimClient *vim25.Client, vsanClient *soap.Client, metrics map[string]string, acc telegraf.Accumulator) {
+	// Construct a map for cmmds
+	cluster := object.NewClusterComputeResource(vimClient, clusterRef.ref)
+	cmmds, err := getCmmdsMap(ctx, vimClient, cluster)
 	if err != nil {
 		log.Printf("E! [inputs.vsphere][vSAN] Error while query cmmds data. Error: %s. Skipping", err)
 		cmmds = make(map[string]CmmdsEntity)
 	}
-	// 2. Create a vsan client
-	vsanClient := client.NewServiceClient(vsanPath, vsanNamespace)
-	// 3. Do collection
-	if err = e.queryDiskUsage(ctx, vsanClient, clusterRef, acc); err != nil {
-		acc.AddError(errors.New("While querying vsan disk usage:" + err.Error()))
-	}
-	if err = e.queryHealthSummary(ctx, vsanClient, clusterRef, acc); err != nil {
-		acc.AddError(errors.New("While querying vsan health summary:" + err.Error()))
-	}
-	if err = e.queryResyncSummary(ctx, vsanClient, cluster, clusterRef, acc); err != nil {
-		acc.AddError(errors.New("While querying vsan resync summary:" + err.Error()))
-	}
-	if len(metrics) > 0 {
-		if err = e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
-			acc.AddError(errors.New("While query vsan perf data:" + err.Error()))
+	// Do collection
+	if _, ok := metrics["summary.disk-usage"]; ok {
+		if err = e.queryDiskUsage(ctx, vsanClient, clusterRef, acc); err != nil {
+			acc.AddError(errors.New("While querying vsan disk usage:" + err.Error()))
 		}
+	}
+	if _, ok := metrics["summary.health"]; ok {
+		if err = e.queryHealthSummary(ctx, vsanClient, clusterRef, acc); err != nil {
+			acc.AddError(errors.New("While querying vsan health summary:" + err.Error()))
+		}
+	}
+	if _, ok := metrics["summary.resync"]; ok {
+		if err = e.queryResyncSummary(ctx, vsanClient, cluster, clusterRef, acc); err != nil {
+			acc.AddError(errors.New("While querying vsan resync summary:" + err.Error()))
+		}
+	}
+	if err = e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
+		acc.AddError(errors.New("While query vsan perf data:" + err.Error()))
 	}
 }
 
-// getVsanPerfMetadata returns a string list of the performance entity types that will be queried.
-func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client, res *resourceKind) []string {
+// getVsanMetadata returns a string list of the entity types that will be queried.
+// e.g ["summary.health", "summary.disk-usage", "summary.resync", "performance.cluster-domclient", "performance.host-domclient"]
+func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client, res *resourceKind) map[string]string {
+	metrics := make(map[string]string)
 	if res.simple { // Skip getting supported Entity types from vCenter. Using user defined metrics without verifying.
-		return res.include
+		for _, entity := range res.include {
+			if strings.Contains(entity, "*") {
+				log.Printf("I! [inputs.vsphere][vSAN] Won't use wildcard match \"*\" when vsan_metric_skip_verify = true. Skipping")
+				continue
+			}
+			metrics[entity] = ""
+		}
+		return metrics
 	}
-	vsanClient := client.NewServiceClient(vsanPath, vsanNamespace)
+	// Use the include & exclude configuration to filter all summary metrics
+	for _, entity := range []string{"summary.health", "summary.disk-usage", "summary.resync"} {
+		if res.filters.Match(entity) {
+			metrics[entity] = ""
+		}
+	}
 	resp, err := vsanmethods.VsanPerfGetSupportedEntityTypes(ctx, vsanClient,
 		&vsantypes.VsanPerfGetSupportedEntityTypes{
 			This: perfManagerRef,
 		})
-	var metrics []string
-
 	if err != nil {
 		log.Printf("E! [inputs.vsphere][vSAN] Fail to get supported entities: %v. Skipping vsan performance data.", err)
 		return metrics
 	}
-	// Use the include & exclude configuration to filter all supported metrics
+	// Use the include & exclude configuration to filter all supported performance metrics
 	for _, entity := range resp.Returnval {
-		if res.filters.Match(entity.Name) {
-			metrics = append(metrics, entity.Name)
+		if res.filters.Match(perfPrefix + entity.Name) {
+			metrics[perfPrefix+entity.Name] = ""
 		}
 	}
-	metrics = append(metrics)
-	log.Printf("D! [inputs.vsphere][vSAN]\tvSan performance Metric: %v", metrics)
+	log.Printf("D! [inputs.vsphere][vSAN]\tvSan Metric: %v", reflect.ValueOf(metrics).MapKeys())
 	return metrics
 }
 
@@ -189,7 +209,7 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 }
 
 // queryPerformance adds performance metrics to telegraf accumulator
-func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef objectRef, metrics []string, cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
+func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef objectRef, metrics map[string]string, cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
 	end := time.Now().UTC()
 	start, ok := e.hwMarks.Get(hwMarksKey)
 	if !ok {
@@ -199,7 +219,11 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 	log.Printf("D! [inputs.vsphere][vSAN]\tQuery vsan performance for time interval: %s ~ %s", start, end)
 	latest := start
 
-	for _, entityRefId := range metrics {
+	for entityRefId := range metrics {
+		if !strings.HasPrefix(entityRefId, perfPrefix) {
+			continue
+		}
+		entityRefId = strings.TrimPrefix(entityRefId, perfPrefix)
 		var perfSpecs []vsantypes.VsanPerfQuerySpec
 
 		perfSpec := vsantypes.VsanPerfQuerySpec{
@@ -217,7 +241,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		resp, err := vsanmethods.VsanPerfQueryPerf(ctx, vsanClient, &perfRequest)
 
 		if err != nil {
-			log.Printf("E! [inputs.vsphere][vSAN] Error querying performance data for %s: %s: %s. Is vsan performace enabled?", clusterRef.name, entityRefId, err)
+			log.Printf("E! [inputs.vsphere][vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefId, err)
 			continue
 
 		}
@@ -274,7 +298,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			}
 			count += len(buckets)
 		}
-		log.Printf("I! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, entityRefId, count)
+		log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, entityRefId, count)
 	}
 	e.hwMarks.Put(hwMarksKey, latest)
 	return nil
@@ -295,6 +319,7 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	fields["TotalCapacityB"] = resp.Returnval.TotalCapacityB
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
+	log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, "disk-usage", 1)
 	return nil
 }
 
@@ -323,6 +348,7 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	default:
 		fields["OverallHealth"] = -1
 	}
+	log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, "health", 1)
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
@@ -366,6 +392,7 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	fields["TotalRecoveryETA"] = resp.Returnval.TotalRecoveryETA
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
+	log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, "resync", 1)
 	return nil
 }
 
@@ -390,6 +417,11 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 	// deep copy
 	for k, v := range tags {
 		newTags[k] = v
+	}
+	// There are cases when the uuid is missing. (Usually happens when performance service is just enabled or disabled)
+	// We need this check to avoid index-out-of-range error
+	if uuid == "*" {
+		return newTags
 	}
 	// Add additional tags based on CMMDS data
 	if strings.Contains(entityName, "-disk") || strings.Contains(entityName, "disk-") {

@@ -39,9 +39,8 @@ type VSphere struct {
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
-	VSANEnabled             bool     `toml:"vsan_enabled"`
-	VSANPerfMetricInclude   []string `toml:"vsan_perf_metric_include"`
-	VSANPerfMetricExclude   []string `toml:"vsan_perf_metric_exclude"`
+	VSANMetricInclude       []string `toml:"vsan_metric_include"`
+	VSANMetricExclude       []string `toml:"vsan_metric_exclude"`
 	VSANMetricSkipVerify    bool     `toml:"vsan_metric_skip_verify"`
 	VSANClusterInclude      []string `toml:"vsan_cluster_include"`
 	Separator               string
@@ -60,9 +59,6 @@ type VSphere struct {
 
 	// Mix in the TLS/SSL goodness from core
 	tls.ClientConfig
-
-	// flag governing vSAN Collection
-	VsanCollectionEnabled bool
 }
 
 var sampleConfig = `
@@ -182,14 +178,9 @@ var sampleConfig = `
   # datacenter_instances = false ## false by default for Datastores only
 
   ## VSAN
-  vsan_enabled = false ## vSAN metrics is not enabled by default
-  vsan_perf_metric_include = [] ## if omitted or empty, all metrics are collected
-  vsan_perf_metric_exclude = [] ## Nothing excluded by default
-
+  vsan_metric_include = [] ## if omitted or empty, all metrics are collected
+  vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
   ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
-  ## This option is given because not all vSAN performance entities are returned by the API.
-  ## When set false, anything not in supported entity list will be filtered out. 
-  ## When set true, queried metrics will be identical to vsan_perf_metric_include and the exclude won't be used.
   vsan_metric_skip_verify = false ## false by default.
 
   ## Plugin Settings
@@ -233,9 +224,6 @@ var sampleConfig = `
   # ssl_key = "/path/to/keyfile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
-  #
-  ## Also collect vSAN Metrics on vSAN enabled clusters
-  # VsanCollectionEnabled = false
 `
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
@@ -342,9 +330,8 @@ func init() {
 			DatastoreMetricInclude:  nil,
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
-			VSANEnabled:             false,
-			VSANPerfMetricInclude:   nil,
-			VSANPerfMetricExclude:   nil,
+			VSANMetricInclude:       nil,
+			VSANMetricExclude:       nil,
 			VSANMetricSkipVerify:    false,
 			VSANClusterInclude:      []string{"/*/host/**"},
 			Separator:               "_",
@@ -357,7 +344,6 @@ func init() {
 			ForceDiscoverOnInit:     false,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 60},
-			VsanCollectionEnabled:   false,
 		}
 	})
 }
