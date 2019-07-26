@@ -10,11 +10,13 @@ and use the old zookeeper connection method.
 
 ```toml
 [[inputs.kafka_consumer]]
-  ## kafka servers
+  ## Kafka brokers.
   brokers = ["localhost:9092"]
-  ## topic(s) to consume
+
+  ## Topics to consume.
   topics = ["telegraf"]
-  ## Add topic as tag if topic_tag is not empty
+
+  ## When set this tag will be added to all metrics with the topic as the value.
   # topic_tag = ""
 
   ## Optional Client id
@@ -37,10 +39,11 @@ and use the old zookeeper connection method.
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
-  ## the name of the consumer group
-  consumer_group = "telegraf_metrics_consumers"
-  ## Offset (must be either "oldest" or "newest")
-  offset = "oldest"
+  ## Name of the consumer group.
+  # consumer_group = "telegraf_metrics_consumers"
+
+  ## Initial offset position; one of "oldest" or "newest".
+  # offset = "oldest"
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
