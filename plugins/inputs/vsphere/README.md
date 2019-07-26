@@ -6,7 +6,7 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * Hosts
 * VMs
 * Datastores
-* [vSAN](README-VSAN.md:)
+* [vSAN](README-VSAN.md)
 
 ## Configuration
 

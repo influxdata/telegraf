@@ -39,7 +39,6 @@ type VSphere struct {
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
-	VSANEnabled             bool     `toml:"vsan_enabled"`
 	VSANPerfMetricInclude   []string `toml:"vsan_perf_metric_include"`
 	VSANPerfMetricExclude   []string `toml:"vsan_perf_metric_exclude"`
 	VSANMetricSkipVerify    bool     `toml:"vsan_metric_skip_verify"`
@@ -60,9 +59,6 @@ type VSphere struct {
 
 	// Mix in the TLS/SSL goodness from core
 	tls.ClientConfig
-
-	// flag governing vSAN Collection
-	VsanCollectionEnabled bool
 }
 
 var sampleConfig = `
@@ -182,9 +178,8 @@ var sampleConfig = `
   # datacenter_instances = false ## false by default for Datastores only
 
   ## VSAN
-  vsan_enabled = false ## vSAN metrics is not enabled by default
   vsan_perf_metric_include = [] ## if omitted or empty, all metrics are collected
-  vsan_perf_metric_exclude = [] ## Nothing excluded by default
+  vsan_perf_metric_exclude = [] ## Nothing excluded by default.
 
   ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
   ## This option is given because not all vSAN performance entities are returned by the API.
@@ -233,9 +228,6 @@ var sampleConfig = `
   # ssl_key = "/path/to/keyfile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
-  #
-  ## Also collect vSAN Metrics on vSAN enabled clusters
-  # VsanCollectionEnabled = false
 `
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
@@ -342,7 +334,6 @@ func init() {
 			DatastoreMetricInclude:  nil,
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
-			VSANEnabled:             false,
 			VSANPerfMetricInclude:   nil,
 			VSANPerfMetricExclude:   nil,
 			VSANMetricSkipVerify:    false,
@@ -357,7 +348,6 @@ func init() {
 			ForceDiscoverOnInit:     false,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 60},
-			VsanCollectionEnabled:   false,
 		}
 	})
 }

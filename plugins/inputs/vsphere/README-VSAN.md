@@ -1,4 +1,4 @@
-### VMware vSphere Input Plugin - vSAN extension 
+# VMware vSphere Input Plugin - vSAN extension 
 
 vSAN resource is a special type of resource that can be collected by the plugin.
 The configuration of vSAN resource is slightly different from hosts, vms and other resources.
@@ -6,6 +6,7 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
 ## Configuration
 ```
 [[inputs.vsphere]]
+  interval = "300s"
   vcenters = ["https://<vcenter-ip>/sdk", "https://<vcenter2-ip>/sdk"]
   username = "<user>"
   password = "<pwd>"
@@ -17,32 +18,58 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
   host_metric_exclude = ["*"]
   cluster_metric_exclude = ["*"]
   
-  # Enable vSan
-  vsan_enabled = true
   # By default all supported entity will be included
-  vsan_perf_metric_include = ["*"]
-  vsan_metric_skip_verify = false
+  vsan_perf_metric_include = [
+   "summary.disk-usage",
+   "summary.health",
+   "summary.resync",
+   "performance.cluster-domclient",
+   "performance.cluster-domcompmgr",
+   "performance.host-domclient",
+   "performance.host-domcompmgr",
+   "performance.cache-disk",
+   "performance.disk-group",
+   "performance.capacity-disk",
+   "performance.disk-group",
+   "performance.virtual-machine",
+   "performance.vscsi",
+   "performance.virtual-disk",
+   "performance.vsan-host-net",
+   "performance.vsan-vnic-net",
+   "performance.vsan-pnic-net",
+   "performance.vsan-iscsi-host",
+   "performance.vsan-iscsi-target",
+   "performance.vsan-iscsi-lun",
+
+   "performance.lsom-world-cpu",
+   "performance.nic-world-cpu",
+   "performance.dom-world-cpu",
+   "performance.cmmds-world-cpu",
+   "performance.host-cpu",
+   "performance.host-domowner",
+  ]
+  # by default vsan_metric_skip_verify = false
+  vsan_metric_skip_verify = true
   # vsan_perf_metric_exclude = ["*"]
   vsan_cluster_include = ["/*/host/**"]
 ```
-* To enable vSAN, you need to set **vsan_enabled** = true. vSAN collection is disabled by default.
+* To enable vSAN collection, you need to set `vsan_enabled = true`. vSAN collection is disabled by default.
 
 
-
-* Use **vsan_perf_metric_include** = [...] to define the vSAN performance entities you want to collect. 
-e.g. vsan_perf_metric_include = ["host-domclient", "cache-disk", "disk-group", "capacity-disk"]. 
-To include all vSAN performance supported metrics, use `vsan_perf_metric_include = [ "*" ]`
+* Use `vsan_perf_metric_include = [...]` to define the vSAN entities you want to collect. 
+e.g. `vsan_perf_metric_include = ["host-domclient", "cache-disk", "disk-group", "capacity-disk"]`. 
+To include all supported vSAN performance metrics, use `vsan_perf_metric_include = [ "*" ]`
 To disable all the vSAN performance metrics, use `vsan_perf_metric_exclude** = [ "*" ]`
 
-* NOTE: You need to enable vsan performance service for your vcenter first. To do it, you should go to vSphere Client -> 
+* NOTE: You need to enable vSAN performance service for your vcenter first. To do it, you should go to vSphere Client -> 
 click cluster's name -> open configure -> in vSAN Services menu -> enable performance service
 
-* **vsan_metric_skip_verify** defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes). 
+* `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes). 
 This option is given because some internal performance entities are not returned by the API, but we want to offer the flexibility if user really need the stats. 
 When set false, anything not in supported entity list will be filtered out. 
 When set true, queried metrics will be identical to vsan_perf_metric_include and the exclusive array will not be used in this case. By default the value is false.
 
-* **vsan_cluster_include** defines a list of inventory paths that will be used to select a portion of vSAN clusters.
+* `vsan_cluster_include` defines a list of inventory paths that will be used to select a portion of vSAN clusters.
 vSAN metrics are only collected on cluster level. Therefore, use the same way as inventory paths for [vsphere's clusters](README.md#inventory-paths)
  
 
