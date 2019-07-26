@@ -182,6 +182,12 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		}
 	}
 
+	log.Printf("D! [agent] Initializing plugins")
+	err := a.initPlugins()
+	if err != nil {
+		return err
+	}
+
 	if hasServiceInputs {
 		log.Printf("D! [agent] Starting service inputs")
 		err := a.startServiceInputs(ctx, metricC)
@@ -191,11 +197,6 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 	}
 
 	for _, input := range a.Config.Inputs {
-		err := input.Init()
-		if err != nil {
-			return err
-		}
-
 		select {
 		case <-ctx.Done():
 			return nil
