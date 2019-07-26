@@ -329,7 +329,7 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 
 	tags := map[string]string{
 		"index_name": "twitter",
-		"node_name":  "oqvR8I1dTpONvwRM30etww",
+		"node_id":    "oqvR8I1dTpONvwRM30etww",
 		"shard_name": "1",
 		"type":       "replica",
 	}

@@ -549,7 +549,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 					routingNode, _ := flattened.Fields["routing_node"].(string)
 					shardTags := map[string]string{
 						"index_name": id,
-						"node_name":  routingNode,
+						"node_id":    routingNode,
 						"shard_name": string(shardNumber),
 						"type":       shardType,
 					}
