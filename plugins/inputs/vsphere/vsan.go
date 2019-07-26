@@ -25,6 +25,7 @@ const (
 	vsanNamespace = "vsan"
 	vsanPath      = "/vsanHealth"
 	hwMarksKey    = "vsan-perf"
+	perfPrefix    = "performance."
 )
 
 var (
@@ -138,8 +139,8 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 	}
 	// Use the include & exclude configuration to filter all supported performance metrics
 	for _, entity := range resp.Returnval {
-		if res.filters.Match("performance." + entity.Name) {
-			metrics["performance."+entity.Name] = ""
+		if res.filters.Match(perfPrefix + entity.Name) {
+			metrics[perfPrefix+entity.Name] = ""
 		}
 	}
 	log.Printf("D! [inputs.vsphere][vSAN]\tvSan Metric: %v", reflect.ValueOf(metrics).MapKeys())
@@ -219,10 +220,10 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 	latest := start
 
 	for entityRefId := range metrics {
-		if !strings.HasPrefix(entityRefId, "performance.") {
+		if !strings.HasPrefix(entityRefId, perfPrefix) {
 			continue
 		}
-		entityRefId = strings.TrimPrefix(entityRefId, "performance.")
+		entityRefId = strings.TrimPrefix(entityRefId, perfPrefix)
 		var perfSpecs []vsantypes.VsanPerfQuerySpec
 
 		perfSpec := vsantypes.VsanPerfQuerySpec{

@@ -19,7 +19,7 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
   cluster_metric_exclude = ["*"]
   
   # By default all supported entity will be included
-  vsan_perf_metric_include = [
+  vsan_metric_include = [
    "summary.disk-usage",
    "summary.health",
    "summary.resync",
@@ -48,18 +48,20 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
    "performance.host-cpu",
    "performance.host-domowner",
   ]
+  
   # by default vsan_metric_skip_verify = false
   vsan_metric_skip_verify = true
-  # vsan_perf_metric_exclude = ["*"]
+  # vsan_metric_exclude = ["*"]
   vsan_cluster_include = ["/*/host/**"]
+  
+  collect_concurrency = 5
+  discover_concurrency = 5
 ```
-* To enable vSAN collection, you need to set `vsan_enabled = true`. vSAN collection is disabled by default.
 
-
-* Use `vsan_perf_metric_include = [...]` to define the vSAN entities you want to collect. 
-e.g. `vsan_perf_metric_include = ["host-domclient", "cache-disk", "disk-group", "capacity-disk"]`. 
-To include all supported vSAN performance metrics, use `vsan_perf_metric_include = [ "*" ]`
-To disable all the vSAN performance metrics, use `vsan_perf_metric_exclude** = [ "*" ]`
+* Use `vsan_metric_include = [...]` to define the vSAN entities you want to collect. 
+e.g. `vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]`. 
+To include all supported vSAN metrics, use `vsan_metric_include = [ "*" ]`
+To disable all the vSAN metrics, use `vsan_metric_exclude = [ "*" ]`
 
 * NOTE: You need to enable vSAN performance service for your vcenter first. To do it, you should go to vSphere Client -> 
 click cluster's name -> open configure -> in vSAN Services menu -> enable performance service
@@ -67,7 +69,7 @@ click cluster's name -> open configure -> in vSAN Services menu -> enable perfor
 * `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes). 
 This option is given because some internal performance entities are not returned by the API, but we want to offer the flexibility if user really need the stats. 
 When set false, anything not in supported entity list will be filtered out. 
-When set true, queried metrics will be identical to vsan_perf_metric_include and the exclusive array will not be used in this case. By default the value is false.
+When set true, queried metrics will be identical to vsan_metric_include and the exclusive array will not be used in this case. By default the value is false.
 
 * `vsan_cluster_include` defines a list of inventory paths that will be used to select a portion of vSAN clusters.
 vSAN metrics are only collected on cluster level. Therefore, use the same way as inventory paths for [vsphere's clusters](README.md#inventory-paths)
@@ -76,45 +78,44 @@ vSAN metrics are only collected on cluster level. Therefore, use the same way as
 ## Measurements & Fields
 
 NOTE: vSAN performance measurements and fields may vary on the vSAN versions.
-
 - vSAN Summary
      - OverallHealth
      - TotalCapacityB, FreeCapacityB
      - TotalBytesToSync, TotalObjectsToSync, TotalRecoveryETA
 - vSAN Performance 
-     - 'cluster-domclient'
-     	- 'iopsRead', 'throughputRead', 'latencyAvgRead', 'iopsWrite', 'throughputWrite', 'latencyAvgWrite', 'congestion', 'oio'
-     - 'cluster-domcompmgr'	
-        - 'iopsRead', 'throughputRead', 'latencyAvgRead', 'iopsWrite', 'throughputWrite', 'latencyAvgWrite', 'iopsRecWrite', 'throughputRecWrite', 'latencyAvgRecWrite', 'congestion', 'oio', 'iopsResyncRead', 'tputResyncRead', 'latAvgResyncRead'
-     - 'host-domclient'
-        - 'iopsRead', 'throughputRead', 'latencyAvgRead', 'readCount', 'iopsWrite', 'throughputWrite', 'latencyAvgWrite', 'writeCount', 'congestion', 'oio', 'clientCacheHits', 'clientCacheHitRate'
-     - 'host-domcompmgr'
-     	- 'iopsRead', 'throughputRead', 'latencyAvgRead', 'readCount', 'iopsWrite', 'throughputWrite', 'latencyAvgWrite', 'writeCount', 'iopsRecWrite', 'throughputRecWrite', 'latencyAvgRecWrite', 'recWriteCount' 'congestion', 'oio', 'iopsResyncRead', 'tputResyncRead', 'latAvgResyncRead'
-     - 'cache-disk'	
-        - 'iopsDevRead', 'throughputDevRead', 'latencyDevRead', 'ioCountDevRead', 'iopsDevWrite', 'throughputDevWrite', 'latencyDevWrite', 'ioCountDevWrite', 'latencyDevDAvg', 'latencyDevGAvg'
-     - 'capacity-disk'
-        - 'iopsDevRead', 'throughputDevRead', 'latencyDevRead', 'ioCountDevRead', 'iopsDevWrite', 'throughputDevWrite', 'latencyDevWrite', 'ioCountDevWrite', 'latencyDevDAvg', 'latencyDevGAvg', 'iopsRead', 'latencyRead', 'ioCountRead', 'iopsWrite', 'latencyWrite', 'ioCountWrite'
-     - 'disk-group'
-        - 'iopsSched', 'latencySched', 'outstandingBytesSched', 'iopsSchedQueueRec', 'throughputSchedQueueRec','latencySchedQueueRec', 'iopsSchedQueueVM', 'throughputSchedQueueVM','latencySchedQueueVM', 'iopsSchedQueueMeta', 'throughputSchedQueueMeta','latencySchedQueueMeta', 'iopsDelayPctSched', 'latencyDelaySched', 'rcHitRate', 'wbFreePct', 'warEvictions', 'quotaEvictions', 'iopsRcRead', 'latencyRcRead', 'ioCountRcRead', 'iopsWbRead', 'latencyWbRead', 'ioCountWbRead', 'iopsRcWrite', 'latencyRcWrite', 'ioCountRcWrite', 'iopsWbWrite', 'latencyWbWrite', 'ioCountWbWrite', 'ssdBytesDrained', 'zeroBytesDrained', 'memCongestion', 'slabCongestion', 'ssdCongestion', 'iopsCongestion', 'logCongestion', 'compCongestion', 'iopsDirectSched', 'iopsRead', 'throughputRead', 'latencyAvgRead', 'readCount', 'iopsWrite', 'throughputWrite', 'latencyAvgWrite', 'writeCount', 'oioWrite', 'oioRecWrite', 'oioWriteSize', 'oioRecWriteSize', 'rcSize', 'wbSize', 'capacity', 'capacityUsed', 'capacityReserved', 'throughputSched', 'iopsResyncReadPolicy', 'iopsResyncReadDecom', 'iopsResyncReadRebalance', 'iopsResyncReadFixComp', 'iopsResyncWritePolicy', 'iopsResyncWriteDecom', 'iopsResyncWriteRebalance', 'iopsResyncWriteFixComp', 'tputResyncReadPolicy', 'tputResyncReadDecom', 'tputResyncReadRebalance', 'tputResyncReadFixComp', 'tputResyncWritePolicy', 'tputResyncWriteDecom', 'tputResyncWriteRebalance', 'tputResyncWriteFixComp', 'latResyncReadPolicy', 'latResyncReadDecom', 'latResyncReadRebalance', 'latResyncReadFixComp', 'latResyncWritePolicy', 'latResyncWriteDecom', 'latResyncWriteRebalance', 'latResyncWriteFixComp'
-     - 'virtual-machine'	
-        - 'iopsRead', 'throughputRead', 'latencyReadAvg', 'latencyReadStddev', 'readCount', 'iopsWrite', 'throughputWrite', 'latencyWriteAvg', 'latencyWriteStddev', 'writeCount'
-     - 'vscsi'
-     	- 'iopsRead', 'throughputRead', 'latencyRead', 'readCount', 'iopsWrite', 'throughputWrite', 'latencyWrite', 'writeCount'
-     - 'virtual-disk'
-     	- 'iopsLimit', 'NIOPS', 'NIOPSDelayed'
-     - 'vsan-host-net'
-     	- 'rxThroughput', 'rxPackets', 'rxPacketsLossRate', 'txThroughput', 'txPackets', 'txPacketsLossRate'
-     - 'vsan-vnic-net':
-     	- 'rxThroughput', 'rxPackets', 'rxPacketsLossRate', 'txThroughput', 'txPackets', 'txPacketsLossRate'
-     - 'vsan-pnic-net'
-     	- 'rxThroughput', 'rxPackets', 'rxPacketsLossRate', 'txThroughput', 'txPackets', 'txPacketsLossRate'
-     - 'vsan-iscsi-host'
-     	- 'iopsRead', 'iopsWrite', 'iopsTotal', 'bandwidthRead', 'bandwidthWrite', 'bandwidthTotal', 'latencyRead', 'latencyWrite', 'latencyTotal', 'queueDepth'
-     - 'vsan-iscsi-target'
-     	- 'iopsRead', 'iopsWrite', 'iopsTotal', 'bandwidthRead', 'bandwidthWrite', 'bandwidthTotal', 'latencyRead', 'latencyWrite', 'latencyTotal', 'queueDepth'
-     - 'vsan-iscsi-lun'
-     	- 'iopsRead', 'iopsWrite', 'iopsTotal', 'bandwidthRead', 'bandwidthWrite', 'bandwidthTotal', 'latencyRead', 'latencyWrite', 'latencyTotal', 'queueDepth' 
-
+     - cluster-domclient
+     	- iopsRead, throughputRead, latencyAvgRead, iopsWrite, throughputWrite, latencyAvgWrite, congestion, oio
+     - cluster-domcompmgr	
+        - iopsRead, throughputRead, latencyAvgRead, iopsWrite, throughputWrite, latencyAvgWrite, iopsRecWrite, throughputRecWrite, latencyAvgRecWrite, congestion, oio, iopsResyncRead, tputResyncRead, latAvgResyncRead
+     - host-domclient
+        - iopsRead, throughputRead, latencyAvgRead, readCount, iopsWrite, throughputWrite, latencyAvgWrite, writeCount, congestion, oio, clientCacheHits, clientCacheHitRate
+     - host-domcompmgr
+     	- iopsRead, throughputRead, latencyAvgRead, readCount, iopsWrite, throughputWrite, latencyAvgWrite, writeCount, iopsRecWrite, throughputRecWrite, latencyAvgRecWrite, recWriteCount congestion, oio, iopsResyncRead, tputResyncRead, latAvgResyncRead
+     - cache-disk	
+        - iopsDevRead, throughputDevRead, latencyDevRead, ioCountDevRead, iopsDevWrite, throughputDevWrite, latencyDevWrite, ioCountDevWrite, latencyDevDAvg, latencyDevGAvg
+     - capacity-disk
+        - iopsDevRead, throughputDevRead, latencyDevRead, ioCountDevRead, iopsDevWrite, throughputDevWrite, latencyDevWrite, ioCountDevWrite, latencyDevDAvg, latencyDevGAvg, iopsRead, latencyRead, ioCountRead, iopsWrite, latencyWrite, ioCountWrite
+     - disk-group
+        - iopsSched, latencySched, outstandingBytesSched, iopsSchedQueueRec, throughputSchedQueueRec,latencySchedQueueRec, iopsSchedQueueVM, throughputSchedQueueVM,latencySchedQueueVM, iopsSchedQueueMeta, throughputSchedQueueMeta,latencySchedQueueMeta, iopsDelayPctSched, latencyDelaySched, rcHitRate, wbFreePct, warEvictions, quotaEvictions, iopsRcRead, latencyRcRead, ioCountRcRead, iopsWbRead, latencyWbRead, ioCountWbRead, iopsRcWrite, latencyRcWrite, ioCountRcWrite, iopsWbWrite, latencyWbWrite, ioCountWbWrite, ssdBytesDrained, zeroBytesDrained, memCongestion, slabCongestion, ssdCongestion, iopsCongestion, logCongestion, compCongestion, iopsDirectSched, iopsRead, throughputRead, latencyAvgRead, readCount, iopsWrite, throughputWrite, latencyAvgWrite, writeCount, oioWrite, oioRecWrite, oioWriteSize, oioRecWriteSize, rcSize, wbSize, capacity, capacityUsed, capacityReserved, throughputSched, iopsResyncReadPolicy, iopsResyncReadDecom, iopsResyncReadRebalance, iopsResyncReadFixComp, iopsResyncWritePolicy, iopsResyncWriteDecom, iopsResyncWriteRebalance, iopsResyncWriteFixComp, tputResyncReadPolicy, tputResyncReadDecom, tputResyncReadRebalance, tputResyncReadFixComp, tputResyncWritePolicy, tputResyncWriteDecom, tputResyncWriteRebalance, tputResyncWriteFixComp, latResyncReadPolicy, latResyncReadDecom, latResyncReadRebalance, latResyncReadFixComp, latResyncWritePolicy, latResyncWriteDecom, latResyncWriteRebalance, latResyncWriteFixComp
+     - virtual-machine	
+        - iopsRead, throughputRead, latencyReadAvg, latencyReadStddev, readCount, iopsWrite, throughputWrite, latencyWriteAvg, latencyWriteStddev, writeCount
+     - vscsi
+     	- iopsRead, throughputRead, latencyRead, readCount, iopsWrite, throughputWrite, latencyWrite, writeCount
+     - virtual-disk
+     	- iopsLimit, NIOPS, NIOPSDelayed
+     - vsan-host-net
+     	- rxThroughput, rxPackets, rxPacketsLossRate, txThroughput, txPackets, txPacketsLossRate
+     - vsan-vnic-net:
+     	- rxThroughput, rxPackets, rxPacketsLossRate, txThroughput, txPackets, txPacketsLossRate
+     - vsan-pnic-net
+     	- rxThroughput, rxPackets, rxPacketsLossRate, txThroughput, txPackets, txPacketsLossRate
+     - vsan-iscsi-host
+     	- iopsRead, iopsWrite, iopsTotal, bandwidthRead, bandwidthWrite, bandwidthTotal, latencyRead, latencyWrite, latencyTotal, queueDepth
+     - vsan-iscsi-target
+     	- iopsRead, iopsWrite, iopsTotal, bandwidthRead, bandwidthWrite, bandwidthTotal, latencyRead, latencyWrite, latencyTotal, queueDepth
+     - vsan-iscsi-lun
+     	- iopsRead, iopsWrite, iopsTotal, bandwidthRead, bandwidthWrite, bandwidthTotal, latencyRead, latencyWrite, latencyTotal, queueDepth 
+     	
 ## Tags
 - all vSAN metrics
 	- vcenter
@@ -134,6 +135,64 @@ NOTE: vSAN performance measurements and fields may vary on the vSAN versions.
 - vsan-vnic-net
     - vnic
     - stackName
+    
+## Realtime vs. historical metrics
+
+vSAN metrics also keep two different kinds of metrics - realtime and historical metrics.
+
+* Realtime metrics are metrics with prefix 'summary'. These metrics are available at real-time.
+* Historical metrics are metrics with prefix 'performance'. They are metrics queried from vSAN performance API, which is available at a 5-minute rollup level. 
+
+For performance consideration, it is better to specify two instances of the plugin, one for the realtime metrics with a short collection interval and one for the historical metrics with a longer interval. For example:
+```
+## Realtime instance
+[[inputs.vsphere]]
+  interval = "30s"
+  vcenters = [ "https://someaddress/sdk" ]
+  username = "someuser@vsphere.local"
+  password = "secret"
+
+  insecure_skip_verify = true
+  force_discover_on_init = true
+
+  # Exclude all other metrics
+  vm_metric_exclude = ["*"]
+  datastore_metric_exclude = ["*"]
+  datacenter_metric_exclude = ["*"]
+  host_metric_exclude = ["*"]
+  cluster_metric_exclude = ["*"]
+  
+  vsan_metric_include = [ "summary.*" ]
+  vsan_metric_skip_verify = false
+
+  collect_concurrency = 5
+  discover_concurrency = 5
+
+# Historical instance
+[[inputs.vsphere]]
+
+  interval = "300s"
+  vcenters = [ "https://someaddress/sdk" ]
+  username = "someuser@vsphere.local"
+  password = "secret"
+
+  insecure_skip_verify = true
+  force_discover_on_init = true
+
+  # Exclude all other metrics
+  vm_metric_exclude = ["*"]
+  datastore_metric_exclude = ["*"]
+  datacenter_metric_exclude = ["*"]
+  host_metric_exclude = ["*"]
+  cluster_metric_exclude = ["*"]
+  
+  vsan_metric_include = [ "performance.*" ]
+  vsan_metric_skip_verify = false
+  
+  collect_concurrency = 5
+  discover_concurrency = 5
+```
+
 
 ## Sample output
 ```
