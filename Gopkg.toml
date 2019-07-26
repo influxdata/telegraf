@@ -296,11 +296,3 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/tbrandon/mbserver"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/goburrow/modbus"
