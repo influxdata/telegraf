@@ -151,7 +151,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		DataFormat: "json",
 	})
 	assert.NoError(t, err)
-	ex.SetParser(p)
+	ex.SetParserFunc(func() parsers.Parser { return p })
 	ex.Command = "/usr/bin/myothercollector --foo=bar"
 	eConfig := &models.InputConfig{
 		Name:              "exec",

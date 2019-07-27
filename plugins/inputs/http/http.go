@@ -16,6 +16,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+var _ parsers.ParserFuncInput = (*HTTP)(nil)
+
 type HTTP struct {
 	URLs            []string `toml:"urls"`
 	Method          string   `toml:"method"`
@@ -34,7 +36,7 @@ type HTTP struct {
 	client *http.Client
 
 	// The parser will automatically be set by Telegraf core code because
-	// this plugin implements the ParserInput interface (i.e. the SetParser method)
+	// this plugin implements the ParserInput interface (i.e. the SetParserFunc method)
 	parser parsers.Parser
 }
 
@@ -123,9 +125,9 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// SetParser takes the data_format from the config and finds the right parser for that format
-func (h *HTTP) SetParser(parser parsers.Parser) {
-	h.parser = parser
+// SetParserFunc takes the data_format from the config and finds the right parser for that format
+func (h *HTTP) SetParserFunc(fn parsers.ParserFunc) {
+	h.parser, _ = fn()
 }
 
 // Gathers data from a particular URL

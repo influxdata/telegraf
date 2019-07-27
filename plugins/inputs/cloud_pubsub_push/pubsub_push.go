@@ -25,6 +25,8 @@ import (
 const defaultMaxBodySize = 500 * 1024 * 1024
 const defaultMaxUndeliveredMessages = 1000
 
+var _ parsers.ParserFuncInput = (*PubSubPush)(nil)
+
 type PubSubPush struct {
 	ServiceAddress string
 	Token          string
@@ -125,8 +127,8 @@ func (p *PubSubPush) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *PubSubPush) SetParser(parser parsers.Parser) {
-	p.Parser = parser
+func (p *PubSubPush) SetParserFunc(fn parsers.ParserFunc) {
+	p.Parser, _ = fn()
 }
 
 // Start starts the http listener service.

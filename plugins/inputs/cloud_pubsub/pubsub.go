@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"sync"
 
-	"cloud.google.com/go/pubsub"
 	"encoding/base64"
+	"log"
+	"time"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
-	"log"
-	"time"
 )
 
 type empty struct{}
@@ -22,6 +23,8 @@ type semaphore chan empty
 
 const defaultMaxUndeliveredMessages = 1000
 const defaultRetryDelaySeconds = 5
+
+var _ parsers.ParserFuncInput = (*PubSub)(nil)
 
 type PubSub struct {
 	sync.Mutex
@@ -69,9 +72,9 @@ func (ps *PubSub) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// SetParser implements ParserInput interface.
-func (ps *PubSub) SetParser(parser parsers.Parser) {
-	ps.parser = parser
+// SetParserFunc implements ParserFuncInput interface.
+func (ps *PubSub) SetParserFunc(fn parsers.ParserFunc) {
+	ps.parser, _ = fn()
 }
 
 // Start initializes the plugin and processing messages from Google PubSub.

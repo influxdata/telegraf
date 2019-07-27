@@ -326,6 +326,8 @@ func (a *Accumulator) AssertContainsTaggedFields(
 	fields map[string]interface{},
 	tags map[string]string,
 ) {
+	t.Helper()
+
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -337,7 +339,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			return
 		}
 	}
-	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	msg := fmt.Sprintf("measurement %s with tags %v not found", measurement, tags)
 	assert.Fail(t, msg)
 }
 
@@ -347,6 +349,8 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 	fields map[string]interface{},
 	tags map[string]string,
 ) {
+	t.Helper()
+
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -369,6 +373,8 @@ func (a *Accumulator) AssertContainsFields(
 	measurement string,
 	fields map[string]interface{},
 ) {
+	t.Helper()
+
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -407,6 +413,8 @@ func (a *Accumulator) HasPoint(
 }
 
 func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
+	t.Helper()
+
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
