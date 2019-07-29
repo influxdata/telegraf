@@ -265,12 +265,14 @@ type ConsumerGroupHandler struct {
 	MaxMessageLen int
 	TopicTag      string
 
-	acc         telegraf.TrackingAccumulator
-	sem         semaphore
-	parser      parsers.Parser
+	acc    telegraf.TrackingAccumulator
+	sem    semaphore
+	parser parsers.Parser
+	wg     sync.WaitGroup
+	cancel context.CancelFunc
+
+	mu          sync.Mutex
 	undelivered map[telegraf.TrackingID]Message
-	wg          sync.WaitGroup
-	cancel      context.CancelFunc
 }
 
 // Setup is called once when a new session is opened.  It setups up the handler
@@ -296,19 +298,27 @@ func (h *ConsumerGroupHandler) run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case track := <-h.acc.Delivered():
-			msg, ok := h.undelivered[track.ID()]
-			if !ok {
-				log.Printf("E! [inputs.kafka_consumer] Could not mark message delivered: %d", track.ID())
-				continue
-			}
-
-			if track.Delivered() {
-				msg.session.MarkMessage(msg.message, "")
-			}
-			delete(h.undelivered, track.ID())
-			<-h.sem
+			h.onDelivery(track)
 		}
 	}
+}
+
+func (h *ConsumerGroupHandler) onDelivery(track telegraf.DeliveryInfo) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	msg, ok := h.undelivered[track.ID()]
+	if !ok {
+		log.Printf("E! [inputs.kafka_consumer] Could not mark message delivered: %d", track.ID())
+		return
+	}
+
+	if track.Delivered() {
+		msg.session.MarkMessage(msg.message, "")
+	}
+
+	delete(h.undelivered, track.ID())
+	<-h.sem
 }
 
 // Reserve blocks until there is an available slot for a new message.
@@ -348,7 +358,9 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	}
 
 	id := h.acc.AddTrackingMetricGroup(metrics)
+	h.mu.Lock()
 	h.undelivered[id] = Message{session: session, message: msg}
+	h.mu.Unlock()
 	return nil
 }
 
