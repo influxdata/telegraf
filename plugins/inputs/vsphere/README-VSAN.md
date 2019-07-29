@@ -3,6 +3,12 @@
 vSAN resource is a special type of resource that can be collected by the plugin.
 The configuration of vSAN resource is slightly different from hosts, vms and other resources.
 
+## Prerequisites
+* vSphere 5.5 and later environments are needed
+
+* [Turn on vSAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.0/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster, the performance service is disabled. You will need to enable vSAN performance service first to monitor the performance metrics. 
+
+
 ## Configuration
 ```
 [[inputs.vsphere]]
@@ -58,16 +64,13 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
   discover_concurrency = 5
 ```
 
-* Use `vsan_metric_include = [...]` to define the vSAN entities you want to collect. 
+* Use `vsan_metric_include = [...]` to define the vSAN metrics you want to collect. 
 e.g. `vsan_metric_include = ["summary.*", "performance.host-domclient", "performance.cache-disk", "performance.disk-group", "performance.capacity-disk"]`. 
 To include all supported vSAN metrics, use `vsan_metric_include = [ "*" ]`
 To disable all the vSAN metrics, use `vsan_metric_exclude = [ "*" ]`
 
-* NOTE: You need to enable vSAN performance service for your vcenter first. To do it, you should go to vSphere Client -> 
-click cluster's name -> open configure -> in vSAN Services menu -> enable performance service
-
 * `vsan_metric_skip_verify` defines whether to skip verifying vSAN metrics against the ones from [GetSupportedEntityTypes API](https://code.vmware.com/apis/48/vsan#/doc/vim.cluster.VsanPerformanceManager.html#getSupportedEntityTypes). 
-This option is given because some internal performance entities are not returned by the API, but we want to offer the flexibility if user really need the stats. 
+This option is given because some performance entities are not returned by the API, but we want to offer the flexibility if user really need the stats. 
 When set false, anything not in supported entity list will be filtered out. 
 When set true, queried metrics will be identical to vsan_metric_include and the exclusive array will not be used in this case. By default the value is false.
 
