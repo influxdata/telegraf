@@ -8,7 +8,6 @@ clone_folder: C:\gopath\src\github.com\influxdata\telegraf
 
 environment:
   GOPATH: C:\gopath
-  CGO_ENABLED: 0
 
 platform: x64
 

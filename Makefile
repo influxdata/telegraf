@@ -1,6 +1,7 @@
 ifeq ($(SHELL), cmd)
 	VERSION := $(shell git describe --exact-match --tags 2>nil)
 	HOME := $(HOMEPATH)
+	CGO_ENABLED ?= 0
 else ifeq ($(SHELL), sh.exe)
 	VERSION := $(shell git describe --exact-match --tags 2>nil)
 	HOME := $(HOMEPATH)
