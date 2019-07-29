@@ -108,7 +108,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				},
 			},
 			want: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "8090652509916334619",
@@ -122,7 +122,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851331000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":             "8090652509916334619",
@@ -139,7 +139,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851331000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "103618986556047333",
@@ -153,7 +153,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":             "103618986556047333",
@@ -170,7 +170,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "22964302721410078",
@@ -184,7 +184,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"service_name":  "trivial",
@@ -200,7 +200,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"service_name":  "trivial",
@@ -216,7 +216,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"parent_id":     "22964302721410078",
@@ -232,7 +232,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"trace_id":       "2505404965370368069",
@@ -283,7 +283,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				},
 			},
 			want: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "6802735349851856000",
@@ -297,7 +297,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 					},
 					Time: time.Unix(1, 0).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":    "cs",

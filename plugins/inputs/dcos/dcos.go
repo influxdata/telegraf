@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -56,11 +57,7 @@ type DCOS struct {
 
 	MaxConnections  int
 	ResponseTimeout internal.Duration
-
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
+	tls.ClientConfig
 
 	client Client
 	creds  Credentials
@@ -107,10 +104,10 @@ var sampleConfig = `
   ## Maximum time to receive a response from cluster.
   # response_timeout = "20s"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
   ## If false, skip chain & host verification
   # insecure_skip_verify = true
 
@@ -351,8 +348,7 @@ func (d *DCOS) init() error {
 }
 
 func (d *DCOS) createClient() (Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		d.SSLCert, d.SSLKey, d.SSLCA, d.InsecureSkipVerify)
+	tlsCfg, err := d.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

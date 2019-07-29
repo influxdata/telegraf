@@ -7,6 +7,7 @@ import (
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
 
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
@@ -19,11 +20,11 @@ type MockPS struct {
 }
 
 type MockPSDisk struct {
-	*systemPS
+	*SystemPS
 	*mock.Mock
 }
 
-type mockDiskUsage struct {
+type MockDiskUsage struct {
 	*mock.Mock
 }
 
@@ -100,6 +101,15 @@ func (m *MockPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	return r0, r1
 }
 
+func (m *MockPS) Temperature() ([]host.TemperatureStat, error) {
+	ret := m.Called()
+
+	r0 := ret.Get(0).([]host.TemperatureStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
+
 func (m *MockPS) NetConnections() ([]net.ConnectionStat, error) {
 	ret := m.Called()
 
@@ -109,7 +119,7 @@ func (m *MockPS) NetConnections() ([]net.ConnectionStat, error) {
 	return r0, r1
 }
 
-func (m *mockDiskUsage) Partitions(all bool) ([]disk.PartitionStat, error) {
+func (m *MockDiskUsage) Partitions(all bool) ([]disk.PartitionStat, error) {
 	ret := m.Called(all)
 
 	r0 := ret.Get(0).([]disk.PartitionStat)
@@ -118,12 +128,12 @@ func (m *mockDiskUsage) Partitions(all bool) ([]disk.PartitionStat, error) {
 	return r0, r1
 }
 
-func (m *mockDiskUsage) OSGetenv(key string) string {
+func (m *MockDiskUsage) OSGetenv(key string) string {
 	ret := m.Called(key)
 	return ret.Get(0).(string)
 }
 
-func (m *mockDiskUsage) OSStat(name string) (os.FileInfo, error) {
+func (m *MockDiskUsage) OSStat(name string) (os.FileInfo, error) {
 	ret := m.Called(name)
 
 	r0 := ret.Get(0).(os.FileInfo)
@@ -132,7 +142,7 @@ func (m *mockDiskUsage) OSStat(name string) (os.FileInfo, error) {
 	return r0, r1
 }
 
-func (m *mockDiskUsage) PSDiskUsage(path string) (*disk.UsageStat, error) {
+func (m *MockDiskUsage) PSDiskUsage(path string) (*disk.UsageStat, error) {
 	ret := m.Called(path)
 
 	r0 := ret.Get(0).(*disk.UsageStat)

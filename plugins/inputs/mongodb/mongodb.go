@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
@@ -22,15 +22,7 @@ type MongoDB struct {
 	Ssl              Ssl
 	mongos           map[string]*Server
 	GatherPerdbStats bool
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tlsint.ClientConfig
 }
 
 type Ssl struct {
@@ -45,13 +37,15 @@ var sampleConfig = `
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
   servers = ["mongodb://127.0.0.1:27017"]
-  gather_perdb_stats = false
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## When true, collect per database stats
+  # gather_perdb_stats = false
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -132,7 +126,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		var tlsConfig *tls.Config
 
 		if m.Ssl.Enabled {
-			// Deprecated SSL config
+			// Deprecated TLS config
 			tlsConfig = &tls.Config{}
 			if len(m.Ssl.CaCerts) > 0 {
 				roots := x509.NewCertPool()
@@ -147,8 +141,10 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 				tlsConfig.InsecureSkipVerify = true
 			}
 		} else {
-			tlsConfig, err = internal.GetTLSConfig(
-				m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+			tlsConfig, err = m.ClientConfig.TLSConfig()
+			if err != nil {
+				return err
+			}
 		}
 
 		// If configured to use TLS, add a dial function

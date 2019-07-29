@@ -14,6 +14,7 @@ import (
 func TestGatherDefault(t *testing.T) {
 	s := Sensors{
 		RemoveNumbers: true,
+		Timeout:       defaultTimeout,
 		path:          "sensors",
 	}
 	// overwriting exec commands with mock commands
@@ -154,6 +155,7 @@ func TestGatherDefault(t *testing.T) {
 func TestGatherNotRemoveNumbers(t *testing.T) {
 	s := Sensors{
 		RemoveNumbers: false,
+		Timeout:       defaultTimeout,
 		path:          "sensors",
 	}
 	// overwriting exec commands with mock commands

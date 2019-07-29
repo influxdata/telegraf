@@ -2,13 +2,13 @@ package nats
 
 import (
 	"fmt"
-
-	nats_client "github.com/nats-io/nats"
+	"log"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	nats_client "github.com/nats-io/go-nats"
 )
 
 type NATS struct {
@@ -19,15 +19,7 @@ type NATS struct {
 	Password string
 	// NATS subject to publish metrics to
 	Subject string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	conn       *nats_client.Conn
 	serializer serializers.Serializer
@@ -42,11 +34,11 @@ var sampleConfig = `
   ## NATS subject for producer messages
   subject = "telegraf"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to output.
@@ -79,8 +71,7 @@ func (n *NATS) Connect() error {
 	}
 
 	// override TLS, if it was specified
-	tlsConfig, err := internal.GetTLSConfig(
-		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	tlsConfig, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
@@ -117,7 +108,8 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.nats] Could not serialize metric: %v", err)
+			continue
 		}
 
 		err = n.conn.Publish(n.Subject, buf)

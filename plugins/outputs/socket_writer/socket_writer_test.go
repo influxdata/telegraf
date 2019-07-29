@@ -3,8 +3,10 @@ package socket_writer
 import (
 	"bufio"
 	"bytes"
+	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -44,13 +46,16 @@ func TestSocketWriter_udp(t *testing.T) {
 }
 
 func TestSocketWriter_unix(t *testing.T) {
-	os.Remove("/tmp/telegraf_test.sock")
-	defer os.Remove("/tmp/telegraf_test.sock")
-	listener, err := net.Listen("unix", "/tmp/telegraf_test.sock")
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "sw.TestSocketWriter_unix.sock")
+
+	listener, err := net.Listen("unix", sock)
 	require.NoError(t, err)
 
 	sw := newSocketWriter()
-	sw.Address = "unix:///tmp/telegraf_test.sock"
+	sw.Address = "unix://" + sock
 
 	err = sw.Connect()
 	require.NoError(t, err)
@@ -62,13 +67,16 @@ func TestSocketWriter_unix(t *testing.T) {
 }
 
 func TestSocketWriter_unixgram(t *testing.T) {
-	os.Remove("/tmp/telegraf_test.sock")
-	defer os.Remove("/tmp/telegraf_test.sock")
-	listener, err := net.ListenPacket("unixgram", "/tmp/telegraf_test.sock")
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "sw.TSW_unixgram.sock")
+
+	listener, err := net.ListenPacket("unixgram", sock)
 	require.NoError(t, err)
 
 	sw := newSocketWriter()
-	sw.Address = "unixgram:///tmp/telegraf_test.sock"
+	sw.Address = "unixgram://" + sock
 
 	err = sw.Connect()
 	require.NoError(t, err)

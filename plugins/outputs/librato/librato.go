@@ -107,7 +107,6 @@ func (l *Librato) Write(metrics []telegraf.Metric) error {
 			for _, gauge := range gauges {
 				tempGauges = append(tempGauges, gauge)
 				log.Printf("D! Got a gauge: %v\n", gauge)
-
 			}
 		} else {
 			log.Printf("I! unable to build Gauge for %s, skipping\n", m.Name())
@@ -187,9 +186,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
-		return gauges, fmt.Errorf(
-			"Measure time must not be zero\n <%s> \n",
-			m.String())
+		return gauges, fmt.Errorf("time was zero %s", m.Name())
 	}
 	metricSource := graphite.InsertField(
 		graphite.SerializeBucketName("", m.Tags(), l.Template, ""),
@@ -236,16 +233,18 @@ func verifyValue(v interface{}) bool {
 
 func (g *Gauge) setValue(v interface{}) error {
 	switch d := v.(type) {
-	case int:
-		g.Value = float64(int(d))
-	case int32:
-		g.Value = float64(int32(d))
 	case int64:
 		g.Value = float64(int64(d))
-	case float32:
+	case uint64:
 		g.Value = float64(d)
 	case float64:
 		g.Value = float64(d)
+	case bool:
+		if d {
+			g.Value = float64(1.0)
+		} else {
+			g.Value = float64(0.0)
+		}
 	default:
 		return fmt.Errorf("undeterminable type %+v", d)
 	}

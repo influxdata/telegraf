@@ -8,11 +8,18 @@ Depending on the work load of your DC/OS cluster, this plugin can quickly
 create a high number of series which, when unchecked, can cause high load on
 your database.
 
-- Use [measurement filtering](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#measurement-filtering) liberally to exclude unneeded metrics as well as the node, container, and app inclue/exclude options.
-- Write to a database with an appropriate [retention policy](https://docs.influxdata.com/influxdb/v1.3/concepts/glossary/#retention-policy-rp).
-- Limit the number of series allowed in your database using the `max-series-per-database` and `max-values-per-tag` settings.
-- Consider enabling the [TSI](https://docs.influxdata.com/influxdb/v1.3/about_the_project/releasenotes-changelog/#release-notes-8) engine.
-- Monitor your [series cardinality](https://docs.influxdata.com/influxdb/v1.3/troubleshooting/frequently-asked-questions/#how-can-i-query-for-series-cardinality).
+- Use the
+  [measurement filtering](https://docs.influxdata.com/telegraf/latest/administration/configuration/#measurement-filtering)
+  options to exclude unneeded tags.
+- Write to a database with an appropriate
+  [retention policy](https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/).
+- Limit series cardinality in your database using the
+  [`max-series-per-database`](https://docs.influxdata.com/influxdb/latest/administration/config/#max-series-per-database-1000000) and
+  [`max-values-per-tag`](https://docs.influxdata.com/influxdb/latest/administration/config/#max-values-per-tag-100000) settings.
+- Consider using the
+  [Time Series Index](https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/).
+- Monitor your databases
+  [series cardinality](https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality).
 
 ### Configuration:
 ```toml
@@ -47,10 +54,10 @@ your database.
   ## Maximum time to receive a response from cluster.
   # response_timeout = "20s"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
   ## If false, skip chain & host verification
   # insecure_skip_verify = true
 

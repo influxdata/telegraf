@@ -1,6 +1,7 @@
 package socket_writer
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -15,6 +17,7 @@ import (
 type SocketWriter struct {
 	Address         string
 	KeepAlivePeriod *internal.Duration
+	tlsint.ClientConfig
 
 	serializers.Serializer
 
@@ -38,6 +41,13 @@ func (sw *SocketWriter) SampleConfig() string {
   # address = "udp6://127.0.0.1:8094"
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.
@@ -63,7 +73,17 @@ func (sw *SocketWriter) Connect() error {
 		return fmt.Errorf("invalid address: %s", sw.Address)
 	}
 
-	c, err := net.Dial(spl[0], spl[1])
+	tlsCfg, err := sw.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	var c net.Conn
+	if tlsCfg == nil {
+		c, err = net.Dial(spl[0], spl[1])
+	} else {
+		c, err = tls.Dial(spl[0], spl[1], tlsCfg)
+	}
 	if err != nil {
 		return err
 	}
@@ -107,8 +127,8 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		bs, err := sw.Serialize(m)
 		if err != nil {
-			//TODO log & keep going with remaining metrics
-			return err
+			log.Printf("D! [outputs.socket_writer] Could not serialize metric: %v", err)
+			continue
 		}
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
@@ -116,6 +136,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 				// permanent error. close the connection
 				sw.Close()
 				sw.Conn = nil
+				return fmt.Errorf("closing connection: %v", err)
 			}
 			return err
 		}

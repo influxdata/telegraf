@@ -85,7 +85,7 @@ Telegraf config:
 
   [[inputs.snmp.table]]
     oid = "TEST::testTable"
-    inherit_tags = "hostname"
+    inherit_tags = [ "hostname" ]
 ```
 
 Resulting output:
@@ -140,6 +140,9 @@ OID to get. May be a numeric or textual OID.
 
 * `oid_index_suffix`:
 The OID sub-identifier to strip off so that the index can be matched against other fields in the table.
+
+* `oid_index_length`:
+Specifies the length of the index after the supplied table OID (in OID path segments). Truncates the index after this point to remove non-fixed value or length index suffixes.
 
 * `name`:
 Output field/tag name.

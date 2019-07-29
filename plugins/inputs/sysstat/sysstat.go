@@ -33,6 +33,9 @@ type Sysstat struct {
 	// Sadc represents the path to the sadc collector utility.
 	Sadc string `toml:"sadc_path"`
 
+	// Force the execution time of sadc
+	SadcInterval internal.Duration `toml:"sadc_interval"`
+
 	// Sadf represents the path to the sadf cmd.
 	Sadf string `toml:"sadf_path"`
 
@@ -136,6 +139,11 @@ func (*Sysstat) SampleConfig() string {
 }
 
 func (s *Sysstat) Gather(acc telegraf.Accumulator) error {
+	if s.SadcInterval.Duration != 0 {
+		// Collect interval is calculated as interval - parseInterval
+		s.interval = int(s.SadcInterval.Duration.Seconds()) + parseInterval
+	}
+
 	if s.interval == 0 {
 		if firstTimestamp.IsZero() {
 			firstTimestamp = time.Now()
@@ -327,6 +335,7 @@ func (s *Sysstat) sadfOptions(activityOption string) []string {
 // escape removes % and / chars in field names
 func escape(dirty string) string {
 	var fieldEscaper = strings.NewReplacer(
+		`%%`, "pct_",
 		`%`, "pct_",
 		`/`, "_per_",
 	)

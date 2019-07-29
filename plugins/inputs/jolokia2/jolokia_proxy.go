@@ -1,9 +1,9 @@
 package jolokia2
 
 import (
-	"time"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 )
 
 type JolokiaProxy struct {
@@ -16,13 +16,10 @@ type JolokiaProxy struct {
 	DefaultTargetUsername string
 	Targets               []JolokiaProxyTargetConfig `toml:"target"`
 
-	Username           string
-	Password           string
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool
-	ResponseTimeout    time.Duration `toml:"response_timeout"`
+	Username        string
+	Password        string
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	tls.ClientConfig
 
 	Metrics  []MetricConfig `toml:"metric"`
 	client   *Client
@@ -47,22 +44,22 @@ func (jp *JolokiaProxy) SampleConfig() string {
   # password = ""
   # response_timeout = "5s"
 
-  ## Optional SSL config
-  # ssl_ca   = "/var/private/ca.pem"
-  # ssl_cert = "/var/private/client.pem"
-  # ssl_key  = "/var/private/client-key.pem"
+  ## Optional TLS config
+  # tls_ca   = "/var/private/ca.pem"
+  # tls_cert = "/var/private/client.pem"
+  # tls_key  = "/var/private/client-key.pem"
   # insecure_skip_verify = false
 
   ## Add proxy targets to query
   # default_target_username = ""
   # default_target_password = ""
-  [[inputs.jolokia_proxy.target]]
+  [[inputs.jolokia2_proxy.target]]
     url = "service:jmx:rmi:///jndi/rmi://targethost:9999/jmxrmi"
-	# username = ""
-	# password = ""
+    # username = ""
+    # password = ""
 
   ## Add metrics to read
-  [[inputs.jolokia_proxy.metric]]
+  [[inputs.jolokia2_proxy.metric]]
     name  = "java_runtime"
     mbean = "java.lang:type=Runtime"
     paths = ["Uptime"]
@@ -117,13 +114,10 @@ func (jp *JolokiaProxy) createClient() (*Client, error) {
 	}
 
 	return NewClient(jp.URL, &ClientConfig{
-		Username:           jp.Username,
-		Password:           jp.Password,
-		ResponseTimeout:    jp.ResponseTimeout,
-		SSLCA:              jp.SSLCA,
-		SSLCert:            jp.SSLCert,
-		SSLKey:             jp.SSLKey,
-		InsecureSkipVerify: jp.InsecureSkipVerify,
-		ProxyConfig:        proxyConfig,
+		Username:        jp.Username,
+		Password:        jp.Password,
+		ResponseTimeout: jp.ResponseTimeout.Duration,
+		ClientConfig:    jp.ClientConfig,
+		ProxyConfig:     proxyConfig,
 	})
 }

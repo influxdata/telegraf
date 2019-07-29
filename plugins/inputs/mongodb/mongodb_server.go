@@ -3,6 +3,7 @@ package mongodb
 import (
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -20,6 +21,53 @@ func (s *Server) getDefaultTags() map[string]string {
 	tags := make(map[string]string)
 	tags["hostname"] = s.Url.Host
 	return tags
+}
+
+type oplogEntry struct {
+	Timestamp bson.MongoTimestamp `bson:"ts"`
+}
+
+func IsAuthorization(err error) bool {
+	return strings.Contains(err.Error(), "not authorized")
+}
+
+func (s *Server) gatherOplogStats() *OplogStats {
+	stats := &OplogStats{}
+	localdb := s.Session.DB("local")
+
+	op_first := oplogEntry{}
+	op_last := oplogEntry{}
+	query := bson.M{"ts": bson.M{"$exists": true}}
+
+	for _, collection_name := range []string{"oplog.rs", "oplog.$main"} {
+		if err := localdb.C(collection_name).Find(query).Sort("$natural").Limit(1).One(&op_first); err != nil {
+			if err == mgo.ErrNotFound {
+				continue
+			}
+			if IsAuthorization(err) {
+				log.Println("D! Error getting first oplog entry (" + err.Error() + ")")
+			} else {
+				log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
+			}
+			return stats
+		}
+		if err := localdb.C(collection_name).Find(query).Sort("-$natural").Limit(1).One(&op_last); err != nil {
+			if err == mgo.ErrNotFound || IsAuthorization(err) {
+				continue
+			}
+			if IsAuthorization(err) {
+				log.Println("D! Error getting first oplog entry (" + err.Error() + ")")
+			} else {
+				log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
+			}
+			return stats
+		}
+	}
+
+	op_first_time := time.Unix(int64(op_first.Timestamp>>32), 0)
+	op_last_time := time.Unix(int64(op_last.Timestamp>>32), 0)
+	stats.TimeDiff = int64(op_last_time.Sub(op_first_time).Seconds())
+	return stats
 }
 
 func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error {
@@ -55,8 +103,24 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		JumboChunksCount: int64(jumbo_chunks),
 	}
 
-	result_db_stats := &DbStats{}
+	resultShards := &ShardStats{}
+	err = s.Session.DB("admin").Run(bson.D{
+		{
+			Name:  "shardConnPoolStats",
+			Value: 1,
+		},
+	}, &resultShards)
+	if err != nil {
+		if IsAuthorization(err) {
+			log.Println("D! Error getting database shard stats (" + err.Error() + ")")
+		} else {
+			log.Println("E! Error getting database shard stats (" + err.Error() + ")")
+		}
+	}
 
+	oplogStats := s.gatherOplogStats()
+
+	result_db_stats := &DbStats{}
 	if gatherDbStats == true {
 		names := []string{}
 		names, err = s.Session.DatabaseNames()
@@ -88,6 +152,8 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		ReplSetStatus: result_repl,
 		ClusterStatus: result_cluster,
 		DbStats:       result_db_stats,
+		ShardStats:    resultShards,
+		OplogStats:    oplogStats,
 	}
 
 	defer func() {
@@ -107,6 +173,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		)
 		data.AddDefaultStats()
 		data.AddDbStats()
+		data.AddShardHostStats()
 		data.flush(acc)
 	}
 	return nil

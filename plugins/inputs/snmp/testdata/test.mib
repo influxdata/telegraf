@@ -22,6 +22,7 @@ TestTableEntry ::=
 		server OCTET STRING,
 		connections  INTEGER,
 		latency  OCTET STRING,
+		description OCTET STRING,
 	}
 
 server OBJECT-TYPE
@@ -41,6 +42,12 @@ latency OBJECT-TYPE
 	MAX-ACCESS read-only
 	STATUS current
 	::= { testTableEntry 3 }
+
+description OBJECT-TYPE
+	SYNTAX OCTET STRING
+	MAX-ACCESS read-only
+	STATUS current
+	::= { testTableEntry 4 }
 
 hostname OBJECT-TYPE
 	SYNTAX OCTET STRING

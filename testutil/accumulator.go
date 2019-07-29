@@ -10,9 +10,17 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/stretchr/testify/assert"
 )
+
+var (
+	lastID uint64
+)
+
+func newTrackingID() telegraf.TrackingID {
+	atomic.AddUint64(&lastID, 1)
+	return telegraf.TrackingID(lastID)
+}
 
 // Metric defines a single point measurement
 type Metric struct {
@@ -23,7 +31,7 @@ type Metric struct {
 }
 
 func (p *Metric) String() string {
-	return fmt.Sprintf("%s %v", p.Measurement, p.Fields)
+	return fmt.Sprintf("%s %v %v", p.Measurement, p.Tags, p.Fields)
 }
 
 // Accumulator defines a mocked out accumulator
@@ -31,15 +39,33 @@ type Accumulator struct {
 	sync.Mutex
 	*sync.Cond
 
-	Metrics  []*Metric
-	nMetrics uint64
-	Discard  bool
-	Errors   []error
-	debug    bool
+	Metrics   []*Metric
+	nMetrics  uint64
+	Discard   bool
+	Errors    []error
+	debug     bool
+	delivered chan telegraf.DeliveryInfo
+
+	TimeFunc func() time.Time
 }
 
 func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
+}
+
+func (a *Accumulator) GetTelegrafMetrics() []telegraf.Metric {
+	metrics := []telegraf.Metric{}
+	for _, m := range a.Metrics {
+		metrics = append(metrics, FromTestMetric(m))
+	}
+	return metrics
+}
+
+func (a *Accumulator) FirstError() error {
+	if len(a.Errors) == 0 {
+		return nil
+	}
+	return a.Errors[0]
 }
 
 func (a *Accumulator) ClearMetrics() {
@@ -65,12 +91,19 @@ func (a *Accumulator) AddFields(
 	if a.Discard {
 		return
 	}
-	if tags == nil {
-		tags = map[string]string{}
-	}
 
 	if len(fields) == 0 {
 		return
+	}
+
+	tagsCopy := map[string]string{}
+	for k, v := range tags {
+		tagsCopy[k] = v
+	}
+
+	fieldsCopy := map[string]interface{}{}
+	for k, v := range fields {
+		fieldsCopy[k] = v
 	}
 
 	var t time.Time
@@ -78,6 +111,12 @@ func (a *Accumulator) AddFields(
 		t = timestamp[0]
 	} else {
 		t = time.Now()
+		if a.TimeFunc == nil {
+			t = time.Now()
+		} else {
+			t = a.TimeFunc()
+		}
+
 	}
 
 	if a.debug {
@@ -90,8 +129,8 @@ func (a *Accumulator) AddFields(
 
 	p := &Metric{
 		Measurement: measurement,
-		Fields:      fields,
-		Tags:        tags,
+		Fields:      fieldsCopy,
+		Tags:        tagsCopy,
 		Time:        t,
 	}
 
@@ -140,6 +179,33 @@ func (a *Accumulator) AddHistogram(
 	a.AddFields(measurement, fields, tags, timestamp...)
 }
 
+func (a *Accumulator) AddMetric(m telegraf.Metric) {
+	a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+}
+
+func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	return a
+}
+
+func (a *Accumulator) AddTrackingMetric(m telegraf.Metric) telegraf.TrackingID {
+	a.AddMetric(m)
+	return newTrackingID()
+}
+
+func (a *Accumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.TrackingID {
+	for _, m := range group {
+		a.AddMetric(m)
+	}
+	return newTrackingID()
+}
+
+func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	if a.delivered == nil {
+		a.delivered = make(chan telegraf.DeliveryInfo)
+	}
+	return a.delivered
+}
+
 // AddError appends the given error to Accumulator.Errors.
 func (a *Accumulator) AddError(err error) {
 	if err == nil {
@@ -153,7 +219,7 @@ func (a *Accumulator) AddError(err error) {
 	a.Unlock()
 }
 
-func (a *Accumulator) SetPrecision(precision, interval time.Duration) {
+func (a *Accumulator) SetPrecision(precision time.Duration) {
 	return
 }
 
@@ -223,7 +289,7 @@ func (a *Accumulator) NFields() int {
 	defer a.Unlock()
 	counter := 0
 	for _, pt := range a.Metrics {
-		for _, _ = range pt.Fields {
+		for range pt.Fields {
 			counter++
 		}
 	}
@@ -267,8 +333,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			continue
 		}
 
-		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
+		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
 			return
 		}
 	}
@@ -289,9 +354,10 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 			continue
 		}
 
-		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
-			msg := fmt.Sprintf("found measurement %s with tags %v which should not be there", measurement, tags)
+		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
+			msg := fmt.Sprintf(
+				"found measurement %s with tagged fields (tags %v) which should not be there",
+				measurement, tags)
 			assert.Fail(t, msg)
 		}
 	}

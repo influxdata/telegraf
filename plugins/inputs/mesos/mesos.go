@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -33,15 +33,7 @@ type Mesos struct {
 	Slaves     []string
 	SlaveCols  []string `toml:"slave_collections"`
 	//SlaveTasks bool
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	initialized bool
 	client      *http.Client
@@ -50,8 +42,8 @@ type Mesos struct {
 }
 
 var allMetrics = map[Role][]string{
-	MASTER: []string{"resources", "master", "system", "agents", "frameworks", "tasks", "messages", "evqueue", "registrar"},
-	SLAVE:  []string{"resources", "agent", "system", "executors", "tasks", "messages"},
+	MASTER: {"resources", "master", "system", "agents", "frameworks", "tasks", "messages", "evqueue", "registrar"},
+	SLAVE:  {"resources", "agent", "system", "executors", "tasks", "messages"},
 }
 
 var sampleConfig = `
@@ -83,11 +75,11 @@ var sampleConfig = `
   #   "messages",
   # ]
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -216,8 +208,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 }
 
 func (m *Mesos) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

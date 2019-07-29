@@ -1,0 +1,14 @@
+# Test A log line:
+#   [04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101
+DURATION %{NUMBER}[nuµm]?s
+RESPONSE_CODE %{NUMBER:response_code:tag}
+RESPONSE_TIME %{DURATION:response_time:duration}
+TEST_LOG_A \[%{HTTPDATE:timestamp:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME} %{NUMBER:myint:int}
+
+# Test B log line:
+#   [04/06/2016--12:41:45] 1.25 mystring dropme nomodifier
+TEST_TIMESTAMP %{MONTHDAY}/%{MONTHNUM}/%{YEAR}--%{TIME}
+TEST_LOG_B \[%{TEST_TIMESTAMP:timestamp:ts-"02/01/2006--15:04:05"}\] %{NUMBER:myfloat:float} %{WORD:mystring:string} %{WORD:dropme:drop} %{WORD:nomodifier}
+
+TEST_TIMESTAMP %{MONTHDAY}/%{MONTHNUM}/%{YEAR}--%{TIME}
+TEST_LOG_BAD \[%{TEST_TIMESTAMP:timestamp:ts-"02/01/2006--15:04:05"}\] %{NUMBER:myfloat:float} %{WORD:mystring:int} %{WORD:dropme:drop} %{WORD:nomodifier}

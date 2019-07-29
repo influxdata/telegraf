@@ -11,6 +11,14 @@
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
   max_tcp_connections = 250
 
+  ## Enable TCP keep alive probes (default=false)
+  tcp_keep_alive = false
+
+  ## Specifies the keep-alive period for an active network connection.
+  ## Only applies to TCP sockets and will be ignored if tcp_keep_alive is false.
+  ## Defaults to the OS configuration.
+  # tcp_keep_alive_period = "2h"
+
   ## Address and port to host UDP listener on
   service_address = ":8125"
 
@@ -26,18 +34,24 @@
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
-  ## Percentiles to calculate for timing & histogram stats
-  percentiles = [90]
+  ## Percentiles to calculate for timing & histogram stats.
+  percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
 
   ## separator to use between elements of a statsd metric
   metric_separator = "_"
 
   ## Parses tags in the datadog statsd format
   ## http://docs.datadoghq.com/guides/dogstatsd/
+  ## deprecated in 1.10; use datadog_extensions option instead
   parse_data_dog_tags = false
 
+  ## Parses extensions to statsd in the datadog statsd format
+  ## currently supports metrics and datadog tags.
+  ## http://docs.datadoghq.com/guides/dogstatsd/
+  datadog_extensions = false
+
   ## Statsd data translation templates, more info can be read here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
+  ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
   # templates = [
   #     "cpu.* measurement*"
   # ]
@@ -50,6 +64,10 @@
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
+
+  ## Maximum socket buffer size in bytes, once the buffer fills up, metrics
+  ## will start dropping.  Defaults to the OS default.
+  # read_buffer_size = 65535
 ```
 
 ### Description
@@ -157,6 +175,8 @@ metric type:
 - **protocol** string: Protocol used in listener - tcp or udp options
 - **max_tcp_connections** []int: Maximum number of concurrent TCP connections
 to allow. Used when protocol is set to tcp.
+- **tcp_keep_alive** boolean: Enable TCP keep alive probes
+- **tcp_keep_alive_period** internal.Duration: Specifies the keep-alive period for an active network connection
 - **service_address** string: Address to listen for statsd UDP packets on
 - **delete_gauges** boolean: Delete gauges on every collection interval
 - **delete_counters** boolean: Delete counters on every collection interval
@@ -171,6 +191,7 @@ the accuracy of percentiles but also increases the memory usage and cpu time.
 - **templates** []string: Templates for transforming statsd buckets into influx
 measurements and tags.
 - **parse_data_dog_tags** boolean: Enable parsing of tags in DataDog's dogstatsd format (http://docs.datadoghq.com/guides/dogstatsd/)
+- **datadog_extensions** boolean: Enable parsing of DataDog's extensions to dogstatsd format (http://docs.datadoghq.com/guides/dogstatsd/)
 
 ### Statsd bucket -> InfluxDB line-protocol Templates
 
@@ -213,5 +234,5 @@ mem.cached.localhost:256|g
 => mem_cached,host=localhost 256
 ```
 
-There are many more options available,
-[More details can be found here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
+Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
+additional details.

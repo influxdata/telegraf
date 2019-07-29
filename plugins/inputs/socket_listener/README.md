@@ -25,6 +25,13 @@ This is a sample configuration for the plugin.
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
 
+  ## Change the file mode bits on unix sockets.  These permissions may not be
+  ## respected by some platforms, to safely restrict write permissions it is best
+  ## to place the socket into a directory that has previously been created
+  ## with the desired permissions.
+  ##   ex: socket_mode = "777"
+  # socket_mode = ""
+
   ## Maximum number of concurrent connections.
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
@@ -35,11 +42,18 @@ This is a sample configuration for the plugin.
   ## 0 (default) is unlimited.
   # read_timeout = "30s"
 
-  ## Maximum socket buffer size in bytes.
+  ## Optional TLS configuration.
+  ## Only applies to stream sockets (e.g. TCP).
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key  = "/etc/telegraf/key.pem"
+  ## Enables client authentication if set.
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Maximum socket buffer size (in bytes when no unit specified).
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
   ## For datagram sockets, once the buffer fills up, metrics will start dropping.
   ## Defaults to the OS default.
-  # read_buffer_size = 65535
+  # read_buffer_size = "64KiB"
 
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.
