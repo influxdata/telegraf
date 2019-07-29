@@ -1,60 +1,28 @@
-// Package uwsgi implements a telegraf plugin for
-// collecting uwsgi stats from the uwsgi stats server.
+// Package uwsgi implements a telegraf plugin for collecting uwsgi stats from
+// the uwsgi stats server.
 package uwsgi
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// uWSGI Server struct
+// Uwsgi server struct
 type Uwsgi struct {
-	Servers []string `toml:"server"`
+	Servers []string `toml:"servers"`
 	Timeout int      `toml:"timeout"`
-}
 
-// Errors is a list of errors accumulated during an interval.
-type Errors []error
-
-func (errs Errors) Error() string {
-	s := ""
-	for _, err := range errs {
-		if s == "" {
-			s = err.Error()
-		} else {
-			s = s + ". " + err.Error()
-		}
-	}
-	return s
-}
-
-// NestedError wraps an error returned from deeper in the code.
-type NestedError struct {
-	// Err is the error from where the NestedError was constructed.
-	Err error
-	// NestedError is the error that was passed back from the called function.
-	NestedErr error
-}
-
-// Error returns a concatenated string of all the nested errors.
-func (ne NestedError) Error() string {
-	return ne.Err.Error() + ": " + ne.NestedErr.Error()
-}
-
-// Errorf is a convenience function for constructing a NestedError.
-func Errorf(err error, msg string, format ...interface{}) error {
-	return NestedError{
-		NestedErr: err,
-		Err:       fmt.Errorf(msg, format...),
-	}
+	client *http.Client
 }
 
 // Description returns the plugin description
@@ -65,66 +33,75 @@ func (u *Uwsgi) Description() string {
 // SampleConfig returns the sample configuration
 func (u *Uwsgi) SampleConfig() string {
 	return `
-    ## List with urls of uWSGI Stats servers. Url must match pattern:
-    ## scheme://address[:port]
-    ##
-    ## For example:
-    ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
-    servers = []
-    timeout = 5
+  ## List with urls of uWSGI Stats servers. URL must match pattern:
+  ## scheme://address[:port]
+  ##
+  ## For example:
+  ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
+  servers = ["tcp://127.0.0.1:1717"]
+
+  ## General connection timout in seconds
+  # timeout = 5
 `
 }
 
 // Gather collect data from uWSGI Server
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
-	var errs Errors
-	for _, s := range u.Servers {
-		n, err := url.Parse(s)
-		if err != nil {
-			return fmt.Errorf("Could not parse uWSGI Stats Server url '%s': %s", s, err)
+	if u.client == nil {
+		u.client = &http.Client{
+			Timeout: time.Duration(u.Timeout) * time.Second,
 		}
-		if err := u.gatherServer(acc, n); err != nil {
-			errs = append(errs, Errorf(err, "server %s", s))
-		}
-
 	}
-	return errs
+	wg := &sync.WaitGroup{}
+
+	for _, s := range u.Servers {
+		wg.Add(1)
+		go func(s string) {
+			defer wg.Done()
+			n, err := url.Parse(s)
+			if err != nil {
+				acc.AddError(fmt.Errorf("could not parse uWSGI Stats Server url '%s': %s", s, err.Error()))
+				return
+			}
+
+			if err := u.gatherServer(acc, n); err != nil {
+				acc.AddError(err)
+				return
+			}
+		}(s)
+	}
+
+	wg.Wait()
+
+	return nil
 }
 
 func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	var err error
 	var r io.ReadCloser
-	var timeout = time.Duration(u.Timeout) * time.Second
-	var httpClient = &http.Client{
-		Timeout: timeout,
-	}
 
 	switch url.Scheme {
-	case "unix":
-		r, err = net.DialTimeout(url.Scheme, url.Path, timeout)
-	case "tcp":
-		r, err = net.DialTimeout(url.Scheme, url.Host, timeout)
-	case "http":
-		resp, err := httpClient.Get(url.String())
+	case "unix", "tcp":
+		r, err = net.DialTimeout(url.Scheme, url.Host, time.Duration(u.Timeout)*time.Second)
 		if err != nil {
-			return Errorf(err, "Could not connect to uWSGI Stats Server '%s'", url.String())
+			return err
+		}
+	case "http":
+		resp, err := u.client.Get(url.String())
+		if err != nil {
+			return err
 		}
 		r = resp.Body
 	default:
-		return fmt.Errorf("'%s' is not a valid URL", url.String())
+		return fmt.Errorf("'%s' is not a supported scheme", url.Scheme)
 	}
 
-	if err != nil {
-		return Errorf(err, "Could not connect to uWSGI Stats Server '%s'", url.String())
-	}
 	defer r.Close()
 
-	var s StatsServer
-	s.Url = url.String()
+	s := StatsServer{URL: url.String()}
 
-	dec := json.NewDecoder(r)
-	if err := dec.Decode(&s); err != nil {
-		return Errorf(err, "Could not decode json payload from server '%s'", url.String())
+	if err := json.NewDecoder(r).Decode(&s); err != nil {
+		return fmt.Errorf("failed to decode json payload from '%s': %s", url.String(), err.Error())
 	}
 
 	u.gatherStatServer(acc, &s)
@@ -138,15 +115,14 @@ func (u *Uwsgi) gatherStatServer(acc telegraf.Accumulator, s *StatsServer) {
 		"listen_queue_errors": s.ListenQueueErrors,
 		"signal_queue":        s.SignalQueue,
 		"load":                s.Load,
+		"pid":                 s.PID,
 	}
 
 	tags := map[string]string{
-		"url":     s.Url,
-		"pid":     strconv.Itoa(s.Pid),
-		"uid":     strconv.Itoa(s.Uid),
-		"gid":     strconv.Itoa(s.Gid),
+		"url":     s.URL,
+		"uid":     strconv.Itoa(s.UID),
+		"gid":     strconv.Itoa(s.GID),
 		"version": s.Version,
-		"cwd":     s.Cwd,
 	}
 	acc.AddFields("uwsgi_overview", fields, tags)
 
@@ -163,6 +139,7 @@ func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) {
 			"delta_request":  w.DeltaRequests,
 			"exceptions":     w.Exceptions,
 			"harakiri_count": w.HarakiriCount,
+			"pid":            w.PID,
 			"signals":        w.Signals,
 			"signal_queue":   w.SignalQueue,
 			"status":         w.Status,
@@ -175,9 +152,8 @@ func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) {
 			"avg_rt":         w.AvgRt,
 		}
 		tags := map[string]string{
-			"worker_id": strconv.Itoa(w.WorkerId),
-			"url":       s.Url,
-			"pid":       strconv.Itoa(w.Pid),
+			"worker_id": strconv.Itoa(w.WorkerID),
+			"url":       s.URL,
 		}
 
 		acc.AddFields("uwsgi_workers", fields, tags)
@@ -194,10 +170,8 @@ func (u *Uwsgi) gatherApps(acc telegraf.Accumulator, s *StatsServer) {
 				"exceptions":   a.Exceptions,
 			}
 			tags := map[string]string{
-				"app_id":     strconv.Itoa(a.AppId),
-				"worker_id":  strconv.Itoa(w.WorkerId),
-				"mountpoint": a.MountPoint,
-				"chdir":      a.Chdir,
+				"app_id":    strconv.Itoa(a.AppID),
+				"worker_id": strconv.Itoa(w.WorkerID),
 			}
 			acc.AddFields("uwsgi_apps", fields, tags)
 		}
@@ -217,8 +191,8 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 				"in_request":         c.InRequest,
 			}
 			tags := map[string]string{
-				"core_id":   strconv.Itoa(c.CoreId),
-				"worker_id": strconv.Itoa(w.WorkerId),
+				"core_id":   strconv.Itoa(c.CoreID),
+				"worker_id": strconv.Itoa(w.WorkerID),
 			}
 			acc.AddFields("uwsgi_cores", fields, tags)
 		}
@@ -228,4 +202,76 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 
 func init() {
 	inputs.Add("uwsgi", func() telegraf.Input { return &Uwsgi{} })
+}
+
+// StatsServer defines the stats server structure.
+type StatsServer struct {
+	// Tags
+	URL     string
+	PID     int    `json:"pid"`
+	UID     int    `json:"uid"`
+	GID     int    `json:"gid"`
+	Version string `json:"version"`
+
+	// Fields
+	ListenQueue       int `json:"listen_queue"`
+	ListenQueueErrors int `json:"listen_queue_errors"`
+	SignalQueue       int `json:"signal_queue"`
+	Load              int `json:"load"`
+
+	Workers []*Worker `json:"workers"`
+}
+
+// Worker defines the worker metric structure.
+type Worker struct {
+	// Tags
+	WorkerID int `json:"id"`
+	PID      int `json:"pid"`
+
+	// Fields
+	Accepting     int    `json:"accepting"`
+	Requests      int    `json:"requests"`
+	DeltaRequests int    `json:"delta_requests"`
+	Exceptions    int    `json:"exceptions"`
+	HarakiriCount int    `json:"harakiri_count"`
+	Signals       int    `json:"signals"`
+	SignalQueue   int    `json:"signal_queue"`
+	Status        string `json:"status"`
+	Rss           int    `json:"rss"`
+	Vsz           int    `json:"vsz"`
+	RunningTime   int    `json:"running_time"`
+	LastSpawn     int    `json:"last_spawn"`
+	RespawnCount  int    `json:"respawn_count"`
+	Tx            int    `json:"tx"`
+	AvgRt         int    `json:"avg_rt"`
+
+	Apps  []*App  `json:"apps"`
+	Cores []*Core `json:"cores"`
+}
+
+// App defines the app metric structure.
+type App struct {
+	// Tags
+	AppID int `json:"id"`
+
+	// Fields
+	Modifier1   int `json:"modifier1"`
+	Requests    int `json:"requests"`
+	StartupTime int `json:"startup_time"`
+	Exceptions  int `json:"exceptions"`
+}
+
+// Core defines the core metric structure.
+type Core struct {
+	// Tags
+	CoreID int `json:"id"`
+
+	// Fields
+	Requests          int `json:"requests"`
+	StaticRequests    int `json:"static_requests"`
+	RoutedRequests    int `json:"routed_requests"`
+	OffloadedRequests int `json:"offloaded_requests"`
+	WriteErrors       int `json:"write_errors"`
+	ReadErrors        int `json:"read_errors"`
+	InRequest         int `json:"in_request"`
 }

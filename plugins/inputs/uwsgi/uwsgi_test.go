@@ -1,12 +1,13 @@
 package uwsgi_test
 
 import (
-	"github.com/influxdata/telegraf/plugins/inputs/uwsgi"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/influxdata/telegraf/plugins/inputs/uwsgi"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBasic(t *testing.T) {
@@ -121,10 +122,11 @@ func TestBasic(t *testing.T) {
 		Servers: []string{fakeServer.URL + "/"},
 	}
 	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+	plugin.Gather(&acc)
+	require.Equal(t, 0, len(acc.Errors))
 }
 
-func TestInvalidJason(t *testing.T) {
+func TestInvalidJSON(t *testing.T) {
 	js := `
 {
     "version":"2.0.12",
@@ -151,7 +153,8 @@ func TestInvalidJason(t *testing.T) {
 		Servers: []string{fakeServer.URL + "/"},
 	}
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	plugin.Gather(&acc)
+	require.Equal(t, 1, len(acc.Errors))
 }
 
 func TestHttpError(t *testing.T) {
@@ -159,7 +162,8 @@ func TestHttpError(t *testing.T) {
 		Servers: []string{"http://novalidurladress/"},
 	}
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	plugin.Gather(&acc)
+	require.Equal(t, 1, len(acc.Errors))
 }
 
 func TestTcpError(t *testing.T) {
@@ -167,7 +171,8 @@ func TestTcpError(t *testing.T) {
 		Servers: []string{"tcp://novalidtcpadress/"},
 	}
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	plugin.Gather(&acc)
+	require.Equal(t, 1, len(acc.Errors))
 }
 
 func TestUnixSocketError(t *testing.T) {
@@ -175,5 +180,6 @@ func TestUnixSocketError(t *testing.T) {
 		Servers: []string{"unix:///novalidunixsocket"},
 	}
 	var acc testutil.Accumulator
-	require.Error(t, plugin.Gather(&acc))
+	plugin.Gather(&acc)
+	require.Equal(t, 1, len(acc.Errors))
 }
