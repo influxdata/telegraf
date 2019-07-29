@@ -1,11 +1,15 @@
 // +build windows
+
 package ping
 
 import (
 	"errors"
+	"reflect"
+	"testing"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 // Windows ping format ( should support multilanguage ?)
@@ -38,24 +42,26 @@ Approximate round trip times in milli-seconds:
 `
 
 func TestHost(t *testing.T) {
-	trans, rec, avg, min, max, err := processPingOutput(winPLPingOutput)
+	trans, recReply, recPacket, avg, min, max, err := processPingOutput(winPLPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, trans, "4 packets were transmitted")
-	assert.Equal(t, 4, rec, "4 packets were received")
+	assert.Equal(t, 4, recReply, "4 packets were reply")
+	assert.Equal(t, 4, recPacket, "4 packets were received")
 	assert.Equal(t, 50, avg, "Average 50")
 	assert.Equal(t, 46, min, "Min 46")
 	assert.Equal(t, 57, max, "max 57")
 
-	trans, rec, avg, min, max, err = processPingOutput(winENPingOutput)
+	trans, recReply, recPacket, avg, min, max, err = processPingOutput(winENPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 4, trans, "4 packets were transmitted")
-	assert.Equal(t, 4, rec, "4 packets were received")
+	assert.Equal(t, 4, recReply, "4 packets were reply")
+	assert.Equal(t, 4, recPacket, "4 packets were received")
 	assert.Equal(t, 50, avg, "Average 50")
 	assert.Equal(t, 50, min, "Min 50")
 	assert.Equal(t, 52, max, "Max 52")
 }
 
-func mockHostPinger(timeout float64, args ...string) (string, error) {
+func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return winENPingOutput, nil
 }
 
@@ -67,15 +73,18 @@ func TestPingGather(t *testing.T) {
 		pingHost: mockHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
 		"packets_received":    4,
+		"reply_received":      4,
 		"percent_packet_loss": 0.0,
-		"average_response_ms": 50,
-		"minimum_response_ms": 50,
-		"maximum_response_ms": 52,
+		"percent_reply_loss":  0.0,
+		"average_response_ms": 50.0,
+		"minimum_response_ms": 50.0,
+		"maximum_response_ms": 52.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
@@ -95,7 +104,7 @@ Statystyka badania ping dla 195.187.242.157:
              (100% straty),
 `
 
-func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return errorPingOutput, errors.New("No packets received")
 }
 
@@ -108,14 +117,29 @@ func TestBadPingGather(t *testing.T) {
 		pingHost: mockErrorHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.amazon.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 4,
 		"packets_received":    0,
+		"reply_received":      0,
 		"percent_packet_loss": 100.0,
+		"percent_reply_loss":  100.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
+}
+
+func TestArguments(t *testing.T) {
+	arguments := []string{"-c", "3"}
+	p := Ping{
+		Count:     2,
+		Timeout:   12.0,
+		Arguments: arguments,
+	}
+
+	actual := p.args("www.google.com")
+	require.True(t, reflect.DeepEqual(actual, arguments), "Expected : %s Actual: %s", arguments, actual)
 }
 
 var lossyPingOutput = `
@@ -137,7 +161,7 @@ Szacunkowy czas błądzenia pakietów w millisekundach:
     Minimum = 114 ms, Maksimum = 119 ms, Czas średni = 115 ms
 `
 
-func mockLossyHostPinger(timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -149,15 +173,18 @@ func TestLossyPingGather(t *testing.T) {
 		pingHost: mockLossyHostPinger,
 	}
 
-	p.Gather(&acc)
+	acc.GatherError(p.Gather)
 	tags := map[string]string{"url": "www.google.com"}
 	fields := map[string]interface{}{
 		"packets_transmitted": 9,
 		"packets_received":    7,
+		"reply_received":      7,
 		"percent_packet_loss": 22.22222222222222,
-		"average_response_ms": 115,
-		"minimum_response_ms": 114,
-		"maximum_response_ms": 119,
+		"percent_reply_loss":  22.22222222222222,
+		"average_response_ms": 115.0,
+		"minimum_response_ms": 114.0,
+		"maximum_response_ms": 119.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
@@ -194,7 +221,7 @@ Options:
 
 `
 
-func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -206,13 +233,130 @@ func TestFatalPingGather(t *testing.T) {
 		pingHost: mockFatalHostPinger,
 	}
 
-	p.Gather(&acc)
-	assert.False(t, acc.HasMeasurement("packets_transmitted"),
+	acc.GatherError(p.Gather)
+	assert.True(t, acc.HasFloatField("ping", "errors"),
+		"Fatal ping should have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "packets_transmitted"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("packets_received"),
+	assert.False(t, acc.HasInt64Field("ping", "packets_received"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("percent_packet_loss"),
+	assert.False(t, acc.HasFloatField("ping", "percent_packet_loss"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("average_response_ms"),
+	assert.False(t, acc.HasFloatField("ping", "percent_reply_loss"),
 		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "average_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
+		"Fatal ping should not have packet measurements")
+}
+
+var UnreachablePingOutput = `
+Pinging www.google.pl [8.8.8.8] with 32 bytes of data:
+Request timed out.
+Request timed out.
+Reply from 194.204.175.50: Destination net unreachable.
+Request timed out.
+
+Ping statistics for 8.8.8.8:
+    Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
+`
+
+func mockUnreachableHostPinger(binary string, timeout float64, args ...string) (string, error) {
+	return UnreachablePingOutput, errors.New("So very bad")
+}
+
+//Reply from 185.28.251.217: TTL expired in transit.
+
+// in case 'Destination net unreachable' ping app return receive packet which is not what we need
+// it's not contain valid metric so treat it as lost one
+func TestUnreachablePingGather(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:     []string{"www.google.com"},
+		pingHost: mockUnreachableHostPinger,
+	}
+
+	acc.GatherError(p.Gather)
+
+	tags := map[string]string{"url": "www.google.com"}
+	fields := map[string]interface{}{
+		"packets_transmitted": 4,
+		"packets_received":    1,
+		"reply_received":      0,
+		"percent_packet_loss": 75.0,
+		"percent_reply_loss":  100.0,
+		"result_code":         0,
+	}
+	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
+
+	assert.False(t, acc.HasFloatField("ping", "errors"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "average_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
+		"Fatal ping should not have packet measurements")
+}
+
+var TTLExpiredPingOutput = `
+Pinging www.google.pl [8.8.8.8] with 32 bytes of data:
+Request timed out.
+Request timed out.
+Reply from 185.28.251.217: TTL expired in transit.
+Request timed out.
+
+Ping statistics for 8.8.8.8:
+    Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
+`
+
+func mockTTLExpiredPinger(binary string, timeout float64, args ...string) (string, error) {
+	return TTLExpiredPingOutput, errors.New("So very bad")
+}
+
+// in case 'Destination net unreachable' ping app return receive packet which is not what we need
+// it's not contain valid metric so treat it as lost one
+func TestTTLExpiredPingGather(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:     []string{"www.google.com"},
+		pingHost: mockTTLExpiredPinger,
+	}
+
+	acc.GatherError(p.Gather)
+
+	tags := map[string]string{"url": "www.google.com"}
+	fields := map[string]interface{}{
+		"packets_transmitted": 4,
+		"packets_received":    1,
+		"reply_received":      0,
+		"percent_packet_loss": 75.0,
+		"percent_reply_loss":  100.0,
+		"result_code":         0,
+	}
+	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
+
+	assert.False(t, acc.HasFloatField("ping", "errors"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "average_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "maximum_response_ms"),
+		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
+		"Fatal ping should not have packet measurements")
+}
+
+func TestPingBinary(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:   []string{"www.google.com"},
+		Binary: "ping6",
+		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			assert.True(t, binary == "ping6")
+			return "", nil
+		},
+	}
+	acc.GatherError(p.Gather)
 }

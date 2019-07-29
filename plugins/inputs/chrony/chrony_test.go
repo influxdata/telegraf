@@ -1,5 +1,3 @@
-// +build linux
-
 package chrony
 
 import (
@@ -27,10 +25,11 @@ func TestGather(t *testing.T) {
 
 	tags := map[string]string{
 		"reference_id": "192.168.1.22",
-		"leap_status":  "normal",
+		"leap_status":  "not synchronized",
 		"stratum":      "3",
 	}
 	fields := map[string]interface{}{
+		"system_time":     0.000020390,
 		"last_offset":     0.000012651,
 		"rms_offset":      0.000025577,
 		"frequency":       -16.001,
@@ -85,7 +84,7 @@ Skew            : 0.006 ppm
 Root delay      : 0.001655 seconds
 Root dispersion : 0.003307 seconds
 Update interval : 507.2 seconds
-Leap status     : Normal
+Leap status     : Not synchronized
 `
 
 	args := os.Args

@@ -1,5 +1,3 @@
-// +build linux
-
 package chrony
 
 import (
@@ -92,7 +90,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 		}
 		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
 		// ignore reference time
-		if strings.Contains(name, "time") {
+		if strings.Contains(name, "ref_time") {
 			continue
 		}
 		valueFields := strings.Fields(stats[1])
@@ -103,9 +101,13 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 			tags["stratum"] = valueFields[0]
 			continue
 		}
+		if strings.Contains(strings.ToLower(name), "reference_id") {
+			tags["reference_id"] = valueFields[0]
+			continue
+		}
 		value, err := strconv.ParseFloat(valueFields[0], 64)
 		if err != nil {
-			tags[name] = strings.ToLower(valueFields[0])
+			tags[name] = strings.ToLower(strings.Join(valueFields, " "))
 			continue
 		}
 		if strings.Contains(stats[1], "slow") {

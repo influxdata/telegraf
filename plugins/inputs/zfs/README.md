@@ -13,8 +13,12 @@ from `sysctl` and `zpool` on FreeBSD.
   # kstatPath = "/proc/spl/kstat/zfs"
 
   ## By default, telegraf gather all zfs stats
-  ## If not specified, then default is:
+  ## Override the stats list using the kstatMetrics array:
+  ## For FreeBSD, the default is:
   # kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats"]
+  ## For Linux, the default is:
+  # kstatMetrics = ["abdstats", "arcstats", "dnodestats", "dbufcachestats",
+  #     "dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"]
 
   ## By default, don't gather zpool stats
   # poolMetrics = false
@@ -22,8 +26,8 @@ from `sysctl` and `zpool` on FreeBSD.
 
 ### Measurements & Fields:
 
-By default this plugin collects metrics about **Arc**, **Zfetch**, and
-**Vdev cache**. All these metrics are either counters or measure sizes
+By default this plugin collects metrics about ZFS internals and pool.
+These metrics are either counters or measure sizes
 in bytes. These metrics will be in the `zfs` measurement with the field
 names listed bellow.
 
@@ -33,7 +37,7 @@ each pool.
 - zfs
     With fields listed bellow.
 
-#### Arc Stats
+#### ARC Stats (FreeBSD and Linux)
 
 - arcstats_allocated (FreeBSD only)
 - arcstats_anon_evict_data (Linux only)
@@ -153,7 +157,7 @@ each pool.
 - arcstats_size
 - arcstats_sync_wait_for_async (FreeBSD only)
 
-#### Zfetch Stats
+#### Zfetch Stats (FreeBSD and Linux)
 
 - zfetchstats_bogus_streams (Linux only)
 - zfetchstats_colinear_hits (Linux only)
@@ -168,7 +172,7 @@ each pool.
 - zfetchstats_stride_hits (Linux only)
 - zfetchstats_stride_misses (Linux only)
 
-#### Vdev Cache Stats
+#### Vdev Cache Stats (FreeBSD)
 
 - vdev_cache_stats_delegations
 - vdev_cache_stats_hits
@@ -176,21 +180,21 @@ each pool.
 
 #### Pool Metrics (optional)
 
-On Linux:
+On Linux (reference: kstat accumulated time and queue length statistics):
 
 - zfs_pool
-    - nread (integer, )
-    - nwritten (integer, )
-    - reads (integer, )
-    - writes (integer, )
-    - wtime (integer, )
-    - wlentime (integer, )
-    - wupdate (integer, )
-    - rtime (integer, )
-    - rlentime (integer, )
-    - rupdate (integer, )
-    - wcnt (integer, )
-    - rcnt (integer, )
+    - nread (integer, bytes)
+    - nwritten (integer, bytes)
+    - reads (integer, count)
+    - writes (integer, count)
+    - wtime (integer, nanoseconds) 
+    - wlentime (integer, queuelength * nanoseconds)
+    - wupdate (integer, timestamp)
+    - rtime (integer, nanoseconds)
+    - rlentime (integer, queuelength * nanoseconds)
+    - rupdate (integer, timestamp)
+    - wcnt (integer, count)
+    - rcnt (integer, count)
 
 On FreeBSD:
 
@@ -214,7 +218,7 @@ On FreeBSD:
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter zfs -test
+$ ./telegraf --config telegraf.conf --input-filter zfs --test
 * Plugin: zfs, Collection 1
 > zfs_pool,health=ONLINE,pool=zroot allocated=1578590208i,capacity=2i,dedupratio=1,fragmentation=1i,free=64456531968i,size=66035122176i 1464473103625653908
 > zfs,pools=zroot arcstats_allocated=4167764i,arcstats_anon_evictable_data=0i,arcstats_anon_evictable_metadata=0i,arcstats_anon_size=16896i,arcstats_arc_meta_limit=10485760i,arcstats_arc_meta_max=115269568i,arcstats_arc_meta_min=8388608i,arcstats_arc_meta_used=51977456i,arcstats_c=16777216i,arcstats_c_max=41943040i,arcstats_c_min=16777216i,arcstats_data_size=0i,arcstats_deleted=1699340i,arcstats_demand_data_hits=14836131i,arcstats_demand_data_misses=2842945i,arcstats_demand_hit_predictive_prefetch=0i,arcstats_demand_metadata_hits=1655006i,arcstats_demand_metadata_misses=830074i,arcstats_duplicate_buffers=0i,arcstats_duplicate_buffers_size=0i,arcstats_duplicate_reads=123i,arcstats_evict_l2_cached=0i,arcstats_evict_l2_eligible=332172623872i,arcstats_evict_l2_ineligible=6168576i,arcstats_evict_l2_skip=0i,arcstats_evict_not_enough=12189444i,arcstats_evict_skip=195190764i,arcstats_hash_chain_max=2i,arcstats_hash_chains=10i,arcstats_hash_collisions=43134i,arcstats_hash_elements=2268i,arcstats_hash_elements_max=6136i,arcstats_hdr_size=565632i,arcstats_hits=16515778i,arcstats_l2_abort_lowmem=0i,arcstats_l2_asize=0i,arcstats_l2_cdata_free_on_write=0i,arcstats_l2_cksum_bad=0i,arcstats_l2_compress_failures=0i,arcstats_l2_compress_successes=0i,arcstats_l2_compress_zeros=0i,arcstats_l2_evict_l1cached=0i,arcstats_l2_evict_lock_retry=0i,arcstats_l2_evict_reading=0i,arcstats_l2_feeds=0i,arcstats_l2_free_on_write=0i,arcstats_l2_hdr_size=0i,arcstats_l2_hits=0i,arcstats_l2_io_error=0i,arcstats_l2_misses=0i,arcstats_l2_read_bytes=0i,arcstats_l2_rw_clash=0i,arcstats_l2_size=0i,arcstats_l2_write_buffer_bytes_scanned=0i,arcstats_l2_write_buffer_iter=0i,arcstats_l2_write_buffer_list_iter=0i,arcstats_l2_write_buffer_list_null_iter=0i,arcstats_l2_write_bytes=0i,arcstats_l2_write_full=0i,arcstats_l2_write_in_l2=0i,arcstats_l2_write_io_in_progress=0i,arcstats_l2_write_not_cacheable=380i,arcstats_l2_write_passed_headroom=0i,arcstats_l2_write_pios=0i,arcstats_l2_write_spa_mismatch=0i,arcstats_l2_write_trylock_fail=0i,arcstats_l2_writes_done=0i,arcstats_l2_writes_error=0i,arcstats_l2_writes_lock_retry=0i,arcstats_l2_writes_sent=0i,arcstats_memory_throttle_count=0i,arcstats_metadata_size=17014784i,arcstats_mfu_evictable_data=0i,arcstats_mfu_evictable_metadata=16384i,arcstats_mfu_ghost_evictable_data=5723648i,arcstats_mfu_ghost_evictable_metadata=10709504i,arcstats_mfu_ghost_hits=1315619i,arcstats_mfu_ghost_size=16433152i,arcstats_mfu_hits=7646611i,arcstats_mfu_size=305152i,arcstats_misses=3676993i,arcstats_mru_evictable_data=0i,arcstats_mru_evictable_metadata=0i,arcstats_mru_ghost_evictable_data=0i,arcstats_mru_ghost_evictable_metadata=80896i,arcstats_mru_ghost_hits=324250i,arcstats_mru_ghost_size=80896i,arcstats_mru_hits=8844526i,arcstats_mru_size=16693248i,arcstats_mutex_miss=354023i,arcstats_other_size=34397040i,arcstats_p=4172800i,arcstats_prefetch_data_hits=0i,arcstats_prefetch_data_misses=0i,arcstats_prefetch_metadata_hits=24641i,arcstats_prefetch_metadata_misses=3974i,arcstats_size=51977456i,arcstats_sync_wait_for_async=0i,vdev_cache_stats_delegations=779i,vdev_cache_stats_hits=323123i,vdev_cache_stats_misses=59929i,zfetchstats_hits=0i,zfetchstats_max_streams=0i,zfetchstats_misses=0i 1464473103634124908
@@ -224,7 +228,7 @@ $ ./telegraf -config telegraf.conf -input-filter zfs -test
 
 A short description for some of the metrics.
 
-#### Arc Stats
+#### ARC Stats
 
 `arcstats_hits` Total amount of cache hits in the arc.
 
@@ -283,12 +287,43 @@ A short description for some of the metrics.
 
 `zfetchstats_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher.
 
+`zfetchstats_misses` Counts the number of prefetch cache misses.
+
 `zfetchstats_colinear_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher (prefetched linear reads)
 
 `zfetchstats_stride_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher (prefetched stride reads)
 
-#### Vdev Cache Stats
+#### Vdev Cache Stats (FreeBSD only)
+note: the vdev cache is deprecated in some ZFS implementations
 
 `vdev_cache_stats_hits` Hits to the vdev (device level) cache.
 
 `vdev_cache_stats_misses` Misses to the vdev (device level) cache.
+
+#### ABD Stats (Linux Only)
+ABD is a linear/scatter dual typed buffer for ARC
+
+`abdstats_linear_cnt` number of linear ABDs which are currently allocated
+
+`abdstats_linear_data_size` amount of data stored in all linear ABDs
+
+`abdstats_scatter_cnt` number of scatter ABDs which are currently allocated
+
+`abdstats_scatter_data_size` amount of data stored in all scatter ABDs
+
+#### DMU Stats (Linux Only)
+
+`dmu_tx_dirty_throttle` counts when writes are throttled due to the amount of dirty data growing too large
+
+`dmu_tx_memory_reclaim` counts when memory is low and throttling activity
+
+`dmu_tx_memory_reserve` counts when memory footprint of the txg exceeds the ARC size
+
+#### Fault Management Ereport errors (Linux Only)
+
+`fm_erpt-dropped` counts when an error report cannot be created (eg available memory is too low)
+
+#### ZIL (Linux Only)
+note: ZIL measurements are system-wide, neither per-pool nor per-dataset
+
+`zil_commit_count` counts when ZFS transactions are committed to a ZIL

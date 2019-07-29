@@ -19,9 +19,22 @@ InfluxDB-formatted endpoints. See below for more information.
   urls = [
     "http://localhost:8086/debug/vars"
   ]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
+  ## http request & header timeout
+  timeout = "5s"
 ```
 
 ### Measurements & Fields
+
+**Note:** The measurements and fields are dynamically built from the InfluxDB source,
+and may vary between versions.
 
 - influxdb
   - n_shards
@@ -64,7 +77,7 @@ InfluxDB-formatted endpoints. See below for more information.
 ### Example Output:
 
 ```
-telegraf -config ~/ws/telegraf.conf -input-filter influxdb -test
+telegraf --config ~/ws/telegraf.conf --input-filter influxdb --test
 * Plugin: influxdb, Collection 1
 > influxdb_database,database=_internal,host=tyrion,url=http://localhost:8086/debug/vars numMeasurements=10,numSeries=29 1463590500247354636
 > influxdb_httpd,bind=:8086,host=tyrion,url=http://localhost:8086/debug/vars req=7,reqActive=1,reqDurationNs=14227734 1463590500247354636

@@ -8,20 +8,44 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Apache struct {
-	Urls []string
+	Urls            []string
+	Username        string
+	Password        string
+	ResponseTimeout internal.Duration
+	tls.ClientConfig
+
+	client *http.Client
 }
 
 var sampleConfig = `
-  ## An array of Apache status URI to gather stats.
+  ## An array of URLs to gather from, must be directed at the machine
+  ## readable version of the mod_status page including the auto query string.
   ## Default is "http://localhost/server-status?auto".
   urls = ["http://localhost/server-status?auto"]
+
+  ## Credentials for basic HTTP authentication.
+  # username = "myuser"
+  # password = "mypassword"
+
+  ## Maximum time to receive response.
+  # response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (n *Apache) SampleConfig() string {
@@ -33,49 +57,73 @@ func (n *Apache) Description() string {
 }
 
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost/server-status?auto"}
 	}
+	if n.ResponseTimeout.Duration < time.Second {
+		n.ResponseTimeout.Duration = time.Second * 5
+	}
 
-	var outerr error
-	var errch = make(chan error)
+	if n.client == nil {
+		client, err := n.createHttpClient()
+		if err != nil {
+			return err
+		}
+		n.client = client
+	}
 
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
 
+		wg.Add(1)
 		go func(addr *url.URL) {
-			errch <- n.gatherUrl(addr, acc)
+			defer wg.Done()
+			acc.AddError(n.gatherUrl(addr, acc))
 		}(addr)
 	}
 
-	// Drain channel, waiting for all requests to finish and save last error.
-	for range n.Urls {
-		if err := <-errch; err != nil {
-			outerr = err
-		}
+	wg.Wait()
+	return nil
+}
+
+func (n *Apache) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := n.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	return outerr
-}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: n.ResponseTimeout.Duration,
+	}
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
+	return client, nil
 }
 
 func (n *Apache) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	resp, err := client.Get(addr.String())
+	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
+	}
+
+	if len(n.Username) != 0 && len(n.Password) != 0 {
+		req.SetBasicAuth(n.Username, n.Password)
+	}
+
+	resp, err := n.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
 	}

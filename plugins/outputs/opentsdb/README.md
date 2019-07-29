@@ -1,6 +1,12 @@
 # OpenTSDB Output Plugin
 
-This plugin writes to a OpenTSDB instance using the "telnet" mode
+This plugin writes to an OpenTSDB instance using either the "telnet" or Http mode.
+
+Using the Http API is the recommended way of writing metrics since OpenTSDB 2.0
+To use Http mode, set useHttp to true in config. You can also control how many
+metrics is sent in each http request by setting batchSize in config.
+
+See http://opentsdb.net/docs/build/html/api_http/put.html for details.
 
 ## Transfer "Protocol" in the telnet mode
 
@@ -10,14 +16,14 @@ The expected input from OpenTSDB is specified in the following way:
 put <metric> <timestamp> <value> <tagk1=tagv1[ tagk2=tagv2 ...tagkN=tagvN]>
 ```
 
-The telegraf output plugin adds an optional prefix to the metric keys so 
+The telegraf output plugin adds an optional prefix to the metric keys so
 that a subamount can be selected.
 
 ```
 put <[prefix.]metric> <timestamp> <value> <tagk1=tagv1[ tagk2=tagv2 ...tagkN=tagvN]>
 ```
 
-### Example 
+### Example
 
 ```
 put nine.telegraf.system_load1 1441910356 0.430000 dc=homeoffice host=irimame scope=green
@@ -38,12 +44,12 @@ put nine.telegraf.ping_average_response_ms 1441910366 24.006000 dc=homeoffice ho
 ...
 ```
 
-## 
+##
 
-The OpenTSDB interface can be simulated with this reader:
+The OpenTSDB telnet interface can be simulated with this reader:
 
 ```
-// opentsdb_telnet_mode_mock.go 
+// opentsdb_telnet_mode_mock.go
 package main
 
 import (

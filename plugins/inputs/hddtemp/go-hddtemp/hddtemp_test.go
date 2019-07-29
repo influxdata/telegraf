@@ -10,13 +10,13 @@ func TestFetch(t *testing.T) {
 	l := serve(t, []byte("|/dev/sda|foobar|36|C|"))
 	defer l.Close()
 
-	disks, err := Fetch(l.Addr().String())
+	disks, err := New().Fetch(l.Addr().String())
 
 	if err != nil {
 		t.Error("expecting err to be nil")
 	}
 
-	expected := []disk{
+	expected := []Disk{
 		{
 			DeviceName:  "sda",
 			Model:       "foobar",
@@ -31,7 +31,7 @@ func TestFetch(t *testing.T) {
 }
 
 func TestFetchWrongAddress(t *testing.T) {
-	_, err := Fetch("127.0.0.1:1")
+	_, err := New().Fetch("127.0.0.1:1")
 
 	if err == nil {
 		t.Error("expecting err to be non-nil")
@@ -42,13 +42,13 @@ func TestFetchStatus(t *testing.T) {
 	l := serve(t, []byte("|/dev/sda|foobar|SLP|C|"))
 	defer l.Close()
 
-	disks, err := Fetch(l.Addr().String())
+	disks, err := New().Fetch(l.Addr().String())
 
 	if err != nil {
 		t.Error("expecting err to be nil")
 	}
 
-	expected := []disk{
+	expected := []Disk{
 		{
 			DeviceName:  "sda",
 			Model:       "foobar",
@@ -67,13 +67,13 @@ func TestFetchTwoDisks(t *testing.T) {
 	l := serve(t, []byte("|/dev/hda|ST380011A|46|C||/dev/hdd|ST340016A|SLP|*|"))
 	defer l.Close()
 
-	disks, err := Fetch(l.Addr().String())
+	disks, err := New().Fetch(l.Addr().String())
 
 	if err != nil {
 		t.Error("expecting err to be nil")
 	}
 
-	expected := []disk{
+	expected := []Disk{
 		{
 			DeviceName:  "hda",
 			Model:       "ST380011A",

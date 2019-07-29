@@ -26,7 +26,7 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("mysql"))
 }
 
-func TestMysqlParseDSN(t *testing.T) {
+func TestMysqlGetDSNTag(t *testing.T) {
 	tests := []struct {
 		input  string
 		output string
@@ -49,7 +49,7 @@ func TestMysqlParseDSN(t *testing.T) {
 		},
 		{
 			"tcp(localhost)/",
-			"localhost",
+			"localhost:3306",
 		},
 		{
 			"root:passwd@tcp(192.168.1.1:3306)/?tls=false",
@@ -78,9 +78,9 @@ func TestMysqlParseDSN(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		output, _ := parseDSN(test.input)
+		output := getDSNTag(test.input)
 		if output != test.output {
-			t.Errorf("Expected %s, got %s\n", test.output, output)
+			t.Errorf("Input: %s Expected %s, got %s\n", test.input, test.output, output)
 		}
 	}
 }
@@ -92,7 +92,7 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 	}{
 		{
 			"",
-			"/?timeout=5s",
+			"tcp(127.0.0.1:3306)/?timeout=5s",
 		},
 		{
 			"tcp(192.168.1.1:3306)/",
@@ -104,7 +104,19 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 		},
 		{
 			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
-			"root:passwd@tcp(192.168.1.1:3306)/?tls=false&timeout=10s",
+			"root:passwd@tcp(192.168.1.1:3306)/?timeout=10s&tls=false",
+		},
+		{
+			"tcp(10.150.1.123:3306)/",
+			"tcp(10.150.1.123:3306)/?timeout=5s",
+		},
+		{
+			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/",
+			"root:@!~(*&$#%(&@#(@&#Password@tcp(10.150.1.123:3306)/?timeout=5s",
+		},
+		{
+			"root:Test3a#@!@tcp(10.150.1.123:3306)/",
+			"root:Test3a#@!@tcp(10.150.1.123:3306)/?timeout=5s",
 		},
 	}
 
@@ -115,26 +127,29 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 		}
 	}
 }
-
 func TestParseValue(t *testing.T) {
 	testCases := []struct {
 		rawByte   sql.RawBytes
-		value     float64
+		output    interface{}
 		boolValue bool
 	}{
-		{sql.RawBytes("Yes"), 1, true},
-		{sql.RawBytes("No"), 0, false},
+		{sql.RawBytes("123"), int64(123), true},
+		{sql.RawBytes("abc"), "abc", true},
+		{sql.RawBytes("10.1"), 10.1, true},
 		{sql.RawBytes("ON"), 1, true},
-		{sql.RawBytes("OFF"), 0, false},
-		{sql.RawBytes("ABC"), 0, false},
+		{sql.RawBytes("OFF"), 0, true},
+		{sql.RawBytes("NO"), 0, true},
+		{sql.RawBytes("YES"), 1, true},
+		{sql.RawBytes("No"), 0, true},
+		{sql.RawBytes("Yes"), 1, true},
+		{sql.RawBytes(""), nil, false},
 	}
 	for _, cases := range testCases {
-		if value, ok := parseValue(cases.rawByte); value != cases.value && ok != cases.boolValue {
-			t.Errorf("want %d with %t, got %d with %t", int(cases.value), cases.boolValue, int(value), ok)
+		if got, ok := parseValue(cases.rawByte); got != cases.output && ok != cases.boolValue {
+			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
 		}
 	}
 }
-
 func TestNewNamespace(t *testing.T) {
 	testCases := []struct {
 		words     []string

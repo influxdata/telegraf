@@ -19,7 +19,7 @@ type RollbarWebhook struct {
 
 func (rb *RollbarWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
-	log.Printf("Started the webhooks_rollbar on %s\n", rb.Path)
+	log.Printf("I! Started the webhooks_rollbar on %s\n", rb.Path)
 	rb.acc = acc
 }
 
@@ -61,6 +61,8 @@ func NewEvent(dummyEvent *DummyEvent, data []byte) (Event, error) {
 	switch dummyEvent.EventName {
 	case "new_item":
 		return generateEvent(&NewItem{}, data)
+	case "occurrence":
+		return generateEvent(&Occurrence{}, data)
 	case "deploy":
 		return generateEvent(&Deploy{}, data)
 	default:

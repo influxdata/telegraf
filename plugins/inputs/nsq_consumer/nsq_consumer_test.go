@@ -20,26 +20,28 @@ import (
 // This test is modeled after the kafka consumer integration test
 func TestReadsMetricsFromNSQ(t *testing.T) {
 	msgID := nsq.MessageID{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'a', 's', 'd', 'f', 'g', 'h'}
-	msg := nsq.NewMessage(msgID, []byte("cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257"))
+	msg := nsq.NewMessage(msgID, []byte("cpu_load_short,direction=in,host=server01,region=us-west value=23422.0 1422568543702900257\n"))
 
 	script := []instruction{
 		// SUB
-		instruction{0, nsq.FrameTypeResponse, []byte("OK")},
+		{0, nsq.FrameTypeResponse, []byte("OK")},
 		// IDENTIFY
-		instruction{0, nsq.FrameTypeResponse, []byte("OK")},
-		instruction{20 * time.Millisecond, nsq.FrameTypeMessage, frameMessage(msg)},
+		{0, nsq.FrameTypeResponse, []byte("OK")},
+		{20 * time.Millisecond, nsq.FrameTypeMessage, frameMessage(msg)},
 		// needed to exit test
-		instruction{100 * time.Millisecond, -1, []byte("exit")},
+		{100 * time.Millisecond, -1, []byte("exit")},
 	}
 
 	addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:4155")
 	newMockNSQD(script, addr.String())
 
 	consumer := &NSQConsumer{
-		Server:      "127.0.0.1:4155",
-		Topic:       "telegraf",
-		Channel:     "consume",
-		MaxInFlight: 1,
+		Server:                 "127.0.0.1:4155",
+		Topic:                  "telegraf",
+		Channel:                "consume",
+		MaxInFlight:            1,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		Nsqd:                   []string{"127.0.0.1:4155"},
 	}
 
 	p, _ := parsers.NewInfluxParser()

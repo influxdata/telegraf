@@ -2,19 +2,26 @@ package ceph
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
 	epsilon = float64(0.00000001)
 )
+
+type expectedResult struct {
+	metric string
+	fields map[string]interface{}
+	tags   map[string]string
+}
 
 func TestParseSockId(t *testing.T) {
 	s := parseSockId(sockFile(osdPrefix, 1), osdPrefix, sockSuffix)
@@ -24,15 +31,45 @@ func TestParseSockId(t *testing.T) {
 func TestParseMonDump(t *testing.T) {
 	dump, err := parseDump(monPerfDump)
 	assert.NoError(t, err)
-	assert.InEpsilon(t, 5678670180, (*dump)["cluster"]["osd_kb_used"], epsilon)
-	assert.InEpsilon(t, 6866.540527000, (*dump)["paxos"]["store_state_latency.sum"], epsilon)
+	assert.InEpsilon(t, int64(5678670180), dump["cluster"]["osd_kb_used"], epsilon)
+	assert.InEpsilon(t, 6866.540527000, dump["paxos"]["store_state_latency.sum"], epsilon)
 }
 
 func TestParseOsdDump(t *testing.T) {
 	dump, err := parseDump(osdPerfDump)
 	assert.NoError(t, err)
-	assert.InEpsilon(t, 552132.109360000, (*dump)["filestore"]["commitcycle_interval.sum"], epsilon)
-	assert.Equal(t, float64(0), (*dump)["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
+	assert.InEpsilon(t, 552132.109360000, dump["filestore"]["commitcycle_interval.sum"], epsilon)
+	assert.Equal(t, float64(0), dump["mutex-FileJournal::finisher_lock"]["wait.avgcount"])
+}
+
+func TestDecodeStatus(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	err := decodeStatus(acc, clusterStatusDump)
+	assert.NoError(t, err)
+
+	for _, r := range cephStatusResults {
+		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
+	}
+}
+
+func TestDecodeDf(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	err := decodeDf(acc, cephDFDump)
+	assert.NoError(t, err)
+
+	for _, r := range cephDfResults {
+		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
+	}
+}
+
+func TestDecodeOSDPoolStats(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	err := decodeOsdPoolStats(acc, cephODSPoolStatsDump)
+	assert.NoError(t, err)
+
+	for _, r := range cephOSDPoolStatsResults {
+		acc.AssertContainsTaggedFields(t, r.metric, r.fields, r.tags)
+	}
 }
 
 func TestGather(t *testing.T) {
@@ -44,7 +81,7 @@ func TestGather(t *testing.T) {
 	}()
 
 	findSockets = func(c *Ceph) ([]*socket, error) {
-		return []*socket{&socket{"osd.1", typeOsd, ""}}, nil
+		return []*socket{{"osd.1", typeOsd, ""}}, nil
 	}
 
 	perfDump = func(binary string, s *socket) (string, error) {
@@ -65,11 +102,16 @@ func TestFindSockets(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 	c := &Ceph{
-		CephBinary: "foo",
-		SocketDir:  tmpdir,
+		CephBinary:             "foo",
+		OsdPrefix:              "ceph-osd",
+		MonPrefix:              "ceph-mon",
+		SocketDir:              tmpdir,
+		SocketSuffix:           "asok",
+		CephUser:               "client.admin",
+		CephConfig:             "/etc/ceph/ceph.conf",
+		GatherAdminSocketStats: true,
+		GatherClusterStats:     false,
 	}
-
-	c.setDefaults()
 
 	for _, st := range sockTestParams {
 		createTestFiles(tmpdir, st)
@@ -148,17 +190,17 @@ type SockTest struct {
 }
 
 var sockTestParams = []*SockTest{
-	&SockTest{
+	{
 		osds: 2,
 		mons: 2,
 	},
-	&SockTest{
+	{
 		mons: 1,
 	},
-	&SockTest{
+	{
 		osds: 1,
 	},
-	&SockTest{},
+	{},
 }
 
 var monPerfDump = `
@@ -680,3 +722,355 @@ var osdPerfDump = `
       "wait": { "avgcount": 0,
           "sum": 0.000000000}}}
 `
+var clusterStatusDump = `
+{
+  "health": {
+    "health": {
+      "health_services": [
+        {
+          "mons": [
+            {
+              "name": "a",
+              "kb_total": 114289256,
+              "kb_used": 26995516,
+              "kb_avail": 81465132,
+              "avail_percent": 71,
+              "last_updated": "2017-01-03 17:20:57.595004",
+              "store_stats": {
+                "bytes_total": 942117141,
+                "bytes_sst": 0,
+                "bytes_log": 4345406,
+                "bytes_misc": 937771735,
+                "last_updated": "0.000000"
+              },
+              "health": "HEALTH_OK"
+            },
+            {
+              "name": "b",
+              "kb_total": 114289256,
+              "kb_used": 27871624,
+              "kb_avail": 80589024,
+              "avail_percent": 70,
+              "last_updated": "2017-01-03 17:20:47.784331",
+              "store_stats": {
+                "bytes_total": 454853104,
+                "bytes_sst": 0,
+                "bytes_log": 5788320,
+                "bytes_misc": 449064784,
+                "last_updated": "0.000000"
+              },
+              "health": "HEALTH_OK"
+            },
+            {
+              "name": "c",
+              "kb_total": 130258508,
+              "kb_used": 38076996,
+              "kb_avail": 85541692,
+              "avail_percent": 65,
+              "last_updated": "2017-01-03 17:21:03.311123",
+              "store_stats": {
+                "bytes_total": 455555199,
+                "bytes_sst": 0,
+                "bytes_log": 6950876,
+                "bytes_misc": 448604323,
+                "last_updated": "0.000000"
+              },
+              "health": "HEALTH_OK"
+            }
+          ]
+        }
+      ]
+    },
+    "timechecks": {
+      "epoch": 504,
+      "round": 34642,
+      "round_status": "finished",
+      "mons": [
+        { "name": "a", "skew": 0, "latency": 0, "health": "HEALTH_OK" },
+        { "name": "b", "skew": -0, "latency": 0.000951, "health": "HEALTH_OK" },
+        { "name": "c", "skew": -0, "latency": 0.000946, "health": "HEALTH_OK" }
+      ]
+    },
+    "summary": [],
+    "overall_status": "HEALTH_OK",
+    "detail": []
+  },
+  "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
+  "election_epoch": 504,
+  "quorum": [ 0, 1, 2 ],
+  "quorum_names": [ "a", "b", "c" ],
+  "monmap": {
+    "epoch": 17,
+    "fsid": "01234567-abcd-9876-0123-ffeeddccbbaa",
+    "modified": "2016-04-11 14:01:52.600198",
+    "created": "0.000000",
+    "mons": [
+      { "rank": 0, "name": "a", "addr": "192.168.0.1:6789/0" },
+      { "rank": 1, "name": "b", "addr": "192.168.0.2:6789/0" },
+      { "rank": 2, "name": "c", "addr": "192.168.0.3:6789/0" }
+    ]
+  },
+  "osdmap": {
+    "osdmap": {
+      "epoch": 21734,
+      "num_osds": 24,
+      "num_up_osds": 24,
+      "num_in_osds": 24,
+      "full": false,
+      "nearfull": false,
+      "num_remapped_pgs": 0
+    }
+  },
+  "pgmap": {
+    "pgs_by_state": [
+      { "state_name": "active+clean", "count": 2560 },
+      { "state_name": "active+scrubbing", "count": 10 },
+      { "state_name": "active+backfilling", "count": 5 }
+    ],
+    "version": 52314277,
+    "num_pgs": 2560,
+    "data_bytes": 2700031960713,
+    "bytes_used": 7478347665408,
+    "bytes_avail": 9857462382592,
+    "bytes_total": 17335810048000,
+    "read_bytes_sec": 0,
+    "write_bytes_sec": 367217,
+    "op_per_sec": 98,
+    "read_op_per_sec": 322,
+    "write_op_per_sec": 1022
+  },
+  "mdsmap": {
+    "epoch": 1,
+    "up": 0,
+    "in": 0,
+    "max": 0,
+    "by_rank": []
+  }
+}
+`
+
+var cephStatusResults = []expectedResult{
+	{
+		metric: "ceph_osdmap",
+		fields: map[string]interface{}{
+			"epoch":            float64(21734),
+			"num_osds":         float64(24),
+			"num_up_osds":      float64(24),
+			"num_in_osds":      float64(24),
+			"full":             false,
+			"nearfull":         false,
+			"num_remapped_pgs": float64(0),
+		},
+		tags: map[string]string{},
+	},
+	{
+		metric: "ceph_pgmap",
+		fields: map[string]interface{}{
+			"version":          float64(52314277),
+			"num_pgs":          float64(2560),
+			"data_bytes":       float64(2700031960713),
+			"bytes_used":       float64(7478347665408),
+			"bytes_avail":      float64(9857462382592),
+			"bytes_total":      float64(17335810048000),
+			"read_bytes_sec":   float64(0),
+			"write_bytes_sec":  float64(367217),
+			"op_per_sec":       pf(98),
+			"read_op_per_sec":  float64(322),
+			"write_op_per_sec": float64(1022),
+		},
+		tags: map[string]string{},
+	},
+	{
+		metric: "ceph_pgmap_state",
+		fields: map[string]interface{}{
+			"count": float64(2560),
+		},
+		tags: map[string]string{
+			"state": "active+clean",
+		},
+	},
+	{
+		metric: "ceph_pgmap_state",
+		fields: map[string]interface{}{
+			"count": float64(10),
+		},
+		tags: map[string]string{
+			"state": "active+scrubbing",
+		},
+	},
+	{
+		metric: "ceph_pgmap_state",
+		fields: map[string]interface{}{
+			"count": float64(5),
+		},
+		tags: map[string]string{
+			"state": "active+backfilling",
+		},
+	},
+}
+
+var cephDFDump = `
+{ "stats": { "total_space": 472345880,
+      "total_used": 71058504,
+      "total_avail": 377286864,
+      "total_bytes": 472345880,
+      "total_used_bytes": 71058504,
+      "total_avail_bytes": 377286864},
+  "pools": [
+        { "name": "data",
+          "id": 0,
+          "stats": { "kb_used": 0,
+              "bytes_used": 0,
+              "objects": 0}},
+        { "name": "metadata",
+          "id": 1,
+          "stats": { "kb_used": 25,
+              "bytes_used": 25052,
+              "objects": 53}},
+        { "name": "rbd",
+          "id": 2,
+          "stats": { "kb_used": 0,
+              "bytes_used": 0,
+              "objects": 0}},
+        { "name": "test",
+          "id": 3,
+          "stats": { "kb_used": 55476,
+              "bytes_used": 56806602,
+              "objects": 1}}]}`
+
+var cephDfResults = []expectedResult{
+	{
+		metric: "ceph_usage",
+		fields: map[string]interface{}{
+			"total_space":       pf(472345880),
+			"total_used":        pf(71058504),
+			"total_avail":       pf(377286864),
+			"total_bytes":       pf(472345880),
+			"total_used_bytes":  pf(71058504),
+			"total_avail_bytes": pf(377286864),
+		},
+		tags: map[string]string{},
+	},
+	{
+		metric: "ceph_pool_usage",
+		fields: map[string]interface{}{
+			"kb_used":      float64(0),
+			"bytes_used":   float64(0),
+			"objects":      float64(0),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
+		},
+		tags: map[string]string{
+			"name": "data",
+		},
+	},
+	{
+		metric: "ceph_pool_usage",
+		fields: map[string]interface{}{
+			"kb_used":      float64(25),
+			"bytes_used":   float64(25052),
+			"objects":      float64(53),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
+		},
+		tags: map[string]string{
+			"name": "metadata",
+		},
+	},
+	{
+		metric: "ceph_pool_usage",
+		fields: map[string]interface{}{
+			"kb_used":      float64(0),
+			"bytes_used":   float64(0),
+			"objects":      float64(0),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
+		},
+		tags: map[string]string{
+			"name": "rbd",
+		},
+	},
+	{
+		metric: "ceph_pool_usage",
+		fields: map[string]interface{}{
+			"kb_used":      float64(55476),
+			"bytes_used":   float64(56806602),
+			"objects":      float64(1),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
+		},
+		tags: map[string]string{
+			"name": "test",
+		},
+	},
+}
+
+var cephODSPoolStatsDump = `
+[
+    { "pool_name": "data",
+      "pool_id": 0,
+      "recovery": {},
+      "recovery_rate": {},
+      "client_io_rate": {}},
+    { "pool_name": "metadata",
+      "pool_id": 1,
+      "recovery": {},
+      "recovery_rate": {},
+      "client_io_rate": {}},
+    { "pool_name": "rbd",
+      "pool_id": 2,
+      "recovery": {},
+      "recovery_rate": {},
+      "client_io_rate": {}},
+    { "pool_name": "pbench",
+      "pool_id": 3,
+      "recovery": { "degraded_objects": 18446744073709551562,
+          "degraded_total": 412,
+          "degrated_ratio": "-13.107"},
+      "recovery_rate": { "recovering_objects_per_sec": 279,
+          "recovering_bytes_per_sec": 176401059,
+          "recovering_keys_per_sec": 0},
+      "client_io_rate": { "read_bytes_sec": 10566067,
+          "write_bytes_sec": 15165220376,
+          "op_per_sec": 9828,
+          "read_op_per_sec": 182,
+          "write_op_per_sec": 473}}]`
+
+var cephOSDPoolStatsResults = []expectedResult{
+	{
+		metric: "ceph_pool_stats",
+		fields: map[string]interface{}{
+			"read_bytes_sec":             float64(0),
+			"write_bytes_sec":            float64(0),
+			"op_per_sec":                 (*float64)(nil),
+			"read_op_per_sec":            float64(0),
+			"write_op_per_sec":           float64(0),
+			"recovering_objects_per_sec": float64(0),
+			"recovering_bytes_per_sec":   float64(0),
+			"recovering_keys_per_sec":    float64(0),
+		},
+		tags: map[string]string{
+			"name": "data",
+		},
+	},
+	{
+		metric: "ceph_pool_stats",
+		fields: map[string]interface{}{
+			"read_bytes_sec":             float64(10566067),
+			"write_bytes_sec":            float64(15165220376),
+			"op_per_sec":                 pf(9828),
+			"read_op_per_sec":            float64(182),
+			"write_op_per_sec":           float64(473),
+			"recovering_objects_per_sec": float64(279),
+			"recovering_bytes_per_sec":   float64(176401059),
+			"recovering_keys_per_sec":    float64(0),
+		},
+		tags: map[string]string{
+			"name": "pbench",
+		},
+	},
+}
+
+func pf(i float64) *float64 {
+	return &i
+}

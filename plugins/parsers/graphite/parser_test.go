@@ -6,9 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/templating"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkParse(b *testing.B) {
@@ -118,7 +120,7 @@ func TestTemplateApply(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tmpl, err := NewTemplate(test.template, nil, DefaultSeparator)
+		tmpl, err := templating.NewDefaultTemplateWithPattern(test.template)
 		if errstr(err) != test.err {
 			t.Fatalf("err does not match.  expected %v, got %v", test.err, err)
 		}
@@ -127,7 +129,7 @@ func TestTemplateApply(t *testing.T) {
 			continue
 		}
 
-		measurement, tags, _, _ := tmpl.Apply(test.input)
+		measurement, tags, _, _ := tmpl.Apply(test.input, DefaultSeparator)
 		if measurement != test.measurement {
 			t.Fatalf("name parse failer.  expected %v, got %v", test.measurement, measurement)
 		}
@@ -239,7 +241,7 @@ func TestParseLine(t *testing.T) {
 				len(test.tags), len(metric.Tags()))
 		}
 		f := metric.Fields()["value"].(float64)
-		if metric.Fields()["value"] != f {
+		if f != test.value {
 			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
 				test.value, f)
 		}
@@ -369,7 +371,7 @@ func TestFilterMatchDefault(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("miss.servers.localhost.cpu_load",
+	exp, err := metric.New("miss.servers.localhost.cpu_load",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -378,7 +380,7 @@ func TestFilterMatchDefault(t *testing.T) {
 	m, err := p.ParseLine("miss.servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchMultipleMeasurement(t *testing.T) {
@@ -387,7 +389,7 @@ func TestFilterMatchMultipleMeasurement(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu.cpu_load.10",
+	exp, err := metric.New("cpu.cpu_load.10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -396,7 +398,7 @@ func TestFilterMatchMultipleMeasurement(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
@@ -406,7 +408,7 @@ func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	exp, err := telegraf.NewMetric("cpu_cpu_load_10",
+	exp, err := metric.New("cpu_cpu_load_10",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -415,7 +417,7 @@ func TestFilterMatchMultipleMeasurementSeparator(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load.10 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchSingle(t *testing.T) {
@@ -424,7 +426,7 @@ func TestFilterMatchSingle(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -432,7 +434,7 @@ func TestFilterMatchSingle(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestParseNoMatch(t *testing.T) {
@@ -441,7 +443,7 @@ func TestParseNoMatch(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("servers.localhost.memory.VmallocChunk",
+	exp, err := metric.New("servers.localhost.memory.VmallocChunk",
 		map[string]string{},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -450,7 +452,7 @@ func TestParseNoMatch(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.memory.VmallocChunk 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchWildcard(t *testing.T) {
@@ -459,7 +461,7 @@ func TestFilterMatchWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -468,7 +470,7 @@ func TestFilterMatchWildcard(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchExactBeforeWildcard(t *testing.T) {
@@ -479,7 +481,7 @@ func TestFilterMatchExactBeforeWildcard(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "localhost"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -488,7 +490,7 @@ func TestFilterMatchExactBeforeWildcard(t *testing.T) {
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestFilterMatchMostLongestFilter(t *testing.T) {
@@ -504,16 +506,16 @@ func TestFilterMatchMostLongestFilter(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
-		map[string]string{"host": "localhost", "resource": "cpu"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("resource")
+	require.True(t, ok)
+	require.Equal(t, "cpu", value)
 }
 
 func TestFilterMatchMultipleWildcards(t *testing.T) {
@@ -528,7 +530,7 @@ func TestFilterMatchMultipleWildcards(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
+	exp, err := metric.New("cpu_load",
 		map[string]string{"host": "server01"},
 		map[string]interface{}{"value": float64(11)},
 		time.Unix(1435077219, 0))
@@ -537,7 +539,7 @@ func TestFilterMatchMultipleWildcards(t *testing.T) {
 	m, err := p.ParseLine("servers.server01.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	assert.Equal(t, exp, m)
 }
 
 func TestParseDefaultTags(t *testing.T) {
@@ -550,16 +552,20 @@ func TestParseDefaultTags(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 func TestParseDefaultTemplateTags(t *testing.T) {
@@ -571,16 +577,20 @@ func TestParseDefaultTemplateTags(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
@@ -592,16 +602,21 @@ func TestParseDefaultTemplateTagsOverridGlobal(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
+	_ = m
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 func TestParseTemplateWhitespace(t *testing.T) {
@@ -615,16 +630,20 @@ func TestParseTemplateWhitespace(t *testing.T) {
 		t.Fatalf("unexpected error creating parser, got %v", err)
 	}
 
-	exp, err := telegraf.NewMetric("cpu_load",
-		map[string]string{"host": "localhost", "region": "us-east", "zone": "1c"},
-		map[string]interface{}{"value": float64(11)},
-		time.Unix(1435077219, 0))
-	assert.NoError(t, err)
-
 	m, err := p.ParseLine("servers.localhost.cpu_load 11 1435077219")
 	assert.NoError(t, err)
 
-	assert.Equal(t, exp.String(), m.String())
+	value, ok := m.GetTag("host")
+	require.True(t, ok)
+	require.Equal(t, "localhost", value)
+
+	value, ok = m.GetTag("region")
+	require.True(t, ok)
+	require.Equal(t, "us-east", value)
+
+	value, ok = m.GetTag("zone")
+	require.True(t, ok)
+	require.Equal(t, "1c", value)
 }
 
 // Test basic functionality of ApplyTemplate
@@ -745,6 +764,48 @@ func TestApplyTemplateGreedyField(t *testing.T) {
 		t.Errorf("Parser.ApplyTemplate unexpected result. got %s, exp %s",
 			field, "logged_in")
 	}
+}
+
+func TestApplyTemplateOverSpecific(t *testing.T) {
+	p, err := NewGraphiteParser(
+		".",
+		[]string{
+			"measurement.host.metric.metric.metric",
+		},
+		nil,
+	)
+	assert.NoError(t, err)
+
+	measurement, tags, _, err := p.ApplyTemplate("net.server001.a.b 2")
+	assert.Equal(t, "net", measurement)
+	assert.Equal(t,
+		map[string]string{"host": "server001", "metric": "a.b"},
+		tags)
+}
+
+func TestApplyTemplateMostSpecificTemplate(t *testing.T) {
+	p, err := NewGraphiteParser(
+		".",
+		[]string{
+			"measurement.host.metric",
+			"measurement.host.metric.metric.metric",
+			"measurement.host.metric.metric",
+		},
+		nil,
+	)
+	assert.NoError(t, err)
+
+	measurement, tags, _, err := p.ApplyTemplate("net.server001.a.b.c 2")
+	assert.Equal(t, "net", measurement)
+	assert.Equal(t,
+		map[string]string{"host": "server001", "metric": "a.b.c"},
+		tags)
+
+	measurement, tags, _, err = p.ApplyTemplate("net.server001.a.b 2")
+	assert.Equal(t, "net", measurement)
+	assert.Equal(t,
+		map[string]string{"host": "server001", "metric": "a.b"},
+		tags)
 }
 
 // Test Helpers

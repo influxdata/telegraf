@@ -1,42 +1,124 @@
-# Telegraf ipmi plugin
+# IPMI Sensor Input Plugin
 
-Get bare metal metrics using the command line utility `ipmitool`
+Get bare metal metrics using the command line utility
+[`ipmitool`](https://sourceforge.net/projects/ipmitool/files/ipmitool/).
 
-see ipmitool(https://sourceforge.net/projects/ipmitool/files/ipmitool/)
+If no servers are specified, the plugin will query the local machine sensor stats via the following command:
 
-The plugin will use the following command to collect remote host sensor stats:
+```
+ipmitool sdr
+```
+or with the version 2 schema:
+```
+ipmitool sdr elist
+```
 
-ipmitool -I lan -H 192.168.1.1 -U USERID -P PASSW0RD sdr
+When one or more servers are specified, the plugin will use the following command to collect remote host sensor stats:
 
-## Measurements
+```
+ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
+```
 
-- ipmi_sensor:
-
-    * Tags: `name`, `server`, `unit`
-    * Fields:
-      - status
-      - value
-
-## Configuration
+### Configuration
 
 ```toml
+# Read metrics from the bare metal servers via IPMI
 [[inputs.ipmi_sensor]]
-  ## specify servers via a url matching:
+  ## optionally specify the path to the ipmitool executable
+  # path = "/usr/bin/ipmitool"
+  ##
+  ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
+  # privilege = "ADMINISTRATOR"
+  ##
+  ## optionally specify one or more servers via a url matching
   ##  [username[:password]@][protocol[(address)]]
   ##  e.g.
   ##    root:passwd@lan(127.0.0.1)
   ##
-  servers = ["USERID:PASSW0RD@lan(10.20.2.203)"]
+  ## if no servers are specified, local machine sensor stats will be queried
+  ##
+  # servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
+
+  ## Recomended: use metric 'interval' that is a multiple of 'timeout' to avoid
+  ## gaps or overlap in pulled data
+  interval = "30s"
+
+  ## Timeout for the ipmitool command to complete. Default is 20 seconds.
+  timeout = "20s"
+
+  ## Schema Version: (Optional, defaults to version 1)
+  metric_version = 2
 ```
 
-## Output
+### Measurements
+
+Version 1 schema:
+- ipmi_sensor:
+  - tags:
+    - name
+    - unit
+    - host
+    - server (only when retrieving stats from remote servers)
+  - fields:
+    - status (int, 1=ok status_code/0=anything else)
+    - value (float)
+
+Version 2 schema:
+- ipmi_sensor:
+  - tags:
+    - name
+    - entity_id (can help uniquify duplicate names)
+    - status_code (two letter code from IPMI documentation)
+    - status_desc (extended status description field)
+    - unit (only on analog values)
+    - host
+    - server (only when retrieving stats from remote)
+  - fields:
+    - value (float)
+
+#### Permissions
+
+When gathering from the local system, Telegraf will need permission to the
+ipmi device node.  When using udev you can create the device node giving
+`rw` permissions to the `telegraf` user by adding the following rule to
+`/etc/udev/rules.d/52-telegraf-ipmi.rules`:
 
 ```
-> ipmi_sensor,server=10.20.2.203,unit=degrees_c,name=ambient_temp status=1i,value=20 1458488465012559455
-> ipmi_sensor,server=10.20.2.203,unit=feet,name=altitude status=1i,value=80 1458488465012688613
-> ipmi_sensor,server=10.20.2.203,unit=watts,name=avg_power status=1i,value=220 1458488465012776511
-> ipmi_sensor,server=10.20.2.203,unit=volts,name=planar_3.3v status=1i,value=3.28 1458488465012861875
-> ipmi_sensor,server=10.20.2.203,unit=volts,name=planar_vbat status=1i,value=3.04 1458488465013072508
-> ipmi_sensor,server=10.20.2.203,unit=rpm,name=fan_1a_tach status=1i,value=2610 1458488465013137932
-> ipmi_sensor,server=10.20.2.203,unit=rpm,name=fan_1b_tach status=1i,value=1775 1458488465013279896
+KERNEL=="ipmi*", MODE="660", GROUP="telegraf"
+```
+
+### Example Output
+
+#### Version 1 Schema
+When retrieving stats from a remote server:
+```
+ipmi_sensor,server=10.20.2.203,name=uid_light value=0,status=1i 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=sys._health_led status=1i,value=0 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=power_supply_1,unit=watts status=1i,value=110 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=power_supply_2,unit=watts status=1i,value=120 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=power_supplies value=0,status=1i 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=fan_1,unit=percent status=1i,value=43.12 1517125513000000000
+```
+
+
+When retrieving stats from the local machine (no server specified):
+```
+ipmi_sensor,name=uid_light value=0,status=1i 1517125513000000000
+ipmi_sensor,name=sys._health_led status=1i,value=0 1517125513000000000
+ipmi_sensor,name=power_supply_1,unit=watts status=1i,value=110 1517125513000000000
+ipmi_sensor,name=power_supply_2,unit=watts status=1i,value=120 1517125513000000000
+ipmi_sensor,name=power_supplies value=0,status=1i 1517125513000000000
+ipmi_sensor,name=fan_1,unit=percent status=1i,value=43.12 1517125513000000000
+```
+
+#### Version 2 Schema
+
+When retrieving stats from the local machine (no server specified):
+```
+ipmi_sensor,name=uid_light,entity_id=23.1,status_code=ok,status_desc=ok value=0 1517125474000000000
+ipmi_sensor,name=sys._health_led,entity_id=23.2,status_code=ok,status_desc=ok value=0 1517125474000000000
+ipmi_sensor,entity_id=10.1,name=power_supply_1,status_code=ok,status_desc=presence_detected,unit=watts value=110 1517125474000000000
+ipmi_sensor,name=power_supply_2,entity_id=10.2,status_code=ok,unit=watts,status_desc=presence_detected value=125 1517125474000000000
+ipmi_sensor,name=power_supplies,entity_id=10.3,status_code=ok,status_desc=fully_redundant value=0 1517125474000000000
+ipmi_sensor,entity_id=7.1,name=fan_1,status_code=ok,status_desc=transition_to_running,unit=percent value=43.12 1517125474000000000
 ```

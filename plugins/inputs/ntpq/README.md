@@ -54,7 +54,7 @@ server (RMS of difference of multiple time samples, milliseconds);
 ### Example Output:
 
 ```
-$ telegraf -config ~/ws/telegraf.conf -input-filter ntpq -test
+$ telegraf --config ~/ws/telegraf.conf --input-filter ntpq --test
 * Plugin: ntpq, Collection 1
 > ntpq,refid=.GPSs.,remote=*time.apple.com,stratum=1,type=u delay=91.797,jitter=3.735,offset=12.841,poll=64i,reach=377i,when=35i 1457960478909556134
 ```

@@ -75,12 +75,11 @@ func (g *Disque) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	var outerr error
-
 	for _, serv := range g.Servers {
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
+			acc.AddError(fmt.Errorf("Unable to parse to address '%s': %s", serv, err))
+			continue
 		} else if u.Scheme == "" {
 			// fallback to simple string based address (i.e. "10.0.0.1:10000")
 			u.Scheme = "tcp"
@@ -90,13 +89,13 @@ func (g *Disque) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(u, acc)
+			acc.AddError(g.gatherServer(u, acc))
 		}(serv)
 	}
 
 	wg.Wait()
 
-	return outerr
+	return nil
 }
 
 const defaultPort = "7711"

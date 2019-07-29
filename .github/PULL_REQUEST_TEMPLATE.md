@@ -1,5 +1,5 @@
 ### Required for all PRs:
 
-- [ ] CHANGELOG.md updated
-- [ ] Sign [CLA](https://influxdata.com/community/cla/) (if not already signed)
-- [ ] README.md updated (if adding a new plugin)
+- [ ] Signed [CLA](https://influxdata.com/community/cla/).
+- [ ] Associated README.md updated.
+- [ ] Has appropriate unit tests.

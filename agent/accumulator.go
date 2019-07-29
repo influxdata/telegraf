@@ -1,57 +1,39 @@
 package agent
 
 import (
-	"fmt"
 	"log"
-	"math"
-	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
-func NewAccumulator(
-	inputConfig *internal_models.InputConfig,
-	metrics chan telegraf.Metric,
-) *accumulator {
-	acc := accumulator{}
-	acc.metrics = metrics
-	acc.inputConfig = inputConfig
-	acc.precision = time.Nanosecond
-	return &acc
+var (
+	NErrors = selfstat.Register("agent", "gather_errors", map[string]string{})
+)
+
+type MetricMaker interface {
+	Name() string
+	MakeMetric(metric telegraf.Metric) telegraf.Metric
 }
 
 type accumulator struct {
-	metrics chan telegraf.Metric
-
-	defaultTags map[string]string
-
-	debug bool
-	// print every point added to the accumulator
-	trace bool
-
-	inputConfig *internal_models.InputConfig
-
+	maker     MetricMaker
+	metrics   chan<- telegraf.Metric
 	precision time.Duration
-
-	errCount uint64
 }
 
-func (ac *accumulator) Add(
-	measurement string,
-	value interface{},
-	tags map[string]string,
-	t ...time.Time,
-) {
-	fields := make(map[string]interface{})
-	fields["value"] = value
-
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
+func NewAccumulator(
+	maker MetricMaker,
+	metrics chan<- telegraf.Metric,
+) telegraf.Accumulator {
+	acc := accumulator{
+		maker:     maker,
+		metrics:   metrics,
+		precision: time.Nanosecond,
 	}
-
-	ac.AddFields(measurement, fields, tags, t...)
+	return &acc
 }
 
 func (ac *accumulator) AddFields(
@@ -60,102 +42,66 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if len(fields) == 0 || len(measurement) == 0 {
-		return
-	}
+	ac.addFields(measurement, tags, fields, telegraf.Untyped, t...)
+}
 
-	if !ac.inputConfig.Filter.ShouldNamePass(measurement) {
-		return
-	}
+func (ac *accumulator) AddGauge(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	ac.addFields(measurement, tags, fields, telegraf.Gauge, t...)
+}
 
-	if !ac.inputConfig.Filter.ShouldTagsPass(tags) {
-		return
-	}
+func (ac *accumulator) AddCounter(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	ac.addFields(measurement, tags, fields, telegraf.Counter, t...)
+}
 
-	// Override measurement name if set
-	if len(ac.inputConfig.NameOverride) != 0 {
-		measurement = ac.inputConfig.NameOverride
-	}
-	// Apply measurement prefix and suffix if set
-	if len(ac.inputConfig.MeasurementPrefix) != 0 {
-		measurement = ac.inputConfig.MeasurementPrefix + measurement
-	}
-	if len(ac.inputConfig.MeasurementSuffix) != 0 {
-		measurement = measurement + ac.inputConfig.MeasurementSuffix
-	}
+func (ac *accumulator) AddSummary(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	ac.addFields(measurement, tags, fields, telegraf.Summary, t...)
+}
 
-	if tags == nil {
-		tags = make(map[string]string)
-	}
-	// Apply plugin-wide tags if set
-	for k, v := range ac.inputConfig.Tags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
-	// Apply daemon-wide tags if set
-	for k, v := range ac.defaultTags {
-		if _, ok := tags[k]; !ok {
-			tags[k] = v
-		}
-	}
-	ac.inputConfig.Filter.FilterTags(tags)
+func (ac *accumulator) AddHistogram(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	ac.addFields(measurement, tags, fields, telegraf.Histogram, t...)
+}
 
-	result := make(map[string]interface{})
-	for k, v := range fields {
-		// Filter out any filtered fields
-		if ac.inputConfig != nil {
-			if !ac.inputConfig.Filter.ShouldFieldsPass(k) {
-				continue
-			}
-		}
-
-		// Validate uint64 and float64 fields
-		switch val := v.(type) {
-		case uint64:
-			// InfluxDB does not support writing uint64
-			if val < uint64(9223372036854775808) {
-				result[k] = int64(val)
-			} else {
-				result[k] = int64(9223372036854775807)
-			}
-			continue
-		case float64:
-			// NaNs are invalid values in influxdb, skip measurement
-			if math.IsNaN(val) || math.IsInf(val, 0) {
-				if ac.debug {
-					log.Printf("Measurement [%s] field [%s] has a NaN or Inf "+
-						"field, skipping",
-						measurement, k)
-				}
-				continue
-			}
-		}
-
-		result[k] = v
+func (ac *accumulator) AddMetric(m telegraf.Metric) {
+	m.SetTime(m.Time().Round(ac.precision))
+	if m := ac.maker.MakeMetric(m); m != nil {
+		ac.metrics <- m
 	}
-	fields = nil
-	if len(result) == 0 {
-		return
-	}
+}
 
-	var timestamp time.Time
-	if len(t) > 0 {
-		timestamp = t[0]
-	} else {
-		timestamp = time.Now()
-	}
-	timestamp = timestamp.Round(ac.precision)
-
-	m, err := telegraf.NewMetric(measurement, tags, result, timestamp)
+func (ac *accumulator) addFields(
+	measurement string,
+	tags map[string]string,
+	fields map[string]interface{},
+	tp telegraf.ValueType,
+	t ...time.Time,
+) {
+	m, err := metric.New(measurement, tags, fields, ac.getTime(t), tp)
 	if err != nil {
-		log.Printf("Error adding point [%s]: %s\n", measurement, err.Error())
 		return
 	}
-	if ac.trace {
-		fmt.Println("> " + m.String())
+	if m := ac.maker.MakeMetric(m); m != nil {
+		ac.metrics <- m
 	}
-	ac.metrics <- m
 }
 
 // AddError passes a runtime error to the accumulator.
@@ -164,59 +110,60 @@ func (ac *accumulator) AddError(err error) {
 	if err == nil {
 		return
 	}
-	atomic.AddUint64(&ac.errCount, 1)
-	//TODO suppress/throttle consecutive duplicate errors?
-	log.Printf("ERROR in input [%s]: %s", ac.inputConfig.Name, err)
+	NErrors.Incr(1)
+	log.Printf("E! [%s]: Error in plugin: %v", ac.maker.Name(), err)
 }
 
-func (ac *accumulator) Debug() bool {
-	return ac.debug
+func (ac *accumulator) SetPrecision(precision time.Duration) {
+	ac.precision = precision
 }
 
-func (ac *accumulator) SetDebug(debug bool) {
-	ac.debug = debug
-}
-
-func (ac *accumulator) Trace() bool {
-	return ac.trace
-}
-
-func (ac *accumulator) SetTrace(trace bool) {
-	ac.trace = trace
-}
-
-// SetPrecision takes two time.Duration objects. If the first is non-zero,
-// it sets that as the precision. Otherwise, it takes the second argument
-// as the order of time that the metrics should be rounded to, with the
-// maximum being 1s.
-func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
-	if precision > 0 {
-		ac.precision = precision
-		return
+func (ac *accumulator) getTime(t []time.Time) time.Time {
+	var timestamp time.Time
+	if len(t) > 0 {
+		timestamp = t[0]
+	} else {
+		timestamp = time.Now()
 	}
-	switch {
-	case interval >= time.Second:
-		ac.precision = time.Second
-	case interval >= time.Millisecond:
-		ac.precision = time.Millisecond
-	case interval >= time.Microsecond:
-		ac.precision = time.Microsecond
+	return timestamp.Round(ac.precision)
+}
+
+func (ac *accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	return &trackingAccumulator{
+		Accumulator: ac,
+		delivered:   make(chan telegraf.DeliveryInfo, maxTracked),
+	}
+}
+
+type trackingAccumulator struct {
+	telegraf.Accumulator
+	delivered chan telegraf.DeliveryInfo
+}
+
+func (a *trackingAccumulator) AddTrackingMetric(m telegraf.Metric) telegraf.TrackingID {
+	dm, id := metric.WithTracking(m, a.onDelivery)
+	a.AddMetric(dm)
+	return id
+}
+
+func (a *trackingAccumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.TrackingID {
+	db, id := metric.WithGroupTracking(group, a.onDelivery)
+	for _, m := range db {
+		a.AddMetric(m)
+	}
+	return id
+}
+
+func (a *trackingAccumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	return a.delivered
+}
+
+func (a *trackingAccumulator) onDelivery(info telegraf.DeliveryInfo) {
+	select {
+	case a.delivered <- info:
 	default:
-		ac.precision = time.Nanosecond
+		// This is a programming error in the input.  More items were sent for
+		// tracking than space requested.
+		panic("channel is full")
 	}
-}
-
-func (ac *accumulator) DisablePrecision() {
-	ac.precision = time.Nanosecond
-}
-
-func (ac *accumulator) setDefaultTags(tags map[string]string) {
-	ac.defaultTags = tags
-}
-
-func (ac *accumulator) addDefaultTag(key, value string) {
-	if ac.defaultTags == nil {
-		ac.defaultTags = make(map[string]string)
-	}
-	ac.defaultTags[key] = value
 }

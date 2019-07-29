@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-type disk struct {
+type Disk struct {
 	DeviceName  string
 	Model       string
 	Temperature int32
@@ -16,12 +16,19 @@ type disk struct {
 	Status      string
 }
 
-func Fetch(address string) ([]disk, error) {
+type hddtemp struct {
+}
+
+func New() *hddtemp {
+	return &hddtemp{}
+}
+
+func (h *hddtemp) Fetch(address string) ([]Disk, error) {
 	var (
 		err    error
 		conn   net.Conn
 		buffer bytes.Buffer
-		disks  []disk
+		disks  []Disk
 	)
 
 	if conn, err = net.Dial("tcp", address); err != nil {
@@ -48,7 +55,7 @@ func Fetch(address string) ([]disk, error) {
 			status = temperatureField
 		}
 
-		disks = append(disks, disk{
+		disks = append(disks, Disk{
 			DeviceName:  device,
 			Model:       fields[offset+2],
 			Temperature: int32(temperature),

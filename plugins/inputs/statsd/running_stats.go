@@ -24,8 +24,10 @@ type RunningStats struct {
 	perc      []float64
 	PercLimit int
 
-	upper float64
+	sum float64
+
 	lower float64
+	upper float64
 
 	// cache if we have sorted the list so that we never re-sort a sorted list,
 	// which can have very bad performance.
@@ -47,9 +49,12 @@ func (rs *RunningStats) AddValue(v float64) {
 	}
 
 	// These are used for the running mean and variance
-	rs.n += 1
+	rs.n++
 	rs.ex += v - rs.k
 	rs.ex2 += (v - rs.k) * (v - rs.k)
+
+	// add to running sum
+	rs.sum += v
 
 	// track upper and lower bounds
 	if v > rs.upper {
@@ -78,6 +83,10 @@ func (rs *RunningStats) Stddev() float64 {
 	return math.Sqrt(rs.Variance())
 }
 
+func (rs *RunningStats) Sum() float64 {
+	return rs.sum
+}
+
 func (rs *RunningStats) Upper() float64 {
 	return rs.upper
 }
@@ -90,7 +99,7 @@ func (rs *RunningStats) Count() int64 {
 	return rs.n
 }
 
-func (rs *RunningStats) Percentile(n int) float64 {
+func (rs *RunningStats) Percentile(n float64) float64 {
 	if n > 100 {
 		n = 100
 	}
@@ -100,9 +109,16 @@ func (rs *RunningStats) Percentile(n int) float64 {
 		rs.sorted = true
 	}
 
-	i := int(float64(len(rs.perc)) * float64(n) / float64(100))
-	if i < 0 {
-		i = 0
+	i := float64(len(rs.perc)) * n / float64(100)
+	return rs.perc[clamp(i, 0, len(rs.perc)-1)]
+}
+
+func clamp(i float64, min int, max int) int {
+	if i < float64(min) {
+		return min
 	}
-	return rs.perc[i]
+	if i > float64(max) {
+		return max
+	}
+	return int(i)
 }

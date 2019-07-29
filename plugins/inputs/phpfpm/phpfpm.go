@@ -13,12 +13,15 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const (
 	PF_POOL                 = "pool"
 	PF_PROCESS_MANAGER      = "process manager"
+	PF_START_SINCE          = "start since"
 	PF_ACCEPTED_CONN        = "accepted conn"
 	PF_LISTEN_QUEUE         = "listen queue"
 	PF_MAX_LISTEN_QUEUE     = "max listen queue"
@@ -35,7 +38,9 @@ type metric map[string]int64
 type poolStat map[string]metric
 
 type phpfpm struct {
-	Urls []string
+	Urls    []string
+	Timeout internal.Duration
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -58,9 +63,19 @@ var sampleConfig = `
   ##       "fcgi://10.0.0.12:9000/status"
   ##       "cgi://10.0.10.12:9001/status"
   ##
-  ## Example of multiple gathering from local socket and remove host
+  ## Example of multiple gathering from local socket and remote host
   ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
+
+  ## Duration allowed to complete HTTP requests.
+  # timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (r *phpfpm) SampleConfig() string {
@@ -80,26 +95,33 @@ func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	var outerr error
-
 	for _, serv := range g.Urls {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(serv, acc)
+			acc.AddError(g.gatherServer(serv, acc))
 		}(serv)
 	}
 
 	wg.Wait()
 
-	return outerr
+	return nil
 }
 
 // Request status page to get stat raw data and import it
 func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if g.client == nil {
-		client := &http.Client{}
-		g.client = client
+		tlsCfg, err := g.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+		tr := &http.Transport{
+			TLSClientConfig: tlsCfg,
+		}
+		g.client = &http.Client{
+			Transport: tr,
+			Timeout:   g.Timeout.Duration,
+		}
 	}
 
 	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
@@ -122,6 +144,9 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		fcgiIp := socketAddr[0]
 		fcgiPort, _ := strconv.Atoi(socketAddr[1])
 		fcgi, err = newFcgiClient(fcgiIp, fcgiPort)
+		if err != nil {
+			return err
+		}
 		if len(u.Path) > 1 {
 			statusPath = strings.Trim(u.Path, "/")
 		} else {
@@ -147,11 +172,11 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	return g.gatherFcgi(fcgi, statusPath, acc)
+	return g.gatherFcgi(fcgi, statusPath, acc, addr)
 }
 
 // Gather stat using fcgi protocol
-func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumulator) error {
+func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumulator, addr string) error {
 	fpmOutput, fpmErr, err := fcgi.Request(map[string]string{
 		"SCRIPT_NAME":     "/" + statusPath,
 		"SCRIPT_FILENAME": statusPath,
@@ -163,7 +188,7 @@ func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 	}, "/"+statusPath)
 
 	if len(fpmErr) == 0 && err == nil {
-		importMetric(bytes.NewReader(fpmOutput), acc)
+		importMetric(bytes.NewReader(fpmOutput), acc, addr)
 		return nil
 	} else {
 		return fmt.Errorf("Unable parse phpfpm status. Error: %v %v", string(fpmErr), err)
@@ -191,12 +216,12 @@ func (g *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 			addr, err)
 	}
 
-	importMetric(res.Body, acc)
+	importMetric(res.Body, acc, addr)
 	return nil
 }
 
 // Import stat data into Telegraf system
-func importMetric(r io.Reader, acc telegraf.Accumulator) (poolStat, error) {
+func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) (poolStat, error) {
 	stats := make(poolStat)
 	var currentPool string
 
@@ -218,7 +243,8 @@ func importMetric(r io.Reader, acc telegraf.Accumulator) (poolStat, error) {
 
 		// Start to parse metric for current pool
 		switch fieldName {
-		case PF_ACCEPTED_CONN,
+		case PF_START_SINCE,
+			PF_ACCEPTED_CONN,
 			PF_LISTEN_QUEUE,
 			PF_MAX_LISTEN_QUEUE,
 			PF_LISTEN_QUEUE_LEN,
@@ -239,6 +265,7 @@ func importMetric(r io.Reader, acc telegraf.Accumulator) (poolStat, error) {
 	for pool := range stats {
 		tags := map[string]string{
 			"pool": pool,
+			"url":  addr,
 		}
 		fields := make(map[string]interface{})
 		for k, v := range stats[pool] {

@@ -7,12 +7,13 @@ import (
 	"encoding/binary"
 	ejson "encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"io"
 	"math"
 	"net"
 	"os"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
 const (
@@ -154,7 +155,7 @@ type Graylog struct {
 }
 
 var sampleConfig = `
-  ## Udp endpoint for your graylog instance.
+  ## UDP endpoint for your graylog instance.
   servers = ["127.0.0.1:12201", "192.168.1.1:12201"]
 `
 
@@ -212,8 +213,8 @@ func serialize(metric telegraf.Metric) ([]string, error) {
 
 	m := make(map[string]interface{})
 	m["version"] = "1.1"
-	m["timestamp"] = metric.UnixNano() / 1000000000
-	m["short_message"] = " "
+	m["timestamp"] = metric.Time().UnixNano() / 1000000000
+	m["short_message"] = "telegraf"
 	m["name"] = metric.Name()
 
 	if host, ok := metric.Tags()["host"]; ok {
@@ -226,9 +227,14 @@ func serialize(metric telegraf.Metric) ([]string, error) {
 		m["host"] = host
 	}
 
+	for key, value := range metric.Tags() {
+		if key != "host" {
+			m["_"+key] = value
+		}
+	}
+
 	for key, value := range metric.Fields() {
-		nkey := fmt.Sprintf("_%s", key)
-		m[nkey] = value
+		m["_"+key] = value
 	}
 
 	serialized, err := ejson.Marshal(m)

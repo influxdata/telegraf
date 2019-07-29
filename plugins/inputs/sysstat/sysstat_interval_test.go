@@ -15,6 +15,9 @@ import (
 // run with -race option, because in that scenario interval between the two
 // Gather calls is greater than wantedInterval.
 func TestInterval(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test with sleep in short mode.")
+	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
 	defer func() { execCommand = exec.Command }()
@@ -23,14 +26,14 @@ func TestInterval(t *testing.T) {
 	s.interval = 0
 	wantedInterval := 3
 
-	err := s.Gather(&acc)
+	err := acc.GatherError(s.Gather)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(time.Duration(wantedInterval) * time.Second)
 
-	err = s.Gather(&acc)
+	err = acc.GatherError(s.Gather)
 	if err != nil {
 		t.Fatal(err)
 	}

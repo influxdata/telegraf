@@ -48,6 +48,9 @@ func (a *Amon) Connect() error {
 		return fmt.Errorf("serverkey and amon_instance are required fields for amon output")
 	}
 	a.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
 		Timeout: a.Timeout.Duration,
 	}
 	return nil
@@ -73,7 +76,7 @@ func (a *Amon) Write(metrics []telegraf.Metric) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("unable to build Metric for %s, skipping\n", m.Name())
+			log.Printf("I! unable to build Metric for %s, skipping\n", m.Name())
 		}
 	}
 

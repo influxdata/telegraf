@@ -1,12 +1,13 @@
 package couchdb_test
 
 import (
-	"github.com/influxdata/telegraf/plugins/inputs/couchdb"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/influxdata/telegraf/plugins/inputs/couchdb"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBasic(t *testing.T) {
@@ -312,9 +313,9 @@ func TestBasic(t *testing.T) {
 	defer fakeServer.Close()
 
 	plugin := &couchdb.CouchDB{
-		HOSTs: []string{fakeServer.URL + "/_stats"},
+		Hosts: []string{fakeServer.URL + "/_stats"},
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, acc.GatherError(plugin.Gather))
 }

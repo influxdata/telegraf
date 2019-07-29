@@ -2,22 +2,50 @@ package redis
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
-	"net"
+	"io"
+	"log"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Redis struct {
-	Servers []string
+	Servers  []string
+	Password string
+	tls.ClientConfig
+
+	clients     []Client
+	initialized bool
+}
+
+type Client interface {
+	Info() *redis.StringCmd
+	BaseTags() map[string]string
+}
+
+type RedisClient struct {
+	client *redis.Client
+	tags   map[string]string
+}
+
+func (r *RedisClient) Info() *redis.StringCmd {
+	return r.client.Info()
+}
+
+func (r *RedisClient) BaseTags() map[string]string {
+	tags := make(map[string]string)
+	for k, v := range r.tags {
+		tags[k] = v
+	}
+	return tags
 }
 
 var sampleConfig = `
@@ -31,9 +59,17 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
-`
 
-var defaultTimeout = 5 * time.Second
+  ## specify server password
+  # password = "s#cr@t%"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = true
+`
 
 func (r *Redis) SampleConfig() string {
 	return sampleConfig
@@ -44,161 +80,140 @@ func (r *Redis) Description() string {
 }
 
 var Tracking = map[string]string{
-	"uptime_in_seconds":           "uptime",
-	"connected_clients":           "clients",
-	"used_memory":                 "used_memory",
-	"used_memory_rss":             "used_memory_rss",
-	"used_memory_peak":            "used_memory_peak",
-	"used_memory_lua":             "used_memory_lua",
-	"rdb_changes_since_last_save": "rdb_changes_since_last_save",
-	"total_connections_received":  "total_connections_received",
-	"total_commands_processed":    "total_commands_processed",
-	"instantaneous_ops_per_sec":   "instantaneous_ops_per_sec",
-	"instantaneous_input_kbps":    "instantaneous_input_kbps",
-	"instantaneous_output_kbps":   "instantaneous_output_kbps",
-	"sync_full":                   "sync_full",
-	"sync_partial_ok":             "sync_partial_ok",
-	"sync_partial_err":            "sync_partial_err",
-	"expired_keys":                "expired_keys",
-	"evicted_keys":                "evicted_keys",
-	"keyspace_hits":               "keyspace_hits",
-	"keyspace_misses":             "keyspace_misses",
-	"pubsub_channels":             "pubsub_channels",
-	"pubsub_patterns":             "pubsub_patterns",
-	"latest_fork_usec":            "latest_fork_usec",
-	"connected_slaves":            "connected_slaves",
-	"master_repl_offset":          "master_repl_offset",
-	"master_last_io_seconds_ago":  "master_last_io_seconds_ago",
-	"repl_backlog_active":         "repl_backlog_active",
-	"repl_backlog_size":           "repl_backlog_size",
-	"repl_backlog_histlen":        "repl_backlog_histlen",
-	"mem_fragmentation_ratio":     "mem_fragmentation_ratio",
-	"used_cpu_sys":                "used_cpu_sys",
-	"used_cpu_user":               "used_cpu_user",
-	"used_cpu_sys_children":       "used_cpu_sys_children",
-	"used_cpu_user_children":      "used_cpu_user_children",
-	"role": "replication_role",
+	"uptime_in_seconds": "uptime",
+	"connected_clients": "clients",
+	"role":              "replication_role",
 }
 
-var ErrProtocolError = errors.New("redis protocol error")
-
-const defaultPort = "6379"
-
-// Reads stats from all configured servers accumulates stats.
-// Returns one of the errors encountered while gather stats (if any).
-func (r *Redis) Gather(acc telegraf.Accumulator) error {
-	if len(r.Servers) == 0 {
-		url := &url.URL{
-			Scheme: "tcp",
-			Host:   ":6379",
-		}
-		r.gatherServer(url, acc)
+func (r *Redis) init(acc telegraf.Accumulator) error {
+	if r.initialized {
 		return nil
 	}
 
-	var wg sync.WaitGroup
-	errChan := errchan.New(len(r.Servers))
-	for _, serv := range r.Servers {
+	if len(r.Servers) == 0 {
+		r.Servers = []string{"tcp://localhost:6379"}
+	}
+
+	r.clients = make([]Client, len(r.Servers))
+
+	for i, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
+			log.Printf("W! [inputs.redis]: server URL found without scheme; please update your configuration file")
 			serv = "tcp://" + serv
 		}
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("Unable to parse to address '%s': %s", serv, err)
-		} else if u.Scheme == "" {
-			// fallback to simple string based address (i.e. "10.0.0.1:10000")
-			u.Scheme = "tcp"
-			u.Host = serv
-			u.Path = ""
-		}
-		if u.Scheme == "tcp" {
-			_, _, err := net.SplitHostPort(u.Host)
-			if err != nil {
-				u.Host = u.Host + ":" + defaultPort
-			}
+			return fmt.Errorf("Unable to parse to address %q: %v", serv, err)
 		}
 
+		password := ""
+		if u.User != nil {
+			pw, ok := u.User.Password()
+			if ok {
+				password = pw
+			}
+		}
+		if len(r.Password) > 0 {
+			password = r.Password
+		}
+
+		var address string
+		if u.Scheme == "unix" {
+			address = u.Path
+		} else {
+			address = u.Host
+		}
+
+		tlsConfig, err := r.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
+		client := redis.NewClient(
+			&redis.Options{
+				Addr:      address,
+				Password:  password,
+				Network:   u.Scheme,
+				PoolSize:  1,
+				TLSConfig: tlsConfig,
+			},
+		)
+
+		tags := map[string]string{}
+		if u.Scheme == "unix" {
+			tags["socket"] = u.Path
+		} else {
+			tags["server"] = u.Hostname()
+			tags["port"] = u.Port()
+		}
+
+		r.clients[i] = &RedisClient{
+			client: client,
+			tags:   tags,
+		}
+	}
+
+	r.initialized = true
+	return nil
+}
+
+// Reads stats from all configured servers accumulates stats.
+// Returns one of the errors encountered while gather stats (if any).
+func (r *Redis) Gather(acc telegraf.Accumulator) error {
+	if !r.initialized {
+		err := r.init(acc)
+		if err != nil {
+			return err
+		}
+	}
+
+	var wg sync.WaitGroup
+
+	for _, client := range r.clients {
 		wg.Add(1)
-		go func(serv string) {
+		go func(client Client) {
 			defer wg.Done()
-			errChan.C <- r.gatherServer(u, acc)
-		}(serv)
+			acc.AddError(r.gatherServer(client, acc))
+		}(client)
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
-func (r *Redis) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
-	var address string
-
-	if addr.Scheme == "unix" {
-		address = addr.Path
-	} else {
-		address = addr.Host
-	}
-	c, err := net.DialTimeout(addr.Scheme, address, defaultTimeout)
+func (r *Redis) gatherServer(client Client, acc telegraf.Accumulator) error {
+	info, err := client.Info().Result()
 	if err != nil {
-		return fmt.Errorf("Unable to connect to redis server '%s': %s", address, err)
-	}
-	defer c.Close()
-
-	// Extend connection
-	c.SetDeadline(time.Now().Add(defaultTimeout))
-
-	if addr.User != nil {
-		pwd, set := addr.User.Password()
-		if set && pwd != "" {
-			c.Write([]byte(fmt.Sprintf("AUTH %s\r\n", pwd)))
-
-			rdr := bufio.NewReader(c)
-
-			line, err := rdr.ReadString('\n')
-			if err != nil {
-				return err
-			}
-			if line[0] != '+' {
-				return fmt.Errorf("%s", strings.TrimSpace(line)[1:])
-			}
-		}
+		return err
 	}
 
-	c.Write([]byte("INFO\r\n"))
-	c.Write([]byte("EOF\r\n"))
-	rdr := bufio.NewReader(c)
-
-	var tags map[string]string
-
-	if addr.Scheme == "unix" {
-		tags = map[string]string{"socket": addr.Path}
-	} else {
-		// Setup tags for all redis metrics
-		host, port := "unknown", "unknown"
-		// If there's an error, ignore and use 'unknown' tags
-		host, port, _ = net.SplitHostPort(addr.Host)
-		tags = map[string]string{"server": host, "port": port}
-	}
-	return gatherInfoOutput(rdr, acc, tags)
+	rdr := strings.NewReader(info)
+	return gatherInfoOutput(rdr, acc, client.BaseTags())
 }
 
 // gatherInfoOutput gathers
 func gatherInfoOutput(
-	rdr *bufio.Reader,
+	rdr io.Reader,
 	acc telegraf.Accumulator,
 	tags map[string]string,
 ) error {
-	var keyspace_hits, keyspace_misses uint64 = 0, 0
+	var section string
+	var keyspace_hits, keyspace_misses int64
 
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, "ERR") {
-			break
+
+		if len(line) == 0 {
+			continue
 		}
 
-		if len(line) == 0 || line[0] == '#' {
+		if line[0] == '#' {
+			if len(line) > 2 {
+				section = line[2:]
+			}
 			continue
 		}
 
@@ -206,42 +221,70 @@ func gatherInfoOutput(
 		if len(parts) < 2 {
 			continue
 		}
-
 		name := string(parts[0])
-		metric, ok := Tracking[name]
-		if !ok {
-			kline := strings.TrimSpace(string(parts[1]))
-			gatherKeyspaceLine(name, kline, acc, tags)
+
+		if section == "Server" {
+			if name != "lru_clock" && name != "uptime_in_seconds" && name != "redis_version" {
+				continue
+			}
+		}
+
+		if strings.HasPrefix(name, "master_replid") {
 			continue
 		}
 
+		if name == "mem_allocator" {
+			continue
+		}
+
+		if strings.HasSuffix(name, "_human") {
+			continue
+		}
+
+		metric, ok := Tracking[name]
+		if !ok {
+			if section == "Keyspace" {
+				kline := strings.TrimSpace(string(parts[1]))
+				gatherKeyspaceLine(name, kline, acc, tags)
+				continue
+			}
+			metric = name
+		}
+
 		val := strings.TrimSpace(parts[1])
-		ival, err := strconv.ParseUint(val, 10, 64)
 
-		if name == "keyspace_hits" {
-			keyspace_hits = ival
+		// Some percentage values have a "%" suffix that we need to get rid of before int/float conversion
+		val = strings.TrimSuffix(val, "%")
+
+		// Try parsing as int
+		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
+			switch name {
+			case "keyspace_hits":
+				keyspace_hits = ival
+			case "keyspace_misses":
+				keyspace_misses = ival
+			case "rdb_last_save_time":
+				// influxdb can't calculate this, so we have to do it
+				fields["rdb_last_save_time_elapsed"] = time.Now().Unix() - ival
+			}
+			fields[metric] = ival
+			continue
 		}
 
-		if name == "keyspace_misses" {
-			keyspace_misses = ival
+		// Try parsing as a float
+		if fval, err := strconv.ParseFloat(val, 64); err == nil {
+			fields[metric] = fval
+			continue
 		}
+
+		// Treat it as a string
 
 		if name == "role" {
 			tags["replication_role"] = val
 			continue
 		}
 
-		if err == nil {
-			fields[metric] = ival
-			continue
-		}
-
-		fval, err := strconv.ParseFloat(val, 64)
-		if err != nil {
-			return err
-		}
-
-		fields[metric] = fval
+		fields[metric] = val
 	}
 	var keyspace_hitrate float64 = 0.0
 	if keyspace_hits != 0 || keyspace_misses != 0 {
@@ -272,7 +315,7 @@ func gatherKeyspaceLine(
 		dbparts := strings.Split(line, ",")
 		for _, dbp := range dbparts {
 			kv := strings.Split(dbp, "=")
-			ival, err := strconv.ParseUint(kv[1], 10, 64)
+			ival, err := strconv.ParseInt(kv[1], 10, 64)
 			if err == nil {
 				fields[kv[0]] = ival
 			}

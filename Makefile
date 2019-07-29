@@ -1,92 +1,152 @@
-VERSION := $(shell sh -c 'git describe --always --tags')
+ifeq ($(SHELL), cmd)
+	VERSION := $(shell git describe --exact-match --tags 2>nil)
+	HOME := $(HOMEPATH)
+else ifeq ($(SHELL), sh.exe)
+	VERSION := $(shell git describe --exact-match --tags 2>nil)
+	HOME := $(HOMEPATH)
+else
+	VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
+endif
+
+PREFIX := /usr/local
+BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
+COMMIT := $(shell git rev-parse --short HEAD)
+GOFILES ?= $(shell git ls-files '*.go')
+GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
+BUILDFLAGS ?=
+
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
 else
-PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
+PATH := $(subst :,/bin:,$(shell go env GOPATH))/bin:$(PATH)
 endif
 
-# Standard Telegraf build
-default: prepare build
+LDFLAGS := $(LDFLAGS) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
+ifdef VERSION
+	LDFLAGS += -X main.version=$(VERSION)
+endif
 
-# Windows build
-windows: prepare-windows build-windows
+.PHONY: all
+all:
+	@$(MAKE) --no-print-directory deps
+	@$(MAKE) --no-print-directory telegraf
 
-# Only run the build (no dependency grabbing)
-build:
-	go install -ldflags "-X main.version=$(VERSION)" ./...
+.PHONY: deps
+deps:
+	dep ensure -vendor-only
 
-build-windows:
-	go build -o telegraf.exe -ldflags \
-		"-X main.version=$(VERSION)" \
-		./cmd/telegraf/telegraf.go
+.PHONY: telegraf
+telegraf:
+	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-build-for-docker:
-	CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo -o telegraf -ldflags \
-					"-s -X main.version=$(VERSION)" \
-					./cmd/telegraf/telegraf.go
+.PHONY: go-install
+go-install:
+	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
-# run package script
-package:
-	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload
+.PHONY: install
+install: telegraf
+	mkdir -p $(DESTDIR)$(PREFIX)/bin/
+	cp telegraf $(DESTDIR)$(PREFIX)/bin/
 
-# Get dependencies and use gdm to checkout changesets
-prepare:
-	go get github.com/sparrc/gdm
-	gdm restore
 
-# Use the windows godeps file to prepare dependencies
-prepare-windows:
-	go get github.com/sparrc/gdm
-	gdm restore -f Godeps_windows
-
-# Run all docker containers necessary for unit tests
-docker-run:
-	docker run --name kafka \
-		-e ADVERTISED_HOST=localhost \
-		-e ADVERTISED_PORT=9092 \
-		-p "2181:2181" -p "9092:9092" \
-		-d spotify/kafka
-	docker run --name mysql -p "3306:3306" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql
-	docker run --name memcached -p "11211:11211" -d memcached
-	docker run --name postgres -p "5432:5432" -d postgres
-	docker run --name rabbitmq -p "15672:15672" -p "5672:5672" -d rabbitmq:3-management
-	docker run --name redis -p "6379:6379" -d redis
-	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server
-	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
-	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
-	docker run --name riemann -p "5555:5555" -d blalor/riemann
-	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
-
-# Run docker containers necessary for CircleCI unit tests
-docker-run-circle:
-	docker run --name kafka \
-		-e ADVERTISED_HOST=localhost \
-		-e ADVERTISED_PORT=9092 \
-		-p "2181:2181" -p "9092:9092" \
-		-d spotify/kafka
-	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server
-	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
-	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
-	docker run --name riemann -p "5555:5555" -d blalor/riemann
-	docker run --name snmp -p "31161:31161/udp" -d titilambert/snmpsim
-
-# Kill all docker containers, ignore errors
-docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann snmp
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql kafka mqtt riemann snmp
-
-# Run full unit tests using docker containers (includes setup and teardown)
-test: vet docker-kill docker-run
-	# Sleeping for kafka leadership election, TSDB setup, etc.
-	sleep 60
-	# SUCCESS, running tests
-	go test -race ./...
-
-# Run "short" unit tests
-test-short: vet
+.PHONY: test
+test:
 	go test -short ./...
 
-vet:
-	go vet ./...
+.PHONY: fmt
+fmt:
+	@gofmt -s -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
 
-.PHONY: test test-short vet build default
+.PHONY: fmtcheck
+fmtcheck:
+	@if [ ! -z "$(GOFMT)" ]; then \
+		echo "[ERROR] gofmt has found errors in the following files:"  ; \
+		echo "$(GOFMT)" ; \
+		echo "" ;\
+		echo "Run make fmt to fix them." ; \
+		exit 1 ;\
+	fi
+
+.PHONY: test-windows
+test-windows:
+	go test -short ./plugins/inputs/ping/...
+	go test -short ./plugins/inputs/win_perf_counters/...
+	go test -short ./plugins/inputs/win_services/...
+	go test -short ./plugins/inputs/procstat/...
+	go test -short ./plugins/inputs/ntpq/...
+
+.PHONY: vet
+vet:
+	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
+	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
+		echo ""; \
+		echo "go vet has found suspicious constructs. Please remediate any reported errors"; \
+		echo "to fix them before submitting code for review."; \
+		exit 1; \
+	fi
+
+.PHONY: check
+check: fmtcheck vet
+
+.PHONY: test-all
+test-all: fmtcheck vet
+	go test ./...
+
+.PHONY: package
+package:
+	./scripts/build.py --package --platform=all --arch=all
+
+.PHONY: package-release
+package-release:
+	./scripts/build.py --release --package --platform=all --arch=all \
+		--upload --bucket=dl.influxdata.com/telegraf/releases
+
+.PHONY: package-nightly
+package-nightly:
+	./scripts/build.py --nightly --package --platform=all --arch=all \
+		--upload --bucket=dl.influxdata.com/telegraf/nightlies
+
+.PHONY: clean
+clean:
+	rm -f telegraf
+	rm -f telegraf.exe
+
+.PHONY: docker-image
+docker-image:
+	docker build -f scripts/stretch.docker -t "telegraf:$(COMMIT)" .
+
+plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
+	ragel -Z -G2 $^ -o $@
+
+.PHONY: static
+static:
+	@echo "Building static linux binary..."
+	@CGO_ENABLED=0 \
+	GOOS=linux \
+	GOARCH=amd64 \
+	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+.PHONY: plugin-%
+plugin-%:
+	@echo "Starting dev environment for $${$(@)} input plugin..."
+	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
+
+.PHONY: ci-1.12
+ci-1.12:
+	docker build -t quay.io/influxdb/telegraf-ci:1.12.5 - < scripts/ci-1.12.docker
+	docker push quay.io/influxdb/telegraf-ci:1.12.5
+
+.PHONY: ci-1.11
+ci-1.11:
+	docker build -t quay.io/influxdb/telegraf-ci:1.11.10 - < scripts/ci-1.11.docker
+	docker push quay.io/influxdb/telegraf-ci:1.11.10
+
+.PHONY: ci-1.10
+ci-1.10:
+	docker build -t quay.io/influxdb/telegraf-ci:1.10.8 - < scripts/ci-1.10.docker
+	docker push quay.io/influxdb/telegraf-ci:1.10.8
+
+.PHONY: ci-1.9
+ci-1.9:
+	docker build -t quay.io/influxdb/telegraf-ci:1.9.7 - < scripts/ci-1.9.docker
+	docker push quay.io/influxdb/telegraf-ci:1.9.7

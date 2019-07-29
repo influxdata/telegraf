@@ -134,7 +134,7 @@ func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 	req.URL.RawQuery = params.String()
 	req.Header.Set("User-Agent", "Telegraf-MailChimp-Plugin")
 	if api.Debug {
-		log.Printf("Request URL: %s", req.URL.String())
+		log.Printf("D! Request URL: %s", req.URL.String())
 	}
 
 	resp, err := client.Do(req)
@@ -148,7 +148,7 @@ func runChimp(api *ChimpAPI, params ReportsParams) ([]byte, error) {
 		return nil, err
 	}
 	if api.Debug {
-		log.Printf("Response Body:%s", string(body))
+		log.Printf("D! Response Body:%s", string(body))
 	}
 
 	if err = chimpErrorCheck(body); err != nil {

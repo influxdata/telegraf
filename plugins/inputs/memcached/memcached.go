@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -30,32 +29,46 @@ var defaultTimeout = 5 * time.Second
 
 // The list of metrics that should be sent
 var sendMetrics = []string{
-	"get_hits",
-	"get_misses",
-	"evictions",
-	"limit_maxbytes",
+	"accepting_conns",
+	"auth_cmds",
+	"auth_errors",
 	"bytes",
-	"uptime",
-	"curr_items",
-	"total_items",
-	"curr_connections",
-	"total_connections",
-	"connection_structures",
-	"cmd_get",
-	"cmd_set",
-	"delete_hits",
-	"delete_misses",
-	"incr_hits",
-	"incr_misses",
-	"decr_hits",
-	"decr_misses",
-	"cas_hits",
-	"cas_misses",
-	"evictions",
 	"bytes_read",
 	"bytes_written",
-	"threads",
+	"cas_badval",
+	"cas_hits",
+	"cas_misses",
+	"cmd_flush",
+	"cmd_get",
+	"cmd_set",
+	"cmd_touch",
 	"conn_yields",
+	"connection_structures",
+	"curr_connections",
+	"curr_items",
+	"decr_hits",
+	"decr_misses",
+	"delete_hits",
+	"delete_misses",
+	"evicted_unfetched",
+	"evictions",
+	"expired_unfetched",
+	"get_hits",
+	"get_misses",
+	"hash_bytes",
+	"hash_is_expanding",
+	"hash_power_level",
+	"incr_hits",
+	"incr_misses",
+	"limit_maxbytes",
+	"listen_disabled_num",
+	"reclaimed",
+	"threads",
+	"total_connections",
+	"total_items",
+	"touch_hits",
+	"touch_misses",
+	"uptime",
 }
 
 // SampleConfig returns sample configuration message
@@ -74,16 +87,15 @@ func (m *Memcached) Gather(acc telegraf.Accumulator) error {
 		return m.gatherServer(":11211", false, acc)
 	}
 
-	errChan := errchan.New(len(m.Servers) + len(m.UnixSockets))
 	for _, serverAddress := range m.Servers {
-		errChan.C <- m.gatherServer(serverAddress, false, acc)
+		acc.AddError(m.gatherServer(serverAddress, false, acc))
 	}
 
 	for _, unixAddress := range m.UnixSockets {
-		errChan.C <- m.gatherServer(unixAddress, true, acc)
+		acc.AddError(m.gatherServer(unixAddress, true, acc))
 	}
 
-	return errChan.Error()
+	return nil
 }
 
 func (m *Memcached) gatherServer(

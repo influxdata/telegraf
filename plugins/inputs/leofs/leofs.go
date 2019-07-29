@@ -3,7 +3,6 @@ package leofs
 import (
 	"bufio"
 	"fmt"
-	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -94,6 +93,19 @@ var KeyMapping = map[ServerType][]string{
 		"allocated_memory",
 		"used_allocated_memory_5min",
 		"allocated_memory_5min",
+		// following items are since LeoFS v1.4.0
+		"mq_num_of_msg_recovery_node",
+		"mq_num_of_msg_deletion_dir",
+		"mq_num_of_msg_async_deletion_dir",
+		"mq_num_of_msg_req_deletion_dir",
+		"mq_mdcr_num_of_msg_req_comp_metadata",
+		"mq_mdcr_num_of_msg_req_sync_obj",
+		"comp_state",
+		"comp_last_start_datetime",
+		"comp_last_end_datetime",
+		"comp_num_of_pending_targets",
+		"comp_num_of_ongoing_targets",
+		"comp_num_of_out_of_targets",
 	},
 	ServerTypeGateway: {
 		"num_of_processes",
@@ -135,9 +147,9 @@ var serverTypeMapping = map[string]ServerType{
 }
 
 var sampleConfig = `
-  ## An array of URI to gather stats about LeoFS.
-  ## Specify an ip or hostname with port. ie 127.0.0.1:4020
-  servers = ["127.0.0.1:4021"]
+  ## An array of URLs of the form:
+  ##   host [ ":" port]
+  servers = ["127.0.0.1:4020"]
 `
 
 func (l *LeoFS) SampleConfig() string {
@@ -154,16 +166,22 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 	var wg sync.WaitGroup
-	var outerr error
 	for _, endpoint := range l.Servers {
-		_, err := url.Parse(endpoint)
-		if err != nil {
-			return fmt.Errorf("Unable to parse the address:%s, err:%s", endpoint, err)
+		results := strings.Split(endpoint, ":")
+
+		port := "4020"
+		if len(results) > 2 {
+			acc.AddError(fmt.Errorf("Unable to parse address %q", endpoint))
+			continue
+		} else if len(results) == 2 {
+			if _, err := strconv.Atoi(results[1]); err == nil {
+				port = results[1]
+			} else {
+				acc.AddError(fmt.Errorf("Unable to parse port from %q", endpoint))
+				continue
+			}
 		}
-		port, err := retrieveTokenAfterColon(endpoint)
-		if err != nil {
-			return err
-		}
+
 		st, ok := serverTypeMapping[port]
 		if !ok {
 			st = ServerTypeStorage
@@ -171,11 +189,11 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(endpoint string, st ServerType) {
 			defer wg.Done()
-			outerr = l.gatherServer(endpoint, st, acc)
+			acc.AddError(l.gatherServer(endpoint, st, acc))
 		}(endpoint, st)
 	}
 	wg.Wait()
-	return outerr
+	return nil
 }
 
 func (l *LeoFS) gatherServer(
@@ -183,7 +201,7 @@ func (l *LeoFS) gatherServer(
 	serverType ServerType,
 	acc telegraf.Accumulator,
 ) error {
-	cmd := exec.Command("snmpwalk", "-v2c", "-cpublic", endpoint, oid)
+	cmd := exec.Command("snmpwalk", "-v2c", "-cpublic", "-On", endpoint, oid)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

@@ -2,88 +2,78 @@ package telegraf
 
 import (
 	"time"
-
-	"github.com/influxdata/influxdb/client/v2"
 )
 
+// ValueType is an enumeration of metric types that represent a simple value.
+type ValueType int
+
+// Possible values for the ValueType enum.
+const (
+	_ ValueType = iota
+	Counter
+	Gauge
+	Untyped
+	Summary
+	Histogram
+)
+
+type Tag struct {
+	Key   string
+	Value string
+}
+
+type Field struct {
+	Key   string
+	Value interface{}
+}
+
 type Metric interface {
-	// Name returns the measurement name of the metric
+	// Getting data structure functions
 	Name() string
-
-	// Name returns the tags associated with the metric
 	Tags() map[string]string
-
-	// Time return the timestamp for the metric
-	Time() time.Time
-
-	// UnixNano returns the unix nano time of the metric
-	UnixNano() int64
-
-	// Fields returns the fields for the metric
+	TagList() []*Tag
 	Fields() map[string]interface{}
+	FieldList() []*Field
+	Time() time.Time
+	Type() ValueType
 
-	// String returns a line-protocol string of the metric
-	String() string
+	// Name functions
+	SetName(name string)
+	AddPrefix(prefix string)
+	AddSuffix(suffix string)
 
-	// PrecisionString returns a line-protocol string of the metric, at precision
-	PrecisionString(precison string) string
+	// Tag functions
+	GetTag(key string) (string, bool)
+	HasTag(key string) bool
+	AddTag(key, value string)
+	RemoveTag(key string)
 
-	// Point returns a influxdb client.Point object
-	Point() *client.Point
-}
+	// Field functions
+	GetField(key string) (interface{}, bool)
+	HasField(key string) bool
+	AddField(key string, value interface{})
+	RemoveField(key string)
 
-// metric is a wrapper of the influxdb client.Point struct
-type metric struct {
-	pt *client.Point
-}
+	SetTime(t time.Time)
 
-// NewMetric returns a metric with the given timestamp. If a timestamp is not
-// given, then data is sent to the database without a timestamp, in which case
-// the server will assign local time upon reception. NOTE: it is recommended to
-// send data with a timestamp.
-func NewMetric(
-	name string,
-	tags map[string]string,
-	fields map[string]interface{},
-	t time.Time,
-) (Metric, error) {
-	pt, err := client.NewPoint(name, tags, fields, t)
-	if err != nil {
-		return nil, err
-	}
-	return &metric{
-		pt: pt,
-	}, nil
-}
+	// HashID returns an unique identifier for the series.
+	HashID() uint64
 
-func (m *metric) Name() string {
-	return m.pt.Name()
-}
+	// Copy returns a deep copy of the Metric.
+	Copy() Metric
 
-func (m *metric) Tags() map[string]string {
-	return m.pt.Tags()
-}
+	// Accept marks the metric as processed successfully and written to an
+	// output.
+	Accept()
 
-func (m *metric) Time() time.Time {
-	return m.pt.Time()
-}
+	// Reject marks the metric as processed unsuccessfully.
+	Reject()
 
-func (m *metric) UnixNano() int64 {
-	return m.pt.UnixNano()
-}
+	// Drop marks the metric as processed successfully without being written
+	// to any output.
+	Drop()
 
-func (m *metric) Fields() map[string]interface{} {
-	return m.pt.Fields()
-}
-
-func (m *metric) String() string {
-	return m.pt.String()
-}
-
-func (m *metric) PrecisionString(precison string) string {
-	return m.pt.PrecisionString(precison)
-}
-
-func (m *metric) Point() *client.Point {
-	return m.pt
+	// Mark Metric as an aggregate
+	SetAggregate(bool)
+	IsAggregate() bool
 }

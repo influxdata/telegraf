@@ -10,16 +10,16 @@ type Filter interface {
 	Match(string) bool
 }
 
-// CompileFilter takes a list of string filters and returns a Filter interface
+// Compile takes a list of string filters and returns a Filter interface
 // for matching a given string against the filter list. The filter list
 // supports glob matching too, ie:
 //
-//   f, _ := CompileFilter([]string{"cpu", "mem", "net*"})
+//   f, _ := Compile([]string{"cpu", "mem", "net*"})
 //   f.Match("cpu")     // true
 //   f.Match("network") // true
 //   f.Match("memory")  // false
 //
-func CompileFilter(filters []string) (Filter, error) {
+func Compile(filters []string) (Filter, error) {
 	// return if there is nothing to compile
 	if len(filters) == 0 {
 		return nil, nil
@@ -76,4 +76,41 @@ func compileFilterNoGlob(filters []string) Filter {
 		out.m[filter] = struct{}{}
 	}
 	return &out
+}
+
+type IncludeExcludeFilter struct {
+	include Filter
+	exclude Filter
+}
+
+func NewIncludeExcludeFilter(
+	include []string,
+	exclude []string,
+) (Filter, error) {
+	in, err := Compile(include)
+	if err != nil {
+		return nil, err
+	}
+
+	ex, err := Compile(exclude)
+	if err != nil {
+		return nil, err
+	}
+
+	return &IncludeExcludeFilter{in, ex}, nil
+}
+
+func (f *IncludeExcludeFilter) Match(s string) bool {
+	if f.include != nil {
+		if !f.include.Match(s) {
+			return false
+		}
+	}
+
+	if f.exclude != nil {
+		if f.exclude.Match(s) {
+			return false
+		}
+	}
+	return true
 }

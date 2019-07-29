@@ -1,39 +1,85 @@
 package kinesis
 
 import (
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	uuid "github.com/satori/go.uuid"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestFormatMetric(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+func TestPartitionKey(t *testing.T) {
+
+	assert := assert.New(t)
+	testPoint := testutil.TestMetric(1)
+
+	k := KinesisOutput{
+		Partition: &Partition{
+			Method: "static",
+			Key:    "-",
+		},
 	}
+	assert.Equal("-", k.getPartitionKey(testPoint), "PartitionKey should be '-'")
 
-	k := &KinesisOutput{
-		Format: "string",
+	k = KinesisOutput{
+		Partition: &Partition{
+			Method: "tag",
+			Key:    "tag1",
+		},
 	}
+	assert.Equal(testPoint.Tags()["tag1"], k.getPartitionKey(testPoint), "PartitionKey should be value of 'tag1'")
 
-	p := testutil.MockMetrics()[0]
-
-	valid_string := "test1,tag1=value1 value=1 1257894000000000000"
-	func_string, err := FormatMetric(k, p)
-
-	if func_string != valid_string {
-		t.Error("Expected ", valid_string)
+	k = KinesisOutput{
+		Partition: &Partition{
+			Method:  "tag",
+			Key:     "doesnotexist",
+			Default: "somedefault",
+		},
 	}
-	require.NoError(t, err)
+	assert.Equal("somedefault", k.getPartitionKey(testPoint), "PartitionKey should use default")
 
-	k = &KinesisOutput{
-		Format: "custom",
+	k = KinesisOutput{
+		Partition: &Partition{
+			Method: "tag",
+			Key:    "doesnotexist",
+		},
 	}
+	assert.Equal("telegraf", k.getPartitionKey(testPoint), "PartitionKey should be telegraf")
 
-	valid_custom := "test1,map[tag1:value1],test1,tag1=value1 value=1 1257894000000000000"
-	func_custom, err := FormatMetric(k, p)
-
-	if func_custom != valid_custom {
-		t.Error("Expected ", valid_custom)
+	k = KinesisOutput{
+		Partition: &Partition{
+			Method: "not supported",
+		},
 	}
-	require.NoError(t, err)
+	assert.Equal("", k.getPartitionKey(testPoint), "PartitionKey should be value of ''")
+
+	k = KinesisOutput{
+		Partition: &Partition{
+			Method: "measurement",
+		},
+	}
+	assert.Equal(testPoint.Name(), k.getPartitionKey(testPoint), "PartitionKey should be value of measurement name")
+
+	k = KinesisOutput{
+		Partition: &Partition{
+			Method: "random",
+		},
+	}
+	partitionKey := k.getPartitionKey(testPoint)
+	u, err := uuid.FromString(partitionKey)
+	assert.Nil(err, "Issue parsing UUID")
+	assert.Equal(byte(4), u.Version(), "PartitionKey should be UUIDv4")
+
+	k = KinesisOutput{
+		PartitionKey: "-",
+	}
+	assert.Equal("-", k.getPartitionKey(testPoint), "PartitionKey should be '-'")
+
+	k = KinesisOutput{
+		RandomPartitionKey: true,
+	}
+	partitionKey = k.getPartitionKey(testPoint)
+	u, err = uuid.FromString(partitionKey)
+	assert.Nil(err, "Issue parsing UUID")
+	assert.Equal(byte(4), u.Version(), "PartitionKey should be UUIDv4")
 }

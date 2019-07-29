@@ -46,7 +46,7 @@ cat /var/lib/puppet/state/last_run_summary.yaml
 ```
 
 ```
-jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 -filter puppetagent -config tele.conf -test
+jcross@pit-devops-02 ~ >sudo ./telegraf_linux_amd64 --input-filter puppetagent --config tele.conf --test
 * Plugin: puppetagent, Collection 1
 > [] puppetagent_events_failure value=0
 > [] puppetagent_events_total value=0

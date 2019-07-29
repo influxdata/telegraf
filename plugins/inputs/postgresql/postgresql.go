@@ -2,27 +2,24 @@ package postgresql
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
-	"regexp"
-	"sort"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	// register in driver.
+	_ "github.com/jackc/pgx/stdlib"
 
-	"github.com/lib/pq"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Postgresql struct {
-	Address          string
+	Service
 	Databases        []string
-	OrderedColumns   []string
-	AllColumns       []string
-	sanitizedAddress string
+	IgnoredDatabases []string
 }
 
-var ignoredColumns = map[string]bool{"datid": true, "datname": true, "stats_reset": true}
+var ignoredColumns = map[string]bool{"stats_reset": true}
 
 var sampleConfig = `
   ## specify address via a url matching:
@@ -39,9 +36,22 @@ var sampleConfig = `
   ## to grab metrics for.
   ##
   address = "host=localhost user=postgres sslmode=disable"
+  ## A custom name for the database that will be used as the "server" tag in the
+  ## measurement output. If not specified, a default one generated from
+  ## the connection address is used.
+  # outputaddress = "db01"
+
+  ## connection configuration.
+  ## maxlifetime - specify the maximum lifetime of a connection.
+  ## default is forever (0s)
+  max_lifetime = "0s"
+
+  ## A  list of databases to explicitly ignore.  If not specified, metrics for all
+  ## databases are gathered.  Do NOT use with the 'databases' option.
+  # ignored_databases = ["postgres", "template0", "template1"]
 
   ## A list of databases to pull metrics about. If not specified, metrics for all
-  ## databases are gathered.
+  ## databases are gathered.  Do NOT use with the 'ignored_databases' option.
   # databases = ["app_production", "testing"]
 `
 
@@ -57,30 +67,24 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }
 
-var localhost = "host=localhost sslmode=disable"
-
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	var query string
+	var (
+		err     error
+		query   string
+		columns []string
+	)
 
-	if p.Address == "" || p.Address == "localhost" {
-		p.Address = localhost
-	}
-
-	db, err := sql.Open("postgres", p.Address)
-	if err != nil {
-		return err
-	}
-
-	defer db.Close()
-
-	if len(p.Databases) == 0 {
+	if len(p.Databases) == 0 && len(p.IgnoredDatabases) == 0 {
 		query = `SELECT * FROM pg_stat_database`
+	} else if len(p.IgnoredDatabases) != 0 {
+		query = fmt.Sprintf(`SELECT * FROM pg_stat_database WHERE datname NOT IN ('%s')`,
+			strings.Join(p.IgnoredDatabases, "','"))
 	} else {
 		query = fmt.Sprintf(`SELECT * FROM pg_stat_database WHERE datname IN ('%s')`,
 			strings.Join(p.Databases, "','"))
 	}
 
-	rows, err := db.Query(query)
+	rows, err := p.DB.Query(query)
 	if err != nil {
 		return err
 	}
@@ -88,24 +92,20 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	defer rows.Close()
 
 	// grab the column information from the result
-	p.OrderedColumns, err = rows.Columns()
-	if err != nil {
+	if columns, err = rows.Columns(); err != nil {
 		return err
-	} else {
-		p.AllColumns = make([]string, len(p.OrderedColumns))
-		copy(p.AllColumns, p.OrderedColumns)
 	}
 
 	for rows.Next() {
-		err = p.accRow(rows, acc)
+		err = p.accRow(rows, acc, columns)
 		if err != nil {
 			return err
 		}
 	}
-	//return rows.Err()
+
 	query = `SELECT * FROM pg_stat_bgwriter`
 
-	bg_writer_row, err := db.Query(query)
+	bg_writer_row, err := p.DB.Query(query)
 	if err != nil {
 		return err
 	}
@@ -113,22 +113,17 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	defer bg_writer_row.Close()
 
 	// grab the column information from the result
-	p.OrderedColumns, err = bg_writer_row.Columns()
-	if err != nil {
+	if columns, err = bg_writer_row.Columns(); err != nil {
 		return err
-	} else {
-		for _, v := range p.OrderedColumns {
-			p.AllColumns = append(p.AllColumns, v)
-		}
 	}
 
 	for bg_writer_row.Next() {
-		err = p.accRow(bg_writer_row, acc)
+		err = p.accRow(bg_writer_row, acc, columns)
 		if err != nil {
 			return err
 		}
 	}
-	sort.Strings(p.AllColumns)
+
 	return bg_writer_row.Err()
 }
 
@@ -136,37 +131,20 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-var passwordKVMatcher, _ = regexp.Compile("password=\\S+ ?")
-
-func (p *Postgresql) SanitizedAddress() (_ string, err error) {
-	var canonicalizedAddress string
-	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
-		canonicalizedAddress, err = pq.ParseURL(p.Address)
-		if err != nil {
-			return p.sanitizedAddress, err
-		}
-	} else {
-		canonicalizedAddress = p.Address
-	}
-	p.sanitizedAddress = passwordKVMatcher.ReplaceAllString(canonicalizedAddress, "")
-
-	return p.sanitizedAddress, err
-}
-
-func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
+func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator, columns []string) error {
 	var columnVars []interface{}
 	var dbname bytes.Buffer
 
 	// this is where we'll store the column name with its *interface{}
 	columnMap := make(map[string]*interface{})
 
-	for _, column := range p.OrderedColumns {
+	for _, column := range columns {
 		columnMap[column] = new(interface{})
 	}
 
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
-		columnVars = append(columnVars, columnMap[p.OrderedColumns[i]])
+		columnVars = append(columnVars, columnMap[columns[i]])
 	}
 
 	// deconstruct array of variables and send to Scan
@@ -177,10 +155,7 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	}
 	if columnMap["datname"] != nil {
 		// extract the database name from the column map
-		dbnameChars := (*columnMap["datname"]).([]uint8)
-		for i := 0; i < len(dbnameChars); i++ {
-			dbname.WriteString(string(dbnameChars[i]))
-		}
+		dbname.WriteString((*columnMap["datname"]).(string))
 	} else {
 		dbname.WriteString("postgres")
 	}
@@ -207,6 +182,15 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("postgresql", func() telegraf.Input {
-		return &Postgresql{}
+		return &Postgresql{
+			Service: Service{
+				MaxIdle: 1,
+				MaxOpen: 1,
+				MaxLifetime: internal.Duration{
+					Duration: 0,
+				},
+				IsPgBouncer: false,
+			},
+		}
 	})
 }

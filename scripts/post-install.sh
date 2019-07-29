@@ -11,7 +11,7 @@ function install_init {
 }
 
 function install_systemd {
-    cp -f $SCRIPT_DIR/telegraf.service /lib/systemd/system/telegraf.service
+    cp -f $SCRIPT_DIR/telegraf.service $1
     systemctl enable telegraf || true
     systemctl daemon-reload || true
 }
@@ -23,15 +23,6 @@ function install_update_rcd {
 function install_chkconfig {
     chkconfig --add telegraf
 }
-
-id telegraf &>/dev/null
-if [[ $? -ne 0 ]]; then
-    useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf
-fi
-
-test -d $LOG_DIR || mkdir -p $LOG_DIR
-chown -R -L telegraf:telegraf $LOG_DIR
-chmod 755 $LOG_DIR
 
 # Remove legacy symlink, if it exists
 if [[ -L /etc/init.d/telegraf ]]; then
@@ -53,33 +44,57 @@ if [[ ! -d /etc/telegraf/telegraf.d ]]; then
 fi
 
 # Distribution-specific logic
-if [[ -f /etc/redhat-release ]]; then
+if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
     # RHEL-variant logic
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-	    install_systemd
+    if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+        install_systemd /usr/lib/systemd/system/telegraf.service
     else
-	    # Assuming sysv
-	    install_init
-	    install_chkconfig
+        # Assuming SysVinit
+        install_init
+        # Run update-rc.d or fallback to chkconfig if not available
+        if which update-rc.d &>/dev/null; then
+            install_update_rcd
+        else
+            install_chkconfig
+        fi
     fi
 elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
-    which systemctl &>/dev/null
-    if [[ $? -eq 0 ]]; then
-	    install_systemd
-	    systemctl restart telegraf || echo "WARNING: systemd not running."
+
+    # Ownership for RH-based platforms is set in build.py via the `rmp-attr` option.
+    # We perform ownership change only for Debian-based systems.
+    # Moving these lines out of this if statement would make `rmp -V` fail after installation.
+    test -d $LOG_DIR || mkdir -p $LOG_DIR
+    chown -R -L telegraf:telegraf $LOG_DIR
+    chmod 755 $LOG_DIR
+
+    if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
+        install_systemd /lib/systemd/system/telegraf.service
+        deb-systemd-invoke restart telegraf.service || echo "WARNING: systemd not running."
     else
-	    # Assuming sysv
-	    install_init
-	    install_update_rcd
-	    invoke-rc.d telegraf restart
+        # Assuming SysVinit
+        install_init
+        # Run update-rc.d or fallback to chkconfig if not available
+        if which update-rc.d &>/dev/null; then
+            install_update_rcd
+        else
+            install_chkconfig
+        fi
+        invoke-rc.d telegraf restart
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
-    if [[ $ID = "amzn" ]]; then
-	    # Amazon Linux logic
-	    install_init
-	    install_chkconfig
+    if [[ "$NAME" = "Amazon Linux" ]]; then
+        # Amazon Linux 2+ logic
+        install_systemd /usr/lib/systemd/system/telegraf.service
+    elif [[ "$NAME" = "Amazon Linux AMI" ]]; then
+        # Amazon Linux logic
+        install_init
+        # Run update-rc.d or fallback to chkconfig if not available
+        if which update-rc.d &>/dev/null; then
+            install_update_rcd
+        else
+            install_chkconfig
+        fi
     fi
 fi

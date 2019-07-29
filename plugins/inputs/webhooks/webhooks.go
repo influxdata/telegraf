@@ -3,6 +3,7 @@ package webhooks
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"reflect"
 
@@ -10,8 +11,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail"
+	"github.com/influxdata/telegraf/plugins/inputs/webhooks/particle"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
 
@@ -26,9 +30,14 @@ func init() {
 type Webhooks struct {
 	ServiceAddress string
 
-	Github   *github.GithubWebhook
-	Mandrill *mandrill.MandrillWebhook
-	Rollbar  *rollbar.RollbarWebhook
+	Github     *github.GithubWebhook
+	Filestack  *filestack.FilestackWebhook
+	Mandrill   *mandrill.MandrillWebhook
+	Rollbar    *rollbar.RollbarWebhook
+	Papertrail *papertrail.PapertrailWebhook
+	Particle   *particle.ParticleWebhook
+
+	srv *http.Server
 }
 
 func NewWebhooks() *Webhooks {
@@ -40,15 +49,25 @@ func (wb *Webhooks) SampleConfig() string {
   ## Address and port to host Webhook listener on
   service_address = ":1619"
 
+  [inputs.webhooks.filestack]
+    path = "/filestack"
+
   [inputs.webhooks.github]
     path = "/github"
+    # secret = ""
 
   [inputs.webhooks.mandrill]
     path = "/mandrill"
 
   [inputs.webhooks.rollbar]
     path = "/rollbar"
- `
+
+  [inputs.webhooks.papertrail]
+    path = "/papertrail"
+
+  [inputs.webhooks.particle]
+    path = "/particle"
+`
 }
 
 func (wb *Webhooks) Description() string {
@@ -57,19 +76,6 @@ func (wb *Webhooks) Description() string {
 
 func (wb *Webhooks) Gather(_ telegraf.Accumulator) error {
 	return nil
-}
-
-func (wb *Webhooks) Listen(acc telegraf.Accumulator) {
-	r := mux.NewRouter()
-
-	for _, webhook := range wb.AvailableWebhooks() {
-		webhook.Register(r, acc)
-	}
-
-	err := http.ListenAndServe(fmt.Sprintf("%s", wb.ServiceAddress), r)
-	if err != nil {
-		log.Printf("Error starting server: %v", err)
-	}
 }
 
 // Looks for fields which implement Webhook interface
@@ -94,11 +100,35 @@ func (wb *Webhooks) AvailableWebhooks() []Webhook {
 }
 
 func (wb *Webhooks) Start(acc telegraf.Accumulator) error {
-	go wb.Listen(acc)
-	log.Printf("Started the webhooks service on %s\n", wb.ServiceAddress)
+	r := mux.NewRouter()
+
+	for _, webhook := range wb.AvailableWebhooks() {
+		webhook.Register(r, acc)
+	}
+
+	wb.srv = &http.Server{Handler: r}
+
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s", wb.ServiceAddress))
+	if err != nil {
+		log.Fatalf("E! Error starting server: %v", err)
+		return err
+
+	}
+
+	go func() {
+		if err := wb.srv.Serve(ln); err != nil {
+			if err != http.ErrServerClosed {
+				acc.AddError(fmt.Errorf("E! Error listening: %v", err))
+			}
+		}
+	}()
+
+	log.Printf("I! Started the webhooks service on %s\n", wb.ServiceAddress)
+
 	return nil
 }
 
 func (rb *Webhooks) Stop() {
-	log.Println("Stopping the Webhooks service")
+	rb.srv.Close()
+	log.Println("I! Stopping the Webhooks service")
 }

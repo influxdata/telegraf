@@ -140,7 +140,7 @@ func TestMailChimpGatherReport(t *testing.T) {
 
 }
 
-func TestMailChimpGatherError(t *testing.T) {
+func TestMailChimpGatherErroror(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {

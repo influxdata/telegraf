@@ -1,34 +1,50 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/logger"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"github.com/kardianos/service"
 )
 
 var fDebug = flag.Bool("debug", false,
-	"show metrics as they're generated to stdout")
+	"turn on debug logging")
+var pprofAddr = flag.String("pprof-addr", "",
+	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
-var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
+var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
+var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
-var fVersion = flag.Bool("version", false, "display the version")
+var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fSectionFilters = flag.String("section-filter", "",
+	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
 var fInputList = flag.Bool("input-list", false,
@@ -37,245 +53,371 @@ var fOutputFilters = flag.String("output-filter", "",
 	"filter the outputs to enable, separator is :")
 var fOutputList = flag.Bool("output-list", false,
 	"print available output plugins.")
+var fAggregatorFilters = flag.String("aggregator-filter", "",
+	"filter the aggregators to enable, separator is :")
+var fProcessorFilters = flag.String("processor-filter", "",
+	"filter the processors to enable, separator is :")
 var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf -usage mysql'")
-var fInputFiltersLegacy = flag.String("filter", "",
-	"filter the inputs to enable, separator is :")
-var fOutputFiltersLegacy = flag.String("outputfilter", "",
-	"filter the outputs to enable, separator is :")
-var fConfigDirectoryLegacy = flag.String("configdirectory", "",
-	"directory containing additional *.conf files")
+	"print usage for a plugin, ie, 'telegraf --usage mysql'")
+var fService = flag.String("service", "",
+	"operate on the service (windows only)")
+var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
+var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
+var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
-// Telegraf version, populated linker.
-//   ie, -ldflags "-X main.version=`git describe --always --tags`"
 var (
 	version string
 	commit  string
 	branch  string
 )
 
-const usage = `Telegraf, The plugin-driven server agent for collecting and reporting metrics.
+var stop chan struct{}
 
-Usage:
-
-  telegraf <flags>
-
-The flags are:
-
-  -config <file>     configuration file to load
-  -test              gather metrics once, print them to stdout, and exit
-  -sample-config     print out full sample configuration to stdout
-  -config-directory  directory containing additional *.conf files
-  -input-filter      filter the input plugins to enable, separator is :
-  -input-list        print all the plugins inputs
-  -output-filter     filter the output plugins to enable, separator is :
-  -output-list       print all the available outputs
-  -usage             print usage for a plugin, ie, 'telegraf -usage mysql'
-  -debug             print metrics as they're generated to stdout
-  -quiet             run in quiet mode
-  -version           print the version to stdout
-
-In addition to the -config flag, telegraf will also load the config file from
-an environment variable or default location. Precedence is:
-  1. -config flag
-  2. $TELEGRAF_CONFIG_PATH environment variable
-  3. $HOME/.telegraf/telegraf.conf
-  4. /etc/telegraf/telegraf.conf
-
-Examples:
-
-  # generate a telegraf config file:
-  telegraf -sample-config > telegraf.conf
-
-  # generate config with only cpu input & influxdb output plugins defined
-  telegraf -sample-config -input-filter cpu -output-filter influxdb
-
-  # run a single telegraf collection, outputing metrics to stdout
-  telegraf -config telegraf.conf -test
-
-  # run telegraf with all plugins defined in config file
-  telegraf -config telegraf.conf
-
-  # run telegraf, enabling the cpu & memory input, and influxdb output plugins
-  telegraf -config telegraf.conf -input-filter cpu:mem -output-filter influxdb
-`
-
-func main() {
+func reloadLoop(
+	stop chan struct{},
+	inputFilters []string,
+	outputFilters []string,
+	aggregatorFilters []string,
+	processorFilters []string,
+) {
 	reload := make(chan bool, 1)
 	reload <- true
 	for <-reload {
 		reload <- false
-		flag.Usage = func() { usageExit(0) }
-		flag.Parse()
-		args := flag.Args()
 
-		var inputFilters []string
-		if *fInputFiltersLegacy != "" {
-			fmt.Printf("WARNING '--filter' flag is deprecated, please use" +
-				" '--input-filter'")
-			inputFilter := strings.TrimSpace(*fInputFiltersLegacy)
-			inputFilters = strings.Split(":"+inputFilter+":", ":")
-		}
-		if *fInputFilters != "" {
-			inputFilter := strings.TrimSpace(*fInputFilters)
-			inputFilters = strings.Split(":"+inputFilter+":", ":")
-		}
+		ctx, cancel := context.WithCancel(context.Background())
 
-		var outputFilters []string
-		if *fOutputFiltersLegacy != "" {
-			fmt.Printf("WARNING '--outputfilter' flag is deprecated, please use" +
-				" '--output-filter'")
-			outputFilter := strings.TrimSpace(*fOutputFiltersLegacy)
-			outputFilters = strings.Split(":"+outputFilter+":", ":")
-		}
-		if *fOutputFilters != "" {
-			outputFilter := strings.TrimSpace(*fOutputFilters)
-			outputFilters = strings.Split(":"+outputFilter+":", ":")
-		}
-
-		if len(args) > 0 {
-			switch args[0] {
-			case "version":
-				v := fmt.Sprintf("Telegraf - version %s", version)
-				fmt.Println(v)
-				return
-			case "config":
-				config.PrintSampleConfig(inputFilters, outputFilters)
-				return
-			}
-		}
-
-		if *fOutputList {
-			fmt.Println("Available Output Plugins:")
-			for k, _ := range outputs.Outputs {
-				fmt.Printf("  %s\n", k)
-			}
-			return
-		}
-
-		if *fInputList {
-			fmt.Println("Available Input Plugins:")
-			for k, _ := range inputs.Inputs {
-				fmt.Printf("  %s\n", k)
-			}
-			return
-		}
-
-		if *fVersion {
-			v := fmt.Sprintf("Telegraf - version %s", version)
-			fmt.Println(v)
-			return
-		}
-
-		if *fSampleConfig {
-			config.PrintSampleConfig(inputFilters, outputFilters)
-			return
-		}
-
-		if *fUsage != "" {
-			if err := config.PrintInputConfig(*fUsage); err != nil {
-				if err2 := config.PrintOutputConfig(*fUsage); err2 != nil {
-					log.Fatalf("%s and %s", err, err2)
-				}
-			}
-			return
-		}
-
-		// If no other options are specified, load the config file and run.
-		c := config.NewConfig()
-		c.OutputFilters = outputFilters
-		c.InputFilters = inputFilters
-		err := c.LoadConfig(*fConfig)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		if *fConfigDirectoryLegacy != "" {
-			fmt.Printf("WARNING '--configdirectory' flag is deprecated, please use" +
-				" '--config-directory'")
-			err = c.LoadDirectory(*fConfigDirectoryLegacy)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		if *fConfigDirectory != "" {
-			err = c.LoadDirectory(*fConfigDirectory)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		if len(c.Outputs) == 0 {
-			log.Fatalf("Error: no outputs found, did you provide a valid config file?")
-		}
-		if len(c.Inputs) == 0 {
-			log.Fatalf("Error: no inputs found, did you provide a valid config file?")
-		}
-
-		ag, err := agent.NewAgent(c)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		if *fDebug {
-			ag.Config.Agent.Debug = true
-		}
-
-		if *fQuiet {
-			ag.Config.Agent.Quiet = true
-		}
-
-		if *fTest {
-			err = ag.Test()
-			if err != nil {
-				log.Fatal(err)
-			}
-			return
-		}
-
-		err = ag.Connect()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		shutdown := make(chan struct{})
 		signals := make(chan os.Signal)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
+			syscall.SIGTERM, syscall.SIGINT)
 		go func() {
-			sig := <-signals
-			if sig == os.Interrupt {
-				close(shutdown)
-			}
-			if sig == syscall.SIGHUP {
-				log.Printf("Reloading Telegraf config\n")
-				<-reload
-				reload <- true
-				close(shutdown)
+			select {
+			case sig := <-signals:
+				if sig == syscall.SIGHUP {
+					log.Printf("I! Reloading Telegraf config")
+					<-reload
+					reload <- true
+				}
+				cancel()
+			case <-stop:
+				cancel()
 			}
 		}()
 
-		log.Printf("Starting Telegraf (version %s)\n", version)
-		log.Printf("Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-		log.Printf("Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-		log.Printf("Tags enabled: %s", c.ListTags())
-
-		if *fPidfile != "" {
-			f, err := os.Create(*fPidfile)
-			if err != nil {
-				log.Fatalf("Unable to create pidfile: %s", err)
-			}
-
-			fmt.Fprintf(f, "%d\n", os.Getpid())
-
-			f.Close()
+		err := runAgent(ctx, inputFilters, outputFilters)
+		if err != nil && err != context.Canceled {
+			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
-
-		ag.Run(shutdown)
 	}
 }
 
+func runAgent(ctx context.Context,
+	inputFilters []string,
+	outputFilters []string,
+) error {
+	// Setup default logging. This may need to change after reading the config
+	// file, but we can configure it to use our logger implementation now.
+	logger.SetupLogging(logger.LogConfig{})
+	log.Printf("I! Starting Telegraf %s", version)
+
+	// If no other options are specified, load the config file and run.
+	c := config.NewConfig()
+	c.OutputFilters = outputFilters
+	c.InputFilters = inputFilters
+	err := c.LoadConfig(*fConfig)
+	if err != nil {
+		return err
+	}
+
+	if *fConfigDirectory != "" {
+		err = c.LoadDirectory(*fConfigDirectory)
+		if err != nil {
+			return err
+		}
+	}
+	if !*fTest && len(c.Outputs) == 0 {
+		return errors.New("Error: no outputs found, did you provide a valid config file?")
+	}
+	if len(c.Inputs) == 0 {
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
+	}
+
+	if int64(c.Agent.Interval.Duration) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %s",
+			c.Agent.Interval.Duration)
+	}
+
+	if int64(c.Agent.FlushInterval.Duration) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %s",
+			c.Agent.Interval.Duration)
+	}
+
+	ag, err := agent.NewAgent(c)
+	if err != nil {
+		return err
+	}
+
+	// Setup logging as configured.
+	logConfig := logger.LogConfig{
+		Debug:               ag.Config.Agent.Debug || *fDebug,
+		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
+		Logfile:             ag.Config.Agent.Logfile,
+		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
+		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+	}
+
+	logger.SetupLogging(logConfig)
+
+	if *fTest || *fTestWait != 0 {
+		testWaitDuration := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, testWaitDuration)
+	}
+
+	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
+	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
+	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	log.Printf("I! Tags enabled: %s", c.ListTags())
+
+	if *fPidfile != "" {
+		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Printf("E! Unable to create pidfile: %s", err)
+		} else {
+			fmt.Fprintf(f, "%d\n", os.Getpid())
+
+			f.Close()
+
+			defer func() {
+				err := os.Remove(*fPidfile)
+				if err != nil {
+					log.Printf("E! Unable to remove pidfile: %s", err)
+				}
+			}()
+		}
+	}
+
+	return ag.Run(ctx)
+}
+
 func usageExit(rc int) {
-	fmt.Println(usage)
+	fmt.Println(internal.Usage)
 	os.Exit(rc)
+}
+
+type program struct {
+	inputFilters      []string
+	outputFilters     []string
+	aggregatorFilters []string
+	processorFilters  []string
+}
+
+func (p *program) Start(s service.Service) error {
+	go p.run()
+	return nil
+}
+func (p *program) run() {
+	stop = make(chan struct{})
+	reloadLoop(
+		stop,
+		p.inputFilters,
+		p.outputFilters,
+		p.aggregatorFilters,
+		p.processorFilters,
+	)
+}
+func (p *program) Stop(s service.Service) error {
+	close(stop)
+	return nil
+}
+
+func formatFullVersion() string {
+	var parts = []string{"Telegraf"}
+
+	if version != "" {
+		parts = append(parts, version)
+	} else {
+		parts = append(parts, "unknown")
+	}
+
+	if branch != "" || commit != "" {
+		if branch == "" {
+			branch = "unknown"
+		}
+		if commit == "" {
+			commit = "unknown"
+		}
+		git := fmt.Sprintf("(git: %s %s)", branch, commit)
+		parts = append(parts, git)
+	}
+
+	return strings.Join(parts, " ")
+}
+
+func main() {
+	flag.Usage = func() { usageExit(0) }
+	flag.Parse()
+	args := flag.Args()
+
+	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
+	if *fSectionFilters != "" {
+		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
+	}
+	if *fInputFilters != "" {
+		inputFilters = strings.Split(":"+strings.TrimSpace(*fInputFilters)+":", ":")
+	}
+	if *fOutputFilters != "" {
+		outputFilters = strings.Split(":"+strings.TrimSpace(*fOutputFilters)+":", ":")
+	}
+
+	aggregatorFilters, processorFilters := []string{}, []string{}
+	if *fAggregatorFilters != "" {
+		aggregatorFilters = strings.Split(":"+strings.TrimSpace(*fAggregatorFilters)+":", ":")
+	}
+	if *fProcessorFilters != "" {
+		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
+	}
+
+	if *pprofAddr != "" {
+		go func() {
+			pprofHostPort := *pprofAddr
+			parts := strings.Split(pprofHostPort, ":")
+			if len(parts) == 2 && parts[0] == "" {
+				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			}
+			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
+
+			log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
+
+			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
+				log.Fatal("E! " + err.Error())
+			}
+		}()
+	}
+
+	if len(args) > 0 {
+		switch args[0] {
+		case "version":
+			fmt.Println(formatFullVersion())
+			return
+		case "config":
+			config.PrintSampleConfig(
+				sectionFilters,
+				inputFilters,
+				outputFilters,
+				aggregatorFilters,
+				processorFilters,
+			)
+			return
+		}
+	}
+
+	// switch for flags which just do something and exit immediately
+	switch {
+	case *fOutputList:
+		fmt.Println("Available Output Plugins:")
+		for k := range outputs.Outputs {
+			fmt.Printf("  %s\n", k)
+		}
+		return
+	case *fInputList:
+		fmt.Println("Available Input Plugins:")
+		for k := range inputs.Inputs {
+			fmt.Printf("  %s\n", k)
+		}
+		return
+	case *fVersion:
+		fmt.Println(formatFullVersion())
+		return
+	case *fSampleConfig:
+		config.PrintSampleConfig(
+			sectionFilters,
+			inputFilters,
+			outputFilters,
+			aggregatorFilters,
+			processorFilters,
+		)
+		return
+	case *fUsage != "":
+		err := config.PrintInputConfig(*fUsage)
+		err2 := config.PrintOutputConfig(*fUsage)
+		if err != nil && err2 != nil {
+			log.Fatalf("E! %s and %s", err, err2)
+		}
+		return
+	}
+
+	shortVersion := version
+	if shortVersion == "" {
+		shortVersion = "unknown"
+	}
+
+	// Configure version
+	if err := internal.SetVersion(shortVersion); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
+	if runtime.GOOS == "windows" && windowsRunAsService() {
+		svcConfig := &service.Config{
+			Name:        *fServiceName,
+			DisplayName: *fServiceDisplayName,
+			Description: "Collects data using a series of plugins and publishes it to" +
+				"another series of plugins.",
+			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+		}
+
+		prg := &program{
+			inputFilters:      inputFilters,
+			outputFilters:     outputFilters,
+			aggregatorFilters: aggregatorFilters,
+			processorFilters:  processorFilters,
+		}
+		s, err := service.New(prg, svcConfig)
+		if err != nil {
+			log.Fatal("E! " + err.Error())
+		}
+		// Handle the --service flag here to prevent any issues with tooling that
+		// may not have an interactive session, e.g. installing from Ansible.
+		if *fService != "" {
+			if *fConfig != "" {
+				(*svcConfig).Arguments = []string{"--config", *fConfig}
+			}
+			if *fConfigDirectory != "" {
+				(*svcConfig).Arguments = append((*svcConfig).Arguments, "--config-directory", *fConfigDirectory)
+			}
+			err := service.Control(s, *fService)
+			if err != nil {
+				log.Fatal("E! " + err.Error())
+			}
+			os.Exit(0)
+		} else {
+			err = s.Run()
+			if err != nil {
+				log.Println("E! " + err.Error())
+			}
+		}
+	} else {
+		stop = make(chan struct{})
+		reloadLoop(
+			stop,
+			inputFilters,
+			outputFilters,
+			aggregatorFilters,
+			processorFilters,
+		)
+	}
+}
+
+// Return true if Telegraf should create a Windows service.
+func windowsRunAsService() bool {
+	if *fService != "" {
+		return true
+	}
+
+	if *fRunAsConsole {
+		return false
+	}
+
+	return !service.Interactive()
 }

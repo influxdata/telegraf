@@ -5,16 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type InfluxDB struct {
-	URLs []string `toml:"urls"`
+	URLs    []string `toml:"urls"`
+	Timeout internal.Duration
+	tls.ClientConfig
+
+	client *http.Client
 }
 
 func (*InfluxDB) Description() string {
@@ -32,6 +37,16 @@ func (*InfluxDB) SampleConfig() string {
   urls = [
     "http://localhost:8086/debug/vars"
   ]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
+  ## http request & header timeout
+  timeout = "5s"
 `
 }
 
@@ -39,7 +54,20 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	if len(i.URLs) == 0 {
 		i.URLs = []string{"http://localhost:8086/debug/vars"}
 	}
-	errorChannel := make(chan error, len(i.URLs))
+
+	if i.client == nil {
+		tlsCfg, err := i.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+		i.client = &http.Client{
+			Transport: &http.Transport{
+				ResponseHeaderTimeout: i.Timeout.Duration,
+				TLSClientConfig:       tlsCfg,
+			},
+			Timeout: i.Timeout.Duration,
+		}
+	}
 
 	var wg sync.WaitGroup
 	for _, u := range i.URLs {
@@ -47,26 +75,14 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 		go func(url string) {
 			defer wg.Done()
 			if err := i.gatherURL(acc, url); err != nil {
-				errorChannel <- fmt.Errorf("[url=%s]: %s", url, err)
+				acc.AddError(fmt.Errorf("[url=%s]: %s", url, err))
 			}
 		}(u)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// If there weren't any errors, we can return nil now.
-	if len(errorChannel) == 0 {
-		return nil
-	}
-
-	// There were errors, so join them all together as one big error.
-	errorStrings := make([]string, 0, len(errorChannel))
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 type point struct {
@@ -76,41 +92,33 @@ type point struct {
 }
 
 type memstats struct {
-	Alloc         int64   `json:"Alloc"`
-	TotalAlloc    int64   `json:"TotalAlloc"`
-	Sys           int64   `json:"Sys"`
-	Lookups       int64   `json:"Lookups"`
-	Mallocs       int64   `json:"Mallocs"`
-	Frees         int64   `json:"Frees"`
-	HeapAlloc     int64   `json:"HeapAlloc"`
-	HeapSys       int64   `json:"HeapSys"`
-	HeapIdle      int64   `json:"HeapIdle"`
-	HeapInuse     int64   `json:"HeapInuse"`
-	HeapReleased  int64   `json:"HeapReleased"`
-	HeapObjects   int64   `json:"HeapObjects"`
-	StackInuse    int64   `json:"StackInuse"`
-	StackSys      int64   `json:"StackSys"`
-	MSpanInuse    int64   `json:"MSpanInuse"`
-	MSpanSys      int64   `json:"MSpanSys"`
-	MCacheInuse   int64   `json:"MCacheInuse"`
-	MCacheSys     int64   `json:"MCacheSys"`
-	BuckHashSys   int64   `json:"BuckHashSys"`
-	GCSys         int64   `json:"GCSys"`
-	OtherSys      int64   `json:"OtherSys"`
-	NextGC        int64   `json:"NextGC"`
-	LastGC        int64   `json:"LastGC"`
-	PauseTotalNs  int64   `json:"PauseTotalNs"`
-	NumGC         int64   `json:"NumGC"`
-	GCCPUFraction float64 `json:"GCCPUFraction"`
-}
-
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
+	Alloc         int64      `json:"Alloc"`
+	TotalAlloc    int64      `json:"TotalAlloc"`
+	Sys           int64      `json:"Sys"`
+	Lookups       int64      `json:"Lookups"`
+	Mallocs       int64      `json:"Mallocs"`
+	Frees         int64      `json:"Frees"`
+	HeapAlloc     int64      `json:"HeapAlloc"`
+	HeapSys       int64      `json:"HeapSys"`
+	HeapIdle      int64      `json:"HeapIdle"`
+	HeapInuse     int64      `json:"HeapInuse"`
+	HeapReleased  int64      `json:"HeapReleased"`
+	HeapObjects   int64      `json:"HeapObjects"`
+	StackInuse    int64      `json:"StackInuse"`
+	StackSys      int64      `json:"StackSys"`
+	MSpanInuse    int64      `json:"MSpanInuse"`
+	MSpanSys      int64      `json:"MSpanSys"`
+	MCacheInuse   int64      `json:"MCacheInuse"`
+	MCacheSys     int64      `json:"MCacheSys"`
+	BuckHashSys   int64      `json:"BuckHashSys"`
+	GCSys         int64      `json:"GCSys"`
+	OtherSys      int64      `json:"OtherSys"`
+	NextGC        int64      `json:"NextGC"`
+	LastGC        int64      `json:"LastGC"`
+	PauseTotalNs  int64      `json:"PauseTotalNs"`
+	PauseNs       [256]int64 `json:"PauseNs"`
+	NumGC         int64      `json:"NumGC"`
+	GCCPUFraction float64    `json:"GCCPUFraction"`
 }
 
 // Gathers data from a particular URL
@@ -127,7 +135,7 @@ func (i *InfluxDB) gatherURL(
 	shardCounter := 0
 	now := time.Now()
 
-	resp, err := client.Get(url)
+	resp, err := i.client.Get(url)
 	if err != nil {
 		return err
 	}
@@ -193,6 +201,7 @@ func (i *InfluxDB) gatherURL(
 						"next_gc":         m.NextGC,
 						"last_gc":         m.LastGC,
 						"pause_total_ns":  m.PauseTotalNs,
+						"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
 						"num_gc":          m.NumGC,
 						"gcc_pu_fraction": m.GCCPUFraction,
 					},
@@ -210,9 +219,13 @@ func (i *InfluxDB) gatherURL(
 			continue
 		}
 
+		if p.Tags == nil {
+			p.Tags = make(map[string]string)
+		}
+
 		// If the object was a point, but was not fully initialized,
 		// ignore it and move on.
-		if p.Name == "" || p.Tags == nil || p.Values == nil || len(p.Values) == 0 {
+		if p.Name == "" || p.Values == nil || len(p.Values) == 0 {
 			continue
 		}
 
@@ -244,6 +257,8 @@ func (i *InfluxDB) gatherURL(
 
 func init() {
 	inputs.Add("influxdb", func() telegraf.Input {
-		return &InfluxDB{}
+		return &InfluxDB{
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }

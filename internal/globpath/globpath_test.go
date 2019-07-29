@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,35 +27,74 @@ func TestCompileAndMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	matches := g1.Match()
-	assert.Len(t, matches, 3)
+	require.Len(t, matches, 6)
 	matches = g2.Match()
-	assert.Len(t, matches, 2)
+	require.Len(t, matches, 2)
 	matches = g3.Match()
-	assert.Len(t, matches, 1)
+	require.Len(t, matches, 1)
 	matches = g4.Match()
-	assert.Len(t, matches, 0)
+	require.Len(t, matches, 1)
 	matches = g5.Match()
-	assert.Len(t, matches, 0)
+	require.Len(t, matches, 0)
 }
 
-func TestFindRootDir(t *testing.T) {
+func TestRootGlob(t *testing.T) {
+	dir := getTestdataDir()
 	tests := []struct {
 		input  string
 		output string
 	}{
-		{"/var/log/telegraf.conf", "/var/log"},
-		{"/home/**", "/home"},
-		{"/home/*/**", "/home"},
-		{"/lib/share/*/*/**.txt", "/lib/share"},
+		{dir + "/**", dir + "/*"},
+		{dir + "/nested?/**", dir + "/nested?/*"},
+		{dir + "/ne**/nest*", dir + "/ne*"},
+		{dir + "/nested?/*", ""},
 	}
 
 	for _, test := range tests {
-		actual := findRootDir(test.input)
-		assert.Equal(t, test.output, actual)
+		actual, _ := Compile(test.input)
+		require.Equal(t, actual.rootGlob, test.output)
 	}
+}
+
+func TestFindNestedTextFile(t *testing.T) {
+	dir := getTestdataDir()
+	// test super asterisk
+	g1, err := Compile(dir + "/**.txt")
+	require.NoError(t, err)
+
+	matches := g1.Match()
+	require.Len(t, matches, 1)
 }
 
 func getTestdataDir() string {
 	_, filename, _, _ := runtime.Caller(1)
 	return strings.Replace(filename, "globpath_test.go", "testdata", 1)
+}
+
+func TestMatch_ErrPermission(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []string
+	}{
+		{"/root/foo", []string{"/root/foo"}},
+		{"/root/f*", []string(nil)},
+	}
+
+	for _, test := range tests {
+		glob, err := Compile(test.input)
+		require.NoError(t, err)
+		actual := glob.Match()
+		require.Equal(t, test.expected, actual)
+	}
+}
+
+func TestWindowsSeparator(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows only test")
+	}
+
+	glob, err := Compile("testdata/nested1")
+	require.NoError(t, err)
+	ok := glob.MatchString("testdata\\nested1")
+	require.True(t, ok)
 }
