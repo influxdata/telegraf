@@ -540,10 +540,6 @@
 
 ### Features
 
-- [#1413](https://github.com/influxdata/telegraf/issues/1413): Separate container_version from container_image tag.
-- [#1525](https://github.com/influxdata/telegraf/pull/1525): Support setting per-device and total metrics for Docker network and blockio.
-- [#1466](https://github.com/influxdata/telegraf/pull/1466): MongoDB input plugin: adding per DB stats from db.stats()
-- [#1562](https://github.com/influxdata/telegraf/pull/1562): uwsgi input plugin. thanks @OrangeTux and @blaggacao!
 - [#4236](https://github.com/influxdata/telegraf/pull/4236): Add SSL/TLS support to redis input.
 - [#4160](https://github.com/influxdata/telegraf/pull/4160): Add tengine input plugin.
 - [#4262](https://github.com/influxdata/telegraf/pull/4262): Add power draw field to nvidia_smi plugin.

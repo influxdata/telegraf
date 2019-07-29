@@ -201,7 +201,11 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 }
 
 func init() {
-	inputs.Add("uwsgi", func() telegraf.Input { return &Uwsgi{} })
+	inputs.Add("uwsgi", func() telegraf.Input {
+		return &Uwsgi{
+			Timeout: 5,
+		}
+	})
 }
 
 // StatsServer defines the stats server structure.
