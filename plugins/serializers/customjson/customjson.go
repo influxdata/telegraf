@@ -139,8 +139,8 @@ func buildDefaultTagsParameter(metric telegraf.Metric, dataGroup map[string]inte
 			tagsBuffer.WriteString("_")
 		}
 		tagsBuffer.WriteString(n)
-		tags_name := tagsBuffer.String()
-		dataGroup[tags_name] = t
+		tagsName := tagsBuffer.String()
+		dataGroup[tagsName] = t
 	}
 	return json.Marshal(dataGroup)
 }
