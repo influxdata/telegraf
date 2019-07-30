@@ -1,9 +1,8 @@
-ifeq ($(SHELL), cmd)
+ifeq ($(OS), Windows_NT)
 	VERSION := $(shell git describe --exact-match --tags 2>nil)
 	HOME := $(HOMEPATH)
-else ifeq ($(SHELL), sh.exe)
-	VERSION := $(shell git describe --exact-match --tags 2>nil)
-	HOME := $(HOMEPATH)
+	CGO_ENABLED ?= 0
+	export CGO_ENABLED
 else
 	VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 endif
@@ -47,7 +46,6 @@ go-install:
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
 	cp telegraf $(DESTDIR)$(PREFIX)/bin/
-
 
 .PHONY: test
 test:
