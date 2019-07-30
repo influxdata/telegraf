@@ -1,4 +1,4 @@
-package flattenjson
+package customjson
 
 import (
 	"fmt"

@@ -6,7 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
-	"github.com/influxdata/telegraf/plugins/serializers/flattenjson"
+	"github.com/influxdata/telegraf/plugins/serializers/customjson"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -81,10 +81,10 @@ type Config struct {
 	// When enabled forward slash (/) and comma (,) will be accepted
 	WavefrontUseStrict bool
 
-	// Include JMESPath expression for flattenjson output
+	// Include JMESPath expression for customjson output
 	JmespathExpression string
 
-	// Include tags prefix for flattenjson output
+	// Include tags prefix for customjson output
 	TagsPrefix string
 }
 
@@ -107,8 +107,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewCarbon2Serializer()
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
-	case "flattenjson":
-		serializer, err = NewFlattenjsonSerializer(config.JmespathExpression, config.TagsPrefix)
+	case "customjson":
+		serializer, err = NewCustomjsonSerializer(config.JmespathExpression, config.TagsPrefix)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -165,6 +165,6 @@ func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serialize
 	}, nil
 }
 
-func NewFlattenjsonSerializer(jmespath_expression string, tags_prefix string) (Serializer, error) {
-	return flattenjson.NewSerializer(jmespath_expression, tags_prefix)
+func NewCustomjsonSerializer(jmespath_expression string, tags_prefix string) (Serializer, error) {
+	return customjson.NewSerializer(jmespath_expression, tags_prefix)
 }

@@ -1,4 +1,4 @@
-package flattenjson
+package customjson
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 
 	m, err := s.createObject(metric)
 	if err != nil {
-		return nil, fmt.Errorf("D! [serializer.flattenjson] Dropping invalid metric: %s", metric.Name())
+		return nil, fmt.Errorf("D! [serializer.customjson] Dropping invalid metric: %s", metric.Name())
 	}
 
 	return m, nil
@@ -40,7 +40,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, metric := range metrics {
 		m, err := s.createObject(metric)
 		if err != nil {
-			return nil, fmt.Errorf("D! [serializer.flattenjson] Dropping invalid metric: %s", metric.Name())
+			return nil, fmt.Errorf("D! [serializer.customjson] Dropping invalid metric: %s", metric.Name())
 		} else if m != nil {
 			serialized = append(serialized, m...)
 		}
@@ -52,7 +52,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, err error) {
 
 	/*  All fields index become dimensions and all tags index can be prefixed by tags_prefix config input and located on json root.
-	    ** Default flattenjson format contains the following fields:
+	    ** Default customjson format contains the following fields:
 		** metric_family: The name of the metric
 		** metric_name:   The name of the fields dimension
 		** metric_value:  The value of the fields dimension

@@ -1,9 +1,9 @@
 # Customjson serializer
 
-The customjson serializer allow you to have unitary metric and to customize output format for common parameter (metric_family, metric_name, metric_value,timestamp) based on default unitary metric format. To specify custom output format for common parameters, you have to specify the parameter "jmespath_expression" with JMESPath grammar expression on the Telegraf configuration file. Tags parameter can be prefixed by the parameter "tags_prefix" on the Telegraf configuration file.
+The customjson serializer allow you to have unitary metric and to customize output format based on JMESPath grammar for common parameter (metric_family, metric_name, metric_value,timestamp) based on default unitary metric format. To specify custom output format for common parameters, you have to specify the parameter "jmespath_expression" with JMESPath grammar expression on the Telegraf configuration file. Tags parameter can be prefixed by the parameter "tags_prefix" on the Telegraf configuration file.
 jmespath_expression and tags_prefix parameter are mandatory on the Telegraf configuration file for customjson data format.
 
-As an exemple of default unitary metric format (with jmespath_expression="" and tags_prefix="":
+As an output exemple of default unitary metric format (with jmespath_expression="" and tags_prefix="":
 ```javascript
 {
   "metric_family": "diskio",
@@ -15,7 +15,7 @@ As an exemple of default unitary metric format (with jmespath_expression="" and 
 }
 ```
 
-As an exemple of default unitary metric format (with jmespath_expression="" and tags_prefix="tags":
+As an output exemple of default unitary metric format (with jmespath_expression="" and tags_prefix="tags":
 ```javascript
 {
   "metric_family": "diskio",
@@ -27,7 +27,7 @@ As an exemple of default unitary metric format (with jmespath_expression="" and 
 }
 ```
 
-As an exemple of default unitary metric format (with jmespath_expression="{timestamp:timestamp,event:'metric',family_name:join('_',[metric_family,metric_name]),fields:{_value:metric_value,name:metric_name}}" and tags_prefix="tags":
+As an output exemple of default unitary metric format (with jmespath_expression="{timestamp:timestamp,event:'metric',family_name:join('_',[metric_family,metric_name]),fields:{_value:metric_value,name:metric_name}}" and tags_prefix="tags":
 ```javascript
 {
   "event": "metric",
