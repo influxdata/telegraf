@@ -38,6 +38,7 @@ type InfluxDB struct {
 	Password             string
 	Database             string
 	DatabaseTag          string `toml:"database_tag"`
+	ExcludeDatabaseTag   bool   `toml:"exclude_database_tag"`
 	UserAgent            string
 	RetentionPolicy      string
 	WriteConsistency     string
@@ -76,6 +77,9 @@ var sampleConfig = `
   ## The value of this tag will be used to determine the database.  If this
   ## tag is not set the 'database' option is used as the default.
   # database_tag = ""
+
+  ## If true, the database tag will not be added to the metric.
+  # exclude_database_tag = false
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
   ## Telegraf with a user without permissions to create databases or when the
@@ -262,6 +266,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		Headers:              i.HTTPHeaders,
 		Database:             i.Database,
 		DatabaseTag:          i.DatabaseTag,
+		ExcludeDatabaseTag:   i.ExcludeDatabaseTag,
 		SkipDatabaseCreation: i.SkipDatabaseCreation,
 		RetentionPolicy:      i.RetentionPolicy,
 		Consistency:          i.WriteConsistency,
