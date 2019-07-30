@@ -103,6 +103,58 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
+func appendErr(errs, err error) error {
+	if errs == nil {
+		return err
+	}
+
+	return fmt.Errorf("%s; %s", errs.Error(), err.Error())
+}
+
+// EagerParse continues parsing the input for metrics despite encountering an error.
+func (p *Parser) EagerParse(input []byte) ([]telegraf.Metric, error) {
+	p.Lock()
+	defer p.Unlock()
+	metrics := make([]telegraf.Metric, 0)
+	p.machine.SetData(input)
+
+	var retErr error
+
+	for {
+		err := p.machine.Next()
+		if err == EOF {
+			break
+		}
+
+		if err != nil {
+			retErr = appendErr(retErr, &ParseError{
+				Offset:     p.machine.Position(),
+				LineOffset: p.machine.LineOffset(),
+				LineNumber: p.machine.LineNumber(),
+				Column:     p.machine.Column(),
+				msg:        err.Error(),
+				buf:        string(input),
+			})
+			continue
+		}
+
+		metric, err := p.handler.Metric()
+		if err != nil {
+			retErr = appendErr(retErr, err)
+			continue
+		}
+
+		if metric == nil {
+			continue
+		}
+
+		metrics = append(metrics, metric)
+	}
+
+	p.applyDefaultTags(metrics)
+	return metrics, retErr
+}
+
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
