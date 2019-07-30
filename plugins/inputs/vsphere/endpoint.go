@@ -660,10 +660,10 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			if net.DeviceConfigId == -1 {
 				continue
 			}
-			if net.IpConfig == nil || net.IpConfig.IpAddress == nil{
+			if net.IpConfig == nil || net.IpConfig.IpAddress == nil {
 				continue
 			}
-			ips := make(map [string][]string)
+			ips := make(map[string][]string)
 			for _, ip := range net.IpConfig.IpAddress {
 				addr := ip.IpAddress
 				for _, ipType := range e.Parent.IpAddresses {
@@ -684,7 +684,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 				}
 			}
 			for ipType, ipList := range ips {
-				lookup["nic/"+strconv.Itoa(int(net.DeviceConfigId)) + "/" + ipType] = strings.Join(ipList, ",")
+				lookup["nic/"+strconv.Itoa(int(net.DeviceConfigId))+"/"+ipType] = strings.Join(ipList, ",")
 			}
 		}
 
@@ -1135,7 +1135,7 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 				t["guest"] = objectRef.guest
 			}
 			if gh := objectRef.lookup["guesthostname"]; gh != "" {
-				t["guesthostname"] = gh;
+				t["guesthostname"] = gh
 			}
 			if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 				t["clustername"] = c.name
@@ -1171,10 +1171,10 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		// Add IP addresses to NIC data.
 		if resourceType == "vm" && objectRef.lookup != nil {
 			key := "nic/" + t["interface"] + "/"
-			if ip, ok := objectRef.lookup[key + "ipv6"]; ok {
+			if ip, ok := objectRef.lookup[key+"ipv6"]; ok {
 				t["ipv6"] = ip
 			}
-			if ip, ok := objectRef.lookup[key + "ipv4"]; ok {
+			if ip, ok := objectRef.lookup[key+"ipv4"]; ok {
 				t["ipv4"] = ip
 			}
 		}
