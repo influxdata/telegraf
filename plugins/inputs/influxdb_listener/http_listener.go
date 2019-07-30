@@ -281,6 +281,10 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	for {
 		n, err := io.ReadFull(body, buf[bufStart:])
 		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+			if err.Error() == "http: request body too large" {
+				tooLarge(res)
+				return
+			}
 			log.Println("D! " + err.Error())
 			// problem reading the request body
 			badRequest(res, err.Error())
@@ -290,7 +294,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.EOF {
 			if return400 {
-				badRequest(res, "")
+				tooLarge(res)
 			} else {
 				res.WriteHeader(http.StatusNoContent)
 			}
@@ -341,6 +345,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			// drop any line longer than the max buffer size
 			log.Printf("D! http_listener received a single line longer than the maximum of %d bytes",
 				len(buf))
+			// todo: why can't we just tooLarge(res) and return here?
 			hangingBytes = true
 			return400 = true
 			bufStart = 0
@@ -380,9 +385,10 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
 func tooLarge(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
-	res.Header().Set("X-Influxdb-Error", "http: request body too large")
+	res.Header().Set("X-Influxdb-Error", "Request Entity Too Large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
-	res.Write([]byte(`{"error":"http: request body too large"}`))
+	res.Write([]byte(`{"error":"Request Entity Too Large"}
+`))
 }
 
 func badRequest(res http.ResponseWriter, errString string) {

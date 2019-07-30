@@ -185,7 +185,7 @@ func TestWriteHTTP(t *testing.T) {
 	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
 	resp.Body.Close()
-	require.EqualValues(t, 400, resp.StatusCode)
+	require.EqualValues(t, 413, resp.StatusCode)
 
 	acc.Wait(3)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
