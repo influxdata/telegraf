@@ -136,19 +136,10 @@ func loadExternalPlugins(rootDir string) error {
 			return nil
 		}
 
-		// name will be the path to the plugin file beginning at the root
-		// directory, minus the extension.
-		// ie, if the plugin file is ./telegraf-plugins/foo.so, name
-		// will be "telegraf-plugins/foo"
-		name := strings.TrimPrefix(strings.TrimPrefix(pth, rootDir), string(os.PathSeparator))
-		name = strings.TrimSuffix(name, filepath.Ext(pth))
-
 		// Load plugin.
 		_, err = plugin.Open(pth)
 		if err != nil {
-			errorMsg := fmt.Sprintf("error loading [%s]: %s", pth, err)
-			log.Printf(errorMsg)
-			return errors.New(errorMsg)
+			return fmt.Errorf("error loading %s: %s", pth, err)
 		}
 
 		return nil
@@ -161,7 +152,6 @@ func runAgent(ctx context.Context,
 ) error {
 	// Setup default logging. This may need to change after reading the config
 	// file, but we can configure it to use our logger implementation now.
-	logger.SetupLogging(logger.LogConfig{})
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
@@ -323,11 +313,13 @@ func main() {
 		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
 	}
 
+	logger.SetupLogging(logger.LogConfig{})
+
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
-		log.Printf("Loading external plugins from: %s\n", *fPlugins)
+		log.Printf("I! Loading external plugins from: %s", *fPlugins)
 		if err := loadExternalPlugins(*fPlugins); err != nil {
-			log.Fatal(err.Error())
+			log.Fatal("E! " + err.Error())
 		}
 	}
 
