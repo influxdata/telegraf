@@ -19,10 +19,6 @@
   version = "1.15.54"
 
 [[constraint]]
-  name = "github.com/bsm/sarama-cluster"
-  version = "2.1.13"
-
-[[constraint]]
   name = "github.com/couchbase/go-couchbase"
   branch = "master"
 

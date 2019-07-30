@@ -62,6 +62,14 @@
   version = "v10.12.0"
 
 [[projects]]
+  digest = "1:82041ab48e5c76da656b723fdc13a2b9ec716cdc736f82adaac77f5c39d4fca8"
+  name = "github.com/DataDog/zstd"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2347a397da4ee9c6b8226d4aff82c302d0e52773"
+  version = "v1.4.1"
+
+[[projects]]
   branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
@@ -81,12 +89,12 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "1:213b41361ad1cb4768add9d26c2e27794c65264eefdb24ed6ea34cdfeeff3f3c"
+  digest = "1:5dd52495eaf9fad11f4742f341166aa9eb68f70061fc1a9b546f9481b284b6d8"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
-  revision = "a6144ae922fd99dd0ea5046c8137acfb7fab0914"
-  version = "v1.18.0"
+  revision = "46c83074a05474240f9620fb7c70fb0d80ca401a"
+  version = "v1.23.1"
 
 [[projects]]
   digest = "1:f82b8ac36058904227087141017bb82f4b0fc58272990a4cdae3e2d6d222644e"
@@ -194,14 +202,6 @@
   packages = ["quantile"]
   pruneopts = ""
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
-
-[[projects]]
-  digest = "1:c5978131c797af795972c27c25396c81d1bf53b7b6e8e3e0259e58375765c071"
-  name = "github.com/bsm/sarama-cluster"
-  packages = ["."]
-  pruneopts = ""
-  revision = "cf455bc755fe41ac9bb2861e7a961833d9c2ecc3"
-  version = "v2.1.13"
 
 [[projects]]
   digest = "1:e5691038f8e87e7da05280095d968e50c17d624e25cca095d4e4cd947a805563"
@@ -641,6 +641,14 @@
   revision = "6bb64b370b90e7ef1fa532be9e591a81c3493e00"
 
 [[projects]]
+  digest = "1:0038a7f43b51c8b2a8cd03b5372e73f8eadfe156484c2ae8185ae836f8ebc2cd"
+  name = "github.com/hashicorp/go-uuid"
+  packages = ["."]
+  pruneopts = ""
+  revision = "4f571afc59f3043a65f8fe6bf46d887b10a01d43"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:f72168ea995f398bab88e84bd1ff58a983466ba162fb8d50d47420666cd57fad"
   name = "github.com/hashicorp/serf"
   packages = ["coordinate"]
@@ -709,6 +717,17 @@
   pruneopts = ""
   revision = "8faa4453fc7051d1076053f8854077753ab912f2"
   version = "v3.4.0"
+
+[[projects]]
+  digest = "1:d45477e90c25c8c6d7d4237281167aa56079382fc042db4b44a8328071649bfa"
+  name = "github.com/jcmturner/gofork"
+  packages = [
+    "encoding/asn1",
+    "x/crypto/pbkdf2",
+  ]
+  pruneopts = ""
+  revision = "dc7c13fece037a4a36e2b3c69db4991498d30692"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
@@ -1524,6 +1543,72 @@
   version = "v0.9.1"
 
 [[projects]]
+  digest = "1:4777ba481cc12866b89aafb0a67529e7ac48b9aea06a25f3737b2cf5a3ffda12"
+  name = "gopkg.in/jcmturner/aescts.v1"
+  packages = ["."]
+  pruneopts = ""
+  revision = "f6abebb3171c4c1b1fea279cb7c7325020a26290"
+  version = "v1.0.1"
+
+[[projects]]
+  digest = "1:84c5b1392ef65ad1bb64da4b4d0beb2f204eefc769d6d96082347bb7057cb7b1"
+  name = "gopkg.in/jcmturner/dnsutils.v1"
+  packages = ["."]
+  pruneopts = ""
+  revision = "13eeb8d49ffb74d7a75784c35e4d900607a3943c"
+  version = "v1.0.1"
+
+[[projects]]
+  digest = "1:502ab576ba8c47c4de77fe3f2b2386adc1a1447bb5afae2ac7bf0edd2b6f7c52"
+  name = "gopkg.in/jcmturner/gokrb5.v7"
+  packages = [
+    "asn1tools",
+    "client",
+    "config",
+    "credentials",
+    "crypto",
+    "crypto/common",
+    "crypto/etype",
+    "crypto/rfc3961",
+    "crypto/rfc3962",
+    "crypto/rfc4757",
+    "crypto/rfc8009",
+    "gssapi",
+    "iana",
+    "iana/addrtype",
+    "iana/adtype",
+    "iana/asnAppTag",
+    "iana/chksumtype",
+    "iana/errorcode",
+    "iana/etypeID",
+    "iana/flags",
+    "iana/keyusage",
+    "iana/msgtype",
+    "iana/nametype",
+    "iana/patype",
+    "kadmin",
+    "keytab",
+    "krberror",
+    "messages",
+    "pac",
+    "types",
+  ]
+  pruneopts = ""
+  revision = "363118e62befa8a14ff01031c025026077fe5d6d"
+  version = "v7.3.0"
+
+[[projects]]
+  digest = "1:f9956ccc103c6208cd50c71ee5191b6fdcc635972c12624ef949c9b20b2bb9d1"
+  name = "gopkg.in/jcmturner/rpc.v1"
+  packages = [
+    "mstypes",
+    "ndr",
+  ]
+  pruneopts = ""
+  revision = "99a8ce2fbf8b8087b6ed12a37c61b10f04070043"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:367baf06b7dbd0ef0bbdd785f6a79f929c96b0c18e9d3b29c0eed1ac3f5db133"
   name = "gopkg.in/ldap.v2"
   packages = ["."]
@@ -1598,7 +1683,6 @@
     "github.com/aws/aws-sdk-go/service/cloudwatch",
     "github.com/aws/aws-sdk-go/service/dynamodb",
     "github.com/aws/aws-sdk-go/service/kinesis",
-    "github.com/bsm/sarama-cluster",
     "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout",
     "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis",
     "github.com/couchbase/go-couchbase",
