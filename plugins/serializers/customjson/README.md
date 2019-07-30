@@ -1,9 +1,9 @@
 # Customjson serializer
 
-The customjson serializer allow you to have unitary metric and to customize output format based on JMESPath grammar for common parameter (metric_family, metric_name, metric_value,timestamp) based on default unitary metric format. To specify custom output format for common parameters, you have to specify the parameter "jmespath_expression" with JMESPath grammar expression on the Telegraf configuration file. Tags parameter can be prefixed by the parameter "tags_prefix" on the Telegraf configuration file.
-jmespath_expression and tags_prefix parameter are mandatory on the Telegraf configuration file for customjson data format.
+The customjson serializer allow you to get unitary metric by document and to customize output format based on JMESPath grammar (http://jmespath.org) for commons parameters (metric_family, metric_name, metric_value, timestamp) based on default unitary metric format. To specify custom output format for common parameters, you have to specify the parameter "jmespath_expression" with JMESPath grammar expression on the Telegraf configuration file. Tags parameter can be prefixed using the parameter "tags_prefix" on the Telegraf configuration file.
+jmespath_expression and tags_prefix parameters are mandatory on the Telegraf configuration file for customjson data format.
 
-As an output exemple of default unitary metric format (with jmespath_expression="" and tags_prefix="":
+An event example of default customjson format (with jmespath_expression="" and tags_prefix="") looks like:
 ```javascript
 {
   "metric_family": "diskio",
@@ -15,7 +15,7 @@ As an output exemple of default unitary metric format (with jmespath_expression=
 }
 ```
 
-As an output exemple of default unitary metric format (with jmespath_expression="" and tags_prefix="tags":
+An event example of default customjson format (with jmespath_expression="" and tags_prefix="tags") looks like:
 ```javascript
 {
   "metric_family": "diskio",
@@ -27,7 +27,7 @@ As an output exemple of default unitary metric format (with jmespath_expression=
 }
 ```
 
-As an output exemple of default unitary metric format (with jmespath_expression="{timestamp:timestamp,event:'metric',family_name:join('_',[metric_family,metric_name]),fields:{_value:metric_value,name:metric_name}}" and tags_prefix="tags":
+An event example of customized customjson format (with jmespath_expression="{timestamp:timestamp,event:'metric',family_name:join('_',[metric_family,metric_name]),fields:{_value:metric_value,name:metric_name}}" and tags_prefix="tags") looks like:
 ```javascript
 {
   "event": "metric",
@@ -44,7 +44,7 @@ As an output exemple of default unitary metric format (with jmespath_expression=
 
 ## Using with the File output
 
-An example configuration of a file based output with default unitary metric format:
+Example of "output.file" Telegraf configuration with default customjson format:
 
 ```toml
  # Send telegraf metrics to file(s)
@@ -58,7 +58,7 @@ An example configuration of a file based output with default unitary metric form
   tags_prefix=""
 ```
 
-An example configuration of a file based output with default unitary metric format and prefixed tags:
+Example of "output.file" Telegraf configuration with default customjson format and prefixed tags:
 
 ```toml
  # Send telegraf metrics to file(s)
@@ -72,7 +72,7 @@ An example configuration of a file based output with default unitary metric form
   tags_prefix="tags"
 ```
 
-An example configuration of a file based output with custom unitary metric format and prefixed tags:
+Example of "output.file" Telegraf configuration with customized customjson format and prefixed tags:
 
 ```toml
  # Send telegraf metrics to file(s)
