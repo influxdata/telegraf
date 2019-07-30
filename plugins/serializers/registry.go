@@ -80,6 +80,12 @@ type Config struct {
 	// Use Strict rules to sanitize metric and tag names from invalid characters for Wavefront
 	// When enabled forward slash (/) and comma (,) will be accepted
 	WavefrontUseStrict bool
+
+	// Include JMESPath expression for flattenjson output
+	JmespathExpression string
+
+	// Include tags prefix for flattenjson output
+	TagsPrefix string
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -102,7 +108,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "wavefront":
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "flattenjson":
-		serializer, err = NewFlattenjsonSerializer()
+		serializer, err = NewFlattenjsonSerializer(config.JmespathExpression, config.TagsPrefix)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -159,6 +165,6 @@ func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serialize
 	}, nil
 }
 
-func NewFlattenjsonSerializer() (Serializer, error) {
-	return flattenjson.NewSerializer()
+func NewFlattenjsonSerializer(jmespath_expression string, tags_prefix string) (Serializer, error) {
+	return flattenjson.NewSerializer(jmespath_expression, tags_prefix)
 }

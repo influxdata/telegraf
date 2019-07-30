@@ -1,18 +1,25 @@
 package flattenjson
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/influxdata/telegraf"
+	"github.com/jmespath/go-jmespath"
 )
 
 type serializer struct {
+	JmespathExpression string
+	TagsPrefix         string
 }
 
-func NewSerializer() (*serializer, error) {
-	s := &serializer{}
+func NewSerializer(jmespath_expression string, tags_prefix string) (*serializer, error) {
+	s := &serializer{
+		JmespathExpression: jmespath_expression,
+		TagsPrefix:         tags_prefix,
+	}
 	return s, nil
 }
 
@@ -44,18 +51,22 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, err error) {
 
-	/*  All fields index become dimensions and all tags index are prefixed by 'tags_' and located on json root.
-	    ** Flattenjson contains the following fields:
+	/*  All fields index become dimensions and all tags index can be prefixed by tags_prefix config input and located on json root.
+	    ** Default flattenjson format contains the following fields:
 		** metric_family: The name of the metric
 		** metric_name:   The name of the fields dimension
 		** metric_value:  The value of the fields dimension
-		** tags_*:	The name and values of the tags
+		** *:             The name and values of the tags
 		** timestamp:     The timestamp for the metric
 	*/
 
 	// Build output result
 	dataGroup := map[string]interface{}{}
 	var metricJson []byte
+
+	if s.JmespathExpression != "" {
+		jmespath.MustCompile(s.JmespathExpression)
+	}
 
 	for _, field := range metric.FieldList() {
 
@@ -71,17 +82,18 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 		// Convert ns to float milliseconds since epoch.
 		dataGroup["timestamp"] = float64(metric.Time().UnixNano()) / float64(1000000)
 
-		// Build tags parameter
-		for n, t := range metric.Tags() {
-			dataGroup["tags_"+n] = t
-		}
-
 		// Build fields parameter
 		dataGroup["metric_name"] = field.Key
 		dataGroup["metric_value"] = fieldValue
 
+		// Build tags parameter
+		if s.JmespathExpression != "" {
+			metricJson, err = buildJmespathTagsParameter(metric, dataGroup, s)
+		} else {
+			metricJson, err = buildDefaultTagsParameter(metric, dataGroup, s)
+		}
+
 		// Output the data as a fields array.
-		metricJson, err = json.Marshal(dataGroup)
 		metricJson = append(metricJson, '\n')
 
 		metricGroup = append(metricGroup, metricJson...)
@@ -92,6 +104,45 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 	}
 
 	return metricGroup, nil
+}
+
+func buildJmespathTagsParameter(metric telegraf.Metric, dataGroup map[string]interface{}, s *serializer) (metricJson []byte, err error) {
+	var jmespathBuffer bytes.Buffer
+	jmespathExpressionLen := len(s.JmespathExpression)
+	jmespathBuffer.WriteString(s.JmespathExpression[:jmespathExpressionLen-1])
+	for n, t := range metric.Tags() {
+		jmespathBuffer.WriteString(",")
+		if s.TagsPrefix != "" {
+			jmespathBuffer.WriteString(s.TagsPrefix)
+			jmespathBuffer.WriteString("_")
+		}
+		jmespathBuffer.WriteString(n)
+		jmespathBuffer.WriteString(":")
+		jmespathBuffer.WriteString("'")
+		jmespathBuffer.WriteString(t)
+		jmespathBuffer.WriteString("'")
+	}
+	jmespathBuffer.WriteString("}")
+
+	jmespathDataGroup, err := jmespath.Search(jmespathBuffer.String(), dataGroup)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(jmespathDataGroup)
+}
+
+func buildDefaultTagsParameter(metric telegraf.Metric, dataGroup map[string]interface{}, s *serializer) (metricJson []byte, err error) {
+	for n, t := range metric.Tags() {
+		var tagsBuffer bytes.Buffer
+		if s.TagsPrefix != "" {
+			tagsBuffer.WriteString(s.TagsPrefix)
+			tagsBuffer.WriteString("_")
+		}
+		tagsBuffer.WriteString(n)
+		tags_name := tagsBuffer.String()
+		dataGroup[tags_name] = t
+	}
+	return json.Marshal(dataGroup)
 }
 
 func verifyValue(v interface{}) (value interface{}, valid bool) {
