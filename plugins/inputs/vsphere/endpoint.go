@@ -28,6 +28,8 @@ var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
 
 var isIPv4 = regexp.MustCompile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")
 
+var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
+
 const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
 
 const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
@@ -646,27 +648,44 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 		}
 		guest := "unknown"
 		uuid := ""
+		lookup := make(map[string]string)
+
+		// Extract host name
+		if r.Guest != nil && r.Guest.HostName != "" {
+			lookup["guesthostname"] = r.Guest.HostName
+		}
 
 		// Collect network information
-		lookup := make(map[string]string)
 		for _, net := range r.Guest.Net {
 			if net.DeviceConfigId == -1 {
 				continue
 			}
-			s := ""
-			first := true
-			for _, ip := range net.IpAddress {
-				if e.Parent.Ipv4Only && !isIPv4.MatchString(ip) {
-					continue
-				}
-				if !first {
-					s += ","
-				} else {
-					first = false
-				}
-				s += ip
+			if net.IpConfig == nil || net.IpConfig.IpAddress == nil{
+				continue
 			}
-			lookup["nic/"+strconv.Itoa(int(net.DeviceConfigId))] = s
+			ips := make(map [string][]string)
+			for _, ip := range net.IpConfig.IpAddress {
+				addr := ip.IpAddress
+				for _, ipType := range e.Parent.IpAddresses {
+					if !(ipType == "ipv4" && isIPv4.MatchString(addr) ||
+						ipType == "ipv6" && isIPv6.MatchString(addr)) {
+						continue
+					}
+
+					// By convention, we want the preferred addresses to appear first in the array.
+					if _, ok := ips[ipType]; !ok {
+						ips[ipType] = make([]string, 0)
+					}
+					if ip.State == "preferred" {
+						ips[ipType] = append([]string{addr}, ips[ipType]...)
+					} else {
+						ips[ipType] = append(ips[ipType], addr)
+					}
+				}
+			}
+			for ipType, ipList := range ips {
+				lookup["nic/"+strconv.Itoa(int(net.DeviceConfigId)) + "/" + ipType] = strings.Join(ipList, ",")
+			}
 		}
 
 		// Sometimes Config is unknown and returns a nil pointer
@@ -1115,6 +1134,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			if objectRef.guest != "" {
 				t["guest"] = objectRef.guest
 			}
+			if gh := objectRef.lookup["guesthostname"]; gh != "" {
+				t["guesthostname"] = gh;
+			}
 			if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 				t["clustername"] = c.name
 			}
@@ -1146,15 +1168,14 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	} else if strings.HasPrefix(name, "net.") {
 		t["interface"] = instance
 
-		// Add IP addresses to NIC data
+		// Add IP addresses to NIC data.
 		if resourceType == "vm" && objectRef.lookup != nil {
-			key := "nic/" + t["interface"]
-			index := 0
-			if ip, ok := objectRef.lookup[key]; ok {
-				for _, s := range strings.Split(ip, ",") {
-					t["ip"+strconv.Itoa(index)] = s
-					index++
-				}
+			key := "nic/" + t["interface"] + "/"
+			if ip, ok := objectRef.lookup[key + "ipv6"]; ok {
+				t["ipv6"] = ip
+			}
+			if ip, ok := objectRef.lookup[key + "ipv4"]; ok {
+				t["ipv4"] = ip
 			}
 		}
 	} else if strings.HasPrefix(name, "storageAdapter.") {

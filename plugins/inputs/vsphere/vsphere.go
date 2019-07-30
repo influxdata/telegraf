@@ -43,7 +43,7 @@ type VSphere struct {
 	CustomAttributeInclude  []string
 	CustomAttributeExclude  []string
 	UseIntSamples           bool
-	Ipv4Only                bool
+	IpAddresses             []string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -158,8 +158,8 @@ var sampleConfig = `
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
-  ## Only consider ipv4 when trying to map IP addresses to interfaces
-  # ipv4Only = true
+  ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+  # ip_addresses = ["ipv6", "ipv4" ]
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
@@ -337,7 +337,7 @@ func init() {
 			CustomAttributeInclude:  []string{},
 			CustomAttributeExclude:  []string{"*"},
 			UseIntSamples:           true,
-			Ipv4Only:                true,
+			IpAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,
