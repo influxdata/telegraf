@@ -9,18 +9,20 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Uwsgi server struct
 type Uwsgi struct {
-	Servers []string `toml:"servers"`
-	Timeout int      `toml:"timeout"`
+	Servers []string          `toml:"servers"`
+	Timeout internal.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -40,8 +42,8 @@ func (u *Uwsgi) SampleConfig() string {
   ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
   servers = ["tcp://127.0.0.1:1717"]
 
-  ## General connection timout in seconds
-  # timeout = 5
+  ## General connection timout
+  # timeout = "5s"
 `
 }
 
@@ -49,7 +51,7 @@ func (u *Uwsgi) SampleConfig() string {
 func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 	if u.client == nil {
 		u.client = &http.Client{
-			Timeout: time.Duration(u.Timeout) * time.Second,
+			Timeout: u.Timeout.Duration,
 		}
 	}
 	wg := &sync.WaitGroup{}
@@ -79,12 +81,23 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 	var err error
 	var r io.ReadCloser
+	var s StatsServer
 
 	switch url.Scheme {
-	case "unix", "tcp":
-		r, err = net.DialTimeout(url.Scheme, url.Host, time.Duration(u.Timeout)*time.Second)
+	case "tcp":
+		r, err = net.DialTimeout(url.Scheme, url.Host, u.Timeout.Duration)
 		if err != nil {
 			return err
+		}
+		s.source = url.Host
+	case "unix":
+		r, err = net.DialTimeout(url.Scheme, url.Host, u.Timeout.Duration)
+		if err != nil {
+			return err
+		}
+		s.source, err = os.Hostname()
+		if err != nil {
+			s.source = url.Host
 		}
 	case "http":
 		resp, err := u.client.Get(url.String())
@@ -92,13 +105,12 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 			return err
 		}
 		r = resp.Body
+		s.source = url.Host
 	default:
 		return fmt.Errorf("'%s' is not a supported scheme", url.Scheme)
 	}
 
 	defer r.Close()
-
-	s := StatsServer{URL: url.String()}
 
 	if err := json.NewDecoder(r).Decode(&s); err != nil {
 		return fmt.Errorf("failed to decode json payload from '%s': %s", url.String(), err.Error())
@@ -119,7 +131,7 @@ func (u *Uwsgi) gatherStatServer(acc telegraf.Accumulator, s *StatsServer) {
 	}
 
 	tags := map[string]string{
-		"url":     s.URL,
+		"source":  s.source,
 		"uid":     strconv.Itoa(s.UID),
 		"gid":     strconv.Itoa(s.GID),
 		"version": s.Version,
@@ -153,7 +165,7 @@ func (u *Uwsgi) gatherWorkers(acc telegraf.Accumulator, s *StatsServer) {
 		}
 		tags := map[string]string{
 			"worker_id": strconv.Itoa(w.WorkerID),
-			"url":       s.URL,
+			"source":    s.source,
 		}
 
 		acc.AddFields("uwsgi_workers", fields, tags)
@@ -172,6 +184,7 @@ func (u *Uwsgi) gatherApps(acc telegraf.Accumulator, s *StatsServer) {
 			tags := map[string]string{
 				"app_id":    strconv.Itoa(a.AppID),
 				"worker_id": strconv.Itoa(w.WorkerID),
+				"source":    s.source,
 			}
 			acc.AddFields("uwsgi_apps", fields, tags)
 		}
@@ -193,6 +206,7 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 			tags := map[string]string{
 				"core_id":   strconv.Itoa(c.CoreID),
 				"worker_id": strconv.Itoa(w.WorkerID),
+				"source":    s.source,
 			}
 			acc.AddFields("uwsgi_cores", fields, tags)
 		}
@@ -203,7 +217,7 @@ func (u *Uwsgi) gatherCores(acc telegraf.Accumulator, s *StatsServer) {
 func init() {
 	inputs.Add("uwsgi", func() telegraf.Input {
 		return &Uwsgi{
-			Timeout: 5,
+			Timeout: internal.Duration{Duration: 5 * time.Second},
 		}
 	})
 }
@@ -211,7 +225,7 @@ func init() {
 // StatsServer defines the stats server structure.
 type StatsServer struct {
 	// Tags
-	URL     string
+	source  string
 	PID     int    `json:"pid"`
 	UID     int    `json:"uid"`
 	GID     int    `json:"gid"`
