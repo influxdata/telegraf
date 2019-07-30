@@ -2,9 +2,12 @@ ifeq ($(SHELL), cmd)
 	VERSION := $(shell git describe --exact-match --tags 2>nil)
 	HOME := $(HOMEPATH)
 	CGO_ENABLED ?= 0
+	export CGO_ENABLED
 else ifeq ($(SHELL), sh.exe)
 	VERSION := $(shell git describe --exact-match --tags 2>nil)
 	HOME := $(HOMEPATH)
+	CGO_ENABLED ?= 0
+	export CGO_ENABLED
 else
 	VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 endif
