@@ -480,7 +480,7 @@ func TestFieldKeyConversions(t *testing.T) {
 			},
 		},
 		{
-			name: "Should trim the existing field to Influx",
+			name: "Should trim the existing field to 6 characters",
 			plugin: &Strings{
 				Left: []converter{
 					{
@@ -493,6 +493,22 @@ func TestFieldKeyConversions(t *testing.T) {
 				fv, ok := actual.GetField("Request")
 				require.True(t, ok)
 				require.Equal(t, "/mixed", fv)
+			},
+		},
+		{
+			name: "Should do nothing to the string",
+			plugin: &Strings{
+				Left: []converter{
+					{
+						Field: "Request",
+						Width: 600,
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("Request")
+				require.True(t, ok)
+				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
 			},
 		},
 	}

@@ -279,7 +279,13 @@ func (s *Strings) initOnce() {
 	}
 	for _, c := range s.Left {
 		c := c
-		c.fn = func(s string) string { return s[:c.Width] }
+		c.fn = func(s string) string {
+			if len(s) < c.Width {
+				return s
+			} else {
+				return s[:c.Width]
+			}
+		}
 		s.converters = append(s.converters, c)
 	}
 
