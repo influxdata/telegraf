@@ -289,7 +289,8 @@ var agentConfig = `
   # logfile = ""
 
   ## The logfile will be rotated after the time interval specified.  When set
-  ## to 0 no time based rotation is performed.
+  ## to 0 no time based rotation is performed.  Logs are rotated only when
+  ## written to, if there is no log activity rotation may be delayed.
   # logfile_rotation_interval = "0d"
 
   ## The logfile will be rotated when it becomes larger than the specified
