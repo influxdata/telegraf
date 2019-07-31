@@ -1647,6 +1647,7 @@
     "github.com/jackc/pgx",
     "github.com/jackc/pgx/pgtype",
     "github.com/jackc/pgx/stdlib",
+    "github.com/jmespath/go-jmespath",
     "github.com/kardianos/service",
     "github.com/karrick/godirwalk",
     "github.com/kballard/go-shellquote",

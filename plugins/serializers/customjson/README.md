@@ -44,7 +44,7 @@ An event example of customized customjson format (with jmespath_expression="{tim
 
 ## Using with the File output
 
-Example of "output.file" Telegraf configuration with default customjson format:
+Example of "outputs.file" Telegraf configuration with default customjson format:
 
 ```toml
  # Send telegraf metrics to file(s)
@@ -58,7 +58,7 @@ Example of "output.file" Telegraf configuration with default customjson format:
   tags_prefix=""
 ```
 
-Example of "output.file" Telegraf configuration with default customjson format and prefixed tags:
+Example of "outputs.file" Telegraf configuration with default customjson format and prefixed tags:
 
 ```toml
  # Send telegraf metrics to file(s)
@@ -72,7 +72,7 @@ Example of "output.file" Telegraf configuration with default customjson format a
   tags_prefix="tags"
 ```
 
-Example of "output.file" Telegraf configuration with customized customjson format and prefixed tags:
+Example of "outputs.file" Telegraf configuration with customized customjson format and prefixed tags:
 
 ```toml
  # Send telegraf metrics to file(s)
