@@ -13,11 +13,18 @@ type MongodbData struct {
 	Fields        map[string]interface{}
 	Tags          map[string]string
 	DbData        []DbData
+	ColData       []ColData
 	ShardHostData []DbData
 }
 
 type DbData struct {
 	Name   string
+	Fields map[string]interface{}
+}
+
+type ColData struct {
+	Name   string
+	DbName string
 	Fields map[string]interface{}
 }
 
@@ -159,6 +166,15 @@ var DbDataStats = map[string]string{
 	"ok":           "Ok",
 }
 
+var ColDataStats = map[string]string{
+	"count":            "Count",
+	"size":             "Size",
+	"avg_obj_size":     "AvgObjSize",
+	"storage_size":     "StorageSize",
+	"total_index_size": "TotalIndexSize",
+	"ok":               "Ok",
+}
+
 func (d *MongodbData) AddDbStats() {
 	for _, dbstat := range d.StatLine.DbStatsLines {
 		dbStatLine := reflect.ValueOf(&dbstat).Elem()
@@ -172,6 +188,23 @@ func (d *MongodbData) AddDbStats() {
 			newDbData.Fields[key] = val
 		}
 		d.DbData = append(d.DbData, *newDbData)
+	}
+}
+
+func (d *MongodbData) AddColStats() {
+	for _, colstat := range d.StatLine.ColStatsLines {
+		colStatLine := reflect.ValueOf(&colstat).Elem()
+		newColData := &ColData{
+			Name:   colstat.Name,
+			DbName: colstat.DbName,
+			Fields: make(map[string]interface{}),
+		}
+		newColData.Fields["type"] = "col_stat"
+		for key, value := range ColDataStats {
+			val := colStatLine.FieldByName(value).Interface()
+			newColData.Fields[key] = val
+		}
+		d.ColData = append(d.ColData, *newColData)
 	}
 }
 
@@ -241,6 +274,17 @@ func (d *MongodbData) flush(acc telegraf.Accumulator) {
 			d.StatLine.Time,
 		)
 		db.Fields = make(map[string]interface{})
+	}
+	for _, col := range d.ColData {
+		d.Tags["collection"] = col.Name
+		d.Tags["db_name"] = col.DbName
+		acc.AddFields(
+			"mongodb_col_stats",
+			col.Fields,
+			d.Tags,
+			d.StatLine.Time,
+		)
+		col.Fields = make(map[string]interface{})
 	}
 	for _, host := range d.ShardHostData {
 		d.Tags["hostname"] = host.Name

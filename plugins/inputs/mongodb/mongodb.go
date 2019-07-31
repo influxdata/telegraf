@@ -22,6 +22,8 @@ type MongoDB struct {
 	Ssl              Ssl
 	mongos           map[string]*Server
 	GatherPerdbStats bool
+	GatherColStats   bool
+	ColStatsDbs      []string
 	tlsint.ClientConfig
 }
 
@@ -40,6 +42,11 @@ var sampleConfig = `
 
   ## When true, collect per database stats
   # gather_perdb_stats = false
+  ## When true, collect per collection stats
+  # gather_col_stats = false
+  ## List of db where collections stats are collected
+  ## If empty, all db are concerned
+  # col_stats_dbs = ["local"]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -164,7 +171,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		}
 		server.Session = sess
 	}
-	return server.gatherData(acc, m.GatherPerdbStats)
+	return server.gatherData(acc, m.GatherPerdbStats, m.GatherColStats, m.ColStatsDbs)
 }
 
 func init() {

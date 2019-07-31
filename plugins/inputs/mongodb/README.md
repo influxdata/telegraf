@@ -13,6 +13,11 @@
 
   ## When true, collect per database stats
   # gather_perdb_stats = false
+  ## When true, collect per collection stats
+  # gather_col_stats = false
+  ## List of db where collections stats are collected
+  ## If empty, all db are concerned
+  # col_stats_dbs = ["local"]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -147,6 +152,20 @@ Error in input [mongodb]: not authorized on admin to execute command { serverSta
     - storage_size (integer)
     - type (string)
 
+- mongodb_col_stats
+  - tags:
+    - hostname
+    - collection
+    - db_name
+  - fields:
+    - size (integer)
+    - avg_obj_size (integer)
+    - storage_size (integer)
+    - total_index_size (integer)
+    - ok (integer)
+    - count (integer)
+    - type (tring)
+
 - mongodb_shard_stats
   - tags:
     - hostname
@@ -161,5 +180,6 @@ Error in input [mongodb]: not authorized on admin to execute command { serverSta
 mongodb,hostname=127.0.0.1:27017 active_reads=0i,active_writes=0i,commands=1335i,commands_per_sec=7i,connections_available=814i,connections_current=5i,connections_total_created=0i,cursor_no_timeout=0i,cursor_no_timeout_count=0i,cursor_pinned=0i,cursor_pinned_count=1i,cursor_timed_out=0i,cursor_timed_out_count=0i,cursor_total=0i,cursor_total_count=1i,deletes=0i,deletes_per_sec=0i,document_deleted=0i,document_inserted=0i,document_returned=13i,document_updated=0i,flushes=5i,flushes_per_sec=0i,getmores=269i,getmores_per_sec=0i,inserts=0i,inserts_per_sec=0i,jumbo_chunks=0i,member_status="PRI",net_in_bytes=986i,net_in_bytes_count=358006i,net_out_bytes=23906i,net_out_bytes_count=661507i,open_connections=5i,percent_cache_dirty=0,percent_cache_used=0,queries=18i,queries_per_sec=3i,queued_reads=0i,queued_writes=0i,repl_commands=0i,repl_commands_per_sec=0i,repl_deletes=0i,repl_deletes_per_sec=0i,repl_getmores=0i,repl_getmores_per_sec=0i,repl_inserts=0i,repl_inserts_per_sec=0i,repl_lag=0i,repl_oplog_window_sec=24355215i,repl_queries=0i,repl_queries_per_sec=0i,repl_updates=0i,repl_updates_per_sec=0i,resident_megabytes=62i,state="PRIMARY",total_available=0i,total_created=0i,total_in_use=0i,total_refreshing=0i,ttl_deletes=0i,ttl_deletes_per_sec=0i,ttl_passes=23i,ttl_passes_per_sec=0i,updates=0i,updates_per_sec=0i,vsize_megabytes=713i,wtcache_app_threads_page_read_count=13i,wtcache_app_threads_page_read_time=74i,wtcache_app_threads_page_write_count=0i,wtcache_bytes_read_into=55271i,wtcache_bytes_written_from=125402i,wtcache_current_bytes=117050i,wtcache_max_bytes_configured=1073741824i,wtcache_pages_evicted_by_app_thread=0i,wtcache_pages_queued_for_eviction=0i,wtcache_server_evicting_pages=0i,wtcache_tracked_dirty_bytes=0i,wtcache_worker_thread_evictingpages=0i 1547159491000000000
 mongodb_db_stats,db_name=admin,hostname=127.0.0.1:27017 avg_obj_size=241,collections=2i,data_size=723i,index_size=49152i,indexes=3i,num_extents=0i,objects=3i,ok=1i,storage_size=53248i,type="db_stat" 1547159491000000000
 mongodb_db_stats,db_name=local,hostname=127.0.0.1:27017 avg_obj_size=813.9705882352941,collections=6i,data_size=55350i,index_size=102400i,indexes=5i,num_extents=0i,objects=68i,ok=1i,storage_size=204800i,type="db_stat" 1547159491000000000
+mongodb_col_stats,collection=foo,db_name=local,hostname=127.0.0.1:27017 size=375005928i,avg_obj_size=5494,type="col_stat",storage_size=249307136i,total_index_size=2138112i,ok=1i,count=68251i 1547159491000000000
 mongodb_shard_stats,hostname=127.0.0.1:27017,in_use=3i,available=3i,created=4i,refreshing=0i 1522799074000000000
 ```
