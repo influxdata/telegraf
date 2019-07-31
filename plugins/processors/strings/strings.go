@@ -17,6 +17,7 @@ type Strings struct {
 	TrimPrefix []converter `toml:"trim_prefix"`
 	TrimSuffix []converter `toml:"trim_suffix"`
 	Replace    []converter `toml:"replace"`
+	Left       []converter `toml:"left"`
 
 	converters []converter
 	init       bool
@@ -36,6 +37,7 @@ type converter struct {
 	Prefix      string
 	Old         string
 	New         string
+	Width       int
 
 	fn ConvertFunc
 }
@@ -79,6 +81,11 @@ const sampleConfig = `
   #   measurement = "*"
   #   old = ":"
   #   new = "_"
+
+  ## Trims strings based on width
+  # [[processors.strings.left]]
+  #   field = "message"
+  #   width = 10
 `
 
 func (s *Strings) SampleConfig() string {
@@ -266,6 +273,17 @@ func (s *Strings) initOnce() {
 				return s
 			} else {
 				return newString
+			}
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Left {
+		c := c
+		c.fn = func(s string) string {
+			if len(s) < c.Width {
+				return s
+			} else {
+				return s[:c.Width]
 			}
 		}
 		s.converters = append(s.converters, c)
