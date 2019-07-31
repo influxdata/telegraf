@@ -3,6 +3,7 @@ package influx
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -17,17 +18,24 @@ var (
 )
 
 type ParseError struct {
-	Offset int
-	msg    string
-	buf    string
+	Offset     int
+	LineOffset int
+	LineNumber int
+	Column     int
+	msg        string
+	buf        string
 }
 
 func (e *ParseError) Error() string {
-	buffer := e.buf
+	buffer := e.buf[e.LineOffset:]
+	eol := strings.IndexAny(buffer, "\r\n")
+	if eol >= 0 {
+		buffer = buffer[:eol]
+	}
 	if len(buffer) > maxErrorBufferSize {
 		buffer = buffer[:maxErrorBufferSize] + "..."
 	}
-	return fmt.Sprintf("metric parse error: %s at offset %d: %q", e.msg, e.Offset, buffer)
+	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.msg, e.LineNumber, e.Column, buffer)
 }
 
 type Parser struct {
@@ -60,21 +68,34 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 	p.machine.SetData(input)
 
-	for p.machine.ParseLine() {
-		err := p.machine.Err()
+	for {
+		err := p.machine.Next()
+		if err == EOF {
+			break
+		}
+
 		if err != nil {
+			p.handler.Reset()
 			return nil, &ParseError{
-				Offset: p.machine.Position(),
-				msg:    err.Error(),
-				buf:    string(input),
+				Offset:     p.machine.Position(),
+				LineOffset: p.machine.LineOffset(),
+				LineNumber: p.machine.LineNumber(),
+				Column:     p.machine.Column(),
+				msg:        err.Error(),
+				buf:        string(input),
 			}
 		}
 
 		metric, err := p.handler.Metric()
 		if err != nil {
+			p.handler.Reset()
 			return nil, err
 		}
-		p.handler.Reset()
+
+		if metric == nil {
+			continue
+		}
+
 		metrics = append(metrics, metric)
 	}
 
@@ -83,7 +104,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	metrics, err := p.Parse([]byte(line + "\n"))
+	metrics, err := p.Parse([]byte(line))
 	if err != nil {
 		return nil, err
 	}

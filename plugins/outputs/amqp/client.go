@@ -19,6 +19,7 @@ type ClientConfig struct {
 	exchangePassive   bool
 	exchangeDurable   bool
 	exchangeArguments amqp.Table
+	encoding          string
 	headers           amqp.Table
 	deliveryMode      uint8
 	tlsConfig         *tls.Config
@@ -55,7 +56,7 @@ func Connect(config *ClientConfig) (*client, error) {
 			log.Printf("D! Output [amqp] connected to %q", broker)
 			break
 		}
-		log.Printf("D! Output [amqp] error connecting to %q", broker)
+		log.Printf("D! Output [amqp] error connecting to %q - %s", broker, err.Error())
 	}
 
 	if client.conn == nil {
@@ -77,6 +78,10 @@ func Connect(config *ClientConfig) (*client, error) {
 }
 
 func (c *client) DeclareExchange() error {
+	if c.config.exchange == "" {
+		return nil
+	}
+
 	var err error
 	if c.config.exchangePassive {
 		err = c.channel.ExchangeDeclarePassive(
@@ -114,10 +119,11 @@ func (c *client) Publish(key string, body []byte) error {
 		false,             // mandatory
 		false,             // immediate
 		amqp.Publishing{
-			Headers:      c.config.headers,
-			ContentType:  "text/plain",
-			Body:         body,
-			DeliveryMode: c.config.deliveryMode,
+			Headers:         c.config.headers,
+			ContentType:     "text/plain",
+			ContentEncoding: c.config.encoding,
+			Body:            body,
+			DeliveryMode:    c.config.deliveryMode,
 		})
 }
 

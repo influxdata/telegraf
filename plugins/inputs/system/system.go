@@ -4,16 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/load"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/load"
 )
 
 type SystemStats struct{}
@@ -22,7 +22,12 @@ func (_ *SystemStats) Description() string {
 	return "Read metrics about system load & uptime"
 }
 
-func (_ *SystemStats) SampleConfig() string { return "" }
+func (_ *SystemStats) SampleConfig() string {
+	return `
+  ## Uncomment to remove deprecated metrics.
+  # fielddrop = ["uptime_format"]
+`
+}
 
 func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
@@ -40,29 +45,31 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	users, err := host.Users()
 	if err == nil {
 		fields["n_users"] = len(users)
-	} else if !os.IsPermission(err) {
-		return err
+	} else if os.IsNotExist(err) {
+		log.Printf("D! [inputs.system] Error reading users: %v", err)
+	} else if os.IsPermission(err) {
+		log.Printf("D! [inputs.system] %v", err)
 	}
 
 	now := time.Now()
 	acc.AddGauge("system", fields, nil, now)
 
-	hostinfo, err := host.Info()
+	uptime, err := host.Uptime()
 	if err != nil {
 		return err
 	}
 
 	acc.AddCounter("system", map[string]interface{}{
-		"uptime": hostinfo.Uptime,
+		"uptime": uptime,
 	}, nil, now)
 	acc.AddFields("system", map[string]interface{}{
-		"uptime_format": format_uptime(hostinfo.Uptime),
+		"uptime_format": formatUptime(uptime),
 	}, nil, now)
 
 	return nil
 }
 
-func format_uptime(uptime uint64) string {
+func formatUptime(uptime uint64) string {
 	buf := new(bytes.Buffer)
 	w := bufio.NewWriter(buf)
 

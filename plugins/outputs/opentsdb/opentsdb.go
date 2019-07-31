@@ -213,7 +213,10 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
-		tagSet[sanitize(k)] = sanitize(v)
+		val := sanitize(v)
+		if val != "" {
+			tagSet[sanitize(k)] = val
+		}
 	}
 	return tagSet
 }

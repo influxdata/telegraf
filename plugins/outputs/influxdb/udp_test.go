@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"sync"
@@ -13,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/stretchr/testify/require"
 )
 
@@ -65,28 +65,15 @@ func (d *MockDialer) DialContext(ctx context.Context, network string, address st
 	return d.DialContextF(network, address)
 }
 
-type MockSerializer struct {
-	SerializeF      func(metric telegraf.Metric) ([]byte, error)
-	SerializeBatchF func(metrics []telegraf.Metric) ([]byte, error)
-}
-
-func (s *MockSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	return s.SerializeF(metric)
-}
-
-func (s *MockSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	return s.SerializeBatchF(metrics)
-}
-
 func TestUDP_NewUDPClientNoURL(t *testing.T) {
-	config := &influxdb.UDPConfig{}
+	config := influxdb.UDPConfig{}
 	_, err := influxdb.NewUDPClient(config)
 	require.Equal(t, err, influxdb.ErrMissingURL)
 }
 
 func TestUDP_URL(t *testing.T) {
 	u := getURL()
-	config := &influxdb.UDPConfig{
+	config := influxdb.UDPConfig{
 		URL: u,
 	}
 
@@ -99,7 +86,7 @@ func TestUDP_URL(t *testing.T) {
 func TestUDP_Simple(t *testing.T) {
 	var buffer bytes.Buffer
 
-	config := &influxdb.UDPConfig{
+	config := influxdb.UDPConfig{
 		URL: getURL(),
 		Dialer: &MockDialer{
 			DialContextF: func(network, address string) (influxdb.Conn, error) {
@@ -130,7 +117,7 @@ func TestUDP_DialError(t *testing.T) {
 	u, err := url.Parse("invalid://127.0.0.1:9999")
 	require.NoError(t, err)
 
-	config := &influxdb.UDPConfig{
+	config := influxdb.UDPConfig{
 		URL: u,
 		Dialer: &MockDialer{
 			DialContextF: func(network, address string) (influxdb.Conn, error) {
@@ -150,7 +137,7 @@ func TestUDP_DialError(t *testing.T) {
 func TestUDP_WriteError(t *testing.T) {
 	closed := false
 
-	config := &influxdb.UDPConfig{
+	config := influxdb.UDPConfig{
 		URL: getURL(),
 		Dialer: &MockDialer{
 			DialContextF: func(network, address string) (influxdb.Conn, error) {
@@ -177,32 +164,73 @@ func TestUDP_WriteError(t *testing.T) {
 	require.True(t, closed)
 }
 
-func TestUDP_SerializeError(t *testing.T) {
-	config := &influxdb.UDPConfig{
-		URL: getURL(),
-		Dialer: &MockDialer{
-			DialContextF: func(network, address string) (influxdb.Conn, error) {
-				conn := &MockConn{}
-				return conn, nil
+func TestUDP_ErrorLogging(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      influxdb.UDPConfig
+		metrics     []telegraf.Metric
+		logContains string
+	}{
+		{
+			name: "logs need more space",
+			config: influxdb.UDPConfig{
+				MaxPayloadSize: 1,
+				URL:            getURL(),
+				Dialer: &MockDialer{
+					DialContextF: func(network, address string) (influxdb.Conn, error) {
+						conn := &MockConn{}
+						return conn, nil
+					},
+				},
 			},
+			metrics:     []telegraf.Metric{getMetric()},
+			logContains: `could not serialize metric: "cpu": need more space`,
 		},
-		Serializer: &MockSerializer{
-			SerializeF: func(metric telegraf.Metric) ([]byte, error) {
-				return nil, influx.ErrNeedMoreSpace
+		{
+			name: "logs series name",
+			config: influxdb.UDPConfig{
+				URL: getURL(),
+				Dialer: &MockDialer{
+					DialContextF: func(network, address string) (influxdb.Conn, error) {
+						conn := &MockConn{}
+						return conn, nil
+					},
+				},
 			},
+			metrics: []telegraf.Metric{
+				func() telegraf.Metric {
+					metric, _ := metric.New(
+						"cpu",
+						map[string]string{
+							"host": "example.org",
+						},
+						map[string]interface{}{},
+						time.Unix(0, 0),
+					)
+					return metric
+				}(),
+			},
+			logContains: `could not serialize metric: "cpu,host=example.org": no serializable fields`,
 		},
 	}
-	client, err := influxdb.NewUDPClient(config)
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var b bytes.Buffer
+			log.SetOutput(&b)
 
-	ctx := context.Background()
-	err = client.Write(ctx, []telegraf.Metric{getMetric()})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), influx.ErrNeedMoreSpace.Error())
+			client, err := influxdb.NewUDPClient(tt.config)
+			require.NoError(t, err)
+
+			ctx := context.Background()
+			err = client.Write(ctx, tt.metrics)
+			require.NoError(t, err)
+			require.Contains(t, b.String(), tt.logContains)
+		})
+	}
 }
 
 func TestUDP_WriteWithRealConn(t *testing.T) {
-	conn, err := net.ListenPacket("udp", "127.0.0.0:0")
+	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{
@@ -216,7 +244,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		var total int
-		for _, _ = range metrics {
+		for range metrics {
 			n, _, err := conn.ReadFrom(buf[total:])
 			if err != nil {
 				break
@@ -230,7 +258,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("%s://%s", addr.Network(), addr))
 	require.NoError(t, err)
 
-	config := &influxdb.UDPConfig{
+	config := influxdb.UDPConfig{
 		URL: u,
 	}
 	client, err := influxdb.NewUDPClient(config)

@@ -36,6 +36,8 @@ The sample config file
   # dump_zeros			= 	true
 ```
 
+In case that `proc_net_snmp6` path doesn't exist (e.g. IPv6 is not enabled) no error would be raised.
+
 ### Measurements & Fields
 
 - nstat

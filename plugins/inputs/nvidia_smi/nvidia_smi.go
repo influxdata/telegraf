@@ -16,21 +16,30 @@ import (
 
 var (
 	measurement = "nvidia_smi"
-	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw"
+	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw,pcie.link.gen.current,pcie.link.width.current,encoder.stats.sessionCount,encoder.stats.averageFps,encoder.stats.averageLatency,clocks.current.graphics,clocks.current.sm,clocks.current.memory,clocks.current.video"
 	metricNames = [][]string{
-		[]string{"fan_speed", "integer"},
-		[]string{"memory_total", "integer"},
-		[]string{"memory_used", "integer"},
-		[]string{"memory_free", "integer"},
-		[]string{"pstate", "tag"},
-		[]string{"temperature_gpu", "integer"},
-		[]string{"name", "tag"},
-		[]string{"uuid", "tag"},
-		[]string{"compute_mode", "tag"},
-		[]string{"utilization_gpu", "integer"},
-		[]string{"utilization_memory", "integer"},
-		[]string{"index", "tag"},
-		[]string{"power_draw", "float"},
+		{"fan_speed", "integer"},
+		{"memory_total", "integer"},
+		{"memory_used", "integer"},
+		{"memory_free", "integer"},
+		{"pstate", "tag"},
+		{"temperature_gpu", "integer"},
+		{"name", "tag"},
+		{"uuid", "tag"},
+		{"compute_mode", "tag"},
+		{"utilization_gpu", "integer"},
+		{"utilization_memory", "integer"},
+		{"index", "tag"},
+		{"power_draw", "float"},
+		{"pcie_link_gen_current", "integer"},
+		{"pcie_link_width_current", "integer"},
+		{"encoder_stats_session_count", "integer"},
+		{"encoder_stats_average_fps", "integer"},
+		{"encoder_stats_average_latency", "integer"},
+		{"clocks_current_graphics", "integer"},
+		{"clocks_current_sm", "integer"},
+		{"clocks_current_memory", "integer"},
+		{"clocks_current_video", "integer"},
 	}
 )
 
@@ -134,7 +143,16 @@ func parseLine(line string) (map[string]string, map[string]interface{}, error) {
 				continue
 			}
 
-			if strings.Contains(col, "[Not Supported]") {
+			// In some cases we may not be able to get data.
+			// One such case is when the memory is overclocked.
+			// nvidia-smi reads the max supported memory clock from the stock value.
+			// If the current memory clock is greater than the max detected memory clock then we receive [Unknown Error] as a value.
+
+			// For example, the stock max memory clock speed on a 2080 Ti is 7000 MHz which nvidia-smi detects.
+			// The user has overclocked their memory using an offset of +1000 so under load the memory clock reaches 8000 MHz.
+			// Now when nvidia-smi tries to read the current memory clock it fails and spits back [Unknown Error] as the value.
+			// This value will break the parsing logic below unless it is accounted for here.
+			if strings.Contains(col, "[Not Supported]") || strings.Contains(col, "[Unknown Error]") {
 				continue
 			}
 

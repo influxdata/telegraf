@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -19,13 +18,16 @@ type Datadog struct {
 	Apikey  string
 	Timeout internal.Duration
 
-	apiUrl string
+	URL    string `toml:"url"`
 	client *http.Client
 }
 
 var sampleConfig = `
   ## Datadog API key
   apikey = "my-secret-key" # required.
+
+  # The base endpoint URL can optionally be specified but it defaults to:
+  #url = "https://app.datadoghq.com/api/v1/series"
 
   ## Connection timeout.
   # timeout = "5s"
@@ -45,12 +47,6 @@ type Metric struct {
 type Point [2]float64
 
 const datadog_api = "https://app.datadoghq.com/api/v1/series"
-
-func NewDatadog(apiUrl string) *Datadog {
-	return &Datadog{
-		apiUrl: apiUrl,
-	}
-}
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
@@ -76,6 +72,9 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
 		if dogMs, err := buildMetrics(m); err == nil {
+			metricTags := buildTags(m.TagList())
+			host, _ := m.GetTag("host")
+
 			for fieldName, dogM := range dogMs {
 				// name of the datadog measurement
 				var dname string
@@ -85,11 +84,9 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				} else {
 					dname = m.Name() + "." + fieldName
 				}
-				var host string
-				host, _ = m.Tags()["host"]
 				metric := &Metric{
 					Metric: dname,
-					Tags:   buildTags(m.Tags()),
+					Tags:   metricTags,
 					Host:   host,
 				}
 				metric.Points[0] = dogM
@@ -139,33 +136,32 @@ func (d *Datadog) authenticatedUrl() string {
 	q := url.Values{
 		"api_key": []string{d.Apikey},
 	}
-	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
+	return fmt.Sprintf("%s?%s", d.URL, q.Encode())
 }
 
 func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 	ms := make(map[string]Point)
-	for k, v := range m.Fields() {
-		if !verifyValue(v) {
+	for _, field := range m.FieldList() {
+		if !verifyValue(field.Value) {
 			continue
 		}
 		var p Point
-		if err := p.setValue(v); err != nil {
-			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", k, err.Error())
+		if err := p.setValue(field.Value); err != nil {
+			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", field.Key, err.Error())
 		}
 		p[0] = float64(m.Time().Unix())
-		ms[k] = p
+		ms[field.Key] = p
 	}
 	return ms, nil
 }
 
-func buildTags(mTags map[string]string) []string {
-	tags := make([]string, len(mTags))
+func buildTags(tagList []*telegraf.Tag) []string {
+	tags := make([]string, len(tagList))
 	index := 0
-	for k, v := range mTags {
-		tags[index] = fmt.Sprintf("%s:%s", k, v)
+	for _, tag := range tagList {
+		tags[index] = fmt.Sprintf("%s:%s", tag.Key, tag.Value)
 		index += 1
 	}
-	sort.Strings(tags)
 	return tags
 }
 
@@ -202,6 +198,8 @@ func (d *Datadog) Close() error {
 
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
-		return NewDatadog(datadog_api)
+		return &Datadog{
+			URL: datadog_api,
+		}
 	})
 }

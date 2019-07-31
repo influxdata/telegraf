@@ -14,26 +14,26 @@ import (
 func TestRefreshFilePaths(t *testing.T) {
 	wd, err := os.Getwd()
 	r := File{
-		Files: []string{filepath.Join(wd, "testfiles/**.log")},
+		Files: []string{filepath.Join(wd, "dev/testfiles/**.log")},
 	}
 
 	err = r.refreshFilePaths()
 	require.NoError(t, err)
-	assert.Equal(t, len(r.filenames), 2)
+	assert.Equal(t, 2, len(r.filenames))
 }
 func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
 	wd, _ := os.Getwd()
 	r := File{
-		Files: []string{filepath.Join(wd, "testfiles/json_a.log")},
+		Files: []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
 	}
 	parserConfig := parsers.Config{
 		DataFormat: "json",
 		TagKeys:    []string{"parent_ignored_child"},
 	}
 	nParser, err := parsers.NewParser(&parserConfig)
-	r.parser = nParser
 	assert.NoError(t, err)
+	r.parser = nParser
 
 	r.Gather(&acc)
 	assert.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
@@ -44,7 +44,7 @@ func TestGrokParser(t *testing.T) {
 	wd, _ := os.Getwd()
 	var acc testutil.Accumulator
 	r := File{
-		Files: []string{filepath.Join(wd, "testfiles/grok_a.log")},
+		Files: []string{filepath.Join(wd, "dev/testfiles/grok_a.log")},
 	}
 
 	parserConfig := parsers.Config{
@@ -57,5 +57,5 @@ func TestGrokParser(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = r.Gather(&acc)
-	assert.Equal(t, 2, len(acc.Metrics))
+	assert.Equal(t, len(acc.Metrics), 2)
 }

@@ -202,10 +202,10 @@ var (
 		"deleting":                  uint32(0),
 		"executing":                 uint32(0),
 		"execution of init_command": uint32(0),
-		"end":                     uint32(0),
-		"freeing items":           uint32(0),
-		"flushing tables":         uint32(0),
-		"fulltext initialization": uint32(0),
+		"end":                       uint32(0),
+		"freeing items":             uint32(0),
+		"flushing tables":           uint32(0),
+		"fulltext initialization":   uint32(0),
 		"idle":                      uint32(0),
 		"init":                      uint32(0),
 		"killed":                    uint32(0),
@@ -241,8 +241,8 @@ var (
 	}
 	// plaintext statuses
 	stateStatusMappings = map[string]string{
-		"user sleep":                               "idle",
-		"creating index":                           "altering table",
+		"user sleep":     "idle",
+		"creating index": "altering table",
 		"committing alter table to storage engine": "altering table",
 		"discard or import tablespace":             "altering table",
 		"rename":                                   "altering table",
@@ -994,6 +994,30 @@ func getColSlice(l int) ([]interface{}, error) {
 			&empty_queries,
 			&total_ssl_connections,
 			&max_statement_time_exceeded,
+		}, nil
+	case 21: // mysql 5.5
+		return []interface{}{
+			&user,
+			&total_connections,
+			&concurrent_connections,
+			&connected_time,
+			&busy_time,
+			&cpu_time,
+			&bytes_received,
+			&bytes_sent,
+			&binlog_bytes_written,
+			&rows_fetched,
+			&rows_updated,
+			&table_rows_read,
+			&select_commands,
+			&update_commands,
+			&other_commands,
+			&commit_transactions,
+			&rollback_transactions,
+			&denied_connections,
+			&lost_connections,
+			&access_denied,
+			&empty_queries,
 		}, nil
 	case 22: // percona
 		return []interface{}{

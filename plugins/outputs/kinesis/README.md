@@ -71,7 +71,7 @@ All metrics will be mapped to the same shard which may limit throughput.
 #### tag
 
 This will take the value of the specified tag from each metric as the paritionKey.
-If the tag is not found an empty string will be used.
+If the tag is not found the `default` value will be used or `telegraf` if unspecified
 
 #### measurement
 

@@ -48,7 +48,7 @@ var (
   # timeout = "5s"
 
   ## Enable additional diagnostic logging.
-  # enable_diagnosic_logging = false
+  # enable_diagnostic_logging = false
 
   ## Context Tag Sources add Application Insights context tags to a tag value.
   ##

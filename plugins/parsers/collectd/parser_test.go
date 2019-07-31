@@ -33,7 +33,7 @@ type testCase struct {
 
 var singleMetric = testCase{
 	[]api.ValueList{
-		api.ValueList{
+		{
 			Identifier: api.Identifier{
 				Host:           "xyzzy",
 				Plugin:         "cpu",
@@ -48,7 +48,7 @@ var singleMetric = testCase{
 		},
 	},
 	[]metricData{
-		metricData{
+		{
 			"cpu_value",
 			map[string]string{
 				"type_instance": "user",
@@ -65,7 +65,7 @@ var singleMetric = testCase{
 
 var multiMetric = testCase{
 	[]api.ValueList{
-		api.ValueList{
+		{
 			Identifier: api.Identifier{
 				Host:           "xyzzy",
 				Plugin:         "cpu",
@@ -81,7 +81,7 @@ var multiMetric = testCase{
 		},
 	},
 	[]metricData{
-		metricData{
+		{
 			"cpu_0",
 			map[string]string{
 				"type_instance": "user",
@@ -93,7 +93,7 @@ var multiMetric = testCase{
 				"value": float64(42),
 			},
 		},
-		metricData{
+		{
 			"cpu_1",
 			map[string]string{
 				"type_instance": "user",

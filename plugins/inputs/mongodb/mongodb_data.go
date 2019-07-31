@@ -13,11 +13,18 @@ type MongodbData struct {
 	Fields        map[string]interface{}
 	Tags          map[string]string
 	DbData        []DbData
+	ColData       []ColData
 	ShardHostData []DbData
 }
 
 type DbData struct {
 	Name   string
+	Fields map[string]interface{}
+}
+
+type ColData struct {
+	Name   string
+	DbName string
 	Fields map[string]interface{}
 }
 
@@ -31,28 +38,44 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 }
 
 var DefaultStats = map[string]string{
+	"inserts":                   "InsertCnt",
 	"inserts_per_sec":           "Insert",
+	"queries":                   "QueryCnt",
 	"queries_per_sec":           "Query",
+	"updates":                   "UpdateCnt",
 	"updates_per_sec":           "Update",
+	"deletes":                   "DeleteCnt",
 	"deletes_per_sec":           "Delete",
+	"getmores":                  "GetMoreCnt",
 	"getmores_per_sec":          "GetMore",
+	"commands":                  "CommandCnt",
 	"commands_per_sec":          "Command",
+	"flushes":                   "FlushesCnt",
 	"flushes_per_sec":           "Flushes",
+	"flushes_total_time_ns":     "FlushesTotalTime",
 	"vsize_megabytes":           "Virtual",
 	"resident_megabytes":        "Resident",
 	"queued_reads":              "QueuedReaders",
 	"queued_writes":             "QueuedWriters",
 	"active_reads":              "ActiveReaders",
 	"active_writes":             "ActiveWriters",
+	"net_in_bytes_count":        "NetInCnt",
 	"net_in_bytes":              "NetIn",
+	"net_out_bytes_count":       "NetOutCnt",
 	"net_out_bytes":             "NetOut",
 	"open_connections":          "NumConnections",
+	"ttl_deletes":               "DeletedDocumentsCnt",
 	"ttl_deletes_per_sec":       "DeletedDocuments",
+	"ttl_passes":                "PassesCnt",
 	"ttl_passes_per_sec":        "Passes",
 	"cursor_timed_out":          "TimedOutC",
+	"cursor_timed_out_count":    "TimedOutCCnt",
 	"cursor_no_timeout":         "NoTimeoutC",
+	"cursor_no_timeout_count":   "NoTimeoutCCnt",
 	"cursor_pinned":             "PinnedC",
+	"cursor_pinned_count":       "PinnedCCnt",
 	"cursor_total":              "TotalC",
+	"cursor_total_count":        "TotalCCnt",
 	"document_deleted":          "DeletedD",
 	"document_inserted":         "InsertedD",
 	"document_returned":         "ReturnedD",
@@ -63,11 +86,17 @@ var DefaultStats = map[string]string{
 }
 
 var DefaultReplStats = map[string]string{
+	"repl_inserts":          "InsertRCnt",
 	"repl_inserts_per_sec":  "InsertR",
+	"repl_queries":          "QueryRCnt",
 	"repl_queries_per_sec":  "QueryR",
+	"repl_updates":          "UpdateRCnt",
 	"repl_updates_per_sec":  "UpdateR",
+	"repl_deletes":          "DeleteRCnt",
 	"repl_deletes_per_sec":  "DeleteR",
+	"repl_getmores":         "GetMoreRCnt",
 	"repl_getmores_per_sec": "GetMoreR",
+	"repl_commands":         "CommandRCnt",
 	"repl_commands_per_sec": "CommandR",
 	"member_status":         "NodeType",
 	"state":                 "NodeState",
@@ -96,6 +125,7 @@ var ShardHostStats = map[string]string{
 var MmapStats = map[string]string{
 	"mapped_megabytes":     "Mapped",
 	"non-mapped_megabytes": "NonMapped",
+	"page_faults":          "FaultsCnt",
 	"page_faults_per_sec":  "Faults",
 }
 
@@ -115,8 +145,13 @@ var WiredTigerExtStats = map[string]string{
 	"wtcache_bytes_read_into":              "BytesReadInto",
 	"wtcache_pages_evicted_by_app_thread":  "PagesEvictedByAppThread",
 	"wtcache_pages_queued_for_eviction":    "PagesQueuedForEviction",
+	"wtcache_pages_read_into":              "PagesReadIntoCache",
+	"wtcache_pages_requested_from":         "PagesRequestedFromCache",
 	"wtcache_server_evicting_pages":        "ServerEvictingPages",
 	"wtcache_worker_thread_evictingpages":  "WorkerThreadEvictingPages",
+	"wtcache_internal_pages_evicted":       "InternalPagesEvicted",
+	"wtcache_modified_pages_evicted":       "ModifiedPagesEvicted",
+	"wtcache_unmodified_pages_evicted":     "UnmodifiedPagesEvicted",
 }
 
 var DbDataStats = map[string]string{
@@ -129,6 +164,15 @@ var DbDataStats = map[string]string{
 	"indexes":      "Indexes",
 	"index_size":   "IndexSize",
 	"ok":           "Ok",
+}
+
+var ColDataStats = map[string]string{
+	"count":            "Count",
+	"size":             "Size",
+	"avg_obj_size":     "AvgObjSize",
+	"storage_size":     "StorageSize",
+	"total_index_size": "TotalIndexSize",
+	"ok":               "Ok",
 }
 
 func (d *MongodbData) AddDbStats() {
@@ -144,6 +188,23 @@ func (d *MongodbData) AddDbStats() {
 			newDbData.Fields[key] = val
 		}
 		d.DbData = append(d.DbData, *newDbData)
+	}
+}
+
+func (d *MongodbData) AddColStats() {
+	for _, colstat := range d.StatLine.ColStatsLines {
+		colStatLine := reflect.ValueOf(&colstat).Elem()
+		newColData := &ColData{
+			Name:   colstat.Name,
+			DbName: colstat.DbName,
+			Fields: make(map[string]interface{}),
+		}
+		newColData.Fields["type"] = "col_stat"
+		for key, value := range ColDataStats {
+			val := colStatLine.FieldByName(value).Interface()
+			newColData.Fields[key] = val
+		}
+		d.ColData = append(d.ColData, *newColData)
 	}
 }
 
@@ -213,6 +274,17 @@ func (d *MongodbData) flush(acc telegraf.Accumulator) {
 			d.StatLine.Time,
 		)
 		db.Fields = make(map[string]interface{})
+	}
+	for _, col := range d.ColData {
+		d.Tags["collection"] = col.Name
+		d.Tags["db_name"] = col.DbName
+		acc.AddFields(
+			"mongodb_col_stats",
+			col.Fields,
+			d.Tags,
+			d.StatLine.Time,
+		)
+		col.Fields = make(map[string]interface{})
 	}
 	for _, host := range d.ShardHostData {
 		d.Tags["hostname"] = host.Name

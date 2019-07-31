@@ -2,22 +2,30 @@ package models
 
 import (
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 func TestFilter_ApplyEmpty(t *testing.T) {
 	f := Filter{}
 	require.NoError(t, f.Compile())
-	assert.False(t, f.IsActive())
+	require.False(t, f.IsActive())
 
-	assert.True(t, f.Apply("m", map[string]interface{}{"value": int64(1)}, map[string]string{}))
+	m, err := metric.New("m",
+		map[string]string{},
+		map[string]interface{}{"value": int64(1)},
+		time.Now())
+	require.NoError(t, err)
+	require.True(t, f.Select(m))
 }
 
 func TestFilter_ApplyTagsDontPass(t *testing.T) {
 	filters := []TagFilter{
-		TagFilter{
+		{
 			Name:   "cpu",
 			Filter: []string{"cpu-*"},
 		},
@@ -27,11 +35,14 @@ func TestFilter_ApplyTagsDontPass(t *testing.T) {
 	}
 	require.NoError(t, f.Compile())
 	require.NoError(t, f.Compile())
-	assert.True(t, f.IsActive())
+	require.True(t, f.IsActive())
 
-	assert.False(t, f.Apply("m",
+	m, err := metric.New("m",
+		map[string]string{"cpu": "cpu-total"},
 		map[string]interface{}{"value": int64(1)},
-		map[string]string{"cpu": "cpu-total"}))
+		time.Now())
+	require.NoError(t, err)
+	require.False(t, f.Select(m))
 }
 
 func TestFilter_ApplyDeleteFields(t *testing.T) {
@@ -40,11 +51,19 @@ func TestFilter_ApplyDeleteFields(t *testing.T) {
 	}
 	require.NoError(t, f.Compile())
 	require.NoError(t, f.Compile())
-	assert.True(t, f.IsActive())
+	require.True(t, f.IsActive())
 
-	fields := map[string]interface{}{"value": int64(1), "value2": int64(2)}
-	assert.True(t, f.Apply("m", fields, nil))
-	assert.Equal(t, map[string]interface{}{"value2": int64(2)}, fields)
+	m, err := metric.New("m",
+		map[string]string{},
+		map[string]interface{}{
+			"value":  int64(1),
+			"value2": int64(2),
+		},
+		time.Now())
+	require.NoError(t, err)
+	require.True(t, f.Select(m))
+	f.Modify(m)
+	require.Equal(t, map[string]interface{}{"value2": int64(2)}, m.Fields())
 }
 
 func TestFilter_ApplyDeleteAllFields(t *testing.T) {
@@ -53,10 +72,19 @@ func TestFilter_ApplyDeleteAllFields(t *testing.T) {
 	}
 	require.NoError(t, f.Compile())
 	require.NoError(t, f.Compile())
-	assert.True(t, f.IsActive())
+	require.True(t, f.IsActive())
 
-	fields := map[string]interface{}{"value": int64(1), "value2": int64(2)}
-	assert.False(t, f.Apply("m", fields, nil))
+	m, err := metric.New("m",
+		map[string]string{},
+		map[string]interface{}{
+			"value":  int64(1),
+			"value2": int64(2),
+		},
+		time.Now())
+	require.NoError(t, err)
+	require.True(t, f.Select(m))
+	f.Modify(m)
+	require.Len(t, m.FieldList(), 0)
 }
 
 func TestFilter_Empty(t *testing.T) {
@@ -217,11 +245,11 @@ func TestFilter_FieldDrop(t *testing.T) {
 
 func TestFilter_TagPass(t *testing.T) {
 	filters := []TagFilter{
-		TagFilter{
+		{
 			Name:   "cpu",
 			Filter: []string{"cpu-*"},
 		},
-		TagFilter{
+		{
 			Name:   "mem",
 			Filter: []string{"mem_free"},
 		}}
@@ -230,20 +258,20 @@ func TestFilter_TagPass(t *testing.T) {
 	}
 	require.NoError(t, f.Compile())
 
-	passes := []map[string]string{
-		{"cpu": "cpu-total"},
-		{"cpu": "cpu-0"},
-		{"cpu": "cpu-1"},
-		{"cpu": "cpu-2"},
-		{"mem": "mem_free"},
+	passes := [][]*telegraf.Tag{
+		{{Key: "cpu", Value: "cpu-total"}},
+		{{Key: "cpu", Value: "cpu-0"}},
+		{{Key: "cpu", Value: "cpu-1"}},
+		{{Key: "cpu", Value: "cpu-2"}},
+		{{Key: "mem", Value: "mem_free"}},
 	}
 
-	drops := []map[string]string{
-		{"cpu": "cputotal"},
-		{"cpu": "cpu0"},
-		{"cpu": "cpu1"},
-		{"cpu": "cpu2"},
-		{"mem": "mem_used"},
+	drops := [][]*telegraf.Tag{
+		{{Key: "cpu", Value: "cputotal"}},
+		{{Key: "cpu", Value: "cpu0"}},
+		{{Key: "cpu", Value: "cpu1"}},
+		{{Key: "cpu", Value: "cpu2"}},
+		{{Key: "mem", Value: "mem_used"}},
 	}
 
 	for _, tags := range passes {
@@ -261,11 +289,11 @@ func TestFilter_TagPass(t *testing.T) {
 
 func TestFilter_TagDrop(t *testing.T) {
 	filters := []TagFilter{
-		TagFilter{
+		{
 			Name:   "cpu",
 			Filter: []string{"cpu-*"},
 		},
-		TagFilter{
+		{
 			Name:   "mem",
 			Filter: []string{"mem_free"},
 		}}
@@ -274,20 +302,20 @@ func TestFilter_TagDrop(t *testing.T) {
 	}
 	require.NoError(t, f.Compile())
 
-	drops := []map[string]string{
-		{"cpu": "cpu-total"},
-		{"cpu": "cpu-0"},
-		{"cpu": "cpu-1"},
-		{"cpu": "cpu-2"},
-		{"mem": "mem_free"},
+	drops := [][]*telegraf.Tag{
+		{{Key: "cpu", Value: "cpu-total"}},
+		{{Key: "cpu", Value: "cpu-0"}},
+		{{Key: "cpu", Value: "cpu-1"}},
+		{{Key: "cpu", Value: "cpu-2"}},
+		{{Key: "mem", Value: "mem_free"}},
 	}
 
-	passes := []map[string]string{
-		{"cpu": "cputotal"},
-		{"cpu": "cpu0"},
-		{"cpu": "cpu1"},
-		{"cpu": "cpu2"},
-		{"mem": "mem_used"},
+	passes := [][]*telegraf.Tag{
+		{{Key: "cpu", Value: "cputotal"}},
+		{{Key: "cpu", Value: "cpu0"}},
+		{{Key: "cpu", Value: "cpu1"}},
+		{{Key: "cpu", Value: "cpu2"}},
+		{{Key: "mem", Value: "mem_used"}},
 	}
 
 	for _, tags := range passes {
@@ -304,58 +332,70 @@ func TestFilter_TagDrop(t *testing.T) {
 }
 
 func TestFilter_FilterTagsNoMatches(t *testing.T) {
-	pretags := map[string]string{
-		"host":  "localhost",
-		"mytag": "foobar",
-	}
+	m, err := metric.New("m",
+		map[string]string{
+			"host":  "localhost",
+			"mytag": "foobar",
+		},
+		map[string]interface{}{"value": int64(1)},
+		time.Now())
+	require.NoError(t, err)
 	f := Filter{
 		TagExclude: []string{"nomatch"},
 	}
 	require.NoError(t, f.Compile())
 
-	f.filterTags(pretags)
-	assert.Equal(t, map[string]string{
+	f.filterTags(m)
+	require.Equal(t, map[string]string{
 		"host":  "localhost",
 		"mytag": "foobar",
-	}, pretags)
+	}, m.Tags())
 
 	f = Filter{
 		TagInclude: []string{"nomatch"},
 	}
 	require.NoError(t, f.Compile())
 
-	f.filterTags(pretags)
-	assert.Equal(t, map[string]string{}, pretags)
+	f.filterTags(m)
+	require.Equal(t, map[string]string{}, m.Tags())
 }
 
 func TestFilter_FilterTagsMatches(t *testing.T) {
-	pretags := map[string]string{
-		"host":  "localhost",
-		"mytag": "foobar",
-	}
+	m, err := metric.New("m",
+		map[string]string{
+			"host":  "localhost",
+			"mytag": "foobar",
+		},
+		map[string]interface{}{"value": int64(1)},
+		time.Now())
+	require.NoError(t, err)
 	f := Filter{
 		TagExclude: []string{"ho*"},
 	}
 	require.NoError(t, f.Compile())
 
-	f.filterTags(pretags)
-	assert.Equal(t, map[string]string{
+	f.filterTags(m)
+	require.Equal(t, map[string]string{
 		"mytag": "foobar",
-	}, pretags)
+	}, m.Tags())
 
-	pretags = map[string]string{
-		"host":  "localhost",
-		"mytag": "foobar",
-	}
+	m, err = metric.New("m",
+		map[string]string{
+			"host":  "localhost",
+			"mytag": "foobar",
+		},
+		map[string]interface{}{"value": int64(1)},
+		time.Now())
+	require.NoError(t, err)
 	f = Filter{
 		TagInclude: []string{"my*"},
 	}
 	require.NoError(t, f.Compile())
 
-	f.filterTags(pretags)
-	assert.Equal(t, map[string]string{
+	f.filterTags(m)
+	require.Equal(t, map[string]string{
 		"mytag": "foobar",
-	}, pretags)
+	}, m.Tags())
 }
 
 // TestFilter_FilterNamePassAndDrop used for check case when
@@ -374,7 +414,7 @@ func TestFilter_FilterNamePassAndDrop(t *testing.T) {
 	require.NoError(t, f.Compile())
 
 	for i, name := range inputData {
-		assert.Equal(t, f.shouldNamePass(name), expectedResult[i])
+		require.Equal(t, f.shouldNamePass(name), expectedResult[i])
 	}
 }
 
@@ -394,7 +434,7 @@ func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
 	require.NoError(t, f.Compile())
 
 	for i, field := range inputData {
-		assert.Equal(t, f.shouldFieldPass(field), expectedResult[i])
+		require.Equal(t, f.shouldFieldPass(field), expectedResult[i])
 	}
 }
 
@@ -402,29 +442,28 @@ func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
 // both parameters were defined
 // see: https://github.com/influxdata/telegraf/issues/2860
 func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
-
-	inputData := []map[string]string{
-		{"tag1": "1", "tag2": "3"},
-		{"tag1": "1", "tag2": "2"},
-		{"tag1": "2", "tag2": "1"},
-		{"tag1": "4", "tag2": "1"},
+	inputData := [][]*telegraf.Tag{
+		{{Key: "tag1", Value: "1"}, {Key: "tag2", Value: "3"}},
+		{{Key: "tag1", Value: "1"}, {Key: "tag2", Value: "2"}},
+		{{Key: "tag1", Value: "2"}, {Key: "tag2", Value: "1"}},
+		{{Key: "tag1", Value: "4"}, {Key: "tag2", Value: "1"}},
 	}
 
 	expectedResult := []bool{false, true, false, false}
 
 	filterPass := []TagFilter{
-		TagFilter{
+		{
 			Name:   "tag1",
 			Filter: []string{"1", "4"},
 		},
 	}
 
 	filterDrop := []TagFilter{
-		TagFilter{
+		{
 			Name:   "tag1",
 			Filter: []string{"4"},
 		},
-		TagFilter{
+		{
 			Name:   "tag2",
 			Filter: []string{"3"},
 		},
@@ -438,7 +477,49 @@ func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 	require.NoError(t, f.Compile())
 
 	for i, tag := range inputData {
-		assert.Equal(t, f.shouldTagsPass(tag), expectedResult[i])
+		require.Equal(t, f.shouldTagsPass(tag), expectedResult[i])
 	}
 
+}
+
+func BenchmarkFilter(b *testing.B) {
+	tests := []struct {
+		name   string
+		filter Filter
+		metric telegraf.Metric
+	}{
+		{
+			name:   "empty filter",
+			filter: Filter{},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "namepass",
+			filter: Filter{
+				NamePass: []string{"cpu"},
+			},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			require.NoError(b, tt.filter.Compile())
+			for n := 0; n < b.N; n++ {
+				tt.filter.Select(tt.metric)
+			}
+		})
+	}
 }
