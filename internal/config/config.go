@@ -1025,6 +1025,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		Name:   name,
 		Delay:  time.Millisecond * 100,
 		Period: time.Second * 30,
+		Grace:  time.Second * 0,
 	}
 
 	if node, ok := tbl.Fields["period"]; ok {
@@ -1053,6 +1054,18 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
+	if node, ok := tbl.Fields["grace"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				conf.Grace = dur
+			}
+		}
+	}
 	if node, ok := tbl.Fields["drop_original"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if b, ok := kv.Value.(*ast.Boolean); ok {
@@ -1100,6 +1113,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 
 	delete(tbl.Fields, "period")
 	delete(tbl.Fields, "delay")
+	delete(tbl.Fields, "grace")
 	delete(tbl.Fields, "drop_original")
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
