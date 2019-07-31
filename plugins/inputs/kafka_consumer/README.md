@@ -23,8 +23,7 @@ and use the old zookeeper connection method.
   # client_id = "Telegraf"
 
   ## Set the minimal supported Kafka version.  Setting this enables the use of new
-  ## Kafka features and APIs.  Of particular interest, lz4 compression
-  ## requires at least version 0.10.0.0.
+  ## Kafka features and APIs.  Must be 0.10.2.0 or greater.
   ##   ex: version = "1.1.0"
   # version = ""
 
