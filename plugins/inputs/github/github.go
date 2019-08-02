@@ -18,10 +18,12 @@ import (
 
 // GitHub - plugin main structure
 type GitHub struct {
-	Repositories []string          `toml:"repositories"`
-	AccessToken  string            `toml:"access_token"`
-	HTTPTimeout  internal.Duration `toml:"http_timeout"`
-	githubClient *github.Client
+	Repositories        []string          `toml:"repositories"`
+	AccessToken         string            `toml:"access_token"`
+	EnterpriseBaseURL   string            `toml:"enterprise_base_url"`
+	EnterpriseUploadURL string            `toml:"enterprise_upload_url"`
+	HTTPTimeout         internal.Duration `toml:"http_timeout"`
+	githubClient        *github.Client
 
 	obfusticatedToken string
 
@@ -36,6 +38,10 @@ const sampleConfig = `
 
   ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
   # access_token = ""
+	
+  ## Github API enterprise urls. Github Enterprise accounts must specify their base and upload urls.
+  # enterprise_base_url = ""
+  # enterprise_upload_url = ""
 
   ## Timeout for HTTP requests.
   # http_timeout = "5s"
@@ -71,9 +77,16 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 
 		g.obfusticatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
 
-		return github.NewClient(oauthClient), nil
+		return g.newGithubClient(oauthClient)
 	}
 
+	return g.newGithubClient(httpClient)
+}
+
+func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
+	if g.EnterpriseBaseURL != "" && g.EnterpriseUploadURL != "" {
+		return github.NewEnterpriseClient(g.EnterpriseBaseURL, g.EnterpriseUploadURL, httpClient)
+	}
 	return github.NewClient(httpClient), nil
 }
 
