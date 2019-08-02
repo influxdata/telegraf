@@ -22,6 +22,11 @@ func TestNewGithubClient(t *testing.T) {
 	require.Nil(t, err)
 	require.Contains(t, enterpriseClient.BaseURL.String(), "api.example.com")
 	require.Contains(t, enterpriseClient.UploadURL.String(), "upload.example.com")
+	g.EnterpriseUploadURL = ""
+	enterpriseClient, err := g.newGithubClient(httpClient)
+	require.Nil(t, err)
+	require.Contains(t, enterpriseClient.BaseURL.String(), "api.example.com")
+	require.Contains(t, enterpriseClient.UploadURL.String(), "")
 }
 
 func TestSplitRepositoryNameWithWorkingExample(t *testing.T) {

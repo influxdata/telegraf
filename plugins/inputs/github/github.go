@@ -84,7 +84,7 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 }
 
 func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
-	if g.EnterpriseBaseURL != "" && g.EnterpriseUploadURL != "" {
+	if g.EnterpriseBaseURL != "" {
 		return github.NewEnterpriseClient(g.EnterpriseBaseURL, g.EnterpriseUploadURL, httpClient)
 	}
 	return github.NewClient(httpClient), nil
