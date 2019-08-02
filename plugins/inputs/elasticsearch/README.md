@@ -1,15 +1,32 @@
 # Elasticsearch Input Plugin
 
 The [elasticsearch](https://www.elastic.co/) plugin queries endpoints to obtain
-[node](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
-and optionally [cluster-health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
-or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html) metrics.
+[Node Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-stats.html)
+and optionally
+[Cluster-Health](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html)
+metrics.
+
+In addition, the following optional queries are only made by the master node:
+ [Cluster Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-stats.html)
+ [Indices Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
+ [Shard Stats](https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html)
+
+Specific Elasticsearch endpoints that are queried:
+- Node: either /_nodes/stats or /_nodes/_local/stats depending on 'local' configuration setting
+- Cluster Heath:  /_cluster/health?level=indices
+- Cluster Stats:  /_cluster/stats
+- Indices Stats:  /_all/_stats
+- Shard Stats:  /_all/_stats?level=shards
+
+Note that specific statistics information can change between Elassticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
 
 ### Configuration
 
 ```toml
 [[inputs.elasticsearch]]
   ## specify a list of one or more Elasticsearch servers
+  ## you can add username and password to your url to use basic authentication:
+  ## servers = ["http://user:pass@localhost:9200"]
   servers = ["http://localhost:9200"]
 
   ## Timeout for HTTP requests to the elastic search server(s)
@@ -20,20 +37,27 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## of the cluster.
   local = true
 
-  ## Set cluster_health to true when you want to also obtain cluster health stats
+  ## Set cluster_health to true when you want to obtain cluster health stats
   cluster_health = false
 
-  ## Adjust cluster_health_level when you want to also obtain detailed health stats
+  ## Adjust cluster_health_level when you want to obtain detailed health stats
   ## The options are
   ##  - indices (default)
   ##  - cluster
   # cluster_health_level = "indices"
 
-  ## Set cluster_stats to true when you want to also obtain cluster stats.
+  ## Set cluster_stats to true when you want to obtain cluster stats.
   cluster_stats = false
 
   ## Only gather cluster_stats from the master node. To work this require local = true
   cluster_stats_only_from_master = true
+
+  ## Indices to collect; can be one or more indices names or _all
+  indices_include = ["_all"]
+
+  ## One of "shards", "cluster", "indices"
+  ## Currently only "shards" is implemented
+  indices_level = "shards"
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
@@ -618,3 +642,211 @@ Emitted when the appropriate `node_stats` options are set.
     - write_queue (float)
     - write_rejected (float)
     - write_threads (float)
+
+Emitted when the appropriate `indices_stats` options are set.
+
+- elasticsearch_indices_stats_(primaries|total)
+  - tags:
+    - index_name
+  - fields:
+    - completion_size_in_bytes (float)
+    - docs_count (float)
+    - docs_deleted (float)
+    - fielddata_evictions (float)
+    - fielddata_memory_size_in_bytes (float)
+    - flush_periodic (float)
+    - flush_total (float)
+    - flush_total_time_in_millis (float)
+    - get_current (float)
+    - get_exists_time_in_millis (float)
+    - get_exists_total (float)
+    - get_missing_time_in_millis (float)
+    - get_missing_total (float)
+    - get_time_in_millis (float)
+    - get_total (float)
+    - indexing_delete_current (float)
+    - indexing_delete_time_in_millis (float)
+    - indexing_delete_total (float)
+    - indexing_index_current (float)
+    - indexing_index_failed (float)
+    - indexing_index_time_in_millis (float)
+    - indexing_index_total (float)
+    - indexing_is_throttled (float)
+    - indexing_noop_update_total (float)
+    - indexing_throttle_time_in_millis (float)
+    - merges_current (float)
+    - merges_current_docs (float)
+    - merges_current_size_in_bytes (float)
+    - merges_total (float)
+    - merges_total_auto_throttle_in_bytes (float)
+    - merges_total_docs (float)
+    - merges_total_size_in_bytes (float)
+    - merges_total_stopped_time_in_millis (float)
+    - merges_total_throttled_time_in_millis (float)
+    - merges_total_time_in_millis (float)
+    - query_cache_cache_count (float)
+    - query_cache_cache_size (float)
+    - query_cache_evictions (float)
+    - query_cache_hit_count (float)
+    - query_cache_memory_size_in_bytes (float)
+    - query_cache_miss_count (float)
+    - query_cache_total_count (float)
+    - recovery_current_as_source (float)
+    - recovery_current_as_target (float)
+    - recovery_throttle_time_in_millis (float)
+    - refresh_external_total (float)
+    - refresh_external_total_time_in_millis (float)
+    - refresh_listeners (float)
+    - refresh_total (float)
+    - refresh_total_time_in_millis (float)
+    - request_cache_evictions (float)
+    - request_cache_hit_count (float)
+    - request_cache_memory_size_in_bytes (float)
+    - request_cache_miss_count (float)
+    - search_fetch_current (float)
+    - search_fetch_time_in_millis (float)
+    - search_fetch_total (float)
+    - search_open_contexts (float)
+    - search_query_current (float)
+    - search_query_time_in_millis (float)
+    - search_query_total (float)
+    - search_scroll_current (float)
+    - search_scroll_time_in_millis (float)
+    - search_scroll_total (float)
+    - search_suggest_current (float)
+    - search_suggest_time_in_millis (float)
+    - search_suggest_total (float)
+    - segments_count (float)
+    - segments_doc_values_memory_in_bytes (float)
+    - segments_fixed_bit_set_memory_in_bytes (float)
+    - segments_index_writer_memory_in_bytes (float)
+    - segments_max_unsafe_auto_id_timestamp (float)
+    - segments_memory_in_bytes (float)
+    - segments_norms_memory_in_bytes (float)
+    - segments_points_memory_in_bytes (float)
+    - segments_stored_fields_memory_in_bytes (float)
+    - segments_term_vectors_memory_in_bytes (float)
+    - segments_terms_memory_in_bytes (float)
+    - segments_version_map_memory_in_bytes (float)
+    - store_size_in_bytes (float)
+    - translog_earliest_last_modified_age (float)
+    - translog_operations (float)
+    - translog_size_in_bytes (float)
+    - translog_uncommitted_operations (float)
+    - translog_uncommitted_size_in_bytes (float)
+    - warmer_current (float)
+    - warmer_total (float)
+    - warmer_total_time_in_millis (float)
+
+Emitted when the appropriate `shards_stats` options are set.
+
+- elasticsearch_indices_stats_shards_total
+  - fields:
+    - failed (float)
+    - successful (float)
+    - total (float)
+
+- elasticsearch_indices_stats_shards
+  - tags:
+    - index_name
+    - node_name
+    - shard_name
+    - type
+  - fields:
+    - commit_generation (float)
+    - commit_num_docs (float)
+    - completion_size_in_bytes (float)
+    - docs_count (float)
+    - docs_deleted (float)
+    - fielddata_evictions (float)
+    - fielddata_memory_size_in_bytes (float)
+    - flush_periodic (float)
+    - flush_total (float)
+    - flush_total_time_in_millis (float)
+    - get_current (float)
+    - get_exists_time_in_millis (float)
+    - get_exists_total (float)
+    - get_missing_time_in_millis (float)
+    - get_missing_total (float)
+    - get_time_in_millis (float)
+    - get_total (float)
+    - indexing_delete_current (float)
+    - indexing_delete_time_in_millis (float)
+    - indexing_delete_total (float)
+    - indexing_index_current (float)
+    - indexing_index_failed (float)
+    - indexing_index_time_in_millis (float)
+    - indexing_index_total (float)
+    - indexing_is_throttled (bool)
+    - indexing_noop_update_total (float)
+    - indexing_throttle_time_in_millis (float)
+    - merges_current (float)
+    - merges_current_docs (float)
+    - merges_current_size_in_bytes (float)
+    - merges_total (float)
+    - merges_total_auto_throttle_in_bytes (float)
+    - merges_total_docs (float)
+    - merges_total_size_in_bytes (float)
+    - merges_total_stopped_time_in_millis (float)
+    - merges_total_throttled_time_in_millis (float)
+    - merges_total_time_in_millis (float)
+    - query_cache_cache_count (float)
+    - query_cache_cache_size (float)
+    - query_cache_evictions (float)
+    - query_cache_hit_count (float)
+    - query_cache_memory_size_in_bytes (float)
+    - query_cache_miss_count (float)
+    - query_cache_total_count (float)
+    - recovery_current_as_source (float)
+    - recovery_current_as_target (float)
+    - recovery_throttle_time_in_millis (float)
+    - refresh_external_total (float)
+    - refresh_external_total_time_in_millis (float)
+    - refresh_listeners (float)
+    - refresh_total (float)
+    - refresh_total_time_in_millis (float)
+    - request_cache_evictions (float)
+    - request_cache_hit_count (float)
+    - request_cache_memory_size_in_bytes (float)
+    - request_cache_miss_count (float)
+    - retention_leases_primary_term (float)
+    - retention_leases_version (float)
+    - routing_state (int) (UNASSIGNED = 1, INITIALIZING = 2, STARTED = 3, RELOCATING = 4, other = 0)
+    - search_fetch_current (float)
+    - search_fetch_time_in_millis (float)
+    - search_fetch_total (float)
+    - search_open_contexts (float)
+    - search_query_current (float)
+    - search_query_time_in_millis (float)
+    - search_query_total (float)
+    - search_scroll_current (float)
+    - search_scroll_time_in_millis (float)
+    - search_scroll_total (float)
+    - search_suggest_current (float)
+    - search_suggest_time_in_millis (float)
+    - search_suggest_total (float)
+    - segments_count (float)
+    - segments_doc_values_memory_in_bytes (float)
+    - segments_fixed_bit_set_memory_in_bytes (float)
+    - segments_index_writer_memory_in_bytes (float)
+    - segments_max_unsafe_auto_id_timestamp (float)
+    - segments_memory_in_bytes (float)
+    - segments_norms_memory_in_bytes (float)
+    - segments_points_memory_in_bytes (float)
+    - segments_stored_fields_memory_in_bytes (float)
+    - segments_term_vectors_memory_in_bytes (float)
+    - segments_terms_memory_in_bytes (float)
+    - segments_version_map_memory_in_bytes (float)
+    - seq_no_global_checkpoint (float)
+    - seq_no_local_checkpoint (float)
+    - seq_no_max_seq_no (float)
+    - shard_path_is_custom_data_path (bool)
+    - store_size_in_bytes (float)
+    - translog_earliest_last_modified_age (float)
+    - translog_operations (float)
+    - translog_size_in_bytes (float)
+    - translog_uncommitted_operations (float)
+    - translog_uncommitted_size_in_bytes (float)
+    - warmer_current (float)
+    - warmer_total (float)
+    - warmer_total_time_in_millis (float)
