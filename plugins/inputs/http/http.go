@@ -88,7 +88,7 @@ func (*HTTP) Description() string {
 	return "Read formatted metrics from one or more HTTP endpoints"
 }
 
-func (h *HTTP) Init() error {
+func (h *HTTP) Init(conf telegraf.PluginConfig) error {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return err

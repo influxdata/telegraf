@@ -46,7 +46,7 @@ func (p *Printer) Description() string {
 	return "Print all metrics that pass through this filter."
 }
 
-func (p *Printer) Init() error {
+func (p *Printer) Init(telegraf.PluginConfig) error {
 	return nil
 }
 

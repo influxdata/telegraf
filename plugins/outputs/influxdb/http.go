@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -106,6 +105,8 @@ type httpClient struct {
 	client           *http.Client
 	config           HTTPConfig
 	createdDatabases map[string]bool
+
+	log telegraf.Logger
 }
 
 func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
@@ -180,6 +181,10 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 // URL returns the origin URL that this client connects too.
 func (c *httpClient) URL() string {
 	return c.config.URL.String()
+}
+
+func (c *httpClient) SetLogger(log telegraf.Logger) {
+	c.log = log
 }
 
 // Database returns the default database that this client connects too.
@@ -257,7 +262,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			if !c.config.SkipDatabaseCreation && !c.createdDatabases[db] {
 				err := c.CreateDatabase(ctx, db)
 				if err != nil {
-					log.Printf("W! [outputs.influxdb] when writing to [%s]: database %q creation failed: %v",
+					c.log.Warnf("when writing to [%s]: database %q creation failed: %v",
 						c.config.URL, db, err)
 				}
 			}
@@ -323,7 +328,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// discarded for being older than the retention policy.  Usually this not
 	// a cause for concern and we don't want to retry.
 	if strings.Contains(desc, errStringPointsBeyondRP) {
-		log.Printf("W! [outputs.influxdb]: when writing to [%s]: received error %v",
+		c.log.Warnf("when writing to [%s]: received error %v",
 			c.URL(), desc)
 		return nil
 	}
@@ -332,7 +337,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// correctable at this point and so the point is dropped instead of
 	// retrying.
 	if strings.Contains(desc, errStringPartialWrite) {
-		log.Printf("E! [outputs.influxdb]: when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("when writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -340,7 +345,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// This error indicates a bug in either Telegraf line protocol
 	// serialization, retries would not be successful.
 	if strings.Contains(desc, errStringUnableToParse) {
-		log.Printf("E! [outputs.influxdb]: when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("when writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}

@@ -110,7 +110,7 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 
 func (ro *RunningOutput) Init() error {
 	if p, ok := ro.Output.(telegraf.Initializer); ok {
-		err := p.Init()
+		err := p.Init(telegraf.PluginConfig{Logger: telegraf.Logger{Name: ro.LogName()}})
 		if err != nil {
 			return err
 		}

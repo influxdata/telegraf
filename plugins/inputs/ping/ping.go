@@ -327,7 +327,7 @@ func onFin(packetsSent int, resps []*ping.Response, destination string) (map[str
 }
 
 // Init ensures the plugin is configured correctly.
-func (p *Ping) Init() error {
+func (p *Ping) Init(conf telegraf.PluginConfig) error {
 	if p.Count < 1 {
 		return errors.New("bad number of packets to transmit")
 	}

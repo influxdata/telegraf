@@ -106,7 +106,7 @@ func (d *DockerLogs) SampleConfig() string {
 	return sampleConfig
 }
 
-func (d *DockerLogs) Init() error {
+func (d *DockerLogs) Init(conf telegraf.PluginConfig) error {
 	var err error
 	if d.Endpoint == "ENV" {
 		d.client, err = d.newEnvClient()

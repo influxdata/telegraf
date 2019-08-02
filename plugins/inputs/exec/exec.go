@@ -3,7 +3,6 @@ package exec
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -51,6 +50,7 @@ type Exec struct {
 	parser parsers.Parser
 
 	runner Runner
+	log    telegraf.Logger
 }
 
 func NewExec() *Exec {
@@ -145,6 +145,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
+	e.log.Debugf("command %#v", command)
 	out, errbuf, runErr := e.runner.Run(command, e.Timeout.Duration)
 	if !isNagios && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
@@ -161,7 +162,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	if isNagios {
 		metrics, err = nagios.TryAddState(runErr, metrics)
 		if err != nil {
-			log.Printf("E! [inputs.exec] failed to add nagios state: %s", err)
+			e.log.Errorf("failed to add nagios state: %s", err)
 		}
 	}
 
@@ -226,6 +227,12 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		go e.ProcessCommand(command, acc, &wg)
 	}
 	wg.Wait()
+	return nil
+}
+
+func (e *Exec) Init(conf telegraf.PluginConfig) error {
+	e.log = conf.Logger
+
 	return nil
 }
 

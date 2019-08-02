@@ -201,7 +201,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (c *X509Cert) Init() error {
+func (c *X509Cert) Init(conf telegraf.PluginConfig) error {
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
 		return err

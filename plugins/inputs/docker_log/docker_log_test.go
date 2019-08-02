@@ -160,7 +160,7 @@ func Test(t *testing.T) {
 				containerList: make(map[string]context.CancelFunc),
 			}
 
-			err := plugin.Init()
+			err := plugin.Init(telegraf.PluginConfig{Logger: telegraf.Logger{}})
 			require.NoError(t, err)
 
 			err = plugin.Gather(&acc)

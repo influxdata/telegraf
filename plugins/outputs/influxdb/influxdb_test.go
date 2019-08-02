@@ -20,6 +20,8 @@ type MockClient struct {
 	CreateDatabaseF func(ctx context.Context, database string) error
 	DatabaseF       func() string
 	CloseF          func()
+
+	log telegraf.Logger
 }
 
 func (c *MockClient) URL() string {
@@ -40,6 +42,10 @@ func (c *MockClient) Database() string {
 
 func (c *MockClient) Close() {
 	c.CloseF()
+}
+
+func (c *MockClient) SetLogger(log telegraf.Logger) {
+	c.log = log
 }
 
 func TestDeprecatedURLSupport(t *testing.T) {

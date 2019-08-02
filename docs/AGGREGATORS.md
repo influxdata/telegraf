@@ -52,7 +52,7 @@ var sampleConfig = `
   drop_original = false
 `
 
-func (m *Min) Init() error {
+func (m *Min) Init(telegraf.PluginConfig) error {
 	return nil
 }
 
