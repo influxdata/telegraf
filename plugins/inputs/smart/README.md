@@ -3,6 +3,8 @@
 Get metrics using the command line utility `smartctl` for S.M.A.R.T. (Self-Monitoring, Analysis and Reporting Technology) storage devices. SMART is a monitoring system included in computer hard disk drives (HDDs) and solid-state drives (SSDs)[1] that detects and reports on various indicators of drive reliability, with the intent of enabling the anticipation of hardware failures.
 See smartmontools (https://www.smartmontools.org/).
 
+SMART information is separated between different measurements: `smart_device` is used for general information, while `smart_attribute` stores the detailed attribute information if `attributes = true` is enabled in the plugin configuration.
+
 If no devices are specified, the plugin will scan for SMART devices via the following command:
 
 ```
@@ -46,7 +48,8 @@ smartctl -s on <device>
   ## "never" depending on your disks.
   # nocheck = "standby"
 
-  ## Gather detailed metrics for each SMART Attribute.
+  ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
+  ## information from each drive into the `smart_attribute` measurement.
   # attributes = false
 
   ## Optionally specify devices to exclude from reporting.

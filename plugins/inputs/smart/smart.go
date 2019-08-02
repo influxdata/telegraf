@@ -139,7 +139,8 @@ var sampleConfig = `
   ## "never" depending on your disks.
   # nocheck = "standby"
 
-  ## Gather detailed metrics for each SMART Attribute.
+  ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
+  ## information from each drive into the 'smart_attribute' measurement.
   # attributes = false
 
   ## Optionally specify devices to exclude from reporting.
