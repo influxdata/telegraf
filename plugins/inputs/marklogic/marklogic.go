@@ -7,14 +7,13 @@ import (
 	"sync"
 	"time"
 
-	dac "github.com/go-http-digest-auth-client"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	dac "github.com/xinsnake/go-http-digest-auth-client"
 )
 
 type Marklogic struct {
-
-	Hosts         []string `toml:"hosts"`
+	Hosts          []string `toml:"hosts"`
 	DigestUsername string   `toml:"digest_username"`
 	DigestPassword string   `toml:"digest_password"`
 
@@ -60,7 +59,7 @@ type MLHosts struct {
 				} `json:"total-load"`
 			} `json:"load-properties"`
 			StatusDetail struct {
-				HostMode          struct {
+				HostMode struct {
 					Units string `json:"units"`
 					Value string `json:"value"`
 				} `json:"host-mode"`
@@ -76,46 +75,46 @@ type MLHosts struct {
 					Units string `json:"units"`
 					Value int    `json:"value"`
 				} `json:"core-threads"`
-				TotalCPUStatUser      float64 `json:"total-cpu-stat-user"`
-				TotalCPUStatNice      float64  `json:"total-cpu-stat-nice"`
-				TotalCPUStatSystem    float64 `json:"total-cpu-stat-system"`
-				TotalCPUStatIdle      float64 `json:"total-cpu-stat-idle"`
-				TotalCPUStatGuest     float64  `json:"total-cpu-stat-guest"`
-				MemoryProcessSize     struct {
+				TotalCPUStatUser   float64 `json:"total-cpu-stat-user"`
+				TotalCPUStatNice   float64 `json:"total-cpu-stat-nice"`
+				TotalCPUStatSystem float64 `json:"total-cpu-stat-system"`
+				TotalCPUStatIdle   float64 `json:"total-cpu-stat-idle"`
+				TotalCPUStatGuest  float64 `json:"total-cpu-stat-guest"`
+				MemoryProcessSize  struct {
 					Units string `json:"units"`
-					Value float64 `json:"value"`
+					Value int    `json:"value"`
 				} `json:"memory-process-size"`
 				MemoryProcessRss struct {
 					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Value int    `json:"value"`
 				} `json:"memory-process-rss"`
 				MemorySystemTotal struct {
 					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Value int    `json:"value"`
 				} `json:"memory-system-total"`
 				MemorySystemFree struct {
 					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Value int    `json:"value"`
 				} `json:"memory-system-free"`
 				DataDirSpace struct {
 					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Value int    `json:"value"`
 				} `json:"data-dir-space"`
 				QueryReadBytes struct {
 					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Value int    `json:"value"`
 				} `json:"query-read-bytes"`
 				QueryReadLoad struct {
 					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Value int    `json:"value"`
 				} `json:"query-read-load"`
 				HTTPServerReceiveBytes struct {
-					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Units string  `json:"units"`
+					Value float64 `json:"value"`
 				} `json:"http-server-receive-bytes"`
 				HTTPServerSendBytes struct {
-					Units string `json:"units"`
-					Value float64    `json:"value"`
+					Units string  `json:"units"`
+					Value float64 `json:"value"`
 				} `json:"http-server-send-bytes"`
 			} `json:"status-detail"`
 		} `json:"status-properties"`
@@ -173,11 +172,11 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, host string) er
 		}
 	}
 
-t := dac.NewTransport(c.DigestUsername, c.DigestPassword)
-req, err := http.NewRequest("GET", host, nil)
-if err != nil {
-	return err
-}
+	t := dac.NewTransport(c.DigestUsername, c.DigestPassword)
+	req, err := http.NewRequest("GET", host, nil)
+	if err != nil {
+		return err
+	}
 
 	response, err := t.RoundTrip(req)
 	if err != nil {
@@ -197,29 +196,28 @@ if err != nil {
 
 	// Build a map of tags
 	tags := map[string]string{
-    //"server":   hs.Host,
-		"ml_hostname":  stats.HostStatus.Name,
-		"id":  stats.HostStatus.ID,
-
+		//"server":   hs.Host,
+		"ml_hostname": stats.HostStatus.Name,
+		"id":          stats.HostStatus.ID,
 	}
 
 	// Build a map of field values
 	fields := map[string]interface{}{
 
-		"online":                             stats.HostStatus.StatusProperties.Online.Value,
-    "total_cpu_stat_user":                stats.HostStatus.StatusProperties.StatusDetail.TotalCPUStatUser,
-		"total_cpu_stat_system":              stats.HostStatus.StatusProperties.StatusDetail.TotalCPUStatSystem,
-		"memory_process_size":                stats.HostStatus.StatusProperties.StatusDetail.MemoryProcessSize.Value,
-		"memory_process_rss":                 stats.HostStatus.StatusProperties.StatusDetail.MemoryProcessRss.Value,
-		"memory_system_total":                stats.HostStatus.StatusProperties.StatusDetail.MemorySystemTotal.Value,
-		"memory_system_free":                 stats.HostStatus.StatusProperties.StatusDetail.MemorySystemFree.Value,
-		"num_cores":                          stats.HostStatus.StatusProperties.StatusDetail.Cores.Value,
-		"total_load":                         stats.HostStatus.StatusProperties.LoadProperties.TotalLoad.Value,
-		"data_dir_space":                     stats.HostStatus.StatusProperties.StatusDetail.DataDirSpace.Value,
-		"query_read_bytes":                   stats.HostStatus.StatusProperties.StatusDetail.QueryReadBytes.Value,
-		"query_read_load":                    stats.HostStatus.StatusProperties.StatusDetail.QueryReadLoad.Value,
-		"http_server_receive_bytes":          stats.HostStatus.StatusProperties.StatusDetail.HTTPServerReceiveBytes.Value,
-	  "http_server_send_bytes":             stats.HostStatus.StatusProperties.StatusDetail.HTTPServerSendBytes.Value,
+		"online":                    stats.HostStatus.StatusProperties.Online.Value,
+		"total_cpu_stat_user":       stats.HostStatus.StatusProperties.StatusDetail.TotalCPUStatUser,
+		"total_cpu_stat_system":     stats.HostStatus.StatusProperties.StatusDetail.TotalCPUStatSystem,
+		"memory_process_size":       stats.HostStatus.StatusProperties.StatusDetail.MemoryProcessSize.Value,
+		"memory_process_rss":        stats.HostStatus.StatusProperties.StatusDetail.MemoryProcessRss.Value,
+		"memory_system_total":       stats.HostStatus.StatusProperties.StatusDetail.MemorySystemTotal.Value,
+		"memory_system_free":        stats.HostStatus.StatusProperties.StatusDetail.MemorySystemFree.Value,
+		"num_cores":                 stats.HostStatus.StatusProperties.StatusDetail.Cores.Value,
+		"total_load":                stats.HostStatus.StatusProperties.LoadProperties.TotalLoad.Value,
+		"data_dir_space":            stats.HostStatus.StatusProperties.StatusDetail.DataDirSpace.Value,
+		"query_read_bytes":          stats.HostStatus.StatusProperties.StatusDetail.QueryReadBytes.Value,
+		"query_read_load":           stats.HostStatus.StatusProperties.StatusDetail.QueryReadLoad.Value,
+		"http_server_receive_bytes": stats.HostStatus.StatusProperties.StatusDetail.HTTPServerReceiveBytes.Value,
+		"http_server_send_bytes":    stats.HostStatus.StatusProperties.StatusDetail.HTTPServerSendBytes.Value,
 	}
 
 	// Accumulate the tags and values

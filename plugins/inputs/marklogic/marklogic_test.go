@@ -20,7 +20,7 @@ func TestMarklogic(t *testing.T) {
 	defer ts.Close()
 
 	// Parse the URL of the test server, used to verify the expected host
-  _, err := url.Parse(ts.URL)
+	_, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 
 	// Create a new Marklogic instance with our given test server
@@ -37,29 +37,27 @@ func TestMarklogic(t *testing.T) {
 	// Expect the correct values for all known keys
 	expectFields := map[string]interface{}{
 
-		"online":                   bool(true),
-    "total_cpu_stat_user":      float64(0.276381999254227 ),
-		"total_cpu_stat_system":    float64(0.636515974998474),
-		"memory_process_size":      float64(1234),
-		"memory_process_rss":       float64(815),
-		"memory_system_total":      float64(3947),
-		"memory_system_free":       float64(2761),
-		"num_cores":                int(4),
-		"total_load":               float64(0.00429263804107904),
-		"data_dir_space":           float64(34968),
-		"query_read_bytes":         float64(11492428),
-		"query_read_load":           float64(0),
+		"online":                    bool(true),
+		"total_cpu_stat_user":       float64(0.276381999254227),
+		"total_cpu_stat_system":     float64(0.636515974998474),
+		"memory_process_size":       int(1234),
+		"memory_process_rss":        int(815),
+		"memory_system_total":       int(3947),
+		"memory_system_free":        int(2761),
+		"num_cores":                 int(4),
+		"total_load":                float64(0.00429263804107904),
+		"data_dir_space":            int(34968),
+		"query_read_bytes":          int(11492428),
+		"query_read_load":           int(0),
 		"http_server_receive_bytes": float64(285915),
 		"http_server_send_bytes":    float64(0),
-
 	}
 	// Expect the correct values for all tags
 	expectTags := map[string]string{
-		"ml_hostname":  string("ml1.local"),
-		"id":   string("2592913110757471141"),
+		"ml_hostname": string("ml1.local"),
+		"id":          string("2592913110757471141"),
 	}
 
-  //fmt.Println(acc.Metrics)
 	acc.AssertContainsTaggedFields(t, "marklogic", expectFields, expectTags)
 
 }
