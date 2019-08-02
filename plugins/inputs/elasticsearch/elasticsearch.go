@@ -189,6 +189,21 @@ func mapHealthStatusToCode(s string) int {
 	return 0
 }
 
+// perform shard status mapping
+func mapShardStatusToCode(s string) int {
+	switch strings.ToUpper(s) {
+	case "UNASSIGNED":
+		return 1
+	case "INITIALIZING":
+		return 2
+	case "STARTED":
+		return 3
+	case "RELOCATING":
+		return 4
+	}
+	return 0
+}
+
 // SampleConfig returns sample configuration for this plugin.
 func (e *Elasticsearch) SampleConfig() string {
 	return sampleConfig
@@ -509,7 +524,7 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 		if err != nil {
 			return err
 		}
-		acc.AddFields("elasticsearch_indices_stats_"+m, jsonParser.Fields, map[string]string{"index_name": "all"}, now)
+		acc.AddFields("elasticsearch_indices_stats_"+m, jsonParser.Fields, map[string]string{"index_name": "_all"}, now)
 	}
 
 	// Individual Indices stats
@@ -546,12 +561,24 @@ func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator)
 					}
 					delete(flattened.Fields, "routing_primary")
 
+					routingState, ok := flattened.Fields["routing_state"].(string)
+					if ok {
+						flattened.Fields["routing_state"] = mapShardStatusToCode(routingState)
+					}
+
 					routingNode, _ := flattened.Fields["routing_node"].(string)
 					shardTags := map[string]string{
 						"index_name": id,
 						"node_id":    routingNode,
 						"shard_name": string(shardNumber),
 						"type":       shardType,
+					}
+
+					for key, field := range flattened.Fields {
+						switch field.(type) {
+						case string, bool:
+							delete(flattened.Fields, key)
+						}
 					}
 
 					acc.AddFields("elasticsearch_indices_stats_shards",

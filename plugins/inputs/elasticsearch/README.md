@@ -56,6 +56,7 @@ Note that specific statistics information can change between Elassticsearch vers
   indices_include = ["_all"]
 
   ## One of "shards", "cluster", "indices"
+  ## Currently only "shards" is implemented
   indices_level = "shards"
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
@@ -644,7 +645,7 @@ Emitted when the appropriate `node_stats` options are set.
 
 Emitted when the appropriate `indices_stats` options are set.
 
-- elasticsearch_indicestats_(primaries|total)
+- elasticsearch_indices_stats_(primaries|total)
   - tags:
     - index_name
   - fields:
@@ -739,13 +740,13 @@ Emitted when the appropriate `indices_stats` options are set.
 
 Emitted when the appropriate `shards_stats` options are set.
 
-- elasticsearch_indicestats_shards_total
+- elasticsearch_indices_stats_shards_total
   - fields:
     - failed (float)
     - successful (float)
     - total (float)
 
-- elasticsearch_indicestats_shards
+- elasticsearch_indices_stats_shards
   - tags:
     - index_name
     - node_name
@@ -753,16 +754,7 @@ Emitted when the appropriate `shards_stats` options are set.
     - type
   - fields:
     - commit_generation (float)
-    - commit_id (string)
     - commit_num_docs (float)
-    - commit_user_data_history_uuid (string)
-    - commit_user_data_local_checkpoint (string)
-    - commit_user_data_max_seq_no (string)
-    - commit_user_data_max_unsafe_auto_id_timestamp (string)
-    - commit_user_data_min_retained_seq_no (string)
-    - commit_user_data_sync_id (string)
-    - commit_user_data_translog_generation (string)
-    - commit_user_data_translog_uuid (string)
     - completion_size_in_bytes (float)
     - docs_count (float)
     - docs_deleted (float)
@@ -819,8 +811,7 @@ Emitted when the appropriate `shards_stats` options are set.
     - request_cache_miss_count (float)
     - retention_leases_primary_term (float)
     - retention_leases_version (float)
-    - routing_node (string)
-    - routing_state (string)
+    - routing_state (int) (UNASSIGNED = 1, INITIALIZING = 2, STARTED = 3, RELOCATING = 4, other = 0)
     - search_fetch_current (float)
     - search_fetch_time_in_millis (float)
     - search_fetch_total (float)
@@ -849,9 +840,7 @@ Emitted when the appropriate `shards_stats` options are set.
     - seq_no_global_checkpoint (float)
     - seq_no_local_checkpoint (float)
     - seq_no_max_seq_no (float)
-    - shard_path_data_path (string)
     - shard_path_is_custom_data_path (bool)
-    - shard_path_state_path (string)
     - store_size_in_bytes (float)
     - translog_earliest_last_modified_age (float)
     - translog_operations (float)
