@@ -12,12 +12,21 @@ instances of telegraf can read from a NATS cluster in parallel.
 [[inputs.nats_consumer]]
   ## urls of NATS servers
   servers = ["nats://localhost:4222"]
-  ## Use Transport Layer Security
-  secure = false
   ## subject(s) to consume
   subjects = ["telegraf"]
   ## name a queue group
   queue_group = "telegraf_consumers"
+
+  ## Optional credentials
+  # username = ""
+  # password = ""
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## Sets the limits for pending msgs and bytes for each subscription
   ## These shouldn't need to be adjusted except in very high throughput scenarios
