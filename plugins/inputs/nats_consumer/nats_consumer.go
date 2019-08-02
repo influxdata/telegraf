@@ -35,11 +35,10 @@ type natsConsumer struct {
 	QueueGroup string   `toml:"queue_group"`
 	Subjects   []string `toml:"subjects"`
 	Servers    []string `toml:"servers"`
+	Secure     bool     `toml:"secure"`
 	Username   string   `toml:"username"`
 	Password   string   `toml:"password"`
 	tls.ClientConfig
-	// Legacy; Should be deprecated
-	Secure bool `toml:"secure"`
 
 	// Client pending limits:
 	PendingMessageLimit int `toml:"pending_message_limit"`
@@ -66,8 +65,7 @@ type natsConsumer struct {
 var sampleConfig = `
   ## urls of NATS servers
   servers = ["nats://localhost:4222"]
-  ## Deprecated: Use Transport Layer Security
-  secure = false
+
   ## subject(s) to consume
   subjects = ["telegraf"]
   ## name a queue group
@@ -76,6 +74,9 @@ var sampleConfig = `
   ## Optional credentials
   # username = ""
   # password = ""
+
+  ## Use Transport Layer Security
+  # secure = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -147,18 +148,14 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 		opts.Password = n.Password
 	}
 
-	// override TLS, if it was specified
-	tlsConfig, err := n.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-	if tlsConfig != nil {
-		// set NATS connection TLS options
+	if n.Secure {
+		tlsConfig, err := n.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
 		opts.Secure = true
 		opts.TLSConfig = tlsConfig
-	} else {
-		// should be deprecated; use TLS
-		opts.Secure = n.Secure
 	}
 
 	if n.conn == nil || n.conn.IsClosed() {
