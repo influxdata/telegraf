@@ -21,6 +21,9 @@ instances of telegraf can read from a NATS cluster in parallel.
   # username = ""
   # password = ""
 
+  ## Use Transport Layer Security
+  # secure = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
