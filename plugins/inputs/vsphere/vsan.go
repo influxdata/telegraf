@@ -438,7 +438,20 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 				}
 			}
 		}
-	} else if strings.Contains(entityName, "host-") {
+	} else if strings.Contains(entityName, "host-memory-") {
+		memInfo := strings.Split(uuid, "|")
+		if strings.Contains(entityName, "-slab") {
+			newTags["slabName"] = memInfo[1]
+		}
+		if strings.Contains(entityName, "-heap") {
+			newTags["heapName"] = memInfo[1]
+		}
+		if e, ok := cmmds[memInfo[0]]; ok {
+			if c, ok := e.Content.(map[string]interface{}); ok {
+				newTags["hostname"] = c["hostname"].(string)
+			}
+		}
+	} else if strings.Contains(entityName, "host-") || strings.Contains(entityName, "system-mem") {
 		if e, ok := cmmds[uuid]; ok {
 			if c, ok := e.Content.(map[string]interface{}); ok {
 				newTags["hostname"] = c["hostname"].(string)
