@@ -102,6 +102,10 @@ Mesos master metric groups
     - master/slaves_connected
     - master/slaves_disconnected
     - master/slaves_inactive
+    - master/slave_unreachable_canceled
+    - master/slave_unreachable_completed
+    - master/slave_unreachable_scheduled
+    - master/slaves_unreachable
 
 - frameworks
     - master/frameworks_active
@@ -135,6 +139,11 @@ Mesos master metric groups
     - master/tasks_running
     - master/tasks_staging
     - master/tasks_starting
+    - master/tasks_dropped
+    - master/tasks_gone
+    - master/tasks_gone_by_operator
+    - master/tasks_killing
+    - master/tasks_unreachable
 
 - messages
     - master/invalid_executor_to_framework_messages
@@ -173,11 +182,17 @@ Mesos master metric groups
     - master/task_lost/source_master/reason_slave_removed
     - master/task_lost/source_slave/reason_executor_terminated
     - master/valid_executor_to_framework_messages
+    - master/invalid_operation_status_update_acknowledgements
+    - master/messages_operation_status_update_acknowledgement
+    - master/messages_reconcile_operations
+    - master/messages_suppress_offers
+    - master/valid_operation_status_update_acknowledgements
 
 - evqueue
     - master/event_queue_dispatches
     - master/event_queue_http_requests
     - master/event_queue_messages
+    - master/operator_event_stream_subscribers
 
 - registrar
     - registrar/state_fetch_ms
@@ -190,6 +205,11 @@ Mesos master metric groups
     - registrar/state_store_ms/p99
     - registrar/state_store_ms/p999
     - registrar/state_store_ms/p9999
+    - registrar/state_store_ms/count
+    - registrar/log/ensemble_size
+    - registrar/log/recovered
+    - registrar/queued_operations
+    - registrar/registry_size_bytes
 
 - allocator
     - allocator/allocation_run_ms
