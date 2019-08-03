@@ -156,7 +156,7 @@ func buildSystemContainerMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Ac
 		fields["memory_major_page_faults"] = container.Memory.MajorPageFaults
 		fields["rootfs_available_bytes"] = container.RootFS.AvailableBytes
 		fields["rootfs_capacity_bytes"] = container.RootFS.CapacityBytes
-		fields["logsfs_avaialble_bytes"] = container.LogsFS.AvailableBytes
+		fields["logsfs_available_bytes"] = container.LogsFS.AvailableBytes
 		fields["logsfs_capacity_bytes"] = container.LogsFS.CapacityBytes
 		acc.AddFields("kubernetes_system_container", fields, tags)
 	}
