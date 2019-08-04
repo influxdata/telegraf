@@ -89,9 +89,8 @@ Defaults!SMARTCTL !logfile, !syslog, !pam_session
   - tags:
     - capacity
     - device
-    - device_model
     - enabled
-    - health
+    - model
     - serial_no
     - wwn
   - fields:
