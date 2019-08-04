@@ -303,7 +303,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		fields := make(map[string]interface{})
 
 		if collectAttributes {
-			keys := [...]string{"device", "serial_no", "wwn"}
+			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
 					tags[key] = value
