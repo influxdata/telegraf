@@ -35,7 +35,7 @@ func TestKubernetesStats(t *testing.T) {
 		"memory_major_page_faults":   int64(13),
 		"rootfs_available_bytes":     int64(84379979776),
 		"rootfs_capacity_bytes":      int64(105553100800),
-		"logsfs_avaialble_bytes":     int64(84379979776),
+		"logsfs_available_bytes":     int64(84379979776),
 		"logsfs_capacity_bytes":      int64(105553100800),
 	}
 	tags := map[string]string{
@@ -80,7 +80,7 @@ func TestKubernetesStats(t *testing.T) {
 		"rootfs_available_bytes":     int64(84379979776),
 		"rootfs_capacity_bytes":      int64(105553100800),
 		"rootfs_used_bytes":          int64(57344),
-		"logsfs_avaialble_bytes":     int64(84379979776),
+		"logsfs_available_bytes":     int64(84379979776),
 		"logsfs_capacity_bytes":      int64(105553100800),
 		"logsfs_used_bytes":          int64(24576),
 	}
@@ -103,7 +103,7 @@ func TestKubernetesStats(t *testing.T) {
 		"rootfs_available_bytes":     int64(0),
 		"rootfs_capacity_bytes":      int64(0),
 		"rootfs_used_bytes":          int64(0),
-		"logsfs_avaialble_bytes":     int64(0),
+		"logsfs_available_bytes":     int64(0),
 		"logsfs_capacity_bytes":      int64(0),
 		"logsfs_used_bytes":          int64(0),
 	}
