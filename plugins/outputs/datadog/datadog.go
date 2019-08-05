@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -63,9 +64,6 @@ func (d *Datadog) Connect() error {
 }
 
 func (d *Datadog) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
 	ts := TimeSeries{}
 	tempSeries := []*Metric{}
 	metricCounter := 0
@@ -74,6 +72,10 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 		if dogMs, err := buildMetrics(m); err == nil {
 			metricTags := buildTags(m.TagList())
 			host, _ := m.GetTag("host")
+
+			if len(dogMs) == 0 {
+				continue
+			}
 
 			for fieldName, dogM := range dogMs {
 				// name of the datadog measurement
@@ -96,6 +98,10 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 		} else {
 			log.Printf("I! unable to build Metric for %s due to error '%v', skipping\n", m.Name(), err)
 		}
+	}
+
+	if len(tempSeries) == 0 {
+		return nil
 	}
 
 	redactedApiKey := "****************"
@@ -166,9 +172,12 @@ func buildTags(tagList []*telegraf.Tag) []string {
 }
 
 func verifyValue(v interface{}) bool {
-	switch v.(type) {
+	switch v := v.(type) {
 	case string:
 		return false
+	case float64:
+		// The payload will be encoded as JSON, which does not allow NaN or Inf.
+		return !math.IsNaN(v) && !math.IsInf(v, 0)
 	}
 	return true
 }
