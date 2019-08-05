@@ -1,3 +1,9 @@
+## v1.11.4 [unreleased]
+
+#### Bugfixes
+
+- [#6200](https://github.com/influxdata/telegraf/pull/6200): Correct typo in kubernetes logsfs_available_bytes field.
+
 ## v1.11.3 [2019-07-23]
 
 #### Bugfixes
