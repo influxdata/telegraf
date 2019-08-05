@@ -231,7 +231,7 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Exec) Init(conf telegraf.PluginConfig) error {
-	e.log = conf.Logger
+	e.log = conf.Logger()
 
 	return nil
 }

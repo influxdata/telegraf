@@ -290,7 +290,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 }
 
 func (i *InfluxDB) Init(conf telegraf.PluginConfig) error {
-	i.log = conf.Logger
+	i.log = conf.Logger()
 
 	return nil
 }

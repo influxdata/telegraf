@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -160,7 +161,7 @@ func Test(t *testing.T) {
 				containerList: make(map[string]context.CancelFunc),
 			}
 
-			err := plugin.Init(telegraf.PluginConfig{Logger: telegraf.Logger{}})
+			err := plugin.Init(models.PluginConfig{Log: models.Logger{}})
 			require.NoError(t, err)
 
 			err = plugin.Gather(&acc)
