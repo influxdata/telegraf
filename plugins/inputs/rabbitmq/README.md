@@ -2,7 +2,7 @@
 
 Reads metrics from RabbitMQ servers via the [Management Plugin](https://www.rabbitmq.com/management.html).
 
-For additional details reference the [RabbitMQ Management HTTP Stats](https://cdn.rawgit.com/rabbitmq/rabbitmq-management/master/priv/www/doc/stats.html).
+For additional details reference the [RabbitMQ Management HTTP Stats](https://pulse.mozilla.org/doc/stats.html).
 
 ### Configuration:
 
