@@ -338,6 +338,7 @@ For documentation on the latest development code see the [documentation index][d
 * [regex](./plugins/processors/regex)
 * [rename](./plugins/processors/rename)
 * [strings](./plugins/processors/strings)
+* [timestamp](./plugins/processors/timestamp)
 * [topk](./plugins/processors/topk)
 * [unpivot](./plugins/processors/unpivot)
 
