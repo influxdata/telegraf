@@ -17,7 +17,7 @@ The MarkLogic Telegraf plugin gathers status metrics from one or more host in th
   # password = "p@ssw0rd"
 ```
 
-### Measurements & Fields:
+### Measurement & Fields:
 
 MarkLogic provides one measurement named "marklogic", with the following fields:
 
