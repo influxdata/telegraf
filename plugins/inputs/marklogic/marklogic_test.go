@@ -60,7 +60,7 @@ func TestMarklogic(t *testing.T) {
 	}
 	// Expect the correct values for all tags
 	expectTags := map[string]string{
-		"name": "ml1.local",
+		"source": "ml1.local",
 		"id":   "2592913110757471141",
 	}
 

@@ -165,8 +165,8 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) err
 
 	// Build a map of tags
 	tags := map[string]string{
-		"name": ml.HostStatus.Name,
-		"id":   ml.HostStatus.ID,
+		"source": ml.HostStatus.Name,
+		"id":     ml.HostStatus.ID,
 	}
 
 	// Build a map of field values
