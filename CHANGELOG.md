@@ -59,6 +59,7 @@
 - [#6189](https://github.com/influxdata/telegraf/pull/6189): Add left function to string processor.
 - [#6049](https://github.com/influxdata/telegraf/pull/6049): Add grace period for metrics late for aggregation.
 - [#4435](https://github.com/influxdata/telegraf/pull/4435): Add diff and non_negative_diff to basicstats aggregator.
+- [#6201](https://github.com/influxdata/telegraf/pull/6201): Add device tags to smart_attributes.
 
 #### Bugfixes
 
