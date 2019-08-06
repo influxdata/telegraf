@@ -1,6 +1,6 @@
 # MarkLogic Plugin
 
-The MarkLogic Telegraf plugin gathers status metrics from one or more host in the MarkLogic Cluster.
+The MarkLogic Telegraf plugin gathers status metrics from one or more host in a MarkLogic Cluster.
 
 ### Configuration:
 
