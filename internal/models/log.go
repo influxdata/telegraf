@@ -25,12 +25,13 @@ type Logger struct {
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l Logger) Errorf(format string, args ...interface{}) {
-	// todo: keep tally of errors from plugins
+	l.addError()
 	log.Printf("E! ["+l.Name+"] "+format, args...)
 }
 
 // Error logs an error message, patterned after log.Print.
 func (l Logger) Error(args ...interface{}) {
+	l.addError()
 	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
 }
 
@@ -67,7 +68,7 @@ func (l Logger) Info(args ...interface{}) {
 func (l Logger) addError() {
 	switch {
 	case strings.HasPrefix(l.Name, "aggregator"):
-		fallthrough
+		aErrors.Incr(1)
 	case strings.HasPrefix(l.Name, "input"):
 		iErrors.Incr(1)
 	case strings.HasPrefix(l.Name, "output"):
