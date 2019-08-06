@@ -76,6 +76,7 @@
 
 - [#6200](https://github.com/influxdata/telegraf/pull/6200): Correct typo in kubernetes logsfs_available_bytes field.
 - [#6191](https://github.com/influxdata/telegraf/issues/6191): Skip floats that are NaN or Inf in Datadog output.
+- [#6209](https://github.com/influxdata/telegraf/issues/6209): Fix reload panic in socket_listener input plugin.
 
 ## v1.11.3 [2019-07-23]
 
