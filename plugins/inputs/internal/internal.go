@@ -2,25 +2,31 @@ package internal
 
 import (
 	"runtime"
+	"strings"
 
 	"github.com/influxdata/telegraf"
+	inter "github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
 type Self struct {
 	CollectMemstats bool
+	SendVersion     bool
 }
 
 func NewSelf() telegraf.Input {
 	return &Self{
 		CollectMemstats: true,
+		SendVersion:     true,
 	}
 }
 
 var sampleConfig = `
   ## If true, collect telegraf memory stats.
   # collect_memstats = true
+  ## If true, send telegraf version
+  # send_version = true
 `
 
 func (s *Self) Description() string {
@@ -52,6 +58,14 @@ func (s *Self) Gather(acc telegraf.Accumulator) error {
 			"num_gc":              m.NumGC,
 		}
 		acc.AddFields("internal_memstats", fields, map[string]string{})
+	}
+
+	if s.SendVersion {
+		fields := map[string]interface{}{
+			"telegraf": inter.Version(),                             // Telegraf version
+			"go":       strings.TrimPrefix(runtime.Version(), "go"), // Go version
+		}
+		acc.AddFields("internal_version", fields, map[string]string{})
 	}
 
 	for _, m := range selfstat.Metrics() {

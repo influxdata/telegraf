@@ -12,9 +12,17 @@ plugin.
 [[inputs.internal]]
   ## If true, collect telegraf memory stats.
   # collect_memstats = true
+  ## If true, send telegraf version
+  # send_version = true
 ```
 
 ### Measurements & Fields:
+
+Telegraf version and Go version used to compile it.
+
+- internal_version
+    - telegraf
+    - go
 
 memstats are taken from the Go runtime: https://golang.org/pkg/runtime/#MemStats
 
@@ -76,6 +84,7 @@ to each particular plugin.
 ### Example Output:
 
 ```
+internal_version,host=tyrion go="1.12.7",telegraf="1.12.0" 1480682800000000000
 internal_memstats,host=tyrion alloc_bytes=4457408i,sys_bytes=10590456i,pointer_lookups=7i,mallocs=17642i,frees=7473i,heap_sys_bytes=6848512i,heap_idle_bytes=1368064i,heap_in_use_bytes=5480448i,heap_released_bytes=0i,total_alloc_bytes=6875560i,heap_alloc_bytes=4457408i,heap_objects_bytes=10169i,num_gc=2i 1480682800000000000
 internal_agent,host=tyrion metrics_written=18i,metrics_dropped=0i,metrics_gathered=19i,gather_errors=0i 1480682800000000000
 internal_write,output=file,host=tyrion buffer_limit=10000i,write_time_ns=636609i,metrics_added=18i,metrics_written=18i,buffer_size=0i 1480682800000000000
