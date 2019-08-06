@@ -152,7 +152,7 @@
   revision = "f2867c24984aa53edec54a138c03db934221bdea"
 
 [[projects]]
-  digest = "1:996727880e06dcf037f712c4d046e241d1b1b01844636fefb0fbaa480cfd230e"
+  digest = "1:f8bf2fcf62410b565b9caacb6a7a858302c22968f5738549c09a17dbe6ae306a"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -164,7 +164,9 @@
     "aws/credentials",
     "aws/credentials/ec2rolecreds",
     "aws/credentials/endpointcreds",
+    "aws/credentials/processcreds",
     "aws/credentials/stscreds",
+    "aws/crr",
     "aws/csm",
     "aws/defaults",
     "aws/ec2metadata",
@@ -172,11 +174,14 @@
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/ini",
     "internal/sdkio",
     "internal/sdkrand",
     "internal/sdkuri",
     "internal/shareddefaults",
     "private/protocol",
+    "private/protocol/eventstream",
+    "private/protocol/eventstream/eventstreamapi",
     "private/protocol/json/jsonutil",
     "private/protocol/jsonrpc",
     "private/protocol/query",
@@ -192,8 +197,8 @@
     "service/sts",
   ]
   pruneopts = ""
-  revision = "bf8067ceb6e7f51e150c218972dccfeeed892b85"
-  version = "v1.15.54"
+  revision = "5312c8dac9067d339c4e68d7e0dd5507b2f01849"
+  version = "v1.19.41"
 
 [[projects]]
   branch = "master"
@@ -431,14 +436,6 @@
   pruneopts = ""
   revision = "1983bc2fd5de3ea00aa5457bbc8774300e889db9"
   version = "v0.1.1"
-
-[[projects]]
-  digest = "1:858b7fe7b0f4bc7ef9953926828f2816ea52d01a88d72d1c45bc8c108f23c356"
-  name = "github.com/go-ini/ini"
-  packages = ["."]
-  pruneopts = ""
-  revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
-  version = "v1.38.1"
 
 [[projects]]
   digest = "1:df89444601379b2e1ee82bf8e6b72af9901cbeed4b469fa380a519c89c339310"
@@ -730,11 +727,11 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
+  digest = "1:13fe471d0ed891e8544eddfeeb0471fd3c9f2015609a1c000aefdedf52a19d40"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
   pruneopts = ""
-  revision = "0b12d6b5"
+  revision = "c2b33e84"
 
 [[projects]]
   branch = "master"
