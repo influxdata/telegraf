@@ -1057,7 +1057,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:8b478b1d29180a608666c36ea8dc160000e3466abb5a5354e571429679e972c0"
+  digest = "1:2226ffdae873216a5bc8a0bab7a51ac670b27a4aed852007d77600f809aa04e3"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -1070,8 +1070,8 @@
     "process",
   ]
   pruneopts = ""
-  revision = "5335e3fd506df4cb63de0a8239c7461d23063be6"
-  version = "v2.19.05"
+  revision = "d80c43f9c984a48783daf22f4bd9278006ae483a"
+  version = "v2.19.7"
 
 [[projects]]
   branch = "master"
@@ -1345,7 +1345,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6a6eed3727d0e15703d9e930d8dbe333bea09eda309d75a015d3c6dc4e5c92a6"
+  digest = "1:0b5c2207c72f2d13995040f176feb6e3f453d6b01af2b9d57df76b05ded2e926"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -1357,7 +1357,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = ""
-  revision = "7c4c994c65f702f41ed7d6620a2cb34107576a77"
+  revision = "51ab0e2deafac1f46c46ad59cf0921be2f180c3d"
   source = "https://github.com/golang/sys.git"
 
 [[projects]]
