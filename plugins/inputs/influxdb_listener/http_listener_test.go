@@ -30,6 +30,10 @@ cpu_load_short,host=server04 value=12.0 1422568543702900257
 cpu_load_short,host=server05 value=12.0 1422568543702900257
 cpu_load_short,host=server06 value=12.0 1422568543702900257
 `
+	testPartial = `cpu,host=a value1=1
+cpu,host=b value1=1,value2=+Inf,value3=3
+cpu,host=c value1=1`
+
 	badMsg = "blahblahblah: 42\n"
 
 	emptyMsg = ""
@@ -212,6 +216,30 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
+	)
+}
+
+func TestPartialWriteHTTP(t *testing.T) {
+	listener := newTestHTTPListener()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testPartial)))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, 400, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu",
+		map[string]interface{}{"value1": float64(1)},
+		map[string]string{"host": "a"},
+	)
+	acc.AssertContainsTaggedFields(t, "cpu",
+		map[string]interface{}{"value1": float64(1)},
+		map[string]string{"host": "c"},
 	)
 }
 
