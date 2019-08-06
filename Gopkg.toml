@@ -16,7 +16,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.15.54"
+  version = "1.19.41"
 
 [[constraint]]
   name = "github.com/couchbase/go-couchbase"
