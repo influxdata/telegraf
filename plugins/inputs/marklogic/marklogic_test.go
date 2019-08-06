@@ -61,7 +61,7 @@ func TestMarklogic(t *testing.T) {
 	// Expect the correct values for all tags
 	expectTags := map[string]string{
 		"source": "ml1.local",
-		"id":   "2592913110757471141",
+		"id":     "2592913110757471141",
 	}
 
 	acc.AssertContainsTaggedFields(t, "marklogic", expectFields, expectTags)

@@ -61,21 +61,21 @@ type MlHost struct {
 				TotalRate MlPointFloat `json:"total-rate"`
 			} `json:"rate-properties"`
 			StatusDetail struct {
-				Cpus                   MlPointInt   `json:"cpus"`
-				Cores                  MlPointInt   `json:"cores"`
-				TotalCPUStatUser       float64      `json:"total-cpu-stat-user"`
-				TotalCPUStatSystem     float64      `json:"total-cpu-stat-system"`
-				TotalCPUStatIdle       float64      `json:"total-cpu-stat-idle"`
-				TotalCPUStatIowait     float64      `json:"total-cpu-stat-iowait"`
-				MemoryProcessSize      MlPointInt   `json:"memory-process-size"`
-				MemoryProcessRss       MlPointInt   `json:"memory-process-rss"`
-				MemorySystemTotal      MlPointInt   `json:"memory-system-total"`
-				MemorySystemFree       MlPointInt   `json:"memory-system-free"`
-				MemorySize             MlPointInt   `json:"memory-size"`
-				HostSize               MlPointInt   `json:"host-size"`
-				DataDirSpace           MlPointInt   `json:"data-dir-space"`
-				QueryReadBytes         MlPointInt   `json:"query-read-bytes"`
-				QueryReadLoad          MlPointInt   `json:"query-read-load"`
+				Cpus                   MlPointInt `json:"cpus"`
+				Cores                  MlPointInt `json:"cores"`
+				TotalCPUStatUser       float64    `json:"total-cpu-stat-user"`
+				TotalCPUStatSystem     float64    `json:"total-cpu-stat-system"`
+				TotalCPUStatIdle       float64    `json:"total-cpu-stat-idle"`
+				TotalCPUStatIowait     float64    `json:"total-cpu-stat-iowait"`
+				MemoryProcessSize      MlPointInt `json:"memory-process-size"`
+				MemoryProcessRss       MlPointInt `json:"memory-process-rss"`
+				MemorySystemTotal      MlPointInt `json:"memory-system-total"`
+				MemorySystemFree       MlPointInt `json:"memory-system-free"`
+				MemorySize             MlPointInt `json:"memory-size"`
+				HostSize               MlPointInt `json:"host-size"`
+				DataDirSpace           MlPointInt `json:"data-dir-space"`
+				QueryReadBytes         MlPointInt `json:"query-read-bytes"`
+				QueryReadLoad          MlPointInt `json:"query-read-load"`
 				HTTPServerReceiveBytes MlPointInt `json:"http-server-receive-bytes"`
 				HTTPServerSendBytes    MlPointInt `json:"http-server-send-bytes"`
 			} `json:"status-detail"`
@@ -133,10 +133,8 @@ func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) error {
 	if c.client == nil {
 		c.client = &http.Client{
-			Transport: &http.Transport{
-				ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			},
-			Timeout: time.Duration(4 * time.Second),
+			Transport: &http.Transport{},
+			Timeout:   time.Duration(5 * time.Second),
 		}
 	}
 
