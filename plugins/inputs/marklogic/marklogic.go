@@ -13,15 +13,16 @@ import (
 )
 
 type Marklogic struct {
-	Hosts          []string `toml:"hosts"`
-	DigestUsername string   `toml:"digest_username"`
-	DigestPassword string   `toml:"digest_password"`
+	URL      string   `toml:"url"`
+	Hosts    []string `toml:"hosts"`
+	Username string   `toml:"username"`
+	Password string   `toml:"password"`
 
 	// HTTP client & request
 	client *http.Client
 }
 
-// NewMarklogic return a new instance of Marklogic with a default http client
+// NewMarkLogic return a new instance of MarkLogic with a default http client
 func NewMarklogic() *Marklogic {
 	tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
 	client := &http.Client{
@@ -31,91 +32,52 @@ func NewMarklogic() *Marklogic {
 	return &Marklogic{client: client}
 }
 
-type MLHosts struct {
+type MlPointInt struct {
+	Value int `json:"value"`
+}
+
+type MlPointFloat struct {
+	Value float64 `json:"value"`
+}
+
+type MlPointBool struct {
+	Value bool `json:"value"`
+}
+
+// MarkLogic v2 management api endpoint for hosts status
+const statsPath = "/manage/v2/hosts/"
+const viewFormat = "?view=status&format=json"
+
+type MlHost struct {
 	HostStatus struct {
-		ID                  string `json:"id"`
-		Name                string `json:"name"`
-		Version             string `json:"version"`
-		EffectiveVersion    int    `json:"effective-version"`
-		HostMode            string `json:"host-mode"`
-		HostModeDescription string `json:"host-mode-description"`
-		Meta                struct {
-			URI         string    `json:"uri"`
-			CurrentTime time.Time `json:"current-time"`
-			ElapsedTime struct {
-				Units string  `json:"units"`
-				Value float64 `json:"value"`
-			} `json:"elapsed-time"`
-		} `json:"meta"`
+		ID               string `json:"id"`
+		Name             string `json:"name"`
 		StatusProperties struct {
-			Online struct {
-				Units string `json:"units"`
-				Value bool   `json:"value"`
-			} `json:"online"`
+			Online         MlPointBool `json:"online"`
 			LoadProperties struct {
-				TotalLoad struct {
-					Units string  `json:"units"`
-					Value float64 `json:"value"`
-				} `json:"total-load"`
+				TotalLoad MlPointFloat `json:"total-load"`
 			} `json:"load-properties"`
+			RateProperties struct {
+				TotalRate MlPointFloat `json:"total-rate"`
+			} `json:"rate-properties"`
 			StatusDetail struct {
-				HostMode struct {
-					Units string `json:"units"`
-					Value string `json:"value"`
-				} `json:"host-mode"`
-				Cpus struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"cpus"`
-				Cores struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"cores"`
-				CoreThreads struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"core-threads"`
-				TotalCPUStatUser   float64 `json:"total-cpu-stat-user"`
-				TotalCPUStatNice   float64 `json:"total-cpu-stat-nice"`
-				TotalCPUStatSystem float64 `json:"total-cpu-stat-system"`
-				TotalCPUStatIdle   float64 `json:"total-cpu-stat-idle"`
-				TotalCPUStatGuest  float64 `json:"total-cpu-stat-guest"`
-				MemoryProcessSize  struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"memory-process-size"`
-				MemoryProcessRss struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"memory-process-rss"`
-				MemorySystemTotal struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"memory-system-total"`
-				MemorySystemFree struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"memory-system-free"`
-				DataDirSpace struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"data-dir-space"`
-				QueryReadBytes struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"query-read-bytes"`
-				QueryReadLoad struct {
-					Units string `json:"units"`
-					Value int    `json:"value"`
-				} `json:"query-read-load"`
-				HTTPServerReceiveBytes struct {
-					Units string  `json:"units"`
-					Value float64 `json:"value"`
-				} `json:"http-server-receive-bytes"`
-				HTTPServerSendBytes struct {
-					Units string  `json:"units"`
-					Value float64 `json:"value"`
-				} `json:"http-server-send-bytes"`
+				Cpus                   MlPointInt   `json:"cpus"`
+				Cores                  MlPointInt   `json:"cores"`
+				TotalCPUStatUser       float64      `json:"total-cpu-stat-user"`
+				TotalCPUStatSystem     float64      `json:"total-cpu-stat-system"`
+				TotalCPUStatIdle       float64      `json:"total-cpu-stat-idle"`
+				TotalCPUStatIowait     float64      `json:"total-cpu-stat-iowait"`
+				MemoryProcessSize      MlPointInt   `json:"memory-process-size"`
+				MemoryProcessRss       MlPointInt   `json:"memory-process-rss"`
+				MemorySystemTotal      MlPointInt   `json:"memory-system-total"`
+				MemorySystemFree       MlPointInt   `json:"memory-system-free"`
+				MemorySize             MlPointInt   `json:"memory-size"`
+				HostSize               MlPointInt   `json:"host-size"`
+				DataDirSpace           MlPointInt   `json:"data-dir-space"`
+				QueryReadBytes         MlPointInt   `json:"query-read-bytes"`
+				QueryReadLoad          MlPointInt   `json:"query-read-load"`
+				HTTPServerReceiveBytes MlPointInt `json:"http-server-receive-bytes"`
+				HTTPServerSendBytes    MlPointInt `json:"http-server-send-bytes"`
 			} `json:"status-detail"`
 		} `json:"status-properties"`
 	} `json:"host-status"`
@@ -126,12 +88,15 @@ func (c *Marklogic) Description() string {
 }
 
 var sampleConfig = `
-  ## List URLs of Marklogic hosts using Management API endpoint.
-  # hosts = ["http://localhost:8002/manage/v2/hosts/${hostname}?view=status&format=json"]
+	## Base URL of MarkLogic host for Management API endpoint.
+  url = "http://localhost:8002"
 
-	# Using HTTP Digest Authentication.
-	# digest_username = "telegraf"
-	# digest_password = "p@ssw0rd"
+	## List of specific hostnames in a cluster to retrieve information. At least (1) required.
+  # hosts = ["hostname1", "hostname2"]
+
+  ## Using HTTP Digest Authentication. This requires 'manage-user' role privileges
+  # username = "telegraf"
+  # password = "p@ssw0rd"
 `
 
 func (c *Marklogic) SampleConfig() string {
@@ -141,18 +106,21 @@ func (c *Marklogic) SampleConfig() string {
 // Gather read stats from all hosts configured in cluster.
 func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup
+	var url string
 
-	if len(c.Hosts) == 0 {
-		c.Hosts = []string{"http://localhost:8002/manage/v2/hosts/ml1.local?view=status&format=json"}
+	if len(c.URL) == 0 {
+		c.URL = string("http://localhost:8002")
 	}
 
-	// Range over all ML servers, gathering stats. Returns early in case of any error.
+	// Range over all ML hostnames, gathering stats. Returns early in case of any error.
 	for _, u := range c.Hosts {
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			if err := c.fetchAndInsertData(accumulator, host); err != nil {
-				accumulator.AddError(fmt.Errorf("[host=%s]: %s", host, err))
+
+			url = string(c.URL + statsPath + host + viewFormat)
+			if err := c.fetchAndInsertData(accumulator, url); err != nil {
+				accumulator.AddError(fmt.Errorf("[host=%s]: %s", url, err))
 			}
 		}(u)
 	}
@@ -162,7 +130,7 @@ func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 	return nil
 }
 
-func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, host string) error {
+func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) error {
 	if c.client == nil {
 		c.client = &http.Client{
 			Transport: &http.Transport{
@@ -172,8 +140,9 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, host string) er
 		}
 	}
 
-	t := dac.NewTransport(c.DigestUsername, c.DigestPassword)
-	req, err := http.NewRequest("GET", host, nil)
+	t := dac.NewTransport(c.Username, c.Password)
+
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
@@ -185,39 +154,43 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, host string) er
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("Failed to get status from Marklogic Management API: HTTP responded %d", response.StatusCode)
+		return fmt.Errorf("failed to get status from MarkLogic management api: HTTP responded %d", response.StatusCode)
 	}
 
 	// Decode the response JSON into a new lights struct
-	stats := &MLHosts{}
-	if err := json.NewDecoder(response.Body).Decode(stats); err != nil {
-		return fmt.Errorf("Unable to decode MLHosts{} object from Management API response: %s", err)
+	ml := &MlHost{}
+	if err := json.NewDecoder(response.Body).Decode(ml); err != nil {
+		return fmt.Errorf("unable to decode MlHost{} object from management api response: %s", err)
 	}
 
 	// Build a map of tags
 	tags := map[string]string{
-		//"server":   hs.Host,
-		"ml_hostname": stats.HostStatus.Name,
-		"id":          stats.HostStatus.ID,
+		"name": ml.HostStatus.Name,
+		"id":   ml.HostStatus.ID,
 	}
 
 	// Build a map of field values
 	fields := map[string]interface{}{
-
-		"online":                    stats.HostStatus.StatusProperties.Online.Value,
-		"total_cpu_stat_user":       stats.HostStatus.StatusProperties.StatusDetail.TotalCPUStatUser,
-		"total_cpu_stat_system":     stats.HostStatus.StatusProperties.StatusDetail.TotalCPUStatSystem,
-		"memory_process_size":       stats.HostStatus.StatusProperties.StatusDetail.MemoryProcessSize.Value,
-		"memory_process_rss":        stats.HostStatus.StatusProperties.StatusDetail.MemoryProcessRss.Value,
-		"memory_system_total":       stats.HostStatus.StatusProperties.StatusDetail.MemorySystemTotal.Value,
-		"memory_system_free":        stats.HostStatus.StatusProperties.StatusDetail.MemorySystemFree.Value,
-		"num_cores":                 stats.HostStatus.StatusProperties.StatusDetail.Cores.Value,
-		"total_load":                stats.HostStatus.StatusProperties.LoadProperties.TotalLoad.Value,
-		"data_dir_space":            stats.HostStatus.StatusProperties.StatusDetail.DataDirSpace.Value,
-		"query_read_bytes":          stats.HostStatus.StatusProperties.StatusDetail.QueryReadBytes.Value,
-		"query_read_load":           stats.HostStatus.StatusProperties.StatusDetail.QueryReadLoad.Value,
-		"http_server_receive_bytes": stats.HostStatus.StatusProperties.StatusDetail.HTTPServerReceiveBytes.Value,
-		"http_server_send_bytes":    stats.HostStatus.StatusProperties.StatusDetail.HTTPServerSendBytes.Value,
+		"online":                    ml.HostStatus.StatusProperties.Online.Value,
+		"total_load":                ml.HostStatus.StatusProperties.LoadProperties.TotalLoad.Value,
+		"total_rate":                ml.HostStatus.StatusProperties.RateProperties.TotalRate.Value,
+		"ncpus":                     ml.HostStatus.StatusProperties.StatusDetail.Cpus.Value,
+		"ncores":                    ml.HostStatus.StatusProperties.StatusDetail.Cores.Value,
+		"total_cpu_stat_user":       ml.HostStatus.StatusProperties.StatusDetail.TotalCPUStatUser,
+		"total_cpu_stat_system":     ml.HostStatus.StatusProperties.StatusDetail.TotalCPUStatSystem,
+		"total_cpu_stat_idle":       ml.HostStatus.StatusProperties.StatusDetail.TotalCPUStatIdle,
+		"total_cpu_stat_iowait":     ml.HostStatus.StatusProperties.StatusDetail.TotalCPUStatIowait,
+		"memory_process_size":       ml.HostStatus.StatusProperties.StatusDetail.MemoryProcessSize.Value,
+		"memory_process_rss":        ml.HostStatus.StatusProperties.StatusDetail.MemoryProcessRss.Value,
+		"memory_system_total":       ml.HostStatus.StatusProperties.StatusDetail.MemorySystemTotal.Value,
+		"memory_system_free":        ml.HostStatus.StatusProperties.StatusDetail.MemorySystemFree.Value,
+		"memory_size":               ml.HostStatus.StatusProperties.StatusDetail.MemorySize.Value,
+		"host_size":                 ml.HostStatus.StatusProperties.StatusDetail.HostSize.Value,
+		"data_dir_space":            ml.HostStatus.StatusProperties.StatusDetail.DataDirSpace.Value,
+		"query_read_bytes":          ml.HostStatus.StatusProperties.StatusDetail.QueryReadBytes.Value,
+		"query_read_load":           ml.HostStatus.StatusProperties.StatusDetail.QueryReadLoad.Value,
+		"http_server_receive_bytes": ml.HostStatus.StatusProperties.StatusDetail.HTTPServerReceiveBytes.Value,
+		"http_server_send_bytes":    ml.HostStatus.StatusProperties.StatusDetail.HTTPServerSendBytes.Value,
 	}
 
 	// Accumulate the tags and values

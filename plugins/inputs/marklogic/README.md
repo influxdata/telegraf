@@ -1,34 +1,41 @@
-# Marklogic Plugin
+# MarkLogic Plugin
 
-The Marklogic Telegraf plugin gathers status metrics from one or more host in the Marklogic cluster.
+The MarkLogic Telegraf plugin gathers status metrics from one or more host in the MarkLogic Cluster.
 
 ### Configuration:
 
 ```toml
-# Description
 [[inputs.marklogic]]
+  ## Base URL of MarkLogic host for Management API endpoint.
+  url = "http://localhost:8002"
 
-## List URLs of Marklogic hosts using Management API endpoint.
-# hosts = ["http://localhost:8002/manage/v2/hosts/${hostname}?view=status&format=json"]
+  ## List of specific hostnames in a cluster to retrieve information. At least (1) required.
+  # hosts = ["hostname1", "hostname2"]
 
-# Using HTTP Digest Authentication.
-# digest_username = "telegraf"
-# digest_password = "p@ssw0rd"
+  ## Using HTTP Digest Authentication. This requires 'manage-user' role privileges
+  # username = "telegraf"
+  # password = "p@ssw0rd"
 ```
 
 ### Measurements & Fields:
 
-Marklogic provides one measurement named "marklogic", with the following fields:
+MarkLogic provides one measurement named "marklogic", with the following fields:
 
 - online
+- total_load
+- total_rate
+- ncpus
+- ncores
 - total_cpu_stat_user
 - total_cpu_stat_system
+- total_cpu_stat_idle
+- total_cpu_stat_iowait
 - memory_process_size
 - memory_process_rss
 - memory_system_total
 - memory_system_free
-- num_cores
-- total_load
+- memory_size
+- host_size
 - data_dir_space
 - query_read_bytes
 - query_read_load
@@ -39,12 +46,12 @@ Marklogic provides one measurement named "marklogic", with the following fields:
 
 All measurements have the following tags:
 
-- ml_hostname (the hostname of the server address, ex. `ml1.local`)
+- name (the hostname of the server address, ex. `ml1.local`)
 - id (the host node unique id ex. `2592913110757471141`)
 
 ### Example Output:
 
 ```
-$ ./telegraf --config telegraf.conf --input-filter marklogic --test
-> marklogic,host=Craigs-MacBook-Pro-2.local,id=2592913110757471141,ml_hostname=ml1.local data_dir_space=29212i,http_server_receive_bytes=0,http_server_send_bytes=0,memory_process_rss=273i,memory_process_size=702i,memory_system_free=3417i,memory_system_total=3947i,num_cores=4i,online=true,query_read_bytes=3545624i,query_read_load=0i,total_cpu_stat_system=0.63408100605011,total_cpu_stat_user=0.302343010902405,total_load=0.0847966074943543 1564731542000000000
+$> marklogic,host=localhost,id=17879472307902936940,name=ml2.local data_dir_space=28398i,host_size=0i,http_server_receive_bytes=8059i,http_server_send_bytes=0i,memory_process_rss=303i,memory_process_size=728i,memory_size=4096i,memory_system_free=3664i,memory_system_total=3947i,ncores=4i,ncpus=1i,online=true,query_read_bytes=0i,query_read_load=0i,total_cpu_stat_idle=99.1915969848633,total_cpu_stat_iowait=0.0167552996426821,total_cpu_stat_system=0.523603975772858,total_cpu_stat_user=0.251329988241196,total_load=0,total_rate=16.1815872192383 1565067570000000000
+
 ```

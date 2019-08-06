@@ -25,7 +25,8 @@ func TestMarklogic(t *testing.T) {
 
 	// Create a new Marklogic instance with our given test server
 	Marklogic := NewMarklogic()
-	Marklogic.Hosts = []string{ts.URL}
+	Marklogic.Hosts = []string{"example1"}
+	Marklogic.URL = string(ts.URL)
 
 	// Create a test accumulator
 	acc := &testutil.Accumulator{}
@@ -36,26 +37,31 @@ func TestMarklogic(t *testing.T) {
 
 	// Expect the correct values for all known keys
 	expectFields := map[string]interface{}{
-
-		"online":                    bool(true),
-		"total_cpu_stat_user":       float64(0.276381999254227),
-		"total_cpu_stat_system":     float64(0.636515974998474),
-		"memory_process_size":       int(1234),
-		"memory_process_rss":        int(815),
-		"memory_system_total":       int(3947),
-		"memory_system_free":        int(2761),
-		"num_cores":                 int(4),
-		"total_load":                float64(0.00429263804107904),
-		"data_dir_space":            int(34968),
-		"query_read_bytes":          int(11492428),
-		"query_read_load":           int(0),
-		"http_server_receive_bytes": float64(285915),
-		"http_server_send_bytes":    float64(0),
+		"online":                    true,
+		"total_load":                0.00429263804107904,
+		"ncpus":                     1,
+		"ncores":                    4,
+		"total_rate":                15.6527042388916,
+		"total_cpu_stat_user":       0.276381999254227,
+		"total_cpu_stat_system":     0.636515974998474,
+		"total_cpu_stat_idle":       99.0578002929688,
+		"total_cpu_stat_iowait":     0.0125628001987934,
+		"memory_process_size":       1234,
+		"memory_process_rss":        815,
+		"memory_system_total":       3947,
+		"memory_system_free":        2761,
+		"memory_size":               4096,
+		"host_size":                 64,
+		"data_dir_space":            34968,
+		"query_read_bytes":          11492428,
+		"query_read_load":           0,
+		"http_server_receive_bytes": 285915,
+		"http_server_send_bytes":    0,
 	}
 	// Expect the correct values for all tags
 	expectTags := map[string]string{
-		"ml_hostname": string("ml1.local"),
-		"id":          string("2592913110757471141"),
+		"name": "ml1.local",
+		"id":   "2592913110757471141",
 	}
 
 	acc.AssertContainsTaggedFields(t, "marklogic", expectFields, expectTags)
@@ -72,7 +78,7 @@ var response = `
     "host-mode": "normal",
     "host-mode-description": "",
     "meta": {
-      "uri": "/manage/LATEST/hosts/ml1.local?view=status",
+      "uri": "/manage/v2/hosts/ml1.local?view=status",
       "current-time": "2019-07-28T22:32:19.056203Z",
       "elapsed-time": {
         "units": "sec",
@@ -82,56 +88,56 @@ var response = `
     "relations": {
       "relation-group": [
         {
-          "uriref": "/manage/LATEST/forests?view=status&host-id=ml1.local",
+          "uriref": "/manage/v2/forests?view=status&host-id=ml1.local",
           "typeref": "forests",
           "relation": [
             {
-              "uriref": "/manage/LATEST/forests/App-Services",
+              "uriref": "/manage/v2/forests/App-Services",
               "idref": "8573569457346659714",
               "nameref": "App-Services"
             },
             {
-              "uriref": "/manage/LATEST/forests/Documents",
+              "uriref": "/manage/v2/forests/Documents",
               "idref": "17189472171231792168",
               "nameref": "Documents"
             },
             {
-              "uriref": "/manage/LATEST/forests/Extensions",
+              "uriref": "/manage/v2/forests/Extensions",
               "idref": "1510244530748962553",
               "nameref": "Extensions"
             },
             {
-              "uriref": "/manage/LATEST/forests/Fab",
+              "uriref": "/manage/v2/forests/Fab",
               "idref": "16221965829238302106",
               "nameref": "Fab"
             },
             {
-              "uriref": "/manage/LATEST/forests/Last-Login",
+              "uriref": "/manage/v2/forests/Last-Login",
               "idref": "1093671762706318022",
               "nameref": "Last-Login"
             },
             {
-              "uriref": "/manage/LATEST/forests/Meters",
+              "uriref": "/manage/v2/forests/Meters",
               "idref": "1573439446779995954",
               "nameref": "Meters"
             },
             {
-              "uriref": "/manage/LATEST/forests/Modules",
+              "uriref": "/manage/v2/forests/Modules",
               "idref": "18320951141685848719",
               "nameref": "Modules"
             },
             {
-              "uriref": "/manage/LATEST/forests/Schemas",
+              "uriref": "/manage/v2/forests/Schemas",
               "idref": "18206720449696085936",
               "nameref": "Schemas"
             },
             {
-              "uriref": "/manage/LATEST/forests/Security",
+              "uriref": "/manage/v2/forests/Security",
               "idref": "9348728036360382939",
               "nameref": "Security"
             },
             {
-              "uriref": "/manage/LATEST/forests/Triggers",
+              "uriref": "/manage/v2/forests/Triggers",
               "idref": "10142793547905338229",
               "nameref": "Triggers"
             }
@@ -141,7 +147,7 @@ var response = `
           "typeref": "groups",
           "relation": [
             {
-              "uriref": "/manage/LATEST/groups/Default?view=status",
+              "uriref": "/manage/v2/groups/Default?view=status",
               "idref": "16808579782544283978",
               "nameref": "Default"
             }
@@ -478,7 +484,7 @@ var response = `
           "units": "quantity",
           "value": 10000100
         },
-        "os-version": "Linux 4.9.125-linuxkit (CentOS Linux release 7.6.1810 (Core) ) on Docker",
+        "os-version": "NA",
         "converters-version": "10.0-1",
         "host-mode": {
           "units": "enum",
@@ -486,11 +492,11 @@ var response = `
         },
         "architecture": "x86_64",
         "platform": "linux",
-        "license-key": "B585-FDCF-618B-FB5F-C38E-285F-DCF6-F7B6-C13E-6275-93BC-50E4-0738-32C5-1EC0-7783-4C52-E417-B838-C54E-7CCE-4D00",
-        "licensee": "Craig Hobbs - Development",
+        "license-key": "000-000-000-000-000-000-000",
+        "licensee": "NA",
         "license-key-expires": {
           "units": "datetime",
-          "value": "2020-01-23T00:00:00Z"
+          "value": "2999-01-23T00:00:00Z"
         },
         "license-key-cpus": {
           "units": "quantity",
@@ -1256,7 +1262,7 @@ var response = `
         {
           "view-type": "item",
           "view-name": "default",
-          "view-uri": "/manage/LATEST/hosts/ml1.local"
+          "view-uri": "/manage/v2/hosts/example"
         }
       ]
     }
