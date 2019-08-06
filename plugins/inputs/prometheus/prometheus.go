@@ -286,7 +286,6 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	if p.MetricVersion == 2 {
 		metrics, err = ParseV2(body, resp.Header)
-		log.Printf("prometheus: using metric_version = %v", p.MetricVersion)
 	} else {
 		metrics, err = Parse(body, resp.Header)
 	}
@@ -299,7 +298,6 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	var urltag = "url"
 	if p.UrlTag != "" {
 		urltag = p.UrlTag
-		log.Printf("prometheus: using url_tag = %v", urltag)
 	}
 
 	for _, metric := range metrics {
