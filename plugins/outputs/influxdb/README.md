@@ -23,6 +23,9 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   ## tag is not set the 'database' option is used as the default.
   # database_tag = ""
 
+  ## If true, the database tag will not be added to the metric.
+  # exclude_database_tag = false
+
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
   ## Telegraf with a user without permissions to create databases or when the
   ## database already exists.

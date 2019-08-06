@@ -13,7 +13,7 @@ and number of users logged in. It is similar to the unix `uptime` command.
 #### Permissions:
 
 The `n_users` field requires read access to `/var/run/utmp`, and may require
-the `telegraf` user to be added to the `utmp` group on some systems.
+the `telegraf` user to be added to the `utmp` group on some systems. If this file does not exist `n_users` will be skipped.
 
 ### Metrics:
 

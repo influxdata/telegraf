@@ -348,17 +348,19 @@ func (c *CiscoTelemetryMDT) Stop() {
 }
 
 const sampleConfig = `
- ## Telemetry transport (one of: tcp, grpc)
+ ## Telemetry transport can be "tcp" or "grpc".  TLS is only supported when
+ ## using the grpc transport.
  transport = "grpc"
 
  ## Address and port to host telemetry listener
  service_address = ":57000"
 
- ## Enable TLS for GRPC transport
+ ## Enable TLS; grpc transport only.
  # tls_cert = "/etc/telegraf/cert.pem"
  # tls_key = "/etc/telegraf/key.pem"
 
- ## Enable TLS client authentication and define allowed CA certificates
+ ## Enable TLS client authentication and define allowed CA certificates; grpc
+ ##  transport only.
  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
  ## Define aliases to map telemetry encoding paths to simple measurement names

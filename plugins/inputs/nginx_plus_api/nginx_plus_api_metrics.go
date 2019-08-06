@@ -2,6 +2,7 @@ package nginx_plus_api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -13,16 +14,33 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+var (
+	// errNotFound signals that the NGINX API routes does not exist.
+	errNotFound = errors.New("not found")
+)
+
 func (n *NginxPlusApi) gatherMetrics(addr *url.URL, acc telegraf.Accumulator) {
-	acc.AddError(n.gatherProcessesMetrics(addr, acc))
-	acc.AddError(n.gatherConnectionsMetrics(addr, acc))
-	acc.AddError(n.gatherSslMetrics(addr, acc))
-	acc.AddError(n.gatherHttpRequestsMetrics(addr, acc))
-	acc.AddError(n.gatherHttpServerZonesMetrics(addr, acc))
-	acc.AddError(n.gatherHttpUpstreamsMetrics(addr, acc))
-	acc.AddError(n.gatherHttpCachesMetrics(addr, acc))
-	acc.AddError(n.gatherStreamServerZonesMetrics(addr, acc))
-	acc.AddError(n.gatherStreamUpstreamsMetrics(addr, acc))
+	addError(acc, n.gatherProcessesMetrics(addr, acc))
+	addError(acc, n.gatherConnectionsMetrics(addr, acc))
+	addError(acc, n.gatherSslMetrics(addr, acc))
+	addError(acc, n.gatherHttpRequestsMetrics(addr, acc))
+	addError(acc, n.gatherHttpServerZonesMetrics(addr, acc))
+	addError(acc, n.gatherHttpUpstreamsMetrics(addr, acc))
+	addError(acc, n.gatherHttpCachesMetrics(addr, acc))
+	addError(acc, n.gatherStreamServerZonesMetrics(addr, acc))
+	addError(acc, n.gatherStreamUpstreamsMetrics(addr, acc))
+}
+
+func addError(acc telegraf.Accumulator, err error) {
+	// This plugin has hardcoded API resource paths it checks that may not
+	// be in the nginx.conf.  Currently, this is to prevent logging of
+	// paths that are not configured.
+	//
+	// The correct solution is to do a GET to /api to get the available paths
+	// on the server rather than simply ignore.
+	if err != errNotFound {
+		acc.AddError(err)
+	}
 }
 
 func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
@@ -33,9 +51,17 @@ func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
 		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusNotFound:
+		// format as special error to catch and ignore as some nginx API
+		// features are either optional, or only available in some versions
+		return nil, errNotFound
+	default:
 		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
+
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	switch contentType {
 	case "application/json":

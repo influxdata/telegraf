@@ -49,6 +49,8 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"used_memory_rss":                int64(811008),
 		"used_memory_peak":               int64(1003936),
 		"used_memory_lua":                int64(33792),
+		"used_memory_peak_perc":          float64(93.58),
+		"used_memory_dataset_perc":       float64(20.27),
 		"mem_fragmentation_ratio":        float64(0.81),
 		"loading":                        int64(0),
 		"rdb_changes_since_last_save":    int64(0),
@@ -152,6 +154,8 @@ used_memory_peak_human:980.41K
 used_memory_lua:33792
 mem_fragmentation_ratio:0.81
 mem_allocator:libc
+used_memory_peak_perc:93.58%
+used_memory_dataset_perc:20.27%
 
 # Persistence
 loading:0

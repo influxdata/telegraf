@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -56,7 +55,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []int
+	Percentiles     []internal.Number
 	PercentileLimit int
 
 	DeleteGauges   bool
@@ -218,7 +217,7 @@ const sampleConfig = `
   delete_timings = true
 
   ## Percentiles to calculate for timing & histogram stats
-  percentiles = [90]
+  percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
 
   ## separator to use between elements of a statsd metric
   metric_separator = "_"
@@ -272,8 +271,8 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			fields[prefix+"lower"] = stats.Lower()
 			fields[prefix+"count"] = stats.Count()
 			for _, percentile := range s.Percentiles {
-				name := fmt.Sprintf("%s%v_percentile", prefix, percentile)
-				fields[name] = stats.Percentile(percentile)
+				name := fmt.Sprintf("%s%v_percentile", prefix, percentile.Value)
+				fields[name] = stats.Percentile(percentile.Value)
 			}
 		}
 
@@ -310,11 +309,14 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Statsd) Start(_ telegraf.Accumulator) error {
+func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	if s.ParseDataDogTags {
 		s.DataDogExtensions = true
 		log.Printf("W! [inputs.statsd] The parse_data_dog_tags option is deprecated, use datadog_extensions instead.")
 	}
+
+	s.acc = ac
+
 	// Make data structures
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
@@ -817,14 +819,12 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 		s.forget(id)
 		s.CurrentConnections.Incr(-1)
 	}()
-	addr := conn.RemoteAddr()
-	parsedURL, err := url.Parse(addr.String())
-	if err != nil {
-		// this should never happen because the conn handler should give us parsable addresses,
-		// but if it does we will know
-		log.Printf("E! [inputs.statsd] failed to parse %s\n", addr)
-		return // close the connetion and return
+
+	var remoteIP string
+	if addr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+		remoteIP = addr.IP.String()
 	}
+
 	var n int
 	scanner := bufio.NewScanner(conn)
 	for {
@@ -848,7 +848,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			b.WriteByte('\n')
 
 			select {
-			case s.in <- input{Buffer: b, Time: time.Now(), Addr: parsedURL.Host}:
+			case s.in <- input{Buffer: b, Time: time.Now(), Addr: remoteIP}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
