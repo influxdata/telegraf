@@ -70,7 +70,7 @@
 - [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
 - [#6136](https://github.com/influxdata/telegraf/issues/6136): Support Kafka 2.3.0 consumer groups.
 
-## v1.11.4 [unreleased]
+## v1.11.4 [2019-08-06]
 
 #### Bugfixes
 
