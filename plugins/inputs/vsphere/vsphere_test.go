@@ -386,6 +386,11 @@ func TestFinder(t *testing.T) {
 	require.Equal(t, 2, len(vm))
 
 	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM*", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(vm))
+
+	vm = []mo.VirtualMachine{}
 	err = f.Find(ctx, "VirtualMachine", "/**/vm/**", &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
