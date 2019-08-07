@@ -176,6 +176,7 @@ For documentation on the latest development code see the [documentation index][d
 * [file](./plugins/inputs/file)
 * [filestat](./plugins/inputs/filestat)
 * [filecount](./plugins/inputs/filecount)
+* [fireboard](/plugins/inputs/fireboard)
 * [fluentd](./plugins/inputs/fluentd)
 * [github](./plugins/inputs/github)
 * [graylog](./plugins/inputs/graylog)
@@ -282,6 +283,7 @@ For documentation on the latest development code see the [documentation index][d
 * [twemproxy](./plugins/inputs/twemproxy)
 * [udp_listener](./plugins/inputs/socket_listener)
 * [unbound](./plugins/inputs/unbound)
+* [uswgi](./plugins/inputs/uswgi)
 * [varnish](./plugins/inputs/varnish)
 * [vsphere](./plugins/inputs/vsphere) VMware vSphere
 * [webhooks](./plugins/inputs/webhooks)

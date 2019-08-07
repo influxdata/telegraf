@@ -33,6 +33,11 @@ in Prometheus format.
   ## OR
   # bearer_token_string = "abc_123"
 
+  ## HTTP Basic Authentication username and password. ('bearer_token' and
+  ## 'bearer_token_string' take priority)
+  # username = ""
+  # password = ""
+
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 

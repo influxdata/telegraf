@@ -48,6 +48,10 @@ type Size struct {
 	Size int64
 }
 
+type Number struct {
+	Value float64
+}
+
 // SetVersion sets the telegraf agent version
 func SetVersion(v string) error {
 	if version != "" {
@@ -121,6 +125,16 @@ func (s *Size) UnmarshalTOML(b []byte) error {
 		return err
 	}
 	s.Size = val
+	return nil
+}
+
+func (n *Number) UnmarshalTOML(b []byte) error {
+	value, err := strconv.ParseFloat(string(b), 64)
+	if err != nil {
+		return err
+	}
+
+	n.Value = value
 	return nil
 }
 

@@ -3,6 +3,8 @@
 The system plugin gathers general stats on system load, uptime,
 and number of users logged in. It is similar to the unix `uptime` command.
 
+Number of CPUs is obtained from the /proc/cpuinfo file.
+
 ### Configuration:
 
 ```toml

@@ -61,28 +61,39 @@ func NewClientFactory(ctx context.Context, url *url.URL, parent *VSphere) *Clien
 func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 	cf.mux.Lock()
 	defer cf.mux.Unlock()
-	if cf.client == nil {
-		var err error
-		if cf.client, err = NewClient(ctx, cf.url, cf.parent); err != nil {
-			return nil, err
+	retrying := false
+	for {
+		if cf.client == nil {
+			var err error
+			if cf.client, err = NewClient(ctx, cf.url, cf.parent); err != nil {
+				return nil, err
+			}
 		}
-	}
 
-	// Execute a dummy call against the server to make sure the client is
-	// still functional. If not, try to log back in. If that doesn't work,
-	// we give up.
-	ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
-	defer cancel1()
-	if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
-		log.Printf("I! [inputs.vsphere]: Client session seems to have time out. Reauthenticating!")
-		ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
-		defer cancel2()
-		if cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
-			return nil, fmt.Errorf("Renewing authentication failed: %v", err)
+		// Execute a dummy call against the server to make sure the client is
+		// still functional. If not, try to log back in. If that doesn't work,
+		// we give up.
+		ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+		defer cancel1()
+		if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
+			log.Printf("I! [inputs.vsphere]: Client session seems to have time out. Reauthenticating!")
+			ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+			defer cancel2()
+			if err := cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)); err != nil {
+				if !retrying {
+					// The client went stale. Probably because someone rebooted vCenter. Clear it to
+					// force us to create a fresh one. We only get one chance at this. If we fail a second time
+					// we will simply skip this collection round and hope things have stabilized for the next one.
+					retrying = true
+					cf.client = nil
+					continue
+				}
+				return nil, fmt.Errorf("Renewing authentication failed: %v", err)
+			}
 		}
-	}
 
-	return cf.client, nil
+		return cf.client, nil
+	}
 }
 
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.

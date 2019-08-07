@@ -31,7 +31,7 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
     "my_tag_2"
   ]
 
-  ## String fields is an array of keys that should be added as string fields.
+  ## Array of glob pattern strings keys that should be added as string fields.
   json_string_fields = []
 
   ## Name key is the key to use as the measurement name.

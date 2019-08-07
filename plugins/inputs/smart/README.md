@@ -3,6 +3,8 @@
 Get metrics using the command line utility `smartctl` for S.M.A.R.T. (Self-Monitoring, Analysis and Reporting Technology) storage devices. SMART is a monitoring system included in computer hard disk drives (HDDs) and solid-state drives (SSDs)[1] that detects and reports on various indicators of drive reliability, with the intent of enabling the anticipation of hardware failures.
 See smartmontools (https://www.smartmontools.org/).
 
+SMART information is separated between different measurements: `smart_device` is used for general information, while `smart_attribute` stores the detailed attribute information if `attributes = true` is enabled in the plugin configuration.
+
 If no devices are specified, the plugin will scan for SMART devices via the following command:
 
 ```
@@ -46,7 +48,8 @@ smartctl -s on <device>
   ## "never" depending on your disks.
   # nocheck = "standby"
 
-  ## Gather detailed metrics for each SMART Attribute.
+  ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
+  ## information from each drive into the `smart_attribute` measurement.
   # attributes = false
 
   ## Optionally specify devices to exclude from reporting.
@@ -86,9 +89,8 @@ Defaults!SMARTCTL !logfile, !syslog, !pam_session
   - tags:
     - capacity
     - device
-    - device_model
     - enabled
-    - health
+    - model
     - serial_no
     - wwn
   - fields:
@@ -101,10 +103,13 @@ Defaults!SMARTCTL !logfile, !syslog, !pam_session
 
 - smart_attribute:
   - tags:
+    - capacity
     - device
+    - enabled
     - fail
     - flags
     - id
+    - model
     - name
     - serial_no
     - wwn
@@ -160,6 +165,6 @@ smartctl --info --health --attributes --tolerance=verypermissive --nocheck NOCHE
 
 ```
 smart_device,enabled=Enabled,host=mbpro.local,device=rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000
-smart_attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=mbpro.local,device=rdisk0 threshold=0i,raw_value=0i,exit_status=0i,value=200i,worst=200i 1502536854000000000
-smart_attribute,device=rdisk0,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=240,name=Unknown_SSD_Attribute,flags=-O---K,fail=-,host=mbpro.local exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1502536854000000000
+smart_attribute,capacity=500277790720,device=rdisk0,enabled=Enabled,fail=-,flags=-O-RC-,host=mbpro.local,id=199,model=APPLE\ SSD\ SM0512F,name=UDMA_CRC_Error_Count,serial_no=S1K5NYCD964433,wwn=5002538655584d30 exit_status=0i,raw_value=0i,threshold=0i,value=200i,worst=200i 1502536854000000000
+smart_attribute,capacity=500277790720,device=rdisk0,enabled=Enabled,fail=-,flags=-O---K,host=mbpro.local,id=199,model=APPLE\ SSD\ SM0512F,name=Unknown_SSD_Attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30 exit_status=0i,raw_value=0i,threshold=0i,value=100i,worst=100i 1502536854000000000
 ```
