@@ -161,7 +161,11 @@ This plugin will format the events in the following way:
   ## Set the interval to check if the Elasticsearch nodes are available
   ## Setting to "0s" will disable the health check (not recommended in production)
   health_check_interval = "10s"
-  ## HTTP basic authentication details
+  ## HTTP basic authentication details.
+  ## If you are using authentication within your Elasticsearch cluster, 
+  ## you need to create a account and create a role with at least the manage role in the Cluster Privileges category.
+  ## Overwise, your account will not be able to connect to your Elasticsearch cluster and send logs to your cluster.
+  ## After that, you need to add "create_indice" and "write" permission to your specific index pattern. 
   # username = "telegraf"
   # password = "mypassword"
 
