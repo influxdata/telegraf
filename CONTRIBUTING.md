@@ -61,6 +61,9 @@ make test-all
 
 Use `make docker-kill` to stop the containers.
 
+**Addressing Feedback:**
+
+Once a pull request review has begun, refrain from force-pushing anything that will overwrite the history. This adds to the wait time and complexity of a review as a full review is required, rather than simply reviewing the feedback changes.
 
 [cla]: https://www.influxdata.com/legal/cla/
 [new issue]: https://github.com/influxdata/telegraf/issues/new/choose
