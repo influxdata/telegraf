@@ -12,21 +12,17 @@ import (
 
 type Self struct {
 	CollectMemstats bool
-	SendVersion     bool
 }
 
 func NewSelf() telegraf.Input {
 	return &Self{
 		CollectMemstats: true,
-		SendVersion:     true,
 	}
 }
 
 var sampleConfig = `
   ## If true, collect telegraf memory stats.
   # collect_memstats = true
-  ## If true, send telegraf version
-  # send_version = true
 `
 
 func (s *Self) Description() string {
@@ -60,15 +56,14 @@ func (s *Self) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields("internal_memstats", fields, map[string]string{})
 	}
 
-	if s.SendVersion {
-		fields := map[string]interface{}{
-			"telegraf": inter.Version(),                             // Telegraf version
-			"go":       strings.TrimPrefix(runtime.Version(), "go"), // Go version
-		}
-		acc.AddFields("internal_version", fields, map[string]string{})
-	}
+	telegrafVersion := inter.Version()
+	goVersion := strings.TrimPrefix(runtime.Version(), "go")
 
 	for _, m := range selfstat.Metrics() {
+		if m.Name() == "internal_agent" {
+			m.AddTag("go_version", goVersion)
+		}
+		m.AddTag("version", telegrafVersion)
 		acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
