@@ -24,5 +24,5 @@ RUN gem install fpm
 
 RUN go get -d github.com/golang/dep && \
     cd src/github.com/golang/dep && \
-    git checkout -q v0.4.1 && \
-    go install -ldflags="-X main.version=v0.4.1" ./cmd/dep
+    git checkout -q v0.5.0 && \
+    go install -ldflags="-X main.version=v0.5.0" ./cmd/dep

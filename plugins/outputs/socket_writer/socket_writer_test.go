@@ -49,7 +49,7 @@ func TestSocketWriter_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "socket_writer.TestSocketWriter_unix.sock")
+	sock := filepath.Join(tmpdir, "sw.TestSocketWriter_unix.sock")
 
 	listener, err := net.Listen("unix", sock)
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestSocketWriter_unixgram(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "socket_writer.TestSocketWriter_unixgram.sock")
+	sock := filepath.Join(tmpdir, "sw.TSW_unixgram.sock")
 
 	listener, err := net.ListenPacket("unixgram", sock)
 	require.NoError(t, err)

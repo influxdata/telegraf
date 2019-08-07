@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -74,28 +74,30 @@ var crTests = []CarriageReturnTest{
 }
 
 type runnerMock struct {
-	out []byte
-	err error
+	out    []byte
+	errout []byte
+	err    error
 }
 
-func newRunnerMock(out []byte, err error) Runner {
+func newRunnerMock(out []byte, errout []byte, err error) Runner {
 	return &runnerMock{
-		out: out,
-		err: err,
+		out:    out,
+		errout: errout,
+		err:    err,
 	}
 }
 
-func (r runnerMock) Run(e *Exec, command string, acc telegraf.Accumulator) ([]byte, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	return r.out, nil
+func (r runnerMock) Run(command string, _ time.Duration) ([]byte, []byte, error) {
+	return r.out, r.errout, r.err
 }
 
 func TestExec(t *testing.T) {
-	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
+	parser, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "exec",
+	})
 	e := &Exec{
-		runner:   newRunnerMock([]byte(validJson), nil),
+		runner:   newRunnerMock([]byte(validJson), nil, nil),
 		Commands: []string{"testcommand arg1"},
 		parser:   parser,
 	}
@@ -119,9 +121,12 @@ func TestExec(t *testing.T) {
 }
 
 func TestExecMalformed(t *testing.T) {
-	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
+	parser, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "exec",
+	})
 	e := &Exec{
-		runner:   newRunnerMock([]byte(malformedJson), nil),
+		runner:   newRunnerMock([]byte(malformedJson), nil, nil),
 		Commands: []string{"badcommand arg1"},
 		parser:   parser,
 	}
@@ -132,9 +137,12 @@ func TestExecMalformed(t *testing.T) {
 }
 
 func TestCommandError(t *testing.T) {
-	parser, _ := parsers.NewJSONParser("exec", []string{}, nil)
+	parser, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "exec",
+	})
 	e := &Exec{
-		runner:   newRunnerMock(nil, fmt.Errorf("exit status code 1")),
+		runner:   newRunnerMock(nil, nil, fmt.Errorf("exit status code 1")),
 		Commands: []string{"badcommand"},
 		parser:   parser,
 	}
@@ -190,6 +198,66 @@ func TestExecCommandWithoutGlobAndPath(t *testing.T) {
 		"value": "metric_value",
 	}
 	acc.AssertContainsFields(t, "metric", fields)
+}
+
+func TestTruncate(t *testing.T) {
+	tests := []struct {
+		name string
+		bufF func() *bytes.Buffer
+		expF func() *bytes.Buffer
+	}{
+		{
+			name: "should not truncate",
+			bufF: func() *bytes.Buffer {
+				var b bytes.Buffer
+				b.WriteString("hello world")
+				return &b
+			},
+			expF: func() *bytes.Buffer {
+				var b bytes.Buffer
+				b.WriteString("hello world")
+				return &b
+			},
+		},
+		{
+			name: "should truncate up to the new line",
+			bufF: func() *bytes.Buffer {
+				var b bytes.Buffer
+				b.WriteString("hello world\nand all the people")
+				return &b
+			},
+			expF: func() *bytes.Buffer {
+				var b bytes.Buffer
+				b.WriteString("hello world...")
+				return &b
+			},
+		},
+		{
+			name: "should truncate to the MaxStderrBytes",
+			bufF: func() *bytes.Buffer {
+				var b bytes.Buffer
+				for i := 0; i < 2*MaxStderrBytes; i++ {
+					b.WriteByte('b')
+				}
+				return &b
+			},
+			expF: func() *bytes.Buffer {
+				var b bytes.Buffer
+				for i := 0; i < MaxStderrBytes; i++ {
+					b.WriteByte('b')
+				}
+				b.WriteString("...")
+				return &b
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := truncate(*tt.bufF())
+			require.Equal(t, tt.expF().Bytes(), res.Bytes())
+		})
+	}
 }
 
 func TestRemoveCarriageReturns(t *testing.T) {

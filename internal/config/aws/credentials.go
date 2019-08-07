@@ -9,13 +9,14 @@ import (
 )
 
 type CredentialConfig struct {
-	Region    string
-	AccessKey string
-	SecretKey string
-	RoleARN   string
-	Profile   string
-	Filename  string
-	Token     string
+	Region      string
+	AccessKey   string
+	SecretKey   string
+	RoleARN     string
+	Profile     string
+	Filename    string
+	Token       string
+	EndpointURL string
 }
 
 func (c *CredentialConfig) Credentials() client.ConfigProvider {
@@ -28,7 +29,8 @@ func (c *CredentialConfig) Credentials() client.ConfigProvider {
 
 func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 	config := &aws.Config{
-		Region: aws.String(c.Region),
+		Region:   aws.String(c.Region),
+		Endpoint: &c.EndpointURL,
 	}
 	if c.AccessKey != "" || c.SecretKey != "" {
 		config.Credentials = credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, c.Token)
@@ -42,7 +44,8 @@ func (c *CredentialConfig) rootCredentials() client.ConfigProvider {
 func (c *CredentialConfig) assumeCredentials() client.ConfigProvider {
 	rootCredentials := c.rootCredentials()
 	config := &aws.Config{
-		Region: aws.String(c.Region),
+		Region:   aws.String(c.Region),
+		Endpoint: &c.EndpointURL,
 	}
 	config.Credentials = stscreds.NewCredentials(rootCredentials, c.RoleARN)
 	return session.New(config)

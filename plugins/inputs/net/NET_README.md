@@ -51,7 +51,7 @@ Under Linux the system wide protocol metrics have the interface=all tag.
 
 ### Sample Queries:
 
-You can use the following query to get the upload/download traffic rate per second for all interfaces in the last hour. The query uses the (derivative function)[https://docs.influxdata.com/influxdb/v1.2/query_language/functions#derivative] which calculates the rate of change between subsequent field values.
+You can use the following query to get the upload/download traffic rate per second for all interfaces in the last hour. The query uses the [derivative function](https://docs.influxdata.com/influxdb/v1.2/query_language/functions#derivative) which calculates the rate of change between subsequent field values.
 
 ```
 SELECT derivative(first(bytes_recv), 1s) as "download bytes/sec", derivative(first(bytes_sent), 1s) as "upload bytes/sec" FROM net WHERE time > now() - 1h AND interface != 'all' GROUP BY time(10s), interface fill(0);

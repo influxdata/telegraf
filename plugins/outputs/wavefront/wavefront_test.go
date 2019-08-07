@@ -51,8 +51,55 @@ func TestBuildMetrics(t *testing.T) {
 			},
 		},
 		{
+			testutil.TestMetric(float64(1), "testing_just/another,metric:float", "metric2"),
+			[]MetricPoint{
+				{Metric: w.Prefix + "testing.just-another-metric-float", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+				{Metric: w.Prefix + "testing.metric2", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+			},
+		},
+		{
 			testMetric1,
 			[]MetricPoint{{Metric: w.Prefix + "test.simple.metric", Value: 123, Timestamp: timestamp, Source: "testHost", Tags: map[string]string{"tag1": "value1"}}},
+		},
+	}
+
+	for _, mt := range metricTests {
+		ml := buildMetrics(mt.metric, w)
+		for i, line := range ml {
+			if mt.metricPoints[i].Metric != line.Metric || mt.metricPoints[i].Value != line.Value {
+				t.Errorf("\nexpected\t%+v %+v\nreceived\t%+v %+v\n", mt.metricPoints[i].Metric, mt.metricPoints[i].Value, line.Metric, line.Value)
+			}
+		}
+	}
+
+}
+
+func TestBuildMetricsStrict(t *testing.T) {
+	w := defaultWavefront()
+	w.Prefix = "testthis."
+	w.UseStrict = true
+
+	pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
+
+	var timestamp int64 = 1257894000
+
+	var metricTests = []struct {
+		metric       telegraf.Metric
+		metricPoints []MetricPoint
+	}{
+		{
+			testutil.TestMetric(float64(1), "testing_just*a%metric:float", "metric2"),
+			[]MetricPoint{
+				{Metric: w.Prefix + "testing.just-a-metric-float", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+				{Metric: w.Prefix + "testing.metric2", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag1": "value1"}},
+			},
+		},
+		{
+			testutil.TestMetric(float64(1), "testing_just/another,metric:float", "metric2"),
+			[]MetricPoint{
+				{Metric: w.Prefix + "testing.just/another,metric-float", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag/1": "value1", "tag,2": "value2"}},
+				{Metric: w.Prefix + "testing.metric2", Value: 1, Timestamp: timestamp, Tags: map[string]string{"tag/1": "value1", "tag,2": "value2"}},
+			},
 		},
 	}
 
@@ -140,6 +187,11 @@ func TestBuildTags(t *testing.T) {
 			"aaa",
 			map[string]string{"dc": "bbb"},
 		},
+		{
+			map[string]string{"host": "aaa", "dc": "a*$a\\abbb\"som/et|hing else", "bad#k%e/y that*sho\\uld work": "value1"},
+			"aaa",
+			map[string]string{"dc": "a-$a\\abbb\"som/et|hing else", "bad-k-e-y-that-sho-uld-work": "value1"},
+		},
 	}
 
 	for _, tt := range tagtests {
@@ -189,7 +241,7 @@ func TestBuildTagsWithSource(t *testing.T) {
 		},
 		{
 			map[string]string{"something": "abc", "host": "r*@l\"Ho/st"},
-			"r-@l\\\"Ho/st",
+			"r-@l\"Ho/st",
 			map[string]string{"something": "abc"},
 		},
 	}
@@ -262,27 +314,6 @@ func TestBuildValueString(t *testing.T) {
 		}
 	}
 
-}
-
-func TestFormatMetricPoint(t *testing.T) {
-	w := defaultWavefront()
-
-	testpoint := &MetricPoint{
-		Metric:    "test.metric.something",
-		Value:     123.456,
-		Timestamp: 1257894000,
-		Source:    "testSource",
-		Tags:      map[string]string{"sp*c!@l\"-ch/rs": "sp*c!@l/ val\"ue"},
-	}
-
-	expected := "test.metric.something 123.456000 1257894000 source=\"testSource\" sp-c--l--ch-rs=\"sp-c!@l/ val\\\"ue\"\n"
-
-	received := formatMetricPoint(testpoint, w)
-
-	if expected != received {
-		t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", expected, received)
-
-	}
 }
 
 // Benchmarks to test performance of string replacement via Regex and Replacer

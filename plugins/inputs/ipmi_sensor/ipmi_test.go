@@ -28,7 +28,7 @@ func TestGather(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, acc.NFields(), 266, "non-numeric measurements should be ignored")
+	assert.Equal(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
 
 	conn := NewConnection(i.Servers[0], i.Privilege)
 	assert.Equal(t, "USERID", conn.Username)
@@ -127,6 +127,7 @@ func TestGather(t *testing.T) {
 	}
 
 	err = acc.GatherError(i.Gather)
+	require.NoError(t, err)
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
@@ -377,4 +378,343 @@ OS RealTime Mod  | 0x00              | ok
 
 	}
 	os.Exit(0)
+}
+
+func TestGatherV2(t *testing.T) {
+	i := &Ipmi{
+		Servers:       []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
+		Path:          "ipmitool",
+		Privilege:     "USER",
+		Timeout:       internal.Duration{Duration: time.Second * 5},
+		MetricVersion: 2,
+	}
+	// overwriting exec commands with mock commands
+	execCommand = fakeExecCommandV2
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(i.Gather)
+
+	require.NoError(t, err)
+
+	conn := NewConnection(i.Servers[0], i.Privilege)
+	assert.Equal(t, "USERID", conn.Username)
+	assert.Equal(t, "lan", conn.Interface)
+
+	var testsWithServer = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		//SEL              | 72h | ns  |  7.1 | No Reading
+		{
+			map[string]interface{}{
+				"value": float64(0),
+			},
+			map[string]string{
+				"name":        "sel",
+				"entity_id":   "7.1",
+				"status_code": "ns",
+				"status_desc": "no_reading",
+				"server":      "192.168.1.1",
+			},
+		},
+	}
+
+	for _, test := range testsWithServer {
+		acc.AssertContainsTaggedFields(t, "ipmi_sensor", test.fields, test.tags)
+	}
+
+	i = &Ipmi{
+		Path:          "ipmitool",
+		Timeout:       internal.Duration{Duration: time.Second * 5},
+		MetricVersion: 2,
+	}
+
+	err = acc.GatherError(i.Gather)
+	require.NoError(t, err)
+
+	var testsWithoutServer = []struct {
+		fields map[string]interface{}
+		tags   map[string]string
+	}{
+		//SEL              | 72h | ns  |  7.1 | No Reading
+		{
+			map[string]interface{}{
+				"value": float64(0),
+			},
+			map[string]string{
+				"name":        "sel",
+				"entity_id":   "7.1",
+				"status_code": "ns",
+				"status_desc": "no_reading",
+			},
+		},
+		//Intrusion        | 73h | ok  |  7.1 |
+		{
+			map[string]interface{}{
+				"value": float64(0),
+			},
+			map[string]string{
+				"name":        "intrusion",
+				"entity_id":   "7.1",
+				"status_code": "ok",
+				"status_desc": "ok",
+			},
+		},
+		//Fan1             | 30h | ok  |  7.1 | 5040 RPM
+		{
+			map[string]interface{}{
+				"value": float64(5040),
+			},
+			map[string]string{
+				"name":        "fan1",
+				"entity_id":   "7.1",
+				"status_code": "ok",
+				"unit":        "rpm",
+			},
+		},
+		//Inlet Temp       | 04h | ok  |  7.1 | 25 degrees C
+		{
+			map[string]interface{}{
+				"value": float64(25),
+			},
+			map[string]string{
+				"name":        "inlet_temp",
+				"entity_id":   "7.1",
+				"status_code": "ok",
+				"unit":        "degrees_c",
+			},
+		},
+		//USB Cable Pres   | 50h | ok  |  7.1 | Connected
+		{
+			map[string]interface{}{
+				"value": float64(0),
+			},
+			map[string]string{
+				"name":        "usb_cable_pres",
+				"entity_id":   "7.1",
+				"status_code": "ok",
+				"status_desc": "connected",
+			},
+		},
+		//Current 1        | 6Ah | ok  | 10.1 | 7.20 Amps
+		{
+			map[string]interface{}{
+				"value": float64(7.2),
+			},
+			map[string]string{
+				"name":        "current_1",
+				"entity_id":   "10.1",
+				"status_code": "ok",
+				"unit":        "amps",
+			},
+		},
+		//Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
+		{
+			map[string]interface{}{
+				"value": float64(110),
+			},
+			map[string]string{
+				"name":        "power_supply_1",
+				"entity_id":   "10.1",
+				"status_code": "ok",
+				"unit":        "watts",
+				"status_desc": "presence_detected",
+			},
+		},
+	}
+
+	for _, test := range testsWithoutServer {
+		acc.AssertContainsTaggedFields(t, "ipmi_sensor", test.fields, test.tags)
+	}
+}
+
+// fackeExecCommandV2 is a helper function that mock
+// the exec.Command call (and call the test binary)
+func fakeExecCommandV2(command string, args ...string) *exec.Cmd {
+	cs := []string{"-test.run=TestHelperProcessV2", "--", command}
+	cs = append(cs, args...)
+	cmd := exec.Command(os.Args[0], cs...)
+	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+	return cmd
+}
+
+// TestHelperProcessV2 isn't a real test. It's used to mock exec.Command
+// For example, if you run:
+// GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcessV2 -- chrony tracking
+// it returns below mockData.
+func TestHelperProcessV2(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+
+	// Curated list of use cases instead of full dumps
+	mockData := `SEL              | 72h | ns  |  7.1 | No Reading
+Intrusion        | 73h | ok  |  7.1 |
+Fan1             | 30h | ok  |  7.1 | 5040 RPM
+Inlet Temp       | 04h | ok  |  7.1 | 25 degrees C
+USB Cable Pres   | 50h | ok  |  7.1 | Connected
+Current 1        | 6Ah | ok  | 10.1 | 7.20 Amps
+Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
+`
+
+	args := os.Args
+
+	// Previous arguments are tests stuff, that looks like :
+	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
+	cmd, args := args[3], args[4:]
+
+	if cmd == "ipmitool" {
+		fmt.Fprint(os.Stdout, mockData)
+	} else {
+		fmt.Fprint(os.Stdout, "command not found")
+		os.Exit(1)
+
+	}
+	os.Exit(0)
+}
+
+func TestExtractFields(t *testing.T) {
+	v1Data := `Ambient Temp     | 20 degrees C      | ok
+Altitude         | 80 feet           | ok
+Avg Power        | 210 Watts         | ok
+Planar 3.3V      | 3.29 Volts        | ok
+Planar 5V        | 4.90 Volts        | ok
+Planar 12V       | 12.04 Volts       | ok
+B                | 0x00              | ok
+Unable to send command: Invalid argument
+ECC Corr Err     | Not Readable      | ns
+Unable to send command: Invalid argument
+ECC Uncorr Err   | Not Readable      | ns
+Unable to send command: Invalid argument
+`
+
+	v2Data := `SEL              | 72h | ns  |  7.1 | No Reading
+Intrusion        | 73h | ok  |  7.1 |
+Fan1             | 30h | ok  |  7.1 | 5040 RPM
+Inlet Temp       | 04h | ok  |  7.1 | 25 degrees C
+USB Cable Pres   | 50h | ok  |  7.1 | Connected
+Unable to send command: Invalid argument
+Current 1        | 6Ah | ok  | 10.1 | 7.20 Amps
+Unable to send command: Invalid argument
+Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
+`
+
+	tests := []string{
+		v1Data,
+		v2Data,
+	}
+
+	for i := range tests {
+		t.Logf("Checking v%d data...", i+1)
+		extractFieldsFromRegex(re_v1_parse_line, tests[i])
+		extractFieldsFromRegex(re_v2_parse_line, tests[i])
+	}
+}
+
+func Test_parseV1(t *testing.T) {
+	type args struct {
+		hostname   string
+		cmdOut     []byte
+		measuredAt time.Time
+	}
+	tests := []struct {
+		name       string
+		args       args
+		wantFields map[string]interface{}
+		wantErr    bool
+	}{
+		{
+			name: "Test correct V1 parsing with hex code",
+			args: args{
+				hostname:   "host",
+				measuredAt: time.Now(),
+				cmdOut:     []byte("PS1 Status       | 0x02              | ok"),
+			},
+			wantFields: map[string]interface{}{"value": float64(2), "status": 1},
+			wantErr:    false,
+		},
+		{
+			name: "Test correct V1 parsing with value with unit",
+			args: args{
+				hostname:   "host",
+				measuredAt: time.Now(),
+				cmdOut:     []byte("Avg Power        | 210 Watts         | ok"),
+			},
+			wantFields: map[string]interface{}{"value": float64(210), "status": 1},
+			wantErr:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			if err := parseV1(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt); (err != nil) != tt.wantErr {
+				t.Errorf("parseV1() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			acc.AssertContainsFields(t, "ipmi_sensor", tt.wantFields)
+		})
+	}
+}
+
+func Test_parseV2(t *testing.T) {
+	type args struct {
+		hostname   string
+		cmdOut     []byte
+		measuredAt time.Time
+	}
+	tests := []struct {
+		name       string
+		args       args
+		wantFields map[string]interface{}
+		wantTags   map[string]string
+		wantErr    bool
+	}{
+		{
+			name: "Test correct V2 parsing with analog value with unit",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected"),
+				measuredAt: time.Now(),
+			},
+			wantFields: map[string]interface{}{"value": float64(110)},
+			wantTags: map[string]string{
+				"name":        "power_supply_1",
+				"status_code": "ok",
+				"server":      "host",
+				"entity_id":   "10.1",
+				"unit":        "watts",
+				"status_desc": "presence_detected",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test correct V2 parsing without analog value",
+			args: args{
+				hostname:   "host",
+				cmdOut:     []byte("Intrusion        | 73h | ok  |  7.1 |"),
+				measuredAt: time.Now(),
+			},
+			wantFields: map[string]interface{}{"value": float64(0)},
+			wantTags: map[string]string{
+				"name":        "intrusion",
+				"status_code": "ok",
+				"server":      "host",
+				"entity_id":   "7.1",
+				"status_desc": "ok",
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		var acc testutil.Accumulator
+
+		t.Run(tt.name, func(t *testing.T) {
+			if err := parseV2(&acc, tt.args.hostname, tt.args.cmdOut, tt.args.measuredAt); (err != nil) != tt.wantErr {
+				t.Errorf("parseV2() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+
+		acc.AssertContainsTaggedFields(t, "ipmi_sensor", tt.wantFields, tt.wantTags)
+	}
 }

@@ -14,7 +14,7 @@ use the [tail input plugin](/plugins/inputs/tail) instead.
   ## ** as a "super asterisk". ie:
   ##   /var/log/**.log     -> recursively find all .log files in /var/log
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
-  ##   /var/log/apache.log -> only tail the apache log file
+  ##   /var/log/apache.log -> only read the apache log file
   files = ["/var/log/apache/access.log"]
 
   ## Data format to consume.

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
+	"github.com/influxdata/wlog"
 	"github.com/soniah/gosnmp"
 )
 
@@ -84,6 +85,14 @@ var execCommand = exec.Command
 // execCmd executes the specified command, returning the STDOUT content.
 // If command exits with error status, the output is captured into the returned error.
 func execCmd(arg0 string, args ...string) ([]byte, error) {
+	if wlog.LogLevel() == wlog.DEBUG {
+		quoted := make([]string, 0, len(args))
+		for _, arg := range args {
+			quoted = append(quoted, fmt.Sprintf("%q", arg))
+		}
+		log.Printf("D! [inputs.snmp] Executing %q %s", arg0, strings.Join(quoted, " "))
+	}
+
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
 		if err, ok := err.(*exec.ExitError); ok {
@@ -1010,7 +1019,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			switch tc {
 			case "MacAddress", "PhysAddress":
 				conversion = "hwaddr"
-			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress":
+			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
 				conversion = "ipaddr"
 			}
 		} else if strings.HasPrefix(line, "::= { ") {

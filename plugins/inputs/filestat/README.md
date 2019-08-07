@@ -20,7 +20,7 @@ The filestat plugin gathers metrics about file existence, size, and other stats.
 - filestat
     - exists (int, 0 | 1)
     - size_bytes (int, bytes)
-    - modification_time (int, unixtime)
+    - modification_time (int, unix time nanoseconds)
     - md5 (optional, string)
 
 ### Tags:

@@ -5,22 +5,25 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
 ### Configuration:
 
 ```toml
- # A plugin to collect stats from Varnish HTTP Cache
- [[inputs.varnish]]
-   ## If running as a restricted user you can prepend sudo for additional access:
-   #use_sudo = false
+[[inputs.varnish]]
+  ## If running as a restricted user you can prepend sudo for additional access:
+  #use_sudo = false
 
-   ## The default location of the varnishstat binary can be overridden with:
-   binary = "/usr/bin/varnishstat"
+  ## The default location of the varnishstat binary can be overridden with:
+  binary = "/usr/bin/varnishstat"
 
-   ## By default, telegraf gathers stats for 3 metric points.
-   ## Setting stats will override the defaults shown below.
-   ## stats may also be set to ["all"], which will collect all stats
-   stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
+  ## By default, telegraf gather stats for 3 metric points.
+  ## Setting stats will override the defaults shown below.
+  ## Glob matching can be used, ie, stats = ["MAIN.*"]
+  ## stats may also be set to ["*"], which will collect all stats
+  stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
 
-   ## Optional name for the varnish instance (or working directory) to query
-   ## Usually appened after -n in varnish cli
-   # instance_name = instanceName
+  ## Optional name for the varnish instance (or working directory) to query
+  ## Usually appened after -n in varnish cli
+  # instance_name = instanceName
+
+  ## Timeout for varnishstat command
+  # timeout = "1s"
 ```
 
 ### Measurements & Fields:
@@ -388,7 +391,9 @@ You will also need to update your sudoers file:
 ```bash
 $ visudo
 # Add the following line:
-telegraf ALL=(ALL) NOPASSWD: /usr/bin/varnishstat
+Cmnd_Alias VARNISHSTAT = /usr/bin/varnishstat
+telegraf  ALL=(ALL) NOPASSWD: VARNISHSTAT
+Defaults!VARNISHSTAT !logfile, !syslog, !pam_session
 ```
 
 Please use the solution you see as most appropriate.

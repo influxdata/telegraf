@@ -42,8 +42,8 @@ type Mesos struct {
 }
 
 var allMetrics = map[Role][]string{
-	MASTER: []string{"resources", "master", "system", "agents", "frameworks", "tasks", "messages", "evqueue", "registrar"},
-	SLAVE:  []string{"resources", "agent", "system", "executors", "tasks", "messages"},
+	MASTER: {"resources", "master", "system", "agents", "frameworks", "tasks", "messages", "evqueue", "registrar"},
+	SLAVE:  {"resources", "agent", "system", "executors", "tasks", "messages"},
 }
 
 var sampleConfig = `

@@ -7,8 +7,12 @@ This input plugin checks HTTP/HTTPS connections.
 ```
 # HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
+  ## Deprecated in 1.12, use 'urls'
   ## Server address (default http://localhost)
   # address = "http://localhost"
+
+  ## List of urls to query.
+  # urls = ["http://localhost"]
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
   # http_proxy = "http://localhost:8888"
@@ -27,7 +31,7 @@ This input plugin checks HTTP/HTTPS connections.
   # {'fake':'data'}
   # '''
 
-  ## Optional substring or regex match in body of the response
+  ## Optional substring or regex match in body of the response (case sensitive)
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
@@ -42,6 +46,9 @@ This input plugin checks HTTP/HTTPS connections.
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Interface to use when dialing an address
+  # interface = "eth0"
 ```
 
 ### Metrics:
@@ -54,6 +61,7 @@ This input plugin checks HTTP/HTTPS connections.
     - result ([see below](#result--result_code))
   - fields:
     - response_time (float, seconds)
+    - response_string_match (int, 0 = mismatch / body read error, 1 = match)
     - http_response_code (int, response status code)
 	- result_type (string, deprecated in 1.6: use `result` tag and `result_code` field)
     - result_code (int, [see below](#result--result_code))
@@ -67,7 +75,7 @@ This tag is used to expose network and plugin errors. HTTP errors are considered
 |Tag value                |Corresponding field value|Description|
 --------------------------|-------------------------|-----------|
 |success                  | 0                       |The HTTP request completed, even if the HTTP code represents an error|
-|response_string_mismatch | 1                       |The option `response_string_match` was used, and the body of the response didn't match the regex|
+|response_string_mismatch | 1                       |The option `response_string_match` was used, and the body of the response didn't match the regex. HTTP errors with content in their body (like 4xx, 5xx) will trigger this error|
 |body_read_error          | 2                       |The option `response_string_match` was used, but the plugin wans't able to read the body of the response. Responses with empty bodies (like 3xx, HEAD, etc) will trigger this error|
 |connection_failed        | 3                       |Catch all for any network error not specifically handled by the plugin|
 |timeout                  | 4                       |The plugin timed out while awaiting the HTTP connection to complete|

@@ -17,6 +17,7 @@ import (
 type Iptables struct {
 	UseSudo bool
 	UseLock bool
+	Binary  string
 	Table   string
 	Chains  []string
 	lister  chainLister
@@ -38,6 +39,8 @@ func (ipt *Iptables) SampleConfig() string {
   ## Setting 'use_lock' to true runs iptables with the "-w" option.
   ## Adjust your sudo settings appropriately if using this option ("iptables -wnvl")
   use_lock = false
+  ## Define an alternate executable, such as "ip6tables". Default is "iptables".
+  # binary = "ip6tables"
   ## defines the table to monitor:
   table = "filter"
   ## defines the chains to monitor.
@@ -70,7 +73,13 @@ func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
 }
 
 func (ipt *Iptables) chainList(table, chain string) (string, error) {
-	iptablePath, err := exec.LookPath("iptables")
+	var binary string
+	if ipt.Binary != "" {
+		binary = ipt.Binary
+	} else {
+		binary = "iptables"
+	}
+	iptablePath, err := exec.LookPath(binary)
 	if err != nil {
 		return "", err
 	}

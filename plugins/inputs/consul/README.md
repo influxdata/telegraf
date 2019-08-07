@@ -24,8 +24,8 @@ report those stats already using StatsD protocol if needed.
   # username = ""
   # password = ""
 
-  ## Data centre to query the health checks from
-  # datacentre = ""
+  ## Data center to query the health checks from
+  # datacenter = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

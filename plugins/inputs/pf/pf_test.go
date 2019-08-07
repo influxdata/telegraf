@@ -23,13 +23,13 @@ func TestPfctlInvocation(t *testing.T) {
 
 	var testCases = []pfctlInvocationTestCase{
 		// 0: no sudo
-		pfctlInvocationTestCase{
+		{
 			config: PF{UseSudo: false},
 			cmd:    "fakepfctl",
 			args:   []string{"-s", "info"},
 		},
 		// 1: with sudo
-		pfctlInvocationTestCase{
+		{
 			config: PF{UseSudo: true},
 			cmd:    "fakesudo",
 			args:   []string{"fakepfctl", "-s", "info"},
@@ -60,9 +60,9 @@ func TestPfMeasurements(t *testing.T) {
 
 	testCases := []pfTestCase{
 		// 0: nil input should raise an error
-		pfTestCase{TestInput: "", err: errParseHeader},
+		{TestInput: "", err: errParseHeader},
 		// 1: changes to pfctl output should raise an error
-		pfTestCase{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
+		{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
 
 Interface Stats for re1               IPv4             IPv6
   Bytes In                   2585823744614    1059233657221
@@ -99,7 +99,7 @@ Counters
 			err: errMissingData("current entries"),
 		},
 		// 2: bad numbers should raise an error
-		pfTestCase{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
+		{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
   current entries                      -23               
@@ -125,7 +125,7 @@ Counters
 `,
 			err: errMissingData("current entries"),
 		},
-		pfTestCase{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
+		{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
   current entries                        2               
@@ -150,7 +150,7 @@ Counters
   synproxy                               0            0.0/s
 `,
 			measurements: []measurementResult{
-				measurementResult{
+				{
 					fields: map[string]interface{}{
 						"entries":        int64(2),
 						"searches":       int64(11325),
@@ -175,7 +175,7 @@ Counters
 				},
 			},
 		},
-		pfTestCase{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
+		{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
 
 Interface Stats for re1               IPv4             IPv6
   Bytes In                   2585823744614    1059233657221
@@ -210,7 +210,7 @@ Counters
   synproxy                               0            0.0/s
 `,
 			measurements: []measurementResult{
-				measurementResult{
+				{
 					fields: map[string]interface{}{
 						"entries":        int64(649),
 						"searches":       int64(18421725761),

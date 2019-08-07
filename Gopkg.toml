@@ -16,11 +16,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.14.8"
-
-[[constraint]]
-  name = "github.com/bsm/sarama-cluster"
-  version = "2.1.13"
+  version = "1.19.41"
 
 [[constraint]]
   name = "github.com/couchbase/go-couchbase"
@@ -40,7 +36,7 @@
 
 [[constraint]]
   name = "github.com/eclipse/paho.mqtt.golang"
-  version = "~1.1.1"
+  version = "1"
 
 [[constraint]]
   name = "github.com/go-sql-driver/mysql"
@@ -72,7 +68,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/go-syslog"
-  version = "1.0.1"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/influxdata/tail"
@@ -80,7 +76,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/toml"
-  branch = "master"
+  branch = "telegraf"
 
 [[constraint]]
   name = "github.com/influxdata/wlog"
@@ -88,7 +84,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.1.0"
+  version = "3.4.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
@@ -132,7 +128,7 @@
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
+  version = "0.9.2"
 
 [[constraint]]
   name = "github.com/prometheus/client_model"
@@ -148,11 +144,11 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.05"
+  version = "2.18.12"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.17.0"
+  version = "1.18.0"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
@@ -183,16 +179,18 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/zensqlmonitor/go-mssqldb"
+  name = "github.com/denisenkom/go-mssqldb"
   branch = "master"
 
 [[constraint]]
   name = "golang.org/x/net"
   branch = "master"
+  source = "https://github.com/golang/net.git"
 
 [[constraint]]
   name = "golang.org/x/sys"
   branch = "master"
+  source = "https://github.com/golang/sys.git"
 
 [[constraint]]
   name = "google.golang.org/grpc"
@@ -225,3 +223,76 @@
 [[constraint]]
   name = "github.com/mdlayher/apcupsd"
   revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
+
+[[constraint]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+
+[[constraint]]
+  name = "github.com/vmware/govmomi"
+  version = "0.19.0"
+
+[[constraint]]
+  name = "github.com/Azure/go-autorest"
+  version = "10.12.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+  source = "https://github.com/golang/oauth2.git"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/libnetwork"
+
+[[override]]
+  name = "github.com/vishvananda/netlink"
+  revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
+
+[[constraint]]
+  name = "github.com/wavefronthq/wavefront-sdk-go"
+  version = "^0.9.1"
+
+[[constraint]]
+  name = "github.com/karrick/godirwalk"
+  version = "1.7.5"
+
+[[override]]
+  name = "github.com/harlow/kinesis-consumer"
+  branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kubernetes/apimachinery"
+
+[[constraint]]
+  name = "github.com/go-logfmt/logfmt"
+  version = "0.4.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/ghodss/yaml"
+
+[[override]]
+  name = "golang.org/x/crypto"
+  source = "https://github.com/golang/crypto.git"
+
+[[override]]
+  name = "golang.org/x/sync"
+  source = "https://github.com/golang/sync.git"
+
+[[override]]
+  name = "golang.org/x/text"
+  source = "https://github.com/golang/text.git"
+
+[[constraint]]
+  name = "github.com/google/go-github"
+  version = "24.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/openconfig/gnmi"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cisco-ie/nx-telemetry-proto"

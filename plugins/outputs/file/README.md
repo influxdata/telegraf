@@ -1,12 +1,25 @@
-# file Output Plugin
+# File Output Plugin
 
 This plugin writes telegraf metrics to files
 
 ### Configuration
-```
+
+```toml
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
+
+  ## The file will be rotated after the time interval specified.  When set
+  ## to 0 no time based rotation is performed.
+  # rotation_interval = "0h"
+
+  ## The logfile will be rotated when it becomes larger than the specified
+  ## size.  When set to 0 no size based rotation is performed.
+  # rotation_max_size = "0MB"
+
+  ## Maximum number of rotated archives to keep, any older logs are deleted.
+  ## If set to -1, no archives are removed.
+  # rotation_max_archives = 5
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
