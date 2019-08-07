@@ -227,7 +227,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			defer d.removeFromContainerList(container.ID)
 
 			err = d.tailContainerLogs(ctx, acc, container, containerName)
-			if err != nil {
+			if err != nil && err != context.Canceled {
 				acc.AddError(err)
 			}
 		}(container)
