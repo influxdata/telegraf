@@ -45,9 +45,9 @@ func (s *Server) gatherOplogStats() *OplogStats {
 				continue
 			}
 			if IsAuthorization(err) {
-				log.Println("D! Error getting first oplog entry (" + err.Error() + ")")
+				log.Printf("D! [inputs.mongodb] Error getting first oplog entry: %v", err)
 			} else {
-				log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
+				log.Printf("E! [inputs.mongodb] Error getting first oplog entry: %v", err)
 			}
 			return stats
 		}
@@ -56,9 +56,9 @@ func (s *Server) gatherOplogStats() *OplogStats {
 				continue
 			}
 			if IsAuthorization(err) {
-				log.Println("D! Error getting first oplog entry (" + err.Error() + ")")
+				log.Printf("D! [inputs.mongodb] Error getting first oplog entry: %v", err)
 			} else {
-				log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
+				log.Printf("E! [inputs.mongodb] Error getting first oplog entry: %v", err)
 			}
 			return stats
 		}
@@ -82,7 +82,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 			var colls []string
 			colls, err = s.Session.DB(db_name).CollectionNames()
 			if err != nil {
-				log.Println("E! Error getting collection names (" + err.Error() + ")")
+				log.Printf("E! [inputs.mongodb] Error getting collection names: %v", err)
 				continue
 			}
 			for _, col_name := range colls {
@@ -94,7 +94,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 					},
 				}, col_stat_line)
 				if err != nil {
-					log.Println("E! Error getting col stats from " + col_name + "(" + err.Error() + ")")
+					log.Printf("E! [inputs.mongodb] Error getting col stats from %q: %v", col_name, err)
 					continue
 				}
 				collection := &Collection{
@@ -151,9 +151,9 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 	}, &resultShards)
 	if err != nil {
 		if IsAuthorization(err) {
-			log.Println("D! Error getting database shard stats (" + err.Error() + ")")
+			log.Printf("D! [inputs.mongodb] Error getting database shard stats: %v", err)
 		} else {
-			log.Println("E! Error getting database shard stats (" + err.Error() + ")")
+			log.Printf("E! [inputs.mongodb] Error getting database shard stats: %v", err)
 		}
 	}
 
@@ -164,7 +164,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 		names := []string{}
 		names, err = s.Session.DatabaseNames()
 		if err != nil {
-			log.Println("E! Error getting database names (" + err.Error() + ")")
+			log.Printf("E! [inputs.mongodb] Error getting database names: %v", err)
 		}
 		for _, db_name := range names {
 			db_stat_line := &DbStatsData{}
@@ -175,7 +175,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 				},
 			}, db_stat_line)
 			if err != nil {
-				log.Println("E! Error getting db stats from " + db_name + "(" + err.Error() + ")")
+				log.Printf("E! [inputs.mongodb] Error getting db stats from %q: %v", db_name, err)
 			}
 			db := &Db{
 				Name:        db_name,
