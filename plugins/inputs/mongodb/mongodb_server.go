@@ -70,7 +70,7 @@ func (s *Server) gatherOplogStats() *OplogStats {
 	return stats
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error {
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 	result_server := &ServerStatus{}
@@ -147,11 +147,48 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		}
 	}
 
+	result_col_stats := &ColStats{}
+	if gatherColStats == true {
+		names := []string{}
+		names, err = s.Session.DatabaseNames()
+		if err != nil {
+			log.Println("E! Error getting database names (" + err.Error() + ")")
+		}
+		for _, db_name := range names {
+			if stringInSlice(db_name, colStatsDbs) || len(colStatsDbs) == 0 {
+				var colls []string
+				colls, err = s.Session.DB(db_name).CollectionNames()
+				if err != nil {
+					log.Println("E! Error getting collection names (" + err.Error() + ")")
+				}
+				for _, col_name := range colls {
+					col_stat_line := &ColStatsData{}
+					err = s.Session.DB(db_name).Run(bson.D{
+						{
+							Name:  "collStats",
+							Value: col_name,
+						},
+					}, col_stat_line)
+					if err != nil {
+						log.Println("E! Error getting col stats from " + col_name + "(" + err.Error() + ")")
+					}
+					collection := &Collection{
+						Name:         col_name,
+						DbName:       db_name,
+						ColStatsData: col_stat_line,
+					}
+					result_col_stats.Collections = append(result_col_stats.Collections, *collection)
+				}
+			}
+		}
+	}
+
 	result := &MongoStatus{
 		ServerStatus:  result_server,
 		ReplSetStatus: result_repl,
 		ClusterStatus: result_cluster,
 		DbStats:       result_db_stats,
+		ColStats:      result_col_stats,
 		ShardStats:    resultShards,
 		OplogStats:    oplogStats,
 	}
@@ -173,8 +210,18 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		)
 		data.AddDefaultStats()
 		data.AddDbStats()
+		data.AddColStats()
 		data.AddShardHostStats()
 		data.flush(acc)
 	}
 	return nil
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

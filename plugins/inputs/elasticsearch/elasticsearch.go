@@ -79,10 +79,10 @@ type clusterStats struct {
 	Nodes       interface{} `json:"nodes"`
 }
 
-type catMaster struct {
-	NodeID   string `json:"id"`
-	NodeIP   string `json:"ip"`
-	NodeName string `json:"node"`
+type indexStat struct {
+	Primaries interface{}              `json:"primaries"`
+	Total     interface{}              `json:"total"`
+	Shards    map[string][]interface{} `json:"shards"`
 }
 
 const sampleConfig = `
@@ -114,6 +114,12 @@ const sampleConfig = `
   ## Only gather cluster_stats from the master node. To work this require local = true
   cluster_stats_only_from_master = true
 
+  ## Indices to collect; can be one or more indices names or _all
+  indices_include = ["_all"]
+
+  ## One of "shards", "cluster", "indices"
+  indices_level = "shards"
+
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
   ## "breaker". Per default, all stats are gathered.
@@ -134,16 +140,18 @@ const sampleConfig = `
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local                      bool
-	Servers                    []string
-	HttpTimeout                internal.Duration
-	ClusterHealth              bool
-	ClusterHealthLevel         string
-	ClusterStats               bool
-	ClusterStatsOnlyFromMaster bool
-	NodeStats                  []string
-	Username                   string `toml:"username"`
-	Password                   string `toml:"password"`
+	Local                      bool              `toml:"local"`
+	Servers                    []string          `toml:"servers"`
+	HTTPTimeout                internal.Duration `toml:"http_timeout"`
+	ClusterHealth              bool              `toml:"cluster_health"`
+	ClusterHealthLevel         string            `toml:"cluster_health_level"`
+	ClusterStats               bool              `toml:"cluster_stats"`
+	ClusterStatsOnlyFromMaster bool              `toml:"cluster_stats_only_from_master"`
+	IndicesInclude             []string          `toml:"indices_include"`
+	IndicesLevel               string            `toml:"indices_level"`
+	NodeStats                  []string          `toml:"node_stats"`
+	Username                   string            `toml:"username"`
+	Password                   string            `toml:"password"`
 	tls.ClientConfig
 
 	client          *http.Client
@@ -162,7 +170,7 @@ func (i serverInfo) isMaster() bool {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HttpTimeout:                internal.Duration{Duration: time.Second * 5},
+		HTTPTimeout:                internal.Duration{Duration: time.Second * 5},
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
 	}
@@ -181,6 +189,21 @@ func mapHealthStatusToCode(s string) int {
 	return 0
 }
 
+// perform shard status mapping
+func mapShardStatusToCode(s string) int {
+	switch strings.ToUpper(s) {
+	case "UNASSIGNED":
+		return 1
+	case "INITIALIZING":
+		return 2
+	case "STARTED":
+		return 3
+	case "RELOCATING":
+		return 4
+	}
+	return 0
+}
+
 // SampleConfig returns sample configuration for this plugin.
 func (e *Elasticsearch) SampleConfig() string {
 	return sampleConfig
@@ -195,7 +218,7 @@ func (e *Elasticsearch) Description() string {
 // Accumulator.
 func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	if e.client == nil {
-		client, err := e.createHttpClient()
+		client, err := e.createHTTPClient()
 
 		if err != nil {
 			return err
@@ -203,7 +226,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 		e.client = client
 	}
 
-	if e.ClusterStats {
+	if e.ClusterStats || len(e.IndicesInclude) > 0 || len(e.IndicesLevel) > 0 {
 		var wgC sync.WaitGroup
 		wgC.Add(len(e.Servers))
 
@@ -243,7 +266,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	for _, serv := range e.Servers {
 		go func(s string, acc telegraf.Accumulator) {
 			defer wg.Done()
-			url := e.nodeStatsUrl(s)
+			url := e.nodeStatsURL(s)
 
 			// Always gather node stats
 			if err := e.gatherNodeStats(url, acc); err != nil {
@@ -268,6 +291,20 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 					return
 				}
 			}
+
+			if len(e.IndicesInclude) > 0 && (e.serverInfo[s].isMaster() || !e.ClusterStatsOnlyFromMaster || !e.Local) {
+				if e.IndicesLevel != "shards" {
+					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats", acc); err != nil {
+						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						return
+					}
+				} else {
+					if err := e.gatherIndicesStats(s+"/"+strings.Join(e.IndicesInclude, ",")+"/_stats?level=shards", acc); err != nil {
+						acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+						return
+					}
+				}
+			}
 		}(serv, acc)
 	}
 
@@ -275,30 +312,30 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
+func (e *Elasticsearch) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := e.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 	tr := &http.Transport{
-		ResponseHeaderTimeout: e.HttpTimeout.Duration,
+		ResponseHeaderTimeout: e.HTTPTimeout.Duration,
 		TLSClientConfig:       tlsCfg,
 	}
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   e.HttpTimeout.Duration,
+		Timeout:   e.HTTPTimeout.Duration,
 	}
 
 	return client, nil
 }
 
-func (e *Elasticsearch) nodeStatsUrl(baseUrl string) string {
+func (e *Elasticsearch) nodeStatsURL(baseURL string) string {
 	var url string
 
 	if e.Local {
-		url = baseUrl + statsPathLocal
+		url = baseURL + statsPathLocal
 	} else {
-		url = baseUrl + statsPath
+		url = baseURL + statsPath
 	}
 
 	if len(e.NodeStats) == 0 {
@@ -313,7 +350,7 @@ func (e *Elasticsearch) gatherNodeID(url string) (string, error) {
 		ClusterName string               `json:"cluster_name"`
 		Nodes       map[string]*nodeStat `json:"nodes"`
 	}{}
-	if err := e.gatherJsonData(url, nodeStats); err != nil {
+	if err := e.gatherJSONData(url, nodeStats); err != nil {
 		return "", err
 	}
 
@@ -329,7 +366,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 		ClusterName string               `json:"cluster_name"`
 		Nodes       map[string]*nodeStat `json:"nodes"`
 	}{}
-	if err := e.gatherJsonData(url, nodeStats); err != nil {
+	if err := e.gatherJSONData(url, nodeStats); err != nil {
 		return err
 	}
 
@@ -380,7 +417,7 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 
 func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator) error {
 	healthStats := &clusterHealth{}
-	if err := e.gatherJsonData(url, healthStats); err != nil {
+	if err := e.gatherJSONData(url, healthStats); err != nil {
 		return err
 	}
 	measurementTime := time.Now()
@@ -432,7 +469,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 
 func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator) error {
 	clusterStats := &clusterStats{}
-	if err := e.gatherJsonData(url, clusterStats); err != nil {
+	if err := e.gatherJSONData(url, clusterStats); err != nil {
 		return err
 	}
 	now := time.Now()
@@ -455,6 +492,102 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 			return err
 		}
 		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
+	}
+
+	return nil
+}
+
+func (e *Elasticsearch) gatherIndicesStats(url string, acc telegraf.Accumulator) error {
+	indicesStats := &struct {
+		Shards  map[string]interface{} `json:"_shards"`
+		All     map[string]interface{} `json:"_all"`
+		Indices map[string]indexStat   `json:"indices"`
+	}{}
+
+	if err := e.gatherJSONData(url, indicesStats); err != nil {
+		return err
+	}
+	now := time.Now()
+
+	// Total Shards Stats
+	shardsStats := map[string]interface{}{}
+	for k, v := range indicesStats.Shards {
+		shardsStats[k] = v
+	}
+	acc.AddFields("elasticsearch_indices_stats_shards_total", shardsStats, map[string]string{}, now)
+
+	// All Stats
+	for m, s := range indicesStats.All {
+		// parse Json, ignoring strings and bools
+		jsonParser := jsonparser.JSONFlattener{}
+		err := jsonParser.FullFlattenJSON("_", s, true, true)
+		if err != nil {
+			return err
+		}
+		acc.AddFields("elasticsearch_indices_stats_"+m, jsonParser.Fields, map[string]string{"index_name": "_all"}, now)
+	}
+
+	// Individual Indices stats
+	for id, index := range indicesStats.Indices {
+		indexTag := map[string]string{"index_name": id}
+		stats := map[string]interface{}{
+			"primaries": index.Primaries,
+			"total":     index.Total,
+		}
+		for m, s := range stats {
+			f := jsonparser.JSONFlattener{}
+			// parse Json, getting strings and bools
+			err := f.FullFlattenJSON("", s, true, true)
+			if err != nil {
+				return err
+			}
+			acc.AddFields("elasticsearch_indices_stats_"+m, f.Fields, indexTag, now)
+		}
+
+		if e.IndicesLevel == "shards" {
+			for shardNumber, shard := range index.Shards {
+				if len(shard) > 0 {
+					// Get Shard Stats
+					flattened := jsonparser.JSONFlattener{}
+					err := flattened.FullFlattenJSON("", shard[0], true, true)
+					if err != nil {
+						return err
+					}
+
+					// determine shard tag and primary/replica designation
+					shardType := "replica"
+					if flattened.Fields["routing_primary"] == true {
+						shardType = "primary"
+					}
+					delete(flattened.Fields, "routing_primary")
+
+					routingState, ok := flattened.Fields["routing_state"].(string)
+					if ok {
+						flattened.Fields["routing_state"] = mapShardStatusToCode(routingState)
+					}
+
+					routingNode, _ := flattened.Fields["routing_node"].(string)
+					shardTags := map[string]string{
+						"index_name": id,
+						"node_id":    routingNode,
+						"shard_name": string(shardNumber),
+						"type":       shardType,
+					}
+
+					for key, field := range flattened.Fields {
+						switch field.(type) {
+						case string, bool:
+							delete(flattened.Fields, key)
+						}
+					}
+
+					acc.AddFields("elasticsearch_indices_stats_shards",
+						flattened.Fields,
+						shardTags,
+						now)
+				}
+			}
+		}
 	}
 
 	return nil
@@ -492,7 +625,7 @@ func (e *Elasticsearch) getCatMaster(url string) (string, error) {
 	return masterID, nil
 }
 
-func (e *Elasticsearch) gatherJsonData(url string, v interface{}) error {
+func (e *Elasticsearch) gatherJSONData(url string, v interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err

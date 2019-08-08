@@ -12,13 +12,11 @@ import (
 )
 
 type NATS struct {
-	// Servers is the NATS server pool to connect to
-	Servers []string
-	// Credentials
-	Username string
-	Password string
-	// NATS subject to publish metrics to
-	Subject string
+	Servers  []string `toml:"servers"`
+	Secure   bool     `toml:"secure"`
+	Username string   `toml:"username"`
+	Password string   `toml:"password"`
+	Subject  string   `toml:"subject"`
 	tls.ClientConfig
 
 	conn       *nats_client.Conn
@@ -33,6 +31,9 @@ var sampleConfig = `
   # password = ""
   ## NATS subject for producer messages
   subject = "telegraf"
+
+  ## Use Transport Layer Security
+  # secure = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -70,13 +71,12 @@ func (n *NATS) Connect() error {
 		opts.Password = n.Password
 	}
 
-	// override TLS, if it was specified
-	tlsConfig, err := n.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-	if tlsConfig != nil {
-		// set NATS connection TLS options
+	if n.Secure {
+		tlsConfig, err := n.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
 		opts.Secure = true
 		opts.TLSConfig = tlsConfig
 	}
