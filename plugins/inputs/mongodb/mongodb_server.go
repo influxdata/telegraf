@@ -31,7 +31,7 @@ func IsAuthorization(err error) bool {
 	return strings.Contains(err.Error(), "not authorized")
 }
 
-func logLevel(err error) string {
+func authLogLevel(err error) string {
 	if IsAuthorization(err) {
 		return "D!"
 	} else {
@@ -52,14 +52,14 @@ func (s *Server) gatherOplogStats() *OplogStats {
 			if err == mgo.ErrNotFound {
 				continue
 			}
-			log.Printf("%s [inputs.mongodb] Error getting first oplog entry: %v", logLevel(err), err)
+			log.Printf("%s [inputs.mongodb] Error getting first oplog entry: %v", authLogLevel(err), err)
 			return stats
 		}
 		if err := localdb.C(collection_name).Find(query).Sort("-$natural").Limit(1).One(&op_last); err != nil {
 			if err == mgo.ErrNotFound || IsAuthorization(err) {
 				continue
 			}
-			log.Printf("%s [inputs.mongodb] Error getting first oplog entry: %v", logLevel(err), err)
+			log.Printf("%s [inputs.mongodb] Error getting first oplog entry: %v", authLogLevel(err), err)
 			return stats
 		}
 	}
@@ -94,7 +94,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 					},
 				}, col_stat_line)
 				if err != nil {
-					log.Printf("%s [inputs.mongodb] Error getting col stats from %q: %v", logLevel(err), col_name, err)
+					log.Printf("%s [inputs.mongodb] Error getting col stats from %q: %v", authLogLevel(err), col_name, err)
 					continue
 				}
 				collection := &Collection{
