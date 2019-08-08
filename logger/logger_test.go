@@ -51,7 +51,7 @@ func TestErrorWriteLogToFile(t *testing.T) {
 	config.Quiet = true
 	SetupLogging(config)
 	log.Printf("E! TEST")
-	log.Printf("I! TEST") // <- should be ignored
+	log.Printf("I! TEST") // <- should be ignoredgo
 
 	f, err := ioutil.ReadFile(tmpfile.Name())
 	assert.NoError(t, err)
@@ -85,7 +85,7 @@ func TestWriteToTruncatedFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, f[19:], []byte("Z I! TEST\n"))
 
-	tmpf, err := os.OpenFile(tmpfile.Name(), os.O_TRUNC, 0644)
+	tmpf, err := os.OpenFile(tmpfile.Name(), os.O_RDWR|os.O_TRUNC, 0644)
 	assert.NoError(t, err)
 	assert.NoError(t, tmpf.Close())
 
