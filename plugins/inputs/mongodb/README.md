@@ -44,6 +44,10 @@ Telegraf logs similar to:
 Error in input [mongodb]: not authorized on admin to execute command { serverStatus: 1, recordStats: 0 }
 ```
 
+Some permission related errors are logged at debug level, you can check these
+messages by setting `debug = true` in the agent section of the configuration or
+by running Telegraf with the `--debug` argument.
+
 ### Metrics:
 
 - mongodb
