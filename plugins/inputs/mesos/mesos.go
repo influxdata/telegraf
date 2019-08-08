@@ -321,9 +321,9 @@ func getMetrics(role Role, group string) []string {
 			"master/outstanding_offers",
 		}
 
-		// These groups are empty because filtering is done in gatherMainMetrics
-		// based on presence of "framework_offers"/"allocator" in MasterCols.
-		// These lines are included to prevent the "unknown" info log below.
+		// framework_offers and allocator metrics have unpredictable names, so they can't be listed here.
+		// These empty groups are included to prevent the "unknown metrics group" info log below.
+		// filterMetrics() filters these metrics by looking for names with the corresponding prefix.
 		m["framework_offers"] = []string{}
 		m["allocator"] = []string{}
 
@@ -505,9 +505,27 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 	}
 
 	for _, k := range metricsDiff(role, selectedMetrics) {
-		for _, v := range getMetrics(role, k) {
-			if _, ok = (*metrics)[v]; ok {
-				delete((*metrics), v)
+		switch k {
+		// allocator and framework_offers metrics have unpredictable names, so we have to identify them by name prefix.
+		case "allocator":
+			for m := range *metrics {
+				if strings.HasPrefix(m, "allocator/") {
+					delete((*metrics), m)
+				}
+			}
+		case "framework_offers":
+			for m := range *metrics {
+				if strings.HasPrefix(m, "master/frameworks/") || strings.HasPrefix(m, "frameworks/") {
+					delete((*metrics), m)
+				}
+			}
+
+		// All other metrics have predictable names. We can use getMetrics() to retrieve them.
+		default:
+			for _, v := range getMetrics(role, k) {
+				if _, ok = (*metrics)[v]; ok {
+					delete((*metrics), v)
+				}
 			}
 		}
 	}
@@ -618,29 +636,6 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 			tags["state"] = "leader"
 		} else {
 			tags["state"] = "standby"
-		}
-	}
-
-	var includeFrameworkOffers, includeAllocator bool
-	for _, col := range m.MasterCols {
-		if col == "framework_offers" {
-			includeFrameworkOffers = true
-		} else if col == "allocator" {
-			includeAllocator = true
-		}
-	}
-
-	for metricName := range jf.Fields {
-		if !strings.HasPrefix(metricName, "master/frameworks/") && !strings.HasPrefix(metricName, "frameworks/") && !strings.HasPrefix(metricName, "allocator/") {
-			continue
-		}
-
-		// filter out framework offers/allocator metrics if necessary
-		if !includeFrameworkOffers &&
-			(strings.HasPrefix(metricName, "master/frameworks/") || strings.HasPrefix(metricName, "frameworks/")) ||
-			(!includeAllocator && strings.HasPrefix(metricName, "allocator/")) {
-			delete(jf.Fields, metricName)
-			continue
 		}
 	}
 
