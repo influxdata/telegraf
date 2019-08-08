@@ -3,10 +3,8 @@ package vsphere
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -83,29 +81,29 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectRef, vimClient *vim25.Client, vsanClient *soap.Client, metrics map[string]string, acc telegraf.Accumulator) {
 	// Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(vimClient, clusterRef.ref)
+	// Do collection
+	if _, ok := metrics["summary.disk-usage"]; ok {
+		if err := e.queryDiskUsage(ctx, vsanClient, clusterRef, acc); err != nil {
+			acc.AddError(fmt.Errorf("error querying disk usage: %v", err))
+		}
+	}
+	if _, ok := metrics["summary.health"]; ok {
+		if err := e.queryHealthSummary(ctx, vsanClient, clusterRef, acc); err != nil {
+			acc.AddError(fmt.Errorf("error querying vsan health summary: %v", err))
+		}
+	}
+	if _, ok := metrics["summary.resync"]; ok {
+		if err := e.queryResyncSummary(ctx, vsanClient, cluster, clusterRef, acc); err != nil {
+			acc.AddError(fmt.Errorf("error querying vsan resync summary: %v", err))
+		}
+	}
 	cmmds, err := getCmmdsMap(ctx, vimClient, cluster)
 	if err != nil {
 		log.Printf("E! [inputs.vsphere][vSAN] Error while query cmmds data. Error: %s. Skipping", err)
 		cmmds = make(map[string]CmmdsEntity)
 	}
-	// Do collection
-	if _, ok := metrics["summary.disk-usage"]; ok {
-		if err = e.queryDiskUsage(ctx, vsanClient, clusterRef, acc); err != nil {
-			acc.AddError(errors.New("While querying vsan disk usage:" + err.Error()))
-		}
-	}
-	if _, ok := metrics["summary.health"]; ok {
-		if err = e.queryHealthSummary(ctx, vsanClient, clusterRef, acc); err != nil {
-			acc.AddError(errors.New("While querying vsan health summary:" + err.Error()))
-		}
-	}
-	if _, ok := metrics["summary.resync"]; ok {
-		if err = e.queryResyncSummary(ctx, vsanClient, cluster, clusterRef, acc); err != nil {
-			acc.AddError(errors.New("While querying vsan resync summary:" + err.Error()))
-		}
-	}
-	if err = e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
-		acc.AddError(errors.New("While query vsan perf data:" + err.Error()))
+	if err := e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
+		acc.AddError(fmt.Errorf("error querying performance metrics: %v", err))
 	}
 }
 
@@ -143,7 +141,6 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 			metrics[perfPrefix+entity.Name] = ""
 		}
 	}
-	log.Printf("D! [inputs.vsphere][vSAN]\tvSan Metric: %v", reflect.ValueOf(metrics).MapKeys())
 	return metrics
 }
 
@@ -155,7 +152,6 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 	}
 
 	if len(hosts) == 0 {
-		log.Printf("I! [inputs.vsphere][vSAN]\tNo host in cluster: %s", clusterObj.Name())
 		return make(map[string]CmmdsEntity), nil
 	}
 
@@ -169,13 +165,12 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 	queries = append(queries, hostnameCmmdsQuery)
 	queries = append(queries, diskCmmdsQuery)
 
-	// We will iterate cmmds querying on each host until a success.
-	// It happens that some hosts return successfully while others fail.
+	//Some esx host can be down or in maintenance mode. Hence cmmds query might fail on such hosts.
+	// We iterate until be get proper api response
 	var resp *types.QueryCmmdsResponse
 	for _, host := range hosts {
 		vis, err := host.ConfigManager().VsanInternalSystem(ctx)
 		if err != nil {
-			log.Printf("I! [inputs.vsphere][vSAN] Fail to get VsanInternalSystem from %s: %s", host.Name(), err)
 			continue
 		}
 		request := types.QueryCmmds{
@@ -183,10 +178,7 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 			Queries: queries,
 		}
 		resp, err = methods.QueryCmmds(ctx, client.RoundTripper, &request)
-		if err != nil {
-			log.Printf("I! [inputs.vsphere][vSAN] Fail to query cmmds from %s: %s", host.Name(), err)
-		} else {
-			log.Printf("I! [inputs.vsphere][vSAN] Successfully get cmmds from %s", host.Name())
+		if err == nil {
 			break
 		}
 	}
@@ -216,7 +208,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		// Look back 3 sampling periods by default
 		start = end.Add(metricLookback * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
 	}
-	log.Printf("D! [inputs.vsphere][vSAN]\tQuery vsan performance for time interval: %s ~ %s", start, end)
+	log.Printf("D! [inputs.vsphere][vSAN] Query vsan performance for time interval: %s ~ %s", start, end)
 	latest := start
 
 	for entityRefId := range metrics {
@@ -298,7 +290,6 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			}
 			count += len(buckets)
 		}
-		log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, entityRefId, count)
 	}
 	e.hwMarks.Put(hwMarksKey, latest)
 	return nil
@@ -315,11 +306,10 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 		return err
 	}
 	fields := make(map[string]interface{})
-	fields["FreeCapacityB"] = resp.Returnval.FreeCapacityB
-	fields["TotalCapacityB"] = resp.Returnval.TotalCapacityB
+	fields["free_capacity_byte"] = resp.Returnval.FreeCapacityB
+	fields["total_capacity_byte"] = resp.Returnval.TotalCapacityB
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
-	log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, "disk-usage", 1)
 	return nil
 }
 
@@ -340,15 +330,14 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	overallHealth := resp.Returnval.OverallHealth
 	switch overallHealth {
 	case "red":
-		fields["OverallHealth"] = 2
+		fields["overall_health"] = 2
 	case "yellow":
-		fields["OverallHealth"] = 1
+		fields["overall_health"] = 1
 	case "green":
-		fields["OverallHealth"] = 0
+		fields["overall_health"] = 0
 	default:
-		fields["OverallHealth"] = -1
+		fields["overall_health"] = -1
 	}
-	log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, "health", 1)
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
@@ -365,7 +354,6 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 		return err
 	}
 	if len(hosts) == 0 {
-		log.Printf("I! [inputs.vsphere][vSAN]\tNo host in cluster: %s", clusterObj.Name())
 		return nil
 	}
 	hostRefValue := hosts[0].Reference().Value
@@ -387,12 +375,11 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 		return err
 	}
 	fields := make(map[string]interface{})
-	fields["TotalBytesToSync"] = resp.Returnval.TotalBytesToSync
-	fields["TotalObjectsToSync"] = resp.Returnval.TotalObjectsToSync
-	fields["TotalRecoveryETA"] = resp.Returnval.TotalRecoveryETA
+	fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
+	fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
+	fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
-	log.Printf("D! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, "resync", 1)
 	return nil
 }
 
@@ -420,68 +407,59 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 	}
 	// There are cases when the uuid is missing. (Usually happens when performance service is just enabled or disabled)
 	// We need this check to avoid index-out-of-range error
-	if uuid == "*" {
+	if uuid == "*" || uuid == "" {
 		return newTags
 	}
 	// Add additional tags based on CMMDS data
 	if strings.Contains(entityName, "-disk") || strings.Contains(entityName, "disk-") {
 		if e, ok := cmmds[uuid]; ok {
 			if host, ok := cmmds[e.Owner]; ok {
-				if c, ok := host.Content.(map[string]interface{}); ok {
-					newTags["hostname"] = c["hostname"].(string)
-				}
+				newTags["hostname"] = host.Content.Hostname
 			}
-			if c, ok := e.Content.(map[string]interface{}); ok {
-				newTags["deviceName"] = c["devName"].(string)
-				if int(c["isSsd"].(float64)) == 0 {
-					newTags["ssdUuid"] = c["ssdUuid"].(string)
-				}
+			newTags["deviceName"] = e.Content.DevName
+			if int(e.Content.IsSsd) == 0 {
+				newTags["ssdUuid"] = e.Content.SsdUuid
 			}
 		}
 	} else if strings.Contains(entityName, "host-memory-") {
 		memInfo := strings.Split(uuid, "|")
-		if strings.Contains(entityName, "-slab") {
+		if strings.Contains(entityName, "-slab") && len(memInfo) > 1 {
 			newTags["slabName"] = memInfo[1]
 		}
-		if strings.Contains(entityName, "-heap") {
+		if strings.Contains(entityName, "-heap") && len(memInfo) > 1 {
 			newTags["heapName"] = memInfo[1]
 		}
 		if e, ok := cmmds[memInfo[0]]; ok {
-			if c, ok := e.Content.(map[string]interface{}); ok {
-				newTags["hostname"] = c["hostname"].(string)
-			}
+			newTags["hostname"] = e.Content.Hostname
 		}
 	} else if strings.Contains(entityName, "host-") || strings.Contains(entityName, "system-mem") {
 		if e, ok := cmmds[uuid]; ok {
-			if c, ok := e.Content.(map[string]interface{}); ok {
-				newTags["hostname"] = c["hostname"].(string)
-			}
+			newTags["hostname"] = e.Content.Hostname
 		}
 	} else if strings.Contains(entityName, "vnic-net") {
 		nicInfo := strings.Split(uuid, "|")
-		newTags["stackName"] = nicInfo[1]
-		newTags["vnic"] = nicInfo[2]
+		if len(nicInfo) > 2 {
+			newTags["stackName"] = nicInfo[1]
+			newTags["vnic"] = nicInfo[2]
+		}
 		if e, ok := cmmds[nicInfo[0]]; ok {
-			if c, ok := e.Content.(map[string]interface{}); ok {
-				newTags["hostname"] = c["hostname"].(string)
-			}
+			newTags["hostname"] = e.Content.Hostname
 		}
 	} else if strings.Contains(entityName, "pnic-net") {
 		nicInfo := strings.Split(uuid, "|")
-		newTags["pnic"] = nicInfo[1]
+		if len(nicInfo) > 1 {
+			newTags["pnic"] = nicInfo[1]
+		}
 		if e, ok := cmmds[nicInfo[0]]; ok {
-			if c, ok := e.Content.(map[string]interface{}); ok {
-				newTags["hostname"] = c["hostname"].(string)
-			}
+			newTags["hostname"] = e.Content.Hostname
 		}
 	} else if strings.Contains(entityName, "world-cpu") {
 		cpuInfo := strings.Split(uuid, "|")
-		newTags["worldName"] = cpuInfo[1]
-		//newTags["worldId"] = cpuInfo[2]
+		if len(cpuInfo) > 1 {
+			newTags["worldName"] = cpuInfo[1]
+		}
 		if e, ok := cmmds[cpuInfo[0]]; ok {
-			if c, ok := e.Content.(map[string]interface{}); ok {
-				newTags["hostname"] = c["hostname"].(string)
-			}
+			newTags["hostname"] = e.Content.Hostname
 		}
 	}
 	// If no tags are added in previous steps, we add uuid for it
@@ -512,12 +490,19 @@ func versionLowerThan(current string, base string) bool {
 }
 
 type CmmdsEntity struct {
-	UUID    string      `json:"uuid"`
-	Owner   string      `json:"owner"` // ESXi UUID
-	Type    string      `json:"type"`
-	Content interface{} `json:"content"`
+	UUID    string       `json:"uuid"`
+	Owner   string       `json:"owner"` // ESXi UUID
+	Type    string       `json:"type"`
+	Content CmmdsContent `json:"content"`
 }
 
 type Cmmds struct {
 	Res []CmmdsEntity `json:"result"`
+}
+
+type CmmdsContent struct {
+	Hostname string  `json:"hostname"`
+	IsSsd    float64 `json:"isSsd"`
+	SsdUuid  string  `json:"ssdUuid"`
+	DevName  string  `json:"devName"`
 }

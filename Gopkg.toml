@@ -230,8 +230,7 @@
 
 [[constraint]]
   name = "github.com/vmware/govmomi"
-  # version = "0.19.0"
-  revision = "445ddf569fe7c9f37530279041a950b16b7e38f0"
+  version = "0.21.0"
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"

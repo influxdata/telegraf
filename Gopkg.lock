@@ -1140,8 +1140,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:be09200c1c11a3dcab31eaf64d0644fffefa1986a848997319343641ef77d286"
+  digest = "1:923f7933e0fa29491d895be855627554c08f16272b64b4a079d0127d18403f4c"
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
@@ -1171,7 +1170,8 @@
     "vsan/types",
   ]
   pruneopts = ""
-  revision = "445ddf569fe7c9f37530279041a950b16b7e38f0"
+  revision = "a0fef816799db3e430bb7a5ac951e7835fe4d56b"
+  version = "v0.21.0"
 
 [[projects]]
   digest = "1:4cb7eb45ed9a5129bc77c726328c130abcbaae566c1fe4d82693fae86c8c621d"

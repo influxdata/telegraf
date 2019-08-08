@@ -455,14 +455,19 @@ func TestVsanCmmds(t *testing.T) {
 func TestVsanTags(t *testing.T) {
 	host := "5b860329-3bc4-a76c-48b6-246e963cfcc0"
 	disk := "52ee3be1-47cc-b50d-ecab-01af0f706381"
+	ssdDisk := "52f26fc8-0b9b-56d8-3a32-a9c3bfbc6148"
+	ssd := "52173131-3384-bb63-4ef8-c00b0ce7e3e7"
 	hostname := "sc2-hs1-b2801.eng.vmware.com"
 	devName := "naa.55cd2e414d82c815:2"
 	var cmmds = map[string]CmmdsEntity{
-		disk: {UUID: disk, Type: "DISK", Owner: host, Content: map[string]interface{}{"devName": devName, "isSsd": 1.}},
-		host: {UUID: host, Type: "HOSTNAME", Owner: host, Content: map[string]interface{}{"hostname": hostname}},
+		disk:    {UUID: disk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 1.}},
+		ssdDisk: {UUID: ssdDisk, Type: "DISK", Owner: host, Content: CmmdsContent{DevName: devName, IsSsd: 0., SsdUuid: ssd}},
+		host:    {UUID: host, Type: "HOSTNAME", Owner: host, Content: CmmdsContent{Hostname: hostname}},
 	}
 	tags := populateCMMDSTags(make(map[string]string), "capacity-disk", disk, cmmds)
 	require.Equal(t, 2, len(tags))
+	tags = populateCMMDSTags(make(map[string]string), "cache-disk", ssdDisk, cmmds)
+	require.Equal(t, 3, len(tags))
 	tags = populateCMMDSTags(make(map[string]string), "host-domclient", host, cmmds)
 	require.Equal(t, 1, len(tags))
 }

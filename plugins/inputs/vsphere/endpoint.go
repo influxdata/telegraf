@@ -398,9 +398,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	// Populate resource objects, and endpoint instance info.
 	newObjects := make(map[string]objectMap)
 	for k, res := range e.resourceKinds {
-		log.Printf("D! [inputs.vsphere]: Discovering resources for %s", res.name)
+		log.Printf("D! [inputs.vsphere] Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
-		if res.enabled || k != "vm" {
+		if res.enabled || (k != "vm" && k != "vsan") {
 			rf := ResourceFilter{
 				finder:  &Finder{client},
 				resType: res.vcName,
@@ -423,7 +423,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				}
 			}
 
-			// No need to collect metric metadata if resource type is not enabled, and skip vsan type
+			// No need to collect metric metadata if resource type is not enabled
+			// VSAN is also skipped since vSAN metadata follow it's own format
 			if res.enabled && k != "vsan" {
 				if res.simple {
 					e.simpleMetadataSelect(ctx, client, res)
