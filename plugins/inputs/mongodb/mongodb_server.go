@@ -70,6 +70,45 @@ func (s *Server) gatherOplogStats() *OplogStats {
 	return stats
 }
 
+func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) {
+	names, err := s.Session.DatabaseNames()
+	if err != nil {
+		return nil, err
+	}
+
+	results := &ColStats{}
+	for _, db_name := range names {
+		if stringInSlice(db_name, colStatsDbs) || len(colStatsDbs) == 0 {
+			var colls []string
+			colls, err = s.Session.DB(db_name).CollectionNames()
+			if err != nil {
+				log.Println("E! Error getting collection names (" + err.Error() + ")")
+				continue
+			}
+			for _, col_name := range colls {
+				col_stat_line := &ColStatsData{}
+				err = s.Session.DB(db_name).Run(bson.D{
+					{
+						Name:  "collStats",
+						Value: col_name,
+					},
+				}, col_stat_line)
+				if err != nil {
+					log.Println("E! Error getting col stats from " + col_name + "(" + err.Error() + ")")
+					continue
+				}
+				collection := &Collection{
+					Name:         col_name,
+					DbName:       db_name,
+					ColStatsData: col_stat_line,
+				}
+				results.Collections = append(results.Collections, *collection)
+			}
+		}
+	}
+	return results, nil
+}
+
 func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
@@ -147,41 +186,9 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 		}
 	}
 
-	result_col_stats := &ColStats{}
-	if gatherColStats == true {
-		names := []string{}
-		names, err = s.Session.DatabaseNames()
-		if err != nil {
-			log.Println("E! Error getting database names (" + err.Error() + ")")
-		}
-		for _, db_name := range names {
-			if stringInSlice(db_name, colStatsDbs) || len(colStatsDbs) == 0 {
-				var colls []string
-				colls, err = s.Session.DB(db_name).CollectionNames()
-				if err != nil {
-					log.Println("E! Error getting collection names (" + err.Error() + ")")
-				}
-				for _, col_name := range colls {
-					col_stat_line := &ColStatsData{}
-					err = s.Session.DB(db_name).Run(bson.D{
-						{
-							Name:  "collStats",
-							Value: col_name,
-						},
-					}, col_stat_line)
-					if err != nil {
-						log.Println("E! Error getting col stats from " + col_name + "(" + err.Error() + ")")
-						continue
-					}
-					collection := &Collection{
-						Name:         col_name,
-						DbName:       db_name,
-						ColStatsData: col_stat_line,
-					}
-					result_col_stats.Collections = append(result_col_stats.Collections, *collection)
-				}
-			}
-		}
+	result_col_stats, err := s.gatherCollectionStats(colStatsDbs)
+	if err != nil {
+		return err
 	}
 
 	result := &MongoStatus{
