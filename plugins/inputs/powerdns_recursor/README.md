@@ -19,6 +19,34 @@ The powerdns recursor plugin gathers metrics about PowerDNS Recursor using unix 
   # socket_mode = "0666"
 ```
 
+#### Permissions:
+
+Telegraf will need read/write access to the control socket and to the
+`socket_dir`.  PowerDNS will need to be able to write to the `socket_dir`.
+
+The setup described below was tested on a Debian Stretch system and may need
+adapted for other systems.
+
+First change permissions on the controlsocket in the PowerDNS recursor
+configuration, usually in `/etc/powerdns/recursor.conf`:
+```
+socket-mode = 660
+```
+
+Then place the `telegraf` user into the `pdns` group:
+```
+usermod telegraf -a -G pdns
+```
+
+Since `telegraf` cannot write to to the default `/var/run` socket directory,
+create a subdirectory and adjust permissions for this directory so that both
+users can access it.
+```sh
+$ mkdir /var/run/pdns
+$ chown root:pdns /var/run/pdns
+$ chmod 770 /var/run/pdns
+```
+
 ### Measurements & Fields:
 
 - powerdns_recursor
