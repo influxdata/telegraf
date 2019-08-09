@@ -193,6 +193,8 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 						err = flexFlatten(outmap, "", threadStruct, s.Delimiter)
 						if err != nil {
 							acc.AddError(err)
+							// we skip this thread as something did not parse correctly
+							continue
 						}
 						fields[k] = outmap
 					}
@@ -204,6 +206,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 			err = flexFlatten(globmap, k, v, s.Delimiter)
 			if err != nil {
 				acc.AddError(err)
+				// we skip this subitem as something did not parse correctly
 			}
 		}
 	}
