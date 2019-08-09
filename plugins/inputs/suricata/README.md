@@ -110,7 +110,6 @@ output in the Suricata configuration file:
     filename: /tmp/suricata-stats.sock
     types:
       - stats:
-         totals: yes
          threads: yes
 ```
 
