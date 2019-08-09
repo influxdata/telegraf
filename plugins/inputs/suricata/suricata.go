@@ -142,7 +142,7 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 		for k, v := range t {
 			var err error
 			if field == "" {
-				err = flexFlatten(outmap, fmt.Sprintf("%s", k), v, delimiter)
+				err = flexFlatten(outmap, k, v, delimiter)
 			} else {
 				err = flexFlatten(outmap, fmt.Sprintf("%s%s%s", field, delimiter, k), v, delimiter)
 			}
