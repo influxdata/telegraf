@@ -2,31 +2,41 @@ package suricata
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io"
 	"net"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/nytlabs/gojsonexplode"
 )
 
 var singleDotRegexp = regexp.MustCompilePOSIX(`[^.]\.[^.]`)
+
+const (
+	// InBufSize is the input buffer size for JSON received via socket.
+	// Set to 10MB, as depending on the number of threads the output might be
+	// large.
+	InBufSize = 10 * 1024 * 1024
+)
 
 // Suricata is a Telegraf input plugin for Suricata runtime statistics.
 type Suricata struct {
 	sync.Mutex
 
-	Source        string `toml:"source"`
+	Source    string `toml:"source"`
+	Delimiter string `toml:"delimiter"`
+
 	InputListener *net.UnixListener
 	JSON          []byte
-	CloseChan     chan bool
-	ClosedChan    chan bool
+	Ctx           context.Context
+	Cancel        context.CancelFunc
+
+	wg sync.WaitGroup
 }
 
 // Description returns the plugin description.
@@ -40,7 +50,10 @@ const sampleConfig = `
   # unix socket to be created for listening.
   # Will be overwritten if a socket or file
   # with that name already exists.
-  source = "/tmp/suricata-stats.sock"
+  source = "/var/run/suricata-stats.sock"
+  # Delimiter for flattening field keys, e.g. subitem "alert" of "detect"
+  # becomes "detect_alert" when delimiter is "_".
+  delimiter = "_"
 `
 
 // SampleConfig returns a sample TOML section to illustrate configuration
@@ -56,7 +69,6 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
 	if s.InputListener == nil {
-		os.Remove(s.Source)
 		s.InputListener, err = net.ListenUnix("unix", &net.UnixAddr{
 			Name: s.Source,
 			Net:  "unix",
@@ -64,136 +76,138 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		s.CloseChan = make(chan bool)
+		s.Ctx, s.Cancel = context.WithCancel(context.Background())
 		s.InputListener.SetUnlinkOnClose(true)
+		s.wg.Add(1)
 		go s.handleServerConnection(acc)
 	}
 	return nil
 }
 
-// Stop causes the plugin to cease collection JSON data from the socket provided
+// Stop causes the plugin to cease collecting JSON data from the socket provided
 // to Suricata.
 func (s *Suricata) Stop() {
 	s.Lock()
 	defer s.Unlock()
-	if s.CloseChan != nil {
-		s.InputListener.Close()
-		s.ClosedChan = make(chan bool)
-		close(s.CloseChan)
-		<-s.ClosedChan
-		s.CloseChan = nil
+	s.InputListener.Close()
+	if s.Cancel != nil {
+		s.Cancel()
+	}
+	s.wg.Wait()
+	s.InputListener.Close()
+	s.InputListener = nil
+}
+
+func (s *Suricata) readInput(acc telegraf.Accumulator, conn net.Conn) {
+	reader := bufio.NewReaderSize(conn, InBufSize)
+	for {
+		select {
+		case <-s.Ctx.Done():
+			return
+		default:
+			line, rerr := reader.ReadBytes('\n')
+			if rerr == nil {
+				s.parse(acc, line)
+			} else if rerr == io.EOF {
+				return
+			}
+		}
 	}
 }
 
 func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 	var err error
+	defer s.wg.Done()
 	for {
 		select {
-		case <-s.CloseChan:
-			s.InputListener = nil
-			close(s.ClosedChan)
+		case <-s.Ctx.Done():
 			return
 		default:
 			var conn net.Conn
 			conn, err = s.InputListener.Accept()
 			if err != nil {
-				continue
-			}
-			reader := bufio.NewReaderSize(conn, 10485760)
-		out:
-			for {
-				select {
-				case <-s.CloseChan:
-					conn.Close()
-					s.InputListener.Close()
-					s.InputListener = nil
-					close(s.ClosedChan)
-					return
-				default:
-					line, isPrefix, rerr := reader.ReadLine()
-					if rerr == nil {
-						if isPrefix {
-							acc.AddError(errors.New("incomplete line read from input"))
-							continue
-						} else {
-							s.parse(acc, line)
-						}
-					} else if rerr == io.EOF {
-						break out
-					}
+				if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+					acc.AddError(err)
 				}
+				return
+			}
+			s.readInput(acc, conn)
+		}
+	}
+}
+
+func flexFlatten(outmap map[string]interface{}, field string, v interface{}, delimiter string) error {
+	switch t := v.(type) {
+	case map[string]interface{}:
+		for k, v := range t {
+			var err error
+			if field == "" {
+				err = flexFlatten(outmap, fmt.Sprintf("%s", k), v, delimiter)
+			} else {
+				err = flexFlatten(outmap, fmt.Sprintf("%s%s%s", field, delimiter, k), v, delimiter)
+			}
+			if err != nil {
+				return err
 			}
 		}
+	case string:
+		outmap[field] = v.(string)
+	case float64:
+		outmap[field] = v.(float64)
+	case nil:
+		return nil
+	default:
+		return fmt.Errorf("unsupported type %T encountered", t)
 	}
-}
-
-func splitAtSingleDot(in string) []string {
-	res := singleDotRegexp.FindAllStringIndex(in, -1)
-	if res == nil {
-		return []string{in}
-	}
-	ret := make([]string, 0)
-	startpos := 0
-	for _, v := range res {
-		ret = append(ret, in[startpos:v[0]+1])
-		startpos = v[1] - 1
-	}
-	return append(ret, in[startpos:])
-}
-
-func addPercentage(thread string, val1 string, val2 string, valt string,
-	fields map[string](map[string]interface{})) {
-	if _, ok := fields[thread][val1]; ok {
-		if _, ok := fields[thread][val2]; ok {
-			f1 := fields[thread][val1].(float64)
-			f2 := fields[thread][val2].(float64)
-			fields[thread][valt] = f2 / (f1 + f2)
-		}
-	}
+	return nil
 }
 
 func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
-	if len(sjson) == 0 {
-		return
-	}
-
-	out, err := gojsonexplode.Explodejsonstr(string(sjson), ".")
-	if err != nil {
-		acc.AddError(err)
-		return
-	}
-
+	// initial parsing
 	var result map[string]interface{}
-	err = json.Unmarshal([]byte(out), &result)
+	err := json.Unmarshal([]byte(sjson), &result)
 	if err != nil {
 		acc.AddError(err)
+		return
+	}
+
+	// check for presence of relevant stats
+	if _, ok := result["stats"]; !ok {
+		acc.AddError(fmt.Errorf("input does not contain necessary 'stats' sub-object"))
+		return
+	}
+
+	if _, ok := result["stats"].(map[string]interface{}); !ok {
+		acc.AddError(fmt.Errorf("'stats' sub-object does not have required structure"))
 		return
 	}
 
 	fields := make(map[string](map[string]interface{}))
-
-	for k, v := range result {
-		key := strings.Replace(k, "stats.", "", 1)
-		if strings.HasPrefix(key, "threads.") {
-			key = strings.Replace(key, "threads.", "", 1)
-			threadkeys := splitAtSingleDot(key)
-			threadkey := threadkeys[0]
-			if _, ok := fields[threadkey]; !ok {
-				fields[threadkey] = make(map[string]interface{})
+	globmap := make(map[string]interface{})
+	for k, v := range result["stats"].(map[string]interface{}) {
+		if k == "threads" {
+			if v, ok := v.(map[string]interface{}); ok {
+				for k, t := range v {
+					outmap := make(map[string]interface{})
+					if threadStruct, ok := t.(map[string]interface{}); ok {
+						err = flexFlatten(outmap, "", threadStruct, s.Delimiter)
+						if err != nil {
+							acc.AddError(err)
+						}
+						fields[k] = outmap
+					}
+				}
+			} else {
+				acc.AddError(fmt.Errorf("'threads' sub-object does not have required structure"))
 			}
-			fields[threadkey][strings.Join(threadkeys[1:], ".")] = v
 		} else {
-			if _, ok := fields["total"]; !ok {
-				fields["total"] = make(map[string]interface{})
+			err = flexFlatten(globmap, k, v, s.Delimiter)
+			if err != nil {
+				acc.AddError(err)
 			}
-			fields["total"][key] = v
 		}
 	}
-
-	addPercentage("total", "capture.kernel_packets", "capture.kernel_drops",
-		"capture.kernel_drop_percentage", fields)
-	addPercentage("total", "capture.kernel_packets_delta", "capture.kernel_drops_delta",
-		"capture.kernel_drop_delta_percentage", fields)
+	fields["total"] = globmap
 
 	for k := range fields {
 		acc.AddFields("suricata", fields[k], map[string]string{"thread": k})
@@ -209,7 +223,8 @@ func (s *Suricata) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("suricata", func() telegraf.Input {
 		return &Suricata{
-			Source: "/tmp/suricata-stats.sock",
+			Source:    "/var/run/suricata-stats.sock",
+			Delimiter: "_",
 		}
 	})
 }
