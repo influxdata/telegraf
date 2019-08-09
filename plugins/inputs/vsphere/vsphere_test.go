@@ -373,6 +373,7 @@ func TestFinder(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/**/vm/**", 8, "")
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*", 0, "")
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*VM*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 8, "")
 
 	vm = []mo.VirtualMachine{}
 	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
