@@ -2,6 +2,8 @@
 defaults:
   defaults: &defaults
     working_directory: '/go/src/github.com/influxdata/telegraf'
+    environment:
+      GOFLAGS: -p=8
   go-1_10: &go-1_10
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.10.8'
