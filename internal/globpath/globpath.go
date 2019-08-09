@@ -21,7 +21,7 @@ func Compile(path string) (*GlobPath, error) {
 	out := GlobPath{
 		hasMeta:      hasMeta(path),
 		HasSuperMeta: hasSuperMeta(path),
-		path:         filepath.FromSlash(path),
+		path:         path,
 	}
 
 	// if there are no glob meta characters in the path, don't bother compiling
@@ -35,7 +35,7 @@ func Compile(path string) (*GlobPath, error) {
 	// glob(/your/expression/until/first/star/of/super-meta))
 	out.rootGlob = path[:strings.Index(path, "**")+1]
 	var err error
-	if out.g, err = glob.Compile(path, os.PathSeparator); err != nil {
+	if out.g, err = glob.Compile(filepath.ToSlash(path), '/'); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -58,7 +58,7 @@ func (g *GlobPath) Match() []string {
 	}
 	out := []string{}
 	walkfn := func(path string, _ *godirwalk.Dirent) error {
-		if g.g.Match(path) {
+		if g.g.Match(filepath.ToSlash(path)) {
 			out = append(out, path)
 		}
 		return nil
@@ -70,7 +70,7 @@ func (g *GlobPath) Match() []string {
 			continue
 		}
 		if !fileinfo.IsDir() {
-			if g.MatchString(root) {
+			if g.MatchString(filepath.ToSlash(root)) {
 				out = append(out, root)
 			}
 			continue
@@ -87,7 +87,7 @@ func (g *GlobPath) Match() []string {
 // the host platform separator.
 func (g *GlobPath) MatchString(path string) bool {
 	if !g.HasSuperMeta {
-		res, _ := filepath.Match(g.path, path)
+		res, _ := filepath.Match(g.path, filepath.ToSlash(path))
 		return res
 	}
 	return g.g.Match(path)
