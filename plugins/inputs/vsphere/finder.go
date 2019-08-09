@@ -29,11 +29,6 @@ type ResourceFilter struct {
 	paths   []string
 }
 
-type nameAndRef struct {
-	name string
-	ref  types.ManagedObjectReference
-}
-
 // FindAll returns the union of resources found given the supplied resource type and paths.
 func (f *Finder) FindAll(ctx context.Context, resType string, paths []string, dst interface{}) error {
 	for _, p := range paths {
@@ -87,15 +82,18 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	var content []types.ObjectContent
 
 	fields := []string{"name"}
+	recurse := tokens[pos]["name"] == "**"
+
+	types := ct
 	if isLeaf {
-		// Special case: The last token is a recursive wildcard, so we can grab everything
-		// recursively in a single call.
-		if tokens[pos]["name"] == "**" {
+		if af, ok := addFields[resType]; ok {
+			fields = append(fields, af...)
+		}
+		if recurse {
+			// Special case: The last token is a recursive wildcard, so we can grab everything
+			// recursively in a single call.
 			v2, err := m.CreateContainerView(ctx, root, []string{resType}, true)
 			defer v2.Destroy(ctx)
-			if af, ok := addFields[resType]; ok {
-				fields = append(fields, af...)
-			}
 			err = v2.Retrieve(ctx, []string{resType}, fields, &content)
 			if err != nil {
 				return err
@@ -105,23 +103,16 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			}
 			return nil
 		}
-
-		if af, ok := addFields[resType]; ok {
-			fields = append(fields, af...)
-		}
-		err = v.Retrieve(ctx, []string{resType}, fields, &content)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = v.Retrieve(ctx, ct, fields, &content)
-		if err != nil {
-			return err
-		}
+		types = []string{resType} // Only load wanted object type at leaf level
+	}
+	err = v.Retrieve(ctx, types, fields, &content)
+	if err != nil {
+		return err
 	}
 
+	rerunAsLeaf := false
 	for _, c := range content {
-		if !tokens[pos].MatchPropertyList(c.PropSet[:1]) {
+		if !matchName(tokens[pos], c.PropSet) {
 			continue
 		}
 
@@ -138,23 +129,24 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 
 		// Deal with recursive wildcards (**)
 		inc := 1 // Normally we advance one token.
-		if tokens[pos]["name"] == "**" {
+		if recurse {
 			if isLeaf {
 				inc = 0 // Can't advance past last token, so keep descending the tree
 			} else {
 				// Lookahead to next token. If it matches this child, we are out of
 				// the recursive wildcard handling and we can advance TWO tokens ahead, since
 				// the token that ended the recursive wildcard mode is now consumed.
-				if tokens[pos+1].MatchPropertyList(c.PropSet) {
+				if matchName(tokens[pos+1], c.PropSet) {
 					if pos < len(tokens)-2 {
 						inc = 2
-					} else {
-						// We found match and it's at a leaf! Grab it!
-						objs[c.Obj.String()] = c
+					} else if c.Obj.Type == resType {
+						// We found match and it's at a we're one step before a leaf.
+						// Rerun the entire level as a leaf.
+						rerunAsLeaf = true
 						continue
 					}
 				} else {
-					// We didn't break out of recursicve wildcard mode yet, so stay on this token.
+					// We didn't break out of recursive wildcard mode yet, so stay on this token.
 					inc = 0
 
 				}
@@ -165,16 +157,14 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			return err
 		}
 	}
-	return nil
-}
 
-func nameFromObjectContent(o types.ObjectContent) string {
-	for _, p := range o.PropSet {
-		if p.Name == "name" {
-			return p.Val.(string)
-		}
+	if rerunAsLeaf {
+		// We're at a "pseudo leaf", i.e. we looked ahead a token and found that this level contains leaf nodes.
+		// Rerun the entire level as a leaf to get those nodes.
+		return f.descend(ctx, root, resType, tokens, pos+1, objs)
 	}
-	return "<unknown>"
+
+	return nil
 }
 
 func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interface{}) error {
@@ -212,6 +202,15 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 // the ResourceFilter.
 func (r *ResourceFilter) FindAll(ctx context.Context, dst interface{}) error {
 	return r.finder.FindAll(ctx, r.resType, r.paths, dst)
+}
+
+func matchName(f property.Filter, props []types.DynamicProperty) bool {
+	for _, prop := range props {
+		if prop.Name == "name" {
+			return f.MatchProperty(prop)
+		}
+	}
+	return false
 }
 
 func init() {
