@@ -60,6 +60,9 @@
 - [#6049](https://github.com/influxdata/telegraf/pull/6049): Add grace period for metrics late for aggregation.
 - [#4435](https://github.com/influxdata/telegraf/pull/4435): Add diff and non_negative_diff to basicstats aggregator.
 - [#6201](https://github.com/influxdata/telegraf/pull/6201): Add device tags to smart_attributes.
+- [#5719](https://github.com/influxdata/telegraf/pull/5719): Collect framework_offers and allocator metrics in mesos input.
+- [#6216](https://github.com/influxdata/telegraf/pull/6216): Add telegraf and go version to the internal input plugin.
+- [#6214](https://github.com/influxdata/telegraf/pull/6214): Update the number of logical CPUs dynamically in system plugin.
 
 #### Bugfixes
 
