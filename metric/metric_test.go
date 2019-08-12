@@ -79,32 +79,6 @@ func TestRemoveTagNoEffectOnMissingTags(t *testing.T) {
 	require.Equal(t, "x", value)
 }
 
-func TestSetTags(t *testing.T) {
-	m := baseMetric()
-
-	m.AddTag("a", "a")
-	m.AddTag("b", "a")
-
-	newTags := make(map[string]string)
-	newTags["a"] = "z"
-	newTags["d"] = "z"
-	newTags["e"] = "z"
-
-	m.SetTags(newTags)
-	val, ok := m.GetTag("a")
-	require.True(t, ok)
-	require.Equal(t, "z", val)
-
-	val, ok = m.GetTag("b")
-	require.False(t, ok)
-
-	val, ok = m.GetTag("d")
-	require.True(t, ok)
-	require.Equal(t, "z", val)
-
-	require.Equal(t, len(m.Tags()), 3)
-}
-
 func TestGetTag(t *testing.T) {
 	m := baseMetric()
 

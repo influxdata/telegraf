@@ -84,29 +84,3 @@ func TestTrim(t *testing.T) {
 	assert.Equal(t, "foo", trimmedTags["a"], "preserved: a")
 	assert.Equal(t, "bar", trimmedTags["b"], "preserved: b")
 }
-
-func TestOverLimit(t *testing.T) {
-	currentTime := time.Now()
-
-	tenTags := make(map[string]string)
-	tenTags["a"] = "foo"
-	tenTags["b"] = "bar"
-	tenTags["c"] = "baz"
-	tenTags["d"] = "abc"
-	tenTags["e"] = "def"
-	tenTags["f"] = "ghi"
-	tenTags["g"] = "jkl"
-	tenTags["h"] = "mno"
-	tenTags["i"] = "pqr"
-	tenTags["j"] = "stu"
-
-	tagLimitConfig := TagLimit{
-		Limit: 3,
-		Keep:  []string{"a", "b", "c", "d"},
-	}
-
-	m1 := MustMetric("foo", tenTags, nil, currentTime)
-	limitApply := tagLimitConfig.Apply(m1)
-	trimmedTags := limitApply[0].Tags()
-	assert.Equal(t, 3, len(trimmedTags), "ten tags")
-}

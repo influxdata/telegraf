@@ -186,18 +186,6 @@ func (m *metric) RemoveTag(key string) {
 	}
 }
 
-func (m *metric) SetTags(tags map[string]string) {
-	var newTags []*telegraf.Tag
-	for k, v := range tags {
-		newTags = append(newTags, &telegraf.Tag{Key: k, Value: v})
-	}
-	m.tags = newTags
-}
-
-func (m *metric) SetTagList(tags []*telegraf.Tag) {
-	m.tags = tags
-}
-
 func (m *metric) AddField(key string, value interface{}) {
 	for i, field := range m.fields {
 		if key == field.Key {

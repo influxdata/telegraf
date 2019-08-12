@@ -46,8 +46,6 @@ type Metric interface {
 	GetTag(key string) (string, bool)
 	HasTag(key string) bool
 	AddTag(key, value string)
-	SetTags(tags map[string]string)
-	SetTagList(tags []*Tag)
 	RemoveTag(key string)
 
 	// Field functions
