@@ -16,6 +16,8 @@ var childTypes map[string][]string
 
 var addFields map[string][]string
 
+var containers map[string]interface{}
+
 // Finder allows callers to find resources in vCenter given a query string.
 type Finder struct {
 	client *Client
@@ -128,29 +130,30 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 		}
 
 		// Deal with recursive wildcards (**)
-		inc := 1 // Normally we advance one token.
+		var inc int
 		if recurse {
-			if isLeaf {
-				inc = 0 // Can't advance past last token, so keep descending the tree
-			} else {
-				// Lookahead to next token. If it matches this child, we are out of
-				// the recursive wildcard handling and we can advance TWO tokens ahead, since
-				// the token that ended the recursive wildcard mode is now consumed.
+			inc = 0 // By default, we stay on this token
+			if !isLeaf {
+				// Lookahead to next token.
 				if matchName(tokens[pos+1], c.PropSet) {
-					if pos < len(tokens)-2 {
+					// Are we looking ahead at a leaf node that has the wanted type?
+					// Rerun the entire level as a leaf. This is needed since all properties aren't loaded
+					// when we're processing non-leaf nodes.
+					if pos == len(tokens)-2 {
+						if c.Obj.Type == resType {
+							rerunAsLeaf = true
+							continue
+						}
+					} else if _, ok := containers[c.Obj.Type]; ok {
+						// Tokens match and we're looking ahead at a container type that's not a leaf
+						// Consume this token and the next.
 						inc = 2
-					} else if c.Obj.Type == resType {
-						// We found match and it's at a we're one step before a leaf.
-						// Rerun the entire level as a leaf.
-						rerunAsLeaf = true
-						continue
 					}
-				} else {
-					// We didn't break out of recursive wildcard mode yet, so stay on this token.
-					inc = 0
-
 				}
 			}
+		} else {
+			// The normal case: Advance to next token before descending
+			inc = 1
 		}
 		err := f.descend(ctx, c.Obj, resType, tokens, pos+inc, objs)
 		if err != nil {
@@ -160,7 +163,8 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 
 	if rerunAsLeaf {
 		// We're at a "pseudo leaf", i.e. we looked ahead a token and found that this level contains leaf nodes.
-		// Rerun the entire level as a leaf to get those nodes.
+		// Rerun the entire level as a leaf to get those nodes. This will only be executed when pos is one token
+		// before the last, to pos+1 will always point to a leaf token.
 		return f.descend(ctx, root, resType, tokens, pos+1, objs)
 	}
 
@@ -216,8 +220,8 @@ func matchName(f property.Filter, props []types.DynamicProperty) bool {
 func init() {
 	childTypes = map[string][]string{
 		"HostSystem":             {"VirtualMachine"},
-		"ComputeResource":        {"HostSystem", "ResourcePool"},
-		"ClusterComputeResource": {"HostSystem", "ResourcePool"},
+		"ComputeResource":        {"HostSystem", "ResourcePool", "VirtualApp"},
+		"ClusterComputeResource": {"HostSystem", "ResourcePool", "VirtualApp"},
 		"Datacenter":             {"Folder"},
 		"Folder": {
 			"Folder",
@@ -236,5 +240,14 @@ func init() {
 		"Datastore":              {"parent", "info"},
 		"ClusterComputeResource": {"parent"},
 		"Datacenter":             {"parent"},
+	}
+
+	containers = map[string]interface{}{
+		"HostSystem":      nil,
+		"ComputeResource": nil,
+		"Datacenter":      nil,
+		"ResourcePool":    nil,
+		"Folder":          nil,
+		"VirtualApp":      nil,
 	}
 }

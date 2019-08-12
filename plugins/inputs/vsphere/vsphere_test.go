@@ -161,6 +161,7 @@ func createSim(folders int) (*simulator.Model, *simulator.Server, error) {
 
 	model.Folder = folders
 	model.Datacenter = 2
+	//model.App = 1
 
 	err := model.Create()
 	if err != nil {
@@ -371,9 +372,9 @@ func TestFinder(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/DC1/**", 4, "")
 	testLookupVM(ctx, t, &f, "/**", 8, "")
 	testLookupVM(ctx, t, &f, "/**/vm/**", 8, "")
-	testLookupVM(ctx, t, &f, "/*/host/**/*DC*", 0, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*", 8, "")
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*VM*", 8, "")
-	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = []mo.VirtualMachine{}
 	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
@@ -418,10 +419,10 @@ func TestFolders(t *testing.T) {
 	require.Equal(t, "F0", folder[0].Name)
 
 	var dc []mo.Datacenter
-	err = f.Find(ctx, "Datacenter", "/F0/DC0", &dc)
+	err = f.Find(ctx, "Datacenter", "/F0/DC1", &dc)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(dc))
-	require.Equal(t, "DC0", dc[0].Name)
+	require.Equal(t, "DC1", dc[0].Name)
 
 	var vms []mo.VirtualMachine
 	err = f.Find(ctx, "VirtualMachine", "/F0/DC0/vm/**/F*", &vms)
@@ -429,12 +430,12 @@ func TestFolders(t *testing.T) {
 	require.Equal(t, 0, len(vms))
 
 	vms = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/F0/DC0/vm/**/F*/*VM*", &vms)
+	err = f.Find(ctx, "VirtualMachine", "/F0/DC1/vm/**/F*/*VM*", &vms)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vms))
 
 	vms = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/F0/DC0/vm/**/F*/**", &vms)
+	err = f.Find(ctx, "VirtualMachine", "/F0/DC1/vm/**/F*/**", &vms)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vms))
 }
