@@ -154,12 +154,12 @@ var sampleConfig = `
   # devices = [ "/dev/ada0 -d atacam" ]
 
   ## Timeout for the smartctl command to complete.
-  # timeout = "5s"
+  # timeout = "30s"
 `
 
 func NewSmart() *Smart {
 	return &Smart{
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: internal.Duration{Duration: time.Second * 30},
 	}
 }
 

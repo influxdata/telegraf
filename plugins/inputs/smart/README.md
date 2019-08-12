@@ -62,7 +62,7 @@ smartctl -s on <device>
   # devices = [ "/dev/ada0 -d atacam" ]
 
   ## Timeout for the smartctl command to complete.
-  # timeout = "5s"
+  # timeout = "30s"
 ```
 
 ### Permissions

@@ -18,7 +18,7 @@ func TestGatherAttributes(t *testing.T) {
 	s.Path = "smartctl"
 	s.Attributes = true
 
-	assert.Equal(t, time.Second*5, s.Timeout.Duration)
+	assert.Equal(t, time.Second*30, s.Timeout.Duration)
 
 	var acc testutil.Accumulator
 
@@ -333,7 +333,7 @@ func TestGatherNoAttributes(t *testing.T) {
 	s.Path = "smartctl"
 	s.Attributes = false
 
-	assert.Equal(t, time.Second*5, s.Timeout.Duration)
+	assert.Equal(t, time.Second*30, s.Timeout.Duration)
 
 	// overwriting exec commands with mock commands
 	var acc testutil.Accumulator
@@ -389,7 +389,7 @@ func TestGatherSATAInfo(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 5}, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
@@ -405,7 +405,7 @@ func TestGatherSATAInfo65(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 5}, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
@@ -421,7 +421,7 @@ func TestGatherHgstSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 5}, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
 }
@@ -437,7 +437,7 @@ func TestGatherHtSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 5}, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 5, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(3), acc.NMetrics(), "Wrong number of metrics gathered")
 }
@@ -453,7 +453,7 @@ func TestGatherSSD(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 5}, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
@@ -469,7 +469,7 @@ func TestGatherSSDRaid(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 5}, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
@@ -485,7 +485,7 @@ func TestGatherNvme(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 5}, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric("smart_device",
