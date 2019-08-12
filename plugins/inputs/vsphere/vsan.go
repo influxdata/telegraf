@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
@@ -59,11 +60,6 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	// Create vSAN client
 	vimClient := client.Client.Client
 	vsanClient := vimClient.NewServiceClient(vsanPath, vsanNamespace)
-	if e.Parent.TLSCA != "" {
-		if err := vsanClient.SetRootCAs(e.Parent.TLSCA); err != nil {
-			return err
-		}
-	}
 	// vSAN Metrics to collect
 	metrics := e.getVsanMetadata(ctx, vsanClient, res)
 	// Iterate over all clusters, run a goroutine for each cluster
@@ -262,7 +258,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 				for i, values := range strings.Split(counter.Values, ",") {
 					ts, ok := time.Parse(time.RFC3339, timeStamps[i])
 					if ok != nil {
-						log.Printf("E! [inputs.vsphere][vSAN]\tFailed to parse a timestamp: %s. Skipping", timeStamps[i])
+						log.Printf("E! [inputs.vsphere][vSAN] Failed to parse a timestamp: %s. Skipping", timeStamps[i])
 						continue
 					}
 					// Organize the metrics into a bucket per measurement.
@@ -274,7 +270,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 						buckets[bKey] = bucket
 					}
 					if v, err := strconv.ParseFloat(values, 32); err == nil {
-						bucket.fields[metricLabel] = v
+						bucket.fields[internal.SnakeCase(metricLabel)] = v
 					}
 				}
 			}

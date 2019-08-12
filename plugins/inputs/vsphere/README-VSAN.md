@@ -84,42 +84,42 @@ vSAN metrics are only collected on cluster level. Therefore, use the same way as
 
 NOTE: vSAN performance measurements and fields may vary on the vSAN versions.
 - vSAN Summary
-     - OverallHealth
-     - TotalCapacityB, FreeCapacityB
-     - TotalBytesToSync, TotalObjectsToSync, TotalRecoveryETA
+     - overall_health
+     - total_capacity_bytes, free_capacity_bytes
+     - total_bytes_to_sync, total_objects_to_sync, total_recovery_eta
 - vSAN Performance 
      - cluster-domclient
-     	- iopsRead, throughputRead, latencyAvgRead, iopsWrite, throughputWrite, latencyAvgWrite, congestion, oio
+     	- iops_read, throughput_read, latency_avg_read, iops_write, throughput_write, latency_avg_write, congestion, oio
      - cluster-domcompmgr	
-        - iopsRead, throughputRead, latencyAvgRead, iopsWrite, throughputWrite, latencyAvgWrite, iopsRecWrite, throughputRecWrite, latencyAvgRecWrite, congestion, oio, iopsResyncRead, tputResyncRead, latAvgResyncRead
+        - iops_read, throughput_read, latency_avg_read, iops_write, throughput_write, latency_avg_write, iops_rec_write, throughput_rec_write, latency_avg_rec_write, congestion, oio, iops_resync_read, tput_resync_read, lat_avg_resyncread
      - host-domclient
-        - iopsRead, throughputRead, latencyAvgRead, readCount, iopsWrite, throughputWrite, latencyAvgWrite, writeCount, congestion, oio, clientCacheHits, clientCacheHitRate
+        - iops_read, throughput_read, latency_avg_read, read_count, iops_write, throughput_write, latency_avg_write, write_count, congestion, oio, client_cache_hits, client_cache_hit_rate
      - host-domcompmgr
-     	- iopsRead, throughputRead, latencyAvgRead, readCount, iopsWrite, throughputWrite, latencyAvgWrite, writeCount, iopsRecWrite, throughputRecWrite, latencyAvgRecWrite, recWriteCount congestion, oio, iopsResyncRead, tputResyncRead, latAvgResyncRead
+     	- iops_read, throughput_read, latency_avg_read, read_count, iops_write, throughput_write, latency_avg_write, write_count, iops_rec_write, throughput_rec_write, latency_avg_rec_write, rec_write_count congestion, oio, iops_resync_read, tput_resync_read, lat_avg_resync_read
      - cache-disk	
-        - iopsDevRead, throughputDevRead, latencyDevRead, ioCountDevRead, iopsDevWrite, throughputDevWrite, latencyDevWrite, ioCountDevWrite, latencyDevDAvg, latencyDevGAvg
+        - iops_dev_read, throughput_dev_read, latency_dev_read, io_count_dev_read, iops_dev_write, throughput_dev_write, latency_dev_write, io_count_dev_write, latency_dev_d_avg, latency_dev_g_avg
      - capacity-disk
-        - iopsDevRead, throughputDevRead, latencyDevRead, ioCountDevRead, iopsDevWrite, throughputDevWrite, latencyDevWrite, ioCountDevWrite, latencyDevDAvg, latencyDevGAvg, iopsRead, latencyRead, ioCountRead, iopsWrite, latencyWrite, ioCountWrite
+        - iops_dev_read, throughput_dev_read, latency_dev_read, io_count_dev_read, iops_dev_write, throughput_dev_write, latency_dev_write, io_count_dev_write, latency_dev_d_avg, latency_dev_g_avg, iops_read, latency_read, io_count_read, iops_write, latency_write, io_count_write
      - disk-group
-        - iopsSched, latencySched, outstandingBytesSched, iopsSchedQueueRec, throughputSchedQueueRec,latencySchedQueueRec, iopsSchedQueueVM, throughputSchedQueueVM,latencySchedQueueVM, iopsSchedQueueMeta, throughputSchedQueueMeta,latencySchedQueueMeta, iopsDelayPctSched, latencyDelaySched, rcHitRate, wbFreePct, warEvictions, quotaEvictions, iopsRcRead, latencyRcRead, ioCountRcRead, iopsWbRead, latencyWbRead, ioCountWbRead, iopsRcWrite, latencyRcWrite, ioCountRcWrite, iopsWbWrite, latencyWbWrite, ioCountWbWrite, ssdBytesDrained, zeroBytesDrained, memCongestion, slabCongestion, ssdCongestion, iopsCongestion, logCongestion, compCongestion, iopsDirectSched, iopsRead, throughputRead, latencyAvgRead, readCount, iopsWrite, throughputWrite, latencyAvgWrite, writeCount, oioWrite, oioRecWrite, oioWriteSize, oioRecWriteSize, rcSize, wbSize, capacity, capacityUsed, capacityReserved, throughputSched, iopsResyncReadPolicy, iopsResyncReadDecom, iopsResyncReadRebalance, iopsResyncReadFixComp, iopsResyncWritePolicy, iopsResyncWriteDecom, iopsResyncWriteRebalance, iopsResyncWriteFixComp, tputResyncReadPolicy, tputResyncReadDecom, tputResyncReadRebalance, tputResyncReadFixComp, tputResyncWritePolicy, tputResyncWriteDecom, tputResyncWriteRebalance, tputResyncWriteFixComp, latResyncReadPolicy, latResyncReadDecom, latResyncReadRebalance, latResyncReadFixComp, latResyncWritePolicy, latResyncWriteDecom, latResyncWriteRebalance, latResyncWriteFixComp
+        - iops_sched, latency_sched, outstanding_bytes_sched, iops_sched_queue_rec, throughput_sched_queue_rec,latency_sched_queue_rec, iops_sched_queue_vm, throughput_sched_queue_vm,latency_sched_queue_vm, iops_sched_queue_meta, throughput_sched_queue_meta,latency_sched_queue_meta, iops_delay_pct_sched, latency_delay_sched, rc_hit_rate, wb_free_pct, war_evictions, quota_evictions, iops_rc_read, latency_rc_read, io_count_rc_read, iops_wb_read, latency_wb_read, io_count_wb_read, iops_rc_write, latency_rc_write, io_count_rc_write, iops_wb_write, latency_wb_write, io_count_wb_write, ssd_bytes_drained, zero_bytes_drained, mem_congestion, slab_congestion, ssd_congestion, iops_congestion, log_congestion, comp_congestion, iops_direct_sched, iops_read, throughput_read, latency_avg_read, read_count, iops_write, throughput_write, latency_avg_write, write_count, oio_write, oio_rec_write, oio_write_size, oio_rec_write_size, rc_size, wb_size, capacity, capacity_used, capacity_reserved, throughput_sched, iops_resync_read_policy, iops_resync_read_decom, iops_resync_read_rebalance, iops_resync_read_fix_comp, iops_resync_write_policy, iops_resync_write_decom, iops_resync_write_rebalance, iops_resync_write_fix_comp, tput_resync_read_policy, tput_resync_read_decom, tput_resync_read_rebalance, tput_resync_read_fix_comp, tput_resync_write_policy, tput_resync_write_decom, tput_resync_write_rebalance, tput_resync_write_fix_comp, lat_resync_read_policy, lat_resync_read_decom, lat_resync_read_rebalance, lat_resync_read_fix_comp, lat_resync_write_policy, lat_resync_write_decom, lat_resync_write_rebalance, lat_resync_write_fix_comp
      - virtual-machine	
-        - iopsRead, throughputRead, latencyReadAvg, latencyReadStddev, readCount, iopsWrite, throughputWrite, latencyWriteAvg, latencyWriteStddev, writeCount
+        - iops_read, throughput_read, latency_read_avg, latency_read_stddev, read_count, iops_write, throughput_write, latency_write_avg, latency_write_stddev, write_count
      - vscsi
-     	- iopsRead, throughputRead, latencyRead, readCount, iopsWrite, throughputWrite, latencyWrite, writeCount
+     	- iops_read, throughput_read, latency_read, read_count, iops_write, throughput_write, latency_write, write_count
      - virtual-disk
-     	- iopsLimit, NIOPS, NIOPSDelayed
+     	- iops_limit, niops, niops_delayed
      - vsan-host-net
-     	- rxThroughput, rxPackets, rxPacketsLossRate, txThroughput, txPackets, txPacketsLossRate
+     	- rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets, tx_packets_loss_rate
      - vsan-vnic-net:
-     	- rxThroughput, rxPackets, rxPacketsLossRate, txThroughput, txPackets, txPacketsLossRate
+     	- rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets, tx_packets_loss_rate 
      - vsan-pnic-net
-     	- rxThroughput, rxPackets, rxPacketsLossRate, txThroughput, txPackets, txPacketsLossRate
+     	- rx_throughput, rx_packets, rx_packets_loss_rate, tx_throughput, tx_packets, tx_packets_loss_rate
      - vsan-iscsi-host
-     	- iopsRead, iopsWrite, iopsTotal, bandwidthRead, bandwidthWrite, bandwidthTotal, latencyRead, latencyWrite, latencyTotal, queueDepth
+     	- iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
      - vsan-iscsi-target
-     	- iopsRead, iopsWrite, iopsTotal, bandwidthRead, bandwidthWrite, bandwidthTotal, latencyRead, latencyWrite, latencyTotal, queueDepth
+     	- iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
      - vsan-iscsi-lun
-     	- iopsRead, iopsWrite, iopsTotal, bandwidthRead, bandwidthWrite, bandwidthTotal, latencyRead, latencyWrite, latencyTotal, queueDepth 
+     	- iops_read, iops_write, iops_total, bandwidth_read, bandwidth_write, bandwidth_total, latency_read, latency_write, latency_total, queue_depth
      	
 ## Tags
 - all vSAN metrics
