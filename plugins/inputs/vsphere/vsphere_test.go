@@ -364,9 +364,9 @@ func TestFinder(t *testing.T) {
 
 	var vm []mo.VirtualMachine
 	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
-	testLookupVM(ctx, t, &f,"/DC0/vm/DC0_C0*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_C0*", 2, "")
 	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0")
-	testLookupVM(ctx, t, &f,"/DC0/*/DC0_H0_*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_*", 2, "")
 	testLookupVM(ctx, t, &f, "/DC0/**/DC0_H0_VM*", 2, "")
 	testLookupVM(ctx, t, &f, "/DC0/**", 4, "")
 	testLookupVM(ctx, t, &f, "/DC1/**", 4, "")
@@ -382,7 +382,6 @@ func TestFinder(t *testing.T) {
 	require.Equal(t, 4, len(vm))
 
 }
-
 
 func TestFolders(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
@@ -425,7 +424,7 @@ func TestFolders(t *testing.T) {
 	require.Equal(t, "DC1", dc[0].Name)
 
 	testLookupVM(ctx, t, &f, "/F0/DC0/vm/**/F*", 0, "")
-	testLookupVM(ctx, t, &f,"/F0/DC1/vm/**/F*/*VM*", 4, "")
+	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "")
 	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
