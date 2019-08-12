@@ -98,8 +98,6 @@ func (p *PointParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		buf = append(buf, []byte("\n")...)
 	}
 
-	//log.Printf("D! [parsers.wavefront] Received data: %s", string(buf))
-
 	points := make([]Point, 0)
 
 	buffer := bytes.NewBuffer(buf)
