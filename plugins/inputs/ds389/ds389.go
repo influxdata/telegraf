@@ -2,6 +2,7 @@ package ds389
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -23,6 +24,8 @@ type ds389 struct {
 	BindDn             string
 	BindPassword       string
 	Dbtomonitor        []string
+	AllDbmonitor       bool
+	Status             bool
 }
 
 const sampleConfig string = `
@@ -47,12 +50,17 @@ const sampleConfig string = `
   #Gather dbname monitor
   # Comma separated list of db filename
   # dbtomonitor = ["exampleDB"]
+  # If true, alldbmonitor monitors all db and it overrides "dbtomonitor".
+  alldbmonitor = false
+
+  # Connections status monitor
+  status = false
 `
 
 var searchMonitor = "cn=Monitor"
 var searchLdbmMonitor = "cn=monitor,cn=ldbm database,cn=plugins,cn=config"
 
-var searchFilter = "(objectClass=*)"
+var searchFilter = "(objectClass=extensibleObject)"
 var searchAttrs = []string{
 	"currentconnections",
 	"totalconnections",
@@ -97,6 +105,9 @@ var searchAttrs = []string{
 	"cacheentries",
 	"cachehits",
 	"slavehits",
+	"backendmonitordn",
+	"connection",
+	"version",
 }
 
 var searchLdbmAttrs = []string{
@@ -119,7 +130,7 @@ func (o *ds389) Description() string {
 	return "ds389 cn=Monitor plugin"
 }
 
-// Newds389 return an initialized
+// return an initialized ds389
 func Newds389() *ds389 {
 	return &ds389{
 		Host:               "localhost",
@@ -132,6 +143,8 @@ func Newds389() *ds389 {
 		BindDn:             "",
 		BindPassword:       "",
 		Dbtomonitor:        []string{},
+		AllDbmonitor:       false,
+		Status:             false,
 	}
 }
 
@@ -212,7 +225,8 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	gatherSearchResult(sr, o, acc)
+	version := sr.Entries[0].GetAttributeValue("version")
+	field := gatherSearchResult(sr, o.Status)
 
 	searchLdbmRequest := ldap.NewSearchRequest(
 		searchLdbmMonitor,
@@ -233,11 +247,12 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	gatherSearchResult(sldbmr, o, acc)
+	for k, v := range gatherSearchResult(sldbmr, false) {
+		field[k] = v
+	}
 
-	if len(o.Dbtomonitor) > 0 {
-		for _, db := range o.Dbtomonitor {
-			var searchDbMonitor = fmt.Sprintf("cn=monitor,cn=%s,cn=ldbm database,cn=plugins,cn=config", db)
+	if o.AllDbmonitor {
+		for _, searchDbMonitor := range sr.Entries[0].GetAttributeValues("backendmonitordn") {
 			searchDbRequest := ldap.NewSearchRequest(
 				searchDbMonitor,
 				ldap.ScopeWholeSubtree,
@@ -255,20 +270,78 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return nil
 			}
-			gatherDbSearchResult(sdbr, o, acc, db)
+			r := regexp.MustCompile(`cn=monitor,cn=(?P<db>\w+),cn=ldbm database,cn=plugins,cn=config`)
+			db := r.FindStringSubmatch(searchDbMonitor)[1]
+			for k, v := range gatherDbSearchResult(sdbr, db) {
+				field[k] = v
+			}
+		}
+	} else {
+		if len(o.Dbtomonitor) > 0 {
+			for _, db := range o.Dbtomonitor {
+				var searchDbMonitor = fmt.Sprintf("cn=monitor,cn=%s,cn=ldbm database,cn=plugins,cn=config", db)
+				searchDbRequest := ldap.NewSearchRequest(
+					searchDbMonitor,
+					ldap.ScopeWholeSubtree,
+					ldap.NeverDerefAliases,
+					0,
+					0,
+					false,
+					searchFilter,
+					searchDbAttrs,
+					nil,
+				)
+
+				sdbr, err := l.Search(searchDbRequest)
+				if err != nil {
+					acc.AddError(err)
+					return nil
+				}
+				for k, v := range gatherDbSearchResult(sdbr, db) {
+					field[k] = v
+				}
+			}
 		}
 	}
+
+	// Add metrics
+	tags := map[string]string{
+		"server":  o.Host,
+		"port":    strconv.Itoa(o.Port),
+		"version": version,
+	}
+	acc.AddFields("ds389", field, tags)
 	return nil
 }
 
-func gatherSearchResult(sr *ldap.SearchResult, o *ds389, acc telegraf.Accumulator) {
+func gatherSearchResult(sr *ldap.SearchResult, status bool) map[string]interface{} {
 	fields := map[string]interface{}{}
-	tags := map[string]string{
-		"server": o.Host,
-		"port":   strconv.Itoa(o.Port),
-	}
 	for _, entry := range sr.Entries {
 		for _, attr := range entry.Attributes {
+			if attr.Name == "connection" && status {
+				for _, thisAttr := range attr.Values {
+					elements := strings.Split(thisAttr, ":")
+					if fd, err := strconv.ParseInt(elements[0], 10, 64); err == nil {
+						conn := fmt.Sprintf("conn.%d", fd)
+						conn_opentime := fmt.Sprintf("%s.%s", conn, "opentime")
+						conn_opsinitiated := fmt.Sprintf("%s.%s", conn, "opsinitiated")
+						conn_opscompleted := fmt.Sprintf("%s.%s", conn, "opscompleted")
+						conn_rw := fmt.Sprintf("%s.%s", conn, "rw")
+						conn_binddn := fmt.Sprintf("%s.%s", conn, "binddn")
+
+						fields[conn_opentime] = elements[1]
+						fields[conn_opsinitiated], err = strconv.ParseInt(elements[2], 10, 64)
+						fields[conn_opscompleted], err = strconv.ParseInt(elements[3], 10, 64)
+						fields[conn_rw] = elements[4]
+						fields[conn_binddn] = elements[5]
+						if len(elements) == 11 {
+							conn_ip := fmt.Sprintf("%s.%s", conn, "ip")
+							fields[conn_ip] = strings.TrimPrefix(elements[10], "ip=")
+						}
+					}
+				}
+			}
+
 			if len(attr.Values[0]) >= 1 {
 				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
 					//fmt.Println(attr.Name, v)
@@ -277,29 +350,22 @@ func gatherSearchResult(sr *ldap.SearchResult, o *ds389, acc telegraf.Accumulato
 			}
 		}
 	}
-	acc.AddFields("ds389", fields, tags)
-	return
+	return fields
 }
 
-func gatherDbSearchResult(sr *ldap.SearchResult, o *ds389, acc telegraf.Accumulator, dbname string) {
+func gatherDbSearchResult(sr *ldap.SearchResult, dbname string) map[string]interface{} {
 	fields := map[string]interface{}{}
-	tags := map[string]string{
-		"server": o.Host,
-		"port":   strconv.Itoa(o.Port),
-	}
 	for _, entry := range sr.Entries {
 		for _, attr := range entry.Attributes {
 			if len(attr.Values[0]) >= 1 {
 				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
 					attrName := fmt.Sprint(strings.ToLower(dbname), "_", attr.Name)
-					//fmt.Println(attrName, v)
 					fields[attrName] = v
 				}
 			}
 		}
 	}
-	acc.AddFields("ds389", fields, tags)
-	return
+	return fields
 }
 
 func init() {
