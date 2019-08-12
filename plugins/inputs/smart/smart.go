@@ -139,7 +139,8 @@ var sampleConfig = `
   ## "never" depending on your disks.
   # nocheck = "standby"
 
-  ## Gather detailed metrics for each SMART Attribute.
+  ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
+  ## information from each drive into the 'smart_attribute' measurement.
   # attributes = false
 
   ## Optionally specify devices to exclude from reporting.
@@ -302,14 +303,11 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		fields := make(map[string]interface{})
 
 		if collectAttributes {
-			deviceNode := strings.Split(device, " ")[0]
-			tags["device"] = path.Base(deviceNode)
-
-			if serial, ok := deviceTags["serial_no"]; ok {
-				tags["serial_no"] = serial
-			}
-			if wwn, ok := deviceTags["wwn"]; ok {
-				tags["wwn"] = wwn
+			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+			for _, key := range keys {
+				if value, ok := deviceTags[key]; ok {
+					tags[key] = value
+				}
 			}
 		}
 

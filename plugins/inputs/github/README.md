@@ -14,6 +14,9 @@ alternative method for collecting repository information.
 
   ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
   # access_token = ""
+	
+  ## Github API enterprise url. Github Enterprise accounts must specify their base url.
+  # enterprise_base_url = ""
 
   ## Timeout for HTTP requests.
   # http_timeout = "5s"
