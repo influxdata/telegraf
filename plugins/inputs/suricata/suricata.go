@@ -209,7 +209,11 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 	fields["total"] = globmap
 
 	for k := range fields {
-		acc.AddFields("suricata", fields[k], map[string]string{"thread": k})
+		if k == "Global" {
+			acc.AddFields("suricata", fields[k], nil)
+		} else {
+			acc.AddFields("suricata", fields[k], map[string]string{"thread": k})
+		}
 	}
 }
 
