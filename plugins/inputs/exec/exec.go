@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -55,6 +56,7 @@ type Exec struct {
 
 func NewExec() *Exec {
 	return &Exec{
+		log:     models.Logger{},
 		runner:  CommandRunner{},
 		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
