@@ -5,7 +5,7 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
 
 ## Prerequisites
 * vSphere 5.5 and later environments are needed
-
+* Clusters with vSAN enabled
 * [Turn on vSAN performance service](https://docs.vmware.com/en/VMware-vSphere/6.0/com.vmware.vsphere.virtualsan.doc/GUID-02F67DC3-3D5A-48A4-A445-D2BD6AF2862C.html): When you create a vSAN cluster, the performance service is disabled. You will need to enable vSAN performance service first to monitor the performance metrics. 
 
 
@@ -55,8 +55,7 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
     "performance.host-memory-slab",
     "performance.host-memory-heap",
     "performance.system-mem",
-  ]
-  
+  ]  
   # by default vsan_metric_skip_verify = false
   vsan_metric_skip_verify = true
   # vsan_metric_exclude = ["*"]
@@ -64,6 +63,13 @@ The configuration of vSAN resource is slightly different from hosts, vms and oth
   
   collect_concurrency = 5
   discover_concurrency = 5
+  
+  ## Optional SSL Config
+  # ssl_ca = "/path/to/cafile"
+  # ssl_cert = "/path/to/certfile"
+  # ssl_key = "/path/to/keyfile"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 * Use `vsan_metric_include = [...]` to define the vSAN metrics you want to collect. 
@@ -78,6 +84,10 @@ When set true, queried metrics will be identical to vsan_metric_include and the 
 
 * `vsan_cluster_include` defines a list of inventory paths that will be used to select a portion of vSAN clusters.
 vSAN metrics are only collected on cluster level. Therefore, use the same way as inventory paths for [vsphere's clusters](README.md#inventory-paths)
+
+* Many vCenter environments use self-signed certificates. Be sure to update the bottom portion of the above configuration and provide proper values for all applicable SSL Config settings that apply in your vSphere environment. In some environments, setting insecure_skip_verify = true will be necessary when the SSL certificates are not available.
+
+* To ensure consistent collection in larger vSphere environments you may need to increase concurrency for the plugin. Use the collect_concurrency setting to control concurrency. Set collect_concurrency to the number of virtual machines divided by 1500 and rounded up to the nearest integer. For example, for 1200 VMs use 1 and for 2300 VMs use 2.
  
 
 ## Measurements & Fields
