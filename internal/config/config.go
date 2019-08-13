@@ -1738,6 +1738,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["sflow_snmp_community"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.SFlowSNMPCommunity = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1780,6 +1788,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
+	delete(tbl.Fields, "sflow_snmp_community")
 
 	return c, nil
 }

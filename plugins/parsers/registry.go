@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/sflow"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
@@ -145,6 +146,9 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
+
+	// sflow configuration
+	SFlowSNMPCommunity string `toml:"sflow_snmp_community"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -219,6 +223,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
 		)
+	case "sflow":
+		parser, err = sflow.NewParser(config.MetricName, config.SFlowSNMPCommunity, config.DefaultTags)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}

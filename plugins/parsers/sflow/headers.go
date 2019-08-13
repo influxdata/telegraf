@@ -71,6 +71,10 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 	rec.record("etype", uint32(binary.BigEndian.Uint16(etherType[0:2])))
 
 	if etherType[0] == 0x8 && etherType[1] == 0x0 { // IPv4
+
+		// second byte of header container dscp and ecn
+		//secondByte := data[1]
+
 		rec.record("IPversion", 1) // v4?
 
 		if len(data) >= offset+36 {
