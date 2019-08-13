@@ -446,14 +446,13 @@ func parseTemperature(fields, deviceFields map[string]interface{}, str string) e
 }
 
 func init() {
-	m := NewSmart()
-	path, _ := exec.LookPath("smartctl")
-	if len(path) > 0 {
-		m.Path = path
-	}
-	m.Nocheck = "standby"
-
 	inputs.Add("smart", func() telegraf.Input {
+		m := NewSmart()
+		path, _ := exec.LookPath("smartctl")
+		if len(path) > 0 {
+			m.Path = path
+		}
+		m.Nocheck = "standby"
 		return m
 	})
 }
