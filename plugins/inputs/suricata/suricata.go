@@ -179,7 +179,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 	}
 
 	fields := make(map[string](map[string]interface{}))
-	globmap := make(map[string]interface{})
+	totalmap := make(map[string]interface{})
 	for k, v := range result["stats"].(map[string]interface{}) {
 		if k == "threads" {
 			if v, ok := v.(map[string]interface{}); ok {
@@ -199,14 +199,14 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 				acc.AddError(fmt.Errorf("'threads' sub-object does not have required structure"))
 			}
 		} else {
-			err = flexFlatten(globmap, k, v, s.Delimiter)
+			err = flexFlatten(totalmap, k, v, s.Delimiter)
 			if err != nil {
 				acc.AddError(err)
 				// we skip this subitem as something did not parse correctly
 			}
 		}
 	}
-	fields["total"] = globmap
+	fields["total"] = totalmap
 
 	for k := range fields {
 		if k == "Global" {
