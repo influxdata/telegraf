@@ -7,19 +7,22 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGatherAttributes(t *testing.T) {
-	s := &Smart{
-		Path:       "smartctl",
-		Attributes: true,
-	}
+	s := NewSmart()
+	s.Path = "smartctl"
+	s.Attributes = true
+
+	assert.Equal(t, time.Second*30, s.Timeout.Duration)
+
 	var acc testutil.Accumulator
 
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
 			if args[0] == "--scan" {
 				return []byte(mockScanData), nil
@@ -326,10 +329,12 @@ func TestGatherAttributes(t *testing.T) {
 }
 
 func TestGatherNoAttributes(t *testing.T) {
-	s := &Smart{
-		Path:       "smartctl",
-		Attributes: false,
-	}
+	s := NewSmart()
+	s.Path = "smartctl"
+	s.Attributes = false
+
+	assert.Equal(t, time.Second*30, s.Timeout.Duration)
+
 	// overwriting exec commands with mock commands
 	var acc testutil.Accumulator
 
@@ -374,7 +379,7 @@ func TestExcludedDev(t *testing.T) {
 }
 
 func TestGatherSATAInfo(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData), nil
 	}
 
@@ -384,13 +389,13 @@ func TestGatherSATAInfo(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSATAInfo65(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData65), nil
 	}
 
@@ -400,13 +405,13 @@ func TestGatherSATAInfo65(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHgstSAS(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
 	}
 
@@ -416,13 +421,13 @@ func TestGatherHgstSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHtSAS(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(htSASInfoData), nil
 	}
 
@@ -432,13 +437,13 @@ func TestGatherHtSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 5, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(3), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSD(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdInfoData), nil
 	}
 
@@ -448,13 +453,13 @@ func TestGatherSSD(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSDRaid(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdRaidInfoData), nil
 	}
 
@@ -464,13 +469,13 @@ func TestGatherSSDRaid(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherNvme(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(nvmeInfoData), nil
 	}
 
@@ -480,7 +485,7 @@ func TestGatherNvme(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric("smart_device",
