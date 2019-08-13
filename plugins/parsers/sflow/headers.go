@@ -72,12 +72,28 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 
 	if etherType[0] == 0x8 && etherType[1] == 0x0 { // IPv4
 
-		// second byte of header container dscp and ecn
-		//secondByte := data[1]
-
 		rec.record("IPversion", 1) // v4?
 
 		if len(data) >= offset+36 {
+
+			// second byte of header container dscp and ecn
+			//fmt.Println("len(data), offset", len(data), offset)
+			secondByte := data[offset+1]
+			ecn := secondByte & 0x03
+			dscp := secondByte & 0xFC
+			rec.record("ecn", uint16(ecn))
+			rec.record("dscp", uint16(dscp))
+			/*
+				fmt.Println("data[offset+2]", data[offset+2])
+				fmt.Println("data[offset+3]", data[offset+3])
+				fmt.Printf("data[offset+2,offset+3] %v\n", data[offset+2:offset+4])
+				fmt.Println("data[offset+2]", data[offset+2])
+				fmt.Println("data[offset+3]", data[offset+3])
+			*/
+			rec.record("total_length", uint32(binary.BigEndian.Uint16(data[offset+2:offset+4])))
+			flags := (data[offset+6] & 0xE0) >> 5
+			rec.record("flags", flags)
+
 			nextHeader = data[offset+9]
 			srcIP = data[offset+12 : offset+16]
 			dstIP = data[offset+16 : offset+20]
@@ -91,6 +107,11 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 	} else if etherType[0] == 0x86 && etherType[1] == 0xdd { // IPv6
 		rec.record("IPversion", 2) // v6?
 		if len(data) >= offset+40 {
+
+			trafficClass := binary.BigEndian.Uint16(data[offset : offset+2])
+			rec.record("dscp", (trafficClass&0xFC0)>>6)
+			rec.record("ecn", (trafficClass&30)>>4)
+
 			nextHeader = data[offset+6]
 			srcIP = data[offset+8 : offset+24]
 			dstIP = data[offset+24 : offset+40]
@@ -114,6 +135,16 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 		rec.record("dstPort", uint32(binary.BigEndian.Uint16(dataTransport[2:4])))
 	} else {
 		//fmt.Println("NOT recording srcPort and dstPort ", len(dataTransport), nextHeader)
+	}
+
+	if len(dataTransport) >= 4 && nextHeader == 6 { // TCP
+		rec.record("urgent_pointer", binary.BigEndian.Uint16(dataTransport[22:24]))
+		rec.record("tcp_header_length", uint32((dataTransport[16]>>4)*4))
+		rec.record("tcp_window_size", binary.BigEndian.Uint16((dataTransport[18:20])))
+	}
+
+	if len(dataTransport) >= 4 && (nextHeader == 17) { // UDP
+		rec.record("udp_length", binary.BigEndian.Uint16((dataTransport[4:6])))
 	}
 
 	//if nextHeader == 6 {

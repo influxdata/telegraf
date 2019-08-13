@@ -175,6 +175,32 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 									fields["tcp_flags"] = header[0]["TCPFlags"].(uint32)
 									fields["ip_ttl"] = header[0]["IPTTL"].(uint32)
 
+									if header[0]["dscp"] != nil {
+										tags["ip_dscp"] = fmt.Sprintf("%d", header[0]["dscp"].(uint16))
+									}
+									if header[0]["ecn"] != nil {
+										tags["ip_ecn"] = fmt.Sprintf("%d", header[0]["ecn"].(uint16))
+									}
+									if header[0]["total_length"] != nil {
+										fields["ip_total_length"] = header[0]["total_length"].(uint32)
+									}
+									if header[0]["flags"] != nil {
+										fields["ip_flags"] = header[0]["flags"].(uint8)
+									}
+									if header[0]["urgent_pointer"] != nil {
+										fields["tcp_urgent_pointer"] = header[0]["urgent_pointer"].(uint16)
+									}
+
+									if header[0]["tcp_header_length"] != nil {
+										fields["tcp_header_length"] = header[0]["tcp_header_length"].(uint32)
+									}
+									if header[0]["tcp_window_size"] != nil {
+										fields["tcp_window_size"] = header[0]["tcp_window_size"].(uint16)
+									}
+									if header[0]["udp_length"] != nil {
+										fields["udp_length"] = header[0]["udp_length"].(uint16)
+									}
+
 									// tag ip_protocol = proto
 									// tag ip_version = IPVersion
 
