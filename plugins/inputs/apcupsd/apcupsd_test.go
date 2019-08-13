@@ -2,7 +2,6 @@ package apcupsd
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 	"testing"
 
@@ -83,6 +82,8 @@ func TestApcupsdGather(t *testing.T) {
 		tests = []struct {
 			servers []string
 			err     bool
+			tags    map[string]string
+			fields  map[string]interface{}
 		}{
 			{
 				servers: []string{lAddr},
@@ -95,6 +96,23 @@ func TestApcupsdGather(t *testing.T) {
 			{
 				servers: []string{"tcp://" + lAddr},
 				err:     false,
+				tags: map[string]string{
+					"serial":   "ABC123",
+					"status":   "ONLINE",
+					"ups_name": "BERTHA",
+				},
+				fields: map[string]interface{}{
+					"status_flags":           "0x08",
+					"battery_charge_percent": float64(0),
+					"battery_voltage":        float64(0),
+					"input_frequency":        float64(0),
+					"input_voltage":          float64(0),
+					"internal_temp":          float64(0),
+					"load_percent":           float64(13),
+					"output_voltage":         float64(0),
+					"time_left_ns":           int64(2790000000000),
+					"time_on_battery_ns":     int64(0),
+				},
 			},
 		}
 
@@ -102,7 +120,6 @@ func TestApcupsdGather(t *testing.T) {
 	)
 
 	for _, test := range tests {
-		fmt.Println("running test", test.servers)
 		apc.Servers = test.servers
 
 		err = apc.Gather(&acc)
@@ -110,6 +127,7 @@ func TestApcupsdGather(t *testing.T) {
 			require.Error(t, err)
 		} else {
 			require.NoError(t, err)
+			acc.AssertContainsTaggedFields(t, "apcupsd", test.fields, test.tags)
 		}
 	}
 }
@@ -126,6 +144,10 @@ func kvBytes(kv string) ([]byte, []byte) {
 
 func genOutput() [][]byte {
 	kvs := []string{
+		"SERIALNO : ABC123",
+		"STATUS   : ONLINE",
+		"STATFLAG : 0x08 Status Flag",
+		"UPSNAME  : BERTHA",
 		"DATE     : 2016-09-06 22:13:28 -0400",
 		"HOSTNAME : example",
 		"LOADPCT  :  13.0 Percent Load Capacity",

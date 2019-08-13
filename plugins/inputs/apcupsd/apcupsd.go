@@ -3,6 +3,7 @@ package apcupsd
 import (
 	"context"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -64,7 +65,7 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 		}
 
 		fields := map[string]interface{}{
-			"status_online":          boolToInt(status.Status == "ONLINE"), // todo: revisit
+			"status_flags":           strings.TrimSuffix(status.StatusFlags, " Status Flag"),
 			"input_voltage":          status.LineVoltage,
 			"load_percent":           status.LoadPercent,
 			"battery_charge_percent": status.BatteryChargePercent,
@@ -79,13 +80,6 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields("apcupsd", fields, tags)
 	}
 	return nil
-}
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 func fetchStatus(ctx context.Context, addr *url.URL) (*apcupsd.Status, error) {
