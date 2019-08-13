@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
-
-var singleDotRegexp = regexp.MustCompilePOSIX(`[^.]\.[^.]`)
 
 const (
 	// InBufSize is the input buffer size for JSON received via socket.
