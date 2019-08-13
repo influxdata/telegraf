@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -174,6 +175,7 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 		},
 		createdDatabases: make(map[string]bool),
 		config:           config,
+		log:              models.Logger{Name: userAgent},
 	}
 	return client, nil
 }

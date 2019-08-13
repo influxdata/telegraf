@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
@@ -305,6 +306,7 @@ func init() {
 			CreateUDPClientF: func(config *UDPConfig) (Client, error) {
 				return NewUDPClient(*config)
 			},
+			log: models.Logger{Name: "outputs.influxdb"},
 		}
 	})
 }

@@ -7,6 +7,11 @@ import (
 )
 
 func TestErrorCount(t *testing.T) {
+	iErrors.Set(0)
+	aErrors.Set(0)
+	oErrors.Set(0)
+	pErrors.Set(0)
+
 	log := Logger{Name: "inputs.test"}
 	log.Errorf("something went wrong")
 	log.Error("something went wrong")
@@ -27,6 +32,7 @@ func TestErrorCount(t *testing.T) {
 }
 
 func TestPluginConfig(t *testing.T) {
+	iErrors.Set(0)
 	p := PluginConfig{Log: Logger{Name: "inputs.test"}}
 	log := p.Logger()
 
