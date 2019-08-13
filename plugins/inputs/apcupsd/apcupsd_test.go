@@ -25,13 +25,6 @@ func TestApcupsdInit(t *testing.T) {
 	_ = input().(*ApcUpsd)
 }
 
-func TestBoolToInt(t *testing.T) {
-	one := boolToInt(true)
-	if one != 1 {
-		t.Errorf("boolToInt failed")
-	}
-}
-
 func listen(t *testing.T) (string, error) {
 	ln, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
