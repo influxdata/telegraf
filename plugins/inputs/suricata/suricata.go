@@ -29,7 +29,6 @@ type Suricata struct {
 	Delimiter string `toml:"delimiter"`
 
 	InputListener *net.UnixListener
-	JSON          []byte
 	Ctx           context.Context
 	Cancel        context.CancelFunc
 
