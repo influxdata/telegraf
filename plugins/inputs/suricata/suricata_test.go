@@ -216,7 +216,6 @@ func TestSuricataSplitDots(t *testing.T) {
 
 func TestSuricataInvalidPath(t *testing.T) {
 	tmpfn := fmt.Sprintf("/t%d/X", rand.Int63())
-
 	s := Suricata{
 		Source: tmpfn,
 	}
