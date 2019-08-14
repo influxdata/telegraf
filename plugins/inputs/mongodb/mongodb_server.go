@@ -171,6 +171,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 					}, col_stat_line)
 					if err != nil {
 						log.Println("E! Error getting col stats from " + col_name + "(" + err.Error() + ")")
+						continue
 					}
 					collection := &Collection{
 						Name:         col_name,
