@@ -188,7 +188,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", nil)
 	e := NewExec()
 	if runtime.GOOS != "windows" {
-		e.Commands = []string{"/bin/ech0 metric_value"}
+		e.Commands = []string{"/bin/echo metric_value"}
 	} else {
 		dir, err := ioutil.TempDir("", "telegraf")
 		if err != nil {
@@ -199,7 +199,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		e.Commands = []string{filepath.Join(dir, "ech* metric_value")}
+		e.Commands = []string{filepath.Join(dir, "echo metric_value")}
 	}
 	e.SetParser(parser)
 
