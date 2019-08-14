@@ -32,22 +32,28 @@ const (
 	// a single InfluxDB point.
 	// 64 KB
 	DEFAULT_MAX_LINE_SIZE = 64 * 1024
+
+	// DefaultDatabaseTag is the name of the tag that will be used to carry
+	// the database collected from the query string
+	DefaultDatabaseTag = "database"
 )
 
 type TimeFunc func() time.Time
 
 type HTTPListener struct {
-	ServiceAddress string
-	ReadTimeout    internal.Duration
-	WriteTimeout   internal.Duration
-	MaxBodySize    internal.Size
-	MaxLineSize    internal.Size
-	Port           int
-
+	ServiceAddress string `toml:"service_address"`
+	// Port gets pulled out of ServiceAddress
+	Port int
 	tlsint.ServerConfig
 
-	BasicUsername string
-	BasicPassword string
+	ReadTimeout   internal.Duration `toml:"read_timeout"`
+	WriteTimeout  internal.Duration `toml:"write_timeout"`
+	MaxBodySize   internal.Size     `toml:"max_body_size"`
+	MaxLineSize   internal.Size     `toml:"max_line_size"`
+	BasicUsername string            `toml:"basic_username"`
+	BasicPassword string            `toml:"basic_password"`
+	KeepDatabase  bool              `toml:"keep_database"`
+	DatabaseTag   string            `toml:"database_tag"`
 
 	TimeFunc
 
@@ -93,6 +99,16 @@ const sampleConfig = `
   ## Maximum line size allowed to be sent in bytes.
   ## 0 means to use the default of 65536 bytes (64 kibibytes)
   max_line_size = "64KiB"
+  
+  ## If the write has a database on it then it should be kept
+  ## for metrics further on. The database will be added as a tag.
+  ## This tag can be used in downstream outputs.
+  keep_database = true
+
+  ## Optional tag name used to store the database if you want to change it to something custom. 
+  ## If not set it will be "database"
+  ## Only used if keep_database is set to true.
+  # database_tag = database
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -258,6 +274,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	now := h.TimeFunc()
 
 	precision := req.URL.Query().Get("precision")
+	db := req.URL.Query().Get("db")
 
 	// Handle gzip request bodies
 	body := req.Body
@@ -315,7 +332,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-			err = h.parse(buf[:n+bufStart], now, precision)
+			err = h.parse(buf[:n+bufStart], now, precision, db)
 			if err != nil {
 				log.Println("D! "+err.Error(), bufStart+n)
 				return400 = true
@@ -346,7 +363,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i+1], now, precision); err != nil {
+		if err := h.parse(buf[:i+1], now, precision, db); err != nil {
 			log.Println("D! " + err.Error())
 			return400 = true
 		}
@@ -359,7 +376,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
+func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -371,6 +388,16 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
 	}
 
 	for _, m := range metrics {
+		// Do we need to keep the database name in the query string
+		if h.KeepDatabase {
+			// Did we get a database argument. If we didn't get it. We can't set it.
+			if db != "" {
+				// Is there already a database set. If not use the database in the query string.
+				if _, ok := m.Tags()[h.DatabaseTag]; !ok {
+					m.AddTag(h.DatabaseTag, db)
+				}
+			}
+		}
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
@@ -436,12 +463,14 @@ func init() {
 		return &HTTPListener{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
+			DatabaseTag:    DefaultDatabaseTag,
 		}
 	})
 	inputs.Add("influxdb_listener", func() telegraf.Input {
 		return &HTTPListener{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
+			DatabaseTag:    DefaultDatabaseTag,
 		}
 	})
 }

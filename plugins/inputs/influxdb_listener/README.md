@@ -46,6 +46,16 @@ submits data to InfluxDB determines the destination database.
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
 
+  ## If the write has a database on it then it should be kept
+  ## for metrics further on. The database will be added as a tag.
+  ## This tag can be used in downstream outputs.
+  keep_database = true
+
+  ## Optional tag name used to store the database if you want to change it to something custom. 
+  ## If not set it will be "database"
+  ## Only used if keep_database is set to true.
+  # database_tag = database
+
   ## Optional username and password to accept for HTTP basic authentication.
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"

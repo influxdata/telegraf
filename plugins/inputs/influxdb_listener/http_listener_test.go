@@ -46,6 +46,7 @@ func newTestHTTPListener() *HTTPListener {
 	listener := &HTTPListener{
 		ServiceAddress: "localhost:0",
 		TimeFunc:       time.Now,
+		DatabaseTag:    DefaultDatabaseTag,
 	}
 	return listener
 }
@@ -146,8 +147,9 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 }
 
-func TestWriteHTTP(t *testing.T) {
+func TestWriteHTTPKeepDatabase(t *testing.T) {
 	listener := newTestHTTPListener()
+	listener.KeepDatabase = true
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -162,7 +164,7 @@ func TestWriteHTTP(t *testing.T) {
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01"},
+		map[string]string{"host": "server01", "database": "mydb"},
 	)
 
 	// post multiple message to listener
@@ -177,21 +179,9 @@ func TestWriteHTTP(t *testing.T) {
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
-			map[string]string{"host": hostTag},
+			map[string]string{"host": hostTag, "database": "mydb"},
 		)
 	}
-
-	// Post a gigantic metric to the listener and verify that an error is returned:
-	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 400, resp.StatusCode)
-
-	acc.Wait(3)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01"},
-	)
 }
 
 // http listener should add a newline at the end of the buffer if it's not there
