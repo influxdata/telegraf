@@ -3,6 +3,9 @@ package exec
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -155,7 +158,20 @@ func TestCommandError(t *testing.T) {
 func TestExecCommandWithGlob(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", nil)
 	e := NewExec()
-	e.Commands = []string{"/bin/ech* metric_value"}
+	if runtime.GOOS != "windows" {
+		e.Commands = []string{"/bin/ech* metric_value"}
+	} else {
+		dir, err := ioutil.TempDir("", "telegraf")
+		if err != nil {
+			t.Error(err)
+		}
+		defer os.RemoveAll(dir)
+		err = ioutil.WriteFile(filepath.Join(dir, "echo.cmd"), []byte("@echo metric_value"), 0666)
+		if err != nil {
+			t.Error(err)
+		}
+		e.Commands = []string{filepath.Join(dir, "ech* metric_value")}
+	}
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
@@ -171,7 +187,20 @@ func TestExecCommandWithGlob(t *testing.T) {
 func TestExecCommandWithoutGlob(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", nil)
 	e := NewExec()
-	e.Commands = []string{"/bin/echo metric_value"}
+	if runtime.GOOS != "windows" {
+		e.Commands = []string{"/bin/ech0 metric_value"}
+	} else {
+		dir, err := ioutil.TempDir("", "telegraf")
+		if err != nil {
+			t.Error(err)
+		}
+		defer os.RemoveAll(dir)
+		err = ioutil.WriteFile(filepath.Join(dir, "echo.cmd"), []byte("@echo metric_value"), 0666)
+		if err != nil {
+			t.Error(err)
+		}
+		e.Commands = []string{filepath.Join(dir, "ech* metric_value")}
+	}
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator
