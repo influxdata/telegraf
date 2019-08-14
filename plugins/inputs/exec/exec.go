@@ -70,9 +70,16 @@ func (c CommandRunner) Run(
 	command string,
 	timeout time.Duration,
 ) ([]byte, []byte, error) {
-	split_cmd, err := shellquote.Split(command)
-	if err != nil || len(split_cmd) == 0 {
-		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
+	var split_cmd []string
+	var err error
+	//cannot use shellquote.Split on Windows as it threats Windows path separator char '\' as a mark for backslashed special char
+	if runtime.GOOS != "windows" {
+		split_cmd, err = shellquote.Split(command)
+		if err != nil || len(split_cmd) == 0 {
+			return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
+		}
+	} else {
+		split_cmd = strings.Fields(command)
 	}
 
 	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
