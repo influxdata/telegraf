@@ -2,7 +2,6 @@ package config
 
 import (
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -195,7 +195,7 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	// Tests telegraf size parsing.
 	assert.Equal(t, internal.Size{Size: 1024 * 1024}, inputHTTPListener.MaxBodySize)
 	// Tests toml multiline basic strings.
-	assert.Equal(t, "/path/to/my/cert", strings.TrimRight(inputHTTPListener.TLSCert, "\r\n"))
+	assert.Equal(t, "/path/to/my/cert"+testutil.LineSeparator, inputHTTPListener.TLSCert)
 }
 
 func TestConfig_FieldNotDefined(t *testing.T) {

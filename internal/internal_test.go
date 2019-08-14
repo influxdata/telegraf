@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -88,7 +89,7 @@ func TestCombinedOutput(t *testing.T) {
 	out, err := CombinedOutputTimeout(cmd, time.Second)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "foo\n", string(out))
+	assert.Equal(t, "foo"+testutil.LineSeparator, string(out))
 }
 
 // test that CombinedOutputTimeout and exec.Cmd.CombinedOutput return
