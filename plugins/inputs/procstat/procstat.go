@@ -245,6 +245,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"memory_locked"] = mem.Locked
 	}
 
+	mem_perc, err := proc.MemoryPercent()
+	if err == nil {
+		fields[prefix+"memory_usage"] = mem_perc
+	}
+
 	rlims, err := proc.RlimitUsage(true)
 	if err == nil {
 		for _, rlim := range rlims {
