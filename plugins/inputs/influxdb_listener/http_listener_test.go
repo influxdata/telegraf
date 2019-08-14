@@ -164,6 +164,7 @@ func TestWriteHTTP(t *testing.T) {
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
+	t.Logf("Randy %v", acc)
 
 	// post multiple message to listener
 	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))

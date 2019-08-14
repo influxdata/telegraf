@@ -49,6 +49,8 @@ type HTTPListener struct {
 	BasicUsername string
 	BasicPassword string
 
+	KeepDatabase bool
+
 	TimeFunc
 
 	mu sync.Mutex
@@ -93,6 +95,11 @@ const sampleConfig = `
   ## Maximum line size allowed to be sent in bytes.
   ## 0 means to use the default of 65536 bytes (64 kibibytes)
   max_line_size = "64KiB"
+  
+  ## If the write has a database on it then it should be kept
+  ## for metrics further on. The database will be added as a
+  ## tag under database
+  keep_database = true
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -258,6 +265,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	now := h.TimeFunc()
 
 	precision := req.URL.Query().Get("precision")
+	db := req.URL.Query().Get("db")
 
 	// Handle gzip request bodies
 	body := req.Body
@@ -315,7 +323,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-			err = h.parse(buf[:n+bufStart], now, precision)
+			err = h.parse(buf[:n+bufStart], now, precision, db)
 			if err != nil {
 				log.Println("D! "+err.Error(), bufStart+n)
 				return400 = true
@@ -346,7 +354,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i+1], now, precision); err != nil {
+		if err := h.parse(buf[:i+1], now, precision, db); err != nil {
 			log.Println("D! " + err.Error())
 			return400 = true
 		}
@@ -359,7 +367,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
+func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -371,6 +379,9 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
 	}
 
 	for _, m := range metrics {
+		if db != "" {
+			m.AddTag("database", db)
+		}
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
