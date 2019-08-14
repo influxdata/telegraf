@@ -60,6 +60,9 @@ smartctl -s on <device>
   ## done and all found will be included except for the
   ## excluded in excludes.
   # devices = [ "/dev/ada0 -d atacam" ]
+
+  ## Timeout for the smartctl command to complete.
+  # timeout = "30s"
 ```
 
 ### Permissions
