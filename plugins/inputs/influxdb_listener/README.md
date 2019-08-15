@@ -46,7 +46,7 @@ submits data to InfluxDB determines the destination database.
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
 
-  ## Optional tag name used to store the database.
+  ## Optional tag name used to store the database name.
   ## If the write has a database in the query string then it will be kept in this tag name.
   ## This tag can be used in downstream outputs.
   ## The default value of nothing means it will be off and the database will not be recorded.
