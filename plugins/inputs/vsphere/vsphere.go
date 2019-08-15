@@ -40,7 +40,10 @@ type VSphere struct {
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
 	Separator               string
+	CustomAttributeInclude  []string
+	CustomAttributeExclude  []string
 	UseIntSamples           bool
+	IpAddresses             []string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -155,6 +158,8 @@ var sampleConfig = `
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
+  ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+  # ip_addresses = ["ipv6", "ipv4" ]
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
@@ -173,7 +178,7 @@ var sampleConfig = `
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default for Datastores only
 
-  ## Plugin Settings
+  ## Plugin Settings  
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
@@ -207,6 +212,14 @@ var sampleConfig = `
   ## the plugin. Setting this flag to "false" will send values as floats to
   ## preserve the full precision when averaging takes place.
   # use_int_samples = true
+
+  ## Custom attributes from vCenter can be very useful for queries in order to slice the
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  ## by default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  # custom_attribute_include = []
+  # custom_attribute_exclude = ["*"] 
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -321,7 +334,10 @@ func init() {
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
 			Separator:               "_",
+			CustomAttributeInclude:  []string{},
+			CustomAttributeExclude:  []string{"*"},
 			UseIntSamples:           true,
+			IpAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

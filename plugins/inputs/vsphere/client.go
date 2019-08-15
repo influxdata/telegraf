@@ -305,3 +305,18 @@ func (c *Client) ListResources(ctx context.Context, root *view.ContainerView, ki
 	defer cancel1()
 	return root.Retrieve(ctx1, kind, ps, dst)
 }
+
+func (c *Client) GetCustomFields(ctx context.Context) (map[int32]string, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	cfm := object.NewCustomFieldsManager(c.Client.Client)
+	fields, err := cfm.Field(ctx1)
+	if err != nil {
+		return nil, err
+	}
+	r := make(map[int32]string)
+	for _, f := range fields {
+		r[f.Key] = f.Name
+	}
+	return r, nil
+}
