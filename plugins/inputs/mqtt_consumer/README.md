@@ -3,13 +3,20 @@
 The [MQTT][mqtt] consumer plugin reads from the specified MQTT topics
 and creates metrics using one of the supported [input data formats][].
 
-### Configuration:
+### Configuration
 
 ```toml
 [[inputs.mqtt_consumer]]
   ## MQTT broker URLs to be used. The format should be scheme://host:port,
   ## schema can be tcp, ssl, or ws.
-  servers = ["tcp://localhost:1883"]
+  servers = ["tcp://127.0.0.1:1883"]
+
+  ## Topics that will be subscribed to.
+  topics = [
+    "telegraf/host01/cpu",
+    "telegraf/+/mem",
+    "sensors/#",
+  ]
 
   ## QoS policy for messages
   ##   0 = at most once
@@ -18,10 +25,10 @@ and creates metrics using one of the supported [input data formats][].
   ##
   ## When using a QoS of 1 or 2, you should enable persistent_session to allow
   ## resuming unacknowledged messages.
-  qos = 0
+  # qos = 0
 
   ## Connection timeout for initial connection in seconds
-  connection_timeout = "30s"
+  # connection_timeout = "30s"
 
   ## Maximum messages to read from the broker that have not been written by an
   ## output.  For best throughput set based on the number of metrics within
@@ -33,21 +40,17 @@ and creates metrics using one of the supported [input data formats][].
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
 
-  ## Topics to subscribe to
-  topics = [
-    "telegraf/host01/cpu",
-    "telegraf/+/mem",
-    "sensors/#",
-  ]
+  ## Persistent session disables clearing of the client session on connection.
+  ## In order for this option to work you must also set client_id to identity
+  ## the client.  To receive messages that arrived while the client is offline,
+  ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
+  ## publishing.
+  # persistent_session = false
 
-  # if true, messages that can't be delivered while the subscriber is offline
-  # will be delivered when it comes back (such as on service restart).
-  # NOTE: if true, client_id MUST be set
-  persistent_session = false
-  # If empty, a random client ID will be generated.
-  client_id = ""
+  ## If unset, a random client ID will be generated.
+  # client_id = ""
 
-  ## username and password to connect MQTT server.
+  ## Username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
@@ -65,7 +68,7 @@ and creates metrics using one of the supported [input data formats][].
   data_format = "influx"
 ```
 
-### Tags:
+### Metrics
 
 - All measurements are tagged with the incoming topic, ie
 `topic=telegraf/host01/cpu`
