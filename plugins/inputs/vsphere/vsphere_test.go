@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -256,34 +255,6 @@ func TestThrottledExecutor(t *testing.T) {
 	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
 }
 
-func TestTimeout(t *testing.T) {
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
-
-	m, s, err := createSim()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Remove()
-	defer s.Close()
-
-	v := defaultVSphere()
-	var acc testutil.Accumulator
-	v.Vcenters = []string{s.URL.String()}
-	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
-	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
-	defer v.Stop()
-	err = v.Gather(&acc)
-
-	// The accumulator must contain exactly one error and it must be a deadline exceeded.
-	require.Equal(t, 1, len(acc.Errors))
-	require.True(t, strings.Contains(acc.Errors[0].Error(), "context deadline exceeded"))
-}
-
 func TestMaxQuery(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -411,6 +382,11 @@ func TestFinder(t *testing.T) {
 
 	vm = []mo.VirtualMachine{}
 	err = f.Find(ctx, "VirtualMachine", "/**/DC0_H0_VM*", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(vm))
+
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM*", &vm)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(vm))
 
