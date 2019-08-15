@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+const defaultTimeout = 5 * time.Second
 
 const sampleConfig = `
   ## Required Fibaro controller address/hostname.
@@ -28,13 +31,13 @@ const description = "Read devices value(s) from a Fibaro controller"
 
 // Fibaro contains connection information
 type Fibaro struct {
-	URL string
+	URL string `toml:"url"`
 
 	// HTTP Basic Auth Credentials
-	Username string
-	Password string
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 
-	Timeout internal.Duration
+	Timeout internal.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -212,6 +215,8 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("fibaro", func() telegraf.Input {
-		return &Fibaro{}
+		return &Fibaro{
+			Timeout: internal.Duration{Duration: defaultTimeout},
+		}
 	})
 }

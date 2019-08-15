@@ -20,13 +20,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
-type APIErrorType int
-
 type APIError struct {
 	StatusCode  int
 	Title       string
 	Description string
-	Type        APIErrorType
 }
 
 func (e APIError) Error() string {
@@ -43,25 +40,30 @@ const (
 )
 
 type HTTPConfig struct {
-	URL             *url.URL
-	Token           string
-	Organization    string
-	Bucket          string
-	Timeout         time.Duration
-	Headers         map[string]string
-	Proxy           *url.URL
-	UserAgent       string
-	ContentEncoding string
-	TLSConfig       *tls.Config
+	URL              *url.URL
+	Token            string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
+	Timeout          time.Duration
+	Headers          map[string]string
+	Proxy            *url.URL
+	UserAgent        string
+	ContentEncoding  string
+	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
 }
 
 type httpClient struct {
-	WriteURL        string
-	ContentEncoding string
-	Timeout         time.Duration
-	Headers         map[string]string
+	ContentEncoding  string
+	Timeout          time.Duration
+	Headers          map[string]string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
 
 	client     *http.Client
 	serializer *influx.Serializer
@@ -103,14 +105,6 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		serializer = influx.NewSerializer()
 	}
 
-	writeURL, err := makeWriteURL(
-		*config.URL,
-		config.Organization,
-		config.Bucket)
-	if err != nil {
-		return nil, err
-	}
-
 	var transport *http.Transport
 	switch config.URL.Scheme {
 	case "http", "https":
@@ -138,11 +132,14 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		url:             config.URL,
-		WriteURL:        writeURL,
-		ContentEncoding: config.ContentEncoding,
-		Timeout:         timeout,
-		Headers:         headers,
+		url:              config.URL,
+		ContentEncoding:  config.ContentEncoding,
+		Timeout:          timeout,
+		Headers:          headers,
+		Organization:     config.Organization,
+		Bucket:           config.Bucket,
+		BucketTag:        config.BucketTag,
+		ExcludeBucketTag: config.ExcludeBucketTag,
 	}
 	return client, nil
 }
@@ -173,8 +170,49 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	if c.retryTime.After(time.Now()) {
 		return errors.New("Retry time has not elapsed")
 	}
+
+	batches := make(map[string][]telegraf.Metric)
+	if c.BucketTag == "" {
+		err := c.writeBatch(ctx, c.Bucket, metrics)
+		if err != nil {
+			return err
+		}
+	} else {
+		for _, metric := range metrics {
+			bucket, ok := metric.GetTag(c.BucketTag)
+			if !ok {
+				bucket = c.Bucket
+			}
+
+			if _, ok := batches[bucket]; !ok {
+				batches[bucket] = make([]telegraf.Metric, 0)
+			}
+
+			if c.ExcludeBucketTag {
+				metric.RemoveTag(c.BucketTag)
+			}
+
+			batches[bucket] = append(batches[bucket], metric)
+		}
+
+		for bucket, batch := range batches {
+			err := c.writeBatch(ctx, bucket, batch)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
+	url, err := makeWriteURL(*c.url, c.Organization, bucket)
+	if err != nil {
+		return err
+	}
+
 	reader := influx.NewReader(metrics, c.serializer)
-	req, err := c.makeWriteRequest(reader)
+	req, err := c.makeWriteRequest(url, reader)
 	if err != nil {
 		return err
 	}
@@ -197,10 +235,11 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	switch resp.StatusCode {
-	case http.StatusBadRequest, http.StatusUnauthorized,
-		http.StatusForbidden, http.StatusRequestEntityTooLarge:
+	case http.StatusBadRequest, http.StatusRequestEntityTooLarge:
 		log.Printf("E! [outputs.influxdb_v2] Failed to write metric: %s\n", desc)
 		return nil
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return fmt.Errorf("failed to write metric: %s", desc)
 	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
@@ -227,7 +266,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 }
 
-func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
+func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
 	var err error
 	if c.ContentEncoding == "gzip" {
 		body, err = internal.CompressWithGzip(body)
@@ -236,7 +275,7 @@ func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
 		}
 	}
 
-	req, err := http.NewRequest("POST", c.WriteURL, body)
+	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -274,4 +313,8 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	}
 	loc.RawQuery = params.Encode()
 	return loc.String(), nil
+}
+
+func (c *httpClient) Close() {
+	internal.CloseIdleConnections(c.client)
 }

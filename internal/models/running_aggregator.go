@@ -1,10 +1,12 @@
 package models
 
 import (
+	"log"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -57,6 +59,7 @@ type AggregatorConfig struct {
 	DropOriginal bool
 	Period       time.Duration
 	Delay        time.Duration
+	Grace        time.Duration
 
 	NameOverride      string
 	MeasurementPrefix string
@@ -69,13 +72,28 @@ func (r *RunningAggregator) Name() string {
 	return "aggregators." + r.Config.Name
 }
 
+func (r *RunningAggregator) Init() error {
+	if p, ok := r.Aggregator.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *RunningAggregator) Period() time.Duration {
 	return r.Config.Period
 }
 
-func (r *RunningAggregator) SetPeriodStart(start time.Time) {
+func (r *RunningAggregator) EndPeriod() time.Time {
+	return r.periodEnd
+}
+
+func (r *RunningAggregator) UpdateWindow(start, until time.Time) {
 	r.periodStart = start
-	r.periodEnd = r.periodStart.Add(r.Config.Period).Add(r.Config.Delay)
+	r.periodEnd = until
+	log.Printf("D! [%s] Updated aggregation range [%s, %s]", r.Name(), start, until)
 }
 
 func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
@@ -96,39 +114,36 @@ func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return m
 }
 
-func (r *RunningAggregator) metricFiltered(metric telegraf.Metric) {
-	r.MetricsFiltered.Incr(1)
-	metric.Accept()
-}
-
-func (r *RunningAggregator) metricDropped(metric telegraf.Metric) {
-	r.MetricsDropped.Incr(1)
-	metric.Accept()
-}
-
 // Add a metric to the aggregator and return true if the original metric
 // should be dropped.
-func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
-	if ok := r.Config.Filter.Select(metric); !ok {
+func (r *RunningAggregator) Add(m telegraf.Metric) bool {
+	if ok := r.Config.Filter.Select(m); !ok {
 		return false
 	}
 
-	metric = metric.Copy()
+	// Make a copy of the metric but don't retain tracking.  We do not fail a
+	// delivery due to the aggregation not being sent because we can't create
+	// aggregations of historical data.  Additionally, waiting for the
+	// aggregation to be pushed would introduce a hefty latency to delivery.
+	m = metric.FromMetric(m)
 
-	r.Config.Filter.Modify(metric)
-	if len(metric.FieldList()) == 0 {
+	r.Config.Filter.Modify(m)
+	if len(m.FieldList()) == 0 {
+		r.MetricsFiltered.Incr(1)
 		return r.Config.DropOriginal
 	}
 
 	r.Lock()
 	defer r.Unlock()
 
-	if r.periodStart.IsZero() || metric.Time().After(r.periodEnd) {
-		r.metricDropped(metric)
+	if m.Time().Before(r.periodStart.Add(-r.Config.Grace)) || m.Time().After(r.periodEnd.Add(r.Config.Delay)) {
+		log.Printf("D! [%s] metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
+			r.Name(), m.Time(), r.periodStart, r.periodEnd, r.Config.Grace)
+		r.MetricsDropped.Incr(1)
 		return r.Config.DropOriginal
 	}
 
-	r.Aggregator.Add(metric)
+	r.Aggregator.Add(m)
 	return r.Config.DropOriginal
 }
 
@@ -136,8 +151,10 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 	r.Lock()
 	defer r.Unlock()
 
-	r.periodStart = r.periodEnd
-	r.periodEnd = r.periodStart.Add(r.Config.Period).Add(r.Config.Delay)
+	since := r.periodEnd
+	until := r.periodEnd.Add(r.Config.Period)
+	r.UpdateWindow(since, until)
+
 	r.push(acc)
 	r.Aggregator.Reset()
 }

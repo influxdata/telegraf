@@ -714,3 +714,15 @@ func TestBuffer_AddOverwriteAndRejectOffset(t *testing.T) {
 	require.Equal(t, 13, reject)
 	require.Equal(t, 5, accept)
 }
+
+func TestBuffer_RejectEmptyBatch(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	batch := b.Batch(2)
+	b.Add(MetricTime(1))
+	b.Reject(batch)
+	b.Add(MetricTime(2))
+	batch = b.Batch(2)
+	for _, m := range batch {
+		require.NotNil(t, m)
+	}
+}

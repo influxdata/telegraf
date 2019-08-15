@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -321,4 +322,31 @@ func TestParseStream(t *testing.T) {
 			},
 			DefaultTime(),
 		), metric)
+}
+
+func TestTimestampUnixFloatPrecision(t *testing.T) {
+	p := Parser{
+		MetricName:      "csv",
+		ColumnNames:     []string{"time", "value"},
+		TimestampColumn: "time",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+	}
+	data := `1551129661.95456123352050781250,42`
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42,
+				"time":  1551129661.954561233,
+			},
+			time.Unix(1551129661, 954561233),
+		),
+	}
+
+	metrics, err := p.Parse([]byte(data))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
 }

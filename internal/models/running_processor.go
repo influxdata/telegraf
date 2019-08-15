@@ -40,6 +40,16 @@ func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {
 	return false
 }
 
+func (rp *RunningProcessor) Init() error {
+	if p, ok := rp.Processor.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	rp.Lock()
 	defer rp.Unlock()

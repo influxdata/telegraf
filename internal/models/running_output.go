@@ -32,6 +32,7 @@ type OutputConfig struct {
 type RunningOutput struct {
 	// Must be 64-bit aligned
 	newMetricsCount int64
+	droppedMetrics  int64
 
 	Name              string
 	Output            telegraf.Output
@@ -96,6 +97,16 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
+func (ro *RunningOutput) Init() error {
+	if p, ok := ro.Output.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // AddMetric adds a metric to the output.
 //
 // Takes ownership of metric
@@ -118,7 +129,8 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
-	ro.buffer.Add(metric)
+	dropped := ro.buffer.Add(metric)
+	atomic.AddInt64(&ro.droppedMetrics, int64(dropped))
 
 	count := atomic.AddInt64(&ro.newMetricsCount, 1)
 	if count == int64(ro.MetricBatchSize) {
@@ -180,7 +192,21 @@ func (ro *RunningOutput) WriteBatch() error {
 	return nil
 }
 
+func (ro *RunningOutput) Close() {
+	err := ro.Output.Close()
+	if err != nil {
+		log.Printf("E! [outputs.%s] Error closing output: %v", ro.Name, err)
+	}
+}
+
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
+	dropped := atomic.LoadInt64(&ro.droppedMetrics)
+	if dropped > 0 {
+		log.Printf("W! [outputs.%s] Metric buffer overflow; %d metrics have been dropped",
+			ro.Name, dropped)
+		atomic.StoreInt64(&ro.droppedMetrics, 0)
+	}
+
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)

@@ -33,14 +33,14 @@ func getHTTPURL() *url.URL {
 }
 
 func TestHTTP_EmptyConfig(t *testing.T) {
-	config := &influxdb.HTTPConfig{}
+	config := influxdb.HTTPConfig{}
 	_, err := influxdb.NewHTTPClient(config)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), influxdb.ErrMissingURL.Error())
 }
 
 func TestHTTP_MinimalConfig(t *testing.T) {
-	config := &influxdb.HTTPConfig{
+	config := influxdb.HTTPConfig{
 		URL: getHTTPURL(),
 	}
 	_, err := influxdb.NewHTTPClient(config)
@@ -48,7 +48,7 @@ func TestHTTP_MinimalConfig(t *testing.T) {
 }
 
 func TestHTTP_UnsupportedScheme(t *testing.T) {
-	config := &influxdb.HTTPConfig{
+	config := influxdb.HTTPConfig{
 		URL: &url.URL{
 			Scheme: "foo",
 			Host:   "localhost",
@@ -69,14 +69,14 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		config           *influxdb.HTTPConfig
+		config           influxdb.HTTPConfig
 		database         string
 		queryHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
 		errFunc          func(t *testing.T, err error)
 	}{
 		{
 			name: "success",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "xyzzy",
 			},
@@ -88,7 +88,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "send basic auth",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Username: "guy",
 				Password: "smiley",
@@ -106,7 +106,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "send user agent",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL: u,
 				Headers: map[string]string{
 					"A": "B",
@@ -124,7 +124,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "send headers",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL: u,
 				Headers: map[string]string{
 					"A": "B",
@@ -141,7 +141,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "database default",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL: u,
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
@@ -152,7 +152,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "database name is escaped",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: `a " b`,
 			},
@@ -164,7 +164,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "invalid database name creates api error",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: `a \\ b`,
 			},
@@ -185,7 +185,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "error with no response body",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -203,7 +203,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 		},
 		{
 			name: "ok with no response body",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -230,7 +230,7 @@ func TestHTTP_CreateDatabase(t *testing.T) {
 
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
-			err = client.CreateDatabase(ctx)
+			err = client.CreateDatabase(ctx, client.Database())
 			if tt.errFunc != nil {
 				tt.errFunc(t, err)
 			} else {
@@ -251,14 +251,14 @@ func TestHTTP_Write(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		config           *influxdb.HTTPConfig
+		config           influxdb.HTTPConfig
 		queryHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
 		errFunc          func(t *testing.T, err error)
 		logFunc          func(t *testing.T, str string)
 	}{
 		{
 			name: "success",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -272,7 +272,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "send basic auth",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 				Username: "guy",
@@ -288,7 +288,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "send user agent",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:       u,
 				Database:  "telegraf",
 				UserAgent: "telegraf",
@@ -300,7 +300,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "default user agent",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -311,7 +311,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "default database",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL: u,
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
@@ -321,7 +321,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "send headers",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL: u,
 				Headers: map[string]string{
 					"A": "B",
@@ -336,7 +336,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "send retention policy",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:             u,
 				Database:        "telegraf",
 				RetentionPolicy: "foo",
@@ -348,7 +348,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "send consistency",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:         u,
 				Database:    "telegraf",
 				Consistency: "all",
@@ -360,7 +360,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "hinted handoff not empty no log no error",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -374,7 +374,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "partial write errors are logged no error",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -388,7 +388,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "parse errors are logged no error",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -402,7 +402,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "http error",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -419,7 +419,7 @@ func TestHTTP_Write(t *testing.T) {
 		},
 		{
 			name: "http error with desc",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      u,
 				Database: "telegraf",
 			},
@@ -520,14 +520,14 @@ func TestHTTP_WritePathPrefix(t *testing.T) {
 	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
-	config := &influxdb.HTTPConfig{
+	config := influxdb.HTTPConfig{
 		URL:      u,
 		Database: "telegraf",
 	}
 
 	client, err := influxdb.NewHTTPClient(config)
 	require.NoError(t, err)
-	err = client.CreateDatabase(ctx)
+	err = client.CreateDatabase(ctx, config.Database)
 	require.NoError(t, err)
 	err = client.Write(ctx, metrics)
 	require.NoError(t, err)
@@ -573,7 +573,7 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
-	config := &influxdb.HTTPConfig{
+	config := influxdb.HTTPConfig{
 		URL:             u,
 		Database:        "telegraf",
 		ContentEncoding: "gzip",
@@ -605,7 +605,7 @@ func TestHTTP_UnixSocket(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		config           *influxdb.HTTPConfig
+		config           influxdb.HTTPConfig
 		database         string
 		queryHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
 		writeHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
@@ -613,7 +613,7 @@ func TestHTTP_UnixSocket(t *testing.T) {
 	}{
 		{
 			name: "success",
-			config: &influxdb.HTTPConfig{
+			config: influxdb.HTTPConfig{
 				URL:      &url.URL{Scheme: "unix", Path: sock},
 				Database: "xyzzy",
 			},
@@ -649,7 +649,7 @@ func TestHTTP_UnixSocket(t *testing.T) {
 
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
-			err = client.CreateDatabase(ctx)
+			err = client.CreateDatabase(ctx, tt.config.Database)
 			if tt.errFunc != nil {
 				tt.errFunc(t, err)
 			} else {

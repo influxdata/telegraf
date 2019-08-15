@@ -24,10 +24,10 @@ var (
 
 type Client interface {
 	Write(context.Context, []telegraf.Metric) error
-	CreateDatabase(ctx context.Context) error
-
-	URL() string
+	CreateDatabase(ctx context.Context, database string) error
 	Database() string
+	URL() string
+	Close()
 }
 
 // InfluxDB struct is the primary data structure for the plugin
@@ -37,6 +37,8 @@ type InfluxDB struct {
 	Username             string
 	Password             string
 	Database             string
+	DatabaseTag          string `toml:"database_tag"`
+	ExcludeDatabaseTag   bool   `toml:"exclude_database_tag"`
 	UserAgent            string
 	RetentionPolicy      string
 	WriteConsistency     string
@@ -71,6 +73,13 @@ var sampleConfig = `
   ## The target database for metrics; will be created as needed.
   ## For UDP url endpoint database needs to be configured on server side.
   # database = "telegraf"
+
+  ## The value of this tag will be used to determine the database.  If this
+  ## tag is not set the 'database' option is used as the default.
+  # database_tag = ""
+
+  ## If true, the database tag will not be added to the metric.
+  # exclude_database_tag = false
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
   ## Telegraf with a user without permissions to create databases or when the
@@ -179,6 +188,9 @@ func (i *InfluxDB) Connect() error {
 }
 
 func (i *InfluxDB) Close() error {
+	for _, client := range i.clients {
+		client.Close()
+	}
 	return nil
 }
 
@@ -205,14 +217,12 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		}
 
 		switch apiError := err.(type) {
-		case *APIError:
+		case *DatabaseNotFoundError:
 			if !i.SkipDatabaseCreation {
-				if apiError.Type == DatabaseNotFound {
-					err := client.CreateDatabase(ctx)
-					if err != nil {
-						log.Printf("E! [outputs.influxdb] when writing to [%s]: database %q not found and failed to recreate",
-							client.URL(), client.Database())
-					}
+				err := client.CreateDatabase(ctx, apiError.Database)
+				if err != nil {
+					log.Printf("E! [outputs.influxdb] when writing to [%s]: database %q not found and failed to recreate",
+						client.URL(), apiError.Database)
 				}
 			}
 		}
@@ -245,19 +255,22 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	}
 
 	config := &HTTPConfig{
-		URL:             url,
-		Timeout:         i.Timeout.Duration,
-		TLSConfig:       tlsConfig,
-		UserAgent:       i.UserAgent,
-		Username:        i.Username,
-		Password:        i.Password,
-		Proxy:           proxy,
-		ContentEncoding: i.ContentEncoding,
-		Headers:         i.HTTPHeaders,
-		Database:        i.Database,
-		RetentionPolicy: i.RetentionPolicy,
-		Consistency:     i.WriteConsistency,
-		Serializer:      i.serializer,
+		URL:                  url,
+		Timeout:              i.Timeout.Duration,
+		TLSConfig:            tlsConfig,
+		UserAgent:            i.UserAgent,
+		Username:             i.Username,
+		Password:             i.Password,
+		Proxy:                proxy,
+		ContentEncoding:      i.ContentEncoding,
+		Headers:              i.HTTPHeaders,
+		Database:             i.Database,
+		DatabaseTag:          i.DatabaseTag,
+		ExcludeDatabaseTag:   i.ExcludeDatabaseTag,
+		SkipDatabaseCreation: i.SkipDatabaseCreation,
+		RetentionPolicy:      i.RetentionPolicy,
+		Consistency:          i.WriteConsistency,
+		Serializer:           i.serializer,
 	}
 
 	c, err := i.CreateHTTPClientF(config)
@@ -266,10 +279,10 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	}
 
 	if !i.SkipDatabaseCreation {
-		err = c.CreateDatabase(ctx)
+		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
 			log.Printf("W! [outputs.influxdb] when writing to [%s]: database %q creation failed: %v",
-				c.URL(), c.Database(), err)
+				c.URL(), i.Database, err)
 		}
 	}
 
@@ -281,10 +294,10 @@ func init() {
 		return &InfluxDB{
 			Timeout: internal.Duration{Duration: time.Second * 5},
 			CreateHTTPClientF: func(config *HTTPConfig) (Client, error) {
-				return NewHTTPClient(config)
+				return NewHTTPClient(*config)
 			},
 			CreateUDPClientF: func(config *UDPConfig) (Client, error) {
-				return NewUDPClient(config)
+				return NewUDPClient(*config)
 			},
 		}
 	})

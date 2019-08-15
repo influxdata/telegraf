@@ -51,7 +51,7 @@ make test
 Running the integration tests requires several docker containers to be
 running.  You can start the containers with:
 ```
-make docker-run
+docker-compose up
 ```
 
 And run the full test suite with:

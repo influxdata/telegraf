@@ -1,7 +1,6 @@
 package dns_query
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -85,7 +84,11 @@ func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 					"record_type": d.RecordType,
 				}
 
-				dnsQueryTime, err := d.getDnsQueryTime(domain, server)
+				dnsQueryTime, rcode, err := d.getDnsQueryTime(domain, server)
+				if rcode >= 0 {
+					tags["rcode"] = dns.RcodeToString[rcode]
+					fields["rcode_value"] = rcode
+				}
 				if err == nil {
 					setResult(Success, fields, tags)
 					fields["query_time_ms"] = dnsQueryTime
@@ -130,7 +133,7 @@ func (d *DnsQuery) setDefaultValues() {
 	}
 }
 
-func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error) {
+func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, int, error) {
 	dnsQueryTime := float64(0)
 
 	c := new(dns.Client)
@@ -140,25 +143,25 @@ func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error
 	m := new(dns.Msg)
 	recordType, err := d.parseRecordType()
 	if err != nil {
-		return dnsQueryTime, err
+		return dnsQueryTime, -1, err
 	}
 	m.SetQuestion(dns.Fqdn(domain), recordType)
 	m.RecursionDesired = true
 
 	r, rtt, err := c.Exchange(m, net.JoinHostPort(server, strconv.Itoa(d.Port)))
 	if err != nil {
-		return dnsQueryTime, err
+		return dnsQueryTime, -1, err
 	}
 	if r.Rcode != dns.RcodeSuccess {
-		return dnsQueryTime, errors.New(fmt.Sprintf("Invalid answer name %s after %s query for %s\n", domain, d.RecordType, domain))
+		return dnsQueryTime, r.Rcode, fmt.Errorf("Invalid answer (%s) from %s after %s query for %s", dns.RcodeToString[r.Rcode], server, d.RecordType, domain)
 	}
 	dnsQueryTime = float64(rtt.Nanoseconds()) / 1e6
-	return dnsQueryTime, nil
+	return dnsQueryTime, r.Rcode, nil
 }
 
 func (d *DnsQuery) parseRecordType() (uint16, error) {
 	var recordType uint16
-	var error error
+	var err error
 
 	switch d.RecordType {
 	case "A":
@@ -184,10 +187,10 @@ func (d *DnsQuery) parseRecordType() (uint16, error) {
 	case "TXT":
 		recordType = dns.TypeTXT
 	default:
-		error = errors.New(fmt.Sprintf("Record type %s not recognized", d.RecordType))
+		err = fmt.Errorf("Record type %s not recognized", d.RecordType)
 	}
 
-	return recordType, error
+	return recordType, err
 }
 
 func setResult(result ResultType, fields map[string]interface{}, tags map[string]string) {

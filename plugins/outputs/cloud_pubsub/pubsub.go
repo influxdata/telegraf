@@ -2,7 +2,9 @@ package cloud_pubsub
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"log"
 	"sync"
 
 	"cloud.google.com/go/pubsub"
@@ -16,11 +18,11 @@ import (
 
 const sampleConfig = `
   ## Required. Name of Google Cloud Platform (GCP) Project that owns
-  ## the given PubSub subscription.
+  ## the given PubSub topic.
   project = "my-project"
 
-  ## Required. Name of PubSub subscription to ingest metrics from.
-  subscription = "my-subscription"
+  ## Required. Name of PubSub topic to publish metrics to.
+  topic = "my-topic"
 
   ## Required. Data format to consume.
   ## Each data format has its own unique set of configuration options.
@@ -56,6 +58,9 @@ const sampleConfig = `
   ## Optional. Specifies a timeout for requests to the PubSub API.
   # publish_timeout = "30s"
 
+  ## Optional. If true, published PubSub message data will be base64-encoded.
+  # base64_data = false
+
   ## Optional. PubSub attributes to add to metrics.
   # [[inputs.pubsub.attributes]]
   #   my_attr = "tag_value"
@@ -72,6 +77,7 @@ type PubSub struct {
 	PublishByteThreshold  int               `toml:"publish_byte_threshold"`
 	PublishNumGoroutines  int               `toml:"publish_num_go_routines"`
 	PublishTimeout        internal.Duration `toml:"publish_timeout"`
+	Base64Data            bool              `toml:"base64_data"`
 
 	t topic
 	c *pubsub.Client
@@ -207,6 +213,12 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 		if err != nil {
 			return nil, err
 		}
+
+		if ps.Base64Data {
+			encoded := base64.StdEncoding.EncodeToString(b)
+			b = []byte(encoded)
+		}
+
 		msg := &pubsub.Message{Data: b}
 		if ps.Attributes != nil {
 			msg.Attributes = ps.Attributes
@@ -218,8 +230,15 @@ func (ps *PubSub) toMessages(metrics []telegraf.Metric) ([]*pubsub.Message, erro
 	for i, m := range metrics {
 		b, err := ps.serializer.Serialize(m)
 		if err != nil {
-			return nil, err
+			log.Printf("D! [outputs.cloud_pubsub] Could not serialize metric: %v", err)
+			continue
 		}
+
+		if ps.Base64Data {
+			encoded := base64.StdEncoding.EncodeToString(b)
+			b = []byte(encoded)
+		}
+
 		msgs[i] = &pubsub.Message{
 			Data: b,
 		}
