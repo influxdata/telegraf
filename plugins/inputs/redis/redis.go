@@ -336,35 +336,39 @@ func gatherCommandstateLine(
 	acc telegraf.Accumulator,
 	global_tags map[string]string,
 ) {
-	if strings.HasPrefix(name, "cmdstat") {
-		fields := make(map[string]interface{})
-		tags := make(map[string]string)
-		for k, v := range global_tags {
-			tags[k] = v
+	if !strings.HasPrefix(name, "cmdstat") {
+		return
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
+	parts := strings.Split(line, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
 		}
-		tags["command"] = strings.TrimPrefix(name, "cmdstat_")
-		parts := strings.Split(line, ",")
-		for _, part := range parts {
-			kv := strings.Split(part, "=")
-			if len(kv) == 2 {
-				switch kv[0] {
-				case "calls":
-					fallthrough
-				case "usec":
-					ival, err := strconv.ParseInt(kv[1], 10, 64)
-					if err == nil {
-						fields[kv[0]] = ival
-					}
-				case "usec_per_call":
-					fval, err := strconv.ParseFloat(kv[1], 64)
-					if err == nil {
-						fields[kv[0]] = fval
-					}
-				}
+
+		switch kv[0] {
+		case "calls":
+			fallthrough
+		case "usec":
+			ival, err := strconv.ParseInt(kv[1], 10, 64)
+			if err == nil {
+				fields[kv[0]] = ival
+			}
+		case "usec_per_call":
+			fval, err := strconv.ParseFloat(kv[1], 64)
+			if err == nil {
+				fields[kv[0]] = fval
 			}
 		}
-		acc.AddFields("redis_cmdstat", fields, tags)
 	}
+	acc.AddFields("redis_cmdstat", fields, tags)
 }
 
 func init() {

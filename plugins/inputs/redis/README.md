@@ -120,6 +120,13 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - expires(int, number)
     - avg_ttl(int, number)
 
+- redis_cmdstat
+    Every Redis used command will have 3 new fields:
+    - calls(int, number)
+    - usec(int, mircoseconds)
+    - usec_per_call(float, microseconds)
+
+
 ### Tags:
 
 - All measurements have the following tags:
