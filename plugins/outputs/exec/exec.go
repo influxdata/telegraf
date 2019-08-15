@@ -11,7 +11,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	shellquote "github.com/kballard/go-shellquote"
 )
 
 var sampleConfig = `
@@ -29,7 +28,7 @@ var sampleConfig = `
 `
 
 type Exec struct {
-	Command string
+	Command []string
 	Timeout internal.Duration
 
 	serializer serializers.Serializer
@@ -39,18 +38,13 @@ type Exec struct {
 }
 
 type Runner interface {
-	Run(*Exec, string, bytes.Buffer) error
+	Run(*Exec, []string, bytes.Buffer) error
 }
 
 type CommandRunner struct{}
 
-func (c CommandRunner) Run(e *Exec, command string, buffer bytes.Buffer) error {
-	splitCmd, err := shellquote.Split(command)
-	if err != nil || len(splitCmd) == 0 {
-		return fmt.Errorf("exec: unable to parse command, %s", err)
-	}
-
-	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
+func (c CommandRunner) Run(e *Exec, command []string, buffer bytes.Buffer) error {
+	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Stdin = &buffer
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -61,7 +55,8 @@ func (c CommandRunner) Run(e *Exec, command string, buffer bytes.Buffer) error {
 			log.Printf("D! Command error: %q\n", s)
 		}
 
-		return fmt.Errorf("exec: %s for command %q", err, command)
+		status, _ := internal.ExitStatus(err)
+		return fmt.Errorf("[outputs.exec] %q exited %d with %s", command, status, err.Error())
 	}
 
 	return nil
@@ -85,13 +80,6 @@ func (e *Exec) Connect() error {
 
 func (e *Exec) Close() error {
 	return nil
-}
-
-func (e *Exec) ProcessCommand(command string, buffer bytes.Buffer) {
-	if err := e.runner.Run(e, command, buffer); err != nil {
-		e.errChan <- err
-		return
-	}
 }
 
 func (e *Exec) Write(metrics []telegraf.Metric) error {

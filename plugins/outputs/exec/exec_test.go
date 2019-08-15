@@ -65,7 +65,7 @@ func getBasicExec(scriptFile, outFile string) *Exec {
 	return exec
 }
 
-func getTestScriptCmd(scriptFile, outFile string) string {
+func getTestScriptCmd(scriptFile, outFile string) []string {
 	_, filename, _, _ := runtime.Caller(1)
 	script := strings.Replace(filename, "exec_test.go", scriptFile, 1)
 
@@ -73,7 +73,7 @@ func getTestScriptCmd(scriptFile, outFile string) string {
 		script = "/bin/sh " + script
 	}
 
-	return fmt.Sprintf("%s %s", script, outFile)
+	return append(strings.Split(script, " "), outFile)
 }
 
 func validateFile(filename, expected string, t *testing.T) {

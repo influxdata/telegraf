@@ -16,7 +16,7 @@ The external program is free to do what it wants with the data.
   # Timeout for each command to complete.
   timeout = "30s"
   
-  # Data format to consume.
+  # Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
