@@ -46,7 +46,6 @@ func newTestHTTPListener() *HTTPListener {
 	listener := &HTTPListener{
 		ServiceAddress: "localhost:0",
 		TimeFunc:       time.Now,
-		DatabaseTag:    DefaultDatabaseTag,
 	}
 	return listener
 }
@@ -149,7 +148,7 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 
 func TestWriteHTTPKeepDatabase(t *testing.T) {
 	listener := newTestHTTPListener()
-	listener.KeepDatabase = true
+	listener.DatabaseTag = "database"
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
