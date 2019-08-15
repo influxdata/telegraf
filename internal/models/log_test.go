@@ -31,10 +31,9 @@ func TestErrorCount(t *testing.T) {
 	require.Equal(t, int64(1), pErrors.Get())
 }
 
-func TestPluginConfig(t *testing.T) {
+func TestLogging(t *testing.T) {
 	iErrors.Set(0)
-	p := PluginConfig{Log: Logger{Name: "inputs.test"}}
-	log := p.Logger()
+	log := Logger{Name: "inputs.test"}
 
 	log.Debugf("something happened")
 	log.Debug("something happened")

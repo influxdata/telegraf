@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -111,7 +110,7 @@ func TestGatherRemote(t *testing.T) {
 				Sources: []string{test.server},
 				Timeout: internal.Duration{Duration: test.timeout},
 			}
-			sc.Init(models.PluginConfig{Log: models.Logger{}})
+			sc.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 			sc.InsecureSkipVerify = true
 			testErr := false
@@ -171,7 +170,7 @@ func TestGatherLocal(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
-			sc.Init(models.PluginConfig{Log: models.Logger{}})
+			sc.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 			error := false
 
@@ -221,7 +220,7 @@ func TestGatherChain(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
-			sc.Init(models.PluginConfig{Log: models.Logger{}})
+			sc.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 			error := false
 
@@ -241,7 +240,7 @@ func TestGatherChain(t *testing.T) {
 
 func TestStrings(t *testing.T) {
 	sc := X509Cert{}
-	sc.Init(models.PluginConfig{Log: models.Logger{}})
+	sc.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	tests := []struct {
 		name     string
@@ -270,7 +269,7 @@ func TestGatherCert(t *testing.T) {
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
 	}
-	m.Init(models.PluginConfig{Log: models.Logger{}})
+	m.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)

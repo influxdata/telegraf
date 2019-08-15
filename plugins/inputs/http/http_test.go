@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf"
 	plugin "github.com/influxdata/telegraf/plugins/inputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -38,7 +38,7 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init(models.PluginConfig{Log: models.Logger{}})
+	plugin.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 1)
@@ -80,7 +80,7 @@ func TestHTTPHeaders(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init(models.PluginConfig{Log: models.Logger{}})
+	plugin.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -103,7 +103,7 @@ func TestInvalidStatusCode(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init(models.PluginConfig{Log: models.Logger{}})
+	plugin.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
@@ -129,7 +129,7 @@ func TestMethod(t *testing.T) {
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
-	plugin.Init(models.PluginConfig{Log: models.Logger{}})
+	plugin.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -223,7 +223,7 @@ func TestBodyAndContentEncoding(t *testing.T) {
 			tt.plugin.SetParser(parser)
 
 			var acc testutil.Accumulator
-			tt.plugin.Init(models.PluginConfig{Log: models.Logger{}})
+			tt.plugin.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 			err = tt.plugin.Gather(&acc)
 			require.NoError(t, err)
 		})

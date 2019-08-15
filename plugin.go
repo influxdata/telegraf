@@ -9,9 +9,9 @@ type Initializer interface {
 	Init(PluginConfig) error
 }
 
-// PluginConfig allows the configuration of plugins.
-type PluginConfig interface {
-	Logger() Logger
+// PluginConfig contains individualized plugin configuration.
+type PluginConfig struct {
+	Log Logger
 }
 
 // Logger defines an interface for logging.

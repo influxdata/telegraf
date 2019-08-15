@@ -8,10 +8,10 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,7 +60,7 @@ func TestDeprecatedURLSupport(t *testing.T) {
 		},
 	}
 
-	output.Init(models.PluginConfig{Log: models.Logger{}})
+	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestDefaultURL(t *testing.T) {
 		},
 	}
 
-	output.Init(models.PluginConfig{Log: models.Logger{}})
+	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -102,7 +102,7 @@ func TestConnectUDPConfig(t *testing.T) {
 			return &MockClient{}, nil
 		},
 	}
-	output.Init(models.PluginConfig{Log: models.Logger{}})
+	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -146,7 +146,7 @@ func TestConnectHTTPConfig(t *testing.T) {
 		},
 	}
 
-	output.Init(models.PluginConfig{Log: models.Logger{}})
+	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 		},
 	}
 
-	output.Init(models.PluginConfig{Log: models.Logger{}})
+	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	err := output.Connect()
 	require.NoError(t, err)

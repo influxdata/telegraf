@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -51,7 +51,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
-	activeMQ.Init(models.PluginConfig{Log: models.Logger{}})
+	activeMQ.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	activeMQ.GatherQueuesMetrics(&acc, queues)
 	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
@@ -98,7 +98,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
-	activeMQ.Init(models.PluginConfig{Log: models.Logger{}})
+	activeMQ.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	activeMQ.GatherTopicsMetrics(&acc, topics)
 	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
@@ -139,7 +139,7 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 	activeMQ.Server = "localhost"
 	activeMQ.Port = 8161
-	activeMQ.Init(models.PluginConfig{Log: models.Logger{}})
+	activeMQ.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 
 	activeMQ.GatherSubscribersMetrics(&acc, subscribers)
 	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
@@ -170,7 +170,7 @@ func TestURLs(t *testing.T) {
 		URL:      "http://" + ts.Listener.Addr().String(),
 		Webadmin: "admin",
 	}
-	err := plugin.Init(models.PluginConfig{Log: models.Logger{}})
+	err := plugin.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
 	require.NoError(t, err)
 
 	var acc testutil.Accumulator

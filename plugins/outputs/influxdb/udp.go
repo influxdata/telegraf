@@ -31,6 +31,7 @@ type UDPConfig struct {
 	URL            *url.URL
 	Serializer     *influx.Serializer
 	Dialer         Dialer
+	Log            telegraf.Logger
 }
 
 func NewUDPClient(config UDPConfig) (*udpClient, error) {

@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -56,7 +55,6 @@ type Exec struct {
 
 func NewExec() *Exec {
 	return &Exec{
-		log:     models.Logger{},
 		runner:  CommandRunner{},
 		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
@@ -147,7 +145,6 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	e.log.Debugf("command %#v", command)
 	out, errbuf, runErr := e.runner.Run(command, e.Timeout.Duration)
 	if !isNagios && runErr != nil {
 		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
@@ -233,7 +230,7 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Exec) Init(conf telegraf.PluginConfig) error {
-	e.log = conf.Logger()
+	e.log = conf.Log
 
 	return nil
 }

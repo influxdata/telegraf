@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -100,6 +99,7 @@ type HTTPConfig struct {
 
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
+	log               telegraf.Logger
 }
 
 type httpClient struct {
@@ -175,7 +175,7 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 		},
 		createdDatabases: make(map[string]bool),
 		config:           config,
-		log:              models.Logger{Name: userAgent},
+		log:              config.log,
 	}
 	return client, nil
 }

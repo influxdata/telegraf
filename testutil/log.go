@@ -1,10 +1,7 @@
-package models
+package testutil
 
 import (
 	"log"
-	"strings"
-
-	"github.com/influxdata/telegraf/selfstat"
 )
 
 // Logger defines a logging structure for plugins.
@@ -14,13 +11,11 @@ type Logger struct {
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l Logger) Errorf(format string, args ...interface{}) {
-	l.addError()
 	log.Printf("E! ["+l.Name+"] "+format, args...)
 }
 
 // Error logs an error message, patterned after log.Print.
 func (l Logger) Error(args ...interface{}) {
-	l.addError()
 	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
 }
 
@@ -53,23 +48,3 @@ func (l Logger) Infof(format string, args ...interface{}) {
 func (l Logger) Info(args ...interface{}) {
 	log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
 }
-
-func (l Logger) addError() {
-	switch {
-	case strings.HasPrefix(l.Name, "aggregator"):
-		aErrors.Incr(1)
-	case strings.HasPrefix(l.Name, "input"):
-		iErrors.Incr(1)
-	case strings.HasPrefix(l.Name, "output"):
-		oErrors.Incr(1)
-	case strings.HasPrefix(l.Name, "processor"):
-		pErrors.Incr(1)
-	}
-}
-
-var (
-	aErrors = selfstat.Register("agent", "aggregator_errors", map[string]string{})
-	iErrors = selfstat.Register("agent", "input_errors", map[string]string{})
-	oErrors = selfstat.Register("agent", "output_errors", map[string]string{})
-	pErrors = selfstat.Register("agent", "processor_errors", map[string]string{})
-)
