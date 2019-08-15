@@ -40,40 +40,12 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   ## enable mutually authenticated TLS connections
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
-  ## Use only tls ciphers defined in this list
-  ## Possible values:
-  ## TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
-  ## TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
-  ## TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-  ## TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-  ## TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-  ## TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-  ## TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
-  ## TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
-  ## TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
-  ## TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
-  ## TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
-  ## TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
-  ## TLS_RSA_WITH_AES_128_GCM_SHA256
-  ## TLS_RSA_WITH_AES_256_GCM_SHA384
-  ## TLS_RSA_WITH_AES_128_CBC_SHA256
-  ## TLS_RSA_WITH_AES_128_CBC_SHA
-  ## TLS_RSA_WITH_AES_256_CBC_SHA
-  ## TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
-  ## TLS_RSA_WITH_3DES_EDE_CBC_SHA
-  ## TLS_RSA_WITH_RC4_128_SHA
-  ## TLS_ECDHE_RSA_WITH_RC4_128_SHA
-  ## TLS_ECDHE_ECDSA_WITH_RC4_128_SHA
-  ## If value wasn't defined default will be used
-  # tls_cipher_suites = ["TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305", "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305", "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256", "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256", "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA", "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA", "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA", "TLS_RSA_WITH_AES_128_GCM_SHA256", "TLS_RSA_WITH_AES_256_GCM_SHA384", "TLS_RSA_WITH_AES_128_CBC_SHA256", "TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_RSA_WITH_AES_256_CBC_SHA"]
-
   ## contains the minimum SSL/TLS version that is acceptable.
   ## If not set, then TLS 1.0 is taken as the minimum.
   # tls_min_version = "TLS11"
 
   ## contains the maximum SSL/TLS version that is acceptable.
-  ## If not set, then the maximum version supported by this package is used,
-  ## which is currently TLS 1.2 (for go < 1.12) or TLS 1.3 (for go >= 1.12).
+  ## If not set, then the maximum supported version is used.
   # tls_max_version = "TLS12"
 
   ## Export metric collection time.
