@@ -90,11 +90,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b824faa7e5fe834b3a51947f658e4b8e86b8216a9ab7e93b9bd47d8987a73b68"
+  digest = "1:129a8d525c2a092359cd0b078da658eb38f143d2b334dbb7edf64adff095e13f"
   name = "github.com/Onefootball/go-localytics"
   packages = ["."]
   pruneopts = ""
-  revision = "3e211c1953515c6d05525e8de4aa812de1ed7777"
+  revision = "290462814af6d508a3325d6a4e168317b8812d0e"
 
 [[projects]]
   digest = "1:5dd52495eaf9fad11f4742f341166aa9eb68f70061fc1a9b546f9481b284b6d8"
