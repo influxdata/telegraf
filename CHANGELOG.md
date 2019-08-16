@@ -1,3 +1,7 @@
+## v1.11.5 [unreleased]
+
+- [#6250](https://github.com/influxdata/telegraf/pull/6250): Update go-sql-driver/mysql driver to 1.4.1 to address auth issues.
+
 ## v1.11.4 [2019-08-06]
 
 #### Bugfixes
