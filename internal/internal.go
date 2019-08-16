@@ -236,11 +236,8 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 	})
 
 	err := c.Wait()
-	isTimeout := timer.Stop()
 
-	if err != nil {
-		return err
-	} else if isTimeout == false {
+	if !timer.Stop() {
 		return TimeoutErr
 	}
 

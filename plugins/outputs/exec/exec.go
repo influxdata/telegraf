@@ -3,6 +3,7 @@ package exec
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os/exec"
 	"time"
@@ -13,80 +14,59 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-var sampleConfig = `
-  ## Command
-  command = "/usr/bin/mycollector --foo=bar"
+// Exec defines the exec output plugin.
+type Exec struct {
+	Command []string          `toml:"command"`
+	Timeout internal.Duration `toml:"timeout"`
 
-  ## Timeout for each command to complete.
-  timeout = "5s"
+	runner     RunCloser
+	serializer serializers.Serializer
+}
+
+var sampleConfig = `
+  ## Command to injest metrics via stdin.
+  command = ["tee", "-a", "/dev/null"]
+
+  ## Timeout for command to complete.
+  # timeout = "5s"
 
   ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
+  # data_format = "influx"
 `
 
-type Exec struct {
-	Command []string
-	Timeout internal.Duration
-
-	serializer serializers.Serializer
-
-	runner  Runner
-	errChan chan error
-}
-
-type Runner interface {
-	Run(*Exec, []string, bytes.Buffer) error
-}
-
-type CommandRunner struct{}
-
-func (c CommandRunner) Run(e *Exec, command []string, buffer bytes.Buffer) error {
-	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Stdin = &buffer
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := internal.RunTimeout(cmd, e.Timeout.Duration); err != nil {
-		s := stderr.String()
-		if s != "" {
-			log.Printf("D! Command error: %q\n", s)
-		}
-
-		status, _ := internal.ExitStatus(err)
-		return fmt.Errorf("[outputs.exec] %q exited %d with %s", command, status, err.Error())
-	}
-
-	return nil
-}
-
-func (e *Exec) Description() string {
-	return "Send Telegraf metrics to commands that can input from stdin"
-}
-
-func (e *Exec) SampleConfig() string {
-	return sampleConfig
-}
-
+// SetSerializer sets the serializer for the output.
 func (e *Exec) SetSerializer(serializer serializers.Serializer) {
 	e.serializer = serializer
 }
 
+// Connect satisfies the Ouput interface.
 func (e *Exec) Connect() error {
 	return nil
 }
 
+// Close kills the running process if any.
 func (e *Exec) Close() error {
-	return nil
-}
-
-func (e *Exec) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
+	if e.runner == nil {
 		return nil
 	}
+	return e.runner.Close()
+}
 
+// Description describes the plugin.
+func (e *Exec) Description() string {
+	return "Send metrics to command as input over stdin"
+}
+
+// SampleConfig returns a sample configuration.
+func (e *Exec) SampleConfig() string {
+	return sampleConfig
+}
+
+// Write writes the metrics to the configured command.
+func (e *Exec) Write(metrics []telegraf.Metric) error {
 	var buffer bytes.Buffer
 	for _, metric := range metrics {
 		value, err := e.serializer.Serialize(metric)
@@ -96,17 +76,63 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 		buffer.Write(value)
 	}
 
-	if err := e.runner.Run(e, e.Command, buffer); err != nil {
-		return err
+	if buffer.Len() <= 0 {
+		return nil
 	}
 
+	return e.runner.Run(e.Timeout.Duration, e.Command, &buffer)
+}
+
+// RunCloser provides an interface for running and ending an exec.Cmd before a
+// timeout is reached.
+type RunCloser interface {
+	Run(time.Duration, []string, io.Reader) error
+	Close() error
+}
+
+// CommandRunner runs a command with the ability to kill the process before the timeout.
+type CommandRunner struct {
+	cmd *exec.Cmd
+}
+
+// Run runs the command.
+func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.Reader) error {
+	cmd := exec.Command(command[0], command[1:]...)
+	cmd.Stdin = buffer
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := internal.RunTimeout(cmd, timeout); err != nil {
+		if err == internal.TimeoutErr {
+			return fmt.Errorf("%q timed out and was killed", command)
+		}
+
+		s := stderr.String()
+		if s != "" {
+			log.Printf("E! [outputs.exec] Command error: %q", s)
+		}
+
+		status, _ := internal.ExitStatus(err)
+		return fmt.Errorf("%q exited %d with %s", command, status, err.Error())
+	}
+	c.cmd = cmd
+
 	return nil
+}
+
+// Close kills the process if it is still running.
+func (c *CommandRunner) Close() error {
+	if c.cmd == nil {
+		return nil
+	}
+
+	return c.cmd.Process.Kill()
 }
 
 func init() {
 	outputs.Add("exec", func() telegraf.Output {
 		return &Exec{
-			runner:  CommandRunner{},
+			runner:  &CommandRunner{},
 			Timeout: internal.Duration{Duration: time.Second * 5},
 		}
 	})
