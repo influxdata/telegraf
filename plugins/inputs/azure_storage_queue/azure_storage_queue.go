@@ -78,7 +78,7 @@ func (a *AzureStorageQueue) GatherQueueMetrics(acc telegraf.Accumulator, queueIt
 	tags["storage_account"] = a.StorageAccountName
 	fields["size"] = properties.ApproximateMessagesCount()
 	if peekedMessage != nil {
-		fields["oldest_message_age"] = time.Now().Unix() - peekedMessage.InsertionTime.Unix()
+		fields["oldest_message_age_ns"] = time.Now().UnixNano() - peekedMessage.InsertionTime.UnixNano()
 	}
 	acc.AddFields("azure_storage_queues", fields, tags)
 }
