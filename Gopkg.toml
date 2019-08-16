@@ -292,3 +292,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/Onefootball/go-localytics"

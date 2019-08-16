@@ -89,6 +89,14 @@
   version = "v0.4.9"
 
 [[projects]]
+  branch = "master"
+  digest = "1:b824faa7e5fe834b3a51947f658e4b8e86b8216a9ab7e93b9bd47d8987a73b68"
+  name = "github.com/Onefootball/go-localytics"
+  packages = ["."]
+  pruneopts = ""
+  revision = "3e211c1953515c6d05525e8de4aa812de1ed7777"
+
+[[projects]]
   digest = "1:5dd52495eaf9fad11f4742f341166aa9eb68f70061fc1a9b546f9481b284b6d8"
   name = "github.com/Shopify/sarama"
   packages = ["."]
@@ -283,6 +291,14 @@
   ]
   pruneopts = ""
   revision = "2be1aa521ff4499e74b7861a2779ba1e96e3e2c5"
+
+[[projects]]
+  digest = "1:8a7970acc52fbdc197f906b6bfb3c1984db9add3b825ee826b9bba1a7a1f6a19"
+  name = "github.com/dghubble/sling"
+  packages = ["."]
+  pruneopts = ""
+  revision = "5a2946623f885d0cfcd7085b039baec12ad53fdd"
+  version = "v1.3.0"
 
 [[projects]]
   digest = "1:6098222470fe0172157ce9bbef5d2200df4edde17ee649c5d6e48330e4afa4c6"
@@ -1666,6 +1682,7 @@
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",
+    "github.com/Onefootball/go-localytics",
     "github.com/Shopify/sarama",
     "github.com/StackExchange/wmi",
     "github.com/aerospike/aerospike-client-go",
