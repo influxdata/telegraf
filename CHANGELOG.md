@@ -64,6 +64,9 @@
 - [#6216](https://github.com/influxdata/telegraf/pull/6216): Add telegraf and go version to the internal input plugin.
 - [#6214](https://github.com/influxdata/telegraf/pull/6214): Update the number of logical CPUs dynamically in system plugin.
 - [#6259](https://github.com/influxdata/telegraf/pull/6259): Add darwin (macOS) builds to the release.
+- [#6241](https://github.com/influxdata/telegraf/pull/6241): Add configurable timeout setting to smart input.
+- [#6249](https://github.com/influxdata/telegraf/pull/6249): Add memory_usage field to procstat input plugin.
+- [#5971](https://github.com/influxdata/telegraf/pull/5971): Add support for custom attributes to vsphere input.
 
 #### Bugfixes
 
@@ -73,6 +76,11 @@
 - [#6100](https://github.com/influxdata/telegraf/issues/6100): Fix SSPI authentication not working in sqlserver input.
 - [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
 - [#6136](https://github.com/influxdata/telegraf/issues/6136): Support Kafka 2.3.0 consumer groups.
+- [#6232](https://github.com/influxdata/telegraf/issues/6232): Fix persistent session in mqtt_consumer.
+
+## v1.11.5 [unreleased]
+
+- [#6250](https://github.com/influxdata/telegraf/pull/6250): Update go-sql-driver/mysql driver to 1.4.1 to address auth issues.
 
 ## v1.11.4 [2019-08-06]
 
