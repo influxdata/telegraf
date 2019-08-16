@@ -380,7 +380,7 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 	}
 
 	for _, m := range metrics {
-		// Do we need to keep the database name in the query string
+		// Do we need to keep the database name in the query string.
 		// If a tag has been supplied to put the db in and we actually got a db query,
 		// then we write it in. This overwrites the database tag if one was sent.
 		// This makes it behave like the influx endpoint.
