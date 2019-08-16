@@ -205,6 +205,9 @@ func (a *Agent) Test(ctx context.Context) error {
 		}
 	}
 
+	if NErrors.Get() > 0 {
+		return fmt.Errorf("One or more input plugins had an error")
+	}
 	return nil
 }
 
