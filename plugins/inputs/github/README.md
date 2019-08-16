@@ -7,10 +7,30 @@ alternative method for collecting repository information.
 
 ### Configuration
 
+#### Obtain metrics from a single repo
 ```toml
 [[inputs.github]]
   ## List of repositories to monitor
   repositories = ["influxdata/telegraf"]
+
+  ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
+  # access_token = ""
+
+  ## Timeout for HTTP requests.
+  # http_timeout = "5s"
+```
+
+#### Obtain metrics from multiple repos
+```toml
+[[inputs.github]]
+  ## List of repositories to monitor
+  repositories = [
+        "hashicorp/nomad",
+        "hashicorp/vagrant",
+        "hashicorp/consul",
+        "hashicorp/terraform",
+        "hashicorp/vault"
+  ]
 
   ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
   # access_token = ""
