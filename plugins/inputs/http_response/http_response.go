@@ -272,26 +272,27 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 
 	// This function closes the response body, as
 	// required by the net/http library
-	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
-	}()
+	defer resp.Body.Close()
 
 	// Set log the HTTP response code
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("D! Failed to read body of HTTP Response : %s", err)
+		setResult("body_read_error", fields, tags)
+		fields["content_length"] = len(bodyBytes)
+		if h.ResponseStringMatch != "" {
+			fields["response_string_match"] = 0
+		}
+		return fields, tags, nil
+	}
+
+	fields["content_length"] = len(bodyBytes)
+
 	// Check the response for a regex match.
 	if h.ResponseStringMatch != "" {
-
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Printf("D! Failed to read body of HTTP Response : %s", err)
-			setResult("body_read_error", fields, tags)
-			fields["response_string_match"] = 0
-			return fields, tags, nil
-		}
-
 		if h.compiledStringMatch.Match(bodyBytes) {
 			setResult("success", fields, tags)
 			fields["response_string_match"] = 1
