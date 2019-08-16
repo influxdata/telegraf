@@ -50,6 +50,8 @@ submits data to InfluxDB determines the destination database.
   ## If the write has a database in the query string then it will be kept in this tag name.
   ## This tag can be used in downstream outputs.
   ## The default value of nothing means it will be off and the database will not be recorded.
+  ## If you have a tag that is the same as the one specified below, and supply a database,
+  ## the tag will be overwritten with the database supplied.
   # database_tag = ""
 
   ## Optional username and password to accept for HTTP basic authentication.

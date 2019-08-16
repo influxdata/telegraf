@@ -147,6 +147,8 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 }
 
 func TestWriteHTTPKeepDatabase(t *testing.T) {
+	testMsgWithDB := "cpu_load_short,host=server01,database=wrongdb value=12.0 1422568543702900257\n"
+
 	listener := newTestHTTPListener()
 	listener.DatabaseTag = "database"
 
@@ -156,6 +158,18 @@ func TestWriteHTTPKeepDatabase(t *testing.T) {
 
 	// post single message to listener
 	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "database": "mydb"},
+	)
+
+	// post single message to listener with a database tag in it already. It should be clobbered.
+	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgWithDB)))
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)

@@ -381,14 +381,11 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 
 	for _, m := range metrics {
 		// Do we need to keep the database name in the query string
-		if h.DatabaseTag != "" {
-			// Did we get a database argument. If we didn't get it. We can't set it.
-			if db != "" {
-				// Is there already a database set. If not use the database in the query string.
-				if _, ok := m.Tags()[h.DatabaseTag]; !ok {
-					m.AddTag(h.DatabaseTag, db)
-				}
-			}
+		// If a tag has been supplied to put the db in and we actually got a db query,
+		// then we write it in. This overwrites the database tag if one was sent.
+		// This makes it behave like the influx endpoint.
+		if h.DatabaseTag != "" && db != "" {
+			m.AddTag(h.DatabaseTag, db)
 		}
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
