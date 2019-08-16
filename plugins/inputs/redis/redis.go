@@ -253,6 +253,9 @@ func gatherInfoOutput(
 
 		val := strings.TrimSpace(parts[1])
 
+		// Some percentage values have a "%" suffix that we need to get rid of before int/float conversion
+		val = strings.TrimSuffix(val, "%")
+
 		// Try parsing as int
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			switch name {

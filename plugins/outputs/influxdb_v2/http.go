@@ -40,28 +40,30 @@ const (
 )
 
 type HTTPConfig struct {
-	URL             *url.URL
-	Token           string
-	Organization    string
-	Bucket          string
-	BucketTag       string
-	Timeout         time.Duration
-	Headers         map[string]string
-	Proxy           *url.URL
-	UserAgent       string
-	ContentEncoding string
-	TLSConfig       *tls.Config
+	URL              *url.URL
+	Token            string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
+	Timeout          time.Duration
+	Headers          map[string]string
+	Proxy            *url.URL
+	UserAgent        string
+	ContentEncoding  string
+	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
 }
 
 type httpClient struct {
-	ContentEncoding string
-	Timeout         time.Duration
-	Headers         map[string]string
-	Organization    string
-	Bucket          string
-	BucketTag       string
+	ContentEncoding  string
+	Timeout          time.Duration
+	Headers          map[string]string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
 
 	client     *http.Client
 	serializer *influx.Serializer
@@ -130,13 +132,14 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		url:             config.URL,
-		ContentEncoding: config.ContentEncoding,
-		Timeout:         timeout,
-		Headers:         headers,
-		Organization:    config.Organization,
-		Bucket:          config.Bucket,
-		BucketTag:       config.BucketTag,
+		url:              config.URL,
+		ContentEncoding:  config.ContentEncoding,
+		Timeout:          timeout,
+		Headers:          headers,
+		Organization:     config.Organization,
+		Bucket:           config.Bucket,
+		BucketTag:        config.BucketTag,
+		ExcludeBucketTag: config.ExcludeBucketTag,
 	}
 	return client, nil
 }
@@ -183,6 +186,10 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 
 			if _, ok := batches[bucket]; !ok {
 				batches[bucket] = make([]telegraf.Metric, 0)
+			}
+
+			if c.ExcludeBucketTag {
+				metric.RemoveTag(c.BucketTag)
 			}
 
 			batches[bucket] = append(batches[bucket], metric)

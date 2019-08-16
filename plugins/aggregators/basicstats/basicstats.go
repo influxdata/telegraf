@@ -16,13 +16,15 @@ type BasicStats struct {
 }
 
 type configuredStats struct {
-	count    bool
-	min      bool
-	max      bool
-	mean     bool
-	variance bool
-	stdev    bool
-	sum      bool
+	count             bool
+	min               bool
+	max               bool
+	mean              bool
+	variance          bool
+	stdev             bool
+	sum               bool
+	diff              bool
+	non_negative_diff bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -43,7 +45,9 @@ type basicstats struct {
 	max   float64
 	sum   float64
 	mean  float64
-	M2    float64 //intermedia value for variance/stdev
+	diff  float64
+	M2    float64 //intermediate value for variance/stdev
+	LAST  float64 //intermediate value for diff
 }
 
 var sampleConfig = `
@@ -82,7 +86,9 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					max:   fv,
 					mean:  fv,
 					sum:   fv,
+					diff:  0.0,
 					M2:    0.0,
+					LAST:  fv,
 				}
 			}
 		}
@@ -98,7 +104,9 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 						max:   fv,
 						mean:  fv,
 						sum:   fv,
+						diff:  0.0,
 						M2:    0.0,
+						LAST:  fv,
 					}
 					continue
 				}
@@ -127,6 +135,8 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				}
 				//sum compute
 				tmp.sum += fv
+				//diff compute
+				tmp.diff = fv - tmp.LAST
 				//store final data
 				m.cache[id].fields[field.Key] = tmp
 			}
@@ -167,6 +177,13 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 				if config.stdev {
 					fields[k+"_stdev"] = math.Sqrt(variance)
 				}
+				if config.diff {
+					fields[k+"_diff"] = v.diff
+				}
+				if config.non_negative_diff && v.diff >= 0 {
+					fields[k+"_non_negative_diff"] = v.diff
+				}
+
 			}
 			//if count == 1 StdDev = infinite => so I won't send data
 		}
@@ -199,6 +216,10 @@ func parseStats(names []string) *configuredStats {
 			parsed.stdev = true
 		case "sum":
 			parsed.sum = true
+		case "diff":
+			parsed.diff = true
+		case "non_negative_diff":
+			parsed.non_negative_diff = true
 
 		default:
 			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
@@ -219,6 +240,7 @@ func defaultStats() *configuredStats {
 	defaults.variance = true
 	defaults.stdev = true
 	defaults.sum = false
+	defaults.non_negative_diff = false
 
 	return defaults
 }

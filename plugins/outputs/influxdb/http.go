@@ -93,6 +93,7 @@ type HTTPConfig struct {
 	ContentEncoding      string
 	Database             string
 	DatabaseTag          string
+	ExcludeDatabaseTag   bool
 	RetentionPolicy      string
 	Consistency          string
 	SkipDatabaseCreation bool
@@ -255,6 +256,10 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 
 			if _, ok := batches[db]; !ok {
 				batches[db] = make([]telegraf.Metric, 0)
+			}
+
+			if c.config.ExcludeDatabaseTag {
+				metric.RemoveTag(c.config.DatabaseTag)
 			}
 
 			batches[db] = append(batches[db], metric)
