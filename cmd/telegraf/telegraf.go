@@ -10,6 +10,9 @@ import (
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
+	"path"
+	"path/filepath"
+	"plugin"
 	"runtime"
 	"strings"
 	"syscall"
@@ -64,6 +67,8 @@ var fService = flag.String("service", "",
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
+var fPlugins = flag.String("plugin-directory", "",
+	"path to directory containing external plugins")
 
 var (
 	version string
@@ -111,13 +116,42 @@ func reloadLoop(
 	}
 }
 
+// loadExternalPlugins loads external plugins from shared libraries (.so, .dll, etc.)
+// in the specified directory.
+func loadExternalPlugins(rootDir string) error {
+	return filepath.Walk(rootDir, func(pth string, info os.FileInfo, err error) error {
+		// Stop if there was an error.
+		if err != nil {
+			return err
+		}
+
+		// Ignore directories.
+		if info.IsDir() {
+			return nil
+		}
+
+		// Ignore files that aren't shared libraries.
+		ext := strings.ToLower(path.Ext(pth))
+		if ext != ".so" && ext != ".dll" {
+			return nil
+		}
+
+		// Load plugin.
+		_, err = plugin.Open(pth)
+		if err != nil {
+			return fmt.Errorf("error loading %s: %s", pth, err)
+		}
+
+		return nil
+	})
+}
+
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
 	// Setup default logging. This may need to change after reading the config
 	// file, but we can configure it to use our logger implementation now.
-	logger.SetupLogging(logger.LogConfig{})
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
@@ -138,7 +172,7 @@ func runAgent(ctx context.Context,
 	if !*fTest && len(c.Outputs) == 0 {
 		return errors.New("Error: no outputs found, did you provide a valid config file?")
 	}
-	if len(c.Inputs) == 0 {
+	if *fPlugins == "" && len(c.Inputs) == 0 {
 		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
@@ -277,6 +311,16 @@ func main() {
 	}
 	if *fProcessorFilters != "" {
 		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
+	}
+
+	logger.SetupLogging(logger.LogConfig{})
+
+	// Load external plugins, if requested.
+	if *fPlugins != "" {
+		log.Printf("I! Loading external plugins from: %s", *fPlugins)
+		if err := loadExternalPlugins(*fPlugins); err != nil {
+			log.Fatal("E! " + err.Error())
+		}
 	}
 
 	if *pprofAddr != "" {

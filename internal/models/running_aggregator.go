@@ -59,6 +59,7 @@ type AggregatorConfig struct {
 	DropOriginal bool
 	Period       time.Duration
 	Delay        time.Duration
+	Grace        time.Duration
 
 	NameOverride      string
 	MeasurementPrefix string
@@ -135,9 +136,9 @@ func (r *RunningAggregator) Add(m telegraf.Metric) bool {
 	r.Lock()
 	defer r.Unlock()
 
-	if m.Time().Before(r.periodStart) || m.Time().After(r.periodEnd.Add(r.Config.Delay)) {
-		log.Printf("D! [%s] metric is outside aggregation window; discarding. %s: m: %s e: %s",
-			r.Name(), m.Time(), r.periodStart, r.periodEnd)
+	if m.Time().Before(r.periodStart.Add(-r.Config.Grace)) || m.Time().After(r.periodEnd.Add(r.Config.Delay)) {
+		log.Printf("D! [%s] metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
+			r.Name(), m.Time(), r.periodStart, r.periodEnd, r.Config.Grace)
 		r.MetricsDropped.Incr(1)
 		return r.Config.DropOriginal
 	}

@@ -11,6 +11,7 @@
 
 - [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
 - [fireboard](/plugins/inputs/fireboard) - Contributed by @ronnocol
+- [uwsgi](/plugins/inputs/uswgi) - Contributed by @blaggacao
 
 #### New Parsers
 
@@ -49,6 +50,9 @@
 - [#6129](https://github.com/influxdata/telegraf/pull/6129): Add support for field/tag keys to strings processor.
 - [#6143](https://github.com/influxdata/telegraf/pull/6143): Add certificate verification status to x509_cert input.
 - [#6163](https://github.com/influxdata/telegraf/pull/6163): Support percentage value parsing in redis input.
+- [#6024](https://github.com/influxdata/telegraf/pull/6024): Load external Go plugins from --plugin-directory.
+- [#6184](https://github.com/influxdata/telegraf/pull/6184): Add ability to exclude db/bucket tag from influxdb outputs.
+- [#6137](https://github.com/influxdata/telegraf/pull/6137): Gather per collections stats in mongodb input plugin.
 
 #### Bugfixes
 
@@ -57,6 +61,7 @@
 - [#6004](https://github.com/influxdata/telegraf/issues/6004): Fix race in master node detection in elasticsearch input.
 - [#6100](https://github.com/influxdata/telegraf/issues/6100): Fix SSPI authentication not working in sqlserver input.
 - [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
+- [#6136](https://github.com/influxdata/telegraf/issues/6136): Support Kafka 2.3.0 consumer groups.
 
 ## v1.11.3 [2019-07-23]
 
