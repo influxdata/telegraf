@@ -15,9 +15,9 @@ Add following instruction in the config file (Output part)
 warpUrl = "http://localhost:4242"
 token = "token"
 prefix = "telegraf."
-debug = false
+timeout = "15s" 
 ```
 
-### Contact ###
+### Values format
 
-* contact@cityzendata.com
+The Warp 10 output support natively number, float and boolean values. String are send as URL encoded values as well as all Influx objects. 

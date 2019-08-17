@@ -32,6 +32,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
-	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
 	_ "github.com/influxdata/telegraf/plugins/outputs/warp10"
+	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
 )

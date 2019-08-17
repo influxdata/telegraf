@@ -1,22 +1,123 @@
 package warp10
 
 import (
+	"fmt"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
+
+type ErrorTest struct {
+	Message  string
+	Expected string
+}
 
 func TestWriteWarp10(t *testing.T) {
 	w := Warp10{
 		Prefix:  "unit.test",
-		WarpUrl: "http://localhost:8090",
+		WarpURL: "http://localhost:8090",
 		Token:   "WRITE",
-		Debug:   false,
 	}
 
-	//err := i.Connect()
-	//require.NoError(t, err)
-	err := w.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	var now = time.Now()
+	payload := w.GenWarp10Payload(testutil.MockMetrics(), now)
+	require.Exactly(t, fmt.Sprintf("%d// unit.testtest1.value{source=telegraf,tag1=value1} 1.000000\n", now.UnixNano()/1000), payload)
+}
+
+func TestHandleWarp10Error(t *testing.T) {
+	w := Warp10{
+		Prefix:  "unit.test",
+		WarpURL: "http://localhost:8090",
+		Token:   "WRITE",
+	}
+	tests := [...]*ErrorTest{
+		{
+			Message: `
+			<html>
+			<head>
+			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+			<title>Error 500 io.warp10.script.WarpScriptException: Invalid token.</title>
+			</head>
+			<body><h2>HTTP ERROR 500</h2>
+			<p>Problem accessing /api/v0/update. Reason:
+			<pre>    io.warp10.script.WarpScriptException: Invalid token.</pre></p>
+			</body>
+			</html>
+			`,
+			Expected: fmt.Sprintf("Invalid token: %v", w.Token),
+		},
+		{
+			Message: `
+			<html>
+			<head>
+			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+			<title>Error 500 io.warp10.script.WarpScriptException: Token Expired.</title>
+			</head>
+			<body><h2>HTTP ERROR 500</h2>
+			<p>Problem accessing /api/v0/update. Reason:
+			<pre>    io.warp10.script.WarpScriptException: Token Expired.</pre></p>
+			</body>
+			</html>
+			`,
+			Expected: fmt.Sprintf("Token Expired: %v", w.Token),
+		},
+		{
+			Message: `
+			<html>
+			<head>
+			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+			<title>Error 500 io.warp10.script.WarpScriptException: Token revoked.</title>
+			</head>
+			<body><h2>HTTP ERROR 500</h2>
+			<p>Problem accessing /api/v0/update. Reason:
+			<pre>    io.warp10.script.WarpScriptException: Token revoked.</pre></p>
+			</body>
+			</html>
+			`,
+			Expected: fmt.Sprintf("Token revoked: %v", w.Token),
+		},
+		{
+			Message: `
+			<html>
+			<head>
+			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+			<title>Error 500 io.warp10.script.WarpScriptException: Write token missing.</title>
+			</head>
+			<body><h2>HTTP ERROR 500</h2>
+			<p>Problem accessing /api/v0/update. Reason:
+			<pre>    io.warp10.script.WarpScriptException: Write token missing.</pre></p>
+			</body>
+			</html>
+			`,
+			Expected: "Write token missing",
+		},
+		{
+			Message: `
+			<html>
+			<head>
+			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+			<title>Error 500 Parse error at &apos;test&apos;</title>
+			</head>
+			<body><h2>HTTP ERROR 500</h2>
+			<p>Problem accessing /api/v0/update. Reason:
+			<pre>    Parse error at &apos;test&apos;</pre></p>
+			</body>
+			</html>
+			`,
+			Expected: "Parse error at: test",
+		},
+		{
+			Message:  `<title>Error 503: server unavailable</title>`,
+			Expected: "<title>Error 503: server unavailable</title>",
+		},
+	}
+
+	for _, handledError := range tests {
+		payload := w.HandleError(handledError.Message)
+		require.Exactly(t, handledError.Expected, payload)
+	}
+
 }
