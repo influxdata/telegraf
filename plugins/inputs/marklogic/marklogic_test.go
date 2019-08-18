@@ -24,15 +24,16 @@ func TestMarklogic(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new Marklogic instance with our given test server
-	Marklogic := NewMarklogic()
-	Marklogic.Hosts = []string{"example1"}
-	Marklogic.URL = string(ts.URL)
+	ml := &Marklogic{
+		Hosts: []string{"example1"},
+		URL:   string(ts.URL),
+	}
 
 	// Create a test accumulator
 	acc := &testutil.Accumulator{}
 
 	// Gather data from the test server
-	err = Marklogic.Gather(acc)
+	err = ml.Gather(acc)
 	require.NoError(t, err)
 
 	// Expect the correct values for all known keys

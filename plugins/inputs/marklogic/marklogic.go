@@ -8,28 +8,19 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	dac "github.com/xinsnake/go-http-digest-auth-client"
 )
 
+// Marklogic configuration toml
 type Marklogic struct {
 	URL      string   `toml:"url"`
 	Hosts    []string `toml:"hosts"`
 	Username string   `toml:"username"`
 	Password string   `toml:"password"`
+	tls.ClientConfig
 
-	// HTTP client & request
 	client *http.Client
-}
-
-// NewMarkLogic return a new instance of MarkLogic with a default http client
-func NewMarklogic() *Marklogic {
-	tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   time.Duration(4 * time.Second),
-	}
-	return &Marklogic{client: client}
 }
 
 type MlPointInt struct {
@@ -83,36 +74,54 @@ type MlHost struct {
 	} `json:"host-status"`
 }
 
+// Description of plugin returned
 func (c *Marklogic) Description() string {
-	return "Gathers host health status data from a Marklogic Cluster"
+	return "Retrives information on a specific host in a MarkLogic Cluster"
 }
 
 var sampleConfig = `
-	## Base URL of MarkLogic host for Management API endpoint.
+  ## Base URL of the MarkLogic HTTP Server.
   url = "http://localhost:8002"
 
-	## List of specific hostnames in a cluster to retrieve information. At least (1) required.
+  ## List of specific hostnames in a cluster to retrieve information. At least (1) required.
   # hosts = ["hostname1", "hostname2"]
 
-  ## Using HTTP Digest Authentication. This requires 'manage-user' role privileges
-  # username = "telegraf"
-  # password = "p@ssw0rd"
+  ## Using HTTP Digest Authentication. Management API requires 'manage-user' role privileges
+  # username = "myuser"
+  # password = "mypassword"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
+// SampleConfig to gather stats from localhost, default port.
 func (c *Marklogic) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather read stats from all hosts configured in cluster.
+// Gather metrics from HTTP Server.
 func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var url string
+
+	if c.client == nil {
+		client, err := c.createHttpClient()
+
+		if err != nil {
+			return err
+		}
+		c.client = client
+	}
 
 	if len(c.URL) == 0 {
 		c.URL = string("http://localhost:8002")
 	}
 
-	// Range over all ML hostnames, gathering stats. Returns early in case of any error.
+	// Range over all ML hostnames configured in fiter. Returns early in case of any error.
 	for _, u := range c.Hosts {
 		wg.Add(1)
 		go func(host string) {
@@ -131,34 +140,9 @@ func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 }
 
 func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) error {
-	if c.client == nil {
-		c.client = &http.Client{
-			Transport: &http.Transport{},
-			Timeout:   time.Duration(5 * time.Second),
-		}
-	}
-
-	t := dac.NewTransport(c.Username, c.Password)
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return err
-	}
-
-	response, err := t.RoundTrip(req)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != 200 {
-		return fmt.Errorf("failed to get status from MarkLogic management api: HTTP responded %d", response.StatusCode)
-	}
-
-	// Decode the response JSON into a new lights struct
 	ml := &MlHost{}
-	if err := json.NewDecoder(response.Body).Decode(ml); err != nil {
-		return fmt.Errorf("unable to decode MlHost{} object from management api response: %s", err)
+	if err := c.gatherJSONData(url, ml); err != nil {
+		return err
 	}
 
 	// Build a map of tags
@@ -197,8 +181,51 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) err
 	return nil
 }
 
+func (c *Marklogic) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: time.Duration(5 * time.Second),
+	}
+
+	return client, nil
+}
+
+func (c *Marklogic) gatherJSONData(url string, v interface{}) error {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	if c.Username != "" || c.Password != "" {
+		req.SetBasicAuth(c.Username, c.Password)
+	}
+
+	response, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("marklogic: API responded with status-code %d, expected %d",
+			response.StatusCode, http.StatusOK)
+	}
+
+	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func init() {
 	inputs.Add("marklogic", func() telegraf.Input {
-		return NewMarklogic()
+		return &Marklogic{}
 	})
 }
