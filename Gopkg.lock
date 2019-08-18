@@ -1763,7 +1763,6 @@
     "github.com/tidwall/gjson",
     "github.com/vjeantet/grok",
     "github.com/vmware/govmomi",
-    "github.com/vmware/govmomi/find",
     "github.com/vmware/govmomi/object",
     "github.com/vmware/govmomi/performance",
     "github.com/vmware/govmomi/property",
