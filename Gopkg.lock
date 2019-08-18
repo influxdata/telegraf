@@ -1780,7 +1780,6 @@
     "github.com/vmware/govmomi/vim25/types",
     "github.com/wavefronthq/wavefront-sdk-go/senders",
     "github.com/wvanbergen/kafka/consumergroup",
-    "github.com/xinsnake/go-http-digest-auth-client",
     "golang.org/x/net/context",
     "golang.org/x/net/html/charset",
     "golang.org/x/oauth2",
