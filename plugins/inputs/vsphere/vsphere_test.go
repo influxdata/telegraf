@@ -403,7 +403,7 @@ func TestFolders(t *testing.T) {
 	c, err := NewClient(ctx, s.URL, v)
 
 	f := Finder{c}
-	
+
 	var folder []mo.Folder
 	err = f.Find(ctx, "Folder", "/F0", &folder)
 	require.NoError(t, err)
