@@ -1,6 +1,6 @@
 # MarkLogic Plugin
 
-The MarkLogic Telegraf plugin gathers status metrics from one or more host in a MarkLogic Cluster.
+The MarkLogic Telegraf plugin gathers health status metrics from one or more host.
 
 ### Configuration:
 
@@ -9,12 +9,12 @@ The MarkLogic Telegraf plugin gathers status metrics from one or more host in a 
   ## Base URL of the MarkLogic HTTP Server.
   url = "http://localhost:8002"
 
-  ## List of specific hostnames in a cluster to retrieve information. At least (1) required.
+  ## List of specific hostnames to retrieve information. At least (1) required.
   # hosts = ["hostname1", "hostname2"]
 
   ## Using HTTP Digest Authentication. Management API requires 'manage-user' role privileges
   # username = "myuser"
-  # password = "p@ssw0rd"
+  # password = "mypassword"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

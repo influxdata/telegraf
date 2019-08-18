@@ -83,7 +83,7 @@ var sampleConfig = `
   ## Base URL of the MarkLogic HTTP Server.
   url = "http://localhost:8002"
 
-  ## List of specific hostnames in a cluster to retrieve information. At least (1) required.
+  ## List of specific hostnames to retrieve information. At least (1) required.
   # hosts = ["hostname1", "hostname2"]
 
   ## Using HTTP Digest Authentication. Management API requires 'manage-user' role privileges
