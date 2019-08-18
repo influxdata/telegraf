@@ -1234,14 +1234,6 @@
   revision = "f72d8611297a7cf105da904c04198ad701a60101"
 
 [[projects]]
-  digest = "1:08f54f35f83370bac9bf1043df718d05ca270f48f5faa5bd8e233b5e69a550f0"
-  name = "github.com/xinsnake/go-http-digest-auth-client"
-  packages = ["."]
-  pruneopts = ""
-  revision = "9da83de55d71220f00cbffb736dba373e6e683b1"
-  version = "v0.4.0"
-
-[[projects]]
   branch = "master"
   digest = "1:c5918689b7e187382cc1066bf0260de54ba9d1b323105f46ed2551d2fb4a17c7"
   name = "github.com/yuin/gopher-lua"
