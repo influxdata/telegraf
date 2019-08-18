@@ -7,10 +7,6 @@ import (
 	"log"
 )
 
-var (
-	keepTags map[string]string
-)
-
 const sampleConfig = `
   ## Maximum number of tags to preserve
   limit = 10
@@ -20,9 +16,10 @@ const sampleConfig = `
 `
 
 type TagLimit struct {
-	Limit int      `toml:"limit"`
-	Keep  []string `toml:"keep"`
-	init  bool
+	Limit    int      `toml:"limit"`
+	Keep     []string `toml:"keep"`
+	init     bool
+	keepTags map[string]string
 }
 
 func (d *TagLimit) SampleConfig() string {
@@ -40,10 +37,10 @@ func (d *TagLimit) initOnce() error {
 	if len(d.Keep) > d.Limit {
 		return fmt.Errorf("%d keep tags is greater than %d total tag limit", len(d.Keep), d.Limit)
 	}
-	keepTags = make(map[string]string)
+	d.keepTags = make(map[string]string)
 	// convert list of tags-to-keep to a map so we can do constant-time lookups
 	for _, tag_key := range d.Keep {
-		keepTags[tag_key] = ""
+		d.keepTags[tag_key] = ""
 	}
 	d.init = true
 	return nil
@@ -58,15 +55,17 @@ func (d *TagLimit) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
 		pointOriginalTags := point.TagList()
 		lenPointTags := len(pointOriginalTags)
-		tagsToRemove := make([]string, lenPointTags)
-		if len(pointOriginalTags) <= d.Limit {
+		if lenPointTags <= d.Limit {
 			continue
 		}
+		tagsToRemove := make([]string, lenPointTags-d.Limit)
+		removeIdx := 0
 		// remove extraneous tags, stop once we're at the limit
-		for i, t := range pointOriginalTags {
-			if _, ok := keepTags[t.Key]; !ok {
-				tagsToRemove[i] = t.Key
-				lenPointTags = lenPointTags - 1
+		for _, t := range pointOriginalTags {
+			if _, ok := d.keepTags[t.Key]; !ok {
+				tagsToRemove[removeIdx] = t.Key
+				removeIdx++
+				lenPointTags--
 			}
 			if lenPointTags <= d.Limit {
 				break
