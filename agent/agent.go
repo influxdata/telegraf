@@ -235,6 +235,9 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		a.stopServiceInputs()
 	}
 
+	if NErrors.Get() > 0 {
+		return fmt.Errorf("One or more input plugins had an error")
+	}
 	return nil
 }
 

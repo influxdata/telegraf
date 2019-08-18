@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/vmware/govmomi/find"
 	"regexp"
 	"sort"
 	"sync"
@@ -404,13 +403,7 @@ func TestFolders(t *testing.T) {
 	c, err := NewClient(ctx, s.URL, v)
 
 	f := Finder{c}
-
-	gf := find.NewFinder(c.Client.Client, false)
-	fs, err := gf.FolderList(ctx, "/F0")
-	require.NoError(t, err)
-	require.Equal(t, 1, len(fs))
-	require.Equal(t, "F0", fs[0].Name())
-
+	
 	var folder []mo.Folder
 	err = f.Find(ctx, "Folder", "/F0", &folder)
 	require.NoError(t, err)
