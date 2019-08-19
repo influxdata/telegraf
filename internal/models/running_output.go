@@ -2,6 +2,7 @@ package models
 
 import (
 	"log"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -109,13 +110,38 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 }
 
 func (ro *RunningOutput) Init() error {
+	setLogIfExist(ro.Output, Logger{Name: ro.LogName()})
+
 	if p, ok := ro.Output.(telegraf.Initializer); ok {
-		err := p.Init(telegraf.PluginConfig{Log: Logger{Name: ro.LogName()}})
+		err := p.Init()
 		if err != nil {
 			return err
 		}
+
 	}
 	return nil
+}
+
+func setLogIfExist(i interface{}, log telegraf.Logger) {
+	valI := reflect.ValueOf(i)
+
+	if valI.Type().Kind() != reflect.Ptr {
+		valI = reflect.New(reflect.TypeOf(i))
+	}
+
+	field := valI.Elem().FieldByName("Log")
+	if !field.IsValid() {
+		return
+	}
+
+	switch field.Type().String() {
+	case "telegraf.Logger":
+		if field.CanSet() {
+			field.Set(reflect.ValueOf(log))
+		}
+	}
+
+	return
 }
 
 // AddMetric adds a metric to the output.

@@ -60,7 +60,7 @@ func TestDeprecatedURLSupport(t *testing.T) {
 		},
 	}
 
-	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
+	output.Log = testutil.Logger{}
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestDefaultURL(t *testing.T) {
 		},
 	}
 
-	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
+	output.Log = testutil.Logger{}
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -102,7 +102,7 @@ func TestConnectUDPConfig(t *testing.T) {
 			return &MockClient{}, nil
 		},
 	}
-	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
+	output.Log = testutil.Logger{}
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -146,7 +146,7 @@ func TestConnectHTTPConfig(t *testing.T) {
 		},
 	}
 
-	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
+	output.Log = testutil.Logger{}
 
 	err := output.Connect()
 	require.NoError(t, err)
@@ -195,7 +195,7 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 		},
 	}
 
-	output.Init(telegraf.PluginConfig{Log: testutil.Logger{}})
+	output.Log = testutil.Logger{}
 
 	err := output.Connect()
 	require.NoError(t, err)

@@ -81,8 +81,10 @@ func (r *RunningAggregator) LogName() string {
 }
 
 func (r *RunningAggregator) Init() error {
+	setLogIfExist(r.Aggregator, Logger{Name: r.LogName()})
+
 	if p, ok := r.Aggregator.(telegraf.Initializer); ok {
-		err := p.Init(telegraf.PluginConfig{Log: Logger{Name: r.LogName()}})
+		err := p.Init()
 		if err != nil {
 			return err
 		}

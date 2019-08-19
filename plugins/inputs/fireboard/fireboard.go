@@ -68,7 +68,7 @@ func (r *Fireboard) Description() string {
 }
 
 // Init the things
-func (r *Fireboard) Init(conf telegraf.PluginConfig) error {
+func (r *Fireboard) Init() error {
 
 	if len(r.AuthToken) == 0 {
 		return fmt.Errorf("You must specify an authToken")

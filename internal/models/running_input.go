@@ -65,8 +65,10 @@ func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
 }
 
 func (r *RunningInput) Init() error {
+	setLogIfExist(r.Input, Logger{Name: r.LogName()})
+
 	if p, ok := r.Input.(telegraf.Initializer); ok {
-		err := p.Init(telegraf.PluginConfig{Log: Logger{Name: r.LogName()}})
+		err := p.Init()
 		if err != nil {
 			return err
 		}

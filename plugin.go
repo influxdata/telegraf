@@ -6,12 +6,7 @@ package telegraf
 type Initializer interface {
 	// Init performs one time setup of the plugin and returns an error if the
 	// configuration is invalid.
-	Init(PluginConfig) error
-}
-
-// PluginConfig contains individualized plugin configuration.
-type PluginConfig struct {
-	Log Logger
+	Init() error
 }
 
 // Logger defines an interface for logging.

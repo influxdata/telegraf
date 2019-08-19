@@ -133,7 +133,7 @@ func (a *ActiveMQ) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (a *ActiveMQ) Init(conf telegraf.PluginConfig) error {
+func (a *ActiveMQ) Init() error {
 	if a.ResponseTimeout.Duration < time.Second {
 		a.ResponseTimeout.Duration = time.Second * 5
 	}

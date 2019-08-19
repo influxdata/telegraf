@@ -548,7 +548,7 @@ func (a *Agent) flush(
 
 	logError := func(err error) {
 		if err != nil {
-			log.Printf("E! [agent] Error writing to [%s]: %v", output.LogName(), err)
+			log.Printf("E! [agent] Error writing to %s: %v", output.LogName(), err)
 		}
 	}
 
@@ -614,7 +614,7 @@ func (a *Agent) initPlugins() error {
 		err := input.Init()
 		if err != nil {
 			return fmt.Errorf("could not initialize input %s: %v",
-				input.Config.Name, err)
+				input.LogName(), err)
 		}
 	}
 	for _, processor := range a.Config.Processors {

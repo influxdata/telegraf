@@ -229,9 +229,7 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Exec) Init(conf telegraf.PluginConfig) error {
-	e.log = conf.Log
-
+func (e *Exec) Init() error {
 	return nil
 }
 
