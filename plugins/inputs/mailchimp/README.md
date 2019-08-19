@@ -4,6 +4,9 @@ Pulls campaign reports from the [Mailchimp API](https://developer.mailchimp.com/
 
 ### Configuration
 
+This section contains the default TOML to configure the plugin.  You can
+generate it using `telegraf --usage mailchimp`.
+
 ```toml
 [[inputs.mailchimp]]
   ## MailChimp API key
@@ -19,34 +22,36 @@ Pulls campaign reports from the [Mailchimp API](https://developer.mailchimp.com/
 ### Metrics
 
 - mailchimp
-  - id
-  - campaign_title
-    - emails_sent
-    - abuse_reports
-    - unsubscribed
-    - hard_bounces
-    - soft_bounces
-    - syntax_errors
-    - forwards_count
-    - forwards_opens
-    - opens_total
-    - unique_opens
-    - open_rate
-    - clicks_total
-    - unique_clicks
-    - unique_subscriber_clicks
-    - click_rate
-    - facebook_recipient_likes
-    - facebook_unique_likes
-    - facebook_likes
-    - industry_type
-    - industry_open_rate
-    - industry_click_rate
-    - industry_bounce_rate
-    - industry_unopen_rate
-    - industry_unsub_rate
-    - industry_abuse_rate
-    - list_stats_sub_rate
-    - list_stats_unsub_rate
-    - list_stats_open_rate
-    - list_stats_click_rate
+  - tags:
+    - id
+    - campaign_title
+  - fields:
+    - emails_sent (integer, emails)
+    - abuse_reports (integer, reports)
+    - unsubscribed (integer, unsubscribes)
+    - hard_bounces (integer, emails)
+    - soft_bounces (integer, emails)
+    - syntax_errors (integer, errors)
+    - forwards_count (integer, emails)
+    - forwards_opens (integer, emails)
+    - opens_total (integer, emails)
+    - unique_opens (integer, emails)
+    - open_rate (double, percentage)
+    - clicks_total (integer, clicks)
+    - unique_clicks (integer, clicks)
+    - unique_subscriber_clicks (integer, clicks)
+    - click_rate (double, percentage)
+    - facebook_recipient_likes (integer, likes)
+    - facebook_unique_likes (integer, likes)
+    - facebook_likes (integer, likes)
+    - industry_type (string, type)
+    - industry_open_rate (double, percentage)
+    - industry_click_rate (double, percentage)
+    - industry_bounce_rate (double, percentage)
+    - industry_unopen_rate (double, percentage)
+    - industry_unsub_rate (double, percentage)
+    - industry_abuse_rate (double, percentage)
+    - list_stats_sub_rate (double, percentage)
+    - list_stats_unsub_rate (double, percentage)
+    - list_stats_open_rate (double, percentage)
+    - list_stats_click_rate (double, percentage)
