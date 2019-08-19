@@ -271,6 +271,40 @@ func TestAlignDuration(t *testing.T) {
 	}
 }
 
+func TestAlignTime(t *testing.T) {
+	rfc3339 := func(value string) time.Time {
+		t, _ := time.Parse(time.RFC3339, value)
+		return t
+	}
+
+	tests := []struct {
+		name     string
+		now      time.Time
+		interval time.Duration
+		expected time.Time
+	}{
+		{
+			name:     "aligned",
+			now:      rfc3339("2018-01-01T01:01:00Z"),
+			interval: 10 * time.Second,
+			expected: rfc3339("2018-01-01T01:01:00Z"),
+		},
+		{
+			name:     "aligned",
+			now:      rfc3339("2018-01-01T01:01:01Z"),
+			interval: 10 * time.Second,
+			expected: rfc3339("2018-01-01T01:01:10Z"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := AlignTime(tt.now, tt.interval)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestParseTimestamp(t *testing.T) {
 	time, err := ParseTimestamp("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000")
 	assert.Nil(t, err)

@@ -118,8 +118,12 @@ vm_metric_exclude = [ "*" ]
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
+    ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+  # ip_addresses = ["ipv6", "ipv4" ]
+  
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
+
 
   ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
@@ -173,6 +177,17 @@ vm_metric_exclude = [ "*" ]
   ## the plugin. Setting this flag to "false" will send values as floats to
   ## preserve the full precision when averaging takes place.
   # use_int_samples = true
+  
+  ## Custom attributes from vCenter can be very useful for queries in order to slice the
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  ## by default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include. 
+  # by default, since they can add a considerable amount of tags to the resulting metrics. To
+  # enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  # to select the attributes you want to include. 
+  # custom_attribute_include = []
+  # custom_attribute_exclude = ["*"] # Default is to exclude everything
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -241,7 +256,7 @@ to a file system. A vSphere inventory has a structure similar to this:
 #### Using Inventory Paths
 Using familiar UNIX-style paths, one could select e.g. VM2 with the path ```/DC0/vm/VM2```.
 
-Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that.
+Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that. 
 
 Another possibility is to select objects using a partial name, such as ```/DC0/vm/Folder1/hadoop*``` yielding all vms in Folder1 with a name starting with "hadoop".
 

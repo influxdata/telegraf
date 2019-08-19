@@ -4,16 +4,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
-
-	"github.com/karrick/godirwalk"
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/karrick/godirwalk"
+	"github.com/pkg/errors"
 )
 
 const sampleConfig = `
@@ -60,6 +58,7 @@ type FileCount struct {
 	MTime       internal.Duration `toml:"mtime"`
 	fileFilters []fileFilterFunc
 	globPaths   []globpath.GlobPath
+	Fs          fileSystem
 }
 
 func (_ *FileCount) Description() string {
@@ -157,10 +156,11 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	childSize := make(map[string]int64)
 
 	walkFn := func(path string, de *godirwalk.Dirent) error {
-		if path == basedir {
+		rel, err := filepath.Rel(basedir, path)
+		if err == nil && rel == "." {
 			return nil
 		}
-		file, err := os.Stat(path)
+		file, err := fc.Fs.Stat(path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				return nil
@@ -173,7 +173,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			return nil
 		}
 		if match {
-			parent := path[:strings.LastIndex(path, "/")]
+			parent := filepath.Dir(path)
 			childCount[parent]++
 			childSize[parent] += file.Size()
 		}
@@ -194,7 +194,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 					"directory": path,
 				})
 		}
-		parent := path[:strings.LastIndex(path, "/")]
+		parent := filepath.Dir(path)
 		if fc.Recursive {
 			childCount[parent] += childCount[path]
 			childSize[parent] += childSize[path]
@@ -245,7 +245,7 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, glob := range fc.globPaths {
-		for _, dir := range onlyDirectories(glob.GetRoots()) {
+		for _, dir := range fc.onlyDirectories(glob.GetRoots()) {
 			fc.count(acc, dir, glob)
 		}
 	}
@@ -253,10 +253,10 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func onlyDirectories(directories []string) []string {
+func (fc *FileCount) onlyDirectories(directories []string) []string {
 	out := make([]string, 0)
 	for _, path := range directories {
-		info, err := os.Stat(path)
+		info, err := fc.Fs.Stat(path)
 		if err == nil && info.IsDir() {
 			out = append(out, path)
 		}
@@ -287,6 +287,7 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 			fc.globPaths = append(fc.globPaths, *glob)
 		}
 	}
+
 }
 
 func NewFileCount() *FileCount {
@@ -299,6 +300,7 @@ func NewFileCount() *FileCount {
 		Size:        internal.Size{Size: 0},
 		MTime:       internal.Duration{Duration: 0},
 		fileFilters: nil,
+		Fs:          osFS{},
 	}
 }
 

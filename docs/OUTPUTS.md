@@ -30,7 +30,7 @@ import (
 )
 
 type Simple struct {
-    Ok bool
+    Ok bool `toml:"ok"`
 }
 
 func (s *Simple) Description() string {
@@ -41,6 +41,10 @@ func (s *Simple) SampleConfig() string {
     return `
   ok = true
 `
+}
+
+func (s *Simple) Init() error {
+	return nil
 }
 
 func (s *Simple) Connect() error {

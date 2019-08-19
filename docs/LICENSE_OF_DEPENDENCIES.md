@@ -14,8 +14,8 @@ following works:
 - github.com/aws/aws-sdk-go [Apache License 2.0](https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)
 - github.com/Azure/go-autorest [Apache License 2.0](https://github.com/Azure/go-autorest/blob/master/LICENSE)
 - github.com/beorn7/perks [MIT License](https://github.com/beorn7/perks/blob/master/LICENSE)
-- github.com/bsm/sarama-cluster [MIT License](https://github.com/bsm/sarama-cluster/blob/master/LICENSE)
 - github.com/cenkalti/backoff [MIT License](https://github.com/cenkalti/backoff/blob/master/LICENSE)
+- github.com/cisco-ie/nx-telemetry-proto [Apache License 2.0](https://github.com/cisco-ie/nx-telemetry-proto/blob/master/LICENSE)
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
 - github.com/couchbase/goutils [COUCHBASE INC. COMMUNITY EDITION LICENSE](https://github.com/couchbase/goutils/blob/master/LICENSE.md)
@@ -43,6 +43,8 @@ following works:
 - github.com/golang/protobuf [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/protobuf/blob/master/LICENSE)
 - github.com/golang/snappy [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/snappy/blob/master/LICENSE)
 - github.com/google/go-cmp [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-cmp/blob/master/LICENSE)
+- github.com/google/go-github [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-github/blob/master/LICENSE)
+- github.com/google/go-querystring [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-querystring/blob/master/LICENSE)
 - github.com/google/uuid [BSD 3-Clause "New" or "Revised" License](https://github.com/google/uuid/blob/master/LICENSE)
 - github.com/googleapis/gax-go [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/gax-go/blob/master/LICENSE)
 - github.com/gorilla/context [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/context/blob/master/LICENSE)
@@ -78,6 +80,7 @@ following works:
 - github.com/nats-io/go-nats [Apache License 2.0](https://github.com/nats-io/go-nats/blob/master/LICENSE)
 - github.com/nats-io/nuid [Apache License 2.0](https://github.com/nats-io/nuid/blob/master/LICENSE)
 - github.com/nsqio/go-nsq [MIT License](https://github.com/nsqio/go-nsq/blob/master/LICENSE)
+- github.com/openconfig/gnmi [Apache License 2.0](https://github.com/openconfig/gnmi/blob/master/LICENSE)
 - github.com/opencontainers/go-digest [Apache License 2.0](https://github.com/opencontainers/go-digest/blob/master/LICENSE)
 - github.com/opencontainers/image-spec [Apache License 2.0](https://github.com/opencontainers/image-spec/blob/master/LICENSE)
 - github.com/opentracing-contrib/go-observer [Apache License 2.0](https://github.com/opentracing-contrib/go-observer/blob/master/LICENSE)
@@ -133,3 +136,6 @@ following works:
 - gopkg.in/olivere/elastic.v5 [MIT License](https://github.com/olivere/elastic/blob/v5.0.76/LICENSE)
 - gopkg.in/tomb.v1 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v1/LICENSE)
 - gopkg.in/yaml.v2 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v2.2.2/LICENSE)
+
+## telegraf used and modified code from these projects
+- github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)

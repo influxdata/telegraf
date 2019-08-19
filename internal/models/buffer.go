@@ -99,10 +99,12 @@ func (b *Buffer) metricDropped(metric telegraf.Metric) {
 	metric.Reject()
 }
 
-func (b *Buffer) add(m telegraf.Metric) {
+func (b *Buffer) add(m telegraf.Metric) int {
+	dropped := 0
 	// Check if Buffer is full
 	if b.size == b.cap {
 		b.metricDropped(b.buf[b.last])
+		dropped++
 
 		if b.last == b.batchFirst && b.batchSize > 0 {
 			b.batchSize--
@@ -120,18 +122,23 @@ func (b *Buffer) add(m telegraf.Metric) {
 	}
 
 	b.size = min(b.size+1, b.cap)
+	return dropped
 }
 
-// Add adds metrics to the buffer
-func (b *Buffer) Add(metrics ...telegraf.Metric) {
+// Add adds metrics to the buffer and returns number of dropped metrics.
+func (b *Buffer) Add(metrics ...telegraf.Metric) int {
 	b.Lock()
 	defer b.Unlock()
 
+	dropped := 0
 	for i := range metrics {
-		b.add(metrics[i])
+		if n := b.add(metrics[i]); n != 0 {
+			dropped += n
+		}
 	}
 
 	b.BufferSize.Set(int64(b.length()))
+	return dropped
 }
 
 // Batch returns a slice containing up to batchSize of the most recently added

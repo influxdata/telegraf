@@ -42,7 +42,7 @@ type Mesos struct {
 }
 
 var allMetrics = map[Role][]string{
-	MASTER: {"resources", "master", "system", "agents", "frameworks", "tasks", "messages", "evqueue", "registrar"},
+	MASTER: {"resources", "master", "system", "agents", "frameworks", "framework_offers", "tasks", "messages", "evqueue", "registrar", "allocator"},
 	SLAVE:  {"resources", "agent", "system", "executors", "tasks", "messages"},
 }
 
@@ -58,10 +58,12 @@ var sampleConfig = `
     "system",
     "agents",
     "frameworks",
+    "framework_offers",
     "tasks",
     "messages",
     "evqueue",
     "registrar",
+    "allocator",
   ]
   ## A list of Mesos slaves, default is []
   # slaves = []
@@ -305,6 +307,10 @@ func getMetrics(role Role, group string) []string {
 			"master/slaves_connected",
 			"master/slaves_disconnected",
 			"master/slaves_inactive",
+			"master/slave_unreachable_canceled",
+			"master/slave_unreachable_completed",
+			"master/slave_unreachable_scheduled",
+			"master/slaves_unreachable",
 		}
 
 		m["frameworks"] = []string{
@@ -315,6 +321,12 @@ func getMetrics(role Role, group string) []string {
 			"master/outstanding_offers",
 		}
 
+		// framework_offers and allocator metrics have unpredictable names, so they can't be listed here.
+		// These empty groups are included to prevent the "unknown metrics group" info log below.
+		// filterMetrics() filters these metrics by looking for names with the corresponding prefix.
+		m["framework_offers"] = []string{}
+		m["allocator"] = []string{}
+
 		m["tasks"] = []string{
 			"master/tasks_error",
 			"master/tasks_failed",
@@ -324,6 +336,11 @@ func getMetrics(role Role, group string) []string {
 			"master/tasks_running",
 			"master/tasks_staging",
 			"master/tasks_starting",
+			"master/tasks_dropped",
+			"master/tasks_gone",
+			"master/tasks_gone_by_operator",
+			"master/tasks_killing",
+			"master/tasks_unreachable",
 		}
 
 		m["messages"] = []string{
@@ -363,12 +380,18 @@ func getMetrics(role Role, group string) []string {
 			"master/task_lost/source_master/reason_slave_removed",
 			"master/task_lost/source_slave/reason_executor_terminated",
 			"master/valid_executor_to_framework_messages",
+			"master/invalid_operation_status_update_acknowledgements",
+			"master/messages_operation_status_update_acknowledgement",
+			"master/messages_reconcile_operations",
+			"master/messages_suppress_offers",
+			"master/valid_operation_status_update_acknowledgements",
 		}
 
 		m["evqueue"] = []string{
 			"master/event_queue_dispatches",
 			"master/event_queue_http_requests",
 			"master/event_queue_messages",
+			"master/operator_event_stream_subscribers",
 		}
 
 		m["registrar"] = []string{
@@ -382,6 +405,11 @@ func getMetrics(role Role, group string) []string {
 			"registrar/state_store_ms/p99",
 			"registrar/state_store_ms/p999",
 			"registrar/state_store_ms/p9999",
+			"registrar/log/ensemble_size",
+			"registrar/log/recovered",
+			"registrar/queued_operations",
+			"registrar/registry_size_bytes",
+			"registrar/state_store_ms/count",
 		}
 	} else if role == SLAVE {
 		m["resources"] = []string{
@@ -477,9 +505,27 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 	}
 
 	for _, k := range metricsDiff(role, selectedMetrics) {
-		for _, v := range getMetrics(role, k) {
-			if _, ok = (*metrics)[v]; ok {
-				delete((*metrics), v)
+		switch k {
+		// allocator and framework_offers metrics have unpredictable names, so we have to identify them by name prefix.
+		case "allocator":
+			for m := range *metrics {
+				if strings.HasPrefix(m, "allocator/") {
+					delete((*metrics), m)
+				}
+			}
+		case "framework_offers":
+			for m := range *metrics {
+				if strings.HasPrefix(m, "master/frameworks/") || strings.HasPrefix(m, "frameworks/") {
+					delete((*metrics), m)
+				}
+			}
+
+		// All other metrics have predictable names. We can use getMetrics() to retrieve them.
+		default:
+			for _, v := range getMetrics(role, k) {
+				if _, ok = (*metrics)[v]; ok {
+					delete((*metrics), v)
+				}
 			}
 		}
 	}

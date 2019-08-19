@@ -1,8 +1,11 @@
 # RabbitMQ Input Plugin
 
-Reads metrics from RabbitMQ servers via the [Management Plugin](https://www.rabbitmq.com/management.html).
+Reads metrics from RabbitMQ servers via the [Management Plugin][management].
 
-For additional details reference the [RabbitMQ Management HTTP Stats](https://cdn.rawgit.com/rabbitmq/rabbitmq-management/master/priv/www/doc/stats.html).
+For additional details reference the [RabbitMQ Management HTTP Stats][management-reference].
+
+[management]: https://www.rabbitmq.com/management.html
+[management-reference]: https://raw.githack.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_9/priv/www/api/index.html
 
 ### Configuration:
 

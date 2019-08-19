@@ -110,27 +110,21 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 			err, data)
 	}
 
+	mainFields := map[string]interface{}{
+		"serial": r.Serial,
+	}
 	var reportTime time.Time
-	var powerFailed, powerRestored int64
+
 	if reportTime, err = parseTime(r.Date, r.Timezone); err != nil {
 		return err
 	}
-	if val, err := parseTime(r.PowerFailed, r.Timezone); err != nil {
-		return err
-	} else {
-		powerFailed = val.UnixNano()
+	if val, err := parseTime(r.PowerFailed, r.Timezone); err == nil {
+		mainFields["power_failed"] = val.UnixNano()
 	}
-	if val, err := parseTime(r.PowerRestored, r.Timezone); err != nil {
-		return err
-	} else {
-		powerRestored = val.UnixNano()
+	if val, err := parseTime(r.PowerRestored, r.Timezone); err == nil {
+		mainFields["power_restored"] = val.UnixNano()
 	}
 
-	mainFields := map[string]interface{}{
-		"serial":         r.Serial,
-		"power_failed":   powerFailed,
-		"power_restored": powerRestored,
-	}
 	acc.AddFields(Measurement, mainFields,
 		map[string]string{
 			"source":   r.Hostname,

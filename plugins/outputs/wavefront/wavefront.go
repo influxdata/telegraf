@@ -22,6 +22,7 @@ type Wavefront struct {
 	ConvertPaths    bool
 	ConvertBool     bool
 	UseRegex        bool
+	UseStrict       bool
 	SourceOverride  []string
 	StringToNumber  map[string][]map[string]float64
 
@@ -35,6 +36,14 @@ var sanitizedChars = strings.NewReplacer(
 	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
 	">", "-", ",", "-", "?", "-", "/", "-", "\\", "-", "|", "-", " ", "-",
 	"=", "-",
+)
+
+// catch many of the invalid chars that could appear in a metric or tag name
+var strictSanitizedChars = strings.NewReplacer(
+	"!", "-", "@", "-", "#", "-", "$", "-", "%", "-", "^", "-", "&", "-",
+	"*", "-", "(", "-", ")", "-", "+", "-", "`", "-", "'", "-", "\"", "-",
+	"[", "-", "]", "-", "{", "-", "}", "-", ":", "-", ";", "-", "<", "-",
+	">", "-", "?", "-", "\\", "-", "|", "-", " ", "-", "=", "-",
 )
 
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
@@ -70,6 +79,10 @@ var sampleConfig = `
   ## Convert metric name paths to use metricSeparator character
   ## When true will convert all _ (underscore) characters in final metric name. default is true
   #convert_paths = true
+
+  ## Use Strict rules to sanitize metric and tag names from invalid characters
+  ## When enabled forward slash (/) and comma (,) will be accpeted
+  #use_strict = false
 
   ## Use Regex to sanitize metric and tag names from invalid characters
   ## Regex is more thorough, but significantly slower. default is false
@@ -163,6 +176,8 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 
 		if w.UseRegex {
 			name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
+		} else if w.UseStrict {
+			name = strictSanitizedChars.Replace(name)
 		} else {
 			name = sanitizedChars.Replace(name)
 		}
@@ -238,6 +253,8 @@ func buildTags(mTags map[string]string, w *Wavefront) (string, map[string]string
 		var key string
 		if w.UseRegex {
 			key = sanitizedRegex.ReplaceAllLiteralString(k, "-")
+		} else if w.UseStrict {
+			key = strictSanitizedChars.Replace(k)
 		} else {
 			key = sanitizedChars.Replace(k)
 		}
