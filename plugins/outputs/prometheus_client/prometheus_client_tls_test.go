@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	inttls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
@@ -19,7 +20,9 @@ var configWithTLS = fmt.Sprintf(`
  tls_allowed_cacerts = ["%s"]
  tls_cert = "%s"
  tls_key = "%s"
-`, pki.TLSServerConfig().TLSAllowedCACerts[0], pki.TLSServerConfig().TLSCert, pki.TLSServerConfig().TLSKey)
+ tls_cipher_suites = ["%s"]
+ tls_min_version = "%s"
+`, pki.TLSServerConfig().TLSAllowedCACerts[0], pki.TLSServerConfig().TLSCert, pki.TLSServerConfig().TLSKey, pki.CipherSuite(), pki.TLSMaxVersion())
 
 var configWithoutTLS = `
   listen = "127.0.0.1:0"
@@ -50,11 +53,21 @@ func TestWorksWithTLS(t *testing.T) {
 	require.NoError(t, err)
 	defer tc.Output.Close()
 
+	serverCiphers, err := inttls.ParseCiphers(tc.Output.ServerConfig.TLSCipherSuites)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(serverCiphers))
+
+	tlsVersion, err := inttls.ParseTLSVersion(tc.Output.ServerConfig.TLSMinVersion)
+	require.NoError(t, err)
+
 	response, err := tc.Client.Get(tc.Output.URL())
 	require.NoError(t, err)
 
 	require.NoError(t, err)
 	require.Equal(t, response.StatusCode, http.StatusOK)
+
+	require.Equal(t, response.TLS.CipherSuite, serverCiphers[0])
+	require.Equal(t, response.TLS.Version, tlsVersion)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},

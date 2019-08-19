@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
 // ClientConfig represents the standard client TLS config.
@@ -25,6 +26,9 @@ type ServerConfig struct {
 	TLSCert           string   `toml:"tls_cert"`
 	TLSKey            string   `toml:"tls_key"`
 	TLSAllowedCACerts []string `toml:"tls_allowed_cacerts"`
+	TLSCipherSuites   []string `toml:"tls_cipher_suites"`
+	TLSMinVersion     string   `toml:"tls_min_version"`
+	TLSMaxVersion     string   `toml:"tls_max_version"`
 }
 
 // TLSConfig returns a tls.Config, may be nil without error if TLS is not
@@ -95,6 +99,38 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if len(c.TLSCipherSuites) != 0 {
+		cipherSuites, err := ParseCiphers(c.TLSCipherSuites)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not parse server cipher suites %s: %v", strings.Join(c.TLSCipherSuites, ","), err)
+		}
+		tlsConfig.CipherSuites = cipherSuites
+	}
+
+	if c.TLSMaxVersion != "" {
+		version, err := ParseTLSVersion(c.TLSMaxVersion)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not parse tls max version %q: %v", c.TLSMaxVersion, err)
+		}
+		tlsConfig.MaxVersion = version
+	}
+
+	if c.TLSMinVersion != "" {
+		version, err := ParseTLSVersion(c.TLSMinVersion)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not parse tls min version %q: %v", c.TLSMinVersion, err)
+		}
+		tlsConfig.MinVersion = version
+	}
+
+	if tlsConfig.MinVersion != 0 && tlsConfig.MaxVersion != 0 && tlsConfig.MinVersion > tlsConfig.MaxVersion {
+		return nil, fmt.Errorf(
+			"tls min version %q can't be greater then tls max version %q", tlsConfig.MinVersion, tlsConfig.MaxVersion)
 	}
 
 	return tlsConfig, nil

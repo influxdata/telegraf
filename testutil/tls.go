@@ -30,6 +30,9 @@ func (p *pki) TLSServerConfig() *tls.ServerConfig {
 		TLSAllowedCACerts: []string{p.CACertPath()},
 		TLSCert:           p.ServerCertPath(),
 		TLSKey:            p.ServerKeyPath(),
+		TLSCipherSuites:   []string{p.CipherSuite()},
+		TLSMinVersion:     p.TLSMinVersion(),
+		TLSMaxVersion:     p.TLSMaxVersion(),
 	}
 }
 
@@ -39,6 +42,18 @@ func (p *pki) ReadCACert() string {
 
 func (p *pki) CACertPath() string {
 	return path.Join(p.path, "cacert.pem")
+}
+
+func (p *pki) CipherSuite() string {
+	return "TLS_RSA_WITH_3DES_EDE_CBC_SHA"
+}
+
+func (p *pki) TLSMinVersion() string {
+	return "TLS11"
+}
+
+func (p *pki) TLSMaxVersion() string {
+	return "TLS12"
 }
 
 func (p *pki) ReadClientCert() string {
