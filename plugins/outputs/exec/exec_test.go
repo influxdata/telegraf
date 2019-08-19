@@ -12,6 +12,10 @@ import (
 )
 
 func TestExec(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to OS/executable dependencies")
+	}
+
 	tests := []struct {
 		command []string
 		err     bool

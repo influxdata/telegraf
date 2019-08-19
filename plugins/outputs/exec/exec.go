@@ -19,7 +19,7 @@ type Exec struct {
 	Command []string          `toml:"command"`
 	Timeout internal.Duration `toml:"timeout"`
 
-	runner     RunCloser
+	runner     Runner
 	serializer serializers.Serializer
 }
 
@@ -49,10 +49,7 @@ func (e *Exec) Connect() error {
 
 // Close kills the running process if any.
 func (e *Exec) Close() error {
-	if e.runner == nil {
-		return nil
-	}
-	return e.runner.Close()
+	return nil
 }
 
 // Description describes the plugin.
@@ -83,11 +80,9 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 	return e.runner.Run(e.Timeout.Duration, e.Command, &buffer)
 }
 
-// RunCloser provides an interface for running and ending an exec.Cmd before a
-// timeout is reached.
-type RunCloser interface {
+// Runner provides an interface for running exec.Cmd.
+type Runner interface {
 	Run(time.Duration, []string, io.Reader) error
-	Close() error
 }
 
 // CommandRunner runs a command with the ability to kill the process before the timeout.
@@ -118,15 +113,6 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 	c.cmd = cmd
 
 	return nil
-}
-
-// Close kills the process if it is still running.
-func (c *CommandRunner) Close() error {
-	if c.cmd == nil {
-		return nil
-	}
-
-	return c.cmd.Process.Kill()
 }
 
 func init() {
