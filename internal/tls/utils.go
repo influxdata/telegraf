@@ -10,7 +10,7 @@ func ParseCiphers(ciphers []string) ([]uint16, error) {
 	suites := []uint16{}
 
 	for _, cipher := range ciphers {
-		if v, ok := tlsCipherMap(cipher); ok {
+		if v, ok := tlsCipherMap[cipher]; ok {
 			suites = append(suites, v)
 		} else {
 			return nil, fmt.Errorf("unsupported cipher %q", cipher)
@@ -23,7 +23,7 @@ func ParseCiphers(ciphers []string) ([]uint16, error) {
 // ParseTLSVersion returns a `uint16` by received version string key that represents tls version from crypto/tls.
 // If version isn't supportes ParseTLSVersion returns 0 with error
 func ParseTLSVersion(version string) (uint16, error) {
-	if v, ok := tlsVersionMap(version); ok {
+	if v, ok := tlsVersionMap[version]; ok {
 		return v, nil
 	}
 	return 0, fmt.Errorf("unsupported version %q", version)
