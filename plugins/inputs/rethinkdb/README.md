@@ -15,11 +15,11 @@ generate it using `telegraf --usage rethinkdb`.
   ##   rethinkdb://10.10.3.33:18832,
   ##   10.0.0.1:10000, etc.
   servers = ["127.0.0.1:28015"]
-  
+
   ## If you use actual rethinkdb of > 2.3.0 with username/password authorization,
   ## protocol have to be named "rethinkdb2" - it will use 1_0 H.
   # servers = ["rethinkdb2://username:password@127.0.0.1:28015"]
-  
+
   ## If you use older versions of rethinkdb (<2.2) with auth_key, protocol
   ## have to be named "rethinkdb".
   # servers = ["rethinkdb://username:auth_key@127.0.0.1:28015"]
@@ -43,8 +43,8 @@ generate it using `telegraf --usage rethinkdb`.
     - disk_usage_garbage_bytes (integer, bytes)
     - disk_usage_metadata_bytes (integer, bytes)
     - disk_usage_preallocated_bytes (integer, bytes)
-  
-- rethinkdb_engine
+
++ rethinkdb_engine
   - tags:
     - type
     - ns
