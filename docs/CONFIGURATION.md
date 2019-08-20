@@ -550,6 +550,10 @@ output.  The tag is removed in the outputs before writing.
     influxdb_database = "other"
 ```
 
+### Transport Layer Security (TLS)
+
+Reference the detailed [TLS][] documentation.
+
 [TOML]: https://github.com/toml-lang/toml#toml
 [global tags]: #global-tags
 [interval]: #intervals
@@ -561,3 +565,4 @@ output.  The tag is removed in the outputs before writing.
 [aggregators]: #aggregator-plugins
 [metric filtering]: #metric-filtering
 [telegraf.conf]: /etc/telegraf.conf
+[TLS]: /docs/TLS.md
