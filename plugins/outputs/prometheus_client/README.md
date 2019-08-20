@@ -35,18 +35,10 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
-  
+
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
-
-  ## contains the minimum SSL/TLS version that is acceptable.
-  ## If not set, then TLS 1.0 is taken as the minimum.
-  # tls_min_version = "TLS11"
-
-  ## contains the maximum SSL/TLS version that is acceptable.
-  ## If not set, then the maximum supported version is used.
-  # tls_max_version = "TLS12"
 
   ## Export metric collection time.
   # export_timestamp = false
