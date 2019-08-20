@@ -230,12 +230,15 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 	timer := time.AfterFunc(timeout, func() {
 		err := c.Process.Kill()
 		if err != nil {
-			log.Printf("E! FATAL error killing process: %s", err)
+			log.Printf("E! [agent] Error killing process: %s", err)
 			return
 		}
 	})
 
 	err := c.Wait()
+	if err == nil {
+		return nil
+	}
 
 	if !timer.Stop() {
 		return TimeoutErr

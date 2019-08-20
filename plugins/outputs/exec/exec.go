@@ -14,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+const maxStderrBytes = 512
+
 // Exec defines the exec output plugin.
 type Exec struct {
 	Command []string          `toml:"command"`
@@ -98,26 +100,47 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 	cmd.Stderr = &stderr
 
 	err := internal.RunTimeout(cmd, timeout)
-	s := stderr.String()
+	s := stderr
 
 	if err != nil {
 		if err == internal.TimeoutErr {
 			return fmt.Errorf("%q timed out and was killed", command)
 		}
 
-		if s != "" {
-			log.Printf("E! [outputs.exec] Command error: %q", s)
+		if s.Len() > 0 {
+			log.Printf("E! [outputs.exec] Command error: %q", truncate(s))
 		}
 
-		status, _ := internal.ExitStatus(err)
-		return fmt.Errorf("%q exited %d with %s", command, status, err.Error())
-	} else if s != "" {
-		log.Printf("D! [outputs.exec] stderr: %q", s)
+		if status, ok := internal.ExitStatus(err); ok {
+			return fmt.Errorf("%q exited %d with %s", command, status, err.Error())
+		}
+
+		return fmt.Errorf("%q failed with %s", command, err.Error())
 	}
 
 	c.cmd = cmd
 
 	return nil
+}
+
+func truncate(buf bytes.Buffer) string {
+	// Limit the number of bytes.
+	didTruncate := false
+	if buf.Len() > maxStderrBytes {
+		buf.Truncate(maxStderrBytes)
+		didTruncate = true
+	}
+	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
+		// Only show truncation if the newline wasn't the last character.
+		if i < buf.Len()-1 {
+			didTruncate = true
+		}
+		buf.Truncate(i)
+	}
+	if didTruncate {
+		buf.WriteString("...")
+	}
+	return buf.String()
 }
 
 func init() {

@@ -6,7 +6,7 @@ The command should be defined similar to docker's `exec` form:
 
     ["executable", "param1", "param2"]
 
-On non-zero exit stderr will be logged at error level. On zero exit stderr will be logged at debug level.
+On non-zero exit stderr will be logged at error level.
 
 ### Configuration
 
