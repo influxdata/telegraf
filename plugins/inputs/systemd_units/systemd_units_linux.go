@@ -24,10 +24,12 @@ type systemctl func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, 
 
 const measurement = "systemd_units"
 
-// unit_load_state_table, see
-// https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L87
+// Below are mappings of systemd state tables as defined at
+// https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.
+// Duplicate strings are removed from this list, zero values are
+// intentionally left free to catch string-not-found errors
+// On lookup, the values are decreased, so that string-not-found maps to -1
 var load_map = map[string]int{
-	// err: 0,
 	"loaded":      1,
 	"stub":        2,
 	"not-found":   3,
@@ -37,10 +39,7 @@ var load_map = map[string]int{
 	"masked":      7,
 }
 
-// unit_active_state_table, see
-// https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L99
 var active_map = map[string]int{
-	// err: 0,
 	"active":       1,
 	"reloading":    2,
 	"inactive":     3,
@@ -49,12 +48,7 @@ var active_map = map[string]int{
 	"deactivating": 6,
 }
 
-// sub states, see various <unittype>_state_tables; duplicates were removed,
-// tables are hex aligned to keep some space for future values
-// https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163
 var sub_map = map[string]int{
-	// err: 0,
-
 	// service_state_table, offset 0x0000
 	"running":       0x0001,
 	"dead":          0x0002,
@@ -72,18 +66,13 @@ var sub_map = map[string]int{
 	"auto-restart":  0x000e,
 
 	// automount_state_table, offset 0x0010
-	//"dead":
 	"waiting": 0x0011,
-	//"running":
-	//"failed":
 
 	// device_state_table, offset 0x0020
-	//"dead":
 	"tentative": 0x0021,
 	"plugged":   0x0022,
 
 	// mount_state_table, offset 0x0030
-	//"dead":
 	"mounting":           0x0031,
 	"mounting-done":      0x0032,
 	"mounted":            0x0033,
@@ -93,61 +82,35 @@ var sub_map = map[string]int{
 	"remounting-sigkill": 0x0037,
 	"unmounting-sigterm": 0x0038,
 	"unmounting-sigkill": 0x0039,
-	//"failed":
 
 	// path_state_table, offset 0x0040
-	//"dead":
-	//"waiting":
-	//"running":
-	//"failed":
 
 	// scope_state_table, offset 0x0050
-	//"dead":
-	//"running":
 	"abandoned": 0x0051,
-	//"stop-sigterm":
-	//"stop-sigkill":
-	//"failed":
 
 	// slice_state_table, offset 0x0060
-	//"dead":
 	"active": 0x0061,
 
 	// socket_state_table, offset 0x0070
-	//"dead":
-	//"start-pre":
-	"start-chown": 0x0071,
-	"start-post":  0x0072,
-	"listening":   0x0073,
-	//"running":
+	"start-chown":      0x0071,
+	"start-post":       0x0072,
+	"listening":        0x0073,
 	"stop-pre":         0x0074,
 	"stop-pre-sigterm": 0x0075,
 	"stop-pre-sigkill": 0x0076,
-	//"stop-post":
-	//"final-sigterm":
-	"final-sigkill": 0x0077,
-	//"failed":
+	"final-sigkill":    0x0077,
 
 	// swap_state_table, offset 0x0080
-	//"dead":
-	"activating":      0x0081,
-	"activating-done": 0x0082,
-	//"active":
+	"activating":           0x0081,
+	"activating-done":      0x0082,
 	"deactivating":         0x0083,
 	"deactivating-sigterm": 0x0084,
 	"deactivating-sigkill": 0x0085,
-	//"failed":
 
 	// target_state_table, offset 0x0090
-	//"dead":
-	//"active":
 
 	// timer_state_table, offset 0x00a0
-	//"dead":
-	//"waiting":
-	//"running":
 	"elapsed": 0x00a1,
-	//"failed":
 }
 
 var (
@@ -163,9 +126,9 @@ func (systemd_units *SystemdUnits) Description() string {
 // SampleConfig returns sample configuration options.
 func (systemd_units *SystemdUnits) SampleConfig() string {
 	return `
-  ## The default timeout of 1s for systemctl execution can be overridden
-  ## here:
+  ## Set timeout for systemctl execution
   # timeout = "1s"
+  #
   ## Filter for a specific unit types, default is "service":
   # unittype = "service"
 `

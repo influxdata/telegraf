@@ -15,9 +15,9 @@ see `systemctl list-units --all --type help` for possible options.
 ### Configuration
 ```
 [[inputs.systemd_units]]
-  ## The default timeout of 1s for systemctl execution can be overridden
-  ## here:
+  ## Set timeout for systemctl execution
   # timeout = "1s"
+  #
   ## Filter for a specific unit types, default is "service":
   # unittype = "service"
 ```
