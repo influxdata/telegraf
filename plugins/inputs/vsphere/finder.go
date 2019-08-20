@@ -16,6 +16,8 @@ var childTypes map[string][]string
 
 var addFields map[string][]string
 
+var containers map[string]interface{}
+
 // Finder allows callers to find resources in vCenter given a query string.
 type Finder struct {
 	client *Client
@@ -27,11 +29,6 @@ type ResourceFilter struct {
 	finder  *Finder
 	resType string
 	paths   []string
-}
-
-type nameAndRef struct {
-	name string
-	ref  types.ManagedObjectReference
 }
 
 // FindAll returns the union of resources found given the supplied resource type and paths.
@@ -87,15 +84,18 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	var content []types.ObjectContent
 
 	fields := []string{"name"}
+	recurse := tokens[pos]["name"] == "**"
+
+	types := ct
 	if isLeaf {
-		// Special case: The last token is a recursive wildcard, so we can grab everything
-		// recursively in a single call.
-		if tokens[pos]["name"] == "**" {
+		if af, ok := addFields[resType]; ok {
+			fields = append(fields, af...)
+		}
+		if recurse {
+			// Special case: The last token is a recursive wildcard, so we can grab everything
+			// recursively in a single call.
 			v2, err := m.CreateContainerView(ctx, root, []string{resType}, true)
 			defer v2.Destroy(ctx)
-			if af, ok := addFields[resType]; ok {
-				fields = append(fields, af...)
-			}
 			err = v2.Retrieve(ctx, []string{resType}, fields, &content)
 			if err != nil {
 				return err
@@ -105,23 +105,16 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			}
 			return nil
 		}
-
-		if af, ok := addFields[resType]; ok {
-			fields = append(fields, af...)
-		}
-		err = v.Retrieve(ctx, []string{resType}, fields, &content)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = v.Retrieve(ctx, ct, fields, &content)
-		if err != nil {
-			return err
-		}
+		types = []string{resType} // Only load wanted object type at leaf level
+	}
+	err = v.Retrieve(ctx, types, fields, &content)
+	if err != nil {
+		return err
 	}
 
+	rerunAsLeaf := false
 	for _, c := range content {
-		if !tokens[pos].MatchPropertyList(c.PropSet[:1]) {
+		if !matchName(tokens[pos], c.PropSet) {
 			continue
 		}
 
@@ -137,44 +130,45 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 		}
 
 		// Deal with recursive wildcards (**)
-		inc := 1 // Normally we advance one token.
-		if tokens[pos]["name"] == "**" {
-			if isLeaf {
-				inc = 0 // Can't advance past last token, so keep descending the tree
-			} else {
-				// Lookahead to next token. If it matches this child, we are out of
-				// the recursive wildcard handling and we can advance TWO tokens ahead, since
-				// the token that ended the recursive wildcard mode is now consumed.
-				if tokens[pos+1].MatchPropertyList(c.PropSet) {
-					if pos < len(tokens)-2 {
+		var inc int
+		if recurse {
+			inc = 0 // By default, we stay on this token
+			if !isLeaf {
+				// Lookahead to next token.
+				if matchName(tokens[pos+1], c.PropSet) {
+					// Are we looking ahead at a leaf node that has the wanted type?
+					// Rerun the entire level as a leaf. This is needed since all properties aren't loaded
+					// when we're processing non-leaf nodes.
+					if pos == len(tokens)-2 {
+						if c.Obj.Type == resType {
+							rerunAsLeaf = true
+							continue
+						}
+					} else if _, ok := containers[c.Obj.Type]; ok {
+						// Tokens match and we're looking ahead at a container type that's not a leaf
+						// Consume this token and the next.
 						inc = 2
-					} else {
-						// We found match and it's at a leaf! Grab it!
-						objs[c.Obj.String()] = c
-						continue
 					}
-				} else {
-					// We didn't break out of recursicve wildcard mode yet, so stay on this token.
-					inc = 0
-
 				}
 			}
+		} else {
+			// The normal case: Advance to next token before descending
+			inc = 1
 		}
 		err := f.descend(ctx, c.Obj, resType, tokens, pos+inc, objs)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
-}
 
-func nameFromObjectContent(o types.ObjectContent) string {
-	for _, p := range o.PropSet {
-		if p.Name == "name" {
-			return p.Val.(string)
-		}
+	if rerunAsLeaf {
+		// We're at a "pseudo leaf", i.e. we looked ahead a token and found that this level contains leaf nodes.
+		// Rerun the entire level as a leaf to get those nodes. This will only be executed when pos is one token
+		// before the last, to pos+1 will always point to a leaf token.
+		return f.descend(ctx, root, resType, tokens, pos+1, objs)
 	}
-	return "<unknown>"
+
+	return nil
 }
 
 func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interface{}) error {
@@ -214,11 +208,20 @@ func (r *ResourceFilter) FindAll(ctx context.Context, dst interface{}) error {
 	return r.finder.FindAll(ctx, r.resType, r.paths, dst)
 }
 
+func matchName(f property.Filter, props []types.DynamicProperty) bool {
+	for _, prop := range props {
+		if prop.Name == "name" {
+			return f.MatchProperty(prop)
+		}
+	}
+	return false
+}
+
 func init() {
 	childTypes = map[string][]string{
 		"HostSystem":             {"VirtualMachine"},
-		"ComputeResource":        {"HostSystem", "ResourcePool"},
-		"ClusterComputeResource": {"HostSystem", "ResourcePool"},
+		"ComputeResource":        {"HostSystem", "ResourcePool", "VirtualApp"},
+		"ClusterComputeResource": {"HostSystem", "ResourcePool", "VirtualApp"},
 		"Datacenter":             {"Folder"},
 		"Folder": {
 			"Folder",
@@ -237,5 +240,14 @@ func init() {
 		"Datastore":              {"parent", "info"},
 		"ClusterComputeResource": {"parent"},
 		"Datacenter":             {"parent"},
+	}
+
+	containers = map[string]interface{}{
+		"HostSystem":      nil,
+		"ComputeResource": nil,
+		"Datacenter":      nil,
+		"ResourcePool":    nil,
+		"Folder":          nil,
+		"VirtualApp":      nil,
 	}
 }
