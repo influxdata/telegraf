@@ -27,6 +27,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			jsonFilePath = "testdata/exchanges.json"
 		case "/api/healthchecks/node/rabbit@vagrant-ubuntu-trusty-64":
 			jsonFilePath = "testdata/healthchecks.json"
+		case "/api/federation-links":
+			jsonFilePath = "testdata/federation-links.json"
 		default:
 			panic("Cannot handle request")
 		}
@@ -139,6 +141,18 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"messages_publish_out_rate": 5.1,
 	}
 	compareMetrics(t, exchangeMetrics, acc, "rabbitmq_exchange")
+
+	federationLinkMetrics := map[string]interface{}{
+		"acks_uncommitted":           1,
+		"consumers":                  2,
+		"messages_unacknowledged":    3,
+		"messages_uncommitted":       4,
+		"messages_unconfirmed":       5,
+		"messages_confirm":           67,
+		"messages_publish":           890,
+		"messages_return_unroutable": 1,
+	}
+	compareMetrics(t, federationLinkMetrics, acc, "rabbitmq_federation")
 }
 
 func compareMetrics(t *testing.T, expectedMetrics map[string]interface{},

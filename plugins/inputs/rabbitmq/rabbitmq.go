@@ -43,9 +43,10 @@ type RabbitMQ struct {
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
 
-	Nodes     []string
-	Queues    []string
-	Exchanges []string
+	Nodes               []string
+	Queues              []string
+	Exchanges           []string
+	FederationUpstreams []string
 
 	QueueInclude []string `toml:"queue_name_include"`
 	QueueExclude []string `toml:"queue_name_exclude"`
@@ -178,6 +179,38 @@ type Exchange struct {
 	AutoDelete   bool `json:"auto_delete"`
 }
 
+// FederationLinkChannelMessageStats ...
+type FederationLinkChannelMessageStats struct {
+	Confirm                 int64
+	ConfirmDetails          Details `json:"confirm_details"`
+	Publish                 int64
+	PublishDetails          Details `json:"publish_details"`
+	ReturnUnroutable        int64   `json:"return_unroutable"`
+	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
+}
+
+// FederationLinkChannel ...
+type FederationLinkChannel struct {
+	AcksUncommitted        int64                             `json:"acks_uncommitted"`
+	ConsumerCount          int64                             `json:"consumer_count"`
+	MessagesUnacknowledged int64                             `json:"messages_unacknowledged"`
+	MessagesUncommitted    int64                             `json:"messages_uncommitted"`
+	MessagesUnconfirmed    int64                             `json:"messages_unconfirmed"`
+	MessageStats           FederationLinkChannelMessageStats `json:"message_stats"`
+}
+
+// FederationLink ...
+type FederationLink struct {
+	Type             string
+	Queue            string
+	UpstreamQueue    string `json:"upstream_queue"`
+	Exchange         string
+	UpstreamExchange string `json:"upstream_exchange"`
+	Vhost            string
+	Upstream         string
+	LocalChannel     FederationLinkChannel `json:"local_channel"`
+}
+
 type HealthCheck struct {
 	Status string `json:"status"`
 }
@@ -185,7 +218,7 @@ type HealthCheck struct {
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
-var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges}
+var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges, gatherFederationLinks}
 
 var sampleConfig = `
   ## Management Plugin url. (default: http://localhost:15672)
@@ -224,6 +257,13 @@ var sampleConfig = `
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
   ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
+
+  ## A list of federation upstreams to gather as the rabbitmq_federation measurement.
+  ## If not specified, metrics for all federation upstreams are gathered.
+  ## Federation link metrics will only be gathered for queues and exchanges
+  ## whose non-federation metrics will be collected (e.g a queue excluded
+  ## by the 'queue_name_exclude' option will also be excluded from federation).
+  # federationUpstreams = ["dataCentre2"]
 
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
@@ -538,7 +578,7 @@ func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 
 	for _, exchange := range exchanges {
-		if !r.shouldGatherExchange(exchange) {
+		if !r.shouldGatherExchange(exchange.Name) {
 			continue
 		}
 		tags := map[string]string{
@@ -558,6 +598,53 @@ func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
 				"messages_publish_in_rate":  exchange.MessageStats.PublishInDetails.Rate,
 				"messages_publish_out":      exchange.MessageStats.PublishOut,
 				"messages_publish_out_rate": exchange.MessageStats.PublishOutDetails.Rate,
+			},
+			tags,
+		)
+	}
+}
+
+func gatherFederationLinks(r *RabbitMQ, acc telegraf.Accumulator) {
+	// Gather information about federation links
+	federationLinks := make([]FederationLink, 0)
+	err := r.requestJSON("/api/federation-links", &federationLinks)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	for _, link := range federationLinks {
+		if !r.shouldGatherFederationLink(link) {
+			continue
+		}
+
+		localEntity := link.Queue
+		upstreamEntity := link.UpstreamQueue
+		if link.Type == "exchange" {
+			localEntity = link.Exchange
+			upstreamEntity = link.UpstreamExchange
+		}
+
+		tags := map[string]string{
+			"url":             r.URL,
+			"type":            link.Type,
+			"local_entity":    localEntity,
+			"upstream_entity": upstreamEntity,
+			"vhost":           link.Vhost,
+			"upstream":        link.Upstream,
+		}
+
+		acc.AddFields(
+			"rabbitmq_federation",
+			map[string]interface{}{
+				"acks_uncommitted":           link.LocalChannel.AcksUncommitted,
+				"consumers":                  link.LocalChannel.ConsumerCount,
+				"messages_unacknowledged":    link.LocalChannel.MessagesUnacknowledged,
+				"messages_uncommitted":       link.LocalChannel.MessagesUncommitted,
+				"messages_unconfirmed":       link.LocalChannel.MessagesUnconfirmed,
+				"messages_confirm":           link.LocalChannel.MessageStats.Confirm,
+				"messages_publish":           link.LocalChannel.MessageStats.Publish,
+				"messages_return_unroutable": link.LocalChannel.MessageStats.ReturnUnroutable,
 			},
 			tags,
 		)
@@ -599,18 +686,49 @@ func (r *RabbitMQ) createQueueFilter() error {
 	return nil
 }
 
-func (r *RabbitMQ) shouldGatherExchange(exchange Exchange) bool {
+func (r *RabbitMQ) shouldGatherExchange(exchangeName string) bool {
 	if len(r.Exchanges) == 0 {
 		return true
 	}
 
 	for _, name := range r.Exchanges {
-		if name == exchange.Name {
+		if name == exchangeName {
 			return true
 		}
 	}
 
 	return false
+}
+
+func (r *RabbitMQ) shouldGatherFederationLink(link FederationLink) bool {
+	gatherUpstream := false
+	if len(r.FederationUpstreams) == 0 {
+		gatherUpstream = true
+	} else {
+		for _, name := range r.FederationUpstreams {
+			if name == link.Upstream {
+				gatherUpstream = true
+				break
+			}
+		}
+	}
+
+	if !gatherUpstream {
+		return false
+	}
+
+	gatherEntity := true
+	if link.Type == "exchange" {
+		gatherEntity = r.shouldGatherExchange(link.Exchange)
+	} else if link.Type == "queue" {
+		if r.excludeEveryQueue {
+			gatherEntity = false
+		} else {
+			gatherEntity = r.queueFilter.Match(link.Queue)
+		}
+	}
+
+	return gatherEntity
 }
 
 func init() {
