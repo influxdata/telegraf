@@ -53,7 +53,7 @@ type Openntpd struct {
 }
 
 var defaultBinary = "/usr/sbin/ntpctl"
-var defaultTimeout = internal.Duration{Duration: time.Second}
+var defaultTimeout = internal.Duration{Duration: 5 * time.Second}
 
 func (n *Openntpd) Description() string {
 	return "Get standard NTP query metrics from OpenNTPD."
@@ -61,14 +61,14 @@ func (n *Openntpd) Description() string {
 
 func (n *Openntpd) SampleConfig() string {
 	return `
-  ## If running as a restricted user you can prepend sudo for additional access:
-  #use_sudo = false
+  ## Run ntpctl binary with sudo.
+  # use_sudo = false
 
-  ## The default location of the ntpctl binary can be overridden with:
-  binary = "/usr/sbin/ntpctl"
+  ## Location of the ntpctl binary.
+  # binary = "/usr/sbin/ntpctl"
 
-  ## The default timeout of 1000ms can be overriden with (in milliseconds):
-  timeout = 1000
+  ## Maximum time the ntpctl binary is allowed to run.
+  # timeout = "5ms"
   `
 }
 
@@ -135,12 +135,12 @@ func (n *Openntpd) Gather(acc telegraf.Accumulator) error {
 		// if there is an ntpctl state prefix, remove it and make it it's own tag
 		if strings.ContainsAny(string(fields[0]), "*") {
 			tags["state_prefix"] = string(fields[0])
-			fields = append(fields[:0], fields[1:]...)
+			fields = fields[1:]
 		}
 
 		// Get tags from output
 		for key, index := range tagI {
-			if len(fields) < index {
+			if index >= len(fields) {
 				continue
 			}
 			tags[key] = fields[index]

@@ -11,6 +11,7 @@
 
 - [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
 - [fireboard](/plugins/inputs/fireboard) - Contributed by @ronnocol
+- [openntpd](/plugins/inputs/openntpd) - Contributed by @aromeyer
 - [uwsgi](/plugins/inputs/uswgi) - Contributed by @blaggacao
 
 #### New Parsers
