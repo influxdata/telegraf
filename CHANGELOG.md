@@ -71,6 +71,7 @@
 - [#6261](https://github.com/influxdata/telegraf/pull/6261): Add content_length metric to http_response input plugin.
 - [#6257](https://github.com/influxdata/telegraf/pull/6257): Add database_tag option to influxdb_listener to add database from query string.
 - [#6246](https://github.com/influxdata/telegraf/pull/6246): Add capability to limit TLS versions and cipher suites.
+- [#6266](https://github.com/influxdata/telegraf/pull/6266): Add topic_tag option to mqtt_consumer.
 
 #### Bugfixes
 
