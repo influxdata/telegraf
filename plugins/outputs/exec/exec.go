@@ -47,7 +47,7 @@ func (e *Exec) Connect() error {
 	return nil
 }
 
-// Close kills the running process if any.
+// Close satisfies the Ouput interface.
 func (e *Exec) Close() error {
 	return nil
 }
@@ -97,19 +97,24 @@ func (c *CommandRunner) Run(timeout time.Duration, command []string, buffer io.R
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
-	if err := internal.RunTimeout(cmd, timeout); err != nil {
+	err := internal.RunTimeout(cmd, timeout)
+	s := stderr.String()
+
+	if err != nil {
 		if err == internal.TimeoutErr {
 			return fmt.Errorf("%q timed out and was killed", command)
 		}
 
-		s := stderr.String()
 		if s != "" {
 			log.Printf("E! [outputs.exec] Command error: %q", s)
 		}
 
 		status, _ := internal.ExitStatus(err)
 		return fmt.Errorf("%q exited %d with %s", command, status, err.Error())
+	} else if s != "" {
+		log.Printf("D! [outputs.exec] stderr: %q", s)
 	}
+
 	c.cmd = cmd
 
 	return nil

@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
@@ -19,18 +20,27 @@ func TestExec(t *testing.T) {
 	tests := []struct {
 		command []string
 		err     bool
+		metrics []telegraf.Metric
 	}{
 		{
 			command: []string{"tee"},
 			err:     false,
+			metrics: testutil.MockMetrics(),
 		},
 		{
 			command: []string{"sleep", "5s"},
 			err:     true,
+			metrics: testutil.MockMetrics(),
 		},
 		{
 			command: []string{"/no/exist", "-h"},
 			err:     true,
+			metrics: testutil.MockMetrics(),
+		},
+		{
+			command: []string{"tee"},
+			err:     false,
+			metrics: []telegraf.Metric{},
 		},
 	}
 
@@ -46,7 +56,7 @@ func TestExec(t *testing.T) {
 
 		e.Connect()
 
-		require.Equal(t, tt.err, e.Write(testutil.MockMetrics()) != nil)
+		require.Equal(t, tt.err, e.Write(tt.metrics) != nil)
 	}
 }
 
