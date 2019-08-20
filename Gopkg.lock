@@ -1177,7 +1177,6 @@
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
-    "find",
     "list",
     "nfc",
     "object",
