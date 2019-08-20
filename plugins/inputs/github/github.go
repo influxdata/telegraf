@@ -33,11 +33,14 @@ type GitHub struct {
 
 const sampleConfig = `
   ## List of repositories to monitor.
-  repositories = ["influxdata/telegraf"]
+  repositories = [
+	  "influxdata/telegraf",
+	  "influxdata/influxdb"
+  ]
 
   ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
   # access_token = ""
-	
+
   ## Github API enterprise url. Github Enterprise accounts must specify their base url.
   # enterprise_base_url = ""
 
