@@ -81,6 +81,7 @@
 - [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
 - [#6136](https://github.com/influxdata/telegraf/issues/6136): Support Kafka 2.3.0 consumer groups.
 - [#6232](https://github.com/influxdata/telegraf/issues/6232): Fix persistent session in mqtt_consumer.
+- [#6235](https://github.com/influxdata/telegraf/issues/6235): Fix finder inconsistencies in vsphere input.
 
 ## v1.11.5 [unreleased]
 
