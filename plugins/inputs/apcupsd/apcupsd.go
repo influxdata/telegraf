@@ -3,6 +3,7 @@ package apcupsd
 import (
 	"context"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,8 +65,13 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 			"status":   status.Status,
 		}
 
+		flags, err := strconv.ParseUint(strings.Fields(status.StatusFlags)[0], 0, 64)
+		if err != nil {
+			return err
+		}
+
 		fields := map[string]interface{}{
-			"status_flags":           strings.TrimSuffix(status.StatusFlags, " Status Flag"),
+			"status_flags":           flags,
 			"input_voltage":          status.LineVoltage,
 			"load_percent":           status.LoadPercent,
 			"battery_charge_percent": status.BatteryChargePercent,

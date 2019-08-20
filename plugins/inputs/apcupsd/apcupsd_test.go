@@ -1,9 +1,13 @@
+// +build go1.11
+
 package apcupsd
 
 import (
+	"context"
 	"encoding/binary"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
@@ -25,14 +29,15 @@ func TestApcupsdInit(t *testing.T) {
 	_ = input().(*ApcUpsd)
 }
 
-func listen(t *testing.T) (string, error) {
-	ln, err := net.Listen("tcp4", "127.0.0.1:0")
+func listen(ctx context.Context, t *testing.T, out [][]byte) (string, error) {
+	lc := net.ListenConfig{}
+	ln, err := lc.Listen(ctx, "tcp4", "127.0.0.1:0")
 	if err != nil {
 		return "", err
 	}
 
 	go func() {
-		for {
+		for ctx.Err() == nil {
 			defer ln.Close()
 
 			conn, err := ln.Accept()
@@ -40,6 +45,7 @@ func listen(t *testing.T) (string, error) {
 				continue
 			}
 			defer conn.Close()
+			conn.SetReadDeadline(time.Now().Add(time.Second))
 
 			in := make([]byte, 128)
 			n, err := conn.Read(in)
@@ -50,7 +56,6 @@ func listen(t *testing.T) (string, error) {
 			require.Equal(t, want, got)
 
 			// Run against test function and append EOF to end of output bytes
-			out := genOutput()
 			out = append(out, []byte{0, 0})
 
 			for _, o := range out {
@@ -63,39 +68,66 @@ func listen(t *testing.T) (string, error) {
 	return ln.Addr().String(), nil
 }
 
-func TestApcupsdGather(t *testing.T) {
+func TestConfig(t *testing.T) {
 	apc := &ApcUpsd{Timeout: defaultTimeout}
-
-	lAddr, err := listen(t)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	var (
 		tests = []struct {
+			name    string
 			servers []string
 			err     bool
-			tags    map[string]string
-			fields  map[string]interface{}
 		}{
 			{
-				servers: []string{lAddr},
+				name:    "test listen address no scheme",
+				servers: []string{"127.0.0.1:1234"},
 				err:     true,
 			},
 			{
+				name:    "test no port",
 				servers: []string{"127.0.0.3"},
 				err:     true,
 			},
+		}
+
+		acc testutil.Accumulator
+	)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			apc.Servers = tt.servers
+
+			err := apc.Gather(&acc)
+			if tt.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+}
+
+func TestApcupsdGather(t *testing.T) {
+	apc := &ApcUpsd{Timeout: defaultTimeout}
+
+	var (
+		tests = []struct {
+			name   string
+			err    bool
+			tags   map[string]string
+			fields map[string]interface{}
+			out    func() [][]byte
+		}{
 			{
-				servers: []string{"tcp://" + lAddr},
-				err:     false,
+				name: "test listening server with output",
+				err:  false,
 				tags: map[string]string{
 					"serial":   "ABC123",
 					"status":   "ONLINE",
 					"ups_name": "BERTHA",
 				},
 				fields: map[string]interface{}{
-					"status_flags":           "0x08",
+					"status_flags":           uint64(8),
 					"battery_charge_percent": float64(0),
 					"battery_voltage":        float64(0),
 					"input_frequency":        float64(0),
@@ -106,22 +138,39 @@ func TestApcupsdGather(t *testing.T) {
 					"time_left_ns":           int64(2790000000000),
 					"time_on_battery_ns":     int64(0),
 				},
+				out: genOutput,
+			},
+			{
+				name: "test with bad output",
+				err:  true,
+				out:  genBadOutput,
 			},
 		}
 
 		acc testutil.Accumulator
 	)
 
-	for _, test := range tests {
-		apc.Servers = test.servers
+	for _, tt := range tests {
 
-		err = apc.Gather(&acc)
-		if test.err {
-			require.Error(t, err)
-		} else {
-			require.NoError(t, err)
-			acc.AssertContainsTaggedFields(t, "apcupsd", test.fields, test.tags)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+
+			lAddr, err := listen(ctx, t, tt.out())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			apc.Servers = []string{"tcp://" + lAddr}
+
+			err = apc.Gather(&acc)
+			if tt.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				acc.AssertContainsTaggedFields(t, "apcupsd", tt.fields, tt.tags)
+			}
+			cancel()
+		})
 	}
 }
 
@@ -150,6 +199,21 @@ func genOutput() [][]byte {
 		"NUMXFERS : 0",
 		"SELFTEST : NO",
 		"NOMPOWER : 865 Watts",
+	}
+
+	var out [][]byte
+	for _, kv := range kvs {
+		lenb, kvb := kvBytes(kv)
+		out = append(out, lenb)
+		out = append(out, kvb)
+	}
+
+	return out
+}
+
+func genBadOutput() [][]byte {
+	kvs := []string{
+		"STATFLAG : 0x08Status Flag",
 	}
 
 	var out [][]byte
