@@ -43,10 +43,11 @@ type Client interface {
 type ClientFactory func(o *mqtt.ClientOptions) Client
 
 type MQTTConsumer struct {
-	Servers                []string
-	Topics                 []string
-	Username               string
-	Password               string
+	Servers                []string          `toml:"servers"`
+	Topics                 []string          `toml:"topics"`
+	TopicTag               *string           `toml:"topic_tag"`
+	Username               string            `toml:"username"`
+	Password               string            `toml:"password"`
 	QoS                    int               `toml:"qos"`
 	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
@@ -67,6 +68,7 @@ type MQTTConsumer struct {
 	state         ConnectionState
 	sem           semaphore
 	messages      map[telegraf.TrackingID]bool
+	topicTag      string
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -83,6 +85,10 @@ var sampleConfig = `
     "telegraf/+/mem",
     "sensors/#",
   ]
+
+  ## The message topic will be stored in a tag specified by this value.  If set
+  ## to the empty string no topic tag will be created.
+  # topic_tag = "topic"
 
   ## QoS policy for messages
   ##   0 = at most once
@@ -159,6 +165,11 @@ func (m *MQTTConsumer) Init() error {
 
 	if m.ConnectionTimeout.Duration < 1*time.Second {
 		return fmt.Errorf("connection_timeout must be greater than 1s: %s", m.ConnectionTimeout.Duration)
+	}
+
+	m.topicTag = "topic"
+	if m.TopicTag != nil {
+		m.topicTag = *m.TopicTag
 	}
 
 	opts, err := m.createOpts()
@@ -267,9 +278,11 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		return err
 	}
 
-	topic := msg.Topic()
-	for _, metric := range metrics {
-		metric.AddTag("topic", topic)
+	if m.topicTag != "" {
+		topic := msg.Topic()
+		for _, metric := range metrics {
+			metric.AddTag(m.topicTag, topic)
+		}
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)

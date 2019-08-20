@@ -18,6 +18,10 @@ and creates metrics using one of the supported [input data formats][].
     "sensors/#",
   ]
 
+  ## The message topic will be stored in a tag specified by this value.  If set
+  ## to the empty string no topic tag will be created.
+  # topic_tag = "topic"
+
   ## QoS policy for messages
   ##   0 = at most once
   ##   1 = at least once
