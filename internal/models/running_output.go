@@ -72,7 +72,7 @@ func NewRunningOutput(
 	}
 
 	ro := &RunningOutput{
-		buffer:            NewBuffer(name, bufferLimit),
+		buffer:            NewBuffer(conf.LogName(), bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            conf,
@@ -81,16 +81,23 @@ func NewRunningOutput(
 		MetricsFiltered: selfstat.Register(
 			"write",
 			"metrics_filtered",
-			map[string]string{"output": name},
+			map[string]string{"output": conf.LogName()},
 		),
 		WriteTime: selfstat.RegisterTiming(
 			"write",
 			"write_time_ns",
-			map[string]string{"output": name},
+			map[string]string{"output": conf.LogName()},
 		),
 	}
 
 	return ro
+}
+
+func (c *OutputConfig) LogName() string {
+	if c.Alias == "" {
+		return c.Name
+	}
+	return c.Name + "::" + c.Alias
 }
 
 func (ro *RunningOutput) Name() string {
@@ -110,7 +117,11 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 }
 
 func (ro *RunningOutput) Init() error {
-	setLogIfExist(ro.Output, Logger{Name: ro.LogName()})
+	setLogIfExist(ro.Output, &Logger{
+		Name: ro.LogName(),
+		Errs: selfstat.Register("write", "errors",
+			map[string]string{"output": ro.LogName()}),
+	})
 
 	if p, ok := ro.Output.(telegraf.Initializer); ok {
 		err := p.Init()

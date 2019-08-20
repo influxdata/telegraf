@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 type RunningProcessor struct {
@@ -51,7 +52,11 @@ func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {
 }
 
 func (rp *RunningProcessor) Init() error {
-	setLogIfExist(rp.Processor, Logger{Name: rp.LogName()})
+	setLogIfExist(rp.Processor, &Logger{
+		Name: rp.LogName(),
+		Errs: selfstat.Register("process", "errors",
+			map[string]string{"processor": rp.LogName()}),
+	})
 
 	if p, ok := rp.Processor.(telegraf.Initializer); ok {
 		err := p.Init()
