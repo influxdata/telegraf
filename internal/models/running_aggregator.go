@@ -33,31 +33,24 @@ func NewRunningAggregator(
 		MetricsPushed: selfstat.Register(
 			"aggregate",
 			"metrics_pushed",
-			map[string]string{"aggregator": config.LogName()},
+			map[string]string{"aggregator": config.Name, "alias": config.Alias},
 		),
 		MetricsFiltered: selfstat.Register(
 			"aggregate",
 			"metrics_filtered",
-			map[string]string{"aggregator": config.LogName()},
+			map[string]string{"aggregator": config.Name, "alias": config.Alias},
 		),
 		MetricsDropped: selfstat.Register(
 			"aggregate",
 			"metrics_dropped",
-			map[string]string{"aggregator": config.LogName()},
+			map[string]string{"aggregator": config.Name, "alias": config.Alias},
 		),
 		PushTime: selfstat.Register(
 			"aggregate",
 			"push_time_ns",
-			map[string]string{"aggregator": config.LogName()},
+			map[string]string{"aggregator": config.Name, "alias": config.Alias},
 		),
 	}
-}
-
-func (c *AggregatorConfig) LogName() string {
-	if c.Alias == "" {
-		return c.Name
-	}
-	return c.Name + "::" + c.Alias
 }
 
 // AggregatorConfig is the common config for all aggregators.
@@ -91,7 +84,7 @@ func (r *RunningAggregator) Init() error {
 	setLogIfExist(r.Aggregator, &Logger{
 		Name: r.LogName(),
 		Errs: selfstat.Register("aggregate", "errors",
-			map[string]string{"aggregator": r.LogName()}),
+			map[string]string{"aggregator": r.Config.Name, "alias": r.Config.Alias}),
 	})
 
 	if p, ok := r.Aggregator.(telegraf.Initializer); ok {

@@ -26,12 +26,12 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		MetricsGathered: selfstat.Register(
 			"gather",
 			"metrics_gathered",
-			map[string]string{"input": config.LogName()},
+			map[string]string{"input": config.Name, "alias": config.Alias},
 		),
 		GatherTime: selfstat.RegisterTiming(
 			"gather",
 			"gather_time_ns",
-			map[string]string{"input": config.LogName()},
+			map[string]string{"input": config.Name, "alias": config.Alias},
 		),
 	}
 }
@@ -47,13 +47,6 @@ type InputConfig struct {
 	MeasurementSuffix string
 	Tags              map[string]string
 	Filter            Filter
-}
-
-func (c *InputConfig) LogName() string {
-	if c.Alias == "" {
-		return c.Name
-	}
-	return c.Name + "::" + c.Alias
 }
 
 func (r *RunningInput) Name() string {
@@ -75,7 +68,7 @@ func (r *RunningInput) Init() error {
 	setLogIfExist(r.Input, &Logger{
 		Name: r.LogName(),
 		Errs: selfstat.Register("gather", "errors",
-			map[string]string{"input": r.LogName()}),
+			map[string]string{"input": r.Config.Name, "alias": r.Config.Alias}),
 	})
 
 	if p, ok := r.Input.(telegraf.Initializer); ok {

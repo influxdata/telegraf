@@ -51,14 +51,14 @@ func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {
 	return false
 }
 
-func (rp *RunningProcessor) Init() error {
-	setLogIfExist(rp.Processor, &Logger{
-		Name: rp.LogName(),
+func (r *RunningProcessor) Init() error {
+	setLogIfExist(r.Processor, &Logger{
+		Name: r.LogName(),
 		Errs: selfstat.Register("process", "errors",
-			map[string]string{"processor": rp.LogName()}),
+			map[string]string{"processor": r.Config.Name, "alias": r.Config.Alias}),
 	})
 
-	if p, ok := rp.Processor.(telegraf.Initializer); ok {
+	if p, ok := r.Processor.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
 			return err

@@ -81,12 +81,12 @@ func NewRunningOutput(
 		MetricsFiltered: selfstat.Register(
 			"write",
 			"metrics_filtered",
-			map[string]string{"output": conf.LogName()},
+			map[string]string{"output": conf.Name, "alias": conf.Alias},
 		),
 		WriteTime: selfstat.RegisterTiming(
 			"write",
 			"write_time_ns",
-			map[string]string{"output": conf.LogName()},
+			map[string]string{"output": conf.Name, "alias": conf.Alias},
 		),
 	}
 
@@ -116,14 +116,14 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
-func (ro *RunningOutput) Init() error {
-	setLogIfExist(ro.Output, &Logger{
-		Name: ro.LogName(),
+func (r *RunningOutput) Init() error {
+	setLogIfExist(r.Output, &Logger{
+		Name: r.LogName(),
 		Errs: selfstat.Register("write", "errors",
-			map[string]string{"output": ro.LogName()}),
+			map[string]string{"output": r.Config.Name, "alias": r.Config.Alias}),
 	})
 
-	if p, ok := ro.Output.(telegraf.Initializer); ok {
+	if p, ok := r.Output.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
 			return err
