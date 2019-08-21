@@ -1,7 +1,6 @@
 package models
 
 import (
-	"log"
 	"sync"
 	"time"
 
@@ -16,6 +15,7 @@ type RunningAggregator struct {
 	Config      *AggregatorConfig
 	periodStart time.Time
 	periodEnd   time.Time
+	log         telegraf.Logger
 
 	MetricsPushed   selfstat.Stat
 	MetricsFiltered selfstat.Stat
@@ -23,10 +23,15 @@ type RunningAggregator struct {
 	PushTime        selfstat.Stat
 }
 
-func NewRunningAggregator(
-	aggregator telegraf.Aggregator,
-	config *AggregatorConfig,
-) *RunningAggregator {
+func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConfig) *RunningAggregator {
+	logger := &Logger{
+		Name: logName("aggregators", config.Name, config.Alias),
+		Errs: selfstat.Register("aggregate", "errors",
+			map[string]string{"input": config.Name, "alias": config.Alias}),
+	}
+
+	setLogIfExist(aggregator, logger)
+
 	return &RunningAggregator{
 		Aggregator: aggregator,
 		Config:     config,
@@ -50,6 +55,7 @@ func NewRunningAggregator(
 			"push_time_ns",
 			map[string]string{"aggregator": config.Name, "alias": config.Alias},
 		),
+		log: logger,
 	}
 }
 
@@ -69,24 +75,11 @@ type AggregatorConfig struct {
 	Filter            Filter
 }
 
-func (r *RunningAggregator) Name() string {
-	return "aggregators." + r.Config.Name
-}
-
 func (r *RunningAggregator) LogName() string {
-	if r.Config.Alias == "" {
-		return r.Name()
-	}
-	return r.Name() + "::" + r.Config.Alias
+	return logName("aggregators", r.Config.Name, r.Config.Alias)
 }
 
 func (r *RunningAggregator) Init() error {
-	setLogIfExist(r.Aggregator, &Logger{
-		Name: r.LogName(),
-		Errs: selfstat.Register("aggregate", "errors",
-			map[string]string{"aggregator": r.Config.Name, "alias": r.Config.Alias}),
-	})
-
 	if p, ok := r.Aggregator.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
@@ -107,7 +100,7 @@ func (r *RunningAggregator) EndPeriod() time.Time {
 func (r *RunningAggregator) UpdateWindow(start, until time.Time) {
 	r.periodStart = start
 	r.periodEnd = until
-	log.Printf("D! [%s] Updated aggregation range [%s, %s]", r.LogName(), start, until)
+	r.log.Debugf("Updated aggregation range [%s, %s]", start, until)
 }
 
 func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
@@ -151,8 +144,8 @@ func (r *RunningAggregator) Add(m telegraf.Metric) bool {
 	defer r.Unlock()
 
 	if m.Time().Before(r.periodStart.Add(-r.Config.Grace)) || m.Time().After(r.periodEnd.Add(r.Config.Delay)) {
-		log.Printf("D! [%s] metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
-			r.LogName(), m.Time(), r.periodStart, r.periodEnd, r.Config.Grace)
+		r.log.Debugf("metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
+			m.Time(), r.periodStart, r.periodEnd, r.Config.Grace)
 		r.MetricsDropped.Incr(1)
 		return r.Config.DropOriginal
 	}

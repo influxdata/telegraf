@@ -9,6 +9,7 @@ import (
 
 type RunningProcessor struct {
 	sync.Mutex
+	log       telegraf.Logger
 	Processor telegraf.Processor
 	Config    *ProcessorConfig
 }
@@ -27,15 +28,20 @@ type ProcessorConfig struct {
 	Filter Filter
 }
 
-func (rp *RunningProcessor) Name() string {
-	return "processors." + rp.Config.Name
-}
-
-func (rp *RunningProcessor) LogName() string {
-	if rp.Config.Alias == "" {
-		return rp.Name()
+func NewRunningProcessor(processor telegraf.Processor, config *ProcessorConfig) *RunningProcessor {
+	logger := &Logger{
+		Name: logName("processors", config.Name, config.Alias),
+		Errs: selfstat.Register("process", "errors",
+			map[string]string{"input": config.Name, "alias": config.Alias}),
 	}
-	return rp.Name() + "::" + rp.Config.Alias
+
+	setLogIfExist(processor, logger)
+
+	return &RunningProcessor{
+		Processor: processor,
+		Config:    config,
+		log:       logger,
+	}
 }
 
 func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {
@@ -52,12 +58,6 @@ func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {
 }
 
 func (r *RunningProcessor) Init() error {
-	setLogIfExist(r.Processor, &Logger{
-		Name: r.LogName(),
-		Errs: selfstat.Register("process", "errors",
-			map[string]string{"processor": r.Config.Name, "alias": r.Config.Alias}),
-	})
-
 	if p, ok := r.Processor.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {

@@ -13,6 +13,7 @@ type RunningInput struct {
 	Input  telegraf.Input
 	Config *InputConfig
 
+	log         telegraf.Logger
 	defaultTags map[string]string
 
 	MetricsGathered selfstat.Stat
@@ -20,6 +21,14 @@ type RunningInput struct {
 }
 
 func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
+	logger := &Logger{
+		Name: logName("inputs", config.Name, config.Alias),
+		Errs: selfstat.Register("gather", "errors",
+			map[string]string{"input": config.Name, "alias": config.Alias}),
+	}
+
+	setLogIfExist(input, logger)
+
 	return &RunningInput{
 		Input:  input,
 		Config: config,
@@ -33,6 +42,7 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 			"gather_time_ns",
 			map[string]string{"input": config.Name, "alias": config.Alias},
 		),
+		log: logger,
 	}
 }
 
@@ -49,28 +59,15 @@ type InputConfig struct {
 	Filter            Filter
 }
 
-func (r *RunningInput) Name() string {
-	return "inputs." + r.Config.Name
-}
-
-func (r *RunningInput) LogName() string {
-	if r.Config.Alias == "" {
-		return r.Name()
-	}
-	return r.Name() + "::" + r.Config.Alias
-}
-
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
 }
 
-func (r *RunningInput) Init() error {
-	setLogIfExist(r.Input, &Logger{
-		Name: r.LogName(),
-		Errs: selfstat.Register("gather", "errors",
-			map[string]string{"input": r.Config.Name, "alias": r.Config.Alias}),
-	})
+func (r *RunningInput) LogName() string {
+	return logName("inputs", r.Config.Name, r.Config.Alias)
+}
 
+func (r *RunningInput) Init() error {
 	if p, ok := r.Input.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {

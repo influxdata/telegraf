@@ -920,10 +920,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	rf := &models.RunningProcessor{
-		Processor: processor,
-		Config:    processorConfig,
-	}
+	rf := models.NewRunningProcessor(processor, processorConfig)
 
 	c.Processors = append(c.Processors, rf)
 	return nil

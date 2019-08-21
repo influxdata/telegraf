@@ -14,7 +14,6 @@ var (
 )
 
 type MetricMaker interface {
-	Name() string
 	LogName() string
 	MakeMetric(metric telegraf.Metric) telegraf.Metric
 }

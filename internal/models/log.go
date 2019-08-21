@@ -2,7 +2,9 @@ package models
 
 import (
 	"log"
+	"reflect"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -52,4 +54,34 @@ func (l *Logger) Infof(format string, args ...interface{}) {
 // Info logs an information message, patterned after log.Print.
 func (l *Logger) Info(args ...interface{}) {
 	log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+}
+
+// logName returns the log-friendly name/type.
+func logName(pluginType, name, alias string) string {
+	if alias == "" {
+		return pluginType + "." + name
+	}
+	return pluginType + "." + name + "::" + alias
+}
+
+func setLogIfExist(i interface{}, log telegraf.Logger) {
+	valI := reflect.ValueOf(i)
+
+	if valI.Type().Kind() != reflect.Ptr {
+		valI = reflect.New(reflect.TypeOf(i))
+	}
+
+	field := valI.Elem().FieldByName("Log")
+	if !field.IsValid() {
+		return
+	}
+
+	switch field.Type().String() {
+	case "telegraf.Logger":
+		if field.CanSet() {
+			field.Set(reflect.ValueOf(log))
+		}
+	}
+
+	return
 }
