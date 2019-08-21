@@ -30,9 +30,6 @@ This plugin reads metrics exposed by
   ## Should the queue statistics be gathered
   collect_queue_stats = true
 
-  ## HTTP method
-  # method = "GET"
-
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 

@@ -2,14 +2,14 @@ package logstash
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
@@ -39,9 +39,6 @@ const sampleConfig = `
 
   ## Should the queue statistics be gathered
   collect_queue_stats = true
-
-  ## HTTP method
-  # method = "GET"
 
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
@@ -77,7 +74,6 @@ type Logstash struct {
 
 	Username   string            `toml:"username"`
 	Password   string            `toml:"password"`
-	Method     string            `toml:"method"`
 	Headers    map[string]string `toml:"headers"`
 	HostHeader string            `toml:"host_header"`
 	Timeout    internal.Duration `toml:"timeout"`
@@ -96,7 +92,6 @@ func NewLogstash() *Logstash {
 		CollectPipelinesStats: true,
 		CollectPluginsStats:   true,
 		CollectQueueStats:     true,
-		Method:                "GET",
 		Headers:               make(map[string]string),
 		HostHeader:            "",
 		Timeout:               internal.Duration{Duration: time.Second * 5},
@@ -202,15 +197,7 @@ func (logstash *Logstash) createHttpClient() (*http.Client, error) {
 
 // gatherJsonData query the data source and parse the response JSON
 func (logstash *Logstash) gatherJsonData(url string, value interface{}) error {
-
-	var method string
-	if logstash.Method != "" {
-		method = logstash.Method
-	} else {
-		method = "GET"
-	}
-
-	request, err := http.NewRequest(method, url, nil)
+	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}

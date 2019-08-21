@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 var logstashTest = NewLogstash()
@@ -689,38 +688,4 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 		},
 	)
 
-}
-
-func Test_LogstashRequests(test *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(writer, "%s", string(logstash6JvmJSON))
-		assert.Equal(test, request.Host, "logstash.test.local")
-		assert.Equal(test, request.Method, "POST")
-		assert.Equal(test, request.Header.Get("X-Test"), "test-header")
-	}))
-	requestURL, err := url.Parse(logstashTest.URL)
-	if err != nil {
-		test.Logf("Can't connect to: %s", logstashTest.URL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
-	fakeServer.Start()
-	defer fakeServer.Close()
-
-	if logstashTest.client == nil {
-		client, err := logstashTest.createHttpClient()
-
-		if err != nil {
-			test.Logf("Can't createHttpClient")
-		}
-		logstashTest.client = client
-	}
-
-	logstashTest.Method = "POST"
-	logstashTest.Headers["X-Test"] = "test-header"
-	logstashTest.HostHeader = "logstash.test.local"
-
-	if err := logstashTest.gatherJsonData(logstashTest.URL+jvmStats, &logstash6accJVMStats); err != nil {
-		test.Logf("Can't gather JVM stats")
-	}
 }
