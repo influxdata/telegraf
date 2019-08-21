@@ -116,9 +116,9 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"nodes":                  collectNodes,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
-	"pods":         collectPods,
-	"services":     collectServices,
-	"statefulsets": collectStatefulSets,
+	"pods":                   collectPods,
+	"services":               collectServices,
+	"statefulsets":           collectStatefulSets,
 }
 
 func (ki *KubernetesInventory) initClient() (*client, error) {
