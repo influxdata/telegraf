@@ -192,17 +192,15 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 		if firstLine {
 			return parser.Parse([]byte(line))
 		} else {
-			metrics := []telegraf.Metric{}
 			m, err := parser.ParseLine(line)
 			if err != nil {
 				return nil, err
 			}
 
 			if m != nil {
-				metrics = append(metrics, m)
+				return []telegraf.Metric{m}, nil
 			}
-
-			return metrics, err
+			return []telegraf.Metric{}, nil
 		}
 	default:
 		return parser.Parse([]byte(line))
