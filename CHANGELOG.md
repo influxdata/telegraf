@@ -9,10 +9,11 @@
 
 #### New Inputs
 
-- [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
-- [fireboard](/plugins/inputs/fireboard) - Contributed by @ronnocol
-- [openntpd](/plugins/inputs/openntpd) - Contributed by @aromeyer
-- [uwsgi](/plugins/inputs/uswgi) - Contributed by @blaggacao
+- [apcupsd](/plugins/inputs/apcupsd/README.md) - Contributed by @jonaz
+- [docker_log](/plugins/inputs/docker_log/README.md) - Contributed by @prashanthjbabu
+- [fireboard](/plugins/inputs/fireboard/README.md) - Contributed by @ronnocol
+- [openntpd](/plugins/inputs/openntpd/README.md) - Contributed by @aromeyer
+- [uwsgi](/plugins/inputs/uswgi/README.md) - Contributed by @blaggacao
 
 #### New Parsers
 
@@ -24,6 +25,10 @@
 - [pivot](/plugins/processors/pivot/README.md) - Contributed by @influxdata
 - [tag_limit](/plugins/processors/tag_limit/README.md) - Contributed by @memory
 - [unpivot](/plugins/processors/unpivot/README.md) - Contributed by @influxdata
+
+#### New Outputs
+
+- [exec](/plugins/outputs/exec/README.md) - Contributed by @Jaeyo
 
 #### Features
 
