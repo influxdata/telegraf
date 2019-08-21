@@ -141,6 +141,7 @@ For documentation on the latest development code see the [documentation index][d
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
 * [aurora](./plugins/inputs/aurora)
+* [apcupsd](./plugins/inputs/apcupsd)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
