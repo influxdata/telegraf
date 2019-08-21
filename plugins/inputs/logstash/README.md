@@ -33,9 +33,6 @@ This plugin reads metrics exposed by
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
-  ## Override HTTP "Host" header
-  # host_header = "logstash.example.com"
-
   ## Timeout for HTTP requests
   timeout = "5s"
 

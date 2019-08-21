@@ -43,9 +43,6 @@ const sampleConfig = `
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
-  ## Override HTTP "Host" header
-  # host_header = "logstash.example.com"
-
   ## Timeout for HTTP requests
   timeout = "5s"
 
@@ -72,11 +69,10 @@ type Logstash struct {
 	CollectPluginsStats   bool `toml:"collect_plugins_stats"`
 	CollectQueueStats     bool `toml:"collect_queue_stats"`
 
-	Username   string            `toml:"username"`
-	Password   string            `toml:"password"`
-	Headers    map[string]string `toml:"headers"`
-	HostHeader string            `toml:"host_header"`
-	Timeout    internal.Duration `toml:"timeout"`
+	Username string            `toml:"username"`
+	Password string            `toml:"password"`
+	Headers  map[string]string `toml:"headers"`
+	Timeout  internal.Duration `toml:"timeout"`
 
 	tls.ClientConfig
 	client *http.Client
@@ -93,7 +89,6 @@ func NewLogstash() *Logstash {
 		CollectPluginsStats:   true,
 		CollectQueueStats:     true,
 		Headers:               make(map[string]string),
-		HostHeader:            "",
 		Timeout:               internal.Duration{Duration: time.Second * 5},
 	}
 }
@@ -205,11 +200,13 @@ func (logstash *Logstash) gatherJsonData(url string, value interface{}) error {
 	if (logstash.Username != "") || (logstash.Password != "") {
 		request.SetBasicAuth(logstash.Username, logstash.Password)
 	}
+
 	for header, value := range logstash.Headers {
-		request.Header.Add(header, value)
-	}
-	if logstash.HostHeader != "" {
-		request.Host = logstash.HostHeader
+		if header == "Host" {
+			request.Host = value
+		} else {
+			request.Header.Add(header, value)
+		}
 	}
 
 	response, err := logstash.client.Do(request)
