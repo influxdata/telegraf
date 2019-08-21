@@ -34,12 +34,6 @@ const sampleConfig = `
   ## Should the event pipelines statistics be gathered
   collect_pipelines_stats = true
 
-  ## Should the plugin statistics be gathered
-  collect_plugins_stats = true
-
-  ## Should the queue statistics be gathered
-  collect_queue_stats = true
-
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
@@ -67,7 +61,6 @@ type Logstash struct {
 	CollectJVMStats       bool `toml:"collect_jvm_stats"`
 	CollectPipelinesStats bool `toml:"collect_pipelines_stats"`
 	CollectPluginsStats   bool `toml:"collect_plugins_stats"`
-	CollectQueueStats     bool `toml:"collect_queue_stats"`
 
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
@@ -86,8 +79,6 @@ func NewLogstash() *Logstash {
 		CollectProcessStats:   true,
 		CollectJVMStats:       true,
 		CollectPipelinesStats: true,
-		CollectPluginsStats:   true,
-		CollectQueueStats:     true,
 		Headers:               make(map[string]string),
 		Timeout:               internal.Duration{Duration: time.Second * 5},
 	}
@@ -363,23 +354,22 @@ func (logstash *Logstash) gatherPipelineStats(url string, accumulator telegraf.A
 	}
 	accumulator.AddFields("logstash_events", flattener.Fields, tags)
 
-	if logstash.CollectPluginsStats {
-		err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Inputs, "input", tags, accumulator)
-		if err != nil {
-			return err
-		}
-		err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Filters, "filter", tags, accumulator)
-		if err != nil {
-			return err
-		}
-		err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Outputs, "output", tags, accumulator)
-		if err != nil {
-			return err
-		}
+	err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Inputs, "input", tags, accumulator)
+	if err != nil {
+		return err
+	}
+	err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Filters, "filter", tags, accumulator)
+	if err != nil {
+		return err
+	}
+	err = logstash.gatherPluginsStats(pipelineStats.Pipeline.Plugins.Outputs, "output", tags, accumulator)
+	if err != nil {
+		return err
 	}
 
-	if logstash.CollectQueueStats {
-		err = logstash.gatherQueueStats(&pipelineStats.Pipeline.Queue, tags, accumulator)
+	err = logstash.gatherQueueStats(&pipelineStats.Pipeline.Queue, tags, accumulator)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -410,25 +400,23 @@ func (logstash *Logstash) gatherPipelinesStats(url string, accumulator telegraf.
 		}
 		accumulator.AddFields("logstash_events", flattener.Fields, tags)
 
-		if logstash.CollectPluginsStats {
-			err = logstash.gatherPluginsStats(pipeline.Plugins.Inputs, "input", tags, accumulator)
-			if err != nil {
-				return err
-			}
-			err = logstash.gatherPluginsStats(pipeline.Plugins.Filters, "filter", tags, accumulator)
-			if err != nil {
-				return err
-			}
-			err = logstash.gatherPluginsStats(pipeline.Plugins.Outputs, "output", tags, accumulator)
-			if err != nil {
-				return err
-			}
+		err = logstash.gatherPluginsStats(pipeline.Plugins.Inputs, "input", tags, accumulator)
+		if err != nil {
+			return err
+		}
+		err = logstash.gatherPluginsStats(pipeline.Plugins.Filters, "filter", tags, accumulator)
+		if err != nil {
+			return err
+		}
+		err = logstash.gatherPluginsStats(pipeline.Plugins.Outputs, "output", tags, accumulator)
+		if err != nil {
+			return err
 		}
 
-		if logstash.CollectQueueStats {
-			err = logstash.gatherQueueStats(&pipeline.Queue, tags, accumulator)
+		err = logstash.gatherQueueStats(&pipeline.Queue, tags, accumulator)
+		if err != nil {
+			return err
 		}
-
 	}
 
 	return nil

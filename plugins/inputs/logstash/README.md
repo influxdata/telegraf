@@ -24,12 +24,6 @@ This plugin reads metrics exposed by
   ## Should the event pipelines statistics be gathered
   collect_pipelines_stats = true
 
-  ## Should the plugin statistics be gathered
-  collect_plugins_stats = true
-
-  ## Should the queue statistics be gathered
-  collect_queue_stats = true
-
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
