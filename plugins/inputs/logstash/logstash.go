@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -194,7 +195,7 @@ func (logstash *Logstash) gatherJsonData(url string, value interface{}) error {
 	}
 
 	for header, value := range logstash.Headers {
-		if header == "Host" {
+		if strings.ToLower(header) == "host" {
 			request.Host = value
 		} else {
 			request.Header.Add(header, value)
