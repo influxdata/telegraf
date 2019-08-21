@@ -43,7 +43,7 @@ func (s *Simple) SampleConfig() string {
 `
 }
 
-func (s *Simple) Init(telegraf.PluginConfig) error {
+func (s *Simple) Init() error {
 	return nil
 }
 
