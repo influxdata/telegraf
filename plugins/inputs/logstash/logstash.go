@@ -2,6 +2,7 @@ package logstash
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,14 +28,8 @@ const sampleConfig = `
   ## Logstash 5.
   # single_pipeline = false
 
-  ## Should the general process statistics be gathered
-  collect_process_stats = true
-
-  ## Should the JVM specific statistics be gathered
-  collect_jvm_stats = true
-
-  ## Should the event pipelines statistics be gathered
-  collect_pipelines_stats = true
+  ##
+  collect = ["pipelines", "process", "jvm"]
 
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
@@ -58,31 +53,26 @@ const sampleConfig = `
 type Logstash struct {
 	URL string `toml:"url"`
 
-	SinglePipeline        bool `toml:"single_pipeline"`
-	CollectProcessStats   bool `toml:"collect_process_stats"`
-	CollectJVMStats       bool `toml:"collect_jvm_stats"`
-	CollectPipelinesStats bool `toml:"collect_pipelines_stats"`
-	CollectPluginsStats   bool `toml:"collect_plugins_stats"`
+	SinglePipeline bool     `toml:"single_pipeline"`
+	Collect        []string `toml:"collect"`
 
 	Username string            `toml:"username"`
 	Password string            `toml:"password"`
 	Headers  map[string]string `toml:"headers"`
 	Timeout  internal.Duration `toml:"timeout"`
-
 	tls.ClientConfig
+
 	client *http.Client
 }
 
 // NewLogstash create an instance of the plugin with default settings
 func NewLogstash() *Logstash {
 	return &Logstash{
-		URL:                   "http://127.0.0.1:9600",
-		SinglePipeline:        false,
-		CollectProcessStats:   true,
-		CollectJVMStats:       true,
-		CollectPipelinesStats: true,
-		Headers:               make(map[string]string),
-		Timeout:               internal.Duration{Duration: time.Second * 5},
+		URL:            "http://127.0.0.1:9600",
+		SinglePipeline: false,
+		Collect:        []string{"pipelines", "process", "jvm"},
+		Headers:        make(map[string]string),
+		Timeout:        internal.Duration{Duration: time.Second * 5},
 	}
 }
 
@@ -165,6 +155,14 @@ const jvmStats = "/_node/stats/jvm"
 const processStats = "/_node/stats/process"
 const pipelinesStats = "/_node/stats/pipelines"
 const pipelineStats = "/_node/stats/pipeline"
+
+func (i *Logstash) Init() error {
+	err := internal.CheckSliceContains(i.Collect, []string{"pipelines", "process", "jvm"})
+	if err != nil {
+		return fmt.Errorf(`cannot verify "collect" setting: %v`, err)
+	}
+	return nil
+}
 
 // createHttpClient create a clients to access API
 func (logstash *Logstash) createHttpClient() (*http.Client, error) {
@@ -436,7 +434,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		logstash.client = client
 	}
 
-	if logstash.CollectJVMStats {
+	if internal.Contains("jvm", logstash.Collect) {
 		jvmUrl, err := url.Parse(logstash.URL + jvmStats)
 		if err != nil {
 			return err
@@ -446,7 +444,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		}
 	}
 
-	if logstash.CollectProcessStats {
+	if internal.Contains("process", logstash.Collect) {
 		processUrl, err := url.Parse(logstash.URL + processStats)
 		if err != nil {
 			return err
@@ -456,7 +454,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		}
 	}
 
-	if logstash.CollectPipelinesStats {
+	if internal.Contains("pipeline", logstash.Collect) {
 		if logstash.SinglePipeline {
 			pipelineUrl, err := url.Parse(logstash.URL + pipelineStats)
 			if err != nil {

@@ -410,3 +410,31 @@ func ParseTimestampWithLocation(timestamp interface{}, format string, location s
 		return time.Time{}, errors.New("Invalid unix format")
 	}
 }
+
+func Contains(choice string, choices []string) bool {
+	for _, item := range choices {
+		if item == choice {
+			return true
+		}
+	}
+	return false
+}
+
+func CheckContains(choice string, available []string) error {
+	if !Contains(choice, available) {
+		return fmt.Errorf("unknown choice %s", choice)
+	}
+	return nil
+}
+
+// CheckSliceContains returns an error if the choices is not a subset of
+// available.
+func CheckSliceContains(choices, available []string) error {
+	for _, choice := range choices {
+		err := CheckContains(choice, available)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
