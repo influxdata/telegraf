@@ -65,7 +65,7 @@ func Test_Logstash5GatherProcessStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("a360d8cf-6289-429d-8419-6145e324b574"),
 			"node_name":    string("node-5-test"),
-			"node_host":    string("node-5"),
+			"source":       string("node-5"),
 			"node_version": string("5.3.0"),
 		},
 	)
@@ -114,7 +114,7 @@ func Test_Logstash6GatherProcessStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 		},
 	)
@@ -159,7 +159,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("a360d8cf-6289-429d-8419-6145e324b574"),
 			"node_name":    string("node-5-test"),
-			"node_host":    string("node-5"),
+			"source":       string("node-5"),
 			"node_version": string("5.3.0"),
 		},
 	)
@@ -175,7 +175,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("a360d8cf-6289-429d-8419-6145e324b574"),
 			"node_name":    string("node-5-test"),
-			"node_host":    string("node-5"),
+			"source":       string("node-5"),
 			"node_version": string("5.3.0"),
 			"plugin_name":  string("beats"),
 			"plugin_id":    string("a35197a509596954e905e38521bae12b1498b17d-1"),
@@ -194,7 +194,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("a360d8cf-6289-429d-8419-6145e324b574"),
 			"node_name":    string("node-5-test"),
-			"node_host":    string("node-5"),
+			"source":       string("node-5"),
 			"node_version": string("5.3.0"),
 			"plugin_name":  string("stdout"),
 			"plugin_id":    string("582d5c2becb582a053e1e9a6bcc11d49b69a6dfd-2"),
@@ -213,7 +213,7 @@ func Test_Logstash5GatherPipelineStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("a360d8cf-6289-429d-8419-6145e324b574"),
 			"node_name":    string("node-5-test"),
-			"node_host":    string("node-5"),
+			"source":       string("node-5"),
 			"node_version": string("5.3.0"),
 			"plugin_name":  string("s3"),
 			"plugin_id":    string("582d5c2becb582a053e1e9a6bcc11d49b69a6dfd-3"),
@@ -263,7 +263,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 		},
@@ -280,7 +280,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("kafka"),
@@ -300,7 +300,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("mutate"),
@@ -320,7 +320,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("mutate"),
@@ -340,7 +340,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("date"),
@@ -360,7 +360,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("mutate"),
@@ -380,7 +380,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("mutate"),
@@ -400,7 +400,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("drop"),
@@ -420,7 +420,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("mutate"),
@@ -440,7 +440,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("csv"),
@@ -460,7 +460,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("mutate"),
@@ -480,7 +480,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("elasticsearch"),
@@ -500,7 +500,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("kafka"),
@@ -520,7 +520,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"plugin_name":  string("kafka"),
@@ -543,7 +543,7 @@ func Test_Logstash6GatherPipelinesStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 			"pipeline":     string("main"),
 			"queue_type":   string("persisted"),
@@ -614,7 +614,7 @@ func Test_Logstash5GatherJVMStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("a360d8cf-6289-429d-8419-6145e324b574"),
 			"node_name":    string("node-5-test"),
-			"node_host":    string("node-5"),
+			"source":       string("node-5"),
 			"node_version": string("5.3.0"),
 		},
 	)
@@ -683,7 +683,7 @@ func Test_Logstash6GatherJVMStats(test *testing.T) {
 		map[string]string{
 			"node_id":      string("3044f675-21ce-4335-898a-8408aa678245"),
 			"node_name":    string("node-6-test"),
-			"node_host":    string("node-6"),
+			"source":       string("node-6"),
 			"node_version": string("6.4.2"),
 		},
 	)

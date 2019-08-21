@@ -239,8 +239,8 @@ func (logstash *Logstash) gatherJVMStats(url string, accumulator telegraf.Accumu
 	tags := map[string]string{
 		"node_id":      jvmStats.ID,
 		"node_name":    jvmStats.Name,
-		"node_host":    jvmStats.Host,
 		"node_version": jvmStats.Version,
+		"source":       jvmStats.Host,
 	}
 
 	flattener := jsonParser.JSONFlattener{}
@@ -265,8 +265,8 @@ func (logstash *Logstash) gatherProcessStats(url string, accumulator telegraf.Ac
 	tags := map[string]string{
 		"node_id":      processStats.ID,
 		"node_name":    processStats.Name,
-		"node_host":    processStats.Host,
 		"node_version": processStats.Version,
+		"source":       processStats.Host,
 	}
 
 	flattener := jsonParser.JSONFlattener{}
@@ -355,8 +355,8 @@ func (logstash *Logstash) gatherPipelineStats(url string, accumulator telegraf.A
 	tags := map[string]string{
 		"node_id":      pipelineStats.ID,
 		"node_name":    pipelineStats.Name,
-		"node_host":    pipelineStats.Host,
 		"node_version": pipelineStats.Version,
+		"source":       pipelineStats.Host,
 	}
 
 	flattener := jsonParser.JSONFlattener{}
@@ -401,9 +401,9 @@ func (logstash *Logstash) gatherPipelinesStats(url string, accumulator telegraf.
 		tags := map[string]string{
 			"node_id":      pipelinesStats.ID,
 			"node_name":    pipelinesStats.Name,
-			"node_host":    pipelinesStats.Host,
 			"node_version": pipelinesStats.Version,
 			"pipeline":     pipelineName,
+			"source":       pipelinesStats.Host,
 		}
 
 		flattener := jsonParser.JSONFlattener{}

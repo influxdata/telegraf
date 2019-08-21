@@ -105,7 +105,7 @@ This plugin reads metrics exposed by
   * Tags:
     - node_id
     - node_name
-    - node_host
+    - source
   	- node_version
 
 - **logstash_events**
@@ -118,7 +118,7 @@ This plugin reads metrics exposed by
   * Tags:
     - node_id
     - node_name
-    - node_host
+    - source
   	- node_version
   	- pipeline (for Logstash 6 only)
 
@@ -131,7 +131,7 @@ This plugin reads metrics exposed by
   * Tags:
     - node_id
     - node_name
-    - node_host
+    - source
   	- node_version
   	- pipeline (for Logstash 6 only)
   	- plugin_id
@@ -149,15 +149,15 @@ This plugin reads metrics exposed by
   * Tags:
     - node_id
     - node_name
-    - node_host
+    - source
     - node_version
     - pipeline (for Logstash 6 only)
-    - queue_type  
+    - queue_type
 
 ### Tags description
 
 - node_id - The uuid of the logstash node. Randomly generated.
-- node_name - The name of the logstash node. Can be defined in the *logstash.yml* or defaults to the hostname.
+- source - The name of the logstash node. Can be defined in the *logstash.yml* or defaults to the hostname.
   Can be used to break apart metrics from different logstash instances of the same host.
 - node_host - The hostname of the logstash node.
   Can be different from the telegraf's host if a remote connection to logstash instance is used.
@@ -166,7 +166,7 @@ This plugin reads metrics exposed by
   Will defaults to "main" if there is only one pipeline and will be missing for logstash 5.
 - plugin_id - The unique id of this plugin.
   It will be a randomly generated string unless it's defined in the logstash pipeline config file.
-- plugin_name - The name of this plugin. i.e. file, elasticsearch, date, mangle. 
+- plugin_name - The name of this plugin. i.e. file, elasticsearch, date, mangle.
 - plugin_type - The type of this plugin i.e. input/filter/output.
 - queue_type - The type of the event queue (memory/persisted).
 
