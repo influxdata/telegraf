@@ -42,8 +42,8 @@ avoid cardinality issues:
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "nodes", "persistentvolumes",
-  ## "persistentvolumeclaims", "pods", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
+  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -131,6 +131,36 @@ subjects:
     - replicas_unavailable
     - created
 
++ kubernetes_endpoints
+  - tags:
+    - endpoint_name
+    - namespace
+    - hostname
+    - node_name
+    - port_name
+    - port_protocol
+    - kind (*varies)
+  - fields:
+    - created
+    - generation
+    - ready
+    - port
+
+- kubernetes_ingress
+  - tags:
+    - ingress_name
+    - namespace
+    - hostname
+    - ip
+    - backend_service_name
+    - path
+    - host
+  - fields:
+    - created
+    - generation
+    - backend_service_port
+    - tls
+
 + kubernetes_node
   - tags:
     - node_name
@@ -174,7 +204,21 @@ subjects:
     - resource_limits_cpu_units
     - resource_limits_memory_bytes
 
-+ kubernetes_statefulset
++ kubernetes_service
+  - tags:
+    - service_name
+    - namespace
+    - port_name
+    - port_protocol
+    - external_name
+    - cluster_ip
+  - fields
+    - created
+    - generation
+    - port
+    - target_port
+
+- kubernetes_statefulset
   - tags:
     - statefulset_name
     - namespace
