@@ -814,6 +814,13 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:d4a3035a03b4612c714b993891c071706a64890e55ef64bcc42bc2b461cb2756"
+  name = "github.com/mdlayher/apcupsd"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
+
+[[projects]]
   digest = "1:4c8d8358c45ba11ab7bb15df749d4df8664ff1582daead28bae58cf8cbe49890"
   name = "github.com/miekg/dns"
   packages = ["."]
@@ -1734,6 +1741,7 @@
     "github.com/kballard/go-shellquote",
     "github.com/kubernetes/apimachinery/pkg/api/resource",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
+    "github.com/mdlayher/apcupsd",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
     "github.com/nats-io/gnatsd/server",
