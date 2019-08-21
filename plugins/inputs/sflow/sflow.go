@@ -311,7 +311,12 @@ func (r *resolver) ifaceResolve(m telegraf.Metric, srcTag string, dstTag string,
 }
 
 func (r *resolver) resolveDNS(ipAddress string, resolved func(fqdn string)) {
+	//r.mux.Lock()
+	//defer r.mux.Unlock()
+
 	fqdn, ok := r.lookupFromDNSCache(ipAddress)
+	//fqdn, ok := r.lookupFromDNSCache(ipAddress)
+
 	if ok {
 		log.Printf("D! [input.sflow] sync cache lookup %s=>%s", ipAddress, fqdn)
 		resolved(fqdn)
