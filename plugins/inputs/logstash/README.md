@@ -12,8 +12,9 @@ This plugin reads metrics exposed by
   ## The URL of the exposed Logstash API endpoint
   url = "http://127.0.0.1:9600"
 
-  ## Enable Logstash 6+ multi-pipeline statistics support
-  multi_pipeline = true
+  ## Use Logstash 5 single pipeline API, set to true when monitoring
+  ## Logstash 5.
+  # single_pipeline = false
 
   ## Should the general process statistics be gathered
   collect_process_stats = true

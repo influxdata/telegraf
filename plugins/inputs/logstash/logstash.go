@@ -22,8 +22,9 @@ const sampleConfig = `
   ## The URL of the exposed Logstash API endpoint
   url = "http://127.0.0.1:9600"
 
-  ## Enable Logstash 6+ multi-pipeline statistics support
-  multi_pipeline = true
+  ## Use Logstash 5 single pipeline API, set to true when monitoring
+  ## Logstash 5.
+  # single_pipeline = false
 
   ## Should the general process statistics be gathered
   collect_process_stats = true
@@ -56,7 +57,7 @@ const sampleConfig = `
 type Logstash struct {
 	URL string `toml:"url"`
 
-	MultiPipeline         bool `toml:"multi_pipeline"`
+	SinglePipeline        bool `toml:"single_pipeline"`
 	CollectProcessStats   bool `toml:"collect_process_stats"`
 	CollectJVMStats       bool `toml:"collect_jvm_stats"`
 	CollectPipelinesStats bool `toml:"collect_pipelines_stats"`
@@ -75,7 +76,7 @@ type Logstash struct {
 func NewLogstash() *Logstash {
 	return &Logstash{
 		URL:                   "http://127.0.0.1:9600",
-		MultiPipeline:         true,
+		SinglePipeline:        false,
 		CollectProcessStats:   true,
 		CollectJVMStats:       true,
 		CollectPipelinesStats: true,
@@ -455,20 +456,20 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 	}
 
 	if logstash.CollectPipelinesStats {
-		if logstash.MultiPipeline {
-			pipelinesUrl, err := url.Parse(logstash.URL + pipelinesStats)
-			if err != nil {
-				return err
-			}
-			if err := logstash.gatherPipelinesStats(pipelinesUrl.String(), accumulator); err != nil {
-				return err
-			}
-		} else {
+		if logstash.SinglePipeline {
 			pipelineUrl, err := url.Parse(logstash.URL + pipelineStats)
 			if err != nil {
 				return err
 			}
 			if err := logstash.gatherPipelineStats(pipelineUrl.String(), accumulator); err != nil {
+				return err
+			}
+		} else {
+			pipelinesUrl, err := url.Parse(logstash.URL + pipelinesStats)
+			if err != nil {
+				return err
+			}
+			if err := logstash.gatherPipelinesStats(pipelinesUrl.String(), accumulator); err != nil {
 				return err
 			}
 		}
