@@ -354,6 +354,10 @@ func NewInfluxParser() (Parser, error) {
 	return influx.NewParser(handler), nil
 }
 
+func NewSFlowParser(metricName, string, snmpCommunity string, defaultTags map[string]string) (Parser, error) {
+	return sflow.NewParser(metricName, snmpCommunity, defaultTags)
+}
+
 func NewGraphiteParser(
 	separator string,
 	templates []string,

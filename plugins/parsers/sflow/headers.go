@@ -57,12 +57,21 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 	var identification uint16
 	var fragOffset uint16
 
+	if lengthInt < 6 {
+		return fmt.Errorf("data (%d bytes) not long enough to read dstMac", lengthInt)
+	}
 	dstMac = binary.BigEndian.Uint64(append([]byte{0, 0}, data[0:6]...))
+	if lengthInt < 12 {
+		return fmt.Errorf("data (%d bytes) not long enough to read srcMac", lengthInt)
+	}
 	srcMac = binary.BigEndian.Uint64(append([]byte{0, 0}, data[6:12]...))
 	rec.record("srcMac", srcMac)
 	rec.record("dstMac", dstMac)
 
 	if etherType[0] == 0x81 && etherType[1] == 0x0 { // VLAN 802.1Q
+		if lengthInt < 16 {
+			return fmt.Errorf("data (%d bytes) not long enough to read vlandId", lengthInt)
+		}
 		rec.record("vlanId", uint32(binary.BigEndian.Uint16(data[14:16])))
 		offset += 4
 		etherType = data[16:18]
@@ -103,6 +112,8 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 
 			identification = binary.BigEndian.Uint16(data[offset+4 : offset+6])
 			fragOffset = binary.BigEndian.Uint16(data[offset+6 : offset+8])
+		} else {
+			return fmt.Errorf("data (%d bytes) ecn/dsp and others from IPv4", lengthInt)
 		}
 	} else if etherType[0] == 0x86 && etherType[1] == 0xdd { // IPv6
 		rec.record("IPversion", 2) // v6?
@@ -123,6 +134,8 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 
 			flowLabeltmp := binary.BigEndian.Uint32(data[offset : offset+4])
 			rec.record("IPv6FlowLabel", flowLabeltmp&0xFFFFF)
+		} else {
+			return fmt.Errorf("data (%d bytes) ecn/dsp and others from IPv6", lengthInt)
 		}
 	} else if etherType[0] == 0x8 && etherType[1] == 0x6 { // ARP
 	} else {
@@ -130,27 +143,27 @@ func (d *ethHeaderDecoder) Decode(r io.Reader, rec Recorder) error {
 	}
 
 	if len(dataTransport) >= 4 && (nextHeader == 17 || nextHeader == 6) {
-		//fmt.Println("Recording srcPort and dstPort")
 		rec.record("srcPort", uint32(binary.BigEndian.Uint16(dataTransport[0:2])))
 		rec.record("dstPort", uint32(binary.BigEndian.Uint16(dataTransport[2:4])))
-	} else {
-		//fmt.Println("NOT recording srcPort and dstPort ", len(dataTransport), nextHeader)
 	}
 
-	if len(dataTransport) >= 4 && nextHeader == 6 { // TCP
-		rec.record("urgent_pointer", binary.BigEndian.Uint16(dataTransport[22:24]))
-		rec.record("tcp_header_length", uint32((dataTransport[16]>>4)*4))
-		rec.record("tcp_window_size", binary.BigEndian.Uint16((dataTransport[18:20])))
+	if nextHeader == 6 { // TCP
+		if len(dataTransport) >= 20 {
+			rec.record("tcp_header_length", uint32((dataTransport[16]>>4)*4))
+			rec.record("tcp_window_size", binary.BigEndian.Uint16((dataTransport[18:20])))
+		} else {
+			return fmt.Errorf("len(dataTransport) = %d < 20 - tcp_header_length IPv6", len(dataTransport))
+		}
+		if len(dataTransport) >= 24 {
+			rec.record("urgent_pointer", binary.BigEndian.Uint16(dataTransport[22:24]))
+		} else {
+			return fmt.Errorf("len(dataTransport) = %d < 24 - urgent pointer IPv6", len(dataTransport))
+		}
 	}
 
 	if len(dataTransport) >= 4 && (nextHeader == 17) { // UDP
 		rec.record("udp_length", binary.BigEndian.Uint16((dataTransport[4:6])))
 	}
-
-	//if nextHeader == 6 {
-	// get urgent pointer
-	//	urgentPointer = dataTransport[18]
-	//}
 
 	if len(dataTransport) >= 13 && nextHeader == 6 {
 		tcpflags = dataTransport[13]

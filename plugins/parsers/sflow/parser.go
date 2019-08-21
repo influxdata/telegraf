@@ -10,7 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/soniah/gosnmp"
 )
 
 // SFlowParser is Telegraf parser capable of parsing an sFlow v5 network packet
@@ -18,6 +17,18 @@ type SFlowParser struct {
 	metricName    string
 	snmpCommunity string
 	defaultTags   map[string]string
+}
+
+type SFlowParserConfig struct {
+	MetricName    string
+	SNMPCommunity string
+	DefaultTags   map[string]string
+
+	// Optional function to replace default DNS resolution - useful in testing
+	DNSLookupFn func(ipAddress string) (string, error)
+
+	// Optional function to replace default port->service name resolution - useful in testing
+	ServiceLookupFn func(portNum int) (string, error)
 }
 
 // NewParser creats a new SFlowParser
@@ -83,7 +94,7 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 											a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15])
 									}
 
-									tags["host"] = ipToName(tags["agent_ip"])
+									//tags["host"] = ipToName(tags["agent_ip"])
 								}
 
 								v := sample["sourceIdType"]
@@ -96,7 +107,7 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 								sourceIDIndex, ok := sample["sourceIdValue"].(uint32)
 								if ok {
 									tags["source_id_index"] = fmt.Sprintf("%d", sourceIDIndex)
-									tags["source_id_name"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], sourceIDIndex)
+									//									tags["source_id_name"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], sourceIDIndex)
 								} else {
 									fmt.Println("couldn't find sourceIdValue")
 								}
@@ -110,7 +121,7 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 									format := sample["inputFormat"].(uint32)
 									if format == 0 {
 										tags["netif_index_in"] = fmt.Sprintf("%d", ui32)
-										tags["netif_name_in"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], ui32)
+										//tags["netif_name_in"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], ui32)
 										if sourceIDIndex == ui32 {
 											tags["sample_direction"] = "ingress"
 										}
@@ -128,8 +139,8 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 									//format := ui32 >> 30
 									//value := ui32 & 0x0fffffff
 									if format == 0 {
-										tags["netif_index_out"] = fmt.Sprintf("%d", ui32)
-										tags["netif_name_out"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], ui32)
+										tags[`"netif_index_out"`] = fmt.Sprintf("%d", ui32)
+										//tags["netif_name_out"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], ui32)
 										if sourceIDIndex == ui32 {
 											tags["sample_direction"] = "egress"
 										}
@@ -158,9 +169,9 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 								header, ok := flowRecord["header"].([]map[string]interface{})
 								if ok && len(header) == 1 {
 									tags["src_ip"] = header[0]["srcIP"].(net.IP).String()
-									tags["src_host"] = ipToName(tags["src_ip"])
+									//tags["src_host"] = ipToName(tags["src_ip"])
 									tags["dst_ip"] = header[0]["dstIP"].(net.IP).String()
-									tags["dst_host"] = ipToName(tags["dst_ip"])
+									//tags["dst_host"] = ipToName(tags["dst_ip"])
 									if header[0]["srcPort"] != nil {
 										tags["src_port"] = fmt.Sprintf("%d", header[0]["srcPort"].(uint32))
 										tags["src_port_name"] = serviceNameFromPort(header[0]["srcPort"])
@@ -364,6 +375,7 @@ func serviceNameFromPort(value interface{}) string {
 	return fmt.Sprintf("%v", value)
 }
 
+/*
 func ipToName(ip string) string {
 	names, err := net.LookupAddr(ip)
 	if err == nil {
@@ -373,26 +385,28 @@ func ipToName(ip string) string {
 			}
 			return names[0]
 		} else {
-			return "-n/a-"
+			return ip
 		}
 	} else {
 		//fmt.Println("err on LookupAdd", err)
-		return "-n/a-"
+		return ip
 	}
 
 }
+*/
 
+/*
 var agentHostIfNames = make(map[string]map[string]string)
 
 func ifIndexToIfName(community string, snmpAgentIP string, ifIndex uint32) string {
-	oid := ".1.3.6.1.2.1.2.2.1.2"
+	oid := "1.3.6.1.2.1.31.1.1.1.1"
 
 	if ifList := agentHostIfNames[snmpAgentIP]; ifList != nil {
 		key := fmt.Sprintf("%s.%d", oid, ifIndex)
 		lookup := ifList[key]
 		//fmt.Printf("looked up from cache '%s' and got '%s'\n", key, lookup)
 		if lookup == "" {
-			return "-n/a-"
+			return fmt.Sprintf("%d", ifIndex)
 		}
 		return lookup
 	} else {
@@ -406,13 +420,13 @@ func ifIndexToIfName(community string, snmpAgentIP string, ifIndex uint32) strin
 	}
 	err := gosnmp.Default.Connect()
 	if err != nil {
-		fmt.Printf("Connect() err: %v\n", err)
+		log.Printf("I! [parsers.sflow] err %v\n", err)
 	}
 	defer gosnmp.Default.Conn.Close()
 	err = gosnmp.Default.BulkWalk(oid, captureInterfaceValues(snmpAgentIP))
 	result := agentHostIfNames[snmpAgentIP][fmt.Sprintf("%s.%d", oid, ifIndex)]
 	if result == "" {
-		result = "-n/a-"
+		result = fmt.Sprintf("%d", ifIndex)
 	}
 	return result
 }
@@ -432,3 +446,4 @@ func captureInterfaceValues(snmpAgentIP string) func(gosnmp.SnmpPDU) error {
 		return nil
 	}
 }
+*/
