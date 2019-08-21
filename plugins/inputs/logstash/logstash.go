@@ -10,44 +10,42 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonParser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
-// ##### Interface #####
-
 const sampleConfig = `
-  ## This plugin reads metrics exposed by Logstash Monitoring API.
-  ## https://www.elastic.co/guide/en/logstash/current/monitoring.html
-
-  ## The URL of the exposed Logstash API endpoint
+  ## The URL of the exposed Logstash API endpoint.
   url = "http://127.0.0.1:9600"
 
   ## Use Logstash 5 single pipeline API, set to true when monitoring
   ## Logstash 5.
   # single_pipeline = false
 
-  ##
-  collect = ["pipelines", "process", "jvm"]
+  ## Enable optional collection components.  Can contain
+  ## "pipelines", "process", and "jvm".
+  # collect = ["pipelines", "process", "jvm"]
 
-  ## Optional HTTP headers
-  # headers = {"X-Special-Header" = "Special-Value"}
+  ## Timeout for HTTP requests.
+  # timeout = "5s"
 
-  ## Timeout for HTTP requests
-  timeout = "5s"
-
-  ## Optional HTTP Basic Auth credentials
+  ## Optional HTTP Basic Auth credentials.
   # username = "username"
   # password = "pa$$word"
 
-  ## Optional TLS Config
+  ## Optional TLS Config.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
-  ## Use TLS but skip chain & host verification
+  ## Use TLS but skip chain & host verification.
   # insecure_skip_verify = false
+
+  ## Optional HTTP headers.
+  # [inputs.logstash.headers]
+  #   "X-Special-Header" = "Special-Value"
 `
 
 type Logstash struct {
@@ -74,13 +72,6 @@ func NewLogstash() *Logstash {
 		Headers:        make(map[string]string),
 		Timeout:        internal.Duration{Duration: time.Second * 5},
 	}
-}
-
-// init initialise this plugin instance
-func init() {
-	inputs.Add("logstash", func() telegraf.Input {
-		return NewLogstash()
-	})
 }
 
 // Description returns short info about plugin
@@ -157,7 +148,7 @@ const pipelinesStats = "/_node/stats/pipelines"
 const pipelineStats = "/_node/stats/pipeline"
 
 func (i *Logstash) Init() error {
-	err := internal.CheckSliceContains(i.Collect, []string{"pipelines", "process", "jvm"})
+	err := choice.CheckSlice(i.Collect, []string{"pipelines", "process", "jvm"})
 	if err != nil {
 		return fmt.Errorf(`cannot verify "collect" setting: %v`, err)
 	}
@@ -424,7 +415,6 @@ func (logstash *Logstash) gatherPipelinesStats(url string, accumulator telegraf.
 
 // Gather ask this plugin to start gathering metrics
 func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
-
 	if logstash.client == nil {
 		client, err := logstash.createHttpClient()
 
@@ -434,7 +424,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		logstash.client = client
 	}
 
-	if internal.Contains("jvm", logstash.Collect) {
+	if choice.Contains("jvm", logstash.Collect) {
 		jvmUrl, err := url.Parse(logstash.URL + jvmStats)
 		if err != nil {
 			return err
@@ -444,7 +434,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		}
 	}
 
-	if internal.Contains("process", logstash.Collect) {
+	if choice.Contains("process", logstash.Collect) {
 		processUrl, err := url.Parse(logstash.URL + processStats)
 		if err != nil {
 			return err
@@ -454,7 +444,7 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 		}
 	}
 
-	if internal.Contains("pipeline", logstash.Collect) {
+	if choice.Contains("pipelines", logstash.Collect) {
 		if logstash.SinglePipeline {
 			pipelineUrl, err := url.Parse(logstash.URL + pipelineStats)
 			if err != nil {
@@ -475,4 +465,11 @@ func (logstash *Logstash) Gather(accumulator telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+// init registers this plugin instance
+func init() {
+	inputs.Add("logstash", func() telegraf.Input {
+		return NewLogstash()
+	})
 }
