@@ -40,7 +40,7 @@ func NewParser(metricName string, snmpCommunity string, defaultTags map[string]s
 		fmt.Println("snmpCommunity was '' set to public", snmpCommunity)
 		snmpCommunity = "public"
 	} else {
-		fmt.Println("snmpCommunity", snmpCommunity)
+		//fmt.Println("snmpCommunity", snmpCommunity)
 	}
 	result := &SFlowParser{metricName: metricName, snmpCommunity: snmpCommunity}
 	if defaultTags != nil {

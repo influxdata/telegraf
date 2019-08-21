@@ -119,7 +119,13 @@ func (sl *SFlowListener) Start(acc telegraf.Accumulator) error {
 	sl.dnsCache = make(map[string]string)
 	sl.ifaceCache = make(map[string]string)
 
-	sl.dnsTTLTicker = time.NewTicker(60 * time.Second)
+	log.Printf("I! [inputs.sflow] dbs cache = %t", sl.resolver.dns)
+	log.Printf("I! [inputs.sflow] dbs cache ttl = %d seconds", sl.DNSFQDNCacheTTL)
+	log.Printf("I! [inputs.sflow] snmp cache = %t", sl.resolver.snmpIfaces)
+	log.Printf("I! [inputs.sflow] snmp cache ttl = %d seconds", sl.SNMPIfaceCacheTTL)
+	log.Printf("I! [inputs.sflow] snmp community = %s", sl.resolver.snmpCommunity)
+
+	sl.dnsTTLTicker = time.NewTicker(time.Duration(sl.DNSFQDNCacheTTL) * time.Second)
 	go func() {
 		for range sl.dnsTTLTicker.C {
 			sl.resolver.mux.Lock()
@@ -128,7 +134,7 @@ func (sl *SFlowListener) Start(acc telegraf.Accumulator) error {
 			sl.dnsCache = make(map[string]string)
 		}
 	}()
-	sl.ifaceTTLTicker = time.NewTicker(60 * time.Second)
+	sl.ifaceTTLTicker = time.NewTicker(time.Duration(sl.SNMPIfaceCacheTTL) * time.Second)
 	go func() {
 		for range sl.ifaceTTLTicker.C {
 			sl.resolver.mux.Lock()
