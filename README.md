@@ -367,6 +367,7 @@ For documentation on the latest development code see the [documentation index][d
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
 * [elasticsearch](./plugins/outputs/elasticsearch)
+* [exec](./plugins/output/exec)
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
