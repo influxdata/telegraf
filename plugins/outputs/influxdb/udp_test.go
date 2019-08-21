@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -78,6 +79,7 @@ func TestUDP_URL(t *testing.T) {
 	}
 
 	client, err := influxdb.NewUDPClient(config)
+	client.SetLogger(testutil.Logger{})
 	require.NoError(t, err)
 
 	require.Equal(t, u.String(), client.URL())
@@ -101,6 +103,7 @@ func TestUDP_Simple(t *testing.T) {
 		},
 	}
 	client, err := influxdb.NewUDPClient(config)
+	client.SetLogger(testutil.Logger{})
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -127,6 +130,7 @@ func TestUDP_DialError(t *testing.T) {
 		},
 	}
 	client, err := influxdb.NewUDPClient(config)
+	client.SetLogger(testutil.Logger{})
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -156,6 +160,7 @@ func TestUDP_WriteError(t *testing.T) {
 		},
 	}
 	client, err := influxdb.NewUDPClient(config)
+	client.SetLogger(testutil.Logger{})
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -219,6 +224,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 			log.SetOutput(&b)
 
 			client, err := influxdb.NewUDPClient(tt.config)
+			client.SetLogger(testutil.Logger{})
 			require.NoError(t, err)
 
 			ctx := context.Background()
@@ -262,6 +268,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 		URL: u,
 	}
 	client, err := influxdb.NewUDPClient(config)
+	client.SetLogger(testutil.Logger{})
 	require.NoError(t, err)
 
 	ctx := context.Background()

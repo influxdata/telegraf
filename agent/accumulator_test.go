@@ -147,6 +147,10 @@ func (tm *TestMetricMaker) Name() string {
 	return "TestPlugin"
 }
 
+func (tm *TestMetricMaker) LogName() string {
+	return tm.Name()
+}
+
 func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
