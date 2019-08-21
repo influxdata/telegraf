@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path"
 	"sync"
 	"time"
 
@@ -18,6 +20,8 @@ type Marklogic struct {
 	Hosts    []string `toml:"hosts"`
 	Username string   `toml:"username"`
 	Password string   `toml:"password"`
+	Sources  []string
+
 	tls.ClientConfig
 
 	client *http.Client
@@ -35,9 +39,9 @@ type MlPointBool struct {
 	Value bool `json:"value"`
 }
 
-// MarkLogic v2 management api endpoint for hosts status
+// MarkLogic v2 management api endpoints for hosts status
 const statsPath = "/manage/v2/hosts/"
-const viewFormat = "?view=status&format=json"
+const viewFormat = "view=status&format=json"
 
 type MlHost struct {
 	HostStatus struct {
@@ -62,11 +66,15 @@ type MlHost struct {
 				MemoryProcessRss       MlPointInt `json:"memory-process-rss"`
 				MemorySystemTotal      MlPointInt `json:"memory-system-total"`
 				MemorySystemFree       MlPointInt `json:"memory-system-free"`
+				MemoryProcessSwapSize  MlPointInt `json:"memory-process-swap-size"`
 				MemorySize             MlPointInt `json:"memory-size"`
 				HostSize               MlPointInt `json:"host-size"`
+				LogDeviceSpace         MlPointInt `json:"log-device-space"`
 				DataDirSpace           MlPointInt `json:"data-dir-space"`
 				QueryReadBytes         MlPointInt `json:"query-read-bytes"`
 				QueryReadLoad          MlPointInt `json:"query-read-load"`
+				MergeReadLoad          MlPointInt `json:"merge-read-load"`
+				MergeWriteLoad         MlPointInt `json:"merge-write-load"`
 				HTTPServerReceiveBytes MlPointInt `json:"http-server-receive-bytes"`
 				HTTPServerSendBytes    MlPointInt `json:"http-server-send-bytes"`
 			} `json:"status-detail"`
@@ -86,7 +94,7 @@ var sampleConfig = `
   ## List of specific hostnames to retrieve information. At least (1) required.
   # hosts = ["hostname1", "hostname2"]
 
-  ## Using HTTP Digest Authentication. Management API requires 'manage-user' role privileges
+  ## Using HTTP Basic Authentication. Management API requires 'manage-user' role privileges
   # username = "myuser"
   # password = "mypassword"
 
@@ -98,6 +106,29 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
+// Init parse all source URLs and place on the Marklogic struct
+func (c *Marklogic) Init() error {
+
+	if len(c.URL) == 0 {
+		c.URL = "http://localhost:8002/"
+	}
+
+	for _, u := range c.Hosts {
+		base, err := url.Parse(c.URL)
+		if err != nil {
+			return err
+		}
+
+		base.Path = path.Join(base.Path, statsPath, u)
+		addr := base.ResolveReference(base)
+
+		addr.RawQuery = viewFormat
+		u := addr.String()
+		c.Sources = append(c.Sources, u)
+	}
+	return nil
+}
+
 // SampleConfig to gather stats from localhost, default port.
 func (c *Marklogic) SampleConfig() string {
 	return sampleConfig
@@ -106,10 +137,9 @@ func (c *Marklogic) SampleConfig() string {
 // Gather metrics from HTTP Server.
 func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	var url string
 
 	if c.client == nil {
-		client, err := c.createHttpClient()
+		client, err := c.createHTTPClient()
 
 		if err != nil {
 			return err
@@ -117,21 +147,16 @@ func (c *Marklogic) Gather(accumulator telegraf.Accumulator) error {
 		c.client = client
 	}
 
-	if len(c.URL) == 0 {
-		c.URL = string("http://localhost:8002")
-	}
-
-	// Range over all ML hostnames configured in fiter. Returns early in case of any error.
-	for _, u := range c.Hosts {
+	// Range over all source URL's appended to the struct
+	for _, serv := range c.Sources {
+		//fmt.Printf("Encoded URL is %q\n", serv)
 		wg.Add(1)
-		go func(host string) {
+		go func(serv string) {
 			defer wg.Done()
-
-			url = string(c.URL + statsPath + host + viewFormat)
-			if err := c.fetchAndInsertData(accumulator, url); err != nil {
-				accumulator.AddError(fmt.Errorf("[host=%s]: %s", url, err))
+			if err := c.fetchAndInsertData(accumulator, serv); err != nil {
+				accumulator.AddError(fmt.Errorf("[host=%s]: %s", serv, err))
 			}
-		}(u)
+		}(serv)
 	}
 
 	wg.Wait()
@@ -166,11 +191,15 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) err
 		"memory_process_rss":        ml.HostStatus.StatusProperties.StatusDetail.MemoryProcessRss.Value,
 		"memory_system_total":       ml.HostStatus.StatusProperties.StatusDetail.MemorySystemTotal.Value,
 		"memory_system_free":        ml.HostStatus.StatusProperties.StatusDetail.MemorySystemFree.Value,
+		"memory_process_swap_size":  ml.HostStatus.StatusProperties.StatusDetail.MemoryProcessSwapSize.Value,
 		"memory_size":               ml.HostStatus.StatusProperties.StatusDetail.MemorySize.Value,
 		"host_size":                 ml.HostStatus.StatusProperties.StatusDetail.HostSize.Value,
+		"log_device_space":          ml.HostStatus.StatusProperties.StatusDetail.LogDeviceSpace.Value,
 		"data_dir_space":            ml.HostStatus.StatusProperties.StatusDetail.DataDirSpace.Value,
 		"query_read_bytes":          ml.HostStatus.StatusProperties.StatusDetail.QueryReadBytes.Value,
 		"query_read_load":           ml.HostStatus.StatusProperties.StatusDetail.QueryReadLoad.Value,
+		"merge_read_load":           ml.HostStatus.StatusProperties.StatusDetail.MergeReadLoad.Value,
+		"merge_write_load":          ml.HostStatus.StatusProperties.StatusDetail.MergeWriteLoad.Value,
 		"http_server_receive_bytes": ml.HostStatus.StatusProperties.StatusDetail.HTTPServerReceiveBytes.Value,
 		"http_server_send_bytes":    ml.HostStatus.StatusProperties.StatusDetail.HTTPServerSendBytes.Value,
 	}
@@ -181,7 +210,7 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, url string) err
 	return nil
 }
 
-func (c *Marklogic) createHttpClient() (*http.Client, error) {
+func (c *Marklogic) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err

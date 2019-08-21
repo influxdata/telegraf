@@ -24,13 +24,19 @@ func TestMarklogic(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a new Marklogic instance with our given test server
+
 	ml := &Marklogic{
 		Hosts: []string{"example1"},
 		URL:   string(ts.URL),
+		//Sources: []string{"http://localhost:8002/manage/v2/hosts/hostname1?view=status&format=json"},
 	}
 
 	// Create a test accumulator
 	acc := &testutil.Accumulator{}
+
+	// Init() call to parse all source URL's
+	err = ml.Init()
+	require.NoError(t, err)
 
 	// Gather data from the test server
 	err = ml.Gather(acc)
@@ -51,11 +57,15 @@ func TestMarklogic(t *testing.T) {
 		"memory_process_rss":        815,
 		"memory_system_total":       3947,
 		"memory_system_free":        2761,
+		"memory_process_swap_size":  0,
 		"memory_size":               4096,
 		"host_size":                 64,
+		"log_device_space":          34968,
 		"data_dir_space":            34968,
 		"query_read_bytes":          11492428,
 		"query_read_load":           0,
+		"merge_read_load":           0,
+		"merge_write_load":          0,
 		"http_server_receive_bytes": 285915,
 		"http_server_send_bytes":    0,
 	}
