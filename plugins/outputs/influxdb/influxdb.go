@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/url"
 	"time"
@@ -28,6 +27,7 @@ type Client interface {
 	Database() string
 	URL() string
 	Close()
+	SetLogger(telegraf.Logger)
 }
 
 // InfluxDB struct is the primary data structure for the plugin
@@ -59,6 +59,7 @@ type InfluxDB struct {
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
 
 	serializer *influx.Serializer
+	Log        telegraf.Logger
 }
 
 var sampleConfig = `
@@ -171,12 +172,16 @@ func (i *InfluxDB) Connect() error {
 				return err
 			}
 
+			c.SetLogger(i.Log)
+
 			i.clients = append(i.clients, c)
 		case "http", "https", "unix":
 			c, err := i.httpClient(ctx, parts, proxy)
 			if err != nil {
 				return err
 			}
+
+			c.SetLogger(i.Log)
 
 			i.clients = append(i.clients, c)
 		default:
@@ -221,13 +226,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			if !i.SkipDatabaseCreation {
 				err := client.CreateDatabase(ctx, apiError.Database)
 				if err != nil {
-					log.Printf("E! [outputs.influxdb] when writing to [%s]: database %q not found and failed to recreate",
+					i.Log.Errorf("when writing to [%s]: database %q not found and failed to recreate",
 						client.URL(), apiError.Database)
 				}
 			}
 		}
 
-		log.Printf("E! [outputs.influxdb] when writing to [%s]: %v", client.URL(), err)
+		i.Log.Errorf("when writing to [%s]: %v", client.URL(), err)
 	}
 
 	return errors.New("could not write any address")
@@ -281,7 +286,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	if !i.SkipDatabaseCreation {
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
-			log.Printf("W! [outputs.influxdb] when writing to [%s]: database %q creation failed: %v",
+			i.Log.Warnf("when writing to [%s]: database %q creation failed: %v",
 				c.URL(), i.Database, err)
 		}
 	}

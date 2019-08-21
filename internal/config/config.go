@@ -187,7 +187,7 @@ func (c *Config) AggregatorNames() []string {
 func (c *Config) ProcessorNames() []string {
 	var name []string
 	for _, processor := range c.Processors {
-		name = append(name, processor.Name)
+		name = append(name, processor.Config.Name)
 	}
 	return name
 }
@@ -196,7 +196,7 @@ func (c *Config) ProcessorNames() []string {
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
-		name = append(name, output.Name)
+		name = append(name, output.Config.Name)
 	}
 	return name
 }
@@ -920,11 +920,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	rf := &models.RunningProcessor{
-		Name:      name,
-		Processor: processor,
-		Config:    processorConfig,
-	}
+	rf := models.NewRunningProcessor(processor, processorConfig)
 
 	c.Processors = append(c.Processors, rf)
 	return nil
@@ -1103,6 +1099,14 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.Alias = str.Value
+			}
+		}
+	}
+
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1119,6 +1123,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "tags")
 	var err error
 	conf.Filter, err = buildFilter(tbl)
@@ -1146,6 +1151,15 @@ func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.Alias = str.Value
+			}
+		}
+	}
+
+	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "order")
 	var err error
 	conf.Filter, err = buildFilter(tbl)
@@ -1334,6 +1348,14 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				cp.Alias = str.Value
+			}
+		}
+	}
+
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1346,6 +1368,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
 	var err error
@@ -2007,9 +2030,18 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				oc.Alias = str.Value
+			}
+		}
+	}
+
 	delete(tbl.Fields, "flush_interval")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
+	delete(tbl.Fields, "alias")
 
 	return oc, nil
 }

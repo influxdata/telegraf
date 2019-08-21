@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
-
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,6 +96,7 @@ func TestExec(t *testing.T) {
 		MetricName: "exec",
 	})
 	e := &Exec{
+		log:      testutil.Logger{},
 		runner:   newRunnerMock([]byte(validJson), nil, nil),
 		Commands: []string{"testcommand arg1"},
 		parser:   parser,
@@ -126,6 +126,7 @@ func TestExecMalformed(t *testing.T) {
 		MetricName: "exec",
 	})
 	e := &Exec{
+		log:      testutil.Logger{},
 		runner:   newRunnerMock([]byte(malformedJson), nil, nil),
 		Commands: []string{"badcommand arg1"},
 		parser:   parser,
@@ -142,6 +143,7 @@ func TestCommandError(t *testing.T) {
 		MetricName: "exec",
 	})
 	e := &Exec{
+		log:      testutil.Logger{},
 		runner:   newRunnerMock(nil, nil, fmt.Errorf("exit status code 1")),
 		Commands: []string{"badcommand"},
 		parser:   parser,

@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -471,6 +472,7 @@ func TestHTTP_Write(t *testing.T) {
 
 			client, err := influxdb.NewHTTPClient(tt.config)
 			require.NoError(t, err)
+			client.SetLogger(testutil.Logger{})
 			err = client.Write(ctx, metrics)
 			if tt.errFunc != nil {
 				tt.errFunc(t, err)
