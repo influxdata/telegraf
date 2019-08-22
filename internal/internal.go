@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math"
 	"math/big"
 	"os"
@@ -198,54 +197,6 @@ func SnakeCase(in string) string {
 	}
 
 	return string(out)
-}
-
-// CombinedOutputTimeout runs the given command with the given timeout and
-// returns the combined output of stdout and stderr.
-// If the command times out, it attempts to kill the process.
-func CombinedOutputTimeout(c *exec.Cmd, timeout time.Duration) ([]byte, error) {
-	var b bytes.Buffer
-	c.Stdout = &b
-	c.Stderr = &b
-	if err := c.Start(); err != nil {
-		return nil, err
-	}
-	err := WaitTimeout(c, timeout)
-	return b.Bytes(), err
-}
-
-// RunTimeout runs the given command with the given timeout.
-// If the command times out, it attempts to kill the process.
-func RunTimeout(c *exec.Cmd, timeout time.Duration) error {
-	if err := c.Start(); err != nil {
-		return err
-	}
-	return WaitTimeout(c, timeout)
-}
-
-// WaitTimeout waits for the given command to finish with a timeout.
-// It assumes the command has already been started.
-// If the command times out, it attempts to kill the process.
-func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
-	timer := time.AfterFunc(timeout, func() {
-		err := c.Process.Kill()
-		if err != nil {
-			log.Printf("E! [agent] Error killing process: %s", err)
-			return
-		}
-	})
-
-	err := c.Wait()
-	if err == nil {
-		timer.Stop()
-		return nil
-	}
-
-	if !timer.Stop() {
-		return TimeoutErr
-	}
-
-	return err
 }
 
 // RandomSleep will sleep for a random amount of time up to max.
