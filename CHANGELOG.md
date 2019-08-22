@@ -13,6 +13,7 @@
 - [docker_log](/plugins/inputs/docker_log/README.md) - Contributed by @prashanthjbabu
 - [fireboard](/plugins/inputs/fireboard/README.md) - Contributed by @ronnocol
 - [logstash](/plugins/inputs/logstash/README.md) - Contributed by @lkmcs @dmitryilyin @arkady-emelyanov
+- [marklogic](/plugins/inputs/marklogic/README.md) - Contributed by @influxdata
 - [openntpd](/plugins/inputs/openntpd/README.md) - Contributed by @aromeyer
 - [uwsgi](/plugins/inputs/uswgi/README.md) - Contributed by @blaggacao
 
