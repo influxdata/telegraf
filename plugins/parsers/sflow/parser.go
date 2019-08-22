@@ -139,7 +139,7 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 									//format := ui32 >> 30
 									//value := ui32 & 0x0fffffff
 									if format == 0 {
-										tags[`"netif_index_out"`] = fmt.Sprintf("%d", ui32)
+										tags["netif_index_out"] = fmt.Sprintf("%d", ui32)
 										//tags["netif_name_out"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], ui32)
 										if sourceIDIndex == ui32 {
 											tags["sample_direction"] = "egress"
