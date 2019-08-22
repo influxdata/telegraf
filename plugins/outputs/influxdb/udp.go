@@ -60,6 +60,7 @@ func NewUDPClient(config UDPConfig) (*udpClient, error) {
 		url:        config.URL,
 		serializer: serializer,
 		dialer:     dialer,
+		log:        config.Log,
 	}
 	return client, nil
 }
@@ -69,16 +70,11 @@ type udpClient struct {
 	dialer     Dialer
 	serializer *influx.Serializer
 	url        *url.URL
-
-	log telegraf.Logger
+	log        telegraf.Logger
 }
 
 func (c *udpClient) URL() string {
 	return c.url.String()
-}
-
-func (c *udpClient) SetLogger(log telegraf.Logger) {
-	c.log = log
 }
 
 func (c *udpClient) Database() string {
