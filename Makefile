@@ -131,20 +131,15 @@ plugin-%:
 
 .PHONY: ci-1.12
 ci-1.12:
-	docker build -t quay.io/influxdb/telegraf-ci:1.12.5 - < scripts/ci-1.12.docker
-	docker push quay.io/influxdb/telegraf-ci:1.12.5
+	docker build -t quay.io/influxdb/telegraf-ci:1.12.9 - < scripts/ci-1.12.docker
+	docker push quay.io/influxdb/telegraf-ci:1.12.9
 
 .PHONY: ci-1.11
 ci-1.11:
-	docker build -t quay.io/influxdb/telegraf-ci:1.11.10 - < scripts/ci-1.11.docker
-	docker push quay.io/influxdb/telegraf-ci:1.11.10
+	docker build -t quay.io/influxdb/telegraf-ci:1.11.13 - < scripts/ci-1.11.docker
+	docker push quay.io/influxdb/telegraf-ci:1.11.13
 
 .PHONY: ci-1.10
 ci-1.10:
 	docker build -t quay.io/influxdb/telegraf-ci:1.10.8 - < scripts/ci-1.10.docker
 	docker push quay.io/influxdb/telegraf-ci:1.10.8
-
-.PHONY: ci-1.9
-ci-1.9:
-	docker build -t quay.io/influxdb/telegraf-ci:1.9.7 - < scripts/ci-1.9.docker
-	docker push quay.io/influxdb/telegraf-ci:1.9.7
