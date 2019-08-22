@@ -14,15 +14,16 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type NginxPlus struct {
-	Urls []string
+	Urls            []string          `toml:"urls"`
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	tls.ClientConfig
 
 	client *http.Client
-
-	ResponseTimeout internal.Duration
 }
 
 var sampleConfig = `
@@ -31,6 +32,13 @@ var sampleConfig = `
 
   # HTTP response timeout (default: 5s)
   response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (n *NginxPlus) SampleConfig() string {
@@ -74,14 +82,20 @@ func (n *NginxPlus) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *NginxPlus) createHttpClient() (*http.Client, error) {
-
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
 
+	tlsConfig, err := n.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	client := &http.Client{
-		Transport: &http.Transport{},
-		Timeout:   n.ResponseTimeout.Duration,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+		Timeout: n.ResponseTimeout.Duration,
 	}
 
 	return client, nil
