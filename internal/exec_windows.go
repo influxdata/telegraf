@@ -23,7 +23,7 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 	err := c.Wait()
 
 	// Shutdown all timers
-	termSent := !term.Stop()
+	termSent := !timer.Stop()
 
 	// If the process exited without error treat it as success.  This allows a
 	// process to do a clean shutdown on signal.
