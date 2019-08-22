@@ -12,6 +12,7 @@
 - [apcupsd](/plugins/inputs/apcupsd/README.md) - Contributed by @jonaz
 - [docker_log](/plugins/inputs/docker_log/README.md) - Contributed by @prashanthjbabu
 - [fireboard](/plugins/inputs/fireboard/README.md) - Contributed by @ronnocol
+- [logstash](/plugins/inputs/logstash/README.md) - Contributed by @lkmcs @dmitryilyin @arkady-emelyanov
 - [openntpd](/plugins/inputs/openntpd/README.md) - Contributed by @aromeyer
 - [uwsgi](/plugins/inputs/uswgi/README.md) - Contributed by @blaggacao
 
@@ -79,6 +80,8 @@
 - [#6257](https://github.com/influxdata/telegraf/pull/6257): Add database_tag option to influxdb_listener to add database from query string.
 - [#6246](https://github.com/influxdata/telegraf/pull/6246): Add capability to limit TLS versions and cipher suites.
 - [#6266](https://github.com/influxdata/telegraf/pull/6266): Add topic_tag option to mqtt_consumer.
+- [#6207](https://github.com/influxdata/telegraf/pull/6207): Add ability to label inputs for logging.
+- [#6300](https://github.com/influxdata/telegraf/pull/6300): Add TLS support to nginx_plus, nginx_plus_api and nginx_vts.
 
 #### Bugfixes
 
@@ -90,6 +93,7 @@
 - [#6136](https://github.com/influxdata/telegraf/issues/6136): Support Kafka 2.3.0 consumer groups.
 - [#6232](https://github.com/influxdata/telegraf/issues/6232): Fix persistent session in mqtt_consumer.
 - [#6235](https://github.com/influxdata/telegraf/issues/6235): Fix finder inconsistencies in vsphere input.
+- [#6138](https://github.com/influxdata/telegraf/issues/6138): Fix parsing multiple metrics on the first line of tailed file.
 
 ## v1.11.5 [unreleased]
 

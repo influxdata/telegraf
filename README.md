@@ -213,6 +213,7 @@ For documentation on the latest development code see the [documentation index][d
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
 * [logparser](./plugins/inputs/logparser)
+* [logstash](./plugins/inputs/logstash)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
 * [mcrouter](./plugins/inputs/mcrouter)
