@@ -100,7 +100,7 @@ type HTTPConfig struct {
 
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
-	log               telegraf.Logger
+	Log               telegraf.Logger
 }
 
 type httpClient struct {
@@ -176,7 +176,7 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 		},
 		createdDatabases: make(map[string]bool),
 		config:           config,
-		log:              config.log,
+		log:              config.Log,
 	}
 	return client, nil
 }
@@ -184,10 +184,6 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 // URL returns the origin URL that this client connects too.
 func (c *httpClient) URL() string {
 	return c.config.URL.String()
-}
-
-func (c *httpClient) SetLogger(log telegraf.Logger) {
-	c.log = log
 }
 
 // Database returns the default database that this client connects too.

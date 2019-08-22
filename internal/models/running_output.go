@@ -79,7 +79,7 @@ func NewRunningOutput(
 	}
 
 	ro := &RunningOutput{
-		buffer:            NewBuffer(config.LogName(), bufferLimit),
+		buffer:            NewBuffer(config.Name, config.Alias, bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            config,
@@ -99,13 +99,6 @@ func NewRunningOutput(
 	}
 
 	return ro
-}
-
-func (c *OutputConfig) LogName() string {
-	if c.Alias == "" {
-		return c.Name
-	}
-	return c.Name + "::" + c.Alias
 }
 
 func (r *RunningOutput) LogName() string {

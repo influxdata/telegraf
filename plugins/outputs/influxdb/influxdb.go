@@ -27,7 +27,6 @@ type Client interface {
 	Database() string
 	URL() string
 	Close()
-	SetLogger(telegraf.Logger)
 }
 
 // InfluxDB struct is the primary data structure for the plugin
@@ -172,16 +171,12 @@ func (i *InfluxDB) Connect() error {
 				return err
 			}
 
-			c.SetLogger(i.Log)
-
 			i.clients = append(i.clients, c)
 		case "http", "https", "unix":
 			c, err := i.httpClient(ctx, parts, proxy)
 			if err != nil {
 				return err
 			}
-
-			c.SetLogger(i.Log)
 
 			i.clients = append(i.clients, c)
 		default:
@@ -243,6 +238,7 @@ func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 		URL:            url,
 		MaxPayloadSize: int(i.UDPPayload.Size),
 		Serializer:     i.serializer,
+		Log:            i.Log,
 	}
 
 	c, err := i.CreateUDPClientF(config)
@@ -276,6 +272,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		RetentionPolicy:      i.RetentionPolicy,
 		Consistency:          i.WriteConsistency,
 		Serializer:           i.serializer,
+		Log:                  i.Log,
 	}
 
 	c, err := i.CreateHTTPClientF(config)
