@@ -59,7 +59,7 @@ func NewRunningOutput(
 ) *RunningOutput {
 	logger := &Logger{
 		Name: logName("outputs", config.Name, config.Alias),
-		Errs: selfstat.Register("gather", "errors",
+		Errs: selfstat.Register("write", "errors",
 			map[string]string{"output": config.Name, "alias": config.Alias}),
 	}
 
