@@ -1,10 +1,5 @@
-# Build and binaries
 /build
 /telegraf
 /telegraf.exe
 /telegraf.gz
 /vendor
-
-# Editor files
-*~
-.idea
