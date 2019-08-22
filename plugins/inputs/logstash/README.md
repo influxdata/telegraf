@@ -3,62 +3,52 @@
 This plugin reads metrics exposed by
 [Logstash Monitoring API](https://www.elastic.co/guide/en/logstash/current/monitoring-logstash.html).
 
-### Configuration:
+Logstash 5 and later is supported.
+
+### Configuration
 
 ```toml
-  ## This plugin reads metrics exposed by Logstash Monitoring API.
-  ## https://www.elastic.co/guide/en/logstash/current/monitoring.html
-
-  ## The URL of the exposed Logstash API endpoint
+[[inputs.logstash]]
+  ## The URL of the exposed Logstash API endpoint.
   url = "http://127.0.0.1:9600"
 
-  ## Enable Logstash 6+ multi-pipeline statistics support
-  multi_pipeline = true
+  ## Use Logstash 5 single pipeline API, set to true when monitoring
+  ## Logstash 5.
+  # single_pipeline = false
 
-  ## Should the general process statistics be gathered
-  collect_process_stats = true
+  ## Enable optional collection components.  Can contain
+  ## "pipelines", "process", and "jvm".
+  # collect = ["pipelines", "process", "jvm"]
 
-  ## Should the JVM specific statistics be gathered
-  collect_jvm_stats = true
+  ## Timeout for HTTP requests.
+  # timeout = "5s"
 
-  ## Should the event pipelines statistics be gathered
-  collect_pipelines_stats = true
-
-  ## Should the plugin statistics be gathered
-  collect_plugins_stats = true
-
-  ## Should the queue statistics be gathered
-  collect_queue_stats = true
-
-  ## HTTP method
-  # method = "GET"
-
-  ## Optional HTTP headers
-  # headers = {"X-Special-Header" = "Special-Value"}
-
-  ## Override HTTP "Host" header
-  # host_header = "logstash.example.com"
-
-  ## Timeout for HTTP requests
-  timeout = "5s"
-
-  ## Optional HTTP Basic Auth credentials
+  ## Optional HTTP Basic Auth credentials.
   # username = "username"
   # password = "pa$$word"
 
-  ## Optional TLS Config
+  ## Optional TLS Config.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
-  ## Use TLS but skip chain & host verification
+  ## Use TLS but skip chain & host verification.
   # insecure_skip_verify = false
+
+  ## Optional HTTP headers.
+  # [inputs.logstash.headers]
+  #   "X-Special-Header" = "Special-Value"
 ```
 
-### Measurements & Fields:
+### Metrics
 
-- **logstash_jvm**
-  * Fields:
+- logstash_jvm
+  - tags:
+    - node_id
+    - node_name
+    - node_host
+    - node_version
+  - fields:
     - threads_peak_count
     - mem_pools_survivor_peak_max_in_bytes
     - mem_pools_survivor_max_in_bytes
@@ -87,14 +77,14 @@ This plugin reads metrics exposed by
     - mem_heap_used_in_bytes
     - gc_collectors_young_collection_count
     - uptime_in_millis
-  * Tags:
+
++ logstash_process
+  - tags:
     - node_id
     - node_name
-    - node_host
-  	- node_version
-
-- **logstash_process**
-  * Fields:
+    - source
+    - node_version
+  - fields:
     - open_file_descriptors
     - cpu_load_average_1m
     - cpu_load_average_5m
@@ -105,85 +95,60 @@ This plugin reads metrics exposed by
     - max_file_descriptors
     - mem_total_virtual_in_bytes
     - mem_total_virtual_in_bytes
-  * Tags:
+
+- logstash_events
+  - tags:
     - node_id
     - node_name
-    - node_host
-  	- node_version
-
-- **logstash_events**
-  * Fields:
+    - source
+    - node_version
+    - pipeline (for Logstash 6+)
+  - fields:
     - queue_push_duration_in_millis
     - duration_in_millis
     - in
     - filtered
     - out
-  * Tags:
+
++ logstash_plugins
+  - tags:
     - node_id
     - node_name
-    - node_host
-  	- node_version
-  	- pipeline (for Logstash 6 only)
-
-- **logstash_plugins**
-  * Fields:
+    - source
+    - node_version
+    - pipeline (for Logstash 6+)
+    - plugin_id
+    - plugin_name
+    - plugin_type
+  - fields:
     - queue_push_duration_in_millis (for input plugins only)
     - duration_in_millis
     - in
     - out
-  * Tags:
+
+- logstash_queue
+  - tags:
     - node_id
     - node_name
-    - node_host
-  	- node_version
-  	- pipeline (for Logstash 6 only)
-  	- plugin_id
-  	- plugin_name
-  	- plugin_type
-
-- **logstash_queue**
-  * Fields:
+    - source
+    - node_version
+    - pipeline (for Logstash 6+)
+    - queue_type
+  - fields:
     - events
     - free_space_in_bytes
     - max_queue_size_in_bytes
     - max_unread_events
     - page_capacity_in_bytes
     - queue_size_in_bytes
-  * Tags:
-    - node_id
-    - node_name
-    - node_host
-    - node_version
-    - pipeline (for Logstash 6 only)
-    - queue_type  
 
-### Tags description
-
-- node_id - The uuid of the logstash node. Randomly generated.
-- node_name - The name of the logstash node. Can be defined in the *logstash.yml* or defaults to the hostname.
-  Can be used to break apart metrics from different logstash instances of the same host.
-- node_host - The hostname of the logstash node.
-  Can be different from the telegraf's host if a remote connection to logstash instance is used.
-- node_version - The version of logstash service running on this node.
-- pipeline (for Logstash 6 only) - The name of a pipeline if multi-pipeline is configured.
-  Will defaults to "main" if there is only one pipeline and will be missing for logstash 5.
-- plugin_id - The unique id of this plugin.
-  It will be a randomly generated string unless it's defined in the logstash pipeline config file.
-- plugin_name - The name of this plugin. i.e. file, elasticsearch, date, mangle. 
-- plugin_type - The type of this plugin i.e. input/filter/output.
-- queue_type - The type of the event queue (memory/persisted).
-
-### Example Output:
+### Example Output
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter logstash -test
-
-> logstash_jvm,host=node-6,node_host=node-6,node_id=3044f675-21ce-4335-898a-8408aa678245,node_name=node-6-test,node_version=6.4.2
-  gc_collectors_old_collection_count=5,gc_collectors_old_collection_time_in_millis=702,gc_collectors_young_collection_count=95,gc_collectors_young_collection_time_in_millis=4772,mem_heap_committed_in_bytes=360804352,mem_heap_max_in_bytes=8389328896,mem_heap_used_in_bytes=252629768,mem_heap_used_percent=3,mem_non_heap_committed_in_bytes=212144128,mem_non_heap_used_in_bytes=188726024,mem_pools_old_committed_in_bytes=280260608,mem_pools_old_max_in_bytes=6583418880,mem_pools_old_peak_max_in_bytes=6583418880,mem_pools_old_peak_used_in_bytes=235352976,mem_pools_old_used_in_bytes=194754608,mem_pools_survivor_committed_in_bytes=8912896,mem_pools_survivor_max_in_bytes=200605696,mem_pools_survivor_peak_max_in_bytes=200605696,mem_pools_survivor_peak_used_in_bytes=8912896,mem_pools_survivor_used_in_bytes=4476680,mem_pools_young_committed_in_bytes=71630848,mem_pools_young_max_in_bytes=1605304320,mem_pools_young_peak_max_in_bytes=1605304320,mem_pools_young_peak_used_in_bytes=71630848,mem_pools_young_used_in_bytes=53398480,threads_count=60,threads_peak_count=62,uptime_in_millis=10469014 1540289864000000000
-> logstash_process,host=node-6,node_host=node-6,node_id=3044f675-21ce-4335-898a-8408aa678245,node_name=node-6-test,node_version=6.4.2
-  cpu_load_average_15m=39.84,cpu_load_average_1m=32.87,cpu_load_average_5m=39.23,cpu_percent=0,cpu_total_in_millis=389920,max_file_descriptors=262144,mem_total_virtual_in_bytes=17921355776,open_file_descriptors=132,peak_open_file_descriptors=140 1540289864000000000
-> logstash_events,host=node-6,node_host=node-6,node_id=3044f675-21ce-4335-898a-8408aa678245,node_name=node-6-test,node_version=6.4.2,pipeline=main
-  duration_in_millis=175144,filtered=4543,in=4543,out=4543,queue_push_duration_in_millis=19 1540289864000000000
-> logstash_plugins,host=node-6,node_host=node-6,node_id=3044f675-21ce-4335-898a-8408aa678245,node_name=node-6-test,node_version=6.4.2,pipeline=main,plugin_id=input-kafka,plugin_name=kafka,plugin_type=input
-  duration_in_millis=0,in=0,out=4543,queue_push_duration_in_millis=19 1540289864000000000
+logstash_jvm,node_id=3da53ed0-a946-4a33-9cdb-33013f2273f6,node_name=debian-stretch-logstash6.virt,node_version=6.8.1,source=debian-stretch-logstash6.virt gc_collectors_old_collection_count=2,gc_collectors_old_collection_time_in_millis=100,gc_collectors_young_collection_count=26,gc_collectors_young_collection_time_in_millis=1028,mem_heap_committed_in_bytes=1056309248,mem_heap_max_in_bytes=1056309248,mem_heap_used_in_bytes=207216328,mem_heap_used_percent=19,mem_non_heap_committed_in_bytes=160878592,mem_non_heap_used_in_bytes=140838184,mem_pools_old_committed_in_bytes=899284992,mem_pools_old_max_in_bytes=899284992,mem_pools_old_peak_max_in_bytes=899284992,mem_pools_old_peak_used_in_bytes=189468088,mem_pools_old_used_in_bytes=189468088,mem_pools_survivor_committed_in_bytes=17432576,mem_pools_survivor_max_in_bytes=17432576,mem_pools_survivor_peak_max_in_bytes=17432576,mem_pools_survivor_peak_used_in_bytes=17432576,mem_pools_survivor_used_in_bytes=12572640,mem_pools_young_committed_in_bytes=139591680,mem_pools_young_max_in_bytes=139591680,mem_pools_young_peak_max_in_bytes=139591680,mem_pools_young_peak_used_in_bytes=139591680,mem_pools_young_used_in_bytes=5175600,threads_count=20,threads_peak_count=24,uptime_in_millis=739089 1566425244000000000
+logstash_process,node_id=3da53ed0-a946-4a33-9cdb-33013f2273f6,node_name=debian-stretch-logstash6.virt,node_version=6.8.1,source=debian-stretch-logstash6.virt cpu_load_average_15m=0.03,cpu_load_average_1m=0.01,cpu_load_average_5m=0.04,cpu_percent=0,cpu_total_in_millis=83230,max_file_descriptors=16384,mem_total_virtual_in_bytes=3689132032,open_file_descriptors=118,peak_open_file_descriptors=118 1566425244000000000
+logstash_events,node_id=3da53ed0-a946-4a33-9cdb-33013f2273f6,node_name=debian-stretch-logstash6.virt,node_version=6.8.1,pipeline=main,source=debian-stretch-logstash6.virt duration_in_millis=0,filtered=0,in=0,out=0,queue_push_duration_in_millis=0 1566425244000000000
+logstash_plugins,node_id=3da53ed0-a946-4a33-9cdb-33013f2273f6,node_name=debian-stretch-logstash6.virt,node_version=6.8.1,pipeline=main,plugin_id=2807cb8610ba7854efa9159814fcf44c3dda762b43bd088403b30d42c88e69ab,plugin_name=beats,plugin_type=input,source=debian-stretch-logstash6.virt out=0,queue_push_duration_in_millis=0 1566425244000000000
+logstash_plugins,node_id=3da53ed0-a946-4a33-9cdb-33013f2273f6,node_name=debian-stretch-logstash6.virt,node_version=6.8.1,pipeline=main,plugin_id=7a6c973366186a695727c73935634a00bccd52fceedf30d0746983fce572d50c,plugin_name=file,plugin_type=output,source=debian-stretch-logstash6.virt duration_in_millis=0,in=0,out=0 1566425244000000000
+logstash_queue,node_id=3da53ed0-a946-4a33-9cdb-33013f2273f6,node_name=debian-stretch-logstash6.virt,node_version=6.8.1,pipeline=main,queue_type=memory,source=debian-stretch-logstash6.virt events=0 1566425244000000000
 ```
