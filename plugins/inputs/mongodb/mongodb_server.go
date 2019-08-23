@@ -31,6 +31,10 @@ func IsAuthorization(err error) bool {
 	return strings.Contains(err.Error(), "not authorized")
 }
 
+func IsLocalThroughMongos(err error) bool {
+	return err.Error() == "Can't use 'local' database through mongos"
+}
+
 func authLogLevel(err error) string {
 	if IsAuthorization(err) {
 		return "D!"
@@ -49,14 +53,14 @@ func (s *Server) gatherOplogStats() *OplogStats {
 
 	for _, collection_name := range []string{"oplog.rs", "oplog.$main"} {
 		if err := localdb.C(collection_name).Find(query).Sort("$natural").Limit(1).One(&op_first); err != nil {
-			if err == mgo.ErrNotFound {
+			if err == mgo.ErrNotFound || IsLocalThroughMongos(err) {
 				continue
 			}
 			log.Printf("%s [inputs.mongodb] Error getting first oplog entry: %v", authLogLevel(err), err)
 			return stats
 		}
 		if err := localdb.C(collection_name).Find(query).Sort("-$natural").Limit(1).One(&op_last); err != nil {
-			if err == mgo.ErrNotFound || IsAuthorization(err) {
+			if err == mgo.ErrNotFound || IsAuthorization(err) || IsLocalThroughMongos(err) {
 				continue
 			}
 			log.Printf("%s [inputs.mongodb] Error getting first oplog entry: %v", authLogLevel(err), err)
