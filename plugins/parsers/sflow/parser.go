@@ -60,6 +60,7 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
+	nano := 0
 	metrics := make([]telegraf.Metric, 0)
 	samples, ok := decodedPacket["samples"].([]map[string]interface{})
 	if ok {
@@ -272,7 +273,8 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 									tags["header_protocol"] = protocol
 								}
 
-								m, err := metric.New(sfp.metricName, tags, fields, time.Now())
+								m, err := metric.New(sfp.metricName, tags, fields, time.Now().Add(time.Duration(nano)))
+								nano++
 								if err == nil {
 									metrics = append(metrics, m)
 								} else {
@@ -360,17 +362,13 @@ func serviceNameFromPort(value interface{}) string {
 		proto := netdb.GetProtoByName("tcp")
 		serv := netdb.GetServByPort(int(ui32), proto)
 		if serv != nil {
-			return serv.Name
+			//if serv.Name != "" {
+			return fmt.Sprintf("%s", serv.Name)
+			/*} else {
+				log.Printf("E! [parsers.sflow] example of serv.Name = `` %d\n", serv.Port)
+				return fmt.Sprintf("%v", value)
+			}*/
 		}
-
-		/*
-			result := portNumberStrToServiceName[fmt.Sprintf("%d", ui32)]
-			if result == "" {
-				return fmt.Sprintf("%d", ui32)
-			} else {
-				return result
-			}
-		*/
 	}
 	return fmt.Sprintf("%v", value)
 }
