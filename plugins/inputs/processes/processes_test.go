@@ -135,24 +135,27 @@ func TestParkedProcess(t *testing.T) {
 			"processes",
 			map[string]string{},
 			map[string]interface{}{
-				"blocked":       0,
-				"dead":          0,
-				"idle":          0,
-				"paging":        0,
-				"parked":        1,
-				"running":       0,
-				"sleeping":      0,
-				"stopped":       0,
-				"total":         175,
-				"total_threads": 175,
-				"unknown":       0,
-				"zombies":       0,
+				"blocked":  0,
+				"dead":     0,
+				"idle":     0,
+				"paging":   0,
+				"parked":   1,
+				"running":  0,
+				"sleeping": 0,
+				"stopped":  0,
+				"unknown":  0,
+				"zombies":  0,
 			},
 			time.Unix(0, 0),
 			telegraf.Untyped,
 		),
 	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
+	actual := acc.GetTelegrafMetrics()
+	for _, a := range actual {
+		a.RemoveField("total")
+		a.RemoveField("total_threads")
+	}
+	testutil.RequireMetricsEqual(t, expected, actual,
 		testutil.IgnoreTime())
 }
 
