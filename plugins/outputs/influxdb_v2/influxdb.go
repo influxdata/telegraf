@@ -42,6 +42,9 @@ var sampleConfig = `
   ## tag is not set the 'bucket' option is used as the default.
   # bucket_tag = ""
 
+  ## If true, the bucket tag will not be added to the metric.
+  # exclude_bucket_tag = false
+
   ## Timeout for HTTP messages.
   # timeout = "5s"
 
@@ -78,17 +81,18 @@ type Client interface {
 }
 
 type InfluxDB struct {
-	URLs            []string          `toml:"urls"`
-	Token           string            `toml:"token"`
-	Organization    string            `toml:"organization"`
-	Bucket          string            `toml:"bucket"`
-	BucketTag       string            `toml:"bucket_tag"`
-	Timeout         internal.Duration `toml:"timeout"`
-	HTTPHeaders     map[string]string `toml:"http_headers"`
-	HTTPProxy       string            `toml:"http_proxy"`
-	UserAgent       string            `toml:"user_agent"`
-	ContentEncoding string            `toml:"content_encoding"`
-	UintSupport     bool              `toml:"influx_uint_support"`
+	URLs             []string          `toml:"urls"`
+	Token            string            `toml:"token"`
+	Organization     string            `toml:"organization"`
+	Bucket           string            `toml:"bucket"`
+	BucketTag        string            `toml:"bucket_tag"`
+	ExcludeBucketTag bool              `toml:"exclude_bucket_tag"`
+	Timeout          internal.Duration `toml:"timeout"`
+	HTTPHeaders      map[string]string `toml:"http_headers"`
+	HTTPProxy        string            `toml:"http_proxy"`
+	UserAgent        string            `toml:"user_agent"`
+	ContentEncoding  string            `toml:"content_encoding"`
+	UintSupport      bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
 	clients    []Client
@@ -179,18 +183,19 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 	}
 
 	config := &HTTPConfig{
-		URL:             url,
-		Token:           i.Token,
-		Organization:    i.Organization,
-		Bucket:          i.Bucket,
-		BucketTag:       i.BucketTag,
-		Timeout:         i.Timeout.Duration,
-		Headers:         i.HTTPHeaders,
-		Proxy:           proxy,
-		UserAgent:       i.UserAgent,
-		ContentEncoding: i.ContentEncoding,
-		TLSConfig:       tlsConfig,
-		Serializer:      i.serializer,
+		URL:              url,
+		Token:            i.Token,
+		Organization:     i.Organization,
+		Bucket:           i.Bucket,
+		BucketTag:        i.BucketTag,
+		ExcludeBucketTag: i.ExcludeBucketTag,
+		Timeout:          i.Timeout.Duration,
+		Headers:          i.HTTPHeaders,
+		Proxy:            proxy,
+		UserAgent:        i.UserAgent,
+		ContentEncoding:  i.ContentEncoding,
+		TLSConfig:        tlsConfig,
+		Serializer:       i.serializer,
 	}
 
 	c, err := NewHTTPClient(config)

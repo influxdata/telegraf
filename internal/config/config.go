@@ -187,7 +187,7 @@ func (c *Config) AggregatorNames() []string {
 func (c *Config) ProcessorNames() []string {
 	var name []string
 	for _, processor := range c.Processors {
-		name = append(name, processor.Name)
+		name = append(name, processor.Config.Name)
 	}
 	return name
 }
@@ -196,7 +196,7 @@ func (c *Config) ProcessorNames() []string {
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
-		name = append(name, output.Name)
+		name = append(name, output.Config.Name)
 	}
 	return name
 }
@@ -289,7 +289,8 @@ var agentConfig = `
   # logfile = ""
 
   ## The logfile will be rotated after the time interval specified.  When set
-  ## to 0 no time based rotation is performed.
+  ## to 0 no time based rotation is performed.  Logs are rotated only when
+  ## written to, if there is no log activity rotation may be delayed.
   # logfile_rotation_interval = "0d"
 
   ## The logfile will be rotated when it becomes larger than the specified
@@ -919,11 +920,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	rf := &models.RunningProcessor{
-		Name:      name,
-		Processor: processor,
-		Config:    processorConfig,
-	}
+	rf := models.NewRunningProcessor(processor, processorConfig)
 
 	c.Processors = append(c.Processors, rf)
 	return nil
@@ -1025,6 +1022,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		Name:   name,
 		Delay:  time.Millisecond * 100,
 		Period: time.Second * 30,
+		Grace:  time.Second * 0,
 	}
 
 	if node, ok := tbl.Fields["period"]; ok {
@@ -1053,6 +1051,18 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
+	if node, ok := tbl.Fields["grace"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				conf.Grace = dur
+			}
+		}
+	}
 	if node, ok := tbl.Fields["drop_original"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if b, ok := kv.Value.(*ast.Boolean); ok {
@@ -1089,6 +1099,14 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.Alias = str.Value
+			}
+		}
+	}
+
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1100,10 +1118,12 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 
 	delete(tbl.Fields, "period")
 	delete(tbl.Fields, "delay")
+	delete(tbl.Fields, "grace")
 	delete(tbl.Fields, "drop_original")
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "tags")
 	var err error
 	conf.Filter, err = buildFilter(tbl)
@@ -1131,6 +1151,15 @@ func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				conf.Alias = str.Value
+			}
+		}
+	}
+
+	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "order")
 	var err error
 	conf.Filter, err = buildFilter(tbl)
@@ -1319,6 +1348,14 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				cp.Alias = str.Value
+			}
+		}
+	}
+
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1331,6 +1368,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
 	var err error
@@ -1992,9 +2030,18 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["alias"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				oc.Alias = str.Value
+			}
+		}
+	}
+
 	delete(tbl.Fields, "flush_interval")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
+	delete(tbl.Fields, "alias")
 
 	return oc, nil
 }

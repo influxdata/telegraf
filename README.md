@@ -62,6 +62,7 @@ version.
 ### Nightly Builds
 
 These builds are generated from the master branch:
+- [telegraf-nightly_darwin_amd64.tar.gz](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly_darwin_amd64.tar.gz)
 - [telegraf_nightly_amd64.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_amd64.deb)
 - [telegraf_nightly_arm64.deb](https://dl.influxdata.com/telegraf/nightlies/telegraf_nightly_arm64.deb)
 - [telegraf-nightly.arm64.rpm](https://dl.influxdata.com/telegraf/nightlies/telegraf-nightly.arm64.rpm)
@@ -140,6 +141,7 @@ For documentation on the latest development code see the [documentation index][d
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
 * [aurora](./plugins/inputs/aurora)
+* [apcupsd](./plugins/inputs/apcupsd)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
@@ -176,6 +178,7 @@ For documentation on the latest development code see the [documentation index][d
 * [file](./plugins/inputs/file)
 * [filestat](./plugins/inputs/filestat)
 * [filecount](./plugins/inputs/filecount)
+* [fireboard](/plugins/inputs/fireboard)
 * [fluentd](./plugins/inputs/fluentd)
 * [github](./plugins/inputs/github)
 * [graylog](./plugins/inputs/graylog)
@@ -210,8 +213,10 @@ For documentation on the latest development code see the [documentation index][d
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
 * [logparser](./plugins/inputs/logparser)
+* [logstash](./plugins/inputs/logstash)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [marklogic](./plugins/inputs/marklogic)
 * [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mem](./plugins/inputs/mem)
@@ -238,6 +243,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ntpq](./plugins/inputs/ntpq)
 * [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
+* [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [openweathermap](./plugins/inputs/openweathermap)
 * [pf](./plugins/inputs/pf)
@@ -282,6 +288,7 @@ For documentation on the latest development code see the [documentation index][d
 * [twemproxy](./plugins/inputs/twemproxy)
 * [udp_listener](./plugins/inputs/socket_listener)
 * [unbound](./plugins/inputs/unbound)
+* [uswgi](./plugins/inputs/uswgi)
 * [varnish](./plugins/inputs/varnish)
 * [vsphere](./plugins/inputs/vsphere) VMware vSphere
 * [webhooks](./plugins/inputs/webhooks)
@@ -336,6 +343,7 @@ For documentation on the latest development code see the [documentation index][d
 * [regex](./plugins/processors/regex)
 * [rename](./plugins/processors/rename)
 * [strings](./plugins/processors/strings)
+* [tag_limit](./plugins/processors/tag_limit)
 * [topk](./plugins/processors/topk)
 * [unpivot](./plugins/processors/unpivot)
 
@@ -362,6 +370,7 @@ For documentation on the latest development code see the [documentation index][d
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
 * [elasticsearch](./plugins/outputs/elasticsearch)
+* [exec](./plugins/output/exec)
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)

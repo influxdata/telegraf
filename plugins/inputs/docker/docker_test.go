@@ -543,12 +543,13 @@ func TestContainerStatus(t *testing.T) {
 		// tags
 		Status string
 		// fields
-		OOMKilled  bool
-		Pid        int
-		ExitCode   int
-		StartedAt  time.Time
-		FinishedAt time.Time
-		UptimeNs   int64
+		ContainerID string
+		OOMKilled   bool
+		Pid         int
+		ExitCode    int
+		StartedAt   time.Time
+		FinishedAt  time.Time
+		UptimeNs    int64
 	}
 
 	var tests = []struct {
@@ -564,12 +565,13 @@ func TestContainerStatus(t *testing.T) {
 			},
 			inspect: containerInspect(),
 			expect: expectation{
-				Status:    "running",
-				OOMKilled: false,
-				Pid:       1234,
-				ExitCode:  0,
-				StartedAt: time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
-				UptimeNs:  int64(3 * time.Minute),
+				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+				Status:      "running",
+				OOMKilled:   false,
+				Pid:         1234,
+				ExitCode:    0,
+				StartedAt:   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
+				UptimeNs:    int64(3 * time.Minute),
 			},
 		},
 		{
@@ -580,13 +582,14 @@ func TestContainerStatus(t *testing.T) {
 				return i
 			}(),
 			expect: expectation{
-				Status:     "running",
-				OOMKilled:  false,
-				Pid:        1234,
-				ExitCode:   0,
-				StartedAt:  time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
-				FinishedAt: time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
-				UptimeNs:   int64(5 * time.Minute),
+				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+				Status:      "running",
+				OOMKilled:   false,
+				Pid:         1234,
+				ExitCode:    0,
+				StartedAt:   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
+				FinishedAt:  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+				UptimeNs:    int64(5 * time.Minute),
 			},
 		},
 		{
@@ -598,11 +601,12 @@ func TestContainerStatus(t *testing.T) {
 				return i
 			}(),
 			expect: expectation{
-				Status:     "running",
-				OOMKilled:  false,
-				Pid:        1234,
-				ExitCode:   0,
-				FinishedAt: time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+				Status:      "running",
+				OOMKilled:   false,
+				Pid:         1234,
+				ExitCode:    0,
+				FinishedAt:  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
 			},
 		},
 	}
@@ -636,9 +640,10 @@ func TestContainerStatus(t *testing.T) {
 			require.NoError(t, err)
 
 			fields := map[string]interface{}{
-				"oomkilled": tt.expect.OOMKilled,
-				"pid":       tt.expect.Pid,
-				"exitcode":  tt.expect.ExitCode,
+				"oomkilled":    tt.expect.OOMKilled,
+				"pid":          tt.expect.Pid,
+				"exitcode":     tt.expect.ExitCode,
+				"container_id": tt.expect.ContainerID,
 			}
 
 			if started := tt.expect.StartedAt; !started.IsZero() {
@@ -698,6 +703,29 @@ func TestDockerGatherInfo(t *testing.T) {
 	)
 
 	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"memory_total": int64(3840757760),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"pool_blocksize": int64(65540),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
 		"docker_data",
 		map[string]interface{}{
 			"used":      int64(17300000000),
@@ -705,11 +733,46 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit":           "bytes",
 			"engine_host":    "absol",
 			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
 		},
 	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_metadata",
+		map[string]interface{}{
+			"used":      int64(20970000),
+			"total":     int64(2146999999),
+			"available": int64(2126999999),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_devicemapper",
+		map[string]interface{}{
+			"base_device_size_bytes":             int64(10740000000),
+			"pool_blocksize_bytes":               int64(65540),
+			"data_space_used_bytes":              int64(17300000000),
+			"data_space_total_bytes":             int64(107400000000),
+			"data_space_available_bytes":         int64(36530000000),
+			"metadata_space_used_bytes":          int64(20970000),
+			"metadata_space_total_bytes":         int64(2146999999),
+			"metadata_space_available_bytes":     int64(2126999999),
+			"thin_pool_minimum_free_space_bytes": int64(10740000000),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"pool_name":      "docker-8:1-1182287-pool",
+		},
+	)
+
 	acc.AssertContainsTaggedFields(t,
 		"docker_container_cpu",
 		map[string]interface{}{

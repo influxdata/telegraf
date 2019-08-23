@@ -36,18 +36,8 @@ var (
 	// PASSED, FAILED, UNKNOWN
 	smartOverallHealth = regexp.MustCompile("^(SMART overall-health self-assessment test result|SMART Health Status):\\s+(\\w+).*$")
 
-	// Accumulated start-stop cycles:  7
-	sasStartStopAttr = regexp.MustCompile("^Accumulated start-stop cycles:\\s+(.*)$")
-	// Accumulated load-unload cycles:  39
-	sasLoadCycleAttr = regexp.MustCompile("^Accumulated load-unload cycles:\\s+(.*)$")
-	// Current Drive Temperature:     34 C
-	sasTempAttr = regexp.MustCompile("^Current Drive Temperature:\\s+(.*)\\s+C(.*)$")
-	// Temperature: 38 Celsius
-	nvmeTempAttr = regexp.MustCompile("^Temperature:\\s+(.*)\\s+(.*)$")
-	// Power Cycles: 472
-	nvmePowerCycleAttr = regexp.MustCompile("^Power Cycles:\\s+(.*)$")
-	// Power On Hours: 6,038
-	nvmePowerOnAttr = regexp.MustCompile("^Power On Hours:\\s+(.*)$")
+	// sasNvmeAttr is a SAS or NVME SMART attribute
+	sasNvmeAttr = regexp.MustCompile(`^([^:]+):\s+(.+)$`)
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
@@ -62,6 +52,64 @@ var (
 		"194": "temp_c",
 		"199": "udma_crc_errors",
 	}
+
+	sasNvmeAttributes = map[string]struct {
+		ID    string
+		Name  string
+		Parse func(fields, deviceFields map[string]interface{}, str string) error
+	}{
+		"Accumulated start-stop cycles": {
+			ID:   "4",
+			Name: "Start_Stop_Count",
+		},
+		"Accumulated load-unload cycles": {
+			ID:   "193",
+			Name: "Load_Cycle_Count",
+		},
+		"Current Drive Temperature": {
+			ID:    "194",
+			Name:  "Temperature_Celsius",
+			Parse: parseTemperature,
+		},
+		"Temperature": {
+			ID:    "194",
+			Name:  "Temperature_Celsius",
+			Parse: parseTemperature,
+		},
+		"Power Cycles": {
+			ID:   "12",
+			Name: "Power_Cycle_Count",
+		},
+		"Power On Hours": {
+			ID:   "9",
+			Name: "Power_On_Hours",
+		},
+		"Media and Data Integrity Errors": {
+			Name: "Media_and_Data_Integrity_Errors",
+		},
+		"Error Information Log Entries": {
+			Name: "Error_Information_Log_Entries",
+		},
+		"Critical Warning": {
+			Name: "Critical_Warning",
+			Parse: func(fields, _ map[string]interface{}, str string) error {
+				var value int64
+				if _, err := fmt.Sscanf(str, "0x%x", &value); err != nil {
+					return err
+				}
+
+				fields["raw_value"] = value
+
+				return nil
+			},
+		},
+		"Available Spare": {
+			Name: "Available_Spare",
+			Parse: func(fields, deviceFields map[string]interface{}, str string) error {
+				return parseCommaSeperatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
+			},
+		},
+	}
 )
 
 type Smart struct {
@@ -71,6 +119,7 @@ type Smart struct {
 	Excludes   []string
 	Devices    []string
 	UseSudo    bool
+	Timeout    internal.Duration
 }
 
 var sampleConfig = `
@@ -91,7 +140,8 @@ var sampleConfig = `
   ## "never" depending on your disks.
   # nocheck = "standby"
 
-  ## Gather detailed metrics for each SMART Attribute.
+  ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
+  ## information from each drive into the 'smart_attribute' measurement.
   # attributes = false
 
   ## Optionally specify devices to exclude from reporting.
@@ -102,7 +152,16 @@ var sampleConfig = `
   ## done and all found will be included except for the
   ## excluded in excludes.
   # devices = [ "/dev/ada0 -d atacam" ]
+
+  ## Timeout for the smartctl command to complete.
+  # timeout = "30s"
 `
+
+func NewSmart() *Smart {
+	return &Smart{
+		Timeout: internal.Duration{Duration: time.Second * 30},
+	}
+}
 
 func (m *Smart) SampleConfig() string {
 	return sampleConfig
@@ -131,17 +190,17 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 }
 
 // Wrap with sudo
-var runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+var runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 	cmd := exec.Command(command, args...)
 	if sudo {
 		cmd = exec.Command("sudo", append([]string{"-n", command}, args...)...)
 	}
-	return internal.CombinedOutputTimeout(cmd, time.Second*5)
+	return internal.CombinedOutputTimeout(cmd, timeout.Duration)
 }
 
 // Scan for S.M.A.R.T. devices
 func (m *Smart) scan() ([]string, error) {
-	out, err := runCmd(m.UseSudo, m.Path, "--scan")
+	out, err := runCmd(m.Timeout, m.UseSudo, m.Path, "--scan")
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to run command '%s --scan': %s - %s", m.Path, err, string(out))
 	}
@@ -177,7 +236,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 	wg.Add(len(devices))
 
 	for _, device := range devices {
-		go gatherDisk(acc, m.UseSudo, m.Attributes, m.Path, m.Nocheck, device, &wg)
+		go gatherDisk(acc, m.Timeout, m.UseSudo, m.Attributes, m.Path, m.Nocheck, device, &wg)
 	}
 
 	wg.Wait()
@@ -194,12 +253,12 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nocheck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
-	out, e := runCmd(usesudo, smartctl, args...)
+	out, e := runCmd(timeout, usesudo, smartctl, args...)
 	outStr := string(out)
 
 	// Ignore all exit statuses except if it is a command line parse error
@@ -253,18 +312,18 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
+		if collectAttributes {
+			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+			for _, key := range keys {
+				if value, ok := deviceTags[key]; ok {
+					tags[key] = value
+				}
+			}
+		}
+
 		attr := attribute.FindStringSubmatch(line)
 		if len(attr) > 1 {
 			if collectAttributes {
-				deviceNode := strings.Split(device, " ")[0]
-				tags["device"] = path.Base(deviceNode)
-
-				if serial, ok := deviceTags["serial_no"]; ok {
-					tags["serial_no"] = serial
-				}
-				if wwn, ok := deviceTags["wwn"]; ok {
-					tags["wwn"] = wwn
-				}
 				tags["id"] = attr[1]
 				tags["name"] = attr[2]
 				tags["flags"] = attr[3]
@@ -297,82 +356,24 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 			}
 		} else {
 			if collectAttributes {
-				if startStop := sasStartStopAttr.FindStringSubmatch(line); len(startStop) > 1 {
-					tags["id"] = "4"
-					tags["name"] = "Start_Stop_Count"
-					i, err := strconv.ParseInt(strings.Replace(startStop[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
+				if matches := sasNvmeAttr.FindStringSubmatch(line); len(matches) > 2 {
+					if attr, ok := sasNvmeAttributes[matches[1]]; ok {
+						tags["name"] = attr.Name
+						if attr.ID != "" {
+							tags["id"] = attr.ID
+						}
+
+						parse := parseCommaSeperatedInt
+						if attr.Parse != nil {
+							parse = attr.Parse
+						}
+
+						if err := parse(fields, deviceFields, matches[2]); err != nil {
+							continue
+						}
+
+						acc.AddFields("smart_attribute", fields, tags)
 					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if powerCycle := nvmePowerCycleAttr.FindStringSubmatch(line); len(powerCycle) > 1 {
-					tags["id"] = "12"
-					tags["name"] = "Power_Cycle_Count"
-					i, err := strconv.ParseInt(strings.Replace(powerCycle[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if powerOn := nvmePowerOnAttr.FindStringSubmatch(line); len(powerOn) > 1 {
-					tags["id"] = "9"
-					tags["name"] = "Power_On_Hours"
-					i, err := strconv.ParseInt(strings.Replace(powerOn[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if loadCycle := sasLoadCycleAttr.FindStringSubmatch(line); len(loadCycle) > 1 {
-					tags["id"] = "193"
-					tags["name"] = "Load_Cycle_Count"
-					i, err := strconv.ParseInt(strings.Replace(loadCycle[1], ",", "", -1), 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = i
-
-					acc.AddFields("smart_attribute", fields, tags)
-					continue
-				}
-
-				if temp := sasTempAttr.FindStringSubmatch(line); len(temp) > 1 {
-					tags["id"] = "194"
-					tags["name"] = "Temperature_Celsius"
-					tempC, err := strconv.ParseInt(temp[1], 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = tempC
-					deviceFields["temp_c"] = tempC
-
-					acc.AddFields("smart_attribute", fields, tags)
-				}
-
-				if temp := nvmeTempAttr.FindStringSubmatch(line); len(temp) > 1 {
-					tags["id"] = "194"
-					tags["name"] = "Temperature_Celsius"
-					tempC, err := strconv.ParseInt(temp[1], 10, 64)
-					if err != nil {
-						continue
-					}
-					fields["raw_value"] = tempC
-					deviceFields["temp_c"] = tempC
-
-					acc.AddFields("smart_attribute", fields, tags)
 				}
 			}
 		}
@@ -421,15 +422,37 @@ func parseInt(str string) int64 {
 	return 0
 }
 
-func init() {
-	m := Smart{}
-	path, _ := exec.LookPath("smartctl")
-	if len(path) > 0 {
-		m.Path = path
+func parseCommaSeperatedInt(fields, _ map[string]interface{}, str string) error {
+	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
+	if err != nil {
+		return err
 	}
-	m.Nocheck = "standby"
 
+	fields["raw_value"] = i
+
+	return nil
+}
+
+func parseTemperature(fields, deviceFields map[string]interface{}, str string) error {
+	var temp int64
+	if _, err := fmt.Sscanf(str, "%d C", &temp); err != nil {
+		return err
+	}
+
+	fields["raw_value"] = temp
+	deviceFields["temp_c"] = temp
+
+	return nil
+}
+
+func init() {
 	inputs.Add("smart", func() telegraf.Input {
-		return &m
+		m := NewSmart()
+		path, _ := exec.LookPath("smartctl")
+		if len(path) > 0 {
+			m.Path = path
+		}
+		m.Nocheck = "standby"
+		return m
 	})
 }

@@ -88,12 +88,14 @@ targets = {
 }
 
 supported_builds = {
+    'darwin': [ "amd64" ],
     "windows": [ "amd64", "i386" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x", "mipsel"],
+    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x", "mipsel", "mips"],
     "freebsd": [ "amd64", "i386" ]
 }
 
 supported_packages = {
+    "darwin": [ "tar" ],
     "linux": [ "deb", "rpm", "tar" ],
     "windows": [ "zip" ],
     "freebsd": [ "tar" ]
@@ -574,7 +576,7 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     shutil.copy(fr, to)
 
                 for package_type in supported_packages[platform]:
-                    if package_type == "rpm" and arch == "mipsel":
+                    if package_type == "rpm" and arch in ["mipsel", "mips"]:
                         continue
                     # Package the directory structure for each package type for the platform
                     logging.debug("Packaging directory '{}' as '{}'.".format(build_root, package_type))

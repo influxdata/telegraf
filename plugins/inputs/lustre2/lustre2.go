@@ -25,8 +25,8 @@ type tags struct {
 // Lustre proc files can change between versions, so we want to future-proof
 // by letting people choose what to look at.
 type Lustre2 struct {
-	Ost_procfiles []string `toml:"ost_jobstat"`
-	Mds_procfiles []string `toml:"mds_jobstat"`
+	Ost_procfiles []string `toml:"ost_procfiles"`
+	Mds_procfiles []string `toml:"mds_procfiles"`
 
 	// allFields maps and OST name to the metric fields associated with that OST
 	allFields map[tags]map[string]interface{}
