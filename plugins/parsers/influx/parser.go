@@ -75,6 +75,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		}
 
 		if err != nil {
+			p.handler.Reset()
 			return nil, &ParseError{
 				Offset:     p.machine.Position(),
 				LineOffset: p.machine.LineOffset(),
@@ -87,6 +88,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 		metric, err := p.handler.Metric()
 		if err != nil {
+			p.handler.Reset()
 			return nil, err
 		}
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io/ioutil"
+	"log"
 	"os/exec"
 	"testing"
 	"time"
@@ -62,6 +63,30 @@ func TestRunTimeout(t *testing.T) {
 	assert.Equal(t, TimeoutErr, err)
 	// Verify that command gets killed in 20ms, with some breathing room
 	assert.True(t, elapsed < time.Millisecond*75)
+}
+
+// Verifies behavior of a command that doesn't get killed.
+func TestRunTimeoutFastExit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to random failures.")
+	}
+	if echobin == "" {
+		t.Skip("'echo' binary not available on OS, skipping.")
+	}
+	cmd := exec.Command(echobin)
+	start := time.Now()
+	err := RunTimeout(cmd, time.Millisecond*20)
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+	elapsed := time.Since(start)
+
+	require.NoError(t, err)
+	// Verify that command gets killed in 20ms, with some breathing room
+	assert.True(t, elapsed < time.Millisecond*75)
+
+	// Verify "process already finished" log doesn't occur.
+	time.Sleep(time.Millisecond * 75)
+	require.Equal(t, "", buf.String())
 }
 
 func TestCombinedOutputTimeout(t *testing.T) {
@@ -266,6 +291,40 @@ func TestAlignDuration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := AlignDuration(tt.now, tt.interval)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestAlignTime(t *testing.T) {
+	rfc3339 := func(value string) time.Time {
+		t, _ := time.Parse(time.RFC3339, value)
+		return t
+	}
+
+	tests := []struct {
+		name     string
+		now      time.Time
+		interval time.Duration
+		expected time.Time
+	}{
+		{
+			name:     "aligned",
+			now:      rfc3339("2018-01-01T01:01:00Z"),
+			interval: 10 * time.Second,
+			expected: rfc3339("2018-01-01T01:01:00Z"),
+		},
+		{
+			name:     "aligned",
+			now:      rfc3339("2018-01-01T01:01:01Z"),
+			interval: 10 * time.Second,
+			expected: rfc3339("2018-01-01T01:01:10Z"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := AlignTime(tt.now, tt.interval)
 			require.Equal(t, tt.expected, actual)
 		})
 	}

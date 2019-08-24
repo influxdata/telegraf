@@ -4,16 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/host"
-	"github.com/shirou/gopsutil/load"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/host"
+	"github.com/shirou/gopsutil/load"
 )
 
 type SystemStats struct{}
@@ -22,7 +22,12 @@ func (_ *SystemStats) Description() string {
 	return "Read metrics about system load & uptime"
 }
 
-func (_ *SystemStats) SampleConfig() string { return "" }
+func (_ *SystemStats) SampleConfig() string {
+	return `
+  ## Uncomment to remove deprecated metrics.
+  # fielddrop = ["uptime_format"]
+`
+}
 
 func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
@@ -30,18 +35,25 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	numCPUs, err := cpu.Counts(true)
+	if err != nil {
+		return err
+	}
+
 	fields := map[string]interface{}{
 		"load1":  loadavg.Load1,
 		"load5":  loadavg.Load5,
 		"load15": loadavg.Load15,
-		"n_cpus": runtime.NumCPU(),
+		"n_cpus": numCPUs,
 	}
 
 	users, err := host.Users()
 	if err == nil {
 		fields["n_users"] = len(users)
-	} else if !os.IsPermission(err) {
-		return err
+	} else if os.IsNotExist(err) {
+		log.Printf("D! [inputs.system] Error reading users: %v", err)
+	} else if os.IsPermission(err) {
+		log.Printf("D! [inputs.system] %v", err)
 	}
 
 	now := time.Now()

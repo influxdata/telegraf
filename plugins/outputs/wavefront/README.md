@@ -32,6 +32,10 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   ## When true will convert all _ (underscore) characters in final metric name. default is true
   #convert_paths = true
 
+  ## Use Strict rules to sanitize metric and tag names from invalid characters
+  ## When enabled forward slash (/) and comma (,) will be accpeted
+  #use_strict = false
+  
   ## Use Regex to sanitize metric and tag names from invalid characters
   ## Regex is more thorough, but significantly slower. default is false
   #use_regex = false

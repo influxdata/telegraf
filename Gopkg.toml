@@ -16,11 +16,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.15.54"
-
-[[constraint]]
-  name = "github.com/bsm/sarama-cluster"
-  version = "2.1.13"
+  version = "1.19.41"
 
 [[constraint]]
   name = "github.com/couchbase/go-couchbase"
@@ -40,7 +36,7 @@
 
 [[constraint]]
   name = "github.com/eclipse/paho.mqtt.golang"
-  version = "~1.1.1"
+  version = "1"
 
 [[constraint]]
   name = "github.com/go-sql-driver/mysql"
@@ -80,7 +76,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/toml"
-  branch = "master"
+  branch = "telegraf"
 
 [[constraint]]
   name = "github.com/influxdata/wlog"
@@ -88,7 +84,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.2.0"
+  version = "3.4.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
@@ -189,10 +185,12 @@
 [[constraint]]
   name = "golang.org/x/net"
   branch = "master"
+  source = "https://github.com/golang/net.git"
 
 [[constraint]]
   name = "golang.org/x/sys"
   branch = "master"
+  source = "https://github.com/golang/sys.git"
 
 [[constraint]]
   name = "google.golang.org/grpc"
@@ -223,6 +221,10 @@
   name = "gopkg.in/fsnotify.v1"
 
 [[constraint]]
+  name = "github.com/mdlayher/apcupsd"
+  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
+
+[[constraint]]
   branch = "master"
   name = "google.golang.org/genproto"
 
@@ -237,6 +239,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+  source = "https://github.com/golang/oauth2.git"
 
 [[constraint]]
   branch = "master"
@@ -265,3 +268,31 @@
 [[constraint]]
   name = "github.com/go-logfmt/logfmt"
   version = "0.4.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/ghodss/yaml"
+
+[[override]]
+  name = "golang.org/x/crypto"
+  source = "https://github.com/golang/crypto.git"
+
+[[override]]
+  name = "golang.org/x/sync"
+  source = "https://github.com/golang/sync.git"
+
+[[override]]
+  name = "golang.org/x/text"
+  source = "https://github.com/golang/text.git"
+
+[[constraint]]
+  name = "github.com/google/go-github"
+  version = "24.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/openconfig/gnmi"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cisco-ie/nx-telemetry-proto"

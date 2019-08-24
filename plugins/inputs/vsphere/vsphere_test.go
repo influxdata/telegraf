@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -25,83 +24,19 @@ import (
 )
 
 var configHeader = `
-# Telegraf Configuration
-#
-# Telegraf is entirely plugin driven. All metrics are gathered from the
-# declared inputs, and sent to the declared outputs.
-#
-# Plugins must be declared in here to be active.
-# To deactivate a plugin, comment out the name and any variables.
-#
-# Use 'telegraf -config telegraf.conf -test' to see what metrics a config
-# file would generate.
-#
-# Environment variables can be used anywhere in this config file, simply prepend
-# them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
-# for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
-
-
-# Global tags can be specified here in key="value" format.
-[global_tags]
-  # dc = "us-east-1" # will tag all metrics with dc=us-east-1
-  # rack = "1a"
-  ## Environment variables can be used as tags, and throughout the config file
-  # user = "$USER"
-
-
-# Configuration for telegraf agent
 [agent]
-  ## Default data collection interval for all inputs
   interval = "10s"
-  ## Rounds collection interval to 'interval'
-  ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
-
-  ## Telegraf will send metrics to outputs in batches of at most
-  ## metric_batch_size metrics.
-  ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
-
-  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
-  ## output, and will flush this buffer on a successful write. Oldest metrics
-  ## are dropped first when this buffer fills.
-  ## This buffer only fills when writes fail to output plugin(s).
   metric_buffer_limit = 10000
-
-  ## Collection jitter is used to jitter the collection by a random amount.
-  ## Each plugin will sleep for a random time within jitter before collecting.
-  ## This can be used to avoid many plugins querying things like sysfs at the
-  ## same time, which can have a measurable effect on the system.
   collection_jitter = "0s"
-
-  ## Default flushing interval for all outputs. You shouldn't set this below
-  ## interval. Maximum flush_interval will be flush_interval + flush_jitter
   flush_interval = "10s"
-  ## Jitter the flush interval by a random amount. This is primarily to avoid
-  ## large write spikes for users running a large number of telegraf instances.
-  ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
-
-  ## By default or when set to "0s", precision will be set to the same
-  ## timestamp order as the collection interval, with the maximum being 1s.
-  ##   ie, when interval = "10s", precision will be "1s"
-  ##       when interval = "250ms", precision will be "1ms"
-  ## Precision will NOT be used for service inputs. It is up to each individual
-  ## service input to set the timestamp at the appropriate precision.
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
-
-  ## Logging configuration:
-  ## Run telegraf with debug log messages.
   debug = false
-  ## Run telegraf in quiet mode (error log messages only).
   quiet = false
-  ## Specify the log file name. The empty string means to log to stderr.
   logfile = ""
-
-  ## Override default hostname, if empty use os.Hostname()
   hostname = ""
-  ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
 `
 
@@ -220,8 +155,12 @@ func defaultVSphere() *VSphere {
 	}
 }
 
-func createSim() (*simulator.Model, *simulator.Server, error) {
+func createSim(folders int) (*simulator.Model, *simulator.Server, error) {
 	model := simulator.VPX()
+
+	model.Folder = folders
+	model.Datacenter = 2
+	//model.App = 1
 
 	err := model.Create()
 	if err != nil {
@@ -320,34 +259,6 @@ func TestThrottledExecutor(t *testing.T) {
 	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
 }
 
-func TestTimeout(t *testing.T) {
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
-
-	m, s, err := createSim()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Remove()
-	defer s.Close()
-
-	v := defaultVSphere()
-	var acc testutil.Accumulator
-	v.Vcenters = []string{s.URL.String()}
-	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
-	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
-	defer v.Stop()
-	err = v.Gather(&acc)
-
-	// The accumulator must contain exactly one error and it must be a deadline exceeded.
-	require.Equal(t, 1, len(acc.Errors))
-	require.True(t, strings.Contains(acc.Errors[0].Error(), "context deadline exceeded"))
-}
-
 func TestMaxQuery(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -355,7 +266,7 @@ func TestMaxQuery(t *testing.T) {
 	if unsafe.Sizeof(i) < 8 {
 		return
 	}
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,6 +302,20 @@ func TestMaxQuery(t *testing.T) {
 	c2.close()
 }
 
+func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, expected int, expectedName string) {
+	poweredOn := types.VirtualMachinePowerState("poweredOn")
+	var vm []mo.VirtualMachine
+	err := f.Find(ctx, "VirtualMachine", path, &vm)
+	require.NoError(t, err)
+	require.Equal(t, expected, len(vm))
+	if expectedName != "" {
+		require.Equal(t, expectedName, vm[0].Name)
+	}
+	for _, v := range vm {
+		require.Equal(t, poweredOn, v.Runtime.PowerState)
+	}
+}
+
 func TestFinder(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -399,7 +324,7 @@ func TestFinder(t *testing.T) {
 		return
 	}
 
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -413,13 +338,13 @@ func TestFinder(t *testing.T) {
 
 	f := Finder{c}
 
-	dc := []mo.Datacenter{}
+	var dc []mo.Datacenter
 	err = f.Find(ctx, "Datacenter", "/DC0", &dc)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(dc))
 	require.Equal(t, "DC0", dc[0].Name)
 
-	host := []mo.HostSystem{}
+	var host []mo.HostSystem
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(host))
@@ -436,62 +361,64 @@ func TestFinder(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, len(host))
 
-	vm := []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_H0_VM0", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_C0*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_VM0", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**/DC0_H0_VM*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**/vm/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	var vm []mo.VirtualMachine
+	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
+	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_C0*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0")
+	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/**/DC0_H0_VM*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/**", 4, "")
+	testLookupVM(ctx, t, &f, "/DC1/**", 4, "")
+	testLookupVM(ctx, t, &f, "/**", 8, "")
+	testLookupVM(ctx, t, &f, "/**/vm/**", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*VM*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = []mo.VirtualMachine{}
 	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
 
-	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/**"}, &vm)
+}
+
+func TestFolders(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
+	m, s, err := createSim(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	v := defaultVSphere()
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, s.URL, v)
+
+	f := Finder{c}
+
+	var folder []mo.Folder
+	err = f.Find(ctx, "Folder", "/F0", &folder)
 	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	require.Equal(t, 1, len(folder))
+	require.Equal(t, "F0", folder[0].Name)
+
+	var dc []mo.Datacenter
+	err = f.Find(ctx, "Datacenter", "/F0/DC1", &dc)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(dc))
+	require.Equal(t, "DC1", dc[0].Name)
+
+	testLookupVM(ctx, t, &f, "/F0/DC0/vm/**/F*", 0, "")
+	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "")
+	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
 func TestAll(t *testing.T) {
@@ -502,7 +429,7 @@ func TestAll(t *testing.T) {
 		return
 	}
 
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}

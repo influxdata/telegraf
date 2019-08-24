@@ -14,7 +14,7 @@ import (
 
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 )
 
 type payload struct {
@@ -83,7 +83,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 // directed to do so by K8s.
 func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 	pod := &corev1.Pod{}
-	watcher, err := client.Watch(ctx, "", &corev1.Pod{})
+	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{})
 	if err != nil {
 		return err
 	}

@@ -11,15 +11,20 @@ import (
 	"time"
 
 	"github.com/influxdata/tail"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
 )
 
 const (
 	defaultWatchMethod = "inotify"
+)
+
+var (
+	offsets      = make(map[string]int64)
+	offsetsMutex = new(sync.Mutex)
 )
 
 type Tail struct {
@@ -29,6 +34,7 @@ type Tail struct {
 	WatchMethod   string
 
 	tailers    map[string]*tail.Tail
+	offsets    map[string]int64
 	parserFunc parsers.ParserFunc
 	wg         sync.WaitGroup
 	acc        telegraf.Accumulator
@@ -40,8 +46,16 @@ type Tail struct {
 }
 
 func NewTail() *Tail {
+	offsetsMutex.Lock()
+	offsetsCopy := make(map[string]int64, len(offsets))
+	for k, v := range offsets {
+		offsetsCopy[k] = v
+	}
+	offsetsMutex.Unlock()
+
 	return &Tail{
 		FromBeginning: false,
+		offsets:       offsetsCopy,
 	}
 }
 
@@ -115,18 +129,19 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	t.acc = acc
 	t.tailers = make(map[string]*tail.Tail)
 
-	return t.tailNewFiles(t.FromBeginning)
+	err := t.tailNewFiles(t.FromBeginning)
+
+	// clear offsets
+	t.offsets = make(map[string]int64)
+	// assumption that once Start is called, all parallel plugins have already been initialized
+	offsetsMutex.Lock()
+	offsets = make(map[string]int64)
+	offsetsMutex.Unlock()
+
+	return err
 }
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {
-	var seek *tail.SeekInfo
-	if !t.Pipe && !fromBeginning {
-		seek = &tail.SeekInfo{
-			Whence: 2,
-			Offset: 0,
-		}
-	}
-
 	var poll bool
 	if t.WatchMethod == "poll" {
 		poll = true
@@ -142,6 +157,22 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			if _, ok := t.tailers[file]; ok {
 				// we're already tailing this file
 				continue
+			}
+
+			var seek *tail.SeekInfo
+			if !t.Pipe && !fromBeginning {
+				if offset, ok := t.offsets[file]; ok {
+					log.Printf("D! [inputs.tail] using offset %d for file: %v", offset, file)
+					seek = &tail.SeekInfo{
+						Whence: 0,
+						Offset: offset,
+					}
+				} else {
+					seek = &tail.SeekInfo{
+						Whence: 2,
+						Offset: 0,
+					}
+				}
 			}
 
 			tailer, err := tail.TailFile(file,
@@ -179,11 +210,34 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	return nil
 }
 
-// this is launched as a goroutine to continuously watch a tailed logfile
+// ParseLine parses a line of text.
+func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.Metric, error) {
+	switch parser.(type) {
+	case *csv.Parser:
+		// The csv parser parses headers in Parse and skips them in ParseLine.
+		// As a temporary solution call Parse only when getting the first
+		// line from the file.
+		if firstLine {
+			return parser.Parse([]byte(line))
+		} else {
+			m, err := parser.ParseLine(line)
+			if err != nil {
+				return nil, err
+			}
+
+			if m != nil {
+				return []telegraf.Metric{m}, nil
+			}
+			return []telegraf.Metric{}, nil
+		}
+	default:
+		return parser.Parse([]byte(line))
+	}
+}
+
+// Receiver is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
-	defer t.wg.Done()
-
 	var firstLine = true
 	var line *tail.Line
 
@@ -215,6 +269,7 @@ func (t *Tail) receiverMultiline(parser parsers.Parser, tailer *tail.Tail) {
 		case line, channelOpen = <-tailer.Lines:
 		case <-timeout:
 		}
+		firstLine = false
 
 		timer.Stop()
 
@@ -294,16 +349,29 @@ func (t *Tail) Stop() {
 	defer t.Unlock()
 
 	for _, tailer := range t.tailers {
+		if !t.Pipe && !t.FromBeginning {
+			// store offset for resume
+			offset, err := tailer.Tell()
+			if err == nil {
+				log.Printf("D! [inputs.tail] recording offset %d for file: %v", offset, tailer.Filename)
+			} else {
+				t.acc.AddError(fmt.Errorf("error recording offset for file %s", tailer.Filename))
+			}
+		}
 		err := tailer.Stop()
 		if err != nil {
 			t.acc.AddError(fmt.Errorf("E! [inputs.tail] error stopping tail on file %s\n", tailer.Filename))
 		}
 	}
 
-	for _, tailer := range t.tailers {
-		tailer.Cleanup()
-	}
 	t.wg.Wait()
+
+	// persist offsets
+	offsetsMutex.Lock()
+	for k, v := range t.offsets {
+		offsets[k] = v
+	}
+	offsetsMutex.Unlock()
 }
 
 func (t *Tail) SetParserFunc(fn parsers.ParserFunc) {

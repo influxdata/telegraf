@@ -103,15 +103,32 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, io := range diskio {
-		if s.deviceFilter != nil && !s.deviceFilter.Match(io.Name) {
-			continue
+
+		match := false
+		if s.deviceFilter != nil && s.deviceFilter.Match(io.Name) {
+			match = true
 		}
 
 		tags := map[string]string{}
-		tags["name"] = s.diskName(io.Name)
+		var devLinks []string
+		tags["name"], devLinks = s.diskName(io.Name)
+
+		if s.deviceFilter != nil && !match {
+			for _, devLink := range devLinks {
+				if s.deviceFilter.Match(devLink) {
+					match = true
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+		}
+
 		for t, v := range s.diskTags(io.Name) {
 			tags[t] = v
 		}
+
 		if !s.SkipSerialNumber {
 			if len(io.SerialNumber) != 0 {
 				tags["serial"] = io.SerialNumber
@@ -137,15 +154,20 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *DiskIO) diskName(devName string) string {
-	if len(s.NameTemplates) == 0 {
-		return devName
+func (s *DiskIO) diskName(devName string) (string, []string) {
+	di, err := s.diskInfo(devName)
+	devLinks := strings.Split(di["DEVLINKS"], " ")
+	for i, devLink := range devLinks {
+		devLinks[i] = strings.TrimPrefix(devLink, "/dev/")
 	}
 
-	di, err := s.diskInfo(devName)
+	if len(s.NameTemplates) == 0 {
+		return devName, devLinks
+	}
+
 	if err != nil {
 		log.Printf("W! Error gathering disk info: %s", err)
-		return devName
+		return devName, devLinks
 	}
 
 	for _, nt := range s.NameTemplates {
@@ -163,11 +185,11 @@ func (s *DiskIO) diskName(devName string) string {
 		})
 
 		if !miss {
-			return name
+			return name, devLinks
 		}
 	}
 
-	return devName
+	return devName, devLinks
 }
 
 func (s *DiskIO) diskTags(devName string) map[string]string {

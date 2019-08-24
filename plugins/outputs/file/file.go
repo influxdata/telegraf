@@ -3,25 +3,42 @@ package file
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type File struct {
-	Files []string
+	Files               []string          `toml:"files"`
+	RotationInterval    internal.Duration `toml:"rotation_interval"`
+	RotationMaxSize     internal.Size     `toml:"rotation_max_size"`
+	RotationMaxArchives int               `toml:"rotation_max_archives"`
 
-	writers []io.Writer
-	closers []io.Closer
-
+	writer     io.Writer
+	closers    []io.Closer
 	serializer serializers.Serializer
 }
 
 var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
+
+  ## The file will be rotated after the time interval specified.  When set
+  ## to 0 no time based rotation is performed.
+  # rotation_interval = "0d"
+
+  ## The logfile will be rotated when it becomes larger than the specified
+  ## size.  When set to 0 no size based rotation is performed.
+  # rotation_max_size = "0MB"
+
+  ## Maximum number of rotated archives to keep, any older logs are deleted.
+  ## If set to -1, no archives are removed.
+  # rotation_max_archives = 5
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -35,43 +52,39 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Connect() error {
+	writers := []io.Writer{}
+
 	if len(f.Files) == 0 {
 		f.Files = []string{"stdout"}
 	}
 
 	for _, file := range f.Files {
 		if file == "stdout" {
-			f.writers = append(f.writers, os.Stdout)
+			writers = append(writers, os.Stdout)
 		} else {
-			var of *os.File
-			var err error
-			if _, err := os.Stat(file); os.IsNotExist(err) {
-				of, err = os.Create(file)
-			} else {
-				of, err = os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-			}
-
+			of, err := rotate.NewFileWriter(
+				file, f.RotationInterval.Duration, f.RotationMaxSize.Size, f.RotationMaxArchives)
 			if err != nil {
 				return err
 			}
-			f.writers = append(f.writers, of)
+
+			writers = append(writers, of)
 			f.closers = append(f.closers, of)
 		}
 	}
+	f.writer = io.MultiWriter(writers...)
 	return nil
 }
 
 func (f *File) Close() error {
-	var errS string
+	var err error
 	for _, c := range f.closers {
-		if err := c.Close(); err != nil {
-			errS += err.Error() + "\n"
+		errClose := c.Close()
+		if errClose != nil {
+			err = errClose
 		}
 	}
-	if errS != "" {
-		return fmt.Errorf(errS)
-	}
-	return nil
+	return err
 }
 
 func (f *File) SampleConfig() string {
@@ -84,19 +97,19 @@ func (f *File) Description() string {
 
 func (f *File) Write(metrics []telegraf.Metric) error {
 	var writeErr error = nil
+
 	for _, metric := range metrics {
 		b, err := f.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("failed to serialize message: %s", err)
+			log.Printf("D! [outputs.file] Could not serialize metric: %v", err)
 		}
 
-		for _, writer := range f.writers {
-			_, err = writer.Write(b)
-			if err != nil && writer != os.Stdout {
-				writeErr = fmt.Errorf("E! failed to write message: %s, %s", b, err)
-			}
+		_, err = f.writer.Write(b)
+		if err != nil {
+			writeErr = fmt.Errorf("E! [outputs.file] failed to write message: %v", err)
 		}
 	}
+
 	return writeErr
 }
 

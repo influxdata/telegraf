@@ -12,7 +12,9 @@ import (
 	monitoring "cloud.google.com/go/monitoring/apiv3" // Imports the Stackdriver Monitoring client package.
 	googlepb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"google.golang.org/api/option"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
@@ -88,7 +90,7 @@ func (s *Stackdriver) Connect() error {
 
 	if s.client == nil {
 		ctx := context.Background()
-		client, err := monitoring.NewMetricClient(ctx)
+		client, err := monitoring.NewMetricClient(ctx, option.WithUserAgent(internal.ProductToken()))
 		if err != nil {
 			return err
 		}

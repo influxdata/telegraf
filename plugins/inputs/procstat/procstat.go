@@ -27,6 +27,7 @@ type Procstat struct {
 	Exe         string
 	Pattern     string
 	Prefix      string
+	CmdLineTag  bool `toml:"cmdline_tag"`
 	ProcessName string
 	User        string
 	SystemdUnit string
@@ -64,6 +65,9 @@ var sampleConfig = `
 
   ## Field name prefix
   # prefix = ""
+
+  ## When true add the full cmdline as a tag.
+  # cmdline_tag = false
 
   ## Add PID as a tag instead of a field; useful to differentiate between
   ## processes whose tags are otherwise the same.  Can create a large number
@@ -170,6 +174,16 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields["pid"] = int32(proc.PID())
 	}
 
+	//If cmd_line tag is true and it is not already set add cmdline as a tag
+	if p.CmdLineTag {
+		if _, ok := proc.Tags()["cmdline"]; !ok {
+			Cmdline, err := proc.Cmdline()
+			if err == nil {
+				proc.Tags()["cmdline"] = Cmdline
+			}
+		}
+	}
+
 	numThreads, err := proc.NumThreads()
 	if err == nil {
 		fields[prefix+"num_threads"] = numThreads
@@ -184,6 +198,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	if err == nil {
 		fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
 		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
+	}
+
+	faults, err := proc.PageFaults()
+	if err == nil {
+		fields[prefix+"minor_faults"] = faults.MinorFaults
+		fields[prefix+"major_faults"] = faults.MajorFaults
+		fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
+		fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
 	}
 
 	io, err := proc.IOCounters()
@@ -204,7 +226,6 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"cpu_time_irq"] = cpu_time.Irq
 		fields[prefix+"cpu_time_soft_irq"] = cpu_time.Softirq
 		fields[prefix+"cpu_time_steal"] = cpu_time.Steal
-		fields[prefix+"cpu_time_stolen"] = cpu_time.Stolen
 		fields[prefix+"cpu_time_guest"] = cpu_time.Guest
 		fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
 	}
@@ -222,6 +243,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"memory_data"] = mem.Data
 		fields[prefix+"memory_stack"] = mem.Stack
 		fields[prefix+"memory_locked"] = mem.Locked
+	}
+
+	mem_perc, err := proc.MemoryPercent()
+	if err == nil {
+		fields[prefix+"memory_usage"] = mem_perc
 	}
 
 	rlims, err := proc.RlimitUsage(true)
@@ -273,11 +299,19 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 	for _, pid := range pids {
 		info, ok := prevInfo[pid]
 		if ok {
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := info.Name(); name == "" {
+				continue
+			}
 			procs[pid] = info
 		} else {
 			proc, err := p.createProcess(pid)
 			if err != nil {
 				// No problem; process may have ended after we found it
+				continue
+			}
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := proc.Name(); name == "" {
 				continue
 			}
 			procs[pid] = proc
@@ -368,7 +402,7 @@ func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 		if !bytes.Equal(kv[0], []byte("MainPID")) {
 			continue
 		}
-		if len(kv[1]) == 0 {
+		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
 		pid, err := strconv.Atoi(string(kv[1]))

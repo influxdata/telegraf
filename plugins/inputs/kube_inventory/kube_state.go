@@ -51,8 +51,8 @@ var sampleConfig = `
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "nodes", "persistentvolumes",
-  ## "persistentvolumeclaims", "pods", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
+  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -111,10 +111,13 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory){
 	"daemonsets":             collectDaemonSets,
 	"deployments":            collectDeployments,
+	"endpoints":              collectEndpoints,
+	"ingress":                collectIngress,
 	"nodes":                  collectNodes,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
 	"pods":                   collectPods,
+	"services":               collectServices,
 	"statefulsets":           collectStatefulSets,
 }
 
@@ -158,10 +161,13 @@ func convertQuantity(s string, m float64) int64 {
 var (
 	daemonSetMeasurement             = "kubernetes_daemonset"
 	deploymentMeasurement            = "kubernetes_deployment"
+	endpointMeasurement              = "kubernetes_endpoint"
+	ingressMeasurement               = "kubernetes_ingress"
 	nodeMeasurement                  = "kubernetes_node"
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
 	podContainerMeasurement          = "kubernetes_pod_container"
+	serviceMeasurement               = "kubernetes_service"
 	statefulSetMeasurement           = "kubernetes_statefulset"
 )
 

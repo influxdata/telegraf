@@ -40,28 +40,30 @@ const (
 )
 
 type HTTPConfig struct {
-	URL             *url.URL
-	Token           string
-	Organization    string
-	Bucket          string
-	BucketTag       string
-	Timeout         time.Duration
-	Headers         map[string]string
-	Proxy           *url.URL
-	UserAgent       string
-	ContentEncoding string
-	TLSConfig       *tls.Config
+	URL              *url.URL
+	Token            string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
+	Timeout          time.Duration
+	Headers          map[string]string
+	Proxy            *url.URL
+	UserAgent        string
+	ContentEncoding  string
+	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
 }
 
 type httpClient struct {
-	ContentEncoding string
-	Timeout         time.Duration
-	Headers         map[string]string
-	Organization    string
-	Bucket          string
-	BucketTag       string
+	ContentEncoding  string
+	Timeout          time.Duration
+	Headers          map[string]string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
 
 	client     *http.Client
 	serializer *influx.Serializer
@@ -130,13 +132,14 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		url:             config.URL,
-		ContentEncoding: config.ContentEncoding,
-		Timeout:         timeout,
-		Headers:         headers,
-		Organization:    config.Organization,
-		Bucket:          config.Bucket,
-		BucketTag:       config.BucketTag,
+		url:              config.URL,
+		ContentEncoding:  config.ContentEncoding,
+		Timeout:          timeout,
+		Headers:          headers,
+		Organization:     config.Organization,
+		Bucket:           config.Bucket,
+		BucketTag:        config.BucketTag,
+		ExcludeBucketTag: config.ExcludeBucketTag,
 	}
 	return client, nil
 }
@@ -185,6 +188,10 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 				batches[bucket] = make([]telegraf.Metric, 0)
 			}
 
+			if c.ExcludeBucketTag {
+				metric.RemoveTag(c.BucketTag)
+			}
+
 			batches[bucket] = append(batches[bucket], metric)
 		}
 
@@ -228,10 +235,11 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 
 	switch resp.StatusCode {
-	case http.StatusBadRequest, http.StatusUnauthorized,
-		http.StatusForbidden, http.StatusRequestEntityTooLarge:
+	case http.StatusBadRequest, http.StatusRequestEntityTooLarge:
 		log.Printf("E! [outputs.influxdb_v2] Failed to write metric: %s\n", desc)
 		return nil
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return fmt.Errorf("failed to write metric: %s", desc)
 	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
@@ -305,4 +313,8 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	}
 	loc.RawQuery = params.Encode()
 	return loc.String(), nil
+}
+
+func (c *httpClient) Close() {
+	internal.CloseIdleConnections(c.client)
 }
