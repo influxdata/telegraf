@@ -130,7 +130,7 @@ func (w *MultilineWhat) UnmarshalText(data []byte) (err error) {
 		return
 	}
 	*w = -1
-	return fmt.Errorf("unknown multiline what")
+	return fmt.Errorf("E! [inputs.tail] unknown multiline what")
 }
 
 // MarshalText implements encoding.TextMarshaler
@@ -139,5 +139,5 @@ func (w MultilineWhat) MarshalText() ([]byte, error) {
 	if s != "" {
 		return []byte(s), nil
 	}
-	return nil, fmt.Errorf("unknown multiline what")
+	return nil, fmt.Errorf("E! [inputs.tail] unknown multiline what")
 }

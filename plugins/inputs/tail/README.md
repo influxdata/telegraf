@@ -50,7 +50,7 @@ The plugin expects messages in one of the
 
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
-  #[inputs.logparser.multiline]
+  #[inputs.tail.multiline]
     ## The pattern should be a regexp which matches what you believe to be an indicator that the field is part of an event consisting of multiple lines of log data.
     #pattern = "^\s"
 
@@ -62,7 +62,7 @@ The plugin expects messages in one of the
     #negate = false
 
     #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
-		#timeout = 5s
+    #timeout = 5s
 ```
 
 ### Metrics:

@@ -72,7 +72,7 @@ const sampleConfig = `
 
   ## multiline parser/codec
   ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
-  #[inputs.logparser.multiline]
+  #[inputs.tail.multiline]
     ## The pattern should be a regexp which matches what you believe to be an indicator that the field is part of an event consisting of multiple lines of log data.
     #pattern = "^\s"
 
@@ -84,7 +84,7 @@ const sampleConfig = `
     #negate = false
 
     #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
-		#timeout = 5s
+    #timeout = 5s
 `
 
 func (t *Tail) SampleConfig() string {
@@ -136,7 +136,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("E! Error Glob %s failed to compile, %s", filepath, err))
+			t.acc.AddError(fmt.Errorf("E! [inputs.tail] Error Glob %s failed to compile, %s", filepath, err))
 		}
 		for _, file := range g.Match() {
 			if _, ok := t.tailers[file]; ok {
@@ -163,7 +163,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 			parser, err := t.parserFunc()
 			if err != nil {
-				t.acc.AddError(fmt.Errorf("error creating parser: %v", err))
+				t.acc.AddError(fmt.Errorf("E! [inputs.tail] error creating parser: %v", err))
 			}
 
 			// create a goroutine for each "tailer"
@@ -246,14 +246,14 @@ func (t *Tail) handleTailerExit(tailer *tail.Tail) {
 	log.Printf("D! [inputs.tail] tail removed for file: %v", tailer.Filename)
 
 	if err := tailer.Err(); err != nil {
-		t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
+		t.acc.AddError(fmt.Errorf("E! [inputs.tail] error tailing file %s, Error: %s\n",
 			tailer.Filename, err))
 	}
 }
 
 func (t *Tail) getLineText(line *tail.Line, filename string) string {
 	if line.Err != nil {
-		t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
+		t.acc.AddError(fmt.Errorf("E! [inputs.tail] error tailing file %s, Error: %s\n",
 			filename, line.Err))
 		return ""
 	}
@@ -278,15 +278,14 @@ func (t *Tail) parse(parser parsers.Parser, filename string, text string, firstL
 		m, err = parser.ParseLine(text)
 	}
 
-	if err == nil {
-		if m != nil {
-			tags := m.Tags()
-			tags["path"] = filename
-			t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
-		}
-	} else {
-		t.acc.AddError(fmt.Errorf("E! Malformed log line in %s: [%s], Error: %s\n",
+	if err != nil {
+		t.acc.AddError(fmt.Errorf("E! [inputs.tail] malformed log line in %s: [%s], Error: %s\n",
 			filename, text, err))
+		return
+	} else if m != nil {
+		tags := m.Tags()
+		tags["path"] = filename
+		t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 	}
 }
 
@@ -297,7 +296,7 @@ func (t *Tail) Stop() {
 	for _, tailer := range t.tailers {
 		err := tailer.Stop()
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("E! Error stopping tail on file %s\n", tailer.Filename))
+			t.acc.AddError(fmt.Errorf("E! [inputs.tail] error stopping tail on file %s\n", tailer.Filename))
 		}
 	}
 
