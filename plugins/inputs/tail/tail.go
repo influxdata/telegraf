@@ -129,7 +129,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 	t.acc = acc
 	t.tailers = make(map[string]*tail.Tail)
 
-	err := t.tailNewFiles(t.FromBeginning)
+	err = t.tailNewFiles(t.FromBeginning)
 
 	// clear offsets
 	t.offsets = make(map[string]int64)

@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -292,10 +292,6 @@ func createGrokParser() (parsers.Parser, error) {
 	return parser, err
 }
 
-func getCurrentDir() string {
-	_, filename, _, _ := runtime.Caller(1)
-	return strings.Replace(filename, "tail_test.go", "", 1)
-
 // The csv parser should only parse the header line once per file.
 func TestCSVHeadersParsedOnce(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
@@ -408,4 +404,9 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
+}
+
+func getCurrentDir() string {
+	_, filename, _, _ := runtime.Caller(1)
+	return strings.Replace(filename, "tail_test.go", "", 1)
 }
