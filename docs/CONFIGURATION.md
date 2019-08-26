@@ -141,8 +141,12 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **quiet**:
   Log only error level messages.
 
+- **logtarget**:
+  Log target - `file`, `stderr` or `eventlog` (Windows only). 
+  The empty string means to log to stderr.
+
 - **logfile**:
-  Log file name, the empty string means to log to stderr.
+  Log file name.
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to
