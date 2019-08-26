@@ -92,6 +92,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 	ctx := context.TODO()
 
 	for marker := (azqueue.Marker{}); marker.NotDone(); {
+		log.Printf("D! [inputs.azure_storage_queue] Listing queues of storage account '%s'", a.StorageAccountName)
 		queuesSegment, err := serviceURL.ListQueuesSegment(ctx, marker,
 			azqueue.ListQueuesSegmentOptions{
 				Detail: azqueue.ListQueuesSegmentDetails{Metadata: false},
@@ -102,6 +103,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 		marker = queuesSegment.NextMarker
 
 		for _, queueItem := range queuesSegment.QueueItems {
+			log.Printf("D! [inputs.azure_storage_queue] Processing queue '%s' of storage account '%s'", queueItem.Name, a.StorageAccountName)
 			queueURL := serviceURL.NewQueueURL(queueItem.Name)
 			properties, err := queueURL.GetProperties(ctx)
 			if err != nil {
