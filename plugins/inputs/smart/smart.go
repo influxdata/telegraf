@@ -425,14 +425,14 @@ func parseInt(str string) int64 {
 }
 
 func init() {
-	m := Smart{}
-	path, _ := exec.LookPath("smartctl")
-	if len(path) > 0 {
-		m.Path = path
-	}
-	m.Nocheck = "standby"
-
 	inputs.Add("smart", func() telegraf.Input {
-		return &m
+		m := &Smart{}
+		path, _ := exec.LookPath("smartctl")
+		if len(path) > 0 {
+			m.Path = path
+		}
+		m.Nocheck = "standby"
+
+		return m
 	})
 }
