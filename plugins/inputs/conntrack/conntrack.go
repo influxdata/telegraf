@@ -151,7 +151,9 @@ func (c *Conntrack) gatherConnStates(acc telegraf.Accumulator) error {
 
 	cmd := exec.Command(c.ConnTable[0], c.ConnTable[1:]...)
 	cmd.Stdout = nf
-	cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
 
 	if err := cmd.Wait(); err != nil {
 		return err
