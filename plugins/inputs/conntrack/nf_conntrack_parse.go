@@ -60,6 +60,8 @@ func (nf *nfConntrack) parseProcNfConntrack(f io.Reader) error {
 					case "udp":
 						if row.unreplied {
 							nf.counters[row.dframe+"_unreplied"]++
+						} else {
+							nf.counters[row.dframe]++
 						}
 					}
 
