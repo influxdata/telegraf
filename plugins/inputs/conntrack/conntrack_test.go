@@ -4,6 +4,7 @@ package conntrack
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -117,7 +118,9 @@ ipv4     2 tcp      6 8 CLOSE src=192.168.0.221 dst=8.8.8.8 sport=49746 dport=54
 		"udp_unreplied":   1,
 		"udp":             1,
 	}
-	nf := newNfConntrack(bytes.NewReader(fakeRow))
+
+	nf := newNfConntrack()
+	io.Copy(nf, bytes.NewReader(fakeRow))
 	if !assert.ObjectsAreEqualValues(expected, nf.counters) {
 		t.Error("Invalid result in the parser")
 	}

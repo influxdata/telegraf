@@ -3,7 +3,6 @@
 package conntrack
 
 import (
-	"io"
 	"strings"
 )
 
@@ -14,77 +13,61 @@ var (
 	byteNewLine = byte('\n')
 )
 
-func newNfConntrack(f io.Reader) *nfConntrack {
+func newNfConntrack() *nfConntrack {
 	nf := &nfConntrack{
 		counters: make(map[string]int64),
+		row:      &rowConn{},
+		block:    make([]byte, 0),
+		pos:      0,
 	}
-	nf.parseProcNfConntrack(f)
 	return nf
 }
 
 type nfConntrack struct {
 	counters map[string]int64
+	row      *rowConn
+	block    []byte
+	pos      int
 }
 
-func (nf *nfConntrack) parseProcNfConntrack(f io.Reader) error {
-	b := make([]byte, 32*1024)
-	block := make([]byte, 0)
-	pos := 0
-
-	row := &rowConn{}
-
-	stackParseFn := func(n int) {
-		for _, v := range b[:n] {
-			switch v {
-			case byteSpace:
-				if len(block) > 0 {
-					switch pos {
-					case 0:
-						row.version = string(block)
-					case 2:
-						row.dframe = string(block)
-					}
-
-					row.parse(block, pos)
-					block = block[:0]
-					pos++
+func (nf *nfConntrack) Write(b []byte) (int, error) {
+	for _, v := range b {
+		switch v {
+		case byteSpace:
+			if len(nf.block) > 0 {
+				switch nf.pos {
+				case 0:
+					nf.row.version = string(nf.block)
+				case 2:
+					nf.row.dframe = string(nf.block)
 				}
-			case byteNewLine:
-				if len(block) > 0 {
-					row.parse(block, pos)
-					block = block[:0]
 
-					switch row.dframe {
-					case "tcp":
-						nf.counters[row.dframe+"_"+strings.ToLower(row.status)]++
-					case "udp":
-						if row.unreplied {
-							nf.counters[row.dframe+"_unreplied"]++
-						} else {
-							nf.counters[row.dframe]++
-						}
-					}
-
-					row.Reset()
-				}
-				pos = 0
-			default:
-				block = append(block, v)
+				nf.row.parse(nf.block, nf.pos)
+				nf.block = nf.block[:0]
+				nf.pos++
 			}
+		case byteNewLine:
+			if len(nf.block) > 0 {
+				nf.row.parse(nf.block, nf.pos)
+				nf.block = nf.block[:0]
+				switch nf.row.dframe {
+				case "tcp":
+					nf.counters[nf.row.dframe+"_"+strings.ToLower(nf.row.status)]++
+				case "udp":
+					if nf.row.unreplied {
+						nf.counters[nf.row.dframe+"_unreplied"]++
+					} else {
+						nf.counters[nf.row.dframe]++
+					}
+				}
+				nf.row.Reset()
+			}
+			nf.pos = 0
+		default:
+			nf.block = append(nf.block, v)
 		}
 	}
-
-	for {
-		n, err := f.Read(b)
-		if err != nil {
-			if err == io.EOF {
-				stackParseFn(n)
-				return nil
-			}
-			return err
-		}
-		stackParseFn(n)
-	}
+	return len(b), nil
 }
 
 type rowConn struct {

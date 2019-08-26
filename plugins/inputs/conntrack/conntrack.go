@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -19,7 +20,8 @@ type Conntrack struct {
 	Path       string
 	Dirs       []string
 	Files      []string
-	ConnTable  string
+	Conntrack  bool
+	ConnTable  []string
 	ConnStates []string
 }
 
@@ -39,7 +41,7 @@ var dfltFiles = []string{
 	"nf_conntrack_max",
 }
 
-var dfltConnTable = "/proc/net/nf_conntrack"
+var dfltConnTable = []string{"/usr/sbin/conntrack", "-L", "-o", "extended"}
 
 func (c *Conntrack) setDefaults() {
 	if len(c.Dirs) == 0 {
@@ -50,7 +52,7 @@ func (c *Conntrack) setDefaults() {
 		c.Files = dfltFiles
 	}
 
-	if c.ConnTable == "" {
+	if len(c.ConnTable) == 0 {
 		c.ConnTable = dfltConnTable
 	}
 }
@@ -73,8 +75,14 @@ var sampleConfig = `
    ## Missing directrories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 
-   ## Location of connections tracking table from Linux kernel-
-   conntable = "/proc/net/nf_conntrack"
+   ## Connections tracking table from Linux kernel
+   ## This metrics are only for servers with the nf_conntrack kerne module
+   ## and the conntrack command installed.
+
+   ## Use conntrack to enable the nf_conntrack metrics
+   conntrack = false
+   ## Change the location path as needed
+   conntable = ["/usr/sbin/conntrack", "-L", "-o", "extended"]
 `
 
 func (c *Conntrack) SampleConfig() string {
@@ -86,8 +94,7 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	if err := c.gatherCounters(acc); err != nil {
 		return err
 	}
-	c.gatherConnStates(acc)
-	return nil
+	return c.gatherConnStates(acc)
 }
 
 func (c *Conntrack) gatherCounters(acc telegraf.Accumulator) error {
@@ -134,18 +141,21 @@ func (c *Conntrack) gatherCounters(acc telegraf.Accumulator) error {
 }
 
 func (c *Conntrack) gatherConnStates(acc telegraf.Accumulator) error {
-	f, err := os.Open(c.ConnTable)
-	if err != nil {
-		if err == os.ErrNotExist {
-			return nil
-		}
-		return err
+	if !c.Conntrack {
+		return nil
 	}
-	defer f.Close()
 
 	fields := make(map[string]interface{})
 
-	nf := newNfConntrack(f)
+	nf := newNfConntrack()
+
+	cmd := exec.Command(c.ConnTable[0], c.ConnTable[1:]...)
+	cmd.Stdout = nf
+	cmd.Start()
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
 
 	for k, v := range nf.counters {
 		fields[k] = v
