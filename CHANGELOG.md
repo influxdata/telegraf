@@ -95,11 +95,17 @@
 - [#6232](https://github.com/influxdata/telegraf/issues/6232): Fix persistent session in mqtt_consumer.
 - [#6235](https://github.com/influxdata/telegraf/issues/6235): Fix finder inconsistencies in vsphere input.
 - [#6138](https://github.com/influxdata/telegraf/issues/6138): Fix parsing multiple metrics on the first line of tailed file.
+- [#2526](https://github.com/influxdata/telegraf/issues/2526): Send TERM to exec processes before sending KILL signal.
 
 ## v1.11.5 [unreleased]
 
 - [#6250](https://github.com/influxdata/telegraf/pull/6250): Update go-sql-driver/mysql driver to 1.4.1 to address auth issues.
 - [#6279](https://github.com/influxdata/telegraf/issues/6279): Return error status from --test if input plugins produce an error.
+- [#6309](https://github.com/influxdata/telegraf/issues/6309): Fix with multiple instances only last configuration is used in smart input.
+- [#6303](https://github.com/influxdata/telegraf/pull/6303): Build official packages with Go 1.12.9.
+- [#6234](https://github.com/influxdata/telegraf/issues/6234): Split out -w argument in iptables input.
+- [#6270](https://github.com/influxdata/telegraf/issues/6270): Add support for parked process state on Linux.
+- [#6287](https://github.com/influxdata/telegraf/issues/6287): Remove leading slash from rcon command.
 
 ## v1.11.4 [2019-08-06]
 
