@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -24,9 +25,9 @@ const (
 
 var sampleConfig = `
   ## Address and port to listen on.
-  ##   ex: service_address = "tcp://localhost:8080"
+  ##   ex: service_address = "http://localhost:8080"
   ##       service_address = "unix:///var/run/telegraf-health.sock"
-  # service_address = "tcp://:8080"
+  # service_address = "http://:8080"
 
   ## The maximum duration for reading the entire request.
   # read_timeout = "5s"
@@ -78,9 +79,12 @@ type Health struct {
 	Contains []*Contains `toml:"contains"`
 	checkers []Checker
 
-	wg     sync.WaitGroup
-	server *http.Server
-	origin string
+	wg      sync.WaitGroup
+	server  *http.Server
+	origin  string
+	network string
+	address string
+	tlsConf *tls.Config
 
 	mu      sync.Mutex
 	healthy bool
@@ -94,8 +98,31 @@ func (h *Health) Description() string {
 	return "Configurable HTTP health check resource based on metrics"
 }
 
-// Connect starts the HTTP server.
-func (h *Health) Connect() error {
+func (h *Health) Init() error {
+	u, err := url.Parse(h.ServiceAddress)
+	if err != nil {
+		return err
+	}
+
+	switch u.Scheme {
+	case "http", "https":
+		h.network = "tcp"
+		h.address = u.Host
+	case "unix":
+		h.network = u.Scheme
+		h.address = u.Path
+	case "tcp4", "tcp6", "tcp":
+		h.network = u.Scheme
+		h.address = u.Host
+	default:
+		return errors.New("service_address contains invalid scheme")
+	}
+
+	h.tlsConf, err = h.ServerConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	h.checkers = make([]Checker, 0)
 	for i := range h.Compares {
 		h.checkers = append(h.checkers, h.Compares[i])
@@ -104,11 +131,11 @@ func (h *Health) Connect() error {
 		h.checkers = append(h.checkers, h.Contains[i])
 	}
 
-	tlsConf, err := h.ServerConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
+// Connect starts the HTTP server.
+func (h *Health) Connect() error {
 	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, onAuthError)
 
 	h.server = &http.Server{
@@ -116,15 +143,15 @@ func (h *Health) Connect() error {
 		Handler:      authHandler(h),
 		ReadTimeout:  h.ReadTimeout.Duration,
 		WriteTimeout: h.WriteTimeout.Duration,
-		TLSConfig:    tlsConf,
+		TLSConfig:    h.tlsConf,
 	}
 
-	listener, err := h.listen(tlsConf)
+	listener, err := h.listen()
 	if err != nil {
 		return err
 	}
 
-	h.origin = h.getOrigin(listener, tlsConf)
+	h.origin = h.getOrigin(listener)
 
 	log.Printf("I! [outputs.health] Listening on %s", h.origin)
 
@@ -145,25 +172,12 @@ func onAuthError(rw http.ResponseWriter, code int) {
 	http.Error(rw, http.StatusText(code), code)
 }
 
-func (h *Health) listen(tlsConf *tls.Config) (net.Listener, error) {
-	u, err := url.Parse(h.ServiceAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	network := "tcp"
-	address := u.Host
-	if u.Host == "" {
-		network = "unix"
-		address = u.Path
-	}
-
-	if tlsConf != nil {
-		return tls.Listen(network, address, tlsConf)
+func (h *Health) listen() (net.Listener, error) {
+	if h.tlsConf != nil {
+		return tls.Listen(h.network, h.address, h.tlsConf)
 	} else {
-		return net.Listen(network, address)
+		return net.Listen(h.network, h.address)
 	}
-
 }
 
 func (h *Health) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -205,23 +219,30 @@ func (h *Health) Origin() string {
 	return h.origin
 }
 
-func (h *Health) getOrigin(listener net.Listener, tlsConf *tls.Config) string {
-	switch listener.Addr().Network() {
-	case "tcp":
-		scheme := "http"
-		if tlsConf != nil {
-			scheme = "https"
+func (h *Health) getOrigin(listener net.Listener) string {
+	scheme := "http"
+	if h.tlsConf != nil {
+		scheme = "https"
+	}
+	if h.network == "unix" {
+		scheme = "unix"
+	}
+
+	switch h.network {
+	case "unix":
+		origin := &url.URL{
+			Scheme: scheme,
+			Path:   listener.Addr().String(),
 		}
+		return origin.String()
+	default:
 		origin := &url.URL{
 			Scheme: scheme,
 			Host:   listener.Addr().String(),
 		}
 		return origin.String()
-	case "unix":
-		return listener.Addr().String()
-	default:
-		return ""
 	}
+
 }
 
 func (h *Health) setHealthy(healthy bool) {
