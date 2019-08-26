@@ -9,15 +9,18 @@ import (
 	"strconv"
 	"strings"
 
+	"path/filepath"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"path/filepath"
 )
 
 type Conntrack struct {
-	Path  string
-	Dirs  []string
-	Files []string
+	Path       string
+	Dirs       []string
+	Files      []string
+	ConnTable  string
+	ConnStates []string
 }
 
 const (
@@ -36,6 +39,8 @@ var dfltFiles = []string{
 	"nf_conntrack_max",
 }
 
+var dfltConnTable = "/proc/net/nf_conntrack"
+
 func (c *Conntrack) setDefaults() {
 	if len(c.Dirs) == 0 {
 		c.Dirs = dfltDirs
@@ -43,6 +48,10 @@ func (c *Conntrack) setDefaults() {
 
 	if len(c.Files) == 0 {
 		c.Files = dfltFiles
+	}
+
+	if c.ConnTable == "" {
+		c.ConnTable = dfltConnTable
 	}
 }
 
@@ -63,6 +72,9 @@ var sampleConfig = `
    ## Directories to search within for the conntrack files above.
    ## Missing directrories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
+
+   ## Location of connections tracking table from Linux kernel-
+   conntable = "/proc/net/nf_conntrack"
 `
 
 func (c *Conntrack) SampleConfig() string {
@@ -71,7 +83,14 @@ func (c *Conntrack) SampleConfig() string {
 
 func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	c.setDefaults()
+	if err := c.gatherCounters(acc); err != nil {
+		return err
+	}
+	c.gatherConnStates(acc)
+	return nil
+}
 
+func (c *Conntrack) gatherCounters(acc telegraf.Accumulator) error {
 	var metricKey string
 	fields := make(map[string]interface{})
 
@@ -111,6 +130,29 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 	}
 
 	acc.AddFields(inputName, fields, nil)
+	return nil
+}
+
+func (c *Conntrack) gatherConnStates(acc telegraf.Accumulator) error {
+	f, err := os.Open(c.ConnTable)
+	if err != nil {
+		if err == os.ErrNotExist {
+			return nil
+		}
+		return err
+	}
+	defer f.Close()
+
+	fields := make(map[string]interface{})
+
+	nf := newNfConntrack(f)
+
+	for k, v := range nf.counters {
+		fields[k] = v
+	}
+
+	acc.AddFields(inputName, fields, nil)
+
 	return nil
 }
 
