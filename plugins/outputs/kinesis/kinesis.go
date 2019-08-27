@@ -11,7 +11,7 @@ import (
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 func init() {
@@ -20,40 +20,40 @@ func init() {
 	})
 }
 
-type (
-	KinesisOutput struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
+// KinesisOutput describes a telegraf kinesis output plugin
+type KinesisOutput struct {
+	Region      string `toml:"region"`
+	AccessKey   string `toml:"access_key"`
+	SecretKey   string `toml:"secret_key"`
+	RoleARN     string `toml:"role_arn"`
+	Profile     string `toml:"profile"`
+	Filename    string `toml:"shared_credential_file"`
+	Token       string `toml:"token"`
+	EndpointURL string `toml:"endpoint_url"`
 
-		StreamName         string     `toml:"streamname"`
-		PartitionKey       string     `toml:"partitionkey"`
-		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
-		Partition          *Partition `toml:"partition"`
-		Debug              bool       `toml:"debug"`
-		AggregateMetrics   bool       `toml:"aggregate_metrics"`
-		UseBatchFormat     bool       `toml:"use_batch_format"`
-		ContentEncoding    string     `toml:"content_encoding"`
+	StreamName         string     `toml:"streamname"`
+	PartitionKey       string     `toml:"partitionkey"`
+	RandomPartitionKey bool       `toml:"use_random_partitionkey"`
+	Partition          *Partition `toml:"partition"`
+	Debug              bool       `toml:"debug"`
+	AggregateMetrics   bool       `toml:"aggregate_metrics"`
+	UseBatchFormat     bool       `toml:"use_batch_format"`
+	ContentEncoding    string     `toml:"content_encoding"`
 
-		svc     *kinesis.Kinesis
-		nShards int64
+	svc     *kinesis.Kinesis
+	nShards int64
 
-		serializer serializers.Serializer
+	serializer serializers.Serializer
 
-		encoder internal.ContentEncoder
-	}
+	encoder internal.ContentEncoder
+}
 
-	Partition struct {
-		Method  string `toml:"method"`
-		Key     string `toml:"key"`
-		Default string `toml:"default"`
-	}
-)
+// Partition is used to detect what type of partition key you would like to use.
+type Partition struct {
+	Method  string `toml:"method"`
+	Key     string `toml:"key"`
+	Default string `toml:"default"`
+}
 
 var sampleConfig = `
   ## Amazon REGION of kinesis endpoint.
@@ -133,16 +133,6 @@ var sampleConfig = `
   debug = false
 `
 
-func makeEncoder(encoderType string) (internal.ContentEncoder, error) {
-	switch encoderType {
-	case "gzip":
-		// Special handling for gzip because we need to change the level of compression.
-		return newGzipEncoder()
-	default:
-		return internal.NewContentEncoder(encoderType)
-	}
-}
-
 func (k *KinesisOutput) SampleConfig() string {
 	return sampleConfig
 }
@@ -151,6 +141,7 @@ func (k *KinesisOutput) Description() string {
 	return "Configuration for the AWS Kinesis output."
 }
 
+// Connect will establish a connection to AWS Kinesis and make sure there are shards ready to collect data.
 func (k *KinesisOutput) Connect() error {
 	if k.Partition == nil {
 		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
@@ -276,7 +267,7 @@ func (k *KinesisOutput) writeDefault(metrics []telegraf.Metric) error {
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v\n", err)
 			continue
 		}
 
@@ -307,13 +298,12 @@ func (k *KinesisOutput) writeDefault(metrics []telegraf.Metric) error {
 }
 
 func (k *KinesisOutput) aggregatedWrite(metrics []telegraf.Metric) error {
-	log.Printf("D! Starting aggregated writer with %d metrics.", len(metrics))
+	log.Printf("D! Starting aggregated writer with %d metrics.\n", len(metrics))
 
-	handler := newPutRecordsHandler()
-	handler.setSerializer(k.serializer)
+	handler := newPutRecordsHandler(k.serializer)
 
 	for _, metric := range metrics {
-		err := handler.addMetric(k.getPartitionKey(metric), metric)
+		err := handler.addRawMetric(k.getPartitionKey(metric), metric)
 		if err != nil {
 			return err
 		}
@@ -321,7 +311,7 @@ func (k *KinesisOutput) aggregatedWrite(metrics []telegraf.Metric) error {
 	handler.packageMetrics(k.nShards)
 
 	// encode the messages if required.
-	err := handler.encodeSlugs(k.encoder)
+	err := handler.encodePayloadBodies(k.encoder)
 	if err != nil {
 		return err
 	}
@@ -335,4 +325,28 @@ func (k *KinesisOutput) aggregatedWrite(metrics []telegraf.Metric) error {
 	log.Printf("D! Wrote aggregated metrics in %+v.\n", elapsed)
 
 	return nil
+}
+
+func newGzipEncoder() (*internal.GzipEncoder, error) {
+	// Grab the Gzip encoder directly because we need to set the level.
+	gz, err := internal.NewGzipEncoder()
+	if err != nil {
+		return nil, err
+	}
+	err = gz.SetLevel(gzipCompressionLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	return gz, nil
+}
+
+func makeEncoder(encoderType string) (internal.ContentEncoder, error) {
+	switch encoderType {
+	case "gzip":
+		// Special handling for gzip because we need to change the level of compression.
+		return newGzipEncoder()
+	default:
+		return internal.NewContentEncoder(encoderType)
+	}
 }

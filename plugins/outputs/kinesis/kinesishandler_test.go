@@ -40,10 +40,10 @@ func fakeMetrics(t *testing.T, howMany int) []telegraf.Metric {
 func TestAddMetric(t *testing.T) {
 	testMetrics := fakeMetrics(t, 3)
 
-	h := newPutRecordsHandler()
+	h := newPutRecordsHandler(influx.NewSerializer())
 
 	for _, m := range testMetrics {
-		h.addMetric("test", m)
+		h.addRawMetric("test", m)
 	}
 
 	if len(h.rawMetrics["test"]) != 3 {
@@ -52,18 +52,18 @@ func TestAddMetric(t *testing.T) {
 	}
 }
 
-func TestAddSlugs(t *testing.T) {
+func TestAddPayload(t *testing.T) {
 	tests := [][]byte{
 		[]byte("test1"),
 		[]byte("test2"),
 		[]byte("test3"),
 	}
 
-	h := newPutRecordsHandler()
+	h := newPutRecordsHandler(influx.NewSerializer())
 	partkey := "testPartion"
-	h.addSlugs(partkey, tests...)
-	if len(h.slugs[partkey]) != 3 {
-		t.Logf("Added 3 slugs but never seen them on the other side. Got: %v", h.slugs[partkey])
+	h.addPayload(partkey, tests...)
+	if len(h.payloads[partkey]) != 3 {
+		t.Logf("Added 3 slugs but never seen them on the other side. Got: %v", h.payloads[partkey])
 		t.Fail()
 	}
 }
@@ -131,8 +131,7 @@ func TestKinesisPackagedMetrics(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		h := newPutRecordsHandler()
-		h.setSerializer(influx.NewSerializer())
+		h := newPutRecordsHandler(influx.NewSerializer())
 
 		pk := randomPartitionKey
 		if test.staticKey != "" {
@@ -140,7 +139,7 @@ func TestKinesisPackagedMetrics(t *testing.T) {
 		}
 
 		for _, m := range fakeMetrics(t, test.nMetrics) {
-			h.addMetric(pk, m)
+			h.addRawMetric(pk, m)
 		}
 
 		if err := h.packageMetrics(test.shards); err != nil {
@@ -148,12 +147,12 @@ func TestKinesisPackagedMetrics(t *testing.T) {
 			t.Fail()
 		}
 
-		if len(h.slugs) != test.expectedSlugs {
-			t.Logf("%s: Expected slug count is wrong.\nWant: %d\nGot: %d", test.name, test.expectedSlugs, len(h.slugs))
+		if len(h.payloads) != test.expectedSlugs {
+			t.Logf("%s: Expected slug count is wrong.\nWant: %d\nGot: %d", test.name, test.expectedSlugs, len(h.payloads))
 			t.Fail()
 		}
 
-		for key, slug := range h.slugs {
+		for key, slug := range h.payloads {
 			for index, recordSet := range slug {
 				if len(recordSet) > maxRecordSizeBytes {
 					t.Logf("%s: recordSet %d of slug %s is too large. Is: %d, max size is: %d", test.name, index, key, len(recordSet), maxRecordSizeBytes)
@@ -166,7 +165,7 @@ func TestKinesisPackagedMetrics(t *testing.T) {
 			t.Logf("Failed to make encoder. You have put something bad into the test")
 			t.Fail()
 		}
-		if err := h.encodeSlugs(encoder); err != nil {
+		if err := h.encodePayloadBodies(encoder); err != nil {
 			t.Logf("Failed to encoder the data")
 			t.Fail()
 		}
