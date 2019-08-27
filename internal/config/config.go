@@ -569,7 +569,7 @@ func getDefaultConfigPath() (string, error) {
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
 	if runtime.GOOS == "windows" {
-		etcfile = `C:\Program Files\Telegraf\telegraf.conf`
+		etcfile = os.Getenv("ProgramFiles") + `\Telegraf\telegraf.conf`
 	}
 	for _, path := range []string{envfile, homefile, etcfile} {
 		if _, err := os.Stat(path); err == nil {
