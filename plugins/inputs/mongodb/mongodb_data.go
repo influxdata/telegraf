@@ -101,7 +101,6 @@ var DefaultReplStats = map[string]string{
 	"member_status":         "NodeType",
 	"state":                 "NodeState",
 	"repl_lag":              "ReplLag",
-	"repl_oplog_window_sec": "OplogTimeDiff",
 }
 
 var DefaultClusterStats = map[string]string{
@@ -230,6 +229,11 @@ func (d *MongodbData) AddDefaultStats() {
 	if d.StatLine.NodeType != "" {
 		d.addStat(statLine, DefaultReplStats)
 	}
+
+	if d.StatLine.OplogStats != nil {
+		d.add("repl_oplog_window_sec", d.StatLine.OplogStats.TimeDiff)
+	}
+
 	d.addStat(statLine, DefaultClusterStats)
 	d.addStat(statLine, DefaultShardStats)
 	if d.StatLine.StorageEngine == "mmapv1" || d.StatLine.StorageEngine == "rocksdb" {

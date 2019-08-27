@@ -210,7 +210,7 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
 		switch input.Config.Name {
-		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
+		case "cpu", "mongodb", "procstat":
 			nulAcc := NewAccumulator(input, nulC)
 			nulAcc.SetPrecision(a.Precision())
 			if err := input.Input.Gather(nulAcc); err != nil {

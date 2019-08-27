@@ -232,7 +232,6 @@ func TestStateTag(t *testing.T) {
 		"repl_updates":              int64(0),
 		"repl_updates_per_sec":      int64(0),
 		"repl_lag":                  int64(0),
-		"repl_oplog_window_sec":     int64(0),
 		"resident_megabytes":        int64(0),
 		"updates":                   int64(0),
 		"updates_per_sec":           int64(0),
