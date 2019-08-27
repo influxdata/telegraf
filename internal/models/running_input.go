@@ -13,6 +13,7 @@ type RunningInput struct {
 	Input  telegraf.Input
 	Config *InputConfig
 
+	log         telegraf.Logger
 	defaultTags map[string]string
 
 	MetricsGathered selfstat.Stat
@@ -20,25 +21,35 @@ type RunningInput struct {
 }
 
 func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
+	logger := &Logger{
+		Name: logName("inputs", config.Name, config.Alias),
+		Errs: selfstat.Register("gather", "errors",
+			map[string]string{"input": config.Name, "alias": config.Alias}),
+	}
+
+	setLogIfExist(input, logger)
+
 	return &RunningInput{
 		Input:  input,
 		Config: config,
 		MetricsGathered: selfstat.Register(
 			"gather",
 			"metrics_gathered",
-			map[string]string{"input": config.Name},
+			map[string]string{"input": config.Name, "alias": config.Alias},
 		),
 		GatherTime: selfstat.RegisterTiming(
 			"gather",
 			"gather_time_ns",
-			map[string]string{"input": config.Name},
+			map[string]string{"input": config.Name, "alias": config.Alias},
 		),
+		log: logger,
 	}
 }
 
 // InputConfig is the common config for all inputs.
 type InputConfig struct {
 	Name     string
+	Alias    string
 	Interval time.Duration
 
 	NameOverride      string
@@ -48,12 +59,12 @@ type InputConfig struct {
 	Filter            Filter
 }
 
-func (r *RunningInput) Name() string {
-	return "inputs." + r.Config.Name
-}
-
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
 	metric.Drop()
+}
+
+func (r *RunningInput) LogName() string {
+	return logName("inputs", r.Config.Name, r.Config.Alias)
 }
 
 func (r *RunningInput) Init() error {

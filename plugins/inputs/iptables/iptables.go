@@ -37,7 +37,7 @@ func (ipt *Iptables) SampleConfig() string {
   ## iptables can be restricted to only list command "iptables -nvL".
   use_sudo = false
   ## Setting 'use_lock' to true runs iptables with the "-w" option.
-  ## Adjust your sudo settings appropriately if using this option ("iptables -wnvl")
+  ## Adjust your sudo settings appropriately if using this option ("iptables -w 5 -nvl")
   use_lock = false
   ## Define an alternate executable, such as "ip6tables". Default is "iptables".
   # binary = "ip6tables"
@@ -89,11 +89,10 @@ func (ipt *Iptables) chainList(table, chain string) (string, error) {
 		name = "sudo"
 		args = append(args, iptablePath)
 	}
-	iptablesBaseArgs := "-nvL"
 	if ipt.UseLock {
-		iptablesBaseArgs = "-wnvL"
+		args = append(args, "-w", "5")
 	}
-	args = append(args, iptablesBaseArgs, chain, "-t", table, "-x")
+	args = append(args, "-nvL", chain, "-t", table, "-x")
 	c := exec.Command(name, args...)
 	out, err := c.Output()
 	return string(out), err

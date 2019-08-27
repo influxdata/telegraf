@@ -118,6 +118,22 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "redis", fields, tags)
 	acc.AssertContainsTaggedFields(t, "redis_keyspace", keyspaceFields, keyspaceTags)
+
+	cmdstatSetTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "set"}
+	cmdstatSetFields := map[string]interface{}{
+		"calls":         int64(261265),
+		"usec":          int64(1634157),
+		"usec_per_call": float64(6.25),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatSetFields, cmdstatSetTags)
+
+	cmdstatCommandTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "command"}
+	cmdstatCommandFields := map[string]interface{}{
+		"calls":         int64(1),
+		"usec":          int64(990),
+		"usec_per_call": float64(990.0),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatCommandFields, cmdstatCommandTags)
 }
 
 const testOutput = `# Server
@@ -208,6 +224,10 @@ used_cpu_sys:0.14
 used_cpu_user:0.05
 used_cpu_sys_children:0.00
 used_cpu_user_children:0.00
+
+# Commandstats
+cmdstat_set:calls=261265,usec=1634157,usec_per_call=6.25
+cmdstat_command:calls=1,usec=990,usec_per_call=990.00
 
 # Keyspace
 db0:keys=2,expires=0,avg_ttl=0
