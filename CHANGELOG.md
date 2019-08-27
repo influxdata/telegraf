@@ -106,6 +106,7 @@
 - [#6234](https://github.com/influxdata/telegraf/issues/6234): Split out -w argument in iptables input.
 - [#6270](https://github.com/influxdata/telegraf/issues/6270): Add support for parked process state on Linux.
 - [#6287](https://github.com/influxdata/telegraf/issues/6287): Remove leading slash from rcon command.
+- [#6313](https://github.com/influxdata/telegraf/pull/6313): Allow jobs with dashes in the name in lustre2 input.
 
 ## v1.11.4 [2019-08-06]
 
