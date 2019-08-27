@@ -53,7 +53,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   ## Federation link metrics will only be gathered for queues and exchanges
   ## whose non-federation metrics will be collected (e.g a queue excluded
   ## by the 'queue_name_exclude' option will also be excluded from federation).
-  # federationUpstreams = ["dataCentre2"]
+  # federation_upstreams = ["dataCentre2"]
 
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
@@ -145,7 +145,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   - messages_publish_out (int, count)
   - messages_publish_out_rate (int, messages per second)
 
-_ rabbitmq_federation
+- rabbitmq_federation
   - acks_uncommitted (int, count)
   - consumers (int, count)
   - messages_unacknowledged (int, count)

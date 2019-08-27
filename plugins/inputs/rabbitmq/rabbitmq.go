@@ -46,7 +46,7 @@ type RabbitMQ struct {
 	Nodes               []string
 	Queues              []string
 	Exchanges           []string
-	FederationUpstreams []string
+	FederationUpstreams []string `toml:"federation_upstreams"`
 
 	QueueInclude []string `toml:"queue_name_include"`
 	QueueExclude []string `toml:"queue_name_exclude"`
@@ -263,7 +263,7 @@ var sampleConfig = `
   ## Federation link metrics will only be gathered for queues and exchanges
   ## whose non-federation metrics will be collected (e.g a queue excluded
   ## by the 'queue_name_exclude' option will also be excluded from federation).
-  # federationUpstreams = ["dataCentre2"]
+  # federation_upstreams = ["dataCentre2"]
 
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
