@@ -541,7 +541,7 @@ type StatLine struct {
 	GetMoreR, GetMoreRCnt                int64
 	CommandR, CommandRCnt                int64
 	ReplLag                              int64
-	OplogTimeDiff                        int64
+	OplogStats                           *OplogStats
 	Flushes, FlushesCnt                  int64
 	FlushesTotalTime                     int64
 	Mapped, Virtual, Resident, NonMapped int64
@@ -890,66 +890,75 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.NumConnections = newStat.Connections.Current
 	}
 
-	newReplStat := *newMongo.ReplSetStatus
+	if newMongo.ReplSetStatus != nil {
+		newReplStat := *newMongo.ReplSetStatus
 
-	if newReplStat.Members != nil {
-		myName := newStat.Repl.Me
-		// Find the master and myself
-		master := ReplSetMember{}
-		me := ReplSetMember{}
-		for _, member := range newReplStat.Members {
-			if member.Name == myName {
-				// Store my state string
-				returnVal.NodeState = member.StateStr
-				if member.State == 1 {
-					// I'm the master
-					returnVal.ReplLag = 0
-					break
-				} else {
-					// I'm secondary
-					me = member
+		if newReplStat.Members != nil {
+			myName := newStat.Repl.Me
+			// Find the master and myself
+			master := ReplSetMember{}
+			me := ReplSetMember{}
+			for _, member := range newReplStat.Members {
+				if member.Name == myName {
+					// Store my state string
+					returnVal.NodeState = member.StateStr
+					if member.State == 1 {
+						// I'm the master
+						returnVal.ReplLag = 0
+						break
+					} else {
+						// I'm secondary
+						me = member
+					}
+				} else if member.State == 1 {
+					// Master found
+					master = member
 				}
-			} else if member.State == 1 {
-				// Master found
-				master = member
 			}
-		}
 
-		if me.State == 2 {
-			// OptimeDate.Unix() type is int64
-			lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
-			if lag < 0 {
-				returnVal.ReplLag = 0
-			} else {
-				returnVal.ReplLag = lag
+			if me.State == 2 {
+				// OptimeDate.Unix() type is int64
+				lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
+				if lag < 0 {
+					returnVal.ReplLag = 0
+				} else {
+					returnVal.ReplLag = lag
+				}
 			}
 		}
 	}
 
-	newClusterStat := *newMongo.ClusterStatus
-	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
-	returnVal.OplogTimeDiff = newMongo.OplogStats.TimeDiff
+	if newMongo.ClusterStatus != nil {
+		newClusterStat := *newMongo.ClusterStatus
+		returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+	}
 
-	newDbStats := *newMongo.DbStats
-	for _, db := range newDbStats.Dbs {
-		dbStatsData := db.DbStatsData
-		// mongos doesn't have the db key, so setting the db name
-		if dbStatsData.Db == "" {
-			dbStatsData.Db = db.Name
+	if newMongo.OplogStats != nil {
+		returnVal.OplogStats = newMongo.OplogStats
+	}
+
+	if newMongo.DbStats != nil {
+		newDbStats := *newMongo.DbStats
+		for _, db := range newDbStats.Dbs {
+			dbStatsData := db.DbStatsData
+			// mongos doesn't have the db key, so setting the db name
+			if dbStatsData.Db == "" {
+				dbStatsData.Db = db.Name
+			}
+			dbStatLine := &DbStatLine{
+				Name:        dbStatsData.Db,
+				Collections: dbStatsData.Collections,
+				Objects:     dbStatsData.Objects,
+				AvgObjSize:  dbStatsData.AvgObjSize,
+				DataSize:    dbStatsData.DataSize,
+				StorageSize: dbStatsData.StorageSize,
+				NumExtents:  dbStatsData.NumExtents,
+				Indexes:     dbStatsData.Indexes,
+				IndexSize:   dbStatsData.IndexSize,
+				Ok:          dbStatsData.Ok,
+			}
+			returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 		}
-		dbStatLine := &DbStatLine{
-			Name:        dbStatsData.Db,
-			Collections: dbStatsData.Collections,
-			Objects:     dbStatsData.Objects,
-			AvgObjSize:  dbStatsData.AvgObjSize,
-			DataSize:    dbStatsData.DataSize,
-			StorageSize: dbStatsData.StorageSize,
-			NumExtents:  dbStatsData.NumExtents,
-			Indexes:     dbStatsData.Indexes,
-			IndexSize:   dbStatsData.IndexSize,
-			Ok:          dbStatsData.Ok,
-		}
-		returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 	}
 
 	newColStats := *newMongo.ColStats
