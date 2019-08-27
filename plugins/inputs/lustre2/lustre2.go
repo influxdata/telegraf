@@ -377,7 +377,7 @@ func (l *Lustre2) GetLustreProcStats(fileglob string, wantedFields []*mapping, a
 		if err != nil {
 			return err
 		}
-		jobs := strings.Split(string(wholeFile), "-")
+		jobs := strings.Split(string(wholeFile), "- ")
 		for _, job := range jobs {
 			lines := strings.Split(string(job), "\n")
 			jobid := ""
