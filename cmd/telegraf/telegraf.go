@@ -403,12 +403,16 @@ func main() {
 	}
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {
+		programFiles := os.Getenv("ProgramFiles")
+		if programFiles == "" { // Should never happen
+			programFiles = "C:\\Program Files"
+		}
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
 			DisplayName: *fServiceDisplayName,
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
-			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+			Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
 		}
 
 		prg := &program{
