@@ -343,12 +343,16 @@ func main() {
 	}
 
 	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
+		programFiles := os.Getenv("ProgramFiles")
+		if programFiles == "" { // Should never happen
+			programFiles = "C:\\Program Files"
+		}
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
-			Arguments: []string{"--config", os.Getenv("ProgramFiles") + "\\Telegraf\\telegraf.conf"},
+			Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
 		}
 
 		prg := &program{
