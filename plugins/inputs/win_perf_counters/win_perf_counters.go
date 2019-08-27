@@ -36,9 +36,12 @@ var sampleConfig = `
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = [
-      "%% Idle Time", "%% Interrupt Time",
-      "%% Privileged Time", "%% User Time",
-      "%% Processor Time"
+      "% Idle Time",
+      "% Interrupt Time",
+      "% Privileged Time",
+      "% User Time",
+      "% Processor Time",
+      "% DPC Time",
     ]
     Measurement = "win_cpu"
     # Set to true to include _Total instance when querying for all (*).
@@ -51,14 +54,56 @@ var sampleConfig = `
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = [
-      "%% Idle Time", "%% Disk Time","%% Disk Read Time",
-      "%% Disk Write Time", "%% User Time", "Current Disk Queue Length"
+      "% Idle Time",
+      "% Disk Time",
+      "% Disk Read Time",
+      "% Disk Write Time",
+      "% User Time",
+      "% Free Space",
+      "Current Disk Queue Length",
+      "Free Megabytes",
     ]
     Measurement = "win_disk"
 
   [[inputs.win_perf_counters.object]]
+    ObjectName = "PhysicalDisk"
+    Instances = ["*"]
+    Counters = [
+      "Disk Read Bytes/sec",
+      "Disk Write Bytes/sec",
+      "Current Disk Queue Length",
+      "Disk Reads/sec",
+      "Disk Writes/sec",
+      "% Disk Time",
+      "% Disk Read Time",
+      "% Disk Write Time",
+    ]
+    Measurement = "win_diskio"
+
+  [[inputs.win_perf_counters.object]]
+    ObjectName = "Network Interface"
+    Instances = ["*"]
+    Counters = [
+      "Bytes Received/sec",
+      "Bytes Sent/sec",
+      "Packets Received/sec",
+      "Packets Sent/sec",
+      "Packets Received Discarded",
+      "Packets Outbound Discarded",
+      "Packets Received Errors",
+      "Packets Outbound Errors",
+    ]
+    Measurement = "win_net"
+
+
+  [[inputs.win_perf_counters.object]]
     ObjectName = "System"
-    Counters = ["Context Switches/sec","System Calls/sec"]
+    Counters = [
+      "Context Switches/sec",
+      "System Calls/sec",
+      "Processor Queue Length",
+      "System Up Time",
+    ]
     Instances = ["------"]
     Measurement = "win_system"
 
@@ -67,12 +112,30 @@ var sampleConfig = `
     # such as from the Memory object.
     ObjectName = "Memory"
     Counters = [
-      "Available Bytes", "Cache Faults/sec", "Demand Zero Faults/sec",
-      "Page Faults/sec", "Pages/sec", "Transition Faults/sec",
-      "Pool Nonpaged Bytes", "Pool Paged Bytes"
+      "Available Bytes",
+      "Cache Faults/sec",
+      "Demand Zero Faults/sec",
+      "Page Faults/sec",
+      "Pages/sec",
+      "Transition Faults/sec",
+      "Pool Nonpaged Bytes",
+      "Pool Paged Bytes",
+      "Standby Cache Reserve Bytes",
+      "Standby Cache Normal Priority Bytes",
+      "Standby Cache Core Bytes",
     ]
     Instances = ["------"] # Use 6 x - to remove the Instance bit from the counterPath.
     Measurement = "win_mem"
+
+  [[inputs.win_perf_counters.object]]
+    # Example query where the Instance portion must be removed to get data back,
+    # such as from the Paging File object.
+    ObjectName = "Paging File"
+    Counters = [
+      "% Usage",
+    ]
+    Instances = ["_Total"]
+    Measurement = "win_swap"
 `
 
 type Win_PerfCounters struct {

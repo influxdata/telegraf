@@ -474,12 +474,12 @@
   version = "v6.12.0"
 
 [[projects]]
-  digest = "1:c07de423ca37dc2765396d6971599ab652a339538084b9b58c9f7fc533b28525"
+  digest = "1:e692d16fdfbddb94e9e4886aaf6c08bdbae5cb4ac80651445de9181b371c6e46"
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
   pruneopts = ""
-  revision = "d523deb1b23d913de5bdada721a6071e71283618"
-  version = "v1.4.0"
+  revision = "72cd26f257d44c1114970e19afddcd812016007e"
+  version = "v1.4.1"
 
 [[projects]]
   digest = "1:9ab1b1c637d7c8f49e39d8538a650d7eb2137b076790cff69d160823b505964c"
@@ -811,6 +811,13 @@
   pruneopts = ""
   revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
   version = "v1.0.1"
+
+[[projects]]
+  digest = "1:d4a3035a03b4612c714b993891c071706a64890e55ef64bcc42bc2b461cb2756"
+  name = "github.com/mdlayher/apcupsd"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
 
 [[projects]]
   digest = "1:4c8d8358c45ba11ab7bb15df749d4df8664ff1582daead28bae58cf8cbe49890"
@@ -1176,7 +1183,6 @@
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
-    "find",
     "list",
     "nfc",
     "object",
@@ -1735,6 +1741,7 @@
     "github.com/kballard/go-shellquote",
     "github.com/kubernetes/apimachinery/pkg/api/resource",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
+    "github.com/mdlayher/apcupsd",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
     "github.com/nats-io/gnatsd/server",

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"runtime"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,6 +107,56 @@ func TestFromProcFilesWithSpaceInCmd(t *testing.T) {
 	fields["total"] = tester.calls
 
 	acc.AssertContainsTaggedFields(t, "processes", fields, map[string]string{})
+}
+
+// Based on `man 5 proc`, parked processes an be found in a
+// limited range of Linux versions:
+//
+// >    P  Parked (Linux 3.9 to 3.13 only)
+//
+// However, we have had reports of this process state on Ubuntu
+// Bionic w/ Linux 4.15 (#6270)
+func TestParkedProcess(t *testing.T) {
+	procstat := `88 (watchdog/13) P 2 0 0 0 -1 69238848 0 0 0 0 0 0 0 0 20 0 1 0 20 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 1 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+`
+	plugin := &Processes{
+		readProcFile: func(string) ([]byte, error) {
+			return []byte(procstat), nil
+		},
+		forceProc: true,
+	}
+
+	var acc testutil.Accumulator
+	err := plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"processes",
+			map[string]string{},
+			map[string]interface{}{
+				"blocked":  0,
+				"dead":     0,
+				"idle":     0,
+				"paging":   0,
+				"parked":   1,
+				"running":  0,
+				"sleeping": 0,
+				"stopped":  0,
+				"unknown":  0,
+				"zombies":  0,
+			},
+			time.Unix(0, 0),
+			telegraf.Untyped,
+		),
+	}
+	actual := acc.GetTelegrafMetrics()
+	for _, a := range actual {
+		a.RemoveField("total")
+		a.RemoveField("total_threads")
+	}
+	testutil.RequireMetricsEqual(t, expected, actual,
+		testutil.IgnoreTime())
 }
 
 func testExecPS() ([]byte, error) {
