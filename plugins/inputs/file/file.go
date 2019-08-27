@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
 )
 
 type File struct {
@@ -48,7 +49,16 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	for _, k := range f.filenames {
-		metrics, err := f.readMetric(k)
+		p := f.parser
+
+		switch pp := f.parser.(type) {
+		case *csv.Parser:
+			// get and use a unique parser per file (allows headers to be re-read)
+			p2 := *pp
+			p = &p2
+		}
+
+		metrics, err := f.readMetric(p, k)
 		if err != nil {
 			return err
 		}
@@ -82,12 +92,12 @@ func (f *File) refreshFilePaths() error {
 	return nil
 }
 
-func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
+func (f *File) readMetric(p parsers.Parser, filename string) ([]telegraf.Metric, error) {
 	fileContents, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}
-	return f.parser.Parse(fileContents)
+	return p.Parse(fileContents)
 
 }
 
