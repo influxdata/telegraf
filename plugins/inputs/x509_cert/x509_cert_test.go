@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -109,13 +110,14 @@ func TestGatherRemote(t *testing.T) {
 				Sources: []string{test.server},
 				Timeout: internal.Duration{Duration: test.timeout},
 			}
+			sc.Init()
 
 			sc.InsecureSkipVerify = true
 			testErr := false
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				testErr = true
 			}
 
@@ -168,12 +170,13 @@ func TestGatherLocal(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
+			sc.Init()
 
 			error := false
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				error = true
 			}
 
@@ -217,6 +220,7 @@ func TestGatherChain(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
+			sc.Init()
 
 			error := false
 
@@ -236,6 +240,7 @@ func TestGatherChain(t *testing.T) {
 
 func TestStrings(t *testing.T) {
 	sc := X509Cert{}
+	sc.Init()
 
 	tests := []struct {
 		name     string
@@ -264,6 +269,7 @@ func TestGatherCert(t *testing.T) {
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
 	}
+	m.Init()
 
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)

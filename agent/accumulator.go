@@ -14,7 +14,7 @@ var (
 )
 
 type MetricMaker interface {
-	Name() string
+	LogName() string
 	MakeMetric(metric telegraf.Metric) telegraf.Metric
 }
 
@@ -111,24 +111,11 @@ func (ac *accumulator) AddError(err error) {
 		return
 	}
 	NErrors.Incr(1)
-	log.Printf("E! [%s]: Error in plugin: %v", ac.maker.Name(), err)
+	log.Printf("E! [%s] Error in plugin: %v", ac.maker.LogName(), err)
 }
 
-func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
-	if precision > 0 {
-		ac.precision = precision
-		return
-	}
-	switch {
-	case interval >= time.Second:
-		ac.precision = time.Second
-	case interval >= time.Millisecond:
-		ac.precision = time.Millisecond
-	case interval >= time.Microsecond:
-		ac.precision = time.Microsecond
-	default:
-		ac.precision = time.Nanosecond
-	}
+func (ac *accumulator) SetPrecision(precision time.Duration) {
+	ac.precision = precision
 }
 
 func (ac *accumulator) getTime(t []time.Time) time.Time {

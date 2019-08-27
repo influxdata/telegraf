@@ -110,7 +110,8 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 
 		buf, err := s.Serialize(m)
 		if err != nil {
-			log.Printf("E! Error serializing a metric to Instrumental: %s", err)
+			log.Printf("D! [outputs.instrumental] Could not serialize metric: %v", err)
+			continue
 		}
 
 		switch metricType {

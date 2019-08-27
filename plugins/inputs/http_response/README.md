@@ -7,8 +7,12 @@ This input plugin checks HTTP/HTTPS connections.
 ```
 # HTTP/HTTPS request given an address a method and a timeout
 [[inputs.http_response]]
+  ## Deprecated in 1.12, use 'urls'
   ## Server address (default http://localhost)
   # address = "http://localhost"
+
+  ## List of urls to query.
+  # urls = ["http://localhost"]
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
   # http_proxy = "http://localhost:8888"
@@ -42,6 +46,9 @@ This input plugin checks HTTP/HTTPS connections.
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Interface to use when dialing an address
+  # interface = "eth0"
 ```
 
 ### Metrics:
@@ -54,6 +61,7 @@ This input plugin checks HTTP/HTTPS connections.
     - result ([see below](#result--result_code))
   - fields:
     - response_time (float, seconds)
+    - content_length (int, response body length)
     - response_string_match (int, 0 = mismatch / body read error, 1 = match)
     - http_response_code (int, response status code)
 	- result_type (string, deprecated in 1.6: use `result` tag and `result_code` field)
@@ -78,5 +86,5 @@ This tag is used to expose network and plugin errors. HTTP errors are considered
 ### Example Output:
 
 ```
-http_response,method=GET,server=http://www.github.com,status_code=200,result=success http_response_code=200i,response_time=6.223266528,result_type="success",result_code=0i 1459419354977857955
+http_response,method=GET,result=success,server=http://github.com,status_code=200 content_length=87878i,http_response_code=200i,response_time=0.937655534,result_code=0i,result_type="success" 1565839598000000000
 ```

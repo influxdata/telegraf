@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"net/url"
 	"regexp"
@@ -19,12 +20,15 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
-	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
 
 var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
+
+var isIPv4 = regexp.MustCompile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")
+
+var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
 
 const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
 
@@ -37,20 +41,24 @@ const maxMetadataSamples = 100 // Number of resources to sample for metric metad
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
 type Endpoint struct {
-	Parent          *VSphere
-	URL             *url.URL
-	resourceKinds   map[string]*resourceKind
-	hwMarks         *TSCache
-	lun2ds          map[string]string
-	discoveryTicker *time.Ticker
-	collectMux      sync.RWMutex
-	initialized     bool
-	clientFactory   *ClientFactory
-	busy            sync.Mutex
+	Parent            *VSphere
+	URL               *url.URL
+	resourceKinds     map[string]*resourceKind
+	hwMarks           *TSCache
+	lun2ds            map[string]string
+	discoveryTicker   *time.Ticker
+	collectMux        sync.RWMutex
+	initialized       bool
+	clientFactory     *ClientFactory
+	busy              sync.Mutex
+	customFields      map[int32]string
+	customAttrFilter  filter.Filter
+	customAttrEnabled bool
 }
 
 type resourceKind struct {
 	name             string
+	vcName           string
 	pKey             string
 	parentTag        string
 	enabled          bool
@@ -58,12 +66,13 @@ type resourceKind struct {
 	sampling         int32
 	objects          objectMap
 	filters          filter.Filter
+	paths            []string
+	collectInstances bool
+	getObjects       func(context.Context, *Endpoint, *ResourceFilter) (objectMap, error)
 	include          []string
 	simple           bool
 	metrics          performance.MetricList
-	collectInstances bool
 	parent           string
-	getObjects       func(context.Context, *Client, *Endpoint, *view.ContainerView) (objectMap, error)
 	latestSample     time.Time
 	lastColl         time.Time
 }
@@ -78,12 +87,14 @@ type metricEntry struct {
 type objectMap map[string]objectRef
 
 type objectRef struct {
-	name      string
-	altID     string
-	ref       types.ManagedObjectReference
-	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
-	guest     string
-	dcname    string
+	name         string
+	altID        string
+	ref          types.ManagedObjectReference
+	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
+	guest        string
+	dcname       string
+	customValues map[string]string
+	lookup       map[string]string
 }
 
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -99,17 +110,20 @@ func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, boo
 // as parameters.
 func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint, error) {
 	e := Endpoint{
-		URL:           url,
-		Parent:        parent,
-		hwMarks:       NewTSCache(1 * time.Hour),
-		lun2ds:        make(map[string]string),
-		initialized:   false,
-		clientFactory: NewClientFactory(ctx, url, parent),
+		URL:               url,
+		Parent:            parent,
+		hwMarks:           NewTSCache(1 * time.Hour),
+		lun2ds:            make(map[string]string),
+		initialized:       false,
+		clientFactory:     NewClientFactory(ctx, url, parent),
+		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
+		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
 	}
 
 	e.resourceKinds = map[string]*resourceKind{
 		"datacenter": {
 			name:             "datacenter",
+			vcName:           "Datacenter",
 			pKey:             "dcname",
 			parentTag:        "",
 			enabled:          anythingEnabled(parent.DatacenterMetricExclude),
@@ -117,6 +131,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
+			paths:            parent.DatacenterInclude,
 			simple:           isSimple(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
 			include:          parent.DatacenterMetricInclude,
 			collectInstances: parent.DatacenterInstances,
@@ -125,6 +140,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		},
 		"cluster": {
 			name:             "cluster",
+			vcName:           "ClusterComputeResource",
 			pKey:             "clustername",
 			parentTag:        "dcname",
 			enabled:          anythingEnabled(parent.ClusterMetricExclude),
@@ -132,6 +148,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
+			paths:            parent.ClusterInclude,
 			simple:           isSimple(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
 			include:          parent.ClusterMetricInclude,
 			collectInstances: parent.ClusterInstances,
@@ -140,6 +157,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		},
 		"host": {
 			name:             "host",
+			vcName:           "HostSystem",
 			pKey:             "esxhostname",
 			parentTag:        "clustername",
 			enabled:          anythingEnabled(parent.HostMetricExclude),
@@ -147,6 +165,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         20,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.HostMetricInclude, parent.HostMetricExclude),
+			paths:            parent.HostInclude,
 			simple:           isSimple(parent.HostMetricInclude, parent.HostMetricExclude),
 			include:          parent.HostMetricInclude,
 			collectInstances: parent.HostInstances,
@@ -155,6 +174,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		},
 		"vm": {
 			name:             "vm",
+			vcName:           "VirtualMachine",
 			pKey:             "vmname",
 			parentTag:        "esxhostname",
 			enabled:          anythingEnabled(parent.VMMetricExclude),
@@ -162,6 +182,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         20,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.VMMetricInclude, parent.VMMetricExclude),
+			paths:            parent.VMInclude,
 			simple:           isSimple(parent.VMMetricInclude, parent.VMMetricExclude),
 			include:          parent.VMMetricInclude,
 			collectInstances: parent.VMInstances,
@@ -170,12 +191,14 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		},
 		"datastore": {
 			name:             "datastore",
+			vcName:           "Datastore",
 			pKey:             "dsname",
 			enabled:          anythingEnabled(parent.DatastoreMetricExclude),
 			realTime:         false,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
+			paths:            parent.DatastoreInclude,
 			simple:           isSimple(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			include:          parent.DatastoreMetricInclude,
 			collectInstances: parent.DatastoreInstances,
@@ -227,10 +250,10 @@ func (e *Endpoint) startDiscovery(ctx context.Context) {
 			case <-e.discoveryTicker.C:
 				err := e.discover(ctx)
 				if err != nil && err != context.Canceled {
-					log.Printf("E! [input.vsphere]: Error in discovery for %s: %v", e.URL.Host, err)
+					log.Printf("E! [inputs.vsphere]: Error in discovery for %s: %v", e.URL.Host, err)
 				}
 			case <-ctx.Done():
-				log.Printf("D! [input.vsphere]: Exiting discovery goroutine for %s", e.URL.Host)
+				log.Printf("D! [inputs.vsphere]: Exiting discovery goroutine for %s", e.URL.Host)
 				e.discoveryTicker.Stop()
 				return
 			}
@@ -241,12 +264,26 @@ func (e *Endpoint) startDiscovery(ctx context.Context) {
 func (e *Endpoint) initalDiscovery(ctx context.Context) {
 	err := e.discover(ctx)
 	if err != nil && err != context.Canceled {
-		log.Printf("E! [input.vsphere]: Error in discovery for %s: %v", e.URL.Host, err)
+		log.Printf("E! [inputs.vsphere]: Error in discovery for %s: %v", e.URL.Host, err)
 	}
 	e.startDiscovery(ctx)
 }
 
 func (e *Endpoint) init(ctx context.Context) error {
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Initial load of custom field metadata
+	if e.customAttrEnabled {
+		fields, err := client.GetCustomFields(ctx)
+		if err != nil {
+			log.Println("W! [inputs.vsphere] Could not load custom field metadata")
+		} else {
+			e.customFields = fields
+		}
+	}
 
 	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
 
@@ -254,7 +291,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 		// goroutine without waiting for it. This will probably cause us to report an empty
 		// dataset on the first collection, but it solves the issue of the first collection timing out.
 		if e.Parent.ForceDiscoverOnInit {
-			log.Printf("D! [input.vsphere]: Running initial discovery and waiting for it to finish")
+			log.Printf("D! [inputs.vsphere]: Running initial discovery and waiting for it to finish")
 			e.initalDiscovery(ctx)
 		} else {
 			// Otherwise, just run it in the background. We'll probably have an incomplete first metric
@@ -317,7 +354,7 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 		defer cancel1()
 		err := o.Properties(ctx1, here, []string{"parent", "name"}, &result)
 		if err != nil {
-			log.Printf("W! [input.vsphere]: Error while resolving parent. Assuming no parent exists. Error: %s", err)
+			log.Printf("W! [inputs.vsphere]: Error while resolving parent. Assuming no parent exists. Error: %s", err)
 			break
 		}
 		if result.Reference().Type == "Datacenter" {
@@ -326,7 +363,7 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 			break
 		}
 		if result.Parent == nil {
-			log.Printf("D! [input.vsphere]: No parent found for %s (ascending from %s)", here.Reference(), r.Reference())
+			log.Printf("D! [inputs.vsphere]: No parent found for %s (ascending from %s)", here.Reference(), r.Reference())
 			break
 		}
 		here = result.Parent.Reference()
@@ -356,8 +393,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("D! [input.vsphere]: Discover new objects for %s", e.URL.Host)
-	resourceKinds := make(map[string]resourceKind)
+	log.Printf("D! [inputs.vsphere]: Discover new objects for %s", e.URL.Host)
 	dcNameCache := make(map[string]string)
 
 	numRes := int64(0)
@@ -365,10 +401,17 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	// Populate resource objects, and endpoint instance info.
 	newObjects := make(map[string]objectMap)
 	for k, res := range e.resourceKinds {
-		log.Printf("D! [input.vsphere] Discovering resources for %s", res.name)
+		log.Printf("D! [inputs.vsphere] Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
 		if res.enabled || k != "vm" {
-			objects, err := res.getObjects(ctx, client, e, client.Root)
+			rf := ResourceFilter{
+				finder:  &Finder{client},
+				resType: res.vcName,
+				paths:   res.paths}
+
+			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			defer cancel1()
+			objects, err := res.getObjects(ctx1, e, &rf)
 			if err != nil {
 				return err
 			}
@@ -399,13 +442,23 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	// Build lun2ds map
-	dss := resourceKinds["datastore"]
+	dss := newObjects["datastore"]
 	l2d := make(map[string]string)
-	for _, ds := range dss.objects {
+	for _, ds := range dss {
 		url := ds.altID
 		m := isolateLUN.FindStringSubmatch(url)
 		if m != nil {
 			l2d[m[1]] = ds.name
+		}
+	}
+
+	// Load custom field metadata
+	var fields map[int32]string
+	if e.customAttrEnabled {
+		fields, err = client.GetCustomFields(ctx)
+		if err != nil {
+			log.Println("W! [inputs.vsphere] Could not load custom field metadata")
+			fields = nil
 		}
 	}
 
@@ -418,16 +471,20 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 	e.lun2ds = l2d
 
+	if fields != nil {
+		e.customFields = fields
+	}
+
 	sw.Stop()
 	SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": "instance-total"}, numRes)
 	return nil
 }
 
 func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res *resourceKind) {
-	log.Printf("D! [input.vsphere] Using fast metric metadata selection for %s", res.name)
+	log.Printf("D! [inputs.vsphere] Using fast metric metadata selection for %s", res.name)
 	m, err := client.CounterInfoByName(ctx)
 	if err != nil {
-		log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
+		log.Printf("E! [inputs.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
 		return
 	}
 	res.metrics = make(performance.MetricList, 0, len(res.include))
@@ -443,7 +500,7 @@ func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res
 			}
 			res.metrics = append(res.metrics, cnt)
 		} else {
-			log.Printf("W! [input.vsphere] Metric name %s is unknown. Will not be collected", s)
+			log.Printf("W! [inputs.vsphere] Metric name %s is unknown. Will not be collected", s)
 		}
 	}
 }
@@ -476,7 +533,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 			te.Run(ctx, func() {
 				metrics, err := e.getMetadata(ctx, obj, res.sampling)
 				if err != nil {
-					log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
+					log.Printf("E! [inputs.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
 				}
 				mMap := make(map[string]types.PerfMetricId)
 				for _, m := range metrics {
@@ -489,7 +546,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 						mMap[strconv.Itoa(int(m.CounterId))+"|"+m.Instance] = m
 					}
 				}
-				log.Printf("D! [input.vsphere] Found %d metrics for %s", len(mMap), obj.name)
+				log.Printf("D! [inputs.vsphere] Found %d metrics for %s", len(mMap), obj.name)
 				instInfoMux.Lock()
 				defer instInfoMux.Unlock()
 				if len(mMap) > len(res.metrics) {
@@ -506,9 +563,11 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	te.Wait()
 }
 
-func getDatacenters(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datacenter
-	err := client.ListResources(ctx, root, []string{"Datacenter"}, []string{"name", "parent"}, &resources)
+	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	defer cancel1()
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -520,9 +579,11 @@ func getDatacenters(ctx context.Context, client *Client, e *Endpoint, root *view
 	return m, nil
 }
 
-func getClusters(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
-	err := client.ListResources(ctx, root, []string{"ClusterComputeResource"}, []string{"name", "parent"}, &resources)
+	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	defer cancel1()
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -532,13 +593,19 @@ func getClusters(ctx context.Context, client *Client, e *Endpoint, root *view.Co
 		// We're not interested in the immediate parent (a folder), but the data center.
 		p, ok := cache[r.Parent.Value]
 		if !ok {
-			o := object.NewFolder(root.Client(), *r.Parent)
-			var folder mo.Folder
 			ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 			defer cancel2()
-			err := o.Properties(ctx2, *r.Parent, []string{"parent"}, &folder)
+			client, err := e.clientFactory.GetClient(ctx2)
 			if err != nil {
-				log.Printf("W! [input.vsphere] Error while getting folder parent: %e", err)
+				return nil, err
+			}
+			o := object.NewFolder(client.Client.Client, *r.Parent)
+			var folder mo.Folder
+			ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			defer cancel3()
+			err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
+			if err != nil {
+				log.Printf("W! [inputs.vsphere] Error while getting folder parent: %e", err)
 				p = nil
 			} else {
 				pp := folder.Parent.Reference()
@@ -552,9 +619,9 @@ func getClusters(ctx context.Context, client *Client, e *Endpoint, root *view.Co
 	return m, nil
 }
 
-func getHosts(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.HostSystem
-	err := client.ListResources(ctx, root, []string{"HostSystem"}, []string{"name", "parent"}, &resources)
+	err := filter.FindAll(ctx, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -566,9 +633,11 @@ func getHosts(ctx context.Context, client *Client, e *Endpoint, root *view.Conta
 	return m, nil
 }
 
-func getVMs(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	err := client.ListResources(ctx, root, []string{"VirtualMachine"}, []string{"name", "runtime.host", "runtime.powerState", "config.guestId", "config.uuid"}, &resources)
+	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	defer cancel1()
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -579,21 +648,86 @@ func getVMs(ctx context.Context, client *Client, e *Endpoint, root *view.Contain
 		}
 		guest := "unknown"
 		uuid := ""
+		lookup := make(map[string]string)
+
+		// Extract host name
+		if r.Guest != nil && r.Guest.HostName != "" {
+			lookup["guesthostname"] = r.Guest.HostName
+		}
+
+		// Collect network information
+		for _, net := range r.Guest.Net {
+			if net.DeviceConfigId == -1 {
+				continue
+			}
+			if net.IpConfig == nil || net.IpConfig.IpAddress == nil {
+				continue
+			}
+			ips := make(map[string][]string)
+			for _, ip := range net.IpConfig.IpAddress {
+				addr := ip.IpAddress
+				for _, ipType := range e.Parent.IpAddresses {
+					if !(ipType == "ipv4" && isIPv4.MatchString(addr) ||
+						ipType == "ipv6" && isIPv6.MatchString(addr)) {
+						continue
+					}
+
+					// By convention, we want the preferred addresses to appear first in the array.
+					if _, ok := ips[ipType]; !ok {
+						ips[ipType] = make([]string, 0)
+					}
+					if ip.State == "preferred" {
+						ips[ipType] = append([]string{addr}, ips[ipType]...)
+					} else {
+						ips[ipType] = append(ips[ipType], addr)
+					}
+				}
+			}
+			for ipType, ipList := range ips {
+				lookup["nic/"+strconv.Itoa(int(net.DeviceConfigId))+"/"+ipType] = strings.Join(ipList, ",")
+			}
+		}
+
 		// Sometimes Config is unknown and returns a nil pointer
-		//
 		if r.Config != nil {
 			guest = cleanGuestID(r.Config.GuestId)
 			uuid = r.Config.Uuid
 		}
+		cvs := make(map[string]string)
+		if e.customAttrEnabled {
+			for _, cv := range r.Summary.CustomValue {
+				val := cv.(*types.CustomFieldStringValue)
+				if val.Value == "" {
+					continue
+				}
+				key, ok := e.customFields[val.Key]
+				if !ok {
+					log.Printf("W! [inputs.vsphere] Metadata for custom field %d not found. Skipping", val.Key)
+					continue
+				}
+				if e.customAttrFilter.Match(key) {
+					cvs[key] = val.Value
+				}
+			}
+		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest, altID: uuid}
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Runtime.Host,
+			guest:        guest,
+			altID:        uuid,
+			customValues: cvs,
+			lookup:       lookup,
+		}
 	}
 	return m, nil
 }
 
-func getDatastores(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datastore
-	err := client.ListResources(ctx, root, []string{"Datastore"}, []string{"name", "parent", "info"}, &resources)
+	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	defer cancel1()
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -710,6 +844,14 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			pq.StartTime = &start
 			pq.EndTime = &now
 
+			// Make sure endtime is always after start time. We may occasionally see samples from the future
+			// returned from vCenter. This is presumably due to time drift between vCenter and EXSi nodes.
+			if pq.StartTime.After(*pq.EndTime) {
+				log.Printf("D! [inputs.vsphere] Future sample. Res: %s, StartTime: %s, EndTime: %s, Now: %s", pq.Entity, *pq.StartTime, *pq.EndTime, now)
+				end := start.Add(time.Second)
+				pq.EndTime = &end
+			}
+
 			pqs = append(pqs, pq)
 			mr -= mc
 			metrics += mc
@@ -719,7 +861,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			// 2) We are at the last resource and have no more data to process.
 			// 3) The query contains more than 100,000 individual metrics
 			if mr > 0 || nRes >= e.Parent.MaxQueryObjects || len(pqs) > 100000 {
-				log.Printf("D! [input.vsphere]: Queueing query: %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d",
+				log.Printf("D! [inputs.vsphere]: Queueing query: %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d",
 					len(pqs), metrics, mr, res.name, e.URL.Host, total+1, len(res.objects))
 
 				// Don't send work items if the context has been cancelled.
@@ -740,7 +882,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	// Handle final partially filled chunk
 	if len(pqs) > 0 {
 		// Run collection job
-		log.Printf("D! [input.vsphere]: Queuing query: %d objects, %d metrics (0 remaining) of type %s for %s. Total objects %d (final chunk)",
+		log.Printf("D! [inputs.vsphere]: Queuing query: %d objects, %d metrics (0 remaining) of type %s for %s. Total objects %d (final chunk)",
 			len(pqs), metrics, res.name, e.URL.Host, len(res.objects))
 		submitChunkJob(ctx, te, job, pqs)
 	}
@@ -765,9 +907,17 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	localNow := time.Now()
 	estInterval := time.Duration(time.Minute)
 	if !res.lastColl.IsZero() {
-		estInterval = localNow.Sub(res.lastColl).Truncate(time.Duration(res.sampling) * time.Second)
+		s := time.Duration(res.sampling) * time.Second
+		rawInterval := localNow.Sub(res.lastColl)
+		paddedInterval := rawInterval + time.Duration(res.sampling/2)*time.Second
+		estInterval = paddedInterval.Truncate(s)
+		if estInterval < s {
+			estInterval = s
+		}
+		log.Printf("D! [inputs.vsphere] Raw interval %s, padded: %s, estimated: %s", rawInterval, paddedInterval, estInterval)
 	}
 	log.Printf("D! [inputs.vsphere] Interval estimated to %s", estInterval)
+	res.lastColl = localNow
 
 	latest := res.latestSample
 	if !latest.IsZero() {
@@ -908,7 +1058,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			e.populateTags(&objectRef, resourceType, res, t, &v)
 
 			nValues := 0
-			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval) // TODO: Estimate interval
+			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval)
 
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
@@ -941,7 +1091,11 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				if info.UnitInfo.GetElementDescription().Key == "percent" {
 					bucket.fields[fn] = float64(v) / 100.0
 				} else {
-					bucket.fields[fn] = v
+					if e.Parent.UseIntSamples {
+						bucket.fields[fn] = int64(round(v))
+					} else {
+						bucket.fields[fn] = v
+					}
 				}
 				count++
 
@@ -980,6 +1134,9 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 			if objectRef.guest != "" {
 				t["guest"] = objectRef.guest
 			}
+			if gh := objectRef.lookup["guesthostname"]; gh != "" {
+				t["guesthostname"] = gh
+			}
 			if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 				t["clustername"] = c.name
 			}
@@ -1010,6 +1167,17 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		t["disk"] = cleanDiskTag(instance)
 	} else if strings.HasPrefix(name, "net.") {
 		t["interface"] = instance
+
+		// Add IP addresses to NIC data.
+		if resourceType == "vm" && objectRef.lookup != nil {
+			key := "nic/" + t["interface"] + "/"
+			if ip, ok := objectRef.lookup[key+"ipv6"]; ok {
+				t["ipv6"] = ip
+			}
+			if ip, ok := objectRef.lookup[key+"ipv4"]; ok {
+				t["ipv4"] = ip
+			}
+		}
 	} else if strings.HasPrefix(name, "storageAdapter.") {
 		t["adapter"] = instance
 	} else if strings.HasPrefix(name, "storagePath.") {
@@ -1023,6 +1191,15 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	} else if v.Instance != "" {
 		// default
 		t["instance"] = v.Instance
+	}
+
+	// Fill in custom values if they exist
+	if objectRef.customValues != nil {
+		for k, v := range objectRef.customValues {
+			if v != "" {
+				t[k] = v
+			}
+		}
 	}
 }
 
@@ -1041,4 +1218,12 @@ func cleanGuestID(id string) string {
 func cleanDiskTag(disk string) string {
 	// Remove enclosing "<>"
 	return strings.TrimSuffix(strings.TrimPrefix(disk, "<"), ">")
+}
+
+func round(x float64) float64 {
+	t := math.Trunc(x)
+	if math.Abs(x-t) >= 0.5 {
+		return t + math.Copysign(1, x)
+	}
+	return t
 }

@@ -33,8 +33,7 @@ func (c *client) init() error {
 	if err != nil {
 		return err
 	}
-	if c.username != "" && c.password != "" {
-		// set auth
+	if c.username != "" || c.password != "" {
 		req.SetBasicAuth(c.username, c.password)
 	}
 	resp, err := c.httpClient.Do(req)
@@ -123,10 +122,11 @@ func createGetRequest(url string, username, password string, sessionCookie *http
 	if err != nil {
 		return nil, err
 	}
+	if username != "" || password != "" {
+		req.SetBasicAuth(username, password)
+	}
 	if sessionCookie != nil {
 		req.AddCookie(sessionCookie)
-	} else if username != "" && password != "" {
-		req.SetBasicAuth(username, password)
 	}
 	req.Header.Add("Accept", "application/json")
 	return req, nil

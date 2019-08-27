@@ -31,6 +31,7 @@ type AzureMonitor struct {
 	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
 	Region              string
 	ResourceID          string `toml:"resource_id"`
+	EndpointUrl         string `toml:"endpoint_url"`
 
 	url    string
 	auth   autorest.Authorizer
@@ -40,6 +41,35 @@ type AzureMonitor struct {
 	timeFunc func() time.Time
 
 	MetricOutsideWindow selfstat.Stat
+}
+
+// VirtualMachineMetadata contains information about a VM from the metadata service
+type virtualMachineMetadata struct {
+	Compute struct {
+		Location          string `json:"location"`
+		Name              string `json:"name"`
+		ResourceGroupName string `json:"resourceGroupName"`
+		SubscriptionID    string `json:"subscriptionId"`
+		VMScaleSetName    string `json:"vmScaleSetName"`
+	} `json:"compute"`
+}
+
+func (m *virtualMachineMetadata) ResourceID() string {
+	if m.Compute.VMScaleSetName != "" {
+		return fmt.Sprintf(
+			resourceIDScaleSetTemplate,
+			m.Compute.SubscriptionID,
+			m.Compute.ResourceGroupName,
+			m.Compute.VMScaleSetName,
+		)
+	} else {
+		return fmt.Sprintf(
+			resourceIDTemplate,
+			m.Compute.SubscriptionID,
+			m.Compute.ResourceGroupName,
+			m.Compute.Name,
+		)
+	}
 }
 
 type dimension struct {
@@ -62,10 +92,12 @@ const (
 	defaultNamespacePrefix = "Telegraf/"
 	defaultAuthResource    = "https://monitoring.azure.com/"
 
-	vmInstanceMetadataURL = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
-	resourceIDTemplate    = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
-	urlTemplate           = "https://%s.monitoring.azure.com%s/metrics"
-	maxRequestBodySize    = 4000000
+	vmInstanceMetadataURL      = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
+	resourceIDTemplate         = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
+	resourceIDScaleSetTemplate = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachineScaleSets/%s"
+	urlTemplate                = "https://%s.monitoring.azure.com%s/metrics"
+	urlOverrideTemplate        = "%s%s/metrics"
+	maxRequestBodySize         = 4000000
 )
 
 var sampleConfig = `
@@ -91,6 +123,11 @@ var sampleConfig = `
   ## The Azure Resource ID against which metric will be logged, e.g.
   ##   ex: resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
+
+  ## Optionally, if in Azure US Government, China or other sovereign
+  ## cloud environment, set appropriate REST endpoint for receiving
+  ## metrics. (Note: region may be unused in this context)
+  # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
 `
 
 // Description provides a description of the plugin
@@ -125,6 +162,8 @@ func (a *AzureMonitor) Connect() error {
 	var err error
 	var region string
 	var resourceID string
+	var endpointUrl string
+
 	if a.Region == "" || a.ResourceID == "" {
 		// Pull region and resource identifier
 		region, resourceID, err = vmInstanceMetadata(a.client)
@@ -138,13 +177,21 @@ func (a *AzureMonitor) Connect() error {
 	if a.ResourceID != "" {
 		resourceID = a.ResourceID
 	}
+	if a.EndpointUrl != "" {
+		endpointUrl = a.EndpointUrl
+	}
 
 	if resourceID == "" {
 		return fmt.Errorf("no resource ID configured or available via VM instance metadata")
 	} else if region == "" {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
-	a.url = fmt.Sprintf(urlTemplate, region, resourceID)
+
+	if endpointUrl == "" {
+		a.url = fmt.Sprintf(urlTemplate, region, resourceID)
+	} else {
+		a.url = fmt.Sprintf(urlOverrideTemplate, endpointUrl, resourceID)
+	}
 
 	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
 
@@ -183,31 +230,17 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 		return "", "", err
 	}
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return "", "", fmt.Errorf("unable to fetch instance metadata: [%v] %s", resp.StatusCode, body)
+		return "", "", fmt.Errorf("unable to fetch instance metadata: [%s] %d",
+			vmInstanceMetadataURL, resp.StatusCode)
 	}
 
-	// VirtualMachineMetadata contains information about a VM from the metadata service
-	type VirtualMachineMetadata struct {
-		Compute struct {
-			Location          string `json:"location"`
-			Name              string `json:"name"`
-			ResourceGroupName string `json:"resourceGroupName"`
-			SubscriptionID    string `json:"subscriptionId"`
-		} `json:"compute"`
-	}
-
-	var metadata VirtualMachineMetadata
+	var metadata virtualMachineMetadata
 	if err := json.Unmarshal(body, &metadata); err != nil {
 		return "", "", err
 	}
 
 	region := metadata.Compute.Location
-	resourceID := fmt.Sprintf(
-		resourceIDTemplate,
-		metadata.Compute.SubscriptionID,
-		metadata.Compute.ResourceGroupName,
-		metadata.Compute.Name,
-	)
+	resourceID := metadata.ResourceID()
 
 	return region, resourceID, nil
 }

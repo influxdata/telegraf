@@ -23,7 +23,7 @@ func expectCpuAsFields(m *testutil.Accumulator, t *testing.T, measurement string
 	fields := map[string]interface{}{}
 	total := int64(0)
 	for idx, count := range irq.Cpus {
-		fields[fmt.Sprintf("cpu%d", idx)] = count
+		fields[fmt.Sprintf("CPU%d", idx)] = count
 		total += count
 	}
 	fields["total"] = total

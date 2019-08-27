@@ -6,12 +6,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
-	"github.com/satori/go.uuid"
-
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/satori/go.uuid"
 )
 
 type (
@@ -124,7 +123,7 @@ func (k *KinesisOutput) Connect() error {
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
-		log.Printf("E! kinesis: Establishing a connection to Kinesis in %+v", k.Region)
+		log.Printf("I! kinesis: Establishing a connection to Kinesis in %s", k.Region)
 	}
 
 	credentialConfig := &internalaws.CredentialConfig{
@@ -165,14 +164,14 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 	if k.Debug {
 		resp, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
 		}
-		log.Printf("E! %+v \n", resp)
+		log.Printf("I! Wrote: '%+v'", resp)
 
 	} else {
 		_, err := k.svc.PutRecords(payload)
 		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %+v \n", err.Error())
+			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
 		}
 	}
 	return time.Since(start)
@@ -197,7 +196,7 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 			// Default partition name if default is not set
 			return "telegraf"
 		default:
-			log.Printf("E! kinesis : You have configured a Partition method of %+v which is not supported", k.Partition.Method)
+			log.Printf("E! kinesis : You have configured a Partition method of '%s' which is not supported", k.Partition.Method)
 		}
 	}
 	if k.RandomPartitionKey {
@@ -221,7 +220,8 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 
 		values, err := k.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.kinesis] Could not serialize metric: %v", err)
+			continue
 		}
 
 		partitionKey := k.getPartitionKey(metric)
@@ -236,7 +236,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		if sz == 500 {
 			// Max Messages Per PutRecordRequest is 500
 			elapsed := writekinesis(k, r)
-			log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
+			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
 			r = nil
 		}
@@ -244,7 +244,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	}
 	if sz > 0 {
 		elapsed := writekinesis(k, r)
-		log.Printf("E! Wrote a %+v point batch to Kinesis in %+v.\n", sz, elapsed)
+		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 	}
 
 	return nil
