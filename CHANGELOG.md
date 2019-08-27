@@ -98,7 +98,7 @@
 - [#2526](https://github.com/influxdata/telegraf/issues/2526): Send TERM to exec processes before sending KILL signal.
 - [#5326](https://github.com/influxdata/telegraf/issues/5326): Query oplog only when connected to a replica set.
 
-## v1.11.5 [unreleased]
+## v1.11.5 [2019-08-27]
 
 - [#6250](https://github.com/influxdata/telegraf/pull/6250): Update go-sql-driver/mysql driver to 1.4.1 to address auth issues.
 - [#6279](https://github.com/influxdata/telegraf/issues/6279): Return error status from --test if input plugins produce an error.
