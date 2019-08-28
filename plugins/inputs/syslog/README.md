@@ -1,9 +1,10 @@
 # Syslog Input Plugin
 
 The syslog plugin listens for syslog messages transmitted over
-[UDP](https://tools.ietf.org/html/rfc5426) or
-[TCP](https://tools.ietf.org/html/rfc6587) or
-[TLS](https://tools.ietf.org/html/rfc5425), with or without the octet counting framing.
+a Unix Domain socket,
+[UDP](https://tools.ietf.org/html/rfc5426),
+[TCP](https://tools.ietf.org/html/rfc6587), or
+[TLS](https://tools.ietf.org/html/rfc5425); with or without the octet counting framing.
 
 Syslog messages should be formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424).
@@ -12,10 +13,12 @@ Syslog messages should be formatted according to
 
 ```toml
 [[inputs.syslog]]
-  ## Specify an ip or hostname with port - eg., tcp://localhost:6514, tcp://10.0.0.1:6514
   ## Protocol, address and port to host the syslog receiver.
   ## If no host is specified, then localhost is used.
   ## If no port is specified, 6514 is used (RFC5425#section-4.1).
+  ##   ex: server = "tcp://localhost:6514"
+  ##       server = "udp://:6514"
+  ##       server = "unix:///var/run/telegraf-syslog.sock"
   server = "tcp://:6514"
 
   ## TLS Config
