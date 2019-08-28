@@ -182,6 +182,35 @@ type HealthCheck struct {
 	Status string `json:"status"`
 }
 
+// MemoryResponse ...
+type MemoryResponse struct {
+	Memory *Memory `json:"memory"`
+}
+
+// Memory details
+type Memory struct {
+	ConnectionReaders   int64 `json:"connection_readers"`
+	ConnectionWriters   int64 `json:"connection_writers"`
+	ConnectionChannels  int64 `json:"connection_channels"`
+	ConnectionOther     int64 `json:"connection_other"`
+	QueueProcs          int64 `json:"queue_procs"`
+	QueueSlaveProcs     int64 `json:"queue_slave_procs"`
+	Plugins             int64 `json:"plugins"`
+	OtherProc           int64 `json:"other_proc"`
+	Metrics             int64 `json:"metrics"`
+	MgmtDb              int64 `json:"mgmt_db"`
+	Mnesia              int64 `json:"mnesia"`
+	OtherEts            int64 `json:"other_ets"`
+	Binary              int64 `json:"binary"`
+	MsgIndex            int64 `json:"msg_index"`
+	Code                int64 `json:"code"`
+	Atom                int64 `json:"atom"`
+	OtherSystem         int64 `json:"other_system"`
+	AllocatedUnused     int64 `json:"allocated_unused"`
+	ReservedUnallocated int64 `json:"reserved_unallocated"`
+	Total               int64 `json:"total"`
+}
+
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
@@ -391,43 +420,54 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 		return
 	}
 
-	type NodeHealthCheck struct {
-		NodeName    string
-		HealthCheck HealthCheck
-		Error       error
+	type NodeCheck struct {
+		NodeName         string
+		HealthCheck      HealthCheck
+		HealthCheckError error
+		Memory           *Memory
+		MemoryError      error
 	}
 
-	healthChecksChannel := make(chan NodeHealthCheck, numberNodes)
+	nodeChecksChannel := make(chan NodeCheck, numberNodes)
 
 	for _, node := range nodes {
-		go func(nodeName string, healthChecksChannel chan NodeHealthCheck) {
+		go func(nodeName string, healthChecksChannel chan NodeCheck) {
 			var healthCheck HealthCheck
+			var memoryresponse MemoryResponse
 
 			err := r.requestJSON("/api/healthchecks/node/"+nodeName, &healthCheck)
-			nodeHealthCheck := NodeHealthCheck{
-				NodeName:    nodeName,
-				Error:       err,
-				HealthCheck: healthCheck,
+			nodeCheck := NodeCheck{
+				NodeName:         nodeName,
+				HealthCheckError: err,
+				HealthCheck:      healthCheck,
 			}
 
-			healthChecksChannel <- nodeHealthCheck
-		}(node.Name, healthChecksChannel)
+			err = r.requestJSON("/api/nodes/"+nodeName+"/memory", &memoryresponse)
+			nodeCheck.Memory = memoryresponse.Memory
+			nodeCheck.MemoryError = err
+			if nodeCheck.Memory == nil {
+				acc.AddError(fmt.Errorf("Wrong answer from rabbitmq for memory stats"))
+				return
+			}
+
+			nodeChecksChannel <- nodeCheck
+		}(node.Name, nodeChecksChannel)
 	}
 
 	now := time.Now()
 
 	for i := 0; i < len(nodes); i++ {
-		nodeHealthCheck := <-healthChecksChannel
+		nodeCheck := <-nodeChecksChannel
 
 		var healthCheckStatus int64 = 0
 
-		if nodeHealthCheck.Error != nil {
-			acc.AddError(nodeHealthCheck.Error)
-		} else if nodeHealthCheck.HealthCheck.Status == "ok" {
+		if nodeCheck.HealthCheckError != nil {
+			acc.AddError(nodeCheck.HealthCheckError)
+		} else if nodeCheck.HealthCheck.Status == "ok" {
 			healthCheckStatus = 1
 		}
 
-		node := nodes[nodeHealthCheck.NodeName]
+		node := nodes[nodeCheck.NodeName]
 
 		tags := map[string]string{"url": r.URL}
 		tags["node"] = node.Name
@@ -465,6 +505,26 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 			"io_write_bytes_rate":       node.IoWriteBytesDetails.Rate,
 			"running":                   boolToInt(node.Running),
 			"health_check_status":       healthCheckStatus,
+			"mem_connection_readers":    nodeCheck.Memory.ConnectionReaders,
+			"mem_connection_writers":    nodeCheck.Memory.ConnectionWriters,
+			"mem_connection_channels":   nodeCheck.Memory.ConnectionChannels,
+			"mem_connection_other":      nodeCheck.Memory.ConnectionOther,
+			"mem_queue_procs":           nodeCheck.Memory.QueueProcs,
+			"mem_queue_slave_procs":     nodeCheck.Memory.QueueSlaveProcs,
+			"mem_plugins":               nodeCheck.Memory.Plugins,
+			"mem_other_proc":            nodeCheck.Memory.OtherProc,
+			"mem_metrics":               nodeCheck.Memory.Metrics,
+			"mem_mgmt_db":               nodeCheck.Memory.MgmtDb,
+			"mem_mnesia":                nodeCheck.Memory.Mnesia,
+			"mem_other_ets":             nodeCheck.Memory.OtherEts,
+			"mem_binary":                nodeCheck.Memory.Binary,
+			"mem_msg_index":             nodeCheck.Memory.MsgIndex,
+			"mem_code":                  nodeCheck.Memory.Code,
+			"mem_atom":                  nodeCheck.Memory.Atom,
+			"mem_other_system":          nodeCheck.Memory.OtherSystem,
+			"mem_allocated_unused":      nodeCheck.Memory.AllocatedUnused,
+			"mem_reserved_unallocated":  nodeCheck.Memory.ReservedUnallocated,
+			"mem_total":                 nodeCheck.Memory.Total,
 		}
 		acc.AddFields("rabbitmq_node", fields, tags, now)
 	}
