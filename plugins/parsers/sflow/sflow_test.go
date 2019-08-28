@@ -32,7 +32,7 @@ func decodeAndCompare(expectedJSON []byte, packet []byte, t *testing.T) {
 
 	packetBytes := make([]byte, hex.DecodedLen(len(packet)))
 	_, err = hex.Decode(packetBytes, packet)
-	decoded, err := Decode(SFlowFormat(), bytes.NewBuffer(packetBytes))
+	decoded, err := Decode(SFlowFormat(10, 10, 10), bytes.NewBuffer(packetBytes))
 	if err != nil {
 		t.Error("unable to decode the packet", err)
 	}
@@ -48,7 +48,7 @@ func decodeAndCompare(expectedJSON []byte, packet []byte, t *testing.T) {
 	if bytes.Compare(packetAsJSON, expectedAsJSON) != 0 {
 		var differenceIndex int
 		var packetAsJSONSnippet []byte
-		var expecetedAsJSONSnippet []byte
+		var expectedAsJSONSnippet []byte
 		for i, b := range packetAsJSON {
 			if i >= len(expectedAsJSON) {
 				differenceIndex = i
@@ -57,11 +57,11 @@ func decodeAndCompare(expectedJSON []byte, packet []byte, t *testing.T) {
 			if expectedAsJSON[i] != b {
 				differenceIndex = i
 				packetAsJSONSnippet = packetAsJSON[max(differenceIndex-10, 0):min(differenceIndex+10, len(packetAsJSON)-1)]
-				expecetedAsJSONSnippet = expectedAsJSON[max(differenceIndex-10, 0):min(differenceIndex+10, len(expectedAsJSON)-1)]
+				expectedAsJSONSnippet = expectedAsJSON[max(differenceIndex-10, 0):min(differenceIndex+10, len(expectedAsJSON)-1)]
 				break
 			}
 		}
-		t.Errorf("Actual and expected are not equal at %d, %s, %s", differenceIndex, packetAsJSONSnippet, expecetedAsJSONSnippet)
+		t.Errorf("Actual and expected are not equal at %d, act %s exp %s", differenceIndex, packetAsJSONSnippet, expectedAsJSONSnippet)
 	}
 }
 
@@ -82,19 +82,25 @@ func Test_sflow_flow_ipv4_sw(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 64,
-						  "IPTos": 0,
-						  "IPversion": 1,
-						  "TCPFlags": 0,
+						  "IPversion": 4,
+						  "TCPFlags": 2,
+						  "dscp": 0,
 						  "dstIP": "192.168.9.10",
 						  "dstMac": 52231066582,
 						  "dstPort": 47621,
+						  "ecn": 0,
 						  "etype": 2048,
+						 
 						  "fragmentId": 61840,
-						  "fragmentOffset": 16384,
+						  "fragmentOffset": 0,
 						  "proto": 17,
 						  "srcIP": "192.168.9.19",
 						  "srcMac": 163580568311648,
-						  "srcPort": 161
+						  "srcPort": 161,
+						  "total_length": 249,
+						  "udp_length": 229,
+
+						  "tagOrEType":2048
 					   }
 					],
 					"header.length": 128,
@@ -111,13 +117,16 @@ func Test_sflow_flow_ipv4_sw(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 2,
-			  "input": 510,
-			  "output": 512,
+			  "inputFormat": 0,
+			  "inputValue": 510,
+			  "outputFormat": 0,
+			  "outputValue": 512,
 			  "sampleData.length": 208,
 			  "samplePool": 75768832,
 			  "sampleType": 1,
 			  "samplingRate": 1024,
 			  "sequenceNumber": 73994,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 510
 		   },
 		   {
@@ -130,20 +139,25 @@ func Test_sflow_flow_ipv4_sw(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 63,
-						  "IPTos": 0,
-						  "IPversion": 1,
-						  "TCPFlags": 0,
+						  "IPversion": 4,
+						  "TCPFlags": 2,
+						  "dscp": 0,
 						  "dstIP": "192.168.9.10",
 						  "dstMac": 52231066582,
 						  "dstPort": 514,
+						  "ecn": 0,
 						  "etype": 2048,
+						  
 						  "fragmentId": 6244,
-						  "fragmentOffset": 16384,
+						  "fragmentOffset": 0,
 						  "proto": 17,
 						  "srcIP": "192.168.8.21",
 						  "srcMac": 278094204371087,
 						  "srcPort": 39529,
-						  "vlanId": 9
+						  "tagOrEType": 33024,
+						  "total_length": 129,
+						  "udp_length": 109,
+						  "vlanID": 9
 					   }
 					],
 					"header.length": 128,
@@ -160,13 +174,16 @@ func Test_sflow_flow_ipv4_sw(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 2,
-			  "input": 528,
-			  "output": 512,
+			  "inputFormat": 0,
+			  "inputValue": 528,
+			  "outputFormat": 0,
+			  "outputValue": 512,
 			  "sampleData.length": 208,
 			  "samplePool": 1223390208,
 			  "sampleType": 1,
 			  "samplingRate": 16384,
 			  "sequenceNumber": 58316,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 528
 		   }
 		],
@@ -176,9 +193,7 @@ func Test_sflow_flow_ipv4_sw(t *testing.T) {
 		"uptime": 200934527,
 		"version": 5
 	 }
-	 
 	`)
-
 	decodeAndCompare(expectedJSON, packet, t)
 }
 
@@ -199,19 +214,25 @@ func Test_sflow_expand_flow(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 126,
-						  "IPTos": 2,
 						  "IPversion": 1,
 						  "TCPFlags": 16,
+						  "dscp": 0,
 						  "dstIP": "217.77.82.245",
 						  "dstMac": 116349993264,
 						  "dstPort": 32368,
+						  "ecn": 2,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 12372,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "172.16.0.22",
 						  "srcMac": 77342281028,
 						  "srcPort": 1433,
+						  "tcp_header_length": 12,
+						  "tcp_window_size": 512,
+						  "total_length": 1446,
+						  "urgent_pointer": 0,
 						  "vlanId": 9073
 					   }
 					],
@@ -221,17 +242,17 @@ func Test_sflow_expand_flow(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1054596,
-			  "output.format": 0,
-			  "output.value": 1051780,
+			  "inputFormat": 0,
+			  "inputValue": 1054596,
+			  "outputFormat": 0,
+			  "outputValue": 1051780,
 			  "sampleData.length": 196,
 			  "samplePool": 620461598,
 			  "sampleType": 3,
 			  "samplingRate": 1024,
 			  "sequenceNumber": 746153,
-			  "sourceId.index": 1051780,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1051780
 		   },
 		   {
 			  "drops": 0,
@@ -243,19 +264,25 @@ func Test_sflow_expand_flow(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 128,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 16,
+						  "dscp": 0,
 						  "dstIP": "192.168.6.8",
 						  "dstMac": 158514430776,
 						  "dstPort": 61391,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 21536,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "192.168.6.12",
 						  "srcMac": 233845176273748,
 						  "srcPort": 80,
+						  "tcp_header_length": 60,
+						  "tcp_window_size": 255,
+						  "total_length": 1500,
+						  "urgent_pointer": 0,
 						  "vlanId": 8198
 					   }
 					],
@@ -265,17 +292,17 @@ func Test_sflow_expand_flow(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1054596,
-			  "output.format": 0,
-			  "output.value": 1054468,
+			  "inputFormat": 0,
+			  "inputValue": 1054596,
+			  "outputFormat": 0,
+			  "outputValue": 1054468,
 			  "sampleData.length": 196,
 			  "samplePool": 2707991580,
 			  "sampleType": 3,
 			  "samplingRate": 16384,
 			  "sequenceNumber": 249551,
-			  "sourceId.index": 1054468,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1054468
 		   },
 		   {
 			  "drops": 0,
@@ -287,17 +314,20 @@ func Test_sflow_expand_flow(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 255,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 0,
+						  "dscp": 0,
 						  "dstIP": "80.16.24.240",
 						  "dstMac": 116349993264,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 9450,
 						  "fragmentOffset": 16384,
 						  "proto": 50,
 						  "srcIP": "217.77.81.5",
 						  "srcMac": 77342281028,
+						  "total_length": 104,
 						  "vlanId": 9073
 					   }
 					],
@@ -307,17 +337,17 @@ func Test_sflow_expand_flow(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1054596,
-			  "output.format": 0,
-			  "output.value": 1051652,
+			  "inputFormat": 0,
+			  "inputValue": 1054596,
+			  "outputFormat": 0,
+			  "outputValue": 1051652,
 			  "sampleData.length": 192,
 			  "samplePool": 1539556277,
 			  "sampleType": 3,
 			  "samplingRate": 1024,
 			  "sequenceNumber": 808058,
-			  "sourceId.index": 1051652,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1051652
 		   }
 		],
 		"samples.length": 3,
@@ -325,7 +355,7 @@ func Test_sflow_expand_flow(t *testing.T) {
 		"subAgentId": 0,
 		"uptime": 2330007928,
 		"version": 5
-	 }
+	 }	 
 	`)
 	decodeAndCompare(expectedJSON, packet, t)
 }
@@ -347,19 +377,23 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 58,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 0,
+						  "dscp": 0,
 						  "dstIP": "86.158.90.179",
 						  "dstMac": 9562081613666,
 						  "dstPort": 58203,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 50148,
 						  "fragmentOffset": 16384,
 						  "proto": 17,
 						  "srcIP": "5.42.173.167",
 						  "srcMac": 83661601595813,
-						  "srcPort": 26534
+						  "srcPort": 26534,
+						  "total_length": 70,
+						  "udp_length": 50
 					   }
 					],
 					"header.length": 84,
@@ -378,19 +412,22 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"dstMaskLen": 11,
 					"flowData.length": 16,
 					"flowFormat": "extendedRouterFlowData",
-					"nextHop.addess": "w0LjKg==",
-					"nextHop.addessType": "IPV4",
+					"nextHop.address": "w0LjKg==",
+					"nextHop.addressType": "IPV4",
 					"srcMaskLen": 22
 				 }
 			  ],
 			  "flowRecords.length": 3,
-			  "input": 655,
-			  "output": 524,
+			  "inputFormat": 0,
+			  "inputValue": 655,
+			  "outputFormat": 0,
+			  "outputValue": 524,
 			  "sampleData.length": 188,
 			  "samplePool": 1970875370,
 			  "sampleType": 1,
 			  "samplingRate": 5041,
 			  "sequenceNumber": 894146313,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 524
 		   },
 		   {
@@ -403,19 +440,23 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 125,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 0,
+						  "dscp": 0,
 						  "dstIP": "24.105.57.150",
 						  "dstMac": 83661601595906,
 						  "dstPort": 3724,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 0,
 						  "fragmentId": 4224,
 						  "fragmentOffset": 0,
 						  "proto": 17,
 						  "srcIP": "87.81.133.167",
 						  "srcMac": 211372786764542,
-						  "srcPort": 61527
+						  "srcPort": 61527,
+						  "total_length": 48,
+						  "udp_length": 28
 					   }
 					],
 					"header.length": 62,
@@ -434,19 +475,22 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"dstMaskLen": 24,
 					"flowData.length": 16,
 					"flowFormat": "extendedRouterFlowData",
-					"nextHop.addess": "id1PIQ==",
-					"nextHop.addessType": "IPV4",
+					"nextHop.address": "id1PIQ==",
+					"nextHop.addressType": "IPV4",
 					"srcMaskLen": 15
 				 }
 			  ],
 			  "flowRecords.length": 3,
-			  "input": 674,
-			  "output": 655,
+			  "inputFormat": 0,
+			  "inputValue": 674,
+			  "outputFormat": 0,
+			  "outputValue": 655,
 			  "sampleData.length": 168,
 			  "samplePool": 775180248,
 			  "sampleType": 1,
 			  "samplingRate": 5041,
 			  "sequenceNumber": 2341469015,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 674
 		   },
 		   {
@@ -459,19 +503,23 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 58,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 0,
+						  "dscp": 0,
 						  "dstIP": "95.148.199.120",
 						  "dstMac": 2410658204460,
 						  "dstPort": 62029,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 6543,
 						  "fragmentOffset": 16384,
 						  "proto": 17,
 						  "srcIP": "5.42.174.31",
 						  "srcMac": 83661601595813,
-						  "srcPort": 26510
+						  "srcPort": 26510,
+						  "total_length": 403,
+						  "udp_length": 383
 					   }
 					],
 					"header.length": 128,
@@ -490,19 +538,22 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"dstMaskLen": 16,
 					"flowData.length": 16,
 					"flowFormat": "extendedRouterFlowData",
-					"nextHop.addess": "w0Lh/Q==",
-					"nextHop.addessType": "IPV4",
+					"nextHop.address": "w0Lh/Q==",
+					"nextHop.addressType": "IPV4",
 					"srcMaskLen": 22
 				 }
 			  ],
 			  "flowRecords.length": 3,
-			  "input": 655,
-			  "output": 524,
+			  "inputFormat": 0,
+			  "inputValue": 655,
+			  "outputFormat": 0,
+			  "outputValue": 524,
 			  "sampleData.length": 232,
 			  "samplePool": 1970880411,
 			  "sampleType": 1,
 			  "samplingRate": 5041,
 			  "sequenceNumber": 894146314,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 524
 		   },
 		   {
@@ -515,19 +566,25 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 54,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 24,
+						  "dscp": 0,
 						  "dstIP": "2.31.243.101",
 						  "dstMac": 2410658204460,
 						  "dstPort": 59552,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 10178,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "185.60.112.106",
 						  "srcMac": 83661601595813,
-						  "srcPort": 1119
+						  "srcPort": 1119,
+						  "tcp_header_length": 44,
+						  "tcp_window_size": 237,
+						  "total_length": 163,
+						  "urgent_pointer": 0
 					   }
 					],
 					"header.length": 128,
@@ -546,19 +603,22 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"dstMaskLen": 16,
 					"flowData.length": 16,
 					"flowFormat": "extendedRouterFlowData",
-					"nextHop.addess": "w0Lh/Q==",
-					"nextHop.addessType": "IPV4",
+					"nextHop.address": "w0Lh/Q==",
+					"nextHop.addressType": "IPV4",
 					"srcMaskLen": 23
 				 }
 			  ],
 			  "flowRecords.length": 3,
-			  "input": 655,
-			  "output": 524,
+			  "inputFormat": 0,
+			  "inputValue": 655,
+			  "outputFormat": 0,
+			  "outputValue": 524,
 			  "sampleData.length": 232,
 			  "samplePool": 1970885452,
 			  "sampleType": 1,
 			  "samplingRate": 5041,
 			  "sequenceNumber": 894146315,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 524
 		   },
 		   {
@@ -571,19 +631,23 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 58,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 0,
+						  "dscp": 0,
 						  "dstIP": "2.28.148.14",
 						  "dstMac": 2410658204460,
 						  "dstPort": 57557,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 32044,
 						  "fragmentOffset": 16384,
 						  "proto": 17,
 						  "srcIP": "5.42.189.141",
 						  "srcMac": 83661601595813,
-						  "srcPort": 26599
+						  "srcPort": 26599,
+						  "total_length": 380,
+						  "udp_length": 360
 					   }
 					],
 					"header.length": 128,
@@ -602,19 +666,22 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"dstMaskLen": 16,
 					"flowData.length": 16,
 					"flowFormat": "extendedRouterFlowData",
-					"nextHop.addess": "w0Lh/Q==",
-					"nextHop.addessType": "IPV4",
+					"nextHop.address": "w0Lh/Q==",
+					"nextHop.addressType": "IPV4",
 					"srcMaskLen": 22
 				 }
 			  ],
 			  "flowRecords.length": 3,
-			  "input": 655,
-			  "output": 524,
+			  "inputFormat": 0,
+			  "inputValue": 655,
+			  "outputFormat": 0,
+			  "outputValue": 524,
 			  "sampleData.length": 232,
 			  "samplePool": 1970890493,
 			  "sampleType": 1,
 			  "samplingRate": 5041,
 			  "sequenceNumber": 894146316,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 524
 		   },
 		   {
@@ -627,19 +694,25 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 119,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 16,
+						  "dscp": 0,
 						  "dstIP": "24.105.29.76",
 						  "dstMac": 83661601595905,
 						  "dstPort": 443,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 1111,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "31.205.128.162",
 						  "srcMac": 238255298996780,
-						  "srcPort": 62206
+						  "srcPort": 62206,
+						  "tcp_header_length": 28,
+						  "tcp_window_size": 64189,
+						  "total_length": 1500,
+						  "urgent_pointer": 0
 					   }
 					],
 					"header.length": 128,
@@ -658,19 +731,22 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 					"dstMaskLen": 24,
 					"flowData.length": 16,
 					"flowFormat": "extendedRouterFlowData",
-					"nextHop.addess": "id1PIQ==",
-					"nextHop.addessType": "IPV4",
+					"nextHop.address": "id1PIQ==",
+					"nextHop.addressType": "IPV4",
 					"srcMaskLen": 16
 				 }
 			  ],
 			  "flowRecords.length": 3,
-			  "input": 673,
-			  "output": 655,
+			  "inputFormat": 0,
+			  "inputValue": 673,
+			  "outputFormat": 0,
+			  "outputValue": 655,
 			  "sampleData.length": 232,
 			  "samplePool": 2021700765,
 			  "sampleType": 1,
 			  "samplingRate": 5041,
 			  "sequenceNumber": 224478892,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 673
 		   }
 		],
@@ -680,6 +756,7 @@ func Test_sflow_flow_ipv4_sw_rt(t *testing.T) {
 		"uptime": 555031252,
 		"version": 5
 	 }
+	 
 	`)
 	decodeAndCompare(expectedJSON, packet, t)
 }
@@ -701,20 +778,22 @@ func Test_sflow_flow_ipv6_sw(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 58,
-						  "IPTos": 0,
 						  "IPv6FlowLabel": 0,
 						  "IPversion": 2,
 						  "TCPFlags": 0,
+						  "dscp": 0,
 						  "dstIP": "2620:ed:c000:e804:a25e:30c5:81af:36fa",
 						  "dstMac": 38184942608,
 						  "dstPort": 64111,
+						  "ecn": 0,
 						  "etype": 34525,
 						  "fragmentId": 0,
 						  "fragmentOffset": 0,
 						  "proto": 17,
 						  "srcIP": "2607:f8b0:4002:14::8",
 						  "srcMac": 234147625066788,
-						  "srcPort": 443
+						  "srcPort": 443,
+						  "udp_length": 1358
 					   }
 					],
 					"header.length": 128,
@@ -731,13 +810,16 @@ func Test_sflow_flow_ipv6_sw(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 2,
-			  "input": 257,
-			  "output": 0,
+			  "inputFormat": 0,
+			  "inputValue": 257,
+			  "outputFormat": 0,
+			  "outputValue": 0,
 			  "sampleData.length": 208,
 			  "samplePool": 435765248,
 			  "sampleType": 1,
 			  "samplingRate": 4096,
 			  "sequenceNumber": 106388,
+			  "sourceIdType": 0,
 			  "sourceIdValue": 257
 		   }
 		],
@@ -746,7 +828,7 @@ func Test_sflow_flow_ipv6_sw(t *testing.T) {
 		"subAgentId": 2,
 		"uptime": 615285300,
 		"version": 5
-	 }
+	 }	 
 	`)
 	decodeAndCompare(expectedJSON, packet, t)
 }
@@ -810,8 +892,8 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 			  "sampleData.length": 236,
 			  "sampleType": 4,
 			  "sequenceNumber": 28366,
-			  "sourceIdIndex": 1054596,
-			  "sourceIdType": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1054596
 		   },
 		   {
 			  "counters": [
@@ -865,8 +947,8 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 			  "sampleData.length": 236,
 			  "sampleType": 4,
 			  "sequenceNumber": 28366,
-			  "sourceIdIndex": 1048964,
-			  "sourceIdType": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1048964
 		   },
 		   {
 			  "drops": 0,
@@ -878,19 +960,25 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 128,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 16,
+						  "dscp": 0,
 						  "dstIP": "192.168.6.79",
 						  "dstMac": 79478986436,
 						  "dstPort": 1194,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 38362,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "192.168.6.10",
 						  "srcMac": 90593772141,
 						  "srcPort": 1263,
+						  "tcp_header_length": 28,
+						  "tcp_window_size": 65535,
+						  "total_length": 40,
+						  "urgent_pointer": 0,
 						  "vlanId": 8198
 					   }
 					],
@@ -900,17 +988,17 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1054596,
-			  "output.format": 0,
-			  "output.value": 1049348,
+			  "inputFormat": 0,
+			  "inputValue": 1054596,
+			  "outputFormat": 0,
+			  "outputValue": 1049348,
 			  "sampleData.length": 132,
 			  "samplePool": 2912797083,
 			  "sampleType": 3,
 			  "samplingRate": 16384,
 			  "sequenceNumber": 17926,
-			  "sourceId.index": 1049348,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1049348
 		   },
 		   {
 			  "drops": 0,
@@ -922,19 +1010,25 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 82,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 24,
+						  "dscp": 0,
 						  "dstIP": "217.77.82.226",
 						  "dstMac": 116349993265,
 						  "dstPort": 61769,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 1107,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "31.13.71.3",
 						  "srcMac": 264945085820864,
 						  "srcPort": 443,
+						  "tcp_header_length": 28,
+						  "tcp_window_size": 65,
+						  "total_length": 89,
+						  "urgent_pointer": 0,
 						  "vlanId": 1081
 					   }
 					],
@@ -944,17 +1038,17 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1053956,
-			  "output.format": 0,
-			  "output.value": 1053828,
+			  "inputFormat": 0,
+			  "inputValue": 1053956,
+			  "outputFormat": 0,
+			  "outputValue": 1053828,
 			  "sampleData.length": 176,
 			  "samplePool": 1879775247,
 			  "sampleType": 3,
 			  "samplingRate": 1024,
 			  "sequenceNumber": 1824408,
-			  "sourceId.index": 1053828,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1053828
 		   },
 		   {
 			  "drops": 0,
@@ -966,19 +1060,25 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 128,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 16,
+						  "dscp": 0,
 						  "dstIP": "192.168.6.9",
 						  "dstMac": 158514716203,
 						  "dstPort": 63573,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 19569,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "192.168.6.12",
 						  "srcMac": 233845176273748,
 						  "srcPort": 80,
+						  "tcp_header_length": 24,
+						  "tcp_window_size": 260,
+						  "total_length": 1500,
+						  "urgent_pointer": 0,
 						  "vlanId": 8198
 					   }
 					],
@@ -988,17 +1088,17 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1054596,
-			  "output.format": 0,
-			  "output.value": 1054468,
+			  "inputFormat": 0,
+			  "inputValue": 1054596,
+			  "outputFormat": 0,
+			  "outputValue": 1054468,
 			  "sampleData.length": 196,
 			  "samplePool": 2707860090,
 			  "sampleType": 3,
 			  "samplingRate": 16384,
 			  "sequenceNumber": 249546,
-			  "sourceId.index": 1054468,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1054468
 		   },
 		   {
 			  "drops": 0,
@@ -1010,19 +1110,25 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 58,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 16,
+						  "dscp": 0,
 						  "dstIP": "217.77.82.143",
 						  "dstMac": 116349993265,
 						  "dstPort": 19515,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 3296,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "193.206.135.147",
 						  "srcMac": 264945085820864,
 						  "srcPort": 80,
+						  "tcp_header_length": 32,
+						  "tcp_window_size": 1349,
+						  "total_length": 52,
+						  "urgent_pointer": 0,
 						  "vlanId": 1081
 					   }
 					],
@@ -1032,17 +1138,17 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1053956,
-			  "output.format": 0,
-			  "output.value": 1053828,
+			  "inputFormat": 0,
+			  "inputValue": 1053956,
+			  "outputFormat": 0,
+			  "outputValue": 1053828,
 			  "sampleData.length": 140,
 			  "samplePool": 1879775247,
 			  "sampleType": 3,
 			  "samplingRate": 1024,
 			  "sequenceNumber": 1824409,
-			  "sourceId.index": 1053828,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1053828
 		   },
 		   {
 			  "drops": 0,
@@ -1054,19 +1160,25 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 64,
-						  "IPTos": 0,
 						  "IPversion": 1,
 						  "TCPFlags": 16,
+						  "dscp": 0,
 						  "dstIP": "192.168.150.114",
 						  "dstMac": 1577058815,
 						  "dstPort": 57724,
+						  "ecn": 0,
 						  "etype": 2048,
+						  "flags": 2,
 						  "fragmentId": 23106,
 						  "fragmentOffset": 16384,
 						  "proto": 6,
 						  "srcIP": "10.0.10.200",
 						  "srcMac": 345048616401,
 						  "srcPort": 443,
+						  "tcp_header_length": 8,
+						  "tcp_window_size": 259,
+						  "total_length": 1500,
+						  "urgent_pointer": 0,
 						  "vlanId": 10
 					   }
 					],
@@ -1076,17 +1188,17 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 				 }
 			  ],
 			  "flowRecords.length": 1,
-			  "input.format": 0,
-			  "input.value": 1050500,
-			  "output.format": 0,
-			  "output.value": 1049220,
+			  "inputFormat": 0,
+			  "inputValue": 1050500,
+			  "outputFormat": 0,
+			  "outputValue": 1049220,
 			  "sampleData.length": 196,
 			  "samplePool": 3354171378,
 			  "sampleType": 3,
 			  "samplingRate": 16384,
 			  "sequenceNumber": 19975,
-			  "sourceId.index": 1049220,
-			  "sourecId.type": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1049220
 		   }
 		],
 		"samples.length": 7,
@@ -1094,7 +1206,7 @@ func Test_sflow_expand_flow_counter(t *testing.T) {
 		"subAgentId": 0,
 		"uptime": 2329999928,
 		"version": 5
-	 }
+	 }	 
 	`)
 	decodeAndCompare(expectedJSON, packet, t)
 }
@@ -1153,8 +1265,8 @@ func Test_sflow_expand_counter(t *testing.T) {
 			  "sampleData.length": 172,
 			  "sampleType": 4,
 			  "sequenceNumber": 27925,
-			  "sourceIdIndex": 1258342912,
-			  "sourceIdType": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1258342912
 		   },
 		   {
 			  "counters": [
@@ -1203,8 +1315,8 @@ func Test_sflow_expand_counter(t *testing.T) {
 			  "sampleData.length": 172,
 			  "sampleType": 4,
 			  "sequenceNumber": 27925,
-			  "sourceIdIndex": 1258312704,
-			  "sourceIdType": 0
+			  "sourceIdType": 0,
+			  "sourceIdValue": 1258312704
 		   }
 		],
 		"samples.length": 2,
@@ -1212,7 +1324,7 @@ func Test_sflow_expand_counter(t *testing.T) {
 		"subAgentId": 0,
 		"uptime": 2330000928,
 		"version": 5
-	 }
+	 }	 
 	`)
 	decodeAndCompare(expectedJSON, packet, t)
 }
@@ -1431,6 +1543,7 @@ func Test_sflow_counter_genif_ether(t *testing.T) {
 		"uptime": 201015129,
 		"version": 5
 	 }
-	`)
+	 
+		 `)
 	decodeAndCompare(expectedJSON, packet, t)
 }

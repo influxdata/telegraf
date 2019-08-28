@@ -2,6 +2,7 @@ package sflow
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"net"
 	"time"
@@ -14,9 +15,12 @@ import (
 
 // SFlowParser is Telegraf parser capable of parsing an sFlow v5 network packet
 type SFlowParser struct {
-	metricName    string
-	snmpCommunity string
-	defaultTags   map[string]string
+	metricName           string
+	snmpCommunity        string
+	defaultTags          map[string]string
+	maxFlowsPerSample    uint32
+	maxCountersPerSample uint32
+	maxSamplesPerPacket  uint32
 }
 
 type SFlowParserConfig struct {
@@ -32,17 +36,11 @@ type SFlowParserConfig struct {
 }
 
 // NewParser creats a new SFlowParser
-func NewParser(metricName string, snmpCommunity string, defaultTags map[string]string) (*SFlowParser, error) {
+func NewParser(metricName string, snmpCommunity string, defaultTags map[string]string, maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSamplesPerPacket uint32) (*SFlowParser, error) {
 	if metricName == "" {
 		return nil, fmt.Errorf("metric name cannot be empty")
 	}
-	if snmpCommunity == "" {
-		fmt.Println("snmpCommunity was '' set to public", snmpCommunity)
-		snmpCommunity = "public"
-	} else {
-		//fmt.Println("snmpCommunity", snmpCommunity)
-	}
-	result := &SFlowParser{metricName: metricName, snmpCommunity: snmpCommunity}
+	result := &SFlowParser{metricName: metricName, snmpCommunity: snmpCommunity, maxFlowsPerSample: maxFlowsPerSample, maxCountersPerSample: maxCountersPerSample, maxSamplesPerPacket: maxSamplesPerPacket}
 	if defaultTags != nil {
 		result.defaultTags = defaultTags
 	}
@@ -55,7 +53,7 @@ func NewParser(metricName string, snmpCommunity string, defaultTags map[string]s
 //
 // Must be thread-safe.
 func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	decodedPacket, err := Decode(SFlowFormat(), bytes.NewBuffer(buf))
+	decodedPacket, err := Decode(SFlowFormat(sfp.maxFlowsPerSample, sfp.maxCountersPerSample, sfp.maxSamplesPerPacket), bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, err
 	}
@@ -169,23 +167,66 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 								// go into the header itself
 								header, ok := flowRecord["header"].([]map[string]interface{})
 								if ok && len(header) == 1 {
-									tags["src_ip"] = header[0]["srcIP"].(net.IP).String()
+									v := header[0]["srcIP"]
+									switch t := v.(type) {
+									case net.IP:
+										tags["src_ip"] = t.String()
+									case []uint8:
+										b := []byte{t[0], t[1], t[2], t[3]}
+										ip := net.IP{}
+										ip = b
+										tags["src_ip"] = ip.String()
+									}
+
+									//tags["src_ip"] = header[0]["srcIP"].(net.IP).String()
 									//tags["src_host"] = ipToName(tags["src_ip"])
-									tags["dst_ip"] = header[0]["dstIP"].(net.IP).String()
+									v = header[0]["dstIP"]
+									switch t := v.(type) {
+									case net.IP:
+										tags["dst_ip"] = t.String()
+									case []uint8:
+										b := []byte{t[0], t[1], t[2], t[3]}
+										ip := net.IP{}
+										ip = b
+										tags["dst_ip"] = ip.String()
+									}
+									//tags["dst_ip"] = header[0]["dstIP"].(net.IP).String()
 									//tags["dst_host"] = ipToName(tags["dst_ip"])
 									if header[0]["srcPort"] != nil {
-										tags["src_port"] = fmt.Sprintf("%d", header[0]["srcPort"].(uint32))
+										tags["src_port"] = fmt.Sprintf("%d", header[0]["srcPort"])
 										tags["src_port_name"] = serviceNameFromPort(header[0]["srcPort"])
 									}
 									if header[0]["dstPort"] != nil {
-										tags["dst_port"] = fmt.Sprintf("%d", header[0]["dstPort"].(uint32))
+										tags["dst_port"] = fmt.Sprintf("%d", header[0]["dstPort"])
 										tags["dst_port_name"] = serviceNameFromPort(header[0]["dstPort"])
 									}
-									tags["src_mac"] = toMACString(header[0]["srcMac"].(uint64))
-									tags["dst_mac"] = toMACString(header[0]["dstMac"].(uint64))
-									fields["ip_fragment_offset"] = header[0]["fragmentOffset"].(uint32)
-									fields["tcp_flags"] = header[0]["TCPFlags"].(uint32)
-									fields["ip_ttl"] = header[0]["IPTTL"].(uint32)
+
+									v = header[0]["srcMac"]
+									switch t := v.(type) {
+									case uint64:
+										tags["src_mac"] = toMACString(t)
+									case []uint8:
+										tags["src_mac"] = toMACString(binary.BigEndian.Uint64(append([]byte{0, 0}, t...)))
+									}
+
+									v = header[0]["dstMac"]
+									switch t := v.(type) {
+									case uint64:
+										tags["dst_mac"] = toMACString(t)
+									case []uint8:
+										tags["dst_mac"] = toMACString(binary.BigEndian.Uint64(append([]byte{0, 0}, t...)))
+									}
+
+									fields["ip_fragment_offset"] = header[0]["fragmentOffset"]
+
+									v, ok := header[0]["TCPFlags"]
+									if ok {
+										fields["tcp_flags"] = v
+									} else {
+										fields["tcp_flags"] = 0 // this is filling a gap in the tests, don't think it is really required
+									}
+
+									fields["ip_ttl"] = header[0]["IPTTL"]
 
 									if header[0]["dscp"] != nil {
 										tags["ip_dscp"] = fmt.Sprintf("%d", header[0]["dscp"].(uint16))
@@ -194,10 +235,10 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 										tags["ip_ecn"] = fmt.Sprintf("%d", header[0]["ecn"].(uint16))
 									}
 									if header[0]["total_length"] != nil {
-										fields["ip_total_length"] = header[0]["total_length"].(uint32)
+										fields["ip_total_length"] = header[0]["total_length"] //.(uint32)
 									}
 									if header[0]["flags"] != nil {
-										fields["ip_flags"] = header[0]["flags"].(uint8)
+										fields["ip_flags"] = header[0]["flags"]
 									}
 									if header[0]["urgent_pointer"] != nil {
 										fields["tcp_urgent_pointer"] = header[0]["urgent_pointer"].(uint16)
@@ -238,6 +279,16 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 										}
 									} else {
 
+									}
+									// NEW HEADER
+									ui16, ok := header[0]["etype"].(uint16)
+									if ok {
+										switch ui16 {
+										case 0x0800:
+											tags["ether_type"] = "IPv4"
+										case 0x86DD:
+											tags["ether_type"] = "IPv6"
+										}
 									}
 								} else {
 
@@ -356,11 +407,19 @@ func serviceNameFromPort(value interface{}) string {
 	if value == nil {
 		return "nil"
 	}
-	ui32, ok := value.(uint32)
-	if ok {
+	var portNum int
+	switch t := value.(type) {
+	case uint32:
+		portNum = int(t)
+	case uint16:
+		portNum = int(t)
+	default:
+		portNum = -1
+	}
 
+	if portNum >= 0 {
 		proto := netdb.GetProtoByName("tcp")
-		serv := netdb.GetServByPort(int(ui32), proto)
+		serv := netdb.GetServByPort(portNum, proto)
 		if serv != nil {
 			//if serv.Name != "" {
 			return fmt.Sprintf("%s", serv.Name)

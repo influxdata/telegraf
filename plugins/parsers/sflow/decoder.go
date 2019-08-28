@@ -133,6 +133,10 @@ func (d *guardItemDecoder) accept(rec Recorder) (bool, error) {
 	v, ok := rec.lookup(d.key)
 	if ok {
 		switch t := v.(type) {
+		case uint16:
+			if t == d.equals {
+				return true, nil
+			}
 		case uint32:
 			if t == d.equals {
 				return true, nil
@@ -191,6 +195,10 @@ func altDefault(d ItemDecoder) *guardItemDecoder {
 	return &guardItemDecoder{"", nil, d, true}
 }
 
+func ui16(k string, fn ...func(uint16) (string, uint16)) ItemDecoder {
+	return &uint16Decoder{k, fn}
+}
+
 func i32(k string, fn ...func(int32) (string, int32)) ItemDecoder {
 	return &int32Decoder{k, fn, nil}
 }
@@ -207,26 +215,34 @@ func ui32Mapped(k string, toMap map[uint32]string) ItemDecoder {
 	return &uint32Decoder{k, nil, toMap}
 }
 
-func bin(k string, l int, fmt string) ItemDecoder {
-	return &binDecoder{k, l, fmt, nil}
-}
-
-func binWithMap(k string, l int, mapFn func([]byte) string) ItemDecoder {
-	return &binDecoder{k, l, "", mapFn}
+func bin(k string, l int, fn ...func([]byte) interface{}) ItemDecoder {
+	if len(fn) > 0 {
+		if len(fn) > 1 {
+			panic("too manhy functions")
+		}
+		return &binDecoder{k, l, fn[0]}
+	} else {
+		return &binDecoder{k, l, nil}
+	}
 }
 
 func sub(k string, d ItemDecoder) ItemDecoder {
 	return &subBuffDecoder{k, []ItemDecoder{d}}
 }
 
+func nest(k string, d ItemDecoder) ItemDecoder {
+	return &nestItemDecoder{k, d}
+}
+
 type iterItemDecoder struct {
 	name        string
 	key         string
+	max         uint32
 	ItemDecoder ItemDecoder
 }
 
-func iter(n string, k string, d ItemDecoder) *iterItemDecoder {
-	return &iterItemDecoder{n, k, d}
+func iter(n string, k string, max uint32, d ItemDecoder) *iterItemDecoder {
+	return &iterItemDecoder{n, k, max, d}
 }
 
 func (d *iterItemDecoder) Decode(r io.Reader, rec Recorder) error {
@@ -235,7 +251,9 @@ func (d *iterItemDecoder) Decode(r io.Reader, rec Recorder) error {
 	if ok {
 		switch t := v.(type) {
 		case uint32:
-
+			if d.max > 0 && t > d.max {
+				return fmt.Errorf("iteration for key %s exceeds max of %d at %d", key, d.max, t)
+			}
 			nestRec := rec.nest(d.name, t)
 			for i := 0; uint32(i) < t; i++ {
 				nestedRec, _ := nestRec.next()
@@ -245,14 +263,46 @@ func (d *iterItemDecoder) Decode(r io.Reader, rec Recorder) error {
 			}
 			return nil
 		default:
-			return fmt.Errorf("unhandled type %T", v)
+			return fmt.Errorf("unhandled type %T at name(%s) key(%s)", v, d.name, d.key)
 		}
 	}
 	return fmt.Errorf("unable to find key %s", key)
 }
 
+type nestItemDecoder struct {
+	name        string
+	ItemDecoder ItemDecoder
+}
+
+func (d *nestItemDecoder) Decode(r io.Reader, rec Recorder) error {
+	nestRec := rec.nest(d.name, 1)
+	nestedRec, _ := nestRec.next()
+	return d.ItemDecoder.Decode(r, nestedRec)
+}
+
 type ItemDecoder interface {
 	Decode(r io.Reader, rec Recorder) error
+}
+
+type uint16Decoder struct {
+	name string
+	fn   []func(uint16) (string, uint16)
+}
+
+func (d *uint16Decoder) Decode(r io.Reader, rec Recorder) error {
+	var value uint16
+	err := binary.Read(r, binary.BigEndian, &value)
+	if err != nil {
+		return err
+	}
+	if d.name != "" {
+		rec.record(d.name, value)
+	}
+	for _, f := range d.fn {
+		n, v := f(value)
+		rec.record(n, v)
+	}
+	return nil
 }
 
 type int32Decoder struct {
@@ -352,20 +402,22 @@ type ifDecoder struct {
 }
 
 type binDecoder struct {
-	name  string
-	size  int
-	fmt   string
-	mapFn func([]byte) string
+	name string
+	size int
+	fn   func([]byte) interface{}
 }
 
 func (b *binDecoder) Decode(r io.Reader, rec Recorder) error {
+	if b.name == "srcMac" {
+		fmt.Println("break")
+	}
 	v := make([]byte, b.size)
 	e := binary.Read(r, binary.BigEndian, v)
 	if e != nil {
 		return e
 	}
-	if b.fmt != "" {
-		rec.record(b.name, fmt.Sprintf(b.fmt, v))
+	if b.fn != nil {
+		rec.record(b.name, b.fn(v))
 	} else {
 		rec.record(b.name, v)
 	}

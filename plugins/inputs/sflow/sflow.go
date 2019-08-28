@@ -1,7 +1,6 @@
-package socket_listener
+package sflow
 
 import (
-	"context"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -10,8 +9,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -20,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/sflow"
-	"github.com/soniah/gosnmp"
 )
 
 type setReadBufferer interface {
@@ -28,9 +24,10 @@ type setReadBufferer interface {
 }
 
 type packetSFlowListener struct {
+	testing bool
 	net.PacketConn
 	*SFlowListener
-	*resolver
+	resolver
 }
 
 func (psl *packetSFlowListener) listen() {
@@ -47,47 +44,23 @@ func (psl *packetSFlowListener) listen() {
 	}
 }
 
+var count int
+
 func (psl *packetSFlowListener) process(buf []byte) {
 	metrics, err := psl.Parse(buf)
+	//if psl.testing {
+	///		count++
+	//		fmt.Printf("test output %d\n", count)
+	//	}
 	if err != nil {
 		psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 
 	}
-	//fmt.Println("ranging over parsed metrics to resolve", len(metrics))
-	//showNext := false
 	for _, m := range metrics {
-		//fmt.Println("passed metric to resolve", i)
-		psl.resolve(m, func(resolvedM telegraf.Metric) {
-			//fmt.Println("resolved m", i)
-			/*
-				tagList := resolvedM.TagList()
-				if len(tagList) == 24 {
-					if tagList[23] == nil || showNext {
-						if tagList[23] == nil {
-							fmt.Printf("yep, we seem to have a nil tag at 23\n")
-						} else {
-							fmt.Println("showing next")
-						}
-						for _, t := range tagList {
-							if t != nil {
-								fmt.Printf("%s -> %s\n", t.Key, t.Value)
-							}
-						}
-						showNext = tagList[23] == nil
-					}
-				}
-			*/
-			skip := false
-			for i, t := range resolvedM.TagList() {
-				if t == nil {
-					log.Printf("E! [inputs.sflow] masking nil tag error (index:%d)\n", i)
-					skip = true
-					break
-				}
-			}
-			if !skip {
-				psl.AddMetric(resolvedM)
-			}
+		psl.resolver.resolve(m, func(resolvedM telegraf.Metric) {
+			//if !psl.testing {
+			psl.AddMetric(resolvedM)
+			//}
 		})
 	}
 }
@@ -101,13 +74,18 @@ type SFlowListener struct {
 	DNSFQDNResolve    bool          `toml:"dns_fqdn_resolve"`
 	DNSFQDNCacheTTL   int           `toml:"dns_fqdn_cache_ttl"`
 	TESTDriver        bool          `toml:"test_stochastic"`
-	dnsTTLTicker      *time.Ticker
-	ifaceTTLTicker    *time.Ticker
+
+	MaxFlowsPerSample    uint32 `toml:"max_flows_per_sample"`
+	MaxCountersPerSample uint32 `toml:"max_counters_per_sample"`
+	MaxSamplesPerPacket  uint32 `toml:"max_samples_per_packet"`
+
+	dnsTTLTicker   *time.Ticker
+	ifaceTTLTicker *time.Ticker
+	nameResolver   resolver
 	tlsint.ServerConfig
 	parsers.Parser
 	telegraf.Accumulator
 	io.Closer
-	resolver
 }
 
 func (sl *SFlowListener) Description() string {
@@ -141,6 +119,11 @@ func (sl *SFlowListener) SampleConfig() string {
 
   ## The length of time the FWDNs are cached
   # dns_fqdn_cache_ttl = 3600
+
+  ##
+  # max_flows_per_sample = 10
+  # max_counters_per_sample = 10
+  # max_samples_per_packet = 10
 `
 }
 
@@ -150,51 +133,21 @@ func (sl *SFlowListener) Gather(_ telegraf.Accumulator) error {
 
 func (sl *SFlowListener) Start(acc telegraf.Accumulator) error {
 
-	sl.resolver.dns = sl.DNSFQDNResolve
-	sl.resolver.snmpIfaces = sl.SNMPIfaceResolve
-	sl.resolver.snmpCommunity = sl.SNMPCommunity
-	sl.resolver.dnsLookup = ipToFqdn
-	sl.resolver.ifaceLookup = ifIndexToIfName
-	sl.dnsCache = make(map[string]string)
-	sl.ifaceCache = make(map[string]string)
+	sl.Accumulator = acc
 
-	if sl.TESTDriver {
-		sl.resolver.dnsLookup = testIPtoFqdn
-		sl.resolver.ifaceLookup = testIFaceLookup
+	if true { // sl.TESTDriver {
+		sl.nameResolver = newTestResolver(sl.DNSFQDNResolve, sl.SNMPIfaceResolve, sl.SNMPCommunity)
+	} else {
+		sl.nameResolver = newAsyncResolver(sl.DNSFQDNResolve, sl.SNMPIfaceResolve, sl.SNMPCommunity)
 	}
+	sl.nameResolver.start(time.Duration(sl.DNSFQDNCacheTTL)*time.Second, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second)
 
-	log.Printf("I! [inputs.sflow] dbs cache = %t", sl.resolver.dns)
-	log.Printf("I! [inputs.sflow] dbs cache ttl = %d seconds", sl.DNSFQDNCacheTTL)
-	log.Printf("I! [inputs.sflow] snmp cache = %t", sl.resolver.snmpIfaces)
-	log.Printf("I! [inputs.sflow] snmp cache ttl = %d seconds", sl.SNMPIfaceCacheTTL)
-	log.Printf("I! [inputs.sflow] snmp community = %s", sl.resolver.snmpCommunity)
-
-	sl.dnsTTLTicker = time.NewTicker(time.Duration(sl.DNSFQDNCacheTTL) * time.Second)
-	go func() {
-		for range sl.dnsTTLTicker.C {
-			sl.resolver.mux.Lock()
-			sl.resolver.mux.Unlock()
-			log.Println("D! [inputs.sflow] clearing DNS cache")
-			sl.dnsCache = make(map[string]string)
-		}
-	}()
-	sl.ifaceTTLTicker = time.NewTicker(time.Duration(sl.SNMPIfaceCacheTTL) * time.Second)
-	go func() {
-		for range sl.ifaceTTLTicker.C {
-			sl.resolver.mux.Lock()
-			sl.resolver.mux.Unlock()
-			log.Println("D! [inputs.sflow] clearing IFace cache")
-			sl.ifaceCache = make(map[string]string)
-		}
-	}()
-
-	parser, err := sflow.NewParser("sflow", sl.SNMPCommunity, make(map[string]string)) // TODO
+	parser, err := sflow.NewParser("sflow", sl.SNMPCommunity, make(map[string]string), sl.MaxFlowsPerSample, sl.MaxCountersPerSample, sl.MaxSamplesPerPacket) // TODO
 	if err != nil {
 		return err
 	}
 	sl.Parser = parser
 
-	sl.Accumulator = acc
 	spl := strings.SplitN(sl.ServiceAddress, "://", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid service address: %s", sl.ServiceAddress)
@@ -222,7 +175,8 @@ func (sl *SFlowListener) Start(acc telegraf.Accumulator) error {
 		psl := &packetSFlowListener{
 			PacketConn:    pc,
 			SFlowListener: sl,
-			resolver:      &sl.resolver,
+			resolver:      sl.nameResolver,
+			testing:       sl.TESTDriver,
 		}
 
 		sl.Closer = psl
@@ -267,11 +221,11 @@ func (sl *SFlowListener) Stop() {
 		sl.Close()
 		sl.Closer = nil
 	}
-	sl.dnsTTLTicker.Stop()
+	sl.nameResolver.stop()
 }
 
 func newSFlowListener() *SFlowListener {
-	parser, _ := sflow.NewParser("sflow", "public", make(map[string]string)) // TODO
+	parser, _ := sflow.NewParser("sflow", "public", make(map[string]string), 0, 0, 0) // TODO
 
 	return &SFlowListener{
 		Parser: parser,
@@ -293,198 +247,11 @@ func init() {
 	inputs.Add("sflow", func() telegraf.Input { return newSFlowListener() })
 }
 
-type resolver struct {
-	dns           bool
-	snmpIfaces    bool
-	snmpCommunity string
-	dnsCache      map[string]string
-	ifaceCache    map[string]string
-	mux           sync.Mutex
-
-	ifaceLookup func(id uint64, community string, snmpAgentIP string, ifIndex string) string
-	dnsLookup   func(ipAddress string) string
-}
-
-type onResolve struct {
-	done    func()
-	counter int
-	mux     sync.Mutex
-}
-
-func (or *onResolve) decrement() {
-	or.mux.Lock()
-	defer or.mux.Unlock()
-	or.counter--
-	if or.counter == 0 {
-		or.done()
-	}
-}
-
-func (or *onResolve) increment() {
-	or.mux.Lock()
-	defer or.mux.Unlock()
-	or.counter++
-}
-
-var ops uint64
-
-// Request the asynchronous resolution of ip addresses and snmp interfaces names for the given metric
-// and when fully resolved then execute the provided callback
-func (r *resolver) resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric)) {
-	or := &onResolve{done: func() { onResolveFn(m) }, counter: 1}
-	r.dnsResolve(m, "agent_ip", "host", or)
-	r.dnsResolve(m, "src_ip", "src_host", or)
-	r.dnsResolve(m, "dst_ip", "dst_host", or)
-	agentIP, ok := m.GetTag("agent_ip")
-	if ok {
-		r.ifaceResolve(m, "source_id_index", "source_id_name", agentIP, or)
-		r.ifaceResolve(m, "netif_index_out", "netif_name_out", agentIP, or)
-		r.ifaceResolve(m, "netif_index_in", "netif_name_in", agentIP, or)
-	}
-	or.decrement() // this will do the resolve if there was nothing to resolve
-}
-
-func (r *resolver) dnsResolve(m telegraf.Metric, srcTag string, dstTag string, or *onResolve) {
-	value, ok := m.GetTag(srcTag)
-	if r.dns && ok {
-		or.increment()
-		go r.resolveDNS(value, func(fqdn string) {
-			m.AddTag(dstTag, fqdn)
-			or.decrement()
-		})
-	}
-}
-
-func (r *resolver) ifaceResolve(m telegraf.Metric, srcTag string, dstTag string, agentIP string, or *onResolve) {
-	value, ok := m.GetTag(srcTag)
-	if r.snmpIfaces && ok {
-		or.increment()
-		go r.resolveIFace(value, agentIP, func(name string) {
-			m.AddTag(dstTag, name)
-			or.decrement()
-		})
-	}
-}
-
-func (r *resolver) resolveDNS(ipAddress string, resolved func(fqdn string)) {
-	//r.mux.Lock()
-	//defer r.mux.Unlock()
-
-	fqdn, ok := r.lookupFromDNSCache(ipAddress)
-	//fqdn, ok := r.lookupFromDNSCache(ipAddress)
-
-	if ok {
-		log.Printf("D! [input.sflow] sync cache lookup %s=>%s", ipAddress, fqdn)
-		resolved(fqdn)
-	} else {
-		fqdn = r.dnsLookup(ipAddress)
-		r.mux.Lock()
-		defer r.mux.Unlock()
-		log.Printf("D! [input.sflow] async resolve of %s=>%s", ipAddress, fqdn)
-		r.dnsCache[ipAddress] = fqdn
-		resolved(fqdn)
-	}
-}
-
-func ipToFqdn(ipAddress string) string {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10000*time.Millisecond)
-	defer cancel()
-	resolver := net.Resolver{}
-	names, err := resolver.LookupAddr(ctx, ipAddress)
-	fqdn := ipAddress
-	if err == nil {
-		if len(names) > 0 {
-			fqdn = names[0]
-		}
-	} else {
-		log.Printf("!E [input.sflow] dns lookup of %s resulted in error %s", ipAddress, err)
-	}
-	return fqdn
-}
-
-func (r *resolver) lookupFromDNSCache(v string) (string, bool) {
-	r.mux.Lock()
-	defer r.mux.Unlock()
-	result, ok := r.dnsCache[v]
-	return result, ok
-}
-
-func (r *resolver) resolveIFace(ifaceIndex string, agentIP string, resolved func(fqdn string)) {
-	id := atomic.AddUint64(&ops, 1)
-	name, ok := r.lookupFromIFaceCache(agentIP, ifaceIndex)
-	if ok {
-		log.Printf("D! [input.sflow] %d sync cache lookup (%s,%s)=>%s", id, agentIP, ifaceIndex, name)
-		resolved(name)
-	} else {
-		// look it up
-		name = r.ifaceLookup(id, r.snmpCommunity, agentIP, ifaceIndex)
-		r.mux.Lock()
-		defer r.mux.Unlock()
-		log.Printf("D! [input.sflow] %d async resolve of (%s,%s)=>%s", id, agentIP, ifaceIndex, name)
-		r.ifaceCache[fmt.Sprintf("%s-%s", agentIP, ifaceIndex)] = name
-		resolved(name)
-	}
-}
-
-func (r *resolver) lookupFromIFaceCache(agentIP string, ifaceIndex string) (string, bool) {
-	r.mux.Lock()
-	defer r.mux.Unlock()
-	result, ok := r.ifaceCache[fmt.Sprintf("%s-%s", agentIP, ifaceIndex)]
-	return result, ok
-}
-
-// So, Ive established that this wasn't thread safe. Might be I need a differen COnnection object.
-var ifIndexToIfNameMux sync.Mutex
-
-func ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex string) string {
-	ifIndexToIfNameMux.Lock()
-	defer ifIndexToIfNameMux.Unlock()
-	// This doesn't make the most of the fact we look up all interface names but only cache/use one of them :-()
-	oid := "1.3.6.1.2.1.31.1.1.1.1"
-	gosnmp.Default.Target = snmpAgentIP
-	if community != "" {
-		gosnmp.Default.Community = community
-	}
-	gosnmp.Default.Timeout = 20 * time.Second
-	gosnmp.Default.Retries = 5
-	err := gosnmp.Default.Connect()
-	if err != nil {
-		log.Println("E! [inputs.sflow] err on snmp.Connect", err)
-	}
-	defer gosnmp.Default.Conn.Close()
-	//ifaceNames := make(map[string]string)
-	result, found := ifIndex, false
-	pduNameToFind := fmt.Sprintf(".%s.%s", oid, ifIndex)
-	err = gosnmp.Default.BulkWalk(oid, func(pdu gosnmp.SnmpPDU) error {
-		switch pdu.Type {
-		case gosnmp.OctetString:
-			b := pdu.Value.([]byte)
-			if pdu.Name == pduNameToFind {
-				log.Printf("D! [inputs.sflow] %d snmp bulk walk (%s) found %s as %s\n", id, snmpAgentIP, pdu.Name, string(b))
-				found = true
-				result = string(b)
-			} else {
-				//log.Printf("D! [inputs.sflow] %d snmp bulk walk (%s) found different %s not %s\n", id, snmpAgentIP, pdu.Name, pduNameToFind)
-			}
-		default:
-		}
-		return nil
-	})
-	if err != nil {
-		log.Printf("E! inputs.sflow] %d unable to find %s in smmp results due to error %s\n", id, pduNameToFind, err)
-	} else {
-		if !found {
-			log.Printf("D! [inputs.sflow] %d unable to find %s in smmp results\n", id, pduNameToFind)
-		} else {
-			log.Printf("D! [inputs.sflow] %d found %s in snmp results as %s\n", id, pduNameToFind, result)
-		}
-	}
-	return result
-}
+var srcCount int
 
 func testStochasticDriver(psl *packetSFlowListener) {
 	r := rand.New(rand.NewSource(0))
-	ticker := time.NewTicker(5 * time.Millisecond)
+	// ticker := time.NewTicker(1 * time.Millisecond)
 	go func() {
 		packet := testSelectPacket(r)
 		packetBytes := make([]byte, hex.DecodedLen(len(packet)))
@@ -492,8 +259,8 @@ func testStochasticDriver(psl *packetSFlowListener) {
 		if err != nil {
 			log.Panicln(err)
 		}
-		for range ticker.C {
-			if r.Intn(20) <= 18 {
+		for { // range ticker.C {
+			if r.Intn(20) <= 15 {
 				packet = testSelectPacket(r)
 				packetBytes = make([]byte, hex.DecodedLen(len(packet)))
 				_, err := hex.Decode(packetBytes, packet)
@@ -504,6 +271,11 @@ func testStochasticDriver(psl *packetSFlowListener) {
 				byteToMessWith := r.Intn(len(packetBytes) - 1)
 				packetBytes[byteToMessWith] = uint8(r.Intn(255))
 			}
+			srcCount++
+			//fmt.Printf("src count %d\n", srcCount)
+			//if srcCount == 152 {
+			//	fmt.Printf("break point\n")
+			//}
 			psl.process(packetBytes)
 		}
 	}()

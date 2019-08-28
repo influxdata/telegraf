@@ -224,7 +224,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.FormUrlencodedTagKeys,
 		)
 	case "sflow":
-		parser, err = sflow.NewParser(config.MetricName, config.SFlowSNMPCommunity, config.DefaultTags)
+		parser, err = sflow.NewParser(config.MetricName, config.SFlowSNMPCommunity, config.DefaultTags, 0, 0, 0)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -355,7 +355,7 @@ func NewInfluxParser() (Parser, error) {
 }
 
 func NewSFlowParser(metricName, string, snmpCommunity string, defaultTags map[string]string) (Parser, error) {
-	return sflow.NewParser(metricName, snmpCommunity, defaultTags)
+	return sflow.NewParser(metricName, snmpCommunity, defaultTags, 0, 0, 0)
 }
 
 func NewGraphiteParser(

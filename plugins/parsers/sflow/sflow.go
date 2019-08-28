@@ -64,19 +64,19 @@ func inputValueFn(v uint32) (string, uint32)  { return "inputValue", v & 0x0ffff
 func outputFormatFn(v uint32) (string, uint32) { return "outputFormat", v >> 30 }
 func outputValueFn(v uint32) (string, uint32)  { return "outputValue", v & 0x0fffffff }
 
-func ipv4Fn(key string) ItemDecoder { return bin(key, 4, "") }
-func ipv6Fn(key string) ItemDecoder { return bin(key, 16, "") }
+func ipv4Fn(key string) ItemDecoder { return bin(key, 4) }
+func ipv6Fn(key string) ItemDecoder { return bin(key, 16) }
 
 //     The most significant 2 bits are used to indicate the format of
 //the 30 bit value.
 
 // SFlowFormat answers and ItemDecoder capable of decoding sFlow v5 packets
-func SFlowFormat() ItemDecoder {
+func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSamplesPerPacket uint32) ItemDecoder {
 
 	ethFrameFlowData := seq( // 1992
 		ui32("length"),
-		bin("srcMac", 6, ""),
-		bin("dstMac", 6, ""),
+		bin("srcMac", 6),
+		bin("dstMac", 6),
 		ui32("type"),
 	)
 
@@ -112,8 +112,8 @@ func SFlowFormat() ItemDecoder {
 	extendedRouterFlowData := seq( //  2083
 		ui32Mapped("nextHop.addressType", ipvMap),
 		alt("nextHop.addressType",
-			eql("nextHop.addressType", "IPV4", bin("nextHop.address", 4, "")),
-			eql("nextHop.addressType", "IPV6", bin("nextHop.address", 16, "")),
+			eql("nextHop.addressType", "IPV4", bin("nextHop.address", 4)),
+			eql("nextHop.addressType", "IPV6", bin("nextHop.address", 16)),
 		),
 		ui32("srcMaskLen"),
 		ui32("dstMaskLen"),
@@ -122,8 +122,8 @@ func SFlowFormat() ItemDecoder {
 	extendedGatewayFlowData := seq( // 2104
 		ui32Mapped("nextHop.addressType", ipvMap),
 		alt("nextHop.addressType",
-			eql("nextHop.addressType", "IPV4", bin("nextHop.address", 4, "")),
-			eql("nextHop.addressType", "IPV6", bin("nextHop.address", 16, "")),
+			eql("nextHop.addressType", "IPV4", bin("nextHop.address", 4)),
+			eql("nextHop.addressType", "IPV6", bin("nextHop.address", 16)),
 		),
 		ui32("as"),
 		ui32("srcAs"),
@@ -175,7 +175,7 @@ func SFlowFormat() ItemDecoder {
 		ui32("frameLength"),
 		ui32("stripped"),
 		ui32("header.length"),
-		sub("header.length",
+		sub("header.length", // TODO, put a max on this
 			alt("protocol",
 				eql("protocol", "ETHERNET-ISO88023", ethHeader("header", "header.length")),
 				altDefault(warnAndBreak("WARN", "unimplemented support for header.protocol %d", "protocol")),
@@ -206,7 +206,7 @@ func SFlowFormat() ItemDecoder {
 	flowRecord := seq(
 		ui32Mapped("flowFormat", formatMap), // 1599
 		ui32("flowData.length"),
-		sub("flowData.length", flowData), // 1600
+		sub("flowData.length", flowData), // 1600 // TODO, put a max on this
 	)
 
 	flowSample := seq( // 1617
@@ -218,10 +218,10 @@ func SFlowFormat() ItemDecoder {
 		ui32("samplingRate"),
 		ui32("samplePool"),
 		ui32("drops"),
-		ui32("", inputFormatFn, inputValueFn),                 // 1652
-		ui32("", outputFormatFn, outputValueFn),               // 1653
-		ui32("flowRecords.length"),                            // 1655
-		iter("flowRecords", "flowRecords.length", flowRecord), //1655
+		ui32("", inputFormatFn, inputValueFn),   // 1652
+		ui32("", outputFormatFn, outputValueFn), // 1653
+		ui32("flowRecords.length"),              // 1655
+		iter("flowRecords", "flowRecords.length", maxFlowsPerSample, flowRecord), //1655
 	)
 
 	flowSampleExpanded := seq(
@@ -237,7 +237,7 @@ func SFlowFormat() ItemDecoder {
 		ui32("outputFormat"),       // 1729
 		ui32("outputValue"),        // 1729
 		ui32("flowRecords.length"), // 1731
-		iter("flowRecords", "flowRecords.length", flowRecord), //1731
+		iter("flowRecords", "flowRecords.length", maxFlowsPerSample, flowRecord), //1731
 	)
 
 	ifCounter := seq( // 2267
@@ -347,14 +347,14 @@ func SFlowFormat() ItemDecoder {
 	counterRecord := seq( // 1604
 		ui32("counterFormat"),
 		ui32("counterData.length"),
-		sub("counterData.length", counterDataAlts),
+		sub("counterData.length", counterDataAlts), // TODO, put a max on this
 	)
 
 	countersSample := seq( // 1661
 		ui32("sequenceNumber"),
 		ui32("", sourceIDTypeFn, sourceIDValueFn), // "sourceId") 1672
 		ui32("counters.length"),
-		iter("counters", "counters.length", counterRecord),
+		iter("counters", "counters.length", maxCountersPerSample, counterRecord),
 	)
 
 	countersSampleExpanded := seq( // 1744
@@ -362,13 +362,13 @@ func SFlowFormat() ItemDecoder {
 		ui32("sourceIdType"),  // 1689
 		ui32("sourceIdValue"), // 1690
 		ui32("counters.length"),
-		iter("counters", "counters.length", counterRecord),
+		iter("counters", "counters.length", maxCountersPerSample, counterRecord),
 	)
 
 	sampleRecord := seq( // 1761
 		ui32("sampleType"), // 1762
 		ui32("sampleData.length"),
-		sub("sampleData.length",
+		sub("sampleData.length", // // TODO, put a max on this
 			alt("sampleType",
 				eql("sampleType", uint32(1), flowSample),             // 1 = flowSample 1615
 				eql("sampleType", uint32(2), countersSample),         // 2 = countersSample 1659
@@ -389,7 +389,7 @@ func SFlowFormat() ItemDecoder {
 		ui32("sequenceNumber"), // 1801
 		ui32("uptime"),         // 1804
 		ui32("samples.length"), // 1812 - array of sample_record
-		iter("samples", "samples.length", sampleRecord),
+		iter("samples", "samples.length", maxSamplesPerPacket, sampleRecord),
 	)
 	return result
 }
