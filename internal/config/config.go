@@ -146,7 +146,10 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet bool `toml:"quiet"`
 
-	// Log file name, the empty string means to log to stderr.
+	// Log target - file, stderr, eventlog (Windows only). The empty string means to log to stderr.
+	LogTarget string `toml:"logtarget"`
+
+	// Log file name			.
 	Logfile string `toml:"logfile"`
 
 	// The file will be rotated after the time interval specified.  When set
