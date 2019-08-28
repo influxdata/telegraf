@@ -15,6 +15,8 @@ type File struct {
 	Files  []string `toml:"files"`
 	parser parsers.Parser
 
+	csvParser csv.Parser
+	csv       bool
 	filenames []string
 }
 
@@ -51,11 +53,9 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 	for _, k := range f.filenames {
 		p := f.parser
 
-		switch pp := f.parser.(type) {
-		case *csv.Parser:
-			// get and use a unique parser per file (allows headers to be re-read)
-			p2 := *pp
-			p = &p2
+		if f.csv {
+			pp := f.csvParser
+			p = &pp
 		}
 
 		metrics, err := f.readMetric(p, k)
@@ -72,6 +72,13 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 
 func (f *File) SetParser(p parsers.Parser) {
 	f.parser = p
+	switch pp := p.(type) {
+	case *csv.Parser:
+		// Save a copy of the csv parser (allows headers to be re-read)
+		f.csvParser = *pp
+		f.csv = true
+	}
+
 }
 
 func (f *File) refreshFilePaths() error {
