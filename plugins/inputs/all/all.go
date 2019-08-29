@@ -7,6 +7,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/apache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/apcupsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aurora"
+	_ "github.com/influxdata/telegraf/plugins/inputs/azure_storage_queue"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bind"

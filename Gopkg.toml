@@ -237,6 +237,10 @@
   version = "10.12.0"
 
 [[constraint]]
+  name = "github.com/Azure/azure-storage-queue-go"
+  version = "0.2.0"
+
+[[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
   source = "https://github.com/golang/oauth2.git"
@@ -256,6 +260,10 @@
 [[constraint]]
   name = "github.com/karrick/godirwalk"
   version = "1.7.5"
+
+[[constraint]]
+  name = "github.com/Azure/azure-pipeline-go"
+  version = "0.1.8"
 
 [[override]]
   name = "github.com/harlow/kinesis-consumer"

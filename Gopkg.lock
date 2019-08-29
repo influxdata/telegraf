@@ -48,6 +48,22 @@
   version = "v0.6.0"
 
 [[projects]]
+  digest = "1:bd444f85703c5aff1ba686cb52766fd38c3730d4e1dfb02327b2481bfe674997"
+  name = "github.com/Azure/azure-pipeline-go"
+  packages = ["pipeline"]
+  pruneopts = ""
+  revision = "b8e3409182fd52e74f7d7bdfbff5833591b3b655"
+  version = "v0.1.8"
+
+[[projects]]
+  digest = "1:6ef03ecdaf3e9a003c2ebd67bfa673bbe8df2c23c82217a4448da766e8ef6b30"
+  name = "github.com/Azure/azure-storage-queue-go"
+  packages = ["azqueue"]
+  pruneopts = ""
+  revision = "6ed74e755687d1a74f08d9aab5a9e3f2fbe7d162"
+  version = "0.2.0"
+
+[[projects]]
   digest = "1:5923e22a060ab818a015593422f9e8a35b9d881d4cfcfed0669a82959b11c7ee"
   name = "github.com/Azure/go-autorest"
   packages = [
@@ -1669,6 +1685,7 @@
     "cloud.google.com/go/pubsub",
     "collectd.org/api",
     "collectd.org/network",
+    "github.com/Azure/azure-storage-queue-go/azqueue",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",
