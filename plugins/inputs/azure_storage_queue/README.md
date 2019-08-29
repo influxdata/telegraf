@@ -8,10 +8,10 @@ This plugin gathers sizes of Azure Storage Queues.
 # Description
 [[inputs.azure_storage_queue]]
   ## Required Azure Storage Account name
-  azure_storage_account_name = "mystorageaccount"
+  account_name = "mystorageaccount"
 
   ## Required Azure Storage Account access key
-  azure_storage_account_key = "storageaccountaccesskey"
+  account_key = "storageaccountaccesskey"
   
   ## Set to false to disable peeking age of oldest message (executes faster)
   # peek_oldest_message_age = true
@@ -20,8 +20,8 @@ This plugin gathers sizes of Azure Storage Queues.
 ### Metrics
 - azure_storage_queues
   - tags:
-    - name
-    - storage_account
+    - queue
+    - account
   - fields:
     - size (integer, count)
     - oldest_message_age_ns (integer, nanoseconds) Age of message at the head of the queue.
@@ -30,6 +30,6 @@ This plugin gathers sizes of Azure Storage Queues.
 ### Example Output
 
 ```
-azure_storage_queues,name=myqueue,storage_account=mystorageaccount oldest_message_age=799714900i,size=7i 1565970503000000000
-azure_storage_queues,name=myemptyqueue,storage_account=mystorageaccount size=0i 1565970502000000000
+azure_storage_queues,queue=myqueue,account=mystorageaccount oldest_message_age=799714900i,size=7i 1565970503000000000
+azure_storage_queues,queue=myemptyqueue,account=mystorageaccount size=0i 1565970502000000000
 ```

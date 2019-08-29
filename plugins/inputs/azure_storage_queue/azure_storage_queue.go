@@ -14,8 +14,8 @@ import (
 )
 
 type AzureStorageQueue struct {
-	StorageAccountName   string `toml:"azure_storage_account_name"`
-	StorageAccountKey    string `toml:"azure_storage_account_key"`
+	StorageAccountName   string `toml:"account_name"`
+	StorageAccountKey    string `toml:"account_key"`
 	PeekOldestMessageAge bool   `toml:"peek_oldest_message_age"`
 
 	serviceURL *azqueue.ServiceURL
@@ -23,10 +23,10 @@ type AzureStorageQueue struct {
 
 var sampleConfig = `
   ## Required Azure Storage Account name
-  azure_storage_account_name = "mystorageaccount"
+  account_name = "mystorageaccount"
 
   ## Required Azure Storage Account access key
-  azure_storage_account_key = "storageaccountaccesskey"
+  account_key = "storageaccountaccesskey"
 
   ## Set to false to disable peeking age of oldest message (executes faster)
   # peek_oldest_message_age = true
@@ -42,11 +42,11 @@ func (a *AzureStorageQueue) SampleConfig() string {
 
 func (a *AzureStorageQueue) Init() error {
 	if a.StorageAccountName == "" {
-		return errors.New("azure_storage_account must be configured")
+		return errors.New("account_name must be configured")
 	}
 
 	if a.StorageAccountKey == "" {
-		return errors.New("azure_storage_account_key must be configured")
+		return errors.New("account_key must be configured")
 	}
 	return nil
 }
@@ -74,8 +74,8 @@ func (a *AzureStorageQueue) GetServiceURL() (azqueue.ServiceURL, error) {
 func (a *AzureStorageQueue) GatherQueueMetrics(acc telegraf.Accumulator, queueItem azqueue.QueueItem, properties *azqueue.QueueGetPropertiesResponse, peekedMessage *azqueue.PeekedMessage) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	tags["name"] = strings.TrimSpace(queueItem.Name)
-	tags["storage_account"] = a.StorageAccountName
+	tags["queue"] = strings.TrimSpace(queueItem.Name)
+	tags["account"] = a.StorageAccountName
 	fields["size"] = properties.ApproximateMessagesCount()
 	if peekedMessage != nil {
 		fields["oldest_message_age_ns"] = time.Now().UnixNano() - peekedMessage.InsertionTime.UnixNano()
