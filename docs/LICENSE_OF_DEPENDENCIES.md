@@ -13,6 +13,7 @@ following works:
 - github.com/apache/thrift [Apache License 2.0](https://github.com/apache/thrift/blob/master/LICENSE)
 - github.com/aws/aws-sdk-go [Apache License 2.0](https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)
 - github.com/Azure/azure-storage-queue-go [MIT License](https://github.com/Azure/azure-storage-queue-go/blob/master/LICENSE)
+- github.com/Azure/azure-pipeline-go [MIT License](https://github.com/Azure/azure-pipeline-go/blob/master/LICENSE)
 - github.com/Azure/go-autorest [Apache License 2.0](https://github.com/Azure/go-autorest/blob/master/LICENSE)
 - github.com/beorn7/perks [MIT License](https://github.com/beorn7/perks/blob/master/LICENSE)
 - github.com/cenkalti/backoff [MIT License](https://github.com/cenkalti/backoff/blob/master/LICENSE)

@@ -1,3 +1,9 @@
+## v1.13 [unreleased]
+
+#### New Inputs
+
+- [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
+
 ## v1.12 [unreleased]
 
 #### Release Notes
