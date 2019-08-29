@@ -421,11 +421,9 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 
 	type NodeCheck struct {
-		NodeName         string
-		HealthCheck      HealthCheck
-		HealthCheckError error
-		Memory           *Memory
-		MemoryError      error
+		NodeName    string
+		HealthCheck HealthCheck
+		Memory      *Memory
 	}
 
 	nodeChecksChannel := make(chan NodeCheck, numberNodes)
@@ -437,16 +435,18 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 
 			err := r.requestJSON("/api/healthchecks/node/"+nodeName, &healthCheck)
 			nodeCheck := NodeCheck{
-				NodeName:         nodeName,
-				HealthCheckError: err,
-				HealthCheck:      healthCheck,
+				NodeName:    nodeName,
+				HealthCheck: healthCheck,
+			}
+			if err != nil {
+				acc.AddError(err)
+				return
 			}
 
 			err = r.requestJSON("/api/nodes/"+nodeName+"/memory", &memoryresponse)
 			nodeCheck.Memory = memoryresponse.Memory
-			nodeCheck.MemoryError = err
-			if nodeCheck.Memory == nil {
-				acc.AddError(fmt.Errorf("Wrong answer from rabbitmq for memory stats"))
+			if err != nil {
+				acc.AddError(err)
 				return
 			}
 
@@ -461,9 +461,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 
 		var healthCheckStatus int64 = 0
 
-		if nodeCheck.HealthCheckError != nil {
-			acc.AddError(nodeCheck.HealthCheckError)
-		} else if nodeCheck.HealthCheck.Status == "ok" {
+		if nodeCheck.HealthCheck.Status == "ok" {
 			healthCheckStatus = 1
 		}
 
@@ -505,26 +503,28 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 			"io_write_bytes_rate":       node.IoWriteBytesDetails.Rate,
 			"running":                   boolToInt(node.Running),
 			"health_check_status":       healthCheckStatus,
-			"mem_connection_readers":    nodeCheck.Memory.ConnectionReaders,
-			"mem_connection_writers":    nodeCheck.Memory.ConnectionWriters,
-			"mem_connection_channels":   nodeCheck.Memory.ConnectionChannels,
-			"mem_connection_other":      nodeCheck.Memory.ConnectionOther,
-			"mem_queue_procs":           nodeCheck.Memory.QueueProcs,
-			"mem_queue_slave_procs":     nodeCheck.Memory.QueueSlaveProcs,
-			"mem_plugins":               nodeCheck.Memory.Plugins,
-			"mem_other_proc":            nodeCheck.Memory.OtherProc,
-			"mem_metrics":               nodeCheck.Memory.Metrics,
-			"mem_mgmt_db":               nodeCheck.Memory.MgmtDb,
-			"mem_mnesia":                nodeCheck.Memory.Mnesia,
-			"mem_other_ets":             nodeCheck.Memory.OtherEts,
-			"mem_binary":                nodeCheck.Memory.Binary,
-			"mem_msg_index":             nodeCheck.Memory.MsgIndex,
-			"mem_code":                  nodeCheck.Memory.Code,
-			"mem_atom":                  nodeCheck.Memory.Atom,
-			"mem_other_system":          nodeCheck.Memory.OtherSystem,
-			"mem_allocated_unused":      nodeCheck.Memory.AllocatedUnused,
-			"mem_reserved_unallocated":  nodeCheck.Memory.ReservedUnallocated,
-			"mem_total":                 nodeCheck.Memory.Total,
+		}
+		if nodeCheck.Memory != nil {
+			fields["mem_connection_readers"] = nodeCheck.Memory.ConnectionReaders
+			fields["mem_connection_writers"] = nodeCheck.Memory.ConnectionWriters
+			fields["mem_connection_channels"] = nodeCheck.Memory.ConnectionChannels
+			fields["mem_connection_other"] = nodeCheck.Memory.ConnectionOther
+			fields["mem_queue_procs"] = nodeCheck.Memory.QueueProcs
+			fields["mem_queue_slave_procs"] = nodeCheck.Memory.QueueSlaveProcs
+			fields["mem_plugins"] = nodeCheck.Memory.Plugins
+			fields["mem_other_proc"] = nodeCheck.Memory.OtherProc
+			fields["mem_metrics"] = nodeCheck.Memory.Metrics
+			fields["mem_mgmt_db"] = nodeCheck.Memory.MgmtDb
+			fields["mem_mnesia"] = nodeCheck.Memory.Mnesia
+			fields["mem_other_ets"] = nodeCheck.Memory.OtherEts
+			fields["mem_binary"] = nodeCheck.Memory.Binary
+			fields["mem_msg_index"] = nodeCheck.Memory.MsgIndex
+			fields["mem_code"] = nodeCheck.Memory.Code
+			fields["mem_atom"] = nodeCheck.Memory.Atom
+			fields["mem_other_system"] = nodeCheck.Memory.OtherSystem
+			fields["mem_allocated_unused"] = nodeCheck.Memory.AllocatedUnused
+			fields["mem_reserved_unallocated"] = nodeCheck.Memory.ReservedUnallocated
+			fields["mem_total"] = nodeCheck.Memory.Total
 		}
 		acc.AddFields("rabbitmq_node", fields, tags, now)
 	}
