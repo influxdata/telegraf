@@ -178,6 +178,11 @@ func (p *Processes) gatherFromProc(fields map[string]interface{}) error {
 			fields["paging"] = fields["paging"].(int64) + int64(1)
 		case 'I':
 			fields["idle"] = fields["idle"].(int64) + int64(1)
+		case 'P':
+			if _, ok := fields["parked"]; ok {
+				fields["parked"] = fields["parked"].(int64) + int64(1)
+			}
+			fields["parked"] = int64(1)
 		default:
 			log.Printf("I! processes: Unknown state [ %s ] in file %s",
 				string(stats[0][0]), filename)

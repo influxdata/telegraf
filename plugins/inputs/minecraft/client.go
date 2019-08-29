@@ -84,7 +84,7 @@ func (c *client) Players() ([]string, error) {
 		}
 	}
 
-	resp, err := c.conn.Execute("/scoreboard players list")
+	resp, err := c.conn.Execute("scoreboard players list")
 	if err != nil {
 		c.conn = nil
 		return nil, err
@@ -107,7 +107,7 @@ func (c *client) Scores(player string) ([]Score, error) {
 		}
 	}
 
-	resp, err := c.conn.Execute("/scoreboard players list " + player)
+	resp, err := c.conn.Execute("scoreboard players list " + player)
 	if err != nil {
 		c.conn = nil
 		return nil, err
