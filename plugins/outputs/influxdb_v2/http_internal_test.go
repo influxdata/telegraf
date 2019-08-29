@@ -1,7 +1,6 @@
 package influxdb_v2
 
 import (
-	"io"
 	"net/url"
 	"testing"
 
@@ -45,15 +44,4 @@ func TestMakeWriteURL(t *testing.T) {
 			require.Equal(t, tests[i].act, rURL)
 		}
 	}
-}
-
-func TestMakeWriteRequest(t *testing.T) {
-	reader, _ := io.Pipe()
-	cli := httpClient{
-		WriteURL:        "http://localhost:9999/v2/write?bucket=telegraf&org=influx",
-		ContentEncoding: "gzip",
-		Headers:         map[string]string{"x": "y"},
-	}
-	_, err := cli.makeWriteRequest(reader)
-	require.NoError(t, err)
 }

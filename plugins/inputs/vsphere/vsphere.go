@@ -40,6 +40,10 @@ type VSphere struct {
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
 	Separator               string
+	CustomAttributeInclude  []string
+	CustomAttributeExclude  []string
+	UseIntSamples           bool
+	IpAddresses             []string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -89,7 +93,7 @@ var sampleConfig = `
     "net.droppedRx.summation",
     "net.droppedTx.summation",
     "net.usage.average",
-    "power.power.average",    
+    "power.power.average",
     "virtualDisk.numberReadAveraged.average",
     "virtualDisk.numberWriteAveraged.average",
     "virtualDisk.read.average",
@@ -104,7 +108,7 @@ var sampleConfig = `
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
 
-  ## Hosts 
+  ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   host_metric_include = [
     "cpu.coreUtilization.average",
@@ -154,15 +158,17 @@ var sampleConfig = `
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
+  ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+  # ip_addresses = ["ipv6", "ipv4" ]
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
-  ## Clusters 
+  ## Clusters
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
-  ## Datastores 
+  ## Datastores
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default for Datastores only
@@ -198,6 +204,22 @@ var sampleConfig = `
 
   ## timeout applies to any of the api request made to vcenter
   # timeout = "60s"
+
+  ## When set to true, all samples are sent as integers. This makes the output
+  ## data types backwards compatible with Telegraf 1.9 or lower. Normally all
+  ## samples from vCenter, with the exception of percentages, are integer
+  ## values, but under some conditions, some averaging takes place internally in
+  ## the plugin. Setting this flag to "false" will send values as floats to
+  ## preserve the full precision when averaging takes place.
+  # use_int_samples = true
+
+  ## Custom attributes from vCenter can be very useful for queries in order to slice the
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  ## by default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  # custom_attribute_include = []
+  # custom_attribute_exclude = ["*"] 
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -312,6 +334,10 @@ func init() {
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
 			Separator:               "_",
+			CustomAttributeInclude:  []string{},
+			CustomAttributeExclude:  []string{"*"},
+			UseIntSamples:           true,
+			IpAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

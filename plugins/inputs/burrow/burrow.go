@@ -432,6 +432,9 @@ func (b *burrow) genGroupStatusMetrics(r *apiResponse, cluster, group string, ac
 
 func (b *burrow) genGroupLagMetrics(r *apiResponse, cluster, group string, acc telegraf.Accumulator) {
 	for _, partition := range r.Status.Partitions {
+		if !b.filterTopics.Match(partition.Topic) {
+			continue
+		}
 		acc.AddFields(
 			"burrow_partition",
 			map[string]interface{}{

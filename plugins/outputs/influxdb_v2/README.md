@@ -22,6 +22,13 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   ## Destination bucket to write into.
   bucket = ""
 
+  ## The value of this tag will be used to determine the bucket.  If this
+  ## tag is not set the 'bucket' option is used as the default.
+  # bucket_tag = ""
+
+  ## If true, the bucket tag will not be added to the metric.
+  # exclude_bucket_tag = false
+
   ## Timeout for HTTP messages.
   # timeout = "5s"
 

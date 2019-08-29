@@ -3,6 +3,7 @@
 package logparser
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -20,6 +21,11 @@ const (
 	defaultWatchMethod = "inotify"
 )
 
+var (
+	offsets      = make(map[string]int64)
+	offsetsMutex = new(sync.Mutex)
+)
+
 // LogParser in the primary interface for the plugin
 type GrokConfig struct {
 	MeasurementName    string `toml:"measurement"`
@@ -28,6 +34,7 @@ type GrokConfig struct {
 	CustomPatterns     string
 	CustomPatternFiles []string
 	Timezone           string
+	UniqueTimestamp    string
 }
 
 type logEntry struct {
@@ -42,6 +49,7 @@ type LogParserPlugin struct {
 	WatchMethod   string
 
 	tailers map[string]*tail.Tail
+	offsets map[string]int64
 	lines   chan logEntry
 	done    chan struct{}
 	wg      sync.WaitGroup
@@ -51,6 +59,20 @@ type LogParserPlugin struct {
 
 	GrokParser parsers.Parser
 	GrokConfig GrokConfig `toml:"grok"`
+}
+
+func NewLogParser() *LogParserPlugin {
+	offsetsMutex.Lock()
+	offsetsCopy := make(map[string]int64, len(offsets))
+	for k, v := range offsets {
+		offsetsCopy[k] = v
+	}
+	offsetsMutex.Unlock()
+
+	return &LogParserPlugin{
+		WatchMethod: defaultWatchMethod,
+		offsets:     offsetsCopy,
+	}
 }
 
 const sampleConfig = `
@@ -100,6 +122,10 @@ const sampleConfig = `
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
     # timezone = "Canada/Eastern"
+
+	## When set to "disable", timestamp will not incremented if there is a
+	## duplicate.
+    # unique_timestamp = "auto"
 `
 
 // SampleConfig returns the sample configuration for the plugin
@@ -144,6 +170,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
 		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
 		GrokTimezone:           l.GrokConfig.Timezone,
+		GrokUniqueTimestamp:    l.GrokConfig.UniqueTimestamp,
 		DataFormat:             "grok",
 	}
 
@@ -156,18 +183,21 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.wg.Add(1)
 	go l.parser()
 
-	return l.tailNewfiles(l.FromBeginning)
+	err = l.tailNewfiles(l.FromBeginning)
+
+	// clear offsets
+	l.offsets = make(map[string]int64)
+	// assumption that once Start is called, all parallel plugins have already been initialized
+	offsetsMutex.Lock()
+	offsets = make(map[string]int64)
+	offsetsMutex.Unlock()
+
+	return err
 }
 
 // check the globs against files on disk, and start tailing any new files.
 // Assumes l's lock is held!
 func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
-	var seek tail.SeekInfo
-	if !fromBeginning {
-		seek.Whence = 2
-		seek.Offset = 0
-	}
-
 	var poll bool
 	if l.WatchMethod == "poll" {
 		poll = true
@@ -177,7 +207,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 	for _, filepath := range l.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			log.Printf("E! Error Glob %s failed to compile, %s", filepath, err)
+			log.Printf("E! [inputs.logparser] Error Glob %s failed to compile, %s", filepath, err)
 			continue
 		}
 		files := g.Match()
@@ -188,11 +218,27 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 				continue
 			}
 
+			var seek *tail.SeekInfo
+			if !fromBeginning {
+				if offset, ok := l.offsets[file]; ok {
+					log.Printf("D! [inputs.tail] using offset %d for file: %v", offset, file)
+					seek = &tail.SeekInfo{
+						Whence: 0,
+						Offset: offset,
+					}
+				} else {
+					seek = &tail.SeekInfo{
+						Whence: 2,
+						Offset: 0,
+					}
+				}
+			}
+
 			tailer, err := tail.TailFile(file,
 				tail.Config{
 					ReOpen:    true,
 					Follow:    true,
-					Location:  &seek,
+					Location:  seek,
 					MustExist: true,
 					Poll:      poll,
 					Logger:    tail.DiscardingLogger,
@@ -223,7 +269,7 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 	for line = range tailer.Lines {
 
 		if line.Err != nil {
-			log.Printf("E! Error tailing file %s, Error: %s\n",
+			log.Printf("E! [inputs.logparser] Error tailing file %s, Error: %s",
 				tailer.Filename, line.Err)
 			continue
 		}
@@ -269,7 +315,7 @@ func (l *LogParserPlugin) parser() {
 				l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
 		} else {
-			log.Println("E! Error parsing log line: " + err.Error())
+			log.Println("E! [inputs.logparser] Error parsing log line: " + err.Error())
 		}
 
 	}
@@ -281,24 +327,38 @@ func (l *LogParserPlugin) Stop() {
 	defer l.Unlock()
 
 	for _, t := range l.tailers {
+		if !l.FromBeginning {
+			// store offset for resume
+			offset, err := t.Tell()
+			if err == nil {
+				l.offsets[t.Filename] = offset
+				log.Printf("D! [inputs.logparser] recording offset %d for file: %v", offset, t.Filename)
+			} else {
+				l.acc.AddError(fmt.Errorf("error recording offset for file %s", t.Filename))
+			}
+		}
 		err := t.Stop()
 
 		//message for a stopped tailer
-		log.Printf("D! tail dropped for file: %v", t.Filename)
+		log.Printf("D! [inputs.logparser] tail dropped for file: %v", t.Filename)
 
 		if err != nil {
-			log.Printf("E! Error stopping tail on file %s\n", t.Filename)
+			log.Printf("E! [inputs.logparser] Error stopping tail on file %s", t.Filename)
 		}
-		t.Cleanup()
 	}
 	close(l.done)
 	l.wg.Wait()
+
+	// persist offsets
+	offsetsMutex.Lock()
+	for k, v := range l.offsets {
+		offsets[k] = v
+	}
+	offsetsMutex.Unlock()
 }
 
 func init() {
 	inputs.Add("logparser", func() telegraf.Input {
-		return &LogParserPlugin{
-			WatchMethod: defaultWatchMethod,
-		}
+		return NewLogParser()
 	})
 }

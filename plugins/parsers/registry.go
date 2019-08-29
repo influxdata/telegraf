@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
+	"github.com/influxdata/telegraf/plugins/parsers/form_urlencoded"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -69,7 +70,7 @@ type Config struct {
 
 	// TagKeys only apply to JSON data
 	TagKeys []string `toml:"tag_keys"`
-	// FieldKeys only apply to JSON
+	// Array of glob pattern strings keys that should be added as string fields.
 	JSONStringFields []string `toml:"json_string_fields"`
 
 	JSONNameKey string `toml:"json_name_key"`
@@ -84,6 +85,9 @@ type Config struct {
 
 	// time format
 	JSONTimeFormat string `toml:"json_time_format"`
+
+	// default timezone
+	JSONTimezone string `toml:"json_timezone"`
 
 	// Authentication file for collectd
 	CollectdAuthFile string `toml:"collectd_auth_file"`
@@ -123,6 +127,7 @@ type Config struct {
 	GrokCustomPatterns     string   `toml:"grok_custom_patterns"`
 	GrokCustomPatternFiles []string `toml:"grok_custom_pattern_files"`
 	GrokTimezone           string   `toml:"grok_timezone"`
+	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
@@ -137,6 +142,9 @@ type Config struct {
 	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
+
+	// FormData configuration
+	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -145,14 +153,19 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
-		parser = newJSONParser(config.MetricName,
-			config.TagKeys,
-			config.JSONNameKey,
-			config.JSONStringFields,
-			config.JSONQuery,
-			config.JSONTimeKey,
-			config.JSONTimeFormat,
-			config.DefaultTags)
+		parser, err = json.New(
+			&json.Config{
+				MetricName:   config.MetricName,
+				TagKeys:      config.TagKeys,
+				NameKey:      config.JSONNameKey,
+				StringFields: config.JSONStringFields,
+				Query:        config.JSONQuery,
+				TimeKey:      config.JSONTimeKey,
+				TimeFormat:   config.JSONTimeFormat,
+				Timezone:     config.JSONTimezone,
+				DefaultTags:  config.DefaultTags,
+			},
+		)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -185,7 +198,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokNamedPatterns,
 			config.GrokCustomPatterns,
 			config.GrokCustomPatternFiles,
-			config.GrokTimezone)
+			config.GrokTimezone,
+			config.GrokUniqueTimestamp)
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeaderRowCount,
@@ -203,6 +217,12 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
+	case "form_urlencoded":
+		parser, err = NewFormUrlencodedParser(
+			config.MetricName,
+			config.DefaultTags,
+			config.FormUrlencodedTagKeys,
+		)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -267,35 +287,10 @@ func newCSVParser(metricName string,
 	return parser, nil
 }
 
-func newJSONParser(
-	metricName string,
-	tagKeys []string,
-	jsonNameKey string,
-	stringFields []string,
-	jsonQuery string,
-	timeKey string,
-	timeFormat string,
-	defaultTags map[string]string,
-) Parser {
-	parser := &json.JSONParser{
-		MetricName:     metricName,
-		TagKeys:        tagKeys,
-		StringFields:   stringFields,
-		JSONNameKey:    jsonNameKey,
-		JSONQuery:      jsonQuery,
-		JSONTimeKey:    timeKey,
-		JSONTimeFormat: timeFormat,
-		DefaultTags:    defaultTags,
-	}
-	return parser
-}
-
-//Deprecated: Use NewParser to get a JSONParser object
 func newGrokParser(metricName string,
-	patterns []string,
-	nPatterns []string,
-	cPatterns string,
-	cPatternFiles []string, tZone string) (Parser, error) {
+	patterns []string, nPatterns []string,
+	cPatterns string, cPatternFiles []string,
+	tZone string, uniqueTimestamp string) (Parser, error) {
 	parser := grok.Parser{
 		Measurement:        metricName,
 		Patterns:           patterns,
@@ -303,23 +298,11 @@ func newGrokParser(metricName string,
 		CustomPatterns:     cPatterns,
 		CustomPatternFiles: cPatternFiles,
 		Timezone:           tZone,
+		UniqueTimestamp:    uniqueTimestamp,
 	}
 
 	err := parser.Compile()
 	return &parser, err
-}
-
-func NewJSONParser(
-	metricName string,
-	tagKeys []string,
-	defaultTags map[string]string,
-) (Parser, error) {
-	parser := &json.JSONParser{
-		MetricName:  metricName,
-		TagKeys:     tagKeys,
-		DefaultTags: defaultTags,
-	}
-	return parser, nil
 }
 
 func NewNagiosParser() (Parser, error) {
@@ -392,4 +375,16 @@ func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, 
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
 	return wavefront.NewWavefrontParser(defaultTags), nil
+}
+
+func NewFormUrlencodedParser(
+	metricName string,
+	defaultTags map[string]string,
+	tagKeys []string,
+) (Parser, error) {
+	return &form_urlencoded.Parser{
+		MetricName:  metricName,
+		DefaultTags: defaultTags,
+		TagKeys:     tagKeys,
+	}, nil
 }

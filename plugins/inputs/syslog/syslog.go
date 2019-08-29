@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/go-syslog/rfc5424"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsConfig "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -32,7 +33,7 @@ type Syslog struct {
 	KeepAlivePeriod *internal.Duration
 	MaxConnections  int
 	ReadTimeout     *internal.Duration
-	Framing         Framing
+	Framing         framing.Framing
 	Trailer         nontransparent.TrailerType
 	BestEffort      bool
 	Separator       string `toml:"sdparam_separator"`
@@ -83,7 +84,7 @@ var sampleConfig = `
   ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
   ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
   ## or the non-transparent framing technique (RFC6587#section-3.4.2).
-  ## Must be one of "octect-counting", "non-transparent".
+  ## Must be one of "octet-counting", "non-transparent".
   # framing = "octet-counting"
 
   ## The trailer to be expected in case of non-trasparent framing (default = "LF").
@@ -313,7 +314,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	}
 
 	// Select the parser to use depeding on transport framing
-	if s.Framing == OctetCounting {
+	if s.Framing == framing.OctetCounting {
 		// Octet counting transparent framing
 		p = octetcounting.NewParser(opts...)
 	} else {
@@ -445,7 +446,7 @@ func init() {
 			ReadTimeout: &internal.Duration{
 				Duration: defaultReadTimeout,
 			},
-			Framing:   OctetCounting,
+			Framing:   framing.OctetCounting,
 			Trailer:   nontransparent.LF,
 			Separator: "_",
 		}

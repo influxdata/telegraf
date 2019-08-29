@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -150,9 +151,9 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 			metricsmap[topic] = append(metricsmap[topic], metric)
 		} else {
 			buf, err := m.serializer.Serialize(metric)
-
 			if err != nil {
-				return err
+				log.Printf("D! [outputs.mqtt] Could not serialize metric: %v", err)
+				continue
 			}
 
 			err = m.publish(topic, buf)

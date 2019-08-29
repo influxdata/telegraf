@@ -44,7 +44,7 @@ const sampleConfig = `
 const description = "Read nginx_upstream_check module status information (https://github.com/yaoweibin/nginx_upstream_check_module)"
 
 type NginxUpstreamCheck struct {
-	URL string `toml:"uls"`
+	URL string `toml:"url"`
 
 	Username   string            `toml:"username"`
 	Password   string            `toml:"password"`
