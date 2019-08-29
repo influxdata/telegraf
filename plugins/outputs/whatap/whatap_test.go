@@ -2,7 +2,7 @@ package whatap
 
 import (
 	"fmt"
-	"log"
+	//"log"
 	"net"
 	"strconv"
 	"strings"
@@ -56,7 +56,6 @@ func TestWhatapWriteErr(t *testing.T) {
 
 	err = w.Connect()
 	require.NoError(t, err)
-	w.Session.Client.(net.TCPConn).SetReadBuffer(256)
 
 	lconn, err := listener.Accept()
 	require.NoError(t, err)
@@ -72,11 +71,3 @@ func TestWhatapWriteErr(t *testing.T) {
 	assert.Nil(t, w.Session.Client)
 }
 
-func TestAutoOname(t *testing.T) {
-	log.Println("WhaTap Test", "TestConnect")
-}
-
-func TestWrite(t *testing.T) {
-	log.Println("WhaTap Test", "TestConnect")
-
-}

@@ -27,8 +27,7 @@ const (
 
 type Whatap struct {
 	License string        `toml:"license"`
-	Server  string        `toml:"server"`
-	Port    int           `toml:"port"`
+	Servers []string      `toml:"servers"`
 	Pcode   int64         `toml:"pcode"`
 	Timeout time.Duration `toml:"timeout"`
 	Oname   string
@@ -52,11 +51,8 @@ var sampleConfig = `
   #pcode = 1111
 
   ## WhaTap server IP. Required
-  # Put multiple IPs with / as delimiters. e.g. "1.1.1.1/2.2.2.2"
-  #server = "1.1.1.1"
-
-  # WhaTap base port 
-  # port = 6600
+  ## Put multiple IPs. ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
+  #servers = ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
 
   ## Connection timeout.
   # timeout = "60s"
@@ -64,18 +60,25 @@ var sampleConfig = `
 
 func (w *Whatap) Connect() error {
 	//log.Println("[outputs.whatap] Connect")
-	hosts := strings.Split(w.Server, "/")
 	w.Session.Dest += 1
-	if w.Session.Dest >= len(hosts) {
+	if w.Session.Dest >= len(w.Servers) {
 		w.Session.Dest = 0
 	}
-	addr := fmt.Sprintf("%s:%d", hosts[w.Session.Dest], w.Port)
+
+	addr := strings.SplitN(w.Servers[w.Session.Dest], "://", 2)
+	if len(addr) != 2 {
+		return fmt.Errorf("invalid address: %s", w.Servers[w.Session.Dest])
+	}
+	if addr[0] != "tcp" {
+		return fmt.Errorf("only tcp is supported: %s", w.Servers[w.Session.Dest])
+	}
+
 	t := w.Timeout * time.Millisecond
-	if client, err := net.DialTimeout("tcp", addr, t); err != nil {
+	if client, err := net.DialTimeout(addr[0], addr[1], t); err != nil {
 		return err
 	} else {
 		w.Session.Client = client.(*net.TCPConn)
-		log.Println("[outputs.whatap] Connected tcp to ", addr)
+		log.Println("I! [outputs.whatap] Connected tcp to ", addr)
 	}
 
 	return nil
@@ -161,7 +164,7 @@ func (w *Whatap) send(code byte, b []byte) (err error) {
 		// Set Deadline
 		err = w.Session.Client.SetWriteDeadline(time.Now().Add(5 * time.Millisecond))
 		if err != nil {
-			log.Println("[outputs.whatap] cannot set tcp write deadline:", err)
+			log.Println("W! [outputs.whatap] cannot set tcp write deadline:", err)
 		}
 		nbytethistime, err = w.Session.Client.Write(sendbuf[pos : pos+nbyteleft])
 		if err != nil {
@@ -359,7 +362,6 @@ func newWhatap() *Whatap {
 		Session: TcpSession{},
 		Oname:   hostname,
 		Oid:     HashStr(hostname),
-		Port:    6600,
 	}
 }
 func init() {
