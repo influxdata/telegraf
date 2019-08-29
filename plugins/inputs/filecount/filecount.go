@@ -1,6 +1,7 @@
 package filecount
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -156,6 +157,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	childSize := make(map[string]int64)
 
 	walkFn := func(path string, de *godirwalk.Dirent) error {
+		fmt.Println(path)
 		rel, err := filepath.Rel(basedir, path)
 		if err == nil && rel == "." {
 			return nil
@@ -267,11 +269,11 @@ func (fc *FileCount) onlyDirectories(directories []string) []string {
 func (fc *FileCount) getDirs() []string {
 	dirs := make([]string, len(fc.Directories))
 	for i, dir := range fc.Directories {
-		dirs[i] = dir
+		dirs[i] = filepath.Clean(dir)
 	}
 
 	if fc.Directory != "" {
-		dirs = append(dirs, fc.Directory)
+		dirs = append(dirs, filepath.Clean(fc.Directory))
 	}
 
 	return dirs
