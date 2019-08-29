@@ -9,15 +9,15 @@ This plugin writes to the WhaTap(https://www.whatap.io) APM(via TCP).
   ## WhaTap license. Required
   #license = "xxxx-xxxx-xxxx"
 
+  ## WhaTap license. Required
+  #license = "xxxx-xxxx-xxxx"
+
   ## WhaTap project code. Required
   #pcode = 1111
 
   ## WhaTap server IP. Required
-  # Put multiple IPs with / as delimiters. e.g. "1.1.1.1/2.2.2.2"
-  #server = "1.1.1.1"
-
-  # WhaTap base port 
-  # port = 6600
+  ## Put multiple IPs. ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
+  #servers = ["tcp://1.1.1.1:6600","tcp://2.2.2.2:6600"]
 
   ## Connection timeout.
   # timeout = "60s"
