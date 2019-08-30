@@ -4,6 +4,10 @@
 
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
 
+#### Features
+
+- [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
+
 ## v1.12 [unreleased]
 
 #### Release Notes
