@@ -1,0 +1,24 @@
+{
+    "memory": {
+        "connection_readers": 1234,
+        "connection_writers": 5678,
+        "connection_channels": 1133,
+        "connection_other": 2840,
+        "queue_procs": 2840,
+        "queue_slave_procs": 0,
+        "plugins": 1755976,
+        "other_proc": 23056584,
+        "metrics": 196536,
+        "mgmt_db": 491272,
+        "mnesia": 115600,
+        "other_ets": 2121872,
+        "binary": 418848,
+        "msg_index": 42848,
+        "code": 25179322,
+        "atom": 1041593,
+        "other_system": 14741981,
+        "allocated_unused": 38208528,
+        "reserved_unallocated": 0,
+        "total": 83025920
+    }
+}
