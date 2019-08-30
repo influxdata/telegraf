@@ -38,10 +38,10 @@ type Object struct {
 }
 
 type Attribute struct {
-	CheckCommand string `json:"check_command"`
-	DisplayName  string `json:"display_name"`
-	Name         string `json:"name"`
-	State        int    `json:"state"`
+	CheckCommand string  `json:"check_command"`
+	DisplayName  string  `json:"display_name"`
+	Name         string  `json:"name"`
+	State        float64 `json:"state"`
 }
 
 var levels = []string{"ok", "warning", "critical", "unknown"}
@@ -51,7 +51,7 @@ type ObjectType string
 var sampleConfig = `
   ## Required Icinga2 server address (default: "https://localhost:5665")
   # server = "https://localhost:5665"
-  
+
   ## Required Icinga2 object type ("services" or "hosts, default "services")
   # object_type = "services"
 
@@ -88,12 +88,14 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 			log.Fatal(err)
 		}
 
+		state := int64(check.Attrs.State)
+
 		fields["name"] = check.Attrs.Name
-		fields["state_code"] = check.Attrs.State
+		fields["state_code"] = state
 
 		tags["display_name"] = check.Attrs.DisplayName
 		tags["check_command"] = check.Attrs.CheckCommand
-		tags["state"] = levels[check.Attrs.State]
+		tags["state"] = levels[state]
 		tags["source"] = url.Hostname()
 		tags["scheme"] = url.Scheme
 		tags["port"] = url.Port()
