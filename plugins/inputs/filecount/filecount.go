@@ -1,7 +1,6 @@
 package filecount
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -157,7 +156,6 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	childSize := make(map[string]int64)
 
 	walkFn := func(path string, de *godirwalk.Dirent) error {
-		fmt.Println(path)
 		rel, err := filepath.Rel(basedir, path)
 		if err == nil && rel == "." {
 			return nil
