@@ -81,7 +81,8 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
 
-You must capture at least one field per line.
+**Note:** You must capture at least one field per line.
+Patterns that convert all captures to tags will result in points that can't be written to InfluxDB.
 
 - Available modifiers:
   - string   (default if nothing is specified)

@@ -1,3 +1,13 @@
+## v1.13 [unreleased]
+
+#### New Inputs
+
+- [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
+
+#### Features
+
+- [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
+
 ## v1.12 [unreleased]
 
 #### Release Notes
@@ -9,9 +19,13 @@
 
 #### New Inputs
 
-- [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
-- [fireboard](/plugins/inputs/fireboard) - Contributed by @ronnocol
-- [uwsgi](/plugins/inputs/uswgi) - Contributed by @blaggacao
+- [apcupsd](/plugins/inputs/apcupsd/README.md) - Contributed by @jonaz
+- [docker_log](/plugins/inputs/docker_log/README.md) - Contributed by @prashanthjbabu
+- [fireboard](/plugins/inputs/fireboard/README.md) - Contributed by @ronnocol
+- [logstash](/plugins/inputs/logstash/README.md) - Contributed by @lkmcs @dmitryilyin @arkady-emelyanov
+- [marklogic](/plugins/inputs/marklogic/README.md) - Contributed by @influxdata
+- [openntpd](/plugins/inputs/openntpd/README.md) - Contributed by @aromeyer
+- [uwsgi](/plugins/inputs/uswgi/README.md) - Contributed by @blaggacao
 
 #### New Parsers
 
@@ -21,7 +35,12 @@
 
 - [date](/plugins/processors/date/README.md) - Contributed by @influxdata
 - [pivot](/plugins/processors/pivot/README.md) - Contributed by @influxdata
+- [tag_limit](/plugins/processors/tag_limit/README.md) - Contributed by @memory
 - [unpivot](/plugins/processors/unpivot/README.md) - Contributed by @influxdata
+
+#### New Outputs
+
+- [exec](/plugins/outputs/exec/README.md) - Contributed by @Jaeyo
 
 #### Features
 
@@ -64,6 +83,16 @@
 - [#6216](https://github.com/influxdata/telegraf/pull/6216): Add telegraf and go version to the internal input plugin.
 - [#6214](https://github.com/influxdata/telegraf/pull/6214): Update the number of logical CPUs dynamically in system plugin.
 - [#6259](https://github.com/influxdata/telegraf/pull/6259): Add darwin (macOS) builds to the release.
+- [#6241](https://github.com/influxdata/telegraf/pull/6241): Add configurable timeout setting to smart input.
+- [#6249](https://github.com/influxdata/telegraf/pull/6249): Add memory_usage field to procstat input plugin.
+- [#5971](https://github.com/influxdata/telegraf/pull/5971): Add support for custom attributes to vsphere input.
+- [#5926](https://github.com/influxdata/telegraf/pull/5926): Add cmdstat metrics to redis input.
+- [#6261](https://github.com/influxdata/telegraf/pull/6261): Add content_length metric to http_response input plugin.
+- [#6257](https://github.com/influxdata/telegraf/pull/6257): Add database_tag option to influxdb_listener to add database from query string.
+- [#6246](https://github.com/influxdata/telegraf/pull/6246): Add capability to limit TLS versions and cipher suites.
+- [#6266](https://github.com/influxdata/telegraf/pull/6266): Add topic_tag option to mqtt_consumer.
+- [#6207](https://github.com/influxdata/telegraf/pull/6207): Add ability to label inputs for logging.
+- [#6300](https://github.com/influxdata/telegraf/pull/6300): Add TLS support to nginx_plus, nginx_plus_api and nginx_vts.
 
 #### Bugfixes
 
@@ -73,6 +102,23 @@
 - [#6100](https://github.com/influxdata/telegraf/issues/6100): Fix SSPI authentication not working in sqlserver input.
 - [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
 - [#6136](https://github.com/influxdata/telegraf/issues/6136): Support Kafka 2.3.0 consumer groups.
+- [#6232](https://github.com/influxdata/telegraf/issues/6232): Fix persistent session in mqtt_consumer.
+- [#6235](https://github.com/influxdata/telegraf/issues/6235): Fix finder inconsistencies in vsphere input.
+- [#6138](https://github.com/influxdata/telegraf/issues/6138): Fix parsing multiple metrics on the first line of tailed file.
+- [#2526](https://github.com/influxdata/telegraf/issues/2526): Send TERM to exec processes before sending KILL signal.
+- [#5326](https://github.com/influxdata/telegraf/issues/5326): Query oplog only when connected to a replica set.
+- [#6317](https://github.com/influxdata/telegraf/pull/6317): Use environment variables to locate Program Files on Windows.
+
+## v1.11.5 [2019-08-27]
+
+- [#6250](https://github.com/influxdata/telegraf/pull/6250): Update go-sql-driver/mysql driver to 1.4.1 to address auth issues.
+- [#6279](https://github.com/influxdata/telegraf/issues/6279): Return error status from --test if input plugins produce an error.
+- [#6309](https://github.com/influxdata/telegraf/issues/6309): Fix with multiple instances only last configuration is used in smart input.
+- [#6303](https://github.com/influxdata/telegraf/pull/6303): Build official packages with Go 1.12.9.
+- [#6234](https://github.com/influxdata/telegraf/issues/6234): Split out -w argument in iptables input.
+- [#6270](https://github.com/influxdata/telegraf/issues/6270): Add support for parked process state on Linux.
+- [#6287](https://github.com/influxdata/telegraf/issues/6287): Remove leading slash from rcon command.
+- [#6313](https://github.com/influxdata/telegraf/pull/6313): Allow jobs with dashes in the name in lustre2 input.
 
 ## v1.11.4 [2019-08-06]
 

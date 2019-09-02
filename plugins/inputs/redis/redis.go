@@ -37,7 +37,7 @@ type RedisClient struct {
 }
 
 func (r *RedisClient) Info() *redis.StringCmd {
-	return r.client.Info()
+	return r.client.Info("ALL")
 }
 
 func (r *RedisClient) BaseTags() map[string]string {
@@ -248,6 +248,11 @@ func gatherInfoOutput(
 				gatherKeyspaceLine(name, kline, acc, tags)
 				continue
 			}
+			if section == "Commandstats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherCommandstateLine(name, kline, acc, tags)
+				continue
+			}
 			metric = name
 		}
 
@@ -322,6 +327,51 @@ func gatherKeyspaceLine(
 		}
 		acc.AddFields("redis_keyspace", fields, tags)
 	}
+}
+
+// Parse the special cmdstat lines.
+// Example:
+//     cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
+// Tag: cmdstat=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
+func gatherCommandstateLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	global_tags map[string]string,
+) {
+	if !strings.HasPrefix(name, "cmdstat") {
+		return
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
+	parts := strings.Split(line, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
+		}
+
+		switch kv[0] {
+		case "calls":
+			fallthrough
+		case "usec":
+			ival, err := strconv.ParseInt(kv[1], 10, 64)
+			if err == nil {
+				fields[kv[0]] = ival
+			}
+		case "usec_per_call":
+			fval, err := strconv.ParseFloat(kv[1], 64)
+			if err == nil {
+				fields[kv[0]] = fval
+			}
+		}
+	}
+	acc.AddFields("redis_cmdstat", fields, tags)
 }
 
 func init() {

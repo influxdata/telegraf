@@ -143,6 +143,142 @@ func TestPersistentClientIDFail(t *testing.T) {
 	require.Error(t, err)
 }
 
+type Message struct {
+}
+
+func (m *Message) Duplicate() bool {
+	panic("not implemented")
+}
+
+func (m *Message) Qos() byte {
+	panic("not implemented")
+}
+
+func (m *Message) Retained() bool {
+	panic("not implemented")
+}
+
+func (m *Message) Topic() string {
+	return "telegraf"
+}
+
+func (m *Message) MessageID() uint16 {
+	panic("not implemented")
+}
+
+func (m *Message) Payload() []byte {
+	return []byte("cpu time_idle=42i")
+}
+
+func (m *Message) Ack() {
+	panic("not implemented")
+}
+
+func TestTopicTag(t *testing.T) {
+	tests := []struct {
+		name     string
+		topicTag func() *string
+		expected []telegraf.Metric
+	}{
+		{
+			name: "default topic when topic tag is unset for backwards compatibility",
+			topicTag: func() *string {
+				return nil
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"topic": "telegraf",
+					},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "use topic tag when set",
+			topicTag: func() *string {
+				tag := "topic_tag"
+				return &tag
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"topic_tag": "telegraf",
+					},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "no topic tag is added when topic tag is set to the empty string",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var handler mqtt.MessageHandler
+			client := &FakeClient{
+				ConnectF: func() mqtt.Token {
+					return &FakeToken{}
+				},
+				AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+					handler = callback
+				},
+				SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+					return &FakeToken{}
+				},
+				DisconnectF: func(quiesce uint) {
+				},
+			}
+
+			plugin := New(func(o *mqtt.ClientOptions) Client {
+				return client
+			})
+			plugin.Topics = []string{"telegraf"}
+			plugin.TopicTag = tt.topicTag()
+
+			parser, err := parsers.NewInfluxParser()
+			require.NoError(t, err)
+			plugin.SetParser(parser)
+
+			err = plugin.Init()
+			require.NoError(t, err)
+
+			var acc testutil.Accumulator
+			err = plugin.Start(&acc)
+			require.NoError(t, err)
+
+			handler(nil, &Message{})
+
+			plugin.Stop()
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
+				testutil.IgnoreTime())
+		})
+	}
+}
+
 func TestAddRouteCalledForEachTopic(t *testing.T) {
 	client := &FakeClient{
 		ConnectF: func() mqtt.Token {

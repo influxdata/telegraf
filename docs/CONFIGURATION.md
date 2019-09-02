@@ -141,8 +141,12 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **quiet**:
   Log only error level messages.
 
+- **logtarget**:
+  Log target - `file`, `stderr` or `eventlog` (Windows only). 
+  The empty string means to log to stderr.
+
 - **logfile**:
-  Log file name, the empty string means to log to stderr.
+  Log file name.
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to
@@ -550,6 +554,10 @@ output.  The tag is removed in the outputs before writing.
     influxdb_database = "other"
 ```
 
+### Transport Layer Security (TLS)
+
+Reference the detailed [TLS][] documentation.
+
 [TOML]: https://github.com/toml-lang/toml#toml
 [global tags]: #global-tags
 [interval]: #intervals
@@ -561,3 +569,4 @@ output.  The tag is removed in the outputs before writing.
 [aggregators]: #aggregator-plugins
 [metric filtering]: #metric-filtering
 [telegraf.conf]: /etc/telegraf.conf
+[TLS]: /docs/TLS.md
