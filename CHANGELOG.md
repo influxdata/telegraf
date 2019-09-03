@@ -1,4 +1,4 @@
-## v1.12 [unreleased]
+## v1.12 [2019-09-03]
 
 #### Release Notes
 
