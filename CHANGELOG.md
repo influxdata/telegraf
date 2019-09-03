@@ -25,11 +25,11 @@
 - [logstash](/plugins/inputs/logstash/README.md) - Contributed by @lkmcs @dmitryilyin @arkady-emelyanov
 - [marklogic](/plugins/inputs/marklogic/README.md) - Contributed by @influxdata
 - [openntpd](/plugins/inputs/openntpd/README.md) - Contributed by @aromeyer
-- [uwsgi](/plugins/inputs/uswgi/README.md) - Contributed by @blaggacao
+- [uwsgi](/plugins/inputs/uwsgi/README.md) - Contributed by @blaggacao
 
 #### New Parsers
 
-- [form_urlencoded](/plugins/processors/form_urlencoded/README.md) - Contributed by @byonchev
+- [form_urlencoded](/plugins/parsers/form_urlencoded/README.md) - Contributed by @byonchev
 
 #### New Processors
 
