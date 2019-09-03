@@ -8,7 +8,7 @@
 
 - [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
 
-## v1.12 [unreleased]
+## v1.12 [2019-09-03]
 
 #### Release Notes
 
