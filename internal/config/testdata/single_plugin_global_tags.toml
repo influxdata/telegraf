@@ -1,0 +1,5 @@
+[global_tags]
+test_accepted = "accepted"
+test_ignored = "ignored"
+[[inputs.memcached]]
+  ignored_default_tags = ["test_ignored"]

@@ -52,11 +52,12 @@ type InputConfig struct {
 	Alias    string
 	Interval time.Duration
 
-	NameOverride      string
-	MeasurementPrefix string
-	MeasurementSuffix string
-	Tags              map[string]string
-	Filter            Filter
+	NameOverride       string
+	MeasurementPrefix  string
+	MeasurementSuffix  string
+	IgnoredDefaultTags []string
+	Tags               map[string]string
+	Filter             Filter
 }
 
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
@@ -111,5 +112,12 @@ func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
 }
 
 func (r *RunningInput) SetDefaultTags(tags map[string]string) {
-	r.defaultTags = tags
+	tempMap := make(map[string]string, len(tags))
+	for k, v := range tags {
+		tempMap[k] = v
+	}
+	for _, ignored := range r.Config.IgnoredDefaultTags {
+		delete(tempMap, ignored)
+	}
+	r.defaultTags = tempMap
 }

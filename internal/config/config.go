@@ -1363,6 +1363,18 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["ignored_default_tags"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						cp.IgnoredDefaultTags = append(cp.IgnoredDefaultTags, str.Value)
+					}
+				}
+			}
+		}
+	}
+
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
@@ -1378,6 +1390,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
+	delete(tbl.Fields, "ignored_default_tags")
 	var err error
 	cp.Filter, err = buildFilter(tbl)
 	if err != nil {

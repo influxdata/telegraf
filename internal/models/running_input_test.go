@@ -175,6 +175,38 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 	require.Equal(t, expected, m)
 }
 
+func TestMakeMetricWithIgnoredDaemonTags(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name:               "TestRunningInput",
+		IgnoredDefaultTags: []string{"baz"},
+	})
+	ri.SetDefaultTags(map[string]string{
+		"foo": "bar",
+		"baz": "qux",
+	})
+
+	m := testutil.MustMetric("RITest",
+		map[string]string{},
+		map[string]interface{}{
+			"value": int64(101),
+		},
+		now,
+		telegraf.Untyped)
+	m = ri.MakeMetric(m)
+	expected, err := metric.New("RITest",
+		map[string]string{
+			"foo": "bar",
+		},
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
+	)
+	require.NoError(t, err)
+	require.Equal(t, expected, m)
+}
+
 func TestMakeMetricNameOverride(t *testing.T) {
 	now := time.Now()
 	ri := NewRunningInput(&testInput{}, &InputConfig{

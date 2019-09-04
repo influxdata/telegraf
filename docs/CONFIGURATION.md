@@ -194,6 +194,8 @@ Parameters that can be used with any input plugin:
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
 - **tags**: A map of tags to apply to a specific input's measurements.
+- **ignored_default_tags**: An array of global tag names that will not be
+  applied by this input
 
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the input plugin.

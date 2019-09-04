@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
 	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
@@ -98,6 +99,42 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 		"Testdata did not produce a correct memcached struct.")
 	assert.Equal(t, mConfig, c.Inputs[0].Config,
 		"Testdata did not produce correct memcached metadata.")
+}
+
+func TestConfig_LoadSingleInputGlobalTags(t *testing.T) {
+	c := NewConfig()
+	c.LoadConfig("./testdata/single_plugin_global_tags.toml")
+
+	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
+
+	mConfig := &models.InputConfig{
+		Name:               "memcached",
+		IgnoredDefaultTags: []string{"test_ignored"},
+	}
+	mConfig.Tags = make(map[string]string)
+
+	assert.Equal(t, memcached, c.Inputs[0].Input,
+		"Testdata did not produce a correct memcached struct.")
+	assert.Equal(t, mConfig, c.Inputs[0].Config,
+		"Testdata did not produce correct memcached metadata.")
+
+	mBuilder := metric.NewBuilder()
+	mBuilder.SetName("test")
+	mBuilder.AddField("value", 1)
+	mBuilder.AddTag("test", "test")
+	metric, _ := mBuilder.Metric()
+
+	actMetric := c.Inputs[0].MakeMetric(metric)
+
+	v, ok := actMetric.GetTag("test_accepted")
+	assert.True(t, ok,
+		"Test input did not apply global tag.")
+	assert.Equal(t, "accepted", v,
+		"Test input applied wrong global tag value.")
+
+	v, ok = actMetric.GetTag("test_ignored")
+	assert.False(t, ok,
+		"Test input applied a global tag that should be ignored.")
 }
 
 func TestConfig_LoadDirectory(t *testing.T) {
