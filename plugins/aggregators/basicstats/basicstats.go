@@ -1,7 +1,6 @@
 package basicstats
 
 import (
-	"log"
 	"math"
 
 	"github.com/influxdata/telegraf"
@@ -10,6 +9,7 @@ import (
 
 type BasicStats struct {
 	Stats []string `toml:"stats"`
+	Log   telegraf.Logger
 
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
@@ -52,7 +52,8 @@ type basicstats struct {
 
 var sampleConfig = `
   ## The period on which to flush & clear the aggregator.
-  period = "30s"
+	period = "30s"
+
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
@@ -61,17 +62,17 @@ var sampleConfig = `
   # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
 `
 
-func (m *BasicStats) SampleConfig() string {
+func (_ *BasicStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *BasicStats) Description() string {
+func (_ *BasicStats) Description() string {
 	return "Keep the aggregate basicstats of each metric passing through."
 }
 
-func (m *BasicStats) Add(in telegraf.Metric) {
+func (b *BasicStats) Add(in telegraf.Metric) {
 	id := in.HashID()
-	if _, ok := m.cache[id]; !ok {
+	if _, ok := b.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
 		a := aggregate{
 			name:   in.Name(),
@@ -92,13 +93,13 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				}
 			}
 		}
-		m.cache[id] = a
+		b.cache[id] = a
 	} else {
 		for _, field := range in.FieldList() {
 			if fv, ok := convert(field.Value); ok {
-				if _, ok := m.cache[id].fields[field.Key]; !ok {
+				if _, ok := b.cache[id].fields[field.Key]; !ok {
 					// hit an uncached field of a cached metric
-					m.cache[id].fields[field.Key] = basicstats{
+					b.cache[id].fields[field.Key] = basicstats{
 						count: 1,
 						min:   fv,
 						max:   fv,
@@ -111,7 +112,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					continue
 				}
 
-				tmp := m.cache[id].fields[field.Key]
+				tmp := b.cache[id].fields[field.Key]
 				//https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
 				//variable initialization
 				x := fv
@@ -138,16 +139,16 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				//diff compute
 				tmp.diff = fv - tmp.LAST
 				//store final data
-				m.cache[id].fields[field.Key] = tmp
+				b.cache[id].fields[field.Key] = tmp
 			}
 		}
 	}
 }
 
-func (m *BasicStats) Push(acc telegraf.Accumulator) {
-	config := getConfiguredStats(m)
+func (b *BasicStats) Push(acc telegraf.Accumulator) {
+	config := b.getConfiguredStats()
 
-	for _, aggregate := range m.cache {
+	for _, aggregate := range b.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
 
@@ -194,14 +195,11 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 	}
 }
 
-func parseStats(names []string) *configuredStats {
-
+func (b *BasicStats) parseStats() *configuredStats {
 	parsed := &configuredStats{}
 
-	for _, name := range names {
-
+	for _, name := range b.Stats {
 		switch name {
-
 		case "count":
 			parsed.count = true
 		case "min":
@@ -222,45 +220,38 @@ func parseStats(names []string) *configuredStats {
 			parsed.non_negative_diff = true
 
 		default:
-			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
+			b.Log.Warnf("Unrecognized basic stat '%s', ignoring", name)
 		}
 	}
 
 	return parsed
 }
 
-func defaultStats() *configuredStats {
-
-	defaults := &configuredStats{}
-
-	defaults.count = true
-	defaults.min = true
-	defaults.max = true
-	defaults.mean = true
-	defaults.variance = true
-	defaults.stdev = true
-	defaults.sum = false
-	defaults.non_negative_diff = false
-
-	return defaults
+var defaultStats = &configuredStats{
+	count:             true,
+	min:               true,
+	max:               true,
+	mean:              true,
+	variance:          true,
+	stdev:             true,
+	sum:               false,
+	non_negative_diff: false,
 }
 
-func getConfiguredStats(m *BasicStats) *configuredStats {
-
-	if m.statsConfig == nil {
-
-		if m.Stats == nil {
-			m.statsConfig = defaultStats()
+func (b *BasicStats) getConfiguredStats() *configuredStats {
+	if b.statsConfig == nil {
+		if b.Stats == nil {
+			b.statsConfig = defaultStats
 		} else {
-			m.statsConfig = parseStats(m.Stats)
+			b.statsConfig = b.parseStats()
 		}
 	}
 
-	return m.statsConfig
+	return b.statsConfig
 }
 
-func (m *BasicStats) Reset() {
-	m.cache = make(map[uint64]aggregate)
+func (b *BasicStats) Reset() {
+	b.cache = make(map[uint64]aggregate)
 }
 
 func convert(in interface{}) (float64, bool) {

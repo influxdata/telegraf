@@ -39,6 +39,7 @@ var m2, _ = metric.New("m1",
 
 func BenchmarkApply(b *testing.B) {
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
 
 	for n := 0; n < b.N; n++ {
 		minmax.Add(m1)
@@ -50,6 +51,7 @@ func BenchmarkApply(b *testing.B) {
 func TestBasicStatsWithPeriod(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
 
 	minmax.Add(m1)
 	minmax.Add(m2)
@@ -106,6 +108,7 @@ func TestBasicStatsWithPeriod(t *testing.T) {
 func TestBasicStatsDifferentPeriods(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
 
 	minmax.Add(m1)
 	minmax.Push(&acc)
@@ -180,6 +183,7 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 func TestBasicStatsWithOnlyCount(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"count"}
 
 	aggregator.Add(m1)
@@ -207,6 +211,7 @@ func TestBasicStatsWithOnlyCount(t *testing.T) {
 func TestBasicStatsWithOnlyMin(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"min"}
 
 	aggregator.Add(m1)
@@ -234,6 +239,7 @@ func TestBasicStatsWithOnlyMin(t *testing.T) {
 func TestBasicStatsWithOnlyMax(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"max"}
 
 	aggregator.Add(m1)
@@ -261,6 +267,7 @@ func TestBasicStatsWithOnlyMax(t *testing.T) {
 func TestBasicStatsWithOnlyMean(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"mean"}
 
 	aggregator.Add(m1)
@@ -288,6 +295,7 @@ func TestBasicStatsWithOnlyMean(t *testing.T) {
 func TestBasicStatsWithOnlySum(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"sum"}
 
 	aggregator.Add(m1)
@@ -346,6 +354,7 @@ func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
 	)
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"sum"}
 
 	aggregator.Add(sum1)
@@ -367,6 +376,7 @@ func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
 func TestBasicStatsWithOnlyVariance(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"s2"}
 
 	aggregator.Add(m1)
@@ -392,6 +402,7 @@ func TestBasicStatsWithOnlyVariance(t *testing.T) {
 func TestBasicStatsWithOnlyStandardDeviation(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"stdev"}
 
 	aggregator.Add(m1)
@@ -417,6 +428,7 @@ func TestBasicStatsWithOnlyStandardDeviation(t *testing.T) {
 func TestBasicStatsWithMinAndMax(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"min", "max"}
 
 	aggregator.Add(m1)
@@ -451,6 +463,7 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 func TestBasicStatsWithDiff(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"diff"}
 
 	aggregator.Add(m1)
@@ -476,6 +489,7 @@ func TestBasicStatsWithDiff(t *testing.T) {
 func TestBasicStatsWithNonNegativeDiff(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"non_negative_diff"}
 
 	aggregator.Add(m1)
@@ -500,6 +514,7 @@ func TestBasicStatsWithNonNegativeDiff(t *testing.T) {
 func TestBasicStatsWithAllStats(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewBasicStats()
+	minmax.Log = testutil.Logger{}
 	minmax.Stats = []string{"count", "min", "max", "mean", "stdev", "s2", "sum"}
 
 	minmax.Add(m1)
@@ -563,6 +578,7 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 func TestBasicStatsWithNoStats(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{}
 
 	aggregator.Add(m1)
@@ -578,6 +594,7 @@ func TestBasicStatsWithNoStats(t *testing.T) {
 func TestBasicStatsWithUnknownStat(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 	aggregator.Stats = []string{"crazy"}
 
 	aggregator.Add(m1)
@@ -596,6 +613,7 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 func TestBasicStatsWithDefaultStats(t *testing.T) {
 
 	aggregator := NewBasicStats()
+	aggregator.Log = testutil.Logger{}
 
 	aggregator.Add(m1)
 	aggregator.Add(m2)
