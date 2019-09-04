@@ -18,7 +18,7 @@ import (
 )
 
 func TestHandleTelemetryEmpty(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "dummy"}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy"}
 	acc := &testutil.Accumulator{}
 	c.Start(acc)
 
@@ -35,7 +35,7 @@ func TestHandleTelemetryEmpty(t *testing.T) {
 }
 
 func TestHandleTelemetryTwoSimple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"alias": "type:model/some/path"}}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"alias": "type:model/some/path"}}
 	acc := &testutil.Accumulator{}
 	c.Start(acc)
 
@@ -110,7 +110,7 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 }
 
 func TestHandleTelemetrySingleNested(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"nested": "type:model/nested/path"}}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"nested": "type:model/nested/path"}}
 	acc := &testutil.Accumulator{}
 	c.Start(acc)
 
@@ -175,7 +175,7 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 }
 
 func TestTCPDialoutOverflow(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "tcp", ServiceAddress: "127.0.0.1:57000"}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:57000"}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
@@ -231,7 +231,7 @@ func mockTelemetryMessage() *telemetry.Telemetry {
 }
 
 func TestTCPDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "tcp", ServiceAddress: "127.0.0.1:57000", Aliases: map[string]string{
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:57000", Aliases: map[string]string{
 		"some": "type:model/some/path", "parallel": "type:model/parallel/path", "other": "type:model/other/path"}}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
@@ -290,7 +290,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 }
 
 func TestGRPCDialoutError(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "grpc", ServiceAddress: "127.0.0.1:57001"}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:57001"}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))
 
@@ -309,7 +309,7 @@ func TestGRPCDialoutError(t *testing.T) {
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Transport: "grpc", ServiceAddress: "127.0.0.1:57001", Aliases: map[string]string{
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:57001", Aliases: map[string]string{
 		"some": "type:model/some/path", "parallel": "type:model/parallel/path", "other": "type:model/other/path"}}
 	acc := &testutil.Accumulator{}
 	assert.Nil(t, c.Start(acc))

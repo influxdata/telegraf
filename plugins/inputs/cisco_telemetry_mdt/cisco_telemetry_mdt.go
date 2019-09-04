@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -34,6 +33,8 @@ type CiscoTelemetryMDT struct {
 	ServiceAddress string            `toml:"service_address"`
 	MaxMsgSize     int               `toml:"max_msg_size"`
 	Aliases        map[string]string `toml:"aliases"`
+
+	Log telegraf.Logger
 
 	// GRPC TLS settings
 	internaltls.ServerConfig
@@ -123,11 +124,11 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 		// Individual client connection routine
 		c.wg.Add(1)
 		go func() {
-			log.Printf("D! [inputs.cisco_telemetry_mdt]: Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
+			c.Log.Debugf("accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 			if err := c.handleTCPClient(conn); err != nil {
 				c.acc.AddError(err)
 			}
-			log.Printf("D! [inputs.cisco_telemetry_mdt]: Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
+			c.Log.Debugf("closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 
 			mutex.Lock()
 			delete(clients, conn)
@@ -142,7 +143,7 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 	mutex.Lock()
 	for client := range clients {
 		if err := client.Close(); err != nil {
-			log.Printf("E! [inputs.cisco_telemetry_mdt]: Failed to close TCP dialout client: %v", err)
+			c.Log.Errorf("failed to close TCP dialout client: %v", err)
 		}
 	}
 	mutex.Unlock()
@@ -195,7 +196,7 @@ func (c *CiscoTelemetryMDT) handleTCPClient(conn net.Conn) error {
 func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
 	peer, peerOK := peer.FromContext(stream.Context())
 	if peerOK {
-		log.Printf("D! [inputs.cisco_telemetry_mdt]: Accepted Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("accepted Cisco MDT GRPC dialout connection from %s", peer.Addr)
 	}
 
 	for {
@@ -216,7 +217,7 @@ func (c *CiscoTelemetryMDT) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutS
 	}
 
 	if peerOK {
-		log.Printf("D! [inputs.cisco_telemetry_mdt]: Closed Cisco MDT GRPC dialout connection from %s", peer.Addr)
+		c.Log.Debugf("closed Cisco MDT GRPC dialout connection from %s", peer.Addr)
 	}
 
 	return nil
@@ -262,7 +263,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 					c.parseGPBKVField(subfield, &namebuf, telemetry.EncodingPath, timestamp, tags, fields)
 				}
 			default:
-				log.Printf("I! [inputs.cisco_telemetry_mdt]: Unexpected top-level MDT field: %s", field.Name)
+				c.Log.Infof("unexpected top-level MDT field: %s", field.Name)
 			}
 		}
 
@@ -273,7 +274,7 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 				tags["path"] = name
 				name = alias
 			} else {
-				log.Printf("D! [inputs.cisco_telemetry_mdt]: No measurement alias for encoding path: %s", name)
+				c.Log.Debugf("no measurement alias for encoding path: %s", name)
 			}
 			c.acc.AddFields(name, fields, tags, timestamp)
 		} else {
