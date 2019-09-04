@@ -1,7 +1,6 @@
 package filecount
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -59,6 +58,7 @@ type FileCount struct {
 	fileFilters []fileFilterFunc
 	globPaths   []globpath.GlobPath
 	Fs          fileSystem
+	Log         telegraf.Logger
 }
 
 func (_ *FileCount) Description() string {
@@ -210,7 +210,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		Unsorted:             true,
 		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
 			if os.IsPermission(errors.Cause(err)) {
-				log.Println("D! [inputs.filecount]", err)
+				fc.Log.Debug(err)
 				return godirwalk.SkipNode
 			}
 			return godirwalk.Halt
