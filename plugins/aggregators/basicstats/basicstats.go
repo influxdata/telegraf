@@ -220,7 +220,7 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.non_negative_diff = true
 
 		default:
-			b.Log.Warnf("Unrecognized basic stat '%s', ignoring", name)
+			b.Log.Warnf("unrecognized basic stat '%s', ignoring", name)
 		}
 	}
 
