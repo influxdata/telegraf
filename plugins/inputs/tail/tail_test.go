@@ -28,6 +28,7 @@ func TestTailFromBeginning(t *testing.T) {
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
@@ -61,6 +62,7 @@ func TestTailFromEnd(t *testing.T) {
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
@@ -97,6 +99,7 @@ func TestTailBadLine(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
@@ -122,6 +125,7 @@ func TestTailDosLineendings(t *testing.T) {
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
@@ -160,6 +164,7 @@ cpu,42
 	require.NoError(t, err)
 
 	plugin := NewTail()
+	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
@@ -217,6 +222,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := NewTail()
+	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
