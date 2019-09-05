@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/fcgi"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -227,7 +228,11 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Equal(t, `Socket doesn't exist  '/tmp/invalid.sock': stat /tmp/invalid.sock: no such file or directory`, err.Error())
+	assertErr := `Socket doesn't exist  '/tmp/invalid.sock': stat /tmp/invalid.sock: no such file or directory`
+	if runtime.GOOS == "windows" {
+		assertErr = `Socket doesn't exist  '/tmp/invalid.sock': CreateFile /tmp/invalid.sock: The system cannot find the file specified.`
+	}
+	assert.Equal(t, assertErr, err.Error())
 
 }
 
