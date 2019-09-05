@@ -20,6 +20,7 @@ func TestRedisConnect(t *testing.T) {
 	addr := fmt.Sprintf(testutil.GetLocalHost() + ":6379")
 
 	r := &Redis{
+		Log:     testutil.Logger{},
 		Servers: []string{addr},
 	}
 
