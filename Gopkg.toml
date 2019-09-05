@@ -148,7 +148,8 @@
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.18.0"
+  revision = "b12709e6ca29240128c89fe0b30b6a76be42b457"
+  source = "https://github.com/influxdata/sarama.git"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
