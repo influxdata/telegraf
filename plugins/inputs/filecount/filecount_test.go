@@ -2,8 +2,7 @@ package filecount
 
 import (
 	"os"
-	"runtime"
-	"strings"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+const PathSeparatorString = string(os.PathSeparator)
 
 func TestNoFilters(t *testing.T) {
 	fc := getNoFilterFileCount()
@@ -26,7 +27,7 @@ func TestNoFiltersOnChildDir(t *testing.T) {
 	matches := []string{"subdir/quux", "subdir/quuz",
 		"subdir/nested2/qux", "subdir/nested2"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
+	tags := map[string]string{"directory": getTestdataDir() + PathSeparatorString + "subdir"}
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
@@ -39,7 +40,7 @@ func TestNoRecursiveButSuperMeta(t *testing.T) {
 	fc.Directories = []string{getTestdataDir() + "/**"}
 	matches := []string{"subdir/quux", "subdir/quuz", "subdir/nested2"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
+	tags := map[string]string{"directory": getTestdataDir() + PathSeparatorString + "subdir"}
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
 
@@ -67,7 +68,7 @@ func TestDoubleAndSimpleStar(t *testing.T) {
 	fc.Directories = []string{getTestdataDir() + "/**/*"}
 	matches := []string{"qux"}
 
-	tags := map[string]string{"directory": getTestdataDir() + "/subdir/nested2"}
+	tags := map[string]string{"directory": getTestdataDir() + PathSeparatorString + "subdir" + PathSeparatorString + "nested2"}
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
@@ -137,17 +138,7 @@ func getTestdataDir() string {
 		panic(err)
 	}
 
-	var chunks []string
-	var testDirectory string
-
-	if runtime.GOOS == "windows" {
-		chunks = strings.Split(dir, "\\")
-		testDirectory = strings.Join(chunks[:], "\\") + "\\testdata"
-	} else {
-		chunks = strings.Split(dir, "/")
-		testDirectory = strings.Join(chunks[:], "/") + "/testdata"
-	}
-	return testDirectory
+	return filepath.Join(dir, "testdata")
 }
 
 func getFakeFileSystem(basePath string) fakeFileSystem {
@@ -163,6 +154,7 @@ func getFakeFileSystem(basePath string) fakeFileSystem {
 	// set directory bit
 	dmask |= (1 << uint(32-1))
 
+	basePath = filepath.ToSlash(basePath)
 	// create a lookup map for getting "files" from the "filesystem"
 	fileList := map[string]fakeFileInfo{
 		basePath:                         {name: "testdata", size: int64(4096), filemode: uint32(dmask), modtime: mtime, isdir: true},
