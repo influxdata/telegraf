@@ -3,6 +3,7 @@ package logparser
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+const PathSeparatorString = string(os.PathSeparator)
 
 func TestStartNoParsers(t *testing.T) {
 	logparser := &LogParserPlugin{
@@ -67,7 +70,7 @@ func TestGrokParseLogFiles(t *testing.T) {
 		},
 		map[string]string{
 			"response_code": "200",
-			"path":          thisdir + "testdata/test_a.log",
+			"path":          thisdir + "testdata" + PathSeparatorString + "test_a.log",
 		})
 
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
@@ -77,7 +80,7 @@ func TestGrokParseLogFiles(t *testing.T) {
 			"nomodifier": "nomodifier",
 		},
 		map[string]string{
-			"path": thisdir + "testdata/test_b.log",
+			"path": thisdir + "testdata" + PathSeparatorString + "test_b.log",
 		})
 }
 
@@ -118,7 +121,7 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 		},
 		map[string]string{
 			"response_code": "200",
-			"path":          emptydir + "/test_a.log",
+			"path":          emptydir + PathSeparatorString + "test_a.log",
 		})
 }
 
@@ -129,7 +132,7 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 
 	logparser := &LogParserPlugin{
 		FromBeginning: true,
-		Files:         []string{thisdir + "testdata/test_a.log"},
+		Files:         []string{thisdir + "testdata" + PathSeparatorString + "test_a.log"},
 		GrokConfig: GrokConfig{
 			MeasurementName:    "logparser_grok",
 			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_BAD}"},
@@ -153,11 +156,15 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 		},
 		map[string]string{
 			"response_code": "200",
-			"path":          thisdir + "testdata/test_a.log",
+			"path":          thisdir + "testdata" + PathSeparatorString + "test_a.log",
 		})
 }
 
 func getCurrentDir() string {
 	_, filename, _, _ := runtime.Caller(1)
+	if runtime.GOOS == "windows" {
+		filename = filepath.FromSlash(filename)
+		//filepath.Clean()
+	}
 	return strings.Replace(filename, "logparser_test.go", "", 1)
 }
