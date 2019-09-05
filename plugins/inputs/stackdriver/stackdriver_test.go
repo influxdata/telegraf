@@ -640,6 +640,7 @@ func TestGather(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			s := &Stackdriver{
+				Log:                          testutil.Logger{},
 				Project:                      "test",
 				RateLimit:                    10,
 				GatherRawDistributionBuckets: true,
@@ -775,6 +776,7 @@ func TestGatherAlign(t *testing.T) {
 			}
 
 			s := &Stackdriver{
+				Log:                          testutil.Logger{},
 				Project:                      "test",
 				RateLimit:                    10,
 				GatherRawDistributionBuckets: false,
