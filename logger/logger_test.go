@@ -51,7 +51,7 @@ func TestErrorWriteLogToFile(t *testing.T) {
 	config.Quiet = true
 	SetupLogging(config)
 	log.Printf("E! TEST")
-	log.Printf("I! TEST") // <- should be ignoredgo
+	log.Printf("I! TEST") // <- should be ignored
 
 	f, err := ioutil.ReadFile(tmpfile.Name())
 	assert.NoError(t, err)
