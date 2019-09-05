@@ -160,8 +160,11 @@ func localAddress(interfaceName string) (net.Addr, error) {
 
 	for _, addr := range addrs {
 		if naddr, ok := addr.(*net.IPNet); ok {
-			// leaving port set to zero to let kernel pick
-			return &net.TCPAddr{IP: naddr.IP}, nil
+			//need to choose IPv4 address
+			if len(naddr.Mask) == net.IPv4len {
+				// leaving port set to zero to let kernel pick
+				return &net.TCPAddr{IP: naddr.IP}, nil
+			}
 		}
 	}
 
