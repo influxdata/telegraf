@@ -2,6 +2,7 @@ package kafka_consumer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -95,6 +96,7 @@ type KafkaConsumer struct {
 	Version                string   `toml:"version"`
 	SASLPassword           string   `toml:"sasl_password"`
 	SASLUsername           string   `toml:"sasl_username"`
+	SASLVersion            *int     `toml:"sasl_version"`
 
 	tls.ClientConfig
 
@@ -172,6 +174,12 @@ func (k *KafkaConsumer) Init() error {
 		config.Net.SASL.User = k.SASLUsername
 		config.Net.SASL.Password = k.SASLPassword
 		config.Net.SASL.Enable = true
+
+		version, err := SASLVersion(config.Version, k.SASLVersion)
+		if err != nil {
+			return err
+		}
+		config.Net.SASL.Version = version
 	}
 
 	if k.ClientID != "" {
@@ -206,6 +214,24 @@ func (k *KafkaConsumer) Init() error {
 
 	k.config = config
 	return nil
+}
+
+func SASLVersion(kafkaVersion sarama.KafkaVersion, saslVersion *int) (int16, error) {
+	if saslVersion == nil {
+		if kafkaVersion.IsAtLeast(sarama.V1_0_0_0) {
+			return sarama.SASLHandshakeV1, nil
+		}
+		return sarama.SASLHandshakeV0, nil
+	}
+
+	switch *saslVersion {
+	case 0:
+		return sarama.SASLHandshakeV0, nil
+	case 1:
+		return sarama.SASLHandshakeV1, nil
+	default:
+		return 0, errors.New("invalid SASL version")
+	}
 }
 
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
