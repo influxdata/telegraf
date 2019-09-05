@@ -91,7 +91,7 @@ func TestTCPError(t *testing.T) {
 	c := NetResponse{
 		Protocol: "tcp",
 		Address:  ":9999",
-		Timeout:  internal.Duration{time.Second * 30},
+		Timeout:  internal.Duration{Duration: time.Second * 30},
 	}
 	// Error
 	err1 := c.Gather(&acc)
