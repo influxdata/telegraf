@@ -54,7 +54,7 @@ type Endpoint struct {
 	customFields      map[int32]string
 	customAttrFilter  filter.Filter
 	customAttrEnabled bool
-  apiVersion      string
+	apiVersion        string
 }
 
 type resourceKind struct {

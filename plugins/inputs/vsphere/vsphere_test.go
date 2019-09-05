@@ -422,7 +422,7 @@ func TestFolders(t *testing.T) {
 }
 
 func TestVsanCmmds(t *testing.T) {
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}
