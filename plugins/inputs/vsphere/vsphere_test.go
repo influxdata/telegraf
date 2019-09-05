@@ -42,6 +42,7 @@ var configHeader = `
 
 func defaultVSphere() *VSphere {
 	return &VSphere{
+		Log: testutil.Logger{},
 		ClusterMetricInclude: []string{
 			"cpu.usage.*",
 			"cpu.usagemhz.*",
