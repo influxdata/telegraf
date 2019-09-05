@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -65,7 +66,7 @@ func (f fakeFileSystem) Open(name string) (file, error) {
 }
 
 func (f fakeFileSystem) Stat(name string) (os.FileInfo, error) {
-	if fakeInfo, found := f.files[name]; found {
+	if fakeInfo, found := f.files[filepath.ToSlash(name)]; found {
 		return fakeInfo, nil
 	}
 	return nil, &os.PathError{Op: "Stat", Path: name, Err: errors.New("No such file or directory")}
