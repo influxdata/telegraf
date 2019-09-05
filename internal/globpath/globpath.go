@@ -87,10 +87,10 @@ func (g *GlobPath) Match() []string {
 // the host platform separator.
 func (g *GlobPath) MatchString(path string) bool {
 	if !g.HasSuperMeta {
-		res, _ := filepath.Match(g.path, filepath.ToSlash(path))
+		res, _ := filepath.Match(filepath.ToSlash(g.path), filepath.ToSlash(path))
 		return res
 	}
-	return g.g.Match(path)
+	return g.g.Match(filepath.ToSlash(path))
 }
 
 // GetRoots returns a list of files and directories which should be optimal
