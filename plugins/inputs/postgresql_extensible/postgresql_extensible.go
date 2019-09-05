@@ -3,7 +3,6 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 
 	// register in driver.
@@ -21,6 +20,8 @@ type Postgresql struct {
 	AdditionalTags []string
 	Query          query
 	Debug          bool
+
+	Log telegraf.Logger
 }
 
 type query []struct {
@@ -152,7 +153,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		if p.Query[i].Version <= db_version {
 			rows, err := p.DB.Query(sql_query)
 			if err != nil {
-				acc.AddError(err)
+				p.Log.Error(err.Error())
 				continue
 			}
 
@@ -160,7 +161,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 			// grab the column information from the result
 			if columns, err = rows.Columns(); err != nil {
-				acc.AddError(err)
+				p.Log.Error(err.Error())
 				continue
 			}
 
@@ -175,7 +176,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			for rows.Next() {
 				err = p.accRow(meas_name, rows, acc, columns)
 				if err != nil {
-					acc.AddError(err)
+					p.Log.Error(err.Error())
 					break
 				}
 			}
@@ -238,7 +239,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	fields := make(map[string]interface{})
 COLUMN:
 	for col, val := range columnMap {
-		log.Printf("D! postgresql_extensible: column: %s = %T: %v\n", col, *val, *val)
+		p.Log.Debugf("column: %s = %T: %v\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]
 		if ignore || *val == nil {
 			continue
@@ -256,7 +257,7 @@ COLUMN:
 			case int64, int32, int:
 				tags[col] = fmt.Sprintf("%d", v)
 			default:
-				log.Println("failed to add additional tag", col)
+				p.Log.Debugf("failed to add %q as additional tag", col)
 			}
 			continue COLUMN
 		}

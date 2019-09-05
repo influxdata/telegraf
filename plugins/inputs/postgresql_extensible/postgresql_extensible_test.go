@@ -13,6 +13,7 @@ import (
 
 func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 	p := &Postgresql{
+		Log: testutil.Logger{},
 		Service: postgresql.Service{
 			Address: fmt.Sprintf(
 				"host=%s user=postgres sslmode=disable",
@@ -207,6 +208,7 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 	}
 
 	p := &Postgresql{
+		Log: testutil.Logger{},
 		Service: postgresql.Service{
 			Address: fmt.Sprintf(
 				"host=%s user=postgres sslmode=disable",
@@ -226,7 +228,10 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 }
 
 func TestAccRow(t *testing.T) {
-	p := Postgresql{}
+	p := Postgresql{
+		Log: testutil.Logger{},
+	}
+
 	var acc testutil.Accumulator
 	columns := []string{"datname", "cat"}
 
