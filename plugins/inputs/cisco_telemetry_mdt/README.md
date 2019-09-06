@@ -25,9 +25,6 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  # tls_cert = "/etc/telegraf/cert.pem"
  # tls_key = "/etc/telegraf/key.pem"
 
- ## Enable support for decoding NX-OS platform-specific telemetry extensions (disable for IOS XR and IOS XE)
- # decode_nxos = true
-
  ## Enable TLS client authentication and define allowed CA certificates; grpc
  ##  transport only.
  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
@@ -35,6 +32,9 @@ The TCP dialout transport is supported on IOS XR (32-bit and 64-bit) 6.1.x and l
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
+
+ ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
+ # enbedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 ```
 
 ### Example Output:
