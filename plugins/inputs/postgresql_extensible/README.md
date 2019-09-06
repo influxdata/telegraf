@@ -43,6 +43,9 @@ The example below has two queries are specified, with the following parameters:
   # withdbname was true.
   # Be careful that if the withdbname is set to false you don't have to define
   # the where clause (aka with the dbname)
+  # Also script option can be used to speciafy the .sql file path,
+  # in this way please make sure that sqlquery and script is not used at same time,
+  # coz this will cause error. 
   #
   # the tagvalue field is used to define custom tags (separated by comas).
   # the query is expected to return columns which match the names of the
@@ -61,7 +64,7 @@ The example below has two queries are specified, with the following parameters:
     withdbname=false
     tagvalue=""
   [[inputs.postgresql_extensible.query]]
-    sqlquery="SELECT * FROM pg_stat_bgwriter"
+    script="your_sql-filepath.sql"
     version=901
     withdbname=false
     tagvalue=""
