@@ -3,7 +3,9 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	// register in driver.
@@ -25,6 +27,7 @@ type Postgresql struct {
 
 type query []struct {
 	Sqlquery    string
+	Script      string
 	Version     int
 	Withdbname  bool
 	Tagvalue    string
@@ -108,6 +111,20 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }
 
+func (p *Postgresql) ReadQueryFromFile(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	qyery, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	return string(qyery), err
+}
+
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var (
 		err         error
@@ -129,8 +146,18 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 	for i := range p.Query {
+		if p.Query[i].Sqlquery != "" && p.Query[i].Script != "" {
+			return fmt.Errorf("both 'sqlquery' and 'script' specified, please choose one option")
+		}
 		sql_query = p.Query[i].Sqlquery
+		if sql_query == "" {
+			sql_query, err = p.ReadQueryFromFile(p.Query[i].Script)
+			if err != nil {
+				return err
+			}
+		}
 		tag_value = p.Query[i].Tagvalue
+
 		if p.Query[i].Measurement != "" {
 			meas_name = p.Query[i].Measurement
 		} else {
