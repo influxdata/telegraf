@@ -12,7 +12,10 @@
 
 #### Bugfixes
 
-- [#6344](https://github.com/influxdata/telegraf/pull/6344): Fix depends on GLIBC_2.14 symbol version.
+- [#6344](https://github.com/influxdata/telegraf/issues/6344): Fix depends on GLIBC_2.14 symbol version.
+- [#6329](https://github.com/influxdata/telegraf/issues/6329): Fix filecount for paths with trailing slash.
+- [#6331](https://github.com/influxdata/telegraf/issues/6331): Convert check state to an integer in icinga2 input.
+- [#6354](https://github.com/influxdata/telegraf/issues/6354): Fix could not mark message delivered error in kafka_consumer.
 
 ## v1.12 [2019-09-03]
 
