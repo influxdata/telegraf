@@ -82,25 +82,23 @@ func Test_sflow_flow_ipv4_sw(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 64,
-						  "IPversion": 4,
-						  "TCPFlags": 2,
+						  "IPversion": 1,
+						  "TCPFlags": 0,
 						  "dscp": 0,
 						  "dstIP": "192.168.9.10",
 						  "dstMac": 52231066582,
 						  "dstPort": 47621,
 						  "ecn": 0,
 						  "etype": 2048,
-						 
+						  "flags": 2,
 						  "fragmentId": 61840,
-						  "fragmentOffset": 0,
+						  "fragmentOffset": 16384,
 						  "proto": 17,
 						  "srcIP": "192.168.9.19",
 						  "srcMac": 163580568311648,
 						  "srcPort": 161,
 						  "total_length": 249,
-						  "udp_length": 229,
-
-						  "tagOrEType":2048
+						  "udp_length": 229
 					   }
 					],
 					"header.length": 128,
@@ -139,25 +137,24 @@ func Test_sflow_flow_ipv4_sw(t *testing.T) {
 					"header": [
 					   {
 						  "IPTTL": 63,
-						  "IPversion": 4,
-						  "TCPFlags": 2,
+						  "IPversion": 1,
+						  "TCPFlags": 0,
 						  "dscp": 0,
 						  "dstIP": "192.168.9.10",
 						  "dstMac": 52231066582,
 						  "dstPort": 514,
 						  "ecn": 0,
 						  "etype": 2048,
-						  
+						  "flags": 2,
 						  "fragmentId": 6244,
-						  "fragmentOffset": 0,
+						  "fragmentOffset": 16384,
 						  "proto": 17,
 						  "srcIP": "192.168.8.21",
 						  "srcMac": 278094204371087,
 						  "srcPort": 39529,
-						  "tagOrEType": 33024,
 						  "total_length": 129,
 						  "udp_length": 109,
-						  "vlanID": 9
+						  "vlanId": 9
 					   }
 					],
 					"header.length": 128,

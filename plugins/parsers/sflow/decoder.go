@@ -408,9 +408,6 @@ type binDecoder struct {
 }
 
 func (b *binDecoder) Decode(r io.Reader, rec Recorder) error {
-	if b.name == "srcMac" {
-		fmt.Println("break")
-	}
 	v := make([]byte, b.size)
 	e := binary.Read(r, binary.BigEndian, v)
 	if e != nil {

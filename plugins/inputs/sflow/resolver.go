@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -43,8 +45,8 @@ func newCache() *cache {
 }
 
 type resolver interface {
-	resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric))
 	start(dnsTTL time.Duration, snmpTTL time.Duration)
+	resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric))
 	stop()
 }
 
@@ -57,10 +59,11 @@ type asyncResolver struct {
 	dnsTTLTicker    *time.Ticker
 	ifaceTTLTicker  *time.Ticker
 	fnWorkerChannel chan asyncJob
+	dnsp            *dnsProcessor
 }
 
-func newAsyncResolver(dnsResolve bool, snmpResolve bool, snmpCommunity string) resolver {
-	log.Printf("I! [inputs.sflow] dbs cache = %t", dnsResolve)
+func newAsyncResolver(dnsResolve bool, dnsMultiProcessor string, snmpResolve bool, snmpCommunity string) resolver {
+	log.Printf("I! [inputs.sflow] dns cache = %t", dnsResolve)
 	log.Printf("I! [inputs.sflow] snmp cache = %t", snmpResolve)
 	log.Printf("I! [inputs.sflow] snmp community = %s", snmpCommunity)
 	return &asyncResolver{
@@ -69,6 +72,7 @@ func newAsyncResolver(dnsResolve bool, snmpResolve bool, snmpCommunity string) r
 		snmpCommunity: snmpCommunity,
 		dnsCache:      newCache(),
 		ifaceCache:    newCache(),
+		dnsp:          newDNSProcessor(dnsMultiProcessor),
 	}
 }
 
@@ -192,8 +196,11 @@ func (r *asyncResolver) ipToFqdn(ipAddress string) string {
 	names, err := resolver.LookupAddr(ctx, ipAddress)
 	fqdn := ipAddress
 	if err == nil {
-		if len(names) > 0 {
-			fqdn = names[0]
+		if len(names) != 0 {
+			fqdn = r.dnsp.transform(names[0])
+			if fqdn != names[0] {
+				log.Printf("D! [input.sflow] transformed dns[0] %s=>%s", names[0], fqdn)
+			}
 		}
 	} else {
 		log.Printf("!E [input.sflow] dns lookup of %s resulted in error %s", ipAddress, err)
@@ -299,4 +306,52 @@ func (r *testResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
 
 func (r *testResolver) stop() {
 	// NOP
+}
+
+type dnsProcessor struct {
+	rePattern *regexp.Regexp
+	template  string
+}
+
+//_ := `s/(.*)(?:(?:-e.[0-9]-[0-9]\.transit)|(?:\.netdevice))(.*)/$1$2`
+// if starts with s/ then look for trailing / and this is the separation of regexp and tremplate
+// if no trailing / then error
+// if no start with s/ then consider it just to be the regexp and a default template of $1$2$3$4$5 will be used
+func newDNSProcessor(processString string) *dnsProcessor {
+	if processString == "" {
+		return &dnsProcessor{}
+	}
+	re := ""
+	template := ""
+	loc := strings.Index(processString, "s/")
+	endLoc := strings.LastIndex(processString, "/")
+	if loc == 0 && endLoc > (loc+1) {
+		re = processString[loc+2 : endLoc]
+		template = processString[endLoc+1:]
+	} else {
+		re = processString
+		template = "$1$2$3$4$5"
+	}
+
+	return &dnsProcessor{rePattern: regexp.MustCompile(re), template: template}
+}
+
+func (p *dnsProcessor) transform(name string) string {
+	if p.rePattern == nil {
+		return name
+	}
+	result := []byte{}
+	// For each match of the regex in the content.
+	expanded := false
+	for _, submatches := range p.rePattern.FindAllStringSubmatchIndex(name, -1) {
+		// Apply the captured submatches to the template and append the output
+		// to the result.
+		//fmt.Println(i, submatches)
+		result = p.rePattern.ExpandString(result, p.template, name, submatches)
+		expanded = true
+	}
+	if !expanded {
+		return name
+	}
+	return string(result)
 }

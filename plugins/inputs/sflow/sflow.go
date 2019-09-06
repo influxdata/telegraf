@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"text/scanner"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -48,10 +49,6 @@ var count int
 
 func (psl *packetSFlowListener) process(buf []byte) {
 	metrics, err := psl.Parse(buf)
-	//if psl.testing {
-	///		count++
-	//		fmt.Printf("test output %d\n", count)
-	//	}
 	if err != nil {
 		psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 
@@ -75,9 +72,11 @@ type SFlowListener struct {
 	DNSFQDNCacheTTL   int           `toml:"dns_fqdn_cache_ttl"`
 	TESTDriver        bool          `toml:"test_stochastic"`
 
-	MaxFlowsPerSample    uint32 `toml:"max_flows_per_sample"`
-	MaxCountersPerSample uint32 `toml:"max_counters_per_sample"`
-	MaxSamplesPerPacket  uint32 `toml:"max_samples_per_packet"`
+	MaxFlowsPerSample     uint32 `toml:"max_flows_per_sample"`
+	MaxCountersPerSample  uint32 `toml:"max_counters_per_sample"`
+	MaxSamplesPerPacket   uint32 `toml:"max_samples_per_packet"`
+	TagsAsFields          string `toml:"as_fields"`
+	DNSMultiNameProcessor string `toml:"dns_multi_name_processor"`
 
 	dnsTTLTicker   *time.Ticker
 	ifaceTTLTicker *time.Ticker
@@ -133,16 +132,27 @@ func (sl *SFlowListener) Gather(_ telegraf.Accumulator) error {
 
 func (sl *SFlowListener) Start(acc telegraf.Accumulator) error {
 
+	if sl.MaxFlowsPerSample == 0 {
+		sl.MaxFlowsPerSample = 1000
+	}
+	if sl.MaxCountersPerSample == 0 {
+		sl.MaxCountersPerSample = 1000
+	}
+	if sl.MaxSamplesPerPacket == 0 {
+		sl.MaxCountersPerSample = 1000
+	}
+
 	sl.Accumulator = acc
 
-	if true { // sl.TESTDriver {
+	if false { // sl.TESTDriver {
 		sl.nameResolver = newTestResolver(sl.DNSFQDNResolve, sl.SNMPIfaceResolve, sl.SNMPCommunity)
 	} else {
-		sl.nameResolver = newAsyncResolver(sl.DNSFQDNResolve, sl.SNMPIfaceResolve, sl.SNMPCommunity)
+		sl.nameResolver = newAsyncResolver(sl.DNSFQDNResolve, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, sl.SNMPCommunity)
 	}
 	sl.nameResolver.start(time.Duration(sl.DNSFQDNCacheTTL)*time.Second, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second)
 
-	parser, err := sflow.NewParser("sflow", sl.SNMPCommunity, make(map[string]string), sl.MaxFlowsPerSample, sl.MaxCountersPerSample, sl.MaxSamplesPerPacket) // TODO
+	tagsAsFields := mapTagsAsFieldsCommaString(sl.TagsAsFields)
+	parser, err := sflow.NewParser("sflow", sl.SNMPCommunity, make(map[string]string), sl.MaxFlowsPerSample, sl.MaxCountersPerSample, sl.MaxSamplesPerPacket, tagsAsFields)
 	if err != nil {
 		return err
 	}
@@ -191,6 +201,17 @@ func (sl *SFlowListener) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func mapTagsAsFieldsCommaString(input string) map[string]bool {
+	var s scanner.Scanner
+	s.Init(strings.NewReader(input))
+	s.Whitespace |= 1 << ','
+	asFields := make(map[string]bool)
+	for tok := s.Scan(); tok != scanner.EOF; tok = s.Scan() {
+		asFields[s.TokenText()] = true
+	}
+	return asFields
+}
+
 func udpListen(network string, address string) (net.PacketConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":
@@ -225,7 +246,7 @@ func (sl *SFlowListener) Stop() {
 }
 
 func newSFlowListener() *SFlowListener {
-	parser, _ := sflow.NewParser("sflow", "public", make(map[string]string), 0, 0, 0) // TODO
+	parser, _ := sflow.NewParser("sflow", "public", make(map[string]string), 0, 0, 0, nil) // TODO
 
 	return &SFlowListener{
 		Parser: parser,
