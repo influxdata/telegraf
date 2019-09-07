@@ -1,0 +1,75 @@
+// Custom options for defining:
+// - Maximum size of string/bytes
+// - Maximum number of elements in array
+//
+// These are used by nanopb to generate statically allocable structures
+// for memory-limited environments.
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/influxdata/telegraf/plugins/parsers/jtinative/pbj";
+option java_package = "net.juniper.pbj";
+
+enum FieldType {
+    FT_DEFAULT = 0; // Automatically decide field type, generate static field if possible.
+    FT_CALLBACK = 1; // Always generate a callback field.
+    FT_POINTER = 4; // Always generate a dynamically allocated field.
+    FT_STATIC = 2; // Generate a static field or raise an exception if not possible.
+    FT_IGNORE = 3; // Ignore the field completely.
+}
+
+// This is the inner options message, which basically defines options for
+// a field. When it is used in message or file scope, it applies to all
+// fields.
+message PBJOptions {
+  // Allocated size for 'bytes' and 'string' fields.
+  optional int32 max_size = 1;
+
+  // Allocated number of entries in arrays ('repeated' fields)
+  optional int32 max_count = 2;
+
+  // Force type of field (callback or static allocation)
+  optional FieldType type = 3 [default = FT_DEFAULT];
+
+  // Use long names for enums, i.e. EnumName_EnumValue.
+  optional bool long_names = 4 [default = true];
+
+  // Add 'packed' attribute to generated structs.
+  // Note: this cannot be used on CPUs that break on unaligned
+  // accesses to variables.
+  optional bool packed_struct = 5 [default = false];
+
+  // Skip this message
+  optional bool skip_message = 6 [default = false];
+
+  optional bool cache_size = 7 [default = true];
+}
+
+// Extensions to protoc 'Descriptor' type in order to define options
+// inside a .proto file.
+//
+// Protocol Buffers extension number registry
+// --------------------------------
+// Project:  PBJ
+// Contact:  Philip Thomas <pthomas@juniper.net>
+// Web site: http://www.juniper.net
+// Extensions: 1020 (all types)
+// --------------------------------
+
+extend google.protobuf.FileOptions {
+    optional PBJOptions pbj_file_option = 1020;
+}
+
+extend google.protobuf.MessageOptions {
+    optional PBJOptions pbj_message_option = 1020;
+}
+
+extend google.protobuf.EnumOptions {
+    optional PBJOptions pbj_enum_option = 1020;
+}
+
+extend google.protobuf.FieldOptions {
+    optional PBJOptions pbj_field_option = 1020;
+}
+
+

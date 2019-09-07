@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_pfe_npu jnpr_junos_pfe_npu_ext = 59;
+}
+
+message junos_pfe_npu {
+   message npu_memory_list {
+   }
+   repeated npu_memory_list npu_memory = 151;
+}

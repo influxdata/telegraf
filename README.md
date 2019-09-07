@@ -321,6 +321,7 @@ For documentation on the latest development code see the [documentation index][d
 - [Nagios](/plugins/parsers/nagios)
 - [Value](/plugins/parsers/value), ie: 45 or "booyah"
 - [Wavefront](/plugins/parsers/wavefront)
+- [Juniper Telemetry Interface](/plugins/parsers/jtinative)
 
 ## Serializers
 

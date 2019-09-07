@@ -1,0 +1,30 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_ppp jnpr_junos_ppp_ext = 45;
+}
+
+message junos_ppp {
+   optional system_type system = 151;
+   message system_type {
+      optional subscriber_management_type subscriber_management = 151;
+      message subscriber_management_type {
+         optional client_protocols_type client_protocols = 151;
+         message client_protocols_type {
+            optional ppp_type ppp = 151;
+            message ppp_type {
+               optional statistics_type statistics = 151;
+               message statistics_type {
+                  optional uint32 ppp_stats_total_subscriber_sessions = 51;
+                  optional uint32 ppp_stats_sessions_disable_phase = 52;
+                  optional uint32 ppp_stats_sessions_establish_phase = 53;
+                  optional uint32 ppp_stats_sessions_network_phase = 54;
+                  optional uint32 ppp_stats_sessions_authenticate_phase = 55;
+               }
+            }
+         }
+      }
+   }
+}

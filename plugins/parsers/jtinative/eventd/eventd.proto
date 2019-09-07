@@ -1,0 +1,36 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_events jnpr_junos_events_ext = 42;
+}
+
+message junos_events {
+   optional events_type events = 151;
+   message events_type {
+      message event_list {
+         optional string id = 51;
+         optional string type = 52;
+         optional timestamp_type timestamp = 151;
+         message timestamp_type {
+            optional uint32 seconds = 51;
+            optional uint32 microseconds = 52;
+         }
+         optional string priority = 53;
+         optional string facility = 54;
+         optional uint32 pid = 55;
+         optional string message = 56;
+         optional string daemon = 57;
+         optional string hostname = 58;
+         optional string lsname = 59;
+         message attributes_list {
+            optional string key = 51 [(telemetry_options).is_key = true];
+            optional string value = 52;
+         }
+         repeated attributes_list attributes = 152;
+         optional int32 logoptions = 60;
+      }
+      repeated event_list event = 151;
+   }
+}

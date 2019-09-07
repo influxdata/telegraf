@@ -1771,6 +1771,65 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	jti_override := make(map[string]string)
+	if node, ok := tbl.Fields["jti_measurement_override"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			if err := toml.UnmarshalTable(subtbl, jti_override); err != nil {
+				log.Printf("Could not parse tags for input %s\n", name)
+			} else {
+				c.JTINativeMeasurementOverride = append(c.JTINativeMeasurementOverride, jti_override)
+			}
+		}
+	}
+
+	jti_tag_override := make(map[string]string)
+	if node, ok := tbl.Fields["jti_tag_override"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			if err := toml.UnmarshalTable(subtbl, jti_tag_override); err != nil {
+				log.Printf("Could not parse tags for input %s\n", name)
+			} else {
+				c.JTINativeTagOverride = append(c.JTINativeTagOverride, jti_tag_override)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["jti_convert_tag"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.JTINativeConvertTag = append(c.JTINativeConvertTag, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["jti_convert_field"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.JTINativeConvertField = append(c.JTINativeConvertField, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["jti_str_as_tag"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				//for config with no quotes
+				val, err := strconv.ParseBool(str.Value)
+				c.JTIStrAsTag = val
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to bool: %v", err)
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["form_urlencoded_tag_keys"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1824,6 +1883,11 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
+	delete(tbl.Fields, "jti_measurement_override")
+	delete(tbl.Fields, "jti_tag_override")
+	delete(tbl.Fields, "jti_convert_tag")
+	delete(tbl.Fields, "jti_convert_field")
+	delete(tbl.Fields, "jti_str_as_tag")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
 
 	return c, nil

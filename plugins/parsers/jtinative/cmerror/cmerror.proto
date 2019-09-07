@@ -1,0 +1,133 @@
+//  
+// Copyrights (c)  2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless optional by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Balagopal Ambalakkat,Sumanth Kamatala, 2016
+//
+// This defines the gpb message format used exporting 
+// cmerror configuration information.
+//  
+// The top level message is Cmerror
+// The message is a collection of error items.
+// 
+//
+// Version 1.0
+//
+
+syntax = "proto2";
+import "telemetry_top.proto";
+
+// 
+// Juniper Error Item information
+// 
+message Error {
+
+    // Identifier that uniquely identifies the source of
+    // the error.
+    // e.g.
+    //
+    // junos/system/linecard/0/pcie/0/lane/0/pcie_cmerror_uncorrectable_major
+    //
+    optional string identifier = 1 [(telemetry_options).is_key = true];
+
+    // Name of the error
+    optional string name = 2;
+
+    // Instance id of the associated resource
+    optional uint32 component_id     = 3;
+
+    // Fru information
+    optional string fru_type = 4;
+    optional uint32 fru_slot = 5;
+
+
+
+    // Scope,Category,Severity
+    // in which this error belong to.
+    optional string scope    = 6;
+    optional string category = 7;
+    optional string severity = 8;
+
+    // Thresholds and action configured for this
+    // error.
+    optional uint32 threshold = 9;
+    optional uint32 limit     = 10;
+    optional uint32 raising_threshold  = 11;
+    optional uint32 clearing_threshold = 12;
+    optional uint32 action = 13;
+
+     // local/global/both
+    optional uint32  action_handling_type  = 14;
+
+    // user configured thresholds and limits for this error.
+    optional uint32 configured_threshold = 15;
+    optional uint32 configured_limit     = 16;
+    optional uint32 configured_action    = 17;
+    optional uint32 configured_clear_action = 18;
+
+}
+
+message GlobalErrorConfiguration {
+
+    // configuration bucket identifier
+    optional string scope    = 1;
+    optional string category = 2;
+    optional string severity = 3;
+
+    // configured parameters for this bucket.
+    optional uint32 threshold = 4;
+    optional uint32 action    = 5;
+
+}
+
+// 
+// Top-level Cmerror message 
+// 
+message Cmerror {
+
+    // collection of error items
+    repeated Error error_item = 1;
+
+    // last configuration change for cmerror.
+    optional uint64 last_configuration_change = 2;
+
+    /* This will toggle at start of every wrap cycle */
+    optional bool wrap_cycle_marker = 3;
+
+    // Fru slot identifier
+    optional uint32 fru_slot = 4;
+    optional string fru_type = 5;
+
+    // Collection of global configuration items
+    repeated GlobalErrorConfiguration global_configuration_item = 6;
+}
+
+
+//
+// This occupies branch 20 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional Cmerror jnpr_cmerror_ext = 20;
+}
+

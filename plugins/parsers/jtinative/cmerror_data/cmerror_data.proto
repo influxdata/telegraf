@@ -1,0 +1,114 @@
+//  
+// Copyrights (c)  2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless optional by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Balagopal Ambalakkat,Sumanth Kamatala, 2016
+//
+// This defines the gpb message format used exporting 
+// cmerror data information.
+//  
+// The top level message is CmerrorData
+// The message is a collection of ErrorData  items.
+// 
+//
+// Version 1.0
+//
+
+syntax = "proto2";
+import "telemetry_top.proto";
+
+//
+ // Juniper Error Item information
+ //
+ message ErrorData {
+ 
+     // Identifier that uniquely identifies the source of
+     // the error.
+     optional string identifier   = 1 [(telemetry_options).is_key = true];
+     optional uint64 count        = 2 [(telemetry_options).is_counter = true];
+     optional uint64 last_updated = 3 [(telemetry_options).is_timestamp = true];
+     optional bool   is_enabled   = 4;
+
+     // Additional Metadata for error processing
+    optional uint32 module_id     = 5;
+    optional uint32 component_id  = 6;
+    optional uint32 error_code    = 7;
+
+    // Additional stats for each of the error
+    optional uint32 occur_count           = 8 [(telemetry_options).is_counter = true];
+    optional uint32 cleared_count         = 9 [(telemetry_options).is_counter = true];
+    optional uint64 last_cleared_at       = 10 [(telemetry_options).is_timestamp = true];
+    optional uint32 action_count          = 11[(telemetry_options).is_counter = true];
+    optional uint64 last_action_taken_at  = 12 [(telemetry_options).is_timestamp = true];
+ 
+
+    // Fru information
+    optional string fru_type = 13;
+    optional uint32 fru_slot = 14;
+
+   // Help information regarding the error.
+    optional string description  = 15;
+    optional string help = 16;
+
+
+ }
+
+message ErrorResourceInfo {
+
+    // resource id e.g pfe identifier
+    optional uint32 id    = 1;
+
+    // resource type e.g pfe/pic
+    optional string type  = 2;
+
+    // resource state e.g enabled /disabled
+    optional uint32 state = 3;
+
+}
+
+ //
+ // Top-level CmerrorData message
+ //
+ message CmerrorData {
+ 
+     // collection of error items
+     repeated ErrorData error_item = 1;
+
+     // Fru slot identifier
+     optional uint32 fru_slot = 2;
+     optional string fru_type = 3;
+
+     // collection of resource states from fru
+     repeated ErrorResourceInfo resource_item = 4;
+
+ }
+ 
+ 
+ //
+ // This occupies branch 21 from JuniperNetworksSensors
+ //
+ extend JuniperNetworksSensors {
+     optional CmerrorData jnpr_cmerror_data_ext = 21;
+ }
+ 

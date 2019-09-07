@@ -1,0 +1,58 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional local_routes_loc_rib jnpr_local_routes_loc_rib_ext = 66;
+}
+
+message local_routes_loc_rib {
+   optional static_routes_type static_routes = 151;
+   message static_routes_type {
+      message static_list {
+         optional string prefix = 51;
+         optional state_type state = 151;
+         message state_type {
+            optional string prefix = 51;
+            optional string set_tag = 52;
+         }
+         optional next_hops_type next_hops = 152;
+         message next_hops_type {
+            message next_hop_list {
+               optional string index = 51;
+               optional state_type state = 151;
+               message state_type {
+                  optional string index = 51;
+                  optional string next_hop = 52;
+                  optional uint32 metric = 53;
+                  optional bool recurse = 54;
+                  optional string set_tag = 55;
+               }
+               optional interface_ref_type interface_ref = 152;
+               message interface_ref_type {
+                  optional state_type state = 151;
+                  message state_type {
+                     optional string interface = 51;
+                     optional uint32 subinterface = 52;
+                  }
+               }
+            }
+            repeated next_hop_list next_hop = 51;
+         }
+      }
+      repeated static_list static = 51;
+   }
+   optional local_aggregates_type local_aggregates = 152;
+   message local_aggregates_type {
+      message aggregate_list {
+         optional string prefix = 51;
+         optional state_type state = 151;
+         message state_type {
+            optional string prefix = 51;
+            optional bool discard = 52;
+            optional string set_tag = 53;
+         }
+      }
+      repeated aggregate_list aggregate = 51;
+   }
+}

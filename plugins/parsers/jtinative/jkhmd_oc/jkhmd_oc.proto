@@ -1,0 +1,54 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_kernel_health jnpr_junos_kernel_health_ext = 85;
+}
+
+message junos_kernel_health {
+   optional chassis_type chassis = 191;
+   message chassis_type {
+      optional gres_type gres = 181;
+      message gres_type {
+         optional uint64 gres_time = 51;
+         optional uint64 slave_connect_time = 52;
+         optional string configured_state = 53;
+         optional string master_kernel_ready = 54;
+         optional string slave_kernel_ready = 55;
+         optional string error_state = 56;
+      }
+      optional issu_type issu = 182;
+      message issu_type {
+         optional string failure_stage = 51;
+         optional string current_issu_stage = 52;
+      }
+   }
+   optional security_type security = 183;
+   message security_type {
+      optional string veriexec_state = 51;
+   }
+   optional kernel_type kernel = 192;
+   message kernel_type {
+      optional peer_infra_type peer_infra = 184;
+      message peer_infra_type {
+         optional uint32 peer_pfeman_conn_drops = 51;
+         optional uint32 spurious_ppt_wkups = 52;
+      }
+      optional record_meta_data_type record_meta_data = 185;
+      message record_meta_data_type {
+         optional uint64 record_time = 51;
+      }
+   }
+   optional kernel_ifstate_type kernel_ifstate = 186;
+   message kernel_ifstate_type {
+      optional uint32 dead_ifstates_cnt = 51;
+      optional uint32 alive_ifstates_cnt = 52;
+      optional uint32 delayed_unrefs_cnt = 53;
+      optional uint32 delayed_unrefs_max = 54;
+      optional uint32 stuck_clients_cnt = 55;
+      optional uint32 dead_clients_cnt = 56;
+      optional uint32 alive_clients_cnt = 57;
+      optional uint32 client_limit_reached = 58;
+   }
+}

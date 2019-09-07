@@ -1,0 +1,178 @@
+//
+// Copyrights (c)  2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Ping Ding, March, 2016
+//
+// This file defines the messages in Protocol Buffers format used by
+// the port sensor. The-top level messages is Port.
+//
+// Version 1.1
+//
+
+import "telemetry_top.proto";
+
+//
+//
+//
+extend JuniperNetworksSensors {
+    optional Optics jnpr_optics_ext               = 10;
+}
+
+//
+// Top-level message
+//
+message Optics {
+    repeated OpticsInfos Optics_diag        = 1;
+}
+
+//
+// Optics Interface information
+//
+message OpticsInfos {
+    // Interface name, e.g., xe-0/0/0
+    required string if_name                          = 1 [(telemetry_options).is_key = true];
+
+    // Global Index
+    optional uint32 snmp_if_index                    = 2;
+
+    // Optics module Diagnostics statistics
+    optional OpticsDiagStats optics_diag_stats       = 3;
+
+}
+
+//
+// Optics Diagnostics stats
+//
+message OpticsDiagStats {
+
+    optional uint32 optics_type                                                   =  1 ;
+
+    // Module temperature
+    optional double module_temp                                                   =  2 [(telemetry_options).is_gauge = true];
+
+    // Module temperature threshold information
+    optional double module_temp_high_alarm_threshold                              =  3 [(telemetry_options).is_gauge = true];
+
+    optional double module_temp_low_alarm_threshold                               =  4 [(telemetry_options).is_gauge = true];
+
+    optional double module_temp_high_warning_threshold                            =  5 [(telemetry_options).is_gauge = true];
+
+    optional double module_temp_low_warning_threshold                             =  6 [(telemetry_options).is_gauge = true];
+
+    // laser output power threshold information
+    optional double laser_output_power_high_alarm_threshold_dbm                   =  7 [(telemetry_options).is_gauge = true];
+
+    optional double laser_output_power_low_alarm_threshold_dbm                    =  8 [(telemetry_options).is_gauge = true];
+
+    optional double laser_output_power_high_warning_threshold_dbm                 =  9 [(telemetry_options).is_gauge = true];
+
+    optional double laser_output_power_low_warning_threshold_dbm                  = 10 [(telemetry_options).is_gauge = true];
+
+    // laser rx power threshold information
+    optional double laser_rx_power_high_alarm_threshold_dbm                       = 11 [(telemetry_options).is_gauge = true];
+
+    optional double laser_rx_power_low_alarm_threshold_dbm                        = 12 [(telemetry_options).is_gauge = true];
+
+    optional double laser_rx_power_high_warning_threshold_dbm                     = 13 [(telemetry_options).is_gauge = true];
+
+    optional double laser_rx_power_low_warning_threshold_dbm                      = 14 [(telemetry_options).is_gauge = true];
+
+    // laser bias current threshold information
+    optional double laser_bias_current_high_alarm_threshold                       = 15 [(telemetry_options).is_gauge = true];
+
+    optional double laser_bias_current_low_alarm_threshold                        = 16 [(telemetry_options).is_gauge = true];
+
+    optional double laser_bias_current_high_warning_threshold                     = 17 [(telemetry_options).is_gauge = true];
+
+    optional double laser_bias_current_low_warning_threshold                      = 18 [(telemetry_options).is_gauge = true];
+
+    // Module temperature alarm information
+    optional bool module_temp_high_alarm                                          = 19;
+
+    optional bool module_temp_low_alarm                                           = 20;
+
+    optional bool module_temp_high_warning                                        = 21;
+
+    optional bool module_temp_low_warning                                         = 22;
+
+    // Optics module lane Diagnostics statistics
+    repeated OpticsDiagLaneStats optics_lane_diag_stats                           = 23;
+
+}
+
+//
+// Optics Diagnostics lane stats
+//
+message OpticsDiagLaneStats {
+
+    optional uint32 lane_number                                                    =  1 [(telemetry_options).is_key = true];
+
+    // lane Module temperature
+    optional double lane_laser_temperature                                        =  2 [(telemetry_options).is_gauge = true];
+
+    // Laser receive power
+    optional double lane_laser_output_power_dbm                                   =  3 [(telemetry_options).is_gauge = true];
+
+    // Laser transmit power
+    optional double lane_laser_receiver_power_dbm                                 =  4 [(telemetry_options).is_gauge = true];
+
+    // Laser receive power
+    optional double lane_laser_bias_current                                       =  5;
+
+    //lane laser output power alarm
+    optional bool lane_laser_output_power_high_alarm                              =  6;
+
+    optional bool lane_laser_output_power_low_alarm                               =  7;
+
+    optional bool lane_laser_output_power_high_warning                            =  8;
+
+    optional bool lane_laser_output_power_low_warning                             =  9;
+
+    //lane laser receiver power alarm
+    optional bool lane_laser_receiver_power_high_alarm                            = 10;
+
+    optional bool lane_laser_receiver_power_low_alarm                             = 11;
+
+    optional bool lane_laser_receiver_power_high_warning                          = 12;
+
+    optional bool lane_laser_receiver_power_low_warning                           = 13;
+
+    //lane laser output power alarm
+    optional bool lane_laser_bias_current_high_alarm                              = 14;
+
+    optional bool lane_laser_bias_current_low_alarm                               = 15;
+
+    optional bool lane_laser_bias_current_high_warning                            = 16;
+
+    optional bool lane_laser_bias_current_low_warning                             = 17;
+
+    optional bool lane_tx_loss_of_signal_alarm                                    = 18;
+
+    optional bool lane_rx_loss_of_signal_alarm                                    = 19;
+
+    optional bool lane_tx_laser_disabled_alarm                                    = 20;
+
+}
+

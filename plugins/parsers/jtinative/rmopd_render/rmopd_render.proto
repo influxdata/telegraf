@@ -1,0 +1,314 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos jnpr_junos_ext = 74;
+}
+
+message junos {
+   optional rpm_type rpm = 151;
+   message rpm_type {
+      optional probe_results_type probe_results = 151;
+      message probe_results_type {
+         message probe_test_results_list {
+            optional string owner = 51;
+            optional string test_name = 52;
+            optional string target_address = 53;
+            optional string target_url = 54;
+            optional string source_address = 55;
+            optional string destination_interface = 56;
+            optional string probe_type = 57;
+            optional uint32 icmp_id = 58;
+            optional uint32 test_size = 59;
+            optional uint32 http_status = 60;
+            optional string routing_instance_name = 61;
+            optional uint32 rtt_thresh = 62;
+            optional uint32 rtt_jitter_thresh = 63;
+            optional uint32 rtt_stddev_thresh = 64;
+            optional uint32 igr_thresh = 65;
+            optional uint32 igr_jitter_thresh = 66;
+            optional uint32 igr_stddev_thresh = 67;
+            optional uint32 egr_thresh = 68;
+            optional uint32 egr_jitter_thresh = 69;
+            optional uint32 egr_stddev_thresh = 70;
+            optional probe_tests_hw_ts_err_type probe_tests_hw_ts_err = 151;
+            message probe_tests_hw_ts_err_type {
+               optional uint32 invalid_client_recv_ts_cntr = 51;
+               optional uint32 invalid_client_nots_cntr = 52;
+               optional uint32 invalid_server_send_ts_cntr = 53;
+               optional uint32 invalid_server_spent_time_cntr = 54;
+            }
+            optional probe_single_results_type probe_single_results = 152;
+            message probe_single_results_type {
+               optional string probe_time = 51;
+               optional string probe_sent_time = 52;
+               optional string probe_status = 53;
+               optional string hardware_timestamp_status = 54;
+               optional uint32 rtt = 55;
+               optional uint32 egress = 56;
+               optional uint32 ingress = 57;
+               optional int32 egress_jitter = 58;
+               optional int32 ingress_jitter = 59;
+               optional int32 round_trip_jitter = 60;
+               optional int32 egress_interarrival_jitter = 61;
+               optional int32 ingress_interarrival_jitter = 62;
+               optional int32 round_trip_interarrival_jitter = 63;
+               optional uint32 http_status = 64;
+            }
+            message probe_test_generic_results_list {
+               optional string results_scope = 51 [(telemetry_options).is_key = true];
+               optional uint32 probes_sent = 52;
+               optional uint32 probe_responses = 53;
+               optional uint32 loss_percentage = 54;
+               optional string last_test_time = 55;
+               message probe_test_generic_measurements_list {
+                  optional string probe_measurement_type = 51 [(telemetry_options).is_key = true];
+                  optional uint32 samples = 52;
+                  optional uint32 min_delay = 53;
+                  optional uint32 max_delay = 54;
+                  optional uint32 avg_delay = 55;
+                  optional uint32 jitter_delay = 56;
+                  optional uint64 stddev_delay = 57;
+                  optional uint64 sum_delay = 58;
+               }
+               repeated probe_test_generic_measurements_list probe_test_generic_measurements = 151;
+            }
+            repeated probe_test_generic_results_list probe_test_generic_results = 153;
+         }
+         repeated probe_test_results_list probe_test_results = 151;
+      }
+      optional history_results_type history_results = 152;
+      message history_results_type {
+         message history_test_results_list {
+            message history_single_test_results_list {
+               optional string owner = 51;
+               optional string test_name = 52;
+               optional string target_address = 53;
+               optional string target_url = 54;
+               optional string source_address = 55;
+               optional string destination_interface = 56;
+               optional string probe_type = 57;
+               optional uint32 icmp_id = 58;
+               optional uint32 test_size = 59;
+               optional uint32 http_status = 60;
+               optional string routing_instance_name = 61;
+               optional uint32 rtt_thresh = 62;
+               optional uint32 rtt_jitter_thresh = 63;
+               optional uint32 rtt_stddev_thresh = 64;
+               optional uint32 igr_thresh = 65;
+               optional uint32 igr_jitter_thresh = 66;
+               optional uint32 igr_stddev_thresh = 67;
+               optional uint32 egr_thresh = 68;
+               optional uint32 egr_jitter_thresh = 69;
+               optional uint32 egr_stddev_thresh = 70;
+               optional probe_single_results_type probe_single_results = 151;
+               message probe_single_results_type {
+                  optional string probe_time = 51;
+                  optional string probe_sent_time = 52;
+                  optional string probe_status = 53;
+                  optional string hardware_timestamp_status = 54;
+                  optional uint32 rtt = 55;
+                  optional uint32 egress = 56;
+                  optional uint32 ingress = 57;
+                  optional int32 egress_jitter = 58;
+                  optional int32 ingress_jitter = 59;
+                  optional int32 round_trip_jitter = 60;
+                  optional int32 egress_interarrival_jitter = 61;
+                  optional int32 ingress_interarrival_jitter = 62;
+                  optional int32 round_trip_interarrival_jitter = 63;
+                  optional uint32 http_status = 64;
+               }
+            }
+            repeated history_single_test_results_list history_single_test_results = 151;
+         }
+         repeated history_test_results_list history_test_results = 151;
+      }
+      optional server_type server = 153;
+      message server_type {
+         message active_servers_list {
+            optional string protocol = 51;
+            optional uint32 port = 52;
+            optional string dst_interface = 53;
+         }
+         repeated active_servers_list active_servers = 151;
+      }
+   }
+   optional twamp_type twamp = 152;
+   message twamp_type {
+      optional server_type server = 151;
+      message server_type {
+         message control_connection_list {
+            optional uint32 connection_id = 51 [(telemetry_options).is_key = true];
+            optional string client_address = 52;
+            optional uint32 client_port = 53;
+            optional string server_address = 54;
+            optional uint32 server_port = 55;
+            optional uint32 session_count = 56;
+            optional string authentication_mode = 57;
+            optional string session_state = 58;
+         }
+         repeated control_connection_list control_connection = 151;
+         message test_session_list {
+            optional uint32 connection_id = 51 [(telemetry_options).is_key = true];
+            message test_session_info_list {
+               optional uint32 test_id = 51 [(telemetry_options).is_key = true];
+               optional string sender_address = 52;
+               optional uint32 sender_port = 53;
+               optional string reflector_address = 54;
+               optional uint32 reflector_port = 55;
+            }
+            repeated test_session_info_list test_session_info = 151;
+         }
+         repeated test_session_list test_session = 152;
+      }
+      optional client_type client = 152;
+      message client_type {
+         message control_connection_list {
+            optional string control_name = 51 [(telemetry_options).is_key = true];
+            optional string client_address = 52;
+            optional uint32 client_port = 53;
+            optional string server_address = 54;
+            optional uint32 server_port = 55;
+            optional uint32 session_count = 56;
+            optional string auth_mode = 57;
+         }
+         repeated control_connection_list control_connection = 151;
+         message test_session_list {
+            optional string control_name = 51 [(telemetry_options).is_key = true];
+            optional string client_address = 52;
+            optional uint32 client_port = 53;
+            optional string server_address = 54;
+            optional uint32 server_port = 55;
+            optional uint32 session_count = 56;
+            optional string auth_mode = 57;
+            message test_session_info_list {
+               optional string session_name = 51 [(telemetry_options).is_key = true];
+               optional string sender_address = 52;
+               optional uint32 sender_port = 53;
+               optional string reflector_address = 54;
+               optional uint32 reflector_port = 55;
+            }
+            repeated test_session_info_list test_session_info = 151;
+         }
+         repeated test_session_list test_session = 152;
+         message probe_test_results_list {
+            optional string owner = 51;
+            optional string test_name = 52;
+            optional string destination_interface = 53;
+            optional uint32 test_size = 54;
+            optional string client_address = 55;
+            optional uint32 client_port = 56;
+            optional string sender_address = 57;
+            optional uint32 sender_port = 58;
+            optional string reflector_address = 59;
+            optional uint32 reflector_port = 60;
+            optional string server_address = 61;
+            optional uint32 server_port = 62;
+            optional uint32 loss_thresh_total = 63;
+            optional uint32 loss_thresh_succ = 64;
+            optional uint32 rtt_thresh = 65;
+            optional uint32 rtt_jitter_thresh = 66;
+            optional uint32 rtt_stddev_thresh = 67;
+            optional uint32 igr_thresh = 68;
+            optional uint32 igr_jitter_thresh = 69;
+            optional uint32 igr_stddev_thresh = 70;
+            optional uint32 egr_thresh = 71;
+            optional uint32 egr_jitter_thresh = 72;
+            optional uint32 egr_stddev_thresh = 73;
+            optional string routing_instance_name = 74;
+            optional probe_tests_hw_ts_err_type probe_tests_hw_ts_err = 151;
+            message probe_tests_hw_ts_err_type {
+               optional uint32 invalid_client_recv_ts_cntr = 51;
+               optional uint32 invalid_client_nots_cntr = 52;
+               optional uint32 invalid_server_send_ts_cntr = 53;
+               optional uint32 invalid_server_spent_time_cntr = 54;
+            }
+            optional probe_single_results_type probe_single_results = 152;
+            message probe_single_results_type {
+               optional string probe_time = 51;
+               optional string probe_sent_time = 52;
+               optional string probe_status = 53;
+               optional string hardware_timestamp_status = 54;
+               optional uint32 rtt = 55;
+               optional uint32 egress = 56;
+               optional uint32 ingress = 57;
+               optional int32 egress_jitter = 58;
+               optional int32 ingress_jitter = 59;
+               optional int32 round_trip_jitter = 60;
+               optional int32 egress_interarrival_jitter = 61;
+               optional int32 ingress_interarrival_jitter = 62;
+               optional int32 round_trip_interarrival_jitter = 63;
+               optional uint32 http_status = 64;
+            }
+            message probe_test_generic_results_list {
+               optional string results_scope = 51 [(telemetry_options).is_key = true];
+               optional uint32 probes_sent = 52;
+               optional uint32 probe_responses = 53;
+               optional uint32 loss_percentage = 54;
+               optional string last_test_time = 55;
+               message probe_test_generic_measurements_list {
+                  optional string probe_measurement_type = 51 [(telemetry_options).is_key = true];
+                  optional uint32 samples = 52;
+                  optional uint32 min_delay = 53;
+                  optional uint32 max_delay = 54;
+                  optional uint32 avg_delay = 55;
+                  optional uint32 jitter_delay = 56;
+                  optional uint64 stddev_delay = 57;
+                  optional uint64 sum_delay = 58;
+               }
+               repeated probe_test_generic_measurements_list probe_test_generic_measurements = 151;
+            }
+            repeated probe_test_generic_results_list probe_test_generic_results = 153;
+         }
+         repeated probe_test_results_list probe_test_results = 153;
+         message history_test_results_list {
+            message history_single_test_results_list {
+               optional string owner = 51;
+               optional string test_name = 52;
+               optional string destination_interface = 53;
+               optional uint32 test_size = 54;
+               optional string client_address = 55;
+               optional uint32 client_port = 56;
+               optional string sender_address = 57;
+               optional uint32 sender_port = 58;
+               optional string reflector_address = 59;
+               optional uint32 reflector_port = 60;
+               optional string server_address = 61;
+               optional uint32 server_port = 62;
+               optional uint32 loss_thresh_total = 63;
+               optional uint32 loss_thresh_succ = 64;
+               optional uint32 rtt_thresh = 65;
+               optional uint32 rtt_jitter_thresh = 66;
+               optional uint32 rtt_stddev_thresh = 67;
+               optional uint32 igr_thresh = 68;
+               optional uint32 igr_jitter_thresh = 69;
+               optional uint32 igr_stddev_thresh = 70;
+               optional uint32 egr_thresh = 71;
+               optional uint32 egr_jitter_thresh = 72;
+               optional uint32 egr_stddev_thresh = 73;
+               optional string routing_instance_name = 74;
+               optional probe_single_results_type probe_single_results = 151;
+               message probe_single_results_type {
+                  optional string probe_time = 51;
+                  optional string probe_sent_time = 52;
+                  optional string probe_status = 53;
+                  optional string hardware_timestamp_status = 54;
+                  optional uint32 rtt = 55;
+                  optional uint32 egress = 56;
+                  optional uint32 ingress = 57;
+                  optional int32 egress_jitter = 58;
+                  optional int32 ingress_jitter = 59;
+                  optional int32 round_trip_jitter = 60;
+                  optional int32 egress_interarrival_jitter = 61;
+                  optional int32 ingress_interarrival_jitter = 62;
+                  optional int32 round_trip_interarrival_jitter = 63;
+                  optional uint32 http_status = 64;
+               }
+            }
+            repeated history_single_test_results_list history_single_test_results = 151;
+         }
+         repeated history_test_results_list history_test_results = 154;
+      }
+   }
+}

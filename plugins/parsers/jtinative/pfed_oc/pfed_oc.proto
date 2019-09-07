@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_pfe jnpr_junos_pfe_ext = 57;
+}
+
+message junos_pfe {
+   message npu_memory_list {
+      optional string pfe_name = 51 [(telemetry_options).is_key = true];
+      optional string combined_pool_name = 52;
+      optional uint32 combined_size = 53;
+      optional uint32 combined_usage_count = 54;
+      optional uint32 combined_utilization = 55;
+      optional string global_pool_name = 56;
+      optional uint32 global_usage_count = 57;
+      optional uint32 global_alloc_count = 58;
+      optional uint32 global_free_count = 59;
+      optional string local_pool_name = 60;
+      optional uint32 local_usage_count = 61;
+      optional uint32 local_alloc_count = 62;
+      optional uint32 local_free_count = 63;
+   }
+   repeated npu_memory_list npu_memory = 151;
+}

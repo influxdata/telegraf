@@ -1,0 +1,33 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional interfaces_pfe_port jnpr_interfaces_pfe_port_ext = 60;
+}
+
+message interfaces_pfe_port {
+   message interface_list {
+      optional state_type state = 151;
+      message state_type {
+         optional counters_type counters = 151;
+         message counters_type {
+            optional uint64 in_octets = 51;
+            optional uint64 in_unicast_pkts = 52;
+            optional uint64 in_broadcast_pkts = 53;
+            optional uint64 in_multicast_pkts = 54;
+            optional uint64 in_discards = 55;
+            optional uint64 in_errors = 56;
+            optional uint32 in_unknown_protos = 57;
+            optional uint64 out_octets = 58;
+            optional uint64 out_unicast_pkts = 59;
+            optional uint64 out_broadcast_pkts = 60;
+            optional uint64 out_multicast_pkts = 61;
+            optional uint64 out_discards = 62;
+            optional uint64 out_errors = 63;
+            optional string last_clear = 64;
+         }
+      }
+   }
+   repeated interface_list interface = 151;
+}

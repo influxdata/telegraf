@@ -1,0 +1,28 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional mpls_pfe_mpls_sr_te_ip jnpr_mpls_pfe_mpls_sr_te_ip_ext = 79;
+}
+
+message mpls_pfe_mpls_sr_te_ip {
+   optional signaling_protocols_type signaling_protocols = 151;
+   message signaling_protocols_type {
+      optional segment_routing_type segment_routing = 151;
+      message segment_routing_type {
+         optional sr_te_ip_policies_type sr_te_ip_policies = 151;
+         message sr_te_ip_policies_type {
+            message sr_te_ip_policy_list {
+               optional state_type state = 151;
+               message state_type {
+                  message counters_list {
+                  }
+                  repeated counters_list counters = 151;
+               }
+            }
+            repeated sr_te_ip_policy_list sr_te_ip_policy = 151;
+         }
+      }
+   }
+}

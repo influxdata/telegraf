@@ -1,0 +1,51 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_kernel_ifstate jnpr_junos_kernel_ifstate_ext = 72;
+}
+
+message junos_kernel_ifstate {
+   optional kernel_ifstate_type kernel_ifstate = 181;
+   message kernel_ifstate_type {
+      message stats_list {
+         optional uint32 record_time = 121 [(telemetry_options).is_key = true];
+         optional uint32 record_seq_num = 122;
+         optional churn_rate_type churn_rate = 151;
+         message churn_rate_type {
+            optional uint32 overall_churn_rate = 51;
+            optional uint32 route_add_rate = 52;
+            optional uint32 route_change_rate = 53;
+            optional uint32 route_delete_rate = 54;
+            optional uint32 nexthop_add_rate = 55;
+            optional uint32 nexthop_delete_rate = 56;
+            optional uint32 nexthop_change_rate = 57;
+         }
+         message peer_consumption_rate_list {
+            optional uint32 peer_index = 51 [(telemetry_options).is_key = true];
+            optional uint32 consumption_rate_counter = 52;
+            optional uint32 consumption_route_add_rate = 53;
+            optional uint32 consumption_route_change_rate = 54;
+            optional uint32 consumption_route_delete_rate = 55;
+            optional uint32 consumption_nexthop_add_rate = 56;
+            optional uint32 consumption_nexthop_change_rate = 57;
+            optional uint32 consumption_nexthop_delete_rate = 58;
+         }
+         repeated peer_consumption_rate_list peer_consumption_rate = 152;
+         optional vetos_statistics_type vetos_statistics = 153;
+         message vetos_statistics_type {
+            optional uint32 veto_vm_page_count_severe = 51;
+            optional uint32 veto_ifstate_memory = 52;
+            optional uint32 veto_memory_overconsumed = 53;
+            optional uint32 veto_pfe_veto_max_routes = 54;
+            optional uint32 veto_too_many_delayed_unrefs = 55;
+            optional uint32 veto_nh_memory_usage = 56;
+            optional uint32 veto_mbuf_cluster = 57;
+            optional uint32 veto_flabel_space_exhaustion = 58;
+            optional uint32 veto_flabel_space_consumption = 59;
+         }
+      }
+      repeated stats_list stats = 141;
+   }
+}

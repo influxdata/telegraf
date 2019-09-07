@@ -1,0 +1,97 @@
+//
+// Copyrights (c) 2015, 2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// This file defines the top level message used for all Juniper
+// Telemetry packets encoded to the protocol buffer format.
+// The top level message is TelemetryStream.
+//
+
+syntax = "proto2";
+
+option go_package = "github.com/influxdata/telegraf/plugins/parsers/jtinative/telemetry_top";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+    optional TelemetryFieldOptions telemetry_options = 1024;
+}
+ 
+message TelemetryFieldOptions {
+    optional bool is_key             = 1;
+    optional bool is_timestamp       = 2;
+    optional bool is_counter         = 3;
+    optional bool is_gauge           = 4;
+}
+ 
+message TelemetryStream {
+    // router name or export IP address    
+    required string system_id        = 1 [(telemetry_options).is_key = true];
+
+    // line card / RE (slot number). For RE, it will be 65535
+    optional uint32 component_id     = 2 [(telemetry_options).is_key = true];
+
+    // PFE (if applicable)
+    optional uint32 sub_component_id = 3 [(telemetry_options).is_key = true];
+
+    // Overload sensor name with "senor name, internal path, external path
+    // and component" seperated by ":". For RE sensors, component will be
+    // daemon-name and for PFE sensors it will be "PFE".
+    optional string sensor_name      = 4 [(telemetry_options).is_key = true];
+
+    // sequence number, monotonically increasesing for each
+    // system_id, component_id, sub_component_id + sensor_name. 
+    optional uint32 sequence_number  = 5;
+
+    // timestamp (milliseconds since 00:00:00 UTC 1/1/1970)
+    optional uint64 timestamp        = 6 [(telemetry_options).is_timestamp = true];
+
+    // major version
+    optional uint32 version_major    = 7;
+
+    // minor version
+    optional uint32 version_minor    = 8;
+
+    optional IETFSensors ietf        = 100;
+
+    optional EnterpriseSensors enterprise = 101;
+}
+
+message IETFSensors {
+    extensions 1 to max;
+}
+
+message EnterpriseSensors {
+    extensions 1 to max;
+}
+
+extend EnterpriseSensors {
+    // re-use IANA assigned numbers
+    optional JuniperNetworksSensors juniperNetworks = 2636;
+}
+
+message JuniperNetworksSensors {
+    extensions 1 to max;
+}
+

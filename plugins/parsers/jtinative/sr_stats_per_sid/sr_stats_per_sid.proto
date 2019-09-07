@@ -1,0 +1,50 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+//
+// This occupies branch 16 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional SrStatsPerSid jnpr_sr_stats_per_sid_ext = 16;
+}
+
+//
+// Top-level message
+//
+message SrStatsPerSid {
+    // List of SR stats per SID records (ingress only as of now)
+    repeated SegmentRoutingRecord sid_stats = 1;
+}
+
+//
+// SR statistics record
+//
+message SegmentRoutingRecord {
+    // Name of the SID
+    required string      sid_identifier        = 1  [(telemetry_options).is_key = true];
+
+    // Instance Identifier for cases when RPD creates multiple instances
+    optional uint32 instance_identifier        = 2  [(telemetry_options).is_key = true];
+
+    // Name of the counter. This is useful when an SR label has multiple counters.
+    // For some scenarios like routing restart, it is possible that a new counter is
+    // created in the hardware.
+    optional string      counter_name         = 3  [(telemetry_options).is_key = true];
+
+    // Ingress Traffic statistics
+    optional SegmentRoutingStats ingress_stats = 4;
+
+    // Egress statistics
+    optional SegmentRoutingStats egress_stats  = 5;
+}
+
+message SegmentRoutingStats {
+    // Packet and Byte statistics
+    optional uint64      packets = 1         [(telemetry_options).is_counter = true];
+    optional uint64      bytes = 2           [(telemetry_options).is_counter = true];
+
+    // Rates of the above counters.
+    optional uint64      packet_rate = 3    [(telemetry_options).is_gauge = true];
+    optional uint64      byte_rate = 4     [(telemetry_options).is_gauge = true];
+}

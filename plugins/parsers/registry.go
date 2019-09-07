@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/jtinative"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
@@ -143,6 +144,13 @@ type Config struct {
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 
+	//JTI Native configuration
+	JTINativeMeasurementOverride []map[string]string `toml:"jti_measurement_override"`
+	JTINativeTagOverride         []map[string]string `toml:"jti_tag_override"`
+	JTINativeConvertTag          []string            `toml:"jti_convert_tag"`
+	JTINativeConvertField        []string            `toml:"jti_convert_field"`
+	JTIStrAsTag                  bool                `toml:"jti_str_as_tag"`
+
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 }
@@ -217,6 +225,14 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
+	case "jtinative":
+		parser, err = NewJTINativeParser(
+			config.DefaultTags,
+			config.JTINativeMeasurementOverride,
+			config.JTINativeTagOverride,
+			config.JTINativeConvertTag,
+			config.JTINativeConvertField,
+			config.JTIStrAsTag)
 	case "form_urlencoded":
 		parser, err = NewFormUrlencodedParser(
 			config.MetricName,
@@ -375,6 +391,25 @@ func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, 
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
 	return wavefront.NewWavefrontParser(defaultTags), nil
+}
+
+func NewJTINativeParser(
+	defaultTags map[string]string,
+	JTINativeMeasurementOverride []map[string]string,
+	JTINativeTagOverride []map[string]string,
+	JTINativeConvertTag []string,
+	JTINativeConvertField []string,
+	JTIStrAsTag bool,
+) (Parser, error) {
+	jti := &jtinative.JTINativeParser{}
+	jti.DefaultTags = defaultTags
+	jti.JTINativeMeasurementOverride = JTINativeMeasurementOverride
+	jti.JTINativeTagOverride = JTINativeTagOverride
+	jti.JTINativeConvertTag = JTINativeConvertTag
+	jti.JTINativeConvertField = JTINativeConvertField
+	jti.JTIStrAsTag = JTIStrAsTag
+	jti.BuildOverrides()
+	return jti, nil
 }
 
 func NewFormUrlencodedParser(

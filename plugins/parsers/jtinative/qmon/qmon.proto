@@ -1,0 +1,77 @@
+import "pbj.proto";
+
+import "telemetry_top.proto";
+
+message QueueMonitor {
+    repeated QueueMonitorElement queue_monitor_element_info = 1
+                                 [(pbj_field_option).max_count = 2048];
+}
+
+// QueueMonitorElement for an interface
+message QueueMonitorElement {
+    // interface name
+    required string if_name        = 1 [(telemetry_options).is_key = true,
+                                       (pbj_field_option).type = FT_POINTER];
+
+    // parent ae interface name
+    optional string parent_ae_name = 2 [(pbj_field_option).type = FT_POINTER];
+
+    // ingress stats
+    optional QueueMonitorDirection
+      queue_monitor_stats_ingress  = 3;
+
+    // egress stats
+    optional QueueMonitorDirection
+      queue_monitor_stats_egress   = 4;
+}
+
+message QueueMonitorDirection {
+    repeated QueueMonitorStats
+      queue_monitor_stats_info     = 1 [(pbj_field_option).max_count = 8];
+}
+
+// QueueMonitorStats for a queue
+message QueueMonitorStats {
+    // queue number, 0-7
+    required uint32 queue_number       = 1 [(telemetry_options).is_key = true];
+
+    // queue id, 0-max(16k for version 1)
+    required uint32 queue_id           = 2 [(telemetry_options).is_key = true];
+
+    // peak_buffer_occupancy in bytes
+    required uint32 peak_buffer_occupancy_bytes   = 3 [(telemetry_options).is_gauge = true];
+
+    // (peak_buffer_occupancy/max_queue_size) * 100
+    optional uint32 peak_buffer_occupancy_percent = 4 [(telemetry_options).is_gauge = true];
+
+    // Count of packets/bytes forwarded
+    required uint64 packets                   = 5 [(telemetry_options).is_counter = true];
+    required uint64 octets                    = 6 [(telemetry_options).is_counter = true];
+
+    // Count of packets/bytes due to dropped tail/force/error
+    required uint64 tail_drop_packets         = 7 [(telemetry_options).is_counter = true];
+    required uint64 tail_drop_octets          = 8 [(telemetry_options).is_counter = true];
+
+    // Count of packets/bytes due to WRED color 0
+    required uint64 red_drop_packets_color_0  = 9 [(telemetry_options).is_counter = true];
+    required uint64 red_drop_octets_color_0   = 10 [(telemetry_options).is_counter = true];
+
+    // Count of packets/bytes due to WRED color 1
+    required uint64 red_drop_packets_color_1  = 11 [(telemetry_options).is_counter = true];
+    required uint64 red_drop_octets_color_1   = 12 [(telemetry_options).is_counter = true];
+
+    // Count of packets/bytes due to WRED color 2
+    required uint64 red_drop_packets_color_2  = 13 [(telemetry_options).is_counter = true];
+    required uint64 red_drop_octets_color_2   = 14 [(telemetry_options).is_counter = true];
+
+    // Count of packets/bytes due to WRED color 3
+    required uint64 red_drop_packets_color_3  = 15 [(telemetry_options).is_counter = true];
+    required uint64 red_drop_octets_color_3   = 16 [(telemetry_options).is_counter = true];
+}
+
+//
+// this occupies branch 15 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional QueueMonitor jnpr_qmon_ext = 15;
+}

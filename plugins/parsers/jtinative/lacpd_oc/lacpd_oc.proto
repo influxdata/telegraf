@@ -1,0 +1,63 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional lacp_lacp jnpr_lacp_lacp_ext = 52;
+}
+
+message lacp_lacp {
+   optional state_type state = 151;
+   message state_type {
+      optional uint32 system_priority = 51;
+   }
+   optional interfaces_type interfaces = 152;
+   message interfaces_type {
+      message interface_list {
+         optional string name = 51 [(telemetry_options).is_key = true];
+         optional state_type state = 151;
+         message state_type {
+            optional string name = 51;
+            optional string interval = 52;
+            optional string lacp_mode = 53;
+            optional string system_id_mac = 54;
+            optional uint32 system_priority = 55;
+         }
+         optional members_type members = 152;
+         message members_type {
+            message member_list {
+               optional string interface = 51 [(telemetry_options).is_key = true];
+               optional state_type state = 151;
+               message state_type {
+                  optional string interface = 51;
+                  optional string activity = 52;
+                  optional string timeout = 53;
+                  optional string synchronization = 54;
+                  optional bool aggregatable = 55;
+                  optional bool collecting = 56;
+                  optional bool distributing = 57;
+                  optional string system_id = 58;
+                  optional uint32 oper_key = 59;
+                  optional string partner_id = 61;
+                  optional uint32 partner_key = 62;
+                  optional uint32 port_num = 60;
+                  optional uint32 partner_port_num = 63;
+                  optional counters_type counters = 151;
+                  message counters_type {
+                     optional uint64 lacp_in_pkts = 51;
+                     optional uint64 lacp_out_pkts = 52;
+                     optional uint64 lacp_rx_errors = 53;
+                     optional uint64 lacp_tx_errors = 54;
+                     optional uint64 lacp_unknown_errors = 55;
+                     optional uint64 lacp_errors = 56;
+                     optional string collection_time = 57;
+                  }
+                  optional string mux_state = 64;
+               }
+            }
+            repeated member_list member = 151;
+         }
+      }
+      repeated interface_list interface = 151;
+   }
+}

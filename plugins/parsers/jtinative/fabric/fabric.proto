@@ -1,0 +1,127 @@
+//
+// This defines the gpb message format used by the fabric sensor.
+//
+// The top level message is 'fabric_message'
+//
+// Version 1.0
+//
+// Copyrights (c) 2015, 2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+message fabric_message {
+    enum sensor_location {
+        Linecard      = 1; // LC
+        Switch_Fabric = 2; // FAB
+    }; 
+    repeated edge_stats edges                 = 1;
+    optional sensor_location location         = 2 [(telemetry_options).is_key = true];
+}
+            
+message edge_stats {
+    enum identifier_type {
+        Switch_Fabric = 1;
+        Linecard      = 2;
+    };
+    optional identifier_type source_type      = 1 [(telemetry_options).is_key = true];
+    optional uint32 source_slot               = 2 [(telemetry_options).is_key = true];
+    optional uint32 source_pfe                = 3 [(telemetry_options).is_key = true];
+    optional identifier_type destination_type = 4 [(telemetry_options).is_key = true];
+    optional uint32 destination_slot          = 5 [(telemetry_options).is_key = true];
+    optional uint32 destination_pfe           = 6 [(telemetry_options).is_key = true];
+
+    // stats from src's perspective 
+    repeated class_stats class_stats          = 7;
+}
+
+//Example of fabric edge stats:
+//1. LOC: LC,  SRC: LC/FPC/PFE, Dst: LC/FPC/PFE    (FPC XM/MQ cos dstats)
+//2. LOC: LC,  SRC: LC/FPC/PFE, Dst: Fab/*/*       (FPC XM/MQ FO)
+//3. LOC: LC,  SRC: Fab/*/*,    Dst: LC/FPC/PFE    (FPC XM/MQ FI)
+//4. LOC: FAB, SRC: Fab/plane/*, Dst: LC/FPC/PFE  (SCB XF/PF TX)
+//5. LOC: FAB, SRC: LC/FPC/PFE,  Dst: Fab/plane/* (SCB XF/PF RX)
+
+message class_stats {
+    // service class, 0 being highest
+    optional string   priority                = 1 [(telemetry_options).is_key = true];
+
+    // transmit data from src to dst
+    optional counters transmit_counts         = 2;
+}    
+
+message counters {
+    // Counter: total packets/cells from this source->destination
+    optional uint64  packets                  = 1 [(telemetry_options).is_counter = true];
+
+    // Counter: total bytes from this source->destination
+    optional uint64  bytes                    = 2 [(telemetry_options).is_counter = true];
+
+    // Rate: packets/cells per seconds, measured across an interval of 1 second.
+    optional uint64  packets_per_second       = 3 [(telemetry_options).is_gauge = true];
+
+    // Rate: bits per seconds, measured across an interval of 1 second.
+    optional uint64  bytes_per_second         = 4 [(telemetry_options).is_gauge = true];
+
+    // Counter: total number of dropped packets/cells from this source->destination
+    optional uint64  drop_packets             = 5 [(telemetry_options).is_counter = true];
+
+    // Counter: total number of dropped bytes from this source->destination
+    optional uint64  drop_bytes               = 6 [(telemetry_options).is_counter = true];
+
+    // Rate: the rate at which packets/cells are dropped, in pps/cps, measured 
+    // across an interval of 1 second.
+    optional uint64  drop_packets_per_second  = 7 [(telemetry_options).is_gauge = true];
+
+    // Rate: the rate at which bytes are dropped, in bytes per sec, measured 
+    // across an interval of 1 second.
+    optional uint64  drop_bytes_per_second    = 8 [(telemetry_options).is_gauge = true];
+
+    // Average: avg queue depth,TAQL:time-average-queue-len, in packets
+    optional uint64  queue_depth_average      = 9 [(telemetry_options).is_gauge = true];
+
+    // Gauge: current queue depth, in packets
+    optional uint64  queue_depth_current      = 10 [(telemetry_options).is_gauge = true];
+
+    // Peak: the max measured queue depth, in packets, across all measurements since boot.
+    optional uint64  queue_depth_peak         = 11 [(telemetry_options).is_gauge = true];
+
+    // The configured maximum depth of the queue, in packets
+    optional uint64  queue_depth_maximum      = 12 [(telemetry_options).is_gauge = true];
+
+    // Counter: total number of errored packets
+    optional uint64  error_packets            = 13 [(telemetry_options).is_counter = true];
+
+    // Rate: the rate of errored packets, in pps, measured across an interval of 1 second.
+    optional uint64  error_packets_per_second = 14 [(telemetry_options).is_gauge = true];
+}
+
+//
+// this occupies branch 2 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional fabric_message fabricMessageExt  = 2;
+}
+

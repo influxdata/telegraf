@@ -1,0 +1,48 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_rsvp_interface jnpr_junos_rsvp_interface_ext = 46;
+}
+
+message junos_rsvp_interface {
+   optional rsvp_interface_information_type rsvp_interface_information = 151;
+   message rsvp_interface_information_type {
+      optional uint32 active_count = 51;
+      message rsvp_interface_list {
+         optional string interface_name = 51 [(telemetry_options).is_key = true];
+         optional uint32 index = 52;
+         optional string rsvp_status = 53;
+         optional string authentication_flag = 54;
+         optional string aggregate_flag = 55;
+         optional string ack_flag = 56;
+         optional string protect_flag = 57;
+         optional uint32 hello_interval = 58;
+         optional string interface_address = 59;
+         message message_statistics_list {
+            optional string rsvp_message = 51 [(telemetry_options).is_key = true];
+            optional uint32 messages_sent = 52;
+            optional uint32 messages_received = 53;
+            optional uint32 messages_sent_5seconds = 54;
+            optional uint32 messages_received_5seconds = 55;
+         }
+         repeated message_statistics_list message_statistics = 151;
+         optional rsvp_telink_type rsvp_telink = 152;
+         message rsvp_telink_type {
+            optional uint32 active_reservation = 51;
+            optional uint32 preemption_count = 52;
+            optional uint32 update_threshold = 53;
+            optional uint32 subscription = 54;
+            optional string static_bandwidth = 55;
+            optional string available_bandwidth = 56;
+            message reserved_bandwidth_list {
+               optional uint32 bandwidth_priority = 51 [(telemetry_options).is_key = true];
+               optional string total_reserved_bandwidth = 52;
+            }
+            repeated reserved_bandwidth_list reserved_bandwidth = 151;
+         }
+      }
+      repeated rsvp_interface_list rsvp_interface = 151;
+   }
+}
