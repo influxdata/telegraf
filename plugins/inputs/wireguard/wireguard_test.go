@@ -5,10 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
-
-	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestWireguard_gatherDeviceMetrics(t *testing.T) {
@@ -16,15 +15,15 @@ func TestWireguard_gatherDeviceMetrics(t *testing.T) {
 
 	wg := &Wireguard{}
 	device := &wgtypes.Device{
-		Name: "wg0",
-		Type: wgtypes.LinuxKernel,
-		ListenPort: 1,
+		Name:         "wg0",
+		Type:         wgtypes.LinuxKernel,
+		ListenPort:   1,
 		FirewallMark: 2,
-		Peers: []wgtypes.Peer{{}, {}},
+		Peers:        []wgtypes.Peer{{}, {}},
 	}
 
 	expectFields := map[string]interface{}{
-		"listen_port": 1,
+		"listen_port":   1,
 		"firewall_mark": 2,
 	}
 	expectGauges := map[string]interface{}{
@@ -52,27 +51,27 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 		Name: "wg0",
 	}
 	peer := wgtypes.Peer{
-		PublicKey: pubkey,
+		PublicKey:                   pubkey,
 		PersistentKeepaliveInterval: 1 * time.Minute,
-		LastHandshakeTime: time.Unix(100, 0),
-		ReceiveBytes: int64(40),
-		TransmitBytes: int64(60),
-		AllowedIPs: []net.IPNet{{}, {}},
-		ProtocolVersion: 0,
+		LastHandshakeTime:           time.Unix(100, 0),
+		ReceiveBytes:                int64(40),
+		TransmitBytes:               int64(60),
+		AllowedIPs:                  []net.IPNet{{}, {}},
+		ProtocolVersion:             0,
 	}
 
 	expectFields := map[string]interface{}{
 		"persistent_keepalive_interval": int64(60),
-		"protocol_version": 0,
-		"allowed_ips": 2,
+		"protocol_version":              0,
+		"allowed_ips":                   2,
 	}
 	expectGauges := map[string]interface{}{
 		"last_handshake_time": int64(100),
-		"rx_bytes": int64(40),
-		"tx_bytes": int64(60),
+		"rx_bytes":            int64(40),
+		"tx_bytes":            int64(60),
 	}
 	expectTags := map[string]string{
-		"device": "wg0",
+		"device":     "wg0",
 		"public_key": pubkey.String(),
 	}
 
