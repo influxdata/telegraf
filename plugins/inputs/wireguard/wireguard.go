@@ -1,6 +1,7 @@
 package wireguard
 
 import (
+	"fmt"
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 
@@ -60,12 +61,12 @@ func (wg *Wireguard) Init() error {
 
 func (wg *Wireguard) Gather(acc telegraf.Accumulator) error {
 	if err := wg.Init(); err != nil {
-		return err
+		return fmt.Errorf("failed to instantiate Wireguard control client: err=%v", err)
 	}
 
 	devices, err := wg.enumerateDevices()
 	if err != nil {
-		acc.AddError(err)
+		acc.AddError(fmt.Errorf("error enumerating Wireguard devices: err=%v", err))
 		return nil
 	}
 
