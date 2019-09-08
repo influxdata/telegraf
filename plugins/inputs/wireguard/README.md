@@ -1,70 +1,63 @@
-# Example Input Plugin
+# Wireguard Input Plugin
 
-The example plugin gathers metrics about example things.  This description
-explains at a high level what the plugin does and provides links to where
-additional information can be found.
+The Wireguard input plugin collects statistics on the local Wireguard server
+using the [`wgctrl`](https://github.com/WireGuard/wgctrl-go) library. It
+reports gauge metrics for Wireguard interface device(s) and its peers.
 
 ### Configuration
 
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage <plugin-name>`.
-
 ```toml
-[[inputs.example]]
-  example_option = "example_value"
+# Collect Wireguard server interface and peer statistics
+[[inputs.wireguard]]
+  ## Optional list of Wireguard device/interface names to query.
+  ## If omitted, all Wireguard interfaces are queried.
+  # devices = ["wg0"]
 ```
-
-#### example_option
-
-A more in depth description of an option can be provided here, but only do so
-if the option cannot be fully described in the sample config.
 
 ### Metrics
 
-Here you should add an optional description and links to where the user can
-get more information about the measurements.
-
-If the output is determined dynamically based on the input source, or there
-are more metrics than can reasonably be listed, describe how the input is
-mapped to the output.
-
-- measurement1
+- `wireguard_device`
   - tags:
-    - tag1 (optional description)
-    - tag2
+    - `name` (interface device name, e.g. `wg0`)
+    - `type` (Wireguard tunnel type, e.g. `linux_kernel` or `userspace`)
   - fields:
-    - field1 (type, unit)
-    - field2 (float, percent)
+    - `listen_port` (int, UDP port on which the interface is listening)
+    - `firewall_mark` (int, device's current firewall mark)
+    - `peers` (int, number of peers associated with the device)
 
-- measurement2
+- `wireguard_peer`
   - tags:
-    - tag3
+    - `device` (associated interface device name, e.g. `wg0`)
+    - `public_key` (peer public key, e.g. `NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=`)
   - fields:
-    - field3 (integer, bytes)
-
-### Sample Queries
-
-This section can contain some useful InfluxDB queries that can be used to get
-started with the plugin or to generate dashboards.  For each query listed,
-describe at a high level what data is returned.
-
-Get the max, mean, and min for the measurement in the last hour:
-```
-SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar AND time > now() - 1h GROUP BY tag
-```
+    - `persistent_keepalive_interval` (int, keepalive interval in seconds; 0 if unset)
+    - `protocol_version` (int, Wireguard protocol version number)
+    - `allowed_ips` (int, number of allowed IPs for this peer)
+    - `last_handshake_time` (int, Unix timestamp of the last handshake for this peer)
+    - `rx_bytes` (int, number of bytes received from this peer)
+    - `tx_bytes` (int, number of bytes transmitted to this peer)
 
 ### Troubleshooting
 
-This optional section can provide basic troubleshooting steps that a user can
-perform.
+#### Error: `operation not permitted`
+
+By default, Telegraf runs as the `telegraf` system user. Wireguard
+implementations that run in kernelspace (as opposed to userspace) require
+userspace programs to run as root in order to communicate with the module.
+Either update the system udev rules for the `telegraf` user or run Telegraf as
+root (not recommended).
+
+#### Error: `error enumerating Wireguard devices`
+
+This usually happens when the device names specified in config are invalid.
+Ensure that `sudo wg show` succeeds, and that the device names in config match
+those printed by this command.
 
 ### Example Output
 
-This section shows example output in Line Protocol format.  You can often use
-`telegraf --input-filter <plugin-name> --test` or use the `file` output to get
-this information.
-
 ```
-measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
-measurement2,tag1=foo,tag2=bar,tag3=baz field3=1i 1453831884664956455
+wireguard_device,host=WGVPN,name=tun0,type=linux_kernel firewall_mark=0i,listen_port=51820i 1567976672000000000
+wireguard_device,host=WGVPN,name=tun0,type=linux_kernel peers=1i 1567976672000000000
+wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= allowed_ips=1i,persistent_keepalive_interval=0i,protocol_version=1i 1567976672000000000
+wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= last_handshake_time=1567905087i,rx_bytes=261415128i,tx_bytes=334031704i 1567976672000000000
 ```
