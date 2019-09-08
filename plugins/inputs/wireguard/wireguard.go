@@ -25,6 +25,8 @@ var (
 // Wireguard is an input that enumerates all Wireguard interfaces/devices on the host, and reports
 // gauge metrics for the device itself and its peers.
 type Wireguard struct {
+	Devices []string `toml:"devices"`
+
 	client      *wgctrl.Client
 	initialized bool
 }
@@ -34,7 +36,11 @@ func (wg *Wireguard) Description() string {
 }
 
 func (wg *Wireguard) SampleConfig() string {
-	return ""
+	return `
+  ## Optional list of Wireguard device/interface names to query.
+  ## If omitted, all Wireguard interfaces are queried.
+  # devices = ["wg0"]
+`
 }
 
 func (wg *Wireguard) Init() error {
@@ -57,7 +63,7 @@ func (wg *Wireguard) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	devices, err := wg.client.Devices()
+	devices, err := wg.enumerateDevices()
 	if err != nil {
 		acc.AddError(err)
 		return nil
@@ -72,6 +78,27 @@ func (wg *Wireguard) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func (wg *Wireguard) enumerateDevices() ([]*wgtypes.Device, error) {
+	var devices []*wgtypes.Device
+
+	// If no device names are specified, defer to the library to enumerate all of them
+	if len(wg.Devices) == 0 {
+		return wg.client.Devices()
+	}
+
+	// Otherwise, explicitly populate only those device names specified in config
+	for _, name := range wg.Devices {
+		dev, err := wg.client.Device(name)
+		if err != nil {
+			return nil, err
+		}
+
+		devices = append(devices, dev)
+	}
+
+	return devices, nil
 }
 
 func (wg *Wireguard) gatherDeviceMetrics(acc telegraf.Accumulator, device *wgtypes.Device) {
