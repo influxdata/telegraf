@@ -141,7 +141,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 
 	if h.FollowRedirects == false {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return ErrRedirectAttempted
+			return http.ErrUseLastResponse
 		}
 	}
 	return client, nil
@@ -254,16 +254,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 
 		// Any error not recognized by `set_error` is considered a "connection_failed"
 		setResult("connection_failed", fields, tags)
-
-		// If the error is a redirect we continue processing and log the HTTP code
-		urlError, isUrlError := err.(*url.Error)
-		if !h.FollowRedirects && isUrlError && urlError.Err == ErrRedirectAttempted {
-			err = nil
-		} else {
-			// If the error isn't a timeout or a redirect stop
-			// processing the request
-			return fields, tags, nil
-		}
+		return fields, tags, nil
 	}
 
 	if _, ok := fields["response_time"]; !ok {
