@@ -222,7 +222,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		metrics, err := parseLine(parser, text, firstLine)
 		if err != nil {
 			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
-				tailer.Filename, line.Text, err.Error)
+				tailer.Filename, line.Text, err.Error())
 			continue
 		}
 		firstLine = false
