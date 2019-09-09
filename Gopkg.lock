@@ -48,6 +48,22 @@
   version = "v0.6.0"
 
 [[projects]]
+  digest = "1:bd444f85703c5aff1ba686cb52766fd38c3730d4e1dfb02327b2481bfe674997"
+  name = "github.com/Azure/azure-pipeline-go"
+  packages = ["pipeline"]
+  pruneopts = ""
+  revision = "b8e3409182fd52e74f7d7bdfbff5833591b3b655"
+  version = "v0.1.8"
+
+[[projects]]
+  digest = "1:6ef03ecdaf3e9a003c2ebd67bfa673bbe8df2c23c82217a4448da766e8ef6b30"
+  name = "github.com/Azure/azure-storage-queue-go"
+  packages = ["azqueue"]
+  pruneopts = ""
+  revision = "6ed74e755687d1a74f08d9aab5a9e3f2fbe7d162"
+  version = "0.2.0"
+
+[[projects]]
   digest = "1:5923e22a060ab818a015593422f9e8a35b9d881d4cfcfed0669a82959b11c7ee"
   name = "github.com/Azure/go-autorest"
   packages = [
@@ -60,14 +76,6 @@
   pruneopts = ""
   revision = "1f7cd6cfe0adea687ad44a512dfe76140f804318"
   version = "v10.12.0"
-
-[[projects]]
-  digest = "1:82041ab48e5c76da656b723fdc13a2b9ec716cdc736f82adaac77f5c39d4fca8"
-  name = "github.com/DataDog/zstd"
-  packages = ["."]
-  pruneopts = ""
-  revision = "2347a397da4ee9c6b8226d4aff82c302d0e52773"
-  version = "v1.4.1"
 
 [[projects]]
   branch = "master"
@@ -89,12 +97,12 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "1:5dd52495eaf9fad11f4742f341166aa9eb68f70061fc1a9b546f9481b284b6d8"
+  digest = "1:322bf7f4bb312294fc551f6e2c82d02f2ab8f94920f4163b3deeb07a8141ac79"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
-  revision = "46c83074a05474240f9620fb7c70fb0d80ca401a"
-  version = "v1.23.1"
+  revision = "b12709e6ca29240128c89fe0b30b6a76be42b457"
+  source = "https://github.com/influxdata/sarama.git"
 
 [[projects]]
   digest = "1:f82b8ac36058904227087141017bb82f4b0fc58272990a4cdae3e2d6d222644e"
@@ -1184,6 +1192,7 @@
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
+    "find",
     "list",
     "nfc",
     "object",
@@ -1669,6 +1678,7 @@
     "cloud.google.com/go/pubsub",
     "collectd.org/api",
     "collectd.org/network",
+    "github.com/Azure/azure-storage-queue-go/azqueue",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",

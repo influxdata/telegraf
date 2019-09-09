@@ -53,5 +53,5 @@ Output:
 mymetric,tag1=foo field1=0.42,field2=42
 ```
 
-[query_string]: https://en.wikipedia.org/wiki/Query_string
+[query string]: https://en.wikipedia.org/wiki/Query_string
 [http_listener_v2]: /plugins/inputs/http_listener_v2

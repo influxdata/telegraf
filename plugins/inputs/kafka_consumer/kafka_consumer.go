@@ -360,8 +360,8 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 		}
 	}
 
-	id := h.acc.AddTrackingMetricGroup(metrics)
 	h.mu.Lock()
+	id := h.acc.AddTrackingMetricGroup(metrics)
 	h.undelivered[id] = Message{session: session, message: msg}
 	h.mu.Unlock()
 	return nil
