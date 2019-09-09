@@ -5,8 +5,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.zx2c4.com/wireguard/wgctrl"
-	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
+	"github.com/mdlayher/wireguardctrl"
+	"github.com/mdlayher/wireguardctrl/wgtypes"
 )
 
 const (
@@ -18,7 +18,6 @@ var (
 	deviceTypeNames = map[wgtypes.DeviceType]string{
 		wgtypes.Unknown:       "unknown",
 		wgtypes.LinuxKernel:   "linux_kernel",
-		wgtypes.OpenBSDKernel: "openbsd_kernel",
 		wgtypes.Userspace:     "userspace",
 	}
 )
@@ -28,7 +27,7 @@ var (
 type Wireguard struct {
 	Devices []string `toml:"devices"`
 
-	client      *wgctrl.Client
+	client      *wireguardctrl.Client
 	initialized bool
 }
 
@@ -51,7 +50,7 @@ func (wg *Wireguard) Init() error {
 		return nil
 	}
 
-	if wg.client, err = wgctrl.New(); err != nil {
+	if wg.client, err = wireguardctrl.New(); err != nil {
 		return err
 	}
 
