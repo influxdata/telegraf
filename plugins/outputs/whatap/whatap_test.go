@@ -4,8 +4,6 @@ import (
 	"fmt"
 	//"log"
 	"net"
-	"strconv"
-	"strings"
 	"testing"
 
 	//"time"
@@ -29,9 +27,7 @@ func TestWhatapConnect(t *testing.T) {
 	addr := listener.Addr().String()
 	fmt.Println(addr)
 
-	arr := strings.Split(addr, ":")
-	w.Server = arr[0]
-	w.Port, err = strconv.Atoi(arr[1])
+	w.Servers = append(w.Servers, fmt.Sprintf("%s://%s", "tcp", addr))
 	require.NoError(t, err)
 
 	err = w.Connect()
@@ -49,9 +45,7 @@ func TestWhatapWriteErr(t *testing.T) {
 	addr := listener.Addr().String()
 	fmt.Println(addr)
 
-	arr := strings.Split(addr, ":")
-	w.Server = arr[0]
-	w.Port, err = strconv.Atoi(arr[1])
+	w.Servers = append(w.Servers, fmt.Sprintf("%s://%s", "tcp", addr))
 	require.NoError(t, err)
 
 	err = w.Connect()
@@ -70,4 +64,3 @@ func TestWhatapWriteErr(t *testing.T) {
 	require.Error(t, err)
 	assert.Nil(t, w.Session.Client)
 }
-
