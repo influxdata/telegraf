@@ -203,7 +203,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	h.Log.Infof("started HTTP listener service on %s", h.ServiceAddress)
+	h.Log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
 
 	return nil
 }
@@ -216,7 +216,7 @@ func (h *HTTPListener) Stop() {
 	h.listener.Close()
 	h.wg.Wait()
 
-	h.Log.Infof("stopped HTTP listener service on %s", h.ServiceAddress)
+	h.Log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
 }
 
 func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -349,7 +349,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		if i == -1 {
 			h.longLines.Incr(1)
 			// drop any line longer than the max buffer size
-			h.Log.Debugf("http_listener received a single line longer than the maximum of %d bytes",
+			h.Log.Debugf("Http_listener received a single line longer than the maximum of %d bytes",
 				len(buf))
 			hangingBytes = true
 			return400 = true

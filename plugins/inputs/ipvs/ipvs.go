@@ -61,7 +61,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 
 		destinations, err := i.handle.GetDestinations(s)
 		if err != nil {
-			i.Log.Errorf("failed to list destinations for a virtual server: %s", err.Error())
+			i.Log.Errorf("Failed to list destinations for a virtual server: %s", err.Error())
 			continue // move on to the next virtual server
 		}
 

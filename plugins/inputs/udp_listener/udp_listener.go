@@ -115,7 +115,7 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	u.wg.Add(1)
 	go u.udpParser()
 
-	u.Log.Infof("started service on %q (ReadBuffer: %d)", u.ServiceAddress, u.UDPBufferSize)
+	u.Log.Infof("Started service on %q (ReadBuffer: %d)", u.ServiceAddress, u.UDPBufferSize)
 	return nil
 }
 
@@ -126,7 +126,7 @@ func (u *UdpListener) Stop() {
 	u.wg.Wait()
 	u.listener.Close()
 	close(u.in)
-	u.Log.Infof("stopped service on %q", u.ServiceAddress)
+	u.Log.Infof("Stopped service on %q", u.ServiceAddress)
 }
 
 func (u *UdpListener) udpListen() error {
@@ -139,7 +139,7 @@ func (u *UdpListener) udpListen() error {
 		return err
 	}
 
-	u.Log.Infof("server listening on %q", u.listener.LocalAddr().String())
+	u.Log.Infof("Server listening on %q", u.listener.LocalAddr().String())
 
 	if u.UDPBufferSize > 0 {
 		err = u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default

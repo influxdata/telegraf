@@ -213,7 +213,7 @@ func (m *MQTTConsumer) connect() error {
 		return err
 	}
 
-	m.Log.Infof("connected %v", m.Servers)
+	m.Log.Infof("Connected %v", m.Servers)
 	m.state = Connected
 	m.sem = make(semaphore, m.MaxUndeliveredMessages)
 	m.messages = make(map[telegraf.TrackingID]bool)
@@ -224,7 +224,7 @@ func (m *MQTTConsumer) connect() error {
 		SessionPresent() bool
 	}
 	if t, ok := token.(sessionPresent); ok && t.SessionPresent() {
-		m.Log.Debugf("session found %v", m.Servers)
+		m.Log.Debugf("Session found %v", m.Servers)
 		return nil
 	}
 
@@ -245,7 +245,7 @@ func (m *MQTTConsumer) connect() error {
 
 func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
 	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
-	m.Log.Debugf("disconnected %v", m.Servers)
+	m.Log.Debugf("Disconnected %v", m.Servers)
 	m.state = Disconnected
 	return
 }
@@ -293,9 +293,9 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 
 func (m *MQTTConsumer) Stop() {
 	if m.state == Connected {
-		m.Log.Debugf("disconnecting %v", m.Servers)
+		m.Log.Debugf("Disconnecting %v", m.Servers)
 		m.client.Disconnect(200)
-		m.Log.Debugf("disconnected %v", m.Servers)
+		m.Log.Debugf("Disconnected %v", m.Servers)
 		m.state = Disconnected
 	}
 	m.cancel()
@@ -304,7 +304,7 @@ func (m *MQTTConsumer) Stop() {
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
 	if m.state == Disconnected {
 		m.state = Connecting
-		m.Log.Debugf("connecting %v", m.Servers)
+		m.Log.Debugf("Connecting %v", m.Servers)
 		m.connect()
 	}
 
@@ -347,7 +347,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	for _, server := range m.Servers {
 		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4
 		if !strings.Contains(server, "://") {
-			m.Log.Warnf("server %q should be updated to use `scheme://host:port` format", server)
+			m.Log.Warnf("Server %q should be updated to use `scheme://host:port` format", server)
 			if tlsCfg == nil {
 				server = "tcp://" + server
 			} else {

@@ -244,7 +244,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			m.Log.Error("no sensors are specified")
+			m.Log.Error("No sensors are specified")
 			continue
 		}
 
@@ -258,7 +258,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			m.Log.Error("no valid sensors are specified")
+			m.Log.Error("No valid sensors are specified")
 			continue
 		}
 
@@ -301,7 +301,7 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					} else {
 						// Retry with delay. If delay is not provided, use default
 						if m.RetryDelay.Duration > 0 {
-							m.Log.Debugf("retrying %s with timeout %v", grpcServer,
+							m.Log.Debugf("Retrying %s with timeout %v", grpcServer,
 								m.RetryDelay.Duration)
 							time.Sleep(m.RetryDelay.Duration)
 							continue
@@ -319,7 +319,7 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 						break
 					}
 
-					m.Log.Debugf("received from %s: %v", grpcServer, r)
+					m.Log.Debugf("Received from %s: %v", grpcServer, r)
 
 					// Create a point and add to batch
 					tags := make(map[string]string)
@@ -330,7 +330,7 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					dgroups := m.extractData(r, grpcServer)
 
 					// Print final data collection
-					m.Log.Debugf("available collection for %s is: %v", grpcServer, dgroups)
+					m.Log.Debugf("Available collection for %s is: %v", grpcServer, dgroups)
 
 					tnow := time.Now()
 					// Iterate through data groups and add them
@@ -376,15 +376,15 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		// Extract device address and port
 		grpcServer, grpcPort, err := net.SplitHostPort(server)
 		if err != nil {
-			m.Log.Errorf("invalid server address: %s", err.Error())
+			m.Log.Errorf("Invalid server address: %s", err.Error())
 			continue
 		}
 
 		grpcClientConn, err = grpc.Dial(server, opts...)
 		if err != nil {
-			m.Log.Errorf("failed to connect to %s: %s", server, err.Error())
+			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
 		} else {
-			m.Log.Debugf("opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
+			m.Log.Debugf("Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
 		}
 
 		// Add to the list of client connections
@@ -396,13 +396,13 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				&authentication.LoginRequest{UserName: m.Username,
 					Password: m.Password, ClientId: m.ClientID})
 			if loginErr != nil {
-				m.Log.Errorf("could not initiate login check for %s: %v", server, loginErr)
+				m.Log.Errorf("Could not initiate login check for %s: %v", server, loginErr)
 				continue
 			}
 
 			// Check if the user is authenticated. Bail if auth error
 			if !loginReply.Result {
-				m.Log.Errorf("failed to authenticate the user for %s", server)
+				m.Log.Errorf("Failed to authenticate the user for %s", server)
 				continue
 			}
 		}

@@ -167,7 +167,7 @@ func (s *DiskIO) diskName(devName string) (string, []string) {
 	}
 
 	if err != nil {
-		s.Log.Warnf("error gathering disk info: %s", err)
+		s.Log.Warnf("Error gathering disk info: %s", err)
 		return devName, devLinks
 	}
 
@@ -200,7 +200,7 @@ func (s *DiskIO) diskTags(devName string) map[string]string {
 
 	di, err := s.diskInfo(devName)
 	if err != nil {
-		s.Log.Warnf("error gathering disk info: %s", err)
+		s.Log.Warnf("Error gathering disk info: %s", err)
 		return nil
 	}
 

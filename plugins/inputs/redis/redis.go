@@ -99,7 +99,7 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 
 	for i, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
-			r.Log.Warn("server URL found without scheme; please update your configuration file")
+			r.Log.Warn("Server URL found without scheme; please update your configuration file")
 			serv = "tcp://" + serv
 		}
 

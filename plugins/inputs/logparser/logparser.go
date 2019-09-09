@@ -207,7 +207,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 	for _, filepath := range l.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			l.Log.Errorf("glob %q failed to compile: %s", filepath, err)
+			l.Log.Errorf("Glob %q failed to compile: %s", filepath, err)
 			continue
 		}
 		files := g.Match()
@@ -221,7 +221,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 			var seek *tail.SeekInfo
 			if !fromBeginning {
 				if offset, ok := l.offsets[file]; ok {
-					l.Log.Debugf("using offset %d for file: %v", offset, file)
+					l.Log.Debugf("Using offset %d for file: %v", offset, file)
 					seek = &tail.SeekInfo{
 						Whence: 0,
 						Offset: offset,
@@ -248,7 +248,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 				continue
 			}
 
-			l.Log.Debugf("tail added for file: %v", file)
+			l.Log.Debugf("Tail added for file: %v", file)
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
@@ -269,7 +269,7 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 	for line = range tailer.Lines {
 
 		if line.Err != nil {
-			l.Log.Errorf("error tailing file %s, Error: %s",
+			l.Log.Errorf("Error tailing file %s, Error: %s",
 				tailer.Filename, line.Err)
 			continue
 		}
@@ -315,7 +315,7 @@ func (l *LogParserPlugin) parser() {
 				l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
 		} else {
-			l.Log.Errorf("error parsing log line: %s", err.Error())
+			l.Log.Errorf("Error parsing log line: %s", err.Error())
 		}
 
 	}
@@ -332,7 +332,7 @@ func (l *LogParserPlugin) Stop() {
 			offset, err := t.Tell()
 			if err == nil {
 				l.offsets[t.Filename] = offset
-				l.Log.Debugf("recording offset %d for file: %v", offset, t.Filename)
+				l.Log.Debugf("Recording offset %d for file: %v", offset, t.Filename)
 			} else {
 				l.acc.AddError(fmt.Errorf("error recording offset for file %s", t.Filename))
 			}
@@ -340,10 +340,10 @@ func (l *LogParserPlugin) Stop() {
 		err := t.Stop()
 
 		//message for a stopped tailer
-		l.Log.Debugf("tail dropped for file: %v", t.Filename)
+		l.Log.Debugf("Tail dropped for file: %v", t.Filename)
 
 		if err != nil {
-			l.Log.Errorf("error stopping tail on file %s", t.Filename)
+			l.Log.Errorf("Error stopping tail on file %s", t.Filename)
 		}
 	}
 	close(l.done)

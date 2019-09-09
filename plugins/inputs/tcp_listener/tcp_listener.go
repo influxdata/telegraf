@@ -116,7 +116,7 @@ func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 	address, _ := net.ResolveTCPAddr("tcp", t.ServiceAddress)
 	t.listener, err = net.ListenTCP("tcp", address)
 	if err != nil {
-		t.Log.Errorf("failed to listen: %s", err.Error())
+		t.Log.Errorf("Failed to listen: %s", err.Error())
 		return err
 	}
 
@@ -124,7 +124,7 @@ func (t *TcpListener) Start(acc telegraf.Accumulator) error {
 	go t.tcpListen()
 	go t.tcpParser()
 
-	t.Log.Infof("started TCP listener service on %q", t.ServiceAddress)
+	t.Log.Infof("Started TCP listener service on %q", t.ServiceAddress)
 	return nil
 }
 
@@ -151,7 +151,7 @@ func (t *TcpListener) Stop() {
 
 	t.wg.Wait()
 	close(t.in)
-	t.Log.Infof("stopped TCP listener service on %q", t.ServiceAddress)
+	t.Log.Infof("Stopped TCP listener service on %q", t.ServiceAddress)
 }
 
 // tcpListen listens for incoming TCP connections.
@@ -192,8 +192,8 @@ func (t *TcpListener) refuser(conn *net.TCPConn) {
 		" reached, closing.\nYou may want to increase max_tcp_connections in"+
 		" the Telegraf tcp listener configuration.\n", t.MaxTCPConnections)
 	conn.Close()
-	t.Log.Infof("refused TCP Connection from %s", conn.RemoteAddr())
-	t.Log.Warn("maximum TCP Connections reached, you may want to adjust max_tcp_connections")
+	t.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
+	t.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
 
 // handler handles a single TCP Connection

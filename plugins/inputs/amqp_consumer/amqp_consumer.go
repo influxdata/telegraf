@@ -241,7 +241,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 				break
 			}
 
-			a.Log.Infof("connection closed: %s; trying to reconnect", err)
+			a.Log.Infof("Connection closed: %s; trying to reconnect", err)
 			for {
 				msgs, err := a.connect(amqpConf)
 				if err != nil {
@@ -272,14 +272,14 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	p := rand.Perm(len(brokers))
 	for _, n := range p {
 		broker := brokers[n]
-		a.Log.Debugf("connecting to %q", broker)
+		a.Log.Debugf("Connecting to %q", broker)
 		conn, err := amqp.DialConfig(broker, *amqpConf)
 		if err == nil {
 			a.conn = conn
-			a.Log.Debugf("connected to %q", broker)
+			a.Log.Debugf("Connected to %q", broker)
 			break
 		}
-		a.Log.Debugf("error connecting to %q", broker)
+		a.Log.Debugf("Error connecting to %q", broker)
 	}
 
 	if a.conn == nil {
@@ -288,7 +288,7 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 
 	ch, err := a.conn.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open a channel: %s", err)
+		return nil, fmt.Errorf("Failed to open a channel: %s", err.Error())
 	}
 
 	if a.Exchange != "" {
@@ -395,7 +395,7 @@ func declareExchange(
 		)
 	}
 	if err != nil {
-		return fmt.Errorf("error declaring exchange: %v", err)
+		return fmt.Errorf("Error declaring exchange: %v", err)
 	}
 	return nil
 }
@@ -437,7 +437,7 @@ func declareQueue(
 		)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("error declaring queue: %v", err)
+		return nil, fmt.Errorf("Error declaring queue: %v", err)
 	}
 	return &queue, nil
 }
@@ -486,7 +486,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 		// this message.
 		rejErr := d.Ack(false)
 		if rejErr != nil {
-			a.Log.Errorf("unable to reject message: %d: %v", d.DeliveryTag, rejErr)
+			a.Log.Errorf("Unable to reject message: %d: %v", d.DeliveryTag, rejErr)
 			a.conn.Close()
 		}
 	}
@@ -518,13 +518,13 @@ func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
 	if track.Delivered() {
 		err := delivery.Ack(false)
 		if err != nil {
-			a.Log.Errorf("unable to ack written delivery: %d: %v", delivery.DeliveryTag, err)
+			a.Log.Errorf("Unable to ack written delivery: %d: %v", delivery.DeliveryTag, err)
 			a.conn.Close()
 		}
 	} else {
 		err := delivery.Reject(false)
 		if err != nil {
-			a.Log.Errorf("unable to reject failed delivery: %d: %v", delivery.DeliveryTag, err)
+			a.Log.Errorf("Unable to reject failed delivery: %d: %v", delivery.DeliveryTag, err)
 			a.conn.Close()
 		}
 	}
@@ -538,7 +538,7 @@ func (a *AMQPConsumer) Stop() {
 	a.wg.Wait()
 	err := a.conn.Close()
 	if err != nil && err != amqp.ErrClosed {
-		a.Log.Errorf("error closing AMQP connection: %s", err)
+		a.Log.Errorf("Error closing AMQP connection: %s", err)
 		return
 	}
 }

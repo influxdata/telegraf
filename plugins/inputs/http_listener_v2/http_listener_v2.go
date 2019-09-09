@@ -162,7 +162,7 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	h.Log.Infof("listening on %s", listener.Addr().String())
+	h.Log.Infof("Listening on %s", listener.Addr().String())
 
 	return nil
 }
@@ -219,7 +219,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 	metrics, err := h.Parse(bytes)
 	if err != nil {
-		h.Log.Debugf("parse error: %s", err.Error())
+		h.Log.Debugf("Parse error: %s", err.Error())
 		badRequest(res)
 		return
 	}
@@ -261,7 +261,7 @@ func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request
 
 	query, err := url.QueryUnescape(rawQuery)
 	if err != nil {
-		h.Log.Debugf("error parsing query: %s", err.Error())
+		h.Log.Debugf("Error parsing query: %s", err.Error())
 		badRequest(res)
 		return nil, false
 	}

@@ -209,10 +209,10 @@ func (m *Smart) scan() ([]string, error) {
 	for _, line := range strings.Split(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
-			m.Log.Debugf("adding device: %+#v", dev)
+			m.Log.Debugf("Adding device: %+#v", dev)
 			devices = append(devices, strings.TrimSpace(dev[0]))
 		} else {
-			m.Log.Debugf("skipping device: %+#v", dev)
+			m.Log.Debugf("Skipping device: %+#v", dev)
 		}
 	}
 	return devices, nil

@@ -221,7 +221,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		})
 		if err != nil {
 			k.cancel()
-			k.Log.Errorf("scan encounterred an error: %s", err.Error())
+			k.Log.Errorf("Scan encounterred an error: %s", err.Error())
 			k.cons = nil
 		}
 	}()
@@ -286,7 +286,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 				k.lastSeqNum = strToBint(sequenceNum)
 				k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum)
 			} else {
-				k.Log.Debug("metric group failed to process")
+				k.Log.Debug("Metric group failed to process")
 			}
 		}
 	}

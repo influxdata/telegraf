@@ -298,7 +298,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 
 		data, err := ioutil.ReadFile(s.SnmptranslateFile)
 		if err != nil {
-			s.Log.Errorf("reading SNMPtranslate file error: %s", err.Error())
+			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err
 		} else {
 			for _, line := range strings.Split(string(data), "\n") {
@@ -396,16 +396,16 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// only if len(s.OidInstanceMapping) == 0
 		if len(host.OidInstanceMapping) >= 0 {
 			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
-				s.Log.Errorf("mapping error for host %q: %s", host.Address, err.Error())
+				s.Log.Errorf("Mapping error for host %q: %s", host.Address, err.Error())
 				continue
 			}
 		}
 		// Launch Get requests
 		if err := host.SNMPGet(acc, s.initNode); err != nil {
-			s.Log.Errorf("error for host %q: %s", host.Address, err.Error())
+			s.Log.Errorf("Error for host %q: %s", host.Address, err.Error())
 		}
 		if err := host.SNMPBulk(acc, s.initNode); err != nil {
-			s.Log.Errorf("error for host %q: %s", host.Address, err.Error())
+			s.Log.Errorf("Error for host %q: %s", host.Address, err.Error())
 		}
 	}
 	return nil

@@ -124,7 +124,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			t.Log.Errorf("glob %q failed to compile: %s", filepath, err.Error())
+			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
 		}
 		for _, file := range g.Match() {
 			if _, ok := t.tailers[file]; ok {
@@ -135,7 +135,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			var seek *tail.SeekInfo
 			if !t.Pipe && !fromBeginning {
 				if offset, ok := t.offsets[file]; ok {
-					t.Log.Debugf("using offset %d for %q", offset, file)
+					t.Log.Debugf("Using offset %d for %q", offset, file)
 					seek = &tail.SeekInfo{
 						Whence: 0,
 						Offset: offset,
@@ -163,11 +163,11 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				continue
 			}
 
-			t.Log.Debugf("tail added for %q", file)
+			t.Log.Debugf("Tail added for %q", file)
 
 			parser, err := t.parserFunc()
 			if err != nil {
-				t.Log.Errorf("creating parser: %s", err.Error())
+				t.Log.Errorf("Creating parser: %s", err.Error())
 			}
 
 			// create a goroutine for each "tailer"
@@ -213,7 +213,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	var firstLine = true
 	for line := range tailer.Lines {
 		if line.Err != nil {
-			t.Log.Errorf("tailing %q: %s", tailer.Filename, line.Err.Error())
+			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
 			continue
 		}
 		// Fix up files with Windows line endings.
@@ -221,7 +221,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 
 		metrics, err := parseLine(parser, text, firstLine)
 		if err != nil {
-			t.Log.Errorf("malformed log line in %q: [%q]: %s",
+			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
 				tailer.Filename, line.Text, err.Error)
 			continue
 		}
@@ -233,10 +233,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		}
 	}
 
-	t.Log.Debugf("tail removed for %q", tailer.Filename)
+	t.Log.Debugf("Tail removed for %q", tailer.Filename)
 
 	if err := tailer.Err(); err != nil {
-		t.Log.Errorf("tailing %q: %s", tailer.Filename, err.Error())
+		t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
 	}
 }
 
@@ -249,14 +249,14 @@ func (t *Tail) Stop() {
 			// store offset for resume
 			offset, err := tailer.Tell()
 			if err == nil {
-				t.Log.Debugf("recording offset %d for %q", offset, tailer.Filename)
+				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
 			} else {
-				t.Log.Errorf("recording offset for %q: %s", tailer.Filename, err.Error())
+				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
 			}
 		}
 		err := tailer.Stop()
 		if err != nil {
-			t.Log.Errorf("stopping tail on %q: %s", tailer.Filename, err.Error())
+			t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
 		}
 	}
 

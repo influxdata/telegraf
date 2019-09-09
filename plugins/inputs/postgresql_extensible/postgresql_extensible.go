@@ -239,7 +239,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	fields := make(map[string]interface{})
 COLUMN:
 	for col, val := range columnMap {
-		p.Log.Debugf("column: %s = %T: %v\n", col, *val, *val)
+		p.Log.Debugf("Column: %s = %T: %v\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]
 		if ignore || *val == nil {
 			continue
@@ -257,7 +257,7 @@ COLUMN:
 			case int64, int32, int:
 				tags[col] = fmt.Sprintf("%d", v)
 			default:
-				p.Log.Debugf("failed to add %q as additional tag", col)
+				p.Log.Debugf("Failed to add %q as additional tag", col)
 			}
 			continue COLUMN
 		}

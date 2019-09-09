@@ -28,9 +28,9 @@ type configuredStats struct {
 }
 
 func NewBasicStats() *BasicStats {
-	mm := &BasicStats{}
-	mm.Reset()
-	return mm
+	return &BasicStats{
+		cache: make(map[uint64]aggregate),
+	}
 }
 
 type aggregate struct {
@@ -52,7 +52,7 @@ type basicstats struct {
 
 var sampleConfig = `
   ## The period on which to flush & clear the aggregator.
-	period = "30s"
+  period = "30s"
 
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
@@ -62,11 +62,11 @@ var sampleConfig = `
   # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
 `
 
-func (_ *BasicStats) SampleConfig() string {
+func (*BasicStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (_ *BasicStats) Description() string {
+func (*BasicStats) Description() string {
 	return "Keep the aggregate basicstats of each metric passing through."
 }
 
@@ -146,25 +146,23 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 }
 
 func (b *BasicStats) Push(acc telegraf.Accumulator) {
-	config := b.getConfiguredStats()
-
 	for _, aggregate := range b.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
 
-			if config.count {
+			if b.statsConfig.count {
 				fields[k+"_count"] = v.count
 			}
-			if config.min {
+			if b.statsConfig.min {
 				fields[k+"_min"] = v.min
 			}
-			if config.max {
+			if b.statsConfig.max {
 				fields[k+"_max"] = v.max
 			}
-			if config.mean {
+			if b.statsConfig.mean {
 				fields[k+"_mean"] = v.mean
 			}
-			if config.sum {
+			if b.statsConfig.sum {
 				fields[k+"_sum"] = v.sum
 			}
 
@@ -172,16 +170,16 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 			if v.count > 1 {
 				variance := v.M2 / (v.count - 1)
 
-				if config.variance {
+				if b.statsConfig.variance {
 					fields[k+"_s2"] = variance
 				}
-				if config.stdev {
+				if b.statsConfig.stdev {
 					fields[k+"_stdev"] = math.Sqrt(variance)
 				}
-				if config.diff {
+				if b.statsConfig.diff {
 					fields[k+"_diff"] = v.diff
 				}
-				if config.non_negative_diff && v.diff >= 0 {
+				if b.statsConfig.non_negative_diff && v.diff >= 0 {
 					fields[k+"_non_negative_diff"] = v.diff
 				}
 
@@ -195,6 +193,7 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	}
 }
 
+// member function for logging.
 func (b *BasicStats) parseStats() *configuredStats {
 	parsed := &configuredStats{}
 
@@ -220,34 +219,28 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.non_negative_diff = true
 
 		default:
-			b.Log.Warnf("unrecognized basic stat '%s', ignoring", name)
+			b.Log.Warnf("Unrecognized basic stat %q, ignoring", name)
 		}
 	}
 
 	return parsed
 }
 
-var defaultStats = &configuredStats{
-	count:             true,
-	min:               true,
-	max:               true,
-	mean:              true,
-	variance:          true,
-	stdev:             true,
-	sum:               false,
-	non_negative_diff: false,
-}
-
-func (b *BasicStats) getConfiguredStats() *configuredStats {
-	if b.statsConfig == nil {
-		if b.Stats == nil {
-			b.statsConfig = defaultStats
-		} else {
-			b.statsConfig = b.parseStats()
+func (b *BasicStats) getConfiguredStats() {
+	if b.Stats == nil {
+		b.statsConfig = &configuredStats{
+			count:             true,
+			min:               true,
+			max:               true,
+			mean:              true,
+			variance:          true,
+			stdev:             true,
+			sum:               false,
+			non_negative_diff: false,
 		}
+	} else {
+		b.statsConfig = b.parseStats()
 	}
-
-	return b.statsConfig
 }
 
 func (b *BasicStats) Reset() {
@@ -265,6 +258,12 @@ func convert(in interface{}) (float64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func (b *BasicStats) Init() error {
+	b.getConfiguredStats()
+
+	return nil
 }
 
 func init() {

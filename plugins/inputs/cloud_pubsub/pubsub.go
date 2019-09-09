@@ -136,14 +136,14 @@ func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
 	err := ps.startReceiver(parentCtx)
 
 	for err != nil && parentCtx.Err() == nil {
-		ps.Log.Errorf("receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
+		ps.Log.Errorf("Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
 
 		delay := defaultRetryDelaySeconds
 		if ps.RetryReceiveDelaySeconds > 0 {
 			delay = ps.RetryReceiveDelaySeconds
 		}
 
-		ps.Log.Infof("waiting %d seconds before attempting to restart receiver...", delay)
+		ps.Log.Infof("Waiting %d seconds before attempting to restart receiver...", delay)
 		time.Sleep(time.Duration(delay) * time.Second)
 
 		err = ps.startReceiver(parentCtx)
@@ -151,7 +151,7 @@ func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
 }
 
 func (ps *PubSub) startReceiver(parentCtx context.Context) error {
-	ps.Log.Infof("starting receiver for subscription %s...", ps.sub.ID())
+	ps.Log.Infof("Starting receiver for subscription %s...", ps.sub.ID())
 	cctx, ccancel := context.WithCancel(parentCtx)
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
@@ -161,7 +161,7 @@ func (ps *PubSub) startReceiver(parentCtx context.Context) error {
 	if err != nil {
 		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
 	} else {
-		ps.Log.Info("subscription pull ended (no error, most likely stopped)")
+		ps.Log.Info("Subscription pull ended (no error, most likely stopped)")
 	}
 	ccancel()
 	return err

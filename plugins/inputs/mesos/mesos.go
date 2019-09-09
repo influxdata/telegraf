@@ -131,7 +131,7 @@ func (m *Mesos) initialize() error {
 	}
 
 	if m.Timeout == 0 {
-		m.Log.Info("missing timeout value, setting default value (100ms)")
+		m.Log.Info("Missing timeout value, setting default value (100ms)")
 		m.Timeout = 100
 	}
 

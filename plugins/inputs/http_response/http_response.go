@@ -243,7 +243,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
 		// Log error
-		h.Log.Debugf("network error while polling %s: %s", u, err.Error())
+		h.Log.Debugf("Network error while polling %s: %s", u, err.Error())
 
 		// Get error details
 		netErr := setError(err, fields, tags)
@@ -281,7 +281,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		h.Log.Debugf("failed to read body of HTTP Response : %s", err.Error())
+		h.Log.Debugf("Failed to read body of HTTP Response : %s", err.Error())
 		setResult("body_read_error", fields, tags)
 		fields["content_length"] = len(bodyBytes)
 		if h.ResponseStringMatch != "" {

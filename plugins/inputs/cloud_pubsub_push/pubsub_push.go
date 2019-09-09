@@ -227,14 +227,14 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 	var payload Payload
 	if err = json.Unmarshal(bytes, &payload); err != nil {
-		p.Log.Errorf("error decoding payload %s", err.Error())
+		p.Log.Errorf("Error decoding payload %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	sDec, err := base64.StdEncoding.DecodeString(payload.Msg.Data)
 	if err != nil {
-		p.Log.Errorf("base64-decode failed %s", err.Error())
+		p.Log.Errorf("Base64-decode failed %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -295,7 +295,7 @@ func (p *PubSubPush) receiveDelivered() {
 				ch <- true
 			} else {
 				ch <- false
-				p.Log.Debug("metric group failed to process")
+				p.Log.Debug("Metric group failed to process")
 			}
 		}
 	}
@@ -315,8 +315,8 @@ func (p *PubSubPush) AuthenticateIfSet(handler http.HandlerFunc, res http.Respon
 func init() {
 	inputs.Add("cloud_pubsub_push", func() telegraf.Input {
 		return &PubSubPush{
-			ServiceAddress:         ":8080",
-			Path:                   "/",
+			ServiceAddress: ":8080",
+			Path:           "/",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})

@@ -208,7 +208,7 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 	mdChan := make(chan *metricpb.MetricDescriptor, 1000)
 
 	go func() {
-		c.log.Debugf("list metric descriptor request filter: %s", req.Filter)
+		c.log.Debugf("List metric descriptor request filter: %s", req.Filter)
 		defer close(mdChan)
 
 		// Iterate over metric descriptors and send them to buffered channel
@@ -218,7 +218,7 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
 				if mdErr != iterator.Done {
-					c.log.Errorf("failed iterating metric desciptor responses: %q: %v", req.String(), mdErr)
+					c.log.Errorf("Failed iterating metric desciptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
 			}
@@ -237,7 +237,7 @@ func (c *stackdriverMetricClient) ListTimeSeries(
 	tsChan := make(chan *monitoringpb.TimeSeries, 1000)
 
 	go func() {
-		c.log.Debugf("list time series request filter: %s", req.Filter)
+		c.log.Debugf("List time series request filter: %s", req.Filter)
 		defer close(tsChan)
 
 		// Iterate over timeseries and send them to buffered channel
@@ -247,7 +247,7 @@ func (c *stackdriverMetricClient) ListTimeSeries(
 			tsDesc, tsErr := tsResp.Next()
 			if tsErr != nil {
 				if tsErr != iterator.Done {
-					c.log.Errorf("failed iterating time series responses: %q: %v", req.String(), tsErr)
+					c.log.Errorf("Failed iterating time series responses: %q: %v", req.String(), tsErr)
 				}
 				break
 			}
@@ -460,8 +460,8 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 			"stackdriver", "list_timeseries_calls", tags)
 
 		s.client = &stackdriverMetricClient{
-			log:                        s.Log,
-			conn:                       client,
+			log:  s.Log,
+			conn: client,
 			listMetricDescriptorsCalls: listMetricDescriptorsCalls,
 			listTimeSeriesCalls:        listTimeSeriesCalls,
 		}
@@ -700,9 +700,9 @@ func (s *Stackdriver) addDistribution(
 func init() {
 	f := func() telegraf.Input {
 		return &Stackdriver{
-			CacheTTL:                        defaultCacheTTL,
-			RateLimit:                       defaultRateLimit,
-			Delay:                           defaultDelay,
+			CacheTTL:  defaultCacheTTL,
+			RateLimit: defaultRateLimit,
+			Delay:     defaultDelay,
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
 		}

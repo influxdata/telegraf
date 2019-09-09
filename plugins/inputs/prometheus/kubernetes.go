@@ -68,7 +68,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 			case <-time.After(time.Second):
 				err := p.watch(ctx, client)
 				if err != nil {
-					p.Log.Errorf("unable to watch resources: %s", err.Error())
+					p.Log.Errorf("Unable to watch resources: %s", err.Error())
 				}
 			}
 		}

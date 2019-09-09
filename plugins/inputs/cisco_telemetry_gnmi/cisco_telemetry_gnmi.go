@@ -212,8 +212,8 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, 
 		return fmt.Errorf("failed to send subscription request: %v", err)
 	}
 
-	c.Log.Debugf("connection to GNMI device %s established", address)
-	defer c.Log.Debugf("connection to GNMI device %s closed", address)
+	c.Log.Debugf("Connection to GNMI device %s established", address)
+	defer c.Log.Debugf("Connection to GNMI device %s closed", address)
 	for ctx.Err() == nil {
 		var reply *gnmi.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
@@ -268,7 +268,7 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 			if alias, ok := c.aliases[aliasPath]; ok {
 				name = alias
 			} else {
-				c.Log.Debugf("no measurement alias for GNMI path: %s", name)
+				c.Log.Debugf("No measurement alias for GNMI path: %s", name)
 			}
 		}
 

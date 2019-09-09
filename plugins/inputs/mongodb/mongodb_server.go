@@ -165,7 +165,7 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 			var colls []string
 			colls, err = s.Session.DB(dbName).CollectionNames()
 			if err != nil {
-				s.Log.Errorf("error getting collection names: %s", err.Error())
+				s.Log.Errorf("Error getting collection names: %s", err.Error())
 				continue
 			}
 			for _, colName := range colls {
@@ -205,7 +205,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 	// member of a replica set.
 	replSetStatus, err := s.gatherReplSetStatus()
 	if err != nil {
-		s.Log.Debugf("unable to gather replica set status: %s", err.Error())
+		s.Log.Debugf("Unable to gather replica set status: %s", err.Error())
 	}
 
 	// Gather the oplog if we are a member of a replica set.  Non-replica set
@@ -220,7 +220,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 
 	clusterStatus, err := s.gatherClusterStatus()
 	if err != nil {
-		s.Log.Debugf("unable to gather cluster status: %s", err.Error())
+		s.Log.Debugf("Unable to gather cluster status: %s", err.Error())
 	}
 
 	shardStats, err := s.gatherShardConnPoolStats()
@@ -243,7 +243,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 		for _, name := range names {
 			db, err := s.gatherDBStats(name)
 			if err != nil {
-				s.Log.Debugf("error getting db stats from %q: %s", name, err.Error())
+				s.Log.Debugf("Error getting db stats from %q: %s", name, err.Error())
 			}
 			dbStats.Dbs = append(dbStats.Dbs, *db)
 		}

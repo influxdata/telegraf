@@ -192,7 +192,7 @@ func (s *Sysstat) collect() error {
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*time.Duration(collectInterval+parseInterval))
 	if err != nil {
 		if err := os.Remove(s.tmpFile); err != nil {
-			s.Log.Errorf("failed to remove tmp file after %q command: %s", strings.Join(cmd.Args, " "), err.Error())
+			s.Log.Errorf("Failed to remove tmp file after %q command: %s", strings.Join(cmd.Args, " "), err.Error())
 		}
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}

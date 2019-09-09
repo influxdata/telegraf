@@ -81,17 +81,17 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 			// Preserve backwards compatibility for hostnames without a
 			// scheme, broken in go 1.8. Remove in Telegraf 2.0
 			serv = "mongodb://" + serv
-			m.Log.Warnf("using %q as connection URL; please update your configuration to use an URL", serv)
+			m.Log.Warnf("Using %q as connection URL; please update your configuration to use an URL", serv)
 			m.Servers[i] = serv
 		}
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			m.Log.Errorf("unable to parse address %q: %s", serv, err.Error())
+			m.Log.Errorf("Unable to parse address %q: %s", serv, err.Error())
 			continue
 		}
 		if u.Host == "" {
-			m.Log.Errorf("unable to parse address %q", serv)
+			m.Log.Errorf("Unable to parse address %q", serv)
 			continue
 		}
 

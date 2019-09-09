@@ -277,7 +277,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 				fields["tasks_running"] = running[service.ID]
 				fields["tasks_desired"] = tasksNoShutdown[service.ID]
 			} else {
-				d.Log.Error("unknown replica mode")
+				d.Log.Error("Unknown replica mode")
 			}
 			// Add metrics
 			acc.AddFields("docker_swarm",

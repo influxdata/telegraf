@@ -126,7 +126,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 
 	// Start the kafka message reader
 	go k.receiver()
-	k.Log.Infof("started the kafka consumer service, peers: %v, topics: %v\n",
+	k.Log.Infof("Started the kafka consumer service, peers: %v, topics: %v\n",
 		k.ZookeeperPeers, k.Topics)
 	return nil
 }

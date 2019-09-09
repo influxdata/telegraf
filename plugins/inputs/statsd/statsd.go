@@ -396,7 +396,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		defer s.wg.Done()
 		s.parser()
 	}()
-	s.Log.Infof("started the statsd service on %q", s.ServiceAddress)
+	s.Log.Infof("Started the statsd service on %q", s.ServiceAddress)
 	return nil
 }
 
@@ -456,7 +456,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			n, addr, err := conn.ReadFromUDP(buf)
 			if err != nil {
 				if !strings.Contains(err.Error(), "closed network") {
-					s.Log.Errorf("error reading: %s", err.Error())
+					s.Log.Errorf("Error reading: %s", err.Error())
 					continue
 				}
 				return err
@@ -472,7 +472,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
-					s.Log.Errorf("statsd message queue full. "+
+					s.Log.Errorf("Statsd message queue full. "+
 						"We have dropped %d messages so far. "+
 						"You may want to increase allowed_pending_messages in the config", s.drops)
 				}
@@ -535,7 +535,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	// Validate splitting the line on ":"
 	bits := strings.Split(line, ":")
 	if len(bits) < 2 {
-		s.Log.Errorf("splitting ':', unable to parse metric: %s", line)
+		s.Log.Errorf("Splitting ':', unable to parse metric: %s", line)
 		return errors.New("error Parsing statsd line")
 	}
 
@@ -551,7 +551,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		// Validate splitting the bit on "|"
 		pipesplit := strings.Split(bit, "|")
 		if len(pipesplit) < 2 {
-			s.Log.Errorf("splitting '|', unable to parse metric: %s", line)
+			s.Log.Errorf("Splitting '|', unable to parse metric: %s", line)
 			return errors.New("error parsing statsd line")
 		} else if len(pipesplit) > 2 {
 			sr := pipesplit[2]
@@ -559,13 +559,13 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			if strings.Contains(sr, "@") && len(sr) > 1 {
 				samplerate, err := strconv.ParseFloat(sr[1:], 64)
 				if err != nil {
-					s.Log.Errorf("parsing sample rate: %s", err.Error())
+					s.Log.Errorf("Parsing sample rate: %s", err.Error())
 				} else {
 					// sample rate successfully parsed
 					m.samplerate = samplerate
 				}
 			} else {
-				s.Log.Debugf("sample rate must be in format like: "+
+				s.Log.Debugf("Sample rate must be in format like: "+
 					"@0.1, @0.5, etc. Ignoring sample rate for line: %s", line)
 			}
 		}
@@ -575,7 +575,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "c", "s", "ms", "h":
 			m.mtype = pipesplit[1]
 		default:
-			s.Log.Errorf("metric type %q unsupported", pipesplit[1])
+			s.Log.Errorf("Metric type %q unsupported", pipesplit[1])
 			return errors.New("error parsing statsd line")
 		}
 
@@ -592,7 +592,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "ms", "h":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
-				s.Log.Errorf("parsing value to float64, unable to parse metric: %s", line)
+				s.Log.Errorf("Parsing value to float64, unable to parse metric: %s", line)
 				return errors.New("error parsing statsd line")
 			}
 			m.floatvalue = v
@@ -602,7 +602,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			if err != nil {
 				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
 				if err2 != nil {
-					s.Log.Errorf("parsing value to int64, unable to parse metric: %s", line)
+					s.Log.Errorf("Parsing value to int64, unable to parse metric: %s", line)
 					return errors.New("error parsing statsd line")
 				}
 				v = int64(v2)
@@ -847,7 +847,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
-					s.Log.Errorf("statsd message queue full. "+
+					s.Log.Errorf("Statsd message queue full. "+
 						"We have dropped %d messages so far. "+
 						"You may want to increase allowed_pending_messages in the config", s.drops)
 				}
@@ -859,8 +859,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
 	conn.Close()
-	s.Log.Infof("refused TCP Connection from %s", conn.RemoteAddr())
-	s.Log.Warn("maximum TCP Connections reached, you may want to adjust max_tcp_connections")
+	s.Log.Infof("Refused TCP Connection from %s", conn.RemoteAddr())
+	s.Log.Warn("Maximum TCP Connections reached, you may want to adjust max_tcp_connections")
 }
 
 // forget a TCP connection
@@ -879,7 +879,7 @@ func (s *Statsd) remember(id string, conn *net.TCPConn) {
 
 func (s *Statsd) Stop() {
 	s.Lock()
-	s.Log.Infof("stopping the statsd service")
+	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
 		s.UDPlistener.Close()
@@ -905,7 +905,7 @@ func (s *Statsd) Stop() {
 
 	s.Lock()
 	close(s.in)
-	s.Log.Infof("stopped listener service on %q", s.ServiceAddress)
+	s.Log.Infof("Stopped listener service on %q", s.ServiceAddress)
 	s.Unlock()
 }
 

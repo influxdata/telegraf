@@ -77,7 +77,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 		ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 		defer cancel1()
 		if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
-			cf.parent.Log.Info("client session seems to have time out. Reauthenticating!")
+			cf.parent.Log.Info("Client session seems to have time out. Reauthenticating!")
 			ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 			defer cancel2()
 			if err := cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)); err != nil {
@@ -114,7 +114,7 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 		u.User = url.UserPassword(vs.Username, vs.Password)
 	}
 
-	vs.Log.Debugf("creating client: %s", u.Host)
+	vs.Log.Debugf("Creating client: %s", u.Host)
 	soapClient := soap.NewClient(u, tlsCfg.InsecureSkipVerify)
 
 	// Add certificate if we have it. Use it to log us in.
@@ -188,7 +188,7 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	}
 	vs.Log.Debugf("vCenter says max_query_metrics should be %d", n)
 	if n < vs.MaxQueryMetrics {
-		vs.Log.Warnf("configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
+		vs.Log.Warnf("Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
 		vs.MaxQueryMetrics = n
 	}
 	return client, nil
@@ -211,7 +211,7 @@ func (c *Client) close() {
 		defer cancel()
 		if c.Client != nil {
 			if err := c.Client.Logout(ctx); err != nil {
-				c.log.Errorf("logout: %s", err.Error())
+				c.log.Errorf("Logout: %s", err.Error())
 			}
 		}
 	})
@@ -251,7 +251,7 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			// Fall through version-based inference if value isn't usable
 		}
 	} else {
-		c.log.Debug("option query for maxQueryMetrics failed. Using default")
+		c.log.Debug("Option query for maxQueryMetrics failed. Using default")
 	}
 
 	// No usable maxQueryMetrics setting. Infer based on version

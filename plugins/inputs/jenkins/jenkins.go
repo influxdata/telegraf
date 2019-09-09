@@ -305,7 +305,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	}
 
 	if build.Building {
-		j.Log.Debugf("ignore running build on %s, build %v", jr.name, number)
+		j.Log.Debugf("Ignore running build on %s, build %v", jr.name, number)
 		return nil
 	}
 
