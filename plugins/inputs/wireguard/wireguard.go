@@ -16,9 +16,9 @@ const (
 
 var (
 	deviceTypeNames = map[wgtypes.DeviceType]string{
-		wgtypes.Unknown:       "unknown",
-		wgtypes.LinuxKernel:   "linux_kernel",
-		wgtypes.Userspace:     "userspace",
+		wgtypes.Unknown:     "unknown",
+		wgtypes.LinuxKernel: "linux_kernel",
+		wgtypes.Userspace:   "userspace",
 	}
 )
 
