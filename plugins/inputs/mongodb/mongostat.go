@@ -961,24 +961,25 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		}
 	}
 
-	newColStats := *newMongo.ColStats
-	for _, col := range newColStats.Collections {
-		colStatsData := col.ColStatsData
-		// mongos doesn't have the db key, so setting the db name
-		if colStatsData.Collection == "" {
-			colStatsData.Collection = col.Name
+	if newMongo.ColStats != nil {
+		for _, col := range newMongo.ColStats.Collections {
+			colStatsData := col.ColStatsData
+			// mongos doesn't have the db key, so setting the db name
+			if colStatsData.Collection == "" {
+				colStatsData.Collection = col.Name
+			}
+			colStatLine := &ColStatLine{
+				Name:           colStatsData.Collection,
+				DbName:         col.DbName,
+				Count:          colStatsData.Count,
+				Size:           colStatsData.Size,
+				AvgObjSize:     colStatsData.AvgObjSize,
+				StorageSize:    colStatsData.StorageSize,
+				TotalIndexSize: colStatsData.TotalIndexSize,
+				Ok:             colStatsData.Ok,
+			}
+			returnVal.ColStatsLines = append(returnVal.ColStatsLines, *colStatLine)
 		}
-		colStatLine := &ColStatLine{
-			Name:           colStatsData.Collection,
-			DbName:         col.DbName,
-			Count:          colStatsData.Count,
-			Size:           colStatsData.Size,
-			AvgObjSize:     colStatsData.AvgObjSize,
-			StorageSize:    colStatsData.StorageSize,
-			TotalIndexSize: colStatsData.TotalIndexSize,
-			Ok:             colStatsData.Ok,
-		}
-		returnVal.ColStatsLines = append(returnVal.ColStatsLines, *colStatLine)
 	}
 
 	// Set shard stats

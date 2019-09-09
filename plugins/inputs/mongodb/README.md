@@ -13,8 +13,10 @@
 
   ## When true, collect per database stats
   # gather_perdb_stats = false
+
   ## When true, collect per collection stats
   # gather_col_stats = false
+
   ## List of db where collections stats are collected
   ## If empty, all db are concerned
   # col_stats_dbs = ["local"]
