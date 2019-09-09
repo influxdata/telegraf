@@ -309,7 +309,7 @@ func (this *TagCountPack) Write(dout *DataOutputX) {
 func (this *TagCountPack) WriteTag(dout *DataOutputX) {
 	//sort
 	keys := make([]string, 0)
-	for k, _ := range this.Tags {
+	for k := range this.Tags {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -326,7 +326,7 @@ func (this *TagCountPack) WriteTag(dout *DataOutputX) {
 func (this *TagCountPack) WriteData(dout *DataOutputX) {
 	//sort
 	keys := make([]string, 0)
-	for k, _ := range this.Data {
+	for k := range this.Data {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
