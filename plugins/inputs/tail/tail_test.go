@@ -1,7 +1,9 @@
 package tail
 
 import (
+	"bytes"
 	"io/ioutil"
+	"log"
 	"os"
 	"runtime"
 	"testing"
@@ -108,13 +110,17 @@ func TestTailBadLine(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
 	require.NoError(t, err)
 
-	acc.WaitError(1)
-	assert.Contains(t, acc.Errors[0].Error(), "malformed log line")
+	time.Sleep(500 * time.Millisecond)
+	assert.Contains(t, buf.String(), "Malformed log line")
 }
 
 func TestTailDosLineendings(t *testing.T) {
