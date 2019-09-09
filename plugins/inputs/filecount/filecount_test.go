@@ -2,11 +2,13 @@ package filecount
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -115,6 +117,37 @@ func TestMTimeFilter(t *testing.T) {
 	fc.MTime = internal.Duration{Duration: fileAge}
 	matches = []string{"baz"}
 	fileCountEquals(t, fc, len(matches), 0)
+}
+
+// Paths with a trailing slash will not exactly match paths produced during the
+// walk as these paths are cleaned before being returned from godirwalk. #6329
+func TestDirectoryWithTrailingSlash(t *testing.T) {
+	plugin := &FileCount{
+		Directories: []string{getTestdataDir() + string(filepath.Separator)},
+		Name:        "*",
+		Recursive:   true,
+		Fs:          getFakeFileSystem(getTestdataDir()),
+	}
+
+	var acc testutil.Accumulator
+	err := plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"filecount",
+			map[string]string{
+				"directory": getTestdataDir(),
+			},
+			map[string]interface{}{
+				"count":      9,
+				"size_bytes": 5096,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func getNoFilterFileCount() FileCount {

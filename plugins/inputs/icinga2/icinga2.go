@@ -39,10 +39,10 @@ type Object struct {
 }
 
 type Attribute struct {
-	CheckCommand string `json:"check_command"`
-	DisplayName  string `json:"display_name"`
-	Name         string `json:"name"`
-	State        int    `json:"state"`
+	CheckCommand string  `json:"check_command"`
+	DisplayName  string  `json:"display_name"`
+	Name         string  `json:"name"`
+	State        float64 `json:"state"`
 }
 
 var levels = []string{"ok", "warning", "critical", "unknown"}
@@ -87,15 +87,17 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 			continue
 		}
 
+		state := int64(check.Attrs.State)
+
 		fields := map[string]interface{}{
 			"name":       check.Attrs.Name,
-			"state_code": check.Attrs.State,
+			"state_code": state,
 		}
 
 		tags := map[string]string{
 			"display_name":  check.Attrs.DisplayName,
 			"check_command": check.Attrs.CheckCommand,
-			"state":         levels[check.Attrs.State],
+			"state":         levels[state],
 			"source":        url.Hostname(),
 			"scheme":        url.Scheme,
 			"port":          url.Port(),

@@ -78,14 +78,6 @@
   version = "v10.12.0"
 
 [[projects]]
-  digest = "1:82041ab48e5c76da656b723fdc13a2b9ec716cdc736f82adaac77f5c39d4fca8"
-  name = "github.com/DataDog/zstd"
-  packages = ["."]
-  pruneopts = ""
-  revision = "2347a397da4ee9c6b8226d4aff82c302d0e52773"
-  version = "v1.4.1"
-
-[[projects]]
   branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
@@ -105,12 +97,12 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "1:5dd52495eaf9fad11f4742f341166aa9eb68f70061fc1a9b546f9481b284b6d8"
+  digest = "1:322bf7f4bb312294fc551f6e2c82d02f2ab8f94920f4163b3deeb07a8141ac79"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
-  revision = "46c83074a05474240f9620fb7c70fb0d80ca401a"
-  version = "v1.23.1"
+  revision = "b12709e6ca29240128c89fe0b30b6a76be42b457"
+  source = "https://github.com/influxdata/sarama.git"
 
 [[projects]]
   digest = "1:f82b8ac36058904227087141017bb82f4b0fc58272990a4cdae3e2d6d222644e"
@@ -1200,6 +1192,7 @@
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
+    "find",
     "list",
     "nfc",
     "object",
