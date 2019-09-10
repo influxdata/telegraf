@@ -151,7 +151,7 @@ func removeDuplicates(elements []int) []int {
 	result := []int{}
 
 	for v := range elements {
-		if encountered[elements[v]] == true {
+		if encountered[elements[v]] {
 		} else {
 			encountered[elements[v]] = true
 			result = append(result, elements[v])
@@ -479,13 +479,13 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 
 	//Init
-	if m.isInitialized == false {
+	if !m.isInitialized {
 		initialization(m)
 		m.isInitialized = true
 	}
 
 	// Connect
-	if m.isConnected == false {
+	if !m.isConnected {
 		err := connect(m)
 		if err != nil {
 			m.isConnected = false
