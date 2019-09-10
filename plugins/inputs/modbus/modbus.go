@@ -238,8 +238,7 @@ func connect(m *Modbus) error {
 		m.handlerTcp.Timeout = m.Timeout.Duration
 		m.handlerTcp.SlaveId = byte(m.SlaveId)
 		m.Client = mb.NewClient(m.handlerTcp)
-		err := m.handlerTcp.Connect()
-		defer m.handlerTcp.Close()
+		err := m.handlerTcp.Connect()		
 		if err != nil {
 			return err
 		}
@@ -254,8 +253,7 @@ func connect(m *Modbus) error {
 		m.handlerSerial.Parity = m.Parity
 		m.handlerSerial.StopBits = m.StopBits
 		m.Client = mb.NewClient(m.handlerSerial)
-		err := m.handlerSerial.Connect()
-		defer m.handlerSerial.Close()
+		err := m.handlerSerial.Connect()		
 		if err != nil {
 			return err
 		}
