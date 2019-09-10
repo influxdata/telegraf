@@ -5,7 +5,7 @@ about: Create a report to help us improve
 ---
 
 ### Relevant telegraf.conf:
-<!-- [Place config betweetn triple backticks '```'] -->
+<!-- [Place config between triple backticks '```'] -->
 ```toml
 
 ```
