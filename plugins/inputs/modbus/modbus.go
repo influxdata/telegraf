@@ -6,24 +6,24 @@ import (
 	"math"
 	"sort"
 	"strconv"
-	"time"	
-
+	
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Modbus struct {
-	Type          string    `toml:"type"`
-	Controller    string    `toml:"controller"`
-	Port          int       `toml:"port"` 
-	BaudRate      int       `toml:"baud_rate"`
-	DataBits      int       `toml:"data_bits"`
-	Parity        string    `toml:"parity"` 
-	StopBits      int       `toml:"stop_bits"`
-	SlaveId       int       `toml:"slave_id"` 
-	Timeout       int       `toml:"time_out"`
-	Registers     registers `toml:"registers"`
+	Type          string                   `toml:"type"`
+	Controller    string                   `toml:"controller"`
+	Port          int                      `toml:"port"` 
+	BaudRate      int                      `toml:"baud_rate"`
+	DataBits      int                      `toml:"data_bits"`
+	Parity        string                   `toml:"parity"` 
+	StopBits      int                      `toml:"stop_bits"`
+	SlaveId       int                      `toml:"slave_id"` 
+	Timeout       internal.Duration        `toml:"time_out"`
+	Registers     registers                `toml:"registers"`
 	isConnected   bool      
 	isInitialized bool
 	HandlerTcp    *mb.TCPClientHandler
@@ -64,78 +64,78 @@ const (
 )
 
 var ModbusConfig = `
- #TCP
- #type = "TCP"
- #controller="192.168.0.9"
- #port = 502
+#TCP
+type = "TCP"
+controller="localhost"
+port = 1502
 
- #RTU
- type = "RTU"
- controller="/dev/ttyUSB0"
- baudRate = 9600
- dataBits = 8
- parity = "N"
- stopBits = 1
- 
- slaveId = 1
- timeout = 1
+#RTU
+#type = "RTU"
+#controller="/dev/ttyUSB0"
+#baudRate = 9600
+#dataBits = 8
+#parity = "N"
+#stopBits = 1
 
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-   name = "Voltage"
-   order = "AB"
+slave_id = 1
+time_out = "1s"
+
+ [[inputs.modbus.registers.holding_registers.tags]]
+  name = "Voltage"
+  order = "AB"
+  datatype = "FLOAT32"
+  scale = "/10"
+  address = [
+   0
+  ]
+
+ [[inputs.modbus.registers.holding_registers.tags]]
+  name = "Current"
+  order ="ABCD"
+  datatype = "FLOAT32"
+  scale = "/1000"
+  address = [
+   1,
+   2
+  ]
+
+ [[inputs.modbus.registers.holding_registers.tags]]
+   name = "Power"
+   order = "ABCD"
    datatype = "FLOAT32"
    scale = "/10"
    address = [
-    0      
+	3,
+	4
    ]
 
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-   name = "Current"
-   order ="CDAB"
-   datatype = "FLOAT32"
+ [[inputs.modbus.registers.holding_registers.tags]]
+   name = "Energy"
+   order = "ABCD"
+   datatype = "FLOAT32"	
    scale = "/1000"
    address = [
-    1,
-    2
+	5,
+	6
    ]
 
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Power"
-    order = "CDAB"
-    datatype = "FLOAT32"
-    scale = "/10"
-    address = [
-     3,
-     4      
-    ]
+ [[inputs.modbus.registers.holding_registers.tags]]
+   name = "Frequency"
+   order = "AB"	
+   datatype = "FLOAT32"	
+   scale = "/10"
+   address = [
+	7
+   ]
 
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Energy"
-    order = "CDAB"
-    datatype = "FLOAT32"	
-    scale = "/1000"
-    address = [
-     5,
-     6      
-    ]
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Frequency"
-	order = "AB"	
-	datatype = "FLOAT32"	    
-    scale = "/10"
-    address = [
-     7
-    ]
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "PowerFactor"
-    order = "AB"
-    datatype = "FLOAT32"
-    scale = "/100"
-    address = [
-     8
-    ]
+ [[inputs.modbus.registers.holding_registers.tags]]
+   name = "PowerFactor"
+   order = "AB"
+   datatype = "FLOAT32"
+   scale = "/100"
+   address = [
+	8
+   ]
 `
 
 func (s *Modbus) SampleConfig() string {
@@ -234,8 +234,8 @@ func initialization(m *Modbus) {
 func connect(m *Modbus) error {
 	switch m.Type {
 	case "TCP":
-		m.HandlerTcp = mb.NewTCPClientHandler(m.Controller + ":" + strconv.Itoa(m.Port))
-		m.HandlerTcp.Timeout = time.Duration(m.Timeout) * time.Second
+		m.HandlerTcp = mb.NewTCPClientHandler(m.Controller + ":" + strconv.Itoa(m.Port))		
+		m.HandlerTcp.Timeout = m.Timeout.Duration
 		m.HandlerTcp.SlaveId = byte(m.SlaveId)
 		m.Client = mb.NewClient(m.HandlerTcp)
 		err := m.HandlerTcp.Connect()
@@ -247,7 +247,7 @@ func connect(m *Modbus) error {
 		return nil
 	case "RTU":
 		m.HandlerSerial = mb.NewRTUClientHandler(m.Controller)
-		m.HandlerSerial.Timeout = time.Duration(m.Timeout) * time.Second
+		m.HandlerSerial.Timeout = m.Timeout.Duration
 		m.HandlerSerial.SlaveId = byte(m.SlaveId)
 		m.HandlerSerial.BaudRate = m.BaudRate
 		m.HandlerSerial.DataBits = m.DataBits
