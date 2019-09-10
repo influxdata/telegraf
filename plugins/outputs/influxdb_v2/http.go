@@ -240,17 +240,28 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric: %s", desc)
-	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+	case http.StatusTooManyRequests:
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
 		if err != nil {
-			retry = 0
+			return errors.New("rate limit exceeded")
 		}
 		if retry > defaultMaxWait {
 			retry = defaultMaxWait
 		}
 		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
-		return fmt.Errorf("Waiting %ds for server before sending metric again", retry)
+		return fmt.Errorf("waiting %ds for server before sending metric again", retry)
+	case http.StatusServiceUnavailable:
+		retryAfter := resp.Header.Get("Retry-After")
+		retry, err := strconv.Atoi(retryAfter)
+		if err != nil {
+			return errors.New("server responded: service unavailable")
+		}
+		if retry > defaultMaxWait {
+			retry = defaultMaxWait
+		}
+		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
+		return fmt.Errorf("waiting %ds for server before sending metric again", retry)
 	}
 
 	// This is only until platform spec is fully implemented. As of the
