@@ -257,7 +257,9 @@ var agentConfig = `
   ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
 
-  ## Maximum number of unwritten metrics per output.
+  ## Maximum number of unwritten metrics per output.  Increasing this value
+  ## allows for longer periods of output downtime without dropping metrics at the
+  ## cost of higher maximum memory usage.
   metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
