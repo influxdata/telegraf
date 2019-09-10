@@ -26,8 +26,8 @@ type Modbus struct {
 	Registers     registers                `toml:"registers"`
 	isConnected   bool      
 	isInitialized bool
-	HandlerTcp    *mb.TCPClientHandler
-	HandlerSerial *mb.RTUClientHandler
+	handlerTcp    *mb.TCPClientHandler
+	handlerSerial *mb.RTUClientHandler
 	Client        mb.Client
 }
 
@@ -40,22 +40,22 @@ type registers struct {
 
 type register struct {
 	Tags      []tag    `toml:"tags"`
-	Chunks    []chunk  
-	RawValues map[int]uint16
+	chunks    []chunk  
+	rawValues map[int]uint16
 }
 
 type tag struct {
-	Name     string
-	Order    string
-	DataType string
-	Scale    string
-	Address  []int
-	Value    interface{}
+	Name     string `toml:"name"`
+	Order    string `toml:"order"`
+	DataType string `toml:"data_type"`
+	Scale    string `toml:"scale"`
+	Address  []int  `toml:"address"`
+	value    interface{}
 }
 
 type chunk struct {
-	Address int
-	Length  int
+	address int
+	length  int
 }
 
 const (
@@ -215,47 +215,47 @@ func createChunks(ch *[]chunk, rawValue map[int]uint16) {
 }
 
 func initialization(m *Modbus) {
-	m.Registers.DiscreteInputs.RawValues = make(map[int]uint16)
-	m.Registers.Coils.RawValues = make(map[int]uint16)
-	m.Registers.HoldingRegisters.RawValues = make(map[int]uint16)
-	m.Registers.InputRegisters.RawValues = make(map[int]uint16)
+	m.Registers.DiscreteInputs.rawValues = make(map[int]uint16)
+	m.Registers.Coils.rawValues = make(map[int]uint16)
+	m.Registers.HoldingRegisters.rawValues = make(map[int]uint16)
+	m.Registers.InputRegisters.rawValues = make(map[int]uint16)
 
-	createRawValueMap(m.Registers.DiscreteInputs.Tags, m.Registers.DiscreteInputs.RawValues)
-	createRawValueMap(m.Registers.Coils.Tags, m.Registers.Coils.RawValues)
-	createRawValueMap(m.Registers.HoldingRegisters.Tags, m.Registers.HoldingRegisters.RawValues)
-	createRawValueMap(m.Registers.InputRegisters.Tags, m.Registers.InputRegisters.RawValues)
+	createRawValueMap(m.Registers.DiscreteInputs.Tags, m.Registers.DiscreteInputs.rawValues)
+	createRawValueMap(m.Registers.Coils.Tags, m.Registers.Coils.rawValues)
+	createRawValueMap(m.Registers.HoldingRegisters.Tags, m.Registers.HoldingRegisters.rawValues)
+	createRawValueMap(m.Registers.InputRegisters.Tags, m.Registers.InputRegisters.rawValues)
 
-	createChunks(&m.Registers.DiscreteInputs.Chunks, m.Registers.DiscreteInputs.RawValues)
-	createChunks(&m.Registers.Coils.Chunks, m.Registers.Coils.RawValues)
-	createChunks(&m.Registers.HoldingRegisters.Chunks, m.Registers.HoldingRegisters.RawValues)
-	createChunks(&m.Registers.InputRegisters.Chunks, m.Registers.InputRegisters.RawValues)
+	createChunks(&m.Registers.DiscreteInputs.chunks, m.Registers.DiscreteInputs.rawValues)
+	createChunks(&m.Registers.Coils.chunks, m.Registers.Coils.rawValues)
+	createChunks(&m.Registers.HoldingRegisters.chunks, m.Registers.HoldingRegisters.rawValues)
+	createChunks(&m.Registers.InputRegisters.chunks, m.Registers.InputRegisters.rawValues)
 }
 
 func connect(m *Modbus) error {
 	switch m.Type {
 	case "TCP":
-		m.HandlerTcp = mb.NewTCPClientHandler(m.Controller + ":" + strconv.Itoa(m.Port))		
-		m.HandlerTcp.Timeout = m.Timeout.Duration
-		m.HandlerTcp.SlaveId = byte(m.SlaveId)
-		m.Client = mb.NewClient(m.HandlerTcp)
-		err := m.HandlerTcp.Connect()
-		defer m.HandlerTcp.Close()
+		m.handlerTcp = mb.NewTCPClientHandler(m.Controller + ":" + strconv.Itoa(m.Port))		
+		m.handlerTcp.Timeout = m.Timeout.Duration
+		m.handlerTcp.SlaveId = byte(m.SlaveId)
+		m.Client = mb.NewClient(m.handlerTcp)
+		err := m.handlerTcp.Connect()
+		defer m.handlerTcp.Close()
 		if err != nil {
 			return err
 		}
 		m.isConnected = true
 		return nil
 	case "RTU":
-		m.HandlerSerial = mb.NewRTUClientHandler(m.Controller)
-		m.HandlerSerial.Timeout = m.Timeout.Duration
-		m.HandlerSerial.SlaveId = byte(m.SlaveId)
-		m.HandlerSerial.BaudRate = m.BaudRate
-		m.HandlerSerial.DataBits = m.DataBits
-		m.HandlerSerial.Parity = m.Parity
-		m.HandlerSerial.StopBits = m.StopBits
-		m.Client = mb.NewClient(m.HandlerSerial)
-		err := m.HandlerSerial.Connect()
-		defer m.HandlerSerial.Close()
+		m.handlerSerial = mb.NewRTUClientHandler(m.Controller)
+		m.handlerSerial.Timeout = m.Timeout.Duration
+		m.handlerSerial.SlaveId = byte(m.SlaveId)
+		m.handlerSerial.BaudRate = m.BaudRate
+		m.handlerSerial.DataBits = m.DataBits
+		m.handlerSerial.Parity = m.Parity
+		m.handlerSerial.StopBits = m.StopBits
+		m.Client = mb.NewClient(m.handlerSerial)
+		err := m.handlerSerial.Connect()
+		defer m.handlerSerial.Close()
 		if err != nil {
 			return err
 		}
@@ -270,15 +270,15 @@ type fn func(uint16, uint16) ([]byte, error)
 
 func getRawValue(t string, f fn, ch []chunk, r map[int]uint16) error {
 	for _, chunk_t := range ch {
-		results, err := f(uint16(chunk_t.Address), uint16(chunk_t.Length))
+		results, err := f(uint16(chunk_t.address), uint16(chunk_t.length))
 		if err != nil {
 			return err
 		}
 
 		if t == C_DIGITAL {
 			for i := 0; i < len(results); i++ {
-				for b := 0; b < chunk_t.Length; b++ {
-					r[chunk_t.Address+b] = uint16(results[i] >> uint(b) & 0x01)
+				for b := 0; b < chunk_t.length; b++ {
+					r[chunk_t.address+b] = uint16(results[i] >> uint(b) & 0x01)
 				}
 
 			}
@@ -287,7 +287,7 @@ func getRawValue(t string, f fn, ch []chunk, r map[int]uint16) error {
 		if t == C_ANALOG {
 			for i := 0; i < len(results); i += 2 {
 				register := uint16(results[i])<<8 | uint16(results[i+1])
-				r[chunk_t.Address+i/2] = uint16(register)
+				r[chunk_t.address+i/2] = uint16(register)
 			}
 		}
 	}
@@ -394,7 +394,7 @@ func scale32(s string, v uint32) interface{} {
 func setTag(s string, t []tag, r map[int]uint16) {
 	if s == C_DIGITAL {
 		for i := 0; i < len(t); i++ {
-			t[i].Value = r[t[i].Address[0]]
+			t[i].value = r[t[i].Address[0]]
 		}
 	}
 
@@ -413,29 +413,29 @@ func setTag(s string, t []tag, r map[int]uint16) {
 				f := format16(t[i].DataType, e16)
 				f16 := f.(uint16)
 				s := scale16(t[i].Scale, f16)
-				t[i].Value = s
+				t[i].value = s
 			case "INT16":
 				e := convertEndianness16(t[i].Order, rawValues)
 				e16, _ := e.(uint16)
 				f := format16(t[i].DataType, e16)
-				t[i].Value = f
+				t[i].value = f
 			case "UINT32":
 				e := convertEndianness32(t[i].Order, rawValues)
 				e32, _ := e.(uint32)
 				f := format32(t[i].DataType, e32)
 				f32 := f.(uint32)
 				s := scale32(t[i].Scale, f32)
-				t[i].Value = s
+				t[i].value = s
 			case "INT32":
 				e := convertEndianness32(t[i].Order, rawValues)
 				e32, _ := e.(uint32)
 				f := format32(t[i].DataType, e32)
-				t[i].Value = f
+				t[i].value = f
 			case "FLOAT32-IEEE":
 				e := convertEndianness32(t[i].Order, rawValues)
 				e32, _ := e.(uint32)
 				f := format32(t[i].DataType, e32)
-				t[i].Value = f
+				t[i].value = f
 			case "FLOAT32":
 				if len(rawValues) == 2 {
 					e := convertEndianness16(t[i].Order, rawValues)
@@ -443,16 +443,16 @@ func setTag(s string, t []tag, r map[int]uint16) {
 					f := format16(t[i].DataType, e16)
 					f16 := f.(uint16)
 					s := scale16(t[i].Scale, f16)
-					t[i].Value = s
+					t[i].value = s
 				} else {
 					e := convertEndianness32(t[i].Order, rawValues)
 					e32, _ := e.(uint32)
 					s := scale32(t[i].Scale, e32)
-					t[i].Value = s
+					t[i].value = s
 				}
 
 			default:
-				t[i].Value = 0
+				t[i].value = 0
 			}
 		}
 	}
@@ -462,7 +462,7 @@ func addFields(t []tag) map[string]interface{} {
 	fields := make(map[string]interface{})
 	for i := 0; i < len(t); i++ {
 		if len(t[i].Name) > 0 {
-			fields[t[i].Name] = t[i].Value
+			fields[t[i].Name] = t[i].value
 		} else {
 			name := ""
 			for _, e := range t[i].Address {
@@ -498,8 +498,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	// Get Raw Values
 	err := getRawValue(C_DIGITAL,
 		m.Client.ReadDiscreteInputs,
-		m.Registers.DiscreteInputs.Chunks,
-		m.Registers.DiscreteInputs.RawValues)
+		m.Registers.DiscreteInputs.chunks,
+		m.Registers.DiscreteInputs.rawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
@@ -507,8 +507,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 	err = getRawValue(C_DIGITAL,
 		m.Client.ReadCoils,
-		m.Registers.Coils.Chunks,
-		m.Registers.Coils.RawValues)
+		m.Registers.Coils.chunks,
+		m.Registers.Coils.rawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
@@ -516,8 +516,8 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 	err = getRawValue(C_ANALOG,
 		m.Client.ReadHoldingRegisters,
-		m.Registers.HoldingRegisters.Chunks,
-		m.Registers.HoldingRegisters.RawValues)
+		m.Registers.HoldingRegisters.chunks,
+		m.Registers.HoldingRegisters.rawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
@@ -525,18 +525,18 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 	err = getRawValue(C_ANALOG,
 		m.Client.ReadInputRegisters,
-		m.Registers.InputRegisters.Chunks,
-		m.Registers.InputRegisters.RawValues)
+		m.Registers.InputRegisters.chunks,
+		m.Registers.InputRegisters.rawValues)
 	if err != nil {
 		m.isConnected = false
 		return err
 	}
 
 	// Set tags
-	setTag(C_DIGITAL, m.Registers.DiscreteInputs.Tags, m.Registers.DiscreteInputs.RawValues)
-	setTag(C_DIGITAL, m.Registers.Coils.Tags, m.Registers.Coils.RawValues)
-	setTag(C_ANALOG, m.Registers.HoldingRegisters.Tags, m.Registers.HoldingRegisters.RawValues)
-	setTag(C_ANALOG, m.Registers.InputRegisters.Tags, m.Registers.InputRegisters.RawValues)
+	setTag(C_DIGITAL, m.Registers.DiscreteInputs.Tags, m.Registers.DiscreteInputs.rawValues)
+	setTag(C_DIGITAL, m.Registers.Coils.Tags, m.Registers.Coils.rawValues)
+	setTag(C_ANALOG, m.Registers.HoldingRegisters.Tags, m.Registers.HoldingRegisters.rawValues)
+	setTag(C_ANALOG, m.Registers.InputRegisters.Tags, m.Registers.InputRegisters.rawValues)
 
 	// Add Fields
 	fields = addFields(m.Registers.DiscreteInputs.Tags)
