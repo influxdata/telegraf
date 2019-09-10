@@ -6,7 +6,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
-	"time"
+	"time"	
 
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
@@ -14,17 +14,17 @@ import (
 )
 
 type Modbus struct {
-	Type          string
-	Controller    string
-	Port          int
-	BaudRate      int
-	DataBits      int
-	Parity        string
-	StopBits      int
-	SlaveId       int
-	Timeout       int
-	Registers     registers
-	isConnected   bool
+	Type          string    `toml:"type"`
+	Controller    string    `toml:"controller"`
+	Port          int       `toml:"port"` 
+	BaudRate      int       `toml:"baud_rate"`
+	DataBits      int       `toml:"data_bits"`
+	Parity        string    `toml:"parity"` 
+	StopBits      int       `toml:"stop_bits"`
+	SlaveId       int       `toml:"slave_id"` 
+	Timeout       int       `toml:"time_out"`
+	Registers     registers `toml:"registers"`
+	isConnected   bool      
 	isInitialized bool
 	HandlerTcp    *mb.TCPClientHandler
 	HandlerSerial *mb.RTUClientHandler
@@ -32,15 +32,15 @@ type Modbus struct {
 }
 
 type registers struct {
-	DiscreteInputs   register
-	Coils            register
-	HoldingRegisters register
-	InputRegisters   register
+	DiscreteInputs   register `toml:"discrete_inputs"`
+	Coils            register `toml:"coils"`
+	HoldingRegisters register `toml:"holding_registers"`
+	InputRegisters   register `toml:"input_registers"`
 }
 
 type register struct {
-	Tags      []tag
-	Chunks    []chunk
+	Tags      []tag    `toml:"tags"`
+	Chunks    []chunk  
 	RawValues map[int]uint16
 }
 
