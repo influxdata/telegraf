@@ -78,7 +78,10 @@ var sampleConfig = `
   ## field is used to define custom tags (separated by commas)
   ## The optional "measurement" value can be used to override the default
   ## output measurement name ("postgresql").
-  #
+  ##
+  ## The script option can be used to speciafy the .sql file path,
+  ## in case if script and sqlquery options specified at same time, sqlquery will be used
+  ##
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
   ##   sqlquery string
@@ -111,7 +114,7 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }
 
-func (p *Postgresql) ReadQueryFromFile(filePath string) (string, error) {
+func ReadQueryFromFile(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
@@ -146,12 +149,9 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 	for i := range p.Query {
-		if p.Query[i].Sqlquery != "" && p.Query[i].Script != "" {
-			return fmt.Errorf("both 'sqlquery' and 'script' specified, please choose one option")
-		}
 		sql_query = p.Query[i].Sqlquery
 		if sql_query == "" {
-			sql_query, err = p.ReadQueryFromFile(p.Query[i].Script)
+			sql_query, err = ReadQueryFromFile(p.Query[i].Script)
 			if err != nil {
 				return err
 			}

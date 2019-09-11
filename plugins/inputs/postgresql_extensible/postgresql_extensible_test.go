@@ -145,7 +145,7 @@ func TestPostgresqlFieldOutput(t *testing.T) {
 	}
 
 	acc := queryRunner(t, query{{
-		Script:     "test.sql",
+		Script:     "select * from pg_stat_database",
 		Version:    901,
 		Withdbname: false,
 		Tagvalue:   "",
@@ -201,10 +201,9 @@ func TestPostgresqlFieldOutput(t *testing.T) {
 	}
 }
 
-func TestPostgresqlSqlQueryAndScriptScepifiedError(t *testing.T) {
+func TestPostgresqlSqlScript(t *testing.T) {
 	q := query{{
-		Script:     "test.sql",
-		Sqlquery:   "select * from pg_stat_database",
+		Script:     "testdata/test.sql",
 		Version:    901,
 		Withdbname: false,
 		Tagvalue:   "",
@@ -223,7 +222,7 @@ func TestPostgresqlSqlQueryAndScriptScepifiedError(t *testing.T) {
 	var acc testutil.Accumulator
 	p.Start(&acc)
 
-	require.Error(t, acc.GatherError(p.Gather))
+	require.NoError(t, acc.GatherError(p.Gather))
 }
 
 func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {

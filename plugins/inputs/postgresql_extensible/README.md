@@ -43,9 +43,9 @@ The example below has two queries are specified, with the following parameters:
   # withdbname was true.
   # Be careful that if the withdbname is set to false you don't have to define
   # the where clause (aka with the dbname)
-  # Also script option can be used to speciafy the .sql file path,
-  # in this way please make sure that sqlquery and script is not used at same time,
-  # coz this will cause error. 
+  #
+  # The script option can be used to speciafy the .sql file path,
+  # in case if script and sqlquery options specified at same time, sqlquery will be used 
   #
   # the tagvalue field is used to define custom tags (separated by comas).
   # the query is expected to return columns which match the names of the
