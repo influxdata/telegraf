@@ -1,13 +1,14 @@
 package influxdb
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"net"
 	"net/url"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -28,11 +29,12 @@ type Conn interface {
 type UDPConfig struct {
 	MaxPayloadSize int
 	URL            *url.URL
-	Serializer     serializers.Serializer
+	Serializer     *influx.Serializer
 	Dialer         Dialer
+	Log            telegraf.Logger
 }
 
-func NewUDPClient(config *UDPConfig) (*udpClient, error) {
+func NewUDPClient(config UDPConfig) (*udpClient, error) {
 	if config.URL == nil {
 		return nil, ErrMissingURL
 	}
@@ -45,9 +47,9 @@ func NewUDPClient(config *UDPConfig) (*udpClient, error) {
 	serializer := config.Serializer
 	if serializer == nil {
 		s := influx.NewSerializer()
-		s.SetMaxLineBytes(config.MaxPayloadSize)
 		serializer = s
 	}
+	serializer.SetMaxLineBytes(size)
 
 	dialer := config.Dialer
 	if dialer == nil {
@@ -58,6 +60,7 @@ func NewUDPClient(config *UDPConfig) (*udpClient, error) {
 		url:        config.URL,
 		serializer: serializer,
 		dialer:     dialer,
+		log:        config.Log,
 	}
 	return client, nil
 }
@@ -65,8 +68,9 @@ func NewUDPClient(config *UDPConfig) (*udpClient, error) {
 type udpClient struct {
 	conn       Conn
 	dialer     Dialer
-	serializer serializers.Serializer
+	serializer *influx.Serializer
 	url        *url.URL
+	log        telegraf.Logger
 }
 
 func (c *udpClient) URL() string {
@@ -89,10 +93,18 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	for _, metric := range metrics {
 		octets, err := c.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("could not serialize metric: %v", err)
+			// Since we are serializing multiple metrics, don't fail the
+			// entire batch just because of one unserializable metric.
+			c.log.Errorf("when writing to [%s] could not serialize metric: %v",
+				c.URL(), err)
+			continue
 		}
 
-		_, err = c.conn.Write(octets)
+		scanner := bufio.NewScanner(bytes.NewReader(octets))
+		scanner.Split(scanLines)
+		for scanner.Scan() {
+			_, err = c.conn.Write(scanner.Bytes())
+		}
 		if err != nil {
 			c.conn.Close()
 			c.conn = nil
@@ -103,7 +115,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	return nil
 }
 
-func (c *udpClient) CreateDatabase(ctx context.Context) error {
+func (c *udpClient) CreateDatabase(ctx context.Context, database string) error {
 	return nil
 }
 
@@ -113,4 +125,19 @@ type netDialer struct {
 
 func (d *netDialer) DialContext(ctx context.Context, network, address string) (Conn, error) {
 	return d.Dialer.DialContext(ctx, network, address)
+}
+
+func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0 : i+1], nil
+
+	}
+	return 0, nil, nil
+}
+
+func (c *udpClient) Close() {
 }

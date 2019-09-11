@@ -5,10 +5,13 @@ import (
 	"os"
 	"runtime"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -27,8 +30,7 @@ func TestTailFromBeginning(t *testing.T) {
 	tt := NewTail()
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
@@ -43,6 +45,7 @@ func TestTailFromBeginning(t *testing.T) {
 		},
 		map[string]string{
 			"mytag": "foo",
+			"path":  tmpfile.Name(),
 		})
 }
 
@@ -59,8 +62,7 @@ func TestTailFromEnd(t *testing.T) {
 
 	tt := NewTail()
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
@@ -84,6 +86,7 @@ func TestTailFromEnd(t *testing.T) {
 		},
 		map[string]string{
 			"othertag": "foo",
+			"path":     tmpfile.Name(),
 		})
 	assert.Len(t, acc.Metrics, 1)
 }
@@ -96,8 +99,7 @@ func TestTailBadLine(t *testing.T) {
 	tt := NewTail()
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
@@ -109,7 +111,7 @@ func TestTailBadLine(t *testing.T) {
 	require.NoError(t, err)
 
 	acc.WaitError(1)
-	assert.Contains(t, acc.Errors[0].Error(), "E! Malformed log line")
+	assert.Contains(t, acc.Errors[0].Error(), "malformed log line")
 }
 
 func TestTailDosLineendings(t *testing.T) {
@@ -122,8 +124,7 @@ func TestTailDosLineendings(t *testing.T) {
 	tt := NewTail()
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	p, _ := parsers.NewInfluxParser()
-	tt.SetParser(p)
+	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
@@ -140,4 +141,118 @@ func TestTailDosLineendings(t *testing.T) {
 		map[string]interface{}{
 			"usage_idle": float64(200),
 		})
+}
+
+// The csv parser should only parse the header line once per file.
+func TestCSVHeadersParsedOnce(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	defer func() {
+		tmpfile.Close()
+		os.Remove(tmpfile.Name())
+	}()
+
+	_, err = tmpfile.WriteString(`
+measurement,time_idle
+cpu,42
+cpu,42
+`)
+	require.NoError(t, err)
+
+	plugin := NewTail()
+	plugin.FromBeginning = true
+	plugin.Files = []string{tmpfile.Name()}
+	plugin.SetParserFunc(func() (parsers.Parser, error) {
+		return &csv.Parser{
+			MeasurementColumn: "measurement",
+			HeaderRowCount:    1,
+			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
+		}, nil
+	})
+	defer plugin.Stop()
+
+	acc := testutil.Accumulator{}
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+	err = plugin.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(2)
+	plugin.Stop()
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"time_idle":   42,
+				"measurement": "cpu",
+			},
+			time.Unix(0, 0)),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"time_idle":   42,
+				"measurement": "cpu",
+			},
+			time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+// Ensure that the first line can produce multiple metrics (#6138)
+func TestMultipleMetricsOnFirstLine(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	defer func() {
+		tmpfile.Close()
+		os.Remove(tmpfile.Name())
+	}()
+
+	_, err = tmpfile.WriteString(`
+[{"time_idle": 42}, {"time_idle": 42}]
+`)
+	require.NoError(t, err)
+
+	plugin := NewTail()
+	plugin.FromBeginning = true
+	plugin.Files = []string{tmpfile.Name()}
+	plugin.SetParserFunc(func() (parsers.Parser, error) {
+		return json.New(
+			&json.Config{
+				MetricName: "cpu",
+			})
+	})
+	defer plugin.Stop()
+
+	acc := testutil.Accumulator{}
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+	err = plugin.Gather(&acc)
+	require.NoError(t, err)
+	acc.Wait(2)
+	plugin.Stop()
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(0, 0)),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"path": tmpfile.Name(),
+			},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime())
 }

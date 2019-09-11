@@ -5,7 +5,7 @@ The [solr](http://lucene.apache.org/solr/) plugin collects stats via the
 
 More about [performance statistics](https://cwiki.apache.org/confluence/display/solr/Performance+Statistics+Reference)
 
-Tested from 3.5 to 6.*
+Tested from 3.5 to 7.*
 
 ### Configuration:
 
@@ -16,6 +16,10 @@ Tested from 3.5 to 6.*
   ##
   ## specify a list of one or more Solr cores (default - all)
   # cores = ["main"]
+  ##
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
 ```
 
 ### Example output of gathered metrics:

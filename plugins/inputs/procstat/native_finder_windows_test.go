@@ -11,6 +11,9 @@ import (
 )
 
 func TestGather_RealPattern(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
 	pids, err := pg.Pattern(`procstat`)
@@ -20,6 +23,9 @@ func TestGather_RealPattern(t *testing.T) {
 }
 
 func TestGather_RealFullPattern(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
 	pids, err := pg.FullPattern(`%procstat%`)
@@ -29,6 +35,9 @@ func TestGather_RealFullPattern(t *testing.T) {
 }
 
 func TestGather_RealUser(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	user, err := user.Current()
 	require.NoError(t, err)
 	pg, err := NewNativeFinder()

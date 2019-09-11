@@ -27,7 +27,7 @@ func TestZipkinPlugin(t *testing.T) {
 			datafile:    "testdata/threespans.dat",
 			contentType: "application/x-thrift",
 			want: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "7047c59776af8a1b",
@@ -41,7 +41,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851331000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":             "7047c59776af8a1b",
@@ -58,7 +58,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851331000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "17020eb55a8bfe5",
@@ -72,7 +72,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":             "17020eb55a8bfe5",
@@ -89,7 +89,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "5195e96239641e",
@@ -103,7 +103,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"service_name":  "trivial",
@@ -119,7 +119,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"service_name":  "trivial",
@@ -135,7 +135,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"parent_id":     "5195e96239641e",
@@ -151,7 +151,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"trace_id":       "22c4fc8ab3669045",
@@ -176,7 +176,7 @@ func TestZipkinPlugin(t *testing.T) {
 			datafile:    "testdata/distributed_trace_sample.dat",
 			contentType: "application/x-thrift",
 			want: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "5e682bc21ce99c80",
@@ -190,7 +190,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":    "cs",
@@ -206,7 +206,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1433330263415871*int64(time.Microsecond)).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":    "cr",
@@ -486,7 +486,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":    "ss",
@@ -502,7 +502,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":     "Demo2Application",
@@ -519,7 +519,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":     "hi",
@@ -536,7 +536,7 @@ func TestZipkinPlugin(t *testing.T) {
 					},
 					Time: time.Unix(0, 1503031538778000*int64(time.Microsecond)).UTC(),
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":     "192.168.0.8:test:8010",

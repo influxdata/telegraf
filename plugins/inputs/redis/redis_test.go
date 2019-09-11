@@ -49,6 +49,8 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"used_memory_rss":                int64(811008),
 		"used_memory_peak":               int64(1003936),
 		"used_memory_lua":                int64(33792),
+		"used_memory_peak_perc":          float64(93.58),
+		"used_memory_dataset_perc":       float64(20.27),
 		"mem_fragmentation_ratio":        float64(0.81),
 		"loading":                        int64(0),
 		"rdb_changes_since_last_save":    int64(0),
@@ -116,6 +118,22 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "redis", fields, tags)
 	acc.AssertContainsTaggedFields(t, "redis_keyspace", keyspaceFields, keyspaceTags)
+
+	cmdstatSetTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "set"}
+	cmdstatSetFields := map[string]interface{}{
+		"calls":         int64(261265),
+		"usec":          int64(1634157),
+		"usec_per_call": float64(6.25),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatSetFields, cmdstatSetTags)
+
+	cmdstatCommandTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "command"}
+	cmdstatCommandFields := map[string]interface{}{
+		"calls":         int64(1),
+		"usec":          int64(990),
+		"usec_per_call": float64(990.0),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatCommandFields, cmdstatCommandTags)
 }
 
 const testOutput = `# Server
@@ -152,6 +170,8 @@ used_memory_peak_human:980.41K
 used_memory_lua:33792
 mem_fragmentation_ratio:0.81
 mem_allocator:libc
+used_memory_peak_perc:93.58%
+used_memory_dataset_perc:20.27%
 
 # Persistence
 loading:0
@@ -204,6 +224,10 @@ used_cpu_sys:0.14
 used_cpu_user:0.05
 used_cpu_sys_children:0.00
 used_cpu_user_children:0.00
+
+# Commandstats
+cmdstat_set:calls=261265,usec=1634157,usec_per_call=6.25
+cmdstat_command:calls=1,usec=990,usec_per_call=990.00
 
 # Keyspace
 db0:keys=2,expires=0,avg_ttl=0

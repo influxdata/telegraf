@@ -31,7 +31,11 @@ _* value ignored and therefore not recorded._
 More information about the meaning of these metrics can be found in the [PostgreSQL Documentation](http://www.postgresql.org/docs/9.2/static/monitoring-stats.html#PG-STAT-DATABASE-VIEW)
 
 ## Configuration
-Specify address via a url matching:
+Specify address via a postgresql connection string:
+
+  `host=/run/postgresql user=telegraf database=telegraf`
+  
+Or via an url matching:
 
   `postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]`
 
@@ -44,6 +48,13 @@ A  list of databases to explicitly ignore.  If not specified, metrics for all da
 A list of databases to pull metrics about. If not specified, metrics for all databases are gathered.  Do NOT use with the 'ignored_databases' option.
 
   `databases = ["app_production", "testing"]`
+
+### TLS Configuration
+
+Add the `sslkey`, `sslcert` and `sslrootcert` options to your DSN:
+```
+host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/telegraf/key.pem sslcert=/etc/telegraf/cert.pem sslrootcert=/etc/telegraf/ca.pem
+```
 
 ### Configuration example
 ```

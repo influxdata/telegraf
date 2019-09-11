@@ -115,8 +115,8 @@ func TestGetSummary(t *testing.T) {
 			expectedValue: &Summary{
 				Cluster: "a",
 				Slaves: []Slave{
-					Slave{ID: "a"},
-					Slave{ID: "b"},
+					{ID: "a"},
+					{ID: "b"},
 				},
 			},
 			expectedError: nil,

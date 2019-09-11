@@ -12,8 +12,8 @@ import (
 
 var TestTimeout = internal.Duration{Duration: time.Second}
 
-func UnboundControl(output string, Timeout internal.Duration, useSudo bool, Server string) func(string, internal.Duration, bool, string) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool, string) (*bytes.Buffer, error) {
+func UnboundControl(output string, Timeout internal.Duration, useSudo bool, Server string, ThreadAsTag bool) func(string, internal.Duration, bool, string, bool) (*bytes.Buffer, error) {
+	return func(string, internal.Duration, bool, string, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,7 +21,7 @@ func UnboundControl(output string, Timeout internal.Duration, useSudo bool, Serv
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run: UnboundControl(fullOutput, TestTimeout, true, ""),
+		run: UnboundControl(fullOutput, TestTimeout, true, "", false),
 	}
 	err := v.Gather(acc)
 
@@ -33,6 +33,26 @@ func TestParseFullOutput(t *testing.T) {
 	assert.Equal(t, acc.NFields(), 63)
 
 	acc.AssertContainsFields(t, "unbound", parsedFullOutput)
+}
+
+func TestParseFullOutputThreadAsTag(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	v := &Unbound{
+		run:         UnboundControl(fullOutput, TestTimeout, true, "", true),
+		ThreadAsTag: true,
+	}
+	err := v.Gather(acc)
+
+	assert.NoError(t, err)
+
+	assert.True(t, acc.HasMeasurement("unbound"))
+	assert.True(t, acc.HasMeasurement("unbound_threads"))
+
+	assert.Len(t, acc.Metrics, 2)
+	assert.Equal(t, acc.NFields(), 63)
+
+	acc.AssertContainsFields(t, "unbound", parsedFullOutputThreadAsTagMeasurementUnbound)
+	acc.AssertContainsFields(t, "unbound_threads", parsedFullOutputThreadAsTagMeasurementUnboundThreads)
 }
 
 var parsedFullOutput = map[string]interface{}{
@@ -99,6 +119,74 @@ var parsedFullOutput = map[string]interface{}{
 	"num_rrset_bogus":                  float64(0),
 	"unwanted_queries":                 float64(0),
 	"unwanted_replies":                 float64(0),
+}
+
+var parsedFullOutputThreadAsTagMeasurementUnboundThreads = map[string]interface{}{
+	"num_queries":              float64(11907596),
+	"num_cachehits":            float64(11489288),
+	"num_cachemiss":            float64(418308),
+	"num_prefetch":             float64(0),
+	"num_recursivereplies":     float64(418308),
+	"requestlist_avg":          float64(0.400229),
+	"requestlist_max":          float64(11),
+	"requestlist_overwritten":  float64(0),
+	"requestlist_exceeded":     float64(0),
+	"requestlist_current_all":  float64(0),
+	"requestlist_current_user": float64(0),
+	"recursion_time_avg":       float64(0.015020),
+	"recursion_time_median":    float64(0.00292343),
+}
+var parsedFullOutputThreadAsTagMeasurementUnbound = map[string]interface{}{
+	"total_num_queries":              float64(11907596),
+	"total_num_cachehits":            float64(11489288),
+	"total_num_cachemiss":            float64(418308),
+	"total_num_prefetch":             float64(0),
+	"total_num_recursivereplies":     float64(418308),
+	"total_requestlist_avg":          float64(0.400229),
+	"total_requestlist_max":          float64(11),
+	"total_requestlist_overwritten":  float64(0),
+	"total_requestlist_exceeded":     float64(0),
+	"total_requestlist_current_all":  float64(0),
+	"total_requestlist_current_user": float64(0),
+	"total_recursion_time_avg":       float64(0.015020),
+	"total_recursion_time_median":    float64(0.00292343),
+	"time_now":                       float64(1509968734.735180),
+	"time_up":                        float64(1472897.672099),
+	"time_elapsed":                   float64(1472897.672099),
+	"mem_total_sbrk":                 float64(7462912),
+	"mem_cache_rrset":                float64(285056),
+	"mem_cache_message":              float64(320000),
+	"mem_mod_iterator":               float64(16532),
+	"mem_mod_validator":              float64(112097),
+	"num_query_type_A":               float64(7062688),
+	"num_query_type_PTR":             float64(43097),
+	"num_query_type_TXT":             float64(2998),
+	"num_query_type_AAAA":            float64(4499711),
+	"num_query_type_SRV":             float64(5691),
+	"num_query_type_ANY":             float64(293411),
+	"num_query_class_IN":             float64(11907596),
+	"num_query_opcode_QUERY":         float64(11907596),
+	"num_query_tcp":                  float64(293411),
+	"num_query_ipv6":                 float64(0),
+	"num_query_flags_QR":             float64(0),
+	"num_query_flags_AA":             float64(0),
+	"num_query_flags_TC":             float64(0),
+	"num_query_flags_RD":             float64(11907596),
+	"num_query_flags_RA":             float64(0),
+	"num_query_flags_Z":              float64(0),
+	"num_query_flags_AD":             float64(1),
+	"num_query_flags_CD":             float64(0),
+	"num_query_edns_present":         float64(6202),
+	"num_query_edns_DO":              float64(6201),
+	"num_answer_rcode_NOERROR":       float64(11857463),
+	"num_answer_rcode_SERVFAIL":      float64(17),
+	"num_answer_rcode_NXDOMAIN":      float64(50116),
+	"num_answer_rcode_nodata":        float64(3914360),
+	"num_answer_secure":              float64(44289),
+	"num_answer_bogus":               float64(1),
+	"num_rrset_bogus":                float64(0),
+	"unwanted_queries":               float64(0),
+	"unwanted_replies":               float64(0),
 }
 
 var fullOutput = `thread0.num.queries=11907596

@@ -28,12 +28,18 @@ const sampleConfig = `
 
   ## specify a list of one or more Solr cores (default - all)
   # cores = ["main"]
+
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
 `
 
 // Solr is a plugin to read stats from one or many Solr servers
 type Solr struct {
 	Local       bool
 	Servers     []string
+	Username    string
+	Password    string
 	HTTPTimeout internal.Duration
 	Cores       []string
 	client      *http.Client
@@ -113,20 +119,7 @@ type Hitratio interface{}
 // Cache is an exported type that
 // contains cache metrics
 type Cache struct {
-	Stats struct {
-		CumulativeEvictions int64    `json:"cumulative_evictions"`
-		CumulativeHitratio  Hitratio `json:"cumulative_hitratio"`
-		CumulativeHits      int64    `json:"cumulative_hits"`
-		CumulativeInserts   int64    `json:"cumulative_inserts"`
-		CumulativeLookups   int64    `json:"cumulative_lookups"`
-		Evictions           int64    `json:"evictions"`
-		Hitratio            Hitratio `json:"hitratio"`
-		Hits                int64    `json:"hits"`
-		Inserts             int64    `json:"inserts"`
-		Lookups             int64    `json:"lookups"`
-		Size                int64    `json:"size"`
-		WarmupTime          int64    `json:"warmupTime"`
-	} `json:"stats"`
+	Stats map[string]interface{} `json:"stats"`
 }
 
 // NewSolr return a new instance of Solr
@@ -424,21 +417,30 @@ func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBe
 		return err
 	}
 	for name, metrics := range cacheMetrics {
-		cumulativeHits := getFloat(metrics.Stats.CumulativeHitratio)
-		hitratio := getFloat(metrics.Stats.Hitratio)
-		coreFields := map[string]interface{}{
-			"cumulative_evictions": metrics.Stats.CumulativeEvictions,
-			"cumulative_hitratio":  cumulativeHits,
-			"cumulative_hits":      metrics.Stats.CumulativeHits,
-			"cumulative_inserts":   metrics.Stats.CumulativeInserts,
-			"cumulative_lookups":   metrics.Stats.CumulativeLookups,
-			"evictions":            metrics.Stats.Evictions,
-			"hitratio":             hitratio,
-			"hits":                 metrics.Stats.Hits,
-			"inserts":              metrics.Stats.Inserts,
-			"lookups":              metrics.Stats.Lookups,
-			"size":                 metrics.Stats.Size,
-			"warmup_time":          metrics.Stats.WarmupTime,
+		coreFields := make(map[string]interface{})
+		for key, value := range metrics.Stats {
+			splitKey := strings.Split(key, ".")
+			newKey := splitKey[len(splitKey)-1]
+			switch newKey {
+			case "cumulative_evictions",
+				"cumulative_hits",
+				"cumulative_inserts",
+				"cumulative_lookups",
+				"eviction",
+				"hits",
+				"inserts",
+				"lookups",
+				"size",
+				"evictions":
+				coreFields[newKey] = getInt(value)
+			case "hitratio",
+				"cumulative_hitratio":
+				coreFields[newKey] = getFloat(value)
+			case "warmupTime":
+				coreFields["warmup_time"] = getInt(value)
+			default:
+				continue
+			}
 		}
 		acc.AddFields(
 			"solr_cache",
@@ -475,7 +477,18 @@ func (s *Solr) createHTTPClient() *http.Client {
 }
 
 func (s *Solr) gatherData(url string, v interface{}) error {
-	r, err := s.client.Get(url)
+	req, reqErr := http.NewRequest(http.MethodGet, url, nil)
+	if reqErr != nil {
+		return reqErr
+	}
+
+	if s.Username != "" {
+		req.SetBasicAuth(s.Username, s.Password)
+	}
+
+	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+
+	r, err := s.client.Do(req)
 	if err != nil {
 		return err
 	}

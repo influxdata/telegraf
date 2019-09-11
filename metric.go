@@ -54,11 +54,24 @@ type Metric interface {
 	AddField(key string, value interface{})
 	RemoveField(key string)
 
+	SetTime(t time.Time)
+
 	// HashID returns an unique identifier for the series.
 	HashID() uint64
 
 	// Copy returns a deep copy of the Metric.
 	Copy() Metric
+
+	// Accept marks the metric as processed successfully and written to an
+	// output.
+	Accept()
+
+	// Reject marks the metric as processed unsuccessfully.
+	Reject()
+
+	// Drop marks the metric as processed successfully without being written
+	// to any output.
+	Drop()
 
 	// Mark Metric as an aggregate
 	SetAggregate(bool)

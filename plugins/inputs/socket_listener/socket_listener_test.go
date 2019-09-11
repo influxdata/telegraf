@@ -3,13 +3,18 @@ package socket_listener
 import (
 	"bytes"
 	"crypto/tls"
+	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/wlog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,11 +25,22 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 // Should be called at the start of the test, and returns a function which should run at the end.
 func testEmptyLog(t *testing.T) func() {
 	buf := bytes.NewBuffer(nil)
-	log.SetOutput(buf)
+	log.SetOutput(wlog.NewWriter(buf))
+
+	level := wlog.WARN
+	wlog.SetLevel(level)
 
 	return func() {
 		log.SetOutput(os.Stderr)
-		assert.Empty(t, string(buf.Bytes()), "log not empty")
+
+		for {
+			line, err := buf.ReadBytes('\n')
+			if err != nil {
+				assert.Equal(t, io.EOF, err)
+				break
+			}
+			assert.Empty(t, string(line), "log not empty")
+		}
 	}
 }
 
@@ -50,14 +66,17 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 }
 
 func TestSocketListener_unix_tls(t *testing.T) {
-	defer testEmptyLog(t)()
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix_tls.sock")
 
 	sl := newSocketListener()
-	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
+	sl.ServiceAddress = "unix://" + sock
 	sl.ServerConfig = *pki.TLSServerConfig()
 
 	acc := &testutil.Accumulator{}
-	err := sl.Start(acc)
+	err = sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
@@ -65,7 +84,7 @@ func TestSocketListener_unix_tls(t *testing.T) {
 	tlsCfg.InsecureSkipVerify = true
 	require.NoError(t, err)
 
-	secureClient, err := tls.Dial("unix", "/tmp/telegraf_test.sock", tlsCfg)
+	secureClient, err := tls.Dial("unix", sock, tlsCfg)
 	require.NoError(t, err)
 
 	testSocketListener(t, sl, secureClient)
@@ -76,7 +95,7 @@ func TestSocketListener_tcp(t *testing.T) {
 
 	sl := newSocketListener()
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
-	sl.ReadBufferSize = 1024
+	sl.ReadBufferSize = internal.Size{Size: 1024}
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -94,7 +113,7 @@ func TestSocketListener_udp(t *testing.T) {
 
 	sl := newSocketListener()
 	sl.ServiceAddress = "udp://127.0.0.1:0"
-	sl.ReadBufferSize = 1024
+	sl.ReadBufferSize = internal.Size{Size: 1024}
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -108,38 +127,48 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix.sock")
+
 	defer testEmptyLog(t)()
 
-	os.Create("/tmp/telegraf_test.sock")
+	os.Create(sock)
 	sl := newSocketListener()
-	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
-	sl.ReadBufferSize = 1024
+	sl.ServiceAddress = "unix://" + sock
+	sl.ReadBufferSize = internal.Size{Size: 1024}
 
 	acc := &testutil.Accumulator{}
-	err := sl.Start(acc)
+	err = sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	client, err := net.Dial("unix", "/tmp/telegraf_test.sock")
+	client, err := net.Dial("unix", sock)
 	require.NoError(t, err)
 
 	testSocketListener(t, sl, client)
 }
 
 func TestSocketListener_unixgram(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unixgram.sock")
+
 	defer testEmptyLog(t)()
 
-	os.Create("/tmp/telegraf_test.sock")
+	os.Create(sock)
 	sl := newSocketListener()
-	sl.ServiceAddress = "unixgram:///tmp/telegraf_test.sock"
-	sl.ReadBufferSize = 1024
+	sl.ServiceAddress = "unixgram://" + sock
+	sl.ReadBufferSize = internal.Size{Size: 1024}
 
 	acc := &testutil.Accumulator{}
-	err := sl.Start(acc)
+	err = sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	client, err := net.Dial("unixgram", "/tmp/telegraf_test.sock")
+	client, err := net.Dial("unixgram", sock)
 	require.NoError(t, err)
 
 	testSocketListener(t, sl, client)

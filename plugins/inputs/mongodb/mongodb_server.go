@@ -3,6 +3,7 @@ package mongodb
 import (
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -26,41 +27,20 @@ type oplogEntry struct {
 	Timestamp bson.MongoTimestamp `bson:"ts"`
 }
 
-func (s *Server) gatherOplogStats() *OplogStats {
-	stats := &OplogStats{}
-	localdb := s.Session.DB("local")
-
-	op_first := oplogEntry{}
-	op_last := oplogEntry{}
-	query := bson.M{"ts": bson.M{"$exists": true}}
-
-	for _, collection_name := range []string{"oplog.rs", "oplog.$main"} {
-		if err := localdb.C(collection_name).Find(query).Sort("$natural").Limit(1).One(&op_first); err != nil {
-			if err == mgo.ErrNotFound {
-				continue
-			}
-			log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
-			return stats
-		}
-		if err := localdb.C(collection_name).Find(query).Sort("-$natural").Limit(1).One(&op_last); err != nil {
-			if err == mgo.ErrNotFound {
-				continue
-			}
-			log.Println("E! Error getting last oplog entry (" + err.Error() + ")")
-			return stats
-		}
-	}
-
-	op_first_time := time.Unix(int64(op_first.Timestamp>>32), 0)
-	op_last_time := time.Unix(int64(op_last.Timestamp>>32), 0)
-	stats.TimeDiff = int64(op_last_time.Sub(op_first_time).Seconds())
-	return stats
+func IsAuthorization(err error) bool {
+	return strings.Contains(err.Error(), "not authorized")
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error {
-	s.Session.SetMode(mgo.Eventual, true)
-	s.Session.SetSocketTimeout(0)
-	result_server := &ServerStatus{}
+func authLogLevel(err error) string {
+	if IsAuthorization(err) {
+		return "D!"
+	} else {
+		return "E!"
+	}
+}
+
+func (s *Server) gatherServerStatus() (*ServerStatus, error) {
+	serverStatus := &ServerStatus{}
 	err := s.Session.DB("admin").Run(bson.D{
 		{
 			Name:  "serverStatus",
@@ -70,78 +50,217 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 			Name:  "recordStats",
 			Value: 0,
 		},
-	}, result_server)
+	}, serverStatus)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	result_repl := &ReplSetStatus{}
-	// ignore error because it simply indicates that the db is not a member
-	// in a replica set, which is fine.
-	_ = s.Session.DB("admin").Run(bson.D{
+	return serverStatus, nil
+}
+
+func (s *Server) gatherReplSetStatus() (*ReplSetStatus, error) {
+	replSetStatus := &ReplSetStatus{}
+	err := s.Session.DB("admin").Run(bson.D{
 		{
 			Name:  "replSetGetStatus",
 			Value: 1,
 		},
-	}, result_repl)
+	}, replSetStatus)
+	if err != nil {
+		return nil, err
+	}
+	return replSetStatus, nil
+}
 
-	jumbo_chunks, _ := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
-
-	result_cluster := &ClusterStatus{
-		JumboChunksCount: int64(jumbo_chunks),
+func (s *Server) gatherClusterStatus() (*ClusterStatus, error) {
+	chunkCount, err := s.Session.DB("config").C("chunks").Find(bson.M{"jumbo": true}).Count()
+	if err != nil {
+		return nil, err
 	}
 
-	resultShards := &ShardStats{}
-	err = s.Session.DB("admin").Run(bson.D{
+	return &ClusterStatus{
+		JumboChunksCount: int64(chunkCount),
+	}, nil
+}
+
+func (s *Server) gatherShardConnPoolStats() (*ShardStats, error) {
+	shardStats := &ShardStats{}
+	err := s.Session.DB("admin").Run(bson.D{
 		{
 			Name:  "shardConnPoolStats",
 			Value: 1,
 		},
-	}, &resultShards)
+	}, &shardStats)
 	if err != nil {
-		log.Println("E! Error getting database shard stats (" + err.Error() + ")")
+		return nil, err
+	}
+	return shardStats, nil
+}
+
+func (s *Server) gatherDBStats(name string) (*Db, error) {
+	stats := &DbStatsData{}
+	err := s.Session.DB(name).Run(bson.D{
+		{
+			Name:  "dbStats",
+			Value: 1,
+		},
+	}, stats)
+	if err != nil {
+		return nil, err
 	}
 
-	oplogStats := s.gatherOplogStats()
+	return &Db{
+		Name:        name,
+		DbStatsData: stats,
+	}, nil
+}
 
-	result_db_stats := &DbStats{}
-	if gatherDbStats == true {
-		names := []string{}
-		names, err = s.Session.DatabaseNames()
-		if err != nil {
-			log.Println("E! Error getting database names (" + err.Error() + ")")
-		}
-		for _, db_name := range names {
-			db_stat_line := &DbStatsData{}
-			err = s.Session.DB(db_name).Run(bson.D{
-				{
-					Name:  "dbStats",
-					Value: 1,
-				},
-			}, db_stat_line)
+func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
+	query := bson.M{"ts": bson.M{"$exists": true}}
+
+	var first oplogEntry
+	err := s.Session.DB("local").C(collection).Find(query).Sort("$natural").Limit(1).One(&first)
+	if err != nil {
+		return nil, err
+	}
+
+	var last oplogEntry
+	err = s.Session.DB("local").C(collection).Find(query).Sort("-$natural").Limit(1).One(&last)
+	if err != nil {
+		return nil, err
+	}
+
+	firstTime := time.Unix(int64(first.Timestamp>>32), 0)
+	lastTime := time.Unix(int64(last.Timestamp>>32), 0)
+	stats := &OplogStats{
+		TimeDiff: int64(lastTime.Sub(firstTime).Seconds()),
+	}
+	return stats, nil
+}
+
+// The "oplog.rs" collection is stored on all replica set members.
+//
+// The "oplog.$main" collection is created on the master node of a
+// master-slave replicated deployment.  As of MongoDB 3.2, master-slave
+// replication has been deprecated.
+func (s *Server) gatherOplogStats() (*OplogStats, error) {
+	stats, err := s.getOplogReplLag("oplog.rs")
+	if err == nil {
+		return stats, nil
+	}
+
+	return s.getOplogReplLag("oplog.$main")
+}
+
+func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) {
+	names, err := s.Session.DatabaseNames()
+	if err != nil {
+		return nil, err
+	}
+
+	results := &ColStats{}
+	for _, db_name := range names {
+		if stringInSlice(db_name, colStatsDbs) || len(colStatsDbs) == 0 {
+			var colls []string
+			colls, err = s.Session.DB(db_name).CollectionNames()
 			if err != nil {
-				log.Println("E! Error getting db stats from " + db_name + "(" + err.Error() + ")")
+				log.Printf("E! [inputs.mongodb] Error getting collection names: %v", err)
+				continue
 			}
-			db := &Db{
-				Name:        db_name,
-				DbStatsData: db_stat_line,
+			for _, col_name := range colls {
+				col_stat_line := &ColStatsData{}
+				err = s.Session.DB(db_name).Run(bson.D{
+					{
+						Name:  "collStats",
+						Value: col_name,
+					},
+				}, col_stat_line)
+				if err != nil {
+					log.Printf("%s [inputs.mongodb] Error getting col stats from %q: %v", authLogLevel(err), col_name, err)
+					continue
+				}
+				collection := &Collection{
+					Name:         col_name,
+					DbName:       db_name,
+					ColStatsData: col_stat_line,
+				}
+				results.Collections = append(results.Collections, *collection)
 			}
+		}
+	}
+	return results, nil
+}
 
-			result_db_stats.Dbs = append(result_db_stats.Dbs, *db)
+func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gatherColStats bool, colStatsDbs []string) error {
+	s.Session.SetMode(mgo.Eventual, true)
+	s.Session.SetSocketTimeout(0)
+
+	serverStatus, err := s.gatherServerStatus()
+	if err != nil {
+		return err
+	}
+
+	// Get replica set status, an error indicates that the server is not a
+	// member of a replica set.
+	replSetStatus, err := s.gatherReplSetStatus()
+	if err != nil {
+		log.Printf("D! [inputs.mongodb] Unable to gather replica set status: %v", err)
+	}
+
+	// Gather the oplog if we are a member of a replica set.  Non-replica set
+	// members do not have the oplog collections.
+	var oplogStats *OplogStats
+	if replSetStatus != nil {
+		oplogStats, err = s.gatherOplogStats()
+		if err != nil {
+			return err
+		}
+	}
+
+	clusterStatus, err := s.gatherClusterStatus()
+	if err != nil {
+		log.Printf("D! [inputs.mongodb] Unable to gather cluster status: %v", err)
+	}
+
+	shardStats, err := s.gatherShardConnPoolStats()
+	if err != nil {
+		log.Printf("%s [inputs.mongodb] Unable to gather shard connection pool stats: %v",
+			authLogLevel(err), err)
+	}
+
+	var collectionStats *ColStats
+	if gatherColStats {
+		stats, err := s.gatherCollectionStats(colStatsDbs)
+		if err != nil {
+			return err
+		}
+		collectionStats = stats
+	}
+
+	dbStats := &DbStats{}
+	if gatherDbStats {
+		names, err := s.Session.DatabaseNames()
+		if err != nil {
+			return err
+		}
+
+		for _, name := range names {
+			db, err := s.gatherDBStats(name)
+			if err != nil {
+				log.Printf("D! [inputs.mongodb] Error getting db stats from %q: %v", name, err)
+			}
+			dbStats.Dbs = append(dbStats.Dbs, *db)
 		}
 	}
 
 	result := &MongoStatus{
-		ServerStatus:  result_server,
-		ReplSetStatus: result_repl,
-		ClusterStatus: result_cluster,
-		DbStats:       result_db_stats,
-		ShardStats:    resultShards,
+		ServerStatus:  serverStatus,
+		ReplSetStatus: replSetStatus,
+		ClusterStatus: clusterStatus,
+		DbStats:       dbStats,
+		ColStats:      collectionStats,
+		ShardStats:    shardStats,
 		OplogStats:    oplogStats,
 	}
-
-	defer func() {
-		s.lastResult = result
-	}()
 
 	result.SampleTime = time.Now()
 	if s.lastResult != nil && result != nil {
@@ -156,8 +275,20 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		)
 		data.AddDefaultStats()
 		data.AddDbStats()
+		data.AddColStats()
 		data.AddShardHostStats()
 		data.flush(acc)
 	}
+
+	s.lastResult = result
 	return nil
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

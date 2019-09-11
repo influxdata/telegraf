@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+const defaultTimeout = 5 * time.Second
 
 const sampleConfig = `
   ## Required Fibaro controller address/hostname.
@@ -28,13 +31,13 @@ const description = "Read devices value(s) from a Fibaro controller"
 
 // Fibaro contains connection information
 type Fibaro struct {
-	URL string
+	URL string `toml:"url"`
 
 	// HTTP Basic Auth Credentials
-	Username string
-	Password string
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 
-	Timeout internal.Duration
+	Timeout internal.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -67,6 +70,8 @@ type Devices struct {
 	Enabled    bool   `json:"enabled"`
 	Properties struct {
 		Dead   interface{} `json:"dead"`
+		Energy interface{} `json:"energy"`
+		Power  interface{} `json:"power"`
 		Value  interface{} `json:"value"`
 		Value2 interface{} `json:"value2"`
 	} `json:"properties"`
@@ -162,12 +167,25 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tags := map[string]string{
-			"section": sections[rooms[device.RoomID].SectionID],
-			"room":    rooms[device.RoomID].Name,
-			"name":    device.Name,
-			"type":    device.Type,
+			"deviceId": strconv.FormatUint(uint64(device.ID), 10),
+			"section":  sections[rooms[device.RoomID].SectionID],
+			"room":     rooms[device.RoomID].Name,
+			"name":     device.Name,
+			"type":     device.Type,
 		}
 		fields := make(map[string]interface{})
+
+		if device.Properties.Energy != nil {
+			if fValue, err := strconv.ParseFloat(device.Properties.Energy.(string), 64); err == nil {
+				fields["energy"] = fValue
+			}
+		}
+
+		if device.Properties.Power != nil {
+			if fValue, err := strconv.ParseFloat(device.Properties.Power.(string), 64); err == nil {
+				fields["power"] = fValue
+			}
+		}
 
 		if device.Properties.Value != nil {
 			value := device.Properties.Value
@@ -197,6 +215,8 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("fibaro", func() telegraf.Input {
-		return &Fibaro{}
+		return &Fibaro{
+			Timeout: internal.Duration{Duration: defaultTimeout},
+		}
 	})
 }

@@ -17,6 +17,7 @@ var m1, _ = metric.New("m1",
 		"b": int64(1),
 		"c": float64(2),
 		"d": float64(2),
+		"g": int64(3),
 	},
 	time.Now(),
 )
@@ -28,8 +29,10 @@ var m2, _ = metric.New("m1",
 		"c":        float64(4),
 		"d":        float64(6),
 		"e":        float64(200),
+		"f":        uint64(200),
 		"ignoreme": "string",
 		"andme":    true,
+		"g":        int64(1),
 	},
 	time.Now(),
 )
@@ -81,6 +84,16 @@ func TestBasicStatsWithPeriod(t *testing.T) {
 		"e_max":   float64(200),
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
+		"f_count": float64(1), //f
+		"f_max":   float64(200),
+		"f_min":   float64(200),
+		"f_mean":  float64(200),
+		"g_count": float64(2), //g
+		"g_max":   float64(3),
+		"g_min":   float64(1),
+		"g_mean":  float64(2),
+		"g_s2":    float64(2),
+		"g_stdev": math.Sqrt(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -113,6 +126,10 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 		"d_max":   float64(2),
 		"d_min":   float64(2),
 		"d_mean":  float64(2),
+		"g_count": float64(1), //g
+		"g_max":   float64(3),
+		"g_min":   float64(3),
+		"g_mean":  float64(3),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -144,6 +161,14 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 		"e_max":   float64(200),
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
+		"f_count": float64(1), //f
+		"f_max":   float64(200),
+		"f_min":   float64(200),
+		"f_mean":  float64(200),
+		"g_count": float64(1), //g
+		"g_max":   float64(1),
+		"g_min":   float64(1),
+		"g_mean":  float64(1),
 	}
 	expectedTags = map[string]string{
 		"foo": "bar",
@@ -169,6 +194,8 @@ func TestBasicStatsWithOnlyCount(t *testing.T) {
 		"c_count": float64(2),
 		"d_count": float64(2),
 		"e_count": float64(1),
+		"f_count": float64(1),
+		"g_count": float64(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -194,6 +221,8 @@ func TestBasicStatsWithOnlyMin(t *testing.T) {
 		"c_min": float64(2),
 		"d_min": float64(2),
 		"e_min": float64(200),
+		"f_min": float64(200),
+		"g_min": float64(1),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -219,6 +248,8 @@ func TestBasicStatsWithOnlyMax(t *testing.T) {
 		"c_max": float64(4),
 		"d_max": float64(6),
 		"e_max": float64(200),
+		"f_max": float64(200),
+		"g_max": float64(3),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -244,6 +275,8 @@ func TestBasicStatsWithOnlyMean(t *testing.T) {
 		"c_mean": float64(3),
 		"d_mean": float64(4),
 		"e_mean": float64(200),
+		"f_mean": float64(200),
+		"g_mean": float64(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -269,6 +302,8 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 		"c_sum": float64(6),
 		"d_sum": float64(8),
 		"e_sum": float64(200),
+		"f_sum": float64(200),
+		"g_sum": float64(4),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -277,7 +312,7 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 }
 
 // Verify that sum doesn't suffer from floating point errors.  Early
-// implementations of sum were calulated from mean and count, which
+// implementations of sum were calculated from mean and count, which
 // e.g. summed "1, 1, 5, 1" as "7.999999..." instead of 8.
 func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
 
@@ -345,6 +380,7 @@ func TestBasicStatsWithOnlyVariance(t *testing.T) {
 		"b_s2": float64(2),
 		"c_s2": float64(2),
 		"d_s2": float64(8),
+		"g_s2": float64(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -369,6 +405,7 @@ func TestBasicStatsWithOnlyStandardDeviation(t *testing.T) {
 		"b_stdev": math.Sqrt(2),
 		"c_stdev": math.Sqrt(2),
 		"d_stdev": math.Sqrt(8),
+		"g_stdev": math.Sqrt(2),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -399,6 +436,59 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 		"d_min": float64(2),
 		"e_max": float64(200), //e
 		"e_min": float64(200),
+		"f_max": float64(200), //f
+		"f_min": float64(200),
+		"g_max": float64(3), //g
+		"g_min": float64(1),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+// Test only aggregating diff
+func TestBasicStatsWithDiff(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"diff"}
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_diff": float64(0),
+		"b_diff": float64(2),
+		"c_diff": float64(2),
+		"d_diff": float64(4),
+		"g_diff": float64(-2),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+// Test only aggregating non_negative_diff
+func TestBasicStatsWithNonNegativeDiff(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"non_negative_diff"}
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_non_negative_diff": float64(0),
+		"b_non_negative_diff": float64(2),
+		"c_non_negative_diff": float64(2),
+		"d_non_negative_diff": float64(4),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -450,6 +540,18 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
 		"e_sum":   float64(200),
+		"f_count": float64(1), //f
+		"f_max":   float64(200),
+		"f_min":   float64(200),
+		"f_mean":  float64(200),
+		"f_sum":   float64(200),
+		"g_count": float64(2), //g
+		"g_max":   float64(3),
+		"g_min":   float64(1),
+		"g_mean":  float64(2),
+		"g_s2":    float64(2),
+		"g_stdev": math.Sqrt(2),
+		"g_sum":   float64(4),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -488,7 +590,7 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 }
 
 // Test that if Stats isn't supplied, then we only do count, min, max, mean,
-// stdev, and s2.  We purposely exclude sum for backwards compatability,
+// stdev, and s2.  We purposely exclude sum for backwards compatibility,
 // otherwise user's working systems will suddenly (and surprisingly) start
 // capturing sum without their input.
 func TestBasicStatsWithDefaultStats(t *testing.T) {

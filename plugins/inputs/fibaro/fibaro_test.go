@@ -119,6 +119,8 @@ const devicesJSON = `
             "type": "com.fibaro.FGRM222",
             "enabled": true,
             "properties": {
+                "energy": "4.33",
+                "power": "0.7",
                 "dead": "false",
                 "value": "50",
                 "value2": "75"
@@ -178,27 +180,27 @@ func TestJSONSuccess(t *testing.T) {
 	assert.Equal(t, uint64(5), acc.NMetrics())
 
 	// Ensure fields / values are correct - Device 1
-	tags := map[string]string{"section": "Section 1", "room": "Room 1", "name": "Device 1", "type": "com.fibaro.binarySwitch"}
+	tags := map[string]string{"deviceId": "1", "section": "Section 1", "room": "Room 1", "name": "Device 1", "type": "com.fibaro.binarySwitch"}
 	fields := map[string]interface{}{"value": float64(0)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 
 	// Ensure fields / values are correct - Device 2
-	tags = map[string]string{"section": "Section 2", "room": "Room 2", "name": "Device 2", "type": "com.fibaro.binarySwitch"}
+	tags = map[string]string{"deviceId": "2", "section": "Section 2", "room": "Room 2", "name": "Device 2", "type": "com.fibaro.binarySwitch"}
 	fields = map[string]interface{}{"value": float64(1)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 
 	// Ensure fields / values are correct - Device 3
-	tags = map[string]string{"section": "Section 3", "room": "Room 3", "name": "Device 3", "type": "com.fibaro.multilevelSwitch"}
+	tags = map[string]string{"deviceId": "3", "section": "Section 3", "room": "Room 3", "name": "Device 3", "type": "com.fibaro.multilevelSwitch"}
 	fields = map[string]interface{}{"value": float64(67)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 
 	// Ensure fields / values are correct - Device 4
-	tags = map[string]string{"section": "Section 3", "room": "Room 4", "name": "Device 4", "type": "com.fibaro.temperatureSensor"}
+	tags = map[string]string{"deviceId": "4", "section": "Section 3", "room": "Room 4", "name": "Device 4", "type": "com.fibaro.temperatureSensor"}
 	fields = map[string]interface{}{"value": float64(22.8)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 
 	// Ensure fields / values are correct - Device 5
-	tags = map[string]string{"section": "Section 3", "room": "Room 4", "name": "Device 5", "type": "com.fibaro.FGRM222"}
-	fields = map[string]interface{}{"value": float64(50), "value2": float64(75)}
+	tags = map[string]string{"deviceId": "5", "section": "Section 3", "room": "Room 4", "name": "Device 5", "type": "com.fibaro.FGRM222"}
+	fields = map[string]interface{}{"energy": float64(4.33), "power": float64(0.7), "value": float64(50), "value2": float64(75)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 }

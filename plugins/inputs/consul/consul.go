@@ -2,8 +2,10 @@ package consul
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/consul/api"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -15,8 +17,10 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
-	Datacentre string
+	Datacentre string // deprecated in 1.10; use Datacenter
+	Datacenter string
 	tls.ClientConfig
+	TagDelimiter string
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -36,8 +40,8 @@ var sampleConfig = `
   # username = ""
   # password = ""
 
-  ## Data centre to query the health checks from
-  # datacentre = ""
+  ## Data center to query the health checks from
+  # datacenter = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -45,6 +49,11 @@ var sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = true
+
+  ## Consul checks' tag splitting
+  # When tags are formatted like "key:value" with ":" as a delimiter then
+  # they will be splitted and reported as proper key:value in Telegraf
+  # tag_delimiter = ":"
 `
 
 func (c *Consul) Description() string {
@@ -70,6 +79,10 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		config.Datacenter = c.Datacentre
 	}
 
+	if c.Datacenter != "" {
+		config.Datacenter = c.Datacenter
+	}
+
 	if c.Token != "" {
 		config.Token = c.Token
 	}
@@ -86,7 +99,7 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		return nil, err
 	}
 
-	config.HttpClient.Transport = &http.Transport{
+	config.Transport = &http.Transport{
 		TLSClientConfig: tlsCfg,
 	}
 
@@ -110,6 +123,19 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		tags["node"] = check.Node
 		tags["service_name"] = check.ServiceName
 		tags["check_id"] = check.CheckID
+
+		for _, checkTag := range check.ServiceTags {
+			if c.TagDelimiter != "" {
+				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
+				if len(splittedTag) == 1 && checkTag != "" {
+					tags[checkTag] = checkTag
+				} else if len(splittedTag) == 2 && splittedTag[1] != "" {
+					tags[splittedTag[0]] = splittedTag[1]
+				}
+			} else if checkTag != "" {
+				tags[checkTag] = checkTag
+			}
+		}
 
 		acc.AddFields("consul_health_checks", record, tags)
 	}

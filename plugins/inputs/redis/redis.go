@@ -13,11 +13,14 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Redis struct {
-	Servers []string
+	Servers  []string
+	Password string
+	tls.ClientConfig
 
 	clients     []Client
 	initialized bool
@@ -34,7 +37,7 @@ type RedisClient struct {
 }
 
 func (r *RedisClient) Info() *redis.StringCmd {
-	return r.client.Info()
+	return r.client.Info("ALL")
 }
 
 func (r *RedisClient) BaseTags() map[string]string {
@@ -56,6 +59,16 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
+
+  ## specify server password
+  # password = "s#cr@t%"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = true
 `
 
 func (r *Redis) SampleConfig() string {
@@ -101,6 +114,9 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 				password = pw
 			}
 		}
+		if len(r.Password) > 0 {
+			password = r.Password
+		}
 
 		var address string
 		if u.Scheme == "unix" {
@@ -109,12 +125,18 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 			address = u.Host
 		}
 
+		tlsConfig, err := r.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
 		client := redis.NewClient(
 			&redis.Options{
-				Addr:     address,
-				Password: password,
-				Network:  u.Scheme,
-				PoolSize: 1,
+				Addr:      address,
+				Password:  password,
+				Network:   u.Scheme,
+				PoolSize:  1,
+				TLSConfig: tlsConfig,
 			},
 		)
 
@@ -226,10 +248,18 @@ func gatherInfoOutput(
 				gatherKeyspaceLine(name, kline, acc, tags)
 				continue
 			}
+			if section == "Commandstats" {
+				kline := strings.TrimSpace(parts[1])
+				gatherCommandstateLine(name, kline, acc, tags)
+				continue
+			}
 			metric = name
 		}
 
 		val := strings.TrimSpace(parts[1])
+
+		// Some percentage values have a "%" suffix that we need to get rid of before int/float conversion
+		val = strings.TrimSuffix(val, "%")
 
 		// Try parsing as int
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
@@ -297,6 +327,51 @@ func gatherKeyspaceLine(
 		}
 		acc.AddFields("redis_keyspace", fields, tags)
 	}
+}
+
+// Parse the special cmdstat lines.
+// Example:
+//     cmdstat_publish:calls=33791,usec=208789,usec_per_call=6.18
+// Tag: cmdstat=publish; Fields: calls=33791i,usec=208789i,usec_per_call=6.18
+func gatherCommandstateLine(
+	name string,
+	line string,
+	acc telegraf.Accumulator,
+	global_tags map[string]string,
+) {
+	if !strings.HasPrefix(name, "cmdstat") {
+		return
+	}
+
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
+	parts := strings.Split(line, ",")
+	for _, part := range parts {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
+		}
+
+		switch kv[0] {
+		case "calls":
+			fallthrough
+		case "usec":
+			ival, err := strconv.ParseInt(kv[1], 10, 64)
+			if err == nil {
+				fields[kv[0]] = ival
+			}
+		case "usec_per_call":
+			fval, err := strconv.ParseFloat(kv[1], 64)
+			if err == nil {
+				fields[kv[0]] = fval
+			}
+		}
+	}
+	acc.AddFields("redis_cmdstat", fields, tags)
 }
 
 func init() {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -28,36 +28,37 @@ func getQueueDirectory() (string, error) {
 	return strings.TrimSpace(string(qd)), nil
 }
 
-func qScan(path string) (int64, int64, int64, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, 0, 0, err
-	}
-
-	finfos, err := f.Readdir(-1)
-	f.Close()
-	if err != nil {
-		return 0, 0, 0, err
-	}
-
+func qScan(path string, acc telegraf.Accumulator) (int64, int64, int64, error) {
 	var length, size int64
 	var oldest time.Time
-	for _, finfo := range finfos {
+	err := filepath.Walk(path, func(_ string, finfo os.FileInfo, err error) error {
+		if err != nil {
+			acc.AddError(fmt.Errorf("error scanning %s: %s", path, err))
+			return nil
+		}
+		if finfo.IsDir() {
+			return nil
+		}
+
 		length++
 		size += finfo.Size()
 
 		ctime := statCTime(finfo.Sys())
 		if ctime.IsZero() {
-			continue
+			return nil
 		}
 		if oldest.IsZero() || ctime.Before(oldest) {
 			oldest = ctime
 		}
+		return nil
+	})
+	if err != nil {
+		return 0, 0, 0, err
 	}
 	var age int64
 	if !oldest.IsZero() {
 		age = int64(time.Now().Sub(oldest) / time.Second)
-	} else if len(finfos) != 0 {
+	} else if length != 0 {
 		// system doesn't support ctime
 		age = -1
 	}
@@ -77,8 +78,8 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	for _, q := range []string{"active", "hold", "incoming", "maildrop"} {
-		length, size, age, err := qScan(path.Join(p.QueueDirectory, q))
+	for _, q := range []string{"active", "hold", "incoming", "maildrop", "deferred"} {
+		length, size, age, err := qScan(filepath.Join(p.QueueDirectory, q), acc)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error scanning queue %s: %s", q, err))
 			continue
@@ -89,30 +90,6 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddFields("postfix_queue", fields, map[string]string{"queue": q})
 	}
-
-	var dLength, dSize int64
-	dAge := int64(-1)
-	for _, q := range []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"} {
-		length, size, age, err := qScan(path.Join(p.QueueDirectory, "deferred", q))
-		if err != nil {
-			if os.IsNotExist(err) {
-				// the directories are created on first use
-				continue
-			}
-			acc.AddError(fmt.Errorf("error scanning queue deferred/%s: %s", q, err))
-			return nil
-		}
-		dLength += length
-		dSize += size
-		if age > dAge {
-			dAge = age
-		}
-	}
-	fields := map[string]interface{}{"length": dLength, "size": dSize}
-	if dAge != -1 {
-		fields["age"] = dAge
-	}
-	acc.AddFields("postfix_queue", fields, map[string]string{"queue": "deferred"})
 
 	return nil
 }

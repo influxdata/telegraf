@@ -11,6 +11,9 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   topic_prefix = "telegraf"
 
   ## QoS policy for messages
+  ##   0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
   qos = 2
 
   ## username and password to connect MQTT server.
@@ -30,8 +33,15 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## When true, metrics will be sent in one MQTT message per flush.  Otherwise,
+  ## metrics are written one metric per MQTT message.
+  # batch = false
+
+  ## When true, messages will have RETAIN flag set.
+  # retain = false
+
   ## Data format to output.
-  data_format = "influx"
+  # data_format = "influx"
 ```
 
 ### Required parameters:
@@ -49,4 +59,5 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 * `tls_cert`: TLS CERT
 * `tls_key`: TLS key
 * `insecure_skip_verify`: Use TLS but skip chain & host verification (default: false)
+* `retain`: Set `retain` flag when publishing
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)

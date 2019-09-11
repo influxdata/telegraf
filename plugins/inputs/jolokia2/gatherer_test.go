@@ -17,7 +17,7 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 				Mbean: "test:foo=bar",
 			},
 			expected: []ReadRequest{
-				ReadRequest{
+				{
 					Mbean:      "test:foo=bar",
 					Attributes: []string{},
 				},
@@ -29,7 +29,7 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 				Paths: []string{"biz"},
 			},
 			expected: []ReadRequest{
-				ReadRequest{
+				{
 					Mbean:      "test:foo=bar",
 					Attributes: []string{"biz"},
 				},
@@ -41,7 +41,7 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 				Paths: []string{"baz", "biz"},
 			},
 			expected: []ReadRequest{
-				ReadRequest{
+				{
 					Mbean:      "test:foo=bar",
 					Attributes: []string{"baz", "biz"},
 				},
@@ -53,7 +53,7 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 				Paths: []string{"biz/baz"},
 			},
 			expected: []ReadRequest{
-				ReadRequest{
+				{
 					Mbean:      "test:foo=bar",
 					Attributes: []string{"biz"},
 					Path:       "baz",
@@ -66,7 +66,7 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 				Paths: []string{"biz/baz/fiz/faz"},
 			},
 			expected: []ReadRequest{
-				ReadRequest{
+				{
 					Mbean:      "test:foo=bar",
 					Attributes: []string{"biz"},
 					Path:       "baz/fiz/faz",
@@ -79,12 +79,12 @@ func TestJolokia2_makeReadRequests(t *testing.T) {
 				Paths: []string{"baz/biz", "faz/fiz"},
 			},
 			expected: []ReadRequest{
-				ReadRequest{
+				{
 					Mbean:      "test:foo=bar",
 					Attributes: []string{"baz"},
 					Path:       "biz",
 				},
-				ReadRequest{
+				{
 					Mbean:      "test:foo=bar",
 					Attributes: []string{"faz"},
 					Path:       "fiz",

@@ -163,7 +163,7 @@ func (c *mockHTTPClient) HTTPClient() *http.Client {
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
 func genMockHttpJson(response string, statusCode int) []*HttpJson {
 	return []*HttpJson{
-		&HttpJson{
+		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server1.example.com/metrics/",
@@ -180,7 +180,7 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 				"apiVersion":   "v1",
 			},
 		},
-		&HttpJson{
+		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server3.example.com/metrics/",

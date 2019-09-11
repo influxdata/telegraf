@@ -2,23 +2,21 @@ package nats
 
 import (
 	"fmt"
-
-	nats_client "github.com/nats-io/nats"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	nats_client "github.com/nats-io/go-nats"
 )
 
 type NATS struct {
-	// Servers is the NATS server pool to connect to
-	Servers []string
-	// Credentials
-	Username string
-	Password string
-	// NATS subject to publish metrics to
-	Subject string
+	Servers  []string `toml:"servers"`
+	Secure   bool     `toml:"secure"`
+	Username string   `toml:"username"`
+	Password string   `toml:"password"`
+	Subject  string   `toml:"subject"`
 	tls.ClientConfig
 
 	conn       *nats_client.Conn
@@ -33,6 +31,9 @@ var sampleConfig = `
   # password = ""
   ## NATS subject for producer messages
   subject = "telegraf"
+
+  ## Use Transport Layer Security
+  # secure = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -70,13 +71,12 @@ func (n *NATS) Connect() error {
 		opts.Password = n.Password
 	}
 
-	// override TLS, if it was specified
-	tlsConfig, err := n.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-	if tlsConfig != nil {
-		// set NATS connection TLS options
+	if n.Secure {
+		tlsConfig, err := n.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
 		opts.Secure = true
 		opts.TLSConfig = tlsConfig
 	}
@@ -108,7 +108,8 @@ func (n *NATS) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := n.serializer.Serialize(metric)
 		if err != nil {
-			return err
+			log.Printf("D! [outputs.nats] Could not serialize metric: %v", err)
+			continue
 		}
 
 		err = n.conn.Publish(n.Subject, buf)

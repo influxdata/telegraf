@@ -1,12 +1,11 @@
 package socket_writer
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"strings"
-
-	"crypto/tls"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -128,8 +127,8 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		bs, err := sw.Serialize(m)
 		if err != nil {
-			//TODO log & keep going with remaining metrics
-			return err
+			log.Printf("D! [outputs.socket_writer] Could not serialize metric: %v", err)
+			continue
 		}
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
@@ -137,6 +136,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 				// permanent error. close the connection
 				sw.Close()
 				sw.Conn = nil
+				return fmt.Errorf("closing connection: %v", err)
 			}
 			return err
 		}

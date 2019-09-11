@@ -120,13 +120,13 @@ confdir=/etc/telegraf/telegraf.d
 case $1 in
     start)
         # Checked the PID file exists and check the actual status of process
-        if [ -e $pidfile ]; then
-            pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
-            # If the status is SUCCESS then don't need to start again.
-            if [ "x$status" = "x0" ]; then
-                log_failure_msg "$name process is running"
-                exit 0 # Exit
-            fi
+        if [ -e "$pidfile" ]; then
+            if pidofproc -p $pidfile $daemon > /dev/null; then
+				log_failure_msg "$name process is running"
+			else
+				log_failure_msg "$name pidfile has no corresponding process; ensure $name is stopped and remove $pidfile"
+			fi
+			exit 0
         fi
 
         # Bump the file limits, before launching the daemon. These will carry over to
@@ -150,13 +150,18 @@ case $1 in
     stop)
         # Stop the daemon.
         if [ -e $pidfile ]; then
-            pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
-            if [ "$status" = 0 ]; then
-                if killproc -p $pidfile SIGTERM && /bin/rm -rf $pidfile; then
-                    log_success_msg "$name process was stopped"
-                else
-                    log_failure_msg "$name failed to stop service"
-                fi
+            if pidofproc -p $pidfile $daemon > /dev/null; then
+                # periodically signal until process exists
+                while true; do
+                        if ! pidofproc -p $pidfile $daemon > /dev/null; then
+                                break
+                        fi
+                        killproc -p $pidfile SIGTERM 2>&1 >/dev/null
+                        sleep 2
+                done
+
+                log_success_msg "$name process was stopped"
+                rm -f $pidfile
             fi
         else
             log_failure_msg "$name process is not running"
@@ -166,8 +171,7 @@ case $1 in
     reload)
         # Reload the daemon.
         if [ -e $pidfile ]; then
-            pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
-            if [ "$status" = 0 ]; then
+            if pidofproc -p $pidfile $daemon > /dev/null; then
                 if killproc -p $pidfile SIGHUP; then
                     log_success_msg "$name process was reloaded"
                 else
