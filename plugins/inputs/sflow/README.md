@@ -4,10 +4,12 @@ The sflow input pluging provides support for acting as an sflow v5 collector in 
 
 # Configuration
 
-| Name | Description | Example |
-|---|---|---|
+| Name | Description 
+|---|---|
 | service_address| URL to listen on expressed as UDP (IPv4 or 6) OP address and port number | service_address = "udp://:6343" 
-| dns_multi_name_processor | An optional regexp and template to use to transform a DNS resolve name. Particularily useful when DNS resolves an IP address to more than one name, and they alternative in order when queried. Using this processor command it is possible to tranform the name into something common irrespect of which entry is first - if the names conform to a regular naming schema. Note TOML [escape sequences](https://github.com/toml-lang/toml) may be required. | ````s/(.*)(?:-net[0-9])/$1```` will strip ```-net<n>``` from the host name thereby converting, as an example, ```hostx-net1``` and ```hostx-net2``` both to ```hostx```
+| dns_multi_name_processor | An optional regexp and template to use to transform a DNS resolve name. Particularily useful when DNS resolves an IP address to more than one name, and they alternative in order when queried. Using this processor command it is possible to tranform the name into something common irrespect of which entry is first - if the names conform to a regular naming schema. Note TOML [escape sequences](https://github.com/toml-lang/toml) may be required.
+||For example, ````s/(.*)(?:-net[0-9])/$1```` will strip ```-net<n>``` from the host name thereby converting, as an example, ```hostx-net1``` and ```hostx-net2``` both to ```hostx```
+|dns_name_resolve|dfsdf|
 
 
 
@@ -41,9 +43,29 @@ The sflow input pluging provides support for acting as an sflow v5 collector in 
   # max_flows_per_sample = 10
   # max_counters_per_sample = 10
   # max_samples_per_packet = 10
+
 ```
 
+## DNS Name and SNMP Interface name resolution and caching
+
+Raw sflow packets, and their samples headers, communicate IP addresses and Interface identifiers, neither of which are useful to humans.
+
+The sflow plugin can be configured to attempt to resolve IP addresses to host names via DNS and interface identifiers to interface short names via SNMP agent interaction.
+
+The resolved names, or in the case of a resolution error the ip/id will be used as 'the' name, are configurably cached for a period of time to avoid continual lookups.
+
+### Multipe DNS Name resolution & processing
+
+In some cases DNS servers may maintain multiple entries for the same IP address in support of load balancing. In this setup the same IP address may be resolved to multiple DNS names, via a single DNS query, and it is likely the order of those DNS names will change over time.
+
+In order to provide some stability to the names recorded against flow records, it is possible to provide a regular expression and template transformation that should be capable of converting multiple names to a single common name where a mathodical naming scheme has been used.
+
+For example:
+
+
 # Schema
+
+**ACTUALLY** document this on parser and refere to it
 
 ## Tags (optionally as Fields)
 
@@ -94,9 +116,20 @@ The following items are naturally recorded as tags by the sflow plugin. However,
 ## Fields
 | Name | Description |
 |---|---|
-|   |   |
-|   |   |
-|   |   |
+|  bytes |   |
+|  drops |   |
+|  packets |   |
+| frame_length |
+| header_size
+| ip_fragment_offset
+| ip_header_length
+| ip_total_length
+| ip_ttl
+| tcp_header_length
+| tcp_window_size
+| udp_length
+| ip_flags
+| tcp_flags | TCP flags of TCP IP header (IPv4 or IPv6)
 
 # TODO
 
@@ -113,4 +146,6 @@ The following items are naturally recorded as tags by the sflow plugin. However,
 // converned about optiopns sizing on header -don't take account of that
 
 // create good tests
+
+// consider natural type storage when asFields (like src_port as int rather than string)
 

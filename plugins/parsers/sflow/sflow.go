@@ -1,14 +1,17 @@
 package sflow
 
 import (
-	"runtime"
+	"encoding/binary"
+	"net"
 )
 
+// Line 1383 of SFlow v5 specification
 var ipvMap = map[uint32]string{
 	1: "IPV4",
 	2: "IPV6",
 }
 
+// Line 1920 of SFlow v5 specfication
 var headerProtocolMap = map[uint32]string{
 	1:  "ETHERNET-ISO88023",
 	2:  "ISO88024-TOKENBUS",
@@ -26,6 +29,7 @@ var headerProtocolMap = map[uint32]string{
 	14: "POS",
 }
 
+// The values here are scattered throughout the SFlow v5 specification - they are brought here in a single place for clarity
 var formatMap = map[uint32]string{
 	1:    "rawPacketHeaderFlowData",
 	2:    "ethFrameFlowData",
@@ -45,33 +49,37 @@ var formatMap = map[uint32]string{
 	1012: "extendedVlanTunnelFlowData",
 }
 
-func file() string {
-	_, file, _, _ := runtime.Caller(0)
-	return file
+// V5FormatOptions captures configuration for controlling the processing of an SFlow V5 packet.
+type V5FormatOptions struct {
+	MaxFlowsPerSample    uint32
+	MaxCountersPerSample uint32
+	MaxSamplesPerPacket  uint32
+	MaxFlowHeaderLength  uint32
+	IncludeHeaders       bool
 }
 
-func line() string {
-	_, _, line, _ := runtime.Caller(0)
-	return string(line)
+// NewDefaultV5FormatOptions answers a new V5FormatOptions with default values initialised
+func NewDefaultV5FormatOptions() V5FormatOptions {
+	return V5FormatOptions{10, 10, 10, 2048, true}
 }
 
-func sourceIDTypeFn(v uint32) (string, uint32)  { return "sourceIdType", v >> 24 }
-func sourceIDValueFn(v uint32) (string, uint32) { return "sourceIdValue", v & 0x00ffffff }
+// SFlowFormat answers and ItemDecoder capable of decoding sFlow v5 packets in accordance
+// with SFlow v5 specification at https://sflow.org/sflow_version_5.txt
+func V5Format(options V5FormatOptions) ItemDecoder {
 
-func inputFormatFn(v uint32) (string, uint32) { return "inputFormat", v >> 30 }
-func inputValueFn(v uint32) (string, uint32)  { return "inputValue", v & 0x0fffffff }
+	// The numbers on comments are line number references to the sflow v5 specification at
 
-func outputFormatFn(v uint32) (string, uint32) { return "outputFormat", v >> 30 }
-func outputValueFn(v uint32) (string, uint32)  { return "outputValue", v & 0x0fffffff }
+	sourceIDTypeFn := func(v uint32) (string, uint32) { return "sourceIdType", v >> 24 }
+	sourceIDValueFn := func(v uint32) (string, uint32) { return "sourceIdValue", v & 0x00ffffff }
 
-func ipv4Fn(key string) ItemDecoder { return bin(key, 4) }
-func ipv6Fn(key string) ItemDecoder { return bin(key, 16) }
+	inputFormatFn := func(v uint32) (string, uint32) { return "inputFormat", v >> 30 }
+	inputValueFn := func(v uint32) (string, uint32) { return "inputValue", v & 0x0fffffff }
 
-//     The most significant 2 bits are used to indicate the format of
-//the 30 bit value.
+	outputFormatFn := func(v uint32) (string, uint32) { return "outputFormat", v >> 30 }
+	outputValueFn := func(v uint32) (string, uint32) { return "outputValue", v & 0x0fffffff }
 
-// SFlowFormat answers and ItemDecoder capable of decoding sFlow v5 packets
-func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSamplesPerPacket uint32) ItemDecoder {
+	ipv4Fn := func(key string) ItemDecoder { return bin(key, 4) }
+	ipv6Fn := func(key string) ItemDecoder { return bin(key, 16) }
 
 	ethFrameFlowData := seq( // 1992
 		ui32("length"),
@@ -170,20 +178,23 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 		warnAndBreak("WARN", "unimplemented support for extendedVlanTunnelFlowData", ""),
 	)
 
+	var headerDecoder ItemDecoder
+	if options.IncludeHeaders {
+		headerDecoder = alt("protocol",
+			eql("protocol", "ETHERNET-ISO88023", ethHeader("header", "header.length")),
+			altDefault(warnAndBreak("WARN", "unimplemented support for header.protocol %d", "protocol")),
+		)
+	}
+
 	rawPacketHeaderFlowData := seq(
 		ui32Mapped("protocol", headerProtocolMap), // 1942 of type headerProtocolMap
 		ui32("frameLength"),
 		ui32("stripped"),
 		ui32("header.length"),
-		sub("header.length", // TODO, put a max on this
-			alt("protocol",
-				eql("protocol", "ETHERNET-ISO88023", ethHeader("header", "header.length")),
-				altDefault(warnAndBreak("WARN", "unimplemented support for header.protocol %d", "protocol")),
-			),
-		),
+		asrtMax("header.length", options.MaxFlowHeaderLength),
+		sub("header.length", headerDecoder),
 	)
 
-	// not liking this below, too much use of duplicate infromation in this strings v seq processor names. Ummm!
 	flowData := alt("flowFormat",
 		eql("flowFormat", "rawPacketHeaderFlowData", rawPacketHeaderFlowData), // 1939
 		eql("flowFormat", "ethFrameFlowData", ethFrameFlowData),
@@ -206,6 +217,7 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 	flowRecord := seq(
 		ui32Mapped("flowFormat", formatMap), // 1599
 		ui32("flowData.length"),
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
 		sub("flowData.length", flowData), // 1600 // TODO, put a max on this
 	)
 
@@ -221,14 +233,15 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 		ui32("", inputFormatFn, inputValueFn),   // 1652
 		ui32("", outputFormatFn, outputValueFn), // 1653
 		ui32("flowRecords.length"),              // 1655
-		iter("flowRecords", "flowRecords.length", maxFlowsPerSample, flowRecord), //1655
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
+		iter("flowRecords", "flowRecords.length", options.MaxFlowsPerSample, flowRecord), //1655
 	)
 
 	flowSampleExpanded := seq(
 		ui32("sequenceNumber"),
 		// sflow data source expanded 1707
-		ui32("sourceIdType"),  /* sFlowDataSource type */
-		ui32("sourceIdValue"), /* sFlowDataSource index */
+		ui32("sourceIdType"),  // sFlowDataSource type
+		ui32("sourceIdValue"), // sFlowDataSource index
 		ui32("samplingRate"),
 		ui32("samplePool"),
 		ui32("drops"),
@@ -237,7 +250,8 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 		ui32("outputFormat"),       // 1729
 		ui32("outputValue"),        // 1729
 		ui32("flowRecords.length"), // 1731
-		iter("flowRecords", "flowRecords.length", maxFlowsPerSample, flowRecord), //1731
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
+		iter("flowRecords", "flowRecords.length", options.MaxFlowsPerSample, flowRecord), //1731
 	)
 
 	ifCounter := seq( // 2267
@@ -333,7 +347,7 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 		ui64("free_memory"),
 	)
 
-	counterDataAlts := alt("counterFormat", // in cloudflare (sflow.go:271) they are comparinsg the "format" which is not the counterFormat but sampleType
+	counterDataAlts := alt("counterFormat",
 		eql("counterFormat", uint32(1), ifCounter),           // 2267
 		eql("counterFormat", uint32(2), ethernetCounter),     // 2304
 		eql("counterFormat", uint32(3), tokenringCounter),    // 2327
@@ -347,6 +361,7 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 	counterRecord := seq( // 1604
 		ui32("counterFormat"),
 		ui32("counterData.length"),
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
 		sub("counterData.length", counterDataAlts), // TODO, put a max on this
 	)
 
@@ -354,7 +369,8 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 		ui32("sequenceNumber"),
 		ui32("", sourceIDTypeFn, sourceIDValueFn), // "sourceId") 1672
 		ui32("counters.length"),
-		iter("counters", "counters.length", maxCountersPerSample, counterRecord),
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
+		iter("counters", "counters.length", options.MaxCountersPerSample, counterRecord),
 	)
 
 	countersSampleExpanded := seq( // 1744
@@ -362,12 +378,14 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 		ui32("sourceIdType"),  // 1689
 		ui32("sourceIdValue"), // 1690
 		ui32("counters.length"),
-		iter("counters", "counters.length", maxCountersPerSample, counterRecord),
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
+		iter("counters", "counters.length", options.MaxCountersPerSample, counterRecord),
 	)
 
 	sampleRecord := seq( // 1761
 		ui32("sampleType"), // 1762
 		ui32("sampleData.length"),
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
 		sub("sampleData.length", // // TODO, put a max on this
 			alt("sampleType",
 				eql("sampleType", uint32(1), flowSample),             // 1 = flowSample 1615
@@ -389,7 +407,103 @@ func SFlowFormat(maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSampl
 		ui32("sequenceNumber"), // 1801
 		ui32("uptime"),         // 1804
 		ui32("samples.length"), // 1812 - array of sample_record
-		iter("samples", "samples.length", maxSamplesPerPacket, sampleRecord),
+		//asrtMax("header.length", options.maxFlowHeaderLength), // what should it do if we breach? breakAndWarn?
+		iter("samples", "samples.length", options.MaxSamplesPerPacket, sampleRecord),
 	)
 	return result
+}
+
+func ethHeader(fieldlName string, lenFieldName string) ItemDecoder {
+	return nest("header", sub(lenFieldName, // TODO, put a max on this
+		seq(
+			bin("dstMac", 6, func(b []byte) interface{} { return binary.BigEndian.Uint64(append([]byte{0, 0}, b...)) }),
+			bin("srcMac", 6, func(b []byte) interface{} { return binary.BigEndian.Uint64(append([]byte{0, 0}, b...)) }),
+			ui16("tagOrEType"),
+			alt("",
+				eql("tagOrEType", uint16(0x8100),
+					seq(
+						ui16("", func(v uint16) (string, uint16) { return "vlanID", v & 0x0FFF }), // last 12 bits of it are the vlanid
+						ui16("etype"), // just follows on from vlan id
+					),
+				),
+				altDefault( // Not an 802.1Q VLAN Tag, just treat as an ether type
+					asgn("tagOrEType", "etype"),
+				),
+			),
+			alt("etype",
+				eql("etype", uint16(0x0800), ipv4Header()),
+				eql("etype", uint16(0x86DD), ipv6Header()),
+				altDefault(warnAndBreak("WARN", "unimplemented support for Ether Type %d", "etherType")),
+			),
+		),
+	))
+}
+
+func ipv4Header() ItemDecoder {
+	return seq(
+		ui16("",
+			func(v uint16) (string, uint16) { return "IPversion", (v & 0xF000) >> 12 },
+			//func(v uint16) (string, uint16) { return "ihl", (v & 0x7000) >> 8 }, ignore
+			func(v uint16) (string, uint16) { return "dscp", (v & 0xFC) >> 2 },
+			func(v uint16) (string, uint16) { return "ecn", v & 0x3 },
+		),
+		ui16("total_length"),
+		ui16("fragmentId"), // identification
+		ui16("",
+			func(v uint16) (string, uint16) { return "flags", (v & 0xE000) >> 13 },
+			func(v uint16) (string, uint16) { return "fragmentOffset", v & 0x1FFF },
+		),
+		bin("IPTTL", 1, func(b []byte) interface{} { return uint8(b[0]) }),
+		bin("proto", 1, func(b []byte) interface{} { return uint16(b[0]) }),
+		ui16(""), // ugnoreheader_checksum"),
+		bin("srcIP", 4, func(b []byte) interface{} { return net.IP(b) }),
+		bin("dstIP", 4, func(b []byte) interface{} { return net.IP(b) }),
+		// TODO, I'm assuming no options
+		alt("",
+			eql("proto", uint16(6), tcpHeader()),
+			eql("proto", uint16(17), udpHeader()),
+			altDefault(warnAndBreak("WARN", "unimplemented support for protol %d", "proto")),
+		),
+	)
+}
+
+func bytesToNetIP(b []byte) interface{} {
+	return net.IP(b)
+}
+
+func ipv6Header() ItemDecoder {
+	return seq(
+		ui32("",
+			func(v uint32) (string, uint32) { return "IPversion", (v & 0xF000) >> 28 },
+			//func(v uint32) (string, uint32) { return "ds", (v & 0xFC00000) >> 22 }, UNUSED
+			//func(v uint32) (string, uint32) { return "ecn", (v & 0x300000) >> 20 },
+			func(v uint32) (string, uint32) { return "IPv6FlowLabel", v & 0xFFFFF }),
+		ui16("paylloadLength"),
+		ui16("",
+			func(v uint16) (string, uint16) { return "nextHeader", (v & 0xFF00) >> 8 },
+			func(v uint16) (string, uint16) { return "hopLimit", (v & 0xFF) }),
+		bin("srcIP", 16, bytesToNetIP),
+		bin("dstIP", 16, bytesToNetIP),
+	)
+}
+
+func tcpHeader() ItemDecoder {
+	return seq(
+		ui16("srcPort"),
+		ui16("dstPort"),
+		ui32("sequence"),
+		ui32("ack_number"),
+		bin("tcp_header_length", 2, func(b []byte) interface{} { return uint32((b[0] & 0xF0) * 4) }), // ignore other pieces
+		ui16("tcp_window_size"),
+		ui16("checksum"),
+		ui16("urgent_pointer"),
+	)
+}
+
+func udpHeader() ItemDecoder {
+	return seq(
+		ui16("srcPort"),
+		ui16("dstPort"),
+		ui16("udp_length"),
+	)
 }

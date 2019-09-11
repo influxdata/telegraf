@@ -54,7 +54,11 @@ func NewParser(metricName string, snmpCommunity string, defaultTags map[string]s
 //
 // Must be thread-safe.
 func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	decodedPacket, err := Decode(SFlowFormat(sfp.maxFlowsPerSample, sfp.maxCountersPerSample, sfp.maxSamplesPerPacket), bytes.NewBuffer(buf))
+	options := NewDefaultV5FormatOptions()
+	options.MaxFlowsPerSample = sfp.maxFlowsPerSample
+	options.MaxCountersPerSample = sfp.maxCountersPerSample
+	options.MaxSamplesPerPacket = sfp.maxSamplesPerPacket
+	decodedPacket, err := Decode(V5Format(options), bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, err
 	}

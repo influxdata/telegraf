@@ -10,10 +10,7 @@ import (
 func Decode(format ItemDecoder, bytes *bytes.Buffer) (map[string]interface{}, error) {
 	recorder := newDefaultRecorder()
 	e := format.Decode(bytes, recorder)
-	if e != nil {
-		return recorder.GetRecording(), e
-	}
-	return recorder.GetRecording(), nil
+	return recorder.GetRecording(), e
 }
 
 // Recorder probably going to do away with this, or rather not export it.
@@ -207,31 +204,8 @@ func ui32(k string, fn ...func(uint32) (string, uint32)) ItemDecoder {
 	return &uint32Decoder{k, fn, nil}
 }
 
-func ui64(k string, fn ...func(uint64) (string, uint64)) ItemDecoder {
-	return &uint64Decoder{k, fn, nil}
-}
-
 func ui32Mapped(k string, toMap map[uint32]string) ItemDecoder {
 	return &uint32Decoder{k, nil, toMap}
-}
-
-func bin(k string, l int, fn ...func([]byte) interface{}) ItemDecoder {
-	if len(fn) > 0 {
-		if len(fn) > 1 {
-			panic("too manhy functions")
-		}
-		return &binDecoder{k, l, fn[0]}
-	} else {
-		return &binDecoder{k, l, nil}
-	}
-}
-
-func sub(k string, d ItemDecoder) ItemDecoder {
-	return &subBuffDecoder{k, []ItemDecoder{d}}
-}
-
-func nest(k string, d ItemDecoder) ItemDecoder {
-	return &nestItemDecoder{k, d}
 }
 
 type iterItemDecoder struct {
@@ -269,19 +243,23 @@ func (d *iterItemDecoder) Decode(r io.Reader, rec Recorder) error {
 	return fmt.Errorf("unable to find key %s", key)
 }
 
+type ItemDecoder interface {
+	Decode(r io.Reader, rec Recorder) error
+}
+
 type nestItemDecoder struct {
 	name        string
 	ItemDecoder ItemDecoder
+}
+
+func nest(k string, d ItemDecoder) ItemDecoder {
+	return &nestItemDecoder{k, d}
 }
 
 func (d *nestItemDecoder) Decode(r io.Reader, rec Recorder) error {
 	nestRec := rec.nest(d.name, 1)
 	nestedRec, _ := nestRec.next()
 	return d.ItemDecoder.Decode(r, nestedRec)
-}
-
-type ItemDecoder interface {
-	Decode(r io.Reader, rec Recorder) error
 }
 
 type uint16Decoder struct {
@@ -371,6 +349,10 @@ type uint64Decoder struct {
 	toMap map[uint64]string
 }
 
+func ui64(k string, fn ...func(uint64) (string, uint64)) ItemDecoder {
+	return &uint64Decoder{k, fn, nil}
+}
+
 func (d *uint64Decoder) Decode(r io.Reader, rec Recorder) error {
 	var value uint64
 	err := binary.Read(r, binary.BigEndian, &value)
@@ -395,16 +377,29 @@ func (d *uint64Decoder) Decode(r io.Reader, rec Recorder) error {
 	return nil
 }
 
+/* DEFUNCT
 type ifDecoder struct {
 	key     string
 	value   interface{}
 	Decoder ItemDecoder
 }
+*/
 
 type binDecoder struct {
 	name string
 	size int
 	fn   func([]byte) interface{}
+}
+
+func bin(k string, l int, fn ...func([]byte) interface{}) ItemDecoder {
+	if len(fn) > 0 {
+		if len(fn) > 1 {
+			panic("too manhy functions")
+		}
+		return &binDecoder{k, l, fn[0]}
+	} else {
+		return &binDecoder{k, l, nil}
+	}
 }
 
 func (b *binDecoder) Decode(r io.Reader, rec Recorder) error {
@@ -426,6 +421,10 @@ type subBuffDecoder struct {
 	processors []ItemDecoder
 }
 
+func sub(k string, d ItemDecoder) ItemDecoder {
+	return &subBuffDecoder{k, []ItemDecoder{d}}
+}
+
 func (s *subBuffDecoder) Decode(r io.Reader, rec Recorder) error {
 	length, ok := rec.lookup(s.key)
 	if ok {
@@ -436,18 +435,20 @@ func (s *subBuffDecoder) Decode(r io.Reader, rec Recorder) error {
 		lUint32, ok := length.(uint32)
 		lengthInt := int(lUint32)
 		if !ok {
-			return fmt.Errorf("can't convert to int %T", length)
+			return fmt.Errorf("can't convert to uint32 %T", length)
 		}
 		sampleReader := bytes.NewBuffer(buff.Next(lengthInt))
 		for _, p := range s.processors {
-			e := p.Decode(sampleReader, rec)
-			if e != nil {
-				if _, ok := e.(UnwrapError); ok {
-					// It is an UnwrapError to stop processing any further decoders at this level and continue (return no error)
-					// at the higher level
-					return nil
+			if p != nil {
+				e := p.Decode(sampleReader, rec)
+				if e != nil {
+					if _, ok := e.(UnwrapError); ok {
+						// It is an UnwrapError to stop processing any further decoders at this level and continue (return no error)
+						// at the higher level
+						return nil
+					}
+					return e
 				}
-				return e
 			}
 		}
 		return nil
@@ -455,8 +456,13 @@ func (s *subBuffDecoder) Decode(r io.Reader, rec Recorder) error {
 	return fmt.Errorf("unabl to find sub length value from key %s", s.key)
 }
 
+/* DEFUNCT I THINK
 type remainingBytesDecoder struct {
 	key string
+}
+
+func remainingBytes(key string) *remainingBytesDecoder {
+	return &remainingBytesDecoder{key}
 }
 
 func (d *remainingBytesDecoder) Decode(r io.Reader, rec Recorder) error {
@@ -468,9 +474,7 @@ func (d *remainingBytesDecoder) Decode(r io.Reader, rec Recorder) error {
 	rec.record(d.key, v)
 	return nil
 }
-func remainingBytes(key string) *remainingBytesDecoder {
-	return &remainingBytesDecoder{key}
-}
+*/
 
 type asgnDecoder struct {
 	srcKey string
@@ -488,4 +492,45 @@ func (d *asgnDecoder) Decode(r io.Reader, rec Recorder) error {
 		return nil
 	}
 	return fmt.Errorf("assigne cannot find source %s", d.srcKey)
+}
+
+type asrtMaxDecoder struct {
+	srcKey string
+	value  interface{}
+}
+
+func asrtMax(srcKey string, value interface{}) ItemDecoder {
+	return &asrtMaxDecoder{srcKey, value}
+}
+
+func (d *asrtMaxDecoder) Decode(_ io.Reader, rec Recorder) error {
+	v, ok := rec.lookup(d.srcKey)
+	if ok {
+		notGreater := false
+		var validTest bool //:= false
+		switch t := v.(type) {
+		case uint:
+			valueAsUint, ok := d.value.(uint)
+			validTest = ok
+			notGreater = t <= valueAsUint
+		case uint16:
+			valueAsUint16, ok := d.value.(uint16)
+			validTest = ok
+			notGreater = t <= valueAsUint16
+		case uint32:
+			valueAsUint32, ok := d.value.(uint32)
+			validTest = ok
+			notGreater = t <= valueAsUint32
+		}
+		if validTest {
+			if !notGreater {
+				return UnwrapError(fmt.Sprintf("artMax %v is greater than %v", v, d.value))
+			} else {
+				return nil
+			}
+		} else {
+			return fmt.Errorf("artMax unable to compare %t and %t", v, d.value)
+		}
+	}
+	return fmt.Errorf("asrtMax cannot find source %s", d.srcKey)
 }

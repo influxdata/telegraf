@@ -51,15 +51,17 @@ type resolver interface {
 }
 
 type asyncResolver struct {
-	dns             bool
-	snmpIfaces      bool
-	snmpCommunity   string
-	dnsCache        *cache
-	ifaceCache      *cache
-	dnsTTLTicker    *time.Ticker
-	ifaceTTLTicker  *time.Ticker
-	fnWorkerChannel chan asyncJob
-	dnsp            *dnsProcessor
+	dns               bool
+	snmpIfaces        bool
+	snmpCommunity     string
+	dnsCache          *cache
+	ifaceCache        *cache
+	dnsTTLTicker      *time.Ticker
+	ifaceTTLTicker    *time.Ticker
+	fnWorkerChannel   chan asyncJob
+	dnsp              *dnsProcessor
+	ipToFqdnFn        func(ip string) string
+	ifIndexToIfNameFn func(id uint64, community string, snmpAgentIP string, ifIndex string) string
 }
 
 func newAsyncResolver(dnsResolve bool, dnsMultiProcessor string, snmpResolve bool, snmpCommunity string) resolver {
@@ -67,12 +69,14 @@ func newAsyncResolver(dnsResolve bool, dnsMultiProcessor string, snmpResolve boo
 	log.Printf("I! [inputs.sflow] snmp cache = %t", snmpResolve)
 	log.Printf("I! [inputs.sflow] snmp community = %s", snmpCommunity)
 	return &asyncResolver{
-		dns:           dnsResolve,
-		snmpIfaces:    snmpResolve,
-		snmpCommunity: snmpCommunity,
-		dnsCache:      newCache(),
-		ifaceCache:    newCache(),
-		dnsp:          newDNSProcessor(dnsMultiProcessor),
+		dns:               dnsResolve,
+		snmpIfaces:        snmpResolve,
+		snmpCommunity:     snmpCommunity,
+		dnsCache:          newCache(),
+		ifaceCache:        newCache(),
+		dnsp:              newDNSProcessor(dnsMultiProcessor),
+		ipToFqdnFn:        ipToFqdn,
+		ifIndexToIfNameFn: ifIndexToIfName,
 	}
 }
 
@@ -182,14 +186,18 @@ func (r *asyncResolver) resolveDNS(ipAddress string, resolved func(fqdn string))
 	if fqdn != "" {
 		log.Printf("D! [input.sflow] sync cache lookup %s=>%s", ipAddress, fqdn)
 	} else {
-		fqdn = r.ipToFqdn(ipAddress)
+		name := r.ipToFqdnFn(ipAddress)
+		fqdn = r.dnsp.transform(name)
+		if fqdn != name {
+			log.Printf("D! [input.sflow] transformed dns[0] %s=>%s", name, fqdn)
+		}
 		log.Printf("D! [input.sflow] async resolve of %s=>%s", ipAddress, fqdn)
 		r.dnsCache.set(ipAddress, fqdn)
 	}
 	resolved(fqdn)
 }
 
-func (r *asyncResolver) ipToFqdn(ipAddress string) string {
+func /*(r *asyncResolver)*/ ipToFqdn(ipAddress string) string {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10000*time.Millisecond)
 	defer cancel()
 	resolver := net.Resolver{}
@@ -197,10 +205,7 @@ func (r *asyncResolver) ipToFqdn(ipAddress string) string {
 	fqdn := ipAddress
 	if err == nil {
 		if len(names) != 0 {
-			fqdn = r.dnsp.transform(names[0])
-			if fqdn != names[0] {
-				log.Printf("D! [input.sflow] transformed dns[0] %s=>%s", names[0], fqdn)
-			}
+			fqdn = names[0]
 		}
 	} else {
 		log.Printf("!E [input.sflow] dns lookup of %s resulted in error %s", ipAddress, err)
@@ -215,7 +220,7 @@ func (r *asyncResolver) resolveIFace(ifaceIndex string, agentIP string, resolved
 		log.Printf("D! [input.sflow] %d sync cache lookup (%s,%s)=>%s", id, agentIP, ifaceIndex, name)
 	} else {
 		// look it up
-		name = r.ifIndexToIfName(id, r.snmpCommunity, agentIP, ifaceIndex)
+		name = r.ifIndexToIfNameFn(id, r.snmpCommunity, agentIP, ifaceIndex)
 		log.Printf("D! [input.sflow] %d async resolve of (%s,%s)=>%s", id, agentIP, ifaceIndex, name)
 		r.ifaceCache.set(fmt.Sprintf("%s-%s", agentIP, ifaceIndex), name)
 	}
@@ -225,7 +230,7 @@ func (r *asyncResolver) resolveIFace(ifaceIndex string, agentIP string, resolved
 // So, Ive established that this wasn't thread safe. Might be I need a differen COnnection object.
 var ifIndexToIfNameMux sync.Mutex
 
-func (r *asyncResolver) ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex string) string {
+func /*(r *asyncResolver)*/ ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex string) string {
 	ifIndexToIfNameMux.Lock()
 	defer ifIndexToIfNameMux.Unlock()
 	// This doesn't make the most of the fact we look up all interface names but only cache/use one of them :-()
