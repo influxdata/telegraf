@@ -35,7 +35,7 @@ func TestCoils(t *testing.T) {
 		Controller: "localhost",
 		Port:       1502,
 		SlaveId:    1,
-		Timeout:    0,
+		//Timeout:    0,
 		Registers: registers{
 			Coils: register{
 				Tags: []tag{
@@ -65,7 +65,7 @@ func TestCoils(t *testing.T) {
 
 		res := []byte{0x00}
 		for i, t := range modbus.Registers.Coils.Tags {
-			v, _ := t.Value.(uint16)
+			v, _ := t.value.(uint16)
 			res[0] = res[0] | byte(v<<uint(i))
 		}
 
@@ -90,7 +90,7 @@ func TestRegisters(t *testing.T) {
 		Controller: "localhost",
 		Port:       1502,
 		SlaveId:    1,
-		Timeout:    0,
+		//Timeout:    0,
 		Registers: registers{
 			HoldingRegisters: register{
 				Tags: []tag{
@@ -254,7 +254,7 @@ func TestRegisters(t *testing.T) {
 
 		for _, tags := range modbus.Registers.HoldingRegisters.Tags {
 			if tags.Name == regTest.Name {
-				assert.Equal(t, regTest.ExpectValue, tags.Value)
+				assert.Equal(t, regTest.ExpectValue, tags.value)
 			}
 		}
 	}
