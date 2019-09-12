@@ -23,8 +23,6 @@ const (
 
 // Suricata is a Telegraf input plugin for Suricata runtime statistics.
 type Suricata struct {
-	sync.Mutex
-
 	Source    string `toml:"source"`
 	Delimiter string `toml:"delimiter"`
 
@@ -61,8 +59,6 @@ func (s *Suricata) SampleConfig() string {
 // provided to Suricata.
 func (s *Suricata) Start(acc telegraf.Accumulator) error {
 	var err error
-	s.Lock()
-	defer s.Unlock()
 	if s.inputListener == nil {
 		s.inputListener, err = net.ListenUnix("unix", &net.UnixAddr{
 			Name: s.Source,
@@ -86,8 +82,6 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 // Stop causes the plugin to cease collecting JSON data from the socket provided
 // to Suricata.
 func (s *Suricata) Stop() {
-	s.Lock()
-	defer s.Unlock()
 	s.inputListener.Close()
 	if s.cancel != nil {
 		s.cancel()
