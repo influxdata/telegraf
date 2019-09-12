@@ -98,10 +98,10 @@ func (s *Suricata) readInput(ctx context.Context, acc telegraf.Accumulator, conn
 			return
 		default:
 			line, rerr := reader.ReadBytes('\n')
-			if rerr == nil {
-				s.parse(acc, line)
-			} else if rerr == io.EOF {
+			if rerr == io.EOF {
 				return
+			} else if len(line) > 0 {
+				s.parse(acc, line)
 			}
 		}
 	}
