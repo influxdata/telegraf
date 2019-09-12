@@ -28,9 +28,9 @@ type Suricata struct {
 	Source    string `toml:"source"`
 	Delimiter string `toml:"delimiter"`
 
-	InputListener *net.UnixListener
-	Ctx           context.Context
-	Cancel        context.CancelFunc
+	inputListener *net.UnixListener
+	ctx           context.Context
+	cancel        context.CancelFunc
 
 	wg sync.WaitGroup
 }
@@ -64,16 +64,16 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 	var err error
 	s.Lock()
 	defer s.Unlock()
-	if s.InputListener == nil {
-		s.InputListener, err = net.ListenUnix("unix", &net.UnixAddr{
+	if s.inputListener == nil {
+		s.inputListener, err = net.ListenUnix("unix", &net.UnixAddr{
 			Name: s.Source,
 			Net:  "unix",
 		})
 		if err != nil {
 			return err
 		}
-		s.Ctx, s.Cancel = context.WithCancel(context.Background())
-		s.InputListener.SetUnlinkOnClose(true)
+		s.ctx, s.cancel = context.WithCancel(context.Background())
+		s.inputListener.SetUnlinkOnClose(true)
 		s.wg.Add(1)
 		go s.handleServerConnection(acc)
 	}
@@ -85,20 +85,20 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 func (s *Suricata) Stop() {
 	s.Lock()
 	defer s.Unlock()
-	s.InputListener.Close()
-	if s.Cancel != nil {
-		s.Cancel()
+	s.inputListener.Close()
+	if s.cancel != nil {
+		s.cancel()
 	}
 	s.wg.Wait()
-	s.InputListener.Close()
-	s.InputListener = nil
+	s.inputListener.Close()
+	s.inputListener = nil
 }
 
 func (s *Suricata) readInput(acc telegraf.Accumulator, conn net.Conn) {
 	reader := bufio.NewReaderSize(conn, InBufSize)
 	for {
 		select {
-		case <-s.Ctx.Done():
+		case <-s.ctx.Done():
 			return
 		default:
 			line, rerr := reader.ReadBytes('\n')
@@ -116,11 +116,11 @@ func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 	defer s.wg.Done()
 	for {
 		select {
-		case <-s.Ctx.Done():
+		case <-s.ctx.Done():
 			return
 		default:
 			var conn net.Conn
-			conn, err = s.InputListener.Accept()
+			conn, err = s.inputListener.Accept()
 			if err != nil {
 				if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 					acc.AddError(err)
