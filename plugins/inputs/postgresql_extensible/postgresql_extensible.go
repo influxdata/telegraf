@@ -3,7 +3,9 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	// register in driver.
@@ -25,6 +27,7 @@ type Postgresql struct {
 
 type query []struct {
 	Sqlquery    string
+	Script      string
 	Version     int
 	Withdbname  bool
 	Tagvalue    string
@@ -75,7 +78,10 @@ var sampleConfig = `
   ## field is used to define custom tags (separated by commas)
   ## The optional "measurement" value can be used to override the default
   ## output measurement name ("postgresql").
-  #
+  ##
+  ## The script option can be used to specify the .sql file path.
+  ## If script and sqlquery options specified at same time, sqlquery will be used 
+  ##
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
   ##   sqlquery string
@@ -96,6 +102,19 @@ var sampleConfig = `
     tagvalue="postgresql.stats"
 `
 
+func (p *Postgresql) Init() error {
+	var err error
+	for i := range p.Query {
+		if p.Query[i].Sqlquery == "" {
+			p.Query[i].Sqlquery, err = ReadQueryFromFile(p.Query[i].Script)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (p *Postgresql) SampleConfig() string {
 	return sampleConfig
 }
@@ -106,6 +125,20 @@ func (p *Postgresql) Description() string {
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
+}
+
+func ReadQueryFromFile(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	query, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	return string(query), err
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
@@ -131,6 +164,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
 		tag_value = p.Query[i].Tagvalue
+
 		if p.Query[i].Measurement != "" {
 			meas_name = p.Query[i].Measurement
 		} else {
