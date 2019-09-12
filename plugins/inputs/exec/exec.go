@@ -218,6 +218,8 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 			// There were matches, so we'll append each match together with
 			// the arguments to the commands slice
 			for _, match := range matches {
+				//Glob returns back-slash separated path on Windows. Normalize it to further processing
+				match = filepath.ToSlash(match)
 				if len(cmdAndArgs) == 1 {
 					commands = append(commands, match)
 				} else {
