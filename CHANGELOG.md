@@ -7,6 +7,7 @@
 #### Features
 
 - [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
+- [#6361](https://github.com/influxdata/telegraf/pull/6361): Add ability to read query from file to postgresql_extensible input.
 
 ## v1.12.1 [2019-09-10]
 
