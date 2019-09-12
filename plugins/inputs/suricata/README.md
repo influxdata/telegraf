@@ -14,7 +14,10 @@ stats output to, and processes the incoming data to fit Telegraf's format.
   # unix socket to be created for listening.
   # Will be overwritten if a socket or file
   # with that name already exists.
-  source = "/tmp/suricata-stats.sock"
+  source = "/var/run/suricata-stats.sock"
+  # Delimiter for flattening field keys, e.g. subitem "alert" of "detect"
+  # becomes "detect_alert" when delimiter is "_".
+  delimiter = "_"
 ```
 
 ### Measurements & Fields:
@@ -25,77 +28,75 @@ See http://suricata.readthedocs.io/en/latest/performance/statistics.html for
 more information.
 
 All fields are numeric.
-
 - suricata
-    - app_layer.flow.dcerpc_udp
-    - app_layer.flow.dns_tcp
-    - app_layer.flow.dns_udp
-    - app_layer.flow.enip_udp
-    - app_layer.flow.failed_tcp
-    - app_layer.flow.failed_udp
-    - app_layer.flow.http
-    - app_layer.flow.ssh
-    - app_layer.flow.tls
-    - app_layer.tx.dns_tcp
-    - app_layer.tx.dns_udp
-    - app_layer.tx.enip_udp
-    - app_layer.tx.http
-    - app_layer.tx.smtp
-    - capture.kernel_drops
-    - capture.kernel_packets
-    - decoder.avg_pkt_size
-    - decoder.bytes
-    - decoder.ethernet
-    - decoder.gre
-    - decoder.icmpv4
-    - decoder.icmpv4.ipv4_unknown_ver
-    - decoder.icmpv6
-    - decoder.invalid
-    - decoder.ipv4
-    - decoder.ipv6
-    - decoder.max_pkt_size
-    - decoder.pkts
-    - decoder.tcp
-    - decoder.tcp.hlen_too_small
-    - decoder.tcp.invalid_optlen
-    - decoder.teredo
-    - decoder.udp
-    - decoder.vlan
-    - detect.alert
-    - dns.memcap_global
-    - dns.memuse
-    - flow.memuse
-    - flow_mgr.closed_pruned
-    - flow_mgr.est_pruned
-    - flow_mgr.flows_checked
-    - flow_mgr.flows_notimeout
-    - flow_mgr.flows_removed
-    - flow_mgr.flows_timeout
-    - flow_mgr.flows_timeout_inuse
-    - flow_mgr.new_pruned
-    - flow_mgr.rows_checked
-    - flow_mgr.rows_empty
-    - flow_mgr.rows_maxlen
-    - flow_mgr.rows_skipped
-    - flow.spare
-    - flow.tcp_reuse
-    - http.memuse
-    - tcp.memuse
-    - tcp.pseudo
-    - tcp.reassembly_gap
-    - tcp.reassembly_memuse
-    - tcp.rst
-    - tcp.sessions
-    - tcp.syn
-    - tcp.synack
+    - app_layer_flow_dcerpc_udp
+    - app_layer_flow_dns_tcp
+    - app_layer_flow_dns_udp
+    - app_layer_flow_enip_udp
+    - app_layer_flow_failed_tcp
+    - app_layer_flow_failed_udp
+    - app_layer_flow_http
+    - app_layer_flow_ssh
+    - app_layer_flow_tls
+    - app_layer_tx_dns_tcp
+    - app_layer_tx_dns_udp
+    - app_layer_tx_enip_udp
+    - app_layer_tx_http
+    - app_layer_tx_smtp
+    - capture_kernel_drops
+    - capture_kernel_packets
+    - decoder_avg_pkt_size
+    - decoder_bytes
+    - decoder_ethernet
+    - decoder_gre
+    - decoder_icmpv4
+    - decoder_icmpv4_ipv4_unknown_ver
+    - decoder_icmpv6
+    - decoder_invalid
+    - decoder_ipv4
+    - decoder_ipv6
+    - decoder_max_pkt_size
+    - decoder_pkts
+    - decoder_tcp
+    - decoder_tcp_hlen_too_small
+    - decoder_tcp_invalid_optlen
+    - decoder_teredo
+    - decoder_udp
+    - decoder_vlan
+    - detect_alert
+    - dns_memcap_global
+    - dns_memuse
+    - flow_memuse
+    - flow_mgr_closed_pruned
+    - flow_mgr_est_pruned
+    - flow_mgr_flows_checked
+    - flow_mgr_flows_notimeout
+    - flow_mgr_flows_removed
+    - flow_mgr_flows_timeout
+    - flow_mgr_flows_timeout_inuse
+    - flow_mgr_new_pruned
+    - flow_mgr_rows_checked
+    - flow_mgr_rows_empty
+    - flow_mgr_rows_maxlen
+    - flow_mgr_rows_skipped
+    - flow_spare
+    - flow_tcp_reuse
+    - http_memuse
+    - tcp_memuse
+    - tcp_pseudo
+    - tcp_reassembly_gap
+    - tcp_reassembly_memuse
+    - tcp_rst
+    - tcp_sessions
+    - tcp_syn
+    - tcp_synack
     - ...
-
 
 ### Tags:
 
 The `suricata` measurement has the following tags:
 
-- thread: `Global` for global statistics, thread IDs (e.g. `W#03-enp0s31f6`) for thread-specific statistics, `total` for a summary across all threads.
+- thread: `Global` for global statistics (if enabled), thread IDs (e.g. `W#03-enp0s31f6`) for thread-specific statistics
 
 ## Suricata configuration
 
