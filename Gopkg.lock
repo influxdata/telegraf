@@ -1056,7 +1056,8 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:2226ffdae873216a5bc8a0bab7a51ac670b27a4aed852007d77600f809aa04e3"
+  branch = "telegraf-1.12"
+  digest = "1:a5b3fc2db56d9daf3e4a5227e880de829a2293555b48c67b755a2189511131fc"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -1069,8 +1070,8 @@
     "process",
   ]
   pruneopts = ""
-  revision = "d80c43f9c984a48783daf22f4bd9278006ae483a"
-  version = "v2.19.7"
+  revision = "ccd53e20fd30e332edc9f5833183440690efaf57"
+  source = "https://github.com/influxdata/gopsutil.git"
 
 [[projects]]
   branch = "master"
