@@ -87,7 +87,6 @@ func (s *Suricata) Stop() {
 		s.cancel()
 	}
 	s.wg.Wait()
-	s.inputListener.Close()
 	s.inputListener = nil
 }
 
