@@ -25,7 +25,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 	}
 	var acc testutil.Accumulator
 	p.Start(&acc)
-
+	p.Init()
 	require.NoError(t, acc.GatherError(p.Gather))
 	return &acc
 }
@@ -145,7 +145,7 @@ func TestPostgresqlFieldOutput(t *testing.T) {
 	}
 
 	acc := queryRunner(t, query{{
-		Script:     "select * from pg_stat_database",
+		Sqlquery:   "select * from pg_stat_database",
 		Version:    901,
 		Withdbname: false,
 		Tagvalue:   "",
@@ -221,6 +221,7 @@ func TestPostgresqlSqlScript(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 	p.Start(&acc)
+	p.Init()
 
 	require.NoError(t, acc.GatherError(p.Gather))
 }

@@ -79,8 +79,8 @@ var sampleConfig = `
   ## The optional "measurement" value can be used to override the default
   ## output measurement name ("postgresql").
   ##
-  ## The script option can be used to speciafy the .sql file path,
-  ## in case if script and sqlquery options specified at same time, sqlquery will be used
+  ## The script option can be used to specify the .sql file path.
+  ## If script and sqlquery options specified at same time, sqlquery will be used 
   ##
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
@@ -102,6 +102,19 @@ var sampleConfig = `
     tagvalue="postgresql.stats"
 `
 
+func (p *Postgresql) Init() error {
+	var err error
+	for i := range p.Query {
+		if p.Query[i].Sqlquery == "" {
+			p.Query[i].Sqlquery, err = ReadQueryFromFile(p.Query[i].Script)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (p *Postgresql) SampleConfig() string {
 	return sampleConfig
 }
@@ -121,11 +134,11 @@ func ReadQueryFromFile(filePath string) (string, error) {
 	}
 	defer file.Close()
 
-	qyery, err := ioutil.ReadAll(file)
+	query, err := ioutil.ReadAll(file)
 	if err != nil {
 		return "", err
 	}
-	return string(qyery), err
+	return string(query), err
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
@@ -150,12 +163,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// Query is not run if Database version does not match the query version.
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
-		if sql_query == "" {
-			sql_query, err = ReadQueryFromFile(p.Query[i].Script)
-			if err != nil {
-				return err
-			}
-		}
 		tag_value = p.Query[i].Tagvalue
 
 		if p.Query[i].Measurement != "" {
