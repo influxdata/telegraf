@@ -75,7 +75,10 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 		s.ctx, s.cancel = context.WithCancel(context.Background())
 		s.inputListener.SetUnlinkOnClose(true)
 		s.wg.Add(1)
-		go s.handleServerConnection(acc)
+		go func() {
+			defer s.wg.Done()
+			go s.handleServerConnection(acc)
+		}()
 	}
 	return nil
 }
@@ -113,7 +116,6 @@ func (s *Suricata) readInput(acc telegraf.Accumulator, conn net.Conn) {
 
 func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 	var err error
-	defer s.wg.Done()
 	for {
 		select {
 		case <-s.ctx.Done():
