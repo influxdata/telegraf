@@ -29,7 +29,6 @@ type Suricata struct {
 	Delimiter string `toml:"delimiter"`
 
 	inputListener *net.UnixListener
-	ctx           context.Context
 	cancel        context.CancelFunc
 
 	wg sync.WaitGroup
@@ -72,12 +71,13 @@ func (s *Suricata) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		s.ctx, s.cancel = context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.Background())
+		s.cancel = cancel
 		s.inputListener.SetUnlinkOnClose(true)
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-			go s.handleServerConnection(acc)
+			go s.handleServerConnection(ctx, acc)
 		}()
 	}
 	return nil
@@ -97,11 +97,11 @@ func (s *Suricata) Stop() {
 	s.inputListener = nil
 }
 
-func (s *Suricata) readInput(acc telegraf.Accumulator, conn net.Conn) {
+func (s *Suricata) readInput(ctx context.Context, acc telegraf.Accumulator, conn net.Conn) {
 	reader := bufio.NewReaderSize(conn, InBufSize)
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			line, rerr := reader.ReadBytes('\n')
@@ -114,11 +114,11 @@ func (s *Suricata) readInput(acc telegraf.Accumulator, conn net.Conn) {
 	}
 }
 
-func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
+func (s *Suricata) handleServerConnection(ctx context.Context, acc telegraf.Accumulator) {
 	var err error
 	for {
 		select {
-		case <-s.ctx.Done():
+		case <-ctx.Done():
 			return
 		default:
 			var conn net.Conn
@@ -129,7 +129,7 @@ func (s *Suricata) handleServerConnection(acc telegraf.Accumulator) {
 				}
 				return
 			}
-			s.readInput(acc, conn)
+			s.readInput(ctx, acc, conn)
 		}
 	}
 }
