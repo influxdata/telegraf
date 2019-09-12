@@ -6,6 +6,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	//"fmt"
 	
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
@@ -161,9 +162,9 @@ func removeDuplicates(elements []int) []int {
 	return result
 }
 
-func createRawValueMap(r []tag, rawValue map[int]uint16) {
+func createRawValueMap(r []tag, rawValue map[int]uint16, ch *[]chunk) {
 	addr := []int{}
-
+		
 	for _, element := range r {
 		for _, a := range element.Address {
 			addr = append(addr, a)
@@ -172,46 +173,28 @@ func createRawValueMap(r []tag, rawValue map[int]uint16) {
 
 	addr = removeDuplicates(addr)
 	sort.Ints(addr)
+	
+	i := 0
+	for range addr {
+		if i < len(addr) {
+			start := addr[i]
+			end   := start	
 
-	for _, element := range addr {
-		rawValue[element] = 0
-	}
-}
-
-func createChunks(ch *[]chunk, rawValue map[int]uint16) {
-	r := []int{}
-	chunks := [][]int{}
-	chunk_t := []int{}
-
-	for k := range rawValue {
-		r = append(r, k)
-	}
-
-	sort.Ints(r)
-
-	for i, element := range r {
-		n := 1
-		if i+1 == len(r) {
-			n = -1
-			if len(r) == 1 {
-				n = 0
+			for i < len(addr) - 1 && addr[i + 1] - addr[i] == 1 {											
+				end = addr[i + 1]					
+				i++	
 			}
-		}
-		if element+n == r[i+n] {
-			chunk_t = append(chunk_t, element)
-			if i+1 == len(r) {
-				chunks = append(chunks, chunk_t)
-			}
-		} else {
-			chunk_t = append(chunk_t, element)
-			chunks = append(chunks, chunk_t)
-			chunk_t = []int{}
-		}
+			i++
+			*ch  = append(*ch , chunk{start, end - start + 1})			
+		}				
 	}
 
-	for _, element := range chunks {
-		*ch = append(*ch, chunk{element[0], len(element)})
+	//fmt.Printf("*ch  %v \n",*ch )			
+	for _,r := range addr {
+		rawValue[r] = 0
 	}
+
+	//fmt.Println(rawValue)	
 }
 
 func initialization(m *Modbus) {
@@ -220,15 +203,10 @@ func initialization(m *Modbus) {
 	m.Registers.HoldingRegisters.rawValues = make(map[int]uint16)
 	m.Registers.InputRegisters.rawValues = make(map[int]uint16)
 
-	createRawValueMap(m.Registers.DiscreteInputs.Tags, m.Registers.DiscreteInputs.rawValues)
-	createRawValueMap(m.Registers.Coils.Tags, m.Registers.Coils.rawValues)
-	createRawValueMap(m.Registers.HoldingRegisters.Tags, m.Registers.HoldingRegisters.rawValues)
-	createRawValueMap(m.Registers.InputRegisters.Tags, m.Registers.InputRegisters.rawValues)
-
-	createChunks(&m.Registers.DiscreteInputs.chunks, m.Registers.DiscreteInputs.rawValues)
-	createChunks(&m.Registers.Coils.chunks, m.Registers.Coils.rawValues)
-	createChunks(&m.Registers.HoldingRegisters.chunks, m.Registers.HoldingRegisters.rawValues)
-	createChunks(&m.Registers.InputRegisters.chunks, m.Registers.InputRegisters.rawValues)
+	createRawValueMap(m.Registers.DiscreteInputs.Tags, m.Registers.DiscreteInputs.rawValues, &m.Registers.DiscreteInputs.chunks)
+	createRawValueMap(m.Registers.Coils.Tags, m.Registers.Coils.rawValues, &m.Registers.Coils.chunks)
+	createRawValueMap(m.Registers.HoldingRegisters.Tags, m.Registers.HoldingRegisters.rawValues, &m.Registers.HoldingRegisters.chunks)
+	createRawValueMap(m.Registers.InputRegisters.Tags, m.Registers.InputRegisters.rawValues, &m.Registers.InputRegisters.chunks)	
 }
 
 func connect(m *Modbus) error {
