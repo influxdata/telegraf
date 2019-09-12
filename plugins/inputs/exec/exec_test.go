@@ -172,7 +172,7 @@ func TestExecCommandWithGlob(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		e.Commands = []string{filepath.Join(dir, "ech* metric_value")}
+		e.Commands = []string{filepath.ToSlash(filepath.Join(dir, "ech* metric_value"))}
 	}
 	e.SetParser(parser)
 
@@ -201,7 +201,7 @@ func TestExecCommandWithoutGlob(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		e.Commands = []string{filepath.Join(dir, "echo metric_value")}
+		e.Commands = []string{filepath.ToSlash(filepath.Join(dir, "echo metric_value"))}
 	}
 	e.SetParser(parser)
 
