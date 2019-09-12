@@ -126,6 +126,16 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - usec(int, mircoseconds)
     - usec_per_call(float, microseconds)
 
+- redis_replication
+  - tags:
+    - replication_role
+    - replica_ip
+    - replica_port
+    - state (either "online", "wait_bgsave", or "send_bulk")
+
+  - fields:
+    - lag(int, number)
+    - offset(int, number)
 
 ### Tags:
 

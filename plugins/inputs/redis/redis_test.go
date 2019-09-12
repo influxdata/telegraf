@@ -82,7 +82,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"pubsub_channels":                int64(0),
 		"pubsub_patterns":                int64(0),
 		"latest_fork_usec":               int64(0),
-		"connected_slaves":               int64(0),
+		"connected_slaves":               int64(2),
 		"master_repl_offset":             int64(0),
 		"repl_backlog_active":            int64(0),
 		"repl_backlog_size":              int64(1048576),
@@ -134,6 +134,36 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"usec_per_call": float64(990.0),
 	}
 	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatCommandFields, cmdstatCommandTags)
+
+	replicationTags := map[string]string{
+		"host":             "redis.net",
+		"replication_role": "slave",
+		"replica_id":       "0",
+		"replica_ip":       "127.0.0.1",
+		"replica_port":     "7379",
+		"state":            "online",
+	}
+	replicationFields := map[string]interface{}{
+		"lag":    int64(0),
+		"offset": int64(4556468),
+	}
+
+	acc.AssertContainsTaggedFields(t, "redis_replication", replicationFields, replicationTags)
+
+	replicationTags = map[string]string{
+		"host":             "redis.net",
+		"replication_role": "slave",
+		"replica_id":       "1",
+		"replica_ip":       "127.0.0.1",
+		"replica_port":     "8379",
+		"state":            "send_bulk",
+	}
+	replicationFields = map[string]interface{}{
+		"lag":    int64(1),
+		"offset": int64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "redis_replication", replicationFields, replicationTags)
 }
 
 const testOutput = `# Server
@@ -209,7 +239,9 @@ latest_fork_usec:0
 
 # Replication
 role:master
-connected_slaves:0
+connected_slaves:2
+slave0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
+slave1:ip=127.0.0.1,port=8379,state=send_bulk,offset=0,lag=1
 master_replid:8c4d7b768b26826825ceb20ff4a2c7c54616350b
 master_replid2:0000000000000000000000000000000000000000
 master_repl_offset:0
