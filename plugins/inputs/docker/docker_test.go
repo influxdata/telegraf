@@ -7,11 +7,11 @@ import (
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/influxdata/telegraf/testutil"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -83,7 +83,7 @@ var baseClient = MockClient{
 		return containerStats(s), nil
 	},
 	ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
-		return containerInspect, nil
+		return containerInspect(), nil
 	},
 	ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
 		return ServiceList, nil
@@ -264,7 +264,7 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 					return containerStatsWindows(), nil
 				},
 				ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-					return containerInspect, nil
+					return containerInspect(), nil
 				},
 				ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
 					return ServiceList, nil
@@ -538,6 +538,140 @@ func TestContainerNames(t *testing.T) {
 	}
 }
 
+func TestContainerStatus(t *testing.T) {
+	type expectation struct {
+		// tags
+		Status string
+		// fields
+		ContainerID string
+		OOMKilled   bool
+		Pid         int
+		ExitCode    int
+		StartedAt   time.Time
+		FinishedAt  time.Time
+		UptimeNs    int64
+	}
+
+	var tests = []struct {
+		name    string
+		now     func() time.Time
+		inspect types.ContainerJSON
+		expect  expectation
+	}{
+		{
+			name: "finished_at is zero value",
+			now: func() time.Time {
+				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
+			},
+			inspect: containerInspect(),
+			expect: expectation{
+				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+				Status:      "running",
+				OOMKilled:   false,
+				Pid:         1234,
+				ExitCode:    0,
+				StartedAt:   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
+				UptimeNs:    int64(3 * time.Minute),
+			},
+		},
+		{
+			name: "finished_at is non-zero value",
+			inspect: func() types.ContainerJSON {
+				i := containerInspect()
+				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
+				return i
+			}(),
+			expect: expectation{
+				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+				Status:      "running",
+				OOMKilled:   false,
+				Pid:         1234,
+				ExitCode:    0,
+				StartedAt:   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
+				FinishedAt:  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+				UptimeNs:    int64(5 * time.Minute),
+			},
+		},
+		{
+			name: "started_at is zero value",
+			inspect: func() types.ContainerJSON {
+				i := containerInspect()
+				i.ContainerJSONBase.State.StartedAt = ""
+				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
+				return i
+			}(),
+			expect: expectation{
+				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+				Status:      "running",
+				OOMKilled:   false,
+				Pid:         1234,
+				ExitCode:    0,
+				FinishedAt:  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var (
+				acc           testutil.Accumulator
+				newClientFunc = func(string, *tls.Config) (Client, error) {
+					client := baseClient
+					client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+						return containerList[:1], nil
+					}
+					client.ContainerInspectF = func(c context.Context, s string) (types.ContainerJSON, error) {
+						return tt.inspect, nil
+					}
+
+					return &client, nil
+				}
+				d = Docker{newClient: newClientFunc}
+			)
+
+			// mock time
+			if tt.now != nil {
+				now = tt.now
+			}
+			defer func() {
+				now = time.Now
+			}()
+
+			err := acc.GatherError(d.Gather)
+			require.NoError(t, err)
+
+			fields := map[string]interface{}{
+				"oomkilled":    tt.expect.OOMKilled,
+				"pid":          tt.expect.Pid,
+				"exitcode":     tt.expect.ExitCode,
+				"container_id": tt.expect.ContainerID,
+			}
+
+			if started := tt.expect.StartedAt; !started.IsZero() {
+				fields["started_at"] = started.UnixNano()
+				fields["uptime_ns"] = tt.expect.UptimeNs
+			}
+
+			if finished := tt.expect.FinishedAt; !finished.IsZero() {
+				fields["finished_at"] = finished.UnixNano()
+			}
+
+			acc.AssertContainsTaggedFields(t,
+				"docker_container_status",
+				fields,
+				map[string]string{
+					"container_name":    "etcd",
+					"container_image":   "quay.io/coreos/etcd",
+					"container_version": "v2.2.2",
+					"engine_host":       "absol",
+					"label1":            "test_value_1",
+					"label2":            "test_value_2",
+					"server_version":    "17.09.0-ce",
+					"container_status":  tt.expect.Status,
+				})
+		})
+	}
+}
+
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
@@ -569,6 +703,29 @@ func TestDockerGatherInfo(t *testing.T) {
 	)
 
 	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"memory_total": int64(3840757760),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"pool_blocksize": int64(65540),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
 		"docker_data",
 		map[string]interface{}{
 			"used":      int64(17300000000),
@@ -576,11 +733,46 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit":           "bytes",
 			"engine_host":    "absol",
 			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
 		},
 	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_metadata",
+		map[string]interface{}{
+			"used":      int64(20970000),
+			"total":     int64(2146999999),
+			"available": int64(2126999999),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_devicemapper",
+		map[string]interface{}{
+			"base_device_size_bytes":             int64(10740000000),
+			"pool_blocksize_bytes":               int64(65540),
+			"data_space_used_bytes":              int64(17300000000),
+			"data_space_total_bytes":             int64(107400000000),
+			"data_space_available_bytes":         int64(36530000000),
+			"metadata_space_used_bytes":          int64(20970000),
+			"metadata_space_total_bytes":         int64(2146999999),
+			"metadata_space_available_bytes":     int64(2126999999),
+			"thin_pool_minimum_free_space_bytes": int64(10740000000),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"pool_name":      "docker-8:1-1182287-pool",
+		},
+	)
+
 	acc.AssertContainsTaggedFields(t,
 		"docker_container_cpu",
 		map[string]interface{}{
@@ -812,57 +1004,6 @@ func TestContainerName(t *testing.T) {
 					require.Equal(t, tt.expected, metric.Tags["container_name"])
 				}
 			}
-		})
-	}
-}
-
-func TestParseImage(t *testing.T) {
-	tests := []struct {
-		image         string
-		parsedName    string
-		parsedVersion string
-	}{
-		{
-			image:         "postgres",
-			parsedName:    "postgres",
-			parsedVersion: "unknown",
-		},
-		{
-			image:         "postgres:latest",
-			parsedName:    "postgres",
-			parsedVersion: "latest",
-		},
-		{
-			image:         "coreos/etcd",
-			parsedName:    "coreos/etcd",
-			parsedVersion: "unknown",
-		},
-		{
-			image:         "coreos/etcd:latest",
-			parsedName:    "coreos/etcd",
-			parsedVersion: "latest",
-		},
-		{
-			image:         "quay.io/postgres",
-			parsedName:    "quay.io/postgres",
-			parsedVersion: "unknown",
-		},
-		{
-			image:         "quay.io:4443/coreos/etcd",
-			parsedName:    "quay.io:4443/coreos/etcd",
-			parsedVersion: "unknown",
-		},
-		{
-			image:         "quay.io:4443/coreos/etcd:latest",
-			parsedName:    "quay.io:4443/coreos/etcd",
-			parsedVersion: "latest",
-		},
-	}
-	for _, tt := range tests {
-		t.Run("parse name "+tt.image, func(t *testing.T) {
-			imageName, imageVersion := parseImage(tt.image)
-			require.Equal(t, tt.parsedName, imageName)
-			require.Equal(t, tt.parsedVersion, imageVersion)
 		})
 	}
 }

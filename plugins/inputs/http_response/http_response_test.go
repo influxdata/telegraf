@@ -1,16 +1,18 @@
 package http_response
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -34,6 +36,7 @@ func checkAbsentTags(t *testing.T, tags []string, acc *testutil.Accumulator) {
 // Receives a dictionary and with expected fields and their values. If a value is nil, it will only check
 // that the field exists, but not its contents
 func checkFields(t *testing.T, fields map[string]interface{}, acc *testutil.Accumulator) {
+	t.Helper()
 	for key, field := range fields {
 		switch v := field.(type) {
 		case int:
@@ -119,6 +122,7 @@ func setUpTestMux() http.Handler {
 }
 
 func checkOutput(t *testing.T, acc *testutil.Accumulator, presentFields map[string]interface{}, presentTags map[string]interface{}, absentFields []string, absentTags []string) {
+	t.Helper()
 	if presentFields != nil {
 		checkFields(t, presentFields, acc)
 	}
@@ -163,6 +167,7 @@ func TestHeaders(t *testing.T) {
 		"result_type":        "success",
 		"result_code":        0,
 		"response_time":      nil,
+		"content_length":     nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -199,6 +204,69 @@ func TestFields(t *testing.T) {
 		"result_type":        "success",
 		"result_code":        0,
 		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func findInterface() (net.Interface, error) {
+	potential, _ := net.Interfaces()
+
+	for _, i := range potential {
+		// we are only interest in loopback interfaces which are up
+		if (i.Flags&net.FlagUp == 0) || (i.Flags&net.FlagLoopback == 0) {
+			continue
+		}
+
+		if addrs, _ := i.Addrs(); len(addrs) > 0 {
+			// return interface if it has at least one unicast address
+			return i, nil
+		}
+	}
+
+	return net.Interface{}, errors.New("cannot find suitable loopback interface")
+}
+
+func TestInterface(t *testing.T) {
+	var (
+		mux = setUpTestMux()
+		ts  = httptest.NewServer(mux)
+	)
+
+	defer ts.Close()
+
+	intf, err := findInterface()
+	require.NoError(t, err)
+
+	h := &HTTPResponse{
+		Address:         ts.URL + "/good",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+		Interface:       intf.Name,
+	}
+
+	var acc testutil.Accumulator
+	err = h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -234,6 +302,7 @@ func TestRedirects(t *testing.T) {
 		"result_type":        "success",
 		"result_code":        0,
 		"response_time":      nil,
+		"content_length":     nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -299,6 +368,7 @@ func TestMethod(t *testing.T) {
 		"result_type":        "success",
 		"result_code":        0,
 		"response_time":      nil,
+		"content_length":     nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -328,6 +398,7 @@ func TestMethod(t *testing.T) {
 		"result_type":        "success",
 		"result_code":        0,
 		"response_time":      nil,
+		"content_length":     nil,
 	}
 	expectedTags = map[string]interface{}{
 		"server":      nil,
@@ -358,6 +429,7 @@ func TestMethod(t *testing.T) {
 		"result_type":        "success",
 		"result_code":        0,
 		"response_time":      nil,
+		"content_length":     nil,
 	}
 	expectedTags = map[string]interface{}{
 		"server":      nil,
@@ -393,6 +465,7 @@ func TestBody(t *testing.T) {
 		"result_type":        "success",
 		"result_code":        0,
 		"response_time":      nil,
+		"content_length":     nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -457,6 +530,7 @@ func TestStringMatch(t *testing.T) {
 		"result_type":           "success",
 		"result_code":           0,
 		"response_time":         nil,
+		"content_length":        nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -493,6 +567,7 @@ func TestStringMatchJson(t *testing.T) {
 		"result_type":           "success",
 		"result_code":           0,
 		"response_time":         nil,
+		"content_length":        nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -530,6 +605,7 @@ func TestStringMatchFail(t *testing.T) {
 		"result_type":           "response_string_mismatch",
 		"result_code":           1,
 		"response_time":         nil,
+		"content_length":        nil,
 	}
 	expectedTags := map[string]interface{}{
 		"server":      nil,
@@ -572,17 +648,16 @@ func TestTimeout(t *testing.T) {
 		"method": "GET",
 		"result": "timeout",
 	}
-	absentFields := []string{"http_response_code", "response_time", "response_string_match"}
+	absentFields := []string{"http_response_code", "response_time", "content_length", "response_string_match"}
 	absentTags := []string{"status_code"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 }
 
-func TestPluginErrors(t *testing.T) {
+func TestBadRegex(t *testing.T) {
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
-	// Bad regex test. Should return an error and return nothing
 	h := &HTTPResponse{
 		Address:             ts.URL + "/good",
 		Body:                "{ 'test': 'data'}",
@@ -599,38 +674,9 @@ func TestPluginErrors(t *testing.T) {
 	err := h.Gather(&acc)
 	require.Error(t, err)
 
-	absentFields := []string{"http_response_code", "response_time", "response_string_match", "result_type", "result_code"}
+	absentFields := []string{"http_response_code", "response_time", "content_length", "response_string_match", "result_type", "result_code"}
 	absentTags := []string{"status_code", "result", "server", "method"}
 	checkOutput(t, &acc, nil, nil, absentFields, absentTags)
-
-	// Attempt to read empty body test
-	h = &HTTPResponse{
-		Address:             ts.URL + "/redirect",
-		Body:                "",
-		Method:              "GET",
-		ResponseStringMatch: ".*",
-		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
-		FollowRedirects:     false,
-	}
-
-	acc = testutil.Accumulator{}
-	err = h.Gather(&acc)
-	require.NoError(t, err)
-
-	expectedFields := map[string]interface{}{
-		"http_response_code":    http.StatusMovedPermanently,
-		"response_string_match": 0,
-		"result_type":           "body_read_error",
-		"result_code":           2,
-		"response_time":         nil,
-	}
-	expectedTags := map[string]interface{}{
-		"server":      nil,
-		"method":      "GET",
-		"status_code": "301",
-		"result":      "body_read_error",
-	}
-	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 }
 
 func TestNetworkErrors(t *testing.T) {
@@ -656,7 +702,7 @@ func TestNetworkErrors(t *testing.T) {
 		"method": "GET",
 		"result": "dns_error",
 	}
-	absentFields := []string{"http_response_code", "response_time", "response_string_match"}
+	absentFields := []string{"http_response_code", "response_time", "content_length", "response_string_match"}
 	absentTags := []string{"status_code"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 
@@ -682,7 +728,120 @@ func TestNetworkErrors(t *testing.T) {
 		"method": "GET",
 		"result": "connection_failed",
 	}
-	absentFields = []string{"http_response_code", "response_time", "response_string_match"}
+	absentFields = []string{"http_response_code", "response_time", "content_length", "response_string_match"}
 	absentTags = []string{"status_code"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
+}
+
+func TestContentLength(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		URLs:            []string{ts.URL + "/good"},
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     len([]byte("hit the good page!")),
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+
+	h = &HTTPResponse{
+		URLs:            []string{ts.URL + "/musthaveabody"},
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields = map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     len([]byte("sent a body!")),
+	}
+	expectedTags = map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields = []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func TestRedirect(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Location", "http://example.org")
+		w.WriteHeader(http.StatusMovedPermanently)
+		w.Write([]byte("test"))
+	})
+
+	plugin := &HTTPResponse{
+		URLs:                []string{ts.URL},
+		ResponseStringMatch: "test",
+	}
+
+	var acc testutil.Accumulator
+	err := plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"http_response",
+			map[string]string{
+				"server":      ts.URL,
+				"method":      "GET",
+				"result":      "success",
+				"status_code": "301",
+			},
+			map[string]interface{}{
+				"result_code":           0,
+				"result_type":           "success",
+				"http_response_code":    301,
+				"response_string_match": 1,
+				"content_length":        4,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual := acc.GetTelegrafMetrics()
+	for _, m := range actual {
+		m.RemoveField("response_time")
+	}
+
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }

@@ -2,14 +2,12 @@ package pgbouncer
 
 import (
 	"bytes"
-	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
-
-	// register in driver.
-	_ "github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
+	_ "github.com/jackc/pgx/stdlib" // register driver
 )
 
 type PgBouncer struct {
@@ -98,12 +96,16 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		if s, ok := (*columnMap["user"]).(string); ok && s != "" {
-			tags["user"] = s
+		if user, ok := columnMap["user"]; ok {
+			if s, ok := (*user).(string); ok && s != "" {
+				tags["user"] = s
+			}
 		}
 
-		if s, ok := (*columnMap["pool_mode"]).(string); ok && s != "" {
-			tags["pool_mode"] = s
+		if poolMode, ok := columnMap["pool_mode"]; ok {
+			if s, ok := (*poolMode).(string); ok && s != "" {
+				tags["pool_mode"] = s
+			}
 		}
 
 		fields := make(map[string]interface{})

@@ -13,9 +13,9 @@ type DiskStats struct {
 	ps system.PS
 
 	// Legacy support
-	Mountpoints []string
+	Mountpoints []string `toml:"mountpoints"`
 
-	MountPoints []string
+	MountPoints []string `toml:"mount_points"`
 	IgnoreFS    []string `toml:"ignore_fs"`
 }
 

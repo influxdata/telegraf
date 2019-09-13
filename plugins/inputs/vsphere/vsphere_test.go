@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -156,8 +155,12 @@ func defaultVSphere() *VSphere {
 	}
 }
 
-func createSim() (*simulator.Model, *simulator.Server, error) {
+func createSim(folders int) (*simulator.Model, *simulator.Server, error) {
 	model := simulator.VPX()
+
+	model.Folder = folders
+	model.Datacenter = 2
+	//model.App = 1
 
 	err := model.Create()
 	if err != nil {
@@ -256,34 +259,6 @@ func TestThrottledExecutor(t *testing.T) {
 	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
 }
 
-func TestTimeout(t *testing.T) {
-	// Don't run test on 32-bit machines due to bug in simulator.
-	// https://github.com/vmware/govmomi/issues/1330
-	var i int
-	if unsafe.Sizeof(i) < 8 {
-		return
-	}
-
-	m, s, err := createSim()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer m.Remove()
-	defer s.Close()
-
-	v := defaultVSphere()
-	var acc testutil.Accumulator
-	v.Vcenters = []string{s.URL.String()}
-	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
-	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
-	defer v.Stop()
-	err = v.Gather(&acc)
-
-	// The accumulator must contain exactly one error and it must be a deadline exceeded.
-	require.Equal(t, 1, len(acc.Errors))
-	require.True(t, strings.Contains(acc.Errors[0].Error(), "context deadline exceeded"))
-}
-
 func TestMaxQuery(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -291,7 +266,7 @@ func TestMaxQuery(t *testing.T) {
 	if unsafe.Sizeof(i) < 8 {
 		return
 	}
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,6 +302,20 @@ func TestMaxQuery(t *testing.T) {
 	c2.close()
 }
 
+func testLookupVM(ctx context.Context, t *testing.T, f *Finder, path string, expected int, expectedName string) {
+	poweredOn := types.VirtualMachinePowerState("poweredOn")
+	var vm []mo.VirtualMachine
+	err := f.Find(ctx, "VirtualMachine", path, &vm)
+	require.NoError(t, err)
+	require.Equal(t, expected, len(vm))
+	if expectedName != "" {
+		require.Equal(t, expectedName, vm[0].Name)
+	}
+	for _, v := range vm {
+		require.Equal(t, poweredOn, v.Runtime.PowerState)
+	}
+}
+
 func TestFinder(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -335,7 +324,7 @@ func TestFinder(t *testing.T) {
 		return
 	}
 
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,13 +338,13 @@ func TestFinder(t *testing.T) {
 
 	f := Finder{c}
 
-	dc := []mo.Datacenter{}
+	var dc []mo.Datacenter
 	err = f.Find(ctx, "Datacenter", "/DC0", &dc)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(dc))
 	require.Equal(t, "DC0", dc[0].Name)
 
-	host := []mo.HostSystem{}
+	var host []mo.HostSystem
 	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(host))
@@ -372,62 +361,64 @@ func TestFinder(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 3, len(host))
 
-	vm := []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_H0_VM0", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_C0*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_VM0", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/DC0/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**/DC0_H0_VM*", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 2, len(vm))
-
-	vm = []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**/vm/**", &vm)
-	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	var vm []mo.VirtualMachine
+	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_H0_VM0", 1, "")
+	testLookupVM(ctx, t, &f, "/DC0/vm/DC0_C0*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_VM0", 1, "DC0_H0_VM0")
+	testLookupVM(ctx, t, &f, "/DC0/*/DC0_H0_*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/**/DC0_H0_VM*", 2, "")
+	testLookupVM(ctx, t, &f, "/DC0/**", 4, "")
+	testLookupVM(ctx, t, &f, "/DC1/**", 4, "")
+	testLookupVM(ctx, t, &f, "/**", 8, "")
+	testLookupVM(ctx, t, &f, "/**/vm/**", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*VM*", 8, "")
+	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = []mo.VirtualMachine{}
 	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
 
-	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/**"}, &vm)
+}
+
+func TestFolders(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
+	m, s, err := createSim(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	v := defaultVSphere()
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, s.URL, v)
+
+	f := Finder{c}
+
+	var folder []mo.Folder
+	err = f.Find(ctx, "Folder", "/F0", &folder)
 	require.NoError(t, err)
-	require.Equal(t, 4, len(vm))
+	require.Equal(t, 1, len(folder))
+	require.Equal(t, "F0", folder[0].Name)
+
+	var dc []mo.Datacenter
+	err = f.Find(ctx, "Datacenter", "/F0/DC1", &dc)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(dc))
+	require.Equal(t, "DC1", dc[0].Name)
+
+	testLookupVM(ctx, t, &f, "/F0/DC0/vm/**/F*", 0, "")
+	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/*VM*", 4, "")
+	testLookupVM(ctx, t, &f, "/F0/DC1/vm/**/F*/**", 4, "")
 }
 
 func TestAll(t *testing.T) {
@@ -438,7 +429,7 @@ func TestAll(t *testing.T) {
 		return
 	}
 
-	m, s, err := createSim()
+	m, s, err := createSim(0)
 	if err != nil {
 		t.Fatal(err)
 	}

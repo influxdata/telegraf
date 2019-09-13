@@ -1,8 +1,11 @@
 # RabbitMQ Input Plugin
 
-Reads metrics from RabbitMQ servers via the [Management Plugin](https://www.rabbitmq.com/management.html).
+Reads metrics from RabbitMQ servers via the [Management Plugin][management].
 
-For additional details reference the [RabbitMQ Management HTTP Stats](https://cdn.rawgit.com/rabbitmq/rabbitmq-management/master/priv/www/doc/stats.html).
+For additional details reference the [RabbitMQ Management HTTP Stats][management-reference].
+
+[management]: https://www.rabbitmq.com/management.html
+[management-reference]: https://raw.githack.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_9/priv/www/api/index.html
 
 ### Configuration:
 
@@ -104,6 +107,26 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   - io_write_avg_time_rate (float, milliseconds per second)
   - io_write_bytes (int, bytes)
   - io_write_bytes_rate (float, bytes per second)
+  - mem_connection_readers (int, bytes)
+  - mem_connection_writers (int, bytes)
+  - mem_connection_channels (int, bytes)
+  - mem_connection_other (int, bytes)
+  - mem_queue_procs (int, bytes)
+  - mem_queue_slave_procs (int, bytes)
+  - mem_plugins (int, bytes)
+  - mem_other_proc (int, bytes)
+  - mem_metrics (int, bytes)
+  - mem_mgmt_db (int, bytes)
+  - mem_mnesia (int, bytes)
+  - mem_other_ets (int, bytes)
+  - mem_binary (int, bytes)
+  - mem_msg_index (int, bytes)
+  - mem_code (int, bytes)
+  - mem_atom (int, bytes)
+  - mem_other_system (int, bytes)
+  - mem_allocated_unused (int, bytes)
+  - mem_reserved_unallocated (int, bytes)
+  - mem_total (int, bytes)
 
 - rabbitmq_queue
   - consumer_utilisation (float, percent)

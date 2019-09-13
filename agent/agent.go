@@ -39,8 +39,14 @@ func (a *Agent) Run(ctx context.Context) error {
 		return ctx.Err()
 	}
 
+	log.Printf("D! [agent] Initializing plugins")
+	err := a.initPlugins()
+	if err != nil {
+		return err
+	}
+
 	log.Printf("D! [agent] Connecting outputs")
-	err := a.connectOutputs(ctx)
+	err = a.connectOutputs(ctx)
 	if err != nil {
 		return err
 	}
@@ -136,7 +142,7 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 // Test runs the inputs once and prints the output to stdout in line protocol.
-func (a *Agent) Test(ctx context.Context) error {
+func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 	var wg sync.WaitGroup
 	metricC := make(chan telegraf.Metric)
 	nulC := make(chan telegraf.Metric)
@@ -156,8 +162,8 @@ func (a *Agent) Test(ctx context.Context) error {
 			octets, err := s.Serialize(metric)
 			if err == nil {
 				fmt.Print("> ", string(octets))
-
 			}
+			metric.Reject()
 		}
 	}()
 
@@ -168,43 +174,70 @@ func (a *Agent) Test(ctx context.Context) error {
 		}
 	}()
 
+	hasServiceInputs := false
+	for _, input := range a.Config.Inputs {
+		if _, ok := input.Input.(telegraf.ServiceInput); ok {
+			hasServiceInputs = true
+			break
+		}
+	}
+
+	log.Printf("D! [agent] Initializing plugins")
+	err := a.initPlugins()
+	if err != nil {
+		return err
+	}
+
+	if hasServiceInputs {
+		log.Printf("D! [agent] Starting service inputs")
+		err := a.startServiceInputs(ctx, metricC)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, input := range a.Config.Inputs {
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			if _, ok := input.Input.(telegraf.ServiceInput); ok {
-				log.Printf("W!: [agent] skipping plugin [[%s]]: service inputs not supported in --test mode",
-					input.Name())
-				continue
+			break
+		}
+
+		acc := NewAccumulator(input, metricC)
+		acc.SetPrecision(a.Precision())
+
+		// Special instructions for some inputs. cpu, for example, needs to be
+		// run twice in order to return cpu usage percentages.
+		switch input.Config.Name {
+		case "cpu", "mongodb", "procstat":
+			nulAcc := NewAccumulator(input, nulC)
+			nulAcc.SetPrecision(a.Precision())
+			if err := input.Input.Gather(nulAcc); err != nil {
+				acc.AddError(err)
 			}
 
-			acc := NewAccumulator(input, metricC)
-			acc.SetPrecision(a.Precision())
-			input.SetDefaultTags(a.Config.Tags)
-
-			// Special instructions for some inputs. cpu, for example, needs to be
-			// run twice in order to return cpu usage percentages.
-			switch input.Name() {
-			case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
-				nulAcc := NewAccumulator(input, nulC)
-				nulAcc.SetPrecision(a.Precision())
-				if err := input.Input.Gather(nulAcc); err != nil {
-					return err
-				}
-
-				time.Sleep(500 * time.Millisecond)
-				if err := input.Input.Gather(acc); err != nil {
-					return err
-				}
-			default:
-				if err := input.Input.Gather(acc); err != nil {
-					return err
-				}
+			time.Sleep(500 * time.Millisecond)
+			if err := input.Input.Gather(acc); err != nil {
+				acc.AddError(err)
+			}
+		default:
+			if err := input.Input.Gather(acc); err != nil {
+				acc.AddError(err)
 			}
 		}
 	}
 
+	if hasServiceInputs {
+		log.Printf("D! [agent] Waiting for service inputs")
+		internal.SleepContext(ctx, waitDuration)
+		log.Printf("D! [agent] Stopping service inputs")
+		a.stopServiceInputs()
+	}
+
+	if NErrors.Get() > 0 {
+		return fmt.Errorf("One or more input plugins had an error")
+	}
 	return nil
 }
 
@@ -304,8 +337,8 @@ func (a *Agent) gatherOnce(
 		case err := <-done:
 			return err
 		case <-ticker.C:
-			log.Printf("W! [agent] input %q did not complete within its interval",
-				input.Name())
+			log.Printf("W! [agent] [%s] did not complete within its interval",
+				input.LogName())
 		}
 	}
 }
@@ -518,7 +551,7 @@ func (a *Agent) flush(
 
 	logError := func(err error) {
 		if err != nil {
-			log.Printf("E! [agent] Error writing to output [%s]: %v", output.Name, err)
+			log.Printf("E! [agent] Error writing to %s: %v", output.LogName(), err)
 		}
 	}
 
@@ -570,22 +603,55 @@ func (a *Agent) flushOnce(
 			output.LogBufferStatus()
 			return err
 		case <-ticker.C:
-			log.Printf("W! [agent] output %q did not complete within its flush interval",
-				output.Name)
+			log.Printf("W! [agent] [%q] did not complete within its flush interval",
+				output.LogName())
 			output.LogBufferStatus()
 		}
 	}
 
 }
 
+// initPlugins runs the Init function on plugins.
+func (a *Agent) initPlugins() error {
+	for _, input := range a.Config.Inputs {
+		err := input.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize input %s: %v",
+				input.LogName(), err)
+		}
+	}
+	for _, processor := range a.Config.Processors {
+		err := processor.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize processor %s: %v",
+				processor.Config.Name, err)
+		}
+	}
+	for _, aggregator := range a.Config.Aggregators {
+		err := aggregator.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize aggregator %s: %v",
+				aggregator.Config.Name, err)
+		}
+	}
+	for _, output := range a.Config.Outputs {
+		err := output.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize output %s: %v",
+				output.Config.Name, err)
+		}
+	}
+	return nil
+}
+
 // connectOutputs connects to all outputs.
 func (a *Agent) connectOutputs(ctx context.Context) error {
 	for _, output := range a.Config.Outputs {
-		log.Printf("D! [agent] Attempting connection to output: %s\n", output.Name)
+		log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
 		err := output.Output.Connect()
 		if err != nil {
-			log.Printf("E! [agent] Failed to connect to output %s, retrying in 15s, "+
-				"error was '%s' \n", output.Name, err)
+			log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
+				"error was '%s'", output.LogName(), err)
 
 			err := internal.SleepContext(ctx, 15*time.Second)
 			if err != nil {
@@ -597,7 +663,7 @@ func (a *Agent) connectOutputs(ctx context.Context) error {
 				return err
 			}
 		}
-		log.Printf("D! [agent] Successfully connected to output: %s\n", output.Name)
+		log.Printf("D! [agent] Successfully connected to %s", output.LogName())
 	}
 	return nil
 }
@@ -627,8 +693,8 @@ func (a *Agent) startServiceInputs(
 
 			err := si.Start(acc)
 			if err != nil {
-				log.Printf("E! [agent] Service for input %s failed to start: %v",
-					input.Name(), err)
+				log.Printf("E! [agent] Service for [%s] failed to start: %v",
+					input.LogName(), err)
 
 				for _, si := range started {
 					si.Stop()
@@ -679,8 +745,8 @@ func panicRecover(input *models.RunningInput) {
 	if err := recover(); err != nil {
 		trace := make([]byte, 2048)
 		runtime.Stack(trace, true)
-		log.Printf("E! FATAL: Input [%s] panicked: %s, Stack:\n%s\n",
-			input.Name(), err, trace)
+		log.Printf("E! FATAL: [%s] panicked: %s, Stack:\n%s",
+			input.LogName(), err, trace)
 		log.Println("E! PLEASE REPORT THIS PANIC ON GITHUB with " +
 			"stack trace, configuration, and OS information: " +
 			"https://github.com/influxdata/telegraf/issues/new/choose")

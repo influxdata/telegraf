@@ -1,31 +1,15 @@
 # Fail2ban Input Plugin
 
-The fail2ban plugin gathers the count of failed and banned ip addresses using [fail2ban](https://www.fail2ban.org).
+The fail2ban plugin gathers the count of failed and banned ip addresses using
+[fail2ban](https://www.fail2ban.org).
 
 This plugin runs the `fail2ban-client` command which generally requires root access.
 Acquiring the required permissions can be done using several methods:
 
-- Use sudo run fail2ban-client.
+- [Use sudo](#using-sudo) run fail2ban-client.
 - Run telegraf as root. (not recommended)
 
-### Using sudo
-
-You will need the following in your telegraf config:
-```toml
-[[inputs.fail2ban]]
-  use_sudo = true
-```
-
-You will also need to update your sudoers file:
-```bash
-$ visudo
-# Add the following line:
-Cmnd_Alias FAIL2BAN = /usr/bin/fail2ban-client status, /usr/bin/fail2ban-client status *
-telegraf  ALL=(root) NOEXEC: NOPASSWD: FAIL2BAN
-Defaults!FAIL2BAN !logfile, !syslog, !pam_session
-```
-
-### Configuration:
+### Configuration
 
 ```toml
 # Read metrics from fail2ban.
@@ -34,18 +18,37 @@ Defaults!FAIL2BAN !logfile, !syslog, !pam_session
   use_sudo = false
 ```
 
-### Measurements & Fields:
+### Using sudo
+
+Make sure to set `use_sudo = true` in your configuration file.
+
+You will also need to update your sudoers file.  It is recommended to modify a
+file in the `/etc/sudoers.d` directory using `visudo`:
+
+```bash
+$ sudo visudo -f /etc/sudoers.d/telegraf
+```
+
+Add the following lines to the file, these commands allow the `telegraf` user
+to call `fail2ban-client` without needing to provide a password and disables
+logging of the call in the auth.log.  Consult `man 8 visudo` and `man 5
+sudoers` for details.
+```
+Cmnd_Alias FAIL2BAN = /usr/bin/fail2ban-client status, /usr/bin/fail2ban-client status *
+telegraf  ALL=(root) NOEXEC: NOPASSWD: FAIL2BAN
+Defaults!FAIL2BAN !logfile, !syslog, !pam_session
+```
+
+### Metrics
 
 - fail2ban
-  - failed (integer, count)
-  - banned (integer, count)
+  - tags:
+    - jail
+  - fields:
+    - failed (integer, count)
+    - banned (integer, count)
 
-### Tags:
-
-- All measurements have the following tags:
-  - jail
-
-### Example Output:
+### Example Output
 
 ```
 # fail2ban-client status sshd

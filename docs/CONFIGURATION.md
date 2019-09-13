@@ -112,7 +112,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
   This controls the size of writes that Telegraf sends to output plugins.
 
 - **metric_buffer_limit**:
-  Maximum number of unwritten metrics per output.
+  Maximum number of unwritten metrics per output.  Increasing this value
+  allows for longer periods of output downtime without dropping metrics at the
+  cost of higher maximum memory usage.
 
 - **collection_jitter**:
   Collection jitter is used to jitter the collection by a random [interval][].
@@ -141,8 +143,12 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **quiet**:
   Log only error level messages.
 
+- **logtarget**:
+  Log target - `file`, `stderr` or `eventlog` (Windows only). 
+  The empty string means to log to stderr.
+
 - **logfile**:
-  Log file name, the empty string means to log to stderr.
+  Log file name.
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to
@@ -325,6 +331,10 @@ Parameters that can be used with any aggregator plugin:
   how long for aggregators to wait before receiving metrics from input
   plugins, in the case that aggregators are flushing and inputs are gathering
   on the same interval.
+- **grace**: The duration when the metrics will still be aggregated
+  by the plugin, even though they're outside of the aggregation period. This
+  is needed in a situation when the agent is expected to receive late metrics
+  and it's acceptable to roll them up into next aggregation period.
 - **drop_original**: If true, the original metric will be dropped by the
   aggregator and will not get sent to the output plugins.
 - **name_override**: Override the base name of the measurement.  (Default is
@@ -546,6 +556,10 @@ output.  The tag is removed in the outputs before writing.
     influxdb_database = "other"
 ```
 
+### Transport Layer Security (TLS)
+
+Reference the detailed [TLS][] documentation.
+
 [TOML]: https://github.com/toml-lang/toml#toml
 [global tags]: #global-tags
 [interval]: #intervals
@@ -557,3 +571,4 @@ output.  The tag is removed in the outputs before writing.
 [aggregators]: #aggregator-plugins
 [metric filtering]: #metric-filtering
 [telegraf.conf]: /etc/telegraf.conf
+[TLS]: /docs/TLS.md

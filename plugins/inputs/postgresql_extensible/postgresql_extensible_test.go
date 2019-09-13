@@ -25,7 +25,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 	}
 	var acc testutil.Accumulator
 	p.Start(&acc)
-
+	p.Init()
 	require.NoError(t, acc.GatherError(p.Gather))
 	return &acc
 }
@@ -199,6 +199,31 @@ func TestPostgresqlFieldOutput(t *testing.T) {
 		_, found := acc.StringField(measurement, field)
 		assert.True(t, found, fmt.Sprintf("expected %s to be a str", field))
 	}
+}
+
+func TestPostgresqlSqlScript(t *testing.T) {
+	q := query{{
+		Script:     "testdata/test.sql",
+		Version:    901,
+		Withdbname: false,
+		Tagvalue:   "",
+	}}
+	p := &Postgresql{
+		Service: postgresql.Service{
+			Address: fmt.Sprintf(
+				"host=%s user=postgres sslmode=disable",
+				testutil.GetLocalHost(),
+			),
+			IsPgBouncer: false,
+		},
+		Databases: []string{"postgres"},
+		Query:     q,
+	}
+	var acc testutil.Accumulator
+	p.Start(&acc)
+	p.Init()
+
+	require.NoError(t, acc.GatherError(p.Gather))
 }
 
 func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
