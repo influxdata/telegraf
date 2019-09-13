@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	//	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,12 +29,12 @@ func TestRedisSentinelConnect(t *testing.T) {
 
 func TestRedisSentinelParseInfo(t *testing.T) {
 	var acc testutil.Accumulator
+
 	tags := map[string]string{"host": "redis.net"}
 	rdr := bufio.NewReader(strings.NewReader(testINFOOutput))
 
 	gatherSentinelInfoOutput(rdr, &acc, tags)
 
-	//	tags = map[string]string{"host": "redis.net"}
 	fields := map[string]interface{}{
 		"lru_clock":     int64(15585808),
 		"uptime":        int64(901),
@@ -85,7 +84,6 @@ func TestRedisSentinelParseInfo(t *testing.T) {
 		"sentinel_tilt":                   int64(0),
 	}
 
-	fmt.Println("test", fields)
 	acc.AssertContainsTaggedFields(t, "redis_sentinel", fields, tags)
 }
 

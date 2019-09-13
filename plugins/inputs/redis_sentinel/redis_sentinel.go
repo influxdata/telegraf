@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/influxdata/telegraf"
@@ -69,7 +70,6 @@ func (r *RedisSentinel) Description() string {
 
 // Rename fields
 var Tracking = map[string]string{
-	"uptime_in_seconds": "uptime",
 	"connected_clients": "clients",
 }
 
@@ -84,6 +84,11 @@ func (r *RedisSentinel) init(acc telegraf.Accumulator) error {
 
 	r.clients = make([]*RedisSentinelClient, len(r.Servers))
 
+	tlsConfig, err := r.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	for i, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
 			log.Printf("W! [inputs.redis_sentinel]: server URL found without scheme; please update your configuration file")
@@ -92,7 +97,8 @@ func (r *RedisSentinel) init(acc telegraf.Accumulator) error {
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("Unable to parse to address %q: %v", serv, err)
+			acc.AddError(fmt.Errorf("Unable to parse to address %q: %v", serv, err))
+			continue
 		}
 
 		password := ""
@@ -101,9 +107,10 @@ func (r *RedisSentinel) init(acc telegraf.Accumulator) error {
 			if ok {
 				password = pw
 			}
-		}
-		if len(r.Password) > 0 {
-			password = r.Password
+		} else {
+			if len(r.Password) > 0 {
+				password = r.Password
+			}
 		}
 
 		var address string
@@ -111,11 +118,6 @@ func (r *RedisSentinel) init(acc telegraf.Accumulator) error {
 			address = u.Path
 		} else {
 			address = u.Host
-		}
-
-		tlsConfig, err := r.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
 		}
 
 		sentinel := redis.NewSentinelClient(
@@ -132,7 +134,7 @@ func (r *RedisSentinel) init(acc telegraf.Accumulator) error {
 		if u.Scheme == "unix" {
 			tags["socket"] = u.Path
 		} else {
-			tags["server"] = u.Hostname()
+			tags["source"] = u.Hostname()
 			tags["port"] = u.Port()
 		}
 
@@ -193,7 +195,6 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 		go func(client *RedisSentinelClient, acc telegraf.Accumulator) {
 			defer wg.Done()
 
-			// Use client.Sentinel.Masters() for >6.14 of go-redis
 			mastersCmd := redis.NewSliceCmd("sentinel", "masters")
 			if smErr := client.sentinel.Process(mastersCmd); smErr != nil {
 				lastError.Add(smErr)
@@ -231,7 +232,6 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 					masterFields[key] = val
 				}
 
-				// Use client.Sentinel.CkQuorum() for >6.15.3 of go-redis
 				quorumCmd := redis.NewStringCmd("sentinel", "ckquorum", m["name"])
 				if qErr := client.sentinel.Process(quorumCmd); qErr != nil {
 					lastError.Add(qErr)
@@ -251,7 +251,6 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 				// Check other Sentinels
 				sentinelTags := client.tags
 
-				// Use client.Sentinel.Sentinels() for >6.15.3 of go-redis
 				sentinelsCmd := redis.NewSliceCmd("sentinel", "sentinels", m["name"])
 				if ssErr := client.sentinel.Process(sentinelsCmd); ssErr != nil {
 					lastError.Add(ssErr)
@@ -293,7 +292,6 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 				// Check other Replicas
 				replicaTags := client.tags
 
-				// Use client.Sentinel.Slaves() for >6.15.3 of go-redis
 				replicasCmd := redis.NewSliceCmd("sentinel", "replicas", m["name"])
 				if srErr := client.sentinel.Process(replicasCmd); srErr != nil {
 					lastError.Add(srErr)
@@ -332,8 +330,7 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 				// ------------------------------------------------------------
 
-				// Use client.Sentinel.Info() for >6.15.3 of go-redis
-				infoCmd := redis.NewStringCmd("info")
+				infoCmd := redis.NewStringCmd("info", "all")
 				if iErr := client.sentinel.Process(infoCmd); iErr != nil {
 					lastError.Add(iErr)
 					return
@@ -367,10 +364,15 @@ func init() {
 func gatherSentinelInfoOutput(
 	rdr io.Reader,
 	acc telegraf.Accumulator,
-	tags map[string]string,
+	global_tags map[string]string,
 ) {
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
+
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
 
 	var section string
 	for scanner.Scan() {
@@ -394,8 +396,15 @@ func gatherSentinelInfoOutput(
 		name := parts[0]
 
 		if section == "Server" {
-			if name != "lru_clock" && name != "uptime_in_seconds" && name != "redis_version" {
+			if name != "lru_clock" && name != "redis_version" {
 				continue
+			}
+
+			if name == "uptime_in_seconds" {
+				uptimeInSeconds, uptimeParseErr := strconv.ParseInt(parts[1], 10, 64)
+				if uptimeParseErr == nil {
+					fields["uptime"] = time.Duration(uptimeInSeconds) * time.Second
+				}
 			}
 		}
 
@@ -429,6 +438,5 @@ func gatherSentinelInfoOutput(
 		fields[metric] = val
 	}
 
-	fmt.Println("plugin", fields)
 	acc.AddFields("redis_sentinel", fields, tags)
 }
