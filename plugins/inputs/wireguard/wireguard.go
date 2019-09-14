@@ -28,7 +28,7 @@ var (
 type Wireguard struct {
 	Devices []string `toml:"devices"`
 
-	client      *wireguardctrl.Client
+	client *wireguardctrl.Client
 }
 
 func (wg *Wireguard) Description() string {

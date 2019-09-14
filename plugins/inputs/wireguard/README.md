@@ -41,11 +41,21 @@ reports gauge metrics for Wireguard interface device(s) and its peers.
 
 #### Error: `operation not permitted`
 
-By default, Telegraf runs as the `telegraf` system user. Wireguard
-implementations that run in kernelspace (as opposed to userspace) require
-userspace programs to run as root in order to communicate with the module.
-Either update the system udev rules for the `telegraf` user or run Telegraf as
-root (not recommended).
+When the kernelspace implementation of Wireguard is in use (as opposed to its
+userspace implementations), Telegraf communicates with the module over netlink.
+This requires Telegraf to either run as root, or for the Telegraf binary to
+have the `CAP_NET_ADMIN` capability.
+
+To add this capability to the Telegraf binary (to allow this communication under
+the default user `telegraf`):
+
+```bash
+$ sudo setcap CAP_NET_ADMIN+epi $(which telegraf)
+```
+
+N.B.: This capability is a filesystem attribute on the binary itself. The
+attribute needs to be re-applied if the Telegraf binary is rotated (e.g.
+on installation of new a Telegraf version from the system package manager).
 
 #### Error: `error enumerating Wireguard devices`
 
