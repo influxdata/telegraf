@@ -40,10 +40,11 @@ type Execd struct {
 	Command string
 	Signal  string
 
-	acc    telegraf.Accumulator
-	cmd    *exec.Cmd
-	parser parsers.Parser
-	stdin  io.WriteCloser
+	acc     telegraf.Accumulator
+	cmd     *exec.Cmd
+	parser  parsers.Parser
+	stdin   io.WriteCloser
+	stopped bool
 }
 
 func (e *Execd) SampleConfig() string {
@@ -72,6 +73,8 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 }
 
 func (e *Execd) Stop() {
+	e.stopped = true
+
 	if e.cmd == nil || e.cmd.Process == nil {
 		return
 	}
@@ -121,6 +124,10 @@ func (e *Execd) cmdRun(args []string) error {
 
 	wg.Wait()
 	e.cmd.Wait()
+
+	if e.stopped {
+		return nil
+	}
 
 	log.Printf("E! [inputs.execd] %s terminated. Restart in one second...", e.Command)
 
