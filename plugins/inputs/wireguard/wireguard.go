@@ -28,7 +28,6 @@ type Wireguard struct {
 	Devices []string `toml:"devices"`
 
 	client      *wireguardctrl.Client
-	initialized bool
 }
 
 func (wg *Wireguard) Description() string {
@@ -46,23 +45,12 @@ func (wg *Wireguard) SampleConfig() string {
 func (wg *Wireguard) Init() error {
 	var err error
 
-	if wg.initialized {
-		return nil
-	}
+	wg.client, err = wireguardctrl.New()
 
-	if wg.client, err = wireguardctrl.New(); err != nil {
-		return err
-	}
-
-	wg.initialized = true
-	return nil
+	return err
 }
 
 func (wg *Wireguard) Gather(acc telegraf.Accumulator) error {
-	if err := wg.Init(); err != nil {
-		return fmt.Errorf("failed to instantiate Wireguard control client: err=%v", err)
-	}
-
 	devices, err := wg.enumerateDevices()
 	if err != nil {
 		acc.AddError(fmt.Errorf("error enumerating Wireguard devices: err=%v", err))
