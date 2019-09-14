@@ -159,7 +159,7 @@ func (e *Execd) cmdReadErr(out io.Reader, wg *sync.WaitGroup) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("E! [inputs.execd] stderr output: %s", scanner.Text())
+		log.Printf("E! [inputs.execd] stderr output: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
