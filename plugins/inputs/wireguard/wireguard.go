@@ -2,6 +2,7 @@ package wireguard
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -81,7 +82,8 @@ func (wg *Wireguard) enumerateDevices() ([]*wgtypes.Device, error) {
 	for _, name := range wg.Devices {
 		dev, err := wg.client.Device(name)
 		if err != nil {
-			return nil, err
+			log.Printf("W! [inputs.wireguard] No Wireguard device found with name %s", name)
+			continue
 		}
 
 		devices = append(devices, dev)
