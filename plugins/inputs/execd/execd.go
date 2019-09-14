@@ -77,7 +77,7 @@ func (e *Execd) Stop() {
 	}
 
 	if err := e.cmd.Process.Kill(); err != nil {
-		log.Printf("E! FATAL error killing process: %s", err)
+		log.Printf("E! [inputs.execd] FATAL error killing process: %s", err)
 	}
 }
 
@@ -107,7 +107,7 @@ func (e *Execd) cmdRun(args []string) error {
 		return fmt.Errorf("error opening stderr pipe: %s", err)
 	}
 
-	log.Printf("D! execd start program: %s", e.Command)
+	log.Printf("D! [inputs.execd] Start program: %s", e.Command)
 
 	err = e.cmd.Start()
 	if err != nil {
@@ -122,7 +122,7 @@ func (e *Execd) cmdRun(args []string) error {
 	wg.Wait()
 	e.cmd.Wait()
 
-	log.Printf("E! execd: %s terminated. Restart in one second...", e.Command)
+	log.Printf("E! [inputs.execd] %s terminated. Restart in one second...", e.Command)
 
 	go func() {
 		<-time.After(time.Second)
@@ -159,7 +159,7 @@ func (e *Execd) cmdReadErr(out io.Reader, wg *sync.WaitGroup) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("E! execd stderr output: %s", scanner.Text())
+		log.Printf("E! [inputs.execd] stderr output: %s", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
