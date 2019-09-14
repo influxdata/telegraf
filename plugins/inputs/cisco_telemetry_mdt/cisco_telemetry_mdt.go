@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -77,13 +78,11 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
 	for _, tag := range c.EmbeddedTags {
-		i := strings.LastIndexByte(tag, '/')
-		if i >= 0 {
-			if _, hasKey := c.extraTags[tag[0:i]]; !hasKey {
-				c.extraTags[tag[0:i]] = make(map[string]struct{})
-			}
-			c.extraTags[tag[0:i]][tag[i+1:]] = struct{}{}
+		dir := path.Dir(tag)
+		if _, hasKey := c.extraTags[dir]; !hasKey {
+			c.extraTags[dir] = make(map[string]struct{})
 		}
+		c.extraTags[dir][path.Base(tag)] = struct{}{}
 	}
 
 	switch c.Transport {
@@ -281,27 +280,34 @@ func (c *CiscoTelemetryMDT) handleTelemetry(data []byte) {
 
 		timestamp := time.Unix(int64(measured/1000), int64(measured%1000)*1000000)
 
-		// Populate tags and fields from toplevel GPBKV fields "keys" and "content"
+		// Find toplevel GPBKV fields "keys" and "content"
+		var keys, content *telemetry.TelemetryField = nil, nil
 		for _, field := range gpbkv.Fields {
-			switch field.Name {
-			case "keys":
-				tags = make(map[string]string, len(field.Fields)+3)
-				tags["source"] = msg.GetNodeIdStr()
-				tags["subscription"] = msg.GetSubscriptionIdStr()
-				tags["path"] = msg.GetEncodingPath()
-
-				for _, subfield := range field.Fields {
-					c.parseKeyField(tags, subfield, "")
-				}
-			case "content":
-				if tags != nil {
-					for _, subfield := range field.Fields {
-						c.parseContentField(grouper, subfield, "", msg.EncodingPath, tags, timestamp)
-					}
-				}
-			default:
-				log.Printf("I! [inputs.cisco_telemetry_mdt]: Unexpected top-level MDT field: %s", field.Name)
+			if field.Name == "keys" {
+				keys = field
+			} else if field.Name == "content" {
+				content = field
 			}
+		}
+
+		if keys == nil || content == nil {
+			log.Printf("I! [inputs.cisco_telemetry_mdt]: Message from %s missing keys or content", msg.GetNodeIdStr())
+			continue
+		}
+
+		// Parse keys
+		tags = make(map[string]string, len(keys.Fields)+3)
+		tags["source"] = msg.GetNodeIdStr()
+		tags["subscription"] = msg.GetSubscriptionIdStr()
+		tags["path"] = msg.GetEncodingPath()
+
+		for _, subfield := range keys.Fields {
+			c.parseKeyField(tags, subfield, "")
+		}
+
+		// Parse values
+		for _, subfield := range content.Fields {
+			c.parseContentField(grouper, subfield, "", msg.EncodingPath, tags, timestamp)
 		}
 	}
 
@@ -368,14 +374,13 @@ func decodeTag(field *telemetry.TelemetryField) string {
 func (c *CiscoTelemetryMDT) parseKeyField(tags map[string]string, field *telemetry.TelemetryField, prefix string) {
 	localname := strings.Replace(field.Name, "-", "_", -1)
 	name := localname
-	if len(name) == 0 {
+	if len(localname) == 0 {
 		name = prefix
 	} else if len(prefix) > 0 {
 		name = prefix + "/" + localname
 	}
 
-	if tag := decodeTag(field); len(tag) > 0 {
-		localname := strings.Replace(field.Name, "-", "_", -1)
+	if tag := decodeTag(field); len(name) > 0 && len(tag) > 0 {
 		if _, exists := tags[localname]; !exists { // Use short keys whenever possible
 			tags[localname] = tag
 		} else {
@@ -414,6 +419,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		}
 
 		grouper.Add(measurement, tags, timestamp, name, value)
+		return
 	}
 
 	if len(extraTags) > 0 {
@@ -438,38 +444,8 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		}
 	}
 
-	if nxAttributes != nil {
-		// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
-		rn := ""
-		dn := false
-
-		for _, subfield := range nxAttributes.Fields {
-			if subfield.Name == "rn" {
-				rn = decodeTag(subfield)
-			} else if subfield.Name == "dn" {
-				dn = true
-			}
-		}
-
-		if len(rn) > 0 {
-			tags[prefix] = rn
-		} else if !dn { // Check for distinguished name being present
-			c.acc.AddError(fmt.Errorf("NX-OS decoding failed: missing dn field"))
-		}
-
-		for _, subfield := range nxAttributes.Fields {
-			if subfield.Name != "rn" {
-				c.parseContentField(grouper, subfield, "", path, tags, timestamp)
-			}
-		}
-
-		if nxChildren != nil {
-			// This is a nested structure, children will inherit relative name keys of parent
-			for _, subfield := range nxChildren.Fields {
-				c.parseContentField(grouper, subfield, prefix, path, tags, timestamp)
-			}
-		}
-		delete(tags, prefix)
+	if nxAttributes == nil && nxRows == nil {
+		return
 	} else if nxRows != nil {
 		// NXAPI structure: https://developer.cisco.com/docs/cisco-nexus-9000-series-nx-api-cli-reference-release-9-2x/
 		for _, row := range nxRows.Fields {
@@ -482,7 +458,41 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 			}
 			delete(tags, prefix)
 		}
+		return
 	}
+
+	// DME structure: https://developer.cisco.com/site/nxapi-dme-model-reference-api/
+	rn := ""
+	dn := false
+
+	for _, subfield := range nxAttributes.Fields {
+		if subfield.Name == "rn" {
+			rn = decodeTag(subfield)
+		} else if subfield.Name == "dn" {
+			dn = true
+		}
+	}
+
+	if len(rn) > 0 {
+		tags[prefix] = rn
+	} else if !dn { // Check for distinguished name being present
+		c.acc.AddError(fmt.Errorf("NX-OS decoding failed: missing dn field"))
+		return
+	}
+
+	for _, subfield := range nxAttributes.Fields {
+		if subfield.Name != "rn" {
+			c.parseContentField(grouper, subfield, "", path, tags, timestamp)
+		}
+	}
+
+	if nxChildren != nil {
+		// This is a nested structure, children will inherit relative name keys of parent
+		for _, subfield := range nxChildren.Fields {
+			c.parseContentField(grouper, subfield, prefix, path, tags, timestamp)
+		}
+	}
+	delete(tags, prefix)
 }
 
 // Stop listener and cleanup
@@ -513,12 +523,12 @@ const sampleConfig = `
  ##  transport only.
  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
+ ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
+ # embedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
+
  ## Define aliases to map telemetry encoding paths to simple measurement names
  [inputs.cisco_telemetry_mdt.aliases]
    ifstats = "ietf-interfaces:interfaces-state/interface/statistics"
-   
- ## Define (for certain nested telemetry measurements with embedded tags) which fields are tags
- # enbedded_tags = ["Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/class-name"]
 `
 
 // SampleConfig of plugin
