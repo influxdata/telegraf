@@ -54,7 +54,7 @@ func (wg *Wireguard) Init() error {
 func (wg *Wireguard) Gather(acc telegraf.Accumulator) error {
 	devices, err := wg.enumerateDevices()
 	if err != nil {
-		acc.AddError(fmt.Errorf("error enumerating Wireguard devices: err=%v", err))
+		acc.AddError(fmt.Errorf("error enumerating Wireguard devices: %v", err))
 		return nil
 	}
 
