@@ -63,7 +63,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 
 	args, err := shellquote.Split(e.Command)
 	if err != nil || len(args) == 0 {
-		return fmt.Errorf("execd: unable to parse command: %s", err)
+		return fmt.Errorf("unable to parse command: %s", err)
 	}
 
 	go e.cmdRun(args)
@@ -92,26 +92,26 @@ func (e *Execd) cmdRun(args []string) error {
 
 	stdin, err := e.cmd.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("execd: error opening stdin pipe: %s", err)
+		return fmt.Errorf("error opening stdin pipe: %s", err)
 	}
 
 	e.stdin = stdin
 
 	stdout, err := e.cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("execd: error opening stdout pipe: %s", err)
+		return fmt.Errorf("error opening stdout pipe: %s", err)
 	}
 
 	stderr, err := e.cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("execd: error opening stderr pipe: %s", err)
+		return fmt.Errorf("error opening stderr pipe: %s", err)
 	}
 
 	log.Printf("D! execd start program: %s", e.Command)
 
 	err = e.cmd.Start()
 	if err != nil {
-		return fmt.Errorf("execd error starting program: %s", err)
+		return fmt.Errorf("error starting program: %s", err)
 	}
 
 	wg.Add(2)

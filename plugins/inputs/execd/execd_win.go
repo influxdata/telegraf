@@ -19,7 +19,7 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 		io.WriteString(e.stdin, "\n")
 	case "none":
 	default:
-		return fmt.Errorf("execd: invalid signal: %s", e.Signal)
+		return fmt.Errorf("invalid signal: %s", e.Signal)
 	}
 
 	return nil
