@@ -5,19 +5,19 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 ### Configuration:
 
 ```toml
-slave_id = 1
+ slave_id = 1
  time_out = "1s"
  #protocol = "RTU"
  
  #TCP 
- controller="tcp://localhost:1502"
+ controller = "tcp://localhost:1502"
  
  #RTU
- #controller="file:///dev/ttyUSB0"
- #baudRate = 9600
- #dataBits = 8
+ #controller = "file:///dev/ttyUSB0"
+ #baud_rate = 9600
+ #data_bits = 8
  #parity = "N"
- #stopBits = 1
+ #stop_bits = 1
  discrete_inputs = [
    { name = "Start",          address = [0]},   
    { name = "Stop",           address = [1]},   
