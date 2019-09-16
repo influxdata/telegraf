@@ -31,7 +31,6 @@ type Modbus struct {
 	Holding_Registers []tag             `toml:"holding_registers"`
 	Input_Registers   []tag             `toml:"input_registers"`
 	registers         []register
-
 	is_connected   bool
 	is_initialized bool
 	tcp_handler    *mb.TCPClientHandler
