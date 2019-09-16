@@ -119,8 +119,15 @@ func (e *Execd) cmdRun(args []string) error {
 
 	wg.Add(2)
 
-	go e.cmdReadOut(stdout, &wg)
-	go e.cmdReadErr(stderr, &wg)
+	go func() {
+		e.cmdReadOut(stdout)
+		wg.Done()
+	}()
+
+	go func() {
+		e.cmdReadErr(stderr)
+		wg.Done()
+	}()
 
 	wg.Wait()
 	e.cmd.Wait()
@@ -139,9 +146,7 @@ func (e *Execd) cmdRun(args []string) error {
 	return nil
 }
 
-func (e *Execd) cmdReadOut(out io.Reader, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (e *Execd) cmdReadOut(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
@@ -160,9 +165,7 @@ func (e *Execd) cmdReadOut(out io.Reader, wg *sync.WaitGroup) {
 	}
 }
 
-func (e *Execd) cmdReadErr(out io.Reader, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
