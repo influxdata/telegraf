@@ -149,7 +149,7 @@ func initialization(m *Modbus) {
 
 			if len(tags) == 0 {
 				continue
-			}
+			}			
 
 			addrs := []uint16{}
 			for _, tag := range tags {
@@ -183,18 +183,14 @@ func initialization(m *Modbus) {
 
 			if name == C_DISCRETE_INPUTS {
 				fn = m.client.ReadDiscreteInputs
-			}
-
-			if name == C_COILS {
+			} else if name == C_COILS {
 				fn = m.client.ReadCoils
-			}
-
-			if name == C_INPUT_REGISTERS {
+			} else if name == C_INPUT_REGISTERS {
 				fn = m.client.ReadInputRegisters
-			}
-
-			if name == C_HOLDING_REGISTERS {
+			} else if name == C_HOLDING_REGISTERS {
 				fn = m.client.ReadHoldingRegisters
+			} else {
+				//TODO:launch error
 			}
 
 			m.registers = append(m.registers, register{name, registers_range, fn, tags})
