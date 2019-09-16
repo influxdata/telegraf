@@ -1,7 +1,6 @@
 package filecount
 
 import (
-	"runtime"
 	"testing"
 	"time"
 
@@ -43,12 +42,7 @@ func TestRealFS(t *testing.T) {
 	fileInfo, err := fs.Stat(getTestdataDir() + "/qux")
 	require.Nil(t, err)
 	require.Equal(t, false, fileInfo.IsDir())
-	reqSize := int64(446)
-	if runtime.GOOS == "windows" {
-		//5 lines, add 7 x '\r'
-		reqSize += 7
-	}
-	require.Equal(t, reqSize, fileInfo.Size())
+	require.Equal(t, int64(446), fileInfo.Size())
 
 	// now swap out real, for fake filesystem
 	fs = getTestFileSystem()
