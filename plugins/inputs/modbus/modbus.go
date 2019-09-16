@@ -4,54 +4,54 @@ import (
 	"encoding/binary"
 	"errors"
 	"math"
+	"net"
+	"net/url"
+	"reflect"
 	"sort"
 	"strconv"
-	"reflect"		
-    "net"
-    "net/url"
-	
+
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type Modbus struct {		
-	Controller    string                   `toml:"controller"`	
-	Baud_Rate      int                      `toml:"baud_rate"`
-	Data_Bits      int                      `toml:"data_bits"`
-	Parity        string                   `toml:"parity"` 
-	Stop_Bits      int                      `toml:"stop_bits"`
-	Slave_Id       int                      `toml:"slave_id"` 
-	Time_out       internal.Duration        `toml:"time_out"`	
-	Discrete_Inputs   []tag	           `toml:"discrete_inputs"`	
-	Coils             []tag	           `toml:"coils"`	
-	Holding_Registers []tag	           `toml:"holding_registers"`	
-	Input_Registers   []tag	           `toml:"input_registers"`
+type Modbus struct {
+	Controller        string            `toml:"controller"`
+	Baud_Rate         int               `toml:"baud_rate"`
+	Data_Bits         int               `toml:"data_bits"`
+	Parity            string            `toml:"parity"`
+	Stop_Bits         int               `toml:"stop_bits"`
+	Slave_Id          int               `toml:"slave_id"`
+	Time_out          internal.Duration `toml:"time_out"`
+	Discrete_Inputs   []tag             `toml:"discrete_inputs"`
+	Coils             []tag             `toml:"coils"`
+	Holding_Registers []tag             `toml:"holding_registers"`
+	Input_Registers   []tag             `toml:"input_registers"`
 	registers         []register
 
-	is_connected   bool      
+	is_connected   bool
 	is_initialized bool
 	tcp_handler    *mb.TCPClientHandler
 	serial_handler *mb.RTUClientHandler
-	client        mb.Client			
+	client         mb.Client
 }
 
-type register struct {	
-	Type 	  string
-	registers_range     []register_range      
-	raw_values map[uint16]uint16
-	ReadValue func(uint16, uint16) ([]byte, error)
-	Tags	  []tag				
+type register struct {
+	Type            string
+	registers_range []register_range
+	raw_values      map[uint16]uint16
+	ReadValue       func(uint16, uint16) ([]byte, error)
+	Tags            []tag
 }
 
 type tag struct {
-	Name     string `toml:"name"`
-	Byte_Order    string `toml:"byte_order"`
-	Data_Type string `toml:"data_type"`
-	Scale    string `toml:"scale"`
-	Address  []uint16  `toml:"address"`
-	value    interface{}
+	Name       string   `toml:"name"`
+	Byte_Order string   `toml:"byte_order"`
+	Data_Type  string   `toml:"data_type"`
+	Scale      string   `toml:"scale"`
+	Address    []uint16 `toml:"address"`
+	value      interface{}
 }
 
 type register_range struct {
@@ -60,12 +60,12 @@ type register_range struct {
 }
 
 const (
-	C_DIGITAL = "digital"
-	C_ANALOG  = "analog"
-	C_DISCRETE_INPUTS = "Discrete_Inputs"
-	C_COILS = "Coils"
+	C_DIGITAL           = "digital"
+	C_ANALOG            = "analog"
+	C_DISCRETE_INPUTS   = "Discrete_Inputs"
+	C_COILS             = "Coils"
 	C_HOLDING_REGISTERS = "Holding_Registers"
-	C_INPUT_REGISTERS = "Input_Registers"
+	C_INPUT_REGISTERS   = "Input_Registers"
 )
 
 var ModbusConfig = `
@@ -112,11 +112,11 @@ func connect(m *Modbus) error {
 	switch u.Scheme {
 	case "tcp":
 		host, port, _ := net.SplitHostPort(u.Host)
-		m.tcp_handler = mb.NewTCPClientHandler(host + ":" + port)		
+		m.tcp_handler = mb.NewTCPClientHandler(host + ":" + port)
 		m.tcp_handler.Timeout = m.Time_out.Duration
 		m.tcp_handler.SlaveId = byte(m.Slave_Id)
 		m.client = mb.NewClient(m.tcp_handler)
-		err := m.tcp_handler.Connect()		
+		err := m.tcp_handler.Connect()
 		if err != nil {
 			return err
 		}
@@ -131,7 +131,7 @@ func connect(m *Modbus) error {
 		m.serial_handler.Parity = m.Parity
 		m.serial_handler.StopBits = m.Stop_Bits
 		m.client = mb.NewClient(m.serial_handler)
-		err := m.serial_handler.Connect()		
+		err := m.serial_handler.Connect()
 		if err != nil {
 			return err
 		}
@@ -142,52 +142,52 @@ func connect(m *Modbus) error {
 	}
 }
 
-func initialization(m *Modbus) {	
-	r := reflect.ValueOf(m).Elem()	
+func initialization(m *Modbus) {
+	r := reflect.ValueOf(m).Elem()
 	for i := 0; i < r.NumField(); i++ {
-		f := r.Field(i)		
-		
-		if f.Type().String() == "[]modbus.tag" {						
-			tags := f.Interface().([]tag)			
-	
+		f := r.Field(i)
+
+		if f.Type().String() == "[]modbus.tag" {
+			tags := f.Interface().([]tag)
+
 			if len(tags) == 0 {
 				continue
 			}
-			
+
 			addrs := []uint16{}
-			for _, tag := range tags {				
+			for _, tag := range tags {
 				for _, a := range tag.Address {
 					addrs = append(addrs, a)
-				}				
+				}
 			}
-			
-			addrs = removeDuplicates(addrs)			
+
+			addrs = removeDuplicates(addrs)
 			sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 			raw_values := make(map[uint16]uint16)
-			for _, j := range addrs{
+			for _, j := range addrs {
 				raw_values[j] = 0
 			}
 
-			ii := 0			
-			var registers_range []register_range     	
+			ii := 0
+			var registers_range []register_range
 
 			name := r.Type().Field(i).Name
-			for range addrs {				
+			for range addrs {
 				if ii < len(addrs) {
 					start := addrs[ii]
-					end   := start	
+					end := start
 
-					for ii < len(addrs) - 1 && addrs[ii + 1] - addrs[ii] == 1 {											
-						end = addrs[ii + 1]					
-						ii++	
+					for ii < len(addrs)-1 && addrs[ii+1]-addrs[ii] == 1 {
+						end = addrs[ii+1]
+						ii++
 					}
 					ii++
-					registers_range  = append(registers_range , register_range{start, end - start + 1})							
-				}				
+					registers_range = append(registers_range, register_range{start, end - start + 1})
+				}
 			}
-			
-			var fn  func(uint16, uint16) ([]byte, error)
+
+			var fn func(uint16, uint16) ([]byte, error)
 
 			if name == C_DISCRETE_INPUTS {
 				fn = m.client.ReadDiscreteInputs
@@ -204,8 +204,8 @@ func initialization(m *Modbus) {
 			if name == C_HOLDING_REGISTERS {
 				fn = m.client.ReadHoldingRegisters
 			}
-			
-			m.registers = append(m.registers, register{name, registers_range, raw_values, fn, tags})						
+
+			m.registers = append(m.registers, register{name, registers_range, raw_values, fn, tags})
 		}
 	}
 }
@@ -243,92 +243,92 @@ func addFields(t []tag) map[string]interface{} {
 	return fields
 }
 
-func (m *Modbus) GetTags() error {			
-	for _,r := range m.registers {
-		for _,rr := range r.registers_range {
+func (m *Modbus) GetTags() error {
+	for _, r := range m.registers {
+		for _, rr := range r.registers_range {
 			res, err := r.ReadValue(uint16(rr.address), uint16(rr.length))
 			if err != nil {
 				return err
-			}			
+			}
 
-			if r.Type == C_DISCRETE_INPUTS || r.Type == C_COILS {				
+			if r.Type == C_DISCRETE_INPUTS || r.Type == C_COILS {
 				getDigitalValue(r, rr, res)
 			}
-	
+
 			if r.Type == C_INPUT_REGISTERS || r.Type == C_HOLDING_REGISTERS {
-				getAnalogValue(r, rr, res)			
+				getAnalogValue(r, rr, res)
 			}
-		}				
+		}
 	}
 
 	return nil
 }
 
-func getDigitalValue(r register, rr register_range, results []uint8) error {	
+func getDigitalValue(r register, rr register_range, results []uint8) error {
 	for i := 0; i < len(results); i++ {
 		for j := uint16(0); j < rr.length; j++ {
 			r.raw_values[rr.address+j] = uint16(results[i] >> uint(j) & 0x01)
-			
+
 		}
 	}
 
 	for i := 0; i < len(r.Tags); i++ {
 		r.Tags[i].value = r.raw_values[r.Tags[i].Address[0]]
 	}
-	
+
 	return nil
 }
 
 func getAnalogValue(r register, rr register_range, res []uint8) error {
-	for i := 0; i < len(res); i += 2 {			
-		r.raw_values[rr.address+ uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
+	for i := 0; i < len(res); i += 2 {
+		r.raw_values[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
 	}
 
-	for i := 0; i < len(r.Tags); i++ {	
-		bytes := []byte{}		
-		for _, rv := range r.Tags[i].Address{			
-			bytes = append(bytes, byte(r.raw_values[rv] >> 8))
-			bytes = append(bytes, byte(r.raw_values[rv] & 255))
+	for i := 0; i < len(r.Tags); i++ {
+		bytes := []byte{}
+		for _, rv := range r.Tags[i].Address {
+			bytes = append(bytes, byte(r.raw_values[rv]>>8))
+			bytes = append(bytes, byte(r.raw_values[rv]&255))
 		}
-		
+
 		r.Tags[i].value = convertDataType(r.Tags[i], bytes)
 	}
-		
+
 	return nil
 }
 
-func convertDataType(t tag, bytes []byte) interface{} {			
+func convertDataType(t tag, bytes []byte) interface{} {
 	switch t.Data_Type {
-	case "UINT16":		
-		e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)		
-		f16 := format16(t.Data_Type, e16).(uint16)
-		return scale16(t.Scale, f16)		
-	case "INT16":		
+	case "UINT16":
 		e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)
-		return format16(t.Data_Type, e16)	
-	case "UINT32":		
-		e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)		
+		f16 := format16(t.Data_Type, e16).(uint16)
+		return scale16(t.Scale, f16)
+	case "INT16":
+		e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)
+		return format16(t.Data_Type, e16)
+	case "UINT32":
+		e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
 		f32 := format32(t.Data_Type, e32).(uint32)
-		return scale32(t.Scale, f32)		
-	case "INT32":		
+		return scale32(t.Scale, f32)
+	case "INT32":
 		e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
-		return format32(t.Data_Type, e32)		
-	case "FLOAT32-IEEE":			
+		return format32(t.Data_Type, e32)
+	case "FLOAT32-IEEE":
 		e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
-		return format32(t.Data_Type, e32)		
-	case "FLOAT32":		
+		return format32(t.Data_Type, e32)
+	case "FLOAT32":
 		if len(bytes) == 2 {
 			e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)
-			f16 := format16(t.Data_Type, e16).(uint16)			
-			return scale16(t.Scale, f16)			
-		} else {			
+			f16 := format16(t.Data_Type, e16).(uint16)
+			return scale16(t.Scale, f16)
+		} else {
 			e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
-			return scale32(t.Scale, e32)			
+			return scale32(t.Scale, e32)
 		}
 
 	default:
 		return 0
-	}	
+	}
 }
 
 func convertEndianness16(o string, b []byte) interface{} {
@@ -374,7 +374,7 @@ func format32(f string, r uint32) interface{} {
 		return r
 	case "INT32":
 		return int32(r)
-	case "FLOAT32-IEEE":		
+	case "FLOAT32-IEEE":
 		return math.Float32frombits(r)
 	default:
 		return r
@@ -385,10 +385,10 @@ func scale16(s string, v uint16) interface{} {
 	if len(s) == 0 {
 		return v
 	}
-		
-	n, err := strconv.ParseFloat(s, 32)	
+
+	n, err := strconv.ParseFloat(s, 32)
 	if err == nil {
-		return  float32(v) * float32(n)
+		return float32(v) * float32(n)
 	}
 
 	return 0
@@ -399,9 +399,9 @@ func scale32(s string, v uint32) interface{} {
 		return v
 	}
 
-	n, err := strconv.ParseFloat(s, 32)	
+	n, err := strconv.ParseFloat(s, 32)
 	if err == nil {
-		return  float32(v) * float32(n)
+		return float32(v) * float32(n)
 	}
 
 	return 0
@@ -410,7 +410,7 @@ func scale32(s string, v uint32) interface{} {
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	
+
 	if !m.is_connected {
 		err := connect(m)
 		if err != nil {
@@ -432,7 +432,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 	for _, reg := range m.registers {
 		fields = addFields(reg.Tags)
-		acc.AddFields("modbus."+reg.Type, fields, tags)				
+		acc.AddFields("modbus."+reg.Type, fields, tags)
 	}
 
 	return nil
