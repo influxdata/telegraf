@@ -146,6 +146,7 @@ func initialization(m *Modbus) {
 
 		if f.Type().String() == "[]modbus.tag" {
 			tags := f.Interface().([]tag)
+			name := r.Type().Field(i).Name
 
 			if len(tags) == 0 {
 				continue
@@ -163,8 +164,7 @@ func initialization(m *Modbus) {
 		
 			ii := 0
 			var registers_range []register_range
-
-			name := r.Type().Field(i).Name
+			
 			for range addrs {
 				if ii < len(addrs) {
 					start := addrs[ii]
