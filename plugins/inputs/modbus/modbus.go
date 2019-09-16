@@ -195,6 +195,9 @@ func initialization(m *Modbus) error {
 			ii := 0
 			var registers_range []register_range
 
+			// Get range of consecutive integers
+			// [1, 2, 3, 5, 6, 10, 11, 12, 14]
+			// (1, 3) , (5, 2) , (10, 3), (14 , 1)
 			for range addrs {
 				if ii < len(addrs) {
 					start := addrs[ii]
