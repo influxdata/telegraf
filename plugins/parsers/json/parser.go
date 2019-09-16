@@ -169,12 +169,10 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 	//remove any additional string/bool values from fields
 	for fk := range fields {
 		switch fields[fk].(type) {
-		case string:
+		case string, bool:
 			if p.stringFields != nil && p.stringFields.Match(fk) {
 				continue
 			}
-			delete(fields, fk)
-		case bool:
 			delete(fields, fk)
 		}
 	}
