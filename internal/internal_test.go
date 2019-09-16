@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -113,7 +114,8 @@ func TestCombinedOutput(t *testing.T) {
 	out, err := CombinedOutputTimeout(cmd, time.Second)
 
 	assert.NoError(t, err)
-	assert.Equal(t, "foo\n", string(out))
+	assert.Equal(t, "foo", strings.TrimRight(string(out), "\r\n"))
+
 }
 
 // test that CombinedOutputTimeout and exec.Cmd.CombinedOutput return
