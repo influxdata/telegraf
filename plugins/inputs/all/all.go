@@ -4,6 +4,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/activemq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
 	_ "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer"
+	_ "github.com/influxdata/telegraf/plugins/inputs/aos"
 	_ "github.com/influxdata/telegraf/plugins/inputs/apache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/apcupsd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aurora"
