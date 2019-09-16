@@ -110,11 +110,11 @@ func connect(m *Modbus) error {
 	}
 
 	switch u.Scheme {
-	case "tcp":		
-		host, port, _err := net.SplitHostPort(u.Host)	
+	case "tcp":
+		host, port, _err := net.SplitHostPort(u.Host)
 		if _err != nil {
 			return _err
-		}	
+		}
 		m.tcp_handler = mb.NewTCPClientHandler(host + ":" + port)
 		m.tcp_handler.Timeout = m.Time_out.Duration
 		m.tcp_handler.SlaveId = byte(m.Slave_Id)
@@ -141,7 +141,7 @@ func connect(m *Modbus) error {
 			}
 			m.is_connected = true
 			return nil
-		}else if m.Protocol == "ASCII" {
+		} else if m.Protocol == "ASCII" {
 			m.ascii_handler = mb.NewASCIIClientHandler(u.Path)
 			m.ascii_handler.Timeout = m.Time_out.Duration
 			m.ascii_handler.SlaveId = byte(m.Slave_Id)
@@ -156,9 +156,9 @@ func connect(m *Modbus) error {
 			}
 			m.is_connected = true
 			return nil
-		}else{
+		} else {
 			return errors.New(fmt.Sprintf("Not valid protcol [%s] - [%s] ", u.Scheme, m.Protocol))
-		}				
+		}
 	default:
 		return errors.New("Not valid Controller")
 	}
