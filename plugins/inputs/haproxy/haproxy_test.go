@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -39,6 +40,9 @@ func (s statServer) serverSocket(l net.Listener) {
 }
 
 func TestHaproxyGeneratesMetricsWithAuthentication(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	//We create a fake server to return test data
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		username, password, ok := r.BasicAuth()

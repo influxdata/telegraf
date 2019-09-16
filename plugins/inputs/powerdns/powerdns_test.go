@@ -3,6 +3,7 @@ package powerdns
 import (
 	"fmt"
 	"net"
+	"runtime"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -69,6 +70,9 @@ func (s statServer) serverSocket(l net.Listener) {
 }
 
 func TestPowerdnsGeneratesMetrics(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	// We create a fake server to return test data
 	randomNumber := int64(5239846799706671610)
 	socket, err := net.Listen("unix", fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber))

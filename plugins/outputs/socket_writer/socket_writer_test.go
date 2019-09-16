@@ -47,6 +47,9 @@ func TestSocketWriter_udp(t *testing.T) {
 }
 
 func TestSocketWriter_unix(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)

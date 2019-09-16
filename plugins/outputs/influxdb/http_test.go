@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -602,6 +603,9 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 }
 
 func TestHTTP_UnixSocket(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	tmpdir, err := ioutil.TempDir("", "telegraf-test")
 	if err != nil {
 		require.NoError(t, err)

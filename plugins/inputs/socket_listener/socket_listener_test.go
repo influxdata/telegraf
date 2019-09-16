@@ -67,6 +67,9 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 }
 
 func TestSocketListener_unix_tls(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
@@ -128,6 +131,9 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)

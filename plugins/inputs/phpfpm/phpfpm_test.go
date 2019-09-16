@@ -9,6 +9,7 @@ import (
 	"net/http/fcgi"
 	"net/http/httptest"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -104,6 +105,9 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 }
 
 func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	// Create a socket in /tmp because we always have write permission and if the
 	// removing of socket fail when system restart /tmp is clear so
 	// we don't have junk files around
@@ -150,6 +154,9 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 }
 
 func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	// Create a socket in /tmp because we always have write permission. If the
 	// removing of socket fail we won't have junk files around. Cuz when system
 	// restart, it clears out /tmp
@@ -230,9 +237,9 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 	require.Error(t, err)
 	assertErr := `Socket doesn't exist  '/tmp/invalid.sock': stat /tmp/invalid.sock: no such file or directory`
 	if runtime.GOOS == "windows" {
-		assertErr = `Socket doesn't exist  '/tmp/invalid.sock': CreateFile /tmp/invalid.sock: The system cannot find the file specified.`
+		assertErr = `Socket doesn't exist  '/tmp/invalid.sock': CreateFile /tmp/invalid.sock: The system cannot find the file specified`
 	}
-	assert.Equal(t, assertErr, err.Error())
+	assert.True(t, strings.HasPrefix(err.Error(), assertErr))
 
 }
 
