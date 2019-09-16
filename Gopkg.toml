@@ -144,7 +144,9 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.12"
+  # version = "2.18.12"
+  branch = "telegraf-1.12"
+  source = "https://github.com/influxdata/gopsutil.git"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
