@@ -130,16 +130,10 @@ func TestGatherSuperAsterisk(t *testing.T) {
 	tags3 := map[string]string{
 		"file": dir + "test.conf",
 	}
-	reqSize := int64(104)
-	reqMD5Sum := "5a7e9b77fa25e7bb411dbd17cf403c1f"
-	if runtime.GOOS == "windows" {
-		//5 lines, add 5 x '\r'
-		reqSize += 5
-		reqMD5Sum = "1d4d1cd31d9d6721c0fc2c0abb9ea996"
-	}
-	require.True(t, acc.HasPoint("filestat", tags3, "size_bytes", reqSize))
+
+	require.True(t, acc.HasPoint("filestat", tags3, "size_bytes", int64(104)))
 	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(1)))
-	require.True(t, acc.HasPoint("filestat", tags3, "md5_sum", reqMD5Sum))
+	require.True(t, acc.HasPoint("filestat", tags3, "md5_sum", "5a7e9b77fa25e7bb411dbd17cf403c1f"))
 }
 
 func TestModificationTime(t *testing.T) {
@@ -181,11 +175,7 @@ func TestGetMd5(t *testing.T) {
 	md5, err := getMd5(dir + "test.conf")
 	assert.NoError(t, err)
 
-	reqMD5Sum := "5a7e9b77fa25e7bb411dbd17cf403c1f"
-	if runtime.GOOS == "windows" {
-		reqMD5Sum = "1d4d1cd31d9d6721c0fc2c0abb9ea996"
-	}
-	assert.Equal(t, reqMD5Sum, md5)
+	assert.Equal(t, "5a7e9b77fa25e7bb411dbd17cf403c1f", md5)
 
 	md5, err = getMd5("/tmp/foo/bar/fooooo")
 	assert.Error(t, err)
