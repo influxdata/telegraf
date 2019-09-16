@@ -56,8 +56,8 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ] 
  input_registers = [
    { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [0]},
-   { name = "TankPH",      byte_order = "AB",   data_type = "UINT32",  scale="1" ,     address = [1]},   
-   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT16",   scale="1" ,     address = [3,4]},
+   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",  scale="1" ,     address = [1]},   
+   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1" ,     address = [3,4]},
  ]
 ```
 ### Example Output:
