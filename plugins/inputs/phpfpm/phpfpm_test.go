@@ -235,12 +235,8 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assertErr := `Socket doesn't exist  '/tmp/invalid.sock': stat /tmp/invalid.sock: no such file or directory`
-	if runtime.GOOS == "windows" {
-		assertErr = `Socket doesn't exist  '/tmp/invalid.sock': CreateFile /tmp/invalid.sock: The system cannot find the file specified`
-	}
-	assert.True(t, strings.HasPrefix(err.Error(), assertErr))
-
+	assertErr := `Socket doesn't exist  '/tmp/invalid.sock'`
+	assert.True(t, strings.HasPrefix(err.Error(), assertErr), fmt.Sprintf("Expected:\n\t%s\nGot:\n\t%s\n", err.Error(), assertErr))
 }
 
 const outputSample = `
