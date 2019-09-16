@@ -223,7 +223,7 @@
 
 [[constraint]]
   name = "github.com/mdlayher/apcupsd"
-  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
+  revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
 
 [[constraint]]
   branch = "master"
