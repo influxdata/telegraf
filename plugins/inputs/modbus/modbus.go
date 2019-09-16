@@ -119,8 +119,8 @@ var ModbusConfig = `
  ] 
  input_registers = [
    { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [0]},
-   { name = "TankPH",      byte_order = "AB",   data_type = "UINT32",  scale="1" ,     address = [1]},   
-   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT16",   scale="1" ,     address = [3,4]},
+   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",  scale="1" ,     address = [1]},   
+   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1" ,     address = [3,4]},
  ]
 `
 
@@ -371,33 +371,42 @@ func addFields(t []tag) map[string]interface{} {
 
 func (m *Modbus) GetTags() error {
 	for _, r := range m.registers {
-		for _, rr := range r.registers_range {
+		raw_values := make(map[uint16]uint16)		
+		for _, rr := range r.registers_range {			
 			res, err := r.ReadValue(uint16(rr.address), uint16(rr.length))
 			if err != nil {
 				return err
 			}
 
 			if r.Type == C_DISCRETE_INPUTS || r.Type == C_COILS {
-				getDigitalValue(r, rr, res)
-			}
+				for i := 0; i < len(res); i++ {
+					for j := uint16(0); j < rr.length; j++ {
+						raw_values[rr.address+j] = uint16(res[i] >> uint(j) & 0x01)
+					}
+				}
+				continue
+			}	
 
 			if r.Type == C_INPUT_REGISTERS || r.Type == C_HOLDING_REGISTERS {
-				getAnalogValue(r, rr, res)
-			}
+				for i := 0; i < len(res); i += 2 {
+					raw_values[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
+				}				
+			}					
 		}
+
+		if r.Type == C_DISCRETE_INPUTS || r.Type == C_COILS {
+			setDigitalValue(r, raw_values)
+		}
+
+		if r.Type == C_INPUT_REGISTERS || r.Type == C_HOLDING_REGISTERS {
+			setAnalogValue(r, raw_values)
+		}		
 	}
 
 	return nil
 }
 
-func getDigitalValue(r register, rr register_range, results []uint8) error {
-	raw_values := make(map[uint16]uint16)
-	for i := 0; i < len(results); i++ {
-		for j := uint16(0); j < rr.length; j++ {
-			raw_values[rr.address+j] = uint16(results[i] >> uint(j) & 0x01)
-		}
-	}
-
+func setDigitalValue(r register, raw_values map[uint16]uint16) error {		
 	for i := 0; i < len(r.Tags); i++ {
 		r.Tags[i].value = raw_values[r.Tags[i].Address[0]]
 	}
@@ -405,12 +414,7 @@ func getDigitalValue(r register, rr register_range, results []uint8) error {
 	return nil
 }
 
-func getAnalogValue(r register, rr register_range, res []uint8) error {
-	raw_values := make(map[uint16]uint16)
-	for i := 0; i < len(res); i += 2 {
-		raw_values[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
-	}
-
+func setAnalogValue(r register, raw_values map[uint16]uint16) error {	
 	for i := 0; i < len(r.Tags); i++ {
 		bytes := []byte{}
 		for _, rv := range r.Tags[i].Address {
@@ -418,7 +422,7 @@ func getAnalogValue(r register, rr register_range, res []uint8) error {
 			bytes = append(bytes, byte(raw_values[rv]&255))
 		}
 
-		r.Tags[i].value = convertDataType(r.Tags[i], bytes)
+		r.Tags[i].value = convertDataType(r.Tags[i], bytes)		
 	}
 
 	return nil
