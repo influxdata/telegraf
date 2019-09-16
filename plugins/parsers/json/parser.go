@@ -120,7 +120,7 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 			return nil, err
 		}
 
-		nTime, err = internal.ParseTimestampWithLocation(f.Fields[p.timeKey], p.timeFormat, p.timezone)
+		nTime, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
 		if err != nil {
 			return nil, err
 		}
