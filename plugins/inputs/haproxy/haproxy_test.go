@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -117,15 +116,17 @@ func TestHaproxyGeneratesMetricsWithoutAuthentication(t *testing.T) {
 }
 
 func TestHaproxyGeneratesMetricsUsingSocket(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix sockets are supported only on Windows since build 17063")
+	}
 	var randomNumber int64
 	var sockets [5]net.Listener
-
-	_globmask := fmt.Sprintf("%s/test-haproxy*.sock", os.TempDir())
+	_globmask := "/tmp/test-haproxy*.sock"
 	_badmask := "/tmp/test-fail-haproxy*.sock"
-	socketFormat := fmt.Sprintf("%s%ctest-haproxy%%d.sock", os.TempDir(), os.PathSeparator)
+
 	for i := 0; i < 5; i++ {
 		binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
-		sockname := fmt.Sprintf(socketFormat, randomNumber)
+		sockname := fmt.Sprintf("/tmp/test-haproxy%d.sock", randomNumber)
 
 		sock, err := net.Listen("unix", sockname)
 		if err != nil {
