@@ -9,6 +9,7 @@
 - [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
 - [#6361](https://github.com/influxdata/telegraf/pull/6361): Add ability to read query from file to postgresql_extensible input.
 - [#5921](https://github.com/influxdata/telegraf/pull/5921): Add replication metrics to the redis input.
+- [#6177](https://github.com/influxdata/telegraf/pull/6177): Support NX-OS telemetry extensions in cisco_telemetry_mdt.
 
 ## v1.12.2 [unreleased]
 
