@@ -262,10 +262,6 @@
   name = "github.com/karrick/godirwalk"
   version = "1.7.5"
 
-[[constraint]]
-  name = "github.com/Azure/azure-pipeline-go"
-  version = "0.1.8"
-
 [[override]]
   name = "github.com/harlow/kinesis-consumer"
   branch = "master"
