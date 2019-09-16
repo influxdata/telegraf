@@ -38,10 +38,10 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ## Analog Variables, Input Registers and Holding Registers
  ## name       - the variable name 
  ## byte_order - the ordering of bytes 
- ##     AB,ABCD   - Big Endian
- ##     BA,DCBA   - Little Endian
- ##     BADC      - Mid-Big Endian
- ##     CDAB      - MIF-Little Endian
+ ##  |---AB, ABCD   - Big Endian
+ ##  |---BA, DCBA   - Little Endian
+ ##  |---BADC       - Mid-Big Endian
+ ##  |---CDAB       - MIF-Little Endian
  ## data_type  - UINT16, INT16, INT32, UINT32, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
  ## scale      - the final numeric variable representation    
  ## address    - variable address
