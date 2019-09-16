@@ -5,78 +5,43 @@ This plugin gather read Discrete Inputs, Coils, Input Registers and Holding Regi
 ### Configuration:
 
 ```toml
-#TCP
- #type = "TCP"
- #controller="192.168.0.9"
- #port = 502
-
- #RTU
- type = "RTU"
- controller="/dev/ttyUSB0"
- baudRate = 9600
- dataBits = 8
- parity = "N"
- stopBits = 1
+slave_id = 1
+ time_out = "1s"
+ #protocol = "RTU"
  
- slaveId = 1
- timeout = 1
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-   name = "Voltage"
-   order ="AB"
-   datatype = "FLOAT32"
-   scale = "/10"
-   address = [
-    0      
-   ]
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-   name = "Current"
-   order ="CDAB"
-   datatype = "FLOAT32"
-   scale = "/1000"
-   address = [
-    1,
-    2
-   ]
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Power"
-    order ="CDAB"
-    datatype = "FLOAT32"
-    scale = "/10"
-    address = [
-     3,
-     4      
-    ]
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Energy"
-    order = "CDAB"
-    datatype = "FLOAT32"	
-    scale = "/1000"
-    address = [
-     5,
-     6      
-    ]
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "Frequency"
-    order = "AB"	    
-    datatype = "FLOAT32"
-    scale = "/10"
-    address = [
-     7
-    ]
-
-  [[inputs.modbus.Registers.InputRegisters.Tags]]
-    name = "PowerFactor"
-    order = "AB"
-    datatype = "FLOAT32"
-    scale = "/100"
-    address = [
-     8
-    ]
+ #TCP 
+ controller="tcp://localhost:1502"
+ 
+ #RTU
+ #controller="file:///dev/ttyUSB0"
+ #baudRate = 9600
+ #dataBits = 8
+ #parity = "N"
+ #stopBits = 1
+ discrete_inputs = [
+   { name = "Start",          address = [0]},   
+   { name = "Stop",           address = [1]},   
+   { name = "Reset",          address = [2]},   
+   { name = "EmergencyStop",  address = [3]},   
+ ]
+ coils = [
+   { name = "Motor1-Run",     address = [0]},   
+   { name = "Motor1-Jog",     address = [1]},   
+   { name = "Motor1-Stop",    address = [2]},      
+ ] 
+ holding_registers = [
+   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01" ,  address = [8]},
+   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [0]},   
+   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [5,6]},
+   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [1, 2]},
+   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [7]},
+   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1" ,   address = [3,4]},      
+ ] 
+ input_registers = [
+   { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [0]},
+   { name = "TankPH",      byte_order = "AB",   data_type = "UINT32",  scale="1" ,     address = [1]},   
+   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT16",   scale="1" ,     address = [3,4]},
+ ]
 ```
 ### Example Output:
 
