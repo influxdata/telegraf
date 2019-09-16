@@ -60,8 +60,6 @@ type register_range struct {
 }
 
 const (
-	C_DIGITAL           = "digital"
-	C_ANALOG            = "analog"
 	C_DISCRETE_INPUTS   = "Discrete_Inputs"
 	C_COILS             = "Coils"
 	C_HOLDING_REGISTERS = "Holding_Registers"
