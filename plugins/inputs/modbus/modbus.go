@@ -73,7 +73,7 @@ var ModbusConfig = `
  #protocol = "RTU"
  
  #TCP 
- controller="tcp://localhost:1502"
+ controller = "tcp://localhost:1502"
  
  #RTU
  #controller = "file:///dev/ttyUSB0"
@@ -81,7 +81,11 @@ var ModbusConfig = `
  #data_bits = 8
  #parity = "N"
  #stop_bits = 1
-
+ 
+ ## Digital Variables, Discrete Inputs and Coils
+ ## name    - the variable name
+ ## address - variable address
+ 
  discrete_inputs = [
    { name = "Start",          address = [0]},   
    { name = "Stop",           address = [1]},   
@@ -93,6 +97,18 @@ var ModbusConfig = `
    { name = "Motor1-Jog",     address = [1]},   
    { name = "Motor1-Stop",    address = [2]},      
  ] 
+ 
+ ## Analog Variables, Input Registers and Holding Registers
+ ## name       - the variable name 
+ ## byte_order - the ordering of bytes 
+ ##  |---AB, ABCD   - Big Endian
+ ##  |---BA, DCBA   - Little Endian
+ ##  |---BADC       - Mid-Big Endian
+ ##  |---CDAB       - MIF-Little Endian
+ ## data_type  - UINT16, INT16, INT32, UINT32, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
+ ## scale      - the final numeric variable representation    
+ ## address    - variable address
+ 
  holding_registers = [
    { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01" ,  address = [8]},
    { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [0]},   
