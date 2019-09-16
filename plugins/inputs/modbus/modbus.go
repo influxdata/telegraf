@@ -19,6 +19,7 @@ import (
 
 type Modbus struct {
 	Controller        string            `toml:"controller"`
+	Protocol          string            `toml:"protocol"`
 	Baud_Rate         int               `toml:"baud_rate"`
 	Data_Bits         int               `toml:"data_bits"`
 	Parity            string            `toml:"parity"`
@@ -35,6 +36,7 @@ type Modbus struct {
 	is_initialized bool
 	tcp_handler    *mb.TCPClientHandler
 	serial_handler *mb.RTUClientHandler
+	ascii_handler  *mb.ASCIIClientHandler
 	client         mb.Client
 }
 
@@ -67,7 +69,7 @@ const (
 )
 
 var ModbusConfig = `
-slave_id = 1
+ slave_id = 1
  time_out = "1s"
  
  #TCP 
@@ -84,7 +86,7 @@ slave_id = 1
  coils = [] 
  holding_registers = [
    { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [0]},
-   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [1, 2]},
+   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [1,2]},
    { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1" ,   address = [3,4]},
    { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [5,6]},
    { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [7]},
@@ -108,8 +110,11 @@ func connect(m *Modbus) error {
 	}
 
 	switch u.Scheme {
-	case "tcp":
-		host, port, _ := net.SplitHostPort(u.Host)
+	case "tcp":		
+		host, port, _err := net.SplitHostPort(u.Host)	
+		if _err != nil {
+			return _err
+		}	
 		m.tcp_handler = mb.NewTCPClientHandler(host + ":" + port)
 		m.tcp_handler.Timeout = m.Time_out.Duration
 		m.tcp_handler.SlaveId = byte(m.Slave_Id)
@@ -121,22 +126,41 @@ func connect(m *Modbus) error {
 		m.is_connected = true
 		return nil
 	case "file":
-		m.serial_handler = mb.NewRTUClientHandler(u.Path)
-		m.serial_handler.Timeout = m.Time_out.Duration
-		m.serial_handler.SlaveId = byte(m.Slave_Id)
-		m.serial_handler.BaudRate = m.Baud_Rate
-		m.serial_handler.DataBits = m.Data_Bits
-		m.serial_handler.Parity = m.Parity
-		m.serial_handler.StopBits = m.Stop_Bits
-		m.client = mb.NewClient(m.serial_handler)
-		err := m.serial_handler.Connect()
-		if err != nil {
-			return err
-		}
-		m.is_connected = true
-		return nil
+		if m.Protocol == "RTU" {
+			m.serial_handler = mb.NewRTUClientHandler(u.Path)
+			m.serial_handler.Timeout = m.Time_out.Duration
+			m.serial_handler.SlaveId = byte(m.Slave_Id)
+			m.serial_handler.BaudRate = m.Baud_Rate
+			m.serial_handler.DataBits = m.Data_Bits
+			m.serial_handler.Parity = m.Parity
+			m.serial_handler.StopBits = m.Stop_Bits
+			m.client = mb.NewClient(m.serial_handler)
+			err := m.serial_handler.Connect()
+			if err != nil {
+				return err
+			}
+			m.is_connected = true
+			return nil
+		}else if m.Protocol == "ASCII" {
+			m.ascii_handler = mb.NewASCIIClientHandler(u.Path)
+			m.ascii_handler.Timeout = m.Time_out.Duration
+			m.ascii_handler.SlaveId = byte(m.Slave_Id)
+			m.ascii_handler.BaudRate = m.Baud_Rate
+			m.ascii_handler.DataBits = m.Data_Bits
+			m.ascii_handler.Parity = m.Parity
+			m.ascii_handler.StopBits = m.Stop_Bits
+			m.client = mb.NewClient(m.ascii_handler)
+			err := m.ascii_handler.Connect()
+			if err != nil {
+				return err
+			}
+			m.is_connected = true
+			return nil
+		}else{
+			return errors.New(fmt.Sprintf("Not valid protcol [%s] - [%s] ", u.Scheme, m.Protocol))
+		}				
 	default:
-		return errors.New("Not valid Protocol")
+		return errors.New("Not valid Controller")
 	}
 }
 
@@ -261,7 +285,7 @@ func validateTags(t []tag, n string) error {
 
 		// check address
 		if len(t[i].Address) == 0 || len(t[i].Address) > 2 {
-			return errors.New(fmt.Sprintf("Not valid address [%s] length [%v] in %s", t[i].Address, len(t[i].Address), n))
+			return errors.New(fmt.Sprintf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n))
 		} else if n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS {
 			if (len(t[i].Address) == 1 && len(t[i].Byte_Order) != 2) || (len(t[i].Address) == 2 && len(t[i].Byte_Order) != 4) {
 				return errors.New(fmt.Sprintf("Not valid byte order [%s] and address [%v]  in %s", t[i].Byte_Order, t[i].Address, n))
@@ -273,7 +297,7 @@ func validateTags(t []tag, n string) error {
 			}
 
 		} else if len(t[i].Address) > 1 || (n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS) {
-			return errors.New(fmt.Sprintf("Not valid address [%s] length [%v] in %s", t[i].Address, len(t[i].Address), n))
+			return errors.New(fmt.Sprintf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n))
 		}
 	}
 
