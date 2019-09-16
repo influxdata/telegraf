@@ -113,7 +113,7 @@ func TestCoils(t *testing.T) {
 }
 
 func TestHoldingRegisters(t *testing.T) {	
-	var coilTests = []struct {
+	var holdingRegisterTests = []struct {
 		name string		
 		address []uint16
 		quantity uint16
@@ -303,9 +303,9 @@ func TestHoldingRegisters(t *testing.T) {
 	defer handler.Close()
 	client := m.NewClient(handler)
 
-	for _, ct := range coilTests {
-		t.Run(ct.name,func(t *testing.T) {
-			_, err = client.WriteMultipleRegisters(ct.address[0], ct.quantity, ct.write)
+	for _, hrt := range holdingRegisterTests {
+		t.Run(hrt.name,func(t *testing.T) {
+			_, err = client.WriteMultipleRegisters(hrt.address[0], hrt.quantity, hrt.write)
 			assert.NoError(t, err)
 
 			modbus := Modbus {				
@@ -313,10 +313,10 @@ func TestHoldingRegisters(t *testing.T) {
 				Slave_Id:    1,		
 				Holding_Registers: []tag {
 					{			
-						Byte_Order : ct.byte_order,	
-						Data_Type : ct.data_type,
-						Scale : ct.scale,		 
-						Address: ct.address,
+						Byte_Order : hrt.byte_order,	
+						Data_Type : hrt.data_type,
+						Scale : hrt.scale,		 
+						Address: hrt.address,
 					},					
 				},
 			}
@@ -325,7 +325,7 @@ func TestHoldingRegisters(t *testing.T) {
 			modbus.Gather(&acc)
 
 			for _, coil := range modbus.registers {
-				assert.Equal(t, ct.read, coil.Tags[0].value)						
+				assert.Equal(t, hrt.read, coil.Tags[0].value)						
 			}			
 		})
 	}
