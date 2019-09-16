@@ -77,11 +77,11 @@ var ModbusConfig = `
  controller="tcp://localhost:1502"
  
  #RTU
- #controller="file:///dev/ttyUSB0"
- #baudRate = 9600
- #dataBits = 8
+ #controller = "file:///dev/ttyUSB0"
+ #baud_rate = 9600
+ #data_bits = 8
  #parity = "N"
- #stopBits = 1
+ #stop_bits = 1
 
  discrete_inputs = [
    { name = "Start",          address = [0]},   
