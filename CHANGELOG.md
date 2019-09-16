@@ -1,4 +1,29 @@
-## v1.12 [unreleased]
+## v1.13 [unreleased]
+
+#### New Inputs
+
+- [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
+
+#### Features
+
+- [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
+- [#6361](https://github.com/influxdata/telegraf/pull/6361): Add ability to read query from file to postgresql_extensible input.
+- [#5921](https://github.com/influxdata/telegraf/pull/5921): Add replication metrics to the redis input.
+
+## v1.12.1 [2019-09-10]
+
+#### Bugfixes
+
+- [#6344](https://github.com/influxdata/telegraf/issues/6344): Fix depends on GLIBC_2.14 symbol version.
+- [#6329](https://github.com/influxdata/telegraf/issues/6329): Fix filecount for paths with trailing slash.
+- [#6331](https://github.com/influxdata/telegraf/issues/6331): Convert check state to an integer in icinga2 input.
+- [#6354](https://github.com/influxdata/telegraf/issues/6354): Fix could not mark message delivered error in kafka_consumer.
+- [#6362](https://github.com/influxdata/telegraf/issues/6362): Skip collection stats when disabled in mongodb input.
+- [#6366](https://github.com/influxdata/telegraf/issues/6366): Fix error reading closed response body on redirect in http_response.
+- [#6373](https://github.com/influxdata/telegraf/issues/6373): Fix apcupsd documentation to reflect plugin.
+- [#6375](https://github.com/influxdata/telegraf/issues/6375): Display retry log message only when retry after is received.
+
+## v1.12 [2019-09-03]
 
 #### Release Notes
 
@@ -15,11 +40,11 @@
 - [logstash](/plugins/inputs/logstash/README.md) - Contributed by @lkmcs @dmitryilyin @arkady-emelyanov
 - [marklogic](/plugins/inputs/marklogic/README.md) - Contributed by @influxdata
 - [openntpd](/plugins/inputs/openntpd/README.md) - Contributed by @aromeyer
-- [uwsgi](/plugins/inputs/uswgi/README.md) - Contributed by @blaggacao
+- [uwsgi](/plugins/inputs/uwsgi/README.md) - Contributed by @blaggacao
 
 #### New Parsers
 
-- [form_urlencoded](/plugins/processors/form_urlencoded/README.md) - Contributed by @byonchev
+- [form_urlencoded](/plugins/parsers/form_urlencoded/README.md) - Contributed by @byonchev
 
 #### New Processors
 
@@ -96,8 +121,12 @@
 - [#6235](https://github.com/influxdata/telegraf/issues/6235): Fix finder inconsistencies in vsphere input.
 - [#6138](https://github.com/influxdata/telegraf/issues/6138): Fix parsing multiple metrics on the first line of tailed file.
 - [#2526](https://github.com/influxdata/telegraf/issues/2526): Send TERM to exec processes before sending KILL signal.
+- [#5326](https://github.com/influxdata/telegraf/issues/5326): Query oplog only when connected to a replica set.
+- [#6317](https://github.com/influxdata/telegraf/pull/6317): Use environment variables to locate Program Files on Windows.
 
-## v1.11.5 [unreleased]
+## v1.11.5 [2019-08-27]
+
+#### Bugfixes
 
 - [#6250](https://github.com/influxdata/telegraf/pull/6250): Update go-sql-driver/mysql driver to 1.4.1 to address auth issues.
 - [#6279](https://github.com/influxdata/telegraf/issues/6279): Return error status from --test if input plugins produce an error.

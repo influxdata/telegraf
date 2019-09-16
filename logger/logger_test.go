@@ -100,6 +100,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "LogRotation")
 	require.NoError(t, err)
 	config := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
+	config.LogTarget = LogTargetFile
 	config.RotationMaxSize = internal.Size{Size: int64(30)}
 	writer := newLogWriter(config)
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
@@ -111,6 +112,26 @@ func TestWriteToFileInRotation(t *testing.T) {
 	log.Printf("I! TEST")   // Writes 29 byes, no rotation expected
 	files, _ := ioutil.ReadDir(tempDir)
 	assert.Equal(t, 2, len(files))
+}
+
+func TestLogTargetSettings(t *testing.T) {
+	config := LogConfig{
+		LogTarget: "",
+		Quiet:     true,
+	}
+	SetupLogging(config)
+	logger, isTelegrafLogger := actualLogger.(*telegrafLog)
+	assert.True(t, isTelegrafLogger)
+	assert.Equal(t, logger.internalWriter, os.Stderr)
+
+	config = LogConfig{
+		LogTarget: "stderr",
+		Quiet:     true,
+	}
+	SetupLogging(config)
+	logger, isTelegrafLogger = actualLogger.(*telegrafLog)
+	assert.True(t, isTelegrafLogger)
+	assert.Equal(t, logger.internalWriter, os.Stderr)
 }
 
 func BenchmarkTelegrafLogWrite(b *testing.B) {
@@ -126,6 +147,7 @@ func BenchmarkTelegrafLogWrite(b *testing.B) {
 func createBasicLogConfig(filename string) LogConfig {
 	return LogConfig{
 		Logfile:             filename,
+		LogTarget:           LogTargetFile,
 		RotationMaxArchives: -1,
 	}
 }
