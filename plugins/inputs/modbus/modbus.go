@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"fmt"
 
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
@@ -139,7 +140,7 @@ func connect(m *Modbus) error {
 	}
 }
 
-func initialization(m *Modbus) {
+func initialization(m *Modbus) error {
 	r := reflect.ValueOf(m).Elem()
 	for i := 0; i < r.NumField(); i++ {
 		f := r.Field(i)
@@ -151,6 +152,11 @@ func initialization(m *Modbus) {
 			if len(tags) == 0 {
 				continue
 			}			
+
+			err := validateTags(tags, name)
+			if err != nil {
+				return err
+			}
 
 			addrs := []uint16{}
 			for _, tag := range tags {
@@ -190,13 +196,88 @@ func initialization(m *Modbus) {
 			} else if name == C_HOLDING_REGISTERS {
 				fn = m.client.ReadHoldingRegisters
 			} else {
-				//TODO:launch error
+				return errors.New("Not Valid funtion")
 			}
 
 			m.registers = append(m.registers, register{name, registers_range, fn, tags})
 		}
 	}
 	m.is_initialized = true
+
+	return nil
+}
+
+func validateTags(t []tag, n string) error {
+	byte_order := []string{"AB","BA","ABCD","CDAB","BADC","DCBA"}
+	data_type := []string{"UINT16","INT16","UINT32","INT32","FLOAT32-IEEE","FLOAT32"}
+
+	name_encountered := map[string]bool{}
+	for i := range t {
+		//check empty name
+		if t[i].Name == "" {
+			return errors.New(fmt.Sprintf("Empty Name in %s", n))
+		}
+		
+		//search name duplicate
+		if name_encountered[t[i].Name] {
+			return errors.New(fmt.Sprintf("Name [%s] in %s is Duplicated", t[i].Name, n))			
+		} else {
+			name_encountered[t[i].Name]	= true
+		}
+		
+		if n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS {
+			// search byte order
+			byte_order_encountered := false
+			for j := range byte_order {
+				if byte_order[j] == t[i].Byte_Order {
+					byte_order_encountered = true					
+					break
+				}
+			}
+
+			if !byte_order_encountered{
+				return errors.New(fmt.Sprintf("Not valid Byte Order [%s] in %s", t[i].Byte_Order, n))			
+			}
+		
+			// search data type
+			data_type_encountered := false
+			for j := range byte_order {
+				if data_type[j] == t[i].Data_Type {
+					data_type_encountered = true
+					break
+				}
+			}
+
+			if !data_type_encountered{
+				return errors.New(fmt.Sprintf("Not valid Data Type [%s] in %s", t[i].Data_Type, n))			
+			}
+
+			// check scale
+			_, err := strconv.ParseFloat(t[i].Scale, 32)
+			if err != nil {
+				return errors.New(fmt.Sprintf("Not valid Scale [%s] in %s", t[i].Scale, n))			
+			}
+		}
+
+		// check address
+		if len(t[i].Address) == 0 || len(t[i].Address) > 2 {
+			return errors.New(fmt.Sprintf("Not valid address [%s] length [%v] in %s", t[i].Address, len(t[i].Address), n))			
+		} else if n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS {
+			if (len(t[i].Address) == 1 && len(t[i].Byte_Order) != 2) || (len(t[i].Address) == 2 && len(t[i].Byte_Order) != 4) {
+				return errors.New(fmt.Sprintf("Not valid byte order [%s] and address [%v]  in %s", t[i].Byte_Order, t[i].Address, n))			
+			} 	
+			
+			// search duplicated			
+			if len(t[i].Address) > len(removeDuplicates(t[i].Address)) {
+				return errors.New(fmt.Sprintf("Duplicate address [%v]  in %s", t[i].Address, n))			
+			}
+			
+		} else if len(t[i].Address) > 1 || (n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS) {
+			return errors.New(fmt.Sprintf("Not valid address [%s] length [%v] in %s", t[i].Address, len(t[i].Address), n))			
+		}
+	}
+
+	return nil
 }
 
 func removeDuplicates(elements []uint16) []uint16 {
@@ -410,7 +491,10 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if !m.is_initialized {
-		initialization(m)		
+		err := initialization(m)
+		if err != nil {
+			return err
+		}		
 	}
 
 	err := m.GetTags()
