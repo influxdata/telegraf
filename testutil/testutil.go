@@ -4,7 +4,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -12,8 +11,6 @@ import (
 )
 
 var localhost = "localhost"
-
-var LineSeparator string
 
 // GetLocalHost returns the DOCKER_HOST environment variable, parsing
 // out any scheme or ports so that only the IP address is returned.
@@ -65,12 +62,4 @@ func TestMetric(value interface{}, name ...string) telegraf.Metric {
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	return pt
-}
-
-func init() {
-	if runtime.GOOS == "windows" {
-		LineSeparator = "\r\n"
-	} else {
-		LineSeparator = "\n"
-	}
 }
