@@ -31,12 +31,12 @@ type Modbus struct {
 	Holding_Registers []tag             `toml:"holding_registers"`
 	Input_Registers   []tag             `toml:"input_registers"`
 	registers         []register
-	is_connected   bool
-	is_initialized bool
-	tcp_handler    *mb.TCPClientHandler
-	serial_handler *mb.RTUClientHandler
-	ascii_handler  *mb.ASCIIClientHandler
-	client         mb.Client
+	is_connected      bool
+	is_initialized    bool
+	tcp_handler       *mb.TCPClientHandler
+	serial_handler    *mb.RTUClientHandler
+	ascii_handler     *mb.ASCIIClientHandler
+	client            mb.Client
 }
 
 type register struct {
@@ -119,7 +119,7 @@ var ModbusConfig = `
  ] 
  input_registers = [
    { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [0]},
-   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",  scale="1" ,     address = [1]},   
+   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [1]},   
    { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1" ,     address = [3,4]},
  ]
 `
@@ -371,8 +371,8 @@ func addFields(t []tag) map[string]interface{} {
 
 func (m *Modbus) GetTags() error {
 	for _, r := range m.registers {
-		raw_values := make(map[uint16]uint16)		
-		for _, rr := range r.registers_range {			
+		raw_values := make(map[uint16]uint16)
+		for _, rr := range r.registers_range {
 			res, err := r.ReadValue(uint16(rr.address), uint16(rr.length))
 			if err != nil {
 				return err
@@ -385,13 +385,13 @@ func (m *Modbus) GetTags() error {
 					}
 				}
 				continue
-			}	
+			}
 
 			if r.Type == C_INPUT_REGISTERS || r.Type == C_HOLDING_REGISTERS {
 				for i := 0; i < len(res); i += 2 {
 					raw_values[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
-				}				
-			}					
+				}
+			}
 		}
 
 		if r.Type == C_DISCRETE_INPUTS || r.Type == C_COILS {
@@ -400,13 +400,13 @@ func (m *Modbus) GetTags() error {
 
 		if r.Type == C_INPUT_REGISTERS || r.Type == C_HOLDING_REGISTERS {
 			setAnalogValue(r, raw_values)
-		}		
+		}
 	}
 
 	return nil
 }
 
-func setDigitalValue(r register, raw_values map[uint16]uint16) error {		
+func setDigitalValue(r register, raw_values map[uint16]uint16) error {
 	for i := 0; i < len(r.Tags); i++ {
 		r.Tags[i].value = raw_values[r.Tags[i].Address[0]]
 	}
@@ -414,7 +414,7 @@ func setDigitalValue(r register, raw_values map[uint16]uint16) error {
 	return nil
 }
 
-func setAnalogValue(r register, raw_values map[uint16]uint16) error {	
+func setAnalogValue(r register, raw_values map[uint16]uint16) error {
 	for i := 0; i < len(r.Tags); i++ {
 		bytes := []byte{}
 		for _, rv := range r.Tags[i].Address {
@@ -422,7 +422,7 @@ func setAnalogValue(r register, raw_values map[uint16]uint16) error {
 			bytes = append(bytes, byte(raw_values[rv]&255))
 		}
 
-		r.Tags[i].value = convertDataType(r.Tags[i], bytes)		
+		r.Tags[i].value = convertDataType(r.Tags[i], bytes)
 	}
 
 	return nil
