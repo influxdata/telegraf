@@ -39,8 +39,7 @@ type Modbus struct {
 
 type register struct {
 	Type            string
-	registers_range []register_range
-	raw_values      map[uint16]uint16
+	registers_range []register_range	
 	ReadValue       func(uint16, uint16) ([]byte, error)
 	Tags            []tag
 }
@@ -161,12 +160,7 @@ func initialization(m *Modbus) {
 
 			addrs = removeDuplicates(addrs)
 			sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
-
-			raw_values := make(map[uint16]uint16)
-			for _, j := range addrs {
-				raw_values[j] = 0
-			}
-
+		
 			ii := 0
 			var registers_range []register_range
 
@@ -203,9 +197,10 @@ func initialization(m *Modbus) {
 				fn = m.client.ReadHoldingRegisters
 			}
 
-			m.registers = append(m.registers, register{name, registers_range, raw_values, fn, tags})
+			m.registers = append(m.registers, register{name, registers_range, fn, tags})
 		}
 	}
+	m.is_initialized = true
 }
 
 func removeDuplicates(elements []uint16) []uint16 {
@@ -263,30 +258,31 @@ func (m *Modbus) GetTags() error {
 }
 
 func getDigitalValue(r register, rr register_range, results []uint8) error {
+	raw_values := make(map[uint16]uint16)
 	for i := 0; i < len(results); i++ {
 		for j := uint16(0); j < rr.length; j++ {
-			r.raw_values[rr.address+j] = uint16(results[i] >> uint(j) & 0x01)
-
+			raw_values[rr.address+j] = uint16(results[i] >> uint(j) & 0x01)
 		}
 	}
 
 	for i := 0; i < len(r.Tags); i++ {
-		r.Tags[i].value = r.raw_values[r.Tags[i].Address[0]]
+		r.Tags[i].value = raw_values[r.Tags[i].Address[0]]
 	}
 
 	return nil
 }
 
 func getAnalogValue(r register, rr register_range, res []uint8) error {
+	raw_values := make(map[uint16]uint16)
 	for i := 0; i < len(res); i += 2 {
-		r.raw_values[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
+		raw_values[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
 	}
 
 	for i := 0; i < len(r.Tags); i++ {
 		bytes := []byte{}
 		for _, rv := range r.Tags[i].Address {
-			bytes = append(bytes, byte(r.raw_values[rv]>>8))
-			bytes = append(bytes, byte(r.raw_values[rv]&255))
+			bytes = append(bytes, byte(raw_values[rv]>>8))
+			bytes = append(bytes, byte(raw_values[rv]&255))
 		}
 
 		r.Tags[i].value = convertDataType(r.Tags[i], bytes)
@@ -418,8 +414,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if !m.is_initialized {
-		initialization(m)
-		m.is_initialized = true
+		initialization(m)		
 	}
 
 	err := m.GetTags()
