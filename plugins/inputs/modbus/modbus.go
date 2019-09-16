@@ -71,6 +71,7 @@ const (
 var ModbusConfig = `
  slave_id = 1
  time_out = "1s"
+ #protocol = "RTU"
  
  #TCP 
  controller="tcp://localhost:1502"
@@ -82,17 +83,30 @@ var ModbusConfig = `
  #parity = "N"
  #stopBits = 1
 
- discrete_inputs = []
- coils = [] 
- holding_registers = [
-   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [0]},
-   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [1,2]},
-   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1" ,   address = [3,4]},
-   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [5,6]},
-   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [7]},
-   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01" ,  address = [8]},
+ discrete_inputs = [
+   { name = "Start",          address = [0]},   
+   { name = "Stop",           address = [1]},   
+   { name = "Reset",          address = [2]},   
+   { name = "EmergencyStop",  address = [3]},   
+ ]
+ coils = [
+   { name = "Motor1-Run",     address = [0]},   
+   { name = "Motor1-Jog",     address = [1]},   
+   { name = "Motor1-Stop",    address = [2]},      
  ] 
- input_registers = []
+ holding_registers = [
+   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01" ,  address = [8]},
+   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [0]},   
+   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [5,6]},
+   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [1, 2]},
+   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [7]},
+   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1" ,   address = [3,4]},      
+ ] 
+ input_registers = [
+   { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [0]},
+   { name = "TankPH",      byte_order = "AB",   data_type = "UINT32",  scale="1" ,     address = [1]},   
+   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT16",   scale="1" ,     address = [3,4]},
+ ]
 `
 
 func (s *Modbus) SampleConfig() string {
