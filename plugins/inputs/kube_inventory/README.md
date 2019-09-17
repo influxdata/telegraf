@@ -280,4 +280,3 @@ kubernetes_statefulset,namespace=default,statefulset_name=etcd replicas_updated=
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
 [k8s-telegraf]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/
-[tick-charts]: https://github.com/influxdata/tick-charts
