@@ -11,41 +11,30 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+
+	"github.com/influxdata/telegraf/plugins/parsers/sflow/decoder"
 )
 
-// SFlowParser is Telegraf parser capable of parsing an sFlow v5 network packet
-type SFlowParser struct {
-	metricName           string
-	snmpCommunity        string
-	defaultTags          map[string]string
-	maxFlowsPerSample    uint32
-	maxCountersPerSample uint32
-	maxSamplesPerPacket  uint32
-	tagsAsFields         map[string]bool
+// Parser is Telegraf parser capable of parsing an sFlow v5 network packet
+type Parser struct {
+	metricName   string
+	defaultTags  map[string]string
+	tagsAsFields map[string]bool
+	sflowConfig  V5FormatOptions
 }
 
-type SFlowParserConfig struct {
-	MetricName    string
-	SNMPCommunity string
-	DefaultTags   map[string]string
-
-	// Optional function to replace default DNS resolution - useful in testing
-	DNSLookupFn func(ipAddress string) (string, error)
-
-	// Optional function to replace default port->service name resolution - useful in testing
-	ServiceLookupFn func(portNum int) (string, error)
-}
-
-// NewParser creats a new SFlowParser
-func NewParser(metricName string, snmpCommunity string, defaultTags map[string]string, maxFlowsPerSample uint32, maxCountersPerSample uint32, maxSamplesPerPacket uint32, tagsAsFields map[string]bool) (*SFlowParser, error) {
+// NewParser creats a new Parser
+func NewParser(metricName string, defaultTags map[string]string, sflowConfig V5FormatOptions, tagsAsFields map[string]bool) (*Parser, error) {
 	if metricName == "" {
 		return nil, fmt.Errorf("metric name cannot be empty")
 	}
-	result := &SFlowParser{metricName: metricName, snmpCommunity: snmpCommunity, maxFlowsPerSample: maxFlowsPerSample, maxCountersPerSample: maxCountersPerSample, maxSamplesPerPacket: maxSamplesPerPacket, tagsAsFields: tagsAsFields}
-	if defaultTags != nil {
-		result.defaultTags = defaultTags
-	}
+	result := &Parser{metricName: metricName, sflowConfig: sflowConfig, tagsAsFields: tagsAsFields, defaultTags: defaultTags}
 	return result, nil
+}
+
+// GetTagsAsFields answers a map of _natural_ tags by name that will actually be recored in the metrics as fields
+func (sfp *Parser) GetTagsAsFields() map[string]bool {
+	return sfp.tagsAsFields
 }
 
 // Parse takes a byte buffer separated by newlines
@@ -53,12 +42,17 @@ func NewParser(metricName string, snmpCommunity string, defaultTags map[string]s
 // and parses it into telegraf metrics
 //
 // Must be thread-safe.
-func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (sfp *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	options := NewDefaultV5FormatOptions()
-	options.MaxFlowsPerSample = sfp.maxFlowsPerSample
-	options.MaxCountersPerSample = sfp.maxCountersPerSample
-	options.MaxSamplesPerPacket = sfp.maxSamplesPerPacket
-	decodedPacket, err := Decode(V5Format(options), bytes.NewBuffer(buf))
+	/*
+		options.MaxFlowsPerSample = sfp.maxFlowsPerSample
+		options.MaxCountersPerSample = sfp.maxCountersPerSample
+		options.MaxSamplesPerPacket = sfp.maxSamplesPerPacket
+	*/
+
+	//TODO:GOT TO CLEAN THESE UP!
+
+	decodedPacket, err := decoder.Decode(V5Format(options), bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +107,7 @@ func (sfp *SFlowParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return metrics, err
 }
 
-func (sfp *SFlowParser) adPotentialTagsOrFields(decodedPacket map[string]interface{}, sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, tags map[string]string, fields map[string]interface{}) {
+func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{}, sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, tags map[string]string, fields map[string]interface{}) {
 	asTagOrField := func(name, value string) {
 		if asField, ok := sfp.tagsAsFields[name]; ok && asField {
 			fields[name] = value
@@ -319,7 +313,7 @@ func (sfp *SFlowParser) adPotentialTagsOrFields(decodedPacket map[string]interfa
 	}
 }
 
-func (sfp *SFlowParser) adFields(sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, fields map[string]interface{}) {
+func (sfp *Parser) adFields(sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, fields map[string]interface{}) {
 
 	samplingRate, ok := sample["samplingRate"].(uint32)
 
@@ -375,7 +369,7 @@ func (sfp *SFlowParser) adFields(sample map[string]interface{}, flowRecord map[s
 }
 
 /*
-func (sfp *SFlowParser) asTagOrField(name, value string, tags map[string]string, fields map[string]interface{}) {
+func (sfp *Parser) asTagOrField(name, value string, tags map[string]string, fields map[string]interface{}) {
 	if asField, ok := sfp.tagsAsFields[name]; ok && asField {
 		fields[name] = value
 	} else {
@@ -389,7 +383,7 @@ func (sfp *SFlowParser) asTagOrField(name, value string, tags map[string]string,
 // and parses it into a telegraf metric.
 //
 // Must be thread-safe.
-func (sfp *SFlowParser) ParseLine(line string) (telegraf.Metric, error) {
+func (sfp *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := sfp.Parse([]byte(line))
 
 	if err != nil {
@@ -406,7 +400,7 @@ func (sfp *SFlowParser) ParseLine(line string) (telegraf.Metric, error) {
 // SetDefaultTags tells the parser to add all of the given tags
 // to each parsed metric.
 // NOTE: do _not_ modify the map after you've passed it here!!
-func (sfp *SFlowParser) SetDefaultTags(tags map[string]string) {
+func (sfp *Parser) SetDefaultTags(tags map[string]string) {
 	sfp.defaultTags = tags
 }
 

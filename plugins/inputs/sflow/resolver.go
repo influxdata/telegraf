@@ -120,20 +120,28 @@ func (r *asyncResolver) resolve(m telegraf.Metric, onResolveFn func(resolved tel
 }
 
 func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
-	r.dnsTTLTicker = time.NewTicker(dnsTTL)
-	go func() {
-		for range r.dnsTTLTicker.C {
-			log.Println("D! [inputs.sflow] clearing DNS cache")
-			r.dnsCache.clear()
-		}
-	}()
-	r.ifaceTTLTicker = time.NewTicker(snmpTTL)
-	go func() {
-		for range r.ifaceTTLTicker.C {
-			log.Println("D! [inputs.sflow] clearing IFace cache")
-			r.ifaceCache.clear()
-		}
-	}()
+	dnsTTLStr := "(never)"
+	if dnsTTL != 0 {
+		dnsTTLStr = ""
+		r.dnsTTLTicker = time.NewTicker(dnsTTL)
+		go func() {
+			for range r.dnsTTLTicker.C {
+				log.Println("D! [inputs.sflow] clearing DNS cache")
+				r.dnsCache.clear()
+			}
+		}()
+	}
+	snmpTTLStr := "(never)"
+	if snmpTTL != 0 {
+		snmpTTLStr = ""
+		r.ifaceTTLTicker = time.NewTicker(snmpTTL)
+		go func() {
+			for range r.ifaceTTLTicker.C {
+				log.Println("D! [inputs.sflow] clearing IFace cache")
+				r.ifaceCache.clear()
+			}
+		}()
+	}
 
 	r.fnWorkerChannel = make(chan asyncJob)
 	go func() {
@@ -143,14 +151,18 @@ func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
 		}
 	}()
 
-	log.Printf("I! [inputs.sflow] dbs cache ttl = %d\n", dnsTTL)
-	log.Printf("I! [inputs.sflow] snmp cache ttl = %d\n", snmpTTL)
+	log.Printf("I! [inputs.sflow] dbs cache ttl = %d %s\n", dnsTTL, dnsTTLStr)
+	log.Printf("I! [inputs.sflow] snmp cache ttl = %d %s\n", snmpTTL, snmpTTLStr)
 
 }
 
 func (r *asyncResolver) stop() {
-	r.dnsTTLTicker.Stop()
-	r.ifaceTTLTicker.Stop()
+	if r.dnsTTLTicker != nil {
+		r.dnsTTLTicker.Stop()
+	}
+	if r.ifaceTTLTicker != nil {
+		r.ifaceTTLTicker.Stop()
+	}
 }
 
 func (r *asyncResolver) dnsResolve(m telegraf.Metric, srcTag string, dstTag string, or *onResolve) {
@@ -197,7 +209,7 @@ func (r *asyncResolver) resolveDNS(ipAddress string, resolved func(fqdn string))
 	resolved(fqdn)
 }
 
-func /*(r *asyncResolver)*/ ipToFqdn(ipAddress string) string {
+func ipToFqdn(ipAddress string) string {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10000*time.Millisecond)
 	defer cancel()
 	resolver := net.Resolver{}
@@ -208,7 +220,7 @@ func /*(r *asyncResolver)*/ ipToFqdn(ipAddress string) string {
 			fqdn = names[0]
 		}
 	} else {
-		log.Printf("!E [input.sflow] dns lookup of %s resulted in error %s", ipAddress, err)
+		log.Printf("E! [input.sflow] dns lookup of %s resulted in error %s", ipAddress, err)
 	}
 	return fqdn
 }
@@ -230,7 +242,7 @@ func (r *asyncResolver) resolveIFace(ifaceIndex string, agentIP string, resolved
 // So, Ive established that this wasn't thread safe. Might be I need a differen COnnection object.
 var ifIndexToIfNameMux sync.Mutex
 
-func /*(r *asyncResolver)*/ ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex string) string {
+func ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex string) string {
 	ifIndexToIfNameMux.Lock()
 	defer ifIndexToIfNameMux.Unlock()
 	// This doesn't make the most of the fact we look up all interface names but only cache/use one of them :-()
@@ -274,43 +286,6 @@ func /*(r *asyncResolver)*/ ifIndexToIfName(id uint64, community string, snmpAge
 		}
 	}
 	return result
-}
-
-type testResolver struct{}
-
-func newTestResolver(dnsResolve bool, snmpResolve bool, snmpCommunity string) resolver {
-	log.Printf("I! [inputs.sflow] test resolver in use")
-	return &testResolver{}
-}
-
-func (r *testResolver) resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric)) {
-	if v, ok := m.GetTag("agent_ip"); ok {
-		m.AddTag("host", v)
-	}
-	if v, ok := m.GetTag("src_ip"); ok {
-		m.AddTag("src_host", v)
-	}
-	if v, ok := m.GetTag("dst_ip"); ok {
-		m.AddTag("dst_host", v)
-	}
-	if v, ok := m.GetTag("source_id_index"); ok {
-		m.AddTag("source_id_name", v)
-	}
-	if v, ok := m.GetTag("netif_index_out"); ok {
-		m.AddTag("netif_name_out", v)
-	}
-	if v, ok := m.GetTag("netif_index_in"); ok {
-		m.AddTag("netif_name_in", v)
-	}
-	onResolveFn(m)
-}
-
-func (r *testResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
-	// NOP
-}
-
-func (r *testResolver) stop() {
-	// NOP
 }
 
 type dnsProcessor struct {

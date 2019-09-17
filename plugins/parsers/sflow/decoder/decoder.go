@@ -1,10 +1,11 @@
-package sflow
+package decoder
 
 import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 )
 
 func Decode(format ItemDecoder, bytes *bytes.Buffer) (map[string]interface{}, error) {
@@ -79,7 +80,7 @@ type seqDecoder struct {
 	Decoders []ItemDecoder
 }
 
-func seq(Decoders ...ItemDecoder) *seqDecoder {
+func Seq(Decoders ...ItemDecoder) *seqDecoder {
 	return &seqDecoder{Decoders}
 }
 
@@ -98,13 +99,13 @@ type altDecoder struct {
 	Decoders []*guardItemDecoder
 }
 
-func alt(ident string, Decoders ...*guardItemDecoder) ItemDecoder {
+func Alt(ident string, Decoders ...*guardItemDecoder) ItemDecoder {
 	return &altDecoder{ident, Decoders}
 }
 
 func (d *altDecoder) Decode(r io.Reader, rec Recorder) error {
 	for _, cd := range d.Decoders {
-		a, e := cd.accept(rec)
+		a, e := cd.Accept(rec)
 		if e != nil {
 			return e
 		}
@@ -126,7 +127,7 @@ func (d *guardItemDecoder) Decode(r io.Reader, rec Recorder) error {
 	return d.Decoder.Decode(r, rec)
 }
 
-func (d *guardItemDecoder) accept(rec Recorder) (bool, error) {
+func (d *guardItemDecoder) Accept(rec Recorder) (bool, error) {
 	v, ok := rec.lookup(d.key)
 	if ok {
 		switch t := v.(type) {
@@ -180,43 +181,42 @@ func (d *warnAndBreakDecoder) Decode(r io.Reader, rec Recorder) error {
 	return UnwrapError(fmt.Sprintf(d.msgFmt, v))
 }
 
-func warnAndBreak(fieldName string, msgFmt string, optionalLookupFieldName string) ItemDecoder {
+func WarnAndBreak(fieldName string, msgFmt string, optionalLookupFieldName string) ItemDecoder {
 	return &warnAndBreakDecoder{fieldName, msgFmt, optionalLookupFieldName}
 }
 
-func eql(k string, v interface{}, d ItemDecoder) *guardItemDecoder {
+func Eql(k string, v interface{}, d ItemDecoder) *guardItemDecoder {
 	return &guardItemDecoder{k, v, d, false}
 }
 
-func altDefault(d ItemDecoder) *guardItemDecoder {
+func AltDefault(d ItemDecoder) *guardItemDecoder {
 	return &guardItemDecoder{"", nil, d, true}
 }
 
-func ui16(k string, fn ...func(uint16) (string, uint16)) ItemDecoder {
+func Ui16(k string, fn ...func(uint16) (string, uint16)) ItemDecoder {
 	return &uint16Decoder{k, fn}
 }
 
-func i32(k string, fn ...func(int32) (string, int32)) ItemDecoder {
+func I32(k string, fn ...func(int32) (string, int32)) ItemDecoder {
 	return &int32Decoder{k, fn, nil}
 }
 
-func ui32(k string, fn ...func(uint32) (string, uint32)) ItemDecoder {
+func Ui32(k string, fn ...func(uint32) (string, uint32)) ItemDecoder {
 	return &uint32Decoder{k, fn, nil}
 }
 
-func ui32Mapped(k string, toMap map[uint32]string) ItemDecoder {
+func Ui32Mapped(k string, toMap map[uint32]string) ItemDecoder {
 	return &uint32Decoder{k, nil, toMap}
 }
 
 type iterItemDecoder struct {
 	name        string
 	key         string
-	max         uint32
 	ItemDecoder ItemDecoder
 }
 
-func iter(n string, k string, max uint32, d ItemDecoder) *iterItemDecoder {
-	return &iterItemDecoder{n, k, max, d}
+func Iter(n string, k string, d ItemDecoder) *iterItemDecoder {
+	return &iterItemDecoder{n, k, d}
 }
 
 func (d *iterItemDecoder) Decode(r io.Reader, rec Recorder) error {
@@ -225,9 +225,6 @@ func (d *iterItemDecoder) Decode(r io.Reader, rec Recorder) error {
 	if ok {
 		switch t := v.(type) {
 		case uint32:
-			if d.max > 0 && t > d.max {
-				return fmt.Errorf("iteration for key %s exceeds max of %d at %d", key, d.max, t)
-			}
 			nestRec := rec.nest(d.name, t)
 			for i := 0; uint32(i) < t; i++ {
 				nestedRec, _ := nestRec.next()
@@ -252,7 +249,7 @@ type nestItemDecoder struct {
 	ItemDecoder ItemDecoder
 }
 
-func nest(k string, d ItemDecoder) ItemDecoder {
+func Nest(k string, d ItemDecoder) ItemDecoder {
 	return &nestItemDecoder{k, d}
 }
 
@@ -349,7 +346,7 @@ type uint64Decoder struct {
 	toMap map[uint64]string
 }
 
-func ui64(k string, fn ...func(uint64) (string, uint64)) ItemDecoder {
+func Ui64(k string, fn ...func(uint64) (string, uint64)) ItemDecoder {
 	return &uint64Decoder{k, fn, nil}
 }
 
@@ -377,21 +374,13 @@ func (d *uint64Decoder) Decode(r io.Reader, rec Recorder) error {
 	return nil
 }
 
-/* DEFUNCT
-type ifDecoder struct {
-	key     string
-	value   interface{}
-	Decoder ItemDecoder
-}
-*/
-
 type binDecoder struct {
 	name string
 	size int
 	fn   func([]byte) interface{}
 }
 
-func bin(k string, l int, fn ...func([]byte) interface{}) ItemDecoder {
+func Bin(k string, l int, fn ...func([]byte) interface{}) ItemDecoder {
 	if len(fn) > 0 {
 		if len(fn) > 1 {
 			panic("too manhy functions")
@@ -421,7 +410,7 @@ type subBuffDecoder struct {
 	processors []ItemDecoder
 }
 
-func sub(k string, d ItemDecoder) ItemDecoder {
+func Sub(k string, d ItemDecoder) ItemDecoder {
 	return &subBuffDecoder{k, []ItemDecoder{d}}
 }
 
@@ -456,32 +445,12 @@ func (s *subBuffDecoder) Decode(r io.Reader, rec Recorder) error {
 	return fmt.Errorf("unabl to find sub length value from key %s", s.key)
 }
 
-/* DEFUNCT I THINK
-type remainingBytesDecoder struct {
-	key string
-}
-
-func remainingBytes(key string) *remainingBytesDecoder {
-	return &remainingBytesDecoder{key}
-}
-
-func (d *remainingBytesDecoder) Decode(r io.Reader, rec Recorder) error {
-	buff, ok := r.(*bytes.Buffer)
-	if !ok {
-		return fmt.Errorf("can't convert to *bytes.Buffer %T", r)
-	}
-	v := buff.Bytes()
-	rec.record(d.key, v)
-	return nil
-}
-*/
-
 type asgnDecoder struct {
 	srcKey string
 	dstKey string
 }
 
-func asgn(srcKey string, dstKey string) ItemDecoder {
+func Asgn(srcKey string, dstKey string) ItemDecoder {
 	return &asgnDecoder{srcKey, dstKey}
 }
 
@@ -495,14 +464,18 @@ func (d *asgnDecoder) Decode(r io.Reader, rec Recorder) error {
 }
 
 type asrtMaxDecoder struct {
-	srcKey string
-	value  interface{}
+	srcKey             string
+	value              interface{}
+	location           string
+	debugInsteadOfWarn bool
 }
 
-func asrtMax(srcKey string, value interface{}) ItemDecoder {
-	return &asrtMaxDecoder{srcKey, value}
+// AsrtMax answer a new asrtMaxDecoder
+func AsrtMax(srcKey string, value interface{}, location string, debugInsteadOfWarn bool) ItemDecoder {
+	return &asrtMaxDecoder{srcKey, value, location, debugInsteadOfWarn}
 }
 
+// Decode implementation for asrtMaxDecoder
 func (d *asrtMaxDecoder) Decode(_ io.Reader, rec Recorder) error {
 	v, ok := rec.lookup(d.srcKey)
 	if ok {
@@ -524,13 +497,17 @@ func (d *asrtMaxDecoder) Decode(_ io.Reader, rec Recorder) error {
 		}
 		if validTest {
 			if !notGreater {
-				return UnwrapError(fmt.Sprintf("artMax %v is greater than %v", v, d.value))
-			} else {
-				return nil
+				msg := fmt.Sprintf("asrtMax %s = %v > %v @ %s", d.srcKey, v, d.value, d.location)
+				if d.debugInsteadOfWarn {
+					log.Printf("D! %s", msg)
+				} else {
+					log.Printf("W! %s", msg)
+				}
+				return UnwrapError(msg)
 			}
-		} else {
-			return fmt.Errorf("artMax unable to compare %t and %t", v, d.value)
+			return nil
 		}
+		return fmt.Errorf("artMax unable to compare %T and %T @ %s", v, d.value, d.location)
 	}
-	return fmt.Errorf("asrtMax cannot find source %s", d.srcKey)
+	return fmt.Errorf("asrtMax cannot find source %s @ %s", d.srcKey, d.location)
 }

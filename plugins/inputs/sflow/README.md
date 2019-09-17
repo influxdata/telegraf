@@ -139,13 +139,100 @@ The following items are naturally recorded as tags by the sflow plugin. However,
 
 // Refere to parser (which has fields)
 
-// find sflow sample headers to test against
+/// converned about optiopns sizing on header -don't take account of that
 
-// find ehternet udp/tcp headers to test against
+// sort example config
 
-// converned about optiopns sizing on header -don't take account of that
+// check sflow asrt / break and warn
 
-// create good tests
+// test all tags can be turned into fields
+// test certain tags are natural type as fields
 
-// consider natural type storage when asFields (like src_port as int rather than string)
+Resolve this against v0.2 code base
+```
+2019-09-13T09:55:34Z I! Starting Telegraf sflow~v0.3
+2019-09-13T09:55:34Z I! Using config file: /etc/telegraf/telegraf.conf
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x8 pc=0x779a5d]
 
+goroutine 24 [running]:
+github.com/influxdata/telegraf/metric.(*metric).GetTag(0xc0025bc8c0, 0x25f16a4, 0xf, 0x0, 0x0, 0x0)
+    /Users/deansheehan/go/src/github.com/influxdata/telegraf/metric/metric.go:171 +0x4d
+github.com/influxdata/telegraf/plugins/inputs/sflow.(*asyncResolver).ifaceResolve(0xc001824460, 0x2ab1c60, 0xc0025bc8c0, 0x25f16a4, 0xf, 0x25ee6ec, 0xe, 0xc001ad8730, 0xd, 0xc000380d80)
+    /Users/deansheehan/go/src/github.com/influxdata/telegraf/plugins/inputs/sflow/resolver.go:167 +0x49
+github.com/influxdata/telegraf/plugins/inputs/sflow.(*asyncResolver).resolve(0xc001824460, 0x2ab1c60, 0xc0025bc8c0, 0xc001c90e80)
+    /Users/deansheehan/go/src/github.com/influxdata/telegraf/plugins/inputs/sflow/resolver.go:112 +0x2df
+github.com/influxdata/telegraf/plugins/inputs/sflow.(*packetSFlowListener).process(0xc0005f8f30, 0xc0001f8000, 0x544, 0x10000)
+    /Users/deansheehan/go/src/github.com/influxdata/telegraf/plugins/inputs/sflow/sflow.go:57 +0x220
+github.com/influxdata/telegraf/plugins/inputs/sflow.(*packetSFlowListener).listen(0xc0005f8f30)
+    /Users/deansheehan/go/src/github.com/influxdata/telegraf/plugins/inputs/sflow/sflow.go:44 +0x75
+created by github.com/influxdata/telegraf/plugins/inputs/sflow.(*SFlowListener).Start
+    /Users/deansheehan/go/src/github.com/influxdata/telegraf/plugins/inputs/sflow/sflow.go:193 +0x444
+```
+
+Also, Timo seems to hae dropped measurement and move more things from tags to fields but is stil lshowing as tags
+
+
+```
+this looks interesting… I dropped the sflow measurement before applying the new config on telegraf. It seems that some of the data is written both as tag and field (dst_mac, src_mac etc)
+> show tag keys from sflow
+name: sflow
+tagKey
+------
+agent_ip
+dst_host
+dst_ip
+dst_mac
+dst_port
+dst_port_name
+ether_type
+header_protocol
+host
+ip_dscp
+ip_ecn
+netif_index_in
+netif_index_out
+netif_name_in
+netif_name_out
+sample_direction
+source_id
+source_id_index
+source_id_name
+src_host
+src_ip
+src_mac
+> show field keys from sflow
+name: sflow
+fieldKey           fieldType
+--------           ---------
+bytes              integer
+drops              integer
+dst_mac            string
+frame_length       integer
+header_length      integer
+ip_flags           integer
+ip_fragment_offset integer
+ip_total_length    integer
+ip_ttl             integer
+netif_index_in     string
+netif_index_out    string
+packets            integer
+source_id          string
+source_id_index    string
+src_mac            string
+src_port           string
+src_port_name      string
+tcp_flags          integer
+tcp_header_length  integer
+tcp_urgent_pointer integer
+tcp_window_size    integer
+udp_length         integer
+and same mac addresses can be found as tag and field
+
+```
+
+
+
+TODO
+
+Put in the SFLow config fields into the config

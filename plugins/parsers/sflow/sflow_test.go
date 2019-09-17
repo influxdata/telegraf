@@ -8,6 +8,8 @@ import (
 	"log"
 	"math/rand"
 	"testing"
+
+	"github.com/influxdata/telegraf/plugins/parsers/sflow/decoder"
 )
 
 func max(x, y int) int {
@@ -35,7 +37,7 @@ func decodeAndCompare(expectedJSON []byte, packet []byte, t *testing.T) {
 	packetBytes := make([]byte, hex.DecodedLen(len(packet)))
 	_, err = hex.Decode(packetBytes, packet)
 	options := NewDefaultV5FormatOptions()
-	decoded, err := Decode(V5Format(options), bytes.NewBuffer(packetBytes))
+	decoded, err := decoder.Decode(V5Format(options), bytes.NewBuffer(packetBytes))
 	if err != nil {
 		t.Error("unable to decode the packet", err)
 	}
@@ -1630,7 +1632,7 @@ func Test_stochasicPacketGeneration(t *testing.T) {
 		packetBytesHNexDecoded := make([]byte, hex.DecodedLen(len(packet)))
 		_, err = hex.Decode(packetBytesHNexDecoded, packet)
 		options := NewDefaultV5FormatOptions()
-		decoded, err := Decode(V5Format(options), bytes.NewBuffer(packetBytesHNexDecoded))
+		decoded, err := decoder.Decode(V5Format(options), bytes.NewBuffer(packetBytesHNexDecoded))
 		if err != nil {
 			errCount++
 		}

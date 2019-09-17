@@ -1,4 +1,4 @@
-package sflow
+package decoder
 
 import (
 	"bytes"
@@ -40,7 +40,7 @@ func Test_ui16(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return ui16(n) },
+		func(n string) ItemDecoder { return Ui16(n) },
 		func(x interface{}) error {
 			xui16, ok := x.(uint16)
 			if !ok {
@@ -66,7 +66,7 @@ func Test_ui32(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return ui32(n) },
+		func(n string) ItemDecoder { return Ui32(n) },
 		func(x interface{}) error {
 			xui32, ok := x.(uint32)
 			if !ok {
@@ -92,7 +92,7 @@ func Test_i32(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return i32(n) },
+		func(n string) ItemDecoder { return I32(n) },
 		func(x interface{}) error {
 			xi32, ok := x.(int32)
 			if !ok {
@@ -120,7 +120,7 @@ func Test_ui64(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return ui64(n) },
+		func(n string) ItemDecoder { return Ui64(n) },
 		func(x interface{}) error {
 			xui64, ok := x.(uint64)
 			if !ok {
@@ -146,7 +146,7 @@ func Test_bin(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return bin(n, len(value)) },
+		func(n string) ItemDecoder { return Bin(n, len(value)) },
 		func(x interface{}) error {
 			b, ok := x.([]byte)
 			if !ok {
@@ -165,7 +165,7 @@ func Test_sub(t *testing.T) {
 	recordedBuf := append(buf, []byte{255}...)
 	recorder := newDefaultRecorder()
 	recorder.record("length", uint32(len(buf)))
-	decoder := sub("length", bin("dstValue", len(buf)))
+	decoder := Sub("length", Bin("dstValue", len(buf)))
 	buffer := bytes.NewBuffer(recordedBuf)
 	error := decoder.Decode(buffer, recorder)
 	if error != nil {
@@ -192,7 +192,7 @@ func Test_sub(t *testing.T) {
 func Test_asgn(t *testing.T) {
 	recorder := newDefaultRecorder()
 	recorder.record("srcValue", uint(45))
-	decoder := asgn("srcValue", "dstValue")
+	decoder := Asgn("srcValue", "dstValue")
 	err := decoder.Decode(nil, recorder)
 	if err != nil {
 		t.Errorf("returned error %v", err)
@@ -210,7 +210,7 @@ func Test_asgn(t *testing.T) {
 func Test_asrtMaxUnint(t *testing.T) {
 	recorder := newDefaultRecorder()
 	recorder.record("srcValue", uint(45))
-	decoder := asrtMax("srcValue", uint(45))
+	decoder := AsrtMax("srcValue", uint(45), "Test_asrtMaxUnint", false)
 	err := decoder.Decode(nil, recorder)
 	if err != nil {
 		t.Errorf("returned error %v", err)
@@ -229,7 +229,7 @@ func Test_asrtMaxUnint(t *testing.T) {
 func Test_asrtMaxUnint16(t *testing.T) {
 	recorder := newDefaultRecorder()
 	recorder.record("srcValue", uint16(45))
-	decoder := asrtMax("srcValue", uint16(45))
+	decoder := AsrtMax("srcValue", uint16(45), "Test_asrtMaxUnint16", false)
 	err := decoder.Decode(nil, recorder)
 	if err != nil {
 		t.Errorf("returned error %v", err)
@@ -248,7 +248,7 @@ func Test_asrtMaxUnint16(t *testing.T) {
 func Test_asrtMaxUnint32(t *testing.T) {
 	recorder := newDefaultRecorder()
 	recorder.record("srcValue", uint32(45))
-	decoder := asrtMax("srcValue", uint32(45))
+	decoder := AsrtMax("srcValue", uint32(45), "Test_asrtMaxUnint32", false)
 	err := decoder.Decode(nil, recorder)
 	if err != nil {
 		t.Errorf("returned error %v", err)
@@ -275,9 +275,9 @@ func Test_seq(t *testing.T) {
 		t.Error("error", err)
 	}
 	recorder := newDefaultRecorder()
-	decoder := seq(
-		ui16("ui16-1"),
-		ui16("ui16-2"),
+	decoder := Seq(
+		Ui16("ui16-1"),
+		Ui16("ui16-2"),
 	)
 	err := decoder.Decode(&buffer, recorder)
 	if err != nil {
@@ -308,10 +308,10 @@ func Test_seq(t *testing.T) {
 }
 
 func Test_altGaurdsAndDefault(t *testing.T) {
-	decoder := alt("",
-		eql("key", uint16(1), ui16("path1")),
-		eql("key", uint16(2), ui16("path2")),
-		altDefault(ui16("defaultPath")),
+	decoder := Alt("",
+		Eql("key", uint16(1), Ui16("path1")),
+		Eql("key", uint16(2), Ui16("path2")),
+		AltDefault(Ui16("defaultPath")),
 	)
 
 	// path1 bytes
@@ -398,7 +398,7 @@ func Test_iter(t *testing.T) {
 	recorder := newDefaultRecorder()
 	recorder.record("count", uint32(2))
 
-	decoder := iter("result", "count", 100, ui16("value"))
+	decoder := Iter("result", "count", Ui16("value"))
 	if err := decoder.Decode(&buffer, recorder); err != nil {
 		t.Error("error", err)
 	}

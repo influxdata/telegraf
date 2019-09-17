@@ -1,7 +1,6 @@
 package sflow
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +9,8 @@ import (
 )
 
 func Test_goodDNSProcessor(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	str := map[string]string{
 		"fi-es-he6-z4-e02-qfx03-dev.netdevice.nesc.nokia.net":     "fi-es-he6-z4-e02-qfx03-dev.nesc.nokia.net",
 		"fi-es-he6-z4-e02-qfx03-dev-em0-0.transit.nesc.nokia.net": "fi-es-he6-z4-e02-qfx03-dev.nesc.nokia.net",
@@ -43,6 +44,8 @@ func Test_goodDNSProcessor(t *testing.T) {
 }
 
 func Test_badDNSProcessor(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	str := map[string]string{
 		"fi-es-he6-z4-e02-qfx03-dev.netdevice.nesc.nokia.net":     "fi-es-he6-z4-e02-qfx03-dev.nesc.nokia.net",
 		"fi-es-he6-z4-e02-qfx03-dev-em0-0.transit.nesc.nokia.net": "fi-es-he6-z4-e02-qfx03-dev.nesc.nokia.net",
@@ -59,6 +62,8 @@ func Test_badDNSProcessor(t *testing.T) {
 }
 
 func Test_deanDNSProcessor(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	str := map[string]string{
 		"192.168.0.49": "deans-laptop",
 		"192.168.0.50": "192.168.0.50",
@@ -82,6 +87,8 @@ func Test_deanDNSProcessor(t *testing.T) {
 }
 
 func Test_exampleDNSProcessor(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	str := map[string]string{
 		"hostx-net1": "hostx",
 		"hostx-net2": "hostx",
@@ -107,6 +114,7 @@ func Test_exampleDNSProcessor(t *testing.T) {
 
 // dnsResolveTest is a helper for the dns resolution tests below
 func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTagName string) {
+	defer testEmptyLog(t)()
 
 	// Create a resole and replace its lowest level dns lookup function with something we can
 	// control via channel reads and writes
@@ -188,6 +196,7 @@ func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTag
 
 // ifaceResolveTest is a helper for the interface name resolution tests below
 func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTagName string) {
+	defer testEmptyLog(t)()
 
 	// Create a resole and replace its lowest level dns lookup function with something we can
 	// control via channel reads and writes
@@ -200,7 +209,6 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 	indexToResolveCh := make(chan string)
 	resolvedNameCh := make(chan string)
 	asyncResolver.ifIndexToIfNameFn = func(id uint64, _ string, _ string, index string) string {
-		fmt.Println("ifIndexToIfName", index)
 		indexToResolveCh <- index
 		result := <-resolvedNameCh
 		return result
@@ -273,25 +281,31 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 }
 
 func Test_agent_ip_to_host_resolve(t *testing.T) {
+	defer testEmptyLog(t)()
 	dnsResolveTest(t, "agent_ip", "192.168.0.1", "localhost", "host")
 }
 
 func Test_src_ip_to_src_host_resolve(t *testing.T) {
+	defer testEmptyLog(t)()
 	dnsResolveTest(t, "src_ip", "192.168.0.1", "localhost", "src_host")
 }
 
 func Test_dst_ip_to_dst_host_resolve(t *testing.T) {
+	defer testEmptyLog(t)()
 	dnsResolveTest(t, "dst_ip", "192.168.0.1", "localhost", "dst_host")
 }
 
 func Test_source_id_index_to_source_id_name_resolve(t *testing.T) {
+	defer testEmptyLog(t)()
 	ifaceResolveTest(t, "source_id_index", "5", "eth0", "source_id_name")
 }
 
 func Test_netif_index_out_to_netif_name_out_resolve(t *testing.T) {
+	defer testEmptyLog(t)()
 	ifaceResolveTest(t, "netif_index_out", "6", "eth1", "netif_name_out")
 }
 
 func Test_netif_index_in_to_netif_name_in_resolve(t *testing.T) {
+	defer testEmptyLog(t)()
 	ifaceResolveTest(t, "netif_index_in", "7", "eth2", "netif_name_in")
 }

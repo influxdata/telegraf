@@ -146,9 +146,6 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
-
-	// sflow configuration
-	SFlowSNMPCommunity string `toml:"sflow_snmp_community"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -224,7 +221,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.FormUrlencodedTagKeys,
 		)
 	case "sflow":
-		parser, err = sflow.NewParser(config.MetricName, config.SFlowSNMPCommunity, config.DefaultTags, 0, 0, 0, nil)
+		sflowConfig := sflow.NewDefaultV5FormatOptions()
+		parser, err = sflow.NewParser(config.MetricName, config.DefaultTags, sflowConfig, nil)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -354,8 +352,9 @@ func NewInfluxParser() (Parser, error) {
 	return influx.NewParser(handler), nil
 }
 
-func NewSFlowParser(metricName, string, snmpCommunity string, defaultTags map[string]string) (Parser, error) {
-	return sflow.NewParser(metricName, snmpCommunity, defaultTags, 0, 0, 0, nil)
+func NewSFlowParser(metricName string, defaultTags map[string]string) (Parser, error) {
+	sflowConfig := sflow.NewDefaultV5FormatOptions()
+	return sflow.NewParser(metricName, defaultTags, sflowConfig, nil)
 }
 
 func NewGraphiteParser(
