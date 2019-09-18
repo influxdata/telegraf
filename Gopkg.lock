@@ -822,11 +822,11 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:d4a3035a03b4612c714b993891c071706a64890e55ef64bcc42bc2b461cb2756"
+  digest = "1:d905825446d3547ebf8f58a4ff30c30439b39781b54d756f5ff3bf19765a3fdb"
   name = "github.com/mdlayher/apcupsd"
   packages = ["."]
   pruneopts = ""
-  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
+  revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
 
 [[projects]]
   digest = "1:4c8d8358c45ba11ab7bb15df749d4df8664ff1582daead28bae58cf8cbe49890"
@@ -1072,7 +1072,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:2226ffdae873216a5bc8a0bab7a51ac670b27a4aed852007d77600f809aa04e3"
+  digest = "1:55dcddb2ba6ab25098ee6b96f176f39305f1fde7ea3d138e7e10bb64a5bf45be"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -1085,8 +1085,8 @@
     "process",
   ]
   pruneopts = ""
-  revision = "d80c43f9c984a48783daf22f4bd9278006ae483a"
-  version = "v2.19.7"
+  revision = "e4ec7b275ada47ca32799106c2dba142d96aaf93"
+  version = "v2.19.8"
 
 [[projects]]
   branch = "master"
@@ -1486,6 +1486,7 @@
     "credentials",
     "credentials/oauth",
     "encoding",
+    "encoding/gzip",
     "encoding/proto",
     "grpclog",
     "internal",
@@ -1813,6 +1814,7 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
+    "google.golang.org/grpc/encoding/gzip",
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/peer",
     "google.golang.org/grpc/status",
