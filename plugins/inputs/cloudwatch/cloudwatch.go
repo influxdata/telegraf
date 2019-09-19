@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"log"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -61,6 +63,7 @@ type (
 	Dimension struct {
 		Name  string `toml:"name"`
 		Value string `toml:"value"`
+		ValueExcludes []string `toml:"value_excludes"`
 	}
 
 	// metricCache caches metrics, their filters, and generated queries.
@@ -599,7 +602,20 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 		selected := false
 		for _, d2 := range metric.Dimensions {
 			if d.Name == *d2.Name {
-				if d.Value == "" || d.Value == "*" || d.Value == *d2.Value {
+				StarValue := "*"
+				if d.ValueExcludes != nil && d.Value == StarValue {
+					for _, match := range d.ValueExcludes {
+						var r = regexp.MustCompile(match)
+						matched := r.MatchString(*d2.Value)
+						if matched || strings.Contains(*d2.Value, match) {
+							log.Println("D! [SKIP][Dimension]: ", d.Name, "= ", *d2.Value, " matches value_excludes = ", d.ValueExcludes)
+							return false
+						} else {
+							log.Println("D! [OK][Dimension]: ", d.Name, "= ", *d2.Value, " matches not value_excludes = ", d.ValueExcludes)
+						}
+					}
+				}
+				if d.Value == "" || d.Value == StarValue || d.Value == *d2.Value {
 					selected = true
 				}
 			}
@@ -610,3 +626,4 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 	}
 	return true
 }
+
