@@ -86,7 +86,6 @@ func (w *Whatap) Connect() error {
 }
 
 func (w *Whatap) Close() error {
-	//log.Println("[outputs.whatap] Closed")
 	if w.Session.Client == nil {
 		return nil
 	}
@@ -104,7 +103,6 @@ func (w *Whatap) SampleConfig() string {
 }
 
 func (w *Whatap) Write(metrics []telegraf.Metric) error {
-	//log.Println("[outputs.whatap] Write len=", len(metrics))
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -141,12 +139,6 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 func (w *Whatap) send(code byte, b []byte) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("Recover Whatap: %s", r)
-		}
-	}()
-
 	out := NewDataOutputX()
 	out.WriteByte1(NETSRC_AGENT_ONEWAY)
 	// ver
