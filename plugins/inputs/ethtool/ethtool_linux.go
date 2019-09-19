@@ -3,12 +3,13 @@
 package ethtool
 
 import (
-	"github.com/influxdata/telegraf/filter"
-	"github.com/pkg/errors"
 	"net"
+	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/pkg/errors"
 	"github.com/safchain/ethtool"
 )
 
@@ -30,23 +31,29 @@ func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// parallelize the ethtool call in event of many interfaces
+	var wg sync.WaitGroup
+
 	for _, iface := range interfaces {
 
 		// Check this isn't a loop back and that its matched by the filter
 		if (iface.Flags&net.FlagLoopback == 0) && interfaceFilter.Match(iface.Name) {
-			e.wg.Add(1)
-			go e.gatherEthtoolStats(iface, acc)
+			wg.Add(1)
+
+			go func(i net.Interface) {
+				e.gatherEthtoolStats(i, acc)
+				wg.Done()
+			}(iface)
 		}
 	}
 
 	// Waiting for all the interfaces
-	e.wg.Wait()
+	wg.Wait()
 	return nil
 }
 
 // Gather the stats for the interface.
 func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulator) {
-	defer e.wg.Done()
 
 	tags := make(map[string]string)
 	tags[tagInterface] = iface.Name

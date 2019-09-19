@@ -2,7 +2,6 @@ package ethtool
 
 import (
 	"net"
-	"sync"
 )
 
 type Command interface {
@@ -23,10 +22,6 @@ type Ethtool struct {
 
 	// the ethtool command
 	command Command
-
-	// Will parallelize the ethtool call in event of many interfaces
-	// so using this to sync
-	wg sync.WaitGroup
 }
 
 const (
