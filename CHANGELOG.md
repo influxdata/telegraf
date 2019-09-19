@@ -7,8 +7,19 @@
 #### Features
 
 - [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
+- [#6361](https://github.com/influxdata/telegraf/pull/6361): Add ability to read query from file to postgresql_extensible input.
+- [#5921](https://github.com/influxdata/telegraf/pull/5921): Add replication metrics to the redis input.
+- [#6177](https://github.com/influxdata/telegraf/pull/6177): Support NX-OS telemetry extensions in cisco_telemetry_mdt.
 
-## v1.12.1 [unreleased]
+## v1.12.2 [unreleased]
+
+#### Bugfixes
+
+- [#6386](https://github.com/influxdata/telegraf/issues/6386): Fix detection of layout timestamps in csv and json parser.
+- [#6394](https://github.com/influxdata/telegraf/issues/6394): Fix parsing of BATTDATE in apcupsd input.
+- [#6398](https://github.com/influxdata/telegraf/issues/6398): Keep boolean values listed in json_string_fields.
+
+## v1.12.1 [2019-09-10]
 
 #### Bugfixes
 
@@ -16,6 +27,10 @@
 - [#6329](https://github.com/influxdata/telegraf/issues/6329): Fix filecount for paths with trailing slash.
 - [#6331](https://github.com/influxdata/telegraf/issues/6331): Convert check state to an integer in icinga2 input.
 - [#6354](https://github.com/influxdata/telegraf/issues/6354): Fix could not mark message delivered error in kafka_consumer.
+- [#6362](https://github.com/influxdata/telegraf/issues/6362): Skip collection stats when disabled in mongodb input.
+- [#6366](https://github.com/influxdata/telegraf/issues/6366): Fix error reading closed response body on redirect in http_response.
+- [#6373](https://github.com/influxdata/telegraf/issues/6373): Fix apcupsd documentation to reflect plugin.
+- [#6375](https://github.com/influxdata/telegraf/issues/6375): Display retry log message only when retry after is received.
 
 ## v1.12 [2019-09-03]
 

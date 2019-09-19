@@ -228,9 +228,13 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %s", err.Error()))
 	}
 
-	collectionStats, err := s.gatherCollectionStats(colStatsDbs)
-	if err != nil {
-		return err
+	var collectionStats *ColStats
+	if gatherColStats {
+		stats, err := s.gatherCollectionStats(colStatsDbs)
+		if err != nil {
+			return err
+		}
+		collectionStats = stats
 	}
 
 	dbStats := &DbStats{}
