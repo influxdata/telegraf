@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -20,15 +21,15 @@ type Parser struct {
 	metricName   string
 	defaultTags  map[string]string
 	tagsAsFields map[string]bool
-	sflowConfig  V5FormatOptions
+	sflowFormat  decoder.ItemDecoder
 }
 
-// NewParser creats a new Parser
+// NewParser creates a new SFlow Parser
 func NewParser(metricName string, defaultTags map[string]string, sflowConfig V5FormatOptions, tagsAsFields map[string]bool) (*Parser, error) {
 	if metricName == "" {
 		return nil, fmt.Errorf("metric name cannot be empty")
 	}
-	result := &Parser{metricName: metricName, sflowConfig: sflowConfig, tagsAsFields: tagsAsFields, defaultTags: defaultTags}
+	result := &Parser{metricName: metricName, sflowFormat: V5Format(sflowConfig), tagsAsFields: tagsAsFields, defaultTags: defaultTags}
 	return result, nil
 }
 
@@ -43,20 +44,11 @@ func (sfp *Parser) GetTagsAsFields() map[string]bool {
 //
 // Must be thread-safe.
 func (sfp *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	options := NewDefaultV5FormatOptions()
-	/*
-		options.MaxFlowsPerSample = sfp.maxFlowsPerSample
-		options.MaxCountersPerSample = sfp.maxCountersPerSample
-		options.MaxSamplesPerPacket = sfp.maxSamplesPerPacket
-	*/
-
-	//TODO:GOT TO CLEAN THESE UP!
-
-	decodedPacket, err := decoder.Decode(V5Format(options), bytes.NewBuffer(buf))
+	decodedPacket, err := decoder.Decode(sfp.sflowFormat, bytes.NewBuffer(buf))
 	if err != nil {
 		return nil, err
 	}
-
+	// walk the object graph and turn into Metric objects
 	nano := 0
 	metrics := make([]telegraf.Metric, 0)
 	samples, ok := decodedPacket["samples"].([]map[string]interface{})
@@ -72,34 +64,24 @@ func (sfp *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 						if ok {
 							headers, ok := iface.([]map[string]interface{})
 							if ok && len(headers) == 1 {
-
 								tags := make(map[string]string)
 								fields := make(map[string]interface{})
 								header, ok := flowRecord["header"].([]map[string]interface{})
 								if ok {
-									sfp.adPotentialTagsOrFields(decodedPacket, sample, flowRecord, header, tags, fields)
-									sfp.adFields(sample, flowRecord, header, fields)
+									sfp.addPotentialTagsOrFields(decodedPacket, sample, flowRecord, header, tags, fields)
+									sfp.addFields(sample, flowRecord, header, fields)
 								}
 								m, err := metric.New(sfp.metricName, tags, fields, time.Now().Add(time.Duration(nano)))
 								nano++
 								if err == nil {
 									metrics = append(metrics, m)
 								} else {
-									// DO WHAT?
+									return nil, err
 								}
-							} else {
-								// header isn't of right type or not right len
 							}
-						} else {
-							// has no header, curious
 						}
 					}
-				} else {
-					// has no flowRecords within it, curioius
-					fmt.Printf("Sample that is a consider a FlowRecords has no flowRecords member")
 				}
-			} else {
-				// not a flow sample record, no worries
 			}
 		}
 	}
@@ -107,10 +89,17 @@ func (sfp *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	return metrics, err
 }
 
-func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{}, sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, tags map[string]string, fields map[string]interface{}) {
-	asTagOrField := func(name, value string) {
+func (sfp *Parser) addPotentialTagsOrFields(decodedPacket map[string]interface{}, sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, tags map[string]string, fields map[string]interface{}) {
+	asTagOrField := func(name, value string, natural ...interface{}) {
+		if len(natural) > 1 {
+			log.Panicf("len(natural) > 1 %d", len(natural))
+		}
 		if asField, ok := sfp.tagsAsFields[name]; ok && asField {
-			fields[name] = value
+			if len(natural) == 1 {
+				fields[name] = natural[0]
+			} else {
+				fields[name] = value
+			}
 		} else {
 			tags[name] = value
 		}
@@ -127,60 +116,39 @@ func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{},
 			asTagOrField("agent_ip", fmt.Sprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 				a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10], a[11], a[12], a[13], a[14], a[15]))
 		}
-
-		//tags["host"] = ipToName(tags["agent_ip"])
 	}
 
 	v := sample["sourceIdType"]
 	ui32, ok := v.(uint32)
 	if ok {
-		asTagOrField("source_id", fmt.Sprintf("%d", ui32))
-	} else {
-		fmt.Println("couldn't find sourceIdType", v, ok, sample)
+		asTagOrField("source_id", fmt.Sprintf("%d", ui32), ui32)
 	}
+
 	sourceIDIndex, ok := sample["sourceIdValue"].(uint32)
 	if ok {
-		asTagOrField("source_id_index", fmt.Sprintf("%d", sourceIDIndex))
-		//									tags["source_id_name"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], sourceIDIndex)
-	} else {
-		fmt.Println("couldn't find sourceIdValue")
+		asTagOrField("source_id_index", fmt.Sprintf("%d", sourceIDIndex), sourceIDIndex)
 	}
 
 	ui32, ok = sample["inputValue"].(uint32)
 	if ok {
-		// need to do some maths to extract format and value
-		// most significant 2 bits are format, rest is value
-		//format := ui32 >> 30
-		//value := ui32 & 0x0fffffff
 		format := sample["inputFormat"].(uint32)
 		if format == 0 {
-			asTagOrField("netif_index_in", fmt.Sprintf("%d", ui32))
-			//tags["netif_name_in"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], ui32)
+			asTagOrField("netif_index_in", fmt.Sprintf("%d", ui32), ui32)
 			if sourceIDIndex == ui32 {
 				asTagOrField("sample_direction", "ingress")
 			}
-		} // WHAT IF SOMETHING ELSE?
-	} else {
-		// WHAT IF EXPANDED FORMAT - should probbaly do this processing in decoder to they are normalized
-		fmt.Println("couldn't find inputValue") // questions this from Rob!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! formt or value
+		}
 	}
 
 	ui32, ok = sample["outputValue"].(uint32)
 	if ok {
 		format := sample["outputFormat"].(uint32)
-		// need to do some maths to extract format and value
-		// most significant 2 bits are format, rest is value
-		//format := ui32 >> 30
-		//value := ui32 & 0x0fffffff
 		if format == 0 {
-			asTagOrField("netif_index_out", fmt.Sprintf("%d", ui32))
-			//tags["netif_name_out"] = ifIndexToIfName(sfp.snmpCommunity, tags["agent_ip"], ui32)
+			asTagOrField("netif_index_out", fmt.Sprintf("%d", ui32), ui32)
 			if sourceIDIndex == ui32 {
 				asTagOrField("sample_direction", "egress")
 			}
-		} // WHAT IF SOMETHING ELSE?
-	} else {
-		fmt.Println("couldn't find outputValue")
+		}
 	}
 
 	// go into the header itself
@@ -196,8 +164,6 @@ func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{},
 			asTagOrField("src_ip", ip.String())
 		}
 
-		//tags["src_ip"] = header[0]["srcIP"].(net.IP).String()
-		//tags["src_host"] = ipToName(tags["src_ip"])
 		v = header[0]["dstIP"]
 		switch t := v.(type) {
 		case net.IP:
@@ -208,14 +174,13 @@ func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{},
 			ip = b
 			asTagOrField("dst_ip", ip.String())
 		}
-		//tags["dst_ip"] = header[0]["dstIP"].(net.IP).String()
-		//tags["dst_host"] = ipToName(tags["dst_ip"])
+
 		if header[0]["srcPort"] != nil {
-			asTagOrField("src_port", fmt.Sprintf("%d", header[0]["srcPort"]))
-			asTagOrField("src_port_name", serviceNameFromPort(header[0]["srcPort"]))
+			asTagOrField("src_port", fmt.Sprintf("%d", header[0]["srcPort"]), header[0]["srcPort"])
+			asTagOrField("src_port_name", serviceNameFromPort(header[0]["srcPort"]), header[0]["srcPort"])
 		}
 		if header[0]["dstPort"] != nil {
-			asTagOrField("dst_port", fmt.Sprintf("%d", header[0]["dstPort"]))
+			asTagOrField("dst_port", fmt.Sprintf("%d", header[0]["dstPort"]), header[0]["dstPort"])
 			asTagOrField("dst_port_name", serviceNameFromPort(header[0]["dstPort"]))
 		}
 
@@ -235,9 +200,6 @@ func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{},
 			asTagOrField("dst_mac", toMACString(binary.BigEndian.Uint64(append([]byte{0, 0}, t...))))
 		}
 
-		// tag ip_protocol = proto
-		// tag ip_version = IPVersion
-
 		at, ok := header[0]["nextHop.addressType"].(string)
 		a, ok := header[0]["nextHop.address"].([]byte)
 		if ok {
@@ -254,14 +216,14 @@ func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{},
 		if ok {
 			str, ok := etypeAsString[fmt.Sprintf("%d", ui32)]
 			if ok {
-				tags["ether_type"] = str
+				asTagOrField("ether_type", str)
 			} else {
 
 			}
 		} else {
 
 		}
-		// NEW HEADER
+
 		ui16, ok := header[0]["etype"].(uint16)
 		if ok {
 			switch ui16 {
@@ -271,68 +233,60 @@ func (sfp *Parser) adPotentialTagsOrFields(decodedPacket map[string]interface{},
 				asTagOrField("ether_type", "IPv6")
 			}
 		}
-	} else {
-
 	}
 
 	ui64, ok := flowRecord["srcVlan"].(uint64)
 	if ok {
-		asTagOrField("src_vlan", fmt.Sprintf("%d", ui64))
+		asTagOrField("src_vlan", fmt.Sprintf("%d", ui64), ui64)
 	}
-
-	//addFieldUint64(taf,flowRecord,"srcVlan","src_vlan")
 
 	ui32, ok = flowRecord["srcPriority"].(uint32)
 	if ok {
-		asTagOrField("src_priority", fmt.Sprintf("%d", ui32))
+		asTagOrField("src_priority", fmt.Sprintf("%d", ui32), ui32)
 	}
 
 	ui64, ok = flowRecord["dstVlan"].(uint64)
 	if ok {
-		asTagOrField("dst_vlan", fmt.Sprintf("%d", ui64))
+		asTagOrField("dst_vlan", fmt.Sprintf("%d", ui64), ui64)
 	}
 	ui32, ok = flowRecord["dstPriority"].(uint32)
 	if ok {
-		asTagOrField("dst_priority", fmt.Sprintf("%d", ui32))
+		asTagOrField("dst_priority", fmt.Sprintf("%d", ui32), ui32)
 	}
 
-	// ui32("srcMaskLen"),
-	// ui32("dstMaskLen"),
-
-	//header_protocol
 	protocol, ok := flowRecord["protocol"].(string)
 	if ok {
 		asTagOrField("header_protocol", protocol)
 	}
 
 	if header[0]["dscp"] != nil {
-		tags["ip_dscp"] = fmt.Sprintf("%d", header[0]["dscp"].(uint16))
+		asTagOrField("ip_dscp", fmt.Sprintf("%d", header[0]["dscp"].(uint16)), header[0]["dscp"])
 	}
 	if header[0]["ecn"] != nil {
-		tags["ip_ecn"] = fmt.Sprintf("%d", header[0]["ecn"].(uint16))
+		asTagOrField("ip_ecn", fmt.Sprintf("%d", header[0]["ecn"].(uint16)), header[0]["ecn"])
 	}
 }
 
-func (sfp *Parser) adFields(sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, fields map[string]interface{}) {
+func (sfp *Parser) addFields(sample map[string]interface{}, flowRecord map[string]interface{}, header []map[string]interface{}, fields map[string]interface{}) {
 
 	samplingRate, ok := sample["samplingRate"].(uint32)
-
 	if ok {
 		fields["packets"] = samplingRate
 	}
 
 	fields["ip_fragment_offset"] = header[0]["fragmentOffset"]
 
-	// ingress or egress
 	d, ok := sample["drops"].(uint32)
 	if ok {
 		fields["drops"] = d
 	}
+
 	ui32, ok := flowRecord["frameLength"].(uint32)
 	if ok {
 		fields["frame_length"] = ui32
 		fields["bytes"] = ui32 * samplingRate
 	}
+
 	ui32, ok = flowRecord["header.length"].(uint32)
 	if ok {
 		fields["header_length"] = ui32
@@ -342,13 +296,13 @@ func (sfp *Parser) adFields(sample map[string]interface{}, flowRecord map[string
 	if ok {
 		fields["tcp_flags"] = v
 	} else {
-		fields["tcp_flags"] = 0 // this is filling a gap in the tests, don't think it is really required
+		fields["tcp_flags"] = 0
 	}
 
 	fields["ip_ttl"] = header[0]["IPTTL"]
 
 	if header[0]["total_length"] != nil {
-		fields["ip_total_length"] = header[0]["total_length"] //.(uint32)
+		fields["ip_total_length"] = header[0]["total_length"]
 	}
 	if header[0]["flags"] != nil {
 		fields["ip_flags"] = header[0]["flags"]
@@ -367,16 +321,6 @@ func (sfp *Parser) adFields(sample map[string]interface{}, flowRecord map[string
 		fields["udp_length"] = header[0]["udp_length"].(uint16)
 	}
 }
-
-/*
-func (sfp *Parser) asTagOrField(name, value string, tags map[string]string, fields map[string]interface{}) {
-	if asField, ok := sfp.tagsAsFields[name]; ok && asField {
-		fields[name] = value
-	} else {
-		tags[name] = value
-	}
-}
-*/
 
 // ParseLine takes a single string metric
 // ie, "cpu.usage.idle 90"
@@ -404,7 +348,6 @@ func (sfp *Parser) SetDefaultTags(tags map[string]string) {
 	sfp.defaultTags = tags
 }
 
-/* MOVE ALL THESE TO sFLow */
 var etypeAsString = map[string]string{
 	"2048": "IPv4",
 }
@@ -431,29 +374,12 @@ func toMACString(val uint64) string {
 }
 
 func serviceNameFromPort(value interface{}) string {
-	if value == nil {
-		return "nil"
-	}
-	var portNum int
-	switch t := value.(type) {
-	case uint32:
-		portNum = int(t)
-	case uint16:
-		portNum = int(t)
-	default:
-		portNum = -1
-	}
-
-	if portNum >= 0 {
+	portNum, ok := value.(uint16)
+	if ok {
 		proto := netdb.GetProtoByName("tcp")
-		serv := netdb.GetServByPort(portNum, proto)
+		serv := netdb.GetServByPort(int(portNum), proto)
 		if serv != nil {
-			//if serv.Name != "" {
-			return fmt.Sprintf("%s", serv.Name)
-			/*} else {
-				log.Printf("E! [parsers.sflow] example of serv.Name = `` %d\n", serv.Port)
-				return fmt.Sprintf("%v", value)
-			}*/
+			return serv.Name
 		}
 	}
 	return fmt.Sprintf("%v", value)

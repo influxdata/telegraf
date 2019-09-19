@@ -236,3 +236,7 @@ and same mac addresses can be found as tag and field
 TODO
 
 Put in the SFLow config fields into the config
+
+
+I still don't like the way these config parameters get in
+and I don't like resolver ttls bneing on start and not part of its instantiation

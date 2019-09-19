@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -61,7 +60,7 @@ type asyncResolver struct {
 	fnWorkerChannel   chan asyncJob
 	dnsp              *dnsProcessor
 	ipToFqdnFn        func(ip string) string
-	ifIndexToIfNameFn func(id uint64, community string, snmpAgentIP string, ifIndex string) string
+	ifIndexToIfNameFn func(community string, snmpAgentIP string, ifIndex string) string
 }
 
 func newAsyncResolver(dnsResolve bool, dnsMultiProcessor string, snmpResolve bool, snmpCommunity string) resolver {
@@ -80,43 +79,91 @@ func newAsyncResolver(dnsResolve bool, dnsMultiProcessor string, snmpResolve boo
 	}
 }
 
-type onResolve struct {
-	done    func()
-	counter int
-	mux     sync.Mutex
-}
-
-func (or *onResolve) decrement() {
-	or.mux.Lock()
-	defer or.mux.Unlock()
-	or.counter--
-	if or.counter == 0 {
-		or.done()
-	}
-}
-
-func (or *onResolve) increment() {
-	or.mux.Lock()
-	defer or.mux.Unlock()
-	or.counter++
-}
-
-var ops uint64
-
 type asyncJob func()
 
 func (r *asyncResolver) resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric)) {
-	or := &onResolve{done: func() { onResolveFn(m) }, counter: 1}
-	r.dnsResolve(m, "agent_ip", "host", or)
-	r.dnsResolve(m, "src_ip", "src_host", or)
-	r.dnsResolve(m, "dst_ip", "dst_host", or)
-	agentIP, ok := m.GetTag("agent_ip")
-	if ok {
-		r.ifaceResolve(m, "source_id_index", "source_id_name", agentIP, or)
-		r.ifaceResolve(m, "netif_index_out", "netif_name_out", agentIP, or)
-		r.ifaceResolve(m, "netif_index_in", "netif_name_in", agentIP, or)
+	dnsToResolve := map[string]string{
+		"agent_ip": "host",
+		"src_ip":   "src_host",
+		"dst_ip":   "dst_host",
 	}
-	or.decrement() // this will do the resolve if there was nothing to resolve
+	ifaceToResolve := map[string]string{
+		"source_id_index": "source_id_name",
+		"netif_index_out": "netif_name_out",
+		"netif_index_in":  "netif_name_in",
+	}
+	dnsCompletelyResolved := r.resolveDNSFromCache(m, dnsToResolve)
+	ifaceCompletelyResolved := r.resolveIFaceFromCache(m, ifaceToResolve)
+	if dnsCompletelyResolved && ifaceCompletelyResolved {
+		onResolveFn(m)
+	} else {
+		agentIP, _ := m.GetTag("agent_ip")
+		r.fnWorkerChannel <- func() {
+			r.resolveAsyncDNS(m, dnsToResolve)
+			r.resolveAsyncIFace(agentIP, m, ifaceToResolve)
+			onResolveFn(m)
+		}
+	}
+}
+
+func (r *asyncResolver) resolveDNSFromCache(m telegraf.Metric, tags map[string]string) bool {
+	if !r.dns {
+		return true
+	}
+	result := true
+	for k, v := range tags {
+		tagValue, ok := m.GetTag(k)
+		if ok {
+			located := r.dnsCache.get(tagValue)
+			if located != "" {
+				m.AddTag(v, located)
+			} else {
+				result = false
+			}
+		}
+	}
+	return result
+}
+
+func (r *asyncResolver) resolveAsyncDNS(m telegraf.Metric, tags map[string]string) {
+	for k, v := range tags {
+		tagValue, ok := m.GetTag(k)
+		if ok {
+			r.resolveDNS(tagValue, func(fqdn string) {
+				m.AddTag(v, fqdn)
+			})
+		}
+	}
+}
+
+func (r *asyncResolver) resolveIFaceFromCache(m telegraf.Metric, tags map[string]string) bool {
+	if !r.snmpIfaces {
+		return true
+	}
+	result := true
+	for srcTag, dstTag := range tags {
+		srcTagValue, ok := m.GetTag(srcTag)
+		if ok {
+			located := r.ifaceCache.get(srcTagValue)
+			if located != "" {
+				m.AddField(dstTag, located)
+			} else {
+				result = false
+			}
+		}
+	}
+	return result
+}
+
+func (r *asyncResolver) resolveAsyncIFace(agentIP string, m telegraf.Metric, tags map[string]string) {
+	for srcTag, dstTag := range tags {
+		srcTagValue, ok := m.GetTag(srcTag)
+		if ok {
+			r.resolveIFace(srcTagValue, agentIP, func(name string) {
+				m.AddTag(dstTag, name)
+			})
+		}
+	}
 }
 
 func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
@@ -126,7 +173,7 @@ func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
 		r.dnsTTLTicker = time.NewTicker(dnsTTL)
 		go func() {
 			for range r.dnsTTLTicker.C {
-				log.Println("D! [inputs.sflow] clearing DNS cache")
+				log.Println("I! [inputs.sflow] clearing DNS cache")
 				r.dnsCache.clear()
 			}
 		}()
@@ -137,7 +184,7 @@ func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
 		r.ifaceTTLTicker = time.NewTicker(snmpTTL)
 		go func() {
 			for range r.ifaceTTLTicker.C {
-				log.Println("D! [inputs.sflow] clearing IFace cache")
+				log.Println("I! [inputs.sflow] clearing IFace cache")
 				r.ifaceCache.clear()
 			}
 		}()
@@ -162,34 +209,6 @@ func (r *asyncResolver) stop() {
 	}
 	if r.ifaceTTLTicker != nil {
 		r.ifaceTTLTicker.Stop()
-	}
-}
-
-func (r *asyncResolver) dnsResolve(m telegraf.Metric, srcTag string, dstTag string, or *onResolve) {
-	value, ok := m.GetTag(srcTag)
-	if r.dns && ok {
-		or.increment()
-		fn := func() {
-			r.resolveDNS(value, func(fqdn string) {
-				m.AddTag(dstTag, fqdn)
-				or.decrement()
-			})
-		}
-		r.fnWorkerChannel <- fn
-	}
-}
-
-func (r *asyncResolver) ifaceResolve(m telegraf.Metric, srcTag string, dstTag string, agentIP string, or *onResolve) {
-	value, ok := m.GetTag(srcTag)
-	if r.snmpIfaces && ok {
-		or.increment()
-		fn := func() {
-			r.resolveIFace(value, agentIP, func(name string) {
-				m.AddTag(dstTag, name)
-				or.decrement()
-			})
-		}
-		r.fnWorkerChannel <- fn
 	}
 }
 
@@ -220,31 +239,25 @@ func ipToFqdn(ipAddress string) string {
 			fqdn = names[0]
 		}
 	} else {
-		log.Printf("E! [input.sflow] dns lookup of %s resulted in error %s", ipAddress, err)
+		log.Printf("W! [input.sflow] dns lookup of %s resulted in error %s", ipAddress, err)
 	}
 	return fqdn
 }
 
 func (r *asyncResolver) resolveIFace(ifaceIndex string, agentIP string, resolved func(fqdn string)) {
-	id := atomic.AddUint64(&ops, 1)
 	name := r.ifaceCache.get(fmt.Sprintf("%s-%s", agentIP, ifaceIndex))
 	if name != "" {
-		log.Printf("D! [input.sflow] %d sync cache lookup (%s,%s)=>%s", id, agentIP, ifaceIndex, name)
+		log.Printf("D! [input.sflow] sync cache lookup (%s,%s)=>%s", agentIP, ifaceIndex, name)
 	} else {
 		// look it up
-		name = r.ifIndexToIfNameFn(id, r.snmpCommunity, agentIP, ifaceIndex)
-		log.Printf("D! [input.sflow] %d async resolve of (%s,%s)=>%s", id, agentIP, ifaceIndex, name)
+		name = r.ifIndexToIfNameFn(r.snmpCommunity, agentIP, ifaceIndex)
+		log.Printf("D! [input.sflow] async resolve of (%s,%s)=>%s", agentIP, ifaceIndex, name)
 		r.ifaceCache.set(fmt.Sprintf("%s-%s", agentIP, ifaceIndex), name)
 	}
 	resolved(name)
 }
 
-// So, Ive established that this wasn't thread safe. Might be I need a differen COnnection object.
-var ifIndexToIfNameMux sync.Mutex
-
-func ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex string) string {
-	ifIndexToIfNameMux.Lock()
-	defer ifIndexToIfNameMux.Unlock()
+func ifIndexToIfName(community string, snmpAgentIP string, ifIndex string) string {
 	// This doesn't make the most of the fact we look up all interface names but only cache/use one of them :-()
 	oid := "1.3.6.1.2.1.31.1.1.1.1"
 	gosnmp.Default.Target = snmpAgentIP
@@ -255,7 +268,8 @@ func ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex st
 	gosnmp.Default.Retries = 5
 	err := gosnmp.Default.Connect()
 	if err != nil {
-		log.Println("E! [inputs.sflow] err on snmp.Connect", err)
+		log.Println("W! [inputs.sflow] err on snmp.Connect", err)
+		return ifIndex
 	}
 	defer gosnmp.Default.Conn.Close()
 	//ifaceNames := make(map[string]string)
@@ -266,7 +280,7 @@ func ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex st
 		case gosnmp.OctetString:
 			b := pdu.Value.([]byte)
 			if pdu.Name == pduNameToFind {
-				log.Printf("D! [inputs.sflow] %d snmp bulk walk (%s) found %s as %s\n", id, snmpAgentIP, pdu.Name, string(b))
+				log.Printf("D! [inputs.sflow] snmp bulk walk (%s) found %s as %s\n", snmpAgentIP, pdu.Name, string(b))
 				found = true
 				result = string(b)
 			} else {
@@ -277,12 +291,12 @@ func ifIndexToIfName(id uint64, community string, snmpAgentIP string, ifIndex st
 		return nil
 	})
 	if err != nil {
-		log.Printf("E! inputs.sflow] %d unable to find %s in smmp results due to error %s\n", id, pduNameToFind, err)
+		log.Printf("W! inputs.sflow] unable to find %s in smmp results due to error %s\n", pduNameToFind, err)
 	} else {
 		if !found {
-			log.Printf("D! [inputs.sflow] %d unable to find %s in smmp results\n", id, pduNameToFind)
+			log.Printf("W! [inputs.sflow] unable to find %s in smmp results\n", pduNameToFind)
 		} else {
-			log.Printf("D! [inputs.sflow] %d found %s in snmp results as %s\n", id, pduNameToFind, result)
+			log.Printf("D! [inputs.sflow] found %s in snmp results as %s\n", pduNameToFind, result)
 		}
 	}
 	return result

@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func valueTest(t *testing.T, buffer *bytes.Buffer, fieldName string, iDec func(n string) ItemDecoder, comp func(x interface{}) error) {
@@ -80,6 +82,33 @@ func Test_ui32(t *testing.T) {
 	)
 }
 
+func Test_ui32Mapped(t *testing.T) {
+
+	value := uint32(1001)
+	var buffer bytes.Buffer
+	if err := binary.Write(&buffer, binary.BigEndian, &value); err != nil {
+		t.Error("error", err)
+	}
+
+	valueTest(
+		t,
+		&buffer,
+		"dstValue",
+		func(n string) ItemDecoder { return Ui32Mapped(n, map[uint32]string{1001: "1001"}) },
+		func(x interface{}) error {
+			xstr, ok := x.(string)
+			if !ok {
+				return fmt.Errorf("not a uint32")
+			}
+			valueAsString := fmt.Sprintf("%d", value)
+			if xstr != valueAsString {
+				return fmt.Errorf("value %s not %s", xstr, valueAsString)
+			}
+			return nil
+		},
+	)
+}
+
 func Test_i32(t *testing.T) {
 
 	value := int32(1001)
@@ -105,8 +134,6 @@ func Test_i32(t *testing.T) {
 		},
 	)
 }
-
-//ui32 mapped
 
 func Test_ui64(t *testing.T) {
 
@@ -158,6 +185,42 @@ func Test_bin(t *testing.T) {
 			return nil
 		},
 	)
+}
+
+func Test_binFn(t *testing.T) {
+
+	value := []byte{223}
+	var buffer bytes.Buffer
+	if err := binary.Write(&buffer, binary.BigEndian, &value); err != nil {
+		t.Error("error", err)
+	}
+
+	valueTest(
+		t,
+		&buffer,
+		"dstValue",
+		func(n string) ItemDecoder {
+			return Bin(n, len(value), func(b []byte) interface{} { return uint16(b[0]) })
+		},
+		func(x interface{}) error {
+			b, ok := x.(uint16)
+			if !ok {
+				return fmt.Errorf("not a []byte]")
+			}
+			if b != uint16(value[0]) {
+				return fmt.Errorf("value %v not %v", b, value)
+			}
+			return nil
+		},
+	)
+
+	// This should panic as too many fnctions
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+	Bin("foo", len(value), func(b []byte) interface{} { return nil }, func(b []byte) interface{} { return nil })
 }
 
 func Test_sub(t *testing.T) {
@@ -382,7 +445,6 @@ func Test_altGaurdsAndDefault(t *testing.T) {
 	} else {
 		t.Fatal("unable to find path2 value, defaultPath not taken")
 	}
-
 }
 
 func Test_iter(t *testing.T) {
@@ -436,5 +498,55 @@ func Test_iter(t *testing.T) {
 	} else {
 		t.Fatal("unable to locate result entry")
 	}
+}
 
+func Test_decode(t *testing.T) {
+	ui16OneWritten := uint16(10)
+	var buffer bytes.Buffer
+	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16OneWritten))
+	ui16TwoWritten := uint16(11)
+	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16TwoWritten))
+	result, err := Decode(Ui16("value"), &buffer)
+	assert.NoError(t, err)
+	v := result["value"]
+	assert.NotNil(t, v)
+	vAsUint16, ok := v.(uint16)
+	assert.True(t, ok)
+	assert.Equal(t, ui16OneWritten, vAsUint16)
+}
+
+func Test_Nest(t *testing.T) {
+	ui16OneWritten := uint16(10)
+	var buffer bytes.Buffer
+	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16OneWritten))
+	ui16TwoWritten := uint16(11)
+	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16TwoWritten))
+	result, err := Decode(Seq(Ui16("value"), Nest("nested", Ui16("value"))), &buffer)
+	assert.NoError(t, err)
+	assert.Equal(t, ui16OneWritten, result["value"])
+	assert.Equal(t, []map[string]interface{}{{"value": ui16TwoWritten}}, result["nested"])
+}
+
+func Test_WarnAndBreak(t *testing.T) {
+	alt := Alt("",
+		Eql("key", uint16(1), Ui16("path1")),
+		AltDefault(WarnAndBreak("path2", "%d", "key")),
+	)
+
+	var buffer bytes.Buffer
+	ui16OneWritten := uint16(10)
+	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16OneWritten))
+	recorder := newDefaultRecorder()
+	recorder.record("key", uint16(1))
+	assert.NoError(t, alt.Decode(&buffer, recorder))
+
+	// hit the path that has warn and break
+	recorder.record("key", uint16(2))
+	e := alt.Decode(&buffer, recorder)
+	assert.Error(t, e)
+	assert.IsType(t, UnwrapError(""), e)
+
+	// now put it in an Sub which should hide the error and just stop cleanly
+	recorder.record("length", uint32(buffer.Len()))
+	assert.NoError(t, Sub("length", alt).Decode(&buffer, recorder))
 }

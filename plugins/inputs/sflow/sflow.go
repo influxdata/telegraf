@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/sflow"
@@ -70,10 +69,10 @@ type SFlowListener struct {
 	TagsAsFields          string `toml:"as_fields"`
 	DNSMultiNameProcessor string `toml:"dns_multi_name_processor"`
 
-	dnsTTLTicker   *time.Ticker
-	ifaceTTLTicker *time.Ticker
-	nameResolver   resolver
-	tlsint.ServerConfig
+	//dnsTTLTicker   *time.Ticker
+	//ifaceTTLTicker *time.Ticker
+	nameResolver resolver
+	//tlsint.ServerConfig
 	parsers.Parser
 	telegraf.Accumulator
 	io.Closer
@@ -127,17 +126,6 @@ func (sl *SFlowListener) Gather(_ telegraf.Accumulator) error {
 
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (sl *SFlowListener) Start(acc telegraf.Accumulator) error {
-
-	if sl.MaxFlowsPerSample == 0 {
-		sl.MaxFlowsPerSample = 1000
-	}
-	if sl.MaxCountersPerSample == 0 {
-		sl.MaxCountersPerSample = 1000
-	}
-	if sl.MaxSamplesPerPacket == 0 {
-		sl.MaxCountersPerSample = 1000
-	}
-
 	sl.Accumulator = acc
 	sl.nameResolver = newAsyncResolver(sl.DNSFQDNResolve, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, sl.SNMPCommunity)
 	sl.nameResolver.start(time.Duration(sl.DNSFQDNCacheTTL)*time.Second, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second)

@@ -11,8 +11,8 @@ import (
 )
 
 func thisFileColonLine() string {
-	_, file, line, _ := runtime.Caller(1)
-	return fmt.Sprintf("%s:%d", file, line)
+	_, _, line, _ := runtime.Caller(1)
+	return fmt.Sprintf("%d", line)
 }
 
 // Line 1383 of SFlow v5 specification

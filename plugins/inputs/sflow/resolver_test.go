@@ -1,6 +1,7 @@
 package sflow
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -120,6 +121,7 @@ func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTag
 	// control via channel reads and writes
 	resolver := newAsyncResolver(true, "", true, "")
 	resolver.start(time.Duration(30)*time.Second, time.Duration(30)*time.Second)
+	defer resolver.stop()
 	asyncResolver, ok := resolver.(*asyncResolver)
 	if !ok {
 		t.Errorf("resolve not an asyncResolver but a %T", asyncResolver)
@@ -171,6 +173,7 @@ func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTag
 			t.Errorf("%s != %s but %s", dstTagName, resolvedValue, aip)
 		}
 	} else {
+		log.Printf("%v", lpIn)
 		t.Error("not ok getting host tag")
 	}
 
@@ -202,13 +205,14 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 	// control via channel reads and writes
 	resolver := newAsyncResolver(true, "", true, "")
 	resolver.start(time.Duration(30)*time.Second, time.Duration(30)*time.Second)
+	defer resolver.stop()
 	asyncResolver, ok := resolver.(*asyncResolver)
 	if !ok {
 		t.Errorf("resolve not an asyncResolver but a %T", asyncResolver)
 	}
 	indexToResolveCh := make(chan string)
 	resolvedNameCh := make(chan string)
-	asyncResolver.ifIndexToIfNameFn = func(id uint64, _ string, _ string, index string) string {
+	asyncResolver.ifIndexToIfNameFn = func(_ string, _ string, index string) string {
 		indexToResolveCh <- index
 		result := <-resolvedNameCh
 		return result
