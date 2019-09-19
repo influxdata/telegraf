@@ -49,6 +49,9 @@ type resolver interface {
 	stop()
 }
 
+// asyncJob is a function type to be placed into a worker channel
+type asyncJob func() error
+
 type asyncResolver struct {
 	dns               bool
 	snmpIfaces        bool
@@ -67,8 +70,10 @@ type asyncResolver struct {
 
 func newAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor string, snmpResolve bool, snmpTTL time.Duration, snmpCommunity string) resolver {
 	log.Printf("I! [inputs.sflow] dns cache = %t", dnsResolve)
+	log.Printf("I! [inputs.sflow] dbs cache ttl = %d\n", dnsTTL)
 	log.Printf("I! [inputs.sflow] snmp cache = %t", snmpResolve)
 	log.Printf("I! [inputs.sflow] snmp community = %s", snmpCommunity)
+	log.Printf("I! [inputs.sflow] snmp cache ttl = %d\n", snmpTTL)
 	return &asyncResolver{
 		dns:               dnsResolve,
 		snmpIfaces:        snmpResolve,
@@ -82,8 +87,6 @@ func newAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor s
 		ifIndexToIfNameFn: ifIndexToIfName,
 	}
 }
-
-type asyncJob func()
 
 func (r *asyncResolver) resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric)) {
 	dnsToResolve := map[string]string{
@@ -102,10 +105,12 @@ func (r *asyncResolver) resolve(m telegraf.Metric, onResolveFn func(resolved tel
 	if dnsCompletelyResolved && ifaceCompletelyResolved {
 		onResolveFn(m)
 	} else {
-		r.fnWorkerChannel <- func() {
+		// place this function into the channel for the async worker to process
+		r.fnWorkerChannel <- func() error {
 			r.resolveAsyncDNS(m, dnsToResolve)
 			r.resolveAsyncIFace(agentIP, m, ifaceToResolve)
 			onResolveFn(m)
+			return nil
 		}
 	}
 }
@@ -172,9 +177,7 @@ func (r *asyncResolver) resolveAsyncIFace(agentIP string, m telegraf.Metric, tag
 }
 
 func (r *asyncResolver) start() {
-	dnsTTLStr := "(never)"
 	if r.dnsTTL != 0 {
-		dnsTTLStr = ""
 		r.dnsTTLTicker = time.NewTicker(r.dnsTTL)
 		go func() {
 			for range r.dnsTTLTicker.C {
@@ -183,9 +186,7 @@ func (r *asyncResolver) start() {
 			}
 		}()
 	}
-	snmpTTLStr := "(never)"
 	if r.snmpTTL != 0 {
-		snmpTTLStr = ""
 		r.ifaceTTLTicker = time.NewTicker(r.snmpTTL)
 		go func() {
 			for range r.ifaceTTLTicker.C {
@@ -195,20 +196,22 @@ func (r *asyncResolver) start() {
 		}()
 	}
 
+	// our worker goroutine just takes a function from the worker channel and executes it
 	r.fnWorkerChannel = make(chan asyncJob)
 	go func() {
 		for {
 			fn := <-r.fnWorkerChannel
-			fn()
+			if fn() != nil {
+				return // terminates the goroutine if the function pulled from the channel returns an error
+			}
 		}
 	}()
-
-	log.Printf("I! [inputs.sflow] dbs cache ttl = %d %s\n", r.dnsTTL, dnsTTLStr)
-	log.Printf("I! [inputs.sflow] snmp cache ttl = %d %s\n", r.snmpTTL, snmpTTLStr)
-
 }
 
 func (r *asyncResolver) stop() {
+	r.fnWorkerChannel <- func() error {
+		return fmt.Errorf("Stop")
+	}
 	if r.dnsTTLTicker != nil {
 		r.dnsTTLTicker.Stop()
 	}
@@ -263,13 +266,12 @@ func (r *asyncResolver) resolveIFace(ifaceIndex string, agentIP string, resolved
 }
 
 func ifIndexToIfName(community string, snmpAgentIP string, ifIndex string) string {
-	// This doesn't make the most of the fact we look up all interface names but only cache/use one of them :-()
 	oid := "1.3.6.1.2.1.31.1.1.1.1"
 	gosnmp.Default.Target = snmpAgentIP
 	if community != "" {
 		gosnmp.Default.Community = community
 	}
-	gosnmp.Default.Timeout = 20 * time.Second
+	gosnmp.Default.Timeout = 2 * time.Second
 	gosnmp.Default.Retries = 5
 	err := gosnmp.Default.Connect()
 	if err != nil {
@@ -277,7 +279,6 @@ func ifIndexToIfName(community string, snmpAgentIP string, ifIndex string) strin
 		return ifIndex
 	}
 	defer gosnmp.Default.Conn.Close()
-	//ifaceNames := make(map[string]string)
 	result, found := ifIndex, false
 	pduNameToFind := fmt.Sprintf(".%s.%s", oid, ifIndex)
 	err = gosnmp.Default.BulkWalk(oid, func(pdu gosnmp.SnmpPDU) error {
@@ -288,8 +289,6 @@ func ifIndexToIfName(community string, snmpAgentIP string, ifIndex string) strin
 				log.Printf("D! [inputs.sflow] snmp bulk walk (%s) found %s as %s\n", snmpAgentIP, pdu.Name, string(b))
 				found = true
 				result = string(b)
-			} else {
-				//log.Printf("D! [inputs.sflow] %d snmp bulk walk (%s) found different %s not %s\n", id, snmpAgentIP, pdu.Name, pduNameToFind)
 			}
 		default:
 		}
@@ -307,6 +306,7 @@ func ifIndexToIfName(community string, snmpAgentIP string, ifIndex string) strin
 	return result
 }
 
+// dnsProcessor is capable of taking a processing instruction to convert an input DNS name to an alternative name
 type dnsProcessor struct {
 	rePattern *regexp.Regexp
 	template  string

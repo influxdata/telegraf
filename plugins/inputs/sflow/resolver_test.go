@@ -313,3 +313,11 @@ func Test_netif_index_in_to_netif_name_in_resolve(t *testing.T) {
 	defer testEmptyLog(t)()
 	ifaceResolveTest(t, "netif_index_in", "7", "eth2", "netif_name_in")
 }
+
+func Test_ipToFqdn(t *testing.T) {
+	ipToFqdn("127.0.0.0")
+}
+
+func Test_ifIndexToIfName(t *testing.T) {
+	ifIndexToIfName("public", "127.0.0.0", "0")
+}
