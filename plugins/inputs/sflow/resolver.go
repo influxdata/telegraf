@@ -44,7 +44,7 @@ func newCache() *cache {
 }
 
 type resolver interface {
-	start(dnsTTL time.Duration, snmpTTL time.Duration)
+	start()
 	resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric))
 	stop()
 }
@@ -61,9 +61,11 @@ type asyncResolver struct {
 	dnsp              *dnsProcessor
 	ipToFqdnFn        func(ip string) string
 	ifIndexToIfNameFn func(community string, snmpAgentIP string, ifIndex string) string
+	snmpTTL           time.Duration
+	dnsTTL            time.Duration
 }
 
-func newAsyncResolver(dnsResolve bool, dnsMultiProcessor string, snmpResolve bool, snmpCommunity string) resolver {
+func newAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor string, snmpResolve bool, snmpTTL time.Duration, snmpCommunity string) resolver {
 	log.Printf("I! [inputs.sflow] dns cache = %t", dnsResolve)
 	log.Printf("I! [inputs.sflow] snmp cache = %t", snmpResolve)
 	log.Printf("I! [inputs.sflow] snmp community = %s", snmpCommunity)
@@ -75,6 +77,8 @@ func newAsyncResolver(dnsResolve bool, dnsMultiProcessor string, snmpResolve boo
 		ifaceCache:        newCache(),
 		dnsp:              newDNSProcessor(dnsMultiProcessor),
 		ipToFqdnFn:        ipToFqdn,
+		snmpTTL:           snmpTTL,
+		dnsTTL:            dnsTTL,
 		ifIndexToIfNameFn: ifIndexToIfName,
 	}
 }
@@ -92,12 +96,12 @@ func (r *asyncResolver) resolve(m telegraf.Metric, onResolveFn func(resolved tel
 		"netif_index_out": "netif_name_out",
 		"netif_index_in":  "netif_name_in",
 	}
+	agentIP, _ := m.GetTag("agent_ip")
 	dnsCompletelyResolved := r.resolveDNSFromCache(m, dnsToResolve)
-	ifaceCompletelyResolved := r.resolveIFaceFromCache(m, ifaceToResolve)
+	ifaceCompletelyResolved := r.resolveIFaceFromCache(agentIP, m, ifaceToResolve)
 	if dnsCompletelyResolved && ifaceCompletelyResolved {
 		onResolveFn(m)
 	} else {
-		agentIP, _ := m.GetTag("agent_ip")
 		r.fnWorkerChannel <- func() {
 			r.resolveAsyncDNS(m, dnsToResolve)
 			r.resolveAsyncIFace(agentIP, m, ifaceToResolve)
@@ -136,7 +140,7 @@ func (r *asyncResolver) resolveAsyncDNS(m telegraf.Metric, tags map[string]strin
 	}
 }
 
-func (r *asyncResolver) resolveIFaceFromCache(m telegraf.Metric, tags map[string]string) bool {
+func (r *asyncResolver) resolveIFaceFromCache(agentIP string, m telegraf.Metric, tags map[string]string) bool {
 	if !r.snmpIfaces {
 		return true
 	}
@@ -144,9 +148,10 @@ func (r *asyncResolver) resolveIFaceFromCache(m telegraf.Metric, tags map[string
 	for srcTag, dstTag := range tags {
 		srcTagValue, ok := m.GetTag(srcTag)
 		if ok {
-			located := r.ifaceCache.get(srcTagValue)
+			keyToLookupInCache := fmt.Sprintf("%s-%s", agentIP, srcTagValue)
+			located := r.ifaceCache.get(keyToLookupInCache)
 			if located != "" {
-				m.AddField(dstTag, located)
+				m.AddTag(dstTag, located)
 			} else {
 				result = false
 			}
@@ -166,11 +171,11 @@ func (r *asyncResolver) resolveAsyncIFace(agentIP string, m telegraf.Metric, tag
 	}
 }
 
-func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
+func (r *asyncResolver) start() {
 	dnsTTLStr := "(never)"
-	if dnsTTL != 0 {
+	if r.dnsTTL != 0 {
 		dnsTTLStr = ""
-		r.dnsTTLTicker = time.NewTicker(dnsTTL)
+		r.dnsTTLTicker = time.NewTicker(r.dnsTTL)
 		go func() {
 			for range r.dnsTTLTicker.C {
 				log.Println("I! [inputs.sflow] clearing DNS cache")
@@ -179,9 +184,9 @@ func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
 		}()
 	}
 	snmpTTLStr := "(never)"
-	if snmpTTL != 0 {
+	if r.snmpTTL != 0 {
 		snmpTTLStr = ""
-		r.ifaceTTLTicker = time.NewTicker(snmpTTL)
+		r.ifaceTTLTicker = time.NewTicker(r.snmpTTL)
 		go func() {
 			for range r.ifaceTTLTicker.C {
 				log.Println("I! [inputs.sflow] clearing IFace cache")
@@ -198,8 +203,8 @@ func (r *asyncResolver) start(dnsTTL time.Duration, snmpTTL time.Duration) {
 		}
 	}()
 
-	log.Printf("I! [inputs.sflow] dbs cache ttl = %d %s\n", dnsTTL, dnsTTLStr)
-	log.Printf("I! [inputs.sflow] snmp cache ttl = %d %s\n", snmpTTL, snmpTTLStr)
+	log.Printf("I! [inputs.sflow] dbs cache ttl = %d %s\n", r.dnsTTL, dnsTTLStr)
+	log.Printf("I! [inputs.sflow] snmp cache ttl = %d %s\n", r.snmpTTL, snmpTTLStr)
 
 }
 
@@ -218,11 +223,11 @@ func (r *asyncResolver) resolveDNS(ipAddress string, resolved func(fqdn string))
 		log.Printf("D! [input.sflow] sync cache lookup %s=>%s", ipAddress, fqdn)
 	} else {
 		name := r.ipToFqdnFn(ipAddress)
+		log.Printf("D! [input.sflow] async resolve of %s=>%s", ipAddress, name)
 		fqdn = r.dnsp.transform(name)
 		if fqdn != name {
 			log.Printf("D! [input.sflow] transformed dns[0] %s=>%s", name, fqdn)
 		}
-		log.Printf("D! [input.sflow] async resolve of %s=>%s", ipAddress, fqdn)
 		r.dnsCache.set(ipAddress, fqdn)
 	}
 	resolved(fqdn)

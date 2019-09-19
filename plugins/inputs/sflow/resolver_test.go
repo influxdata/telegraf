@@ -119,8 +119,8 @@ func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTag
 
 	// Create a resole and replace its lowest level dns lookup function with something we can
 	// control via channel reads and writes
-	resolver := newAsyncResolver(true, "", true, "")
-	resolver.start(time.Duration(30)*time.Second, time.Duration(30)*time.Second)
+	resolver := newAsyncResolver(true, time.Duration(30)*time.Second, "", true, time.Duration(30)*time.Second, "")
+	resolver.start()
 	defer resolver.stop()
 	asyncResolver, ok := resolver.(*asyncResolver)
 	if !ok {
@@ -201,10 +201,10 @@ func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTag
 func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTagName string) {
 	defer testEmptyLog(t)()
 
-	// Create a resole and replace its lowest level dns lookup function with something we can
+	// Create a resole and replace its lowest level iface lookup function with something we can
 	// control via channel reads and writes
-	resolver := newAsyncResolver(true, "", true, "")
-	resolver.start(time.Duration(30)*time.Second, time.Duration(30)*time.Second)
+	resolver := newAsyncResolver(true, time.Duration(30)*time.Second, "", true, time.Duration(30)*time.Second, "")
+	resolver.start()
 	defer resolver.stop()
 	asyncResolver, ok := resolver.(*asyncResolver)
 	if !ok {
@@ -233,7 +233,7 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 		}
 	}()
 
-	// srcTagName of srcTagValue should resolve to resolvedValue via async lookup (go routine / channel) use of our replacement ipToFqdnFn
+	// srcTagName of srcTagValue should resolve to resolvedValue via async lookup (go routine / channel) use of our replacement ifIndexToIfNameFn
 	lpIn, _ := metric.New("metric", map[string]string{srcTagName: srcTagValue, "agent_ip": "192.168.0.1"}, nil, time.Now())
 	metricToResolveCh <- lpIn
 	index := <-indexToResolveCh

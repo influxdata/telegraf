@@ -44,24 +44,24 @@ func testEmptyLog(t *testing.T) func() {
 }
 
 func TestSFLowDescription(t *testing.T) {
-	sl := newSFlowListener()
+	sl := newListener()
 	assert.NotEmpty(t, sl.Description())
 }
 
 func TestSFLowSampleConfig(t *testing.T) {
-	sl := newSFlowListener()
+	sl := newListener()
 	assert.NotEmpty(t, sl.SampleConfig())
 }
 
 func TestSFLowGather(t *testing.T) {
-	sl := newSFlowListener()
+	sl := newListener()
 	assert.Nil(t, sl.Gather(nil))
 }
 
 func TestSFLowPacketToMetrics(t *testing.T) {
 	defer testEmptyLog(t)()
 
-	sl := newSFlowListener()
+	sl := newListener()
 	sl.ServiceAddress = "udp://127.0.0.1:0"
 	sl.ReadBufferSize = internal.Size{Size: 1024}
 	sl.MaxCountersPerSample = 50
@@ -95,7 +95,7 @@ func TestSFLowPacketToMetrics(t *testing.T) {
 // TODO how do we test each of the config params have an impact?
 func TestMapTagsAsFieldsCommaString(t *testing.T) {
 	defer testEmptyLog(t)()
-	sl := newSFlowListener()
+	sl := newListener()
 	sl.ServiceAddress = "udp://127.0.0.1:0"
 	sl.TagsAsFields = "a,b,c"
 	acc := &testutil.Accumulator{}
@@ -119,7 +119,7 @@ func Test_stochasicPacketGeneration(t *testing.T) {
 	level := wlog.WARN
 	wlog.SetLevel(level)
 
-	sl := newSFlowListener()
+	sl := newListener()
 	sl.ServiceAddress = "udp://127.0.0.1:0"
 	sl.ReadBufferSize = internal.Size{Size: 1024}
 	sl.MaxCountersPerSample = 10
@@ -135,7 +135,7 @@ func Test_stochasicPacketGeneration(t *testing.T) {
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	psl, ok := sl.Closer.(*packetSFlowListener)
+	psl, ok := sl.Closer.(*packetListener)
 	if !ok {
 		log.Panicf("sl.Closer is not packetSFlowListener but a %T", sl.Closer)
 	}
