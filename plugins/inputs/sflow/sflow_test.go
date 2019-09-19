@@ -84,7 +84,7 @@ func TestSFLowPacketToMetrics(t *testing.T) {
 
 	client.Write(packetBytes)
 
-	acc.Wait(1) // expecting 1 metric
+	acc.Wait(2) // expecting 1 metric
 	acc.Lock()
 	actual := fmt.Sprintf(("%s"), acc.Metrics)
 	acc.Unlock()
