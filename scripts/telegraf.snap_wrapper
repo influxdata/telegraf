@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Fail if these vars are not present (e.g. from direct wrapper runs)
+: ${SNAP?} ${SNAP_DATA?}
+# Copy only if not existing
+cp -pn $SNAP/etc/telegraf.conf $SNAP_DATA/telegraf.conf
+exec $SNAP/bin/telegraf --config $SNAP_DATA/telegraf.conf
