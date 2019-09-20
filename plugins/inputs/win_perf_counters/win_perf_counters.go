@@ -139,8 +139,7 @@ var sampleConfig = `
 `
 
 type Win_PerfCounters struct {
-	PrintValid bool
-	//deprecated: determined dynamically
+	PrintValid              bool
 	PreVistaSupport         bool
 	UsePerfCounterTime      bool
 	Object                  []perfobject
@@ -247,7 +246,7 @@ func (m *Win_PerfCounters) SampleConfig() string {
 func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
 	var err error
 	var counterHandle PDH_HCOUNTER
-	if !m.query.IsVistaOrNewer() {
+	if m.PreVistaSupport || !m.query.IsVistaOrNewer() {
 		counterHandle, err = m.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
