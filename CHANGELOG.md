@@ -3,6 +3,7 @@
 #### New Inputs
 
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
+- [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
 
 #### Features
 
