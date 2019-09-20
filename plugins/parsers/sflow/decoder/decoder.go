@@ -10,6 +10,12 @@ import (
 	"log"
 )
 
+// ItemDecoder are the base entities of the decoding engine. They decode bytes extracted from an io.Reader and record the results
+// in a Recorder
+type ItemDecoder interface {
+	Decode(r io.Reader, rec Recorder) error
+}
+
 // Decode uses the supplied format, expressed as an ItemDecoder, and decodes the provide bytes according to that format.
 // Should all proceed well then the results is provided via a string->interface{} map which may iteself contains arrays and other sub maps.
 func Decode(format ItemDecoder, bytes *bytes.Buffer) (map[string]interface{}, error) {
@@ -18,70 +24,92 @@ func Decode(format ItemDecoder, bytes *bytes.Buffer) (map[string]interface{}, er
 	return recorder.GetRecording(), e
 }
 
-// Recorder probably going to do away with this, or rather not export it.
+// Recorder provides the interface for ItemDecoders to write entries into
 type Recorder interface {
 	lookup(key string) (interface{}, bool)
 	record(name string, value interface{})
 	nest(key string, size uint32) NestedRecorder
 }
 
+// NestedRecorder is a type of Recoder that can iterate
 type NestedRecorder interface {
 	next() (Recorder, bool)
 }
 
+// WarnAndBreak answers an ItemDecoder that will log a warning and break an iteration
 func WarnAndBreak(fieldName string, msgFmt string, optionalLookupFieldName string) ItemDecoder {
 	return &warnAndBreakDecoder{fieldName, msgFmt, optionalLookupFieldName}
 }
 
-func Eql(k string, v interface{}, d ItemDecoder) *guardItemDecoder {
-	return &guardItemDecoder{k, v, d, false}
+// Eql answers an ItemDecoder that may be used within an Alt ItemDecoder to form a case statement with optional paths
+func Eql(k string, v interface{}, d ItemDecoder) *GuardItemDecoder {
+	return &GuardItemDecoder{k, v, d, false}
 }
 
-func AltDefault(d ItemDecoder) *guardItemDecoder {
-	return &guardItemDecoder{"", nil, d, true}
+// AltDefault answers an ItemDecoder that can be used as the default entry in an Alt ItemDecoder
+func AltDefault(d ItemDecoder) *GuardItemDecoder {
+	return &GuardItemDecoder{"", nil, d, true}
 }
 
-func Ui16(k string, fn ...func(uint16) (string, uint16)) ItemDecoder {
+// UI16 will parse an unsigned 16 bit interger and record the value with the specified k name. Optional a map of functions can be supplied
+// to take the decoded value as an input and provide an alternative key and value to record
+func UI16(k string, fn ...func(uint16) (string, uint16)) ItemDecoder {
 	return &uint16Decoder{k, fn}
 }
 
+// I32 will parse an signed 32 bit interger and record the value with the specified k name. Optional a map of functions can be supplied
+// to take the decoded value as an input and provide an alternative key and value to record
 func I32(k string, fn ...func(int32) (string, int32)) ItemDecoder {
 	return &int32Decoder{k, fn, nil}
 }
 
-func Ui32(k string, fn ...func(uint32) (string, uint32)) ItemDecoder {
+// UI32 will parse an unsigned 32 bit interger and record the value with the specified k name. Optional a map of functions can be supplied
+// to take the decoded value as an input and provide an alternative key and value to record
+func UI32(k string, fn ...func(uint32) (string, uint32)) ItemDecoder {
 	return &uint32Decoder{k, fn, nil}
 }
 
-func Ui32Mapped(k string, toMap map[uint32]string) ItemDecoder {
+// UI32Mapped will parse an unsigned 32 bit interger and record the value with the specified k name having ampped the value to a one
+// of the strings in the proviced map
+func UI32Mapped(k string, toMap map[uint32]string) ItemDecoder {
 	return &uint32Decoder{k, nil, toMap}
 }
 
-func Seq(Decoders ...ItemDecoder) *seqDecoder {
+// Seq answers an ItemDecoder that will sequentially decoded the provided list of ItemDecoders
+func Seq(Decoders ...ItemDecoder) ItemDecoder {
 	return &seqDecoder{Decoders}
 }
 
-func Alt(ident string, Decoders ...*guardItemDecoder) ItemDecoder {
+// Alt answers an ItemDecoder that takes a sequence of GuardItemDecoders, will check them one by one to see
+// which one accepts the path the decode and will decode using that selected Gaurded Decoder
+func Alt(ident string, Decoders ...*GuardItemDecoder) ItemDecoder {
 	return &altDecoder{ident, Decoders}
 }
 
-func Ui64(k string, fn ...func(uint64) (string, uint64)) ItemDecoder {
+// UI64 will parse an unsigned 364 bit interger and record the value with the specified k name. Optional a map of functions can be supplied
+// to take the decoded value as an input and provide an alternative key and value to record
+func UI64(k string, fn ...func(uint64) (string, uint64)) ItemDecoder {
 	return &uint64Decoder{k, fn, nil}
 }
 
-// AsrtMax answer a new asrtMaxDecoder
+// AsrtMax answer an ItemDecoder that doesn't decode any data but will check a previously recorded value to see that it falls
+// below a specified limit
 func AsrtMax(srcKey string, value interface{}, location string, debugInsteadOfWarn bool) ItemDecoder {
 	return &asrtMaxDecoder{srcKey, value, location, debugInsteadOfWarn}
 }
 
+// Asgn answers an ItemDecoder that will take one recorded value and popualte a new one (copy) with the same value
 func Asgn(srcKey string, dstKey string) ItemDecoder {
 	return &asgnDecoder{srcKey, dstKey}
 }
 
+// Sub answers an ItemDecoder that will lookup the specified key as a length of following buffer to extra for encapsulated decoding
 func Sub(k string, d ItemDecoder) ItemDecoder {
 	return &subBuffDecoder{k, []ItemDecoder{d}}
 }
 
+// Bin answers an ItemDecoder that will decode the specified number of bytes. Optionally the bytes may be put through a single mapping
+// function to convert them to another type
 func Bin(k string, l int, fn ...func([]byte) interface{}) ItemDecoder {
 	if len(fn) > 0 {
 		if len(fn) > 1 {
@@ -93,12 +121,91 @@ func Bin(k string, l int, fn ...func([]byte) interface{}) ItemDecoder {
 	}
 }
 
+// Nest answers an ItenDecoder that will nest the subsequent decoder within a named sub-tree
 func Nest(k string, d ItemDecoder) ItemDecoder {
 	return &nestItemDecoder{k, d}
 }
 
-func Iter(n string, k string, d ItemDecoder) *iterItemDecoder {
-	return &iterItemDecoder{n, k, d}
+// Iter answers an ItemDecoder that will iterate number of times recored in the k value and record the entries against an array with name n in the parent
+func Iter(n string, k string, d ItemDecoder) *IterItemDecoder {
+	return &IterItemDecoder{n, k, d}
+}
+
+// UnwrapError is a type of error that is used by the WarnAndBreak to trigger a break in iteration of the decode
+type UnwrapError string
+
+// GuardItemDecoder is a type of ItemDecoder that is gaurded by a condition and forms part of the Alt ItemDecoder
+type GuardItemDecoder struct {
+	key            string
+	equals         interface{}
+	Decoder        ItemDecoder
+	ifAllElseFails bool
+}
+
+// Decode is the ItemDecoder implementation for GuardItemDecoder
+func (d *GuardItemDecoder) Decode(r io.Reader, rec Recorder) error {
+	return d.Decoder.Decode(r, rec)
+}
+
+// IterItemDecoder is an ItemDecoder that will iterate a given number of times
+type IterItemDecoder struct {
+	name        string
+	key         string
+	ItemDecoder ItemDecoder
+}
+
+// Decode is ItemDecoder implementation for IterItemDecoder
+func (d *IterItemDecoder) Decode(r io.Reader, rec Recorder) error {
+	key := d.key
+	v, ok := rec.lookup(key)
+	if ok {
+		switch t := v.(type) {
+		case uint32:
+			nestRec := rec.nest(d.name, t)
+			for i := 0; uint32(i) < t; i++ {
+				nestedRec, _ := nestRec.next()
+				if e := d.ItemDecoder.Decode(r, nestedRec); e != nil {
+					return e
+				}
+			}
+			return nil
+		default:
+			return fmt.Errorf("unhandled type %T at name(%s) key(%s)", v, d.name, d.key)
+		}
+	}
+	return fmt.Errorf("unable to find key %s", key)
+}
+
+func (d *GuardItemDecoder) accept(rec Recorder) (bool, error) {
+	v, ok := rec.lookup(d.key)
+	if ok {
+		switch t := v.(type) {
+		case uint16:
+			if t == d.equals {
+				return true, nil
+			}
+		case uint32:
+			if t == d.equals {
+				return true, nil
+			}
+		case *uint32:
+			if *t == d.equals {
+				return true, nil
+			}
+		case string:
+			if t == d.equals {
+				return true, nil
+			}
+		default:
+			return false, fmt.Errorf("unhandled type %T", v)
+		}
+	} else if !d.ifAllElseFails {
+		fmt.Println("couldn't find", d.key)
+	}
+	if d.ifAllElseFails {
+		return true, nil
+	}
+	return false, nil
 }
 
 type defaultRecorder struct {
@@ -168,12 +275,12 @@ func (d *seqDecoder) Decode(r io.Reader, rec Recorder) error {
 
 type altDecoder struct {
 	ident    string
-	Decoders []*guardItemDecoder
+	Decoders []*GuardItemDecoder
 }
 
 func (d *altDecoder) Decode(r io.Reader, rec Recorder) error {
 	for _, cd := range d.Decoders {
-		a, e := cd.Accept(rec)
+		a, e := cd.accept(rec)
 		if e != nil {
 			return e
 		}
@@ -183,52 +290,6 @@ func (d *altDecoder) Decode(r io.Reader, rec Recorder) error {
 	}
 	return fmt.Errorf("Non of the alternatives accept %s", d.ident)
 }
-
-type guardItemDecoder struct {
-	key            string
-	equals         interface{}
-	Decoder        ItemDecoder
-	ifAllElseFails bool
-}
-
-func (d *guardItemDecoder) Decode(r io.Reader, rec Recorder) error {
-	return d.Decoder.Decode(r, rec)
-}
-
-func (d *guardItemDecoder) Accept(rec Recorder) (bool, error) {
-	v, ok := rec.lookup(d.key)
-	if ok {
-		switch t := v.(type) {
-		case uint16:
-			if t == d.equals {
-				return true, nil
-			}
-		case uint32:
-			if t == d.equals {
-				return true, nil
-			}
-		case *uint32:
-			if *t == d.equals {
-				return true, nil
-			}
-		case string:
-			if t == d.equals {
-				return true, nil
-			}
-		default:
-			return false, fmt.Errorf("unhandled type %T", v)
-		}
-	} else if !d.ifAllElseFails {
-		fmt.Println("couldn't find", d.key)
-	}
-	if d.ifAllElseFails {
-		return true, nil
-	}
-	return false, nil
-}
-
-// UnwrapError
-type UnwrapError string
 
 func (e UnwrapError) Error() string {
 	return string(e)
@@ -247,37 +308,6 @@ func (d *warnAndBreakDecoder) Decode(r io.Reader, rec Recorder) error {
 	}
 	rec.record(d.fieldName, fmt.Sprintf(d.msgFmt, v))
 	return UnwrapError(fmt.Sprintf(d.msgFmt, v))
-}
-
-type iterItemDecoder struct {
-	name        string
-	key         string
-	ItemDecoder ItemDecoder
-}
-
-func (d *iterItemDecoder) Decode(r io.Reader, rec Recorder) error {
-	key := d.key
-	v, ok := rec.lookup(key)
-	if ok {
-		switch t := v.(type) {
-		case uint32:
-			nestRec := rec.nest(d.name, t)
-			for i := 0; uint32(i) < t; i++ {
-				nestedRec, _ := nestRec.next()
-				if e := d.ItemDecoder.Decode(r, nestedRec); e != nil {
-					return e
-				}
-			}
-			return nil
-		default:
-			return fmt.Errorf("unhandled type %T at name(%s) key(%s)", v, d.name, d.key)
-		}
-	}
-	return fmt.Errorf("unable to find key %s", key)
-}
-
-type ItemDecoder interface {
-	Decode(r io.Reader, rec Recorder) error
 }
 
 type nestItemDecoder struct {

@@ -11,61 +11,55 @@ Within Flow Samples, Ethernet samples with IPv4 o IPv6 UDP or TCP headers are pa
 | Name | Description |
 |---|---|
 | agent_id | IP address of the agent that obtained the sflow sample and sent it to this collector | 
-| host | If DNS name resolved is enabled then the host name associated with the agent_id otherwise the agent_id IP address as is|
-| source_id_type| NOT DONE (**I don't have this translated**|)
-| source_id_index| |
-| source_id_name | |
-| netif_index_in | |
-| netif_name_in | |
-| netif_index_out | |
-| netif_name_out | |
-| sample_direction | |
-| header_protocol | |
-| ether_type | |
-| src_ip | |
-| src_host | |
-| src_port | |
-| src_port_name | |
-| src_mac | |
-| src_vlan | |
-| src_priority | 
-| src_mask_len | |
-| dst_ip
-| dst_host
-| dst_port
-| dst_port_name
-| dst_mac
-| dst_vlan
-| dst_priority
-| dst_mask_len
-| next_hop
-| ip_version
-| ip_protocol
-| ip_dscp
-| ip_ecn
-| tcp_urgent_pointer
+| source_id_type| Decoded from source_id_type field of flow_sample or flow_sample_expanded structures
+| source_id_index| Decoded from source_id_index field of flow_sample or flow_sample_expanded structures|
+| netif_index_in | Decoded from value (input) field of flow_sample or flow_sample_expanded structures|
+| netif_index_out | Decoded from value (output) field of flow_sample or flow_sample_expanded structures|
+| sample_direction | Derived from source_id_index, netif_index_in and netif_index_out|
+| header_protocol | Decoded from header_protocol field of sampled_header structures|
+| ether_type | Decoded from eth_type field of an ETHERNET-ISO88023 header|
+| src_ip | Decoded from source_ipaddr field of IPv4 or IPv6 structures|
+| src_port | Decoded from src_port field of TCP or UDP structures|
+| src_port_name | Derived from src_port|
+| src_mac | Decoded from source_mac_addr field of an ETHERNET-ISO88023 header|
+| src_vlan | Decoded from src_vlan field of extended_switch structure|
+| src_priority | Decoded from src_priority field of extended_switch structure |
+| src_mask_len | Decoded from src_mask_len field of extended_router structure|
+| dst_ip | Decoded from destination_ipaddr field of IPv4 or IPv6 structures
+| dst_port | Decoded from dst_port field of TCP or UDP structures
+| dst_port_name | Derived from dst_port
+| dst_mac | Decoded from destination_mac_addr field of an ETHERNET-ISO88023 header
+| dst_vlan | Decoded from dst_vlan field of extended_switch structure
+| dst_priority | Decoded from dst_priority field of extended_switch structure
+| dst_mask_len | Decoded from dst_mask_len field of extended_router structure
+| next_hop | Decoded from next_hop field of extended_router structure
+| ip_version | Decoded from ip_ver field of IPv4 or IPv6 structures
+| ip_protocol | Decoded from ip_protocol field of IPv4 or IPv6 structures
+| ip_dscp | Decoded from ip_dscp field of IPv4 or IPv6 structures
+| ip_ecn | Decoded from ecn field of IPv4 or IPv6 structures
+| tcp_urgent_pointer | Decoded from urgent_pointer field of TCP structure
 
 ## Fields
 | Name | Type | Description |
 |---|---|---|
-|  bytes |  Integer |
-|  drops |  Integer |
-|  packets | Integer |
-| frame_length | Integer |
-| header_size | Integer |
-| ip_fragment_offset | Integer |
-| ip_header_length | Integer |
-| ip_total_length | Integer |
-| ip_ttl | Integer |
-| tcp_header_length | Integer
-| tcp_window_size | Integer
-| udp_length | Integer
-| ip_flags | Integer
+|  bytes |  Integer | Derived from the product of frame_length and packets
+|  drops |  Integer |Decoded from drops field of flow_sample or flow_sample_expanded structures
+|  packets | Integer |Decoded from sampling_rate field of flow_sample or flow_sample_expanded structures
+| frame_length | Integer | Decoded from frame_length field of sampled_header structures
+| header_size | Integer | Decoded from header_size field of sampled_header structures
+| ip_fragment_offset | Integer | Decoded from ip_ver field of IPv4 structures
+| ip_header_length | Integer | Decoded from ip_ver field of IPv4 structures
+| ip_total_length | Integer | Decoded from ip_total_len field of IPv4 structures
+| ip_ttl | Integer | Decoded from ip_ttl field of IPv4 structures or ip_hop_limit field IPv6 structures
+| tcp_header_length | Integer | Decoded from size field of TCP structure. This value is specified in 32-bit words. It must be multiplied by 4 to produce a value in bytes.
+| tcp_window_size | Integer | Decoded from window_size field of TCP structure
+| udp_length | Integer | 	Decoded from length field of UDP structures
+| ip_flags | Integer | Decoded from ip_ver field of IPv4 structures
 | tcp_flags | Integer | TCP flags of TCP IP header (IPv4 or IPv6)
 
 # Implementation Approach
-This SFlow parser has been developed using a generic packet processing engine making it easy to alter butis not the most efficient in memory or cpu utilisation due to heavy use of map[string]interface for recording generic object tree.
+This SFlow parser has been developed using a generic packet processing engine making it easy to alter, but is not the most efficient in memory or cpu utilisation due to heavy use of map[string]interface for recording generic object trees.
 
-In the future it is expected that a move to a GoLand struture based parser or possible even a zero copy approach is adopted. The primary objective at this stage was to build a parser that we easy to understand and easy to modify prior to optimization.
+In the future it is expected that a move to a GoLang struture based parser or possibly even a zero copy approach is adopted. The primary objective at this stage was to build a parser that we easy to understand and easy to modify prior to optimization.
 
 

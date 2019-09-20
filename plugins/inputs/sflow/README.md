@@ -10,52 +10,43 @@ The following configuration options are availabe:
 | Name | Description 
 |---|---|
 | service_address| URL to listen on expressed as UDP (IPv4 or 6) OP address and port number 
+| | Example: ```service_address = "udp://:6343"```
+| read_buffer_size | Maximum socket buffer size (in bytes when no unit specified). Once the buffer fills up, metrics will start dropping. Defaults to the OS default.
+||Example = ```read_buffer_size"64KiB"``` |
 | dns_multi_name_processor | An optional regexp and template to use to transform a DNS resolve name. Particularily useful when DNS resolves an IP address to more than one name, and they alternative in order when queried. Using this processor command it is possible to tranform the name into something common irrespect of which entry is first - if the names conform to a regular naming schema. Note TOML [escape sequences](https://github.com/toml-lang/toml) may be required.
-||For example, ````s/(.*)(?:-net[0-9])/$1```` will strip ```-net<n>``` from the host name thereby converting, as an example, ```hostx-net1``` and ```hostx-net2``` both to ```hostx```
-|dns_name_resolve|dfsdf|
-
-
-
-```
-  ## URL to listen on
-  # service_address = "udp://:6343"
-  # service_address = "udp4://:6343"
-  # service_address = "udp6://:6343"
-  
-  ## Maximum socket buffer size (in bytes when no unit specified).
-  ## Once the buffer fills up, metrics will start dropping.
-  ## Defaults to the OS default.
-  # read_buffer_size = "64KiB"
-
-  ## The SNMP community string to use for access SNMP on the agents in order to resolve interface names
-  # snmp_community = "public"
-
-  ## Whether interface indexes should be turned into interface names via use of snmp
-  # snmp_iface_resolve = false
-
-  ## The length of time the interface names are cached
-  # snmp_iface_cache_ttl = 3600
-
-  ## Should IP addresses be resolved to host names through DNS lookup
-  # dns_name_resolve = false
-
-  ## The length of time the FWDNs are cached
-  # dns_name_cache_ttl = 3600
-
-  ##
-  # max_flows_per_sample = 10
-  # max_counters_per_sample = 10
-  # max_samples_per_packet = 10
-
-```
+||Example: ````s/(.*)(?:-net[0-9])/$1```` will strip ```-net<n>``` from the host name thereby converting, as an example, ```hostx-net1``` and ```hostx-net2``` both to ```hostx```
+|dns_fqdn_resolve|Determines whether IP addresses should be resolved to Host names.
+||Example: ```dns_fqdn_resolve = true```
+|dns_fqdn_cache_ttl|The time to live for entries in the DNS name cache expressed in seconds. Default is 0 which is infinite
+||Example: ```dns_fwdn_cache_ttl = 3600```
+|snmp_iface_resolve = false|Determines whether interface indexes should be looked up using SNMP to provide the natural show name|
+||Example: ```snmp_iface_resolve = true```
+|snmp_community|The SNMP community string to use for access SNMP on the agents in order to resolve interface names
+||Example: ```snmp_community = "public"```
+|snmp_iface_cache_ttl| The time to live for entries in the SNMP Interface cache expressed in seconds. Default is 0 which is infinite.
+||Example: ```snmp_iface_cache_ttl = 3600```
+|as_fields| A comma separated list of _natural_ tags that are to be recorded as fields. This can help manage cardinality. Any of the tags listed in the [SFlow Parser](../../parsers/sflow/README.md) configuration can be moved to fields
+||Example: ```as_fields = "src_port,src_port_name"```
 
 ## DNS Name and SNMP Interface name resolution and caching
 
-Raw sflow packets, and their samples headers, communicate IP addresses and Interface identifiers, neither of which are useful to humans.
+Raw SFlow packets, and their samples headers, communicate IP addresses and Interface identifiers, neither of which are useful to humans.
 
 The sflow plugin can be configured to attempt to resolve IP addresses to host names via DNS and interface identifiers to interface short names via SNMP agent interaction.
 
 The resolved names, or in the case of a resolution error the ip/id will be used as 'the' name, are configurably cached for a period of time to avoid continual lookups.
+
+| Source IP Tag | Resolved Host Tag 
+|---|---|
+|agent_ip|host
+|src_ip|src_host
+|dst_ip|dst_host
+
+| Source IFace Index Tag | Resolved IFace Name Tag 
+|---|---|
+|source_id_index|source_id_name
+|netif_index_out|netif_name_out
+|netif_index_in|netif_name_in
 
 ### Multipe DNS Name resolution & processing
 
@@ -63,15 +54,10 @@ In some cases DNS servers may maintain multiple entries for the same IP address 
 
 In order to provide some stability to the names recorded against flow records, it is possible to provide a regular expression and template transformation that should be capable of converting multiple names to a single common name where a mathodical naming scheme has been used.
 
-For example:
-
+Example: ````s/(.*)(?:-net[0-9])/$1```` will strip ```-net<n>``` from the host name thereby converting, as an example, ```hostx-net1``` and ```hostx-net2``` both to ```hostx```
 
 # Schema
 
 The parsing of SFlow packets is handled by the SFlow Parser and the schema is described [here](../../parsers/sflow/README.md).
 
 At a high level, individual Flow Samples within the V5 Flow Packet are translated to individual Metric objects.
-
-## Tags (optionally as Fields)
-
-The following items are naturally recorded as tags by the sflow plugin. However, using the ```as_fields``` configuration parameter it is possible to have any of these recorded as fields instead

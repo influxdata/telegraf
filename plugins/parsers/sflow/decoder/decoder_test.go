@@ -42,7 +42,7 @@ func Test_ui16(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return Ui16(n) },
+		func(n string) ItemDecoder { return UI16(n) },
 		func(x interface{}) error {
 			xui16, ok := x.(uint16)
 			if !ok {
@@ -68,7 +68,7 @@ func Test_ui32(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return Ui32(n) },
+		func(n string) ItemDecoder { return UI32(n) },
 		func(x interface{}) error {
 			xui32, ok := x.(uint32)
 			if !ok {
@@ -94,7 +94,7 @@ func Test_ui32Mapped(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return Ui32Mapped(n, map[uint32]string{1001: "1001"}) },
+		func(n string) ItemDecoder { return UI32Mapped(n, map[uint32]string{1001: "1001"}) },
 		func(x interface{}) error {
 			xstr, ok := x.(string)
 			if !ok {
@@ -147,7 +147,7 @@ func Test_ui64(t *testing.T) {
 		t,
 		&buffer,
 		"dstValue",
-		func(n string) ItemDecoder { return Ui64(n) },
+		func(n string) ItemDecoder { return UI64(n) },
 		func(x interface{}) error {
 			xui64, ok := x.(uint64)
 			if !ok {
@@ -339,8 +339,8 @@ func Test_seq(t *testing.T) {
 	}
 	recorder := newDefaultRecorder()
 	decoder := Seq(
-		Ui16("ui16-1"),
-		Ui16("ui16-2"),
+		UI16("ui16-1"),
+		UI16("ui16-2"),
 	)
 	err := decoder.Decode(&buffer, recorder)
 	if err != nil {
@@ -372,9 +372,9 @@ func Test_seq(t *testing.T) {
 
 func Test_altGaurdsAndDefault(t *testing.T) {
 	decoder := Alt("",
-		Eql("key", uint16(1), Ui16("path1")),
-		Eql("key", uint16(2), Ui16("path2")),
-		AltDefault(Ui16("defaultPath")),
+		Eql("key", uint16(1), UI16("path1")),
+		Eql("key", uint16(2), UI16("path2")),
+		AltDefault(UI16("defaultPath")),
 	)
 
 	// path1 bytes
@@ -460,7 +460,7 @@ func Test_iter(t *testing.T) {
 	recorder := newDefaultRecorder()
 	recorder.record("count", uint32(2))
 
-	decoder := Iter("result", "count", Ui16("value"))
+	decoder := Iter("result", "count", UI16("value"))
 	if err := decoder.Decode(&buffer, recorder); err != nil {
 		t.Error("error", err)
 	}
@@ -506,7 +506,7 @@ func Test_decode(t *testing.T) {
 	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16OneWritten))
 	ui16TwoWritten := uint16(11)
 	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16TwoWritten))
-	result, err := Decode(Ui16("value"), &buffer)
+	result, err := Decode(UI16("value"), &buffer)
 	assert.NoError(t, err)
 	v := result["value"]
 	assert.NotNil(t, v)
@@ -521,7 +521,7 @@ func Test_Nest(t *testing.T) {
 	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16OneWritten))
 	ui16TwoWritten := uint16(11)
 	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &ui16TwoWritten))
-	result, err := Decode(Seq(Ui16("value"), Nest("nested", Ui16("value"))), &buffer)
+	result, err := Decode(Seq(UI16("value"), Nest("nested", UI16("value"))), &buffer)
 	assert.NoError(t, err)
 	assert.Equal(t, ui16OneWritten, result["value"])
 	assert.Equal(t, []map[string]interface{}{{"value": ui16TwoWritten}}, result["nested"])
@@ -529,7 +529,7 @@ func Test_Nest(t *testing.T) {
 
 func Test_WarnAndBreak(t *testing.T) {
 	alt := Alt("",
-		Eql("key", uint16(1), Ui16("path1")),
+		Eql("key", uint16(1), UI16("path1")),
 		AltDefault(WarnAndBreak("path2", "%d", "key")),
 	)
 

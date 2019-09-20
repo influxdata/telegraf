@@ -118,65 +118,65 @@ func V5Format(options V5FormatOptions) d.ItemDecoder {
 	ipv6Fn := func(key string) d.ItemDecoder { return d.Bin(key, 16) }
 
 	ethFrameFlowData := d.Seq( // 1992
-		d.Ui32("length"),
+		d.UI32("length"),
 		d.Bin("srcMac", 6),
 		d.Bin("dstMac", 6),
-		d.Ui32("type"),
+		d.UI32("type"),
 	)
 
 	packetIPV4FlowData := d.Seq( // 2004
-		d.Ui32("length"),
-		d.Ui32("protocol"),
+		d.UI32("length"),
+		d.UI32("protocol"),
 		ipv4Fn("srcIP"),
 		ipv4Fn("dstIP"),
-		d.Ui32("srcPort"),
-		d.Ui32("dstPort"),
-		d.Ui32("tcpFlags"),
-		d.Ui32("tos"),
+		d.UI32("srcPort"),
+		d.UI32("dstPort"),
+		d.UI32("tcpFlags"),
+		d.UI32("tos"),
 	)
 
 	packetIPV6FlowData := d.Seq( // 2027
-		d.Ui32("length"),
-		d.Ui32("protocol"),
+		d.UI32("length"),
+		d.UI32("protocol"),
 		ipv6Fn("srcIP"),
 		ipv6Fn("dstIP"),
-		d.Ui32("srcPort"),
-		d.Ui32("dstPort"),
-		d.Ui32("tcpFlags"),
-		d.Ui32("priority"),
+		d.UI32("srcPort"),
+		d.UI32("dstPort"),
+		d.UI32("tcpFlags"),
+		d.UI32("priority"),
 	)
 
 	extendedSwitchFlowData := d.Seq( //2059
-		d.Ui32("srcVlan"),
-		d.Ui32("srcPriority"),
-		d.Ui32("dstVlan"),
-		d.Ui32("dstPriority"),
+		d.UI32("srcVlan"),
+		d.UI32("srcPriority"),
+		d.UI32("dstVlan"),
+		d.UI32("dstPriority"),
 	)
 
 	extendedRouterFlowData := d.Seq( //  2083
-		d.Ui32Mapped("nextHop.addressType", ipvMap),
+		d.UI32Mapped("nextHop.addressType", ipvMap),
 		d.Alt("nextHop.addressType",
 			d.Eql("nextHop.addressType", "IPV4", d.Bin("nextHop.address", 4)),
 			d.Eql("nextHop.addressType", "IPV6", d.Bin("nextHop.address", 16)),
 			// TO DO ALTERNATIVE
 		),
-		d.Ui32("srcMaskLen"),
-		d.Ui32("dstMaskLen"),
+		d.UI32("srcMaskLen"),
+		d.UI32("dstMaskLen"),
 	)
 
 	extendedGatewayFlowData := d.Seq( // 2104
-		d.Ui32Mapped("nextHop.addressType", ipvMap),
+		d.UI32Mapped("nextHop.addressType", ipvMap),
 		d.Alt("nextHop.addressType",
 			d.Eql("nextHop.addressType", "IPV4", d.Bin("nextHop.address", 4)),
 			d.Eql("nextHop.addressType", "IPV6", d.Bin("nextHop.address", 16)),
 		),
-		d.Ui32("as"),
-		d.Ui32("srcAs"),
-		d.Ui32("srcPeerAs"),
+		d.UI32("as"),
+		d.UI32("srcAs"),
+		d.UI32("srcPeerAs"),
 		d.WarnAndBreak("WARN", "unimplemented support for extendedGateway", ""),
 		// 2112 ui32 array
 		// 2113 ui32 communites array
-		d.Ui32("localpref"),
+		d.UI32("localpref"),
 	)
 
 	extendedUserFlowData := d.Seq( // 2124
@@ -224,10 +224,10 @@ func V5Format(options V5FormatOptions) d.ItemDecoder {
 	}
 
 	rawPacketHeaderFlowData := d.Seq(
-		d.Ui32Mapped("protocol", headerProtocolMap), // 1942 of type headerProtocolMap
-		d.Ui32("frameLength"),
-		d.Ui32("stripped"),
-		d.Ui32("header.length"),
+		d.UI32Mapped("protocol", headerProtocolMap), // 1942 of type headerProtocolMap
+		d.UI32("frameLength"),
+		d.UI32("stripped"),
+		d.UI32("header.length"),
 		d.AsrtMax("header.length", options.MaxFlowHeaderLength, thisFileColonLine(), false),
 		d.Sub("header.length", headerDecoder),
 	)
@@ -252,136 +252,136 @@ func V5Format(options V5FormatOptions) d.ItemDecoder {
 	)
 
 	flowRecord := d.Seq(
-		d.Ui32Mapped("flowFormat", formatMap), // 1599
-		d.Ui32("flowData.length"),
+		d.UI32Mapped("flowFormat", formatMap), // 1599
+		d.UI32("flowData.length"),
 		d.AsrtMax("flowData.length", options.MaxFlowHeaderLength, thisFileColonLine(), false),
 		d.Sub("flowData.length", flowData), // 1600 // TODO, put a max on this
 	)
 
 	flowSample := d.Seq( // 1617
-		d.Ui32("sequenceNumber"),
-		d.Ui32("", sourceIDTypeFn, sourceIDValueFn), // "sourceId") 1623
+		d.UI32("sequenceNumber"),
+		d.UI32("", sourceIDTypeFn, sourceIDValueFn), // "sourceId") 1623
 		// 1465 mist significant byte 0=ifIndex, 1=smonVlanDaaSource, 2=entPhysicalEntry
 		// lower 3 bytes contain the 'relevant index value'
 		// which is consistent with what f1 and f2 do
-		d.Ui32("samplingRate"),
-		d.Ui32("samplePool"),
-		d.Ui32("drops"),
-		d.Ui32("", inputFormatFn, inputValueFn),   // 1652
-		d.Ui32("", outputFormatFn, outputValueFn), // 1653
-		d.Ui32("flowRecords.length"),              // 1655
+		d.UI32("samplingRate"),
+		d.UI32("samplePool"),
+		d.UI32("drops"),
+		d.UI32("", inputFormatFn, inputValueFn),   // 1652
+		d.UI32("", outputFormatFn, outputValueFn), // 1653
+		d.UI32("flowRecords.length"),              // 1655
 		d.AsrtMax("flowRecords.length", options.MaxFlowsPerSample, thisFileColonLine(), true),
 		d.Iter("flowRecords", "flowRecords.length", flowRecord), //1655
 	)
 
 	flowSampleExpanded := d.Seq(
-		d.Ui32("sequenceNumber"),
+		d.UI32("sequenceNumber"),
 		// sflow data source expanded 1707
-		d.Ui32("sourceIdType"),  // sFlowDataSource type
-		d.Ui32("sourceIdValue"), // sFlowDataSource index
-		d.Ui32("samplingRate"),
-		d.Ui32("samplePool"),
-		d.Ui32("drops"),
-		d.Ui32("inputFormat"),        // 1728
-		d.Ui32("inputValue"),         // 1728
-		d.Ui32("outputFormat"),       // 1729
-		d.Ui32("outputValue"),        // 1729
-		d.Ui32("flowRecords.length"), // 1731
+		d.UI32("sourceIdType"),  // sFlowDataSource type
+		d.UI32("sourceIdValue"), // sFlowDataSource index
+		d.UI32("samplingRate"),
+		d.UI32("samplePool"),
+		d.UI32("drops"),
+		d.UI32("inputFormat"),        // 1728
+		d.UI32("inputValue"),         // 1728
+		d.UI32("outputFormat"),       // 1729
+		d.UI32("outputValue"),        // 1729
+		d.UI32("flowRecords.length"), // 1731
 		d.AsrtMax("flowRecords.length", options.MaxFlowsPerSample, thisFileColonLine(), true),
 		d.Iter("flowRecords", "flowRecords.length", flowRecord), //1731
 	)
 
 	ifCounter := d.Seq( // 2267
-		d.Ui32("ifIndex"),
-		d.Ui32("ifType"),
-		d.Ui64("ifSpeed"),
-		d.Ui32("ifDirection"),
-		d.Ui32("ifStatus"),
-		d.Ui64("ifInOctets"),
-		d.Ui32("ifInUcastPkts"),
-		d.Ui32("ifInMulticastPkts"),
-		d.Ui32("ifInBroadcastPkts"),
-		d.Ui32("ifInDiscards"),
-		d.Ui32("ifInErrors"),
-		d.Ui32("ifInUnknownProtos"),
-		d.Ui64("ifOutOctets"),
-		d.Ui32("ifOutUcastPkts"),
-		d.Ui32("ifOutMulticastPkts"),
-		d.Ui32("ifOutBroadcastPkts"),
-		d.Ui32("ifOutDiscards"),
-		d.Ui32("ifOutErrors"),
-		d.Ui32("ifPromiscuousMode"),
+		d.UI32("ifIndex"),
+		d.UI32("ifType"),
+		d.UI64("ifSpeed"),
+		d.UI32("ifDirection"),
+		d.UI32("ifStatus"),
+		d.UI64("ifInOctets"),
+		d.UI32("ifInUcastPkts"),
+		d.UI32("ifInMulticastPkts"),
+		d.UI32("ifInBroadcastPkts"),
+		d.UI32("ifInDiscards"),
+		d.UI32("ifInErrors"),
+		d.UI32("ifInUnknownProtos"),
+		d.UI64("ifOutOctets"),
+		d.UI32("ifOutUcastPkts"),
+		d.UI32("ifOutMulticastPkts"),
+		d.UI32("ifOutBroadcastPkts"),
+		d.UI32("ifOutDiscards"),
+		d.UI32("ifOutErrors"),
+		d.UI32("ifPromiscuousMode"),
 	)
 
 	ethernetCounter := d.Seq( // 2306
-		d.Ui32("dot3StatsAlignmentErrors"),
-		d.Ui32("dot3StatsFCSErrors"),
-		d.Ui32("dot3StatsSingleCollisionFrames"),
-		d.Ui32("dot3StatsMultipleCollisionFrames"),
-		d.Ui32("dot3StatsSQETestErrors"),
-		d.Ui32("dot3StatsDeferredTransmissions"),
-		d.Ui32("dot3StatsLateCollisions"),
-		d.Ui32("dot3StatsExcessiveCollisions"),
-		d.Ui32("dot3StatsInternalMacTransmitErrors"),
-		d.Ui32("dot3StatsCarrierSenseErrors"),
-		d.Ui32("dot3StatsFrameTooLongs"),
-		d.Ui32("dot3StatsInternalMacReceiveErrors"),
-		d.Ui32("dot3StatsSymbolErrors"),
+		d.UI32("dot3StatsAlignmentErrors"),
+		d.UI32("dot3StatsFCSErrors"),
+		d.UI32("dot3StatsSingleCollisionFrames"),
+		d.UI32("dot3StatsMultipleCollisionFrames"),
+		d.UI32("dot3StatsSQETestErrors"),
+		d.UI32("dot3StatsDeferredTransmissions"),
+		d.UI32("dot3StatsLateCollisions"),
+		d.UI32("dot3StatsExcessiveCollisions"),
+		d.UI32("dot3StatsInternalMacTransmitErrors"),
+		d.UI32("dot3StatsCarrierSenseErrors"),
+		d.UI32("dot3StatsFrameTooLongs"),
+		d.UI32("dot3StatsInternalMacReceiveErrors"),
+		d.UI32("dot3StatsSymbolErrors"),
 	)
 
 	tokenringCounter := d.Seq( // 2325
-		d.Ui32("dot5StatsLineErrors"),
-		d.Ui32("dot5StatsBurstErrors"),
-		d.Ui32("dot5StatsACErrors"),
-		d.Ui32("dot5StatsAbortTransErrors"),
-		d.Ui32("dot5StatsInternalErrors"),
-		d.Ui32("dot5StatsLostFrameErrors"),
-		d.Ui32("dot5StatsReceiveCongestions"),
-		d.Ui32("dot5StatsFrameCopiedErrors"),
-		d.Ui32("dot5StatsTokenErrors"),
-		d.Ui32("dot5StatsSoftErrors"),
-		d.Ui32("dot5StatsHardErrors"),
-		d.Ui32("dot5StatsSignalLoss"),
-		d.Ui32("dot5StatsTransmitBeacons"),
-		d.Ui32("dot5StatsRecoverys"),
-		d.Ui32("dot5StatsLobeWires"),
-		d.Ui32("dot5StatsRemoves"),
-		d.Ui32("dot5StatsSingles"),
-		d.Ui32("dot5StatsFreqErrors"),
+		d.UI32("dot5StatsLineErrors"),
+		d.UI32("dot5StatsBurstErrors"),
+		d.UI32("dot5StatsACErrors"),
+		d.UI32("dot5StatsAbortTransErrors"),
+		d.UI32("dot5StatsInternalErrors"),
+		d.UI32("dot5StatsLostFrameErrors"),
+		d.UI32("dot5StatsReceiveCongestions"),
+		d.UI32("dot5StatsFrameCopiedErrors"),
+		d.UI32("dot5StatsTokenErrors"),
+		d.UI32("dot5StatsSoftErrors"),
+		d.UI32("dot5StatsHardErrors"),
+		d.UI32("dot5StatsSignalLoss"),
+		d.UI32("dot5StatsTransmitBeacons"),
+		d.UI32("dot5StatsRecoverys"),
+		d.UI32("dot5StatsLobeWires"),
+		d.UI32("dot5StatsRemoves"),
+		d.UI32("dot5StatsSingles"),
+		d.UI32("dot5StatsFreqErrors"),
 	)
 
 	vgCounter := d.Seq( // 2347
-		d.Ui32("dot12InHighPriorityFrames"),
-		d.Ui64("dot12InHighPriorityOctets"),
-		d.Ui32("dot12InNormPriorityFrames"),
-		d.Ui64("dot12InNormPriorityOctets"),
-		d.Ui32("dot12InIPMErrors"),
-		d.Ui32("dot12InOversizeFrameErrors"),
-		d.Ui32("dot12InDataErrors"),
-		d.Ui32("dot12InNullAddressedFrames"),
-		d.Ui32("dot12OutHighPriorityFrames"),
-		d.Ui64("dot12OutHighPriorityOctets"),
-		d.Ui32("dot12TransitionIntoTrainings"),
-		d.Ui64("dot12HCInHighPriorityOctets"),
-		d.Ui64("dot12HCInNormPriorityOctets"),
-		d.Ui64("dot12HCOutHighPriorityOctets"),
+		d.UI32("dot12InHighPriorityFrames"),
+		d.UI64("dot12InHighPriorityOctets"),
+		d.UI32("dot12InNormPriorityFrames"),
+		d.UI64("dot12InNormPriorityOctets"),
+		d.UI32("dot12InIPMErrors"),
+		d.UI32("dot12InOversizeFrameErrors"),
+		d.UI32("dot12InDataErrors"),
+		d.UI32("dot12InNullAddressedFrames"),
+		d.UI32("dot12OutHighPriorityFrames"),
+		d.UI64("dot12OutHighPriorityOctets"),
+		d.UI32("dot12TransitionIntoTrainings"),
+		d.UI64("dot12HCInHighPriorityOctets"),
+		d.UI64("dot12HCInNormPriorityOctets"),
+		d.UI64("dot12HCOutHighPriorityOctets"),
 	)
 
 	vlanCounter := d.Seq( // 2377
-		d.Ui32("vlan_id"),
-		d.Ui64("octets"),
-		d.Ui32("ucastPkts"),
-		d.Ui32("multicastPkts"),
-		d.Ui32("broadcastPkts"),
-		d.Ui32("discards"),
+		d.UI32("vlan_id"),
+		d.UI64("octets"),
+		d.UI32("ucastPkts"),
+		d.UI32("multicastPkts"),
+		d.UI32("broadcastPkts"),
+		d.UI32("discards"),
 	)
 
 	processorCounter := d.Seq( // 2395
 		d.I32("5s_cpu"),
 		d.I32("1m_cpu"),
 		d.I32("5m_cpu"),
-		d.Ui64("total_memory"),
-		d.Ui64("free_memory"),
+		d.UI64("total_memory"),
+		d.UI64("free_memory"),
 	)
 
 	counterDataAlts := d.Alt("counterFormat",
@@ -396,32 +396,32 @@ func V5Format(options V5FormatOptions) d.ItemDecoder {
 	)
 
 	counterRecord := d.Seq( // 1604
-		d.Ui32("counterFormat"),
-		d.Ui32("counterData.length"),
+		d.UI32("counterFormat"),
+		d.UI32("counterData.length"),
 		d.AsrtMax("counterData.length", options.MaxCounterHeaderLength, thisFileColonLine(), false),
 		d.Sub("counterData.length", counterDataAlts), // TODO, put a max on this
 	)
 
 	countersSample := d.Seq( // 1661
-		d.Ui32("sequenceNumber"),
-		d.Ui32("", sourceIDTypeFn, sourceIDValueFn), // "sourceId") 1672
-		d.Ui32("counters.length"),
+		d.UI32("sequenceNumber"),
+		d.UI32("", sourceIDTypeFn, sourceIDValueFn), // "sourceId") 1672
+		d.UI32("counters.length"),
 		d.AsrtMax("counters.length", options.MaxCountersPerSample, thisFileColonLine(), true),
 		d.Iter("counters", "counters.length", counterRecord),
 	)
 
 	countersSampleExpanded := d.Seq( // 1744
-		d.Ui32("sequenceNumber"),
-		d.Ui32("sourceIdType"),  // 1689
-		d.Ui32("sourceIdValue"), // 1690
-		d.Ui32("counters.length"),
+		d.UI32("sequenceNumber"),
+		d.UI32("sourceIdType"),  // 1689
+		d.UI32("sourceIdValue"), // 1690
+		d.UI32("counters.length"),
 		d.AsrtMax("counters.length", options.MaxCountersPerSample, thisFileColonLine(), true),
 		d.Iter("counters", "counters.length", counterRecord),
 	)
 
 	sampleRecord := d.Seq( // 1761
-		d.Ui32("sampleType"), // 1762
-		d.Ui32("sampleData.length"),
+		d.UI32("sampleType"), // 1762
+		d.UI32("sampleData.length"),
 		d.AsrtMax("sampleData.length", options.MaxSampleLength, thisFileColonLine(), false),
 		d.Sub("sampleData.length", // // TODO, put a max on this
 			d.Alt("sampleType",
@@ -435,17 +435,17 @@ func V5Format(options V5FormatOptions) d.ItemDecoder {
 	)
 
 	result := d.Seq(
-		d.Ui32("version"),
-		d.Ui32Mapped("addressType", ipvMap), // 1388
+		d.UI32("version"),
+		d.UI32Mapped("addressType", ipvMap), // 1388
 		d.Alt("addressType", // 1788
 			d.Eql("addressType", "IPV4", ipv4Fn("agentAddress")),
 			d.Eql("addressType", "IPV6", ipv4Fn("agentAddress")),
 			// TODO
 		),
-		d.Ui32("subAgentId"),     // 1790
-		d.Ui32("sequenceNumber"), // 1801
-		d.Ui32("uptime"),         // 1804
-		d.Ui32("samples.length"), // 1812 - array of sample_record
+		d.UI32("subAgentId"),     // 1790
+		d.UI32("sequenceNumber"), // 1801
+		d.UI32("uptime"),         // 1804
+		d.UI32("samples.length"), // 1812 - array of sample_record
 		d.AsrtMax("samples.length", options.MaxSamplesPerPacket, thisFileColonLine(), false),
 		d.Iter("samples", "samples.length", sampleRecord),
 	)
@@ -457,12 +457,12 @@ func ethHeader(fieldlName string, lenFieldName string) d.ItemDecoder {
 		d.Seq(
 			d.Bin("dstMac", 6, func(b []byte) interface{} { return binary.BigEndian.Uint64(append([]byte{0, 0}, b...)) }),
 			d.Bin("srcMac", 6, func(b []byte) interface{} { return binary.BigEndian.Uint64(append([]byte{0, 0}, b...)) }),
-			d.Ui16("tagOrEType"),
+			d.UI16("tagOrEType"),
 			d.Alt("",
 				d.Eql("tagOrEType", uint16(0x8100),
 					d.Seq(
-						d.Ui16("", func(v uint16) (string, uint16) { return "vlanID", v & 0x0FFF }), // last 12 bits of it are the vlanid
-						d.Ui16("etype"), // just follows on from vlan id
+						d.UI16("", func(v uint16) (string, uint16) { return "vlanID", v & 0x0FFF }), // last 12 bits of it are the vlanid
+						d.UI16("etype"), // just follows on from vlan id
 					),
 				),
 				d.AltDefault( // Not an 802.1Q VLAN Tag, just treat as an ether type
@@ -480,21 +480,21 @@ func ethHeader(fieldlName string, lenFieldName string) d.ItemDecoder {
 
 func ipv4Header() d.ItemDecoder {
 	return d.Seq(
-		d.Ui16("",
+		d.UI16("",
 			func(v uint16) (string, uint16) { return "IPversion", (v & 0xF000) >> 12 },
 			//func(v uint16) (string, uint16) { return "ihl", (v & 0x7000) >> 8 }, ignore
 			func(v uint16) (string, uint16) { return "dscp", (v & 0xFC) >> 2 },
 			func(v uint16) (string, uint16) { return "ecn", v & 0x3 },
 		),
-		d.Ui16("total_length"),
-		d.Ui16("fragmentId"), // identification
-		d.Ui16("",
+		d.UI16("total_length"),
+		d.UI16("fragmentId"), // identification
+		d.UI16("",
 			func(v uint16) (string, uint16) { return "flags", (v & 0xE000) >> 13 },
 			func(v uint16) (string, uint16) { return "fragmentOffset", v & 0x1FFF },
 		),
 		d.Bin("IPTTL", 1, func(b []byte) interface{} { return uint8(b[0]) }),
 		d.Bin("proto", 1, func(b []byte) interface{} { return uint16(b[0]) }),
-		d.Ui16(""), // ugnoreheader_checksum"),
+		d.UI16(""), // ugnoreheader_checksum"),
 		d.Bin("srcIP", 4, func(b []byte) interface{} { return net.IP(b) }),
 		d.Bin("dstIP", 4, func(b []byte) interface{} { return net.IP(b) }),
 		// TODO, I'm assuming no options
@@ -515,13 +515,13 @@ func ipv6Header() d.ItemDecoder {
 	// TODO: consider options offset
 
 	return d.Seq(
-		d.Ui32("",
+		d.UI32("",
 			func(v uint32) (string, uint32) { return "IPversion", (v & 0xF000) >> 28 },
 			//func(v uint32) (string, uint32) { return "ds", (v & 0xFC00000) >> 22 }, UNUSED
 			//func(v uint32) (string, uint32) { return "ecn", (v & 0x300000) >> 20 },
 			func(v uint32) (string, uint32) { return "IPv6FlowLabel", v & 0xFFFFF }),
-		d.Ui16("paylloadLength"),
-		d.Ui16("",
+		d.UI16("paylloadLength"),
+		d.UI16("",
 			func(v uint16) (string, uint16) { return "nextHeader", (v & 0xFF00) >> 8 },
 			func(v uint16) (string, uint16) { return "hopLimit", (v & 0xFF) }),
 		d.Bin("srcIP", 16, bytesToNetIP),
@@ -531,21 +531,21 @@ func ipv6Header() d.ItemDecoder {
 
 func tcpHeader() d.ItemDecoder {
 	return d.Seq(
-		d.Ui16("srcPort"),
-		d.Ui16("dstPort"),
-		d.Ui32("sequence"),
-		d.Ui32("ack_number"),
+		d.UI16("srcPort"),
+		d.UI16("dstPort"),
+		d.UI32("sequence"),
+		d.UI32("ack_number"),
 		d.Bin("tcp_header_length", 2, func(b []byte) interface{} { return uint32((b[0] & 0xF0) * 4) }), // ignore other pieces
-		d.Ui16("tcp_window_size"),
-		d.Ui16("checksum"),
-		d.Ui16("urgent_pointer"),
+		d.UI16("tcp_window_size"),
+		d.UI16("checksum"),
+		d.UI16("urgent_pointer"),
 	)
 }
 
 func udpHeader() d.ItemDecoder {
 	return d.Seq(
-		d.Ui16("srcPort"),
-		d.Ui16("dstPort"),
-		d.Ui16("udp_length"),
+		d.UI16("srcPort"),
+		d.UI16("dstPort"),
+		d.UI16("udp_length"),
 	)
 }
