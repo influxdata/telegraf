@@ -276,6 +276,7 @@ For documentation on the latest development code see the [documentation index][d
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver)
 * [statsd](./plugins/inputs/statsd)
+* [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
