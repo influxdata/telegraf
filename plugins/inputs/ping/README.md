@@ -158,7 +158,7 @@ sockets and the `ping_group_range` setting.
 
 ##### reply_received vs packets_received
 
-On Windows systems, "Destination net unreachable" reply will increment `packets_received` but not `reply_received`*
+On Windows systems with `method = "exec"`, the "Destination net unreachable" reply will increment `packets_received` but not `reply_received`*.
 
 ##### ttl
 
