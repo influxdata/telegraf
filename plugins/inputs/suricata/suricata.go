@@ -60,23 +60,21 @@ func (s *Suricata) SampleConfig() string {
 // provided to Suricata.
 func (s *Suricata) Start(acc telegraf.Accumulator) error {
 	var err error
-	if s.inputListener == nil {
-		s.inputListener, err = net.ListenUnix("unix", &net.UnixAddr{
-			Name: s.Source,
-			Net:  "unix",
-		})
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		s.cancel = cancel
-		s.inputListener.SetUnlinkOnClose(true)
-		s.wg.Add(1)
-		go func() {
-			defer s.wg.Done()
-			go s.handleServerConnection(ctx, acc)
-		}()
+	s.inputListener, err = net.ListenUnix("unix", &net.UnixAddr{
+		Name: s.Source,
+		Net:  "unix",
+	})
+	if err != nil {
+		return err
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
+	s.inputListener.SetUnlinkOnClose(true)
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		go s.handleServerConnection(ctx, acc)
+	}()
 	return nil
 }
 
@@ -88,19 +86,18 @@ func (s *Suricata) Stop() {
 		s.cancel()
 	}
 	s.wg.Wait()
-	s.inputListener = nil
 }
 
-func (s *Suricata) readInput(ctx context.Context, acc telegraf.Accumulator, conn net.Conn) {
+func (s *Suricata) readInput(ctx context.Context, acc telegraf.Accumulator, conn net.Conn) error {
 	reader := bufio.NewReaderSize(conn, InBufSize)
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		default:
 			line, rerr := reader.ReadBytes('\n')
-			if rerr == io.EOF {
-				return
+			if rerr != nil {
+				return rerr
 			} else if len(line) > 0 {
 				s.parse(acc, line)
 			}
@@ -121,9 +118,16 @@ func (s *Suricata) handleServerConnection(ctx context.Context, acc telegraf.Accu
 				if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 					acc.AddError(err)
 				}
+				continue
+			}
+			err = s.readInput(ctx, acc, conn)
+			// we want to handle EOF as an opportunity to wait for a new
+			// connection -- this could, for example, happen when Suricata is
+			// restarted while Telegraf is running.
+			if err != io.EOF {
+				acc.AddError(err)
 				return
 			}
-			s.readInput(ctx, acc, conn)
 		}
 	}
 }
