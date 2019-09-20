@@ -13,7 +13,7 @@ import (
 
 func thisFileColonLine() string {
 	_, _, line, _ := runtime.Caller(1)
-	return fmt.Sprintf("%d", line)
+	return fmt.Sprintf("sflow.go:%d", line)
 }
 
 // Line 1383 of SFlow v5 specification
@@ -69,27 +69,6 @@ type V5FormatOptions struct {
 	MaxCounterHeaderLength uint32
 	MaxSampleLength        uint32
 	IncludeHeaders         bool
-}
-
-func (o V5FormatOptions) logIfNotDefault() {
-	if o.MaxFlowsPerSample < math.MaxUint32 {
-		log.Printf("D! [parser.sflow] !default maxFlowsPerSample: %d", o.MaxFlowsPerSample)
-	}
-	if o.MaxCountersPerSample < math.MaxUint32 {
-		log.Printf("D! [parser.sflow] !default maxCountersPerSample: %d", o.MaxCountersPerSample)
-	}
-	if o.MaxSamplesPerPacket < math.MaxUint32 {
-		log.Printf("D! [parser.sflow] !default maxSamplesPerPacket: %d", o.MaxSamplesPerPacket)
-	}
-	if o.MaxFlowHeaderLength < math.MaxUint32 {
-		log.Printf("D! [parser.sflow] !default maxFlowHeaderLength: %d", o.MaxFlowHeaderLength)
-	}
-	if o.MaxCounterHeaderLength < math.MaxUint32 {
-		log.Printf("D! [parser.sflow] !default maxCounterHeaderLength: %d", o.MaxCounterHeaderLength)
-	}
-	if o.MaxSampleLength < math.MaxUint32 {
-		log.Printf("D! [parser.sflow] !default maxSampleLength: %d", o.MaxSampleLength)
-	}
 }
 
 // NewDefaultV5FormatOptions answers a new V5FormatOptions with default values initialised
@@ -548,4 +527,25 @@ func udpHeader() d.ItemDecoder {
 		d.UI16("dstPort"),
 		d.UI16("udp_length"),
 	)
+}
+
+func (o V5FormatOptions) logIfNotDefault() {
+	if o.MaxFlowsPerSample < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxFlowsPerSample: %d", o.MaxFlowsPerSample)
+	}
+	if o.MaxCountersPerSample < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxCountersPerSample: %d", o.MaxCountersPerSample)
+	}
+	if o.MaxSamplesPerPacket < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxSamplesPerPacket: %d", o.MaxSamplesPerPacket)
+	}
+	if o.MaxFlowHeaderLength < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxFlowHeaderLength: %d", o.MaxFlowHeaderLength)
+	}
+	if o.MaxCounterHeaderLength < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxCounterHeaderLength: %d", o.MaxCounterHeaderLength)
+	}
+	if o.MaxSampleLength < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxSampleLength: %d", o.MaxSampleLength)
+	}
 }

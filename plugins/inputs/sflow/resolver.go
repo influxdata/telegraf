@@ -68,6 +68,7 @@ type asyncResolver struct {
 	dnsTTL            time.Duration
 }
 
+// newAsyncResolver answers a new asynchronous resolver with the given configuration
 func newAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor string, snmpResolve bool, snmpTTL time.Duration, snmpCommunity string) resolver {
 	log.Printf("I! [inputs.sflow] dns cache = %t", dnsResolve)
 	log.Printf("I! [inputs.sflow] dbs cache ttl = %d\n", dnsTTL)
@@ -81,13 +82,15 @@ func newAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor s
 		dnsCache:          newCache(),
 		ifaceCache:        newCache(),
 		dnsp:              newDNSProcessor(dnsMultiProcessor),
-		ipToFqdnFn:        ipToFqdn,
+		ipToFqdnFn:        dnsLookupOfHostname,
 		snmpTTL:           snmpTTL,
 		dnsTTL:            dnsTTL,
-		ifIndexToIfNameFn: ifIndexToIfName,
+		ifIndexToIfNameFn: snmpAgentLookupOfIfaceName,
 	}
 }
 
+// resolve the resolvable entries in the given Metric and provide the resolved result metric via the callback function
+// when available
 func (r *asyncResolver) resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric)) {
 	dnsToResolve := map[string]string{
 		"agent_ip": "host",
@@ -176,6 +179,7 @@ func (r *asyncResolver) resolveAsyncIFace(agentIP string, m telegraf.Metric, tag
 	}
 }
 
+// start the resolver which processes resolution asynchrnousingly in the backgroun and manages cache clearing
 func (r *asyncResolver) start() {
 	if r.dnsTTL != 0 {
 		r.dnsTTLTicker = time.NewTicker(r.dnsTTL)
@@ -208,6 +212,7 @@ func (r *asyncResolver) start() {
 	}()
 }
 
+// stop the resolver processing any more resolution requets and clearing its caches
 func (r *asyncResolver) stop() {
 	r.fnWorkerChannel <- func() error {
 		return fmt.Errorf("Stop")
@@ -236,7 +241,9 @@ func (r *asyncResolver) resolveDNS(ipAddress string, resolved func(fqdn string))
 	resolved(fqdn)
 }
 
-func ipToFqdn(ipAddress string) string {
+// dnsLookupOfHostname uses DNS to resolve the hostname associated with the given IP address.
+// If there is a problem in resolution then the stringified versionof the IP address is returned
+func dnsLookupOfHostname(ipAddress string) string {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10000*time.Millisecond)
 	defer cancel()
 	resolver := net.Resolver{}
@@ -265,7 +272,9 @@ func (r *asyncResolver) resolveIFace(ifaceIndex string, agentIP string, resolved
 	resolved(name)
 }
 
-func ifIndexToIfName(community string, snmpAgentIP string, ifIndex string) string {
+// snmpAgentLookupOfIfaceName will look up the short description of the given interface, by index, from the specified
+// snmp agent. If there is an error in resolution then the stringified version of the index will be returned
+func snmpAgentLookupOfIfaceName(community string, snmpAgentIP string, ifIndex string) string {
 	oid := "1.3.6.1.2.1.31.1.1.1.1"
 	gosnmp.Default.Target = snmpAgentIP
 	if community != "" {
