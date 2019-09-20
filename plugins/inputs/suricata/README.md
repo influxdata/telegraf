@@ -1,11 +1,11 @@
-# Suricata plugin for Telegraf
+# Suricata Input Plugin
 
 This plugin reports internal performance counters of the Suricata IDS/IPS
 engine, such as captured traffic volume, memory usage, uptime, flow counters,
 and much more. It provides a socket for the Suricata log output to write JSON
 stats output to, and processes the incoming data to fit Telegraf's format.
 
-### Configuration:
+### Configuration
 
 ```toml
 [[input.suricata]]
@@ -19,7 +19,7 @@ stats output to, and processes the incoming data to fit Telegraf's format.
   delimiter = "_"
 ```
 
-### Measurements & Fields:
+### Metrics
 
 Fields in the 'suricata' measurement follow the JSON format used by Suricata's
 stats output.
@@ -28,6 +28,9 @@ more information.
 
 All fields are numeric.
 - suricata
+  - tags:
+    - thread: `Global` for global statistics (if enabled), thread IDs (e.g. `W#03-enp0s31f6`) for thread-specific statistics
+  - fields:
     - app_layer_flow_dcerpc_udp
     - app_layer_flow_dns_tcp
     - app_layer_flow_dns_udp
@@ -91,13 +94,8 @@ All fields are numeric.
     - tcp_synack
     - ...
 
-### Tags:
 
-The `suricata` measurement has the following tags:
-
-- thread: `Global` for global statistics (if enabled), thread IDs (e.g. `W#03-enp0s31f6`) for thread-specific statistics
-
-## Suricata configuration
+#### Suricata configuration
 
 Suricata needs to deliver the 'stats' event type to a given unix socket for
 this plugin to pick up. This can be done, for example, by creating an additional
@@ -113,7 +111,7 @@ output in the Suricata configuration file:
          threads: yes
 ```
 
-## Example Output:
+### Example Output
 
 ```text
 suricata,host=myhost,thread=FM#01 flow_mgr_rows_empty=0,flow_mgr_rows_checked=65536,flow_mgr_closed_pruned=0,flow_emerg_mode_over=0,flow_mgr_flows_timeout_inuse=0,flow_mgr_rows_skipped=65535,flow_mgr_bypassed_pruned=0,flow_mgr_flows_removed=0,flow_mgr_est_pruned=0,flow_mgr_flows_notimeout=1,flow_mgr_flows_checked=1,flow_mgr_rows_busy=0,flow_spare=10000,flow_mgr_rows_maxlen=1,flow_mgr_new_pruned=0,flow_emerg_mode_entered=0,flow_tcp_reuse=0,flow_mgr_flows_timeout=0 1568368562545197545
