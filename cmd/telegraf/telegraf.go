@@ -10,9 +10,6 @@ import (
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
-	"path"
-	"path/filepath"
-	"plugin"
 	"runtime"
 	"strings"
 	"syscall"
@@ -21,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -114,36 +112,6 @@ func reloadLoop(
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
-}
-
-// loadExternalPlugins loads external plugins from shared libraries (.so, .dll, etc.)
-// in the specified directory.
-func loadExternalPlugins(rootDir string) error {
-	return filepath.Walk(rootDir, func(pth string, info os.FileInfo, err error) error {
-		// Stop if there was an error.
-		if err != nil {
-			return err
-		}
-
-		// Ignore directories.
-		if info.IsDir() {
-			return nil
-		}
-
-		// Ignore files that aren't shared libraries.
-		ext := strings.ToLower(path.Ext(pth))
-		if ext != ".so" && ext != ".dll" {
-			return nil
-		}
-
-		// Load plugin.
-		_, err = plugin.Open(pth)
-		if err != nil {
-			return fmt.Errorf("error loading %s: %s", pth, err)
-		}
-
-		return nil
-	})
 }
 
 func runAgent(ctx context.Context,
@@ -317,7 +285,7 @@ func main() {
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
 		log.Printf("I! Loading external plugins from: %s", *fPlugins)
-		if err := loadExternalPlugins(*fPlugins); err != nil {
+		if err := goplugin.LoadExternalPlugins(*fPlugins); err != nil {
 			log.Fatal("E! " + err.Error())
 		}
 	}
