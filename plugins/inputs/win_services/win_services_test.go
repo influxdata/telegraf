@@ -161,7 +161,7 @@ func TestServiceErrors(t *testing.T) {
 	winServices := &WinServices{testutil.Logger{}, nil, &FakeMgProvider{testErrors[2]}}
 	var acc1 testutil.Accumulator
 	require.NoError(t, winServices.Gather(&acc1))
-	assert.Len(t, acc1.Errors, 3)
+	require.Len(t, acc1.Errors, 3)
 	//open service error
 	assert.Contains(t, acc1.Errors[0].Error(), testErrors[2].services[0].serviceOpenError.Error())
 	//query service error
