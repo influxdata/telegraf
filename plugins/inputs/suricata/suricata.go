@@ -29,6 +29,8 @@ type Suricata struct {
 	inputListener *net.UnixListener
 	cancel        context.CancelFunc
 
+	Log telegraf.Logger `toml:"-"`
+
 	wg sync.WaitGroup
 }
 
@@ -143,7 +145,7 @@ func flexFlatten(outmap map[string]interface{}, field string, v interface{}, del
 	case float64:
 		outmap[field] = v.(float64)
 	default:
-		return fmt.Errorf("unsupported type %T encountered", t)
+		return fmt.Errorf("Unsupported type %T encountered", t)
 	}
 	return nil
 }
@@ -159,12 +161,12 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 
 	// check for presence of relevant stats
 	if _, ok := result["stats"]; !ok {
-		acc.AddError(fmt.Errorf("input does not contain necessary 'stats' sub-object"))
+		s.Log.Debug("Input does not contain necessary 'stats' sub-object")
 		return
 	}
 
 	if _, ok := result["stats"].(map[string]interface{}); !ok {
-		acc.AddError(fmt.Errorf("'stats' sub-object does not have required structure"))
+		s.Log.Debug("The 'stats' sub-object does not have required structure")
 		return
 	}
 
@@ -178,7 +180,7 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 					if threadStruct, ok := t.(map[string]interface{}); ok {
 						err = flexFlatten(outmap, "", threadStruct, s.Delimiter)
 						if err != nil {
-							acc.AddError(err)
+							s.Log.Debug(err)
 							// we skip this thread as something did not parse correctly
 							continue
 						}
@@ -186,12 +188,12 @@ func (s *Suricata) parse(acc telegraf.Accumulator, sjson []byte) {
 					}
 				}
 			} else {
-				acc.AddError(fmt.Errorf("'threads' sub-object does not have required structure"))
+				s.Log.Debug("The 'threads' sub-object does not have required structure")
 			}
 		} else {
 			err = flexFlatten(totalmap, k, v, s.Delimiter)
 			if err != nil {
-				acc.AddError(err)
+				s.Log.Debug(err.Error())
 				// we skip this subitem as something did not parse correctly
 			}
 		}

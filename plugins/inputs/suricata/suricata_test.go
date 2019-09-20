@@ -1,6 +1,7 @@
 package suricata
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
@@ -42,6 +44,9 @@ func TestSuricataLarge(t *testing.T) {
 	s := Suricata{
 		Source:    tmpfn,
 		Delimiter: ".",
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -76,6 +81,9 @@ func TestSuricata(t *testing.T) {
 	s := Suricata{
 		Source:    tmpfn,
 		Delimiter: ".",
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -92,6 +100,13 @@ func TestSuricata(t *testing.T) {
 	acc.Wait(1)
 
 	s.Stop()
+	s = Suricata{
+		Source:    tmpfn,
+		Delimiter: ".",
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
+	}
 
 	acc.AssertContainsTaggedFields(t, "suricata",
 		map[string]interface{}{
@@ -138,6 +153,9 @@ func TestSuricataInvalid(t *testing.T) {
 
 	s := Suricata{
 		Source: tmpfn,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -189,6 +207,9 @@ func TestSuricataSplitDots(t *testing.T) {
 	s := Suricata{
 		Source:    tmpfn,
 		Delimiter: ".",
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -218,6 +239,9 @@ func TestSuricataInvalidPath(t *testing.T) {
 	tmpfn := fmt.Sprintf("/t%d/X", rand.Int63())
 	s := Suricata{
 		Source: tmpfn,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 
 	acc := testutil.Accumulator{}
@@ -236,6 +260,9 @@ func TestSuricataTooLongLine(t *testing.T) {
 
 	s := Suricata{
 		Source: tmpfn,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -265,6 +292,9 @@ func TestSuricataEmptyJSON(t *testing.T) {
 
 	s := Suricata{
 		Source: tmpfn,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -289,38 +319,54 @@ func TestSuricataInvalidInputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dir)
+	defer func() {
+		log.SetOutput(os.Stderr)
+	}()
 	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
 
-	s := Suricata{
-		Source:    tmpfn,
-		Delimiter: ".",
-	}
-
 	for input, errmsg := range map[string]string{
-		brokenType1:   `unsupported type bool encountered`,
-		brokenType2:   `unsupported type []interface {} encountered`,
-		brokenType3:   `unsupported type string encountered`,
-		brokenType4:   `unsupported type <nil> encountered`,
-		brokenType5:   `unsupported type <nil> encountered`,
-		brokenStruct1: `'threads' sub-object does not have required structure`,
-		brokenStruct2: `input does not contain necessary 'stats' sub-object`,
-		brokenStruct3: `'stats' sub-object does not have required structure`,
-		brokenStruct4: `'stats' sub-object does not have required structure`,
+		brokenType1:   `Unsupported type bool encountered`,
+		brokenType2:   `Unsupported type []interface {} encountered`,
+		brokenType3:   `Unsupported type string encountered`,
+		brokenType4:   `Unsupported type <nil> encountered`,
+		brokenType5:   `Unsupported type <nil> encountered`,
+		brokenStruct1: `The 'threads' sub-object does not have required structure`,
+		brokenStruct2: `Input does not contain necessary 'stats' sub-object`,
+		brokenStruct3: `The 'stats' sub-object does not have required structure`,
+		brokenStruct4: `The 'stats' sub-object does not have required structure`,
 	} {
+		var logBuf buffer
+		logBuf.Reset()
+		log.SetOutput(&logBuf)
+
 		acc := testutil.Accumulator{}
 		acc.SetDebug(true)
+
+		s := Suricata{
+			Source:    tmpfn,
+			Delimiter: ".",
+			Log: testutil.Logger{
+				Name: "inputs.suricata",
+			},
+		}
 		assert.NoError(t, s.Start(&acc))
 
 		c, err := net.Dial("unix", tmpfn)
 		if err != nil {
-			log.Println(err)
+			t.Fatal(err)
 		}
 		c.Write([]byte(input))
 		c.Write([]byte("\n"))
 		c.Close()
 
-		acc.WaitError(1)
-		assert.Contains(t, acc.FirstError().Error(), errmsg)
+		for {
+			if bytes.Count(logBuf.Bytes(), []byte{'\n'}) > 0 {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		assert.Contains(t, logBuf.String(), errmsg)
 		s.Stop()
 	}
 }
@@ -335,6 +381,9 @@ func TestSuricataDisconnectSocket(t *testing.T) {
 
 	s := Suricata{
 		Source: tmpfn,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -383,6 +432,9 @@ func TestSuricataStartStop(t *testing.T) {
 
 	s := Suricata{
 		Source: tmpfn,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
@@ -400,6 +452,9 @@ func TestSuricataGather(t *testing.T) {
 
 	s := Suricata{
 		Source: tmpfn,
+		Log: testutil.Logger{
+			Name: "inputs.suricata",
+		},
 	}
 	acc := testutil.Accumulator{}
 	acc.SetDebug(true)
