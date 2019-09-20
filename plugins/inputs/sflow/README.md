@@ -1,6 +1,8 @@
 # SFlow Input Plugin
 
-The SFlow Input Plugin provides support for acting as an SFlow V5 collector in accordance with the specification from [sflow.org](https://sflow.org/)
+The SFlow Input Plugin provides support for acting as an SFlow V5 collector in accordance with the specification from [sflow.org](https://sflow.org/).
+
+Currently only Flow Samples of Ethernet / IPv4 & IPv4 TCP & UDP headers are turned into metrics - counters and other header samples may come later.
 
 # Configuration
 The following configuration options are availabe:

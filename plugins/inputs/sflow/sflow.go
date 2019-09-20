@@ -57,18 +57,25 @@ func (psl *packetListener) process(buf []byte) {
 
 // Listener configuration structure
 type Listener struct {
-	ServiceAddress        string        `toml:"service_address"`
-	ReadBufferSize        internal.Size `toml:"read_buffer_size"`
-	SNMPCommunity         string        `toml:"snmp_community"`
-	SNMPIfaceResolve      bool          `toml:"snmp_iface_resolve"`
-	SNMPIfaceCacheTTL     int           `toml:"snmp_iface_cache_ttl"`
-	DNSFQDNResolve        bool          `toml:"dns_fqdn_resolve"`
-	DNSFQDNCacheTTL       int           `toml:"dns_fqdn_cache_ttl"`
-	MaxFlowsPerSample     uint32        `toml:"max_flows_per_sample"`
-	MaxCountersPerSample  uint32        `toml:"max_counters_per_sample"`
-	MaxSamplesPerPacket   uint32        `toml:"max_samples_per_packet"`
-	TagsAsFields          string        `toml:"as_fields"`
-	DNSMultiNameProcessor string        `toml:"dns_multi_name_processor"`
+	ServiceAddress string        `toml:"service_address"`
+	ReadBufferSize internal.Size `toml:"read_buffer_size"`
+
+	SNMPCommunity     string `toml:"snmp_community"`
+	SNMPIfaceResolve  bool   `toml:"snmp_iface_resolve"`
+	SNMPIfaceCacheTTL int    `toml:"snmp_iface_cache_ttl"`
+
+	DNSFQDNResolve        bool   `toml:"dns_fqdn_resolve"`
+	DNSFQDNCacheTTL       int    `toml:"dns_fqdn_cache_ttl"`
+	DNSMultiNameProcessor string `toml:"dns_multi_name_processor"`
+
+	TagsAsFields string `toml:"as_fields"`
+
+	MaxFlowsPerSample      uint32 `toml:"max_flows_per_sample"`
+	MaxCountersPerSample   uint32 `toml:"max_counters_per_sample"`
+	MaxSamplesPerPacket    uint32 `toml:"max_samples_per_packet"`
+	MaxSampleLength        uint32 `toml:"max_sample_length"`
+	MaxFlowHeaderLength    uint32 `toml:"max_flow_header_length"`
+	MaxCounterHeaderLength uint32 `toml:"max_counter_header_length"`
 
 	nameResolver resolver
 	parsers.Parser
@@ -95,9 +102,24 @@ func (sl *Listener) Gather(_ telegraf.Accumulator) error {
 
 func (sl *Listener) getSflowConfig() sflow.V5FormatOptions {
 	sflowConfig := sflow.NewDefaultV5FormatOptions()
-	sflowConfig.MaxFlowsPerSample = sl.MaxFlowsPerSample
-	sflowConfig.MaxCountersPerSample = sl.MaxCountersPerSample
-	sflowConfig.MaxSamplesPerPacket = sl.MaxSamplesPerPacket
+	if sl.MaxFlowsPerSample > 0 {
+		sflowConfig.MaxFlowsPerSample = sl.MaxFlowsPerSample
+	}
+	if sl.MaxCountersPerSample > 0 {
+		sflowConfig.MaxCountersPerSample = sl.MaxCountersPerSample
+	}
+	if sl.MaxSamplesPerPacket > 0 {
+		sflowConfig.MaxSamplesPerPacket = sl.MaxSamplesPerPacket
+	}
+	if sl.MaxSampleLength > 0 {
+		sflowConfig.MaxSampleLength = sl.MaxSampleLength
+	}
+	if sl.MaxFlowHeaderLength > 0 {
+		sflowConfig.MaxFlowHeaderLength = sl.MaxFlowHeaderLength
+	}
+	if sl.MaxCounterHeaderLength > 0 {
+		sflowConfig.MaxCounterHeaderLength = sl.MaxCounterHeaderLength
+	}
 	return sflowConfig
 }
 

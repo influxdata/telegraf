@@ -3,6 +3,7 @@ package sflow
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"runtime"
@@ -70,6 +71,27 @@ type V5FormatOptions struct {
 	IncludeHeaders         bool
 }
 
+func (o V5FormatOptions) logIfNotDefault() {
+	if o.MaxFlowsPerSample < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxFlowsPerSample: %d", o.MaxFlowsPerSample)
+	}
+	if o.MaxCountersPerSample < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxCountersPerSample: %d", o.MaxCountersPerSample)
+	}
+	if o.MaxSamplesPerPacket < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxSamplesPerPacket: %d", o.MaxSamplesPerPacket)
+	}
+	if o.MaxFlowHeaderLength < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxFlowHeaderLength: %d", o.MaxFlowHeaderLength)
+	}
+	if o.MaxCounterHeaderLength < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxCounterHeaderLength: %d", o.MaxCounterHeaderLength)
+	}
+	if o.MaxSampleLength < math.MaxUint32 {
+		log.Printf("D! [parser.sflow] !default maxSampleLength: %d", o.MaxSampleLength)
+	}
+}
+
 // NewDefaultV5FormatOptions answers a new V5FormatOptions with default values initialised
 func NewDefaultV5FormatOptions() V5FormatOptions {
 	return V5FormatOptions{math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32, true}
@@ -78,6 +100,8 @@ func NewDefaultV5FormatOptions() V5FormatOptions {
 // V5Format answers and ItemDecoder capable of decoding sFlow v5 packets in accordance
 // with SFlow v5 specification at https://sflow.org/sflow_version_5.txt
 func V5Format(options V5FormatOptions) d.ItemDecoder {
+
+	options.logIfNotDefault()
 
 	// The numbers on comments are line number references to the sflow v5 specification at
 
