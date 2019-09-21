@@ -8,12 +8,11 @@ import (
 	"net"
 	"time"
 
-	"honnef.co/go/netdb"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/influxdata/telegraf/plugins/parsers/sflow/decoder"
+	"github.com/influxdata/telegraf/plugins/parsers/sflow/protodb"
 )
 
 // Parser is Telegraf parser capable of parsing an sFlow v5 network packet
@@ -376,11 +375,9 @@ func toMACString(val uint64) string {
 func serviceNameFromPort(value interface{}) string {
 	portNum, ok := value.(uint16)
 	if ok {
-		proto := netdb.GetProtoByName("tcp")
-		serv := netdb.GetServByPort(int(portNum), proto)
-		if serv != nil {
-			return serv.Name
+		if service, ok := protodb.GetServByPort("tcp", int(portNum)); ok {
+			return service
 		}
 	}
-	return fmt.Sprintf("%v", value)
+	return fmt.Sprintf("%v", portNum)
 }
