@@ -91,8 +91,38 @@ func (sl *Listener) Description() string {
 // SampleConfig answers a sample configuration
 func (sl *Listener) SampleConfig() string {
 	return `
-  TODO
-`
+	## URL to listen on
+	# service_address = "udp://:6343"
+	# service_address = "udp4://:6343"
+	# service_address = "udp6://:6343"
+    
+	## Maximum socket buffer size (in bytes when no unit specified).
+	## For stream sockets, once the buffer fills up, the sender will start backing up.
+	## For datagram sockets, once the buffer fills up, metrics will start dropping.
+	## Defaults to the OS default.
+	# read_buffer_size = "64KiB"
+
+	# Whether IP addresses should be resolved to host names
+	# dns_fqdn_resolve = true
+
+	# How long should resolved IP->Hostnames be cached (in seconds)
+	# dns_fqdn_cache_ttl = 3600
+	
+	# Optional processing instructions for transforming DNS resolve host names
+	# dns_multi_name_processor = "s/(.*)(?:-net[0-9])/$1"
+
+	# Whether Interface Indexes should be resolved to Interface Names via SNMP
+	# snmp_iface_resolve = true
+	
+	# SNMP Community string to use when resolving Interface Names
+	# snmp_community = "public"
+
+	# How long should resolved Iface Index->Iface Name be cached (in seconds)
+	# snmp_iface_cache_ttl = 3600
+
+	# Comma separated list of tags, by name, to forced back to fields
+	# as_fields = "src_port,src_port_name"
+	`
 }
 
 // Gather is a NOP for sFlow as it receives, asynchronously, sFlow network packets
