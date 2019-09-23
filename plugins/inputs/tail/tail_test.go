@@ -1,7 +1,9 @@
 package tail
 
 import (
+	"bytes"
 	"io/ioutil"
+	"log"
 	"os"
 	"runtime"
 	"testing"
@@ -28,6 +30,7 @@ func TestTailFromBeginning(t *testing.T) {
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
@@ -61,6 +64,7 @@ func TestTailFromEnd(t *testing.T) {
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
@@ -97,6 +101,7 @@ func TestTailBadLine(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
@@ -105,13 +110,17 @@ func TestTailBadLine(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
 	require.NoError(t, err)
 
-	acc.WaitError(1)
-	assert.Contains(t, acc.Errors[0].Error(), "malformed log line")
+	time.Sleep(500 * time.Millisecond)
+	assert.Contains(t, buf.String(), "Malformed log line")
 }
 
 func TestTailDosLineendings(t *testing.T) {
@@ -122,6 +131,7 @@ func TestTailDosLineendings(t *testing.T) {
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
@@ -160,6 +170,7 @@ cpu,42
 	require.NoError(t, err)
 
 	plugin := NewTail()
+	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
@@ -217,6 +228,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := NewTail()
+	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {

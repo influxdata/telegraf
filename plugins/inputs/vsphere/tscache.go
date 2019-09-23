@@ -34,7 +34,7 @@ func (t *TSCache) Purge() {
 			n++
 		}
 	}
-	log.Printf("D! [inputs.vsphere] Purged timestamp cache. %d deleted with %d remaining", n, len(t.table))
+	log.Printf("D! [inputs.vsphere] purged timestamp cache. %d deleted with %d remaining", n, len(t.table))
 }
 
 // IsNew returns true if the supplied timestamp for the supplied key is more recent than the

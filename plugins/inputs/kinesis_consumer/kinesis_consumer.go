@@ -3,7 +3,6 @@ package kinesis_consumer
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/big"
 	"strings"
 	"sync"
@@ -39,6 +38,8 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
+
+		Log telegraf.Logger
 
 		cons   *consumer.Consumer
 		parser parsers.Parser
@@ -220,7 +221,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		})
 		if err != nil {
 			k.cancel()
-			log.Printf("E! [inputs.kinesis_consumer] Scan encounterred an error - %s", err.Error())
+			k.Log.Errorf("Scan encounterred an error: %s", err.Error())
 			k.cons = nil
 		}
 	}()
@@ -285,7 +286,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 				k.lastSeqNum = strToBint(sequenceNum)
 				k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum)
 			} else {
-				log.Println("D! [inputs.kinesis_consumer] Metric group failed to process")
+				k.Log.Debug("Metric group failed to process")
 			}
 		}
 	}

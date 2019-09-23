@@ -2,7 +2,6 @@ package vsphere
 
 import (
 	"context"
-	"log"
 	"reflect"
 	"strings"
 
@@ -54,7 +53,7 @@ func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}
 		return err
 	}
 	objectContentToTypedArray(objs, dst)
-	log.Printf("D! [inputs.vsphere] Find(%s, %s) returned %d objects", resType, path, len(objs))
+	f.client.log.Debugf("Find(%s, %s) returned %d objects", resType, path, len(objs))
 	return nil
 }
 

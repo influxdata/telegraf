@@ -1,7 +1,6 @@
 package basicstats
 
 import (
-	"log"
 	"math"
 
 	"github.com/influxdata/telegraf"
@@ -10,6 +9,7 @@ import (
 
 type BasicStats struct {
 	Stats []string `toml:"stats"`
+	Log   telegraf.Logger
 
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
@@ -28,9 +28,9 @@ type configuredStats struct {
 }
 
 func NewBasicStats() *BasicStats {
-	mm := &BasicStats{}
-	mm.Reset()
-	return mm
+	return &BasicStats{
+		cache: make(map[uint64]aggregate),
+	}
 }
 
 type aggregate struct {
@@ -53,6 +53,7 @@ type basicstats struct {
 var sampleConfig = `
   ## The period on which to flush & clear the aggregator.
   period = "30s"
+
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
@@ -61,17 +62,17 @@ var sampleConfig = `
   # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
 `
 
-func (m *BasicStats) SampleConfig() string {
+func (*BasicStats) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *BasicStats) Description() string {
+func (*BasicStats) Description() string {
 	return "Keep the aggregate basicstats of each metric passing through."
 }
 
-func (m *BasicStats) Add(in telegraf.Metric) {
+func (b *BasicStats) Add(in telegraf.Metric) {
 	id := in.HashID()
-	if _, ok := m.cache[id]; !ok {
+	if _, ok := b.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
 		a := aggregate{
 			name:   in.Name(),
@@ -92,13 +93,13 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				}
 			}
 		}
-		m.cache[id] = a
+		b.cache[id] = a
 	} else {
 		for _, field := range in.FieldList() {
 			if fv, ok := convert(field.Value); ok {
-				if _, ok := m.cache[id].fields[field.Key]; !ok {
+				if _, ok := b.cache[id].fields[field.Key]; !ok {
 					// hit an uncached field of a cached metric
-					m.cache[id].fields[field.Key] = basicstats{
+					b.cache[id].fields[field.Key] = basicstats{
 						count: 1,
 						min:   fv,
 						max:   fv,
@@ -111,7 +112,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					continue
 				}
 
-				tmp := m.cache[id].fields[field.Key]
+				tmp := b.cache[id].fields[field.Key]
 				//https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
 				//variable initialization
 				x := fv
@@ -138,32 +139,30 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				//diff compute
 				tmp.diff = fv - tmp.LAST
 				//store final data
-				m.cache[id].fields[field.Key] = tmp
+				b.cache[id].fields[field.Key] = tmp
 			}
 		}
 	}
 }
 
-func (m *BasicStats) Push(acc telegraf.Accumulator) {
-	config := getConfiguredStats(m)
-
-	for _, aggregate := range m.cache {
+func (b *BasicStats) Push(acc telegraf.Accumulator) {
+	for _, aggregate := range b.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
 
-			if config.count {
+			if b.statsConfig.count {
 				fields[k+"_count"] = v.count
 			}
-			if config.min {
+			if b.statsConfig.min {
 				fields[k+"_min"] = v.min
 			}
-			if config.max {
+			if b.statsConfig.max {
 				fields[k+"_max"] = v.max
 			}
-			if config.mean {
+			if b.statsConfig.mean {
 				fields[k+"_mean"] = v.mean
 			}
-			if config.sum {
+			if b.statsConfig.sum {
 				fields[k+"_sum"] = v.sum
 			}
 
@@ -171,16 +170,16 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 			if v.count > 1 {
 				variance := v.M2 / (v.count - 1)
 
-				if config.variance {
+				if b.statsConfig.variance {
 					fields[k+"_s2"] = variance
 				}
-				if config.stdev {
+				if b.statsConfig.stdev {
 					fields[k+"_stdev"] = math.Sqrt(variance)
 				}
-				if config.diff {
+				if b.statsConfig.diff {
 					fields[k+"_diff"] = v.diff
 				}
-				if config.non_negative_diff && v.diff >= 0 {
+				if b.statsConfig.non_negative_diff && v.diff >= 0 {
 					fields[k+"_non_negative_diff"] = v.diff
 				}
 
@@ -194,14 +193,12 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 	}
 }
 
-func parseStats(names []string) *configuredStats {
-
+// member function for logging.
+func (b *BasicStats) parseStats() *configuredStats {
 	parsed := &configuredStats{}
 
-	for _, name := range names {
-
+	for _, name := range b.Stats {
 		switch name {
-
 		case "count":
 			parsed.count = true
 		case "min":
@@ -222,45 +219,32 @@ func parseStats(names []string) *configuredStats {
 			parsed.non_negative_diff = true
 
 		default:
-			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
+			b.Log.Warnf("Unrecognized basic stat %q, ignoring", name)
 		}
 	}
 
 	return parsed
 }
 
-func defaultStats() *configuredStats {
-
-	defaults := &configuredStats{}
-
-	defaults.count = true
-	defaults.min = true
-	defaults.max = true
-	defaults.mean = true
-	defaults.variance = true
-	defaults.stdev = true
-	defaults.sum = false
-	defaults.non_negative_diff = false
-
-	return defaults
-}
-
-func getConfiguredStats(m *BasicStats) *configuredStats {
-
-	if m.statsConfig == nil {
-
-		if m.Stats == nil {
-			m.statsConfig = defaultStats()
-		} else {
-			m.statsConfig = parseStats(m.Stats)
+func (b *BasicStats) getConfiguredStats() {
+	if b.Stats == nil {
+		b.statsConfig = &configuredStats{
+			count:             true,
+			min:               true,
+			max:               true,
+			mean:              true,
+			variance:          true,
+			stdev:             true,
+			sum:               false,
+			non_negative_diff: false,
 		}
+	} else {
+		b.statsConfig = b.parseStats()
 	}
-
-	return m.statsConfig
 }
 
-func (m *BasicStats) Reset() {
-	m.cache = make(map[uint64]aggregate)
+func (b *BasicStats) Reset() {
+	b.cache = make(map[uint64]aggregate)
 }
 
 func convert(in interface{}) (float64, bool) {
@@ -274,6 +258,12 @@ func convert(in interface{}) (float64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func (b *BasicStats) Init() error {
+	b.getConfiguredStats()
+
+	return nil
 }
 
 func init() {

@@ -12,8 +12,10 @@ instances of telegraf can read from a NATS cluster in parallel.
 [[inputs.nats_consumer]]
   ## urls of NATS servers
   servers = ["nats://localhost:4222"]
+
   ## subject(s) to consume
   subjects = ["telegraf"]
+
   ## name a queue group
   queue_group = "telegraf_consumers"
 

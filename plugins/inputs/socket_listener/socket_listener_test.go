@@ -48,6 +48,7 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 	defer testEmptyLog(t)()
 
 	sl := newSocketListener()
+	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
 	sl.ServerConfig = *pki.TLSServerConfig()
 
@@ -72,6 +73,7 @@ func TestSocketListener_unix_tls(t *testing.T) {
 	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix_tls.sock")
 
 	sl := newSocketListener()
+	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
 	sl.ServerConfig = *pki.TLSServerConfig()
 
@@ -94,6 +96,7 @@ func TestSocketListener_tcp(t *testing.T) {
 	defer testEmptyLog(t)()
 
 	sl := newSocketListener()
+	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
 	sl.ReadBufferSize = internal.Size{Size: 1024}
 
@@ -112,6 +115,7 @@ func TestSocketListener_udp(t *testing.T) {
 	defer testEmptyLog(t)()
 
 	sl := newSocketListener()
+	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "udp://127.0.0.1:0"
 	sl.ReadBufferSize = internal.Size{Size: 1024}
 
@@ -136,6 +140,7 @@ func TestSocketListener_unix(t *testing.T) {
 
 	os.Create(sock)
 	sl := newSocketListener()
+	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unix://" + sock
 	sl.ReadBufferSize = internal.Size{Size: 1024}
 
@@ -160,6 +165,7 @@ func TestSocketListener_unixgram(t *testing.T) {
 
 	os.Create(sock)
 	sl := newSocketListener()
+	sl.Log = testutil.Logger{}
 	sl.ServiceAddress = "unixgram://" + sock
 	sl.ReadBufferSize = internal.Size{Size: 1024}
 

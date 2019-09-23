@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestServeHTTP(t *testing.T) {
@@ -118,6 +119,7 @@ func TestServeHTTP(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 		pubPush := &PubSubPush{
+			Log:  testutil.Logger{},
 			Path: "/",
 			MaxBodySize: internal.Size{
 				Size: test.maxsize,

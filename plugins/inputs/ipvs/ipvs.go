@@ -5,7 +5,6 @@ package ipvs
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/bits"
 	"strconv"
 	"syscall"
@@ -18,6 +17,7 @@ import (
 // IPVS holds the state for this input plugin
 type IPVS struct {
 	handle *ipvs.Handle
+	Log    telegraf.Logger
 }
 
 // Description returns a description string
@@ -61,7 +61,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 
 		destinations, err := i.handle.GetDestinations(s)
 		if err != nil {
-			log.Println("E! Failed to list destinations for a virtual server")
+			i.Log.Errorf("Failed to list destinations for a virtual server: %s", err.Error())
 			continue // move on to the next virtual server
 		}
 

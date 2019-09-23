@@ -90,7 +90,7 @@ func execCmd(arg0 string, args ...string) ([]byte, error) {
 		for _, arg := range args {
 			quoted = append(quoted, fmt.Sprintf("%q", arg))
 		}
-		log.Printf("D! [inputs.snmp] Executing %q %s", arg0, strings.Join(quoted, " "))
+		log.Printf("D! [inputs.snmp] executing %q %s", arg0, strings.Join(quoted, " "))
 	}
 
 	out, err := execCommand(arg0, args...).Output()

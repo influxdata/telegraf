@@ -188,6 +188,7 @@ driven operation.
 
 Parameters that can be used with any input plugin:
 
+- **alias**: Name an instance of a plugin.
 - **interval**: How often to gather this metric. Normal plugins use a single
   global interval, but if one particular input should be run less or more
   often, you can configure that here.

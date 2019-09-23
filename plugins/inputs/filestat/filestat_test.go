@@ -14,6 +14,7 @@ import (
 func TestGatherNoMd5(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Files = []string{
 		dir + "log1.log",
 		dir + "log2.log",
@@ -44,6 +45,7 @@ func TestGatherNoMd5(t *testing.T) {
 func TestGatherExplicitFiles(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
 		dir + "log1.log",
@@ -77,6 +79,7 @@ func TestGatherExplicitFiles(t *testing.T) {
 func TestGatherGlob(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
 		dir + "*.log",
@@ -103,6 +106,7 @@ func TestGatherGlob(t *testing.T) {
 func TestGatherSuperAsterisk(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
 		dir + "**",
@@ -136,6 +140,7 @@ func TestGatherSuperAsterisk(t *testing.T) {
 func TestModificationTime(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Files = []string{
 		dir + "log1.log",
 	}
@@ -153,6 +158,7 @@ func TestModificationTime(t *testing.T) {
 
 func TestNoModificationTime(t *testing.T) {
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Files = []string{
 		"/non/existant/file",
 	}

@@ -32,8 +32,9 @@ type Mesos struct {
 	MasterCols []string `toml:"master_collections"`
 	Slaves     []string
 	SlaveCols  []string `toml:"slave_collections"`
-	//SlaveTasks bool
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	initialized bool
 	client      *http.Client
@@ -49,8 +50,10 @@ var allMetrics = map[Role][]string{
 var sampleConfig = `
   ## Timeout, in ms.
   timeout = 100
+
   ## A list of Mesos masters.
   masters = ["http://localhost:5050"]
+
   ## Master metrics groups to be collected, by default, all enabled.
   master_collections = [
     "resources",
@@ -65,8 +68,10 @@ var sampleConfig = `
     "registrar",
     "allocator",
   ]
+
   ## A list of Mesos slaves, default is []
   # slaves = []
+
   ## Slave metrics groups to be collected, by default, all enabled.
   # slave_collections = [
   #   "resources",
@@ -110,7 +115,7 @@ func parseURL(s string, role Role) (*url.URL, error) {
 		}
 
 		s = "http://" + host + ":" + port
-		log.Printf("W! [inputs.mesos] Using %q as connection URL; please update your configuration to use an URL", s)
+		log.Printf("W! [inputs.mesos] using %q as connection URL; please update your configuration to use an URL", s)
 	}
 
 	return url.Parse(s)
@@ -126,7 +131,7 @@ func (m *Mesos) initialize() error {
 	}
 
 	if m.Timeout == 0 {
-		log.Println("I! [inputs.mesos] Missing timeout value, setting default value (100ms)")
+		m.Log.Info("Missing timeout value, setting default value (100ms)")
 		m.Timeout = 100
 	}
 
@@ -191,17 +196,6 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 			wg.Done()
 			return
 		}(slave)
-
-		// if !m.SlaveTasks {
-		// 	continue
-		// }
-
-		// wg.Add(1)
-		// go func(c string) {
-		// 	acc.AddError(m.gatherSlaveTaskMetrics(slave, acc))
-		// 	wg.Done()
-		// 	return
-		// }(v)
 	}
 
 	wg.Wait()
@@ -487,7 +481,7 @@ func getMetrics(role Role, group string) []string {
 	ret, ok := m[group]
 
 	if !ok {
-		log.Printf("I! [mesos] Unknown %s metrics group: %s\n", role, group)
+		log.Printf("I! [inputs.mesos] unknown role %q metrics group: %s", role, group)
 		return []string{}
 	}
 

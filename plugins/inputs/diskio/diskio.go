@@ -2,7 +2,6 @@ package diskio
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 
@@ -23,6 +22,8 @@ type DiskIO struct {
 	DeviceTags       []string
 	NameTemplates    []string
 	SkipSerialNumber bool
+
+	Log telegraf.Logger
 
 	infoCache    map[string]diskInfoCache
 	deviceFilter filter.Filter
@@ -75,7 +76,7 @@ func (s *DiskIO) init() error {
 		if hasMeta(device) {
 			filter, err := filter.Compile(s.Devices)
 			if err != nil {
-				return fmt.Errorf("error compiling device pattern: %v", err)
+				return fmt.Errorf("error compiling device pattern: %s", err.Error())
 			}
 			s.deviceFilter = filter
 		}
@@ -99,7 +100,7 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 
 	diskio, err := s.ps.DiskIO(devices)
 	if err != nil {
-		return fmt.Errorf("error getting disk io info: %s", err)
+		return fmt.Errorf("error getting disk io info: %s", err.Error())
 	}
 
 	for _, io := range diskio {
@@ -166,7 +167,7 @@ func (s *DiskIO) diskName(devName string) (string, []string) {
 	}
 
 	if err != nil {
-		log.Printf("W! Error gathering disk info: %s", err)
+		s.Log.Warnf("Error gathering disk info: %s", err)
 		return devName, devLinks
 	}
 
@@ -199,7 +200,7 @@ func (s *DiskIO) diskTags(devName string) map[string]string {
 
 	di, err := s.diskInfo(devName)
 	if err != nil {
-		log.Printf("W! Error gathering disk info: %s", err)
+		s.Log.Warnf("Error gathering disk info: %s", err)
 		return nil
 	}
 

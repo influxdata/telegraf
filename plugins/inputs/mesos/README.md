@@ -10,8 +10,10 @@ For more information, please check the [Mesos Observability Metrics](http://meso
 [[inputs.mesos]]
   ## Timeout, in ms.
   timeout = 100
+
   ## A list of Mesos masters.
   masters = ["http://localhost:5050"]
+
   ## Master metrics groups to be collected, by default, all enabled.
   master_collections = [
     "resources",
@@ -26,8 +28,10 @@ For more information, please check the [Mesos Observability Metrics](http://meso
     "registrar",
     "allocator",
   ]
+
   ## A list of Mesos slaves, default is []
   # slaves = []
+
   ## Slave metrics groups to be collected, by default, all enabled.
   # slave_collections = [
   #   "resources",

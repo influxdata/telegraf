@@ -14,6 +14,7 @@ import (
 
 func TestStartNoParsers(t *testing.T) {
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{"testdata/*.log"},
 	}
@@ -26,6 +27,7 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{thisdir + "testdata/*.log"},
 		GrokConfig: GrokConfig{
@@ -43,6 +45,7 @@ func TestGrokParseLogFiles(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log: testutil.Logger{},
 		GrokConfig: GrokConfig{
 			MeasurementName:    "logparser_grok",
 			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
@@ -89,6 +92,7 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{emptydir + "/*.log"},
 		GrokConfig: GrokConfig{
@@ -128,6 +132,7 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{thisdir + "testdata/test_a.log"},
 		GrokConfig: GrokConfig{

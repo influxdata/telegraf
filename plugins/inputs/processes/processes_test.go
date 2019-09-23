@@ -16,6 +16,7 @@ import (
 
 func TestProcesses(t *testing.T) {
 	processes := &Processes{
+		Log:          testutil.Logger{},
 		execPS:       execPS,
 		readProcFile: readProcFile,
 	}
@@ -35,6 +36,7 @@ func TestProcesses(t *testing.T) {
 
 func TestFromPS(t *testing.T) {
 	processes := &Processes{
+		Log:     testutil.Logger{},
 		execPS:  testExecPS,
 		forcePS: true,
 	}
@@ -56,6 +58,7 @@ func TestFromPS(t *testing.T) {
 
 func TestFromPSError(t *testing.T) {
 	processes := &Processes{
+		Log:     testutil.Logger{},
 		execPS:  testExecPSError,
 		forcePS: true,
 	}
@@ -71,6 +74,7 @@ func TestFromProcFiles(t *testing.T) {
 	}
 	tester := tester{}
 	processes := &Processes{
+		Log:          testutil.Logger{},
 		readProcFile: tester.testProcFile,
 		forceProc:    true,
 	}
@@ -93,6 +97,7 @@ func TestFromProcFilesWithSpaceInCmd(t *testing.T) {
 	}
 	tester := tester{}
 	processes := &Processes{
+		Log:          testutil.Logger{},
 		readProcFile: tester.testProcFile2,
 		forceProc:    true,
 	}
@@ -120,6 +125,7 @@ func TestParkedProcess(t *testing.T) {
 	procstat := `88 (watchdog/13) P 2 0 0 0 -1 69238848 0 0 0 0 0 0 0 0 20 0 1 0 20 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 1 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 `
 	plugin := &Processes{
+		Log: testutil.Logger{},
 		readProcFile: func(string) ([]byte, error) {
 			return []byte(procstat), nil
 		},

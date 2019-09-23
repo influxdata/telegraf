@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -74,6 +73,8 @@ type HTTPListener struct {
 	NotFoundsServed selfstat.Stat
 	BuffersCreated  selfstat.Stat
 	AuthFailures    selfstat.Stat
+
+	Log telegraf.Logger
 
 	longLines selfstat.Stat
 }
@@ -202,7 +203,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! Started HTTP listener service on %s\n", h.ServiceAddress)
+	h.Log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
 
 	return nil
 }
@@ -215,7 +216,7 @@ func (h *HTTPListener) Stop() {
 	h.listener.Close()
 	h.wg.Wait()
 
-	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress)
+	h.Log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
 }
 
 func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -274,7 +275,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		var err error
 		body, err = gzip.NewReader(req.Body)
 		if err != nil {
-			log.Println("D! " + err.Error())
+			h.Log.Debug(err.Error())
 			badRequest(res, err.Error())
 			return
 		}
@@ -290,7 +291,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	for {
 		n, err := io.ReadFull(body, buf[bufStart:])
 		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-			log.Println("D! " + err.Error())
+			h.Log.Debug(err.Error())
 			// problem reading the request body
 			badRequest(res, err.Error())
 			return
@@ -326,7 +327,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			// finished reading the request body
 			err = h.parse(buf[:n+bufStart], now, precision, db)
 			if err != nil {
-				log.Println("D! "+err.Error(), bufStart+n)
+				h.Log.Debugf("%s: %s", err.Error(), bufStart+n)
 				return400 = true
 			}
 			if return400 {
@@ -348,7 +349,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		if i == -1 {
 			h.longLines.Incr(1)
 			// drop any line longer than the max buffer size
-			log.Printf("D! http_listener received a single line longer than the maximum of %d bytes",
+			h.Log.Debugf("Http_listener received a single line longer than the maximum of %d bytes",
 				len(buf))
 			hangingBytes = true
 			return400 = true
@@ -356,7 +357,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			continue
 		}
 		if err := h.parse(buf[:i+1], now, precision, db); err != nil {
-			log.Println("D! " + err.Error())
+			h.Log.Debug(err.Error())
 			return400 = true
 		}
 		// rotate the bit remaining after the last newline to the front of the buffer

@@ -265,7 +265,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			if !c.config.SkipDatabaseCreation && !c.createdDatabases[db] {
 				err := c.CreateDatabase(ctx, db)
 				if err != nil {
-					c.log.Warnf("when writing to [%s]: database %q creation failed: %v",
+					c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
 						c.config.URL, db, err)
 				}
 			}
@@ -331,7 +331,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// discarded for being older than the retention policy.  Usually this not
 	// a cause for concern and we don't want to retry.
 	if strings.Contains(desc, errStringPointsBeyondRP) {
-		c.log.Warnf("when writing to [%s]: received error %v",
+		c.log.Warnf("When writing to [%s]: received error %v",
 			c.URL(), desc)
 		return nil
 	}
@@ -340,7 +340,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// correctable at this point and so the point is dropped instead of
 	// retrying.
 	if strings.Contains(desc, errStringPartialWrite) {
-		c.log.Errorf("when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -348,7 +348,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// This error indicates a bug in either Telegraf line protocol
 	// serialization, retries would not be successful.
 	if strings.Contains(desc, errStringUnableToParse) {
-		c.log.Errorf("when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}

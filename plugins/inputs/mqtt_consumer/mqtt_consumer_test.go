@@ -102,6 +102,7 @@ func TestLifecycleSanity(t *testing.T) {
 			},
 		}
 	})
+	plugin.Log = testutil.Logger{}
 	plugin.Servers = []string{"tcp://127.0.0.1"}
 
 	parser := &FakeParser{}
@@ -124,10 +125,12 @@ func TestRandomClientID(t *testing.T) {
 	var err error
 
 	m1 := New(nil)
+	m1.Log = testutil.Logger{}
 	err = m1.Init()
 	require.NoError(t, err)
 
 	m2 := New(nil)
+	m2.Log = testutil.Logger{}
 	err = m2.Init()
 	require.NoError(t, err)
 
@@ -137,6 +140,7 @@ func TestRandomClientID(t *testing.T) {
 // PersistentSession requires ClientID
 func TestPersistentClientIDFail(t *testing.T) {
 	plugin := New(nil)
+	plugin.Log = testutil.Logger{}
 	plugin.PersistentSession = true
 
 	err := plugin.Init()
@@ -255,6 +259,7 @@ func TestTopicTag(t *testing.T) {
 			plugin := New(func(o *mqtt.ClientOptions) Client {
 				return client
 			})
+			plugin.Log = testutil.Logger{}
 			plugin.Topics = []string{"telegraf"}
 			plugin.TopicTag = tt.topicTag()
 
@@ -295,6 +300,7 @@ func TestAddRouteCalledForEachTopic(t *testing.T) {
 	plugin := New(func(o *mqtt.ClientOptions) Client {
 		return client
 	})
+	plugin.Log = testutil.Logger{}
 	plugin.Topics = []string{"a", "b"}
 
 	err := plugin.Init()
@@ -325,6 +331,7 @@ func TestSubscribeCalledIfNoSession(t *testing.T) {
 	plugin := New(func(o *mqtt.ClientOptions) Client {
 		return client
 	})
+	plugin.Log = testutil.Logger{}
 	plugin.Topics = []string{"b"}
 
 	err := plugin.Init()
@@ -355,6 +362,7 @@ func TestSubscribeNotCalledIfSession(t *testing.T) {
 	plugin := New(func(o *mqtt.ClientOptions) Client {
 		return client
 	})
+	plugin.Log = testutil.Logger{}
 	plugin.Topics = []string{"b"}
 
 	err := plugin.Init()

@@ -95,7 +95,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 		if err != nil {
 			// Since we are serializing multiple metrics, don't fail the
 			// entire batch just because of one unserializable metric.
-			c.log.Errorf("when writing to [%s] could not serialize metric: %v",
+			c.log.Errorf("When writing to [%s] could not serialize metric: %v",
 				c.URL(), err)
 			continue
 		}

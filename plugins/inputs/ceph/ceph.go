@@ -101,12 +101,12 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 	for _, s := range sockets {
 		dump, err := perfDump(c.CephBinary, s)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error reading from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error reading from socket '%s': %v", s.socket, err))
 			continue
 		}
 		data, err := parseDump(dump)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error parsing dump from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error parsing dump from socket '%s': %v", s.socket, err))
 			continue
 		}
 		for tag, metrics := range data {
@@ -287,7 +287,7 @@ func flatten(data interface{}) []*metric {
 			}
 		}
 	default:
-		log.Printf("I! Ignoring unexpected type '%T' for value %v", val, val)
+		log.Printf("I! [inputs.ceph] ignoring unexpected type '%T' for value %v", val, val)
 	}
 
 	return metrics

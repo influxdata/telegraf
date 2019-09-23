@@ -68,7 +68,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 			case <-time.After(time.Second):
 				err := p.watch(ctx, client)
 				if err != nil {
-					log.Printf("E! [inputs.prometheus] unable to watch resources: %v", err)
+					p.Log.Errorf("Unable to watch resources: %s", err.Error())
 				}
 			}
 		}
@@ -144,7 +144,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] will scrape metrics from %s", *targetURL)
+	log.Printf("D! [inputs.prometheus] will scrape metrics from %q", *targetURL)
 	// add annotation as metrics tags
 	tags := pod.GetMetadata().GetAnnotations()
 	if tags == nil {
@@ -158,7 +158,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	URL, err := url.Parse(*targetURL)
 	if err != nil {
-		log.Printf("E! [inputs.prometheus] could not parse URL %s: %v", *targetURL, err)
+		log.Printf("E! [inputs.prometheus] could not parse URL %q: %s", *targetURL, err.Error())
 		return
 	}
 	podURL := p.AddressToURL(URL, URL.Hostname())
@@ -211,13 +211,13 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("D! [inputs.prometheus] registered a delete request for %s in namespace %s",
+	log.Printf("D! [inputs.prometheus] registered a delete request for %q in namespace %q",
 		pod.GetMetadata().GetName(), pod.GetMetadata().GetNamespace())
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	if _, ok := p.kubernetesPods[*url]; ok {
 		delete(p.kubernetesPods, *url)
-		log.Printf("D! [inputs.prometheus] will stop scraping for %s", *url)
+		log.Printf("D! [inputs.prometheus] will stop scraping for %q", *url)
 	}
 }

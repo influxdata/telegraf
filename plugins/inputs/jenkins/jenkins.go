@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,6 +27,8 @@ type Jenkins struct {
 
 	tls.ClientConfig
 	client *client
+
+	Log telegraf.Logger
 
 	MaxConnections    int               `toml:"max_connections"`
 	MaxBuildAge       internal.Duration `toml:"max_build_age"`
@@ -304,7 +305,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	}
 
 	if build.Building {
-		log.Printf("D! Ignore running build on %s, build %v", jr.name, number)
+		j.Log.Debugf("Ignore running build on %s, build %v", jr.name, number)
 		return nil
 	}
 

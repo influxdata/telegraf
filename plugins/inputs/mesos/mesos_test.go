@@ -349,6 +349,7 @@ func TestMesosMaster(t *testing.T) {
 	var acc testutil.Accumulator
 
 	m := Mesos{
+		Log:     testutil.Logger{},
 		Masters: []string{masterTestServer.Listener.Addr().String()},
 		Timeout: 10,
 	}
@@ -364,6 +365,7 @@ func TestMesosMaster(t *testing.T) {
 
 func TestMasterFilter(t *testing.T) {
 	m := Mesos{
+		Log: testutil.Logger{},
 		MasterCols: []string{
 			"resources", "master", "registrar", "allocator",
 		},
@@ -416,6 +418,7 @@ func TestMesosSlave(t *testing.T) {
 	var acc testutil.Accumulator
 
 	m := Mesos{
+		Log:     testutil.Logger{},
 		Masters: []string{},
 		Slaves:  []string{slaveTestServer.Listener.Addr().String()},
 		// SlaveTasks: true,
@@ -433,6 +436,7 @@ func TestMesosSlave(t *testing.T) {
 
 func TestSlaveFilter(t *testing.T) {
 	m := Mesos{
+		Log: testutil.Logger{},
 		SlaveCols: []string{
 			"resources", "agent", "tasks",
 		},

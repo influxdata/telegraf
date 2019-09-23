@@ -18,7 +18,7 @@ const (
 )
 
 func NewTestStatsd() *Statsd {
-	s := Statsd{}
+	s := Statsd{Log: testutil.Logger{}}
 
 	// Make data structures
 	s.done = make(chan struct{})
@@ -36,6 +36,7 @@ func NewTestStatsd() *Statsd {
 // Test that MaxTCPConections is respected
 func TestConcurrentConns(t *testing.T) {
 	listener := Statsd{
+		Log:                    testutil.Logger{},
 		Protocol:               "tcp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
@@ -66,6 +67,7 @@ func TestConcurrentConns(t *testing.T) {
 // Test that MaxTCPConections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
 	listener := Statsd{
+		Log:                    testutil.Logger{},
 		Protocol:               "tcp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
@@ -94,6 +96,7 @@ func TestConcurrentConns1(t *testing.T) {
 // Test that MaxTCPConections is respected
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := Statsd{
+		Log:                    testutil.Logger{},
 		Protocol:               "tcp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
@@ -115,6 +118,7 @@ func TestCloseConcurrentConns(t *testing.T) {
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkUDP(b *testing.B) {
 	listener := Statsd{
+		Log:                    testutil.Logger{},
 		Protocol:               "udp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
@@ -145,6 +149,7 @@ func BenchmarkUDP(b *testing.B) {
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkTCP(b *testing.B) {
 	listener := Statsd{
+		Log:                    testutil.Logger{},
 		Protocol:               "tcp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
@@ -1625,6 +1630,7 @@ func testValidateGauge(
 
 func TestTCP(t *testing.T) {
 	statsd := Statsd{
+		Log:                    testutil.Logger{},
 		Protocol:               "tcp",
 		ServiceAddress:         "localhost:0",
 		AllowedPendingMessages: 10000,

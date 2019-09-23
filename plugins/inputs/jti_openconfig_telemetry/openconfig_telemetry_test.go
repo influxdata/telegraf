@@ -17,6 +17,7 @@ import (
 )
 
 var cfg = &OpenConfigTelemetry{
+	Log:             testutil.Logger{},
 	Servers:         []string{"127.0.0.1:50051"},
 	SampleFrequency: internal.Duration{Duration: time.Second * 2},
 }

@@ -139,8 +139,8 @@ func parseResponse(metrics string) map[string]interface{} {
 
 		i, err := strconv.ParseInt(m[1], 10, 64)
 		if err != nil {
-			log.Printf("E! [inputs.powerdns_recursor] Error parsing integer for metric [%s] %v",
-				metric, err)
+			log.Printf("E! [inputs.powerdns_recursor] error parsing integer for metric %q: %s",
+				metric, err.Error())
 			continue
 		}
 		values[m[0]] = i

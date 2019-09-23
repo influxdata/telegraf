@@ -2,7 +2,6 @@ package vsphere
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
@@ -58,6 +57,8 @@ type VSphere struct {
 
 	// Mix in the TLS/SSL goodness from core
 	tls.ClientConfig
+
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
@@ -243,7 +244,7 @@ func (v *VSphere) Description() string {
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
 func (v *VSphere) Start(acc telegraf.Accumulator) error {
-	log.Println("D! [inputs.vsphere]: Starting plugin")
+	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
 
@@ -266,7 +267,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
 func (v *VSphere) Stop() {
-	log.Println("D! [inputs.vsphere]: Stopping plugin")
+	v.Log.Info("Stopping plugin")
 	v.cancel()
 
 	// Wait for all endpoints to finish. No need to wait for
@@ -275,7 +276,7 @@ func (v *VSphere) Stop() {
 	// wait for any discovery to complete by trying to grab the
 	// "busy" mutex.
 	for _, ep := range v.endpoints {
-		log.Printf("D! [inputs.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
+		v.Log.Debugf("Waiting for endpoint %q to finish", ep.URL.Host)
 		func() {
 			ep.busy.Lock() // Wait until discovery is finished
 			defer ep.busy.Unlock()
