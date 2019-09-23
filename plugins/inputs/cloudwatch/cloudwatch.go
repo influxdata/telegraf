@@ -3,12 +3,12 @@ package cloudwatch
 import (
 	"errors"
 	"fmt"
+	"log"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"log"
-	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -61,8 +61,8 @@ type (
 
 	// Dimension defines a simplified Cloudwatch dimension (provides metric filtering).
 	Dimension struct {
-		Name  string `toml:"name"`
-		Value string `toml:"value"`
+		Name          string   `toml:"name"`
+		Value         string   `toml:"value"`
 		ValueExcludes []string `toml:"value_excludes"`
 	}
 
@@ -604,7 +604,7 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 		for _, d2 := range metric.Dimensions {
 			if d.Name == *d2.Name {
 				// apply valueExlude
-				if (d.Value == "*" || d.Value == "" ) && len(d.ValueExcludes) > 0 {
+				if (d.Value == "*" || d.Value == "") && len(d.ValueExcludes) > 0 {
 					for _, match := range d.ValueExcludes {
 						var r = regexp.MustCompile(match)
 						matched := r.MatchString(*d2.Value)
@@ -629,4 +629,3 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 	}
 	return true
 }
-

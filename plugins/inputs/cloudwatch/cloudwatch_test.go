@@ -135,7 +135,6 @@ func TestGather(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
-
 func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	metrics := []*cloudwatch.Metric{}
 	// 4 metrics are available
@@ -273,8 +272,8 @@ func TestSelectMetricsValueExcludesKeepOne(t *testing.T) {
 				MetricNames: []string{"Latency", "RequestCount"},
 				Dimensions: []*Dimension{
 					{
-						Name:  "LoadBalancerName",
-						Value: "*",
+						Name:          "LoadBalancerName",
+						Value:         "*",
 						ValueExcludes: []string{"-(prod|qa|nomatch)$"},
 					},
 					{
@@ -307,8 +306,8 @@ func TestSelectMetricsDimensionsValueNoValueExcludes(t *testing.T) {
 				MetricNames: []string{"Latency", "RequestCount"},
 				Dimensions: []*Dimension{
 					{
-						Name:  "LoadBalancerName",
-						Value: "lb-1-staging",
+						Name:          "LoadBalancerName",
+						Value:         "lb-1-staging",
 						ValueExcludes: []string{"staging", "qa", "staging"},
 					},
 					{
@@ -390,7 +389,6 @@ func TestSelectMetricsAndValueWhitespace(t *testing.T) {
 	assert.Equal(t, 12, len(filtered[0].metrics))
 	assert.Nil(t, err)
 }
-
 
 func TestGenerateStatisticsInputParams(t *testing.T) {
 	d := &cloudwatch.Dimension{
