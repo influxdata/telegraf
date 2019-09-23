@@ -248,7 +248,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case MEASUREMENT:
 			p.Measurement = v
 		case INT:
-			iv, err := strconv.ParseInt(v, 10, 64)
+			iv, err := strconv.ParseInt(v, 0, 64)
 			if err != nil {
 				log.Printf("E! Error parsing %s to int: %s", v, err)
 			} else {
