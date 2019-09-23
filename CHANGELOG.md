@@ -12,6 +12,7 @@
 - [#5921](https://github.com/influxdata/telegraf/pull/5921): Add replication metrics to the redis input.
 - [#6177](https://github.com/influxdata/telegraf/pull/6177): Support NX-OS telemetry extensions in cisco_telemetry_mdt.
 - [#6415](https://github.com/influxdata/telegraf/pull/6415): Allow graphite parser to create Inf and NaN values.
+- [#6434](https://github.com/influxdata/telegraf/pull/6434): Use prefix base detection for ints in grok parser.
 
 ## v1.12.2 [unreleased]
 
