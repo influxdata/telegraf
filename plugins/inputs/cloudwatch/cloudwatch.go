@@ -602,8 +602,8 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 		selected := false
 		for _, d2 := range metric.Dimensions {
 			if d.Name == *d2.Name {
-				StarValue := "*"
-				if d.ValueExcludes != nil && d.Value == StarValue {
+				// apply valueExlude
+				if (d.Value == "*" || d.Value == "" ) && len(d.ValueExcludes) > 0 {
 					for _, match := range d.ValueExcludes {
 						var r = regexp.MustCompile(match)
 						matched := r.MatchString(*d2.Value)
@@ -612,10 +612,12 @@ func isSelected(name string, metric *cloudwatch.Metric, dimensions []*Dimension)
 							return false
 						} else {
 							log.Println("D! [OK][Dimension]: ", d.Name, "= ", *d2.Value, " matches not value_excludes = ", d.ValueExcludes)
+							// selected = true
 						}
 					}
 				}
-				if d.Value == "" || d.Value == StarValue || d.Value == *d2.Value {
+
+				if d.Value == "" || d.Value == "*" || d.Value == *d2.Value {
 					selected = true
 				}
 			}

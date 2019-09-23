@@ -135,12 +135,13 @@ func TestGather(t *testing.T) {
 
 type mockSelectMetricsCloudWatchClient struct{}
 
+
 func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	metrics := []*cloudwatch.Metric{}
 	// 4 metrics are available
 	metricNames := []string{"Latency", "RequestCount", "HealthyHostCount", "UnHealthyHostCount"}
 	// for 3 ELBs
-	loadBalancers := []string{"lb-1", "lb-2", "lb-3"}
+	loadBalancers := []string{"lb-1-staging", "lb-2-qa", "lb-3-prod"}
 	// in 2 AZs
 	availabilityZones := []string{"us-east-1a", "us-east-1b"}
 	for _, m := range metricNames {
@@ -220,6 +221,176 @@ func TestSelectMetrics(t *testing.T) {
 	assert.Equal(t, 12, len(filtered[0].metrics))
 	assert.Nil(t, err)
 }
+
+func TestSelectMetricsValueExcludesAll(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 200,
+		Metrics: []*Metric{
+			{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions: []*Dimension{
+					{
+						Name:  "LoadBalancerName",
+						Value: "*",
+						// exclude all. "prod", "qa", "staging"
+						ValueExcludes: []string{"-(qa|prod)$", "staging"},
+					},
+					{
+						Name:  "AvailabilityZone",
+						Value: "*",
+					},
+				},
+			},
+		},
+	}
+	c.client = &mockSelectMetricsCloudWatchClient{}
+	filtered, err := getFilteredMetrics(c)
+	assert.Equal(t, 0, len(filtered[0].metrics))
+	assert.Nil(t, err)
+}
+
+func TestSelectMetricsValueExcludesKeepOne(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 200,
+		Metrics: []*Metric{
+			{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions: []*Dimension{
+					{
+						Name:  "LoadBalancerName",
+						Value: "*",
+						ValueExcludes: []string{"-(prod|qa|nomatch)$"},
+					},
+					{
+						Name:  "AvailabilityZone",
+						Value: "*",
+					},
+				},
+			},
+		},
+	}
+	c.client = &mockSelectMetricsCloudWatchClient{}
+	filtered, err := getFilteredMetrics(c)
+	assert.Equal(t, 4, len(filtered[0].metrics))
+	assert.Nil(t, err)
+}
+
+func TestSelectMetricsDimensionsValueNoValueExcludes(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 200,
+		Metrics: []*Metric{
+			{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions: []*Dimension{
+					{
+						Name:  "LoadBalancerName",
+						Value: "lb-1-staging",
+						ValueExcludes: []string{"staging", "qa", "staging"},
+					},
+					{
+						Name:  "AvailabilityZone",
+						Value: "*",
+					},
+				},
+			},
+		},
+	}
+	c.client = &mockSelectMetricsCloudWatchClient{}
+	filtered, err := getFilteredMetrics(c)
+	assert.Equal(t, 4, len(filtered[0].metrics))
+	assert.Nil(t, err)
+}
+
+func TestSelectMetricsDimensionsValuesEmpty(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 200,
+		Metrics: []*Metric{
+			{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions: []*Dimension{
+					{
+						Name:  "LoadBalancerName",
+						Value: "",
+					},
+					{
+						Name:  "AvailabilityZone",
+						Value: "",
+					},
+				},
+			},
+		},
+	}
+	c.client = &mockSelectMetricsCloudWatchClient{}
+	filtered, err := getFilteredMetrics(c)
+	assert.Equal(t, 12, len(filtered[0].metrics))
+	assert.Nil(t, err)
+}
+
+func TestSelectMetricsAndValueWhitespace(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+	c := &CloudWatch{
+		Region:    "us-east-1",
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+		RateLimit: 200,
+		Metrics: []*Metric{
+			{
+				MetricNames: []string{"Latency", "RequestCount"},
+				Dimensions: []*Dimension{
+					{
+						Name:  "LoadBalancerName",
+						Value: "*",
+					},
+					{
+						Name:  "AvailabilityZone",
+						Value: "*",
+					},
+				},
+			},
+		},
+	}
+	c.client = &mockSelectMetricsCloudWatchClient{}
+	filtered, err := getFilteredMetrics(c)
+	assert.Equal(t, 12, len(filtered[0].metrics))
+	assert.Nil(t, err)
+}
+
 
 func TestGenerateStatisticsInputParams(t *testing.T) {
 	d := &cloudwatch.Dimension{
