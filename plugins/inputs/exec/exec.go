@@ -161,7 +161,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	if isNagios {
 		metrics, err = nagios.TryAddState(runErr, metrics)
 		if err != nil {
-			e.log.Errorf("failed to add nagios state: %s", err)
+			e.log.Errorf("Failed to add nagios state: %s", err)
 		}
 	}
 

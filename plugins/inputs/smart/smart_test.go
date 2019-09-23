@@ -15,6 +15,7 @@ import (
 
 func TestGatherAttributes(t *testing.T) {
 	s := NewSmart()
+	s.Log = testutil.Logger{}
 	s.Path = "smartctl"
 	s.Attributes = true
 
@@ -330,6 +331,7 @@ func TestGatherAttributes(t *testing.T) {
 
 func TestGatherNoAttributes(t *testing.T) {
 	s := NewSmart()
+	s.Log = testutil.Logger{}
 	s.Path = "smartctl"
 	s.Attributes = false
 

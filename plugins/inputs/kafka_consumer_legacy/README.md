@@ -13,12 +13,16 @@ from the same topic in parallel.
 [[inputs.kafka_consumer]]
   ## topic(s) to consume
   topics = ["telegraf"]
+
   ## an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
+
   ## Zookeeper Chroot
   zookeeper_chroot = ""
+
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
+
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 

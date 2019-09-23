@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -54,6 +53,8 @@ type CiscoTelemetryGNMI struct {
 	acc     telegraf.Accumulator
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
+
+	Log telegraf.Logger
 }
 
 // Subscription for a GNMI client
@@ -211,8 +212,8 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, 
 		return fmt.Errorf("failed to send subscription request: %v", err)
 	}
 
-	log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s established", address)
-	defer log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s closed", address)
+	c.Log.Debugf("Connection to GNMI device %s established", address)
+	defer c.Log.Debugf("Connection to GNMI device %s closed", address)
 	for ctx.Err() == nil {
 		var reply *gnmi.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
@@ -267,7 +268,7 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 			if alias, ok := c.aliases[aliasPath]; ok {
 				name = alias
 			} else {
-				log.Printf("D! [inputs.cisco_telemetry_gnmi]: No measurement alias for GNMI path: %s", name)
+				c.Log.Debugf("No measurement alias for GNMI path: %s", name)
 			}
 		}
 

@@ -1,7 +1,7 @@
 package mongodb
 
 import (
-	"log"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -15,6 +15,8 @@ type Server struct {
 	Url        *url.URL
 	Session    *mgo.Session
 	lastResult *MongoStatus
+
+	Log telegraf.Logger
 }
 
 func (s *Server) getDefaultTags() map[string]string {
@@ -31,11 +33,11 @@ func IsAuthorization(err error) bool {
 	return strings.Contains(err.Error(), "not authorized")
 }
 
-func authLogLevel(err error) string {
+func (s *Server) authLog(err error) {
 	if IsAuthorization(err) {
-		return "D!"
+		s.Log.Debug(err.Error())
 	} else {
-		return "E!"
+		s.Log.Error(err.Error())
 	}
 }
 
@@ -158,30 +160,30 @@ func (s *Server) gatherCollectionStats(colStatsDbs []string) (*ColStats, error) 
 	}
 
 	results := &ColStats{}
-	for _, db_name := range names {
-		if stringInSlice(db_name, colStatsDbs) || len(colStatsDbs) == 0 {
+	for _, dbName := range names {
+		if stringInSlice(dbName, colStatsDbs) || len(colStatsDbs) == 0 {
 			var colls []string
-			colls, err = s.Session.DB(db_name).CollectionNames()
+			colls, err = s.Session.DB(dbName).CollectionNames()
 			if err != nil {
-				log.Printf("E! [inputs.mongodb] Error getting collection names: %v", err)
+				s.Log.Errorf("Error getting collection names: %s", err.Error())
 				continue
 			}
-			for _, col_name := range colls {
-				col_stat_line := &ColStatsData{}
-				err = s.Session.DB(db_name).Run(bson.D{
+			for _, colName := range colls {
+				colStatLine := &ColStatsData{}
+				err = s.Session.DB(dbName).Run(bson.D{
 					{
 						Name:  "collStats",
-						Value: col_name,
+						Value: colName,
 					},
-				}, col_stat_line)
+				}, colStatLine)
 				if err != nil {
-					log.Printf("%s [inputs.mongodb] Error getting col stats from %q: %v", authLogLevel(err), col_name, err)
+					s.authLog(fmt.Errorf("error getting col stats from %q: %v", colName, err))
 					continue
 				}
 				collection := &Collection{
-					Name:         col_name,
-					DbName:       db_name,
-					ColStatsData: col_stat_line,
+					Name:         colName,
+					DbName:       dbName,
+					ColStatsData: colStatLine,
 				}
 				results.Collections = append(results.Collections, *collection)
 			}
@@ -203,7 +205,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 	// member of a replica set.
 	replSetStatus, err := s.gatherReplSetStatus()
 	if err != nil {
-		log.Printf("D! [inputs.mongodb] Unable to gather replica set status: %v", err)
+		s.Log.Debugf("Unable to gather replica set status: %s", err.Error())
 	}
 
 	// Gather the oplog if we are a member of a replica set.  Non-replica set
@@ -218,13 +220,12 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 
 	clusterStatus, err := s.gatherClusterStatus()
 	if err != nil {
-		log.Printf("D! [inputs.mongodb] Unable to gather cluster status: %v", err)
+		s.Log.Debugf("Unable to gather cluster status: %s", err.Error())
 	}
 
 	shardStats, err := s.gatherShardConnPoolStats()
 	if err != nil {
-		log.Printf("%s [inputs.mongodb] Unable to gather shard connection pool stats: %v",
-			authLogLevel(err), err)
+		s.authLog(fmt.Errorf("unable to gather shard connection pool stats: %s", err.Error()))
 	}
 
 	var collectionStats *ColStats
@@ -246,7 +247,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 		for _, name := range names {
 			db, err := s.gatherDBStats(name)
 			if err != nil {
-				log.Printf("D! [inputs.mongodb] Error getting db stats from %q: %v", name, err)
+				s.Log.Debugf("Error getting db stats from %q: %s", name, err.Error())
 			}
 			dbStats.Dbs = append(dbStats.Dbs, *db)
 		}

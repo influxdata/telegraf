@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -44,6 +43,8 @@ type Docker struct {
 
 	ContainerStateInclude []string `toml:"container_state_include"`
 	ContainerStateExclude []string `toml:"container_state_exclude"`
+
+	Log telegraf.Logger
 
 	tlsint.ClientConfig
 
@@ -107,8 +108,10 @@ var sampleConfig = `
   ## Whether to report for each container per-device blkio (8:0, 8:1...) and
   ## network (eth0, eth1, ...) stats or not
   perdevice = true
+
   ## Whether to report for each container total blkio and network stats or not
   total = false
+
   ## Which environment variables should we use as a tag
   ##tag_env = ["JAVA_HOME", "HEAP_SIZE"]
 
@@ -274,7 +277,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 				fields["tasks_running"] = running[service.ID]
 				fields["tasks_desired"] = tasksNoShutdown[service.ID]
 			} else {
-				log.Printf("E! Unknow Replicas Mode")
+				d.Log.Error("Unknown replica mode")
 			}
 			// Add metrics
 			acc.AddFields("docker_swarm",

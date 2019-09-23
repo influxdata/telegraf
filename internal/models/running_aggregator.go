@@ -144,7 +144,7 @@ func (r *RunningAggregator) Add(m telegraf.Metric) bool {
 	defer r.Unlock()
 
 	if m.Time().Before(r.periodStart.Add(-r.Config.Grace)) || m.Time().After(r.periodEnd.Add(r.Config.Delay)) {
-		r.log.Debugf("metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
+		r.log.Debugf("Metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
 			m.Time(), r.periodStart, r.periodEnd, r.Config.Grace)
 		r.MetricsDropped.Incr(1)
 		return r.Config.DropOriginal
