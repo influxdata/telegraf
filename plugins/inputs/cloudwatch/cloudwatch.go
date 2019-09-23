@@ -157,6 +157,7 @@ func (c *CloudWatch) SampleConfig() string {
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"
+  #    # value_excludes = ["example"] # only used when LoadBalancerName is * or empty
 `
 }
 

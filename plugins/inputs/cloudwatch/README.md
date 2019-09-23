@@ -139,6 +139,36 @@ Then 2 metrics will be output:
 If the `AvailabilityZone` wildcard dimension was omitted, then a single metric (name: `p-example`)
 would be exported containing the aggregate values of the ELB across availability zones.
 
+
+Example2:
+```
+[[inputs.cloudwatch]]
+  period = "1m"
+  interval = "5m"
+
+  [[inputs.cloudwatch.metrics]]
+    names = ["Latency"]
+
+    ## Dimension filters for Metric (optional)
+    [[inputs.cloudwatch.metrics.dimensions]]
+      name = "LoadBalancerName"
+      value = "*"
+      value_excludes = ["example"]
+
+    [[inputs.cloudwatch.metrics.dimensions]]
+      name = "AvailabilityZone"
+      value = "*"
+```
+
+If the following ELBs are available:
+- name: `p-example`, availabilityZone: `us-east-1a`
+- name: `p-example`, availabilityZone: `us-east-1b`
+- name: `q-example`, availabilityZone: `us-east-1a`
+- name: `q-example`, availabilityZone: `us-east-1b`
+
+
+Then 0 metrics will be output as **example** matches all `LoadBalancerName=*`
+
 To maximize efficiency and savings, consider making fewer requests by increasing `interval` but keeping `period` at the duration you would like metrics to be reported. The above example will request metrics from Cloudwatch every 5 minutes but will output five metrics timestamped one minute apart.
 
 #### Restrictions and Limitations
