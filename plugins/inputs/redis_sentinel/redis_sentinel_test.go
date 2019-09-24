@@ -37,7 +37,7 @@ func TestRedisSentinelParseInfo(t *testing.T) {
 
 	fields := map[string]interface{}{
 		"lru_clock":     int64(15585808),
-		"uptime":        int64(901),
+		"uptime_ns":     int64(901000000000),
 		"redis_version": "5.0.5",
 
 		"clients":                         int64(2),

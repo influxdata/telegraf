@@ -396,14 +396,18 @@ func gatherSentinelInfoOutput(
 		name := parts[0]
 
 		if section == "Server" {
-			if name != "lru_clock" && name != "redis_version" {
+			if name != "lru_clock" && name != "uptime_in_seconds" && name != "redis_version" {
 				continue
 			}
 
+			// Rename and convert to nanoseconds
 			if name == "uptime_in_seconds" {
 				uptimeInSeconds, uptimeParseErr := strconv.ParseInt(parts[1], 10, 64)
 				if uptimeParseErr == nil {
-					fields["uptime"] = time.Duration(uptimeInSeconds) * time.Second
+					fields["uptime_ns"] = int64(time.Duration(uptimeInSeconds) * time.Second)
+					continue
+				} else {
+					acc.AddError(uptimeParseErr)
 				}
 			}
 		}
