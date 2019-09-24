@@ -187,8 +187,6 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	lastError := returnLastError{}
-
 	for _, client := range r.clients {
 		wg.Add(1)
 
@@ -197,13 +195,13 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 			mastersCmd := redis.NewSliceCmd("sentinel", "masters")
 			if smErr := client.sentinel.Process(mastersCmd); smErr != nil {
-				lastError.Add(smErr)
+				acc.AddError(smErr)
 				return
 			}
 
 			masters, mastersErr := mastersCmd.Result()
 			if mastersErr != nil {
-				lastError.Add(mastersErr)
+				acc.AddError(mastersErr)
 				return
 			}
 
@@ -234,7 +232,7 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 				quorumCmd := redis.NewStringCmd("sentinel", "ckquorum", m["name"])
 				if qErr := client.sentinel.Process(quorumCmd); qErr != nil {
-					lastError.Add(qErr)
+					acc.AddError(qErr)
 					return
 				}
 
@@ -253,13 +251,13 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 				sentinelsCmd := redis.NewSliceCmd("sentinel", "sentinels", m["name"])
 				if ssErr := client.sentinel.Process(sentinelsCmd); ssErr != nil {
-					lastError.Add(ssErr)
+					acc.AddError(ssErr)
 					return
 				}
 
 				sentinels, sentinelsErr := sentinelsCmd.Result()
 				if sentinelsErr != nil {
-					lastError.Add(sentinelsErr)
+					acc.AddError(sentinelsErr)
 					return
 				}
 
@@ -294,13 +292,13 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 				replicasCmd := redis.NewSliceCmd("sentinel", "replicas", m["name"])
 				if srErr := client.sentinel.Process(replicasCmd); srErr != nil {
-					lastError.Add(srErr)
+					acc.AddError(srErr)
 					return
 				}
 
 				replicas, replicasErr := replicasCmd.Result()
 				if replicasErr != nil {
-					lastError.Add(replicasErr)
+					acc.AddError(replicasErr)
 					return
 				}
 
@@ -332,13 +330,13 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 				infoCmd := redis.NewStringCmd("info", "all")
 				if iErr := client.sentinel.Process(infoCmd); iErr != nil {
-					lastError.Add(iErr)
+					acc.AddError(iErr)
 					return
 				}
 
 				info, infoErr := infoCmd.Result()
 				if infoErr != nil {
-					lastError.Add(infoErr)
+					acc.AddError(infoErr)
 					return
 				}
 
@@ -350,7 +348,7 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 
-	return lastError.Get()
+	return nil
 }
 
 func init() {
