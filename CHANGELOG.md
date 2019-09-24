@@ -22,6 +22,7 @@
 - [#6394](https://github.com/influxdata/telegraf/issues/6394): Fix parsing of BATTDATE in apcupsd input.
 - [#6398](https://github.com/influxdata/telegraf/issues/6398): Keep boolean values listed in json_string_fields.
 - [#6393](https://github.com/influxdata/telegraf/issues/6393): Disable Go plugin support in official builds.
+- [#6391](https://github.com/influxdata/telegraf/issues/6391): Fix path handling issues in cisco_telemetry_gnmi.
 
 ## v1.12.1 [2019-09-10]
 
