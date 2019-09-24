@@ -157,8 +157,8 @@ func (agg *TDigestAgg) Add(input telegraf.Metric) {
 }
 
 func (agg *TDigestAgg) Push(acc telegraf.Accumulator) {
-	// This probably won't work until merged into main project
-	//selfstat.Register("aggregation-window", "cardinality", len(agg.cache))
+	// TODO: Evaluate cardinality metric
+	//selfstat.Register("aggregation-window", "cardinality", map[string]string{}).Set(len(agg.cache))
 
 	for _, agg := range agg.cache {
 		(*agg).emit(acc)

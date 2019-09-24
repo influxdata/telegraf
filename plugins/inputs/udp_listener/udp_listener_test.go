@@ -34,8 +34,8 @@ func newTestUdpListener() (*UdpListener, chan []byte) {
 		Log:                    testutil.Logger{},
 		ServiceAddress:         ":8125",
 		AllowedPendingMessages: 10000,
-		in:                     in,
-		done:                   make(chan struct{}),
+		in:   in,
+		done: make(chan struct{}),
 	}
 	return listener, in
 }

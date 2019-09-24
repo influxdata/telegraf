@@ -55,9 +55,9 @@ func (m *MockStackdriverClient) Close() error {
 
 func TestInitAndRegister(t *testing.T) {
 	expected := &Stackdriver{
-		CacheTTL:                        defaultCacheTTL,
-		RateLimit:                       defaultRateLimit,
-		Delay:                           defaultDelay,
+		CacheTTL:  defaultCacheTTL,
+		RateLimit: defaultRateLimit,
+		Delay:     defaultDelay,
 		GatherRawDistributionBuckets:    true,
 		DistributionAggregationAligners: []string{},
 	}
@@ -282,8 +282,8 @@ func TestGather(t *testing.T) {
 					Value: &monitoringpb.TypedValue{
 						Value: &monitoringpb.TypedValue_DistributionValue{
 							DistributionValue: &distribution.Distribution{
-								Count:                 2,
-								Mean:                  2.0,
+								Count: 2,
+								Mean:  2.0,
 								SumOfSquaredDeviation: 1.0,
 								Range: &distribution.Distribution_Range{
 									Min: 0.0,
@@ -377,8 +377,8 @@ func TestGather(t *testing.T) {
 					Value: &monitoringpb.TypedValue{
 						Value: &monitoringpb.TypedValue_DistributionValue{
 							DistributionValue: &distribution.Distribution{
-								Count:                 2,
-								Mean:                  2.0,
+								Count: 2,
+								Mean:  2.0,
 								SumOfSquaredDeviation: 1.0,
 								Range: &distribution.Distribution_Range{
 									Min: 0.0,
@@ -472,8 +472,8 @@ func TestGather(t *testing.T) {
 					Value: &monitoringpb.TypedValue{
 						Value: &monitoringpb.TypedValue_DistributionValue{
 							DistributionValue: &distribution.Distribution{
-								Count:                 4,
-								Mean:                  2.0,
+								Count: 4,
+								Mean:  2.0,
 								SumOfSquaredDeviation: 1.0,
 								Range: &distribution.Distribution_Range{
 									Min: 0.0,
@@ -555,8 +555,8 @@ func TestGather(t *testing.T) {
 					Value: &monitoringpb.TypedValue{
 						Value: &monitoringpb.TypedValue_DistributionValue{
 							DistributionValue: &distribution.Distribution{
-								Count:                 2,
-								Mean:                  2.0,
+								Count: 2,
+								Mean:  2.0,
 								SumOfSquaredDeviation: 1.0,
 								Range: &distribution.Distribution_Range{
 									Min: 0.0,
