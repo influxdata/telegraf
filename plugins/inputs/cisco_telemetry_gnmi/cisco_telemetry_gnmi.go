@@ -305,7 +305,7 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 
 	// Make sure a value is actually set
 	if update.Val == nil || update.Val.Value == nil {
-		log.Printf("I! [inputs.cisco_telemetry_gnmi]: Discarded empty or legacy type value with path: %s", path)
+		c.Log.Infof("Discarded empty or legacy type value with path: %q", path)
 		return aliasPath, nil
 	}
 
