@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -102,21 +103,27 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	// Invert explicit alias list and prefill subscription names
 	c.aliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
 	for _, subscription := range c.Subscriptions {
+		var gnmiLongPath, gnmiShortPath *gnmi.Path
+
 		// Build the subscription path without keys
-		gnmiPath, err := parsePath(subscription.Origin, subscription.Path, "")
-		if err != nil {
+		if gnmiLongPath, err = parsePath(subscription.Origin, subscription.Path, ""); err != nil {
+			return err
+		}
+		if gnmiShortPath, err = parsePath("", subscription.Path, ""); err != nil {
 			return err
 		}
 
-		path, _ := c.handlePath(gnmiPath, nil, "")
+		longPath, _ := c.handlePath(gnmiLongPath, nil, "")
+		shortPath, _ := c.handlePath(gnmiShortPath, nil, "")
 		name := subscription.Name
 
 		// If the user didn't provide a measurement name, use last path element
 		if len(name) == 0 {
-			name = path[strings.LastIndexByte(path, '/')+1:]
+			name = path.Base(shortPath)
 		}
 		if len(name) > 0 {
-			c.aliases[path] = name
+			c.aliases[longPath] = name
+			c.aliases[shortPath] = name
 		}
 	}
 	for alias, path := range c.Aliases {
@@ -296,6 +303,12 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 	var value interface{}
 	var jsondata []byte
 
+	// Make sure a value is actually set
+	if update.Val == nil || update.Val.Value == nil {
+		log.Printf("I! [inputs.cisco_telemetry_gnmi]: Discarded empty or legacy type value with path: %s", path)
+		return aliasPath, nil
+	}
+
 	switch val := update.Val.Value.(type) {
 	case *gnmi.TypedValue_AsciiVal:
 		value = val.AsciiVal
@@ -347,8 +360,10 @@ func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string,
 
 	// Parse generic keys from prefix
 	for _, elem := range path.Elem {
-		builder.WriteRune('/')
-		builder.WriteString(elem.Name)
+		if len(elem.Name) > 0 {
+			builder.WriteRune('/')
+			builder.WriteString(elem.Name)
+		}
 		name := builder.String()
 
 		if _, exists := c.aliases[name]; exists {
