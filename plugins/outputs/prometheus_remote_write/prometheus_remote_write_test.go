@@ -83,3 +83,114 @@ func TestWrite(t *testing.T) {
 		})
 	}
 }
+
+func TestWrite_WithStringField(t *testing.T) {
+	for i, tc := range []struct {
+		metrics  []telegraf.Metric
+		expected prompb.WriteRequest
+	}{
+		{
+			metrics:  []telegraf.Metric{},
+			expected: prompb.WriteRequest{},
+		},
+
+		{
+			metrics: []telegraf.Metric{
+				mustNew(t,
+					"foo",
+					map[string]string{"bar": "baz"},
+					map[string]interface{}{
+						"blip": "blop",
+						"num":  1,
+					},
+					time.Unix(0, 0),
+					telegraf.Counter,
+				),
+			},
+			expected: prompb.WriteRequest{
+				Timeseries: []prompb.TimeSeries{{
+					Labels: []prompb.Label{
+						{Name: "__name__", Value: "foo_num"},
+						{Name: "bar", Value: "baz"},
+						{Name: "blip", Value: "blop"},
+					},
+					Samples: []prompb.Sample{
+						{Timestamp: 0, Value: 1},
+					},
+				}},
+			},
+		},
+	} {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			var actual prompb.WriteRequest
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				buf, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+
+				buf, err = snappy.Decode(nil, buf)
+				require.NoError(t, err)
+
+				err = proto.Unmarshal(buf, &actual)
+				require.NoError(t, err)
+			}))
+			defer server.Close()
+
+			remote := PrometheusRemoteWrite{
+				URL: server.URL,
+			}
+			err := remote.Write(tc.metrics)
+			require.NoError(t, err)
+			assert.Equal(t, actual, tc.expected)
+		})
+	}
+}
+
+func TestWrite_WithStringFieldWithoutAnyNumericField(t *testing.T) {
+	for i, tc := range []struct {
+		metrics  []telegraf.Metric
+		expected prompb.WriteRequest
+	}{
+		{
+			metrics:  []telegraf.Metric{},
+			expected: prompb.WriteRequest{},
+		},
+
+		{
+			metrics: []telegraf.Metric{
+				mustNew(
+					t,
+					"foo",
+					map[string]string{"bar": "baz"},
+					map[string]interface{}{"blip": "blop"},
+					time.Unix(0, 0),
+					telegraf.Counter,
+				),
+			},
+			expected: prompb.WriteRequest{},
+		},
+	} {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			var actual prompb.WriteRequest
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				buf, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+
+				buf, err = snappy.Decode(nil, buf)
+				require.NoError(t, err)
+
+				err = proto.Unmarshal(buf, &actual)
+				require.NoError(t, err)
+			}))
+			defer server.Close()
+
+			remote := PrometheusRemoteWrite{
+				URL: server.URL,
+			}
+			err := remote.Write(tc.metrics)
+			require.NoError(t, err)
+			assert.Equal(t, actual, tc.expected)
+		})
+	}
+}

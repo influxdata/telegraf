@@ -346,7 +346,7 @@ func Sanitize(value string) string {
 	return InvalidNameCharRE.ReplaceAllString(value, "_")
 }
 
-func isValidTagName(tag string) bool {
+func IsValidTagName(tag string) bool {
 	return ValidNameCharRE.MatchString(tag)
 }
 
@@ -422,7 +422,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		labels := make(map[string]string)
 		for k, v := range tags {
 			tName := Sanitize(k)
-			if !isValidTagName(tName) {
+			if !IsValidTagName(tName) {
 				continue
 			}
 			labels[tName] = v
@@ -435,7 +435,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				switch fv := fv.(type) {
 				case string:
 					tName := Sanitize(fn)
-					if !isValidTagName(tName) {
+					if !IsValidTagName(tName) {
 						continue
 					}
 					labels[tName] = fv
@@ -484,7 +484,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 			mname = Sanitize(point.Name())
 
-			if !isValidTagName(mname) {
+			if !IsValidTagName(mname) {
 				continue
 			}
 
@@ -530,7 +530,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 			mname = Sanitize(point.Name())
 
-			if !isValidTagName(mname) {
+			if !IsValidTagName(mname) {
 				continue
 			}
 
@@ -578,7 +578,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 						mname = Sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
 					}
 				}
-				if !isValidTagName(mname) {
+				if !IsValidTagName(mname) {
 					continue
 				}
 				p.addMetricFamily(point, sample, mname, sampleID)

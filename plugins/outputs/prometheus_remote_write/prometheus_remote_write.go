@@ -95,6 +95,22 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 			})
 		}
 
+		// Prometheus doesn't have a string value type, so convert string
+		// fields to labels if enabled.
+		for fn, fv := range metric.Fields() {
+			switch fv := fv.(type) {
+			case string:
+				tName := prometheus_client.Sanitize(fn)
+				if !prometheus_client.IsValidTagName(tName) {
+					continue
+				}
+				commonLabels = append(commonLabels, prompb.Label{
+					Name:  tName,
+					Value: fv,
+				})
+			}
+		}
+
 		for _, field := range metric.FieldList() {
 			metricName := getSanitizedMetricName(metric.Name(), field.Key)
 			labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
