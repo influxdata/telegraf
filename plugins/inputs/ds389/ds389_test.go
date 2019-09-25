@@ -10,16 +10,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test389dsLdap(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	o := &ds389{
+		Host:     testutil.GetLocalHost(),
+		Protocol: "ldap",
+		Port:     389,
+	}
+
+	var acc testutil.Accumulator
+	err := o.Gather(&acc)
+	require.NoError(t, err)
+	commonTests(t, o, &acc)
+}
+
 func Test389dsStartTLS(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	o := &ds389{
-		Host:               testutil.GetLocalHost(),
-		Port:               389,
-		SSL:                "starttls",
-		InsecureSkipVerify: true,
+		Host:     testutil.GetLocalHost(),
+		Protocol: "starttls",
+		Port:     389,
 	}
 
 	var acc testutil.Accumulator
@@ -34,15 +50,16 @@ func Test389dsNoConnection(t *testing.T) {
 	}
 
 	o := &ds389{
-		Host: "nosuchhost",
-		Port: 389,
+		Host:     "nosuchhost",
+		Protocol: "ldap",
+		Port:     389,
 	}
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
-	require.NoError(t, err)        // test that we didn't return an error
-	assert.Zero(t, acc.NFields())  // test that we didn't return any fields
-	assert.NotEmpty(t, acc.Errors) // test that we set an error
+	require.Error(t, err)
+	assert.Zero(t, acc.NFields())
+	assert.NotEmpty(t, acc.Errors)
 }
 
 func Test389dsGeneratesMetrics(t *testing.T) {
@@ -69,7 +86,7 @@ func Test389dsLDAPS(t *testing.T) {
 	o := &ds389{
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
-		SSL:                "ldaps",
+		Protocol:           "ldaps",
 		InsecureSkipVerify: true,
 	}
 
@@ -106,7 +123,7 @@ func Test389dsNetscapeRootDbAttrs(t *testing.T) {
 		Host:         testutil.GetLocalHost(),
 		Port:         389,
 		BindDn:       "cn=Directory manager",
-		BindPassword: "secret", //shoul be something else
+		BindPassword: "secret", //should be something else
 		Dbtomonitor:  []string{"userRoot"},
 	}
 
@@ -116,7 +133,7 @@ func Test389dsNetscapeRootDbAttrs(t *testing.T) {
 	assert.True(t, acc.HasInt64Field("ds389", "userroot_dncachehits"), "Has an integer field called userroot_dncachehits")
 }
 
-func Test389dsInvalidSSL(t *testing.T) {
+func Test389dsInvalidTLS(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -124,15 +141,15 @@ func Test389dsInvalidSSL(t *testing.T) {
 	o := &ds389{
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
-		SSL:                "invalid",
+		Protocol:           "invalid",
 		InsecureSkipVerify: true,
 	}
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
-	require.NoError(t, err)        // test that we didn't return an error
-	assert.Zero(t, acc.NFields())  // test that we didn't return any fields
-	assert.NotEmpty(t, acc.Errors) // test that we set an error
+	require.NoError(t, err)
+	assert.Zero(t, acc.NFields())
+	assert.NotEmpty(t, acc.Errors)
 }
 
 func commonTests(t *testing.T, o *ds389, acc *testutil.Accumulator) {

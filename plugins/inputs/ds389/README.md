@@ -12,7 +12,7 @@ This plugin gathers metrics from 389 Directory Servers's cn=Monitor backend and 
   # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
   # note that port will likely need to be changed to 636 for ldaps
   # valid options: "" | "starttls" | "ldaps"
-  tls = ""
+  #protocol = ""
 
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false
@@ -24,10 +24,10 @@ This plugin gathers metrics from 389 Directory Servers's cn=Monitor backend and 
   bind_dn = ""
   bind_password = ""
   
-  # reverse metric names so they sort more naturally
-  # Defaults to false if unset, but is set to true when generating a new config
-  dbtomonitor = ["db1","db2"]
-  # If true, alldbmonitor monitors all db and it overrides "dbtomonitor".
+  ## Gather dbname to monitor
+  # Comma separated list of db filename
+  # dbtomonitor = ["exampleDB"]
+  # If true, alldbmonitor monitors all db and overrides "dbtomonitor".
   alldbmonitor = false
 
   # Connections status monitor
@@ -38,58 +38,65 @@ This plugin gathers metrics from 389 Directory Servers's cn=Monitor backend and 
 
 All attributes are gathered based on this LDAP query:
 
-```(objectClass=extensibleObject)```
+`(objectClass=extensibleObject)`
 
 Metric names are attributes name. 
 
 If dbtomonitor array is provided , it can gather metrics for each dbfilename like uniquemember, memberof, givename indexes.
 If `alldbmonitor = true`, `dbtomonitor` will be overriden with all dbs currently installed in the Directory Server.
 
-An 389DS 1.3.7 server will provide these metrics:
+An 389DS 1.3.x server will provide these metrics:
 
-- currentconnections
-- totalconnections
-- currentconnectionsatmaxthreads
-- maxthreadsperconnhits
-- dtablesize
-- readwaiters
-- opsinitiated
-- opscompleted
-- entriessent
-- bytessent
-- anonymousbinds
-- unauthbinds
-- simpleauthbinds
-- strongauthbinds
-- bindsecurityerrors
-- inops
-- readops
-- compareops
-- addentryops
-- removeentryops
-- modifyentryops
-- modifyrdnops
-- listops
-- searchops
-- onelevelsearchops
-- wholesubtreesearchops
-- referrals
-- chainings
-- securityerrors
-- errors
-- connections
-- connectionseq
-- connectionsinmaxthreads
-- connectionsmaxthreadscount
-- bytesrecv
-- bytessent
-- entriesreturned
-- referralsreturned
-- masterentries
-- copyentries
-- cacheentries
-- cachehits
-- slavehits
+- ds389
+  - tags:
+    - host
+    - port
+    - instancename
+    - version
+- fields:
+  - currentconnections
+  - totalconnections
+  - currentconnectionsatmaxthreads
+  - maxthreadsperconnhits
+  - dtablesize
+  - readwaiters
+  - opsinitiated
+  - opscompleted
+  - entriessent
+  - bytessent
+  - anonymousbinds
+  - unauthbinds
+  - simpleauthbinds
+  - strongauthbinds
+  - bindsecurityerrors
+  - inops
+  - readops
+  - compareops
+  - addentryops
+  - removeentryops
+  - modifyentryops
+  - modifyrdnops
+  - listops
+  - searchops
+  - onelevelsearchops
+  - wholesubtreesearchops
+  - referrals
+  - chainings
+  - securityerrors
+  - errors
+  - connections
+  - connectionseq
+  - connectionsinmaxthreads
+  - connectionsmaxthreadscount
+  - bytesrecv
+  - bytessent
+  - entriesreturned
+  - referralsreturned
+  - masterentries
+  - copyentries
+  - cacheentries
+  - cachehits
+  - slavehits
 
 If you enable the Connection status (status = true) a full connection status detail will be added to the metrics.
 The idea is to monitor all metrics provided by the 389 Console.
