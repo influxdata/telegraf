@@ -6,7 +6,7 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
 
 ```toml
  slave_id = 1
- time_out = "1s"
+ timeout = "1s"
  #protocol = "RTU"
  
  #TCP 

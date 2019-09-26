@@ -25,7 +25,7 @@ type Modbus struct {
 	Parity            string            `toml:"parity"`
 	Stop_Bits         int               `toml:"stop_bits"`
 	Slave_Id          int               `toml:"slave_id"`
-	Time_out          internal.Duration `toml:"time_out"`
+	Timeout           internal.Duration `toml:"timeout"`
 	Discrete_Inputs   []tag             `toml:"discrete_inputs"`
 	Coils             []tag             `toml:"coils"`
 	Holding_Registers []tag             `toml:"holding_registers"`
@@ -69,7 +69,7 @@ const (
 
 var ModbusConfig = `
  slave_id = 1
- time_out = "1s"
+ timeout = "1s"
  #protocol = "RTU"
  
  #TCP 
@@ -145,7 +145,7 @@ func connect(m *Modbus) error {
 			return _err
 		}
 		m.tcp_handler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcp_handler.Timeout = m.Time_out.Duration
+		m.tcp_handler.Timeout = m.Timeout.Duration
 		m.tcp_handler.SlaveId = byte(m.Slave_Id)
 		m.client = mb.NewClient(m.tcp_handler)
 		err := m.tcp_handler.Connect()
@@ -157,7 +157,7 @@ func connect(m *Modbus) error {
 	case "file":
 		if m.Protocol == "RTU" {
 			m.serial_handler = mb.NewRTUClientHandler(u.Path)
-			m.serial_handler.Timeout = m.Time_out.Duration
+			m.serial_handler.Timeout = m.Timeout.Duration
 			m.serial_handler.SlaveId = byte(m.Slave_Id)
 			m.serial_handler.BaudRate = m.Baud_Rate
 			m.serial_handler.DataBits = m.Data_Bits
@@ -172,7 +172,7 @@ func connect(m *Modbus) error {
 			return nil
 		} else if m.Protocol == "ASCII" {
 			m.ascii_handler = mb.NewASCIIClientHandler(u.Path)
-			m.ascii_handler.Timeout = m.Time_out.Duration
+			m.ascii_handler.Timeout = m.Timeout.Duration
 			m.ascii_handler.SlaveId = byte(m.Slave_Id)
 			m.ascii_handler.BaudRate = m.Baud_Rate
 			m.ascii_handler.DataBits = m.Data_Bits
