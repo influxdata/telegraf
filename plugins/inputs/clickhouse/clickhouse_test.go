@@ -21,3 +21,18 @@ func TestClusterIncludeExcludeFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestChInt64(t *testing.T) {
+	assets := map[string]int64{
+		`"1"`:  1,
+		"1":    1,
+		"42":   42,
+		`"42"`: 42,
+	}
+	for src, expected := range assets {
+		var v chInt64
+		if err := v.UnmarshalJSON([]byte(src)); assert.NoError(t, err) {
+			assert.Equal(t, expected, v.toInt64())
+		}
+	}
+}

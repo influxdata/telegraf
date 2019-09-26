@@ -234,6 +234,7 @@ func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error
 	return json.Unmarshal(response.Data, i)
 }
 
+// see output_format_json_quote_64bit_integers
 type chInt64 int64
 
 func (i *chInt64) UnmarshalJSON(b []byte) error {
