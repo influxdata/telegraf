@@ -1,3 +1,9 @@
+## v1.12.3 [unreleased]
+
+#### Bugfixes
+
+- [#6445](https://github.com/influxdata/telegraf/issues/6445): Use batch serialization format in exec output.
+
 ## v1.12.2 [2019-09-24]
 
 #### Bugfixes
