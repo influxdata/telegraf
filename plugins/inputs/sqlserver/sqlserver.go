@@ -17,6 +17,8 @@ type SQLServer struct {
 	QueryVersion int      `toml:"query_version"`
 	AzureDB      bool     `toml:"azuredb"`
 	ExcludeQuery []string `toml:"exclude_query"`
+	queries MapQuery
+	isInitialized bool
 }
 
 // Query struct
@@ -28,12 +30,6 @@ type Query struct {
 
 // MapQuery type
 type MapQuery map[string]Query
-
-type SQLServerInstance struct {
-	SQLServer
-	isInitialized bool
-	queries MapQuery
-}
 
 var defaultServer = "Server=.;app name=telegraf;log=1;"
 
@@ -90,7 +86,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(s *SQLServerInstance) {
+func initQueries(s *SQLServer) {
 	s.queries = make(MapQuery)
 	queries := s.queries
 	// If this is an AzureDB instance, grab some extra metrics
@@ -106,7 +102,7 @@ func initQueries(s *SQLServerInstance) {
 		queries["DatabaseIO"] = Query{Script: sqlDatabaseIOV2, ResultByRow: false}
 		queries["ServerProperties"] = Query{Script: sqlServerPropertiesV2, ResultByRow: false}
 		time.Sleep(1 * time.Millisecond)
-		fmt.Println("gbj")
+		fmt.Println("gbj2")
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
@@ -132,7 +128,7 @@ func initQueries(s *SQLServerInstance) {
 }
 
 // Gather collect data from SQL Server
-func (s *SQLServerInstance) Gather(acc telegraf.Accumulator) error {
+func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	if !s.isInitialized {
 		initQueries(s)
 	}
@@ -240,7 +236,7 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServerInstance{isInitialized: false}
+		return &SQLServer{isInitialized: false}
 	})
 }
 
