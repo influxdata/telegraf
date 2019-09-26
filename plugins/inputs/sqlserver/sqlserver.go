@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"sync"
 	"time"
+	"fmt"
 
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	"github.com/influxdata/telegraf"
@@ -28,10 +29,11 @@ type Query struct {
 // MapQuery type
 type MapQuery map[string]Query
 
-var queries MapQuery
-
-// Initialized flag
-var isInitialized = false
+type SQLServerInstance struct {
+	SQLServer
+	isInitialized bool
+	queries MapQuery
+}
 
 var defaultServer = "Server=.;app name=telegraf;log=1;"
 
@@ -88,9 +90,9 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(s *SQLServer) {
-	queries = make(MapQuery)
-
+func initQueries(s *SQLServerInstance) {
+	s.queries = make(MapQuery)
+	queries := s.queries
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
 		queries["AzureDBResourceStats"] = Query{Script: sqlAzureDBResourceStats, ResultByRow: false}
@@ -103,6 +105,8 @@ func initQueries(s *SQLServer) {
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
 		queries["DatabaseIO"] = Query{Script: sqlDatabaseIOV2, ResultByRow: false}
 		queries["ServerProperties"] = Query{Script: sqlServerPropertiesV2, ResultByRow: false}
+		time.Sleep(1 * time.Millisecond)
+		fmt.Println("gbj")
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
@@ -124,12 +128,12 @@ func initQueries(s *SQLServer) {
 	}
 
 	// Set a flag so we know that queries have already been initialized
-	isInitialized = true
+	s.isInitialized = true
 }
 
 // Gather collect data from SQL Server
-func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
-	if !isInitialized {
+func (s *SQLServerInstance) Gather(acc telegraf.Accumulator) error {
+	if !s.isInitialized {
 		initQueries(s)
 	}
 
@@ -140,7 +144,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, serv := range s.Servers {
-		for _, query := range queries {
+		for _, query := range s.queries {
 			wg.Add(1)
 			go func(serv string, query Query) {
 				defer wg.Done()
@@ -236,7 +240,7 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 
 func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
-		return &SQLServer{}
+		return &SQLServerInstance{isInitialized: false}
 	})
 }
 
