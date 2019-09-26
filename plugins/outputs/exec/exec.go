@@ -67,13 +67,11 @@ func (e *Exec) SampleConfig() string {
 // Write writes the metrics to the configured command.
 func (e *Exec) Write(metrics []telegraf.Metric) error {
 	var buffer bytes.Buffer
-	for _, metric := range metrics {
-		value, err := e.serializer.Serialize(metric)
-		if err != nil {
-			return err
-		}
-		buffer.Write(value)
+	serializedMetrics, err := e.serializer.SerializeBatch(metrics)
+	if err != nil {
+		return err
 	}
+	buffer.Write(serializedMetrics)
 
 	if buffer.Len() <= 0 {
 		return nil
