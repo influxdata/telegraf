@@ -592,7 +592,10 @@ WHERE	(
 				'Background Writer pages/sec',
 				'Percent Log Used',
 				'Log Send Queue KB',
-				'Redo Queue KB'
+				'Redo Queue KB',
+				'Mirrored Write Transactions/sec',
+				'Group Commit Time',
+				'Group Commits/sec'
 			)
 		) OR (
 			object_name LIKE '%User Settable%'
