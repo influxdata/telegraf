@@ -169,7 +169,7 @@ func connect(m *Modbus) error {
 		m.is_connected = true
 		return nil
 	case "file":
-		if m.Transmission_mode == "RTU" {
+		if m.Transmission_Mode == "RTU" {
 			m.serial_handler = mb.NewRTUClientHandler(u.Path)
 			m.serial_handler.Timeout = m.Timeout.Duration
 			m.serial_handler.SlaveId = byte(m.Slave_Id)
