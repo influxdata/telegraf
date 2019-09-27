@@ -73,7 +73,7 @@ var ModbusConfig = `
  #transmission_mode = "RTU"
  
  #TCP 
- controller = "tcp://localhost:1502"
+ controller = "tcp://localhost:502"
  
  #RTU
  #controller = "file:///dev/ttyUSB0"
