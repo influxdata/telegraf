@@ -19,7 +19,7 @@ import (
 
 type Modbus struct {
 	Controller        string            `toml:"controller"`
-	Protocol          string            `toml:"protocol"`
+	Transmission_Mode string            `toml:"transmission_mode"`
 	Baud_Rate         int               `toml:"baud_rate"`
 	Data_Bits         int               `toml:"data_bits"`
 	Parity            string            `toml:"parity"`
@@ -70,7 +70,7 @@ const (
 var ModbusConfig = `
  slave_id = 1
  timeout = "1s"
- #protocol = "RTU"
+ #transmission_mode = "RTU"
  
  #TCP 
  controller = "tcp://localhost:1502"
@@ -155,7 +155,7 @@ func connect(m *Modbus) error {
 		m.is_connected = true
 		return nil
 	case "file":
-		if m.Protocol == "RTU" {
+		if m.Transmission_mode == "RTU" {
 			m.serial_handler = mb.NewRTUClientHandler(u.Path)
 			m.serial_handler.Timeout = m.Timeout.Duration
 			m.serial_handler.SlaveId = byte(m.Slave_Id)
@@ -170,7 +170,7 @@ func connect(m *Modbus) error {
 			}
 			m.is_connected = true
 			return nil
-		} else if m.Protocol == "ASCII" {
+		} else if m.Transmission_Mode == "ASCII" {
 			m.ascii_handler = mb.NewASCIIClientHandler(u.Path)
 			m.ascii_handler.Timeout = m.Timeout.Duration
 			m.ascii_handler.SlaveId = byte(m.Slave_Id)
@@ -186,7 +186,7 @@ func connect(m *Modbus) error {
 			m.is_connected = true
 			return nil
 		} else {
-			return errors.New(fmt.Sprintf("Not valid protcol [%s] - [%s] ", u.Scheme, m.Protocol))
+			return errors.New(fmt.Sprintf("Not valid protcol [%s] - [%s] ", u.Scheme, m.Transmission_Mode))
 		}
 	default:
 		return errors.New("Not valid Controller")
