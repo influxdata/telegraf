@@ -354,6 +354,7 @@ For documentation on the latest development code see the [documentation index][d
 * [basicstats](./plugins/aggregators/basicstats)
 * [final](./plugins/aggregators/final)
 * [histogram](./plugins/aggregators/histogram)
+* [merge](./plugins/aggregators/merge)
 * [minmax](./plugins/aggregators/minmax)
 * [valuecounter](./plugins/aggregators/valuecounter)
 
