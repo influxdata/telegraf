@@ -5,19 +5,33 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
 ### Configuration:
 
 ```toml
+ ## Connection Configuration
+ ##
+ ## The module supports connections to PLCs via MODBUS/TCP or
+ ## via serial line communication in binary (RTU) or readable (ASCII) encoding
+ ##
+ 
+ ## Slave ID - addresses a MODBUS device on the bus
+ ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
  slave_id = 1
- time_out = "1s"
- #protocol = "RTU"
  
- #TCP 
- controller = "tcp://localhost:1502"
+ ## Timeout for each request
+ timeout = "1s"
  
- #RTU
+ # TCP - connect via Modbus/TCP
+ controller = "tcp://localhost:502"
+ 
+ # Serial (RS485; RS232)
  #controller = "file:///dev/ttyUSB0"
  #baud_rate = 9600
  #data_bits = 8
  #parity = "N"
  #stop_bits = 1
+ #transmission_mode = "RTU"
+ 
+ 
+ ## Measurements
+ ##
  
  ## Digital Variables, Discrete Inputs and Coils
  ## name    - the variable name
@@ -25,14 +39,14 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  
  discrete_inputs = [
    { name = "Start",          address = [0]},   
-   { name = "Stop",           address = [1]},   
-   { name = "Reset",          address = [2]},   
-   { name = "EmergencyStop",  address = [3]},   
+   { name = "Stop",           address = [1]},
+   { name = "Reset",          address = [2]},
+   { name = "EmergencyStop",  address = [3]},
  ]
  coils = [
-   { name = "Motor1-Run",     address = [0]},   
-   { name = "Motor1-Jog",     address = [1]},   
-   { name = "Motor1-Stop",    address = [2]},      
+   { name = "Motor1-Run",     address = [0]},
+   { name = "Motor1-Jog",     address = [1]},
+   { name = "Motor1-Stop",    address = [2]},
  ] 
  
  ## Analog Variables, Input Registers and Holding Registers
@@ -43,21 +57,21 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ##  |---BADC       - Mid-Big Endian
  ##  |---CDAB       - Mid-Little Endian
  ## data_type  - UINT16, INT16, INT32, UINT32, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
- ## scale      - the final numeric variable representation    
+ ## scale      - the final numeric variable representation
  ## address    - variable address
  
  holding_registers = [
-   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01" ,  address = [8]},
-   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [0]},   
-   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [5,6]},
-   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [1, 2]},
-   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [7]},
-   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1" ,   address = [3,4]},      
- ] 
+   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01",  address = [8]},
+   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [0]},
+   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [5,6]},
+   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [1, 2]},
+   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [7]},
+   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1",   address = [3,4]},
+ ]
  input_registers = [
-   { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [0]},
-   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",  scale="1" ,     address = [1]},   
-   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1" ,     address = [3,4]},
+   { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1",     address = [0]},
+   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",   scale="1",     address = [1]},
+   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1",     address = [3,4]},
  ]
 ```
 ### Example Output:

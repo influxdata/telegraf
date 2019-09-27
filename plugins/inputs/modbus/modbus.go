@@ -19,13 +19,13 @@ import (
 
 type Modbus struct {
 	Controller        string            `toml:"controller"`
-	Protocol          string            `toml:"protocol"`
+	Transmission_Mode string            `toml:"transmission_mode"`
 	Baud_Rate         int               `toml:"baud_rate"`
 	Data_Bits         int               `toml:"data_bits"`
 	Parity            string            `toml:"parity"`
 	Stop_Bits         int               `toml:"stop_bits"`
 	Slave_Id          int               `toml:"slave_id"`
-	Time_out          internal.Duration `toml:"time_out"`
+	Timeout           internal.Duration `toml:"timeout"`
 	Discrete_Inputs   []tag             `toml:"discrete_inputs"`
 	Coils             []tag             `toml:"coils"`
 	Holding_Registers []tag             `toml:"holding_registers"`
@@ -68,59 +68,73 @@ const (
 )
 
 var ModbusConfig = `
+ ## Connection Configuration
+ ##
+ ## The module supports connections to PLCs via MODBUS/TCP or
+ ## via serial line communication in binary (RTU) or readable (ASCII) encoding
+ ##
+ 
+ ## Slave ID - addresses a MODBUS device on the bus
+ ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
  slave_id = 1
- time_out = "1s"
- #protocol = "RTU"
  
- #TCP 
- controller = "tcp://localhost:1502"
+ ## Timeout for each request
+ timeout = "1s"
  
- #RTU
+ # TCP - connect via Modbus/TCP
+ controller = "tcp://localhost:502"
+ 
+ # Serial (RS485; RS232)
  #controller = "file:///dev/ttyUSB0"
  #baud_rate = 9600
  #data_bits = 8
  #parity = "N"
  #stop_bits = 1
+ #transmission_mode = "RTU"
+ 
+ 
+ ## Measurements
+ ##
  
  ## Digital Variables, Discrete Inputs and Coils
  ## name    - the variable name
  ## address - variable address
  
  discrete_inputs = [
-   { name = "Start",          address = [0]},   
-   { name = "Stop",           address = [1]},   
-   { name = "Reset",          address = [2]},   
-   { name = "EmergencyStop",  address = [3]},   
+   { name = "Start",          address = [0]},
+   { name = "Stop",           address = [1]},
+   { name = "Reset",          address = [2]},
+   { name = "EmergencyStop",  address = [3]},
  ]
  coils = [
-   { name = "Motor1-Run",     address = [0]},   
-   { name = "Motor1-Jog",     address = [1]},   
-   { name = "Motor1-Stop",    address = [2]},      
- ] 
+   { name = "Motor1-Run",     address = [0]},
+   { name = "Motor1-Jog",     address = [1]},
+   { name = "Motor1-Stop",    address = [2]},
+ ]
  
  ## Analog Variables, Input Registers and Holding Registers
- ## name       - the variable name 
- ## byte_order - the ordering of bytes 
+ ## name       - the variable name
+ ## byte_order - the ordering of bytes
  ##  |---AB, ABCD   - Big Endian
  ##  |---BA, DCBA   - Little Endian
  ##  |---BADC       - Mid-Big Endian
  ##  |---CDAB       - Mid-Little Endian
  ## data_type  - UINT16, INT16, INT32, UINT32, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
- ## scale      - the final numeric variable representation    
+ ## scale      - the final numeric variable representation
  ## address    - variable address
  
  holding_registers = [
-   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01" ,  address = [8]},
-   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [0]},   
-   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [5,6]},
-   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001" , address = [1, 2]},
-   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1" ,   address = [7]},
-   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1" ,   address = [3,4]},      
- ] 
+   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01",  address = [8]},
+   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [0]},
+   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [5,6]},
+   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [1, 2]},
+   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [7]},
+   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1",   address = [3,4]},
+ ]
  input_registers = [
-   { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [0]},
-   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",   scale="1" ,     address = [1]},   
-   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1" ,     address = [3,4]},
+   { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1",     address = [0]},
+   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",   scale="1",     address = [1]},
+   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1",     address = [3,4]},
  ]
 `
 
@@ -145,7 +159,7 @@ func connect(m *Modbus) error {
 			return _err
 		}
 		m.tcp_handler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcp_handler.Timeout = m.Time_out.Duration
+		m.tcp_handler.Timeout = m.Timeout.Duration
 		m.tcp_handler.SlaveId = byte(m.Slave_Id)
 		m.client = mb.NewClient(m.tcp_handler)
 		err := m.tcp_handler.Connect()
@@ -155,9 +169,9 @@ func connect(m *Modbus) error {
 		m.is_connected = true
 		return nil
 	case "file":
-		if m.Protocol == "RTU" {
+		if m.Transmission_Mode == "RTU" {
 			m.serial_handler = mb.NewRTUClientHandler(u.Path)
-			m.serial_handler.Timeout = m.Time_out.Duration
+			m.serial_handler.Timeout = m.Timeout.Duration
 			m.serial_handler.SlaveId = byte(m.Slave_Id)
 			m.serial_handler.BaudRate = m.Baud_Rate
 			m.serial_handler.DataBits = m.Data_Bits
@@ -170,9 +184,9 @@ func connect(m *Modbus) error {
 			}
 			m.is_connected = true
 			return nil
-		} else if m.Protocol == "ASCII" {
+		} else if m.Transmission_Mode == "ASCII" {
 			m.ascii_handler = mb.NewASCIIClientHandler(u.Path)
-			m.ascii_handler.Timeout = m.Time_out.Duration
+			m.ascii_handler.Timeout = m.Timeout.Duration
 			m.ascii_handler.SlaveId = byte(m.Slave_Id)
 			m.ascii_handler.BaudRate = m.Baud_Rate
 			m.ascii_handler.DataBits = m.Data_Bits
@@ -186,7 +200,7 @@ func connect(m *Modbus) error {
 			m.is_connected = true
 			return nil
 		} else {
-			return errors.New(fmt.Sprintf("Not valid protcol [%s] - [%s] ", u.Scheme, m.Protocol))
+			return errors.New(fmt.Sprintf("Not valid protcol [%s] - [%s] ", u.Scheme, m.Transmission_Mode))
 		}
 	default:
 		return errors.New("Not valid Controller")
