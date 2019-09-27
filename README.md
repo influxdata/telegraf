@@ -40,9 +40,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.10 or newer, the Makefile requires GNU make.
+Telegraf requires golang version 1.12 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.10 (1.12 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.12 (1.13 recommended)
 2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
 3. Download Telegraf source:
    ```
