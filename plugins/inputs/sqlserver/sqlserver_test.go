@@ -1,6 +1,7 @@
 package sqlserver
 
 import (
+	"github.com/stretchr/testify/assert"
 	"strconv"
 	"strings"
 	"testing"
@@ -14,7 +15,7 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	queries = make(MapQuery)
+	queries := make(MapQuery)
 	queries["PerformanceCounters"] = Query{Script: mockPerformanceCounters, ResultByRow: true}
 	queries["WaitStatsCategorized"] = Query{Script: mockWaitStatsCategorized, ResultByRow: false}
 	queries["CPUHistory"] = Query{Script: mockCPUHistory, ResultByRow: false}
@@ -79,6 +80,35 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 			idx++
 		}
 	}
+}
+
+func TestSqlServer_MultipleInstance(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	s := &SQLServer{
+		Servers: []string{"Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"},
+		ExcludeQuery: []string{"MemoryClerk"},
+		isInitialized: false,
+	}
+	s2 := &SQLServer{
+		Servers: []string{"Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"},
+		ExcludeQuery: []string{"DatabaseSize"},
+		isInitialized: false,
+	}
+
+	var acc, acc2 testutil.Accumulator
+	err := s.Gather(&acc)
+	require.NoError(t, err)
+	err = s2.Gather(&acc2)
+	require.NoError(t, err)
+
+	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
+	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
+
+	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
+	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
 }
 
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
