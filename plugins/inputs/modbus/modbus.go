@@ -26,10 +26,10 @@ type Modbus struct {
 	Stop_Bits         int               `toml:"stop_bits"`
 	Slave_Id          int               `toml:"slave_id"`
 	Timeout           internal.Duration `toml:"timeout"`
-	Discrete_Inputs   []tag             `toml:"discrete_inputs"`
-	Coils             []tag             `toml:"coils"`
-	Holding_Registers []tag             `toml:"holding_registers"`
-	Input_Registers   []tag             `toml:"input_registers"`
+	Discrete_Inputs   []ModbusData      `toml:"discrete_inputs"`
+	Coils             []ModbusData      `toml:"coils"`
+	Holding_Registers []ModbusData      `toml:"holding_registers"`
+	Input_Registers   []ModbusData      `toml:"input_registers"`
 	registers         []register
 	is_connected      bool
 	is_initialized    bool
@@ -43,10 +43,10 @@ type register struct {
 	Type            string
 	registers_range []register_range
 	ReadValue       func(uint16, uint16) ([]byte, error)
-	Tags            []tag
+	Tags            []ModbusData
 }
 
-type tag struct {
+type ModbusData struct {
 	Name       string   `toml:"name"`
 	Byte_Order string   `toml:"byte_order"`
 	Data_Type  string   `toml:"data_type"`
@@ -212,8 +212,8 @@ func initialization(m *Modbus) error {
 	for i := 0; i < r.NumField(); i++ {
 		f := r.Field(i)
 
-		if f.Type().String() == "[]modbus.tag" {
-			tags := f.Interface().([]tag)
+		if f.Type().String() == "[]modbus.ModbusData" {
+			tags := f.Interface().([]ModbusData)
 			name := r.Type().Field(i).Name
 
 			if len(tags) == 0 {
@@ -277,7 +277,7 @@ func initialization(m *Modbus) error {
 	return nil
 }
 
-func validateTags(t []tag, n string) error {
+func validateTags(t []ModbusData, n string) error {
 	byte_order := []string{"AB", "BA", "ABCD", "CDAB", "BADC", "DCBA"}
 	data_type := []string{"UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32"}
 
@@ -365,7 +365,7 @@ func removeDuplicates(elements []uint16) []uint16 {
 	return result
 }
 
-func addFields(t []tag) map[string]interface{} {
+func addFields(t []ModbusData) map[string]interface{} {
 	fields := make(map[string]interface{})
 	for i := 0; i < len(t); i++ {
 		if len(t[i].Name) > 0 {
@@ -442,7 +442,7 @@ func setAnalogValue(r register, raw_values map[uint16]uint16) error {
 	return nil
 }
 
-func convertDataType(t tag, bytes []byte) interface{} {
+func convertDataType(t ModbusData, bytes []byte) interface{} {
 	switch t.Data_Type {
 	case "UINT16":
 		e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)
