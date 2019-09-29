@@ -26,10 +26,10 @@ type Modbus struct {
 	StopBits          int               `toml:"stop_bits"`
 	SlaveID           int               `toml:"slave_id"`
 	Timeout           internal.Duration `toml:"timeout"`
-	DiscreteInputs    []modbusData      `toml:"discrete_inputs"`
-	Coils             []modbusData      `toml:"coils"`
-	HoldingRegisters  []modbusData      `toml:"holding_registers"`
-	InputRegisters    []modbusData      `toml:"input_registers"`
+	DiscreteInputs    []fieldContainer  `toml:"discrete_inputs"`
+	Coils             []fieldContainer  `toml:"coils"`
+	HoldingRegisters  []fieldContainer  `toml:"holding_registers"`
+	InputRegisters    []fieldContainer  `toml:"input_registers"`
 	registers         []register
 	isConnected       bool
 	isInitialized     bool
@@ -43,10 +43,10 @@ type register struct {
 	Type            string
 	RegistersRange  []registerRange
 	ReadValue       func(uint16, uint16) ([]byte, error)
-	Tags            []modbusData
+	Fields          []fieldContainer
 }
 
-type modbusData struct {
+type fieldContainer struct {
 	Name       string   `toml:"name"`
 	ByteOrder  string   `toml:"byte_order"`
 	DataType   string   `toml:"data_type"`
@@ -216,22 +216,22 @@ func initialization(m *Modbus) error {
 	for i := 0; i < r.NumField(); i++ {
 		f := r.Field(i)
 
-		if f.Type().String() == "[]modbus.modbusData" {
-			tags := f.Interface().([]modbusData)
+		if f.Type().String() == "[]modbus.fieldContainer" {
+			fields := f.Interface().([]fieldContainer)
 			name := r.Type().Field(i).Name
 
-			if len(tags) == 0 {
+			if len(fields) == 0 {
 				continue
 			}
 
-			err := validateTags(tags, name)
+			err := validateFieldContainers(fields, name)
 			if err != nil {
 				return err
 			}
 
 			addrs := []uint16{}
-			for _, tag := range tags {
-				for _, a := range tag.Address {
+			for _, field := range fields {
+				for _, a := range field.Address {
 					addrs = append(addrs, a)
 				}
 			}
@@ -273,7 +273,7 @@ func initialization(m *Modbus) error {
 				return fmt.Errorf("Not Valid function")
 			}
 
-			m.registers = append(m.registers, register{name, registersRange, fn, tags})
+			m.registers = append(m.registers, register{name, registersRange, fn, fields})
 		}
 	}
 	m.isInitialized = true
@@ -281,7 +281,7 @@ func initialization(m *Modbus) error {
 	return nil
 }
 
-func validateTags(t []modbusData, n string) error {
+func validateFieldContainers(t []fieldContainer, n string) error {
 	byteOrder := []string{"AB", "BA", "ABCD", "CDAB", "BADC", "DCBA"}
 	dataType := []string{"UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32"}
 
@@ -368,7 +368,7 @@ func removeDuplicates(elements []uint16) []uint16 {
 	return result
 }
 
-func addFields(t []modbusData) map[string]interface{} {
+func addFields(t []fieldContainer) map[string]interface{} {
 	fields := make(map[string]interface{})
 	for i := 0; i < len(t); i++ {
 		if len(t[i].Name) > 0 {
@@ -386,7 +386,7 @@ func addFields(t []modbusData) map[string]interface{} {
 	return fields
 }
 
-func (m *Modbus) getTags() error {
+func (m *Modbus) getFields() error {
 	for _, r := range m.registers {
 		rawValues := make(map[uint16]uint16)
 		for _, rr := range r.RegistersRange {
@@ -424,28 +424,28 @@ func (m *Modbus) getTags() error {
 }
 
 func setDigitalValue(r register, rawValues map[uint16]uint16) error {
-	for i := 0; i < len(r.Tags); i++ {
-		r.Tags[i].value = rawValues[r.Tags[i].Address[0]]
+	for i := 0; i < len(r.Fields); i++ {
+		r.Fields[i].value = rawValues[r.Fields[i].Address[0]]
 	}
 
 	return nil
 }
 
 func setAnalogValue(r register, rawValues map[uint16]uint16) error {
-	for i := 0; i < len(r.Tags); i++ {
+	for i := 0; i < len(r.Fields); i++ {
 		bytes := []byte{}
-		for _, rv := range r.Tags[i].Address {
+		for _, rv := range r.Fields[i].Address {
 			bytes = append(bytes, byte(rawValues[rv]>>8))
 			bytes = append(bytes, byte(rawValues[rv]&255))
 		}
 
-		r.Tags[i].value = convertDataType(r.Tags[i], bytes)
+		r.Fields[i].value = convertDataType(r.Fields[i], bytes)
 	}
 
 	return nil
 }
 
-func convertDataType(t modbusData, bytes []byte) interface{} {
+func convertDataType(t fieldContainer, bytes []byte) interface{} {
 	switch t.DataType {
 	case "UINT16":
 		e16, _ := convertEndianness16(t.ByteOrder, bytes).(uint16)
@@ -574,14 +574,15 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	err := m.getTags()
+	err := m.getFields()
 	if err != nil {
 		m.isConnected = false
 		return err
 	}
 
 	for _, reg := range m.registers {
-		fields = addFields(reg.Tags)
+		fields = addFields(reg.Fields)
+		// telegraf.Accumulator.AddFields(Name, Fields, Tags, Time)
 		acc.AddFields("modbus."+reg.Type, fields, tags)
 	}
 

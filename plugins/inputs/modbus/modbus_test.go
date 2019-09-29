@@ -95,7 +95,7 @@ func TestCoils(t *testing.T) {
 			modbus := Modbus{
 				Controller: "tcp://localhost:1502",
 				SlaveID:   1,
-				Coils: []modbusData{
+				Coils: []fieldContainer{
 					{
 						Address: []uint16{ct.address},
 					},
@@ -106,7 +106,7 @@ func TestCoils(t *testing.T) {
 			modbus.Gather(&acc)
 
 			for _, coil := range modbus.registers {
-				assert.Equal(t, ct.read, coil.Tags[0].value)
+				assert.Equal(t, ct.read, coil.Fields[0].value)
 			}
 		})
 	}
@@ -311,7 +311,7 @@ func TestHoldingRegisters(t *testing.T) {
 			modbus := Modbus{
 				Controller: "tcp://localhost:1502",
 				SlaveID:   1,
-				HoldingRegisters: []modbusData{
+				HoldingRegisters: []fieldContainer{
 					{
 						ByteOrder: hrt.byte_order,
 						DataType:  hrt.data_type,
@@ -325,7 +325,7 @@ func TestHoldingRegisters(t *testing.T) {
 			modbus.Gather(&acc)
 
 			for _, coil := range modbus.registers {
-				assert.Equal(t, hrt.read, coil.Tags[0].value)
+				assert.Equal(t, hrt.read, coil.Fields[0].value)
 			}
 		})
 	}
