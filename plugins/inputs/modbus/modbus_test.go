@@ -94,8 +94,8 @@ func TestCoils(t *testing.T) {
 
 			modbus := Modbus{
 				Controller: "tcp://localhost:1502",
-				Slave_Id:   1,
-				Coils: []tag{
+				SlaveID:   1,
+				Coils: []modbusData{
 					{
 						Address: []uint16{ct.address},
 					},
@@ -310,11 +310,11 @@ func TestHoldingRegisters(t *testing.T) {
 
 			modbus := Modbus{
 				Controller: "tcp://localhost:1502",
-				Slave_Id:   1,
-				Holding_Registers: []tag{
+				SlaveID:   1,
+				HoldingRegisters: []modbusData{
 					{
-						Byte_Order: hrt.byte_order,
-						Data_Type:  hrt.data_type,
+						ByteOrder: hrt.byte_order,
+						DataType:  hrt.data_type,
 						Scale:      hrt.scale,
 						Address:    hrt.address,
 					},

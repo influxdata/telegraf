@@ -2,7 +2,6 @@ package modbus
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -17,60 +16,62 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+// Modbus holds all data relevant to the plugin
 type Modbus struct {
 	Controller        string            `toml:"controller"`
-	Transmission_Mode string            `toml:"transmission_mode"`
-	Baud_Rate         int               `toml:"baud_rate"`
-	Data_Bits         int               `toml:"data_bits"`
+	TransmissionMode  string            `toml:"transmission_mode"`
+	BaudRate          int               `toml:"baud_rate"`
+	DataBits          int               `toml:"data_bits"`
 	Parity            string            `toml:"parity"`
-	Stop_Bits         int               `toml:"stop_bits"`
-	Slave_Id          int               `toml:"slave_id"`
+	StopBits          int               `toml:"stop_bits"`
+	SlaveID           int               `toml:"slave_id"`
 	Timeout           internal.Duration `toml:"timeout"`
-	Discrete_Inputs   []ModbusData      `toml:"discrete_inputs"`
-	Coils             []ModbusData      `toml:"coils"`
-	Holding_Registers []ModbusData      `toml:"holding_registers"`
-	Input_Registers   []ModbusData      `toml:"input_registers"`
-	registers         []Register
-	is_connected      bool
-	is_initialized    bool
-	tcp_handler       *mb.TCPClientHandler
-	serial_handler    *mb.RTUClientHandler
-	ascii_handler     *mb.ASCIIClientHandler
+	DiscreteInputs    []modbusData      `toml:"discrete_inputs"`
+	Coils             []modbusData      `toml:"coils"`
+	HoldingRegisters  []modbusData      `toml:"holding_registers"`
+	InputRegisters    []modbusData      `toml:"input_registers"`
+	registers         []register
+	isConnected       bool
+	isInitialized     bool
+	tcpHandler       *mb.TCPClientHandler
+	serialHandler    *mb.RTUClientHandler
+	asciiHandler     *mb.ASCIIClientHandler
 	client            mb.Client
 }
 
-type Register struct {
+type register struct {
 	Type            string
-	registers_range []RegisterRange
+	RegistersRange  []registerRange
 	ReadValue       func(uint16, uint16) ([]byte, error)
-	Tags            []ModbusData
+	Tags            []modbusData
 }
 
-type ModbusData struct {
+type modbusData struct {
 	Name       string   `toml:"name"`
-	Byte_Order string   `toml:"byte_order"`
-	Data_Type  string   `toml:"data_type"`
+	ByteOrder  string   `toml:"byte_order"`
+	DataType   string   `toml:"data_type"`
 	Scale      string   `toml:"scale"`
 	Address    []uint16 `toml:"address"`
 	value      interface{}
 }
 
-type RegisterRange struct {
+type registerRange struct {
 	address uint16
 	length  uint16
 }
 
 const (
-	C_DISCRETE_INPUTS   = "Discrete_Inputs"
-	C_COILS             = "Coils"
-	C_HOLDING_REGISTERS = "Holding_Registers"
-	C_INPUT_REGISTERS   = "Input_Registers"
+	cDiscreteInputs   = "DiscreteInputs"
+	cCoils             = "Coils"
+	cHoldingRegisters = "HoldingRegisters"
+	cInputRegisters   = "InputRegisters"
 )
 
-var ModbusConfig = `
+const description = `Retrieve data from MODBUS slave devices`
+const sampleConfig = `
  ## Connection Configuration
  ##
- ## The module supports connections to PLCs via MODBUS/TCP or
+ ## The plugin supports connections to PLCs via MODBUS/TCP or
  ## via serial line communication in binary (RTU) or readable (ASCII) encoding
  ##
  
@@ -138,14 +139,17 @@ var ModbusConfig = `
  ]
 `
 
-func (s *Modbus) SampleConfig() string {
-	return ModbusConfig
+// SampleConfig returns a basic configuration for the plugin
+func (m *Modbus) SampleConfig() string {
+	return sampleConfig
 }
 
-func (s *Modbus) Description() string {
-	return "Modbus client"
+// Description returns a short description of what the plugin does
+func (m *Modbus) Description() string {
+	return description
 }
 
+// Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
 func connect(m *Modbus) error {
 	u, err := url.Parse(m.Controller)
 	if err != nil {
@@ -158,52 +162,52 @@ func connect(m *Modbus) error {
 		if _err != nil {
 			return _err
 		}
-		m.tcp_handler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcp_handler.Timeout = m.Timeout.Duration
-		m.tcp_handler.SlaveId = byte(m.Slave_Id)
-		m.client = mb.NewClient(m.tcp_handler)
-		err := m.tcp_handler.Connect()
+		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
+		m.tcpHandler.Timeout = m.Timeout.Duration
+		m.tcpHandler.SlaveId = byte(m.SlaveID)
+		m.client = mb.NewClient(m.tcpHandler)
+		err := m.tcpHandler.Connect()
 		if err != nil {
 			return err
 		}
-		m.is_connected = true
+		m.isConnected = true
 		return nil
 	case "file":
-		if m.Transmission_Mode == "RTU" {
-			m.serial_handler = mb.NewRTUClientHandler(u.Path)
-			m.serial_handler.Timeout = m.Timeout.Duration
-			m.serial_handler.SlaveId = byte(m.Slave_Id)
-			m.serial_handler.BaudRate = m.Baud_Rate
-			m.serial_handler.DataBits = m.Data_Bits
-			m.serial_handler.Parity = m.Parity
-			m.serial_handler.StopBits = m.Stop_Bits
-			m.client = mb.NewClient(m.serial_handler)
-			err := m.serial_handler.Connect()
+		if m.TransmissionMode == "RTU" {
+			m.serialHandler = mb.NewRTUClientHandler(u.Path)
+			m.serialHandler.Timeout = m.Timeout.Duration
+			m.serialHandler.SlaveId = byte(m.SlaveID)
+			m.serialHandler.BaudRate = m.BaudRate
+			m.serialHandler.DataBits = m.DataBits
+			m.serialHandler.Parity = m.Parity
+			m.serialHandler.StopBits = m.StopBits
+			m.client = mb.NewClient(m.serialHandler)
+			err := m.serialHandler.Connect()
 			if err != nil {
 				return err
 			}
-			m.is_connected = true
+			m.isConnected = true
 			return nil
-		} else if m.Transmission_Mode == "ASCII" {
-			m.ascii_handler = mb.NewASCIIClientHandler(u.Path)
-			m.ascii_handler.Timeout = m.Timeout.Duration
-			m.ascii_handler.SlaveId = byte(m.Slave_Id)
-			m.ascii_handler.BaudRate = m.Baud_Rate
-			m.ascii_handler.DataBits = m.Data_Bits
-			m.ascii_handler.Parity = m.Parity
-			m.ascii_handler.StopBits = m.Stop_Bits
-			m.client = mb.NewClient(m.ascii_handler)
-			err := m.ascii_handler.Connect()
+		} else if m.TransmissionMode == "ASCII" {
+			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
+			m.asciiHandler.Timeout = m.Timeout.Duration
+			m.asciiHandler.SlaveId = byte(m.SlaveID)
+			m.asciiHandler.BaudRate = m.BaudRate
+			m.asciiHandler.DataBits = m.DataBits
+			m.asciiHandler.Parity = m.Parity
+			m.asciiHandler.StopBits = m.StopBits
+			m.client = mb.NewClient(m.asciiHandler)
+			err := m.asciiHandler.Connect()
 			if err != nil {
 				return err
 			}
-			m.is_connected = true
+			m.isConnected = true
 			return nil
 		} else {
-			return errors.New(fmt.Sprintf("Not valid protcol [%s] - [%s] ", u.Scheme, m.Transmission_Mode))
+			return fmt.Errorf("Not valid protcol [%s] - [%s] ", u.Scheme, m.TransmissionMode)
 		}
 	default:
-		return errors.New("Not valid Controller")
+		return fmt.Errorf("Not valid Controller")
 	}
 }
 
@@ -212,8 +216,8 @@ func initialization(m *Modbus) error {
 	for i := 0; i < r.NumField(); i++ {
 		f := r.Field(i)
 
-		if f.Type().String() == "[]modbus.ModbusData" {
-			tags := f.Interface().([]ModbusData)
+		if f.Type().String() == "[]modbus.modbusData" {
+			tags := f.Interface().([]modbusData)
 			name := r.Type().Field(i).Name
 
 			if len(tags) == 0 {
@@ -236,7 +240,7 @@ func initialization(m *Modbus) error {
 			sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 			ii := 0
-			var registers_range []RegisterRange
+			var registersRange []registerRange
 
 			// Get range of consecutive integers
 			// [1, 2, 3, 5, 6, 10, 11, 12, 14]
@@ -251,102 +255,101 @@ func initialization(m *Modbus) error {
 						ii++
 					}
 					ii++
-					registers_range = append(registers_range, RegisterRange{start, end - start + 1})
+					registersRange = append(registersRange, registerRange{start, end - start + 1})
 				}
 			}
 
 			var fn func(uint16, uint16) ([]byte, error)
 
-			if name == C_DISCRETE_INPUTS {
+			if name == cDiscreteInputs {
 				fn = m.client.ReadDiscreteInputs
-			} else if name == C_COILS {
+			} else if name == cCoils {
 				fn = m.client.ReadCoils
-			} else if name == C_INPUT_REGISTERS {
+			} else if name == cInputRegisters {
 				fn = m.client.ReadInputRegisters
-			} else if name == C_HOLDING_REGISTERS {
+			} else if name == cHoldingRegisters {
 				fn = m.client.ReadHoldingRegisters
 			} else {
-				return errors.New("Not Valid function")
+				return fmt.Errorf("Not Valid function")
 			}
 
-			m.registers = append(m.registers, Register{name, registers_range, fn, tags})
+			m.registers = append(m.registers, register{name, registersRange, fn, tags})
 		}
 	}
-	m.is_initialized = true
+	m.isInitialized = true
 
 	return nil
 }
 
-func validateTags(t []ModbusData, n string) error {
-	byte_order := []string{"AB", "BA", "ABCD", "CDAB", "BADC", "DCBA"}
-	data_type := []string{"UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32"}
+func validateTags(t []modbusData, n string) error {
+	byteOrder := []string{"AB", "BA", "ABCD", "CDAB", "BADC", "DCBA"}
+	dataType := []string{"UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32"}
 
-	name_encountered := map[string]bool{}
+	nameEncountered := map[string]bool{}
 	for i := range t {
 		//check empty name
 		if t[i].Name == "" {
-			return errors.New(fmt.Sprintf("Empty Name in %s", n))
+			return fmt.Errorf("Empty Name in %s", n)
 		}
 
 		//search name duplicate
-		if name_encountered[t[i].Name] {
-			return errors.New(fmt.Sprintf("Name [%s] in %s is Duplicated", t[i].Name, n))
+		if nameEncountered[t[i].Name] {
+			return fmt.Errorf("Name [%s] in %s is Duplicated", t[i].Name, n)
 		} else {
-			name_encountered[t[i].Name] = true
+			nameEncountered[t[i].Name] = true
 		}
 
-		if n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS {
+		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
-			byte_order_encountered := false
-			for j := range byte_order {
-				if byte_order[j] == t[i].Byte_Order {
-					byte_order_encountered = true
+			byteOrderEncountered := false
+			for j := range byteOrder {
+				if byteOrder[j] == t[i].ByteOrder {
+					byteOrderEncountered = true
 					break
 				}
 			}
 
-			if !byte_order_encountered {
-				return errors.New(fmt.Sprintf("Not valid Byte Order [%s] in %s", t[i].Byte_Order, n))
+			if !byteOrderEncountered {
+				return fmt.Errorf("Not valid Byte Order [%s] in %s", t[i].ByteOrder, n)
 			}
 
 			// search data type
-			data_type_encountered := false
-			for j := range byte_order {
-				if data_type[j] == t[i].Data_Type {
-					data_type_encountered = true
+			dataTypeEncountered := false
+			for j := range byteOrder {
+				if dataType[j] == t[i].DataType {
+					dataTypeEncountered = true
 					break
 				}
 			}
 
-			if !data_type_encountered {
-				return errors.New(fmt.Sprintf("Not valid Data Type [%s] in %s", t[i].Data_Type, n))
+			if !dataTypeEncountered {
+				return fmt.Errorf("Not valid Data Type [%s] in %s", t[i].DataType, n)
 			}
 
 			// check scale
 			_, err := strconv.ParseFloat(t[i].Scale, 32)
 			if err != nil {
-				return errors.New(fmt.Sprintf("Not valid Scale [%s] in %s", t[i].Scale, n))
+				return fmt.Errorf("Not valid Scale [%s] in %s", t[i].Scale, n)
 			}
 		}
 
 		// check address
 		if len(t[i].Address) == 0 || len(t[i].Address) > 2 {
-			return errors.New(fmt.Sprintf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n))
-		} else if n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS {
-			if (len(t[i].Address) == 1 && len(t[i].Byte_Order) != 2) || (len(t[i].Address) == 2 && len(t[i].Byte_Order) != 4) {
-				return errors.New(fmt.Sprintf("Not valid byte order [%s] and address [%v]  in %s", t[i].Byte_Order, t[i].Address, n))
+			return fmt.Errorf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
+		} else if n == cInputRegisters || n == cHoldingRegisters {
+			if (len(t[i].Address) == 1 && len(t[i].ByteOrder) != 2) || (len(t[i].Address) == 2 && len(t[i].ByteOrder) != 4) {
+				return fmt.Errorf("Not valid byte order [%s] and address [%v]  in %s", t[i].ByteOrder, t[i].Address, n)
 			}
 
 			// search duplicated
 			if len(t[i].Address) > len(removeDuplicates(t[i].Address)) {
-				return errors.New(fmt.Sprintf("Duplicate address [%v]  in %s", t[i].Address, n))
+				return fmt.Errorf("Duplicate address [%v]  in %s", t[i].Address, n)
 			}
 
-		} else if len(t[i].Address) > 1 || (n == C_INPUT_REGISTERS || n == C_HOLDING_REGISTERS) {
-			return errors.New(fmt.Sprintf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n))
+		} else if len(t[i].Address) > 1 || (n == cInputRegisters || n == cHoldingRegisters) {
+			return fmt.Errorf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
 		}
 	}
-
 	return nil
 }
 
@@ -365,7 +368,7 @@ func removeDuplicates(elements []uint16) []uint16 {
 	return result
 }
 
-func addFields(t []ModbusData) map[string]interface{} {
+func addFields(t []modbusData) map[string]interface{} {
 	fields := make(map[string]interface{})
 	for i := 0; i < len(t); i++ {
 		if len(t[i].Name) > 0 {
@@ -383,57 +386,57 @@ func addFields(t []ModbusData) map[string]interface{} {
 	return fields
 }
 
-func (m *Modbus) GetTags() error {
+func (m *Modbus) getTags() error {
 	for _, r := range m.registers {
-		raw_values := make(map[uint16]uint16)
-		for _, rr := range r.registers_range {
+		rawValues := make(map[uint16]uint16)
+		for _, rr := range r.RegistersRange {
 			res, err := r.ReadValue(uint16(rr.address), uint16(rr.length))
 			if err != nil {
 				return err
 			}
 
-			if r.Type == C_DISCRETE_INPUTS || r.Type == C_COILS {
+			if r.Type == cDiscreteInputs || r.Type == cCoils {
 				for i := 0; i < len(res); i++ {
 					for j := uint16(0); j < rr.length; j++ {
-						raw_values[rr.address+j] = uint16(res[i] >> uint(j) & 0x01)
+						rawValues[rr.address+j] = uint16(res[i] >> uint(j) & 0x01)
 					}
 				}
 				continue
 			}
 
-			if r.Type == C_INPUT_REGISTERS || r.Type == C_HOLDING_REGISTERS {
+			if r.Type == cInputRegisters || r.Type == cHoldingRegisters {
 				for i := 0; i < len(res); i += 2 {
-					raw_values[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
+					rawValues[rr.address+uint16(i)/2] = uint16(res[i])<<8 | uint16(res[i+1])
 				}
 			}
 		}
 
-		if r.Type == C_DISCRETE_INPUTS || r.Type == C_COILS {
-			setDigitalValue(r, raw_values)
+		if r.Type == cDiscreteInputs || r.Type == cCoils {
+			setDigitalValue(r, rawValues)
 		}
 
-		if r.Type == C_INPUT_REGISTERS || r.Type == C_HOLDING_REGISTERS {
-			setAnalogValue(r, raw_values)
+		if r.Type == cInputRegisters || r.Type == cHoldingRegisters {
+			setAnalogValue(r, rawValues)
 		}
 	}
 
 	return nil
 }
 
-func setDigitalValue(r Register, raw_values map[uint16]uint16) error {
+func setDigitalValue(r register, rawValues map[uint16]uint16) error {
 	for i := 0; i < len(r.Tags); i++ {
-		r.Tags[i].value = raw_values[r.Tags[i].Address[0]]
+		r.Tags[i].value = rawValues[r.Tags[i].Address[0]]
 	}
 
 	return nil
 }
 
-func setAnalogValue(r Register, raw_values map[uint16]uint16) error {
+func setAnalogValue(r register, rawValues map[uint16]uint16) error {
 	for i := 0; i < len(r.Tags); i++ {
 		bytes := []byte{}
 		for _, rv := range r.Tags[i].Address {
-			bytes = append(bytes, byte(raw_values[rv]>>8))
-			bytes = append(bytes, byte(raw_values[rv]&255))
+			bytes = append(bytes, byte(rawValues[rv]>>8))
+			bytes = append(bytes, byte(rawValues[rv]&255))
 		}
 
 		r.Tags[i].value = convertDataType(r.Tags[i], bytes)
@@ -442,35 +445,34 @@ func setAnalogValue(r Register, raw_values map[uint16]uint16) error {
 	return nil
 }
 
-func convertDataType(t ModbusData, bytes []byte) interface{} {
-	switch t.Data_Type {
+func convertDataType(t modbusData, bytes []byte) interface{} {
+	switch t.DataType {
 	case "UINT16":
-		e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)
-		f16 := format16(t.Data_Type, e16).(uint16)
+		e16, _ := convertEndianness16(t.ByteOrder, bytes).(uint16)
+		f16 := format16(t.DataType, e16).(uint16)
 		return scale16(t.Scale, f16)
 	case "INT16":
-		e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)
-		return format16(t.Data_Type, e16)
+		e16, _ := convertEndianness16(t.ByteOrder, bytes).(uint16)
+		return format16(t.DataType, e16)
 	case "UINT32":
-		e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
-		f32 := format32(t.Data_Type, e32).(uint32)
+		e32, _ := convertEndianness32(t.ByteOrder, bytes).(uint32)
+		f32 := format32(t.DataType, e32).(uint32)
 		return scale32(t.Scale, f32)
 	case "INT32":
-		e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
-		return format32(t.Data_Type, e32)
+		e32, _ := convertEndianness32(t.ByteOrder, bytes).(uint32)
+		return format32(t.DataType, e32)
 	case "FLOAT32-IEEE":
-		e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
-		return format32(t.Data_Type, e32)
+		e32, _ := convertEndianness32(t.ByteOrder, bytes).(uint32)
+		return format32(t.DataType, e32)
 	case "FLOAT32":
 		if len(bytes) == 2 {
-			e16, _ := convertEndianness16(t.Byte_Order, bytes).(uint16)
-			f16 := format16(t.Data_Type, e16).(uint16)
+			e16, _ := convertEndianness16(t.ByteOrder, bytes).(uint16)
+			f16 := format16(t.DataType, e16).(uint16)
 			return scale16(t.Scale, f16)
 		} else {
-			e32, _ := convertEndianness32(t.Byte_Order, bytes).(uint32)
+			e32, _ := convertEndianness32(t.ByteOrder, bytes).(uint32)
 			return scale32(t.Scale, e32)
 		}
-
 	default:
 		return 0
 	}
@@ -552,28 +554,29 @@ func scale32(s string, v uint32) interface{} {
 	return 0
 }
 
+// Gather implements the telegraf plugin interface method for data accumulation
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	if !m.is_connected {
+	if !m.isConnected {
 		err := connect(m)
 		if err != nil {
-			m.is_connected = false
+			m.isConnected = false
 			return err
 		}
 	}
 
-	if !m.is_initialized {
+	if !m.isInitialized {
 		err := initialization(m)
 		if err != nil {
 			return err
 		}
 	}
 
-	err := m.GetTags()
+	err := m.getTags()
 	if err != nil {
-		m.is_connected = false
+		m.isConnected = false
 		return err
 	}
 
@@ -585,6 +588,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// Add this plugin to telegraf
 func init() {
 	inputs.Add("modbus", func() telegraf.Input { return &Modbus{} })
 }
