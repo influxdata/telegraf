@@ -30,7 +30,7 @@ type Modbus struct {
 	Coils             []ModbusData      `toml:"coils"`
 	Holding_Registers []ModbusData      `toml:"holding_registers"`
 	Input_Registers   []ModbusData      `toml:"input_registers"`
-	registers         []register
+	registers         []Register
 	is_connected      bool
 	is_initialized    bool
 	tcp_handler       *mb.TCPClientHandler
@@ -39,9 +39,9 @@ type Modbus struct {
 	client            mb.Client
 }
 
-type register struct {
+type Register struct {
 	Type            string
-	registers_range []register_range
+	registers_range []Register_range
 	ReadValue       func(uint16, uint16) ([]byte, error)
 	Tags            []ModbusData
 }
@@ -55,7 +55,7 @@ type ModbusData struct {
 	value      interface{}
 }
 
-type register_range struct {
+type Register_range struct {
 	address uint16
 	length  uint16
 }
@@ -236,7 +236,7 @@ func initialization(m *Modbus) error {
 			sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 			ii := 0
-			var registers_range []register_range
+			var registers_range []Register_range
 
 			// Get range of consecutive integers
 			// [1, 2, 3, 5, 6, 10, 11, 12, 14]
@@ -251,7 +251,7 @@ func initialization(m *Modbus) error {
 						ii++
 					}
 					ii++
-					registers_range = append(registers_range, register_range{start, end - start + 1})
+					registers_range = append(registers_range, Register_range{start, end - start + 1})
 				}
 			}
 
@@ -269,7 +269,7 @@ func initialization(m *Modbus) error {
 				return errors.New("Not Valid function")
 			}
 
-			m.registers = append(m.registers, register{name, registers_range, fn, tags})
+			m.registers = append(m.registers, Register{name, registers_range, fn, tags})
 		}
 	}
 	m.is_initialized = true
@@ -420,7 +420,7 @@ func (m *Modbus) GetTags() error {
 	return nil
 }
 
-func setDigitalValue(r register, raw_values map[uint16]uint16) error {
+func setDigitalValue(r Register, raw_values map[uint16]uint16) error {
 	for i := 0; i < len(r.Tags); i++ {
 		r.Tags[i].value = raw_values[r.Tags[i].Address[0]]
 	}
@@ -428,7 +428,7 @@ func setDigitalValue(r register, raw_values map[uint16]uint16) error {
 	return nil
 }
 
-func setAnalogValue(r register, raw_values map[uint16]uint16) error {
+func setAnalogValue(r Register, raw_values map[uint16]uint16) error {
 	for i := 0; i < len(r.Tags); i++ {
 		bytes := []byte{}
 		for _, rv := range r.Tags[i].Address {
