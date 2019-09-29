@@ -41,7 +41,7 @@ type Modbus struct {
 
 type Register struct {
 	Type            string
-	registers_range []Register_range
+	registers_range []RegisterRange
 	ReadValue       func(uint16, uint16) ([]byte, error)
 	Tags            []ModbusData
 }
@@ -55,7 +55,7 @@ type ModbusData struct {
 	value      interface{}
 }
 
-type Register_range struct {
+type RegisterRange struct {
 	address uint16
 	length  uint16
 }
@@ -236,7 +236,7 @@ func initialization(m *Modbus) error {
 			sort.Slice(addrs, func(i, j int) bool { return addrs[i] < addrs[j] })
 
 			ii := 0
-			var registers_range []Register_range
+			var registers_range []RegisterRange
 
 			// Get range of consecutive integers
 			// [1, 2, 3, 5, 6, 10, 11, 12, 14]
@@ -251,7 +251,7 @@ func initialization(m *Modbus) error {
 						ii++
 					}
 					ii++
-					registers_range = append(registers_range, Register_range{start, end - start + 1})
+					registers_range = append(registers_range, RegisterRange{start, end - start + 1})
 				}
 			}
 
