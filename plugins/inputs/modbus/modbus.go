@@ -34,7 +34,7 @@ type Modbus struct {
 	isConnected       bool
 	isInitialized     bool
 	tcpHandler       *mb.TCPClientHandler
-	serialHandler    *mb.RTUClientHandler
+	rtuHandler    *mb.RTUClientHandler
 	asciiHandler     *mb.ASCIIClientHandler
 	client            mb.Client
 }
@@ -174,15 +174,15 @@ func connect(m *Modbus) error {
 		return nil
 	case "file":
 		if m.TransmissionMode == "RTU" {
-			m.serialHandler = mb.NewRTUClientHandler(u.Path)
-			m.serialHandler.Timeout = m.Timeout.Duration
-			m.serialHandler.SlaveId = byte(m.SlaveID)
-			m.serialHandler.BaudRate = m.BaudRate
-			m.serialHandler.DataBits = m.DataBits
-			m.serialHandler.Parity = m.Parity
-			m.serialHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.serialHandler)
-			err := m.serialHandler.Connect()
+			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
+			m.rtuHandler.Timeout = m.Timeout.Duration
+			m.rtuHandler.SlaveId = byte(m.SlaveID)
+			m.rtuHandler.BaudRate = m.BaudRate
+			m.rtuHandler.DataBits = m.DataBits
+			m.rtuHandler.Parity = m.Parity
+			m.rtuHandler.StopBits = m.StopBits
+			m.client = mb.NewClient(m.rtuHandler)
+			err := m.rtuHandler.Connect()
 			if err != nil {
 				return err
 			}
