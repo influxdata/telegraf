@@ -34,7 +34,7 @@ type Modbus struct {
 	isConnected       bool
 	isInitialized     bool
 	tcpHandler       *mb.TCPClientHandler
-	rtuHandler    *mb.RTUClientHandler
+	rtuHandler       *mb.RTUClientHandler
 	asciiHandler     *mb.ASCIIClientHandler
 	client            mb.Client
 }
