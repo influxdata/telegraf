@@ -23,7 +23,7 @@ var (
 	// Model Number: TS128GMTE850
 	modelInfo = regexp.MustCompile("^(Device Model|Product|Model Number):\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
-	serialInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
+	serialInfo = regexp.MustCompile("(?i)^Serial Number:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
 	wwnInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
 	// User Capacity:    251,000,193,024 bytes [251 GB]
