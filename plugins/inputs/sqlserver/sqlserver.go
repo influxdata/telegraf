@@ -31,9 +31,9 @@ type Query struct {
 // MapQuery type
 type MapQuery map[string]Query
 
-var defaultServer = "Server=.;app name=telegraf;log=1;"
+const defaultServer = "Server=.;app name=telegraf;log=1;"
 
-var sampleConfig = `
+const sampleConfig = `
   ## Specify instances to monitor with a list of connection strings.
   ## All connection parameters are optional.
   ## By default, the host is localhost, listening on default port, TCP 1433.

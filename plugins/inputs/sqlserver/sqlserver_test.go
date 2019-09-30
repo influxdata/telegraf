@@ -90,12 +90,10 @@ func TestSqlServer_MultipleInstance(t *testing.T) {
 	s := &SQLServer{
 		Servers: []string{"Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"},
 		ExcludeQuery: []string{"MemoryClerk"},
-		isInitialized: false,
 	}
 	s2 := &SQLServer{
 		Servers: []string{"Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"},
 		ExcludeQuery: []string{"DatabaseSize"},
-		isInitialized: false,
 	}
 
 	var acc, acc2 testutil.Accumulator
