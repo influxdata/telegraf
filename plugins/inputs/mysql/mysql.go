@@ -182,7 +182,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// These are const but can't be labelled as such because golang doesn't allow const maps
+// These are const but can't be declared as such because golang doesn't allow const maps
 var (
 	// status counter
 	generalThreadStates = map[string]uint32{

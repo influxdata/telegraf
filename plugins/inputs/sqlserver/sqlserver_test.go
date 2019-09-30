@@ -86,13 +86,13 @@ func TestSqlServer_MultipleInstance(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
+	testServer := "Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"
 	s := &SQLServer{
-		Servers: []string{"Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"},
+		Servers: []string{testServer},
 		ExcludeQuery: []string{"MemoryClerk"},
 	}
 	s2 := &SQLServer{
-		Servers: []string{"Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"},
+		Servers: []string{testServer},
 		ExcludeQuery: []string{"DatabaseSize"},
 	}
 
@@ -107,9 +107,11 @@ func TestSqlServer_MultipleInstance(t *testing.T) {
 	assert.Equal(t, s.isInitialized, true)
 	assert.Equal(t, s2.isInitialized, true)
 
+	// acc includes size metrics, and excludes memory metrics
 	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
 	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
 
+	// acc2 includes memory metrics, and excludes size metrics
 	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
 	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
 }
@@ -124,12 +126,14 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 
 	initQueries(s)
 	_, ok := s.queries["DatabaseSize"]
+	// acc includes size metrics
 	assert.True(t,ok)
 	assert.Equal(t, s.isInitialized, true)
 	assert.Equal(t, s2.isInitialized, false)
 
 	initQueries(s2)
 	_, ok = s2.queries["DatabaseSize"]
+	// acc2 excludes size metrics
 	assert.False(t,ok)
 	assert.Equal(t, s.isInitialized, true)
 	assert.Equal(t, s2.isInitialized, true)
