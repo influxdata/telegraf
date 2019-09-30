@@ -15,7 +15,6 @@ import (
 
 func TestGatherAttributes(t *testing.T) {
 	s := NewSmart()
-	s.Log = testutil.Logger{}
 	s.Path = "smartctl"
 	s.Attributes = true
 
@@ -331,7 +330,6 @@ func TestGatherAttributes(t *testing.T) {
 
 func TestGatherNoAttributes(t *testing.T) {
 	s := NewSmart()
-	s.Log = testutil.Logger{}
 	s.Path = "smartctl"
 	s.Attributes = false
 
@@ -440,8 +438,56 @@ func TestGatherHtSAS(t *testing.T) {
 
 	wg.Add(1)
 	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-	assert.Equal(t, 5, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(3), acc.NMetrics(), "Wrong number of metrics gathered")
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "194",
+				"model":     "HUC103030CSS600",
+				"name":      "Temperature_Celsius",
+			},
+			map[string]interface{}{
+				"raw_value": 36,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "4",
+				"model":     "HUC103030CSS600",
+				"name":      "Start_Stop_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 47,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_device",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"model":     "HUC103030CSS600",
+			},
+			map[string]interface{}{
+				"exit_status": 0,
+				"health_ok":   true,
+				"temp_c":      36,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func TestGatherSSD(t *testing.T) {
