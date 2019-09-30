@@ -116,7 +116,7 @@ func (w *Whatap) Write(metrics []telegraf.Metric) error {
 		p := NewTagCountPack()
 		p.Pcode = w.Pcode
 		p.Oid = w.Oid
-		p.Category = fmt.Sprintf("%s%s", "Telegraf.", m.Name())
+		p.Category = fmt.Sprintf("%s%s", "telegraf_", m.Name())
 		for k, v := range m.Fields() {
 			p.Put(k, v)
 		}
