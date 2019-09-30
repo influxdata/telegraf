@@ -24,6 +24,7 @@
 
 - [#6445](https://github.com/influxdata/telegraf/issues/6445): Use batch serialization format in exec output.
 - [#6455](https://github.com/influxdata/telegraf/issues/6455): Build official packages with Go 1.12.10.
+- [#6464](https://github.com/influxdata/telegraf/pull/6464): Use case insensitive serial numer match in smart input.
 
 ## v1.12.2 [2019-09-24]
 
