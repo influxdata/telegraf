@@ -12,11 +12,11 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	ExcludeQuery []string `toml:"exclude_query"`
-	queries MapQuery
+	Servers       []string `toml:"servers"`
+	QueryVersion  int      `toml:"query_version"`
+	AzureDB       bool     `toml:"azuredb"`
+	ExcludeQuery  []string `toml:"exclude_query"`
+	queries       MapQuery
 	isInitialized bool
 }
 
