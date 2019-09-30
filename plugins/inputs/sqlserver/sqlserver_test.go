@@ -114,6 +114,28 @@ func TestSqlServer_MultipleInstance(t *testing.T) {
 	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
 }
 
+func TestSqlServer_MultipleInit(t *testing.T) {
+
+	s := &SQLServer{
+	}
+	s2 := &SQLServer{
+		ExcludeQuery: []string{"DatabaseSize"},
+	}
+
+	initQueries(s)
+	_, ok := s.queries["DatabaseSize"]
+	assert.True(t,ok)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
+
+	initQueries(s2)
+	_, ok = s2.queries["DatabaseSize"]
+	assert.False(t,ok)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
+}
+
+
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
 Performance metrics;WIN8-DEV;Performance metrics;0;6353158144;0;0;7;2773;415061;0;25;229371;130;10;18;188;52;14`
 
