@@ -27,6 +27,8 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 }
 
 func TestMysqlMultipleInstances(t *testing.T) {
+	// Invoke Gather() from two separate configurations and
+	//  confirm they don't interfere with each other
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
