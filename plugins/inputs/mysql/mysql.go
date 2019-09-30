@@ -39,9 +39,9 @@ type Mysql struct {
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 	tls.ClientConfig
-	lastT                               time.Time
-	initDone                            bool
-	scanIntervalSlow                    uint32
+	lastT            time.Time
+	initDone         bool
+	scanIntervalSlow uint32
 }
 
 const sampleConfig = `
@@ -136,7 +136,7 @@ func (m *Mysql) Description() string {
 	return "Read metrics from one or many mysql servers"
 }
 
-const	localhost        = ""
+const localhost = ""
 
 func (m *Mysql) InitMysql() {
 	if len(m.IntervalSlow) > 0 {

@@ -16,7 +16,7 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	}
 
 	m := &Mysql{
-		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
+		Servers: []string{fmt.Sprintf("root@tcp(127.0.0.1:3306)/?tls=false")},
 	}
 
 	var acc testutil.Accumulator
@@ -34,7 +34,7 @@ func TestMysqlMultipleInstances(t *testing.T) {
 	}
 	testServer := "root@tcp(127.0.0.1:3306)/?tls=false"
 	m := &Mysql{
-		Servers: []string{testServer},
+		Servers:      []string{testServer},
 		IntervalSlow: "30s",
 	}
 
@@ -59,8 +59,7 @@ func TestMysqlMultipleInits(t *testing.T) {
 	m := &Mysql{
 		IntervalSlow: "30s",
 	}
-	m2 := &Mysql{
-	}
+	m2 := &Mysql{}
 
 	m.InitMysql()
 	assert.True(t, m.initDone)
