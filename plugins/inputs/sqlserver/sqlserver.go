@@ -602,7 +602,6 @@ WHERE	(
 			OR object_name LIKE '%SQL Errors%'
 		) OR (
 			object_name LIKE 'SQLServer:Batch Resp Statistics%'
-			AND instance_name LIKE 'CPU%'
 		) OR (
 			instance_name IN ('_Total')
 			AND counter_name IN (
