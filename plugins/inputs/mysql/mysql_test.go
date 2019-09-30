@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -15,7 +16,7 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	}
 
 	m := &Mysql{
-		Servers: []string{"root@tcp(127.0.0.1:3306)/?tls=false"},
+		Servers: []string{fmt.Sprintf("root@tcp(127.0.0.1:3306)/?tls=false")},
 	}
 
 	var acc testutil.Accumulator
@@ -29,9 +30,9 @@ func TestMysqlMultipleInstances(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-
+	testServer := "root@tcp(127.0.0.1:3306)/?tls=false"
 	m := &Mysql{
-		Servers: []string{"root@tcp(127.0.0.1:3306)/?tls=false"},
+		Servers: []string{testServer},
 		IntervalSlow: "30s",
 	}
 
@@ -43,7 +44,7 @@ func TestMysqlMultipleInstances(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("mysql_variables"))
 
 	m2 := &Mysql{
-		Servers: []string{"root@tcp(127.0.0.1:3306)/?tls=false"},
+		Servers: []string{testServer},
 	}
 	err = m2.Gather(&acc2)
 	require.NoError(t, err)
@@ -64,6 +65,7 @@ func TestMysqlMultipleInits(t *testing.T) {
 	assert.False(t, m2.initDone)
 	assert.Equal(t, m.scanIntervalSlow, uint32(30))
 	assert.Equal(t, m2.scanIntervalSlow, uint32(0))
+
 	m2.InitMysql()
 	assert.True(t, m.initDone)
 	assert.True(t, m2.initDone)
