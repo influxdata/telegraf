@@ -137,8 +137,6 @@ func (m *Mysql) Description() string {
 }
 
 const	localhost        = ""
-var (
-)
 
 func (m *Mysql) InitMysql() {
 	if len(m.IntervalSlow) > 0 {
