@@ -841,13 +841,14 @@ func loadConfig(config string) ([]byte, error) {
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
-	v := os.Getenv("INFLUX_TOKEN")
-
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Authorization", "Token "+v)
+
+	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+		req.Header.Add("Authorization", "Token "+v)
+	}
 	req.Header.Add("Accept", "application/toml")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
