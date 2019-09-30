@@ -101,8 +101,13 @@ func TestSqlServer_MultipleInstance(t *testing.T) {
 	var acc, acc2 testutil.Accumulator
 	err := s.Gather(&acc)
 	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, false)
+
 	err = s2.Gather(&acc2)
 	require.NoError(t, err)
+	assert.Equal(t, s.isInitialized, true)
+	assert.Equal(t, s2.isInitialized, true)
 
 	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
 	assert.True(t, acc.HasMeasurement("Log size (bytes)"))
