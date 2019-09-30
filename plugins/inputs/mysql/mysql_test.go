@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"database/sql"
-	"fmt"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -16,7 +15,7 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	}
 
 	m := &Mysql{
-		Servers: []string{fmt.Sprintf("root@tcp(%s:3306)/", testutil.GetLocalHost())},
+		Servers: []string{"root@tcp(127.0.0.1:3306)/?tls=false"},
 	}
 
 	var acc testutil.Accumulator
@@ -24,6 +23,52 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("mysql"))
+}
+
+func TestMysqlMultipleInstances(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &Mysql{
+		Servers: []string{"root@tcp(127.0.0.1:3306)/?tls=false"},
+		IntervalSlow: "30s",
+	}
+
+	var acc, acc2 testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+	assert.True(t, acc.HasMeasurement("mysql"))
+	// acc should have global variables
+	assert.True(t, acc.HasMeasurement("mysql_variables"))
+
+	m2 := &Mysql{
+		Servers: []string{"root@tcp(127.0.0.1:3306)/?tls=false"},
+	}
+	err = m2.Gather(&acc2)
+	require.NoError(t, err)
+	assert.True(t, acc2.HasMeasurement("mysql"))
+	// acc2 should not have global variables
+	assert.False(t, acc2.HasMeasurement("mysql_variables"))
+}
+
+func TestMysqlMultipleInits(t *testing.T) {
+	m := &Mysql{
+		IntervalSlow: "30s",
+	}
+	m2 := &Mysql{
+	}
+
+	m.InitMysql()
+	assert.True(t, m.initDone)
+	assert.False(t, m2.initDone)
+	assert.Equal(t, m.scanIntervalSlow, uint32(30))
+	assert.Equal(t, m2.scanIntervalSlow, uint32(0))
+	m2.InitMysql()
+	assert.True(t, m.initDone)
+	assert.True(t, m2.initDone)
+	assert.Equal(t, m.scanIntervalSlow, uint32(30))
+	assert.Equal(t, m2.scanIntervalSlow, uint32(0))
 }
 
 func TestMysqlGetDSNTag(t *testing.T) {
