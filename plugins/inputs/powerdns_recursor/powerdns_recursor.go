@@ -27,14 +27,14 @@ type PowerdnsRecursor struct {
 var defaultTimeout = 5 * time.Second
 
 var sampleConfig = `
-  ## An array of sockets to gather stats about.
-  ## Specify a path to unix socket.
+  ## Path to the Recursor control socket.
   unix_sockets = ["/var/run/pdns_recursor.controlsocket"]
 
-  ## Socket for Receive
-  #socket_dir = "/var/run/"
-  ## Socket permissions
-  #socket_mode = "0666"
+  ## Directory to create receive socket.  This default is likely not writable,
+  ## please reference the full plugin documentation for a recommended setup.
+  # socket_dir = "/var/run/"
+  ## Socket permissions for the receive socket.
+  # socket_mode = "0666"
 `
 
 func (p *PowerdnsRecursor) SampleConfig() string {
@@ -139,8 +139,8 @@ func parseResponse(metrics string) map[string]interface{} {
 
 		i, err := strconv.ParseInt(m[1], 10, 64)
 		if err != nil {
-			log.Printf("E! [inputs.powerdns_recursor] Error parsing integer for metric [%s] %v",
-				metric, err)
+			log.Printf("E! [inputs.powerdns_recursor] error parsing integer for metric %q: %s",
+				metric, err.Error())
 			continue
 		}
 		values[m[0]] = i

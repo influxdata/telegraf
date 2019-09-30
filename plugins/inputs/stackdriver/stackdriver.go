@@ -3,7 +3,6 @@ package stackdriver
 import (
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -128,6 +127,8 @@ type (
 		DistributionAggregationAligners []string              `toml:"distribution_aggregation_aligners"`
 		Filter                          *ListTimeSeriesFilter `toml:"filter"`
 
+		Log telegraf.Logger
+
 		client              metricClient
 		timeSeriesConfCache *timeSeriesConfCache
 		prevEnd             time.Time
@@ -167,6 +168,7 @@ type (
 
 	// stackdriverMetricClient is a metric client for stackdriver
 	stackdriverMetricClient struct {
+		log  telegraf.Logger
 		conn *monitoring.MetricClient
 
 		listMetricDescriptorsCalls selfstat.Stat
@@ -206,7 +208,7 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 	mdChan := make(chan *metricpb.MetricDescriptor, 1000)
 
 	go func() {
-		log.Printf("D! [inputs.stackdriver] ListMetricDescriptors: %s", req.Filter)
+		c.log.Debugf("List metric descriptor request filter: %s", req.Filter)
 		defer close(mdChan)
 
 		// Iterate over metric descriptors and send them to buffered channel
@@ -216,7 +218,7 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
 				if mdErr != iterator.Done {
-					log.Printf("E! [inputs.stackdriver] Received error response: %s: %v", req, mdErr)
+					c.log.Errorf("Failed iterating metric desciptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
 			}
@@ -235,7 +237,7 @@ func (c *stackdriverMetricClient) ListTimeSeries(
 	tsChan := make(chan *monitoringpb.TimeSeries, 1000)
 
 	go func() {
-		log.Printf("D! [inputs.stackdriver] ListTimeSeries: %s", req.Filter)
+		c.log.Debugf("List time series request filter: %s", req.Filter)
 		defer close(tsChan)
 
 		// Iterate over timeseries and send them to buffered channel
@@ -245,7 +247,7 @@ func (c *stackdriverMetricClient) ListTimeSeries(
 			tsDesc, tsErr := tsResp.Next()
 			if tsErr != nil {
 				if tsErr != iterator.Done {
-					log.Printf("E! [inputs.stackdriver] Received error response: %s: %v", req, tsErr)
+					c.log.Errorf("Failed iterating time series responses: %q: %v", req.String(), tsErr)
 				}
 				break
 			}
@@ -458,6 +460,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 			"stackdriver", "list_timeseries_calls", tags)
 
 		s.client = &stackdriverMetricClient{
+			log:                        s.Log,
 			conn:                       client,
 			listMetricDescriptorsCalls: listMetricDescriptorsCalls,
 			listTimeSeriesCalls:        listTimeSeriesCalls,

@@ -11,6 +11,7 @@ The filestat plugin gathers metrics about file existence, size, and other stats.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". See https://github.com/gobwas/glob.
   files = ["/etc/telegraf/telegraf.conf", "/var/log/**.log"]
+
   ## If true, read the entire file and calculate an md5 checksum.
   md5 = false
 ```

@@ -17,6 +17,7 @@ type Strings struct {
 	TrimPrefix []converter `toml:"trim_prefix"`
 	TrimSuffix []converter `toml:"trim_suffix"`
 	Replace    []converter `toml:"replace"`
+	Left       []converter `toml:"left"`
 
 	converters []converter
 	init       bool
@@ -26,7 +27,9 @@ type ConvertFunc func(s string) string
 
 type converter struct {
 	Field       string
+	FieldKey    string
 	Tag         string
+	TagKey      string
 	Measurement string
 	Dest        string
 	Cutset      string
@@ -34,6 +37,7 @@ type converter struct {
 	Prefix      string
 	Old         string
 	New         string
+	Width       int
 
 	fn ConvertFunc
 }
@@ -77,6 +81,11 @@ const sampleConfig = `
   #   measurement = "*"
   #   old = ":"
   #   new = "_"
+
+  ## Trims strings based on width
+  # [[processors.strings.left]]
+  #   field = "message"
+  #   width = 10
 `
 
 func (s *Strings) SampleConfig() string {
@@ -109,6 +118,27 @@ func (c *converter) convertTag(metric telegraf.Metric) {
 	}
 }
 
+func (c *converter) convertTagKey(metric telegraf.Metric) {
+	var tags map[string]string
+	if c.TagKey == "*" {
+		tags = metric.Tags()
+	} else {
+		tags = make(map[string]string)
+		tv, ok := metric.GetTag(c.TagKey)
+		if !ok {
+			return
+		}
+		tags[c.TagKey] = tv
+	}
+
+	for key, value := range tags {
+		if k := c.fn(key); k != "" {
+			metric.RemoveTag(key)
+			metric.AddTag(k, value)
+		}
+	}
+}
+
 func (c *converter) convertField(metric telegraf.Metric) {
 	var fields map[string]interface{}
 	if c.Field == "*" {
@@ -133,6 +163,27 @@ func (c *converter) convertField(metric telegraf.Metric) {
 	}
 }
 
+func (c *converter) convertFieldKey(metric telegraf.Metric) {
+	var fields map[string]interface{}
+	if c.FieldKey == "*" {
+		fields = metric.Fields()
+	} else {
+		fields = make(map[string]interface{})
+		fv, ok := metric.GetField(c.FieldKey)
+		if !ok {
+			return
+		}
+		fields[c.FieldKey] = fv
+	}
+
+	for key, value := range fields {
+		if k := c.fn(key); k != "" {
+			metric.RemoveField(key)
+			metric.AddField(k, value)
+		}
+	}
+}
+
 func (c *converter) convertMeasurement(metric telegraf.Metric) {
 	if metric.Name() != c.Measurement && c.Measurement != "*" {
 		return
@@ -146,8 +197,16 @@ func (c *converter) convert(metric telegraf.Metric) {
 		c.convertField(metric)
 	}
 
+	if c.FieldKey != "" {
+		c.convertFieldKey(metric)
+	}
+
 	if c.Tag != "" {
 		c.convertTag(metric)
+	}
+
+	if c.TagKey != "" {
+		c.convertTagKey(metric)
 	}
 
 	if c.Measurement != "" {
@@ -214,6 +273,17 @@ func (s *Strings) initOnce() {
 				return s
 			} else {
 				return newString
+			}
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Left {
+		c := c
+		c.fn = func(s string) string {
+			if len(s) < c.Width {
+				return s
+			} else {
+				return s[:c.Width]
 			}
 		}
 		s.converters = append(s.converters, c)

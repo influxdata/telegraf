@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -34,9 +33,15 @@ type Prometheus struct {
 	BearerToken       string `toml:"bearer_token"`
 	BearerTokenString string `toml:"bearer_token_string"`
 
+	// Basic authentication credentials
+	Username string `toml:"username"`
+	Password string `toml:"password"`
+
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	client *http.Client
 
@@ -75,7 +80,12 @@ var sampleConfig = `
   ## OR
   # bearer_token_string = "abc_123"
 
-  ## Specify timeout duration for slower prometheus clients (default is 3s)
+  ## HTTP Basic Authentication username and password. ('bearer_token' and
+  ## 'bearer_token_string' take priority)
+  # username = ""
+  # password = ""
+
+	## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
   ## Optional TLS Config
@@ -127,7 +137,7 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {
-			log.Printf("prometheus: Could not parse %s, skipping it. Error: %s", u, err.Error())
+			p.Log.Errorf("Could not parse %q, skipping it. Error: %s", u, err.Error())
 			continue
 		}
 		allURLs[URL.String()] = URLAndAddress{URL: URL, OriginalURL: URL}
@@ -148,7 +158,7 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 
 		resolvedAddresses, err := net.LookupHost(URL.Hostname())
 		if err != nil {
-			log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", URL.Host, err.Error())
+			p.Log.Errorf("Could not resolve %q, skipping it. Error: %s", URL.Host, err.Error())
 			continue
 		}
 		for _, resolved := range resolvedAddresses {
@@ -251,6 +261,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+string(token))
 	} else if p.BearerTokenString != "" {
 		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
+	} else if p.Username != "" || p.Password != "" {
+		req.SetBasicAuth(p.Username, p.Password)
 	}
 
 	var resp *http.Response
