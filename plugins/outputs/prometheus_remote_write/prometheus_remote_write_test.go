@@ -248,3 +248,57 @@ func TestWriteWithHistogram(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteWithSummary(t *testing.T) {
+	for i, tc := range []struct {
+		metrics  []telegraf.Metric
+		expected prompb.WriteRequest
+	}{
+		{
+			metrics:  []telegraf.Metric{},
+			expected: prompb.WriteRequest{},
+		},
+
+		{
+			metrics: []telegraf.Metric{
+				mustNew(t, "foo", map[string]string{"bar": "baz"},
+					map[string]interface{}{"99": 1.0}, time.Unix(0, 0), telegraf.Summary),
+			},
+			expected: prompb.WriteRequest{
+				Timeseries: []prompb.TimeSeries{{
+					Labels: []prompb.Label{
+						{Name: "__name__", Value: "foo"},
+						{Name: "bar", Value: "baz"},
+						{Name: "quantile", Value: "99"},
+					},
+					Samples: []prompb.Sample{
+						{Timestamp: 0, Value: 1.0},
+					},
+				}},
+			},
+		},
+	} {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			var actual prompb.WriteRequest
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				buf, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+
+				buf, err = snappy.Decode(nil, buf)
+				require.NoError(t, err)
+
+				err = proto.Unmarshal(buf, &actual)
+				require.NoError(t, err)
+			}))
+			defer server.Close()
+
+			remote := PrometheusRemoteWrite{
+				URL: server.URL,
+			}
+			err := remote.Write(tc.metrics)
+			require.NoError(t, err)
+			assert.Equal(t, actual, tc.expected)
+		})
+	}
+}
