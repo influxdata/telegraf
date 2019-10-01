@@ -3,11 +3,8 @@
 This plugin writes to the WhaTap(https://www.whatap.io) APM(via TCP).
 
 ```toml
-## You can create a project on the WhaTap site(https://www.whatap.io) 
+  ## You can create a project on the WhaTap site(https://www.whatap.io) 
   ## to get license, project code and server IP information.
-
-  ## WhaTap license. Required
-  #license = "xxxx-xxxx-xxxx"
 
   ## WhaTap license. Required
   #license = "xxxx-xxxx-xxxx"
