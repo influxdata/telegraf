@@ -92,7 +92,7 @@ var sampleConfig = `
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
 
-  ## Set the hostname for the metric to the container ID
+  ## Set the host tag for the metrics to the container ID hostname, eg first 12 chars
   container_id_as_hostname = false
 
   ## Containers to include and exclude. Globs accepted.
