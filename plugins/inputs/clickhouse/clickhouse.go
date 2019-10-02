@@ -153,8 +153,8 @@ func (ch *ClickHouse) clusterIncludeExcludeFilter() string {
 
 func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, metric string) error {
 	var result []struct {
-		Metric string  `json:"metric"`
-		Value  chInt64 `json:"value"`
+		Metric string   `json:"metric"`
+		Value  chUInt64 `json:"value"`
 	}
 	if err := ch.execQuery(conn.url, commonMetrics[metric], &result); err != nil {
 		return err
@@ -172,7 +172,7 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 
 	fields := make(map[string]interface{})
 	for _, r := range result {
-		fields[internal.SnakeCase(r.Metric)] = r.Value.toInt64()
+		fields[internal.SnakeCase(r.Metric)] = r.Value.toUInt64()
 	}
 
 	acc.AddFields("clickhouse_"+metric, fields, tags)
@@ -182,11 +182,11 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 
 func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 	var parts []struct {
-		Database string  `json:"database"`
-		Table    string  `json:"table"`
-		Bytes    chInt64 `json:"bytes"`
-		Parts    chInt64 `json:"parts"`
-		Rows     chInt64 `json:"rows"`
+		Database string   `json:"database"`
+		Table    string   `json:"table"`
+		Bytes    chUInt64 `json:"bytes"`
+		Parts    chUInt64 `json:"parts"`
+		Rows     chUInt64 `json:"rows"`
 	}
 
 	if err := ch.execQuery(conn.url, systemParts, &parts); err != nil {
@@ -206,9 +206,9 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		tags["database"] = part.Database
 		acc.AddFields("clickhouse_tables",
 			map[string]interface{}{
-				"bytes": part.Bytes.toInt64(),
-				"parts": part.Parts.toInt64(),
-				"rows":  part.Rows.toInt64(),
+				"bytes": part.Bytes.toUInt64(),
+				"parts": part.Parts.toUInt64(),
+				"rows":  part.Rows.toUInt64(),
 			},
 			tags,
 		)
@@ -235,9 +235,9 @@ func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error
 }
 
 // see output_format_json_quote_64bit_integers
-type chInt64 int64
+type chUInt64 uint64
 
-func (i *chInt64) UnmarshalJSON(b []byte) error {
+func (i *chUInt64) UnmarshalJSON(b []byte) error {
 	if len(b) >= 3 {
 		if b[len(b)-1] == '"' {
 			b = b[:len(b)-1]
@@ -246,16 +246,16 @@ func (i *chInt64) UnmarshalJSON(b []byte) error {
 			b = b[1:]
 		}
 	}
-	v, err := strconv.Atoi(string(b))
+	v, err := strconv.ParseUint(string(b), 10, 64)
 	if err != nil {
 		return err
 	}
-	*i = chInt64(v)
+	*i = chUInt64(v)
 	return nil
 }
 
-func (i chInt64) toInt64() int64 {
-	return int64(i)
+func (i chUInt64) toUInt64() uint64 {
+	return uint64(i)
 }
 
 func init() {
