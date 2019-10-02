@@ -33,7 +33,7 @@ func TestChInt64(t *testing.T) {
 	for src, expected := range assets {
 		var v chUInt64
 		if err := v.UnmarshalJSON([]byte(src)); assert.NoError(t, err) {
-			assert.Equal(t, expected, v.toInt64())
+			assert.Equal(t, expected, v.toUInt64())
 		}
 	}
 }
