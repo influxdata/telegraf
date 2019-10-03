@@ -113,7 +113,7 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 
 		for _, field := range metric.FieldList() {
 			var metricName string
-			if metric.Type() == telegraf.Histogram || metric.Type() == telegraf.Summary {
+			if (metric.Type() == telegraf.Histogram || metric.Type() == telegraf.Summary) && (field.Key != "sum" && field.Key != "count") {
 				metricName = prometheus_client.Sanitize(metric.Name())
 			} else {
 				metricName = getSanitizedMetricName(metric.Name(), field.Key)
@@ -142,17 +142,20 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 			// Send keys as label values for histograms and summaries
 			switch metric.Type() {
 			case telegraf.Histogram:
-				labels = append(labels, prompb.Label{
-					Name:  "le",
-					Value: field.Key,
-				})
+				if field.Key != "sum" && field.Key != "count" {
+					labels = append(labels, prompb.Label{
+						Name:  "le",
+						Value: field.Key,
+					})
+				}
 			case telegraf.Summary:
-				labels = append(labels, prompb.Label{
-					Name:  "quantile",
-					Value: field.Key,
-				})
+				if field.Key != "sum" && field.Key != "count" {
+					labels = append(labels, prompb.Label{
+						Name:  "quantile",
+						Value: field.Key,
+					})
+				}
 			}
-
 			ts := metric.Time().UnixNano() / int64(time.Millisecond)
 			req.Timeseries = append(req.Timeseries, prompb.TimeSeries{
 				Labels: labels,
@@ -161,6 +164,7 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 					Value:     value,
 				}},
 			})
+
 		}
 	}
 
