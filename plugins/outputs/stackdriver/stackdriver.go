@@ -61,6 +61,9 @@ var sampleConfig = `
   ## Custom resource type
   # resource_type = "generic_node"
 
+  ## Number of seconds between cumulative intervals
+  # cumulative_interval_seconds = 60
+
   ## Additonal resource labels
   # [outputs.stackdriver.resource_labels]
   #   node_id = "$HOSTNAME"

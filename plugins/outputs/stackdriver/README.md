@@ -11,6 +11,8 @@ Metrics are grouped by the `namespace` variable and metric key - eg: `custom.goo
 
 Additional resource labels can be configured by `resource_labels`. By default the required `project_id` label is always set to the `project` variable.
 
+For cumulative metric [intervals](https://cloud.google.com/monitoring/api/ref_v3/rest/v3/TimeInterval), the start time is by default set to the start time of the telegraf process. To get periodic intervals, the `cumulative_interval_seconds` parameter can be set to define the number of seconds between each interval.
+
 ### Configuration
 
 ```toml
@@ -24,7 +26,10 @@ Additional resource labels can be configured by `resource_labels`. By default th
   ## Custom resource type
   # resource_type = "generic_node"
 
-  ## Additonal resource labels
+  ## Number of seconds between reseting cumulative startTime
+  # cumulative_interval_seconds = 60
+
+  ## Additional resource labels
   # [outputs.stackdriver.resource_labels]
   #   node_id = "$HOSTNAME"
   #   namespace = "myapp"
