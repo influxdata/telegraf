@@ -3,9 +3,9 @@ module github.com/influxdata/telegraf
 go 1.15
 
 require (
-	cloud.google.com/go v0.53.0
-	cloud.google.com/go/datastore v1.1.0 // indirect
-	cloud.google.com/go/pubsub v1.2.0
+	cloud.google.com/go v0.75.0
+	cloud.google.com/go/bigtable v1.8.0 // indirect
+	cloud.google.com/go/pubsub v1.3.1
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
@@ -66,7 +66,7 @@ require (
 	github.com/gofrs/uuid v2.1.0+incompatible
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
-	github.com/golang/protobuf v1.3.5
+	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.1
 	github.com/google/go-cmp v0.5.4
 	github.com/google/go-github/v32 v32.1.0
@@ -81,6 +81,7 @@ require (
 	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90 // indirect
 	github.com/hashicorp/memberlist v0.1.5 // indirect
 	github.com/hashicorp/serf v0.8.1 // indirect
+	github.com/influxdata/flux v0.49.0
 	github.com/influxdata/go-syslog/v2 v2.0.1
 	github.com/influxdata/tail v1.0.1-0.20200707181643-03a791b270e4
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
@@ -141,17 +142,15 @@ require (
 	github.com/xdg/scram v0.0.0-20180814205039-7eeb5667e42c
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
 	go.starlark.net v0.0.0-20200901195727-6e684ef5eeee
-	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
-	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68
+	golang.org/x/net v0.0.0-20201224014010-6772e930b67b
+	golang.org/x/oauth2 v0.0.0-20210218202405-ba52d332ba99
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sys v0.0.0-20210223095934-7937bea0104d
 	golang.org/x/text v0.3.4
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
-	google.golang.org/api v0.20.0
-	google.golang.org/genproto v0.0.0-20200513103714-09dca8ec2884
-	google.golang.org/grpc v1.33.1
+	google.golang.org/api v0.40.0
+	google.golang.org/genproto v0.0.0-20210222152913-aa3ee6e6a81c
+	google.golang.org/grpc v1.35.0
 	gopkg.in/djherbis/times.v1 v1.2.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
@@ -160,7 +159,6 @@ require (
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/yaml.v2 v2.3.0
 	gotest.tools v2.2.0+incompatible
-	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	k8s.io/apimachinery v0.17.1 // indirect
 	modernc.org/sqlite v1.7.4
 )
