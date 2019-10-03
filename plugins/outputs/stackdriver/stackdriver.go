@@ -166,7 +166,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			var startTime, endTime int64 = defaultStartTime, m.Time().Unix()
 			var endTimeNanos int32 = 0
-			if s.CumulativeIntervalSeconds > 0 {
+			if s.CumulativeIntervalSeconds > 0 && metricKind == metricpb.MetricDescriptor_CUMULATIVE {
 				startTime = m.Time().Unix() + (m.Time().Unix() % s.CumulativeIntervalSeconds)
 				if endTime == startTime {
 					endTimeNanos = 1000
@@ -264,7 +264,6 @@ func getStackdriverTimeInterval(
 		return &monitoringpb.TimeInterval{
 			EndTime: &googlepb.Timestamp{
 				Seconds: end,
-				Nanos:   endNanos,
 			},
 		}, nil
 	case metricpb.MetricDescriptor_CUMULATIVE:
