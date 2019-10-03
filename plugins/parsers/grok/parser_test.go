@@ -299,7 +299,6 @@ func TestParseEpochMilli(t *testing.T) {
 	assert.Equal(t, time.Unix(0, 1568540909963000000), metricA.Time())
 }
 
-
 func TestParseEpochNano(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{MYAPP}"},
