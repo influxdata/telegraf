@@ -686,20 +686,19 @@ func gatherFederationLinks(r *RabbitMQ, acc telegraf.Accumulator) {
 			continue
 		}
 
-		localEntity := link.Queue
-		upstreamEntity := link.UpstreamQueue
-		if link.Type == "exchange" {
-			localEntity = link.Exchange
-			upstreamEntity = link.UpstreamExchange
+		tags := map[string]string{
+			"url":      r.URL,
+			"type":     link.Type,
+			"vhost":    link.Vhost,
+			"upstream": link.Upstream,
 		}
 
-		tags := map[string]string{
-			"url":             r.URL,
-			"type":            link.Type,
-			"local_entity":    localEntity,
-			"upstream_entity": upstreamEntity,
-			"vhost":           link.Vhost,
-			"upstream":        link.Upstream,
+		if link.Type == "exchange" {
+			tags["exchange"] = link.Exchange
+			tags["upstream_exchange"] = link.UpstreamExchange
+		} else {
+			tags["queue"] = link.Queue
+			tags["upstream_queue"] = link.UpstreamQueue
 		}
 
 		acc.AddFields(
