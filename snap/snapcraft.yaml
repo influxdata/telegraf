@@ -1,4 +1,4 @@
-name: telegraf-sajoupa
+name: telegraf
 adopt-info: telegraf
 summary: Telegraf agent
 description: |
