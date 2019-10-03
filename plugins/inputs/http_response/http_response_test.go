@@ -150,6 +150,7 @@ func TestHeaders(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL,
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 2},
@@ -185,6 +186,7 @@ func TestFields(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/good",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -246,6 +248,7 @@ func TestInterface(t *testing.T) {
 	require.NoError(t, err)
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/good",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -284,6 +287,7 @@ func TestRedirects(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/redirect",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -314,6 +318,7 @@ func TestRedirects(t *testing.T) {
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	h = &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/badredirect",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -350,6 +355,7 @@ func TestMethod(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/mustbepostmethod",
 		Body:            "{ 'test': 'data'}",
 		Method:          "POST",
@@ -380,6 +386,7 @@ func TestMethod(t *testing.T) {
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	h = &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/mustbepostmethod",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -411,6 +418,7 @@ func TestMethod(t *testing.T) {
 
 	//check that lowercase methods work correctly
 	h = &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/mustbepostmethod",
 		Body:            "{ 'test': 'data'}",
 		Method:          "head",
@@ -447,6 +455,7 @@ func TestBody(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/musthaveabody",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -477,6 +486,7 @@ func TestBody(t *testing.T) {
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	h = &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/musthaveabody",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
@@ -510,6 +520,7 @@ func TestStringMatch(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:                 testutil.Logger{},
 		Address:             ts.URL + "/good",
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
@@ -547,6 +558,7 @@ func TestStringMatchJson(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:                 testutil.Logger{},
 		Address:             ts.URL + "/jsonresponse",
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
@@ -584,6 +596,7 @@ func TestStringMatchFail(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:                 testutil.Logger{},
 		Address:             ts.URL + "/good",
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
@@ -626,6 +639,7 @@ func TestTimeout(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         ts.URL + "/twosecondnap",
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -659,6 +673,7 @@ func TestBadRegex(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:                 testutil.Logger{},
 		Address:             ts.URL + "/good",
 		Body:                "{ 'test': 'data'}",
 		Method:              "GET",
@@ -682,6 +697,7 @@ func TestBadRegex(t *testing.T) {
 func TestNetworkErrors(t *testing.T) {
 	// DNS error
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         "https://nonexistent.nonexistent", // Any non-resolvable URL works here
 		Body:            "",
 		Method:          "GET",
@@ -708,6 +724,7 @@ func TestNetworkErrors(t *testing.T) {
 
 	// Connecton failed
 	h = &HTTPResponse{
+		Log:             testutil.Logger{},
 		Address:         "https:/nonexistent.nonexistent", // Any non-routable IP works here
 		Body:            "",
 		Method:          "GET",
@@ -739,6 +756,7 @@ func TestContentLength(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
+		Log:             testutil.Logger{},
 		URLs:            []string{ts.URL + "/good"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
@@ -769,6 +787,7 @@ func TestContentLength(t *testing.T) {
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	h = &HTTPResponse{
+		Log:             testutil.Logger{},
 		URLs:            []string{ts.URL + "/musthaveabody"},
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",

@@ -103,6 +103,7 @@ func TestDiskIO(t *testing.T) {
 			var acc testutil.Accumulator
 
 			diskio := &DiskIO{
+				Log:     testutil.Logger{},
 				ps:      &mps,
 				Devices: tt.devices,
 			}

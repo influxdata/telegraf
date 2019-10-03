@@ -5,7 +5,6 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -146,6 +145,8 @@ type Win_PerfCounters struct {
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
 	UseWildcardsExpansion   bool
+
+	Log telegraf.Logger
 
 	lastRefreshed time.Time
 	counters      []*counter
@@ -289,7 +290,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			m.counters = append(m.counters, newItem)
 
 			if m.PrintValid {
-				log.Printf("Valid: %s\n", counterPath)
+				m.Log.Infof("Valid: %s", counterPath)
 			}
 		}
 	} else {
@@ -297,7 +298,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			includeTotal, counterHandle}
 		m.counters = append(m.counters, newItem)
 		if m.PrintValid {
-			log.Printf("Valid: %s\n", counterPath)
+			m.Log.Infof("Valid: %s", counterPath)
 		}
 	}
 
@@ -323,7 +324,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							log.Printf("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+							m.Log.Errorf("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err

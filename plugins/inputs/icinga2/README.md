@@ -11,10 +11,10 @@ services and hosts. You can read Icinga2's documentation for their remote API
 ```toml
 # Description
 [[inputs.icinga2]]
-  ## Required Icinga2 server address (default: "https://localhost:5665")
+  ## Required Icinga2 server address
   # server = "https://localhost:5665"
   
-  ## Required Icinga2 object type ("services" or "hosts, default "services")
+  ## Required Icinga2 object type ("services" or "hosts")
   # object_type = "services"
 
   ## Credentials for basic HTTP authentication
