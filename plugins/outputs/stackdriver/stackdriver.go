@@ -8,6 +8,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3" // Imports the Stackdriver Monitoring client package.
 	googlepb "github.com/golang/protobuf/ptypes/timestamp"
@@ -22,10 +23,11 @@ import (
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project        string
-	Namespace      string
-	ResourceType   string            `toml:"resource_type"`
-	ResourceLabels map[string]string `toml:"resource_labels"`
+	Project                   string
+	Namespace                 string
+	ResourceType              string            `toml:"resource_type"`
+	ResourceLabels            map[string]string `toml:"resource_labels"`
+	CumulativeIntervalSeconds int64             `toml:"cumulative_interval_seconds"`
 
 	client *monitoring.MetricClient
 }
@@ -41,8 +43,6 @@ const (
 	// to string length for label value.
 	QuotaStringLengthForLabelValue = 1024
 
-	// StartTime for cumulative metrics.
-	StartTime = int64(1)
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
 
@@ -67,6 +67,8 @@ var sampleConfig = `
   #   namespace = "myapp"
   #   location = "eu-north0"
 `
+
+var defaultStartTime = time.Now().Unix()
 
 // Connect initiates the primary connection to the GCP project.
 func (s *Stackdriver) Connect() error {
@@ -159,7 +161,15 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			timeInterval, err := getStackdriverTimeInterval(metricKind, StartTime, m.Time().Unix())
+			var startTime, endTime int64 = defaultStartTime, m.Time().Unix()
+			var endTimeNanos int32 = 0
+			if s.CumulativeIntervalSeconds > 0 {
+				startTime = m.Time().Unix() + (m.Time().Unix() % s.CumulativeIntervalSeconds)
+				if endTime == startTime {
+					endTimeNanos = 1000
+				}
+			}
+			timeInterval, err := getStackdriverTimeInterval(metricKind, startTime, 0, endTime, endTimeNanos)
 			if err != nil {
 				log.Printf("E! [outputs.stackdriver] get time interval failed: %s", err)
 				continue
@@ -242,22 +252,27 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 func getStackdriverTimeInterval(
 	m metricpb.MetricDescriptor_MetricKind,
 	start int64,
+	startNanos int32,
 	end int64,
+	endNanos int32,
 ) (*monitoringpb.TimeInterval, error) {
 	switch m {
 	case metricpb.MetricDescriptor_GAUGE:
 		return &monitoringpb.TimeInterval{
 			EndTime: &googlepb.Timestamp{
 				Seconds: end,
+				Nanos:   endNanos,
 			},
 		}, nil
 	case metricpb.MetricDescriptor_CUMULATIVE:
 		return &monitoringpb.TimeInterval{
 			StartTime: &googlepb.Timestamp{
 				Seconds: start,
+				Nanos:   startNanos,
 			},
 			EndTime: &googlepb.Timestamp{
 				Seconds: end,
+				Nanos:   endNanos,
 			},
 		}, nil
 	case metricpb.MetricDescriptor_DELTA, metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED:
