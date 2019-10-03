@@ -43,19 +43,21 @@ type RabbitMQ struct {
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
 
-	Nodes               []string
-	Queues              []string
-	Exchanges           []string
-	FederationUpstreams []string `toml:"federation_upstreams"`
+	Nodes     []string
+	Queues    []string
+	Exchanges []string
 
-	QueueInclude []string `toml:"queue_name_include"`
-	QueueExclude []string `toml:"queue_name_exclude"`
+	QueueInclude              []string `toml:"queue_name_include"`
+	QueueExclude              []string `toml:"queue_name_exclude"`
+	FederationUpstreamInclude []string `toml:"federation_upstream_include"`
+	FederationUpstreamExclude []string `toml:"federation_upstream_exclude"`
 
 	Client *http.Client
 
 	filterCreated     bool
 	excludeEveryQueue bool
 	queueFilter       filter.Filter
+	upstreamFilter    filter.Filter
 }
 
 // OverviewResponse ...
@@ -181,9 +183,9 @@ type Exchange struct {
 
 // FederationLinkChannelMessageStats ...
 type FederationLinkChannelMessageStats struct {
-	Confirm                 int64
+	Confirm                 int64   `json:"confirm"`
 	ConfirmDetails          Details `json:"confirm_details"`
-	Publish                 int64
+	Publish                 int64   `json:"publish"`
 	PublishDetails          Details `json:"publish_details"`
 	ReturnUnroutable        int64   `json:"return_unroutable"`
 	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
@@ -201,13 +203,13 @@ type FederationLinkChannel struct {
 
 // FederationLink ...
 type FederationLink struct {
-	Type             string
-	Queue            string
-	UpstreamQueue    string `json:"upstream_queue"`
-	Exchange         string
-	UpstreamExchange string `json:"upstream_exchange"`
-	Vhost            string
-	Upstream         string
+	Type             string                `json:"type"`
+	Queue            string                `json:"queue"`
+	UpstreamQueue    string                `json:"upstream_queue"`
+	Exchange         string                `json:"exchange"`
+	UpstreamExchange string                `json:"upstream_exchange"`
+	Vhost            string                `json:"vhost"`
+	Upstream         string                `json:"upstream"`
 	LocalChannel     FederationLinkChannel `json:"local_channel"`
 }
 
@@ -287,17 +289,19 @@ var sampleConfig = `
   ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
 
-  ## A list of federation upstreams to gather as the rabbitmq_federation measurement.
-  ## If not specified, metrics for all federation upstreams are gathered.
-  ## Federation link metrics will only be gathered for queues and exchanges
-  ## whose non-federation metrics will be collected (e.g a queue excluded
-  ## by the 'queue_name_exclude' option will also be excluded from federation).
-  # federation_upstreams = ["dataCentre2"]
-
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
   queue_name_include = []
   queue_name_exclude = []
+
+  ## Federation upstreams include and exclude when gathering the rabbitmq_federation measurement.
+  ## If neither are specified, metrics for all federation upstreams are gathered.
+  ## Federation link metrics will only be gathered for queues and exchanges
+  ## whose non-federation metrics will be collected (e.g a queue excluded
+  ## by the 'queue_name_exclude' option will also be excluded from federation).
+  ## Globs accepted.
+  # federation_upstream_include = ["dataCentre-*"]
+  # federation_upstream_exclude = []
 `
 
 func boolToInt(b bool) int64 {
@@ -334,9 +338,13 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	// Create queue filter if not already created
+	// Create gather filters if not already created
 	if !r.filterCreated {
 		err := r.createQueueFilter()
+		if err != nil {
+			return err
+		}
+		err = r.createUpstreamFilter()
 		if err != nil {
 			return err
 		}
@@ -746,6 +754,16 @@ func (r *RabbitMQ) createQueueFilter() error {
 	return nil
 }
 
+func (r *RabbitMQ) createUpstreamFilter() error {
+	upstreamFilter, err := filter.NewIncludeExcludeFilter(r.FederationUpstreamInclude, r.FederationUpstreamExclude)
+	if err != nil {
+		return err
+	}
+	r.upstreamFilter = upstreamFilter
+
+	return nil
+}
+
 func (r *RabbitMQ) shouldGatherExchange(exchangeName string) bool {
 	if len(r.Exchanges) == 0 {
 		return true
@@ -761,34 +779,18 @@ func (r *RabbitMQ) shouldGatherExchange(exchangeName string) bool {
 }
 
 func (r *RabbitMQ) shouldGatherFederationLink(link FederationLink) bool {
-	gatherUpstream := false
-	if len(r.FederationUpstreams) == 0 {
-		gatherUpstream = true
-	} else {
-		for _, name := range r.FederationUpstreams {
-			if name == link.Upstream {
-				gatherUpstream = true
-				break
-			}
-		}
-	}
-
-	if !gatherUpstream {
+	if !r.upstreamFilter.Match(link.Upstream) {
 		return false
 	}
 
-	gatherEntity := true
-	if link.Type == "exchange" {
-		gatherEntity = r.shouldGatherExchange(link.Exchange)
-	} else if link.Type == "queue" {
-		if r.excludeEveryQueue {
-			gatherEntity = false
-		} else {
-			gatherEntity = r.queueFilter.Match(link.Queue)
-		}
+	switch link.Type {
+	case "exchange":
+		return r.shouldGatherExchange(link.Exchange)
+	case "queue":
+		return r.queueFilter.Match(link.Queue)
+	default:
+		return false
 	}
-
-	return gatherEntity
 }
 
 func init() {
