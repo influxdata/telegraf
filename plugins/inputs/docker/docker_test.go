@@ -252,6 +252,7 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
 
 	d := Docker{
+		Log: testutil.Logger{},
 		newClient: func(string, *tls.Config) (Client, error) {
 			return &MockClient{
 				InfoF: func(ctx context.Context) (types.Info, error) {
@@ -390,6 +391,7 @@ func TestContainerLabels(t *testing.T) {
 			}
 
 			d := Docker{
+				Log:          testutil.Logger{},
 				newClient:    newClientFunc,
 				LabelInclude: tt.include,
 				LabelExclude: tt.exclude,
@@ -511,6 +513,7 @@ func TestContainerNames(t *testing.T) {
 			}
 
 			d := Docker{
+				Log:              testutil.Logger{},
 				newClient:        newClientFunc,
 				ContainerInclude: tt.include,
 				ContainerExclude: tt.exclude,
@@ -625,7 +628,10 @@ func TestContainerStatus(t *testing.T) {
 
 					return &client, nil
 				}
-				d = Docker{newClient: newClientFunc}
+				d = Docker{
+					Log:       testutil.Logger{},
+					newClient: newClientFunc,
+				}
 			)
 
 			// mock time
@@ -675,6 +681,7 @@ func TestContainerStatus(t *testing.T) {
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
+		Log:       testutil.Logger{},
 		newClient: newClient,
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
@@ -824,6 +831,7 @@ func TestDockerGatherInfo(t *testing.T) {
 func TestDockerGatherSwarmInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
+		Log:       testutil.Logger{},
 		newClient: newClient,
 	}
 
@@ -931,6 +939,7 @@ func TestContainerStateFilter(t *testing.T) {
 			}
 
 			d := Docker{
+				Log:                   testutil.Logger{},
 				newClient:             newClientFunc,
 				ContainerStateInclude: tt.include,
 				ContainerStateExclude: tt.exclude,
@@ -992,6 +1001,7 @@ func TestContainerName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := Docker{
+				Log:       testutil.Logger{},
 				newClient: tt.clientFunc,
 			}
 			var acc testutil.Accumulator

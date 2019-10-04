@@ -277,6 +277,7 @@ For documentation on the latest development code see the [documentation index][d
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver)
 * [statsd](./plugins/inputs/statsd)
+* [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
@@ -354,6 +355,7 @@ For documentation on the latest development code see the [documentation index][d
 * [basicstats](./plugins/aggregators/basicstats)
 * [final](./plugins/aggregators/final)
 * [histogram](./plugins/aggregators/histogram)
+* [merge](./plugins/aggregators/merge)
 * [minmax](./plugins/aggregators/minmax)
 * [valuecounter](./plugins/aggregators/valuecounter)
 

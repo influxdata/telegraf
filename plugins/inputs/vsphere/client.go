@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
@@ -45,6 +45,7 @@ type Client struct {
 	Valid     bool
 	Timeout   time.Duration
 	closeGate sync.Once
+	log       telegraf.Logger
 }
 
 // NewClientFactory creates a new ClientFactory and prepares it for use.
@@ -76,7 +77,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 		ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 		defer cancel1()
 		if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
-			log.Printf("I! [inputs.vsphere]: Client session seems to have time out. Reauthenticating!")
+			cf.parent.Log.Info("Client session seems to have time out. Reauthenticating!")
 			ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 			defer cancel2()
 			if err := cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)); err != nil {
@@ -88,7 +89,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 					cf.client = nil
 					continue
 				}
-				return nil, fmt.Errorf("Renewing authentication failed: %v", err)
+				return nil, fmt.Errorf("renewing authentication failed: %s", err.Error())
 			}
 		}
 
@@ -113,7 +114,7 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 		u.User = url.UserPassword(vs.Username, vs.Password)
 	}
 
-	log.Printf("D! [inputs.vsphere]: Creating client: %s", u.Host)
+	vs.Log.Debugf("Creating client: %s", u.Host)
 	soapClient := soap.NewClient(u, tlsCfg.InsecureSkipVerify)
 
 	// Add certificate if we have it. Use it to log us in.
@@ -170,6 +171,7 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	p := performance.NewManager(c.Client)
 
 	client := &Client{
+		log:     vs.Log,
 		Client:  c,
 		Views:   m,
 		Root:    v,
@@ -184,9 +186,9 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("D! [inputs.vsphere] vCenter says max_query_metrics should be %d", n)
+	vs.Log.Debugf("vCenter says max_query_metrics should be %d", n)
 	if n < vs.MaxQueryMetrics {
-		log.Printf("W! [inputs.vsphere] Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
+		vs.Log.Warnf("Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
 		vs.MaxQueryMetrics = n
 	}
 	return client, nil
@@ -202,7 +204,6 @@ func (cf *ClientFactory) Close() {
 }
 
 func (c *Client) close() {
-
 	// Use a Once to prevent us from panics stemming from trying
 	// to close it multiple times.
 	c.closeGate.Do(func() {
@@ -210,7 +211,7 @@ func (c *Client) close() {
 		defer cancel()
 		if c.Client != nil {
 			if err := c.Client.Logout(ctx); err != nil {
-				log.Printf("E! [inputs.vsphere]: Error during logout: %s", err)
+				c.log.Errorf("Logout: %s", err.Error())
 			}
 		}
 	})
@@ -239,7 +240,7 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			if s, ok := res[0].GetOptionValue().Value.(string); ok {
 				v, err := strconv.Atoi(s)
 				if err == nil {
-					log.Printf("D! [inputs.vsphere] vCenter maxQueryMetrics is defined: %d", v)
+					c.log.Debugf("vCenter maxQueryMetrics is defined: %d", v)
 					if v == -1 {
 						// Whatever the server says, we never ask for more metrics than this.
 						return absoluteMaxMetrics, nil
@@ -250,17 +251,17 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			// Fall through version-based inference if value isn't usable
 		}
 	} else {
-		log.Println("D! [inputs.vsphere] Option query for maxQueryMetrics failed. Using default")
+		c.log.Debug("Option query for maxQueryMetrics failed. Using default")
 	}
 
 	// No usable maxQueryMetrics setting. Infer based on version
 	ver := c.Client.Client.ServiceContent.About.Version
 	parts := strings.Split(ver, ".")
 	if len(parts) < 2 {
-		log.Printf("W! [inputs.vsphere] vCenter returned an invalid version string: %s. Using default query size=64", ver)
+		c.log.Warnf("vCenter returned an invalid version string: %s. Using default query size=64", ver)
 		return 64, nil
 	}
-	log.Printf("D! [inputs.vsphere] vCenter version is: %s", ver)
+	c.log.Debugf("vCenter version is: %s", ver)
 	major, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return 0, err

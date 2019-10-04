@@ -3,7 +3,6 @@ package smart
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os/exec"
 	"path"
 	"regexp"
@@ -24,7 +23,7 @@ var (
 	// Model Number: TS128GMTE850
 	modelInfo = regexp.MustCompile("^(Device Model|Product|Model Number):\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
-	serialInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
+	serialInfo = regexp.MustCompile("(?i)^Serial Number:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
 	wwnInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
 	// User Capacity:    251,000,193,024 bytes [251 GB]
@@ -209,10 +208,7 @@ func (m *Smart) scan() ([]string, error) {
 	for _, line := range strings.Split(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
-			log.Printf("D! [inputs.smart] adding device: %+#v", dev)
 			devices = append(devices, strings.TrimSpace(dev[0]))
-		} else {
-			log.Printf("D! [inputs.smart] skipping device: %+#v", dev)
 		}
 	}
 	return devices, nil

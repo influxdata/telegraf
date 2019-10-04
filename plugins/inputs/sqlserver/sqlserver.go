@@ -41,7 +41,8 @@ var sampleConfig = `
   ## By default, the host is localhost, listening on default port, TCP 1433.
   ##   for Windows, the user is the currently running AD user (SSO).
   ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-  ##   parameters.
+  ##   parameters, in particular, tls connections can be created like so:
+  ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
   # servers = [
   #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
   # ]
@@ -591,11 +592,16 @@ WHERE	(
 				'Background Writer pages/sec',
 				'Percent Log Used',
 				'Log Send Queue KB',
-				'Redo Queue KB'
+				'Redo Queue KB',
+				'Mirrored Write Transactions/sec',
+				'Group Commit Time',
+				'Group Commits/sec'
 			)
 		) OR (
 			object_name LIKE '%User Settable%'
 			OR object_name LIKE '%SQL Errors%'
+		) OR (
+			object_name LIKE 'SQLServer:Batch Resp Statistics%'
 		) OR (
 			instance_name IN ('_Total')
 			AND counter_name IN (

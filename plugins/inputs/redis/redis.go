@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -22,6 +21,8 @@ type Redis struct {
 	Servers  []string
 	Password string
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	clients     []Client
 	initialized bool
@@ -101,13 +102,13 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 
 	for i, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
-			log.Printf("W! [inputs.redis]: server URL found without scheme; please update your configuration file")
+			r.Log.Warn("Server URL found without scheme; please update your configuration file")
 			serv = "tcp://" + serv
 		}
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			return fmt.Errorf("Unable to parse to address %q: %v", serv, err)
+			return fmt.Errorf("unable to parse to address %q: %s", serv, err.Error())
 		}
 
 		password := ""

@@ -562,6 +562,7 @@ func TestZipkinPlugin(t *testing.T) {
 	DefaultNetwork = "tcp4"
 
 	z := &Zipkin{
+		Log:  testutil.Logger{},
 		Path: "/api/v1/spans",
 		Port: 0,
 	}

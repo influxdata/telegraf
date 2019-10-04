@@ -3,6 +3,7 @@ package prometheus
 import (
 	"testing"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 
 	v1 "github.com/ericchiang/k8s/apis/core/v1"
@@ -53,7 +54,7 @@ func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 }
 
 func TestAddPod(t *testing.T) {
-	prom := &Prometheus{}
+	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -62,7 +63,7 @@ func TestAddPod(t *testing.T) {
 }
 
 func TestAddMultipleDuplicatePods(t *testing.T) {
-	prom := &Prometheus{}
+	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -73,7 +74,7 @@ func TestAddMultipleDuplicatePods(t *testing.T) {
 }
 
 func TestAddMultiplePods(t *testing.T) {
-	prom := &Prometheus{}
+	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -85,7 +86,7 @@ func TestAddMultiplePods(t *testing.T) {
 }
 
 func TestDeletePods(t *testing.T) {
-	prom := &Prometheus{}
+	prom := &Prometheus{Log: testutil.Logger{}}
 
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}

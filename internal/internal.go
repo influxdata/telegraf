@@ -13,7 +13,6 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -302,62 +301,115 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 	return pipeReader, err
 }
 
-// ParseTimestamp with no location provided parses a timestamp value as UTC
-func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
-	return ParseTimestampWithLocation(timestamp, format, "UTC")
+// ParseTimestamp parses a Time according to the standard Telegraf options.
+// These are generally displayed in the toml similar to:
+//   json_time_key= "timestamp"
+//   json_time_format = "2006-01-02T15:04:05Z07:00"
+//   json_timezone = "America/Los_Angeles"
+//
+// The format can be one of "unix", "unix_ms", "unix_us", "unix_ns", or a Go
+// time layout suitable for time.Parse.
+//
+// When using the "unix" format, a optional fractional component is allowed.
+// Specific unix time precisions cannot have a fractional component.
+//
+// Unix times may be an int64, float64, or string.  When using a Go format
+// string the timestamp must be a string.
+//
+// The location is a location string suitable for time.LoadLocation.  Unix
+// times do not use the location string, a unix time is always return in the
+// UTC location.
+func ParseTimestamp(format string, timestamp interface{}, location string) (time.Time, error) {
+	switch format {
+	case "unix", "unix_ms", "unix_us", "unix_ns":
+		return parseUnix(format, timestamp)
+	default:
+		if location == "" {
+			location = "UTC"
+		}
+		return parseTime(format, timestamp, location)
+	}
 }
 
-// ParseTimestamp parses a timestamp value as a unix epoch of various precision.
-//
-// format = "unix": epoch is assumed to be in seconds and can come as number or string. Can have a decimal part.
-// format = "unix_ms": epoch is assumed to be in milliseconds and can come as number or string. Cannot have a decimal part.
-// format = "unix_us": epoch is assumed to be in microseconds and can come as number or string. Cannot have a decimal part.
-// format = "unix_ns": epoch is assumed to be in nanoseconds and can come as number or string. Cannot have a decimal part.
-func ParseTimestampWithLocation(timestamp interface{}, format string, location string) (time.Time, error) {
-	timeInt, timeFractional := int64(0), int64(0)
-
-	switch ts := timestamp.(type) {
-	case string:
-		var err error
-		splitted := regexp.MustCompile("[.,]").Split(ts, 2)
-		timeInt, err = strconv.ParseInt(splitted[0], 10, 64)
-		if err != nil {
-			loc, err := time.LoadLocation(location)
-			if err != nil {
-				return time.Time{}, fmt.Errorf("location: %s could not be loaded as a location", location)
-			}
-			return time.ParseInLocation(format, ts, loc)
-		}
-
-		if len(splitted) == 2 {
-			if len(splitted[1]) > 9 {
-				splitted[1] = splitted[1][:9] //truncates decimal part to nanoseconds precision
-			}
-			nanosecStr := splitted[1] + strings.Repeat("0", 9-len(splitted[1])) //adds 0's to the right to obtain a valid number of nanoseconds
-
-			timeFractional, err = strconv.ParseInt(nanosecStr, 10, 64)
-			if err != nil {
-				return time.Time{}, err
-			}
-		}
-	case int64:
-		timeInt = ts
-	case float64:
-		intPart, frac := math.Modf(ts)
-		timeInt, timeFractional = int64(intPart), int64(frac*1e9)
-	default:
-		return time.Time{}, fmt.Errorf("time: %v could not be converted to string nor float64", timestamp)
+func parseUnix(format string, timestamp interface{}) (time.Time, error) {
+	integer, fractional, err := parseComponents(timestamp)
+	if err != nil {
+		return time.Unix(0, 0), err
 	}
 
-	if strings.EqualFold(format, "unix") {
-		return time.Unix(timeInt, timeFractional).UTC(), nil
-	} else if strings.EqualFold(format, "unix_ms") {
-		return time.Unix(timeInt/1000, (timeInt%1000)*1e6).UTC(), nil
-	} else if strings.EqualFold(format, "unix_us") {
-		return time.Unix(0, timeInt*1e3).UTC(), nil
-	} else if strings.EqualFold(format, "unix_ns") {
-		return time.Unix(0, timeInt).UTC(), nil
-	} else {
-		return time.Time{}, errors.New("Invalid unix format")
+	switch strings.ToLower(format) {
+	case "unix":
+		return time.Unix(integer, fractional).UTC(), nil
+	case "unix_ms":
+		return time.Unix(0, integer*1e6).UTC(), nil
+	case "unix_us":
+		return time.Unix(0, integer*1e3).UTC(), nil
+	case "unix_ns":
+		return time.Unix(0, integer).UTC(), nil
+	default:
+		return time.Unix(0, 0), errors.New("unsupported type")
+	}
+}
+
+// Returns the integers before and after an optional decimal point.  Both '.'
+// and ',' are supported for the decimal point.  The timestamp can be an int64,
+// float64, or string.
+//   ex: "42.5" -> (42, 5, nil)
+func parseComponents(timestamp interface{}) (int64, int64, error) {
+	switch ts := timestamp.(type) {
+	case string:
+		parts := strings.SplitN(ts, ".", 2)
+		if len(parts) == 2 {
+			return parseUnixTimeComponents(parts[0], parts[1])
+		}
+
+		parts = strings.SplitN(ts, ",", 2)
+		if len(parts) == 2 {
+			return parseUnixTimeComponents(parts[0], parts[1])
+		}
+
+		integer, err := strconv.ParseInt(ts, 10, 64)
+		if err != nil {
+			return 0, 0, err
+		}
+		return integer, 0, nil
+	case int64:
+		return ts, 0, nil
+	case float64:
+		integer, fractional := math.Modf(ts)
+		return int64(integer), int64(fractional * 1e9), nil
+	default:
+		return 0, 0, errors.New("unsupported type")
+	}
+}
+
+func parseUnixTimeComponents(first, second string) (int64, int64, error) {
+	integer, err := strconv.ParseInt(first, 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// Convert to nanoseconds, dropping any greater precision.
+	buf := []byte("000000000")
+	copy(buf, second)
+
+	fractional, err := strconv.ParseInt(string(buf), 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	return integer, fractional, nil
+}
+
+// ParseTime parses a string timestamp according to the format string.
+func parseTime(format string, timestamp interface{}, location string) (time.Time, error) {
+	switch ts := timestamp.(type) {
+	case string:
+		loc, err := time.LoadLocation(location)
+		if err != nil {
+			return time.Unix(0, 0), err
+		}
+		return time.ParseInLocation(format, ts, loc)
+	default:
+		return time.Unix(0, 0), errors.New("unsupported type")
 	}
 }

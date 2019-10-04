@@ -206,6 +206,7 @@ func TestGatherNodeData(t *testing.T) {
 		ts := httptest.NewServer(test.input)
 		defer ts.Close()
 		j := &Jenkins{
+			Log:             testutil.Logger{},
 			URL:             ts.URL,
 			ResponseTimeout: internal.Duration{Duration: time.Microsecond},
 			NodeExclude:     []string{"ignore-1", "ignore-2"},
@@ -258,6 +259,7 @@ func TestInitialize(t *testing.T) {
 		{
 			name: "bad jenkins config",
 			input: &Jenkins{
+				Log:             testutil.Logger{},
 				URL:             "http://a bad url",
 				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
 			},
@@ -266,6 +268,7 @@ func TestInitialize(t *testing.T) {
 		{
 			name: "has filter",
 			input: &Jenkins{
+				Log:             testutil.Logger{},
 				URL:             ts.URL,
 				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
 				JobExclude:      []string{"job1", "job2"},
@@ -275,10 +278,12 @@ func TestInitialize(t *testing.T) {
 		{
 			name: "default config",
 			input: &Jenkins{
+				Log:             testutil.Logger{},
 				URL:             ts.URL,
 				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
 			},
 			output: &Jenkins{
+				Log:               testutil.Logger{},
 				MaxConnections:    5,
 				MaxSubJobPerLayer: 10,
 			},
@@ -570,6 +575,7 @@ func TestGatherJobs(t *testing.T) {
 		ts := httptest.NewServer(test.input)
 		defer ts.Close()
 		j := &Jenkins{
+			Log:             testutil.Logger{},
 			URL:             ts.URL,
 			MaxBuildAge:     internal.Duration{Duration: time.Hour},
 			ResponseTimeout: internal.Duration{Duration: time.Microsecond},
