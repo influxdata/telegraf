@@ -175,7 +175,7 @@ There are 5 remote network requests made for each server listed in the config.
     - total_connections_received (int)
     - total_net_input_bytes (int)
     - total_net_output_bytes (int)
-    - uptime (int, seconds)
+    - uptime_ns (int, seconds)
     - used_cpu_sys (float)
     - used_cpu_sys_children (float)
     - used_cpu_user (float)
