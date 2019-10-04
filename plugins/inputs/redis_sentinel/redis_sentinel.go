@@ -31,6 +31,22 @@ type RedisSentinelClient struct {
 	tags     map[string]string
 }
 
+const measurementMasters = "redis_sentinel_masters"
+const measurementSentinel = "redis_sentinel"
+const measurementSentinels = "redis_sentinels"
+const measurementReplicas = "redis_replicas"
+
+// Rename fields (old : new)
+var Tracking = map[string]string{
+	"connected_clients": "clients",
+}
+
+func init() {
+	inputs.Add("redis_sentinel", func() telegraf.Input {
+		return &RedisSentinel{}
+	})
+}
+
 func (r *RedisSentinelClient) BaseTags() map[string]string {
 	tags := make(map[string]string)
 	for k, v := range r.tags {
@@ -66,11 +82,6 @@ func (r *RedisSentinel) SampleConfig() string {
 
 func (r *RedisSentinel) Description() string {
 	return "Read metrics from one or many redis-sentinel servers"
-}
-
-// Rename fields
-var Tracking = map[string]string{
-	"connected_clients": "clients",
 }
 
 func (r *RedisSentinel) init(acc telegraf.Accumulator) error {
@@ -159,23 +170,6 @@ func toMap(vals []interface{}) map[string]string {
 	return m
 }
 
-type returnLastError struct {
-	sync.RWMutex
-	err error
-}
-
-func (e *returnLastError) Add(err error) {
-	e.Lock()
-	e.err = err
-	e.Unlock()
-}
-
-func (e *returnLastError) Get() error {
-	e.RLock()
-	defer e.RUnlock()
-	return e.err
-}
-
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
@@ -193,6 +187,7 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 		go func(client *RedisSentinelClient, acc telegraf.Accumulator) {
 			defer wg.Done()
 
+			// First check all masters this sentinel is monitoring
 			mastersCmd := redis.NewSliceCmd("sentinel", "masters")
 			if smErr := client.sentinel.Process(mastersCmd); smErr != nil {
 				acc.AddError(smErr)
@@ -208,28 +203,6 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 			for _, master := range masters {
 				m := toMap(master.([]interface{}))
 
-				masterTags := client.tags
-				masterTags["master_name"] = m["name"]
-
-				masterFields := make(map[string]interface{})
-
-				for key, val := range m {
-					// Try parsing as int
-					if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
-						masterFields[key] = ival
-						continue
-					}
-
-					// Try parsing as a float
-					if fval, err := strconv.ParseFloat(val, 64); err == nil {
-						masterFields[key] = fval
-						continue
-					}
-
-					// Treat it as a string
-					masterFields[key] = val
-				}
-
 				quorumCmd := redis.NewStringCmd("sentinel", "ckquorum", m["name"])
 				if qErr := client.sentinel.Process(quorumCmd); qErr != nil {
 					acc.AddError(qErr)
@@ -237,18 +210,13 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 				}
 
 				_, quorumErr := quorumCmd.Result()
-				masterFields["has-quorum"] = false
-				if quorumErr == nil {
-					masterFields["has-quorum"] = true
-				}
 
-				acc.AddFields("redis_sentinel_masters", masterFields, masterTags)
+				sentinelMastersTags, sentinelMastersFields := convertSentinelMastersOutput(client.BaseTags(), m, quorumErr)
+				acc.AddFields(measurementMasters, sentinelMastersFields, sentinelMastersTags)
 
 				// ------------------------------------------------------------
 
 				// Check other Sentinels
-				sentinelTags := client.tags
-
 				sentinelsCmd := redis.NewSliceCmd("sentinel", "sentinels", m["name"])
 				if ssErr := client.sentinel.Process(sentinelsCmd); ssErr != nil {
 					acc.AddError(ssErr)
@@ -263,33 +231,14 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 				for _, sentinel := range sentinels {
 					sm := toMap(sentinel.([]interface{}))
-					sentinelTags["sentinel_ip"] = sm["ip"]
-					sentinelTags["sentinel_port"] = sm["port"]
-					sentinelTags["master_name"] = m["name"]
-					sentinelFields := make(map[string]interface{})
 
-					for key, val := range sm {
-						if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
-							sentinelFields[key] = ival
-							continue
-						}
-
-						if fval, err := strconv.ParseFloat(val, 64); err == nil {
-							sentinelFields[key] = fval
-							continue
-						}
-
-						sentinelFields[key] = val
-					}
-
-					acc.AddFields("redis_sentinels", sentinelFields, sentinelTags)
+					sentinelTags, sentinelFields := convertSentinelSentinelsOutput(client.BaseTags(), m["name"], sm)
+					acc.AddFields(measurementSentinels, sentinelFields, sentinelTags)
 				}
 
 				// ------------------------------------------------------------
 
 				// Check other Replicas
-				replicaTags := client.tags
-
 				replicasCmd := redis.NewSliceCmd("sentinel", "replicas", m["name"])
 				if srErr := client.sentinel.Process(replicasCmd); srErr != nil {
 					acc.AddError(srErr)
@@ -304,30 +253,14 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 
 				for _, replica := range replicas {
 					rm := toMap(replica.([]interface{}))
-					replicaTags["replica_ip"] = rm["ip"]
-					replicaTags["replica_port"] = rm["port"]
-					replicaTags["master_name"] = m["name"]
-					replicaFields := make(map[string]interface{})
 
-					for key, val := range rm {
-						if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
-							replicaFields[key] = ival
-							continue
-						}
-
-						if fval, err := strconv.ParseFloat(val, 64); err == nil {
-							replicaFields[key] = fval
-							continue
-						}
-
-						replicaFields[key] = val
-					}
-
-					acc.AddFields("redis_replicas", replicaFields, replicaTags)
+					replicaTags, replicaFields := convertSentinelReplicaOutput(client.BaseTags(), m["name"], rm)
+					acc.AddFields(measurementReplicas, replicaFields, replicaTags)
 				}
 
 				// ------------------------------------------------------------
 
+				// Get INFO
 				infoCmd := redis.NewStringCmd("info", "all")
 				if iErr := client.sentinel.Process(infoCmd); iErr != nil {
 					acc.AddError(iErr)
@@ -341,7 +274,9 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 				}
 
 				rdr := strings.NewReader(info)
-				gatherSentinelInfoOutput(rdr, acc, client.BaseTags())
+				infoTags, infoFields := convertSentinelInfoOutput(acc, client.BaseTags(), rdr)
+
+				acc.AddFields(measurementSentinel, infoFields, infoTags)
 			}
 		}(client, acc)
 	}
@@ -351,19 +286,120 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func init() {
-	inputs.Add("redis_sentinel", func() telegraf.Input {
-		return &RedisSentinel{}
-	})
+// converts `sentinel masters <name>` output to tags and fields
+func convertSentinelMastersOutput(
+	global_tags map[string]string,
+	master map[string]string,
+	quorumErr error,
+) (map[string]string, map[string]interface{}) {
+
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+
+	tags["master_name"] = master["name"]
+
+	fields := make(map[string]interface{})
+
+	fields["has-quorum"] = 0
+	if quorumErr == nil {
+		fields["has-quorum"] = 1
+	}
+
+	for key, val := range master {
+		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
+			fields[key] = ival
+			continue
+		}
+
+		if fval, err := strconv.ParseFloat(val, 64); err == nil {
+			fields[key] = fval
+			continue
+		}
+
+		fields[key] = val
+	}
+
+	return tags, fields
 }
 
-// gatherSentinelInfoOutput parses `INFO` command output
+// converts `sentinel sentinels <name>` output to tags and fields
+func convertSentinelSentinelsOutput(
+	global_tags map[string]string,
+	masterName string,
+	sentinelMaster map[string]string,
+) (map[string]string, map[string]interface{}) {
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+
+	tags["sentinel_ip"] = sentinelMaster["ip"]
+	tags["sentinel_port"] = sentinelMaster["port"]
+	tags["master_name"] = masterName
+
+	fields := make(map[string]interface{})
+
+	for key, val := range sentinelMaster {
+		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
+			fields[key] = ival
+			continue
+		}
+
+		if fval, err := strconv.ParseFloat(val, 64); err == nil {
+			fields[key] = fval
+			continue
+		}
+
+		fields[key] = val
+	}
+
+	return tags, fields
+}
+
+// converts `sentinel replicas <name>` output to tags and fields
+func convertSentinelReplicaOutput(
+	global_tags map[string]string,
+	masterName string,
+	replica map[string]string,
+) (map[string]string, map[string]interface{}) {
+
+	tags := make(map[string]string)
+	for k, v := range global_tags {
+		tags[k] = v
+	}
+
+	tags["replica_ip"] = replica["ip"]
+	tags["replica_port"] = replica["port"]
+	tags["master_name"] = masterName
+
+	fields := make(map[string]interface{})
+
+	for key, val := range replica {
+		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
+			fields[key] = ival
+			continue
+		}
+
+		if fval, err := strconv.ParseFloat(val, 64); err == nil {
+			fields[key] = fval
+			continue
+		}
+
+		fields[key] = val
+	}
+
+	return tags, fields
+}
+
+// convertSentinelInfoOutput parses `INFO` command output
 // Largely copied from the Redis input plugin's gatherInfoOutput()
-func gatherSentinelInfoOutput(
-	rdr io.Reader,
+func convertSentinelInfoOutput(
 	acc telegraf.Accumulator,
 	global_tags map[string]string,
-) {
+	rdr io.Reader,
+) (map[string]string, map[string]interface{}) {
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]interface{})
 
@@ -440,5 +476,5 @@ func gatherSentinelInfoOutput(
 		fields[metric] = val
 	}
 
-	acc.AddFields("redis_sentinel", fields, tags)
+	return tags, fields
 }

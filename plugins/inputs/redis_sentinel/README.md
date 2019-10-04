@@ -38,7 +38,7 @@ The plugin gathers the results of these commands and measurements:
 * `sentinel replicas` - `redis_replicas`
 * `info all` - `redis_sentinel`
 
-The `has-quorum` (bool) field in `redis_sentinel_masters` is from calling the command `sentinels ckquorum`.
+The `has-quorum` (int) field in `redis_sentinel_masters` is from calling the command `sentinels ckquorum`. `1` is for true, `0` is for false.
 
 There are 5 remote network requests made for each server listed in the config.
 
@@ -57,7 +57,7 @@ There are 5 remote network requests made for each server listed in the config.
     - down-after-milliseconds (int)
     - failover-timeout (int)
     - flags (string)
-    - has-quorum (bool)
+    - has-quorum (int)
     - info-refresh (int)
     - ip (string)
     - last-ok-ping-reply (int)
@@ -184,25 +184,32 @@ There are 5 remote network requests made for each server listed in the config.
 
 ### Example Output:
 
-It produces:
+An example of 2 Redis Sentinel instances monitoring a single master and replica. It produces:
 
 redis_sentinel_masters:
 ```
-redis_sentinel_masters,host=host,master_name=my-other-master,port=26380,source=localhost config-epoch=0i,down-after-milliseconds=30000i,failover-timeout=180000i,flags="master,disconnected",has-quorum=false,info-refresh=1559589511843i,ip="127.0.0.1",last-ok-ping-reply=3375i,last-ping-reply=3375i,last-ping-sent=3375i,link-pending-commands=3i,link-refcount=1i,name="my-other-master",num-other-sentinels=0i,num-slaves=0i,parallel-syncs=1i,port=6380i,quorum=2i,role-reported="master",role-reported-time=3375i,runid="" 1559589512000000000
-redis_sentinel_masters,host=host,master_name=my-master,port=26379,source=localhost config-epoch=0i,down-after-milliseconds=30000i,failover-timeout=180000i,flags="master",has-quorum=true,info-refresh=4050i,ip="127.0.0.1",last-ok-ping-reply=679i,last-ping-reply=679i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="my-master",num-other-sentinels=0i,num-slaves=0i,parallel-syncs=1i,port=6379i,quorum=1i,role-reported="master",role-reported-time=184657i,runid="b56d5bc6e8d7fd29333a685c390407078778458b" 1559589133000000000
+redis_sentinel_masters,host=somehostname,master_name=mymaster,port=26380,source=localhost config-epoch=0i,down-after-milliseconds=30000i,failover-timeout=180000i,flags="master",has-quorum=1i,info-refresh=110i,ip="127.0.0.1",last-ok-ping-reply=819i,last-ping-reply=819i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="mymaster",num-other-sentinels=1i,num-slaves=1i,parallel-syncs=1i,port=6379i,quorum=2i,role-reported="master",role-reported-time=311248i,runid="c77be03053dbb5df31dea24b833b9724162ba525" 1570207377000000000
+
+redis_sentinel_masters,host=somehostname,master_name=mymaster,port=26379,source=localhost config-epoch=0i,down-after-milliseconds=30000i,failover-timeout=180000i,flags="master",has-quorum=1i,info-refresh=1650i,ip="127.0.0.1",last-ok-ping-reply=1003i,last-ping-reply=1003i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="mymaster",num-other-sentinels=1i,num-slaves=1i,parallel-syncs=1i,port=6379i,quorum=2i,role-reported="master",role-reported-time=302990i,runid="c77be03053dbb5df31dea24b833b9724162ba525" 1570207377000000000
 ```
 
 redis_sentinels:
 ```
-redis_sentinels,host=host,master_name=my-other-master,port=26381,sentinel_ip=127.0.0.1,sentinel_port=26380,source=localhost down-after-milliseconds=30000i,flags="sentinel",ip="127.0.0.1",last-hello-message=467i,last-ok-ping-reply=414i,last-ping-reply=414i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="36a31f2676b638555e5e411c7aa0f2ea6c2caf65",port=26380i,runid="36a31f2676b638555e5e411c7aa0f2ea6c2caf65",voted-leader="?",voted-leader-epoch=0i 1559591099000000000
+redis_sentinels,host=somehostname,master_name=mymaster,port=26380,sentinel_ip=127.0.0.1,sentinel_port=26379,source=localhost down-after-milliseconds=30000i,flags="sentinel",ip="127.0.0.1",last-hello-message=1337i,last-ok-ping-reply=566i,last-ping-reply=566i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="fd7444de58ecc00f2685cd89fc11ff96c72f0569",port=26379i,runid="fd7444de58ecc00f2685cd89fc11ff96c72f0569",voted-leader="?",voted-leader-epoch=0i 1570207377000000000
+
+redis_sentinels,host=somehostname,master_name=mymaster,port=26379,sentinel_ip=127.0.0.1,sentinel_port=26380,source=localhost down-after-milliseconds=30000i,flags="sentinel",ip="127.0.0.1",last-hello-message=1510i,last-ok-ping-reply=1004i,last-ping-reply=1004i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="d06519438fe1b35692cb2ea06d57833c959f9114",port=26380i,runid="d06519438fe1b35692cb2ea06d57833c959f9114",voted-leader="?",voted-leader-epoch=0i 1570207377000000000
 ```
 
 redis_replicas:
 ```
-redis_replicas,host=host,master_name=my-master,port=26379,replica_ip=127.0.0.1,replica_port=6382,source=localhost down-after-milliseconds=30000i,flags="slave",info-refresh=2227i,ip="127.0.0.1",last-ok-ping-reply=181i,last-ping-reply=181i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,master-host="127.0.0.1",master-link-down-time=0i,master-link-status="ok",master-port=6379i,name="127.0.0.1:6382",port=6382i,role-reported="slave",role-reported-time=2293i,runid="69e077a76096bf9c24ac0dc310b377c3ce77042a",slave-priority=100i,slave-repl-offset=0i 1559589814000000000
+redis_replicas,host=somehostname,master_name=mymaster,port=26379,replica_ip=127.0.0.1,replica_port=6380,source=localhost down-after-milliseconds=30000i,flags="slave",info-refresh=1651i,ip="127.0.0.1",last-ok-ping-reply=1005i,last-ping-reply=1005i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,master-host="127.0.0.1",master-link-down-time=0i,master-link-status="ok",master-port=6379i,name="127.0.0.1:6380",port=6380i,role-reported="slave",role-reported-time=302983i,runid="6e569078c6024a3d0c293a5a965baad5ece46ecd",slave-priority=100i,slave-repl-offset=40175i 1570207377000000000
+
+redis_replicas,host=somehostname,master_name=mymaster,port=26380,replica_ip=127.0.0.1,replica_port=6380,source=localhost down-after-milliseconds=30000i,flags="slave",info-refresh=111i,ip="127.0.0.1",last-ok-ping-reply=821i,last-ping-reply=821i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,master-host="127.0.0.1",master-link-down-time=0i,master-link-status="ok",master-port=6379i,name="127.0.0.1:6380",port=6380i,role-reported="slave",role-reported-time=311243i,runid="6e569078c6024a3d0c293a5a965baad5ece46ecd",slave-priority=100i,slave-repl-offset=40441i 1570207377000000000
 ```
 
 redis_sentinel
 ```
-redis_sentinel,host=host,master_name=my-master,port=26379,replica_ip=127.0.0.1,replica_port=6382,source=localhost active_defrag_hits=0i,active_defrag_key_hits=0i,active_defrag_key_misses=0i,active_defrag_misses=0i,blocked_clients=0i,client_recent_max_input_buffer=2i,client_recent_max_output_buffer=0i,clients=1i,evicted_keys=0i,expired_keys=0i,expired_stale_perc=0,expired_time_cap_reached_count=0i,instantaneous_input_kbps=0,instantaneous_ops_per_sec=0i,instantaneous_output_kbps=0,keyspace_hits=0i,keyspace_misses=0i,latest_fork_usec=0i,lru_clock=16092078i,master0="name=my-master,status=ok,address=127.0.0.1:6379,slaves=2,sentinels=1",migrate_cached_sockets=0i,pubsub_channels=0i,pubsub_patterns=0i,redis_version="5.0.3",rejected_connections=0i,sentinel_masters=1i,sentinel_running_scripts=0i,sentinel_scripts_queue_length=0i,sentinel_simulate_failure_flags=0i,sentinel_tilt=0i,slave_expires_tracked_keys=0i,sync_full=0i,sync_partial_err=0i,sync_partial_ok=0i,total_commands_processed=9i,total_connections_received=3i,total_net_input_bytes=392i,total_net_output_bytes=5559i,uptime=641i,used_cpu_sys=0.411944,used_cpu_sys_children=0,used_cpu_user=0.403248,used_cpu_user_children=0 1559595950000000000
+redis_sentinel,host=somehostname,port=26379,source=localhost active_defrag_hits=0i,active_defrag_key_hits=0i,active_defrag_key_misses=0i,active_defrag_misses=0i,blocked_clients=0i,client_recent_max_input_buffer=2i,client_recent_max_output_buffer=0i,clients=3i,evicted_keys=0i,expired_keys=0i,expired_stale_perc=0,expired_time_cap_reached_count=0i,instantaneous_input_kbps=0.01,instantaneous_ops_per_sec=0i,instantaneous_output_kbps=0,keyspace_hits=0i,keyspace_misses=0i,latest_fork_usec=0i,lru_clock=9926289i,migrate_cached_sockets=0i,pubsub_channels=0i,pubsub_patterns=0i,redis_version="5.0.5",rejected_connections=0i,sentinel_masters=1i,sentinel_running_scripts=0i,sentinel_scripts_queue_length=0i,sentinel_simulate_failure_flags=0i,sentinel_tilt=0i,slave_expires_tracked_keys=0i,sync_full=0i,sync_partial_err=0i,sync_partial_ok=0i,total_commands_processed=459i,total_connections_received=6i,total_net_input_bytes=24517i,total_net_output_bytes=14864i,uptime_ns=303000000000i,used_cpu_sys=0.404,used_cpu_sys_children=0,used_cpu_user=0.436,used_cpu_user_children=0 1570207377000000000
+
+redis_sentinel,host=somehostname,port=26380,source=localhost active_defrag_hits=0i,active_defrag_key_hits=0i,active_defrag_key_misses=0i,active_defrag_misses=0i,blocked_clients=0i,client_recent_max_input_buffer=2i,client_recent_max_output_buffer=0i,clients=2i,evicted_keys=0i,expired_keys=0i,expired_stale_perc=0,expired_time_cap_reached_count=0i,instantaneous_input_kbps=0.01,instantaneous_ops_per_sec=0i,instantaneous_output_kbps=0,keyspace_hits=0i,keyspace_misses=0i,latest_fork_usec=0i,lru_clock=9926289i,migrate_cached_sockets=0i,pubsub_channels=0i,pubsub_patterns=0i,redis_version="5.0.5",rejected_connections=0i,sentinel_masters=1i,sentinel_running_scripts=0i,sentinel_scripts_queue_length=0i,sentinel_simulate_failure_flags=0i,sentinel_tilt=0i,slave_expires_tracked_keys=0i,sync_full=0i,sync_partial_err=0i,sync_partial_ok=0i,total_commands_processed=442i,total_connections_received=2i,total_net_input_bytes=23861i,total_net_output_bytes=4443i,uptime_ns=312000000000i,used_cpu_sys=0.46,used_cpu_sys_children=0,used_cpu_user=0.416,used_cpu_user_children=0 1570207377000000000
 ```
