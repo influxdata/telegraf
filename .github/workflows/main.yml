@@ -7,7 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     name: "Check CLA"
     steps:
-      - uses: actions/checkout@v1
       - name: "Lookup PR Author"
         uses: influxdata/clasee@v1
         with:
