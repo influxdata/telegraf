@@ -26,6 +26,54 @@ func TestMysqlDefaultsToLocal(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("mysql"))
 }
 
+func TestMysqlMultipleInstances(t *testing.T) {
+	// Invoke Gather() from two separate configurations and
+	//  confirm they don't interfere with each other
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	testServer := "root@tcp(127.0.0.1:3306)/?tls=false"
+	m := &Mysql{
+		Servers:      []string{testServer},
+		IntervalSlow: "30s",
+	}
+
+	var acc, acc2 testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+	assert.True(t, acc.HasMeasurement("mysql"))
+	// acc should have global variables
+	assert.True(t, acc.HasMeasurement("mysql_variables"))
+
+	m2 := &Mysql{
+		Servers: []string{testServer},
+	}
+	err = m2.Gather(&acc2)
+	require.NoError(t, err)
+	assert.True(t, acc2.HasMeasurement("mysql"))
+	// acc2 should not have global variables
+	assert.False(t, acc2.HasMeasurement("mysql_variables"))
+}
+
+func TestMysqlMultipleInits(t *testing.T) {
+	m := &Mysql{
+		IntervalSlow: "30s",
+	}
+	m2 := &Mysql{}
+
+	m.InitMysql()
+	assert.True(t, m.initDone)
+	assert.False(t, m2.initDone)
+	assert.Equal(t, m.scanIntervalSlow, uint32(30))
+	assert.Equal(t, m2.scanIntervalSlow, uint32(0))
+
+	m2.InitMysql()
+	assert.True(t, m.initDone)
+	assert.True(t, m2.initDone)
+	assert.Equal(t, m.scanIntervalSlow, uint32(30))
+	assert.Equal(t, m2.scanIntervalSlow, uint32(0))
+}
+
 func TestMysqlGetDSNTag(t *testing.T) {
 	tests := []struct {
 		input  string
