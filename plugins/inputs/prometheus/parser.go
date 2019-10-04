@@ -71,6 +71,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 			} else if mf.GetType() == dto.MetricType_HISTOGRAM {
 				// histogram metric
 				fields = makeBuckets(m)
+				fields["+Inf"] = float64(m.GetHistogram().GetSampleCount())
 				fields["count"] = float64(m.GetHistogram().GetSampleCount())
 				fields["sum"] = float64(m.GetHistogram().GetSampleSum())
 
