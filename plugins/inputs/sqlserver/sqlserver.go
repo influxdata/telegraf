@@ -12,10 +12,12 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	ExcludeQuery []string `toml:"exclude_query"`
+	Servers       []string `toml:"servers"`
+	QueryVersion  int      `toml:"query_version"`
+	AzureDB       bool     `toml:"azuredb"`
+	ExcludeQuery  []string `toml:"exclude_query"`
+	queries       MapQuery
+	isInitialized bool
 }
 
 // Query struct
@@ -28,14 +30,9 @@ type Query struct {
 // MapQuery type
 type MapQuery map[string]Query
 
-var queries MapQuery
+const defaultServer = "Server=.;app name=telegraf;log=1;"
 
-// Initialized flag
-var isInitialized = false
-
-var defaultServer = "Server=.;app name=telegraf;log=1;"
-
-var sampleConfig = `
+const sampleConfig = `
   ## Specify instances to monitor with a list of connection strings.
   ## All connection parameters are optional.
   ## By default, the host is localhost, listening on default port, TCP 1433.
@@ -89,8 +86,8 @@ type scanner interface {
 }
 
 func initQueries(s *SQLServer) {
-	queries = make(MapQuery)
-
+	s.queries = make(MapQuery)
+	queries := s.queries
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
 		queries["AzureDBResourceStats"] = Query{Script: sqlAzureDBResourceStats, ResultByRow: false}
@@ -124,12 +121,12 @@ func initQueries(s *SQLServer) {
 	}
 
 	// Set a flag so we know that queries have already been initialized
-	isInitialized = true
+	s.isInitialized = true
 }
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
-	if !isInitialized {
+	if !s.isInitialized {
 		initQueries(s)
 	}
 
@@ -140,7 +137,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, serv := range s.Servers {
-		for _, query := range queries {
+		for _, query := range s.queries {
 			wg.Add(1)
 			go func(serv string, query Query) {
 				defer wg.Done()
