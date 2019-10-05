@@ -50,6 +50,7 @@ You must capture at least one field per line.
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
   - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-epochmilli    (milliseconds since unix epoch)
   - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
 

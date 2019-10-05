@@ -277,6 +277,28 @@ func TestParsePatternsWithoutCustom(t *testing.T) {
 	assert.Equal(t, time.Unix(0, 1466004605359052000), metricA.Time())
 }
 
+func TestParseEpochMilli(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{MYAPP}"},
+		CustomPatterns: `
+			MYAPP %{POSINT:ts:ts-epochmilli} response_time=%{POSINT:response_time:int} mymetric=%{NUMBER:metric:float}
+		`,
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`1568540909963 response_time=20821 mymetric=10890.645`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"response_time": int64(20821),
+			"metric":        float64(10890.645),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{}, metricA.Tags())
+	assert.Equal(t, time.Unix(0, 1568540909963000000), metricA.Time())
+}
+
 func TestParseEpochNano(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{MYAPP}"},

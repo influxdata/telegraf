@@ -12,3 +12,7 @@ TEST_LOG_B \[%{TEST_TIMESTAMP:timestamp:ts-"02/01/2006--15:04:05"}\] %{NUMBER:my
 
 TEST_TIMESTAMP %{MONTHDAY}/%{MONTHNUM}/%{YEAR}--%{TIME}
 TEST_LOG_BAD \[%{TEST_TIMESTAMP:timestamp:ts-"02/01/2006--15:04:05"}\] %{NUMBER:myfloat:float} %{WORD:mystring:int} %{WORD:dropme:drop} %{WORD:nomodifier}
+
+# Test C log line:
+#   1568723594631 1.25 200 192.168.1.1 5.432µs 101
+TEST_LOG_C %{POSINT:timestamp:ts-epochmilli} %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME} %{NUMBER:myint:int}

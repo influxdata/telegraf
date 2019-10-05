@@ -28,12 +28,13 @@ var timeLayouts = map[string]string{
 	"ts-rfc3339":     "2006-01-02T15:04:05Z07:00",
 	"ts-rfc3339nano": "2006-01-02T15:04:05.999999999Z07:00",
 	"ts-httpd":       "02/Jan/2006:15:04:05 -0700",
-	// These three are not exactly "layouts", but they are special cases that
+	// These four are not exactly "layouts", but they are special cases that
 	// will get handled in the ParseLine function.
-	"ts-epoch":     "EPOCH",
-	"ts-epochnano": "EPOCH_NANO",
-	"ts-syslog":    "SYSLOG_TIMESTAMP",
-	"ts":           "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
+	"ts-epoch":      "EPOCH",
+	"ts-epochnano":  "EPOCH_NANO",
+	"ts-epochmilli": "EPOCH_MILLI",
+	"ts-syslog":     "SYSLOG_TIMESTAMP",
+	"ts":            "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
 }
 
 const (
@@ -45,6 +46,7 @@ const (
 	DURATION          = "duration"
 	DROP              = "drop"
 	EPOCH             = "EPOCH"
+	EPOCH_MILLI       = "EPOCH_MILLI"
 	EPOCH_NANO        = "EPOCH_NANO"
 	SYSLOG_TIMESTAMP  = "SYSLOG_TIMESTAMP"
 	GENERIC_TIMESTAMP = "GENERIC_TIMESTAMP"
@@ -297,6 +299,14 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				ts = ts.Add(time.Duration(nanosec) * time.Nanosecond)
 			}
 			timestamp = ts
+		case EPOCH_MILLI:
+			ms, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				log.Printf("E! Error parsing %s to int: %s", v, err)
+			} else {
+				timestamp = time.Unix(0, ms*int64(time.Millisecond))
+				fmt.Println(timestamp)
+			}
 		case EPOCH_NANO:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
