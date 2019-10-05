@@ -113,14 +113,13 @@ func (r *RedisSentinel) init(acc telegraf.Accumulator) error {
 		}
 
 		password := ""
-		if u.User != nil {
+
+		if len(r.Password) > 0 {
+			password = r.Password
+		} else if u.User != nil {
 			pw, ok := u.User.Password()
 			if ok {
 				password = pw
-			}
-		} else {
-			if len(r.Password) > 0 {
-				password = r.Password
 			}
 		}
 

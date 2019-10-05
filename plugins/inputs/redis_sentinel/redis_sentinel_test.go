@@ -20,7 +20,7 @@ func TestRedisSentinelConnect(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf(testutil.GetLocalHost() + ":26379")
+	addr := fmt.Sprintf("tcp://" + testutil.GetLocalHost() + ":26379")
 
 	r := &RedisSentinel{
 		Servers: []string{addr},
