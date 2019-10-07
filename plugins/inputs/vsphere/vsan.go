@@ -21,10 +21,10 @@ import (
 )
 
 const (
-	vsanNamespace = "vsan"
-	vsanPath      = "/vsanHealth"
-	hwMarksKey    = "vsan-perf"
-	perfPrefix    = "performance."
+	vsanNamespace    = "vsan"
+	vsanPath         = "/vsanHealth"
+	hwMarksKeyPrefix = "vsan-perf-"
+	perfPrefix       = "performance."
 )
 
 var (
@@ -65,9 +65,11 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	// Iterate over all clusters, run a goroutine for each cluster
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	for _, obj := range res.objects {
-		te.Run(ctx, func() {
-			e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
-		})
+		func(obj objectRef) {
+			te.Run(ctx, func() {
+				e.collectVsanPerCluster(ctx, obj, vimClient, vsanClient, metrics, acc)
+			})
+		}(obj)
 	}
 	te.Wait()
 	return nil
@@ -77,6 +79,10 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectRef, vimClient *vim25.Client, vsanClient *soap.Client, metrics map[string]string, acc telegraf.Accumulator) {
 	// Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(vimClient, clusterRef.ref)
+	if !e.vsanEnabled(ctx, cluster) {
+		log.Printf("E! [inputs.vsphere][vSAN] Failed to identifiy vSAN for : %s. Skipping", clusterRef.name)
+		return
+	}
 	// Do collection
 	if _, ok := metrics["summary.disk-usage"]; ok {
 		if err := e.queryDiskUsage(ctx, vsanClient, clusterRef, acc); err != nil {
@@ -101,6 +107,16 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectR
 	if err := e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
 		acc.AddError(fmt.Errorf("error querying performance metrics: %v", err))
 	}
+}
+
+// vsanEnabled returns True if vSAN is enabled, otherwise False
+func (e *Endpoint) vsanEnabled(ctx context.Context, clusterObj *object.ClusterComputeResource) bool {
+	config, err := clusterObj.Configuration(ctx)
+	if err != nil {
+		return false
+	}
+	Enabled := config.VsanConfigInfo.Enabled
+	return *Enabled
 }
 
 // getVsanMetadata returns a string list of the entity types that will be queried.
@@ -199,7 +215,7 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 // queryPerformance adds performance metrics to telegraf accumulator
 func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef objectRef, metrics map[string]string, cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
 	end := time.Now().UTC()
-	start, ok := e.hwMarks.Get(hwMarksKey)
+	start, ok := e.hwMarks.Get(hwMarksKeyPrefix + clusterRef.ref.Value)
 	if !ok {
 		// Look back 3 sampling periods by default
 		start = end.Add(metricLookback * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
@@ -229,6 +245,10 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		resp, err := vsanmethods.VsanPerfQueryPerf(ctx, vsanClient, &perfRequest)
 
 		if err != nil {
+			if err.Error() == "ServerFaultCode: NotFound" {
+				log.Printf("E! [inputs.vsphere][vSAN] Is vSAN performance service enbaled for %s? Skipping ...", clusterRef.name)
+				break
+			}
 			log.Printf("E! [inputs.vsphere][vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefId, err)
 			continue
 
@@ -287,7 +307,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			count += len(buckets)
 		}
 	}
-	e.hwMarks.Put(hwMarksKey, latest)
+	e.hwMarks.Put(hwMarksKeyPrefix+clusterRef.ref.Value, latest)
 	return nil
 }
 
@@ -322,17 +342,11 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	if err != nil {
 		return err
 	}
+	healthStr := resp.Returnval.OverallHealth
+	healthMap := map[string]int{"red": 2, "yellow": 1, "green": 0}
 	fields := make(map[string]interface{})
-	overallHealth := resp.Returnval.OverallHealth
-	switch overallHealth {
-	case "red":
-		fields["overall_health"] = 2
-	case "yellow":
-		fields["overall_health"] = 1
-	case "green":
-		fields["overall_health"] = 0
-	default:
-		fields["overall_health"] = -1
+	if val, ok := healthMap[healthStr]; ok {
+		fields["overall_health"] = val
 	}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanSummaryMetricsName, fields, tags)
