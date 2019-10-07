@@ -29,6 +29,7 @@
 - [#6464](https://github.com/influxdata/telegraf/pull/6464): Use case insensitive serial numer match in smart input.
 - [#6469](https://github.com/influxdata/telegraf/pull/6469): Add auth header only when env var is set.
 - [#6468](https://github.com/influxdata/telegraf/pull/6468): Fix running multiple mysql and sqlserver plugin instances.
+- [#6471](https://github.com/influxdata/telegraf/issues/6471): Fix database routing on retry with exclude_database_tag.
 
 ## v1.12.2 [2019-09-24]
 
