@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -43,7 +42,7 @@ func (ssl *streamSocketListener) listen() {
 		c, err := ssl.Accept()
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				ssl.AddError(err)
+				ssl.Log.Error(err.Error())
 			}
 			break
 		}
@@ -52,7 +51,7 @@ func (ssl *streamSocketListener) listen() {
 			if srb, ok := c.(setReadBufferer); ok {
 				srb.SetReadBuffer(int(ssl.ReadBufferSize.Size))
 			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", ssl.sockType)
+				ssl.Log.Warnf("Unable to set read buffer on a %s socket", ssl.sockType)
 			}
 		}
 
@@ -66,7 +65,7 @@ func (ssl *streamSocketListener) listen() {
 		ssl.connectionsMtx.Unlock()
 
 		if err := ssl.setKeepAlive(c); err != nil {
-			ssl.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", ssl.ServiceAddress, err))
+			ssl.Log.Errorf("Unable to configure keep alive %q: %s", ssl.ServiceAddress, err.Error())
 		}
 
 		wg.Add(1)
@@ -122,7 +121,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 		}
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
-			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
+			ssl.Log.Errorf("Unable to parse incoming line: %s", err.Error())
 			// TODO rate limit
 			continue
 		}
@@ -133,9 +132,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 
 	if err := scnr.Err(); err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			log.Printf("D! Timeout in plugin [input.socket_listener]: %s", err)
+			ssl.Log.Debugf("Timeout in plugin: %s", err.Error())
 		} else if netErr != nil && !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-			ssl.AddError(err)
+			ssl.Log.Error(err.Error())
 		}
 	}
 }
@@ -151,14 +150,14 @@ func (psl *packetSocketListener) listen() {
 		n, _, err := psl.ReadFrom(buf)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				psl.AddError(err)
+				psl.Log.Error(err.Error())
 			}
 			break
 		}
 
 		metrics, err := psl.Parse(buf[:n])
 		if err != nil {
-			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
+			psl.Log.Errorf("Unable to parse incoming packet: %s", err.Error())
 			// TODO rate limit
 			continue
 		}
@@ -178,6 +177,8 @@ type SocketListener struct {
 	tlsint.ServerConfig
 
 	wg sync.WaitGroup
+
+	Log telegraf.Logger
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -292,7 +293,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, l.Addr())
+		sl.Log.Infof("Listening on %s://%s", protocol, l.Addr())
 
 		// Set permissions on socket
 		if (spl[0] == "unix" || spl[0] == "unixpacket") && sl.SocketMode != "" {
@@ -339,11 +340,11 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			if srb, ok := pc.(setReadBufferer); ok {
 				srb.SetReadBuffer(int(sl.ReadBufferSize.Size))
 			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", protocol)
+				sl.Log.Warnf("Unable to set read buffer on a %s socket", protocol)
 			}
 		}
 
-		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, pc.LocalAddr())
+		sl.Log.Infof("Listening on %s://%s", protocol, pc.LocalAddr())
 
 		psl := &packetSocketListener{
 			PacketConn:     pc,

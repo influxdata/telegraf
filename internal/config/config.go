@@ -146,7 +146,10 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet bool `toml:"quiet"`
 
-	// Log file name, the empty string means to log to stderr.
+	// Log target - file, stderr, eventlog (Windows only). The empty string means to log to stderr.
+	LogTarget string `toml:"logtarget"`
+
+	// Log file name			.
 	Logfile string `toml:"logfile"`
 
 	// The file will be rotated after the time interval specified.  When set
@@ -254,7 +257,9 @@ var agentConfig = `
   ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
 
-  ## Maximum number of unwritten metrics per output.
+  ## Maximum number of unwritten metrics per output.  Increasing this value
+  ## allows for longer periods of output downtime without dropping metrics at the
+  ## cost of higher maximum memory usage.
   metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
@@ -641,7 +646,11 @@ func getDefaultConfigPath() (string, error) {
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
 	if runtime.GOOS == "windows" {
-		etcfile = `C:\Program Files\Telegraf\telegraf.conf`
+		programFiles := os.Getenv("ProgramFiles")
+		if programFiles == "" { // Should never happen
+			programFiles = `C:\Program Files`
+		}
+		etcfile = programFiles + `\Telegraf\telegraf.conf`
 	}
 	for _, path := range []string{envfile, homefile, etcfile} {
 		if _, err := os.Stat(path); err == nil {
@@ -832,13 +841,14 @@ func loadConfig(config string) ([]byte, error) {
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
-	v := os.Getenv("INFLUX_TOKEN")
-
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("Authorization", "Token "+v)
+
+	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+		req.Header.Add("Authorization", "Token "+v)
+	}
 	req.Header.Add("Accept", "application/toml")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

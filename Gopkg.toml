@@ -148,7 +148,8 @@
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.18.0"
+  revision = "b12709e6ca29240128c89fe0b30b6a76be42b457"
+  source = "https://github.com/influxdata/sarama.git"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
@@ -222,7 +223,7 @@
 
 [[constraint]]
   name = "github.com/mdlayher/apcupsd"
-  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
+  revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
 
 [[constraint]]
   branch = "master"
@@ -235,6 +236,10 @@
 [[constraint]]
   name = "github.com/Azure/go-autorest"
   version = "10.12.0"
+
+[[constraint]]
+  name = "github.com/Azure/azure-storage-queue-go"
+  version = "0.2.0"
 
 [[constraint]]
   branch = "master"

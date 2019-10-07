@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -33,6 +32,7 @@ type PubSubPush struct {
 	WriteTimeout   internal.Duration
 	MaxBodySize    internal.Size
 	AddMeta        bool
+	Log            telegraf.Logger
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
@@ -227,21 +227,21 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 	var payload Payload
 	if err = json.Unmarshal(bytes, &payload); err != nil {
-		log.Printf("E! [inputs.cloud_pubsub_push] Error decoding payload %s", err.Error())
+		p.Log.Errorf("Error decoding payload %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	sDec, err := base64.StdEncoding.DecodeString(payload.Msg.Data)
 	if err != nil {
-		log.Printf("E! [inputs.cloud_pubsub_push] Base64-Decode Failed %s", err.Error())
+		p.Log.Errorf("Base64-decode failed %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	metrics, err := p.Parse(sDec)
 	if err != nil {
-		log.Println("D! [inputs.cloud_pubsub_push] " + err.Error())
+		p.Log.Debug(err.Error())
 		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -295,7 +295,7 @@ func (p *PubSubPush) receiveDelivered() {
 				ch <- true
 			} else {
 				ch <- false
-				log.Println("D! [inputs.cloud_pubsub_push] Metric group failed to process")
+				p.Log.Debug("Metric group failed to process")
 			}
 		}
 	}

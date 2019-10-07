@@ -46,6 +46,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 	parser, _ := parsers.NewInfluxParser()
 
 	listener := &HTTPListenerV2{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -68,6 +69,7 @@ func newTestHTTPSListenerV2() *HTTPListenerV2 {
 	parser, _ := parsers.NewInfluxParser()
 
 	listener := &HTTPListenerV2{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -231,6 +233,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 	parser, _ := parsers.NewInfluxParser()
 
 	listener := &HTTPListenerV2{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -253,6 +256,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	parser, _ := parsers.NewInfluxParser()
 
 	listener := &HTTPListenerV2{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},

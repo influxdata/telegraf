@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -16,20 +15,22 @@ import (
 	"github.com/shirou/gopsutil/load"
 )
 
-type SystemStats struct{}
+type SystemStats struct {
+	Log telegraf.Logger
+}
 
-func (_ *SystemStats) Description() string {
+func (*SystemStats) Description() string {
 	return "Read metrics about system load & uptime"
 }
 
-func (_ *SystemStats) SampleConfig() string {
+func (*SystemStats) SampleConfig() string {
 	return `
   ## Uncomment to remove deprecated metrics.
   # fielddrop = ["uptime_format"]
 `
 }
 
-func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
+func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err
@@ -51,9 +52,9 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	if err == nil {
 		fields["n_users"] = len(users)
 	} else if os.IsNotExist(err) {
-		log.Printf("D! [inputs.system] Error reading users: %v", err)
+		s.Log.Debugf("Reading users: %s", err.Error())
 	} else if os.IsPermission(err) {
-		log.Printf("D! [inputs.system] %v", err)
+		s.Log.Debug(err.Error())
 	}
 
 	now := time.Now()

@@ -10,9 +10,6 @@ import (
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
-	"path"
-	"path/filepath"
-	"plugin"
 	"runtime"
 	"strings"
 	"syscall"
@@ -21,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -116,42 +114,10 @@ func reloadLoop(
 	}
 }
 
-// loadExternalPlugins loads external plugins from shared libraries (.so, .dll, etc.)
-// in the specified directory.
-func loadExternalPlugins(rootDir string) error {
-	return filepath.Walk(rootDir, func(pth string, info os.FileInfo, err error) error {
-		// Stop if there was an error.
-		if err != nil {
-			return err
-		}
-
-		// Ignore directories.
-		if info.IsDir() {
-			return nil
-		}
-
-		// Ignore files that aren't shared libraries.
-		ext := strings.ToLower(path.Ext(pth))
-		if ext != ".so" && ext != ".dll" {
-			return nil
-		}
-
-		// Load plugin.
-		_, err = plugin.Open(pth)
-		if err != nil {
-			return fmt.Errorf("error loading %s: %s", pth, err)
-		}
-
-		return nil
-	})
-}
-
 func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	// Setup default logging. This may need to change after reading the config
-	// file, but we can configure it to use our logger implementation now.
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
@@ -195,6 +161,7 @@ func runAgent(ctx context.Context,
 	logConfig := logger.LogConfig{
 		Debug:               ag.Config.Agent.Debug || *fDebug,
 		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
+		LogTarget:           ag.Config.Agent.LogTarget,
 		Logfile:             ag.Config.Agent.Logfile,
 		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
 		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
@@ -318,7 +285,7 @@ func main() {
 	// Load external plugins, if requested.
 	if *fPlugins != "" {
 		log.Printf("I! Loading external plugins from: %s", *fPlugins)
-		if err := loadExternalPlugins(*fPlugins); err != nil {
+		if err := goplugin.LoadExternalPlugins(*fPlugins); err != nil {
 			log.Fatal("E! " + err.Error())
 		}
 	}
@@ -403,12 +370,16 @@ func main() {
 	}
 
 	if runtime.GOOS == "windows" && windowsRunAsService() {
+		programFiles := os.Getenv("ProgramFiles")
+		if programFiles == "" { // Should never happen
+			programFiles = "C:\\Program Files"
+		}
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
 			DisplayName: *fServiceDisplayName,
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
-			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+			Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
 		}
 
 		prg := &program{
@@ -425,18 +396,28 @@ func main() {
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
 			if *fConfig != "" {
-				(*svcConfig).Arguments = []string{"--config", *fConfig}
+				svcConfig.Arguments = []string{"--config", *fConfig}
 			}
 			if *fConfigDirectory != "" {
-				(*svcConfig).Arguments = append((*svcConfig).Arguments, "--config-directory", *fConfigDirectory)
+				svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
 			}
+			//set servicename to service cmd line, to have a custom name after relaunch as a service
+			svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
+
 			err := service.Control(s, *fService)
 			if err != nil {
 				log.Fatal("E! " + err.Error())
 			}
 			os.Exit(0)
 		} else {
+			winlogger, err := s.Logger(nil)
+			if err == nil {
+				//When in service mode, register eventlog target andd setup default logging to eventlog
+				logger.RegisterEventLogger(winlogger)
+				logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
+			}
 			err = s.Run()
+
 			if err != nil {
 				log.Println("E! " + err.Error())
 			}

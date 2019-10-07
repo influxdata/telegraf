@@ -8,6 +8,9 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * Datastores
 * [vSAN](README-VSAN.md)
 
+## Supported versions of vSphere
+This plugin supports vSphere version 5.5 through 6.7. 
+
 ## Configuration
 
 NOTE: To disable collection of a specific resource type, simply exclude all metrics using the XX_metric_exclude.
