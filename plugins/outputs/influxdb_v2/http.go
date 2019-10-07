@@ -189,6 +189,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			}
 
 			if c.ExcludeBucketTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
 				metric.RemoveTag(c.BucketTag)
 			}
 
