@@ -44,7 +44,7 @@ type Docker struct {
 	ContainerStateInclude []string `toml:"container_state_include"`
 	ContainerStateExclude []string `toml:"container_state_exclude"`
 
-	ContainerIDAsHostname bool `toml:"container_id_as_hostname"`
+	IncludeSourceTag bool `toml:"source_tag"`
 
 	Log telegraf.Logger
 
@@ -92,8 +92,8 @@ var sampleConfig = `
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
 
-  ## Set the host tag for the metrics to the container ID hostname, eg first 12 chars
-  container_id_as_hostname = false
+  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
+  source_tag = false
 
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
@@ -455,8 +455,8 @@ func (d *Docker) gatherContainer(
 		"container_version": imageVersion,
 	}
 
-	if d.ContainerIDAsHostname {
-		tags["host"] = hostnameFromID(container.ID)
+	if d.IncludeSourceTag {
+		tags["source"] = hostnameFromID(container.ID)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)

@@ -629,9 +629,9 @@ func TestContainerStatus(t *testing.T) {
 					return &client, nil
 				}
 				d = Docker{
-					Log:                   testutil.Logger{},
-					newClient:             newClientFunc,
-					ContainerIDAsHostname: true,
+					Log:              testutil.Logger{},
+					newClient:        newClientFunc,
+					IncludeSourceTag: true,
 				}
 			)
 
@@ -674,7 +674,7 @@ func TestContainerStatus(t *testing.T) {
 					"label2":            "test_value_2",
 					"server_version":    "17.09.0-ce",
 					"container_status":  tt.expect.Status,
-					"host":              "e2173b9478a6",
+					"source":            "e2173b9478a6",
 				})
 		})
 	}
