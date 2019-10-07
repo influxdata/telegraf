@@ -99,7 +99,7 @@ volumes:
 #### source tag
 
 Selecting the containers measurements can be tricky if you have many containers with the same name.
-To alleviate this issue you can set the below value to true
+To alleviate this issue you can set the below value to `true`
 
 ```toml
 source_tag = true
