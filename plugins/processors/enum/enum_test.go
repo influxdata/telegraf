@@ -131,6 +131,6 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
 	assertFieldValue(t, "test", "string_value", fields)
-	value, present := fields[field]
+	_, present := fields[field]
 	assert.False(t, present, "value of field '"+field+"' was present")
 }
