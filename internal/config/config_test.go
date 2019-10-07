@@ -158,6 +158,11 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		MeasurementSuffix: "_myothercollector",
 	}
 	eConfig.Tags = make(map[string]string)
+
+	exec := c.Inputs[1].Input.(*exec.Exec)
+	require.NotNil(t, exec.Log)
+	exec.Log = nil
+
 	assert.Equal(t, ex, c.Inputs[1].Input,
 		"Merged Testdata did not produce a correct exec struct.")
 	assert.Equal(t, eConfig, c.Inputs[1].Config,
