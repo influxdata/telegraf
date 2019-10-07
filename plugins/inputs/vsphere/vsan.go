@@ -46,8 +46,12 @@ var (
 
 // collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
-	if versionLowerThan(e.apiVersion, "5.5") {
-		log.Printf("I! [inputs.vsphere][vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
+	lower, err := versionLowerThan(e.apiVersion, "5.5")
+	if err != nil {
+		e.Parent.Log.Errorf("[vSAN] Fail to get vCenter version: %v", err)
+	}
+	if lower {
+		e.Parent.Log.Infof("[vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 		return nil
 	}
 	vsanPerfMetricsName = strings.Join([]string{"vsphere", "vsan", "performance"}, e.Parent.Separator)
@@ -80,32 +84,32 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectR
 	// Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(vimClient, clusterRef.ref)
 	if !e.vsanEnabled(ctx, cluster) {
-		log.Printf("E! [inputs.vsphere][vSAN] Failed to identifiy vSAN for : %s. Skipping", clusterRef.name)
+		e.Parent.Log.Errorf("[vSAN] Fail to identify vSAN for cluster %s. Skipping", clusterRef.name)
 		return
 	}
 	// Do collection
 	if _, ok := metrics["summary.disk-usage"]; ok {
 		if err := e.queryDiskUsage(ctx, vsanClient, clusterRef, acc); err != nil {
-			acc.AddError(fmt.Errorf("error querying disk usage: %v", err))
+			acc.AddError(fmt.Errorf("error querying disk usage for cluster %s: %v", clusterRef.name, err))
 		}
 	}
 	if _, ok := metrics["summary.health"]; ok {
 		if err := e.queryHealthSummary(ctx, vsanClient, clusterRef, acc); err != nil {
-			acc.AddError(fmt.Errorf("error querying vsan health summary: %v", err))
+			acc.AddError(fmt.Errorf("error querying vsan health summary for cluster %s: %v", clusterRef.name, err))
 		}
 	}
 	if _, ok := metrics["summary.resync"]; ok {
 		if err := e.queryResyncSummary(ctx, vsanClient, cluster, clusterRef, acc); err != nil {
-			acc.AddError(fmt.Errorf("error querying vsan resync summary: %v", err))
+			acc.AddError(fmt.Errorf("error querying vsan resync summary for cluster %s: %v", clusterRef.name, err))
 		}
 	}
 	cmmds, err := getCmmdsMap(ctx, vimClient, cluster)
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN] Error while query cmmds data. Error: %s. Skipping", err)
+		e.Parent.Log.Errorf("[vSAN] Error while query cmmds data. Error: %s. Skipping", err)
 		cmmds = make(map[string]CmmdsEntity)
 	}
 	if err := e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
-		acc.AddError(fmt.Errorf("error querying performance metrics: %v", err))
+		acc.AddError(fmt.Errorf("error querying performance metrics for cluster %s: %v", clusterRef.name, err))
 	}
 }
 
@@ -126,7 +130,7 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 	if res.simple { // Skip getting supported Entity types from vCenter. Using user defined metrics without verifying.
 		for _, entity := range res.include {
 			if strings.Contains(entity, "*") {
-				log.Printf("I! [inputs.vsphere][vSAN] Won't use wildcard match \"*\" when vsan_metric_skip_verify = true. Skipping")
+				e.Parent.Log.Infof("[vSAN] Won't use wildcard match \"*\" when vsan_metric_skip_verify = true. Skipping")
 				continue
 			}
 			metrics[entity] = ""
@@ -144,7 +148,7 @@ func (e *Endpoint) getVsanMetadata(ctx context.Context, vsanClient *soap.Client,
 			This: perfManagerRef,
 		})
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN] Fail to get supported entities: %v. Skipping vsan performance data.", err)
+		e.Parent.Log.Errorf("[vSAN] Fail to get supported entities: %v. Skipping vsan performance data.", err)
 		return metrics
 	}
 	// Use the include & exclude configuration to filter all supported performance metrics
@@ -220,7 +224,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		// Look back 3 sampling periods by default
 		start = end.Add(metricLookback * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
 	}
-	log.Printf("D! [inputs.vsphere][vSAN] Query vsan performance for time interval: %s ~ %s", start, end)
+	e.Parent.Log.Debugf("[vSAN] Query vsan performance for time interval: %s ~ %s", start, end)
 	latest := start
 
 	for entityRefId := range metrics {
@@ -246,10 +250,10 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 
 		if err != nil {
 			if err.Error() == "ServerFaultCode: NotFound" {
-				log.Printf("E! [inputs.vsphere][vSAN] Is vSAN performance service enbaled for %s? Skipping ...", clusterRef.name)
+				e.Parent.Log.Errorf("[vSAN] Is vSAN performance service enbaled for %s? Skipping ...", clusterRef.name)
 				break
 			}
-			log.Printf("E! [inputs.vsphere][vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefId, err)
+			e.Parent.Log.Errorf("[vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefId, err)
 			continue
 
 		}
@@ -278,7 +282,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 				for i, values := range strings.Split(counter.Values, ",") {
 					ts, ok := time.Parse(time.RFC3339, timeStamps[i])
 					if ok != nil {
-						log.Printf("E! [inputs.vsphere][vSAN] Failed to parse a timestamp: %s. Skipping", timeStamps[i])
+						e.Parent.Log.Errorf("[vSAN] Fail to parse a timestamp: %s. Skipping", timeStamps[i])
 						continue
 					}
 					// Organize the metrics into a bucket per measurement.
@@ -355,7 +359,7 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 
 // queryResyncSummary adds resync information to accumulator
 func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource, clusterRef objectRef, acc telegraf.Accumulator) error {
-	if versionLowerThan(e.apiVersion, "6.7") {
+	if lower, _ := versionLowerThan(e.apiVersion, "6.7"); lower {
 		log.Printf("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 		return nil
 	}
@@ -480,23 +484,23 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 }
 
 // versionLowerThan returns true is the current version < a base version
-func versionLowerThan(current string, base string) bool {
+func versionLowerThan(current string, base string) (bool, error) {
 	v1 := strings.Split(current, ".")
 	v2 := strings.Split(base, ".")
 	major1, err := strconv.Atoi(v1[0])
 	major2, _ := strconv.Atoi(v2[0])
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s.", current)
+		return false, fmt.Errorf("fail to parse version %s: %v", current, err)
 	}
 	if len(v1) < 2 {
-		return major1 < major2
+		return major1 < major2, nil
 	}
 	minor1, err := strconv.Atoi(v1[1])
 	minor2, _ := strconv.Atoi(v2[1])
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s.", current)
+		return false, fmt.Errorf("fail to parse version %s: %v", current, err)
 	}
-	return major1 < major2 || major1 == major2 && minor1 < minor2
+	return major1 < major2 || major1 == major2 && minor1 < minor2, nil
 }
 
 type CmmdsEntity struct {
