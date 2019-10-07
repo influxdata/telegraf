@@ -255,6 +255,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			}
 
 			if c.config.ExcludeDatabaseTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
 				metric.RemoveTag(c.config.DatabaseTag)
 			}
 
