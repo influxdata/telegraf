@@ -40,28 +40,30 @@ const (
 )
 
 type HTTPConfig struct {
-	URL             *url.URL
-	Token           string
-	Organization    string
-	Bucket          string
-	BucketTag       string
-	Timeout         time.Duration
-	Headers         map[string]string
-	Proxy           *url.URL
-	UserAgent       string
-	ContentEncoding string
-	TLSConfig       *tls.Config
+	URL              *url.URL
+	Token            string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
+	Timeout          time.Duration
+	Headers          map[string]string
+	Proxy            *url.URL
+	UserAgent        string
+	ContentEncoding  string
+	TLSConfig        *tls.Config
 
 	Serializer *influx.Serializer
 }
 
 type httpClient struct {
-	ContentEncoding string
-	Timeout         time.Duration
-	Headers         map[string]string
-	Organization    string
-	Bucket          string
-	BucketTag       string
+	ContentEncoding  string
+	Timeout          time.Duration
+	Headers          map[string]string
+	Organization     string
+	Bucket           string
+	BucketTag        string
+	ExcludeBucketTag bool
 
 	client     *http.Client
 	serializer *influx.Serializer
@@ -130,13 +132,14 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 			Timeout:   timeout,
 			Transport: transport,
 		},
-		url:             config.URL,
-		ContentEncoding: config.ContentEncoding,
-		Timeout:         timeout,
-		Headers:         headers,
-		Organization:    config.Organization,
-		Bucket:          config.Bucket,
-		BucketTag:       config.BucketTag,
+		url:              config.URL,
+		ContentEncoding:  config.ContentEncoding,
+		Timeout:          timeout,
+		Headers:          headers,
+		Organization:     config.Organization,
+		Bucket:           config.Bucket,
+		BucketTag:        config.BucketTag,
+		ExcludeBucketTag: config.ExcludeBucketTag,
 	}
 	return client, nil
 }
@@ -183,6 +186,13 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 
 			if _, ok := batches[bucket]; !ok {
 				batches[bucket] = make([]telegraf.Metric, 0)
+			}
+
+			if c.ExcludeBucketTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
+				metric.RemoveTag(c.BucketTag)
 			}
 
 			batches[bucket] = append(batches[bucket], metric)
@@ -233,17 +243,28 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric: %s", desc)
-	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+	case http.StatusTooManyRequests:
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
 		if err != nil {
-			retry = 0
+			return errors.New("rate limit exceeded")
 		}
 		if retry > defaultMaxWait {
 			retry = defaultMaxWait
 		}
 		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
-		return fmt.Errorf("Waiting %ds for server before sending metric again", retry)
+		return fmt.Errorf("waiting %ds for server before sending metric again", retry)
+	case http.StatusServiceUnavailable:
+		retryAfter := resp.Header.Get("Retry-After")
+		retry, err := strconv.Atoi(retryAfter)
+		if err != nil {
+			return errors.New("server responded: service unavailable")
+		}
+		if retry > defaultMaxWait {
+			retry = defaultMaxWait
+		}
+		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
+		return fmt.Errorf("waiting %ds for server before sending metric again", retry)
 	}
 
 	// This is only until platform spec is fully implemented. As of the

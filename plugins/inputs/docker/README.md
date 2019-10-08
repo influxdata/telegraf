@@ -26,6 +26,9 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   ## Deprecated (1.4.0), use container_name_include
   container_names = []
 
+  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
+  source_tag = false
+
   ## Containers to include and exclude. Collect all if empty. Globs accepted.
   container_name_include = []
   container_name_exclude = []
@@ -92,6 +95,17 @@ lines to the telegraf container definition in a docker compose file:
 volumes:
   - /var/run/docker.sock:/var/run/docker.sock
 ```
+
+#### source tag
+
+Selecting the containers measurements can be tricky if you have many containers with the same name.
+To alleviate this issue you can set the below value to `true`
+
+```toml
+source_tag = true
+```
+
+This will cause all measurements to have the `source` tag be set to the first 12 characters of the container id. The first 12 characters is the common hostname for containers that have no explicit hostname set, as defined by docker.
 
 #### Kubernetes Labels
 

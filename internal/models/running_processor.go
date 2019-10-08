@@ -4,12 +4,12 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 type RunningProcessor struct {
-	Name string
-
 	sync.Mutex
+	log       telegraf.Logger
 	Processor telegraf.Processor
 	Config    *ProcessorConfig
 }
@@ -23,8 +23,25 @@ func (rp RunningProcessors) Less(i, j int) bool { return rp[i].Config.Order < rp
 // FilterConfig containing a name and filter
 type ProcessorConfig struct {
 	Name   string
+	Alias  string
 	Order  int64
 	Filter Filter
+}
+
+func NewRunningProcessor(processor telegraf.Processor, config *ProcessorConfig) *RunningProcessor {
+	logger := &Logger{
+		Name: logName("processors", config.Name, config.Alias),
+		Errs: selfstat.Register("process", "errors",
+			map[string]string{"input": config.Name, "alias": config.Alias}),
+	}
+
+	setLogIfExist(processor, logger)
+
+	return &RunningProcessor{
+		Processor: processor,
+		Config:    config,
+		log:       logger,
+	}
 }
 
 func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {
@@ -40,8 +57,8 @@ func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {
 	return false
 }
 
-func (rp *RunningProcessor) Init() error {
-	if p, ok := rp.Processor.(telegraf.Initializer); ok {
+func (r *RunningProcessor) Init() error {
+	if p, ok := r.Processor.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
 			return err

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -44,6 +43,10 @@ type Docker struct {
 
 	ContainerStateInclude []string `toml:"container_state_include"`
 	ContainerStateExclude []string `toml:"container_state_exclude"`
+
+	IncludeSourceTag bool `toml:"source_tag"`
+
+	Log telegraf.Logger
 
 	tlsint.ClientConfig
 
@@ -89,6 +92,9 @@ var sampleConfig = `
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
 
+  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
+  source_tag = false
+
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
   container_name_include = []
@@ -107,8 +113,10 @@ var sampleConfig = `
   ## Whether to report for each container per-device blkio (8:0, 8:1...) and
   ## network (eth0, eth1, ...) stats or not
   perdevice = true
+
   ## Whether to report for each container total blkio and network stats or not
   total = false
+
   ## Which environment variables should we use as a tag
   ##tag_env = ["JAVA_HOME", "HEAP_SIZE"]
 
@@ -274,7 +282,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 				fields["tasks_running"] = running[service.ID]
 				fields["tasks_desired"] = tasksNoShutdown[service.ID]
 			} else {
-				log.Printf("E! Unknow Replicas Mode")
+				d.Log.Error("Unknown replica mode")
 			}
 			// Add metrics
 			acc.AddFields("docker_swarm",
@@ -409,6 +417,13 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func hostnameFromID(id string) string {
+	if len(id) > 12 {
+		return id[0:12]
+	}
+	return id
+}
+
 func (d *Docker) gatherContainer(
 	container types.Container,
 	acc telegraf.Accumulator,
@@ -438,6 +453,10 @@ func (d *Docker) gatherContainer(
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
+	}
+
+	if d.IncludeSourceTag {
+		tags["source"] = hostnameFromID(container.ID)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)

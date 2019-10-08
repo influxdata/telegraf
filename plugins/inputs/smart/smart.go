@@ -3,7 +3,6 @@ package smart
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os/exec"
 	"path"
 	"regexp"
@@ -24,7 +23,7 @@ var (
 	// Model Number: TS128GMTE850
 	modelInfo = regexp.MustCompile("^(Device Model|Product|Model Number):\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
-	serialInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
+	serialInfo = regexp.MustCompile("(?i)^Serial Number:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
 	wwnInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
 	// User Capacity:    251,000,193,024 bytes [251 GB]
@@ -119,6 +118,7 @@ type Smart struct {
 	Excludes   []string
 	Devices    []string
 	UseSudo    bool
+	Timeout    internal.Duration
 }
 
 var sampleConfig = `
@@ -139,7 +139,8 @@ var sampleConfig = `
   ## "never" depending on your disks.
   # nocheck = "standby"
 
-  ## Gather detailed metrics for each SMART Attribute.
+  ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
+  ## information from each drive into the 'smart_attribute' measurement.
   # attributes = false
 
   ## Optionally specify devices to exclude from reporting.
@@ -150,7 +151,16 @@ var sampleConfig = `
   ## done and all found will be included except for the
   ## excluded in excludes.
   # devices = [ "/dev/ada0 -d atacam" ]
+
+  ## Timeout for the smartctl command to complete.
+  # timeout = "30s"
 `
+
+func NewSmart() *Smart {
+	return &Smart{
+		Timeout: internal.Duration{Duration: time.Second * 30},
+	}
+}
 
 func (m *Smart) SampleConfig() string {
 	return sampleConfig
@@ -179,17 +189,17 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 }
 
 // Wrap with sudo
-var runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+var runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 	cmd := exec.Command(command, args...)
 	if sudo {
 		cmd = exec.Command("sudo", append([]string{"-n", command}, args...)...)
 	}
-	return internal.CombinedOutputTimeout(cmd, time.Second*5)
+	return internal.CombinedOutputTimeout(cmd, timeout.Duration)
 }
 
 // Scan for S.M.A.R.T. devices
 func (m *Smart) scan() ([]string, error) {
-	out, err := runCmd(m.UseSudo, m.Path, "--scan")
+	out, err := runCmd(m.Timeout, m.UseSudo, m.Path, "--scan")
 	if err != nil {
 		return []string{}, fmt.Errorf("failed to run command '%s --scan': %s - %s", m.Path, err, string(out))
 	}
@@ -198,10 +208,7 @@ func (m *Smart) scan() ([]string, error) {
 	for _, line := range strings.Split(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
-			log.Printf("D! [inputs.smart] adding device: %+#v", dev)
 			devices = append(devices, strings.TrimSpace(dev[0]))
-		} else {
-			log.Printf("D! [inputs.smart] skipping device: %+#v", dev)
 		}
 	}
 	return devices, nil
@@ -225,7 +232,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 	wg.Add(len(devices))
 
 	for _, device := range devices {
-		go gatherDisk(acc, m.UseSudo, m.Attributes, m.Path, m.Nocheck, device, &wg)
+		go gatherDisk(acc, m.Timeout, m.UseSudo, m.Attributes, m.Path, m.Nocheck, device, &wg)
 	}
 
 	wg.Wait()
@@ -242,12 +249,12 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nocheck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
-	out, e := runCmd(usesudo, smartctl, args...)
+	out, e := runCmd(timeout, usesudo, smartctl, args...)
 	outStr := string(out)
 
 	// Ignore all exit statuses except if it is a command line parse error
@@ -302,14 +309,11 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		fields := make(map[string]interface{})
 
 		if collectAttributes {
-			deviceNode := strings.Split(device, " ")[0]
-			tags["device"] = path.Base(deviceNode)
-
-			if serial, ok := deviceTags["serial_no"]; ok {
-				tags["serial_no"] = serial
-			}
-			if wwn, ok := deviceTags["wwn"]; ok {
-				tags["wwn"] = wwn
+			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+			for _, key := range keys {
+				if value, ok := deviceTags[key]; ok {
+					tags[key] = value
+				}
 			}
 		}
 
@@ -438,14 +442,13 @@ func parseTemperature(fields, deviceFields map[string]interface{}, str string) e
 }
 
 func init() {
-	m := Smart{}
-	path, _ := exec.LookPath("smartctl")
-	if len(path) > 0 {
-		m.Path = path
-	}
-	m.Nocheck = "standby"
-
 	inputs.Add("smart", func() telegraf.Input {
-		return &m
+		m := NewSmart()
+		path, _ := exec.LookPath("smartctl")
+		if len(path) > 0 {
+			m.Path = path
+		}
+		m.Nocheck = "standby"
+		return m
 	})
 }

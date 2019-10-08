@@ -1,9 +1,8 @@
-ifeq ($(SHELL), cmd)
+ifeq ($(OS), Windows_NT)
 	VERSION := $(shell git describe --exact-match --tags 2>nil)
 	HOME := $(HOMEPATH)
-else ifeq ($(SHELL), sh.exe)
-	VERSION := $(shell git describe --exact-match --tags 2>nil)
-	HOME := $(HOMEPATH)
+	CGO_ENABLED ?= 0
+	export CGO_ENABLED
 else
 	VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 endif
@@ -47,7 +46,6 @@ go-install:
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
 	cp telegraf $(DESTDIR)$(PREFIX)/bin/
-
 
 .PHONY: test
 test:
@@ -131,22 +129,12 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
+.PHONY: ci-1.13
+ci-1.13:
+	docker build -t quay.io/influxdb/telegraf-ci:1.13.1 - < scripts/ci-1.13.docker
+	docker push quay.io/influxdb/telegraf-ci:1.13.1
+
 .PHONY: ci-1.12
 ci-1.12:
-	docker build -t quay.io/influxdb/telegraf-ci:1.12.5 - < scripts/ci-1.12.docker
-	docker push quay.io/influxdb/telegraf-ci:1.12.5
-
-.PHONY: ci-1.11
-ci-1.11:
-	docker build -t quay.io/influxdb/telegraf-ci:1.11.10 - < scripts/ci-1.11.docker
-	docker push quay.io/influxdb/telegraf-ci:1.11.10
-
-.PHONY: ci-1.10
-ci-1.10:
-	docker build -t quay.io/influxdb/telegraf-ci:1.10.8 - < scripts/ci-1.10.docker
-	docker push quay.io/influxdb/telegraf-ci:1.10.8
-
-.PHONY: ci-1.9
-ci-1.9:
-	docker build -t quay.io/influxdb/telegraf-ci:1.9.7 - < scripts/ci-1.9.docker
-	docker push quay.io/influxdb/telegraf-ci:1.9.7
+	docker build -t quay.io/influxdb/telegraf-ci:1.12.10 - < scripts/ci-1.12.docker
+	docker push quay.io/influxdb/telegraf-ci:1.12.10

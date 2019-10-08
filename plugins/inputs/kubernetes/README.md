@@ -48,7 +48,12 @@ avoid cardinality issues:
 ### DaemonSet
 
 For recommendations on running Telegraf as a DaemonSet see [Monitoring Kubernetes
-Architecture][k8s-telegraf] or view the [Helm charts][tick-charts].
+Architecture][k8s-telegraf] or view the Helm charts:
+
+- [Telegraf][]
+- [InfluxDB][]
+- [Chronograf][]
+- [Kapacitor][]
 
 ### Metrics
 
@@ -136,4 +141,7 @@ kubernetes_system_container
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
 [k8s-telegraf]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/
-[tick-charts]: https://github.com/influxdata/tick-charts
+[Telegraf]: https://github.com/helm/charts/tree/master/stable/telegraf
+[InfluxDB]: https://github.com/helm/charts/tree/master/stable/influxdb
+[Chronograf]: https://github.com/helm/charts/tree/master/stable/chronograf
+[Kapacitor]: https://github.com/helm/charts/tree/master/stable/kapacitor

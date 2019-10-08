@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/glinton/ping"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -68,35 +67,47 @@ func (*Ping) Description() string {
 }
 
 const sampleConfig = `
-  ## List of urls to ping
+  ## Hosts to send ping packets to.
   urls = ["example.org"]
 
-  ## Number of pings to send per collection (ping -c <COUNT>)
-  # count = 1
-
-  ## Interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
-  # ping_interval = 1.0
-
-  ## Per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
-  # timeout = 1.0
-
-  ## Total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
-  # deadline = 10
-
-  ## Interface or source address to send ping from (ping -I[-S] <INTERFACE/SRC_ADDR>)
-  # interface = ""
-
-  ## How to ping. "native" doesn't have external dependencies, while "exec" depends on 'ping'.
+  ## Method used for sending pings, can be either "exec" or "native".  When set
+  ## to "exec" the systems ping command will be executed.  When set to "native"
+  ## the plugin will send pings directly.
+  ##
+  ## While the default is "exec" for backwards compatibility, new deployments
+  ## are encouraged to use the "native" method for improved compatibility and
+  ## performance.
   # method = "exec"
 
-  ## Specify the ping executable binary, default is "ping"
-	# binary = "ping"
+  ## Number of ping packets to send per interval.  Corresponds to the "-c"
+  ## option of the ping command.
+  # count = 1
 
-  ## Arguments for ping command. When arguments is not empty, system binary will be used and
-  ## other options (ping_interval, timeout, etc) will be ignored.
+  ## Time to wait between sending ping packets in seconds.  Operates like the
+  ## "-i" option of the ping command.
+  # ping_interval = 1.0
+
+  ## If set, the time to wait for a ping response in seconds.  Operates like
+  ## the "-W" option of the ping command.
+  # timeout = 1.0
+
+  ## If set, the total ping deadline, in seconds.  Operates like the -w option
+  ## of the ping command.
+  # deadline = 10
+
+  ## Interface or source address to send ping from.  Operates like the -I or -S
+  ## option of the ping command.
+  # interface = ""
+
+  ## Specify the ping executable binary.
+  # binary = "ping"
+
+  ## Arguments for ping command. When arguments is not empty, the command from
+  ## the binary option will be used and other options (ping_interval, timeout,
+  ## etc) will be ignored.
   # arguments = ["-c", "3"]
 
-  ## Use only ipv6 addresses when resolving hostnames.
+  ## Use only IPv6 addresses when resolving a hostname.
   # ipv6 = false
 `
 

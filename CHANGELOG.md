@@ -1,4 +1,66 @@
-## v1.12 [unreleased]
+## v1.13 [unreleased]
+
+#### Release Notes
+
+- Official packages are built with Go 1.13.1.
+
+#### New Inputs
+
+- [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
+- [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
+
+#### New Aggregators
+
+- [merge](/plugins/aggregators/merge/README.md) - Contributed by @influxdata
+
+#### Features
+
+- [#6326](https://github.com/influxdata/telegraf/pull/5842): Add per node memory stats to rabbitmq input.
+- [#6361](https://github.com/influxdata/telegraf/pull/6361): Add ability to read query from file to postgresql_extensible input.
+- [#5921](https://github.com/influxdata/telegraf/pull/5921): Add replication metrics to the redis input.
+- [#6177](https://github.com/influxdata/telegraf/pull/6177): Support NX-OS telemetry extensions in cisco_telemetry_mdt.
+- [#6415](https://github.com/influxdata/telegraf/pull/6415): Allow graphite parser to create Inf and NaN values.
+- [#6434](https://github.com/influxdata/telegraf/pull/6434): Use prefix base detection for ints in grok parser.
+- [#6465](https://github.com/influxdata/telegraf/pull/6465): Add more performance counter metrics to sqlserver input.
+- [#6476](https://github.com/influxdata/telegraf/pull/6476): Add millisecond unix time support to grok parser.
+- [#6473](https://github.com/influxdata/telegraf/pull/6473): Add container id as optional source tag to docker and docker_log input.
+
+## v1.12.3 [2019-10-07]
+
+#### Bugfixes
+
+- [#6445](https://github.com/influxdata/telegraf/issues/6445): Use batch serialization format in exec output.
+- [#6455](https://github.com/influxdata/telegraf/issues/6455): Build official packages with Go 1.12.10.
+- [#6464](https://github.com/influxdata/telegraf/pull/6464): Use case insensitive serial numer match in smart input.
+- [#6469](https://github.com/influxdata/telegraf/pull/6469): Add auth header only when env var is set.
+- [#6468](https://github.com/influxdata/telegraf/pull/6468): Fix running multiple mysql and sqlserver plugin instances.
+- [#6471](https://github.com/influxdata/telegraf/issues/6471): Fix database routing on retry with exclude_database_tag.
+- [#6488](https://github.com/influxdata/telegraf/issues/6488): Fix logging panic in exec input with nagios data format.
+
+## v1.12.2 [2019-09-24]
+
+#### Bugfixes
+
+- [#6386](https://github.com/influxdata/telegraf/issues/6386): Fix detection of layout timestamps in csv and json parser.
+- [#6394](https://github.com/influxdata/telegraf/issues/6394): Fix parsing of BATTDATE in apcupsd input.
+- [#6398](https://github.com/influxdata/telegraf/issues/6398): Keep boolean values listed in json_string_fields.
+- [#6393](https://github.com/influxdata/telegraf/issues/6393): Disable Go plugin support in official builds.
+- [#6391](https://github.com/influxdata/telegraf/issues/6391): Fix path handling issues in cisco_telemetry_gnmi.
+
+## v1.12.1 [2019-09-10]
+
+#### Bugfixes
+
+- [#6344](https://github.com/influxdata/telegraf/issues/6344): Fix depends on GLIBC_2.14 symbol version.
+- [#6329](https://github.com/influxdata/telegraf/issues/6329): Fix filecount for paths with trailing slash.
+- [#6331](https://github.com/influxdata/telegraf/issues/6331): Convert check state to an integer in icinga2 input.
+- [#6354](https://github.com/influxdata/telegraf/issues/6354): Fix could not mark message delivered error in kafka_consumer.
+- [#6362](https://github.com/influxdata/telegraf/issues/6362): Skip collection stats when disabled in mongodb input.
+- [#6366](https://github.com/influxdata/telegraf/issues/6366): Fix error reading closed response body on redirect in http_response.
+- [#6373](https://github.com/influxdata/telegraf/issues/6373): Fix apcupsd documentation to reflect plugin.
+- [#6375](https://github.com/influxdata/telegraf/issues/6375): Display retry log message only when retry after is received.
+
+## v1.12 [2019-09-03]
 
 #### Release Notes
 
@@ -9,18 +71,28 @@
 
 #### New Inputs
 
-- [docker_log](/plugins/inputs/docker_log) - Contributed by @prashanthjbabu
-- [fireboard](/plugins/inputs/fireboard) - Contributed by @ronnocol
+- [apcupsd](/plugins/inputs/apcupsd/README.md) - Contributed by @jonaz
+- [docker_log](/plugins/inputs/docker_log/README.md) - Contributed by @prashanthjbabu
+- [fireboard](/plugins/inputs/fireboard/README.md) - Contributed by @ronnocol
+- [logstash](/plugins/inputs/logstash/README.md) - Contributed by @lkmcs @dmitryilyin @arkady-emelyanov
+- [marklogic](/plugins/inputs/marklogic/README.md) - Contributed by @influxdata
+- [openntpd](/plugins/inputs/openntpd/README.md) - Contributed by @aromeyer
+- [uwsgi](/plugins/inputs/uwsgi/README.md) - Contributed by @blaggacao
 
 #### New Parsers
 
-- [form_urlencoded](/plugins/processors/form_urlencoded/README.md) - Contributed by @byonchev
+- [form_urlencoded](/plugins/parsers/form_urlencoded/README.md) - Contributed by @byonchev
 
 #### New Processors
 
 - [date](/plugins/processors/date/README.md) - Contributed by @influxdata
 - [pivot](/plugins/processors/pivot/README.md) - Contributed by @influxdata
+- [tag_limit](/plugins/processors/tag_limit/README.md) - Contributed by @memory
 - [unpivot](/plugins/processors/unpivot/README.md) - Contributed by @influxdata
+
+#### New Outputs
+
+- [exec](/plugins/outputs/exec/README.md) - Contributed by @Jaeyo
 
 #### Features
 
@@ -48,6 +120,31 @@
 - [#6105](https://github.com/influxdata/telegraf/pull/6105): Collect k8s endpoints, ingress, and services in kube_inventory plugin.
 - [#6129](https://github.com/influxdata/telegraf/pull/6129): Add support for field/tag keys to strings processor.
 - [#6143](https://github.com/influxdata/telegraf/pull/6143): Add certificate verification status to x509_cert input.
+- [#6163](https://github.com/influxdata/telegraf/pull/6163): Support percentage value parsing in redis input.
+- [#6024](https://github.com/influxdata/telegraf/pull/6024): Load external Go plugins from --plugin-directory.
+- [#6184](https://github.com/influxdata/telegraf/pull/6184): Add ability to exclude db/bucket tag from influxdb outputs.
+- [#6137](https://github.com/influxdata/telegraf/pull/6137): Gather per collections stats in mongodb input plugin.
+- [#6195](https://github.com/influxdata/telegraf/pull/6195): Add TLS & credentials configuration for nats_consumer input plugin.
+- [#6194](https://github.com/influxdata/telegraf/pull/6194): Add support for enterprise repos to github plugin.
+- [#6060](https://github.com/influxdata/telegraf/pull/6060): Add Indices stats to elasticsearch input.
+- [#6189](https://github.com/influxdata/telegraf/pull/6189): Add left function to string processor.
+- [#6049](https://github.com/influxdata/telegraf/pull/6049): Add grace period for metrics late for aggregation.
+- [#4435](https://github.com/influxdata/telegraf/pull/4435): Add diff and non_negative_diff to basicstats aggregator.
+- [#6201](https://github.com/influxdata/telegraf/pull/6201): Add device tags to smart_attributes.
+- [#5719](https://github.com/influxdata/telegraf/pull/5719): Collect framework_offers and allocator metrics in mesos input.
+- [#6216](https://github.com/influxdata/telegraf/pull/6216): Add telegraf and go version to the internal input plugin.
+- [#6214](https://github.com/influxdata/telegraf/pull/6214): Update the number of logical CPUs dynamically in system plugin.
+- [#6259](https://github.com/influxdata/telegraf/pull/6259): Add darwin (macOS) builds to the release.
+- [#6241](https://github.com/influxdata/telegraf/pull/6241): Add configurable timeout setting to smart input.
+- [#6249](https://github.com/influxdata/telegraf/pull/6249): Add memory_usage field to procstat input plugin.
+- [#5971](https://github.com/influxdata/telegraf/pull/5971): Add support for custom attributes to vsphere input.
+- [#5926](https://github.com/influxdata/telegraf/pull/5926): Add cmdstat metrics to redis input.
+- [#6261](https://github.com/influxdata/telegraf/pull/6261): Add content_length metric to http_response input plugin.
+- [#6257](https://github.com/influxdata/telegraf/pull/6257): Add database_tag option to influxdb_listener to add database from query string.
+- [#6246](https://github.com/influxdata/telegraf/pull/6246): Add capability to limit TLS versions and cipher suites.
+- [#6266](https://github.com/influxdata/telegraf/pull/6266): Add topic_tag option to mqtt_consumer.
+- [#6207](https://github.com/influxdata/telegraf/pull/6207): Add ability to label inputs for logging.
+- [#6300](https://github.com/influxdata/telegraf/pull/6300): Add TLS support to nginx_plus, nginx_plus_api and nginx_vts.
 
 #### Bugfixes
 
@@ -56,8 +153,36 @@
 - [#6004](https://github.com/influxdata/telegraf/issues/6004): Fix race in master node detection in elasticsearch input.
 - [#6100](https://github.com/influxdata/telegraf/issues/6100): Fix SSPI authentication not working in sqlserver input.
 - [#6142](https://github.com/influxdata/telegraf/issues/6142): Fix memory error panic in mqtt input.
+- [#6136](https://github.com/influxdata/telegraf/issues/6136): Support Kafka 2.3.0 consumer groups.
+- [#6232](https://github.com/influxdata/telegraf/issues/6232): Fix persistent session in mqtt_consumer.
+- [#6235](https://github.com/influxdata/telegraf/issues/6235): Fix finder inconsistencies in vsphere input.
+- [#6138](https://github.com/influxdata/telegraf/issues/6138): Fix parsing multiple metrics on the first line of tailed file.
+- [#2526](https://github.com/influxdata/telegraf/issues/2526): Send TERM to exec processes before sending KILL signal.
+- [#5326](https://github.com/influxdata/telegraf/issues/5326): Query oplog only when connected to a replica set.
+- [#6317](https://github.com/influxdata/telegraf/pull/6317): Use environment variables to locate Program Files on Windows.
 
-## v1.11.3 [unreleased]
+## v1.11.5 [2019-08-27]
+
+#### Bugfixes
+
+- [#6250](https://github.com/influxdata/telegraf/pull/6250): Update go-sql-driver/mysql driver to 1.4.1 to address auth issues.
+- [#6279](https://github.com/influxdata/telegraf/issues/6279): Return error status from --test if input plugins produce an error.
+- [#6309](https://github.com/influxdata/telegraf/issues/6309): Fix with multiple instances only last configuration is used in smart input.
+- [#6303](https://github.com/influxdata/telegraf/pull/6303): Build official packages with Go 1.12.9.
+- [#6234](https://github.com/influxdata/telegraf/issues/6234): Split out -w argument in iptables input.
+- [#6270](https://github.com/influxdata/telegraf/issues/6270): Add support for parked process state on Linux.
+- [#6287](https://github.com/influxdata/telegraf/issues/6287): Remove leading slash from rcon command.
+- [#6313](https://github.com/influxdata/telegraf/pull/6313): Allow jobs with dashes in the name in lustre2 input.
+
+## v1.11.4 [2019-08-06]
+
+#### Bugfixes
+
+- [#6200](https://github.com/influxdata/telegraf/pull/6200): Correct typo in kubernetes logsfs_available_bytes field.
+- [#6191](https://github.com/influxdata/telegraf/issues/6191): Skip floats that are NaN or Inf in Datadog output.
+- [#6209](https://github.com/influxdata/telegraf/issues/6209): Fix reload panic in socket_listener input plugin.
+
+## v1.11.3 [2019-07-23]
 
 #### Bugfixes
 

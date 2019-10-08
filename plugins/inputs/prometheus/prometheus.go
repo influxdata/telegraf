@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -41,6 +40,8 @@ type Prometheus struct {
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	client *http.Client
 
@@ -136,7 +137,7 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {
-			log.Printf("prometheus: Could not parse %s, skipping it. Error: %s", u, err.Error())
+			p.Log.Errorf("Could not parse %q, skipping it. Error: %s", u, err.Error())
 			continue
 		}
 		allURLs[URL.String()] = URLAndAddress{URL: URL, OriginalURL: URL}
@@ -157,7 +158,7 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 
 		resolvedAddresses, err := net.LookupHost(URL.Hostname())
 		if err != nil {
-			log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", URL.Host, err.Error())
+			p.Log.Errorf("Could not resolve %q, skipping it. Error: %s", URL.Host, err.Error())
 			continue
 		}
 		for _, resolved := range resolvedAddresses {

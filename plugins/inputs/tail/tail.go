@@ -3,17 +3,15 @@
 package tail
 
 import (
-	"fmt"
-	"log"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/tail"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
 )
 
 const (
@@ -30,6 +28,8 @@ type Tail struct {
 	FromBeginning bool
 	Pipe          bool
 	WatchMethod   string
+
+	Log telegraf.Logger
 
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
@@ -124,7 +124,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("glob %s failed to compile, %s", filepath, err))
+			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
 		}
 		for _, file := range g.Match() {
 			if _, ok := t.tailers[file]; ok {
@@ -135,7 +135,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			var seek *tail.SeekInfo
 			if !t.Pipe && !fromBeginning {
 				if offset, ok := t.offsets[file]; ok {
-					log.Printf("D! [inputs.tail] using offset %d for file: %v", offset, file)
+					t.Log.Debugf("Using offset %d for %q", offset, file)
 					seek = &tail.SeekInfo{
 						Whence: 0,
 						Offset: offset,
@@ -163,71 +163,80 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 				continue
 			}
 
-			log.Printf("D! [inputs.tail] tail added for file: %v", file)
+			t.Log.Debugf("Tail added for %q", file)
 
 			parser, err := t.parserFunc()
 			if err != nil {
-				t.acc.AddError(fmt.Errorf("error creating parser: %v", err))
+				t.Log.Errorf("Creating parser: %s", err.Error())
 			}
 
 			// create a goroutine for each "tailer"
 			t.wg.Add(1)
-			go t.receiver(parser, tailer)
+			go func() {
+				defer t.wg.Done()
+				t.receiver(parser, tailer)
+			}()
 			t.tailers[tailer.Filename] = tailer
 		}
 	}
 	return nil
 }
 
-// this is launched as a goroutine to continuously watch a tailed logfile
+// ParseLine parses a line of text.
+func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.Metric, error) {
+	switch parser.(type) {
+	case *csv.Parser:
+		// The csv parser parses headers in Parse and skips them in ParseLine.
+		// As a temporary solution call Parse only when getting the first
+		// line from the file.
+		if firstLine {
+			return parser.Parse([]byte(line))
+		} else {
+			m, err := parser.ParseLine(line)
+			if err != nil {
+				return nil, err
+			}
+
+			if m != nil {
+				return []telegraf.Metric{m}, nil
+			}
+			return []telegraf.Metric{}, nil
+		}
+	default:
+		return parser.Parse([]byte(line))
+	}
+}
+
+// Receiver is launched as a goroutine to continuously watch a tailed logfile
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
-	defer t.wg.Done()
-
 	var firstLine = true
-	var metrics []telegraf.Metric
-	var m telegraf.Metric
-	var err error
-	var line *tail.Line
-	for line = range tailer.Lines {
+	for line := range tailer.Lines {
 		if line.Err != nil {
-			t.acc.AddError(fmt.Errorf("error tailing file %s, Error: %s", tailer.Filename, err))
+			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
 			continue
 		}
 		// Fix up files with Windows line endings.
 		text := strings.TrimRight(line.Text, "\r")
 
-		if firstLine {
-			metrics, err = parser.Parse([]byte(text))
-			if err == nil {
-				if len(metrics) == 0 {
-					firstLine = false
-					continue
-				} else {
-					m = metrics[0]
-				}
-			}
-			firstLine = false
-		} else {
-			m, err = parser.ParseLine(text)
+		metrics, err := parseLine(parser, text, firstLine)
+		if err != nil {
+			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
+				tailer.Filename, line.Text, err.Error())
+			continue
 		}
+		firstLine = false
 
-		if err == nil {
-			if m != nil {
-				tags := m.Tags()
-				tags["path"] = tailer.Filename
-				t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
-			}
-		} else {
-			t.acc.AddError(fmt.Errorf("malformed log line in %s: [%s], Error: %s",
-				tailer.Filename, line.Text, err))
+		for _, metric := range metrics {
+			metric.AddTag("path", tailer.Filename)
+			t.acc.AddMetric(metric)
 		}
 	}
 
-	log.Printf("D! [inputs.tail] tail removed for file: %v", tailer.Filename)
+	t.Log.Debugf("Tail removed for %q", tailer.Filename)
 
 	if err := tailer.Err(); err != nil {
-		t.acc.AddError(fmt.Errorf("error tailing file %s, Error: %s", tailer.Filename, err))
+		t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
 	}
 }
 
@@ -240,14 +249,14 @@ func (t *Tail) Stop() {
 			// store offset for resume
 			offset, err := tailer.Tell()
 			if err == nil {
-				log.Printf("D! [inputs.tail] recording offset %d for file: %v", offset, tailer.Filename)
+				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
 			} else {
-				t.acc.AddError(fmt.Errorf("error recording offset for file %s", tailer.Filename))
+				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
 			}
 		}
 		err := tailer.Stop()
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("error stopping tail on file %s", tailer.Filename))
+			t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
 		}
 	}
 

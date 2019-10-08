@@ -51,8 +51,8 @@ var sampleConfig = `
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "nodes", "persistentvolumes",
-  ## "persistentvolumeclaims", "pods", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
+  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -114,11 +114,11 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"endpoints":              collectEndpoints,
 	"ingress":                collectIngress,
 	"nodes":                  collectNodes,
-	"persistentvolumes":      collectPersistentVolumes,
-	"persistentvolumeclaims": collectPersistentVolumeClaims,
 	"pods":                   collectPods,
 	"services":               collectServices,
 	"statefulsets":           collectStatefulSets,
+	"persistentvolumes":      collectPersistentVolumes,
+	"persistentvolumeclaims": collectPersistentVolumeClaims,
 }
 
 func (ki *KubernetesInventory) initClient() (*client, error) {
@@ -144,12 +144,12 @@ func atoi(s string) int64 {
 func convertQuantity(s string, m float64) int64 {
 	q, err := resource.ParseQuantity(s)
 	if err != nil {
-		log.Printf("E! Failed to parse quantity - %v", err)
+		log.Printf("D! [inputs.kube_inventory] failed to parse quantity: %s", err.Error())
 		return 0
 	}
 	f, err := strconv.ParseFloat(fmt.Sprint(q.AsDec()), 64)
 	if err != nil {
-		log.Printf("E! Failed to parse float - %v", err)
+		log.Printf("D! [inputs.kube_inventory] failed to parse float: %s", err.Error())
 		return 0
 	}
 	if m < 1 {
