@@ -53,26 +53,26 @@ There are 5 remote network requests made for each server listed in the config.
     - source
 
   - fields:
-    - config-epoch (int)
-    - down-after-milliseconds (int)
-    - failover-timeout (int)
+    - config_epoch (int)
+    - down_after_milliseconds (int)
+    - failover_timeout (int)
     - flags (string)
-    - has-quorum (int)
-    - info-refresh (int)
+    - has_quorum (int)
+    - info_refresh (int)
     - ip (string)
-    - last-ok-ping-reply (int)
-    - last-ping-reply (int)
-    - last-ping-sent (int)
-    - link-pending-commands (int)
-    - link-refcount (int)
+    - last_ok_ping_reply (int)
+    - last_ping_reply (int)
+    - last_ping_sent (int)
+    - link_pending_commands (int)
+    - link_refcount (int)
     - name (string)
-    - num-other-sentinels (int)
-    - num-slaves (int)
-    - parallel-syncs (int)
+    - num_other_sentinels (int)
+    - num_slaves (int)
+    - parallel_syncs (int)
     - port (int)
     - quorum (int)
-    - role-reported (string)
-    - role-reported-time (int)
+    - role_reported (string)
+    - role_reported_time (int)
     - runid (string)
 
 - redis_sentinels
@@ -85,20 +85,20 @@ There are 5 remote network requests made for each server listed in the config.
     - source
 
   - fields:
-    - down-after-milliseconds (int)
+    - down_after_milliseconds (int)
     - flags (string)
     - ip (string)
-    - last-hello-message (int)
-    - last-ok-ping-reply (int)
-    - last-ping-reply (int)
-    - last-ping-sent (int)
-    - link-pending-commands (int)
-    - link-refcount (int)
+    - last_hello_message (int)
+    - last_ok_ping_reply (int)
+    - last_ping_reply (int)
+    - last_ping_sent (int)
+    - link_pending_commands (int)
+    - link_refcount (int)
     - name (string)
     - port (int)
     - runid (string)
-    - voted-leader (string)
-    - voted-leader-epoch (int)
+    - voted_leader (string)
+    - voted_leader_epoch (int)
 
 - redis_replicas
   - tags:
@@ -110,26 +110,26 @@ There are 5 remote network requests made for each server listed in the config.
     - source
 
   - fields:
-    - down-after-milliseconds (int)
+    - down_after_milliseconds (int)
     - flags (string)
-    - info-refresh (int)
+    - info_refresh (int)
     - ip (string)
-    - last-ok-ping-reply (int)
-    - last-ping-reply (int)
-    - last-ping-sent (int)
-    - link-pending-commands (int)
-    - link-refcount (int)
-    - master-host (string)
-    - master-link-down-time (int)
-    - master-link-status (string)
-    - master-port (int)
+    - last_ok_ping_reply (int)
+    - last_ping_reply (int)
+    - last_ping_sent (int)
+    - link_pending_commands (int)
+    - link_refcount (int)
+    - master_host (string)
+    - master_link_down_time (int)
+    - master_link_status (string)
+    - master_port (int)
     - name (string)
     - port (int)
-    - role-reported (string)
-    - role-reported-time (int)
+    - role_reported (string)
+    - role_reported_time (int)
     - runid (string)
-    - slave-priority (int)
-    - slave-repl-offset (int)
+    - slave_priority (int)
+    - slave_repl_offset (int)
 
 - redis_sentinel
   - tags:
@@ -188,23 +188,23 @@ An example of 2 Redis Sentinel instances monitoring a single master and replica.
 
 redis_sentinel_masters:
 ```
-redis_sentinel_masters,host=somehostname,master_name=mymaster,port=26380,source=localhost config-epoch=0i,down-after-milliseconds=30000i,failover-timeout=180000i,flags="master",has-quorum=1i,info-refresh=110i,ip="127.0.0.1",last-ok-ping-reply=819i,last-ping-reply=819i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="mymaster",num-other-sentinels=1i,num-slaves=1i,parallel-syncs=1i,port=6379i,quorum=2i,role-reported="master",role-reported-time=311248i,runid="c77be03053dbb5df31dea24b833b9724162ba525" 1570207377000000000
+redis_sentinel_masters,host=somehostname,master_name=mymaster,port=26380,source=localhost config_epoch=0i,down_after_milliseconds=30000i,failover_timeout=180000i,flags="master",has_quorum=1i,info_refresh=110i,ip="127.0.0.1",last_ok_ping_reply=819i,last_ping_reply=819i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,name="mymaster",num_other_sentinels=1i,num_slaves=1i,parallel_syncs=1i,port=6379i,quorum=2i,role_reported="master",role_reported_time=311248i,runid="c77be03053dbb5df31dea24b833b9724162ba525" 1570207377000000000
 
-redis_sentinel_masters,host=somehostname,master_name=mymaster,port=26379,source=localhost config-epoch=0i,down-after-milliseconds=30000i,failover-timeout=180000i,flags="master",has-quorum=1i,info-refresh=1650i,ip="127.0.0.1",last-ok-ping-reply=1003i,last-ping-reply=1003i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="mymaster",num-other-sentinels=1i,num-slaves=1i,parallel-syncs=1i,port=6379i,quorum=2i,role-reported="master",role-reported-time=302990i,runid="c77be03053dbb5df31dea24b833b9724162ba525" 1570207377000000000
+redis_sentinel_masters,host=somehostname,master_name=mymaster,port=26379,source=localhost config_epoch=0i,down_after_milliseconds=30000i,failover_timeout=180000i,flags="master",has_quorum=1i,info_refresh=1650i,ip="127.0.0.1",last_ok_ping_reply=1003i,last_ping_reply=1003i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,name="mymaster",num_other_sentinels=1i,num_slaves=1i,parallel_syncs=1i,port=6379i,quorum=2i,role_reported="master",role_reported_time=302990i,runid="c77be03053dbb5df31dea24b833b9724162ba525" 1570207377000000000
 ```
 
 redis_sentinels:
 ```
-redis_sentinels,host=somehostname,master_name=mymaster,port=26380,sentinel_ip=127.0.0.1,sentinel_port=26379,source=localhost down-after-milliseconds=30000i,flags="sentinel",ip="127.0.0.1",last-hello-message=1337i,last-ok-ping-reply=566i,last-ping-reply=566i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="fd7444de58ecc00f2685cd89fc11ff96c72f0569",port=26379i,runid="fd7444de58ecc00f2685cd89fc11ff96c72f0569",voted-leader="?",voted-leader-epoch=0i 1570207377000000000
+redis_sentinels,host=somehostname,master_name=mymaster,port=26380,sentinel_ip=127.0.0.1,sentinel_port=26379,source=localhost down_after_milliseconds=30000i,flags="sentinel",ip="127.0.0.1",last_hello_message=1337i,last_ok_ping_reply=566i,last_ping_reply=566i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,name="fd7444de58ecc00f2685cd89fc11ff96c72f0569",port=26379i,runid="fd7444de58ecc00f2685cd89fc11ff96c72f0569",voted_leader="?",voted_leader_epoch=0i 1570207377000000000
 
-redis_sentinels,host=somehostname,master_name=mymaster,port=26379,sentinel_ip=127.0.0.1,sentinel_port=26380,source=localhost down-after-milliseconds=30000i,flags="sentinel",ip="127.0.0.1",last-hello-message=1510i,last-ok-ping-reply=1004i,last-ping-reply=1004i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,name="d06519438fe1b35692cb2ea06d57833c959f9114",port=26380i,runid="d06519438fe1b35692cb2ea06d57833c959f9114",voted-leader="?",voted-leader-epoch=0i 1570207377000000000
+redis_sentinels,host=somehostname,master_name=mymaster,port=26379,sentinel_ip=127.0.0.1,sentinel_port=26380,source=localhost down_after_milliseconds=30000i,flags="sentinel",ip="127.0.0.1",last_hello_message=1510i,last_ok_ping_reply=1004i,last_ping_reply=1004i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,name="d06519438fe1b35692cb2ea06d57833c959f9114",port=26380i,runid="d06519438fe1b35692cb2ea06d57833c959f9114",voted_leader="?",voted_leader_epoch=0i 1570207377000000000
 ```
 
 redis_replicas:
 ```
-redis_replicas,host=somehostname,master_name=mymaster,port=26379,replica_ip=127.0.0.1,replica_port=6380,source=localhost down-after-milliseconds=30000i,flags="slave",info-refresh=1651i,ip="127.0.0.1",last-ok-ping-reply=1005i,last-ping-reply=1005i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,master-host="127.0.0.1",master-link-down-time=0i,master-link-status="ok",master-port=6379i,name="127.0.0.1:6380",port=6380i,role-reported="slave",role-reported-time=302983i,runid="6e569078c6024a3d0c293a5a965baad5ece46ecd",slave-priority=100i,slave-repl-offset=40175i 1570207377000000000
+redis_replicas,host=somehostname,master_name=mymaster,port=26379,replica_ip=127.0.0.1,replica_port=6380,source=localhost down_after_milliseconds=30000i,flags="slave",info_refresh=1651i,ip="127.0.0.1",last_ok_ping_reply=1005i,last_ping_reply=1005i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,master_host="127.0.0.1",master_link_down_time=0i,master_link_status="ok",master_port=6379i,name="127.0.0.1:6380",port=6380i,role_reported="slave",role_reported_time=302983i,runid="6e569078c6024a3d0c293a5a965baad5ece46ecd",slave_priority=100i,slave_repl_offset=40175i 1570207377000000000
 
-redis_replicas,host=somehostname,master_name=mymaster,port=26380,replica_ip=127.0.0.1,replica_port=6380,source=localhost down-after-milliseconds=30000i,flags="slave",info-refresh=111i,ip="127.0.0.1",last-ok-ping-reply=821i,last-ping-reply=821i,last-ping-sent=0i,link-pending-commands=0i,link-refcount=1i,master-host="127.0.0.1",master-link-down-time=0i,master-link-status="ok",master-port=6379i,name="127.0.0.1:6380",port=6380i,role-reported="slave",role-reported-time=311243i,runid="6e569078c6024a3d0c293a5a965baad5ece46ecd",slave-priority=100i,slave-repl-offset=40441i 1570207377000000000
+redis_replicas,host=somehostname,master_name=mymaster,port=26380,replica_ip=127.0.0.1,replica_port=6380,source=localhost down_after_milliseconds=30000i,flags="slave",info_refresh=111i,ip="127.0.0.1",last_ok_ping_reply=821i,last_ping_reply=821i,last_ping_sent=0i,link_pending_commands=0i,link_refcount=1i,master_host="127.0.0.1",master_link_down_time=0i,master_link_status="ok",master_port=6379i,name="127.0.0.1:6380",port=6380i,role_reported="slave",role_reported_time=311243i,runid="6e569078c6024a3d0c293a5a965baad5ece46ecd",slave_priority=100i,slave_repl_offset=40441i 1570207377000000000
 ```
 
 redis_sentinel

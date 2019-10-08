@@ -301,12 +301,14 @@ func convertSentinelMastersOutput(
 
 	fields := make(map[string]interface{})
 
-	fields["has-quorum"] = 0
+	fields["has_quorum"] = 0
 	if quorumErr == nil {
-		fields["has-quorum"] = 1
+		fields["has_quorum"] = 1
 	}
 
 	for key, val := range master {
+		key = strings.ReplaceAll(key, "-", "_")
+
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			fields[key] = ival
 			continue
@@ -341,6 +343,8 @@ func convertSentinelSentinelsOutput(
 	fields := make(map[string]interface{})
 
 	for key, val := range sentinelMaster {
+		key = strings.ReplaceAll(key, "-", "_")
+
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			fields[key] = ival
 			continue
@@ -376,6 +380,8 @@ func convertSentinelReplicaOutput(
 	fields := make(map[string]interface{})
 
 	for key, val := range replica {
+		key = strings.ReplaceAll(key, "-", "_")
+
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			fields[key] = ival
 			continue
@@ -459,6 +465,8 @@ func convertSentinelInfoOutput(
 		if !ok {
 			metric = name
 		}
+
+		metric = strings.ReplaceAll(metric, "-", "_")
 
 		val := strings.TrimSpace(parts[1])
 
