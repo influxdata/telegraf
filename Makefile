@@ -129,17 +129,12 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
+.PHONY: ci-1.13
+ci-1.13:
+	docker build -t quay.io/influxdb/telegraf-ci:1.13.1 - < scripts/ci-1.13.docker
+	docker push quay.io/influxdb/telegraf-ci:1.13.1
+
 .PHONY: ci-1.12
 ci-1.12:
 	docker build -t quay.io/influxdb/telegraf-ci:1.12.10 - < scripts/ci-1.12.docker
 	docker push quay.io/influxdb/telegraf-ci:1.12.10
-
-.PHONY: ci-1.11
-ci-1.11:
-	docker build -t quay.io/influxdb/telegraf-ci:1.11.13 - < scripts/ci-1.11.docker
-	docker push quay.io/influxdb/telegraf-ci:1.11.13
-
-.PHONY: ci-1.10
-ci-1.10:
-	docker build -t quay.io/influxdb/telegraf-ci:1.10.8 - < scripts/ci-1.10.docker
-	docker push quay.io/influxdb/telegraf-ci:1.10.8
