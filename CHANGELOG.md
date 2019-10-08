@@ -1,5 +1,9 @@
 ## v1.13 [unreleased]
 
+#### Release Notes
+
+- Official packages are built with Go 1.13.1.
+
 #### New Inputs
 
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
