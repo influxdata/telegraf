@@ -123,3 +123,14 @@ func TestWritesToDestination(t *testing.T) {
 	assertFieldValue(t, "test", "string_value", fields)
 	assertFieldValue(t, 1, "string_code", fields)
 }
+
+func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
+	field := "string_code"
+	mapper := EnumMapper{Mappings: []Mapping{{Field: "string_value", Dest: field, ValueMappings: map[string]interface{}{"other": int64(1)}}}}
+
+	fields := calculateProcessedValues(mapper, createTestMetric())
+
+	assertFieldValue(t, "test", "string_value", fields)
+	_, present := fields[field]
+	assert.False(t, present, "value of field '"+field+"' was present")
+}
