@@ -150,30 +150,35 @@ type metric struct {
 	additive   bool
 	samplerate float64
 	tags       map[string]string
+	tm         time.Time
 }
 
 type cachedset struct {
 	name   string
 	fields map[string]map[string]bool
 	tags   map[string]string
+	tm     time.Time
 }
 
 type cachedgauge struct {
 	name   string
 	fields map[string]interface{}
 	tags   map[string]string
+	tm     time.Time
 }
 
 type cachedcounter struct {
 	name   string
 	fields map[string]interface{}
 	tags   map[string]string
+	tm     time.Time
 }
 
 type cachedtimings struct {
 	name   string
 	fields map[string]RunningStats
 	tags   map[string]string
+	tm     time.Time
 }
 
 func (_ *Statsd) Description() string {
@@ -246,7 +251,6 @@ func (_ *Statsd) SampleConfig() string {
 func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
-	now := time.Now()
 
 	for _, m := range s.timings {
 		// Defining a template to parse field names for timers allows us to split
@@ -270,21 +274,21 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		acc.AddFields(m.name, fields, m.tags, now)
+		acc.AddFields(m.name, fields, m.tags, m.tm)
 	}
 	if s.DeleteTimings {
 		s.timings = make(map[string]cachedtimings)
 	}
 
 	for _, m := range s.gauges {
-		acc.AddGauge(m.name, m.fields, m.tags, now)
+		acc.AddGauge(m.name, m.fields, m.tags, m.tm)
 	}
 	if s.DeleteGauges {
 		s.gauges = make(map[string]cachedgauge)
 	}
 
 	for _, m := range s.counters {
-		acc.AddCounter(m.name, m.fields, m.tags, now)
+		acc.AddCounter(m.name, m.fields, m.tags, m.tm)
 	}
 	if s.DeleteCounters {
 		s.counters = make(map[string]cachedcounter)
@@ -295,7 +299,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		for field, set := range m.fields {
 			fields[field] = int64(len(set))
 		}
-		acc.AddFields(m.name, fields, m.tags, now)
+		acc.AddFields(m.name, fields, m.tags, m.tm)
 	}
 	if s.DeleteSets {
 		s.sets = make(map[string]cachedset)
@@ -499,7 +503,7 @@ func (s *Statsd) parser() error {
 				case s.DataDogExtensions && strings.HasPrefix(line, "_e"):
 					s.parseEventMessage(in.Time, line, in.Addr)
 				default:
-					s.parseStatsdLine(line)
+					s.parseStatsdLine(line, in.Time)
 				}
 			}
 		}
@@ -508,7 +512,7 @@ func (s *Statsd) parser() error {
 
 // parseStatsdLine will parse the given statsd line, validating it as it goes.
 // If the line is valid, it will be cached for the next call to Gather()
-func (s *Statsd) parseStatsdLine(line string) error {
+func (s *Statsd) parseStatsdLine(line string, tm time.Time) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -645,7 +649,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		tg = append(tg, m.name)
 		m.hash = strings.Join(tg, "")
 
-		s.aggregate(m)
+		s.aggregate(m, tm)
 	}
 
 	return nil
@@ -715,7 +719,7 @@ func parseKeyValue(keyvalue string) (string, string) {
 // aggregate takes in a metric. It then
 // aggregates and caches the current value(s). It does not deal with the
 // Delete* options, because those are dealt with in the Gather function.
-func (s *Statsd) aggregate(m metric) {
+func (s *Statsd) aggregate(m metric, tm time.Time) {
 	switch m.mtype {
 	case "ms", "h":
 		// Check if the measurement exists
@@ -727,6 +731,7 @@ func (s *Statsd) aggregate(m metric) {
 				tags:   m.tags,
 			}
 		}
+		cached.tm = tm
 		// Check if the field exists. If we've not enabled multiple fields per timer
 		// this will be the default field name, eg. "value"
 		field, ok := cached.fields[m.field]
@@ -746,14 +751,16 @@ func (s *Statsd) aggregate(m metric) {
 		s.timings[m.hash] = cached
 	case "c":
 		// check if the measurement exists
-		_, ok := s.counters[m.hash]
+		counter, ok := s.counters[m.hash]
 		if !ok {
-			s.counters[m.hash] = cachedcounter{
+			counter = cachedcounter{
 				name:   m.name,
 				fields: make(map[string]interface{}),
 				tags:   m.tags,
 			}
 		}
+		counter.tm = tm
+		s.counters[m.hash] = counter
 		// check if the field exists
 		_, ok = s.counters[m.hash].fields[m.field]
 		if !ok {
@@ -763,14 +770,16 @@ func (s *Statsd) aggregate(m metric) {
 			s.counters[m.hash].fields[m.field].(int64) + m.intvalue
 	case "g":
 		// check if the measurement exists
-		_, ok := s.gauges[m.hash]
+		gauge, ok := s.gauges[m.hash]
 		if !ok {
-			s.gauges[m.hash] = cachedgauge{
+			gauge = cachedgauge{
 				name:   m.name,
 				fields: make(map[string]interface{}),
 				tags:   m.tags,
 			}
 		}
+		gauge.tm = tm
+		s.gauges[m.hash] = gauge
 		// check if the field exists
 		_, ok = s.gauges[m.hash].fields[m.field]
 		if !ok {
@@ -784,14 +793,16 @@ func (s *Statsd) aggregate(m metric) {
 		}
 	case "s":
 		// check if the measurement exists
-		_, ok := s.sets[m.hash]
+		set, ok := s.sets[m.hash]
 		if !ok {
-			s.sets[m.hash] = cachedset{
+			set = cachedset{
 				name:   m.name,
 				fields: make(map[string]map[string]bool),
 				tags:   m.tags,
 			}
 		}
+		set.tm = tm
+		s.sets[m.hash] = set
 		// check if the field exists
 		_, ok = s.sets[m.hash].fields[m.field]
 		if !ok {

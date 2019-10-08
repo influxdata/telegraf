@@ -190,7 +190,7 @@ func TestParse_ValidLines(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -221,7 +221,7 @@ func TestParse_Gauges(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -299,7 +299,7 @@ func TestParse_Sets(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -356,7 +356,7 @@ func TestParse_Counters(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -416,7 +416,7 @@ func TestParse_Timings(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -446,7 +446,7 @@ func TestParseScientificNotation(t *testing.T) {
 		"scientific.notation:4.6968460083008E-5|h",
 	}
 	for _, line := range sciNotationLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line [%s] should not have resulted in error: %s\n", line, err)
 		}
@@ -468,7 +468,7 @@ func TestParse_InvalidLines(t *testing.T) {
 		"invalid.value:1d1|c",
 	}
 	for _, line := range invalidLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err == nil {
 			t.Errorf("Parsing line %s should have resulted in an error\n", line)
 		}
@@ -486,7 +486,7 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 	}
 
 	for _, line := range invalidLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -536,7 +536,7 @@ func TestParse_DefaultNameParsing(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -577,7 +577,7 @@ func TestParse_Template(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -619,7 +619,7 @@ func TestParse_TemplateFilter(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -661,7 +661,7 @@ func TestParse_TemplateSpecificity(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -709,7 +709,7 @@ func TestParse_TemplateFields(t *testing.T) {
 	}
 
 	for _, line := range lines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -854,6 +854,7 @@ func TestParse_Tags(t *testing.T) {
 }
 
 func TestParse_DataDogTags(t *testing.T) {
+	now := time.Now()
 	tests := []struct {
 		name     string
 		line     string
@@ -874,7 +875,7 @@ func TestParse_DataDogTags(t *testing.T) {
 					map[string]interface{}{
 						"value": 1,
 					},
-					time.Now(),
+					now,
 				),
 			},
 		},
@@ -891,7 +892,7 @@ func TestParse_DataDogTags(t *testing.T) {
 					map[string]interface{}{
 						"value": 10.1,
 					},
-					time.Now(),
+					now,
 				),
 			},
 		},
@@ -908,7 +909,7 @@ func TestParse_DataDogTags(t *testing.T) {
 					map[string]interface{}{
 						"value": 1,
 					},
-					time.Now(),
+					now,
 				),
 			},
 		},
@@ -931,7 +932,7 @@ func TestParse_DataDogTags(t *testing.T) {
 						"sum":    float64(30),
 						"upper":  float64(3),
 					},
-					time.Now(),
+					now,
 				),
 			},
 		},
@@ -947,7 +948,7 @@ func TestParse_DataDogTags(t *testing.T) {
 					map[string]interface{}{
 						"value": 42,
 					},
-					time.Now(),
+					now,
 				),
 			},
 		},
@@ -960,13 +961,13 @@ func TestParse_DataDogTags(t *testing.T) {
 			s := NewTestStatsd()
 			s.DataDogExtensions = true
 
-			err := s.parseStatsdLine(tt.line)
+			err := s.parseStatsdLine(tt.line, now)
 			require.NoError(t, err)
 			err = s.Gather(&acc)
 			require.NoError(t, err)
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
-				testutil.SortMetrics(), testutil.IgnoreTime())
+				testutil.SortMetrics())
 		})
 	}
 }
@@ -1041,7 +1042,7 @@ func TestParse_MeasurementsWithSameName(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -1094,14 +1095,14 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 	sMultiple := NewTestStatsd()
 
 	for _, line := range singleLines {
-		err := sSingle.parseStatsdLine(line)
+		err := sSingle.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
 	}
 
 	for _, line := range multipleLines {
-		err := sMultiple.parseStatsdLine(line)
+		err := sMultiple.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -1204,7 +1205,7 @@ func TestParse_TimingsMultipleFieldsWithTemplate(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -1255,7 +1256,7 @@ func TestParse_TimingsMultipleFieldsWithoutTemplate(t *testing.T) {
 	}
 
 	for _, line := range validLines {
-		err := s.parseStatsdLine(line)
+		err := s.parseStatsdLine(line, time.Now())
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 		}
@@ -1301,7 +1302,7 @@ func BenchmarkParse(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(line, time.Now())
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1326,7 +1327,7 @@ func BenchmarkParseWithTemplate(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(line, time.Now())
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1351,7 +1352,7 @@ func BenchmarkParseWithTemplateAndFilter(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(line, time.Now())
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1379,7 +1380,7 @@ func BenchmarkParseWith2TemplatesAndFilter(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(line, time.Now())
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1407,7 +1408,7 @@ func BenchmarkParseWith2Templates3TagsAndFilter(b *testing.B) {
 	}
 	for n := 0; n < b.N; n++ {
 		for _, line := range validLines {
-			err := s.parseStatsdLine(line)
+			err := s.parseStatsdLine(line, time.Now())
 			if err != nil {
 				b.Errorf("Parsing line %s should not have resulted in an error\n", line)
 			}
@@ -1422,7 +1423,7 @@ func TestParse_Timings_Delete(t *testing.T) {
 	var err error
 
 	line := "timing:100|ms"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine(line, time.Now())
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
@@ -1446,7 +1447,7 @@ func TestParse_Gauges_Delete(t *testing.T) {
 	var err error
 
 	line := "current.users:100|g"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine(line, time.Now())
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
@@ -1472,7 +1473,7 @@ func TestParse_Sets_Delete(t *testing.T) {
 	var err error
 
 	line := "unique.user.ids:100|s"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine(line, time.Now())
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
@@ -1498,7 +1499,7 @@ func TestParse_Counters_Delete(t *testing.T) {
 	var err error
 
 	line := "total.users:100|c"
-	err = s.parseStatsdLine(line)
+	err = s.parseStatsdLine(line, time.Now())
 	if err != nil {
 		t.Errorf("Parsing line %s should not have resulted in an error\n", line)
 	}
