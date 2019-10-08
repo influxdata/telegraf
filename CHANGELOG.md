@@ -19,6 +19,7 @@
 - [#6434](https://github.com/influxdata/telegraf/pull/6434): Use prefix base detection for ints in grok parser.
 - [#6465](https://github.com/influxdata/telegraf/pull/6465): Add more performance counter metrics to sqlserver input.
 - [#6476](https://github.com/influxdata/telegraf/pull/6476): Add millisecond unix time support to grok parser.
+- [#6473](https://github.com/influxdata/telegraf/pull/6473): Add container id as optional source tag to docker and docker_log input.
 
 ## v1.12.3 [2019-10-07]
 
