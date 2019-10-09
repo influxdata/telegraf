@@ -301,3 +301,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  version = "0.7.0"
+  name = "github.com/Azure/azure-storage-blob-go"
