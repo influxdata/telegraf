@@ -49,7 +49,7 @@ var sampleConfig = `
   ## City ID's to collect weather data from.
   city_id = ["5391959"]
 
-  ## Language of the description.  See https://openweathermap.org/current#multi for language values.
+  ## Language of the description field.
   lang = "en"
 
   ## APIs to fetch; can contain "weather" or "forecast".
@@ -285,28 +285,31 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 }
 
 func gatherForecast(acc telegraf.Accumulator, status *Status) {
-	tags := map[string]string{
-		"city_id":  strconv.FormatInt(status.City.Id, 10),
-		"forecast": "*",
-		"city":     status.City.Name,
-		"country":  status.City.Country,
-	}
 	for i, e := range status.List {
 		tm := time.Unix(e.Dt, 0)
+		fields := map[string]interface{}{
+			"cloudiness":   e.Clouds.All,
+			"humidity":     e.Main.Humidity,
+			"pressure":     e.Main.Pressure,
+			"rain":         e.Rain.Rain3,
+			"temperature":  e.Main.Temp,
+			"wind_degrees": e.Wind.Deg,
+			"wind_speed":   e.Wind.Speed,
+		}
+		tags := map[string]string{
+			"city_id":  strconv.FormatInt(status.City.Id, 10),
+			"forecast": "*",
+			"city":     status.City.Name,
+			"country":  status.City.Country,
+		}
+		if len(e.Weather) > 0 {
+			fields["condition_description"] = e.Weather[0].Description
+			fields["condition_icon"] = e.Weather[0].Icon
+			tags["condition_id"] = strconv.FormatInt(e.Weather[0].ID, 10)
+			tags["condition_main"] = e.Weather[0].Main
+		}
 		tags["forecast"] = fmt.Sprintf("%dh", (i+1)*3)
-		acc.AddFields(
-			"weather",
-			map[string]interface{}{
-				"cloudiness":   e.Clouds.All,
-				"humidity":     e.Main.Humidity,
-				"pressure":     e.Main.Pressure,
-				"rain":         e.Rain.Rain3,
-				"temperature":  e.Main.Temp,
-				"wind_degrees": e.Wind.Deg,
-				"wind_speed":   e.Wind.Speed,
-			},
-			tags,
-			tm)
+		acc.AddFields("weather", fields, tags, tm)
 	}
 }
 
@@ -324,8 +327,6 @@ func init() {
 }
 
 func (n *OpenWeatherMap) formatURL(path string, city string) string {
-
-	//u, err := url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s&units=%s&lang=%s", city, n.AppId, units, n.Lang))
 	v := url.Values{
 		"id":    []string{city},
 		"APPID": []string{n.AppId},
