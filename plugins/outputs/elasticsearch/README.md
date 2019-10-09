@@ -1,6 +1,6 @@
 # Elasticsearch Output Plugin
 
-This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (<http://olivere.github.io/elastic/).>
+This plugin writes to [Elasticsearch](https://www.elastic.co) via HTTP using Elastic (<http://olivere.github.io/elastic>).
 
 It supports Elasticsearch releases from 5.x up to 7.x.
 
