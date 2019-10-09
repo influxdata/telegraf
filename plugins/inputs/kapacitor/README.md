@@ -2,7 +2,7 @@
 
 The Kapacitor plugin will collect metrics from the given Kapacitor instances.
 
-### Configuration:
+## Configuration:
 
 ```toml
 [[inputs.kapacitor]]
@@ -23,65 +23,314 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
   # insecure_skip_verify = false
 ```
 
-### Measurements & Fields
+## Measurements & Fields
 
-- kapacitor
-    - num_enabled_tasks, integer
-    - num_subscriptions, integer
-    - num_tasks, integer
-- kapacitor_edges
-    - collected, integer
-    - emitted, integer
-- kapacitor_ingress
-    - points_received, integer
-- kapacitor_memstats
-    - alloc_bytes, integer
-    - buck_hash_sys_bytes, integer
-    - frees, integer
-    - gcc_pu_fraction, float
-    - gc_sys_bytes, integer
-    - heap_alloc_bytes, integer
-    - heap_idle_bytes, integer
-    - heap_inuse_bytes, integer
-    - heap_objects, integer
-    - heap_released_bytes, integer
-    - heap_sys_bytes, integer
-    - last_gc_ns, integer
-    - lookups, integer
-    - mallocs, integer
-    - mcache_in_use_bytes, integer
-    - mcache_sys_bytes, integer
-    - mspan_in_use_bytes, integer
-    - mspan_sys_bytes, integer
-    - next_gc_ns, integer
-    - num_gc, integer
-    - other_sys_bytes, integer
-    - pause_total_ns, integer
-    - stack_in_use_bytes, integer
-    - stack_sys_bytes, integer
-    - sys_bytes, integer
-    - total_alloc_bytes, integer
-- kapacitor_nodes
-    - alerts_triggered, integer
-    - avg_exec_time_ns, integer
-    - batches_queried, integer
-    - crits_triggered, integer
-    - eval_errors, integer
-    - fields_defaulted, integer
-    - infos_triggered, integer
-    - oks_triggered, integer
-    - points_queried, integer
-    - points_written, integer
-    - query_errors, integer
-    - tags_defaulted, integer
-    - warns_triggered, integer
-    - write_errors, integer
+---
+
+### kapacitor
+The `kapacitor` measurement stores fields with information about [Kapacitor
+tasks](https://docs.influxdata.com/kapacitor/latest/introduction/getting-started/#kapacitor-tasks)
+and [subscriptions](https://docs.influxdata.com/kapacitor/latest/administration/subscription-management/).
+
+- [num_enabled_tasks](#num_enabled_tasks)
+- [num_subscriptions](#num_subscriptions)
+- [num_tasks](#num_tasks)
+
+##### num_enabled_tasks
+The number of enabled Kapacitor tasks.  
+**Data type:** integer
+
+##### num_subscriptions
+The number of Kapacitor/InfluxDB subscriptions.  
+**Data type:** integer
+
+##### num_tasks
+The total number of Kapacitor tasks.  
+**Data type:** integer
+
+---
+
+### kapacitor_edges
+The `kapacitor_edges` measurement stores fields with information related to
+[edges](https://docs.influxdata.com/kapacitor/v1.5/tick/introduction/#pipelines)
+in Kapacitor TICKscripts.
+
+- [collected](#collected)
+- [emitted](#emitted)
+
+##### collected
+The number of messages collected by TICKscript edges.  
+**Data type:** integer
+
+##### emitted
+The number of messages emitted by TICKscript edges.  
+**Data type:** integer
+
+---
+
+### kapacitor_ingress
+The `kapacitor_ingress` measurement stores fields with information about data
+coming into Kapacitor.
+
+- [points_received](#points_received)
+
+##### points_received
+The number of points received by Kapacitor.  
+**Data type:** integer
+
+---
+
+### kapacitor_memstats
+The `kapacitor_memstats` measurement stores fields related to Kapacitor memory usage.
+
+- [alloc_bytes](#alloc_bytes)
+- [buck_hash_sys_bytes](#buck_hash_sys_bytes)
+- [frees](#frees)
+- [gc_cpu_fraction](#gc_cpu_fraction)
+- [gc_sys_bytes](#gc_sys_bytes)
+- [heap_alloc_bytes](#heap_alloc_bytes)
+- [heap_idle_bytes](#heap_idle_bytes)
+- [heap_inuse_bytes](#heap_inuse_bytes)
+- [heap_objects](#heap_objects)
+- [heap_released_bytes](#heap_released_bytes)
+- [heap_sys_bytes](#heap_sys_bytes)
+- [last_gc_ns](#last_gc_ns)
+- [lookups](#lookups)
+- [mallocs](#mallocs)
+- [mcache_in_use_bytes](#mcache_in_use_bytes)
+- [mcache_sys_bytes](#mcache_sys_bytes)
+- [mspan_in_use_bytes](#mspan_in_use_bytes)
+- [mspan_sys_bytes](#mspan_sys_bytes)
+- [next_gc_ns](#next_gc_ns)
+- [num_gc](#num_gc)
+- [other_sys_bytes](#other_sys_bytes)
+- [pause_total_ns](#pause_total_ns)
+- [stack_in_use_bytes](#stack_in_use_bytes)
+- [stack_sys_bytes](#stack_sys_bytes)
+- [sys_bytes](#sys_bytes)
+- [total_alloc_bytes](#total_alloc_bytes)
+
+##### alloc_bytes
+The number of bytes of memory allocated by Kapacitor that are still in use.  
+**Data type:** integer
+
+##### buck_hash_sys_bytes
+The number of bytes of memory used by the profiling bucket hash table.  
+**Data type:** integer
+
+##### frees
+The number of heap objects freed.  
+**Data type:** integer
+
+##### gc_cpu_fraction
+The fraction of Kapacitor's available CPU time used by garbage collection since
+Kapacitor started.  
+**Data type:** float
+
+##### gc_sys_bytes
+The number of bytes of memory used for garbage collection system metadata.  
+**Data type:** integer
+
+##### heap_alloc_bytes
+The number of reachable and unreachable heap objects garbage collection has
+not freed.  
+**Data type:** integer
+
+##### heap_idle_bytes
+The number of heap bytes waiting to be used.  
+**Data type:** integer
+
+##### heap_inuse_bytes
+The number of heap bytes in use.  
+**Data type:** integer
+
+##### heap_objects
+The number of allocated objects.  
+**Data type:** integer
+
+##### heap_released_bytes
+The number of heap bytes released to the operating system.  
+**Data type:** integer
+
+##### heap_sys_bytes
+The number of heap bytes obtained from `system`.  
+**Data type:** integer
+
+##### last_gc_ns
+The nanosecond epoch time of the last garbage collection.
+**Data type:** integer
+
+##### lookups
+The total number of pointer lookups.  
+**Data type:** integer
+
+##### mallocs
+The total number of mallocs.
+**Data type:** integer
+
+##### mcache_in_use_bytes
+The number of bytes in use by mcache structures.  
+**Data type:** integer
+
+##### mcache_sys_bytes
+The number of bytes used for mcache structures obtained from `system`.  
+**Data type:** integer
+
+##### mspan_in_use_bytes
+The number of bytes in use by mspan structures.  
+**Data type:** integer
+
+##### mspan_sys_bytes
+The number of bytes used for mspan structures obtained from `system`.  
+**Data type:** integer
+
+##### next_gc_ns
+The nanosecond epoch time of the next garbage collection.  
+**Data type:** integer
+
+##### num_gc
+The number of completed garbage collection cycles.  
+**Data type:** integer
+
+##### other_sys_bytes
+The number of bytes used for other system allocations.  
+**Data type:** integer
+
+##### pause_total_ns
+The totoal number of nanoseconds spent in garbage collection "stop-the-world"
+pauses since Kapacitor started.  
+**Data type:** integer
+
+##### stack_in_use_bytes
+The number of bytes in use by the stack allocator.  
+**Data type:** integer
+
+##### stack_sys_bytes
+The number of bytes obtained from `system` for stack allocator.  
+**Data type:** integer
+
+##### sys_bytes
+The number of bytes of memory obtained from `system`.  
+**Data type:** integer
+
+##### total_alloc_bytes
+The total number of bytes allocated, even if freed.  
+**Data type:** integer
+
+---
+
+### kapacitor_nodes
+The `kapacitor_nodes` measurement stores fields related to events that occur in
+[TICKscript nodes](https://docs.influxdata.com/kapacitor/latest/nodes/).
+
+- [alerts_triggered](#alerts_triggered)
+- [avg_exec_time_ns](#avg_exec_time_ns)
+- [batches_queried](#batches_queried)
+- [crits_triggered](#crits_triggered)
+- [cooldown_drops](#cooldown_drops)
+- [decrease_events](#decrease_events)
+- [eval_errors](#eval_errors)
+- [fields_defaulted](#fields_defaulted)
+- [fields_deleted](#fields_deleted)
+- [infos_triggered](#infos_triggered)
+- [increase_events](#increase_events)
+- [oks_triggered](#oks_triggered)
+- [points_queried](#points_queried)
+- [points_written](#points_written)
+- [query_errors](#query_errors)
+- [tags_defaulted](#tags_defaulted)
+- [tags_deleted](#tags_deleted)
+- [warns_triggered](#warns_triggered)
+- [write_errors](#write_errors)
+
+##### alerts_triggered
+The total number of alerts triggered by TICKscripts.  
+**Data type:** integer
+
+##### avg_exec_time_ns
+The average execution time of TICKscripts in nanoseconds.  
+**Data type:** integer
+
+##### batches_queried
+The number of batches returned from queries.  
+**Data type:** integer
+
+##### crits_triggered
+The number of critical (`crit`) alerts triggered by TICKscripts.  
+**Data type:** integer
+
+##### cooldown_drops
+The number of times an autoscale event was dropped because of a cooldown timer.  
+**Data type:** integer
+
+##### decrease_events
+The number of times an "autoscale" node decreased the replica count.  
+**Data type:** integer
+
+##### eval_errors
+The number of evaluation errors caused by
+[`eval` nodes](https://docs.influxdata.com/kapacitor/latest/nodes/eval_node/)
+expressions in TICKscripts.  
+**Data type:** integer
+
+##### fields_defaulted
+The number of missing fields.  
+**Data type:** integer
+
+##### fields_deleted
+The number of fields deleted from points.
+Kapacitor only increments the delete count if the field already existed.  
+**Data type:** integer
+
+##### infos_triggered
+The number of info (`info`) alerts triggered by TICKscripts.  
+**Data type:** integer
+
+##### increase_events
+The number of times an "autoscale" node increased the replica count.  
+**Data type:** integer
+
+##### oks_triggered
+The number of ok (`ok`) alerts triggered by TICKscripts.  
+**Data type:** integer
+
+##### points_queried
+The total number of points in batches.  
+**Data type:** integer
+
+##### points_written
+The number of points written to InfluxDB or back to Kapacitor.
+**Data type:** integer
+
+##### query_errors
+The number of errors when querying.
+**Data type:** integer
+
+##### tags_defaulted
+The number of missing tags.  
+**Data type:** integer
+
+##### tags_deleted
+The number of tags deleted from points.
+Kapacitor only increments the delete count if the tag already existed.  
+**Data type:** integer
+
+##### warns_triggered
+The number of warning (`warn`) alerts triggered by TICKscripts.  
+**Data type:** integer
+
+##### write_errors
+The number of errors that occurred when writing to InfluxDB or to a given Kafka
+topic and cluster.  
+**Data type:** integer
+
+---
 
 *Note:* The Kapacitor variables `host`, `cluster_id`, and `server_id`
 are currently not recorded due to the potential high cardinality of
 these values.
 
-### Example Output:
+## Example Output
 
 ```
 $ telegraf --config /etc/telegraf.conf --input-filter kapacitor --test
