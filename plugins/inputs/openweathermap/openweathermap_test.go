@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -277,7 +278,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
+		SiteURL: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
 		Fetch:   []string{"weather", "forecast"},
@@ -352,7 +353,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
+		SiteURL: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
 		Fetch:   []string{"weather"},
@@ -368,22 +369,26 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "2988507",
-				"forecast": "*",
-				"city":     "Paris",
-				"country":  "FR",
+				"city_id":        "2988507",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
 			},
 			map[string]interface{}{
-				"cloudiness":   int64(0),
-				"humidity":     int64(87),
-				"pressure":     1007.0,
-				"temperature":  9.25,
-				"rain":         0.0,
-				"sunrise":      int64(1544167818000000000),
-				"sunset":       int64(1544198047000000000),
-				"wind_degrees": 290.0,
-				"wind_speed":   8.7,
-				"visibility":   10000,
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  0.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
 			},
 			time.Unix(1544194800, 0),
 		),
@@ -408,7 +413,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl: ts.URL,
+		SiteURL: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"524901", "703448", "2643743"},
 		Fetch:   []string{"weather"},
@@ -424,66 +429,78 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "524901",
-				"forecast": "*",
-				"city":     "Moscow",
-				"country":  "RU",
+				"city_id":        "524901",
+				"forecast":       "*",
+				"city":           "Moscow",
+				"country":        "RU",
+				"condition_id":   "802",
+				"condition_main": "Clouds",
 			},
 			map[string]interface{}{
-				"cloudiness":   40,
-				"humidity":     int64(46),
-				"pressure":     1014.0,
-				"temperature":  9.57,
-				"wind_degrees": 60.0,
-				"wind_speed":   5.0,
-				"rain":         0.0,
-				"sunrise":      int64(1556416455000000000),
-				"sunset":       int64(1556470779000000000),
-				"visibility":   10000,
+				"cloudiness":            40,
+				"humidity":              int64(46),
+				"pressure":              1014.0,
+				"temperature":           9.57,
+				"wind_degrees":          60.0,
+				"wind_speed":            5.0,
+				"rain":                  0.0,
+				"sunrise":               int64(1556416455000000000),
+				"sunset":                int64(1556470779000000000),
+				"visibility":            10000,
+				"condition_description": "scattered clouds",
+				"condition_icon":        "03d",
 			},
 			time.Unix(1556444155, 0),
 		),
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "703448",
-				"forecast": "*",
-				"city":     "Kiev",
-				"country":  "UA",
+				"city_id":        "703448",
+				"forecast":       "*",
+				"city":           "Kiev",
+				"country":        "UA",
+				"condition_id":   "520",
+				"condition_main": "Rain",
 			},
 			map[string]interface{}{
-				"cloudiness":   0,
-				"humidity":     int64(63),
-				"pressure":     1009.0,
-				"temperature":  19.29,
-				"wind_degrees": 0.0,
-				"wind_speed":   1.0,
-				"rain":         0.0,
-				"sunrise":      int64(1556419155000000000),
-				"sunset":       int64(1556471486000000000),
-				"visibility":   10000,
+				"cloudiness":            0,
+				"humidity":              int64(63),
+				"pressure":              1009.0,
+				"temperature":           19.29,
+				"wind_degrees":          0.0,
+				"wind_speed":            1.0,
+				"rain":                  0.0,
+				"sunrise":               int64(1556419155000000000),
+				"sunset":                int64(1556471486000000000),
+				"visibility":            10000,
+				"condition_description": "light intensity shower rain",
+				"condition_icon":        "09d",
 			},
 			time.Unix(1556444155, 0),
 		),
 		testutil.MustMetric(
 			"weather",
 			map[string]string{
-				"city_id":  "2643743",
-				"forecast": "*",
-				"city":     "London",
-				"country":  "GB",
+				"city_id":        "2643743",
+				"forecast":       "*",
+				"city":           "London",
+				"country":        "GB",
+				"condition_id":   "803",
+				"condition_main": "Clouds",
 			},
 			map[string]interface{}{
-				"cloudiness":   75,
-				"humidity":     int64(66),
-				"pressure":     1019.0,
-				"temperature":  10.62,
-				"wind_degrees": 290.0,
-				"wind_speed":   6.2,
-				"rain":         0.072,
-				"sunrise":      int64(1556426319000000000),
-				"sunset":       int64(1556479032000000000),
-				"visibility":   10000,
+				"cloudiness":            75,
+				"humidity":              int64(66),
+				"pressure":              1019.0,
+				"temperature":           10.62,
+				"wind_degrees":          290.0,
+				"wind_speed":            6.2,
+				"rain":                  0.072,
+				"sunrise":               int64(1556426319000000000),
+				"sunset":                int64(1556479032000000000),
+				"visibility":            10000,
+				"condition_description": "broken clouds",
+				"condition_icon":        "04d",
 			},
 			time.Unix(1556444155, 0),
 		),
@@ -491,4 +508,23 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 	testutil.RequireMetricsEqual(t,
 		expected, acc.GetTelegrafMetrics(),
 		testutil.SortMetrics())
+}
+
+func TestFormatURL(t *testing.T) {
+	b, _ := url.Parse("http://foo.com")
+	n := &OpenWeatherMap{
+		AppId:   "appid",
+		Units:   "units",
+		Lang:    "lang",
+		baseURL: b,
+	}
+
+	t.Run("path 1", func(t *testing.T) {
+		s := n.formatURL("/data/2.5/forecast", "12345")
+		if want := "http://foo.com/data/2.5/forecast?APPID=appid&id=12345&lang=lang&units=units"; s != want {
+			t.Errorf("FormatOwnUrl: got %s, want %s", s, want)
+		}
+	})
+
+	//t.Errorf("bad things happened")
 }
