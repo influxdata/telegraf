@@ -65,7 +65,7 @@ func (wb *Webhooks) SampleConfig() string {
     path = "/rollbar"
 
   [inputs.webhooks.papertrail]
-	path = "/papertrail"
+    path = "/papertrail"
   
   [inputs.webhooks.plex]
     path = "/plex"
