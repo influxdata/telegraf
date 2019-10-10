@@ -6,19 +6,15 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
+	"os"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
-
-var metricsCache []telegraf.Metric
-var timeOfPreviousFlush time.Time
-var blobService azblob.ServiceURL
-var blobContainerService azblob.ContainerURL
 
 const (
 	blobFormatString = `https://%s.blob.core.windows.net`
@@ -32,10 +28,17 @@ type AzureBlob struct {
 	BlobContainerName string `toml:"blobContainerName"`
 	FlushInterval     int    `toml:"flushInterval"`
 	MachineName       string `toml:"machineName"`
+
+	serializer           serializers.Serializer
+	metricsCache         []telegraf.Metric
+	timeOfPreviousFlush  time.Time
+	blobService          azblob.ServiceURL
+	blobContainerService azblob.ContainerURL
 }
 
 // Connect to the Output
 func (s *AzureBlob) Connect() error {
+	// authenticate and create a pipeline
 	c, err := azblob.NewSharedKeyCredential(s.BlobAccount, s.BlobAccountKey)
 	if err != nil {
 		return err
@@ -45,80 +48,81 @@ func (s *AzureBlob) Connect() error {
 	if err != nil {
 		return err
 	}
-	blobService = azblob.NewServiceURL(*u, p)
-	blobContainerService = blobService.NewContainerURL(s.BlobContainerName)
+	// create Azure Blob services
+	s.blobService = azblob.NewServiceURL(*u, p)
+	s.blobContainerService = s.blobService.NewContainerURL(s.BlobContainerName)
 
-	err = createContainerIfNotExists(context.TODO(), s.BlobContainerName)
+	err = s.createContainerIfNotExists(context.TODO())
 	if err != nil {
 		return err
 	}
 
 	// setting time to an initial value
-	timeOfPreviousFlush = time.Now()
+	s.timeOfPreviousFlush = time.Now()
+	// setting hostname to an initial value
+	if s.MachineName == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			return err
+		}
+		s.MachineName = hostname
+	}
+	// setting format to an initial value
 	return nil
+}
+
+func (s *AzureBlob) SetSerializer(serializer serializers.Serializer) {
+	s.serializer = serializer
 }
 
 // Close any connections to the Output
 func (s *AzureBlob) Close() error {
 	fmt.Println("Close message received. Synchronously flushing saved events")
-
-	tempCache := make([]telegraf.Metric, len(metricsCache))
-	copy(tempCache, metricsCache)
-	s.flushMetricsMemoryCacheToAzureBlob(tempCache)
-
-	return nil
+	err := s.flushMetricsCacheToAzureBlob()
+	return err
 }
 
 // Write takes in group of points to be written to the Output
 func (s *AzureBlob) Write(metrics []telegraf.Metric) error {
 	fmt.Printf("Write %d\n", len(metrics))
 
-	metricsCache = append(metricsCache, metrics...)
+	s.metricsCache = append(s.metricsCache, metrics...)
 
-	if time.Now().Sub(timeOfPreviousFlush) < time.Duration(s.FlushInterval)*time.Second {
+	// check if it is time to flush all cached metrics
+	if time.Now().Sub(s.timeOfPreviousFlush) < time.Duration(s.FlushInterval)*time.Second {
 		return nil
 	}
 
-	tempCache := make([]telegraf.Metric, len(metricsCache))
-	copy(tempCache, metricsCache)
-	s.flushMetricsMemoryCacheToAzureBlob(tempCache)
-	metricsCache = nil
-
-	timeOfPreviousFlush = time.Now()
-
+	err := s.flushMetricsCacheToAzureBlob()
+	s.timeOfPreviousFlush = time.Now()
+	if err != nil {
+		return err
+	}
+	// we'll empty the cache only if the createBlob operation succeeded
+	s.metricsCache = nil
 	return nil
 }
 
-func (s *AzureBlob) flushMetricsCacheToAzureBlob(cache []telegraf.Metric) {
+func (s *AzureBlob) flushMetricsCacheToAzureBlob() error {
+	bytes, err := s.serializer.SerializeBatch(s.metricsCache)
 
-}
-
-func (s *AzureBlob) flushMetricsMemoryCacheToAzureBlob(cache []telegraf.Metric) {
-	fmt.Printf("Flush %d\n", len(cache))
-
-	var str strings.Builder
-	for _, metric := range cache {
-		_, err := str.WriteString(fmt.Sprintf("%v\n", metric))
-		if err != nil {
-			fmt.Printf("error creating string in flush because: %s. Recovering...\n", err)
-		}
-	}
-
-	if len(cache) == 0 {
+	if len(s.metricsCache) == 0 {
 		fmt.Println("0 items in cache - will not write anything")
-		return
+		return nil
 	}
 
-	// format is endDate-startDate-machineName.txt
-	blobName := fmt.Sprintf("%s-%s-%s.zip", cache[len(cache)-1].Time().Format(timeFormatString),
-		cache[0].Time().Format(timeFormatString), s.MachineName)
+	// format is endDateTime-startDateTime-machineName.zip
+	blobName := fmt.Sprintf("%s-%s-%s.zip", s.metricsCache[len(s.metricsCache)-1].Time().Format(timeFormatString),
+		s.metricsCache[0].Time().Format(timeFormatString), s.MachineName)
 
-	_, err := s.createBlockBlob(context.TODO(), blobName, str.String())
+	_, err = s.createBlockBlob(context.TODO(), blobName, bytes)
 	if err != nil {
-		fmt.Printf("error writing to blob because of %s\n", err)
-	} else {
-		fmt.Printf("Blob named %s written successfully\n", blobName)
+		return fmt.Errorf("error creating blob: %s", err)
 	}
+
+	fmt.Printf("blob '%s' written successfully\n", blobName)
+	return nil
+
 }
 
 func init() {
@@ -126,14 +130,13 @@ func init() {
 }
 
 func (s *AzureBlob) getBlockBlobURL(ctx context.Context, blobName string) azblob.BlockBlobURL {
-	blob := blobContainerService.NewBlockBlobURL(blobName)
+	blob := s.blobContainerService.NewBlockBlobURL(blobName)
 	return blob
 }
 
-func (s *AzureBlob) createBlockBlob(ctx context.Context, blobName string, data string) (azblob.BlockBlobURL, error) {
+func (s *AzureBlob) createBlockBlob(ctx context.Context, blobName string, byteString []byte) (azblob.BlockBlobURL, error) {
 	b := s.getBlockBlobURL(ctx, blobName)
-
-	compressedData, err := compressString(data)
+	compressedData, err := compressBytes(byteString)
 
 	if err != nil {
 		return azblob.BlockBlobURL{}, err
@@ -144,8 +147,8 @@ func (s *AzureBlob) createBlockBlob(ctx context.Context, blobName string, data s
 		//strings.NewReader(data),
 		bytes.NewReader(compressedData),
 		azblob.BlobHTTPHeaders{
-			//ContentType: "text/plain",
 			ContentType: "application/octet-stream",
+			//ContentType: "text/plain",
 		},
 		azblob.Metadata{},
 		azblob.BlobAccessConditions{},
@@ -154,10 +157,10 @@ func (s *AzureBlob) createBlockBlob(ctx context.Context, blobName string, data s
 	return b, err
 }
 
-func compressString(data string) ([]byte, error) {
+func compressBytes(byteString []byte) ([]byte, error) {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
-	if _, err := gz.Write([]byte(data)); err != nil {
+	if _, err := gz.Write(byteString); err != nil {
 		return nil, err
 	}
 	if err := gz.Close(); err != nil {
@@ -184,33 +187,38 @@ func (s *AzureBlob) SampleConfig() string {
 	# flushInterval = 300
 	## Machine name that is sending the data
 	# machineName = "myhostname"
+	## Data format to output.
+	## Each data format has its own unique set of configuration options, read
+	## more about them here:
+	## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+	data_format = "json"
 	`
 }
 
-func createContainerIfNotExists(ctx context.Context, blobContainerName string) error {
-	exists, err := checkIfContainerExists(ctx, blobContainerName)
+func (s *AzureBlob) createContainerIfNotExists(ctx context.Context) error {
+	exists, err := s.checkIfContainerExists(ctx)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		resp, err := blobContainerService.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
+		resp, err := s.blobContainerService.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Container %s creation status code %d\n", blobContainerName, resp.StatusCode())
+		fmt.Printf("Container %s creation status code %d\n", s.BlobContainerName, resp.StatusCode())
 	}
 	return nil
 }
 
-func checkIfContainerExists(ctx context.Context, blobContainerName string) (bool, error) {
-	resp, err := blobService.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{
-		Prefix: blobContainerName,
+func (s *AzureBlob) checkIfContainerExists(ctx context.Context) (bool, error) {
+	resp, err := s.blobService.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{
+		Prefix: s.BlobContainerName,
 	})
 	if err != nil {
 		return false, err
 	}
 	for _, containerItem := range resp.ContainerItems {
-		if containerItem.Name == blobContainerName {
+		if containerItem.Name == s.BlobContainerName {
 			return true, nil
 		}
 	}
