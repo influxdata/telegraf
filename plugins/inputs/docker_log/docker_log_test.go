@@ -98,6 +98,7 @@ func Test(t *testing.T) {
 						"container_image":   "influxdata/telegraf",
 						"container_version": "1.11.0",
 						"stream":            "tty",
+						"source":            "deadbeef",
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
@@ -141,6 +142,7 @@ func Test(t *testing.T) {
 						"container_image":   "influxdata/telegraf",
 						"container_version": "1.11.0",
 						"stream":            "stdout",
+						"source":            "deadbeef",
 					},
 					map[string]interface{}{
 						"container_id": "deadbeef",
@@ -155,9 +157,10 @@ func Test(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			plugin := &DockerLogs{
-				Timeout:       internal.Duration{Duration: time.Second * 5},
-				newClient:     func(string, *tls.Config) (Client, error) { return tt.client, nil },
-				containerList: make(map[string]context.CancelFunc),
+				Timeout:          internal.Duration{Duration: time.Second * 5},
+				newClient:        func(string, *tls.Config) (Client, error) { return tt.client, nil },
+				containerList:    make(map[string]context.CancelFunc),
+				IncludeSourceTag: true,
 			}
 
 			err := plugin.Init()
