@@ -37,6 +37,9 @@ $ sudo service telegraf start
   [inputs.webhooks.papertrail]
     path = "/papertrail"
 
+  [inputs.webhooks.plex]
+    path = "/plex"
+
   [inputs.webhooks.particle]
     path = "/particle"
 ```
@@ -49,6 +52,7 @@ $ sudo service telegraf start
 - [Mandrill](mandrill/)
 - [Rollbar](rollbar/)
 - [Papertrail](papertrail/)
+- [Plex](plex/)
 - [Particle](particle/)
 
 
