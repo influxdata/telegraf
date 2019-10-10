@@ -15,19 +15,23 @@ import (
 // Qsys_QRC holds configuration for the plugin
 type Qsys_QRC struct {
 	// Q-SYS core to target
-	Core string
+	Server string
+	NamedControls []string `toml:"named_controls"`
 
 	client net.Conn
 }
 
 // Description will appear directly above the plugin definition in the config file
 func (m *Qsys_QRC) Description() string {
-	return `Retrieve Named Controls from a QSC Q-SYS core`
+	return `Retrieve Named Controls and status from a QSC Q-SYS core`
 }
 
 var exampleConfig = `
   ## Specify the core address and port
-  core = "localhost:1710"
+  server = "localhost:1710"
+
+  ## If desired, an array of named controls can be collected
+  # named_controls = []
 `
 
 // SampleConfig will populate the sample configuration portion of the plugin's configuration
@@ -36,8 +40,7 @@ func (m *Qsys_QRC) SampleConfig() string {
 }
 
 func (m *Qsys_QRC) init(acc telegraf.Accumulator) error {
-
-	client, connerr := net.Dial("tcp", m.Core)
+	client, connerr := net.Dial("tcp", m.Server)
 	if connerr != nil {
 		return connerr
 	}
@@ -56,16 +59,29 @@ func (m *Qsys_QRC) Gather(acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
+
 	status, statuserr := m.queryStatus()
 	if statuserr != nil {
 		acc.AddError(statuserr)
-	} else {
-		tags["server"] = m.Core
-		fields["state"] = status.State
-		fields["design"] = status.DesignName
-		fields["status"] = status.Status.String
-		acc.AddFields("qsys", fields, tags)
+		return statuserr
 	}
+	tags["server"] = m.Server
+	tags["platform"] = status.Platform
+	tags["design"] = status.DesignName
+
+	fields["state"] = status.State
+	fields["status"] = status.Status.String
+
+	controls, controlerr := m.gatherControls()
+	if controlerr != nil {
+		acc.AddError(controlerr)
+		return controlerr
+	}
+	for _, control := range controls {
+		fields[control.Name] = control.Value
+	}
+
+	acc.AddFields("qsys", fields, tags)
 	return nil
 }
 
@@ -115,13 +131,33 @@ func (m *Qsys_QRC) makeRPCCall(request *JSONRPC) ([]byte, error) {
 	}
 }
 
+func (m *Qsys_QRC) gatherControls() ([]ControlValue, error) {
+	request := JSONRPC{
+		Version: "2.0",
+		Method:  "Control.Get",
+		Params:  m.NamedControls,
+	}
+	replyString, rpcerror := m.makeRPCCall(&request)
+	var reply ControlGetReply
+	if rpcerror != nil {
+		return reply.Result, rpcerror
+	}
+	jsonerr := json.Unmarshal(replyString, &reply)
+	if jsonerr != nil {
+		fmt.Printf("Error unmarshaling JSON: %s", jsonerr)
+		return reply.Result, jsonerr
+	}
+	if reply.Error.Code != 0 {
+		return reply.Result, errors.New(reply.Error.Message)
+	}
+	return reply.Result, nil
+}
+
 func (m *Qsys_QRC) queryStatus() (EngineStatusReplyData, error) {
-	id := rand.Int31()
 	request := JSONRPC{
 		Version: "2.0",
 		Method:  "StatusGet",
 		Params:  0,
-		ID:      id,
 	}
 	replyString, rpcerror := m.makeRPCCall(&request)
 	var reply EngineStatusReply
