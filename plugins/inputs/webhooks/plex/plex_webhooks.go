@@ -2,7 +2,6 @@ package plex
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -22,21 +21,15 @@ func (p *PlexWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 }
 
 func (p *PlexWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	e, err := generateEvent(data, &PlexWebhookEvent{})
+	r.ParseMultipartForm(1 << 20)
+	e, err := generateEvent([]byte(r.Form["payload"][0]), &PlexWebhookEvent{})
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if e != nil {
 		newMetric := e.NewMetric()
-		p.acc.AddFields("github_webhooks", newMetric.Fields(), newMetric.Tags(), newMetric.Time())
+		p.acc.AddFields("plex_webhooks", newMetric.Fields(), newMetric.Tags(), newMetric.Time())
 	}
 	w.WriteHeader(http.StatusOK)
 }
