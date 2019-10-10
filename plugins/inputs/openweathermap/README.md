@@ -67,9 +67,9 @@ condition ID, icon, and main is at [weather conditions][].
 ### Example Output
 
 ```
-> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=*,host=debian cloudiness=1i,condition_description="clear sky",condition_icon="01d",humidity=35i,pressure=1012,rain=0,sunrise=1570630329000000000i,sunset=1570671689000000000i,temperature=21.52,visibility=16093i,wind_degrees=280,wind_speed=5.7 1570659256000000000
-> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=3h,host=debian cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=41i,pressure=1010,rain=0,temperature=22.34,wind_degrees=249.393,wind_speed=2.085 1570665600000000000
-> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=6h,host=debian cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=50i,pressure=1012,rain=0,temperature=17.09,wind_degrees=310.754,wind_speed=3.009 1570676400000000000
+> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=* cloudiness=1i,condition_description="clear sky",condition_icon="01d",humidity=35i,pressure=1012,rain=0,sunrise=1570630329000000000i,sunset=1570671689000000000i,temperature=21.52,visibility=16093i,wind_degrees=280,wind_speed=5.7 1570659256000000000
+> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=3h cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=41i,pressure=1010,rain=0,temperature=22.34,wind_degrees=249.393,wind_speed=2.085 1570665600000000000
+> weather,city=San\ Francisco,city_id=5391959,condition_id=800,condition_main=Clear,country=US,forecast=6h cloudiness=0i,condition_description="clear sky",condition_icon="01n",humidity=50i,pressure=1012,rain=0,temperature=17.09,wind_degrees=310.754,wind_speed=3.009 1570676400000000000
 ```
 
 [api key]: https://openweathermap.org/appid

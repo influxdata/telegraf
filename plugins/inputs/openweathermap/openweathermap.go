@@ -25,8 +25,6 @@ const (
 
 	defaultSiteURL                       = "https://api.openweathermap.org/"
 	defaultResponseTimeout time.Duration = time.Second * 5
-	defaultUnits           string        = "metric"
-	defaultLang            string        = "en"
 )
 
 type OpenWeatherMap struct {
@@ -50,7 +48,7 @@ var sampleConfig = `
   city_id = ["5391959"]
 
   ## Language of the description field.
-  lang = "en"
+  # lang = "en"
 
   ## APIs to fetch; can contain "weather" or "forecast".
   fetch = ["weather", "forecast"]
@@ -103,7 +101,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	}
 
 	switch n.Units {
-	case "imperial", "standard", "metric":
+	case "imperial", "standard", "metric", "":
 	default:
 		return fmt.Errorf("unknown units: %s", n.Units)
 	}
@@ -285,6 +283,12 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 }
 
 func gatherForecast(acc telegraf.Accumulator, status *Status) {
+	tags := map[string]string{
+		"city_id":  strconv.FormatInt(status.City.Id, 10),
+		"forecast": "*",
+		"city":     status.City.Name,
+		"country":  status.City.Country,
+	}
 	for i, e := range status.List {
 		tm := time.Unix(e.Dt, 0)
 		fields := map[string]interface{}{
@@ -295,12 +299,6 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"temperature":  e.Main.Temp,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
-		}
-		tags := map[string]string{
-			"city_id":  strconv.FormatInt(status.City.Id, 10),
-			"forecast": "*",
-			"city":     status.City.Name,
-			"country":  status.City.Country,
 		}
 		if len(e.Weather) > 0 {
 			fields["condition_description"] = e.Weather[0].Description
@@ -320,7 +318,6 @@ func init() {
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
-			Units:           defaultUnits,
 			SiteURL:         defaultSiteURL,
 		}
 	})
@@ -330,8 +327,14 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 	v := url.Values{
 		"id":    []string{city},
 		"APPID": []string{n.AppId},
-		"units": []string{n.Units},
-		"lang":  []string{n.Lang},
+	}
+
+	if n.Units != "" {
+		v["units"] = []string{n.Units}
+	}
+
+	if n.Lang != "" {
+		v["lang"] = []string{n.Lang}
 	}
 
 	relative := &url.URL{
