@@ -1,12 +1,13 @@
 package azure_blob
 
 import (
+	"archive/zip"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -38,6 +39,8 @@ type AzureBlob struct {
 
 // Connect to the Output
 func (s *AzureBlob) Connect() error {
+	fmt.Printf("Initializing Azure Blob output plugin for BlobAccount %s, BlobContainerName %s, MachineName %s and FlushInterval %d seconds\n",
+		s.BlobAccount, s.BlobContainerName, s.MachineName, s.FlushInterval)
 	// authenticate and create a pipeline
 	c, err := azblob.NewSharedKeyCredential(s.BlobAccount, s.BlobAccountKey)
 	if err != nil {
@@ -84,7 +87,7 @@ func (s *AzureBlob) Close() error {
 
 // Write takes in group of points to be written to the Output
 func (s *AzureBlob) Write(metrics []telegraf.Metric) error {
-	fmt.Printf("Write %d\n", len(metrics))
+	fmt.Printf("%d metrics cached\n", len(metrics))
 
 	s.metricsCache = append(s.metricsCache, metrics...)
 
@@ -104,18 +107,26 @@ func (s *AzureBlob) Write(metrics []telegraf.Metric) error {
 }
 
 func (s *AzureBlob) flushMetricsCacheToAzureBlob() error {
-	bytes, err := s.serializer.SerializeBatch(s.metricsCache)
-
+	var sb strings.Builder
+	for _, metric := range s.metricsCache {
+		bytes, err := s.serializer.Serialize(metric)
+		if err != nil {
+			return fmt.Errorf("cannot serialize because of %s", err)
+		}
+		sb.Write(bytes)
+	}
+	//bytes, err := s.serializer.SerializeBatch(s.metricsCache)
+	bytes := []byte(sb.String())
 	if len(s.metricsCache) == 0 {
 		fmt.Println("0 items in cache - will not write anything")
 		return nil
 	}
 
-	// format is endDateTime-startDateTime-machineName.zip
-	blobName := fmt.Sprintf("%s-%s-%s.zip", s.metricsCache[len(s.metricsCache)-1].Time().Format(timeFormatString),
+	// format is endDateTime-startDateTime-machineName
+	blobName := fmt.Sprintf("%s-%s-%s", s.metricsCache[len(s.metricsCache)-1].Time().Format(timeFormatString),
 		s.metricsCache[0].Time().Format(timeFormatString), s.MachineName)
 
-	_, err = s.createBlockBlob(context.TODO(), blobName, bytes)
+	_, err := s.createBlockBlob(context.TODO(), blobName, bytes)
 	if err != nil {
 		return fmt.Errorf("error creating blob: %s", err)
 	}
@@ -135,20 +146,17 @@ func (s *AzureBlob) getBlockBlobURL(ctx context.Context, blobName string) azblob
 }
 
 func (s *AzureBlob) createBlockBlob(ctx context.Context, blobName string, byteString []byte) (azblob.BlockBlobURL, error) {
-	b := s.getBlockBlobURL(ctx, blobName)
-	compressedData, err := compressBytes(byteString)
-
+	b := s.getBlockBlobURL(ctx, blobName+".zip")                              // .zip is the file that will be created
+	compressedData, err := compressBytesIntoFile(blobName+".txt", byteString) // .txt is the file that will be contained in the zip
 	if err != nil {
 		return azblob.BlockBlobURL{}, err
 	}
 
 	_, err = b.Upload(
 		ctx,
-		//strings.NewReader(data),
 		bytes.NewReader(compressedData),
 		azblob.BlobHTTPHeaders{
 			ContentType: "application/octet-stream",
-			//ContentType: "text/plain",
 		},
 		azblob.Metadata{},
 		azblob.BlobAccessConditions{},
@@ -157,16 +165,22 @@ func (s *AzureBlob) createBlockBlob(ctx context.Context, blobName string, byteSt
 	return b, err
 }
 
-func compressBytes(byteString []byte) ([]byte, error) {
-	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
-	if _, err := gz.Write(byteString); err != nil {
+func compressBytesIntoFile(filename string, data []byte) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(buf)
+	zipFile, err := zipWriter.Create(filename)
+	if err != nil {
 		return nil, err
 	}
-	if err := gz.Close(); err != nil {
+	_, err = zipFile.Write(data)
+	if err != nil {
 		return nil, err
 	}
-	return b.Bytes(), nil
+	err = zipWriter.Close()
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // Description returns a one-sentence description on the Output
