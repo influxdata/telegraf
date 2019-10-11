@@ -18,7 +18,6 @@ The tag values and field values show the place on the incoming JSON object where
 * 'is_user_webhook' = `event.user` bool
 * 'is_owner_webhook' = `event.owner` bool
 * 'user_id' = `event.Account.id` string
-* 'user_thumb' = `event.Account.thumb` string
 * 'user_name' = `event.Account.title` string
 * 'server_title' = `event.Server.title` string
 * 'server_uuid' = `event.Server.uuid` string
@@ -33,17 +32,12 @@ The tag values and field values show the place on the incoming JSON object where
 * 'grandparent_title' = `event.Metadata.grandparentTitle` string
 * 'parent_title' = `event.Metadata.parentTitle` string
 * 'parent_index' = `event.Metadata.parentIndex` string
-* 'parent_thumb' = `event.Metadata.parentThumb` string
-* 'grandparent_thumb' = `event.Metadata.grandparentThumb` string
-* 'grandparent_art' = `event.Metadata.grandparentArt` string
 
 **Fields:**		
 * 'rating_count' = `event.Metadata.ratingCount` int
 * 'added_at' = `event.Metadata.addedAt` int
 * 'updated_at' = `event.Metadata.updatedAt` int
 * 'summary' = `event.Metadata.summary` string
-* 'thumb' = `event.Metadata.thumb` string
-* 'art' = `event.Metadata.art` string
 * 'title' = `event.Metadata.title` string
 * 'index' = `event.Metadata.index` int
 * 'library_selection_id' = `event.Metadata.librarySectionID` int
