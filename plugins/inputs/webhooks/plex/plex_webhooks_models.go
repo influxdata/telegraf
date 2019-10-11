@@ -76,7 +76,6 @@ func (s PlexWebhookEvent) NewMetric() telegraf.Metric {
 		"is_user_webhook":        fmt.Sprintf("%v", s.User),
 		"is_owner_webhook":       fmt.Sprintf("%v", s.Owner),
 		"user_id":                fmt.Sprintf("%v", s.Account.ID),
-		"user_thumb":             s.Account.Thumb,
 		"user_name":              s.Account.Title,
 		"server_title":           s.Server.Title,
 		"server_uuid":            s.Server.UUID,
@@ -91,17 +90,12 @@ func (s PlexWebhookEvent) NewMetric() telegraf.Metric {
 		"grandparent_title":      s.Metadata.GrandparentTitle,
 		"parent_title":           s.Metadata.ParentTitle,
 		"parent_index":           fmt.Sprintf("%v", s.Metadata.ParentIndex),
-		"parent_thumb":           s.Metadata.ParentThumb,
-		"grandparent_thumb":      s.Metadata.GrandparentThumb,
-		"grandparent_art":        s.Metadata.GrandparentArt,
 	}
 	f := map[string]interface{}{
 		"rating_count":         s.Metadata.RatingCount,
 		"added_at":             s.Metadata.AddedAt,
 		"updated_at":           s.Metadata.UpdatedAt,
 		"summary":              s.Metadata.Summary,
-		"thumb":                s.Metadata.Thumb,
-		"art":                  s.Metadata.Art,
 		"title":                s.Metadata.Title,
 		"index":                s.Metadata.Index,
 		"library_selection_id": s.Metadata.LibrarySectionID,
@@ -109,7 +103,7 @@ func (s PlexWebhookEvent) NewMetric() telegraf.Metric {
 	}
 	m, err := metric.New(meas, t, f, time.Now())
 	if err != nil {
-		log.Fatalf("Failed to create %v event", s)
+		log.Fatalf("Failed to create %v event", s.Event)
 	}
 	return m
 }

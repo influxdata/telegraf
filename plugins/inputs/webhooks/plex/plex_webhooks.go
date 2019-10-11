@@ -2,7 +2,6 @@ package plex
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -12,17 +11,28 @@ import (
 type PlexWebhook struct {
 	Path string
 	acc  telegraf.Accumulator
+
+	Log telegraf.Logger
 }
 
 func (p *PlexWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(p.Path, p.eventHandler).Methods("POST")
-	log.Printf("I! Started the webhooks_plex on %s\n", p.Path)
+	p.Log.Info("I! Started the webhooks_plex on %s\n", p.Path)
 	p.acc = acc
 }
 
 func (p *PlexWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(1 << 20)
-	e, err := generateEvent([]byte(r.Form["payload"][0]), &PlexWebhookEvent{})
+	err := r.ParseMultipartForm(1 << 20)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if r.Form["payload"] == nil || len(r.Form["payload"]) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	e := &PlexWebhookEvent{}
+	err = generateEvent([]byte(r.Form["payload"][0]), e)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -34,10 +44,7 @@ func (p *PlexWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func generateEvent(data []byte, event Event) (Event, error) {
+func generateEvent(data []byte, event Event) error {
 	err := json.Unmarshal(data, event)
-	if err != nil {
-		return nil, err
-	}
-	return event, nil
+	return err
 }
