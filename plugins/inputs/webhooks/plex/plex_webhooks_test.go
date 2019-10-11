@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func PlexWebhookRequest(jsonString string, t *testing.T) {
@@ -23,9 +24,7 @@ func PlexWebhookRequest(jsonString string, t *testing.T) {
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 	p.eventHandler(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("POST returned HTTP status code %v.\nExpected %v", w.Code, http.StatusOK)
-	}
+	require.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestPlexEvent(t *testing.T) {
