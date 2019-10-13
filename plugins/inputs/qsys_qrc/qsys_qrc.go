@@ -15,7 +15,7 @@ import (
 // Qsys_QRC holds configuration for the plugin
 type Qsys_QRC struct {
 	// Q-SYS core to target
-	Server string
+	Server        string
 	NamedControls []string `toml:"named_controls"`
 
 	client net.Conn
@@ -96,7 +96,6 @@ func (m *Qsys_QRC) makeRPCCall(request *JSONRPC) ([]byte, error) {
 	// Build null-terminated JSON string
 	requestString, _ := json.Marshal(request)
 	fmt.Fprintf(m.client, "%s\x00", requestString)
-
 	// The core may take some time to reply or send unsolicited other messages,
 	// so we have to handle returns async and possibly filter out some data.
 	// Make a channel to pass the proper return through, or timeout waiting for it.
@@ -127,7 +126,7 @@ func (m *Qsys_QRC) makeRPCCall(request *JSONRPC) ([]byte, error) {
 	case replyString := <-replyWaiter:
 		return replyString, nil
 	case <-time.After(10 * time.Second):
-		return nil, errors.New("did not receive RPC reply in time")
+		return nil, errors.New("did not receive RPC reply to " + request.Method + " in time")
 	}
 }
 
