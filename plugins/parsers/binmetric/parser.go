@@ -3,11 +3,13 @@ package binmetric
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/toml"
 )
@@ -34,10 +36,14 @@ type Config struct {
 	BinMetric BinMetric
 }
 
+const timeKey = "time"
+const timezone = "UTC"
+
 var data string = `
-[BinMetric]
+[binmetric]
 	metric_name = "drone_status"
 	endiannes = "be"
+	time_format = "unix"
 	fields = [
 		{name="version",type="uint16",offset=0},
 		{name="time",type="int32",offset=2},
@@ -88,10 +94,22 @@ func (p *BinMetric) Parse(BinMetric []byte) ([]telegraf.Metric, error) {
 		fields[field.Name] = fieldValue.Elem().Interface()
 	}
 
-	timeValue := fields["time"]
 	metricTime := time.Now().UTC()
+	timeValue := fields[timeKey]
+	var err error
 	if timeValue != nil {
-		metricTime = time.Unix(int64(timeValue.(int32)), 0).UTC()
+		if config.BinMetric.TimeFormat == "" {
+			err = fmt.Errorf(`use of "%s" field requires "binmetric_time_format"`, timeKey)
+			return nil, err
+		}
+
+		var timeValueInt64 int64 = int64(timeValue.(int32))
+		metricTime, err = internal.ParseTimestamp(config.BinMetric.TimeFormat, timeValueInt64, timezone)
+		if err != nil {
+			return nil, err
+		}
+
+		delete(fields, timeKey)
 	}
 
 	// metricTags := make(map[string]string)

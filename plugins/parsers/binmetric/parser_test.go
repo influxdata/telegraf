@@ -20,6 +20,7 @@ func TestParser(t *testing.T) {
 	assert.Len(t, metrics, 1)
 	require.Equal(t, "drone_status", metrics[0].Name())
 
+	fmt.Println("time", metrics[0].Time())
 	for key, value := range metrics[0].Fields() {
 		fmt.Println(key, value)
 	}
