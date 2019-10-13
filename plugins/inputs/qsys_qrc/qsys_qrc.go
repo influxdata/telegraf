@@ -17,6 +17,8 @@ type Qsys_QRC struct {
 	// Q-SYS core to target
 	Server        string
 	NamedControls []string `toml:"named_controls"`
+	Username      string
+	PIN           string
 
 	client net.Conn
 }
@@ -29,6 +31,10 @@ func (m *Qsys_QRC) Description() string {
 var exampleConfig = `
   ## Specify the core address and port
   server = "localhost:1710"
+
+  ## If the core is set up with user accounts set the username and PIN to use
+  # username = ""
+  # pin = ""
 
   ## If desired, an array of named controls can be collected
   # named_controls = []
@@ -45,6 +51,12 @@ func (m *Qsys_QRC) init(acc telegraf.Accumulator) error {
 		return connerr
 	}
 	m.client = client
+	if m.Username != "" {
+		logonerr := m.logon()
+		if logonerr != nil {
+			return logonerr
+		}
+	}
 	return nil
 }
 
@@ -169,6 +181,19 @@ func (m *Qsys_QRC) queryStatus() (EngineStatusReplyData, error) {
 		return reply.Result, jsonerr
 	}
 	return reply.Result, nil
+}
+
+func (m *Qsys_QRC) logon() error {
+	request := JSONRPC{
+		Version: "2.0",
+		Method:  "Logon",
+		Params: map[string]string{
+			"User":     m.Username,
+			"Password": m.PIN,
+		},
+	}
+	_, err := m.makeRPCCall(&request)
+	return err
 }
 
 func init() {
