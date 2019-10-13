@@ -1,4 +1,4 @@
-package qsys_qrc
+package qsc_qsys
 
 import "encoding/json"
 
@@ -33,18 +33,18 @@ type EngineStatusReply struct {
 
 // When querying named controls the core sends back an array of these objects
 type ControlValue struct {
-	Name string `json:"Name"`
-	Value json.Token `json:"Value"`
-	String string `json:"String"`
+	Name   string     `json:"Name"`
+	Value  json.Token `json:"Value"`
+	String string     `json:"String"`
 }
 
 // ControlGetReply is the message the core responds with to a Control.Get query
 type ControlGetReply struct {
-	Version string `json:"jsonrpc"`
-	ID int32 `json:"id"`
-	Result []ControlValue `json:"result"`
-	Error struct {
-		Code int32 `json:"code"`
+	Version string         `json:"jsonrpc"`
+	ID      int32          `json:"id"`
+	Result  []ControlValue `json:"result"`
+	Error   struct {
+		Code    int32  `json:"code"`
 		Message string `json:"message"`
 	} `json:"error"`
 }

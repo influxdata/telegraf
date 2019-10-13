@@ -1,4 +1,4 @@
-package qsys_qrc
+package qsc_qsys
 
 import (
 	"bufio"
@@ -66,7 +66,7 @@ func TestGather(t *testing.T) {
 	defer mockServer.Close()
 
 	go handleRequests(mockServer, t)
-	testClient := Qsys_QRC{
+	testClient := QSC_QSYS{
 		Server:        mockServer.Addr().String(),
 		NamedControls: []string{"GainGain"},
 	}

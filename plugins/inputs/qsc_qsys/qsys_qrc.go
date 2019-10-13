@@ -1,4 +1,4 @@
-package qsys_qrc
+package qsc_qsys
 
 import (
 	"bufio"
@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-// Qsys_QRC holds configuration for the plugin
-type Qsys_QRC struct {
+// QSC_QSYS holds configuration for the plugin
+type QSC_QSYS struct {
 	// Q-SYS core to target
 	Server        string
 	NamedControls []string `toml:"named_controls"`
@@ -24,7 +24,7 @@ type Qsys_QRC struct {
 }
 
 // Description will appear directly above the plugin definition in the config file
-func (m *Qsys_QRC) Description() string {
+func (m *QSC_QSYS) Description() string {
 	return `Retrieve Named Controls and status from a QSC Q-SYS core`
 }
 
@@ -41,11 +41,11 @@ var exampleConfig = `
 `
 
 // SampleConfig will populate the sample configuration portion of the plugin's configuration
-func (m *Qsys_QRC) SampleConfig() string {
+func (m *QSC_QSYS) SampleConfig() string {
 	return exampleConfig
 }
 
-func (m *Qsys_QRC) init(acc telegraf.Accumulator) error {
+func (m *QSC_QSYS) init(acc telegraf.Accumulator) error {
 	client, connerr := net.Dial("tcp", m.Server)
 	if connerr != nil {
 		return connerr
@@ -61,7 +61,7 @@ func (m *Qsys_QRC) init(acc telegraf.Accumulator) error {
 }
 
 // Gather defines what data the plugin will gather.
-func (m *Qsys_QRC) Gather(acc telegraf.Accumulator) error {
+func (m *QSC_QSYS) Gather(acc telegraf.Accumulator) error {
 	if m.client == nil {
 		connerr := m.init(acc)
 		if connerr != nil {
@@ -98,7 +98,7 @@ func (m *Qsys_QRC) Gather(acc telegraf.Accumulator) error {
 }
 
 // makeRPCCall sends a JSONRPC message to the core and blocks until it returns or times out
-func (m *Qsys_QRC) makeRPCCall(request *JSONRPC) ([]byte, error) {
+func (m *QSC_QSYS) makeRPCCall(request *JSONRPC) ([]byte, error) {
 	// If the upcoming request does not have an ID set, set one to distinguish its reply
 	if request.ID == 0 {
 		id := rand.Int31()
@@ -142,7 +142,7 @@ func (m *Qsys_QRC) makeRPCCall(request *JSONRPC) ([]byte, error) {
 	}
 }
 
-func (m *Qsys_QRC) gatherControls() ([]ControlValue, error) {
+func (m *QSC_QSYS) gatherControls() ([]ControlValue, error) {
 	request := JSONRPC{
 		Version: "2.0",
 		Method:  "Control.Get",
@@ -164,7 +164,7 @@ func (m *Qsys_QRC) gatherControls() ([]ControlValue, error) {
 	return reply.Result, nil
 }
 
-func (m *Qsys_QRC) queryStatus() (EngineStatusReplyData, error) {
+func (m *QSC_QSYS) queryStatus() (EngineStatusReplyData, error) {
 	request := JSONRPC{
 		Version: "2.0",
 		Method:  "StatusGet",
@@ -183,7 +183,7 @@ func (m *Qsys_QRC) queryStatus() (EngineStatusReplyData, error) {
 	return reply.Result, nil
 }
 
-func (m *Qsys_QRC) logon() error {
+func (m *QSC_QSYS) logon() error {
 	request := JSONRPC{
 		Version: "2.0",
 		Method:  "Logon",
@@ -198,6 +198,6 @@ func (m *Qsys_QRC) logon() error {
 
 func init() {
 	inputs.Add("qsys", func() telegraf.Input {
-		return &Qsys_QRC{}
+		return &QSC_QSYS{}
 	})
 }
