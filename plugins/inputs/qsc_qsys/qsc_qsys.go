@@ -29,6 +29,7 @@ func (m *QSC_QSYS) Description() string {
 }
 
 var exampleConfig = `
+# QSC Q-SYS audio processors
   ## Specify the core address and port
   server = "localhost:1710"
 
