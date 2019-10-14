@@ -17,7 +17,7 @@
 
 ### Description
 The qsys plugin connects to a [QSC Q-SYS](https://www.qsc.com/systems/products/q-sys-ecosystem/) Core audio processor 
-using the [QSYS Remote Control protocol](https://q-syshelp.qsc.com/Index.htm#External_Control/Q-Sys_Remote_Control/QRC.htm).
+using the [QSYS Remote Control protocol](https://q-syshelp.qsc.com/Index.htm#External_Control/Q-Sys_Remote_Control/QRC.htm). By default it will collect basic information about overall system health, but any value exposed by a Named Control can also be monitored. The communication does not use the change group API, so each control is polled seperately. Very short polling periods or long control lists may cause collection problems.
 
 ### Measurements:
 * qsys
