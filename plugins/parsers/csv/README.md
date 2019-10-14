@@ -29,6 +29,7 @@ values.
 
   ## For assigning explicit data types to columns.
   ## Supported types: "int", "float", "bool", "string".
+  ## Specify types in order by column (e.g. `["string", "int", "float"]`)
   ## If this is not specified, type conversion will be done on the types above.
   csv_column_types = []
 
