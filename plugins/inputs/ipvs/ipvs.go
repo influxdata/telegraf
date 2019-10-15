@@ -3,7 +3,6 @@
 package ipvs
 
 import (
-	"errors"
 	"fmt"
 	"math/bits"
 	"strconv"
@@ -35,7 +34,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 	if i.handle == nil {
 		h, err := ipvs.New("") // TODO: make the namespace configurable
 		if err != nil {
-			return errors.New("Unable to open IPVS handle")
+			return fmt.Errorf("unable to open IPVS handle: %v", err)
 		}
 		i.handle = h
 	}
@@ -44,7 +43,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		i.handle.Close()
 		i.handle = nil // trigger a reopen on next call to gather
-		return errors.New("Failed to list IPVS services")
+		return fmt.Errorf("failed to list IPVS services: %v", err)
 	}
 	for _, s := range services {
 		fields := map[string]interface{}{
@@ -61,7 +60,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 
 		destinations, err := i.handle.GetDestinations(s)
 		if err != nil {
-			i.Log.Errorf("Failed to list destinations for a virtual server: %s", err.Error())
+			i.Log.Errorf("Failed to list destinations for a virtual server: %v", err)
 			continue // move on to the next virtual server
 		}
 
