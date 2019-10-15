@@ -23,8 +23,9 @@ const (
 	// The limit of locations is 20.
 	owmRequestSeveralCityId int = 20
 
-	defaultSiteURL                       = "https://api.openweathermap.org/"
+	defaultBaseUrl                       = "https://api.openweathermap.org/"
 	defaultResponseTimeout time.Duration = time.Second * 5
+	defaultUnits           string        = "metric"
 )
 
 type OpenWeatherMap struct {
@@ -32,12 +33,12 @@ type OpenWeatherMap struct {
 	CityId          []string          `toml:"city_id"`
 	Lang            string            `toml:"lang"`
 	Fetch           []string          `toml:"fetch"`
-	SiteURL         string            `toml:"base_url"`
+	BaseUrl         string            `toml:"base_url"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 	Units           string            `toml:"units"`
 
 	client  *http.Client
-	baseURL *url.URL
+	baseUrl *url.URL
 }
 
 var sampleConfig = `
@@ -77,34 +78,8 @@ func (n *OpenWeatherMap) Description() string {
 }
 
 func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
-	var (
-		wg   sync.WaitGroup
-		strs []string
-		err  error
-	)
-
-	if n.baseURL == nil {
-		n.baseURL, err = url.Parse(n.SiteURL)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Create an HTTP client that is re-used for each
-	// collection interval
-	if n.client == nil {
-		client, err := n.createHttpClient()
-		if err != nil {
-			return err
-		}
-		n.client = client
-	}
-
-	switch n.Units {
-	case "imperial", "standard", "metric", "":
-	default:
-		return fmt.Errorf("unknown units: %s", n.Units)
-	}
+	var wg sync.WaitGroup
+	var strs []string
 
 	for _, fetch := range n.Fetch {
 		if fetch == "forecast" {
@@ -318,9 +293,34 @@ func init() {
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
-			SiteURL:         defaultSiteURL,
+			BaseUrl:         defaultBaseUrl,
 		}
 	})
+}
+
+func (n *OpenWeatherMap) Init() error {
+	var err error
+	n.baseUrl, err = url.Parse(n.BaseUrl)
+	if err != nil {
+		return err
+	}
+
+	// Create an HTTP client that is re-used for each
+	// collection interval
+	n.client, err = n.createHttpClient()
+	if err != nil {
+		return err
+	}
+
+	switch n.Units {
+	case "imperial", "standard", "metric":
+	case "":
+		n.Units = defaultUnits
+	default:
+		return fmt.Errorf("unknown units: %s", n.Units)
+	}
+
+	return nil
 }
 
 func (n *OpenWeatherMap) formatURL(path string, city string) string {
@@ -342,5 +342,5 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 		RawQuery: v.Encode(),
 	}
 
-	return n.baseURL.ResolveReference(relative).String()
+	return n.baseUrl.ResolveReference(relative).String()
 }

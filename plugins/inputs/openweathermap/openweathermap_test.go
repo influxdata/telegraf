@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 	"time"
 
@@ -278,12 +277,13 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		SiteURL: ts.URL,
+		BaseUrl: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
 		Fetch:   []string{"weather", "forecast"},
 		Units:   "metric",
 	}
+	n.Init()
 
 	var acc testutil.Accumulator
 
@@ -361,12 +361,13 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		SiteURL: ts.URL,
+		BaseUrl: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
+	n.Init()
 
 	var acc testutil.Accumulator
 
@@ -421,12 +422,13 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		SiteURL: ts.URL,
+		BaseUrl: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"524901", "703448", "2643743"},
 		Fetch:   []string{"weather"},
 		Units:   "metric",
 	}
+	n.Init()
 
 	var acc testutil.Accumulator
 
@@ -519,20 +521,22 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 }
 
 func TestFormatURL(t *testing.T) {
-	b, _ := url.Parse("http://foo.com")
 	n := &OpenWeatherMap{
 		AppId:   "appid",
 		Units:   "units",
 		Lang:    "lang",
-		baseURL: b,
+		BaseUrl: "http://foo.com",
 	}
+	n.Init()
 
-	t.Run("path 1", func(t *testing.T) {
-		s := n.formatURL("/data/2.5/forecast", "12345")
-		if want := "http://foo.com/data/2.5/forecast?APPID=appid&id=12345&lang=lang&units=units"; s != want {
-			t.Errorf("FormatOwnUrl: got %s, want %s", s, want)
-		}
-	})
+	require.Equal(t,
+		"http://foo.com/data/2.5/forecast?APPID=appid&id=12345&lang=lang&units=units",
+		n.formatURL("/data/2.5/forecast", "12345"))
+}
 
-	//t.Errorf("bad things happened")
+func TestDefaultUnits(t *testing.T) {
+	n := &OpenWeatherMap{}
+	n.Init()
+
+	require.Equal(t, "metric", n.Units)
 }
