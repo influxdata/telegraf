@@ -629,8 +629,9 @@ func TestContainerStatus(t *testing.T) {
 					return &client, nil
 				}
 				d = Docker{
-					Log:       testutil.Logger{},
-					newClient: newClientFunc,
+					Log:              testutil.Logger{},
+					newClient:        newClientFunc,
+					IncludeSourceTag: true,
 				}
 			)
 
@@ -673,6 +674,7 @@ func TestContainerStatus(t *testing.T) {
 					"label2":            "test_value_2",
 					"server_version":    "17.09.0-ce",
 					"container_status":  tt.expect.Status,
+					"source":            "e2173b9478a6",
 				})
 		})
 	}
@@ -1016,4 +1018,38 @@ func TestContainerName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHostnameFromID(t *testing.T) {
+	tests := []struct {
+		name   string
+		id     string
+		expect string
+	}{
+		{
+			name:   "Real ID",
+			id:     "565e3a55f5843cfdd4aa5659a1a75e4e78d47f73c3c483f782fe4a26fc8caa07",
+			expect: "565e3a55f584",
+		},
+		{
+			name:   "Short ID",
+			id:     "shortid123",
+			expect: "shortid123",
+		},
+		{
+			name:   "No ID",
+			id:     "",
+			expect: "shortid123",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			output := hostnameFromID(test.id)
+			if test.expect != output {
+				t.Logf("Container ID for hostname is wrong. Want: %s, Got: %s", output, test.expect)
+			}
+		})
+	}
+
 }

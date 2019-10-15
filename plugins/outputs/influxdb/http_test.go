@@ -675,3 +675,61 @@ func TestHTTP_UnixSocket(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/write":
+				r.ParseForm()
+				require.Equal(t, r.Form["db"], []string{"foo"})
+
+				body, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Contains(t, string(body), "cpu value=42")
+
+				w.WriteHeader(http.StatusNoContent)
+				return
+			default:
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+		}),
+	)
+	defer ts.Close()
+
+	addr := &url.URL{
+		Scheme: "http",
+		Host:   ts.Listener.Addr().String(),
+	}
+
+	config := influxdb.HTTPConfig{
+		URL:                addr,
+		Database:           "telegraf",
+		DatabaseTag:        "database",
+		ExcludeDatabaseTag: true,
+		Log:                testutil.Logger{},
+	}
+
+	client, err := influxdb.NewHTTPClient(config)
+	require.NoError(t, err)
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"database": "foo",
+			},
+			map[string]interface{}{
+				"value": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	ctx := context.Background()
+	err = client.Write(ctx, metrics)
+	require.NoError(t, err)
+	err = client.Write(ctx, metrics)
+	require.NoError(t, err)
+}
