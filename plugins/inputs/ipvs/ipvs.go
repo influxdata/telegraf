@@ -10,6 +10,7 @@ import (
 
 	"github.com/docker/libnetwork/ipvs"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/logrus"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -147,5 +148,8 @@ func addressFamilyToString(af uint16) string {
 }
 
 func init() {
-	inputs.Add("ipvs", func() telegraf.Input { return &IPVS{} })
+	inputs.Add("ipvs", func() telegraf.Input {
+		logrus.InstallHook()
+		return &IPVS{}
+	})
 }
