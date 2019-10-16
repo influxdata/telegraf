@@ -346,7 +346,7 @@ func init() {
 		return &Prometheus{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
 			kubernetesPods:  map[string]URLAndAddress{},
-			URLTag: "url",
+			URLTag:          "url",
 		}
 	})
 }

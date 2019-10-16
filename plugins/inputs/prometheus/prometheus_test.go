@@ -52,7 +52,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		URLs: []string{ts.URL},
+		URLs:   []string{ts.URL},
 		URLTag: "url",
 	}
 
@@ -77,7 +77,7 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 
 	p := &Prometheus{
 		KubernetesServices: []string{ts.URL},
-		URLTag: "url",
+		URLTag:             "url",
 	}
 	u, _ := url.Parse(ts.URL)
 	tsAddress := u.Hostname()
@@ -129,7 +129,7 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 
 	p := &Prometheus{
 		URLs:          []string{ts.URL},
-		URLTag: "url",
+		URLTag:        "url",
 		MetricVersion: 2,
 	}
 
@@ -153,7 +153,7 @@ func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
 
 	p := &Prometheus{
 		URLs:          []string{ts.URL},
-		URLTag: "url",
+		URLTag:        "url",
 		MetricVersion: 2,
 	}
 
