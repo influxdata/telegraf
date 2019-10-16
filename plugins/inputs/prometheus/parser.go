@@ -150,7 +150,7 @@ func makeBucketsV2(m *dto.Metric, tags map[string]string, metricName string, met
 		newTags := tags
 		fields = make(map[string]interface{})
 		newTags["le"] = fmt.Sprint(b.GetUpperBound())
-		fields[metricName] = float64(b.GetCumulativeCount())
+		fields[metricName+"_bucket"] = float64(b.GetCumulativeCount())
 
 		histogramMetric, err := metric.New("prometheus", newTags, fields, t, valueType(metricType))
 		if err == nil {
