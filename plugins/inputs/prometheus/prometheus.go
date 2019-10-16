@@ -38,7 +38,7 @@ type Prometheus struct {
 
 	MetricVersion int `toml:"metric_version"`
 
-	UrlTag string `toml:"url_tag"`
+	URLTag string `toml:"url_tag"`
 
 	tls.ClientConfig
 
@@ -295,16 +295,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 			u.URL, err)
 	}
 
-	var urltag = "url"
-	if p.UrlTag != "" {
-		urltag = p.UrlTag
-	}
-
 	for _, metric := range metrics {
 		tags := metric.Tags()
 		// strip user and password from URL
 		u.OriginalURL.User = nil
-		tags[urltag] = u.OriginalURL.String()
+		tags[p.URLTag] = u.OriginalURL.String()
 		if u.Address != "" {
 			tags["address"] = u.Address
 		}
@@ -351,6 +346,7 @@ func init() {
 		return &Prometheus{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
 			kubernetesPods:  map[string]URLAndAddress{},
+			URLTag: "url",
 		}
 	})
 }
