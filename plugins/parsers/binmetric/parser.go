@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ type Field struct {
 	Name   string
 	Type   string
 	Offset int
+	Size   int
 }
 
 // BinMetric is ...
@@ -45,17 +47,18 @@ var data string = `
 	endiannes = "be"
 	time_format = "unix"
 	fields = [
-		{name="version",type="uint16",offset=0},
-		{name="time",type="int32",offset=2},
-		{name="location_latitude",type="float64",offset=6},
-		{name="location_longitude",type="float64",offset=14},
-		{name="location_altitude",type="float32",offset=22},
-		{name="orientation_heading",type="float32",offset=26},
-		{name="orientation_elevation",type="float32",offset=30},
-		{name="orientation_bank",type="float32",offset=34},
-		{name="speed_ground",type="float32",offset=38},
-		{name="speed_air",type="float32",offset=42},
-		{name="is_healthy",type="bool",offset=46},
+		{name="version",type="uint16",offset=0,size=2},
+		{name="time",type="int32",offset=2,size=4},
+		{name="location_latitude",type="float64",offset=6,size=8},
+		{name="location_longitude",type="float64",offset=14,size=8},
+		{name="location_altitude",type="float32",offset=22,size=4},
+		{name="orientation_heading",type="float32",offset=26,size=4},
+		{name="orientation_elevation",type="float32",offset=30,size=4},
+		{name="orientation_bank",type="float32",offset=34,size=4},
+		{name="speed_ground",type="float32",offset=38,size=4},
+		{name="speed_air",type="float32",offset=42,size=4},
+		{name="is_healthy",type="bool",offset=46,size=1},
+		{name="state",type="string",offset=47,size=8},
 	]
 `
 
@@ -71,36 +74,56 @@ var fieldTypes = map[string]reflect.Type{
 	"int64":   reflect.TypeOf((*int64)(nil)).Elem(),
 	"float32": reflect.TypeOf((*float32)(nil)).Elem(),
 	"float64": reflect.TypeOf((*float64)(nil)).Elem(),
+	"string":  reflect.TypeOf((*string)(nil)).Elem(),
 }
 
 // Parse is ...
-func (p *BinMetric) Parse(BinMetric []byte) ([]telegraf.Metric, error) {
+func (p *BinMetric) Parse(binMetric []byte) ([]telegraf.Metric, error) {
 	var config Config
-	var _ = toml.Unmarshal([]byte(data), &config)
+	var err = toml.Unmarshal([]byte(data), &config)
+	if err != nil {
+		return nil, err
+	}
 
 	endiannes := strings.ToLower(config.BinMetric.Endiannes)
-	fields := make(map[string]interface{})
+	if endiannes != "be" && endiannes != "le" {
+		return nil, fmt.Errorf(`invalid endiannes "%s""`, endiannes)
+	}
 
-	byteReader := bytes.NewReader(BinMetric)
+	fields := make(map[string]interface{})
+	s := io.NewSectionReader(bytes.NewReader(binMetric), 0, int64(len(binMetric)))
 
 	for _, field := range config.BinMetric.Fields {
-		fieldType := fieldTypes[field.Type]
-		fieldValue := reflect.New(fieldType)
-		if endiannes == "be" {
-			binary.Read(byteReader, binary.BigEndian, fieldValue.Interface())
-		} else {
-			binary.Read(byteReader, binary.LittleEndian, fieldValue.Interface())
+		fieldBuffer := make([]byte, field.Size)
+		_, err := s.ReadAt(fieldBuffer, int64(field.Offset))
+		if err != nil {
+			return nil, err
 		}
-		fields[field.Name] = fieldValue.Elem().Interface()
+
+		fieldType := fieldTypes[field.Type]
+		if fieldType == nil {
+			return nil, fmt.Errorf(`invalid field type "%s""`, field.Type)
+		}
+
+		if fieldType.Name() == "string" {
+			fields[field.Name] = string(fieldBuffer)
+		} else {
+			fieldValue := reflect.New(fieldType)
+			byteReader := bytes.NewReader(fieldBuffer)
+			if endiannes == "be" {
+				binary.Read(byteReader, binary.BigEndian, fieldValue.Interface())
+			} else {
+				binary.Read(byteReader, binary.LittleEndian, fieldValue.Interface())
+			}
+			fields[field.Name] = fieldValue.Elem().Interface()
+		}
 	}
 
 	metricTime := time.Now().UTC()
 	timeValue := fields[timeKey]
-	var err error
 	if timeValue != nil {
 		if config.BinMetric.TimeFormat == "" {
-			err = fmt.Errorf(`use of "%s" field requires "binmetric_time_format"`, timeKey)
-			return nil, err
+			return nil, fmt.Errorf(`use of "%s" field requires "binmetric_time_format"`, timeKey)
 		}
 
 		var timeValueInt64 int64 = int64(timeValue.(int32))
