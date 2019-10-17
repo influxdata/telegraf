@@ -116,6 +116,10 @@ func (p *testProc) Tags() map[string]string {
 	return p.tags
 }
 
+func (p *testProc) PageFaults() (*process.PageFaultsStat, error) {
+	return &process.PageFaultsStat{}, nil
+}
+
 func (p *testProc) IOCounters() (*process.IOCountersStat, error) {
 	return &process.IOCountersStat{}, nil
 }
@@ -141,6 +145,10 @@ func (p *testProc) NumThreads() (int32, error) {
 }
 
 func (p *testProc) Percent(interval time.Duration) (float64, error) {
+	return 0, nil
+}
+
+func (p *testProc) MemoryPercent() (float32, error) {
 	return 0, nil
 }
 

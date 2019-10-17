@@ -12,6 +12,7 @@ type Process interface {
 	PID() PID
 	Tags() map[string]string
 
+	PageFaults() (*process.PageFaultsStat, error)
 	IOCounters() (*process.IOCountersStat, error)
 	MemoryInfo() (*process.MemoryInfoStat, error)
 	Name() (string, error)
@@ -20,6 +21,7 @@ type Process interface {
 	NumFDs() (int32, error)
 	NumThreads() (int32, error)
 	Percent(interval time.Duration) (float64, error)
+	MemoryPercent() (float32, error)
 	Times() (*cpu.TimesStat, error)
 	RlimitUsage(bool) ([]process.RlimitStat, error)
 	Username() (string, error)

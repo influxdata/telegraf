@@ -124,21 +124,16 @@ type templateSpecs []templateSpec
 // Less reports whether the element with
 // index j should sort before the element with index k.
 func (e templateSpecs) Less(j, k int) bool {
-	if len(e[j].filter) == 0 && len(e[k].filter) == 0 {
-		jlength := len(strings.Split(e[j].template, e[j].separator))
-		klength := len(strings.Split(e[k].template, e[k].separator))
-		return jlength < klength
-	}
-	if len(e[j].filter) == 0 {
+	jlen := len(e[j].filter)
+	klen := len(e[k].filter)
+	if jlen == 0 && klen != 0 {
 		return true
 	}
-	if len(e[k].filter) == 0 {
+	if klen == 0 && jlen != 0 {
 		return false
 	}
-
-	jlength := len(strings.Split(e[j].template, e[j].separator))
-	klength := len(strings.Split(e[k].template, e[k].separator))
-	return jlength < klength
+	return strings.Count(e[j].template, e[j].separator) <
+		strings.Count(e[k].template, e[k].separator)
 }
 
 // Swap swaps the elements with indexes i and j.

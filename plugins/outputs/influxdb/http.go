@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -94,18 +93,22 @@ type HTTPConfig struct {
 	ContentEncoding      string
 	Database             string
 	DatabaseTag          string
+	ExcludeDatabaseTag   bool
 	RetentionPolicy      string
 	Consistency          string
 	SkipDatabaseCreation bool
 
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
+	Log               telegraf.Logger
 }
 
 type httpClient struct {
 	client           *http.Client
 	config           HTTPConfig
 	createdDatabases map[string]bool
+
+	log telegraf.Logger
 }
 
 func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
@@ -173,6 +176,7 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 		},
 		createdDatabases: make(map[string]bool),
 		config:           config,
+		log:              config.Log,
 	}
 	return client, nil
 }
@@ -250,6 +254,13 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 				batches[db] = make([]telegraf.Metric, 0)
 			}
 
+			if c.config.ExcludeDatabaseTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
+				metric.RemoveTag(c.config.DatabaseTag)
+			}
+
 			batches[db] = append(batches[db], metric)
 		}
 
@@ -257,7 +268,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			if !c.config.SkipDatabaseCreation && !c.createdDatabases[db] {
 				err := c.CreateDatabase(ctx, db)
 				if err != nil {
-					log.Printf("W! [outputs.influxdb] when writing to [%s]: database %q creation failed: %v",
+					c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
 						c.config.URL, db, err)
 				}
 			}
@@ -323,7 +334,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// discarded for being older than the retention policy.  Usually this not
 	// a cause for concern and we don't want to retry.
 	if strings.Contains(desc, errStringPointsBeyondRP) {
-		log.Printf("W! [outputs.influxdb]: when writing to [%s]: received error %v",
+		c.log.Warnf("When writing to [%s]: received error %v",
 			c.URL(), desc)
 		return nil
 	}
@@ -332,7 +343,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// correctable at this point and so the point is dropped instead of
 	// retrying.
 	if strings.Contains(desc, errStringPartialWrite) {
-		log.Printf("E! [outputs.influxdb]: when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -340,7 +351,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// This error indicates a bug in either Telegraf line protocol
 	// serialization, retries would not be successful.
 	if strings.Contains(desc, errStringUnableToParse) {
-		log.Printf("E! [outputs.influxdb]: when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -447,4 +458,8 @@ func makeQueryURL(loc *url.URL) (string, error) {
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
 	return u.String(), nil
+}
+
+func (c *httpClient) Close() {
+	internal.CloseIdleConnections(c.client)
 }

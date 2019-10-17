@@ -1,7 +1,6 @@
 package dns_query
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -162,7 +161,7 @@ func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, int, 
 
 func (d *DnsQuery) parseRecordType() (uint16, error) {
 	var recordType uint16
-	var error error
+	var err error
 
 	switch d.RecordType {
 	case "A":
@@ -188,10 +187,10 @@ func (d *DnsQuery) parseRecordType() (uint16, error) {
 	case "TXT":
 		recordType = dns.TypeTXT
 	default:
-		error = errors.New(fmt.Sprintf("Record type %s not recognized", d.RecordType))
+		err = fmt.Errorf("Record type %s not recognized", d.RecordType)
 	}
 
-	return recordType, error
+	return recordType, err
 }
 
 func setResult(result ResultType, fields map[string]interface{}, tags map[string]string) {

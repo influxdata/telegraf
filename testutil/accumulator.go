@@ -345,8 +345,7 @@ func (a *Accumulator) AssertContainsTaggedFields(
 			continue
 		}
 
-		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
+		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
 			return
 		}
 	}

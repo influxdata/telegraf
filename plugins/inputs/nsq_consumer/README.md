@@ -10,8 +10,10 @@ of the supported [input data formats][].
 [[inputs.nsq_consumer]]
   ## Server option still works but is deprecated, we just prepend it to the nsqd array.
   # server = "localhost:4150"
+
   ## An array representing the NSQD TCP HTTP Endpoints
   nsqd = ["localhost:4150"]
+
   ## An array representing the NSQLookupd HTTP Endpoints
   nsqlookupd = ["localhost:4161"]
   topic = "telegraf"

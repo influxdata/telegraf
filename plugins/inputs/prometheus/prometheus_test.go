@@ -52,7 +52,8 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		URLs:   []string{ts.URL},
+		Log:    testutil.Logger{},
+    URLs:   []string{ts.URL},
 		URLTag: "url",
 	}
 
@@ -76,6 +77,7 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:                testutil.Logger{},
 		KubernetesServices: []string{ts.URL},
 		URLTag:             "url",
 	}
@@ -106,6 +108,7 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
+		Log:                testutil.Logger{},
 		URLs:               []string{ts.URL},
 		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
 	}

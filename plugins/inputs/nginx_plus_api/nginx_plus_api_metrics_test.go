@@ -448,11 +448,11 @@ const streamServerZonesPayload = `
 `
 
 func TestGatherProcessesMetrics(t *testing.T) {
-	ts, n := prepareEndpoint(processesPath, defaultApiVersion, processesPayload)
+	ts, n := prepareEndpoint(t, processesPath, defaultApiVersion, processesPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherProcessesMetrics(addr, &acc))
 
@@ -468,12 +468,12 @@ func TestGatherProcessesMetrics(t *testing.T) {
 		})
 }
 
-func TestGatherConnectioinsMetrics(t *testing.T) {
-	ts, n := prepareEndpoint(connectionsPath, defaultApiVersion, connectionsPayload)
+func TestGatherConnectionsMetrics(t *testing.T) {
+	ts, n := prepareEndpoint(t, connectionsPath, defaultApiVersion, connectionsPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherConnectionsMetrics(addr, &acc))
 
@@ -493,11 +493,11 @@ func TestGatherConnectioinsMetrics(t *testing.T) {
 }
 
 func TestGatherSslMetrics(t *testing.T) {
-	ts, n := prepareEndpoint(sslPath, defaultApiVersion, sslPayload)
+	ts, n := prepareEndpoint(t, sslPath, defaultApiVersion, sslPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherSslMetrics(addr, &acc))
 
@@ -516,11 +516,11 @@ func TestGatherSslMetrics(t *testing.T) {
 }
 
 func TestGatherHttpRequestsMetrics(t *testing.T) {
-	ts, n := prepareEndpoint(httpRequestsPath, defaultApiVersion, httpRequestsPayload)
+	ts, n := prepareEndpoint(t, httpRequestsPath, defaultApiVersion, httpRequestsPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherHttpRequestsMetrics(addr, &acc))
 
@@ -538,11 +538,11 @@ func TestGatherHttpRequestsMetrics(t *testing.T) {
 }
 
 func TestGatherHttpServerZonesMetrics(t *testing.T) {
-	ts, n := prepareEndpoint(httpServerZonesPath, defaultApiVersion, httpServerZonesPayload)
+	ts, n := prepareEndpoint(t, httpServerZonesPath, defaultApiVersion, httpServerZonesPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherHttpServerZonesMetrics(addr, &acc))
 
@@ -592,11 +592,11 @@ func TestGatherHttpServerZonesMetrics(t *testing.T) {
 }
 
 func TestHatherHttpUpstreamsMetrics(t *testing.T) {
-	ts, n := prepareEndpoint(httpUpstreamsPath, defaultApiVersion, httpUpstreamsPayload)
+	ts, n := prepareEndpoint(t, httpUpstreamsPath, defaultApiVersion, httpUpstreamsPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherHttpUpstreamsMetrics(addr, &acc))
 
@@ -764,11 +764,11 @@ func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 }
 
 func TestGatherHttpCachesMetrics(t *testing.T) {
-	ts, n := prepareEndpoint(httpCachesPath, defaultApiVersion, httpCachesPayload)
+	ts, n := prepareEndpoint(t, httpCachesPath, defaultApiVersion, httpCachesPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherHttpCachesMetrics(addr, &acc))
 
@@ -842,11 +842,11 @@ func TestGatherHttpCachesMetrics(t *testing.T) {
 }
 
 func TestGatherStreamUpstreams(t *testing.T) {
-	ts, n := prepareEndpoint(streamUpstreamsPath, defaultApiVersion, streamUpstreamsPayload)
+	ts, n := prepareEndpoint(t, streamUpstreamsPath, defaultApiVersion, streamUpstreamsPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherStreamUpstreamsMetrics(addr, &acc))
 
@@ -984,12 +984,12 @@ func TestGatherStreamUpstreams(t *testing.T) {
 
 }
 
-func TestGatherStreamServerZonesMatrics(t *testing.T) {
-	ts, n := prepareEndpoint(streamServerZonesPath, defaultApiVersion, streamServerZonesPayload)
+func TestGatherStreamServerZonesMetrics(t *testing.T) {
+	ts, n := prepareEndpoint(t, streamServerZonesPath, defaultApiVersion, streamServerZonesPayload)
 	defer ts.Close()
 
 	var acc testutil.Accumulator
-	addr, host, port := prepareAddr(ts)
+	addr, host, port := prepareAddr(t, ts)
 
 	require.NoError(t, n.gatherStreamServerZonesMetrics(addr, &acc))
 
@@ -1023,11 +1023,92 @@ func TestGatherStreamServerZonesMatrics(t *testing.T) {
 			"zone":   "dns",
 		})
 }
+func TestUnavailableEndpoints(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer ts.Close()
 
-func prepareAddr(ts *httptest.Server) (*url.URL, string, string) {
+	n := &NginxPlusApi{
+		client: ts.Client(),
+	}
+
+	addr, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var acc testutil.Accumulator
+	n.gatherMetrics(addr, &acc)
+	require.NoError(t, acc.FirstError())
+}
+
+func TestServerError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	n := &NginxPlusApi{
+		client: ts.Client(),
+	}
+
+	addr, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var acc testutil.Accumulator
+	n.gatherMetrics(addr, &acc)
+	require.Error(t, acc.FirstError())
+}
+
+func TestMalformedJSON(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		fmt.Fprintln(w, "this is not JSON")
+	}))
+	defer ts.Close()
+
+	n := &NginxPlusApi{
+		client: ts.Client(),
+	}
+
+	addr, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var acc testutil.Accumulator
+	n.gatherMetrics(addr, &acc)
+	require.Error(t, acc.FirstError())
+}
+
+func TestUnknownContentType(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+	}))
+	defer ts.Close()
+
+	n := &NginxPlusApi{
+		client: ts.Client(),
+	}
+
+	addr, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var acc testutil.Accumulator
+	n.gatherMetrics(addr, &acc)
+	require.Error(t, acc.FirstError())
+}
+
+func prepareAddr(t *testing.T, ts *httptest.Server) (*url.URL, string, string) {
+	t.Helper()
 	addr, err := url.Parse(fmt.Sprintf("%s/api", ts.URL))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	host, port, err := net.SplitHostPort(addr.Host)
@@ -1046,7 +1127,7 @@ func prepareAddr(ts *httptest.Server) (*url.URL, string, string) {
 	return addr, host, port
 }
 
-func prepareEndpoint(path string, apiVersion int64, payload string) (*httptest.Server, *NginxPlusApi) {
+func prepareEndpoint(t *testing.T, path string, apiVersion int64, payload string) (*httptest.Server, *NginxPlusApi) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 
@@ -1054,7 +1135,7 @@ func prepareEndpoint(path string, apiVersion int64, payload string) (*httptest.S
 			rsp = payload
 			w.Header()["Content-Type"] = []string{"application/json"}
 		} else {
-			panic("Cannot handle request")
+			t.Errorf("unknown request path")
 		}
 
 		fmt.Fprintln(w, rsp)
@@ -1067,7 +1148,7 @@ func prepareEndpoint(path string, apiVersion int64, payload string) (*httptest.S
 
 	client, err := n.createHttpClient()
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	n.client = client
 

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -37,17 +36,18 @@ const (
 type TimeFunc func() time.Time
 
 type HTTPListener struct {
-	ServiceAddress string
-	ReadTimeout    internal.Duration
-	WriteTimeout   internal.Duration
-	MaxBodySize    internal.Size
-	MaxLineSize    internal.Size
-	Port           int
-
+	ServiceAddress string `toml:"service_address"`
+	// Port gets pulled out of ServiceAddress
+	Port int
 	tlsint.ServerConfig
 
-	BasicUsername string
-	BasicPassword string
+	ReadTimeout   internal.Duration `toml:"read_timeout"`
+	WriteTimeout  internal.Duration `toml:"write_timeout"`
+	MaxBodySize   internal.Size     `toml:"max_body_size"`
+	MaxLineSize   internal.Size     `toml:"max_line_size"`
+	BasicUsername string            `toml:"basic_username"`
+	BasicPassword string            `toml:"basic_password"`
+	DatabaseTag   string            `toml:"database_tag"`
 
 	TimeFunc
 
@@ -74,6 +74,8 @@ type HTTPListener struct {
 	BuffersCreated  selfstat.Stat
 	AuthFailures    selfstat.Stat
 
+	Log telegraf.Logger
+
 	longLines selfstat.Stat
 }
 
@@ -93,6 +95,13 @@ const sampleConfig = `
   ## Maximum line size allowed to be sent in bytes.
   ## 0 means to use the default of 65536 bytes (64 kibibytes)
   max_line_size = "64KiB"
+  
+
+  ## Optional tag name used to store the database. 
+  ## If the write has a database in the query string then it will be kept in this tag name.
+  ## This tag can be used in downstream outputs.
+  ## The default value of nothing means it will be off and the database will not be recorded.
+  # database_tag = ""
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -194,7 +203,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! Started HTTP listener service on %s\n", h.ServiceAddress)
+	h.Log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
 
 	return nil
 }
@@ -207,7 +216,7 @@ func (h *HTTPListener) Stop() {
 	h.listener.Close()
 	h.wg.Wait()
 
-	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress)
+	h.Log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
 }
 
 func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -258,6 +267,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	now := h.TimeFunc()
 
 	precision := req.URL.Query().Get("precision")
+	db := req.URL.Query().Get("db")
 
 	// Handle gzip request bodies
 	body := req.Body
@@ -265,7 +275,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		var err error
 		body, err = gzip.NewReader(req.Body)
 		if err != nil {
-			log.Println("D! " + err.Error())
+			h.Log.Debug(err.Error())
 			badRequest(res, err.Error())
 			return
 		}
@@ -281,7 +291,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	for {
 		n, err := io.ReadFull(body, buf[bufStart:])
 		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-			log.Println("D! " + err.Error())
+			h.Log.Debug(err.Error())
 			// problem reading the request body
 			badRequest(res, err.Error())
 			return
@@ -315,9 +325,9 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-			err = h.parse(buf[:n+bufStart], now, precision)
+			err = h.parse(buf[:n+bufStart], now, precision, db)
 			if err != nil {
-				log.Println("D! "+err.Error(), bufStart+n)
+				h.Log.Debugf("%s: %s", err.Error(), bufStart+n)
 				return400 = true
 			}
 			if return400 {
@@ -339,15 +349,15 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		if i == -1 {
 			h.longLines.Incr(1)
 			// drop any line longer than the max buffer size
-			log.Printf("D! http_listener received a single line longer than the maximum of %d bytes",
+			h.Log.Debugf("Http_listener received a single line longer than the maximum of %d bytes",
 				len(buf))
 			hangingBytes = true
 			return400 = true
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i+1], now, precision); err != nil {
-			log.Println("D! " + err.Error())
+		if err := h.parse(buf[:i+1], now, precision, db); err != nil {
+			h.Log.Debug(err.Error())
 			return400 = true
 		}
 		// rotate the bit remaining after the last newline to the front of the buffer
@@ -359,7 +369,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
+func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -371,6 +381,13 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
 	}
 
 	for _, m := range metrics {
+		// Do we need to keep the database name in the query string.
+		// If a tag has been supplied to put the db in and we actually got a db query,
+		// then we write it in. This overwrites the database tag if one was sent.
+		// This makes it behave like the influx endpoint.
+		if h.DatabaseTag != "" && db != "" {
+			m.AddTag(h.DatabaseTag, db)
+		}
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 

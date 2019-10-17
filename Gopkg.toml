@@ -16,11 +16,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.15.54"
-
-[[constraint]]
-  name = "github.com/bsm/sarama-cluster"
-  version = "2.1.13"
+  version = "1.19.41"
 
 [[constraint]]
   name = "github.com/couchbase/go-couchbase"
@@ -40,7 +36,7 @@
 
 [[constraint]]
   name = "github.com/eclipse/paho.mqtt.golang"
-  version = "~1.1.1"
+  version = "1"
 
 [[constraint]]
   name = "github.com/go-sql-driver/mysql"
@@ -80,7 +76,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/toml"
-  branch = "master"
+  branch = "telegraf"
 
 [[constraint]]
   name = "github.com/influxdata/wlog"
@@ -88,7 +84,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.2.0"
+  version = "3.4.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
@@ -152,7 +148,8 @@
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.18.0"
+  revision = "b12709e6ca29240128c89fe0b30b6a76be42b457"
+  source = "https://github.com/influxdata/sarama.git"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
@@ -225,6 +222,10 @@
   name = "gopkg.in/fsnotify.v1"
 
 [[constraint]]
+  name = "github.com/mdlayher/apcupsd"
+  revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
+
+[[constraint]]
   branch = "master"
   name = "google.golang.org/genproto"
 
@@ -235,6 +236,10 @@
 [[constraint]]
   name = "github.com/Azure/go-autorest"
   version = "10.12.0"
+
+[[constraint]]
+  name = "github.com/Azure/azure-storage-queue-go"
+  version = "0.2.0"
 
 [[constraint]]
   branch = "master"
@@ -288,3 +293,11 @@
 [[constraint]]
   name = "github.com/google/go-github"
   version = "24.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/openconfig/gnmi"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cisco-ie/nx-telemetry-proto"

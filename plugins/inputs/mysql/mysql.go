@@ -39,9 +39,12 @@ type Mysql struct {
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 	tls.ClientConfig
+	lastT            time.Time
+	initDone         bool
+	scanIntervalSlow uint32
 }
 
-var sampleConfig = `
+const sampleConfig = `
   ## specify servers via a url matching:
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
@@ -123,7 +126,7 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
-var defaultTimeout = time.Second * time.Duration(5)
+const defaultTimeout = time.Second * time.Duration(5)
 
 func (m *Mysql) SampleConfig() string {
 	return sampleConfig
@@ -133,21 +136,16 @@ func (m *Mysql) Description() string {
 	return "Read metrics from one or many mysql servers"
 }
 
-var (
-	localhost        = ""
-	lastT            time.Time
-	initDone         = false
-	scanIntervalSlow uint32
-)
+const localhost = ""
 
 func (m *Mysql) InitMysql() {
 	if len(m.IntervalSlow) > 0 {
 		interval, err := time.ParseDuration(m.IntervalSlow)
 		if err == nil && interval.Seconds() >= 1.0 {
-			scanIntervalSlow = uint32(interval.Seconds())
+			m.scanIntervalSlow = uint32(interval.Seconds())
 		}
 	}
-	initDone = true
+	m.initDone = true
 }
 
 func (m *Mysql) Gather(acc telegraf.Accumulator) error {
@@ -156,7 +154,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		return m.gatherServer(localhost, acc)
 	}
 	// Initialise additional query intervals
-	if !initDone {
+	if !m.initDone {
 		m.InitMysql()
 	}
 
@@ -184,6 +182,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// These are const but can't be declared as such because golang doesn't allow const maps
 var (
 	// status counter
 	generalThreadStates = map[string]uint32{
@@ -426,12 +425,12 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	// Global Variables may be gathered less often
 	if len(m.IntervalSlow) > 0 {
-		if uint32(time.Since(lastT).Seconds()) >= scanIntervalSlow {
+		if uint32(time.Since(m.lastT).Seconds()) >= m.scanIntervalSlow {
 			err = m.gatherGlobalVariables(db, serv, acc)
 			if err != nil {
 				return err
 			}
-			lastT = time.Now()
+			m.lastT = time.Now()
 		}
 	}
 
