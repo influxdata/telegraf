@@ -35,8 +35,7 @@ type (
 		EndpointURL      string            `toml:"endpoint_url"`
 		StatisticExclude []string          `toml:"statistic_exclude"`
 		StatisticInclude []string          `toml:"statistic_include"`
-		ResponseTimeout  internal.Duration `toml:"response_timeout"`
-		DialTimeout      internal.Duration `toml:"dial_timeout"`
+		Timeout          internal.Duration `toml:"timeout"`
 
 		Period    internal.Duration `toml:"period"`
 		Delay     internal.Duration `toml:"delay"`
@@ -138,10 +137,7 @@ func (c *CloudWatch) SampleConfig() string {
   # ratelimit = 25
 
   ## Timeout for http requests made by the cloudwatch client.
-  # response_timeout = "5s"
-
-  ## Maximum amount of time a dial will wait for a connect to complete. Default is no timeout.
-  # dial_timeout = "30s"
+  # timeout = "5s"
 
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
@@ -257,11 +253,11 @@ func (c *CloudWatch) initializeCloudWatch() {
 
 	cfg := &aws.Config{
 		HTTPClient: &http.Client{
-			// use the DefaultTransport plus configured dial timeout
+			// use values from DefaultTransport
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 				DialContext: (&net.Dialer{
-					Timeout:   c.DialTimeout.Duration,
+					Timeout:   30 * time.Second,
 					KeepAlive: 30 * time.Second,
 					DualStack: true,
 				}).DialContext,
@@ -271,7 +267,7 @@ func (c *CloudWatch) initializeCloudWatch() {
 				TLSHandshakeTimeout:   10 * time.Second,
 				ExpectContinueTimeout: 1 * time.Second,
 			},
-			Timeout: c.ResponseTimeout.Duration,
+			Timeout: c.Timeout.Duration,
 		},
 	}
 
@@ -556,10 +552,9 @@ func (c *CloudWatch) aggregateMetrics(
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
 		return &CloudWatch{
-			CacheTTL:        internal.Duration{Duration: time.Hour},
-			RateLimit:       25,
-			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
-			DialTimeout:     internal.Duration{Duration: time.Second * 30},
+			CacheTTL:  internal.Duration{Duration: time.Hour},
+			RateLimit: 25,
+			Timeout:   internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }

@@ -71,10 +71,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   # ratelimit = 25
 
   ## Timeout for http requests made by the cloudwatch client.
-  # response_timeout = "5s"
-
-  ## Maximum amount of time a dial will wait for a connect to complete. Default is no timeout.
-  # dial_timeout = "30s"
+  # timeout = "5s"
 
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
