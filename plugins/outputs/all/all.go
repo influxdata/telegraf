@@ -4,6 +4,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/application_insights"
+	_ "github.com/influxdata/telegraf/plugins/outputs/azure_blob"
 	_ "github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
@@ -34,5 +35,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/syslog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
-	_ "github.com/influxdata/telegraf/plugins/outputs/azure_blob"
 )
