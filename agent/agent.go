@@ -17,13 +17,15 @@ import (
 
 // Agent runs a set of plugins.
 type Agent struct {
-	Config *config.Config
+	Config  *config.Config
+	RunOnce bool
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config) (*Agent, error) {
+func NewAgent(config *config.Config, runOnce bool) (*Agent, error) {
 	a := &Agent{
-		Config: config,
+		Config:  config,
+		RunOnce: runOnce,
 	}
 	return a, nil
 }
@@ -57,10 +59,12 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	startTime := time.Now()
 
-	log.Printf("D! [agent] Starting service inputs")
-	err = a.startServiceInputs(ctx, inputC)
-	if err != nil {
-		return err
+	if !a.RunOnce {
+		log.Printf("D! [agent] Starting service inputs")
+		err = a.startServiceInputs(ctx, inputC)
+		if err != nil {
+			return err
+		}
 	}
 
 	var wg sync.WaitGroup
@@ -77,8 +81,10 @@ func (a *Agent) Run(ctx context.Context) error {
 			log.Printf("E! [agent] Error running inputs: %v", err)
 		}
 
-		log.Printf("D! [agent] Stopping service inputs")
-		a.stopServiceInputs()
+		if !a.RunOnce {
+			log.Printf("D! [agent] Stopping service inputs")
+			a.stopServiceInputs()
+		}
 
 		close(dst)
 		log.Printf("D! [agent] Input channel closed")
@@ -267,12 +273,17 @@ func (a *Agent) runInputs(
 		go func(input *models.RunningInput) {
 			defer wg.Done()
 
-			if a.Config.Agent.RoundInterval {
+			if !a.RunOnce && a.Config.Agent.RoundInterval {
 				err := internal.SleepContext(
 					ctx, internal.AlignDuration(startTime, interval))
 				if err != nil {
 					return
 				}
+			}
+
+			if a.RunOnce {
+				a.gatherOnce(acc, input, interval)
+				return
 			}
 
 			a.gatherOnInterval(ctx, acc, input, interval, jitter)
@@ -507,7 +518,7 @@ func (a *Agent) runOutputs(
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
 
-			if a.Config.Agent.RoundInterval {
+			if !a.RunOnce && !a.Config.Agent.RoundInterval {
 				err := internal.SleepContext(
 					ctx, internal.AlignDuration(startTime, interval))
 				if err != nil {
