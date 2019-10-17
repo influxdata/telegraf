@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,4 +59,17 @@ func TestFieldRename(t *testing.T) {
 	results := r.Apply(m)
 
 	assert.Equal(t, map[string]interface{}{"time": int64(1250), "snakes": true}, results[0].Fields(), "should change field 'time_msec' to 'time'")
+}
+
+func BenchmarkRename(b *testing.B) {
+	m1 := testutil.MustMetric("m1", map[string]string{"foo": "bar"}, map[string]interface{}{"status": 200, "foobar": "bar"}, time.Now())
+
+	r := Rename{
+		Replaces: []Replace{
+			{Measurement: "m1", Dest: "m2"},
+		},
+	}
+	for i := 0; i < b.N; i++ {
+		r.Apply(m1)
+	}
 }

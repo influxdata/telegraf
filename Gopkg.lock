@@ -244,6 +244,17 @@
   revision = "82441e232cf6af9be0f808bf0c6421ee8519880e"
 
 [[projects]]
+  digest = "1:b654a87d3a24093b1b25cfc68ec91eee12e6d4c889b475416968ac8e0ee3b16c"
+  name = "github.com/containous/yaegi"
+  packages = [
+    "interp",
+    "stdlib",
+  ]
+  pruneopts = ""
+  revision = "47923866ff3bd6d2ab93ad075fc1b29150e4bd51"
+  version = "v0.6.2"
+
+[[projects]]
   branch = "master"
   digest = "1:298e42868718da06fc0899ae8fdb99c48a14477045234c9274d81caa79af6a8f"
   name = "github.com/couchbase/go-couchbase"
@@ -1698,6 +1709,8 @@
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout",
     "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis",
+    "github.com/containous/yaegi/interp",
+    "github.com/containous/yaegi/stdlib",
     "github.com/couchbase/go-couchbase",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
