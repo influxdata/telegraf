@@ -67,6 +67,7 @@ var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Col
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fPlugins = flag.String("plugin-directory", "",
 	"path to directory containing external plugins")
+var fRunOnce = flag.Bool("run-once", false, "collect metrics from inputs once and exit")
 
 var (
 	version string
@@ -151,7 +152,7 @@ func runAgent(ctx context.Context,
 			c.Agent.Interval.Duration)
 	}
 
-	ag, err := agent.NewAgent(c)
+	ag, err := agent.NewAgent(c, *fRunOnce)
 	if err != nil {
 		return err
 	}
