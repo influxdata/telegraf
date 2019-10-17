@@ -134,7 +134,7 @@ func (config BinMetric) getTime(fields map[string]interface{}) (time.Time, error
 		switch config.TimeFormat {
 		case "unix":
 			metricTime, err = internal.ParseTimestamp(config.TimeFormat, int64(timeValue.(int32)), timezone)
-		case "unix_ms", "unix_ns":
+		case "unix_ms", "unix_us", "unix_ns":
 			metricTime, err = internal.ParseTimestamp(config.TimeFormat, int64(timeValue.(int64)), timezone)
 		default:
 			return *nilTime, fmt.Errorf("invalid time format %s", config.TimeFormat)

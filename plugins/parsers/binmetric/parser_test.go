@@ -23,7 +23,7 @@ var binaryDataLittleEndian = []byte{
 	0x4C, 0x6C, 0xA8, 0x5D,
 }
 
-var binaryDataBigEndianTimeMs = []byte{
+var binaryDataBigEndianTimeXs = []byte{
 	0x00,
 	0x00, 0x00, 0x01, 0x6D, 0xD9, 0xE7, 0x0B, 0x17,
 }
@@ -258,11 +258,49 @@ func TestTimeMs(t *testing.T) {
 		},
 	}
 
-	metrics, err := timeMs.Parse(binaryDataBigEndianTimeMs)
+	metrics, err := timeMs.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	require.Equal(t, timeMs.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000000)
+	assert.Equal(t, map[string]interface{}{
+		"fieldBool0": false,
+	}, metrics[0].Fields())
+
+	var timeUs = BinMetric{
+		MetricName: "time_ms",
+		Endiannes:  "be",
+		TimeFormat: "unix_us",
+		Fields: []Field{
+			Field{Name: "fieldBool0", Type: "bool", Offset: 0, Size: 1},
+			Field{Name: "time", Type: "int64", Offset: 1, Size: 8},
+		},
+	}
+
+	metrics, err = timeUs.Parse(binaryDataBigEndianTimeXs)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, timeUs.MetricName, metrics[0].Name())
+	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000)
+	assert.Equal(t, map[string]interface{}{
+		"fieldBool0": false,
+	}, metrics[0].Fields())
+
+	var timeNs = BinMetric{
+		MetricName: "time_ns",
+		Endiannes:  "be",
+		TimeFormat: "unix_ns",
+		Fields: []Field{
+			Field{Name: "fieldBool0", Type: "bool", Offset: 0, Size: 1},
+			Field{Name: "time", Type: "int64", Offset: 1, Size: 8},
+		},
+	}
+
+	metrics, err = timeNs.Parse(binaryDataBigEndianTimeXs)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, timeNs.MetricName, metrics[0].Name())
+	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano())
 	assert.Equal(t, map[string]interface{}{
 		"fieldBool0": false,
 	}, metrics[0].Fields())
