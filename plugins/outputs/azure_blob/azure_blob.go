@@ -17,6 +17,8 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
+const verbose = true
+
 const (
 	blobFormatString = `https://%s.blob.core.windows.net`
 	timeFormatString = "20060102150405" // YYYYMMDDHHMMSS
@@ -27,6 +29,7 @@ type AzureBlob struct {
 	BlobAccount       string `toml:"blobAccount"`
 	BlobAccountKey    string `toml:"blobAccountKey"`
 	BlobContainerName string `toml:"blobContainerName"`
+	BlobAccountSasURL string `toml:"blobAccountSasURL"`
 	FlushInterval     int    `toml:"flushInterval"`
 	MachineName       string `toml:"machineName"`
 
@@ -39,30 +42,47 @@ type AzureBlob struct {
 
 // Connect to the Output
 func (s *AzureBlob) Connect() error {
-	fmt.Printf("Initializing Azure Blob output plugin for BlobAccount %s, BlobContainerName %s, MachineName %s and FlushInterval %d seconds\n",
-		s.BlobAccount, s.BlobContainerName, s.MachineName, s.FlushInterval)
-	// authenticate and create a pipeline
-	c, err := azblob.NewSharedKeyCredential(s.BlobAccount, s.BlobAccountKey)
-	if err != nil {
-		return err
+	var u *url.URL
+	var c azblob.Credential
+	var err error
+
+	if s.BlobAccount != "" && s.BlobAccountKey != "" {
+		log(fmt.Sprintf("Initializing Azure Blob output plugin for BlobAccount %s, BlobContainerName %s, MachineName %s and FlushInterval %d seconds\n",
+			s.BlobAccount, s.BlobContainerName, s.MachineName, s.FlushInterval))
+
+		// authenticate and create a pipeline
+		c, err = azblob.NewSharedKeyCredential(s.BlobAccount, s.BlobAccountKey)
+		if err != nil {
+			return err
+		}
+		u, err = url.Parse(fmt.Sprintf(blobFormatString, s.BlobAccount))
+		if err != nil {
+			return err
+		}
+	} else if s.BlobAccountSasURL != "" {
+		log(fmt.Sprintf("Initializing Azure Blob output plugin with SAS for URL %s\n", strings.Split(s.BlobAccountSasURL, "?")[0]))
+
+		c = azblob.NewAnonymousCredential()
+		u, err = url.Parse(s.BlobAccountSasURL)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("You need to provide either a BlobAccount/BlobAccountKey combination or a BlobAccountSasURL")
 	}
+
 	p := azblob.NewPipeline(c, azblob.PipelineOptions{})
-	u, err := url.Parse(fmt.Sprintf(blobFormatString, s.BlobAccount))
-	if err != nil {
-		return err
-	}
+
 	// create Azure Blob services
 	s.blobService = azblob.NewServiceURL(*u, p)
 	s.blobContainerService = s.blobService.NewContainerURL(s.BlobContainerName)
 
-	err = s.createContainerIfNotExists(context.TODO())
+	err = s.createContainerIfNotExists(context.Background())
 	if err != nil {
 		return err
 	}
 
-	// setting time to an initial value
-	s.timeOfPreviousFlush = time.Now()
-	// setting hostname to an initial value
+	// setting hostname to current hostname if one was not provided by the user
 	if s.MachineName == "" {
 		hostname, err := os.Hostname()
 		if err != nil {
@@ -70,7 +90,10 @@ func (s *AzureBlob) Connect() error {
 		}
 		s.MachineName = hostname
 	}
-	// setting format to an initial value
+
+	// setting timeOfPreviousFlush to an initial value
+	s.timeOfPreviousFlush = time.Now()
+
 	return nil
 }
 
@@ -80,14 +103,15 @@ func (s *AzureBlob) SetSerializer(serializer serializers.Serializer) {
 
 // Close any connections to the Output
 func (s *AzureBlob) Close() error {
-	fmt.Println("Close message received. Synchronously flushing saved events")
+	log(fmt.Sprintf("Close message received. Synchronously flushing saved events"))
+
 	err := s.flushMetricsCacheToAzureBlob()
 	return err
 }
 
 // Write takes in group of points to be written to the Output
 func (s *AzureBlob) Write(metrics []telegraf.Metric) error {
-	fmt.Printf("%d metrics cached\n", len(metrics))
+	log(fmt.Sprintf("%d metrics cached\n", len(metrics)))
 
 	s.metricsCache = append(s.metricsCache, metrics...)
 
@@ -115,23 +139,25 @@ func (s *AzureBlob) flushMetricsCacheToAzureBlob() error {
 		}
 		sb.Write(bytes)
 	}
-	//bytes, err := s.serializer.SerializeBatch(s.metricsCache)
+
 	bytes := []byte(sb.String())
 	if len(s.metricsCache) == 0 {
 		fmt.Println("0 items in cache - will not write anything")
 		return nil
 	}
 
-	// format is endDateTime-startDateTime-machineName
-	blobName := fmt.Sprintf("%s-%s-%s", s.metricsCache[len(s.metricsCache)-1].Time().Format(timeFormatString),
-		s.metricsCache[0].Time().Format(timeFormatString), s.MachineName)
+	loc, _ := time.LoadLocation("UTC")
+	// format is machineName-startDateTime-endDateTime (in UTC format)
+	blobName := fmt.Sprintf("%s-%s-%s", s.MachineName, s.metricsCache[0].Time().In(loc).Format(timeFormatString),
+		s.metricsCache[len(s.metricsCache)-1].Time().In(loc).Format(timeFormatString))
 
-	_, err := s.createBlockBlob(context.TODO(), blobName, bytes)
+	_, err := s.createBlockBlob(context.Background(), blobName, bytes)
 	if err != nil {
 		return fmt.Errorf("error creating blob: %s", err)
 	}
 
-	fmt.Printf("blob '%s' written successfully\n", blobName)
+	log(fmt.Sprintf("blob '%s' written successfully\n", blobName))
+
 	return nil
 
 }
@@ -185,16 +211,19 @@ func compressBytesIntoFile(filename string, data []byte) ([]byte, error) {
 
 // Description returns a one-sentence description on the Output
 func (s *AzureBlob) Description() string {
-	return "Azure Blob plugin sends telegraf data to a Azure Blob"
+	return "Azure Blob plugin periodically sends zipped telegraf data to a specified Azure Blob container"
 }
 
 // SampleConfig returns the default configuration of the Output
 func (s *AzureBlob) SampleConfig() string {
 	return `
+	## You need to have either an account/account key combination or a SAS URL
 	## Azure Blob account
 	# blobAccount = "myblobaccount"
 	## Azure Blob account key
 	# blobAccountKey = "myblobaccountkey"
+	## Azure Blob SAS URL
+	# blobAccountSasURL = "YOUR_SAS_URL"
 	## Azure Blob container name
 	# blobContainerName = "telegrafcontainer"
 	## Flush interval in seconds
@@ -219,7 +248,7 @@ func (s *AzureBlob) createContainerIfNotExists(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Container %s creation status code %d\n", s.BlobContainerName, resp.StatusCode())
+		log(fmt.Sprintf("Container %s creation status code %d\n", s.BlobContainerName, resp.StatusCode()))
 	}
 	return nil
 }
@@ -237,4 +266,10 @@ func (s *AzureBlob) checkIfContainerExists(ctx context.Context) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func log(msg string) {
+	if verbose {
+		fmt.Print(msg)
+	}
 }
