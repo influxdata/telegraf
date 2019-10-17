@@ -26,6 +26,7 @@ const (
 	defaultBaseUrl                       = "https://api.openweathermap.org/"
 	defaultResponseTimeout time.Duration = time.Second * 5
 	defaultUnits           string        = "metric"
+	defaultLang            string        = "en"
 )
 
 type OpenWeatherMap struct {
@@ -48,7 +49,10 @@ var sampleConfig = `
   ## City ID's to collect weather data from.
   city_id = ["5391959"]
 
-  ## Language of the description field.
+  ## Language of the description field. Can be one of "ar", "bg",
+  ## "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl", "hr", "hu",
+  ## "it", "ja", "kr", "la", "lt", "mk", "nl", "pl", "pt", "ro", "ru",
+  ## "se", "sk", "sl", "es", "tr", "ua", "vi", "zh_cn", "zh_tw"
   # lang = "en"
 
   ## APIs to fetch; can contain "weather" or "forecast".
@@ -320,6 +324,17 @@ func (n *OpenWeatherMap) Init() error {
 		return fmt.Errorf("unknown units: %s", n.Units)
 	}
 
+	switch n.Lang {
+	case "ar", "bg", "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl",
+		"hr", "hu", "it", "ja", "kr", "la", "lt", "mk", "nl", "pl",
+		"pt", "ro", "ru", "se", "sk", "sl", "es", "tr", "ua", "vi",
+		"zh_cn", "zh_tw":
+	case "":
+		n.Lang = defaultLang
+	default:
+		return fmt.Errorf("unknown language: %s", n.Lang)
+	}
+
 	return nil
 }
 
@@ -327,14 +342,8 @@ func (n *OpenWeatherMap) formatURL(path string, city string) string {
 	v := url.Values{
 		"id":    []string{city},
 		"APPID": []string{n.AppId},
-	}
-
-	if n.Units != "" {
-		v["units"] = []string{n.Units}
-	}
-
-	if n.Lang != "" {
-		v["lang"] = []string{n.Lang}
+		"lang":  []string{n.Lang},
+		"units": []string{n.Units},
 	}
 
 	relative := &url.URL{

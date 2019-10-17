@@ -20,8 +20,11 @@ condition ID, icon, and main is at [weather conditions][].
   ## City ID's to collect weather data from.
   city_id = ["5391959"]
 
-  ## Language of the description field.
-  lang = "en"
+  ## Language of the description field. Can be one of "ar", "bg",
+  ## "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl", "hr", "hu",
+  ## "it", "ja", "kr", "la", "lt", "mk", "nl", "pl", "pt", "ro", "ru",
+  ## "se", "sk", "sl", "es", "tr", "ua", "vi", "zh_cn", "zh_tw"
+  # lang = "en"
 
   ## APIs to fetch; can contain "weather" or "forecast".
   fetch = ["weather", "forecast"]

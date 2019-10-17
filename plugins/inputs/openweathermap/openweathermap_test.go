@@ -540,3 +540,10 @@ func TestDefaultUnits(t *testing.T) {
 
 	require.Equal(t, "metric", n.Units)
 }
+
+func TestDefaultLang(t *testing.T) {
+	n := &OpenWeatherMap{}
+	n.Init()
+
+	require.Equal(t, "en", n.Lang)
+}
