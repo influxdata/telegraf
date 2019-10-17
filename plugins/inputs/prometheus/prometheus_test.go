@@ -53,7 +53,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 
 	p := &Prometheus{
 		Log:    testutil.Logger{},
-    URLs:   []string{ts.URL},
+		URLs:   []string{ts.URL},
 		URLTag: "url",
 	}
 
