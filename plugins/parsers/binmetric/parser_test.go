@@ -8,16 +8,16 @@ import (
 )
 
 var binaryDataBigEndian = []byte{
-	0x00, 0x01, 0x02, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x07,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
+	0x00, 0x01, 0x02, 0xFE, 0x00, 0x04, 0xFF, 0xFC, 0x00, 0x00, 0x00, 0x06, 0xFF, 0xFF, 0xFF, 0xFA,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF8,
 	0x41, 0x29, 0x00, 0x00, 0x40, 0x26, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x41, 0x42, 0x43,
 	0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53,
 	0x5D, 0xA8, 0x6C, 0x4C,
 }
 
 var binaryDataLittleEndian = []byte{
-	0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x05, 0x00, 0x06, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00,
-	0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x01, 0x02, 0xFE, 0x04, 0x00, 0xFC, 0xFF, 0x06, 0x00, 0x00, 0x00, 0xFA, 0xFF, 0xFF, 0xFF,
+	0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0x00, 0x00, 0x29, 0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x26, 0x40, 0x40, 0x41, 0x42, 0x43,
 	0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53,
 	0x4C, 0x6C, 0xA8, 0x5D,
@@ -61,13 +61,13 @@ func TestAllFieldsOrderedBigEndian(t *testing.T) {
 		"fieldBool0":   false,
 		"fieldBool1":   true,
 		"fieldUint8":   uint64(2),
-		"fieldInt8":    int64(3),
+		"fieldInt8":    int64(-2),
 		"fieldUint16":  uint64(4),
-		"fieldInt16":   int64(5),
+		"fieldInt16":   int64(-4),
 		"fieldUint32":  uint64(6),
-		"fieldInt32":   int64(7),
+		"fieldInt32":   int64(-6),
 		"fieldUint64":  uint64(8),
-		"fieldInt64":   int64(9),
+		"fieldInt64":   int64(-8),
 		"fieldFloat32": 10.5625,
 		"fieldFloat64": 11.0,
 		"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
@@ -112,13 +112,13 @@ func TestAllFieldsLittleEndian(t *testing.T) {
 		"fieldBool0":   false,
 		"fieldBool1":   true,
 		"fieldUint8":   uint64(2),
-		"fieldInt8":    int64(3),
+		"fieldInt8":    int64(-2),
 		"fieldUint16":  uint64(4),
-		"fieldInt16":   int64(5),
+		"fieldInt16":   int64(-4),
 		"fieldUint32":  uint64(6),
-		"fieldInt32":   int64(7),
+		"fieldInt32":   int64(-6),
 		"fieldUint64":  uint64(8),
-		"fieldInt64":   int64(9),
+		"fieldInt64":   int64(-8),
 		"fieldFloat32": 10.5625,
 		"fieldFloat64": 11.0,
 		"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
@@ -158,13 +158,13 @@ func TestFieldsOutOfOrder(t *testing.T) {
 		"fieldBool0":   false,
 		"fieldBool1":   true,
 		"fieldUint8":   uint64(2),
-		"fieldInt8":    int64(3),
+		"fieldInt8":    int64(-2),
 		"fieldUint16":  uint64(4),
-		"fieldInt16":   int64(5),
+		"fieldInt16":   int64(-4),
 		"fieldUint32":  uint64(6),
-		"fieldInt32":   int64(7),
+		"fieldInt32":   int64(-6),
 		"fieldUint64":  uint64(8),
-		"fieldInt64":   int64(9),
+		"fieldInt64":   int64(-8),
 		"fieldFloat32": 10.5625,
 		"fieldFloat64": 11.0,
 		"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
@@ -199,11 +199,11 @@ func TestWithGaps(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"fieldBool1":   true,
 		"fieldUint8":   uint64(2),
-		"fieldInt8":    int64(3),
+		"fieldInt8":    int64(-2),
 		"fieldUint32":  uint64(6),
-		"fieldInt32":   int64(7),
+		"fieldInt32":   int64(-6),
 		"fieldUint64":  uint64(8),
-		"fieldInt64":   int64(9),
+		"fieldInt64":   int64(-8),
 		"fieldFloat32": 10.5625,
 		"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
 	}, metrics[0].Fields())
@@ -246,10 +246,10 @@ func TestInvalidType(t *testing.T) {
 	assert.Len(t, metrics, 0)
 }
 
-func TestTimeMs(t *testing.T) {
+func TestTimeXs(t *testing.T) {
 
-	var timeMs = BinMetric{
-		MetricName: "time_ms",
+	var timeFormatUnixMs = BinMetric{
+		MetricName: "time_format_unix_ms",
 		Endiannes:  "be",
 		TimeFormat: "unix_ms",
 		Fields: []Field{
@@ -258,17 +258,17 @@ func TestTimeMs(t *testing.T) {
 		},
 	}
 
-	metrics, err := timeMs.Parse(binaryDataBigEndianTimeXs)
+	metrics, err := timeFormatUnixMs.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, timeMs.MetricName, metrics[0].Name())
+	require.Equal(t, timeFormatUnixMs.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000000)
 	assert.Equal(t, map[string]interface{}{
 		"fieldBool0": false,
 	}, metrics[0].Fields())
 
-	var timeUs = BinMetric{
-		MetricName: "time_ms",
+	var timeFormatUnixUs = BinMetric{
+		MetricName: "time_format_unix_ms",
 		Endiannes:  "be",
 		TimeFormat: "unix_us",
 		Fields: []Field{
@@ -277,17 +277,17 @@ func TestTimeMs(t *testing.T) {
 		},
 	}
 
-	metrics, err = timeUs.Parse(binaryDataBigEndianTimeXs)
+	metrics, err = timeFormatUnixUs.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, timeUs.MetricName, metrics[0].Name())
+	require.Equal(t, timeFormatUnixUs.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000)
 	assert.Equal(t, map[string]interface{}{
 		"fieldBool0": false,
 	}, metrics[0].Fields())
 
-	var timeNs = BinMetric{
-		MetricName: "time_ns",
+	var timeFromatUnixNs = BinMetric{
+		MetricName: "time_format_unix_ns",
 		Endiannes:  "be",
 		TimeFormat: "unix_ns",
 		Fields: []Field{
@@ -296,13 +296,70 @@ func TestTimeMs(t *testing.T) {
 		},
 	}
 
-	metrics, err = timeNs.Parse(binaryDataBigEndianTimeXs)
+	metrics, err = timeFromatUnixNs.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, timeNs.MetricName, metrics[0].Name())
+	require.Equal(t, timeFromatUnixNs.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano())
 	assert.Equal(t, map[string]interface{}{
 		"fieldBool0": false,
 	}, metrics[0].Fields())
 
+	var timeFormatInvalid = BinMetric{
+		MetricName: "time_format_invalid",
+		Endiannes:  "be",
+		TimeFormat: "foo",
+		Fields: []Field{
+			Field{Name: "fieldBool0", Type: "bool", Offset: 0, Size: 1},
+			Field{Name: "time", Type: "int64", Offset: 1, Size: 8},
+		},
+	}
+
+	metrics, err = timeFormatInvalid.Parse(binaryDataBigEndianTimeXs)
+	require.Error(t, err)
+	assert.Len(t, metrics, 0)
+}
+
+func TestBinaryProtocol(t *testing.T) {
+
+	var invalidProtocol = BinMetric{
+		MetricName: "invalid_protocol",
+		Protocol:   "invalid",
+		Endiannes:  "be",
+		TimeFormat: "unix",
+		Fields: []Field{
+			Field{Name: "fieldBool0", Type: "bool", Offset: 0, Size: 1},
+		},
+	}
+
+	metrics, err := invalidProtocol.Parse(binaryDataBigEndian)
+	require.Error(t, err)
+	assert.Len(t, metrics, 0)
+
+	var validProtocol = BinMetric{
+		MetricName: "valid_protocol",
+		Protocol:   "raw",
+		Endiannes:  "be",
+		TimeFormat: "unix",
+		Fields: []Field{
+			Field{Name: "fieldBool0", Type: "bool", Offset: 0, Size: 1},
+		},
+	}
+
+	metrics, err = validProtocol.Parse(binaryDataBigEndian)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+
+	var noProtocol = BinMetric{
+		MetricName: "no_protocol",
+		Endiannes:  "be",
+		TimeFormat: "unix",
+		Fields: []Field{
+			Field{Name: "fieldBool0", Type: "bool", Offset: 0, Size: 1},
+		},
+	}
+
+	metrics, err = noProtocol.Parse(binaryDataBigEndian)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
 }

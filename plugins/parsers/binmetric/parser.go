@@ -14,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+const timeKey = "time"
+const timezone = "UTC"
+const defaultProtocol = "raw"
+
 // Field is ...
 type Field struct {
 	Name   string
@@ -25,18 +29,20 @@ type Field struct {
 // BinMetric is ...
 type BinMetric struct {
 	MetricName string
+	Protocol   string
+	TimeFormat string
+	Endiannes  string
+	Fields     []Field
 	// TagKeys    []string
-	TimeFormat  string
-	Endiannes   string
-	Fields      []Field
 	DefaultTags map[string]string
 }
 
-const timeKey = "time"
-const timezone = "UTC"
-
 // Parse is ...
 func (config *BinMetric) Parse(binMetric []byte) ([]telegraf.Metric, error) {
+	_, err := config.getProtocol()
+	if err != nil {
+		return nil, err
+	}
 
 	endiannes, err := config.getEndiannes()
 	if err != nil {
@@ -53,7 +59,7 @@ func (config *BinMetric) Parse(binMetric []byte) ([]telegraf.Metric, error) {
 			return nil, err
 		}
 
-		fieldType := fieldTypes[field.Type]
+		fieldType := fieldTypes[strings.ToLower(field.Type)]
 		if fieldType == nil {
 			return nil, fmt.Errorf(`invalid field type "%s""`, field.Type)
 		}
@@ -110,6 +116,15 @@ var fieldTypes = map[string]reflect.Type{
 	"float32": reflect.TypeOf((*float32)(nil)).Elem(),
 	"float64": reflect.TypeOf((*float64)(nil)).Elem(),
 	"string":  reflect.TypeOf((*string)(nil)).Elem(),
+}
+
+func (config BinMetric) getProtocol() (string, error) {
+	protocol := strings.ToLower(config.Protocol)
+	if protocol == "" {
+	} else if protocol != defaultProtocol {
+		return defaultProtocol, fmt.Errorf("only protocol %s is supported", defaultProtocol)
+	}
+	return defaultProtocol, nil
 }
 
 func (config BinMetric) getEndiannes() (binary.ByteOrder, error) {
