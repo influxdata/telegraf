@@ -216,7 +216,7 @@ func parseSchedStats(file io.Reader) (cmd string, cpuTime int64, ctxSwich int64,
 
 		if strings.Contains(metric, "sum_exec_runtime") {
 			value, _ := strconv.ParseFloat(strValue, 64)
-			cpuTime = int64(value * 1_000_000)
+			cpuTime = int64(value * 1000000)
 			continue
 		} else if strings.Contains(metric, "nr_voluntary") {
 			value, _ := strconv.ParseInt(strValue, 10, 64)
