@@ -14,7 +14,6 @@ import (
 	"github.com/go-redis/redis"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -309,7 +308,7 @@ func convertSentinelMastersOutput(
 	}
 
 	for key, val := range master {
-		key = internal.SnakeCase(key)
+		key = strings.Replace(key, "-", "_", -1)
 
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			fields[key] = ival
@@ -345,7 +344,7 @@ func convertSentinelSentinelsOutput(
 	fields := make(map[string]interface{})
 
 	for key, val := range sentinelMaster {
-		key = internal.SnakeCase(key)
+		key = strings.Replace(key, "-", "_", -1)
 
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			fields[key] = ival
@@ -382,7 +381,7 @@ func convertSentinelReplicaOutput(
 	fields := make(map[string]interface{})
 
 	for key, val := range replica {
-		key = internal.SnakeCase(key)
+		key = strings.Replace(key, "-", "_", -1)
 
 		if ival, err := strconv.ParseInt(val, 10, 64); err == nil {
 			fields[key] = ival
@@ -468,7 +467,7 @@ func convertSentinelInfoOutput(
 			metric = name
 		}
 
-		metric = internal.SnakeCase(metric)
+		metric = strings.Replace(metric, "-", "_", -1)
 
 		val := strings.TrimSpace(parts[1])
 
