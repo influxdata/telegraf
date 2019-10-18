@@ -1,4 +1,4 @@
-package binmetric
+package bindata
 
 import (
 	"testing"
@@ -30,7 +30,7 @@ var binaryDataBigEndianTimeXs = []byte{
 
 func TestAllFieldsOrderedBigEndian(t *testing.T) {
 
-	var allTypes = BinMetric{
+	var allTypes = BinData{
 		MetricName: "all_types_be",
 		Endiannes:  "be",
 		TimeFormat: "unix",
@@ -72,16 +72,11 @@ func TestAllFieldsOrderedBigEndian(t *testing.T) {
 		"fieldFloat64": 11.0,
 		"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
 	}, metrics[0].Fields())
-
-	// fmt.Println("time", metrics[0].Time())
-	// for key, value := range metrics[0].Fields() {
-	// 	fmt.Println(key, value)
-	// }
 }
 
 func TestAllFieldsLittleEndian(t *testing.T) {
 
-	var allTypes = BinMetric{
+	var allTypes = BinData{
 		MetricName: "all_types_le",
 		Endiannes:  "le",
 		TimeFormat: "unix",
@@ -127,7 +122,7 @@ func TestAllFieldsLittleEndian(t *testing.T) {
 
 func TestFieldsOutOfOrder(t *testing.T) {
 
-	var outOfOrder = BinMetric{
+	var outOfOrder = BinData{
 		MetricName: "out_of_order",
 		Endiannes:  "be",
 		TimeFormat: "unix",
@@ -173,7 +168,7 @@ func TestFieldsOutOfOrder(t *testing.T) {
 
 func TestWithGaps(t *testing.T) {
 
-	var withGaps = BinMetric{
+	var withGaps = BinData{
 		MetricName: "with_gaps",
 		Endiannes:  "be",
 		TimeFormat: "unix",
@@ -211,7 +206,7 @@ func TestWithGaps(t *testing.T) {
 
 func TestTimeAddedByParser(t *testing.T) {
 
-	var noTimeHere = BinMetric{
+	var noTimeHere = BinData{
 		MetricName: "no_time_here",
 		Endiannes:  "be",
 		TimeFormat: "unix",
@@ -232,7 +227,7 @@ func TestTimeAddedByParser(t *testing.T) {
 
 func TestInvalidType(t *testing.T) {
 
-	var invalidType = BinMetric{
+	var invalidType = BinData{
 		MetricName: "invalid_type",
 		Endiannes:  "be",
 		TimeFormat: "unix",
@@ -248,7 +243,7 @@ func TestInvalidType(t *testing.T) {
 
 func TestTimeXs(t *testing.T) {
 
-	var timeFormatUnixMs = BinMetric{
+	var timeFormatUnixMs = BinData{
 		MetricName: "time_format_unix_ms",
 		Endiannes:  "be",
 		TimeFormat: "unix_ms",
@@ -267,7 +262,7 @@ func TestTimeXs(t *testing.T) {
 		"fieldBool0": false,
 	}, metrics[0].Fields())
 
-	var timeFormatUnixUs = BinMetric{
+	var timeFormatUnixUs = BinData{
 		MetricName: "time_format_unix_ms",
 		Endiannes:  "be",
 		TimeFormat: "unix_us",
@@ -286,7 +281,7 @@ func TestTimeXs(t *testing.T) {
 		"fieldBool0": false,
 	}, metrics[0].Fields())
 
-	var timeFromatUnixNs = BinMetric{
+	var timeFromatUnixNs = BinData{
 		MetricName: "time_format_unix_ns",
 		Endiannes:  "be",
 		TimeFormat: "unix_ns",
@@ -305,7 +300,7 @@ func TestTimeXs(t *testing.T) {
 		"fieldBool0": false,
 	}, metrics[0].Fields())
 
-	var timeFormatInvalid = BinMetric{
+	var timeFormatInvalid = BinData{
 		MetricName: "time_format_invalid",
 		Endiannes:  "be",
 		TimeFormat: "foo",
@@ -322,7 +317,7 @@ func TestTimeXs(t *testing.T) {
 
 func TestBinaryProtocol(t *testing.T) {
 
-	var invalidProtocol = BinMetric{
+	var invalidProtocol = BinData{
 		MetricName: "invalid_protocol",
 		Protocol:   "invalid",
 		Endiannes:  "be",
@@ -336,7 +331,7 @@ func TestBinaryProtocol(t *testing.T) {
 	require.Error(t, err)
 	assert.Len(t, metrics, 0)
 
-	var validProtocol = BinMetric{
+	var validProtocol = BinData{
 		MetricName: "valid_protocol",
 		Protocol:   "raw",
 		Endiannes:  "be",
@@ -350,7 +345,7 @@ func TestBinaryProtocol(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
 
-	var noProtocol = BinMetric{
+	var noProtocol = BinData{
 		MetricName: "no_protocol",
 		Endiannes:  "be",
 		TimeFormat: "unix",

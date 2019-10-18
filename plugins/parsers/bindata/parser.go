@@ -1,4 +1,4 @@
-package binmetric
+package bindata
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ type Field struct {
 	Size   int
 }
 
-// BinMetric is ...
-type BinMetric struct {
+// BinData is ...
+type BinData struct {
 	MetricName string
 	Protocol   string
 	TimeFormat string
@@ -38,21 +38,21 @@ type BinMetric struct {
 }
 
 // Parse is ...
-func (config *BinMetric) Parse(binMetric []byte) ([]telegraf.Metric, error) {
-	_, err := config.getProtocol()
+func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
+	_, err := binData.getProtocol()
 	if err != nil {
 		return nil, err
 	}
 
-	endiannes, err := config.getEndiannes()
+	endiannes, err := binData.getEndiannes()
 	if err != nil {
 		return nil, err
 	}
 
 	fields := make(map[string]interface{})
-	reader := io.NewSectionReader(bytes.NewReader(binMetric), 0, int64(len(binMetric)))
+	reader := io.NewSectionReader(bytes.NewReader(data), 0, int64(len(data)))
 
-	for _, field := range config.Fields {
+	for _, field := range binData.Fields {
 		fieldBuffer := make([]byte, field.Size)
 		_, err := reader.ReadAt(fieldBuffer, int64(field.Offset))
 		if err != nil {
@@ -74,18 +74,18 @@ func (config *BinMetric) Parse(binMetric []byte) ([]telegraf.Metric, error) {
 		}
 	}
 
-	metricTime, err := config.getTime(fields)
+	metricTime, err := binData.getTime(fields)
 	if err != nil {
 		return nil, err
 	}
 
-	metric, err := metric.New(config.MetricName, nil, fields, metricTime)
+	metric, err := metric.New(binData.MetricName, nil, fields, metricTime)
 	if err != nil {
 		return nil, err
 	}
 
 	// metricTags := make(map[string]string)
-	// for _, tagKey := range config.BinMetric.TagKeys {
+	// for _, tagKey := range binData.BinData.TagKeys {
 	// 	metricTags[tagKey] = ""
 	// }
 
@@ -93,14 +93,14 @@ func (config *BinMetric) Parse(binMetric []byte) ([]telegraf.Metric, error) {
 }
 
 // ParseLine is ...
-func (config *BinMetric) ParseLine(line string) (telegraf.Metric, error) {
-	fmt.Println("BinMetric.ParseLine() not supported")
+func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
+	fmt.Println("BinData.ParseLine() not supported")
 	return nil, nil
 }
 
 // SetDefaultTags is ...
-func (config *BinMetric) SetDefaultTags(tags map[string]string) {
-	fmt.Println("BinMetric.SetDefaultTags() not supported")
+func (binData *BinData) SetDefaultTags(tags map[string]string) {
+	fmt.Println("BinData.SetDefaultTags() not supported")
 }
 
 var fieldTypes = map[string]reflect.Type{
@@ -118,8 +118,8 @@ var fieldTypes = map[string]reflect.Type{
 	"string":  reflect.TypeOf((*string)(nil)).Elem(),
 }
 
-func (config BinMetric) getProtocol() (string, error) {
-	protocol := strings.ToLower(config.Protocol)
+func (binData BinData) getProtocol() (string, error) {
+	protocol := strings.ToLower(binData.Protocol)
 	if protocol == "" {
 	} else if protocol != defaultProtocol {
 		return defaultProtocol, fmt.Errorf("only protocol %s is supported", defaultProtocol)
@@ -127,9 +127,9 @@ func (config BinMetric) getProtocol() (string, error) {
 	return defaultProtocol, nil
 }
 
-func (config BinMetric) getEndiannes() (binary.ByteOrder, error) {
+func (binData BinData) getEndiannes() (binary.ByteOrder, error) {
 	var endiannes binary.ByteOrder
-	cfgEndiannes := strings.ToLower(config.Endiannes)
+	cfgEndiannes := strings.ToLower(binData.Endiannes)
 	if cfgEndiannes == "" || cfgEndiannes == "be" {
 		endiannes = binary.BigEndian
 	} else if cfgEndiannes == "le" {
@@ -140,19 +140,19 @@ func (config BinMetric) getEndiannes() (binary.ByteOrder, error) {
 	return endiannes, nil
 }
 
-func (config BinMetric) getTime(fields map[string]interface{}) (time.Time, error) {
+func (binData BinData) getTime(fields map[string]interface{}) (time.Time, error) {
 	nilTime := new(time.Time)
 	metricTime := time.Now()
 	timeValue := fields[timeKey]
 	if timeValue != nil {
 		var err error
-		switch config.TimeFormat {
+		switch binData.TimeFormat {
 		case "unix":
-			metricTime, err = internal.ParseTimestamp(config.TimeFormat, int64(timeValue.(int32)), timezone)
+			metricTime, err = internal.ParseTimestamp(binData.TimeFormat, int64(timeValue.(int32)), timezone)
 		case "unix_ms", "unix_us", "unix_ns":
-			metricTime, err = internal.ParseTimestamp(config.TimeFormat, int64(timeValue.(int64)), timezone)
+			metricTime, err = internal.ParseTimestamp(binData.TimeFormat, int64(timeValue.(int64)), timezone)
 		default:
-			return *nilTime, fmt.Errorf("invalid time format %s", config.TimeFormat)
+			return *nilTime, fmt.Errorf("invalid time format %s", binData.TimeFormat)
 		}
 		if err != nil {
 			return *nilTime, err
