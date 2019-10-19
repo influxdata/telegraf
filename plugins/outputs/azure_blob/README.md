@@ -4,7 +4,7 @@ Azure Blob output plugin exports zipped telegraf data to Azure Blob. It caches d
 
 ## Authentication
 
-You can authenticate to Azure Blob Storage via an account name/account key combination or via a SAS Url, which should have appropriate permissions.
+You can authenticate to Azure Blob Storage via an account name/account key combination or via a SAS Url. This pre-authenticated URL should include the name of the Blob Container and should have appropriate permissions (create and write).
 
 ## Configuration
 
@@ -12,15 +12,16 @@ You can configure the flush interval (seconds) as well as the Blob Container tha
 
 ```toml
 [[outputs.azure_blob]]
-  ## You need to have either an account/account key combination or a SAS URL
+  ## You need to have either an accountName/accountKey combination or a SAS URL
+  ## SAS URL should contain the Blob Container Name and have appropriate permissions (create and write)
   ## Azure Blob account
   # blobAccount = "myblobaccount"
   ## Azure Blob account key
   # blobAccountKey = "myblobaccountkey"
-  ## Azure Blob SAS URL
-  # blobAccountSasURL = "YOUR_SAS_URL"
-  ## Azure Blob container name
+  ## Azure Blob container name. Used only when authenticating via accountName. If omitted, "metrics" is used
   # blobContainerName = "telegrafcontainer"
+  ## Azure Blob Container SAS URL
+  # blobAccountSasURL = "YOUR_SAS_URL"
   ## Flush interval in seconds
   # flushInterval = 300
   ## Machine name that is sending the data

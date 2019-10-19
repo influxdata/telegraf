@@ -20,8 +20,9 @@ import (
 const verbose = true
 
 const (
-	blobFormatString = `https://%s.blob.core.windows.net`
-	timeFormatString = "20060102150405" // YYYYMMDDHHMMSS
+	blobFormatString     = `https://%s.blob.core.windows.net`
+	timeFormatString     = "20060102150405" // YYYYMMDDHHMMSS
+	defaultContainerName = "metrics"
 )
 
 // AzureBlob allows publishing of metrics to Azure Blob Storage
@@ -46,11 +47,12 @@ func (s *AzureBlob) Connect() error {
 	var c azblob.Credential
 	var err error
 
+	var useAccountCredentials bool
+
 	if s.BlobAccount != "" && s.BlobAccountKey != "" {
 		log(fmt.Sprintf("Initializing Azure Blob output plugin for BlobAccount %s, BlobContainerName %s, MachineName %s and FlushInterval %d seconds\n",
 			s.BlobAccount, s.BlobContainerName, s.MachineName, s.FlushInterval))
-
-		// authenticate and create a pipeline
+		useAccountCredentials = true
 		c, err = azblob.NewSharedKeyCredential(s.BlobAccount, s.BlobAccountKey)
 		if err != nil {
 			return err
@@ -61,7 +63,7 @@ func (s *AzureBlob) Connect() error {
 		}
 	} else if s.BlobAccountSasURL != "" {
 		log(fmt.Sprintf("Initializing Azure Blob output plugin with SAS for URL %s\n", strings.Split(s.BlobAccountSasURL, "?")[0]))
-
+		useAccountCredentials = false
 		c = azblob.NewAnonymousCredential()
 		u, err = url.Parse(s.BlobAccountSasURL)
 		if err != nil {
@@ -73,16 +75,22 @@ func (s *AzureBlob) Connect() error {
 
 	p := azblob.NewPipeline(c, azblob.PipelineOptions{})
 
-	// create Azure Blob services
-	s.blobService = azblob.NewServiceURL(*u, p)
-	s.blobContainerService = s.blobService.NewContainerURL(s.BlobContainerName)
-
-	err = s.createContainerIfNotExists(context.Background())
-	if err != nil {
-		return err
+	if useAccountCredentials {
+		s.blobService = azblob.NewServiceURL(*u, p)
+		s.blobContainerService = s.blobService.NewContainerURL(s.BlobContainerName)
+		// if user hasn't provided a Blob Container Name, set a default
+		if s.BlobContainerName == "" {
+			s.BlobContainerName = defaultContainerName
+		}
+		err = s.createContainerIfNotExists(context.Background())
+		if err != nil {
+			return err
+		}
+	} else {
+		s.blobContainerService = azblob.NewContainerURL(*u, p)
 	}
 
-	// setting hostname to current hostname if one was not provided by the user
+	// setting hostname to current host's hostname if one was not provided by the user
 	if s.MachineName == "" {
 		hostname, err := os.Hostname()
 		if err != nil {
@@ -95,10 +103,6 @@ func (s *AzureBlob) Connect() error {
 	s.timeOfPreviousFlush = time.Now()
 
 	return nil
-}
-
-func (s *AzureBlob) SetSerializer(serializer serializers.Serializer) {
-	s.serializer = serializer
 }
 
 // Close any connections to the Output
@@ -217,15 +221,16 @@ func (s *AzureBlob) Description() string {
 // SampleConfig returns the default configuration of the Output
 func (s *AzureBlob) SampleConfig() string {
 	return `
-	## You need to have either an account/account key combination or a SAS URL
+	## You need to have either an accountName/accountKey combination or a SAS URL
+	## SAS URL should contain the Blob Container Name and have appropriate permissions (create and write)
 	## Azure Blob account
 	# blobAccount = "myblobaccount"
 	## Azure Blob account key
 	# blobAccountKey = "myblobaccountkey"
-	## Azure Blob SAS URL
-	# blobAccountSasURL = "YOUR_SAS_URL"
-	## Azure Blob container name
+	## Azure Blob container name. Used only when authenticating via accountName. If omitted, "metrics" is used
 	# blobContainerName = "telegrafcontainer"
+	## Azure Blob Container SAS URL
+	# blobAccountSasURL = "YOUR_SAS_URL"
 	## Flush interval in seconds
 	# flushInterval = 300
 	## Machine name that is sending the data
@@ -251,6 +256,10 @@ func (s *AzureBlob) createContainerIfNotExists(ctx context.Context) error {
 		log(fmt.Sprintf("Container %s creation status code %d\n", s.BlobContainerName, resp.StatusCode()))
 	}
 	return nil
+}
+
+func (s *AzureBlob) SetSerializer(serializer serializers.Serializer) {
+	s.serializer = serializer
 }
 
 func (s *AzureBlob) checkIfContainerExists(ctx context.Context) (bool, error) {
