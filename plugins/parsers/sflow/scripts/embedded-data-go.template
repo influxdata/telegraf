@@ -1,0 +1,6 @@
+package protodb
+
+func populateServiceNameMapFromEmbedded (serviceNameMap map[string]string) {
+    {{range .}}serviceNameMap["{{.Protocol}}:{{.RealPort}}"] = "{{.Name}}"
+    {{end}}
+}

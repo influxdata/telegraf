@@ -159,7 +159,7 @@ func (sl *Listener) Start(acc telegraf.Accumulator) error {
 	sl.nameResolver = newAsyncResolver(sl.DNSFQDNResolve, time.Duration(sl.DNSFQDNCacheTTL)*time.Second, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second, sl.SNMPCommunity)
 	sl.nameResolver.start()
 
-	parser, err := sflow.NewParser("sflow", make(map[string]string), sl.getSflowConfig(), mapTagsAsFieldsCommaString(sl.TagsAsFields))
+	parser, err := sflow.NewParser("sflow", make(map[string]string), sl.getSflowConfig())
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func (sl *Listener) Stop() {
 
 // newListener constructs a new vanilla, unconfigured, listener and returns it
 func newListener() *Listener {
-	p, _ := sflow.NewParser("sflow", make(map[string]string), sflow.NewDefaultV5FormatOptions(), nil)
+	p, _ := sflow.NewParser("sflow", make(map[string]string), sflow.NewDefaultV5FormatOptions())
 	return &Listener{Parser: p}
 }
 

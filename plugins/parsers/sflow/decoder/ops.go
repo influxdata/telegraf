@@ -1,0 +1,431 @@
+package decoder
+
+import (
+	"fmt"
+
+	"github.com/influxdata/telegraf"
+)
+
+type DirectiveOp interface {
+	prev() DirectiveOp
+	// process method can be executed in two contexts, one to check that the given type
+	// of upstream value can be processed (not to process it) and then to actually process
+	// the upstream value. The difference in reqwuired behaviour is signalled by the presence
+	// of the DecodeContect - if nil. just test, if !nil process
+	process(dc *DecodeContext, upstreamValue interface{}) error
+}
+
+type baseDOp struct {
+	p   DirectiveOp
+	do  DirectiveOp
+	n   DirectiveOp
+	loc string
+}
+
+func (op *baseDOp) prev() DirectiveOp {
+	return op.p
+}
+
+func (op *baseDOp) AsF(name string) DirectiveOp {
+	result := &AsFDOp{baseDOp: baseDOp{p: op.do, loc: location(2)}, name: name}
+	result.do = result
+	op.n = result
+	return result
+}
+
+func (op *baseDOp) AsT(name string) DirectiveOp {
+	result := &AsTDOp{baseDOp: baseDOp{p: op.do, loc: location(2)}, name: name}
+	result.do = result
+	op.n = result
+	return result
+}
+
+func (op *baseDOp) Set(ptr interface{}) *SetDOp {
+	result := &SetDOp{baseDOp: baseDOp{p: op.do, loc: location(2)}, ptr: ptr}
+	result.do = result
+	op.n = result
+	return result
+}
+
+type U32ToU32DOp struct {
+	baseDOp
+	fn func(uint32) uint32
+}
+
+func (op *U32ToU32DOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	var out uint32
+	switch v := upstreamValue.(type) {
+	case *uint32:
+		if dc != nil {
+			out = op.fn(*v)
+			dc.tracef("%s U32ToU32 %d=>%d\n", op.loc, *v, out)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", v)
+	}
+
+	if dc != nil && op.n != nil {
+		return op.n.process(dc, out)
+	}
+	return nil
+}
+
+func (op *U32ToU32DOp) ToString(fn func(uint32) string) *U32ToStrDOp {
+	result := &U32ToStrDOp{baseDOp: baseDOp{p: op, loc: location(2)}, fn: fn}
+	result.do = result
+	op.n = result
+	return result
+}
+
+type AsFDOp struct {
+	baseDOp
+	name string
+}
+
+func (op *AsFDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	var m telegraf.Metric
+	if dc != nil {
+		m = dc.currentMetric()
+	}
+	switch v := upstreamValue.(type) {
+	case *uint32:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
+			m.AddField(op.name, *v)
+		}
+	case uint32:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
+			m.AddField(op.name, v)
+		}
+	case *uint16:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
+			m.AddField(op.name, *v)
+		}
+	case uint16:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
+			m.AddField(op.name, v)
+		}
+	case uint8:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
+			m.AddField(op.name, v)
+		}
+	default:
+		return fmt.Errorf("%s AsF cannot process %T", op.loc, v)
+	}
+	return nil
+}
+
+type AsTDOp struct {
+	baseDOp
+	name      string
+	skipEmpty bool
+}
+
+func (op *AsTDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	var m telegraf.Metric
+	if dc != nil {
+		m = dc.currentMetric()
+	}
+	switch v := upstreamValue.(type) {
+	case *uint32:
+		if dc != nil {
+			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, *v)
+			m.AddTag(op.name, fmt.Sprintf("%d", *v))
+		}
+	case uint32:
+		if dc != nil {
+			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, v)
+			m.AddTag(op.name, fmt.Sprintf("%d", v))
+		}
+	case *uint16:
+		if dc != nil {
+			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, *v)
+			m.AddTag(op.name, fmt.Sprintf("%d", *v))
+		}
+	case uint16:
+		if dc != nil {
+			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, v)
+			m.AddTag(op.name, fmt.Sprintf("%d", v))
+		}
+	case string:
+		if dc != nil {
+			if !op.skipEmpty || v != "" {
+				dc.tracef("%s AsT %s=%s\n", op.loc, op.name, v)
+				m.AddTag(op.name, v)
+			}
+		}
+	default:
+		return fmt.Errorf("can't process %T", upstreamValue)
+	}
+	return nil
+}
+
+func (op *AsTDOp) prev() DirectiveOp {
+	return op.p
+}
+
+type BytesToStrDOp struct {
+	baseDOp
+	len int
+	fn  func([]byte) string
+}
+
+func (op *BytesToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case []byte:
+		if len(v) == op.len {
+			if dc != nil {
+				out := op.fn(v)
+				if op.n != nil {
+					return op.n.process(dc, out)
+				}
+			}
+		} else {
+			return fmt.Errorf("cannot process len(%d) as requrire %d", len(v), op.len)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+type U32AssertDOp struct {
+	baseDOp
+	fn     func(uint32) bool
+	fmtStr string
+}
+
+func (op *U32AssertDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case *uint32:
+		if dc != nil && !op.fn(*v) {
+			return fmt.Errorf(op.fmtStr, *v)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+type U32ToStrDOp struct {
+	baseDOp
+	fn func(uint32) string
+}
+
+func (op *U32ToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case uint32:
+		if dc != nil && op.n != nil {
+			dc.tracef("%s U32ToStrDOp executed %d\n", op.loc, v)
+			op.n.process(dc, (op.fn(v)))
+		}
+	case *uint32:
+		if dc != nil && op.n != nil {
+			dc.tracef("%s U32ToStrDOp executed %d\n", op.loc, *v)
+			return op.n.process(dc, (op.fn(*v)))
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+func (op *U32ToStrDOp) BreakIf(value string) *BreakIfDOp {
+	result := &BreakIfDOp{baseDOp: baseDOp{p: op, loc: location(2)}, value: value}
+	result.do = result
+	op.n = result
+	return result
+}
+
+type U16ToStrDOp struct {
+	baseDOp
+	fn func(uint16) string
+}
+
+func (op *U16ToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case *uint16:
+		if dc != nil {
+			return op.n.process(dc, (op.fn(*v)))
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+type BreakIfDOp struct {
+	baseDOp
+	value string
+}
+
+func (op *BreakIfDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case string:
+		if dc != nil {
+			if v != op.value {
+				dc.tracef("%s no break", op.loc)
+				op.n.process(dc, v)
+			} else {
+				dc.tracef("%s break", op.loc)
+			}
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+type U16ToU16DOp struct {
+	baseDOp
+	fn func(uint16) uint16
+}
+
+func (op *U16ToU16DOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	var out uint16
+	var err error
+	switch v := upstreamValue.(type) {
+	case *uint16:
+		if dc != nil {
+			dc.tracef("%s U16ToU16 executed %d\n", op.loc, *v)
+			out = op.fn(*v)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	if err != nil {
+		return err
+	}
+	if op.n != nil && dc != nil {
+		return op.n.process(dc, out)
+	}
+	return nil
+}
+
+type BytesToU32DOp struct {
+	baseDOp
+	len int
+	fn  func([]byte) uint32
+}
+
+func (op *BytesToU32DOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case []byte:
+		if len(v) == op.len {
+			out := op.fn(v)
+			if op.n != nil {
+				return op.n.process(dc, out)
+			}
+		} else {
+			return fmt.Errorf("cannot process %T as len(%d) != %d", upstreamValue, v, op.len)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+type SetDOp struct {
+	baseDOp
+	ptr interface{}
+}
+
+func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case *uint32:
+		ptr, ok := op.ptr.(*uint32)
+		if ok {
+			if dc != nil {
+				dc.tracef("%s set %v = %d\n", op.loc, ptr, *v)
+				*ptr = *v
+			}
+		} else {
+			return fmt.Errorf("cannot process as ptr %T and not *uint32", op.ptr)
+		}
+	case uint32:
+		ptr, ok := op.ptr.(*uint32)
+		if ok {
+			if dc != nil {
+				dc.tracef("%s set %v = %d\n", op.loc, ptr, v)
+				*ptr = v
+			}
+		} else {
+			return fmt.Errorf("cannot process as ptr %T and not *uint32", op.ptr)
+		}
+	case *uint16:
+		ptr, ok := op.ptr.(*uint16)
+		if ok {
+			if dc != nil {
+				dc.tracef("%s set %v = %d\n", op.loc, ptr, *v)
+				*ptr = *v
+			}
+		} else {
+			return fmt.Errorf("cannot process as ptr %T and not *uint16", op.ptr)
+		}
+	case uint16:
+		ptr, ok := op.ptr.(*uint16)
+		if ok {
+			if dc != nil {
+				dc.tracef("%s set %v = %d\n", op.loc, ptr, v)
+				*ptr = v
+			}
+		} else {
+			return fmt.Errorf("cannot process as ptr %T and not *uint16", op.ptr)
+		}
+	case string:
+		ptr, ok := op.ptr.(*string)
+		if ok {
+			if dc != nil {
+				dc.tracef("%s set %v = %s\n", op.loc, ptr, v)
+				*ptr = v
+			}
+		} else {
+			return fmt.Errorf("cannot process as ptr %T and not *string", op.ptr)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	if op.n != nil && dc != nil {
+		return op.n.process(dc, upstreamValue)
+	}
+	return nil
+}
+
+type BytesToDOp struct {
+	baseDOp
+	len int
+	fn  func([]byte) interface{}
+}
+
+func (op *BytesToDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case []byte:
+		if len(v) == op.len {
+			if dc != nil {
+				out := op.fn(v)
+				return op.n.process(dc, out)
+			}
+		} else {
+			return fmt.Errorf("cannot process as len:%d required %d", len(v), op.len)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+type ErrorDOp struct {
+	baseDOp
+	errorOnTestProcess bool
+}
+
+func (op *ErrorDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	if dc == nil && !op.errorOnTestProcess {
+		return nil
+	}
+	return fmt.Errorf("Error Op")
+}
