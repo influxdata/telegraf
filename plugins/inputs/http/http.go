@@ -106,6 +106,11 @@ func (h *HTTP) Init() error {
 		},
 		Timeout: h.Timeout.Duration,
 	}
+
+	// Set default as [200]
+	if len(h.SuccessStatusCodes) == 0 {
+		h.SuccessStatusCodes = []int{200}
+	}
 	return nil
 }
 
@@ -176,12 +181,19 @@ func (h *HTTP) gatherURL(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Received status code %d (%s), expected %d (%s)",
+	responseHasSuccessCode := false
+	for _, statusCode := range h.SuccessStatusCodes {
+		if resp.StatusCode == statusCode {
+			responseHasSuccessCode = true
+			break
+		}
+	}
+	
+	if !responseHasSuccessCode {
+		return fmt.Errorf("received status code %d (%s), expected any value out of %v",
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
-			http.StatusOK,
-			http.StatusText(http.StatusOK))
+			h.SuccessStatusCodes)
 	}
 
 	b, err := ioutil.ReadAll(resp.Body)
@@ -219,9 +231,8 @@ func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
 func init() {
 	inputs.Add("http", func() telegraf.Input {
 		return &HTTP{
-			Timeout:            internal.Duration{Duration: time.Second * 5},
-			Method:             "GET",
-			SuccessStatusCodes: []int{200},
+			Timeout: internal.Duration{Duration: time.Second * 5},
+			Method:  "GET",
 		}
 	})
 }
