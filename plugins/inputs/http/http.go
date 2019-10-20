@@ -29,6 +29,8 @@ type HTTP struct {
 	Password string `toml:"password"`
 	tls.ClientConfig
 
+	SuccessStatusCodes []int `toml: success_status_codes`
+
 	Timeout internal.Duration `toml:"timeout"`
 
 	client *http.Client
@@ -70,6 +72,9 @@ var sampleConfig = `
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
+
+  ## List of success status codes
+  # success_status_codes = []
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -214,8 +219,9 @@ func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
 func init() {
 	inputs.Add("http", func() telegraf.Input {
 		return &HTTP{
-			Timeout: internal.Duration{Duration: time.Second * 5},
-			Method:  "GET",
+			Timeout:            internal.Duration{Duration: time.Second * 5},
+			Method:             "GET",
+			SuccessStatusCodes: []int{200},
 		}
 	})
 }
