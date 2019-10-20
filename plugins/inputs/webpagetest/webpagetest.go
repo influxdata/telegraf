@@ -362,12 +362,12 @@ type TestStatusResult struct {
 func init() {
 	inputs.Add("webpagetest", func() telegraf.Input {
 		return &WebPageTest{
-			PollFrequency: 5,
-			MaxPollTime: 120,
+			PollFrequency:     5,
+			MaxPollTime:       120,
 			DownloadBandwidth: 5000,
-			UploadBandwidth: 1000,
-			RoundTripLatency: 28,
-			PacketLossRate: 0,
+			UploadBandwidth:   1000,
+			RoundTripLatency:  28,
+			PacketLossRate:    0,
 		}
 	})
 }
