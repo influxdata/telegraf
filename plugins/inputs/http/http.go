@@ -188,7 +188,7 @@ func (h *HTTP) gatherURL(
 			break
 		}
 	}
-	
+
 	if !responseHasSuccessCode {
 		return fmt.Errorf("received status code %d (%s), expected any value out of %v",
 			resp.StatusCode,
