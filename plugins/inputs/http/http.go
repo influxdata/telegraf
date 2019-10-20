@@ -29,7 +29,7 @@ type HTTP struct {
 	Password string `toml:"password"`
 	tls.ClientConfig
 
-	SuccessStatusCodes []int `toml: success_status_codes`
+	SuccessStatusCodes []int `toml:"success_status_codes"`
 
 	Timeout internal.Duration `toml:"timeout"`
 
@@ -74,7 +74,7 @@ var sampleConfig = `
   # timeout = "5s"
 
   ## List of success status codes
-  # success_status_codes = []
+  # success_status_codes = [200]
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
