@@ -17,6 +17,18 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
+type loginMethod int
+
+const (
+	invalidLogin loginMethod = iota
+	accountLogin
+	sasLogin
+)
+
+const (
+	emptyCredentials string = "You need to have either a account name/account key combination or a valid SAS url in order to login"
+)
+
 const verbose = true
 
 const (
@@ -41,103 +53,115 @@ type AzureBlob struct {
 	blobContainerService azblob.ContainerURL
 }
 
-// Connect to the Output
-func (s *AzureBlob) Connect() error {
-	var u *url.URL
-	var c azblob.Credential
+// Connect initializes the connection to Azure Storage
+func (a *AzureBlob) Connect() error {
+	login := a.getLoginMethod()
+
 	var err error
-
-	var useAccountCredentials bool
-
-	if s.BlobAccount != "" && s.BlobAccountKey != "" {
-		log(fmt.Sprintf("Initializing Azure Blob output plugin for BlobAccount %s, BlobContainerName %s, MachineName %s and FlushInterval %d seconds\n",
-			s.BlobAccount, s.BlobContainerName, s.MachineName, s.FlushInterval))
-		useAccountCredentials = true
-		c, err = azblob.NewSharedKeyCredential(s.BlobAccount, s.BlobAccountKey)
-		if err != nil {
-			return err
-		}
-		u, err = url.Parse(fmt.Sprintf(blobFormatString, s.BlobAccount))
-		if err != nil {
-			return err
-		}
-	} else if s.BlobAccountSasURL != "" {
-		log(fmt.Sprintf("Initializing Azure Blob output plugin with SAS for URL %s\n", strings.Split(s.BlobAccountSasURL, "?")[0]))
-		useAccountCredentials = false
-		c = azblob.NewAnonymousCredential()
-		u, err = url.Parse(s.BlobAccountSasURL)
-		if err != nil {
-			return err
-		}
+	if login == accountLogin {
+		err = a.initializeAccountConnection()
+	} else if login == sasLogin {
+		err = a.initializeSasConnection()
 	} else {
-		return fmt.Errorf("You need to provide either a BlobAccount/BlobAccountKey combination or a BlobAccountSasURL")
+		return fmt.Errorf(emptyCredentials)
 	}
 
-	p := azblob.NewPipeline(c, azblob.PipelineOptions{})
-
-	if useAccountCredentials {
-		s.blobService = azblob.NewServiceURL(*u, p)
-		s.blobContainerService = s.blobService.NewContainerURL(s.BlobContainerName)
-		// if user hasn't provided a Blob Container Name, set a default
-		if s.BlobContainerName == "" {
-			s.BlobContainerName = defaultContainerName
-		}
-		err = s.createContainerIfNotExists(context.Background())
-		if err != nil {
-			return err
-		}
-	} else {
-		s.blobContainerService = azblob.NewContainerURL(*u, p)
+	if err != nil {
+		return err
 	}
 
 	// setting hostname to current host's hostname if one was not provided by the user
-	if s.MachineName == "" {
+	if a.MachineName == "" {
 		hostname, err := os.Hostname()
 		if err != nil {
 			return err
 		}
-		s.MachineName = hostname
+		a.MachineName = hostname
 	}
 
 	// setting timeOfPreviousFlush to an initial value
-	s.timeOfPreviousFlush = time.Now()
-
+	a.timeOfPreviousFlush = time.Now()
 	return nil
 }
 
-// Close any connections to the Output
-func (s *AzureBlob) Close() error {
-	log(fmt.Sprintf("Close message received. Synchronously flushing saved events"))
-
-	err := s.flushMetricsCacheToAzureBlob()
-	return err
-}
-
-// Write takes in group of points to be written to the Output
-func (s *AzureBlob) Write(metrics []telegraf.Metric) error {
-	log(fmt.Sprintf("%d metrics cached\n", len(metrics)))
-
-	s.metricsCache = append(s.metricsCache, metrics...)
-
-	// check if it is time to flush all cached metrics
-	if time.Now().Sub(s.timeOfPreviousFlush) < time.Duration(s.FlushInterval)*time.Second {
-		return nil
-	}
-
-	err := s.flushMetricsCacheToAzureBlob()
-	s.timeOfPreviousFlush = time.Now()
+func (a *AzureBlob) initializeAccountConnection() error {
+	log(fmt.Sprintf("Initializing Azure Blob output plugin for BlobAccount %s, BlobContainerName %s, MachineName %s and FlushInterval %d seconds\n",
+		a.BlobAccount, a.BlobContainerName, a.MachineName, a.FlushInterval))
+	c, err := azblob.NewSharedKeyCredential(a.BlobAccount, a.BlobAccountKey)
 	if err != nil {
 		return err
 	}
-	// we'll empty the cache only if the createBlob operation succeeded
-	s.metricsCache = nil
+	u, err := url.Parse(fmt.Sprintf(blobFormatString, a.BlobAccount))
+	if err != nil {
+		return err
+	}
+	// create the pipeline
+	p := azblob.NewPipeline(c, azblob.PipelineOptions{})
+	// inialize Blob Container Service
+	a.blobService = azblob.NewServiceURL(*u, p)
+	a.blobContainerService = a.blobService.NewContainerURL(a.BlobContainerName)
+	// if user hasn't provided a Blob Container Name, set a default
+	if a.BlobContainerName == "" {
+		a.BlobContainerName = defaultContainerName
+	}
+	err = a.createContainerIfNotExists(context.Background())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (s *AzureBlob) flushMetricsCacheToAzureBlob() error {
+func (a *AzureBlob) initializeSasConnection() error {
+	log(fmt.Sprintf("Initializing Azure Blob output plugin with SAS for URL %s, MachineName %s and FlushInterval %d seconds\n", strings.Split(a.BlobAccountSasURL, "?")[0], a.MachineName, a.FlushInterval))
+	c := azblob.NewAnonymousCredential()
+	u, err := url.Parse(a.BlobAccountSasURL)
+	if err != nil {
+		return err
+	}
+	// create the pipeline
+	p := azblob.NewPipeline(c, azblob.PipelineOptions{})
+	// recall that the container url *MUST* contain the container name
+	a.blobContainerService = azblob.NewContainerURL(*u, p)
+	return nil
+}
+
+// Close will send whatever is in memory to Azure Storage
+func (a *AzureBlob) Close() error {
+	log(fmt.Sprintf("Close message received. Synchronously flushing saved events"))
+
+	err := a.flushMetricsCacheToAzureBlob()
+	return err
+}
+
+// Write will receive metrics and cache them
+// if the flushInterval has passed, it will call
+func (a *AzureBlob) Write(metrics []telegraf.Metric) error {
+	log(fmt.Sprintf("%d metrics cached\n", len(metrics)))
+
+	a.metricsCache = append(a.metricsCache, metrics...)
+
+	// check if it is time to flush all cached metrics
+	if time.Now().Sub(a.timeOfPreviousFlush) < time.Duration(a.FlushInterval)*time.Second {
+		return nil
+	}
+
+	err := a.flushMetricsCacheToAzureBlob()
+
+	if err != nil {
+		return err
+	}
+
+	a.timeOfPreviousFlush = time.Now()
+
+	// we'll empty the cache only if the createBlob operation succeeded
+	a.metricsCache = nil
+	return nil
+}
+
+func (a *AzureBlob) flushMetricsCacheToAzureBlob() error {
 	var sb strings.Builder
-	for _, metric := range s.metricsCache {
-		bytes, err := s.serializer.Serialize(metric)
+	for _, metric := range a.metricsCache {
+		bytes, err := a.serializer.Serialize(metric)
 		if err != nil {
 			return fmt.Errorf("cannot serialize because of %s", err)
 		}
@@ -145,38 +169,39 @@ func (s *AzureBlob) flushMetricsCacheToAzureBlob() error {
 	}
 
 	bytes := []byte(sb.String())
-	if len(s.metricsCache) == 0 {
+	if len(a.metricsCache) == 0 {
 		fmt.Println("0 items in cache - will not write anything")
 		return nil
 	}
 
 	loc, _ := time.LoadLocation("UTC")
 	// format is machineName-startDateTime-endDateTime (in UTC format)
-	blobName := fmt.Sprintf("%s-%s-%s", s.MachineName, s.metricsCache[0].Time().In(loc).Format(timeFormatString),
-		s.metricsCache[len(s.metricsCache)-1].Time().In(loc).Format(timeFormatString))
+	blobName := fmt.Sprintf("%s-%s-%s",
+		a.MachineName,
+		a.metricsCache[0].Time().In(loc).Format(timeFormatString),
+		a.metricsCache[len(a.metricsCache)-1].Time().In(loc).Format(timeFormatString))
 
-	_, err := s.createBlockBlob(context.Background(), blobName, bytes)
+	_, err := a.createBlockBlob(context.Background(), blobName, bytes)
 	if err != nil {
 		return fmt.Errorf("error creating blob: %s", err)
 	}
 
-	log(fmt.Sprintf("blob '%s' written successfully\n", blobName))
+	log(fmt.Sprintf("blob '%s.zip' created successfully\n", blobName))
 
 	return nil
-
 }
 
 func init() {
 	outputs.Add("azure_blob", func() telegraf.Output { return &AzureBlob{} })
 }
 
-func (s *AzureBlob) getBlockBlobURL(ctx context.Context, blobName string) azblob.BlockBlobURL {
-	blob := s.blobContainerService.NewBlockBlobURL(blobName)
+func (a *AzureBlob) getBlockBlobURL(ctx context.Context, blobName string) azblob.BlockBlobURL {
+	blob := a.blobContainerService.NewBlockBlobURL(blobName)
 	return blob
 }
 
-func (s *AzureBlob) createBlockBlob(ctx context.Context, blobName string, byteString []byte) (azblob.BlockBlobURL, error) {
-	b := s.getBlockBlobURL(ctx, blobName+".zip")                              // .zip is the file that will be created
+func (a *AzureBlob) createBlockBlob(ctx context.Context, blobName string, byteString []byte) (azblob.BlockBlobURL, error) {
+	b := a.getBlockBlobURL(ctx, blobName+".zip")                              // .zip is the file that will be created
 	compressedData, err := compressBytesIntoFile(blobName+".txt", byteString) // .txt is the file that will be contained in the zip
 	if err != nil {
 		return azblob.BlockBlobURL{}, err
@@ -214,12 +239,12 @@ func compressBytesIntoFile(filename string, data []byte) ([]byte, error) {
 }
 
 // Description returns a one-sentence description on the Output
-func (s *AzureBlob) Description() string {
+func (AzureBlob) Description() string {
 	return "Azure Blob plugin periodically sends zipped telegraf data to a specified Azure Blob container"
 }
 
 // SampleConfig returns the default configuration of the Output
-func (s *AzureBlob) SampleConfig() string {
+func (AzureBlob) SampleConfig() string {
 	return `
 	## You need to have either an accountName/accountKey combination or a SAS URL
 	## SAS URL should contain the Blob Container Name and have appropriate permissions (create and write)
@@ -243,34 +268,45 @@ func (s *AzureBlob) SampleConfig() string {
 	`
 }
 
-func (s *AzureBlob) createContainerIfNotExists(ctx context.Context) error {
-	exists, err := s.checkIfContainerExists(ctx)
+func (a *AzureBlob) getLoginMethod() loginMethod {
+	if a.BlobAccount != "" && a.BlobAccountKey != "" {
+		return accountLogin
+	}
+	if a.BlobAccountSasURL != "" {
+		return sasLogin
+	}
+	return invalidLogin
+}
+
+func (a *AzureBlob) createContainerIfNotExists(ctx context.Context) error {
+	exists, err := a.checkIfContainerExists(ctx)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		resp, err := s.blobContainerService.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
+		resp, err := a.blobContainerService.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 		if err != nil {
 			return err
 		}
-		log(fmt.Sprintf("Container %s creation status code %d\n", s.BlobContainerName, resp.StatusCode()))
+		log(fmt.Sprintf("Container %s creation status code is %d\n", a.BlobContainerName, resp.StatusCode()))
 	}
 	return nil
 }
 
-func (s *AzureBlob) SetSerializer(serializer serializers.Serializer) {
-	s.serializer = serializer
+// SetSerializer sets the data export format
+func (a *AzureBlob) SetSerializer(serializer serializers.Serializer) {
+	a.serializer = serializer
 }
 
-func (s *AzureBlob) checkIfContainerExists(ctx context.Context) (bool, error) {
-	resp, err := s.blobService.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{
-		Prefix: s.BlobContainerName,
+func (a *AzureBlob) checkIfContainerExists(ctx context.Context) (bool, error) {
+	resp, err := a.blobService.ListContainersSegment(ctx, azblob.Marker{}, azblob.ListContainersSegmentOptions{
+		Prefix: a.BlobContainerName,
 	})
 	if err != nil {
 		return false, err
 	}
 	for _, containerItem := range resp.ContainerItems {
-		if containerItem.Name == s.BlobContainerName {
+		if containerItem.Name == a.BlobContainerName {
 			return true, nil
 		}
 	}
