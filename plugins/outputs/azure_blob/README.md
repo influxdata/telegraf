@@ -4,11 +4,15 @@ Azure Blob output plugin exports zipped telegraf data to Azure Blob. It caches d
 
 ## Authentication
 
-You can authenticate to Azure Blob Storage via an account name/account key combination or via a SAS Url. This pre-authenticated URL should include the name of the Blob Container and should have appropriate permissions (create and write).
+You can authenticate to Azure Blob Storage via an account name/account key combination or via a SAS url. This (pre-authenticated) url should include the name of the Blob Container and should have appropriate permissions (create and write), so it should be something like this:
+
+_https://ACCOUNTNAME.blob.core.windows.net/CONTAINERNAME?sv=2018-03-28&sr=c&sig=REDACTED_
+
+If you use account name/account key to login, you can optionally provide the Blob Container name (in the `blobContainerName` variable).
 
 ## Configuration
 
-You can configure the flush interval (seconds) as well as the Blob Container that the zip files will be created. The files have the format `startTime-endTime-machineName`. Times are in UTC and the machineName can be set via configuration, since telegraf could be running in a container but you'd like the host's hostname to be there.
+You can configure the flush interval (seconds) that the zip files will be created in Blob Storage. These files have the format `machineName-endTime-startTime`. Times are in UTC whereas the machineName can be set via configuration. This is because telegraf can be running in a container but you'd like the host's hostname to be there.
 
 ```toml
 [[outputs.azure_blob]]
