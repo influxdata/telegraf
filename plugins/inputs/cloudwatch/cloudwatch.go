@@ -3,6 +3,8 @@ package cloudwatch
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,16 +25,17 @@ import (
 type (
 	// CloudWatch contains the configuration and cache for the cloudwatch plugin.
 	CloudWatch struct {
-		Region           string   `toml:"region"`
-		AccessKey        string   `toml:"access_key"`
-		SecretKey        string   `toml:"secret_key"`
-		RoleARN          string   `toml:"role_arn"`
-		Profile          string   `toml:"profile"`
-		CredentialPath   string   `toml:"shared_credential_file"`
-		Token            string   `toml:"token"`
-		EndpointURL      string   `toml:"endpoint_url"`
-		StatisticExclude []string `toml:"statistic_exclude"`
-		StatisticInclude []string `toml:"statistic_include"`
+		Region           string            `toml:"region"`
+		AccessKey        string            `toml:"access_key"`
+		SecretKey        string            `toml:"secret_key"`
+		RoleARN          string            `toml:"role_arn"`
+		Profile          string            `toml:"profile"`
+		CredentialPath   string            `toml:"shared_credential_file"`
+		Token            string            `toml:"token"`
+		EndpointURL      string            `toml:"endpoint_url"`
+		StatisticExclude []string          `toml:"statistic_exclude"`
+		StatisticInclude []string          `toml:"statistic_include"`
+		Timeout          internal.Duration `toml:"timeout"`
 
 		Period    internal.Duration `toml:"period"`
 		Delay     internal.Duration `toml:"delay"`
@@ -133,6 +136,9 @@ func (c *CloudWatch) SampleConfig() string {
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   # ratelimit = 25
 
+  ## Timeout for http requests made by the cloudwatch client.
+  # timeout = "5s"
+
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
   # statistic_include = [ "average", "sum", "minimum", "maximum", sample_count" ]
@@ -183,10 +189,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = c.updateWindow(time.Now())
-	if err != nil {
-		return err
-	}
+	c.updateWindow(time.Now())
 
 	// Get all of the possible queries so we can send groups of 100.
 	queries, err := c.getDataQueries(filteredMetrics)
@@ -235,7 +238,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	return c.aggregateMetrics(acc, results)
 }
 
-func (c *CloudWatch) initializeCloudWatch() error {
+func (c *CloudWatch) initializeCloudWatch() {
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      c.Region,
 		AccessKey:   c.AccessKey,
@@ -248,10 +251,27 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 	configProvider := credentialConfig.Credentials()
 
-	cfg := &aws.Config{}
+	cfg := &aws.Config{
+		HTTPClient: &http.Client{
+			// use values from DefaultTransport
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+					DualStack: true,
+				}).DialContext,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+			Timeout: c.Timeout.Duration,
+		},
+	}
+
 	loglevel := aws.LogOff
 	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
-	return nil
 }
 
 type filteredMetric struct {
@@ -370,7 +390,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 	return metrics, nil
 }
 
-func (c *CloudWatch) updateWindow(relativeTo time.Time) error {
+func (c *CloudWatch) updateWindow(relativeTo time.Time) {
 	windowEnd := relativeTo.Add(-c.Delay.Duration)
 
 	if c.windowEnd.IsZero() {
@@ -382,8 +402,6 @@ func (c *CloudWatch) updateWindow(relativeTo time.Time) error {
 	}
 
 	c.windowEnd = windowEnd
-
-	return nil
 }
 
 // getDataQueries gets all of the possible queries so we can maximize the request payload.
@@ -535,6 +553,7 @@ func init() {
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: time.Hour},
 			RateLimit: 25,
+			Timeout:   internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }
