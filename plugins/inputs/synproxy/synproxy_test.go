@@ -69,7 +69,7 @@ func TestSynproxyFileHeaderMismatch(t *testing.T) {
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "out of column boundary!")
+	assert.Contains(t, err.Error(), "out of column boundary")
 }
 
 func TestSynproxyFileInvalidHex(t *testing.T) {
@@ -83,7 +83,7 @@ func TestSynproxyFileInvalidHex(t *testing.T) {
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Invalid value")
+	assert.Contains(t, err.Error(), "invalid value")
 }
 
 func TestNoSynproxyFile(t *testing.T) {
@@ -97,7 +97,6 @@ func TestNoSynproxyFile(t *testing.T) {
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "does not exist")
 }
 
 // Valid Synproxy file

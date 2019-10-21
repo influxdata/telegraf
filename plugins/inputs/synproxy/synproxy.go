@@ -44,7 +44,7 @@ func (k *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 	// Open synproxy file in proc filesystem
 	file, err := os.Open(k.statFile)
 	if err != nil {
-		return nil, fmt.Errorf("synproxy: %s does not exist!", k.statFile)
+		return nil, err
 	}
 	defer file.Close()
 
@@ -60,7 +60,7 @@ func (k *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 		}
 	}
 	if len(fields) == 0 {
-		return nil, fmt.Errorf("synproxy: Invalid data!")
+		return nil, fmt.Errorf("invalid data")
 	}
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -71,10 +71,10 @@ func (k *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 			x, err := strconv.ParseUint(val, 16, 32)
 			// If field is not a valid hexstring
 			if err != nil {
-				return nil, fmt.Errorf("synproxy: Invalid value '%s' found!", val)
+				return nil, fmt.Errorf("invalid value '%s' found", val)
 			// If index is out of boundary
 			} else if i >= len(fields) {
-				return nil, fmt.Errorf("synproxy: Value '%s' out of column boundary!", val)
+				return nil, fmt.Errorf("value '%s' out of column boundary", val)
 			// If field is a valid hexstring and index not out of boundary
 			} else {
 				fields[hname[i]] = fields[hname[i]].(uint32) + uint32(x)
