@@ -9,6 +9,10 @@
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
 
+#### New Processors
+
+- [clone](/plugins/processors/clone/README.md) - Contributed by @adrianlzt
+
 #### New Aggregators
 
 - [merge](/plugins/aggregators/merge/README.md) - Contributed by @influxdata
