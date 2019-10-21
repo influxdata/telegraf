@@ -29,6 +29,7 @@
 - [#6476](https://github.com/influxdata/telegraf/pull/6476): Add millisecond unix time support to grok parser.
 - [#6473](https://github.com/influxdata/telegraf/pull/6473): Add container id as optional source tag to docker and docker_log input.
 - [#6504](https://github.com/influxdata/telegraf/pull/6504): Add lang parameter to OpenWeathermap input plugin.
+- [#6540](https://github.com/influxdata/telegraf/pull/6540): Log file open errors at debug level in tail input.
 
 ## v1.12.3 [2019-10-07]
 
