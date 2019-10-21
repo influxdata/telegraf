@@ -17,7 +17,7 @@ type CounterValue struct {
 	Value        interface{}
 }
 
-//PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
+// PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
 type PerformanceQuery interface {
 	Open() error
 	Close() error
@@ -32,6 +32,10 @@ type PerformanceQuery interface {
 	CollectData() error
 	CollectDataWithTime() (time.Time, error)
 	IsVistaOrNewer() bool
+}
+
+type PerformanceQueryCreator interface {
+	NewPerformanceQuery(string) PerformanceQuery
 }
 
 //PdhError represents error returned from Performance Counters API
@@ -51,9 +55,16 @@ func NewPdhError(code uint32) error {
 	}
 }
 
-//PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
+// PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
 type PerformanceQueryImpl struct {
 	query PDH_HQUERY
+}
+
+type PerformanceQueryCreatorImpl struct {
+}
+
+func (m PerformanceQueryCreatorImpl) NewPerformanceQuery(string) PerformanceQuery {
+	return &PerformanceQueryImpl{}
 }
 
 // Open creates a new counterPath that is used to manage the collection of performance data.
