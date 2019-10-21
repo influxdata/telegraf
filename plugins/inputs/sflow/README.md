@@ -25,8 +25,6 @@ The following configuration options are availabe:
 ||Example: ```snmp_community = "public"```
 |snmp_iface_cache_ttl| The time to live for entries in the SNMP Interface cache expressed in seconds. Default is 0 which is infinite.
 ||Example: ```snmp_iface_cache_ttl = 3600```
-|as_fields| A comma separated list of _natural_ tags that are to be recorded as fields. This can help manage cardinality. Any of the tags listed in the [SFlow Parser](../../parsers/sflow/README.md) configuration can be moved to fields
-||Example: ```as_fields = "src_port,src_port_name"```
 
 ## Configuration:
 
@@ -62,10 +60,6 @@ This is a sample configuration for the plugin.
 
 	# How long should resolved Iface Index->Iface Name be cached (in seconds)
 	# snmp_iface_cache_ttl = 3600
-
-	# Comma separated list of tags, by name, to forced back to fields
-	# as_fields = "src_port,src_port_name"
-
 ```
 
 ## DNS Name and SNMP Interface name resolution and caching
@@ -78,15 +72,15 @@ The resolved names, or in the case of a resolution error the ip/id will be used 
 
 | Source IP Tag | Resolved Host Tag 
 |---|---|
-|agent_ip|host
+|agent_address|agent_host
 |src_ip|src_host
 |dst_ip|dst_host
 
 | Source IFace Index Tag | Resolved IFace Name Tag 
 |---|---|
 |source_id_index|source_id_name
-|netif_index_out|netif_name_out
-|netif_index_in|netif_name_in
+|input_ifindex|input_ifname
+|output_ifindex|output_ifname
 
 ### Multipe DNS Name resolution & processing
 

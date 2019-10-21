@@ -93,16 +93,16 @@ func newAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor s
 // when available
 func (r *asyncResolver) resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric)) {
 	dnsToResolve := map[string]string{
-		"agent_ip": "host",
-		"src_ip":   "src_host",
-		"dst_ip":   "dst_host",
+		"agent_address": "agent_host",
+		"src_ip":        "src_host",
+		"dst_ip":        "dst_host",
 	}
 	ifaceToResolve := map[string]string{
 		"source_id_index": "source_id_name",
-		"netif_index_out": "netif_name_out",
-		"netif_index_in":  "netif_name_in",
+		"output_ifindex":  "output_ifname",
+		"input_ifindex":   "input_ifname",
 	}
-	agentIP, _ := m.GetTag("agent_ip")
+	agentIP, _ := m.GetTag("agent_address")
 	dnsCompletelyResolved := r.resolveDNSFromCache(m, dnsToResolve)
 	ifaceCompletelyResolved := r.resolveIFaceFromCache(agentIP, m, ifaceToResolve)
 	if dnsCompletelyResolved && ifaceCompletelyResolved {

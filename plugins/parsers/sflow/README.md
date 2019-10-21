@@ -4,17 +4,17 @@
 
 Currently this SFlow Packet parser will only parse SFlow Version 5 and within that only Flow Samples, not Counter Samples.
 
-Within Flow Samples, Ethernet samples with IPv4 o IPv6 UDP or TCP headers are parsed.
+Within Flow Samples, Ethernet samples with {IPv4, IPv6} and {UDP,TCP} headers are parsed.
 
 # Schema
 ## Natural Tags
 | Name | Description |
 |---|---|
-| agent_id | IP address of the agent that obtained the sflow sample and sent it to this collector | 
+| agent_address | IP address of the agent that obtained the sflow sample and sent it to this collector | 
 | source_id_type| Decoded from source_id_type field of flow_sample or flow_sample_expanded structures
 | source_id_index| Decoded from source_id_index field of flow_sample or flow_sample_expanded structures|
-| netif_index_in | Decoded from value (input) field of flow_sample or flow_sample_expanded structures|
-| netif_index_out | Decoded from value (output) field of flow_sample or flow_sample_expanded structures|
+| input_ifindex | Decoded from value (input) field of flow_sample or flow_sample_expanded structures|
+| output_ifindex | Decoded from value (output) field of flow_sample or flow_sample_expanded structures|
 | sample_direction | Derived from source_id_index, netif_index_in and netif_index_out|
 | header_protocol | Decoded from header_protocol field of sampled_header structures|
 | ether_type | Decoded from eth_type field of an ETHERNET-ISO88023 header|
@@ -56,10 +56,5 @@ Within Flow Samples, Ethernet samples with IPv4 o IPv6 UDP or TCP headers are pa
 | udp_length | Integer | 	Decoded from length field of UDP structures
 | ip_flags | Integer | Decoded from ip_ver field of IPv4 structures
 | tcp_flags | Integer | TCP flags of TCP IP header (IPv4 or IPv6)
-
-# Implementation Approach
-This SFlow parser has been developed using a generic packet processing engine making it easy to alter, but is not the most efficient in memory or cpu utilisation due to heavy use of map[string]interface for recording generic object trees.
-
-In the future it is expected that a move to a GoLang struture based parser or possibly even a zero copy approach is adopted. The primary objective at this stage was to build a parser that we easy to understand and easy to modify prior to optimization.
 
 

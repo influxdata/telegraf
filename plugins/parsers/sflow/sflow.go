@@ -68,10 +68,8 @@ func V5Format(options V5FormatOptions) decoder.Directive {
 	return decoder.Seq( // line: 1823
 		decoder.U32().Do(decoder.U32Assert(func(v uint32) bool { return v == 5 }, "Version %d not supported, only version 5")),
 		decoder.U32().Switch( // agent_address line: 1787
-			// CHANGE: agent_ip->agent_address
-			// CHANGE: resolved to be agent_name
-			decoder.Case(addressTypeIPv4, decoder.Bytes(4).Do(decoder.BytesToStr(4, bytesToIPStr).AsT("agent_ip"))),   // line: 1390
-			decoder.Case(addressTypeIPv6, decoder.Bytes(16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("agent_ip"))), // line: 1393
+			decoder.Case(addressTypeIPv4, decoder.Bytes(4).Do(decoder.BytesToStr(4, bytesToIPStr).AsT("agent_address"))),   // line: 1390
+			decoder.Case(addressTypeIPv6, decoder.Bytes(16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("agent_address"))), // line: 1393
 		),
 		decoder.U32(), // sub_agent_id line: 1790
 		decoder.U32(), // sequence_number line: 1801
@@ -100,13 +98,13 @@ func flowSample(sampleType interface{}, options V5FormatOptions) decoder.Directi
 	return decoder.Seq( // line: 1616
 		decoder.U32(), // sequence_number line: 1617
 		decoder.U32(). // source_id line: 1622
-				Do(decoder.U32ToU32(func(v uint32) uint32 { return v >> 24 }).AsT("source_id")).                                 // CHANGE: source_id->source_id_type                                // source_id_type Line 1465
+				Do(decoder.U32ToU32(func(v uint32) uint32 { return v >> 24 }).AsT("source_id_type")).                            // source_id_type Line 1465
 				Do(decoder.U32ToU32(func(v uint32) uint32 { return v & 0x00ffffff }).Set(sourceIDIndex).AsT("source_id_index")), // line: 1468
-		decoder.U32().Do(decoder.Set(samplingRate).AsF("packets")), // sampling_rate line: 1631
+		decoder.U32().Do(decoder.Set(samplingRate).AsF("sampling_rate")), // line: 1631
 		decoder.U32(),                          // samplePool: Line 1632
 		decoder.U32().Do(decoder.AsF("drops")), // Line 1636
 		decoder.U32(). // line: 1651
-				Do(decoder.U32ToU32(func(v uint32) uint32 { return v & 0x3fffffff }).AsT("netif_index_in")). // line: 1477
+				Do(decoder.U32ToU32(func(v uint32) uint32 { return v & 0x3fffffff }).AsT("input_ifindex")). // line: 1477
 				Do(decoder.U32ToU32(func(v uint32) uint32 { return v & 0x3fffffff }).
 					ToString(func(v uint32) string {
 					if v == *sourceIDIndex {
@@ -117,7 +115,7 @@ func flowSample(sampleType interface{}, options V5FormatOptions) decoder.Directi
 				BreakIf("").
 				AsT("sample_direction")),
 		decoder.U32(). // line: 1652
-				Do(decoder.U32ToU32(func(v uint32) uint32 { return v & 0x3fffffff }).AsT("netif_index_out")). // line: 1477
+				Do(decoder.U32ToU32(func(v uint32) uint32 { return v & 0x3fffffff }).AsT("output_ifindex")). // line: 1477
 				Do(decoder.U32ToU32(func(v uint32) uint32 { return v & 0x3fffffff }).
 					ToString(func(v uint32) string {
 					if v == *sourceIDIndex {
@@ -136,14 +134,14 @@ func flowSampleExpanded(sampleType interface{}, options V5FormatOptions) decoder
 	var sourceIDIndex = new(uint32)
 	return decoder.Seq( // line: 1700
 		decoder.U32(), // sequence_number line: 1701
-		decoder.U32().Do(decoder.AsT("source_id")),                          // CHANGE source_id->source_id_type                     // line: 1706 + 16878
+		decoder.U32().Do(decoder.AsT("source_id_type")),                     // line: 1706 + 16878
 		decoder.U32().Do(decoder.Set(sourceIDIndex).AsT("source_id_index")), // line 1689
-		decoder.U32().Do(decoder.Set(samplingRate).AsF("packets")),          // sample_rate line: 1707
+		decoder.U32().Do(decoder.Set(samplingRate).AsF("sampling_rate")),    // sample_rate line: 1707
 		decoder.U32(),                          // saple_pool line: 1708
 		decoder.U32().Do(decoder.AsF("drops")), // line: 1712
 		decoder.U32(),                          // inputt line: 1727
 		decoder.U32(). // input line: 1727
-				Do(decoder.AsT("netif_index_in")). // line: 1728
+				Do(decoder.AsT("input_ifindex")). // line: 1728
 				Do(decoder.U32ToStr(func(v uint32) string {
 				if v == *sourceIDIndex {
 					return "ingress"
@@ -154,7 +152,7 @@ func flowSampleExpanded(sampleType interface{}, options V5FormatOptions) decoder
 				AsT("sample_direction")),
 		decoder.U32(), // output line: 1728
 		decoder.U32(). // outpuit line: 1728
-				Do(decoder.AsT("netif_index_out")). // line: 1729
+				Do(decoder.AsT("output_ifindex")). // line: 1729 CHANFE AS FOR NON EXPANDED
 				Do(decoder.U32ToStr(func(v uint32) string {
 				if v == *sourceIDIndex {
 					return "egress"

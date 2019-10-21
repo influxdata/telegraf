@@ -1,0 +1,515 @@
+{
+	"meta": {
+		"chronografVersion": "1.7.12",
+		"sources": {
+			"0": {
+				"name": "http://192.2.0.1:8086",
+				"link": "/chronograf/v1/sources/0"
+			}
+		}
+	},
+	"dashboard": {
+		"id": 12,
+		"cells": [
+			{
+				"i": "ef6dd812-5045-4905-9eac-39325688d620",
+				"x": 6,
+				"y": 0,
+				"w": 6,
+				"h": 3,
+				"name": "Bandwidth by Destination - :host:",
+				"queries": [
+					{
+						"query": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"dst_host\" FILL(0)",
+						"queryConfig": {
+							"database": "",
+							"measurement": "",
+							"retentionPolicy": "",
+							"fields": [],
+							"tags": {},
+							"groupBy": {
+								"time": "",
+								"tags": []
+							},
+							"areTagsAccepted": false,
+							"rawText": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"dst_host\" FILL(0)",
+							"range": null,
+							"shifts": null
+						},
+						"source": "",
+						"type": "influxql"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"0",
+							""
+						],
+						"label": "bandwidth (bits/s)",
+						"prefix": "",
+						"suffix": "",
+						"base": "2",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "line-stacked",
+				"colors": [
+					{
+						"id": "6f9eb692-d044-4085-9d13-3711510c6dda",
+						"type": "scale",
+						"hex": "#31C0F6",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "6d9574e7-60c2-4076-8d1d-1320e3d6ffbb",
+						"type": "scale",
+						"hex": "#A500A5",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "4561f6d2-4bab-47c2-8b59-4671d2a3b154",
+						"type": "scale",
+						"hex": "#FF7E27",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					}
+				],
+				"legend": {},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 2
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/12/cells/ef6dd812-5045-4905-9eac-39325688d620"
+				}
+			},
+			{
+				"i": "35814550-d837-456f-850b-30a1992d544c",
+				"x": 0,
+				"y": 0,
+				"w": 6,
+				"h": 3,
+				"name": "Bandwidth by Source - :host:",
+				"queries": [
+					{
+						"query": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"src_host\" FILL(0)",
+						"queryConfig": {
+							"database": "",
+							"measurement": "",
+							"retentionPolicy": "",
+							"fields": [],
+							"tags": {},
+							"groupBy": {
+								"time": "",
+								"tags": []
+							},
+							"areTagsAccepted": false,
+							"rawText": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"src_host\" FILL(0)",
+							"range": null,
+							"shifts": null
+						},
+						"source": "",
+						"type": "influxql"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"0",
+							""
+						],
+						"label": "bandwidth (bits/s)",
+						"prefix": "",
+						"suffix": "",
+						"base": "2",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "line-stacked",
+				"colors": [
+					{
+						"id": "6f9eb692-d044-4085-9d13-3711510c6dda",
+						"type": "scale",
+						"hex": "#31C0F6",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "6d9574e7-60c2-4076-8d1d-1320e3d6ffbb",
+						"type": "scale",
+						"hex": "#A500A5",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "4561f6d2-4bab-47c2-8b59-4671d2a3b154",
+						"type": "scale",
+						"hex": "#FF7E27",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					}
+				],
+				"legend": {},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 2
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/12/cells/35814550-d837-456f-850b-30a1992d544c"
+				}
+			},
+			{
+				"i": "687e3da3-00f3-43b2-88d1-c00d6617db76",
+				"x": 6,
+				"y": 3,
+				"w": 6,
+				"h": 3,
+				"name": "Bandwidth by Destination Port - :host:",
+				"queries": [
+					{
+						"query": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"dst_port_name\" FILL(0)",
+						"queryConfig": {
+							"database": "",
+							"measurement": "",
+							"retentionPolicy": "",
+							"fields": [],
+							"tags": {},
+							"groupBy": {
+								"time": "",
+								"tags": []
+							},
+							"areTagsAccepted": false,
+							"rawText": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"dst_port_name\" FILL(0)",
+							"range": null,
+							"shifts": null
+						},
+						"source": "",
+						"type": "influxql"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"0",
+							""
+						],
+						"label": "bandwidth (bits/s)",
+						"prefix": "",
+						"suffix": "",
+						"base": "2",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "line-stacked",
+				"colors": [
+					{
+						"id": "6f9eb692-d044-4085-9d13-3711510c6dda",
+						"type": "scale",
+						"hex": "#31C0F6",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "6d9574e7-60c2-4076-8d1d-1320e3d6ffbb",
+						"type": "scale",
+						"hex": "#A500A5",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "4561f6d2-4bab-47c2-8b59-4671d2a3b154",
+						"type": "scale",
+						"hex": "#FF7E27",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					}
+				],
+				"legend": {},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 2
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/12/cells/687e3da3-00f3-43b2-88d1-c00d6617db76"
+				}
+			},
+			{
+				"i": "e01e84f4-8039-455a-b778-eb31e2650a5d",
+				"x": 0,
+				"y": 3,
+				"w": 6,
+				"h": 3,
+				"name": "Bandwidth by Source Port - :host:",
+				"queries": [
+					{
+						"query": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"src_port_name\" FILL(0)",
+						"queryConfig": {
+							"database": "",
+							"measurement": "",
+							"retentionPolicy": "",
+							"fields": [],
+							"tags": {},
+							"groupBy": {
+								"time": "",
+								"tags": []
+							},
+							"areTagsAccepted": false,
+							"rawText": "SELECT non_negative_derivative(sum(\"bytes\"), 1s) * 8 AS \"bandwidth\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY time(:interval:), \"src_port_name\" FILL(0)",
+							"range": null,
+							"shifts": null
+						},
+						"source": "",
+						"type": "influxql"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"0",
+							""
+						],
+						"label": "bandwidth (bits/s)",
+						"prefix": "",
+						"suffix": "",
+						"base": "2",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "line-stacked",
+				"colors": [
+					{
+						"id": "6f9eb692-d044-4085-9d13-3711510c6dda",
+						"type": "scale",
+						"hex": "#31C0F6",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "6d9574e7-60c2-4076-8d1d-1320e3d6ffbb",
+						"type": "scale",
+						"hex": "#A500A5",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "4561f6d2-4bab-47c2-8b59-4671d2a3b154",
+						"type": "scale",
+						"hex": "#FF7E27",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					}
+				],
+				"legend": {},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 2
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/12/cells/e01e84f4-8039-455a-b778-eb31e2650a5d"
+				}
+			}
+		],
+		"templates": [
+			{
+				"tempVar": ":host:",
+				"values": [
+					{
+						"value": "sw1.",
+						"type": "influxql",
+						"selected": true
+					}
+				],
+				"id": "feebca2c-31eb-472b-a124-efb17c909836",
+				"type": "influxql",
+				"label": "",
+				"query": {
+					"influxql": "SHOW TAG VALUES ON \"sflow\" FROM \"sflow\" WITH KEY=\"agent_host\"",
+					"measurement": "",
+					"tagKey": "",
+					"fieldKey": ""
+				},
+				"links": {
+					"self": "/chronograf/v1/dashboards/12/templates/feebca2c-31eb-472b-a124-efb17c909836"
+				}
+			}
+		],
+		"name": "sFlow: Bandwidth Usage",
+		"organization": "default",
+		"links": {
+			"self": "/chronograf/v1/dashboards/12",
+			"cells": "/chronograf/v1/dashboards/12/cells",
+			"templates": "/chronograf/v1/dashboards/12/templates"
+		}
+	}
+}

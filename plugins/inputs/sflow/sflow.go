@@ -68,8 +68,6 @@ type Listener struct {
 	DNSFQDNCacheTTL       int    `toml:"dns_fqdn_cache_ttl"`
 	DNSMultiNameProcessor string `toml:"dns_multi_name_processor"`
 
-	TagsAsFields string `toml:"as_fields"`
-
 	MaxFlowsPerSample      uint32 `toml:"max_flows_per_sample"`
 	MaxCountersPerSample   uint32 `toml:"max_counters_per_sample"`
 	MaxSamplesPerPacket    uint32 `toml:"max_samples_per_packet"`

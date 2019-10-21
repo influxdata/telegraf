@@ -234,7 +234,7 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 	}()
 
 	// srcTagName of srcTagValue should resolve to resolvedValue via async lookup (go routine / channel) use of our replacement ifIndexToIfNameFn
-	lpIn, _ := metric.New("metric", map[string]string{srcTagName: srcTagValue, "agent_ip": "192.168.0.1"}, nil, time.Now())
+	lpIn, _ := metric.New("metric", map[string]string{srcTagName: srcTagValue, "agent_address": "192.168.0.1"}, nil, time.Now())
 	metricToResolveCh <- lpIn
 	index := <-indexToResolveCh
 	if index != srcTagValue {
@@ -252,7 +252,7 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 	}
 
 	// srcTagName of srcTagValue should resolve to resolvedValue from cache rather than lookup (go routine / channel) use of our replacement ipToFqdnFn
-	lpIn, _ = metric.New("metric", map[string]string{srcTagName: srcTagValue, "agent_ip": "192.168.0.1"}, nil, time.Now())
+	lpIn, _ = metric.New("metric", map[string]string{srcTagName: srcTagValue, "agent_address": "192.168.0.1"}, nil, time.Now())
 	metricToResolveCh <- lpIn
 	lpOut = <-resolvedMetricCh
 	name, ok = lpOut.GetTag(dstTagName)
@@ -266,7 +266,7 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 
 	// if we clear the cache then it should resolve to a lookup from via our replacement fn
 	asyncResolver.ifaceCache.clear()
-	lpIn, _ = metric.New("metric", map[string]string{srcTagName: srcTagValue, "agent_ip": "192.168.0.1"}, nil, time.Now())
+	lpIn, _ = metric.New("metric", map[string]string{srcTagName: srcTagValue, "agent_address": "192.168.0.1"}, nil, time.Now())
 	metricToResolveCh <- lpIn
 	name = <-indexToResolveCh
 	if name != srcTagValue {
@@ -286,7 +286,7 @@ func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstT
 
 func Test_agent_ip_to_host_resolve(t *testing.T) {
 	defer testEmptyLog(t)()
-	dnsResolveTest(t, "agent_ip", "192.168.0.1", "localhost", "host")
+	dnsResolveTest(t, "agent_address", "192.168.0.1", "localhost", "agent_host")
 }
 
 func Test_src_ip_to_src_host_resolve(t *testing.T) {
@@ -306,12 +306,12 @@ func Test_source_id_index_to_source_id_name_resolve(t *testing.T) {
 
 func Test_netif_index_out_to_netif_name_out_resolve(t *testing.T) {
 	defer testEmptyLog(t)()
-	ifaceResolveTest(t, "netif_index_out", "6", "eth1", "netif_name_out")
+	ifaceResolveTest(t, "output_ifindex", "6", "eth1", "output_ifname")
 }
 
 func Test_netif_index_in_to_netif_name_in_resolve(t *testing.T) {
 	defer testEmptyLog(t)()
-	ifaceResolveTest(t, "netif_index_in", "7", "eth2", "netif_name_in")
+	ifaceResolveTest(t, "input_ifindex", "7", "eth2", "input_ifname")
 }
 
 func Test_ipToFqdn(t *testing.T) {

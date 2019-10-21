@@ -1,0 +1,379 @@
+{
+	"meta": {
+		"chronografVersion": "1.7.12",
+		"sources": {
+			"0": {
+				"name": "http://192.2.0.1:8086",
+				"link": "/chronograf/v1/sources/0"
+			}
+		}
+	},
+	"dashboard": {
+		"id": 55,
+		"cells": [
+			{
+				"i": "f247bf11-852d-45ea-9d19-368c5a66956c",
+				"x": 0,
+				"y": 0,
+				"w": 6,
+				"h": 9,
+				"name": "Top Sources - :host:",
+				"queries": [
+					{
+						"query": "SELECT sum(\"bytes\") AS \"bytes\", sum(\"sampling_rate\") AS \"packets\", count(\"bytes\") AS \"records\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY \"src_host\" FILL(0)",
+						"queryConfig": {
+							"database": "sflow",
+							"measurement": "sflow",
+							"retentionPolicy": "",
+							"fields": [
+								{
+									"value": "sum",
+									"type": "func",
+									"alias": "bytes",
+									"args": [
+										{
+											"value": "bytes",
+											"type": "field",
+											"alias": ""
+										}
+									]
+								},
+								{
+									"value": "sum",
+									"type": "func",
+									"alias": "packets",
+									"args": [
+										{
+											"value": "packets",
+											"type": "field",
+											"alias": ""
+										}
+									]
+								},
+								{
+									"value": "count",
+									"type": "func",
+									"alias": "records",
+									"args": [
+										{
+											"value": "bytes",
+											"type": "field",
+											"alias": ""
+										}
+									]
+								}
+							],
+							"tags": {
+								"host": [
+									":host:"
+								]
+							},
+							"groupBy": {
+								"time": "",
+								"tags": [
+									"src_host"
+								]
+							},
+							"areTagsAccepted": true,
+							"rawText": null,
+							"range": null,
+							"shifts": null
+						},
+						"source": "",
+						"type": "influxql"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"0",
+							""
+						],
+						"label": "bandwidth (bits/s)",
+						"prefix": "",
+						"suffix": "",
+						"base": "2",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "table",
+				"colors": [
+					{
+						"id": "base",
+						"type": "text",
+						"hex": "#00C9FF",
+						"name": "laser",
+						"value": "-1000000000000000000"
+					}
+				],
+				"legend": {},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "sflow.bytes",
+						"displayName": "Bytes",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": false
+					},
+					{
+						"internalName": "src_host",
+						"displayName": "Source",
+						"visible": true
+					},
+					{
+						"internalName": "sflow.bytes",
+						"displayName": "Bytes",
+						"visible": true
+					},
+					{
+						"internalName": "sflow.packets",
+						"displayName": "Packets",
+						"visible": true
+					},
+					{
+						"internalName": "sflow.records",
+						"displayName": "Records",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 0
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/55/cells/f247bf11-852d-45ea-9d19-368c5a66956c"
+				}
+			},
+			{
+				"i": "b9e9c8b0-4b0f-47f8-9cad-3cda1908ee2f",
+				"x": 6,
+				"y": 0,
+				"w": 6,
+				"h": 9,
+				"name": "Top Destinations - :host:",
+				"queries": [
+					{
+						"query": "SELECT sum(\"bytes\") AS \"bytes\", sum(\"sampling_rate\") AS \"packets\", count(\"bytes\") AS \"records\" FROM \"sflow\"..\"sflow\" WHERE time > :dashboardTime: AND \"agent_host\"=':host:' GROUP BY \"dst_host\"",
+						"queryConfig": {
+							"database": "sflow",
+							"measurement": "sflow",
+							"retentionPolicy": "",
+							"fields": [
+								{
+									"value": "sum",
+									"type": "func",
+									"alias": "bytes",
+									"args": [
+										{
+											"value": "bytes",
+											"type": "field",
+											"alias": ""
+										}
+									]
+								},
+								{
+									"value": "sum",
+									"type": "func",
+									"alias": "packets",
+									"args": [
+										{
+											"value": "packets",
+											"type": "field",
+											"alias": ""
+										}
+									]
+								},
+								{
+									"value": "count",
+									"type": "func",
+									"alias": "records",
+									"args": [
+										{
+											"value": "bytes",
+											"type": "field",
+											"alias": ""
+										}
+									]
+								}
+							],
+							"tags": {
+								"host": [
+									":host:"
+								]
+							},
+							"groupBy": {
+								"time": "",
+								"tags": [
+									"dst_host"
+								]
+							},
+							"areTagsAccepted": true,
+							"rawText": null,
+							"range": null,
+							"shifts": null
+						},
+						"source": "",
+						"type": "influxql"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"0",
+							""
+						],
+						"label": "bandwidth (bits/s)",
+						"prefix": "",
+						"suffix": "",
+						"base": "2",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "table",
+				"colors": [
+					{
+						"id": "base",
+						"type": "text",
+						"hex": "#00C9FF",
+						"name": "laser",
+						"value": "-1000000000000000000"
+					}
+				],
+				"legend": {},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "sflow.bytes",
+						"displayName": "Bytes",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": false
+					},
+					{
+						"internalName": "dst_host",
+						"displayName": "Destination",
+						"visible": true
+					},
+					{
+						"internalName": "sflow.bytes",
+						"displayName": "Bytes",
+						"visible": true
+					},
+					{
+						"internalName": "sflow.packets",
+						"displayName": "Packets",
+						"visible": true
+					},
+					{
+						"internalName": "sflow.records",
+						"displayName": "Records",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 0
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/55/cells/b9e9c8b0-4b0f-47f8-9cad-3cda1908ee2f"
+				}
+			}
+		],
+		"templates": [
+			{
+				"tempVar": ":host:",
+				"values": [
+					{
+						"value": "sw1.",
+						"type": "influxql",
+						"selected": true
+					}
+				],
+				"id": "feebca2c-31eb-472b-a124-efb17c909836",
+				"type": "influxql",
+				"label": "",
+				"query": {
+					"influxql": "SHOW TAG VALUES ON \"sflow\" FROM \"sflow\" WITH KEY=\"agent_host\"",
+					"measurement": "",
+					"tagKey": "",
+					"fieldKey": ""
+				},
+				"links": {
+					"self": "/chronograf/v1/dashboards/55/templates/feebca2c-31eb-472b-a124-efb17c909836"
+				}
+			}
+		],
+		"name": "sFlow: Top Talkers",
+		"organization": "default",
+		"links": {
+			"self": "/chronograf/v1/dashboards/55",
+			"cells": "/chronograf/v1/dashboards/55/cells",
+			"templates": "/chronograf/v1/dashboards/55/templates"
+		}
+	}
+}
