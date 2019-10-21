@@ -33,6 +33,10 @@ type PerformanceQuery interface {
 	IsVistaOrNewer() bool
 }
 
+type PerformanceQueryCreator interface {
+	NewPerformanceQuery(string) PerformanceQuery
+}
+
 // PdhError represents error returned from Performance Counters API
 type PdhError struct {
 	ErrorCode uint32
@@ -53,6 +57,13 @@ func NewPdhError(code uint32) error {
 // PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
 type PerformanceQueryImpl struct {
 	query PDH_HQUERY
+}
+
+type PerformanceQueryCreatorImpl struct {
+}
+
+func (m PerformanceQueryCreatorImpl) NewPerformanceQuery(string) PerformanceQuery {
+	return &PerformanceQueryImpl{}
 }
 
 // Open creates a new counterPath that is used to manage the collection of performance data.

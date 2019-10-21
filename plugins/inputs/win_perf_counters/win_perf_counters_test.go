@@ -5,10 +5,11 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
@@ -31,7 +32,7 @@ type FakePerformanceQuery struct {
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue(raw bool) *CounterValue {
-	_, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
+	_, _, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
 	if inst == "" {
 		inst = "--"
 	}
@@ -225,7 +226,21 @@ func (m *FakePerformanceQuery) IsVistaOrNewer() bool {
 	return m.vistaAndNewer
 }
 
-func createPerfObject(measurement string, object string, instances []string, counters []string, failOnMissing, includeTotal, useRawValues bool) []perfobject {
+type FakePerformanceQueryCreator struct {
+	fakeQueries map[string]*FakePerformanceQuery
+}
+
+func (m FakePerformanceQueryCreator) NewPerformanceQuery(computer string) PerformanceQuery {
+	var ret PerformanceQuery
+	var ok bool
+	ret = nil
+	if ret, ok = m.fakeQueries[computer]; !ok {
+		panic(fmt.Errorf("query for %s not found", computer))
+	}
+	return ret
+}
+
+func createPerfObject(computer string, measurement string, object string, instances []string, counters []string, failOnMissing bool, includeTotal bool, useRawValues bool) []perfobject {
 	PerfObject := perfobject{
 		ObjectName:    object,
 		Instances:     instances,
@@ -236,8 +251,11 @@ func createPerfObject(measurement string, object string, instances []string, cou
 		IncludeTotal:  includeTotal,
 		UseRawValues:  useRawValues,
 	}
-	perfobjects := []perfobject{PerfObject}
-	return perfobjects
+	if computer != "" {
+		PerfObject.Sources = []string{computer}
+	}
+	perfObjects := []perfobject{PerfObject}
+	return perfObjects
 }
 
 func createCounterMap(counterPaths []string, values []float64, status []uint32) map[string]testCounter {
@@ -253,25 +271,37 @@ func createCounterMap(counterPaths []string, values []float64, status []uint32) 
 	return counters
 }
 
+var cachedHostname string
+
+func hostname() string {
+	if cachedHostname == "" {
+		var err error
+		if cachedHostname, err = os.Hostname(); err != nil {
+			cachedHostname = "localhost"
+		}
+	}
+	return cachedHostname
+}
+
 var counterPathsAndRes = map[string][]string{
-	"\\O\\CT":                           {"O", "", "CT"},
-	"\\O\\CT(i)":                        {"O", "", "CT(i)"},
-	"\\O\\CT(d:\\f\\i)":                 {"O", "", "CT(d:\\f\\i)"},
-	"\\\\CM\\O\\CT":                     {"O", "", "CT"},
-	"\\O(I)\\CT":                        {"O", "I", "CT"},
-	"\\O(I)\\CT(i)":                     {"O", "I", "CT(i)"},
-	"\\O(I)\\CT(i)x":                    {"O", "I", "CT(i)x"},
-	"\\O(I)\\CT(d:\\f\\i)":              {"O", "I", "CT(d:\\f\\i)"},
-	"\\\\CM\\O(I)\\CT":                  {"O", "I", "CT"},
-	"\\O(d:\\f\\I)\\CT":                 {"O", "d:\\f\\I", "CT"},
-	"\\O(d:\\f\\I(d))\\CT":              {"O", "d:\\f\\I(d)", "CT"},
-	"\\O(d:\\f\\I(d)x)\\CT":             {"O", "d:\\f\\I(d)x", "CT"},
-	"\\O(d:\\f\\I)\\CT(i)":              {"O", "d:\\f\\I", "CT(i)"},
-	"\\O(d:\\f\\I)\\CT(d:\\f\\i)":       {"O", "d:\\f\\I", "CT(d:\\f\\i)"},
-	"\\\\CM\\O(d:\\f\\I)\\CT":           {"O", "d:\\f\\I", "CT"},
-	"\\\\CM\\O(d:\\f\\I)\\CT(d:\\f\\i)": {"O", "d:\\f\\I", "CT(d:\\f\\i)"},
-	"\\O(I(info))\\CT":                  {"O", "I(info)", "CT"},
-	"\\\\CM\\O(I(info))\\CT":            {"O", "I(info)", "CT"},
+	"\\O\\CT":                           {"", "O", "", "CT"},
+	"\\O\\CT(i)":                        {"", "O", "", "CT(i)"},
+	"\\O\\CT(d:\\f\\i)":                 {"", "O", "", "CT(d:\\f\\i)"},
+	"\\\\CM\\O\\CT":                     {"CM", "O", "", "CT"},
+	"\\O(I)\\CT":                        {"", "O", "I", "CT"},
+	"\\O(I)\\CT(i)":                     {"", "O", "I", "CT(i)"},
+	"\\O(I)\\CT(i)x":                    {"", "O", "I", "CT(i)x"},
+	"\\O(I)\\CT(d:\\f\\i)":              {"", "O", "I", "CT(d:\\f\\i)"},
+	"\\\\CM\\O(I)\\CT":                  {"CM", "O", "I", "CT"},
+	"\\O(d:\\f\\I)\\CT":                 {"", "O", "d:\\f\\I", "CT"},
+	"\\O(d:\\f\\I(d))\\CT":              {"", "O", "d:\\f\\I(d)", "CT"},
+	"\\O(d:\\f\\I(d)x)\\CT":             {"", "O", "d:\\f\\I(d)x", "CT"},
+	"\\O(d:\\f\\I)\\CT(i)":              {"", "O", "d:\\f\\I", "CT(i)"},
+	"\\O(d:\\f\\I)\\CT(d:\\f\\i)":       {"", "O", "d:\\f\\I", "CT(d:\\f\\i)"},
+	"\\\\CM\\O(d:\\f\\I)\\CT":           {"CM", "O", "d:\\f\\I", "CT"},
+	"\\\\CM\\O(d:\\f\\I)\\CT(d:\\f\\i)": {"CM", "O", "d:\\f\\I", "CT(d:\\f\\i)"},
+	"\\O(I(info))\\CT":                  {"", "O", "I(info)", "CT"},
+	"\\\\CM\\O(I(info))\\CT":            {"CM", "O", "I(info)", "CT"},
 }
 
 var invalidCounterPaths = []string{
@@ -283,16 +313,20 @@ var invalidCounterPaths = []string{
 	"\\O(I/C)",
 	"\\O(I\\)C",
 	"\\O(I\\C)",
+	"\\CM\\O(I)\\C",
+	"\\CM\\O\\C",
+	"\\\\C\\O(I)\\C)",
+	"\\\\C\\O\\C)",
 }
 
 func TestCounterPathParsing(t *testing.T) {
 	for path, vals := range counterPathsAndRes {
-		o, i, c, err := extractCounterInfoFromCounterPath(path)
+		h, o, i, c, err := extractCounterInfoFromCounterPath(path)
 		require.NoError(t, err)
-		require.Equalf(t, vals, []string{o, i, c}, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+		require.Equalf(t, vals, []string{h, o, i, c}, "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
 	}
 	for _, path := range invalidCounterPaths {
-		_, _, _, err := extractCounterInfoFromCounterPath(path)
+		_, _, _, _, err := extractCounterInfoFromCounterPath(path)
 		require.Error(t, err)
 	}
 }
@@ -300,263 +334,868 @@ func TestCounterPathParsing(t *testing.T) {
 func TestAddItemSimple(t *testing.T) {
 	var err error
 	cps1 := []string{"\\O(I)\\C"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     nil,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
-			expandPaths: map[string][]string{
-				cps1[0]: cps1,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
+				expandPaths: map[string][]string{
+					cps1[0]: cps1,
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
+			},
+		},
+	}
+	err = m.AddItem(cps1[0], "localhost", "O", "I", "c", "test", false, false)
 	require.NoError(t, err)
-	err = m.AddItem(cps1[0], "O", "I", "c", "test", false, true)
-	require.NoError(t, err)
-	err = m.query.Close()
-	require.NoError(t, err)
+	counters, ok := m.hostCounters["localhost"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 1)
+	assert.True(t, counters.counters[0].computer == "localhost")
+	assert.True(t, counters.counters[0].objectName == "O")
+	assert.True(t, counters.counters[0].instance == "I")
+	assert.True(t, counters.counters[0].counter == "c")
+	assert.True(t, counters.counters[0].measurement == "test")
+	assert.True(t, !counters.counters[0].includeTotal)
 }
 
 func TestAddItemInvalidCountPath(t *testing.T) {
 	var err error
 	cps1 := []string{"\\O\\C"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:                   testutil.Logger{},
 		PrintValid:            false,
 		Object:                nil,
 		UseWildcardsExpansion: true,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
-			expandPaths: map[string][]string{
-				cps1[0]: {"\\O/C"},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {"\\O/C"},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
+			},
+		},
+	}
 	require.NoError(t, err)
-	err = m.AddItem("\\O\\C", "O", "------", "C", "test", false, false)
+	err = m.AddItem("\\O\\C", "localhost", "O", "------", "C", "test", false, false)
 	require.Error(t, err)
-	err = m.query.Close()
-	require.NoError(t, err)
 }
 
 func TestParseConfigBasic(t *testing.T) {
 	var err error
-	perfObjects := createPerfObject("m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)
+	perfObjects := createPerfObject("", "m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
+		Sources:    []string{"localhost"},
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0}),
-			expandPaths: map[string][]string{
-				cps1[0]: {cps1[0]},
-				cps1[1]: {cps1[1]},
-				cps1[2]: {cps1[2]},
-				cps1[3]: {cps1[3]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+					cps1[1]: {cps1[1]},
+					cps1[2]: {cps1[2]},
+					cps1[3]: {cps1[3]},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
+			},
+		},
+	}
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	require.Len(t, m.counters, 4)
-	err = m.query.Close()
+	counters, ok := m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 4)
+	err = m.cleanQueries()
 	require.NoError(t, err)
-
 	m.UseWildcardsExpansion = true
-	m.counters = nil
 
-	err = m.query.Open()
+	err = m.ParseConfig()
+	require.NoError(t, err)
+	counters, ok = m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 4)
+}
+
+func TestParseConfigMultiComps(t *testing.T) {
+	var err error
+	perfObjects := []perfobject{
+		createPerfObject("", "m", "O", []string{"I"}, []string{"C"}, false, false, false)[0],
+		createPerfObject("", "m", "O1", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
+		createPerfObject("", "m", "O2", []string{"I"}, []string{"C1", "C2", "C3"}, false, false, false)[0],
+	}
+	cps11 := []string{"\\O(I)\\C"}
+	cps12 := []string{"\\\\cmp1\\O(I)\\C"}
+	cps13 := []string{"\\\\cmp2\\O(I)\\C"}
+	cps21 := []string{"\\O1(I1)\\C1", "\\O1(I1)\\C2", "\\O1(I2)\\C1", "\\O1(I2)\\C2"}
+	cps22 := []string{"\\\\cmp1\\O1(I1)\\C1", "\\\\cmp1\\O1(I1)\\C2", "\\\\cmp1\\O1(I2)\\C1", "\\\\cmp1\\O1(I2)\\C2"}
+	cps23 := []string{"\\\\cmp2\\O1(I1)\\C1", "\\\\cmp2\\O1(I1)\\C2", "\\\\cmp2\\O1(I2)\\C1", "\\\\cmp2\\O1(I2)\\C2"}
+	cps31 := []string{"\\O2(I)\\C1", "\\O2(I)\\C2", "\\O2(I)\\C3"}
+	cps32 := []string{"\\\\cmp1\\O2(I)\\C1", "\\\\cmp1\\O2(I)\\C2", "\\\\cmp1\\O2(I)\\C3"}
+	cps33 := []string{"\\\\cmp2\\O2(I)\\C1", "\\\\cmp2\\O2(I)\\C2", "\\\\cmp2\\O2(I)\\C3"}
+	m := WinPerfCounters{
+		Sources:    []string{"localhost", "cmp1", "cmp2"},
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{
+				"localhost": {
+					counters: createCounterMap(append(append(cps11, cps21...), cps31...),
+						[]float64{1.1, 1.1, 1.2, 2.1, 2.2, 1.1, 1.2, 1.3},
+						[]uint32{0, 0, 0, 0, 0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps11[0]: {cps11[0]},
+						cps21[0]: {cps21[0]},
+						cps21[1]: {cps21[1]},
+						cps21[2]: {cps21[2]},
+						cps21[3]: {cps21[3]},
+						cps31[0]: {cps31[0]},
+						cps31[1]: {cps31[1]},
+						cps31[2]: {cps31[2]},
+					},
+					vistaAndNewer: true,
+				},
+				"cmp1": {
+					counters: createCounterMap(append(append(cps12, cps22...), cps32...),
+						[]float64{1.1, 1.1, 1.2, 2.1, 2.2, 1.1, 1.2, 1.3},
+						[]uint32{0, 0, 0, 0, 0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps12[0]: {cps12[0]},
+						cps22[0]: {cps22[0]},
+						cps22[1]: {cps22[1]},
+						cps22[2]: {cps22[2]},
+						cps22[3]: {cps22[3]},
+						cps32[0]: {cps32[0]},
+						cps32[1]: {cps32[1]},
+						cps32[2]: {cps32[2]},
+					},
+					vistaAndNewer: true,
+				},
+				"cmp2": {
+					counters: createCounterMap(append(append(cps13, cps23...), cps33...),
+						[]float64{1.1, 1.1, 1.2, 2.1, 2.2, 1.1, 1.2, 1.3},
+						[]uint32{0, 0, 0, 0, 0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps13[0]: {cps13[0]},
+						cps23[0]: {cps23[0]},
+						cps23[1]: {cps23[1]},
+						cps23[2]: {cps23[2]},
+						cps23[3]: {cps23[3]},
+						cps33[0]: {cps33[0]},
+						cps33[1]: {cps33[1]},
+						cps33[2]: {cps33[2]},
+					},
+					vistaAndNewer: true,
+				},
+			},
+		},
+	}
 	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	require.Len(t, m.counters, 4)
-	err = m.query.Close()
+	assert.Len(t, m.hostCounters, 3)
+
+	counters, ok := m.hostCounters["localhost"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 8)
+	assert.True(t, counters.tag == hostname())
+	assert.True(t, counters.counters[0].computer == "localhost")
+	assert.True(t, counters.counters[0].objectName == "O")
+	assert.True(t, counters.counters[0].instance == "I")
+	assert.True(t, counters.counters[0].counter == "C")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[1].computer == "localhost")
+	assert.True(t, counters.counters[1].objectName == "O1")
+	assert.True(t, counters.counters[1].instance == "I1")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "localhost")
+	assert.True(t, counters.counters[2].objectName == "O1")
+	assert.True(t, counters.counters[2].instance == "I2")
+	assert.True(t, counters.counters[2].counter == "C1")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "localhost")
+	assert.True(t, counters.counters[3].objectName == "O1")
+	assert.True(t, counters.counters[3].instance == "I1")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+	assert.True(t, counters.counters[4].computer == "localhost")
+	assert.True(t, counters.counters[4].objectName == "O1")
+	assert.True(t, counters.counters[4].instance == "I2")
+	assert.True(t, counters.counters[4].counter == "C2")
+	assert.True(t, counters.counters[4].measurement == "m")
+	assert.True(t, !counters.counters[4].includeTotal)
+	assert.True(t, counters.counters[5].computer == "localhost")
+	assert.True(t, counters.counters[5].objectName == "O2")
+	assert.True(t, counters.counters[5].instance == "I")
+	assert.True(t, counters.counters[5].counter == "C1")
+	assert.True(t, counters.counters[5].measurement == "m")
+	assert.True(t, !counters.counters[5].includeTotal)
+	assert.True(t, counters.counters[6].computer == "localhost")
+	assert.True(t, counters.counters[6].objectName == "O2")
+	assert.True(t, counters.counters[6].instance == "I")
+	assert.True(t, counters.counters[6].counter == "C2")
+	assert.True(t, counters.counters[6].measurement == "m")
+	assert.True(t, !counters.counters[6].includeTotal)
+	assert.True(t, counters.counters[7].computer == "localhost")
+	assert.True(t, counters.counters[7].objectName == "O2")
+	assert.True(t, counters.counters[7].instance == "I")
+	assert.True(t, counters.counters[7].counter == "C3")
+	assert.True(t, counters.counters[7].measurement == "m")
+	assert.True(t, !counters.counters[7].includeTotal)
+
+	counters, ok = m.hostCounters["cmp1"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 8)
+	assert.True(t, counters.tag == "cmp1")
+	assert.True(t, counters.counters[0].computer == "cmp1")
+	assert.True(t, counters.counters[0].objectName == "O")
+	assert.True(t, counters.counters[0].instance == "I")
+	assert.True(t, counters.counters[0].counter == "C")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[1].computer == "cmp1")
+	assert.True(t, counters.counters[1].objectName == "O1")
+	assert.True(t, counters.counters[1].instance == "I1")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "cmp1")
+	assert.True(t, counters.counters[2].objectName == "O1")
+	assert.True(t, counters.counters[2].instance == "I2")
+	assert.True(t, counters.counters[2].counter == "C1")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "cmp1")
+	assert.True(t, counters.counters[3].objectName == "O1")
+	assert.True(t, counters.counters[3].instance == "I1")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+	assert.True(t, counters.counters[4].computer == "cmp1")
+	assert.True(t, counters.counters[4].objectName == "O1")
+	assert.True(t, counters.counters[4].instance == "I2")
+	assert.True(t, counters.counters[4].counter == "C2")
+	assert.True(t, counters.counters[4].measurement == "m")
+	assert.True(t, !counters.counters[4].includeTotal)
+	assert.True(t, counters.counters[5].computer == "cmp1")
+	assert.True(t, counters.counters[5].objectName == "O2")
+	assert.True(t, counters.counters[5].instance == "I")
+	assert.True(t, counters.counters[5].counter == "C1")
+	assert.True(t, counters.counters[5].measurement == "m")
+	assert.True(t, !counters.counters[5].includeTotal)
+	assert.True(t, counters.counters[6].computer == "cmp1")
+	assert.True(t, counters.counters[6].objectName == "O2")
+	assert.True(t, counters.counters[6].instance == "I")
+	assert.True(t, counters.counters[6].counter == "C2")
+	assert.True(t, counters.counters[6].measurement == "m")
+	assert.True(t, !counters.counters[6].includeTotal)
+	assert.True(t, counters.counters[7].computer == "cmp1")
+	assert.True(t, counters.counters[7].objectName == "O2")
+	assert.True(t, counters.counters[7].instance == "I")
+	assert.True(t, counters.counters[7].counter == "C3")
+	assert.True(t, counters.counters[7].measurement == "m")
+	assert.True(t, !counters.counters[7].includeTotal)
+
+	counters, ok = m.hostCounters["cmp2"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 8)
+	assert.True(t, counters.tag == "cmp2")
+	assert.True(t, counters.counters[0].computer == "cmp2")
+	assert.True(t, counters.counters[0].objectName == "O")
+	assert.True(t, counters.counters[0].instance == "I")
+	assert.True(t, counters.counters[0].counter == "C")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[1].computer == "cmp2")
+	assert.True(t, counters.counters[1].objectName == "O1")
+	assert.True(t, counters.counters[1].instance == "I1")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "cmp2")
+	assert.True(t, counters.counters[2].objectName == "O1")
+	assert.True(t, counters.counters[2].instance == "I2")
+	assert.True(t, counters.counters[2].counter == "C1")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "cmp2")
+	assert.True(t, counters.counters[3].objectName == "O1")
+	assert.True(t, counters.counters[3].instance == "I1")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+	assert.True(t, counters.counters[4].computer == "cmp2")
+	assert.True(t, counters.counters[4].objectName == "O1")
+	assert.True(t, counters.counters[4].instance == "I2")
+	assert.True(t, counters.counters[4].counter == "C2")
+	assert.True(t, counters.counters[4].measurement == "m")
+	assert.True(t, !counters.counters[4].includeTotal)
+	assert.True(t, counters.counters[5].computer == "cmp2")
+	assert.True(t, counters.counters[5].objectName == "O2")
+	assert.True(t, counters.counters[5].instance == "I")
+	assert.True(t, counters.counters[5].counter == "C1")
+	assert.True(t, counters.counters[5].measurement == "m")
+	assert.True(t, !counters.counters[5].includeTotal)
+	assert.True(t, counters.counters[6].computer == "cmp2")
+	assert.True(t, counters.counters[6].objectName == "O2")
+	assert.True(t, counters.counters[6].instance == "I")
+	assert.True(t, counters.counters[6].counter == "C2")
+	assert.True(t, counters.counters[6].measurement == "m")
+	assert.True(t, !counters.counters[6].includeTotal)
+	assert.True(t, counters.counters[7].computer == "cmp2")
+	assert.True(t, counters.counters[7].objectName == "O2")
+	assert.True(t, counters.counters[7].instance == "I")
+	assert.True(t, counters.counters[7].counter == "C3")
+	assert.True(t, counters.counters[7].measurement == "m")
+	assert.True(t, !counters.counters[7].includeTotal)
+
+}
+
+func TestParseConfigMultiCompsOverrideMultiplePerfObjects(t *testing.T) {
+	var err error
+	perfObjects := []perfobject{
+		createPerfObject("localhost", "m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
+		createPerfObject("cmp1", "m", "O1", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
+		createPerfObject("cmp2", "m", "O2", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
+	}
+	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
+	cps2 := []string{"\\\\cmp1\\O1(I1)\\C1", "\\\\cmp1\\O1(I1)\\C2", "\\\\cmp1\\O1(I2)\\C1", "\\\\cmp1\\O1(I2)\\C2"}
+	cps3 := []string{"\\\\cmp2\\O2(I1)\\C1", "\\\\cmp2\\O2(I1)\\C2", "\\\\cmp2\\O2(I2)\\C1", "\\\\cmp2\\O2(I2)\\C2"}
+	m := WinPerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1,
+					[]float64{1.1, 1.2, 1.3, 1.4},
+					[]uint32{0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+					cps1[1]: {cps1[1]},
+					cps1[2]: {cps1[2]},
+					cps1[3]: {cps1[3]},
+				},
+				vistaAndNewer: true,
+			},
+				"cmp1": {
+					counters: createCounterMap(cps2,
+						[]float64{2.1, 2.2, 2.3, 2.4},
+						[]uint32{0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps2[0]: {cps2[0]},
+						cps2[1]: {cps2[1]},
+						cps2[2]: {cps2[2]},
+						cps2[3]: {cps2[3]},
+					},
+					vistaAndNewer: true,
+				},
+				"cmp2": {
+					counters: createCounterMap(cps3,
+						[]float64{3.1, 3.2, 3.3, 3.4},
+						[]uint32{0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps3[0]: {cps3[0]},
+						cps3[1]: {cps3[1]},
+						cps3[2]: {cps3[2]},
+						cps3[3]: {cps3[3]},
+					},
+					vistaAndNewer: true,
+				},
+			},
+		},
+	}
 	require.NoError(t, err)
+	err = m.ParseConfig()
+	require.NoError(t, err)
+	assert.Len(t, m.hostCounters, 3)
+
+	counters, ok := m.hostCounters["localhost"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 4)
+	assert.True(t, counters.counters[0].computer == "localhost")
+	assert.True(t, counters.counters[0].objectName == "O")
+	assert.True(t, counters.counters[0].instance == "I1")
+	assert.True(t, counters.counters[0].counter == "C1")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[1].computer == "localhost")
+	assert.True(t, counters.counters[1].objectName == "O")
+	assert.True(t, counters.counters[1].instance == "I2")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "localhost")
+	assert.True(t, counters.counters[2].objectName == "O")
+	assert.True(t, counters.counters[2].instance == "I1")
+	assert.True(t, counters.counters[2].counter == "C2")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "localhost")
+	assert.True(t, counters.counters[3].objectName == "O")
+	assert.True(t, counters.counters[3].instance == "I2")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+
+	counters, ok = m.hostCounters["cmp1"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 4)
+	assert.True(t, counters.counters[0].computer == "cmp1")
+	assert.True(t, counters.counters[0].objectName == "O1")
+	assert.True(t, counters.counters[0].instance == "I1")
+	assert.True(t, counters.counters[0].counter == "C1")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[1].computer == "cmp1")
+	assert.True(t, counters.counters[1].objectName == "O1")
+	assert.True(t, counters.counters[1].instance == "I2")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "cmp1")
+	assert.True(t, counters.counters[2].objectName == "O1")
+	assert.True(t, counters.counters[2].instance == "I1")
+	assert.True(t, counters.counters[2].counter == "C2")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "cmp1")
+	assert.True(t, counters.counters[3].objectName == "O1")
+	assert.True(t, counters.counters[3].instance == "I2")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+
+	counters, ok = m.hostCounters["cmp2"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 4)
+	assert.True(t, counters.counters[0].computer == "cmp2")
+	assert.True(t, counters.counters[0].objectName == "O2")
+	assert.True(t, counters.counters[0].instance == "I1")
+	assert.True(t, counters.counters[0].counter == "C1")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[1].computer == "cmp2")
+	assert.True(t, counters.counters[1].objectName == "O2")
+	assert.True(t, counters.counters[1].instance == "I2")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "cmp2")
+	assert.True(t, counters.counters[2].objectName == "O2")
+	assert.True(t, counters.counters[2].instance == "I1")
+	assert.True(t, counters.counters[2].counter == "C2")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "cmp2")
+	assert.True(t, counters.counters[3].objectName == "O2")
+	assert.True(t, counters.counters[3].instance == "I2")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+
+}
+
+func TestParseConfigMultiCompsOverrideOnePerfObject(t *testing.T) {
+	var err error
+
+	PerfObject := perfobject{
+		Sources:       []string{"cmp1", "cmp2"},
+		ObjectName:    "O",
+		Instances:     []string{"I1", "I2"},
+		Counters:      []string{"C1", "C2"},
+		Measurement:   "m",
+		WarnOnMissing: false,
+		FailOnMissing: false,
+		IncludeTotal:  false,
+	}
+	cps11 := []string{"\\\\cmp1\\O(I1)\\C1", "\\\\cmp1\\O(I1)\\C2", "\\\\cmp1\\O(I2)\\C1", "\\\\cmp1\\O(I2)\\C2"}
+	cps12 := []string{"\\\\cmp2\\O(I1)\\C1", "\\\\cmp2\\O(I1)\\C2", "\\\\cmp2\\O(I2)\\C1", "\\\\cmp2\\O(I2)\\C2"}
+	cps21 := []string{"\\O1(I)\\C"}
+	cps22 := []string{"\\\\cmp1\\O1(I)\\C"}
+	m := WinPerfCounters{
+		Sources:    []string{"localhost", "cmp1"},
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     []perfobject{PerfObject, createPerfObject("", "m", "O1", []string{"I"}, []string{"C"}, false, false, false)[0]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{
+				"localhost": {
+					counters: createCounterMap(cps21,
+						[]float64{1.1},
+						[]uint32{0}),
+					expandPaths: map[string][]string{
+						cps21[0]: {cps21[0]},
+					},
+					vistaAndNewer: true,
+				},
+				"cmp1": {
+					counters: createCounterMap(append(cps11, cps22...),
+						[]float64{2.1, 2.1, 2.2, 2.3, 2.4},
+						[]uint32{0, 0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps11[0]: {cps11[0]},
+						cps11[1]: {cps11[1]},
+						cps11[2]: {cps11[2]},
+						cps11[3]: {cps11[3]},
+						cps22[0]: {cps22[0]},
+					},
+					vistaAndNewer: true,
+				},
+				"cmp2": {
+					counters: createCounterMap(cps12,
+						[]float64{3.1, 3.2, 3.3, 3.4},
+						[]uint32{0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps12[0]: {cps12[0]},
+						cps12[1]: {cps12[1]},
+						cps12[2]: {cps12[2]},
+						cps12[3]: {cps12[3]},
+					},
+					vistaAndNewer: true,
+				},
+			},
+		},
+	}
+	require.NoError(t, err)
+	err = m.ParseConfig()
+	require.NoError(t, err)
+	assert.Len(t, m.hostCounters, 3)
+
+	counters, ok := m.hostCounters["localhost"]
+	assert.True(t, ok)
+	require.Len(t, counters.counters, 1)
+	assert.True(t, counters.tag == hostname())
+	assert.True(t, counters.counters[0].computer == "localhost")
+	assert.True(t, counters.counters[0].objectName == "O1")
+	assert.True(t, counters.counters[0].instance == "I")
+	assert.True(t, counters.counters[0].counter == "C")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+
+	counters, ok = m.hostCounters["cmp1"]
+	assert.True(t, ok)
+	require.Len(t, counters.counters, 5)
+	assert.True(t, counters.tag == "cmp1")
+	assert.True(t, counters.counters[0].computer == "cmp1")
+	assert.True(t, counters.counters[0].objectName == "O")
+	assert.True(t, counters.counters[0].instance == "I1")
+	assert.True(t, counters.counters[0].counter == "C1")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[0].computer == "cmp1")
+	assert.True(t, counters.counters[1].objectName == "O")
+	assert.True(t, counters.counters[1].instance == "I2")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "cmp1")
+	assert.True(t, counters.counters[2].objectName == "O")
+	assert.True(t, counters.counters[2].instance == "I1")
+	assert.True(t, counters.counters[2].counter == "C2")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "cmp1")
+	assert.True(t, counters.counters[3].objectName == "O")
+	assert.True(t, counters.counters[3].instance == "I2")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+	assert.True(t, counters.counters[4].computer == "cmp1")
+	assert.True(t, counters.counters[4].objectName == "O1")
+	assert.True(t, counters.counters[4].instance == "I")
+	assert.True(t, counters.counters[4].counter == "C")
+	assert.True(t, counters.counters[4].measurement == "m")
+	assert.True(t, !counters.counters[4].includeTotal)
+
+	counters, ok = m.hostCounters["cmp2"]
+	assert.True(t, ok)
+	require.Len(t, counters.counters, 4)
+	assert.True(t, counters.tag == "cmp2")
+	assert.True(t, counters.counters[0].computer == "cmp2")
+	assert.True(t, counters.counters[0].objectName == "O")
+	assert.True(t, counters.counters[0].instance == "I1")
+	assert.True(t, counters.counters[0].counter == "C1")
+	assert.True(t, counters.counters[0].measurement == "m")
+	assert.True(t, !counters.counters[0].includeTotal)
+	assert.True(t, counters.counters[1].computer == "cmp2")
+	assert.True(t, counters.counters[1].objectName == "O")
+	assert.True(t, counters.counters[1].instance == "I2")
+	assert.True(t, counters.counters[1].counter == "C1")
+	assert.True(t, counters.counters[1].measurement == "m")
+	assert.True(t, !counters.counters[1].includeTotal)
+	assert.True(t, counters.counters[2].computer == "cmp2")
+	assert.True(t, counters.counters[2].objectName == "O")
+	assert.True(t, counters.counters[2].instance == "I1")
+	assert.True(t, counters.counters[2].counter == "C2")
+	assert.True(t, counters.counters[2].measurement == "m")
+	assert.True(t, !counters.counters[2].includeTotal)
+	assert.True(t, counters.counters[3].computer == "cmp2")
+	assert.True(t, counters.counters[3].objectName == "O")
+	assert.True(t, counters.counters[3].instance == "I2")
+	assert.True(t, counters.counters[3].counter == "C2")
+	assert.True(t, counters.counters[3].measurement == "m")
+	assert.True(t, !counters.counters[3].includeTotal)
+
+}
+
+func TestParseConfigLocalhost(t *testing.T) {
+
+	var err error
+	perfObjects := createPerfObject("localhost", "m", "O", []string{"------"}, []string{"C"}, false, false, false)
+	cps1 := []string{"\\O\\C"}
+	m := WinPerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.1}, []uint32{0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+				},
+				vistaAndNewer: true,
+			},
+			},
+		},
+	}
+
+	err = m.ParseConfig()
+	require.NoError(t, err)
+
+	hostCounters, ok := m.hostCounters["localhost"]
+	assert.True(t, ok)
+	require.Len(t, hostCounters.counters, 1)
+	assert.Equal(t, "localhost", hostCounters.counters[0].computer)
+	assert.Equal(t, "localhost", hostCounters.computer, hostCounters.computer)
+	assert.Equal(t, hostname(), hostCounters.tag)
+
+	err = m.cleanQueries()
+	require.NoError(t, err)
+
+	m.Object[0].Sources = []string{""}
+
+	err = m.ParseConfig()
+	require.NoError(t, err)
+
+	hostCounters, ok = m.hostCounters["localhost"]
+	assert.True(t, ok)
+	require.Len(t, hostCounters.counters, 1)
+	assert.Equal(t, "localhost", hostCounters.counters[0].computer)
+	assert.Equal(t, "localhost", hostCounters.computer, hostCounters.computer)
+	assert.Equal(t, hostname(), hostCounters.tag)
 }
 
 func TestParseConfigNoInstance(t *testing.T) {
 	var err error
-	perfObjects := createPerfObject("m", "O", []string{"------"}, []string{"C1", "C2"}, false, false, false)
+	perfObjects := createPerfObject("", "m", "O", []string{"------"}, []string{"C1", "C2"}, false, false, false)
 	cps1 := []string{"\\O\\C1", "\\O\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:                   testutil.Logger{},
 		PrintValid:            false,
 		Object:                perfObjects,
 		UseWildcardsExpansion: false,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(cps1, []float64{1.1, 1.2}, []uint32{0, 0}),
-			expandPaths: map[string][]string{
-				cps1[0]: {cps1[0]},
-				cps1[1]: {cps1[1]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.1, 1.2}, []uint32{0, 0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+					cps1[1]: {cps1[1]},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
-	require.NoError(t, err)
+			},
+		},
+	}
+
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	require.Len(t, m.counters, 2)
-	err = m.query.Close()
-	require.NoError(t, err)
+	counters, ok := m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 2)
 
 	m.UseWildcardsExpansion = true
-	m.counters = nil
-
-	err = m.query.Open()
+	err = m.cleanQueries()
 	require.NoError(t, err)
+
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	require.Len(t, m.counters, 2)
-	err = m.query.Close()
-	require.NoError(t, err)
+	counters, ok = m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 2)
+
 }
 
 func TestParseConfigInvalidCounterError(t *testing.T) {
 	var err error
-	perfObjects := createPerfObject("m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, true, false, false)
+	perfObjects := createPerfObject("", "m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, true, false, false)
 	cps1 := []string{"\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
-			expandPaths: map[string][]string{
-				cps1[0]: {cps1[0]},
-				cps1[1]: {cps1[1]},
-				cps1[2]: {cps1[2]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+					cps1[1]: {cps1[1]},
+					cps1[2]: {cps1[2]},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
-	require.NoError(t, err)
+			},
+		},
+	}
+
 	err = m.ParseConfig()
 	require.Error(t, err)
-	err = m.query.Close()
-	require.NoError(t, err)
 
+	err = m.cleanQueries()
+	require.NoError(t, err)
 	m.UseWildcardsExpansion = true
-	m.counters = nil
 
-	err = m.query.Open()
-	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.Error(t, err)
-	err = m.query.Close()
+	err = m.cleanQueries()
 	require.NoError(t, err)
 }
 
 func TestParseConfigInvalidCounterNoError(t *testing.T) {
 	var err error
-	perfObjects := createPerfObject("m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)
+	perfObjects := createPerfObject("", "m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)
 	cps1 := []string{"\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
-			expandPaths: map[string][]string{
-				cps1[0]: {cps1[0]},
-				cps1[1]: {cps1[1]},
-				cps1[2]: {cps1[2]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.1, 1.2, 1.3}, []uint32{0, 0, 0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+					cps1[1]: {cps1[1]},
+					cps1[2]: {cps1[2]},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
-	require.NoError(t, err)
+			},
+		},
+	}
+
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	err = m.query.Close()
+	err = m.cleanQueries()
 	require.NoError(t, err)
 
 	m.UseWildcardsExpansion = true
-	m.counters = nil
 
-	err = m.query.Open()
-	require.NoError(t, err)
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	err = m.query.Close()
+	err = m.cleanQueries()
 	require.NoError(t, err)
-
 }
 
 func TestParseConfigTotalExpansion(t *testing.T) {
 	var err error
-	perfObjects := createPerfObject("m", "O", []string{"*"}, []string{"*"}, true, true, false)
+	perfObjects := createPerfObject("", "m", "O", []string{"*"}, []string{"*"}, true, true, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:                   testutil.Logger{},
 		PrintValid:            false,
 		UseWildcardsExpansion: true,
 		Object:                perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
-			expandPaths: map[string][]string{
-				"\\O(*)\\*": cps1,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					"\\O(*)\\*": cps1,
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
-	require.NoError(t, err)
+			},
+		},
+		LocalizeWildcardsExpansion: true,
+	}
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	require.Len(t, m.counters, 4)
-	err = m.query.Close()
+	counters, ok := m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 4)
+	err = m.cleanQueries()
 	require.NoError(t, err)
 
 	perfObjects[0].IncludeTotal = false
 
-	m = Win_PerfCounters{
+	m = WinPerfCounters{
 		Log:                   testutil.Logger{},
 		PrintValid:            false,
 		UseWildcardsExpansion: true,
 		Object:                perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
-			expandPaths: map[string][]string{
-				"\\O(*)\\*": cps1,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					"\\O(*)\\*": cps1,
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
-	require.NoError(t, err)
+			},
+		},
+		LocalizeWildcardsExpansion: true,
+	}
+
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	require.Len(t, m.counters, 2)
-	err = m.query.Close()
+	counters, ok = m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 2)
+	err = m.cleanQueries()
 	require.NoError(t, err)
 }
 
 func TestParseConfigExpand(t *testing.T) {
 	var err error
-	perfObjects := createPerfObject("m", "O", []string{"*"}, []string{"*"}, false, false, false)
+	perfObjects := createPerfObject("", "m", "O", []string{"*"}, []string{"*"}, false, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:                   testutil.Logger{},
 		PrintValid:            false,
 		UseWildcardsExpansion: true,
 		Object:                perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
-			expandPaths: map[string][]string{
-				"\\O(*)\\*": cps1,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					"\\O(*)\\*": cps1,
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
-	err = m.query.Open()
-	require.NoError(t, err)
+			},
+		},
+		LocalizeWildcardsExpansion: true,
+	}
 	err = m.ParseConfig()
 	require.NoError(t, err)
-	require.Len(t, m.counters, 4)
-	err = m.query.Close()
+	counters, ok := m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 4)
+	err = m.cleanQueries()
 	require.NoError(t, err)
 }
 
@@ -566,19 +1205,23 @@ func TestSimpleGather(t *testing.T) {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
-			expandPaths: map[string][]string{
-				cp1: {cp1},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
+				expandPaths: map[string][]string{
+					cp1: {cp1},
+				},
+				vistaAndNewer: false,
 			},
-			vistaAndNewer: false,
-		}}
+			},
+		},
+	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
@@ -589,11 +1232,13 @@ func TestSimpleGather(t *testing.T) {
 	tags1 := map[string]string{
 		"instance":   "I",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
 	m.UseWildcardsExpansion = true
-	m.counters = nil
+	err = m.cleanQueries()
+	require.NoError(t, err)
 	m.lastRefreshed = time.Time{}
 
 	var acc2 testutil.Accumulator
@@ -601,6 +1246,8 @@ func TestSimpleGather(t *testing.T) {
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+	err = m.cleanQueries()
+	require.NoError(t, err)
 }
 
 func TestSimpleGatherNoData(t *testing.T) {
@@ -609,19 +1256,23 @@ func TestSimpleGatherNoData(t *testing.T) {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{PDH_NO_DATA}),
-			expandPaths: map[string][]string{
-				cp1: {cp1},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{PDH_NO_DATA}),
+				expandPaths: map[string][]string{
+					cp1: {cp1},
+				},
+				vistaAndNewer: false,
 			},
-			vistaAndNewer: false,
-		}}
+			},
+		},
+	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	// this "PDH_NO_DATA" error should not be returned to caller, but checked, and handled
@@ -639,7 +1290,8 @@ func TestSimpleGatherNoData(t *testing.T) {
 	acc1.AssertDoesNotContainsTaggedFields(t, measurement, fields1, tags1)
 
 	m.UseWildcardsExpansion = true
-	m.counters = nil
+	err = m.cleanQueries()
+	require.NoError(t, err)
 	m.lastRefreshed = time.Time{}
 
 	var acc2 testutil.Accumulator
@@ -647,6 +1299,8 @@ func TestSimpleGatherNoData(t *testing.T) {
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
 	acc1.AssertDoesNotContainsTaggedFields(t, measurement, fields1, tags1)
+	err = m.cleanQueries()
+	require.NoError(t, err)
 }
 
 func TestSimpleGatherWithTimestamp(t *testing.T) {
@@ -655,20 +1309,25 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:                testutil.Logger{},
 		PrintValid:         false,
 		UsePerfCounterTime: true,
 		Object:             perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
-			expandPaths: map[string][]string{
-				cp1: {cp1},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap([]string{cp1}, []float64{1.2}, []uint32{0}),
+				expandPaths: map[string][]string{
+					cp1: {cp1},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
+			},
+		},
+	}
+
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
@@ -679,45 +1338,62 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 	tags1 := map[string]string{
 		"instance":   "I",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	require.True(t, acc1.HasTimestamp(measurement, MetricTime))
+	err = m.cleanQueries()
+	require.NoError(t, err)
+
 }
 
 func TestGatherError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
 	var err error
-	expectedError := "error while getting value for counter \\O(I)\\C: The information passed is not valid.\r\n"
+	expectedError := "error during collecting data on host 'localhost': error while getting value for counter \\O(I)\\C: The information passed is not valid.\r\n"
 	if testing.Short() {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C"}, false, false, false)
 	cp1 := "\\O(I)\\C"
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{PDH_PLA_VALIDATION_WARNING}),
-			expandPaths: map[string][]string{
-				cp1: {cp1},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap([]string{cp1}, []float64{-2}, []uint32{PDH_PLA_VALIDATION_WARNING}),
+				expandPaths: map[string][]string{
+					cp1: {cp1},
+				},
+				vistaAndNewer: false,
 			},
-			vistaAndNewer: false,
-		}}
+			},
+		},
+	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
-	require.Error(t, err)
-	require.Equal(t, expectedError, err.Error())
+	require.NoError(t, err)
+	require.Len(t, acc1.Errors, 1)
+	require.Equal(t, expectedError, acc1.Errors[0].Error())
 
 	m.UseWildcardsExpansion = true
-	m.counters = nil
+	err = m.cleanQueries()
+	require.NoError(t, err)
 	m.lastRefreshed = time.Time{}
 
 	var acc2 testutil.Accumulator
 
 	err = m.Gather(&acc2)
-	require.Error(t, err)
-	require.Equal(t, expectedError, err.Error())
+	require.NoError(t, err)
+	require.Len(t, acc2.Errors, 1)
+	require.Equal(t, expectedError, acc2.Errors[0].Error())
+
+	err = m.cleanQueries()
+	require.NoError(t, err)
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
@@ -726,21 +1402,25 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C1", "C2", "C3"}, false, false, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"I"}, []string{"C1", "C2", "C3"}, false, false, false)
 	cps1 := []string{"\\O(I)\\C1", "\\O(I)\\C2", "\\O(I)\\C3"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:        testutil.Logger{},
 		PrintValid: false,
 		Object:     perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, PDH_INVALID_DATA, 0}),
-			expandPaths: map[string][]string{
-				cps1[0]: {cps1[0]},
-				cps1[1]: {cps1[1]},
-				cps1[2]: {cps1[2]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1, []float64{1.2, 1, 0}, []uint32{0, PDH_INVALID_DATA, 0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+					cps1[1]: {cps1[1]},
+					cps1[2]: {cps1[2]},
+				},
+				vistaAndNewer: false,
 			},
-			vistaAndNewer: false,
-		}}
+			},
+		},
+	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
@@ -752,17 +1432,21 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 	tags1 := map[string]string{
 		"instance":   "I",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
 	m.UseWildcardsExpansion = true
-	m.counters = nil
+	err = m.cleanQueries()
+	require.NoError(t, err)
 	m.lastRefreshed = time.Time{}
 
 	var acc2 testutil.Accumulator
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+	err = m.cleanQueries()
+	require.NoError(t, err)
 }
 
 // tests with expansion
@@ -772,7 +1456,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"*"}, true, false, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"*"}, []string{"*"}, true, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
 	fpm := &FakePerformanceQuery{
 		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}, []uint32{0, 0, 0, 0, 0}),
@@ -781,19 +1465,25 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		},
 		vistaAndNewer: true,
 	}
-	m := Win_PerfCounters{
-		Log:                        testutil.Logger{},
-		PrintValid:                 false,
-		Object:                     perfObjects,
-		UseWildcardsExpansion:      true,
-		query:                      fpm,
+	m := WinPerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		Object:                perfObjects,
+		UseWildcardsExpansion: true,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+		},
 		CountersRefreshInterval:    config.Duration(time.Second * 10),
 		LocalizeWildcardsExpansion: true,
 	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
-	require.Len(t, m.counters, 4)
 	require.NoError(t, err)
+
+	counters, ok := m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 4)
+
 	require.Len(t, acc1.Metrics, 2)
 
 	fields1 := map[string]interface{}{
@@ -803,6 +1493,7 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	tags1 := map[string]string{
 		"instance":   "I1",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
@@ -813,8 +1504,10 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	tags2 := map[string]string{
 		"instance":   "I2",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
+
 	cps2 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I3)\\C1", "\\O(I3)\\C2"}
 	fpm = &FakePerformanceQuery{
 		counters: createCounterMap(append(cps2, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 0}, []uint32{0, 0, 0, 0, 0, 0, 0}),
@@ -823,8 +1516,10 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		},
 		vistaAndNewer: true,
 	}
-	m.query = fpm
-	_ = fpm.Open()
+
+	m.queryCreator = &FakePerformanceQueryCreator{
+		fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+	}
 	var acc2 testutil.Accumulator
 
 	fields3 := map[string]interface{}{
@@ -834,12 +1529,15 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	tags3 := map[string]string{
 		"instance":   "I3",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 
 	//test before elapsing CounterRefreshRate counters are not refreshed
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	require.Len(t, m.counters, 4)
+	counters, ok = m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 4)
 	require.Len(t, acc2.Metrics, 2)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
@@ -856,6 +1554,8 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 	acc3.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
 	acc3.AssertContainsTaggedFields(t, measurement, fields3, tags3)
+	err = m.cleanQueries()
+	require.NoError(t, err)
 
 }
 
@@ -865,7 +1565,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, false, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
 	fpm := &FakePerformanceQuery{
 		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
@@ -875,18 +1575,22 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		},
 		vistaAndNewer: true,
 	}
-	m := Win_PerfCounters{
-		Log:                     testutil.Logger{},
-		PrintValid:              false,
-		Object:                  perfObjects,
-		UseWildcardsExpansion:   false,
-		query:                   fpm,
+	m := WinPerfCounters{
+		Log:                   testutil.Logger{},
+		PrintValid:            false,
+		Object:                perfObjects,
+		UseWildcardsExpansion: false,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+		},
 		CountersRefreshInterval: config.Duration(time.Second * 10)}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
-	require.Len(t, m.counters, 2)
+	counters, ok := m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 2)
 	require.NoError(t, err)
-	require.Len(t, acc1.Metrics, 2)
+	assert.Len(t, acc1.Metrics, 2)
 
 	fields1 := map[string]interface{}{
 		"C1": 1.1,
@@ -895,6 +1599,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	tags1 := map[string]string{
 		"instance":   "I1",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
@@ -905,6 +1610,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	tags2 := map[string]string{
 		"instance":   "I2",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	//test finding new instance
@@ -917,8 +1623,14 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		},
 		vistaAndNewer: true,
 	}
-	m.query = fpm
-	_ = fpm.Open()
+
+	err = m.cleanQueries()
+	require.NoError(t, err)
+	m.lastRefreshed = time.Time{}
+	m.queryCreator = &FakePerformanceQueryCreator{
+		fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+	}
+
 	var acc2 testutil.Accumulator
 
 	fields3 := map[string]interface{}{
@@ -928,19 +1640,23 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	tags3 := map[string]string{
 		"instance":   "I3",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 
 	//test before elapsing CounterRefreshRate counters are not refreshed
+
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	require.Len(t, m.counters, 2)
+	counters, ok = m.hostCounters["localhost"]
+	require.True(t, ok)
+	require.Len(t, counters.counters, 2)
 	require.Len(t, acc2.Metrics, 3)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 	acc2.AssertContainsTaggedFields(t, measurement, fields3, tags3)
 	//test changed configuration
-	perfObjects = createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2", "C3"}, true, false, false)
+	perfObjects = createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2", "C3"}, true, false, false)
 	cps3 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I1)\\C3", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I2)\\C3"}
 	fpm = &FakePerformanceQuery{
 		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2", "\\O(*)\\C3"}, cps3...), []float64{0, 0, 0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6}, []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0}),
@@ -951,10 +1667,13 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		},
 		vistaAndNewer: true,
 	}
-	m.query = fpm
+	err = m.cleanQueries()
+	m.lastRefreshed = time.Time{}
+	require.NoError(t, err)
+	m.queryCreator = &FakePerformanceQueryCreator{
+		fakeQueries: map[string]*FakePerformanceQuery{"localhost": fpm},
+	}
 	m.Object = perfObjects
-
-	_ = fpm.Open()
 
 	time.Sleep(time.Duration(m.CountersRefreshInterval))
 
@@ -970,6 +1689,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	tags4 := map[string]string{
 		"instance":   "I1",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	fields5 := map[string]interface{}{
 		"C1": 1.4,
@@ -979,11 +1699,13 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	tags5 := map[string]string{
 		"instance":   "I2",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 
 	acc3.AssertContainsTaggedFields(t, measurement, fields4, tags4)
 	acc3.AssertContainsTaggedFields(t, measurement, fields5, tags5)
-
+	err = m.cleanQueries()
+	require.NoError(t, err)
 }
 
 func TestGatherTotalNoExpansion(t *testing.T) {
@@ -992,26 +1714,32 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	}
 	var err error
 	measurement := "m"
-	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, true, false)
+	perfObjects := createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, true, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:                   testutil.Logger{},
 		PrintValid:            false,
 		UseWildcardsExpansion: false,
 		Object:                perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
-			expandPaths: map[string][]string{
-				"\\O(*)\\C1": {cps1[0], cps1[2]},
-				"\\O(*)\\C2": {cps1[1], cps1[3]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					"\\O(*)\\C1": {cps1[0], cps1[2]},
+					"\\O(*)\\C2": {cps1[1], cps1[3]},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
+			},
+		},
+	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
-	require.Len(t, m.counters, 2)
-	require.Len(t, acc1.Metrics, 2)
+	counters, ok := m.hostCounters["localhost"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 2)
+	assert.Len(t, acc1.Metrics, 2)
 	fields1 := map[string]interface{}{
 		"C1": 1.1,
 		"C2": 1.2,
@@ -1019,6 +1747,7 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	tags1 := map[string]string{
 		"instance":   "I1",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
@@ -1029,23 +1758,149 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 	tags2 := map[string]string{
 		"instance":   "_Total",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
 	perfObjects[0].IncludeTotal = false
 
-	m.counters = nil
+	err = m.cleanQueries()
+	require.NoError(t, err)
+	m.UseWildcardsExpansion = true
 	m.lastRefreshed = time.Time{}
 
 	var acc2 testutil.Accumulator
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	require.Len(t, m.counters, 2)
-	require.Len(t, acc2.Metrics, 1)
+	counters, ok = m.hostCounters["localhost"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 2)
+	assert.Len(t, acc2.Metrics, 1)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
-
 	acc2.AssertDoesNotContainsTaggedFields(t, measurement, fields2, tags2)
+	err = m.cleanQueries()
+	require.NoError(t, err)
+}
+
+func TestGatherMultiComps(t *testing.T) {
+	var err error
+	perfObjects := []perfobject{
+		createPerfObject("", "m", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
+		createPerfObject("cmp1", "m1", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
+		createPerfObject("cmp2", "m2", "O", []string{"I1", "I2"}, []string{"C1", "C2"}, false, false, false)[0],
+	}
+	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
+	cps2 := []string{"\\\\cmp1\\O(I1)\\C1", "\\\\cmp1\\O(I1)\\C2", "\\\\cmp1\\O(I2)\\C1", "\\\\cmp1\\O(I2)\\C2"}
+	cps3 := []string{"\\\\cmp2\\O(I1)\\C1", "\\\\cmp2\\O(I1)\\C2", "\\\\cmp2\\O(I2)\\C1", "\\\\cmp2\\O(I2)\\C2"}
+	m := WinPerfCounters{
+		Log:        testutil.Logger{},
+		PrintValid: false,
+		Object:     perfObjects,
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(cps1,
+					[]float64{1.1, 1.2, 1.3, 1.4},
+					[]uint32{0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					cps1[0]: {cps1[0]},
+					cps1[1]: {cps1[1]},
+					cps1[2]: {cps1[2]},
+					cps1[3]: {cps1[3]},
+				},
+				vistaAndNewer: true,
+			},
+				"cmp1": {
+					counters: createCounterMap(cps2,
+						[]float64{2.1, 2.2, 2.3, 2.4},
+						[]uint32{0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps2[0]: {cps2[0]},
+						cps2[1]: {cps2[1]},
+						cps2[2]: {cps2[2]},
+						cps2[3]: {cps2[3]},
+					},
+					vistaAndNewer: true,
+				},
+				"cmp2": {
+					counters: createCounterMap(cps3,
+						[]float64{3.1, 3.2, 3.3, 3.4},
+						[]uint32{0, 0, 0, 0}),
+					expandPaths: map[string][]string{
+						cps3[0]: {cps3[0]},
+						cps3[1]: {cps3[1]},
+						cps3[2]: {cps3[2]},
+						cps3[3]: {cps3[3]},
+					},
+					vistaAndNewer: true,
+				},
+			},
+		},
+	}
+	var acc testutil.Accumulator
+	err = m.Gather(&acc)
+	require.NoError(t, err)
+	assert.Len(t, acc.Metrics, 6)
+	fields1 := map[string]interface{}{
+		"C1": 1.1,
+		"C2": 1.2,
+	}
+	tags1 := map[string]string{
+		"instance":   "I1",
+		"objectname": "O",
+		"source":     hostname(),
+	}
+	fields2 := map[string]interface{}{
+		"C1": 1.3,
+		"C2": 1.4,
+	}
+	tags2 := map[string]string{
+		"instance":   "I2",
+		"objectname": "O",
+		"source":     hostname(),
+	}
+	acc.AssertContainsTaggedFields(t, "m", fields1, tags1)
+	acc.AssertContainsTaggedFields(t, "m", fields2, tags2)
+	fields3 := map[string]interface{}{
+		"C1": 2.1,
+		"C2": 2.2,
+	}
+	tags3 := map[string]string{
+		"instance":   "I1",
+		"objectname": "O",
+		"source":     "cmp1",
+	}
+	fields4 := map[string]interface{}{
+		"C1": 2.3,
+		"C2": 2.4,
+	}
+	tags4 := map[string]string{
+		"instance":   "I2",
+		"objectname": "O",
+		"source":     "cmp1",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", fields3, tags3)
+	acc.AssertContainsTaggedFields(t, "m1", fields4, tags4)
+	fields5 := map[string]interface{}{
+		"C1": 3.1,
+		"C2": 3.2,
+	}
+	tags5 := map[string]string{
+		"instance":   "I1",
+		"objectname": "O",
+		"source":     "cmp2",
+	}
+	fields6 := map[string]interface{}{
+		"C1": 3.3,
+		"C2": 3.4,
+	}
+	tags6 := map[string]string{
+		"instance":   "I2",
+		"objectname": "O",
+		"source":     "cmp2",
+	}
+	acc.AssertContainsTaggedFields(t, "m2", fields5, tags5)
+	acc.AssertContainsTaggedFields(t, "m2", fields6, tags6)
 }
 
 func TestGatherRaw(t *testing.T) {
@@ -1054,25 +1909,31 @@ func TestGatherRaw(t *testing.T) {
 	}
 	var err error
 	measurement := "m"
-	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, true, true)
+	perfObjects := createPerfObject("", measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, true, true)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
-	m := Win_PerfCounters{
+	m := WinPerfCounters{
 		Log:                   testutil.Logger{},
 		PrintValid:            false,
 		UseWildcardsExpansion: false,
 		Object:                perfObjects,
-		query: &FakePerformanceQuery{
-			counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 2.2, 3.3, 4.4}, []uint32{0, 0, 0, 0, 0, 0}),
-			expandPaths: map[string][]string{
-				"\\O(*)\\C1": {cps1[0], cps1[2]},
-				"\\O(*)\\C2": {cps1[1], cps1[3]},
+		queryCreator: &FakePerformanceQueryCreator{
+			fakeQueries: map[string]*FakePerformanceQuery{"localhost": {
+				counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 2.2, 3.3, 4.4}, []uint32{0, 0, 0, 0, 0, 0}),
+				expandPaths: map[string][]string{
+					"\\O(*)\\C1": {cps1[0], cps1[2]},
+					"\\O(*)\\C2": {cps1[1], cps1[3]},
+				},
+				vistaAndNewer: true,
 			},
-			vistaAndNewer: true,
-		}}
+			},
+		},
+	}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 2)
+	counters, ok := m.hostCounters["localhost"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 2)
 	assert.Len(t, acc1.Metrics, 2)
 	fields1 := map[string]interface{}{
 		"C1_Raw": int64(1),
@@ -1081,6 +1942,7 @@ func TestGatherRaw(t *testing.T) {
 	tags1 := map[string]string{
 		"instance":   "I1",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
@@ -1091,17 +1953,21 @@ func TestGatherRaw(t *testing.T) {
 	tags2 := map[string]string{
 		"instance":   "_Total",
 		"objectname": "O",
+		"source":     hostname(),
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
 	m.UseWildcardsExpansion = true
-	m.counters = nil
+	err = m.cleanQueries()
+	require.NoError(t, err)
 	m.lastRefreshed = time.Time{}
 
 	var acc2 testutil.Accumulator
 	err = m.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Len(t, m.counters, 4) //expanded counters
+	counters, ok = m.hostCounters["localhost"]
+	assert.True(t, ok)
+	assert.Len(t, counters.counters, 4) //expanded counters
 	assert.Len(t, acc2.Metrics, 2)
 
 	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
@@ -1143,15 +2009,15 @@ func TestUTF16ToStringArray(t *testing.T) {
 }
 
 func TestNoWildcards(t *testing.T) {
-	m := Win_PerfCounters{
-		Object:                     createPerfObject("measurement", "object", []string{"instance"}, []string{"counter*"}, false, false, false),
+	m := WinPerfCounters{
+		Object:                     createPerfObject("", "measurement", "object", []string{"instance"}, []string{"counter*"}, false, false, false),
 		UseWildcardsExpansion:      true,
 		LocalizeWildcardsExpansion: false,
 		Log:                        testutil.Logger{},
 	}
 	require.Error(t, m.Init())
-	m = Win_PerfCounters{
-		Object:                     createPerfObject("measurement", "object?", []string{"instance"}, []string{"counter"}, false, false, false),
+	m = WinPerfCounters{
+		Object:                     createPerfObject("", "measurement", "object?", []string{"instance"}, []string{"counter"}, false, false, false),
 		UseWildcardsExpansion:      true,
 		LocalizeWildcardsExpansion: false,
 		Log:                        testutil.Logger{},
@@ -1166,15 +2032,16 @@ func TestLocalizeWildcardsExpansion(t *testing.T) {
 	}
 
 	const counter = "% Processor Time"
-	m := Win_PerfCounters{
-		query:                   &PerformanceQueryImpl{},
+	m := WinPerfCounters{
+		queryCreator:            &PerformanceQueryCreatorImpl{},
 		CountersRefreshInterval: config.Duration(time.Second * 60),
-		Object: createPerfObject("measurement", "Processor Information",
-			[]string{"_Total"}, []string{counter}, false, false, false),
+		Object: createPerfObject("", "measurement", "Processor Information",
+			[]string{"_Total"}, []string{counter}, true, false, false),
 		LocalizeWildcardsExpansion: false,
 		UseWildcardsExpansion:      true,
 		Log:                        testutil.Logger{},
 	}
+
 	require.NoError(t, m.Init())
 	var acc testutil.Accumulator
 	require.NoError(t, m.Gather(&acc))
@@ -1216,7 +2083,7 @@ func TestCheckError(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.Name, func(t *testing.T) {
-			m := Win_PerfCounters{
+			m := WinPerfCounters{
 				IgnoredErrors: tc.IgnoredErrors,
 			}
 
