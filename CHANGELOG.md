@@ -31,6 +31,7 @@
 - [#6504](https://github.com/influxdata/telegraf/pull/6504): Add lang parameter to OpenWeathermap input plugin.
 - [#6540](https://github.com/influxdata/telegraf/pull/6540): Log file open errors at debug level in tail input.
 - [#6553](https://github.com/influxdata/telegraf/pull/6553): Add timeout option to cloudwatch input.
+- [#6549](https://github.com/influxdata/telegraf/pull/6549): Support custom success codes in http input.
 
 ## v1.12.3 [2019-10-07]
 
