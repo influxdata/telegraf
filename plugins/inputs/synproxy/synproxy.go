@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -83,10 +84,18 @@ func (k *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 	return fields, nil
 }
 
+func GetHostProc() string {
+	procPath := "/proc"
+	if os.Getenv("HOST_PROC") != "" {
+		procPath = os.Getenv("HOST_PROC")
+	}
+	return procPath
+}
+
 func init() {
 	inputs.Add("synproxy", func() telegraf.Input {
 		return &Synproxy{
-			statFile: "/proc/net/stat/synproxy",
+			statFile: path.Join(GetHostProc(), "/net/stat/synproxy"),
 		}
 	})
 }
