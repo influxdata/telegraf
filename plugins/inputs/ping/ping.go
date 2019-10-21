@@ -261,6 +261,8 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 					Seq: seq,
 				})
 				if err != nil {
+					acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": destination})
+					acc.AddError(err)
 					return
 				}
 
