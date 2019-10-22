@@ -252,6 +252,25 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	var doErr error
 	var packetsSent int
 
+	type sentReq struct {
+		err  error
+		sent bool
+	}
+	sents := make(chan sentReq)
+
+	r.Add(1)
+	go func() {
+		for sent := range sents {
+			if sent.err != nil {
+				doErr = sent.err
+			}
+			if sent.sent {
+				packetsSent++
+			}
+		}
+		r.Done()
+	}()
+
 	for i := 0; i < p.Count; i++ {
 		select {
 		case <-ctx.Done():
@@ -268,15 +287,15 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 					Src: net.ParseIP(p.listenAddr),
 					Seq: seq,
 				})
+
+				sent := sentReq{err: err, sent: true}
 				if err != nil {
-					if !strings.Contains(err.Error(), "not permitted") {
-						packetsSent++
+					if strings.Contains(err.Error(), "not permitted") {
+						sent.sent = false
 					}
-					doErr = err
 					return
 				}
 
-				packetsSent++
 				resps <- resp
 			}(i + 1)
 		}
@@ -285,6 +304,7 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 finish:
 	wg.Wait()
 	close(resps)
+	close(sents)
 
 	r.Wait()
 
