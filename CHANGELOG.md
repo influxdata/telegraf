@@ -44,6 +44,10 @@
 
 - Official packages built with Go 1.12.12.
 
+#### Bugfixes
+
+- [#6521](https://github.com/influxdata/telegraf/issues/6521): Fix metric generation with ping input native method.
+
 ## v1.12.3 [2019-10-07]
 
 #### Bugfixes
