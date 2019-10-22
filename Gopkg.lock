@@ -1774,6 +1774,7 @@
     "github.com/shirou/gopsutil/mem",
     "github.com/shirou/gopsutil/net",
     "github.com/shirou/gopsutil/process",
+    "github.com/sirupsen/logrus",
     "github.com/soniah/gosnmp",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
