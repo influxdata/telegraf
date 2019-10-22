@@ -6,10 +6,10 @@ defaults:
       GOFLAGS: -p=8
   go-1_12: &go-1_12
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.12.10'
+      - image: 'quay.io/influxdb/telegraf-ci:1.12.12'
   go-1_13: &go-1_13
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.13.1'
+      - image: 'quay.io/influxdb/telegraf-ci:1.13.3'
 
 version: 2
 jobs:
