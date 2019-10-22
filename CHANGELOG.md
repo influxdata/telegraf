@@ -33,6 +33,10 @@
 - [#6553](https://github.com/influxdata/telegraf/pull/6553): Add timeout option to cloudwatch input.
 - [#6549](https://github.com/influxdata/telegraf/pull/6549): Support custom success codes in http input.
 
+#### Bugfixes
+
+- [#6484](https://github.com/influxdata/telegraf/issues/6484): Show correct default settings in mysql sample config.
+
 ## v1.12.3 [2019-10-07]
 
 #### Bugfixes
