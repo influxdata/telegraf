@@ -758,12 +758,12 @@
   revision = "615a14ed75099c9eaac6949e22ac2341bf9d3197"
 
 [[projects]]
-  digest = "1:a12b6f20a7e5eb7412d2e5cd15e1262a021f735fa958d664d9e7ba2160eefd0a"
+  digest = "1:3e160bec100719bb664ce5192b42e82e66b290397da4c0845aed5ce3cfce60cb"
   name = "github.com/karrick/godirwalk"
   packages = ["."]
   pruneopts = ""
-  revision = "2de2192f9e35ce981c152a873ed943b93b79ced4"
-  version = "v1.7.5"
+  revision = "532e518bccc921708e14b29e16503b1bf5c898cc"
+  version = "v1.12.0"
 
 [[projects]]
   branch = "master"
