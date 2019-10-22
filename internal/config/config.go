@@ -152,7 +152,8 @@ type AgentConfig struct {
 	// is determined by the "logfile" setting.
 	LogTarget string `toml:"logtarget"`
 
-	// Log file name			.
+	// Name of the file to be logged to when using the "file" logtarget.  If set to
+	// the empty string then logs are written to stderr.
 	Logfile string `toml:"logfile"`
 
 	// The file will be rotated after the time interval specified.  When set
@@ -298,8 +299,8 @@ var agentConfig = `
   ## is determined by the "logfile" setting.
   # logtarget = "file"
 
-  ## Log file name when "logtarget" is set to file.  If set to the empty string
-  ## logs will be sent to to stderr.
+  ## Name of the file to be logged to when using the "file" logtarget.  If set to
+  ## the empty string then logs are written to stderr.
   # logfile = ""
 
   ## The logfile will be rotated after the time interval specified.  When set

@@ -149,8 +149,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
   determined by the "logfile" setting.
 
 - **logfile**:
-  Log file name when "logtarget" is set to file.  If set to the empty string
-  logs will be sent to to stderr.
+  Name of the file to be logged to when using the "file" logtarget.  If set to
+  the empty string then logs are written to stderr.
+
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to
