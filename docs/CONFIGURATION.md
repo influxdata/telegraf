@@ -144,11 +144,14 @@ The agent table configures Telegraf and the defaults used across all plugins.
   Log only error level messages.
 
 - **logtarget**:
-  Log target - `file`, `stderr` or `eventlog` (Windows only). 
-  The empty string means to log to stderr.
+  Log target controls the destination for logs and can be one of "file",
+  "stderr" or, on Windows, "eventlog".  When set to "file", the output file is
+  determined by the "logfile" setting.
 
 - **logfile**:
-  Log file name.
+  Name of the file to be logged to when using the "file" logtarget.  If set to
+  the empty string then logs are written to stderr.
+
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to

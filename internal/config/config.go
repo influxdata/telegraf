@@ -75,6 +75,7 @@ func NewConfig() *Config {
 			Interval:                   internal.Duration{Duration: 10 * time.Second},
 			RoundInterval:              true,
 			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
+			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
 		},
 
@@ -146,10 +147,13 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet bool `toml:"quiet"`
 
-	// Log target - file, stderr, eventlog (Windows only). The empty string means to log to stderr.
+	// Log target controls the destination for logs and can be one of "file",
+	// "stderr" or, on Windows, "eventlog".  When set to "file", the output file
+	// is determined by the "logfile" setting.
 	LogTarget string `toml:"logtarget"`
 
-	// Log file name			.
+	// Name of the file to be logged to when using the "file" logtarget.  If set to
+	// the empty string then logs are written to stderr.
 	Logfile string `toml:"logfile"`
 
 	// The file will be rotated after the time interval specified.  When set
@@ -290,7 +294,13 @@ var agentConfig = `
   ## Log only error level messages.
   # quiet = false
 
-  ## Log file name, the empty string means to log to stderr.
+  ## Log target controls the destination for logs and can be one of "file",
+  ## "stderr" or, on Windows, "eventlog".  When set to "file", the output file
+  ## is determined by the "logfile" setting.
+  # logtarget = "file"
+
+  ## Name of the file to be logged to when using the "file" logtarget.  If set to
+  ## the empty string then logs are written to stderr.
   # logfile = ""
 
   ## The logfile will be rotated after the time interval specified.  When set
