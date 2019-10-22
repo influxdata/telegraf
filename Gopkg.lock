@@ -56,6 +56,14 @@
   version = "v0.1.8"
 
 [[projects]]
+  digest = "1:969da519486a6747991b534cbb5645c57bb0525b72b883bc29143b60dacf6883"
+  name = "github.com/Azure/azure-storage-blob-go"
+  packages = ["azblob"]
+  pruneopts = ""
+  revision = "678206e7e6e55abf0265a6440135e92005176ebf"
+  version = "v0.6.0"
+
+[[projects]]
   digest = "1:6ef03ecdaf3e9a003c2ebd67bfa673bbe8df2c23c82217a4448da766e8ef6b30"
   name = "github.com/Azure/azure-storage-queue-go"
   packages = ["azqueue"]
@@ -1678,6 +1686,7 @@
     "cloud.google.com/go/pubsub",
     "collectd.org/api",
     "collectd.org/network",
+    "github.com/Azure/azure-storage-blob-go/azblob",
     "github.com/Azure/azure-storage-queue-go/azqueue",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
