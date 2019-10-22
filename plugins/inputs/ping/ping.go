@@ -3,10 +3,12 @@ package ping
 import (
 	"context"
 	"errors"
+	"log"
 	"math"
 	"net"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -204,7 +206,11 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 
 	host, err := net.ResolveIPAddr(network, destination)
 	if err != nil {
-		acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": destination})
+		acc.AddFields(
+			"ping",
+			map[string]interface{}{"result_code": 1},
+			map[string]string{"url": destination},
+		)
 		acc.AddError(err)
 		return
 	}
@@ -243,8 +249,10 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	wg := &sync.WaitGroup{}
 	c := ping.Client{}
 
-	var i int
-	for i = 0; i < p.Count; i++ {
+	var doErr error
+	var packetsSent int
+
+	for i := 0; i < p.Count; i++ {
 		select {
 		case <-ctx.Done():
 			goto finish
@@ -261,9 +269,14 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 					Seq: seq,
 				})
 				if err != nil {
+					if !strings.Contains(err.Error(), "not permitted") {
+						packetsSent++
+					}
+					doErr = err
 					return
 				}
 
+				packetsSent++
 				resps <- resp
 			}(i + 1)
 		}
@@ -274,11 +287,16 @@ finish:
 	close(resps)
 
 	r.Wait()
-	tags, fields := onFin(i, rsps, destination)
+
+	if doErr != nil && strings.Contains(doErr.Error(), "not permitted") {
+		log.Printf("D! [inputs.ping] %s", doErr.Error())
+	}
+
+	tags, fields := onFin(packetsSent, rsps, doErr, destination)
 	acc.AddFields("ping", fields, tags)
 }
 
-func onFin(packetsSent int, resps []*ping.Response, destination string) (map[string]string, map[string]interface{}) {
+func onFin(packetsSent int, resps []*ping.Response, err error, destination string) (map[string]string, map[string]interface{}) {
 	packetsRcvd := len(resps)
 
 	tags := map[string]string{"url": destination}
@@ -289,10 +307,16 @@ func onFin(packetsSent int, resps []*ping.Response, destination string) (map[str
 	}
 
 	if packetsSent == 0 {
+		if err != nil {
+			fields["result_code"] = 2
+		}
 		return tags, fields
 	}
 
 	if packetsRcvd == 0 {
+		if err != nil {
+			fields["result_code"] = 1
+		}
 		fields["percent_packet_loss"] = float64(100)
 		return tags, fields
 	}
