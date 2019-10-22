@@ -2,7 +2,7 @@
 
 #### Release Notes
 
-- Official packages are built with Go 1.13.1.
+- Official packages built with Go 1.13.3.
 
 #### New Inputs
 
@@ -37,6 +37,12 @@
 #### Bugfixes
 
 - [#6484](https://github.com/influxdata/telegraf/issues/6484): Show correct default settings in mysql sample config.
+
+## v1.12.4 [unreleased]
+
+#### Release Notes
+
+- Official packages built with Go 1.12.12.
 
 ## v1.12.3 [2019-10-07]
 
