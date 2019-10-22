@@ -438,12 +438,12 @@
   revision = "25d852aebe32c875e9c044af3eef9c7dc6bc777f"
 
 [[projects]]
-  digest = "1:1c43ffc41749039318c291a397bde76f8eb0d92836e685f57fab3bcb8b977a4e"
+  digest = "1:7a9dc29b3fbc9a6440d98fcff422a2ce1a613975697ea560e3610084234f91ec"
   name = "github.com/glinton/ping"
   packages = ["."]
   pruneopts = ""
-  revision = "f160bc1281bab2b841d5851990494fef6e63d92f"
-  version = "v0.1.2"
+  revision = "d3c0ecf4df108179eccdff2176f4ff569c3aab37"
+  version = "v0.1.3"
 
 [[projects]]
   digest = "1:df89444601379b2e1ee82bf8e6b72af9901cbeed4b469fa380a519c89c339310"
