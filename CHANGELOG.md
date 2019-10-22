@@ -1,3 +1,9 @@
+## v1.12.4 [unreleased]
+
+#### Release Notes
+
+- Official packages built with Go 1.12.12.
+
 ## v1.12.3 [2019-10-07]
 
 #### Bugfixes
