@@ -29,14 +29,14 @@ type ProcessorConfig struct {
 }
 
 func NewRunningProcessor(processor telegraf.Processor, config *ProcessorConfig) *RunningProcessor {
-	tags := map[string]string{"processors": config.Name}
+	tags := map[string]string{"processor": config.Name}
 	if config.Alias != "" {
 		tags["alias"] = config.Alias
 	}
 
 	logger := &Logger{
 		Name: logName("processors", config.Name, config.Alias),
-		Errs: selfstat.Register("processor", "errors", tags),
+		Errs: selfstat.Register("process", "errors", tags),
 	}
 	setLogIfExist(processor, logger)
 
