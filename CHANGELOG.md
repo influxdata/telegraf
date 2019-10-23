@@ -1,4 +1,4 @@
-## v1.12.4 [unreleased]
+## v1.12.4 [2019-10-23]
 
 #### Release Notes
 
