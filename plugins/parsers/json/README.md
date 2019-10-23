@@ -18,6 +18,10 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
+  ## When strict is true and a JSON array is being parsed, all objects within the
+  ## array must be valid
+  strict = false
+
   ## Query is a GJSON path that specifies a specific chunk of JSON to be
   ## parsed, if not specified the whole document will be parsed.
   ##

@@ -32,6 +32,7 @@ type Config struct {
 	TimeFormat   string
 	Timezone     string
 	DefaultTags  map[string]string
+	Strict       bool
 }
 
 type Parser struct {
@@ -44,6 +45,7 @@ type Parser struct {
 	timeFormat   string
 	timezone     string
 	defaultTags  map[string]string
+	strict       bool
 }
 
 func New(config *Config) (*Parser, error) {
@@ -62,6 +64,7 @@ func New(config *Config) (*Parser, error) {
 		timeFormat:   config.TimeFormat,
 		timezone:     config.Timezone,
 		defaultTags:  config.DefaultTags,
+		strict:       config.Strict,
 	}, nil
 }
 
@@ -73,7 +76,10 @@ func (p *Parser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
 		case map[string]interface{}:
 			metrics, err := p.parseObject(v)
 			if err != nil {
-				return nil, err
+				if p.strict {
+					return nil, err
+				}
+				continue
 			}
 			results = append(results, metrics...)
 		default:

@@ -17,6 +17,7 @@ const (
 	validJSONArrayMultiple = "[{\"a\": 5, \"b\": {\"c\": 6}}, {\"a\": 7, \"b\": {\"c\": 8}}]"
 	invalidJSON            = "I don't think this is JSON"
 	invalidJSON2           = "{\"a\": 5, \"b\": \"c\": 6}}"
+	mixedValidityJSON      = "[{\"a\": 5, \"time\": \"2006-01-02T15:04:05\"}, {\"a\": 2}]"
 )
 
 const validJSONTags = `
@@ -149,6 +150,41 @@ func TestParseInvalidJSON(t *testing.T) {
 	_, err = parser.Parse([]byte(invalidJSON2))
 	require.Error(t, err)
 	_, err = parser.ParseLine(invalidJSON)
+	require.Error(t, err)
+}
+
+func TestParseJSONImplicitStrictness(t *testing.T) {
+	parserImplicitNoStrict, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "time",
+	})
+	require.NoError(t, err)
+
+	_, err = parserImplicitNoStrict.Parse([]byte(mixedValidityJSON))
+	require.NoError(t, err)
+}
+
+func TestParseJSONExplicitStrictnessFalse(t *testing.T) {
+	parserNoStrict, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "time",
+		Strict:     false,
+	})
+	require.NoError(t, err)
+
+	_, err = parserNoStrict.Parse([]byte(mixedValidityJSON))
+	require.NoError(t, err)
+}
+
+func TestParseJSONExplicitStrictnessTrue(t *testing.T) {
+	parserStrict, err := New(&Config{
+		MetricName: "json_test",
+		TimeKey:    "time",
+		Strict:     true,
+	})
+	require.NoError(t, err)
+
+	_, err = parserStrict.Parse([]byte(mixedValidityJSON))
 	require.Error(t, err)
 }
 
