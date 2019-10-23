@@ -34,6 +34,7 @@
 - [#6549](https://github.com/influxdata/telegraf/pull/6549): Support custom success codes in http input.
 - [#6530](https://github.com/influxdata/telegraf/pull/6530): Improve ipvs input error strings and logging.
 - [#6532](https://github.com/influxdata/telegraf/pull/6532): Add strict mode to JSON parser that can be disable to ignore invalid items.
+- [#6543](https://github.com/influxdata/telegraf/pull/6543): Add support for Kubernetes 1.16 and remove deprecated API usage.
 
 #### Bugfixes
 
