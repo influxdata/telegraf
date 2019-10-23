@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta2"
+	"github.com/ericchiang/k8s/apis/apps/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -24,7 +24,7 @@ func TestDaemonSet(t *testing.T) {
 			name: "no daemon set",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/daemonsets/": &v1beta2.DaemonSetList{},
+					"/daemonsets/": &v1.DaemonSetList{},
 				},
 			},
 			hasError: false,
@@ -33,10 +33,10 @@ func TestDaemonSet(t *testing.T) {
 			name: "collect daemonsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/daemonsets/": &v1beta2.DaemonSetList{
-						Items: []*v1beta2.DaemonSet{
+					"/daemonsets/": &v1.DaemonSetList{
+						Items: []*v1.DaemonSet{
 							{
-								Status: &v1beta2.DaemonSetStatus{
+								Status: &v1.DaemonSetStatus{
 									CurrentNumberScheduled: toInt32Ptr(3),
 									DesiredNumberScheduled: toInt32Ptr(5),
 									NumberAvailable:        toInt32Ptr(2),
@@ -90,7 +90,7 @@ func TestDaemonSet(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1beta2.DaemonSetList)).Items {
+		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1.DaemonSetList)).Items {
 			err := ks.gatherDaemonSet(*dset, acc)
 			if err != nil {
 				t.Errorf("Failed to gather daemonset - %s", err.Error())
