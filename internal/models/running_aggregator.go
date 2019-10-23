@@ -24,10 +24,14 @@ type RunningAggregator struct {
 }
 
 func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConfig) *RunningAggregator {
+	tags := map[string]string{"aggregator": config.Name}
+	if config.Alias != "" {
+		tags["alias"] = config.Alias
+	}
+
 	logger := &Logger{
 		Name: logName("aggregators", config.Name, config.Alias),
-		Errs: selfstat.Register("aggregate", "errors",
-			map[string]string{"input": config.Name, "alias": config.Alias}),
+		Errs: selfstat.Register("aggregate", "errors", tags),
 	}
 
 	setLogIfExist(aggregator, logger)
@@ -38,22 +42,22 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 		MetricsPushed: selfstat.Register(
 			"aggregate",
 			"metrics_pushed",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		MetricsFiltered: selfstat.Register(
 			"aggregate",
 			"metrics_filtered",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		MetricsDropped: selfstat.Register(
 			"aggregate",
 			"metrics_dropped",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		PushTime: selfstat.Register(
 			"aggregate",
 			"push_time_ns",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		log: logger,
 	}
