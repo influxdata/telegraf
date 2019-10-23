@@ -38,7 +38,7 @@
 
 - [#6484](https://github.com/influxdata/telegraf/issues/6484): Show correct default settings in mysql sample config.
 
-## v1.12.4 [unreleased]
+## v1.12.4 [2019-10-23]
 
 #### Release Notes
 
