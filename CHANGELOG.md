@@ -47,6 +47,7 @@
 #### Bugfixes
 
 - [#6521](https://github.com/influxdata/telegraf/issues/6521): Fix metric generation with ping input native method.
+- [#6541](https://github.com/influxdata/telegraf/issues/6541): Exclude alias tag if unset from plugin internal stats.
 
 ## v1.12.3 [2019-10-07]
 
