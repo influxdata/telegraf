@@ -57,12 +57,15 @@ func NewRunningOutput(
 	batchSize int,
 	bufferLimit int,
 ) *RunningOutput {
-	logger := &Logger{
-		Name: logName("outputs", config.Name, config.Alias),
-		Errs: selfstat.Register("write", "errors",
-			map[string]string{"output": config.Name, "alias": config.Alias}),
+	tags := map[string]string{"output": config.Name}
+	if config.Alias != "" {
+		tags["alias"] = config.Alias
 	}
 
+	logger := &Logger{
+		Name: logName("outputs", config.Name, config.Alias),
+		Errs: selfstat.Register("write", "errors", tags),
+	}
 	setLogIfExist(output, logger)
 
 	if config.MetricBufferLimit > 0 {
@@ -88,12 +91,12 @@ func NewRunningOutput(
 		MetricsFiltered: selfstat.Register(
 			"write",
 			"metrics_filtered",
-			map[string]string{"output": config.Name, "alias": config.Alias},
+			tags,
 		),
 		WriteTime: selfstat.RegisterTiming(
 			"write",
 			"write_time_ns",
-			map[string]string{"output": config.Name, "alias": config.Alias},
+			tags,
 		),
 		log: logger,
 	}
