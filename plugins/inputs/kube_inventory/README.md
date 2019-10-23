@@ -1,17 +1,25 @@
 # Kube_Inventory Plugin
+
 This plugin generates metrics derived from the state of the following Kubernetes resources:
- - daemonsets
- - deployments
- - nodes
- - persistentvolumes
- - persistentvolumeclaims
- - pods (containers)
- - statefulsets
+
+- daemonsets
+- deployments
+- nodes
+- persistentvolumes
+- persistentvolumeclaims
+- pods (containers)
+- statefulsets
+
+Kubernetes is a fast moving project, with a new minor release every 3 months. As
+such, we will aim to maintain support only for versions that are supported by
+the major cloud providers; this is roughly 4 release / 2 years.
+
+**This plugin supports Kubernetes 1.11 and later.**
 
 #### Series Cardinality Warning
 
 This plugin may produce a high number of series which, when not controlled
-for, will cause high load on your database.  Use the following techniques to
+for, will cause high load on your database. Use the following techniques to
 avoid cardinality issues:
 
 - Use [metric filtering][] options to exclude unneeded measurements and tags.
@@ -61,6 +69,7 @@ avoid cardinality issues:
 #### Kubernetes Permissions
 
 If using [RBAC authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), you will need to create a cluster role to list "persistentvolumes" and "nodes". You will then need to make an [aggregated ClusterRole](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) that will eventually be bound to a user or group.
+
 ```yaml
 ---
 kind: ClusterRole
@@ -70,9 +79,9 @@ metadata:
   labels:
     rbac.authorization.k8s.io/aggregate-view-telegraf: "true"
 rules:
-- apiGroups: [""]
-  resources: ["persistentvolumes","nodes"]
-  verbs: ["get","list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes", "nodes"]
+    verbs: ["get", "list"]
 
 ---
 kind: ClusterRole
@@ -81,14 +90,15 @@ metadata:
   name: influx:telegraf
 aggregationRule:
   clusterRoleSelectors:
-  - matchLabels:
-      rbac.authorization.k8s.io/aggregate-view-telegraf: "true"
-  - matchLabels:
-      rbac.authorization.k8s.io/aggregate-to-view: "true"
+    - matchLabels:
+        rbac.authorization.k8s.io/aggregate-view-telegraf: "true"
+    - matchLabels:
+        rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
 
 Bind the newly created aggregated ClusterRole with the following config file, updating the subjects as needed.
+
 ```yaml
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -100,15 +110,14 @@ roleRef:
   kind: ClusterRole
   name: influx:telegraf
 subjects:
-- kind: ServiceAccount
-  name: telegraf
-  namespace: default
+  - kind: ServiceAccount
+    name: telegraf
+    namespace: default
 ```
-
 
 ### Metrics:
 
-+ kubernetes_daemonset
+- kubernetes_daemonset
   - tags:
     - daemonset_name
     - namespace
@@ -122,7 +131,7 @@ subjects:
     - number_unavailable
     - updated_number_scheduled
 
-- kubernetes_deployment
+* kubernetes_deployment
   - tags:
     - deployment_name
     - namespace
@@ -131,7 +140,7 @@ subjects:
     - replicas_unavailable
     - created
 
-+ kubernetes_endpoints
+- kubernetes_endpoints
   - tags:
     - endpoint_name
     - namespace
@@ -139,14 +148,14 @@ subjects:
     - node_name
     - port_name
     - port_protocol
-    - kind (*varies)
+    - kind (\*varies)
   - fields:
     - created
     - generation
     - ready
     - port
 
-- kubernetes_ingress
+* kubernetes_ingress
   - tags:
     - ingress_name
     - namespace
@@ -161,7 +170,7 @@ subjects:
     - backend_service_port
     - tls
 
-+ kubernetes_node
+- kubernetes_node
   - tags:
     - node_name
   - fields:
@@ -172,7 +181,7 @@ subjects:
     - allocatable_memory_bytes
     - allocatable_pods
 
-- kubernetes_persistentvolume
+* kubernetes_persistentvolume
   - tags:
     - pv_name
     - phase
@@ -180,7 +189,7 @@ subjects:
   - fields:
     - phase_type (int, [see below](#pv-phase_type))
 
-+ kubernetes_persistentvolumeclaim
+- kubernetes_persistentvolumeclaim
   - tags:
     - pvc_name
     - namespace
@@ -189,7 +198,7 @@ subjects:
   - fields:
     - phase_type (int, [see below](#pvc-phase_type))
 
-- kubernetes_pod_container
+* kubernetes_pod_container
   - tags:
     - container_name
     - namespace
@@ -204,7 +213,7 @@ subjects:
     - resource_limits_cpu_units
     - resource_limits_memory_bytes
 
-+ kubernetes_service
+- kubernetes_service
   - tags:
     - service_name
     - namespace
@@ -218,7 +227,7 @@ subjects:
     - port
     - target_port
 
-- kubernetes_statefulset
+* kubernetes_statefulset
   - tags:
     - statefulset_name
     - namespace
@@ -236,26 +245,25 @@ subjects:
 
 The persistentvolume "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
 
-|Tag value |Corresponding field value|
------------|-------------------------|
-|bound     | 0                       |
-|failed    | 1                       |
-|pending   | 2                       |
-|released  | 3                       |
-|available | 4                       |
-|unknown   | 5                       |
+| Tag value | Corresponding field value |
+| --------- | ------------------------- |
+| bound     | 0                         |
+| failed    | 1                         |
+| pending   | 2                         |
+| released  | 3                         |
+| available | 4                         |
+| unknown   | 5                         |
 
 #### pvc `phase_type`
 
 The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
 
-|Tag value |Corresponding field value|
------------|-------------------------|
-|bound     | 0                       |
-|lost      | 1                       |
-|pending   | 2                       |
-|unknown   | 3                       |
-
+| Tag value | Corresponding field value |
+| --------- | ------------------------- |
+| bound     | 0                         |
+| lost      | 1                         |
+| pending   | 2                         |
+| unknown   | 3                         |
 
 ### Example Output:
 
@@ -270,7 +278,6 @@ kubernetes_pod,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1
 kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1,state=running resource_requests_cpu_units=0.1,resource_limits_memory_bytes=524288000,resource_limits_cpu_units=0.5,restarts_total=0i,state_code=0i,terminated_reason="",resource_requests_memory_bytes=524288000 1547597616000000000
 kubernetes_statefulset,namespace=default,statefulset_name=etcd replicas_updated=3i,spec_replicas=3i,observed_generation=1i,created=1544101669000000000i,generation=1i,replicas=3i,replicas_current=3i,replicas_ready=3i 1547597616000000000
 ```
-
 
 [metric filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
 [retention policy]: https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/

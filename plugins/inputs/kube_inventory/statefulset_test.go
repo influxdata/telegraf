@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta1"
+	"github.com/ericchiang/k8s/apis/apps/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -24,7 +24,7 @@ func TestStatefulSet(t *testing.T) {
 			name: "no statefulsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/statefulsets/": &v1beta1.StatefulSetList{},
+					"/statefulsets/": &v1.StatefulSetList{},
 				},
 			},
 			hasError: false,
@@ -33,17 +33,17 @@ func TestStatefulSet(t *testing.T) {
 			name: "collect statefulsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/statefulsets/": &v1beta1.StatefulSetList{
-						Items: []*v1beta1.StatefulSet{
+					"/statefulsets/": &v1.StatefulSetList{
+						Items: []*v1.StatefulSet{
 							{
-								Status: &v1beta1.StatefulSetStatus{
+								Status: &v1.StatefulSetStatus{
 									Replicas:           toInt32Ptr(2),
 									CurrentReplicas:    toInt32Ptr(4),
 									ReadyReplicas:      toInt32Ptr(1),
 									UpdatedReplicas:    toInt32Ptr(3),
 									ObservedGeneration: toInt64Ptr(119),
 								},
-								Spec: &v1beta1.StatefulSetSpec{
+								Spec: &v1.StatefulSetSpec{
 									Replicas: toInt32Ptr(3),
 								},
 								Metadata: &metav1.ObjectMeta{
@@ -90,7 +90,7 @@ func TestStatefulSet(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1beta1.StatefulSetList)).Items {
+		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
 			err := ks.gatherStatefulSet(*ss, acc)
 			if err != nil {
 				t.Errorf("Failed to gather ss - %s", err.Error())
