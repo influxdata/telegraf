@@ -139,7 +139,10 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	p := &PowerdnsRecursor{
 		UnixSockets: []string{controlSocket},
 		SocketDir:   "/tmp",
+		SocketMode:  "0666",
 	}
+	err = p.Init()
+	require.NoError(t, err)
 
 	var acc testutil.Accumulator
 
