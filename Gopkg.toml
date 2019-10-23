@@ -104,7 +104,7 @@
 
 [[constraint]]
   name = "github.com/miekg/dns"
-  version = "1.0.8"
+  version = "1.0.10"
 
 [[constraint]]
   name = "github.com/multiplay/go-ts3"
