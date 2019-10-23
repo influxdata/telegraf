@@ -18,10 +18,11 @@ import (
 )
 
 type PowerdnsRecursor struct {
-	UnixSockets []string
+	UnixSockets []string `toml:"unix_sockets"`
+	SocketDir   string   `toml:"socket_dir"`
+	SocketMode  string   `toml:"socket_mode"`
 
-	SocketDir  string `toml:"socket_dir"`
-	SocketMode uint32 `toml:"socket_mode"`
+	mode uint32
 }
 
 var defaultTimeout = 5 * time.Second
@@ -43,6 +44,18 @@ func (p *PowerdnsRecursor) SampleConfig() string {
 
 func (p *PowerdnsRecursor) Description() string {
 	return "Read metrics from one or many PowerDNS Recursor servers"
+}
+
+func (p *PowerdnsRecursor) Init() error {
+	if p.SocketMode != "" {
+		mode, err := strconv.ParseUint(p.SocketMode, 8, 32)
+		if err != nil {
+			return fmt.Errorf("could not parse socket_mode: %v", err)
+		}
+
+		p.mode = uint32(mode)
+	}
+	return nil
 }
 
 func (p *PowerdnsRecursor) Gather(acc telegraf.Accumulator) error {
@@ -79,11 +92,7 @@ func (p *PowerdnsRecursor) gatherServer(address string, acc telegraf.Accumulator
 	if err != nil {
 		return err
 	}
-	perm := uint32(0666)
-	if p.SocketMode > 0 {
-		perm = p.SocketMode
-	}
-	if err := os.Chmod(recvSocket, os.FileMode(perm)); err != nil {
+	if err := os.Chmod(recvSocket, os.FileMode(p.mode)); err != nil {
 		return err
 	}
 	defer conn.Close()
@@ -151,6 +160,8 @@ func parseResponse(metrics string) map[string]interface{} {
 
 func init() {
 	inputs.Add("powerdns_recursor", func() telegraf.Input {
-		return &PowerdnsRecursor{}
+		return &PowerdnsRecursor{
+			mode: uint32(0666),
+		}
 	})
 }
