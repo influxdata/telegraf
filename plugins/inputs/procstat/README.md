@@ -106,6 +106,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - memory_rss (int)
     - memory_stack (int)
     - memory_swap (int)
+    - memory_usage (float)
     - memory_vms (int)
     - minor_faults (int)
     - nice_priority (int)
