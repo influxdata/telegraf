@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta1"
-
+	v1 "github.com/ericchiang/k8s/apis/apps/v1"
 	"github.com/influxdata/telegraf"
 )
 
@@ -23,7 +22,7 @@ func collectDeployments(ctx context.Context, acc telegraf.Accumulator, ki *Kuber
 	}
 }
 
-func (ki *KubernetesInventory) gatherDeployment(d v1beta1.Deployment, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherDeployment(d v1.Deployment, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
 		"replicas_available":   d.Status.GetAvailableReplicas(),
 		"replicas_unavailable": d.Status.GetUnavailableReplicas(),

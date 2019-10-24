@@ -2,12 +2,16 @@
 
 #### Release Notes
 
-- Official packages are built with Go 1.13.1.
+- Official packages built with Go 1.13.3.
 
 #### New Inputs
 
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
+
+#### New Processors
+
+- [clone](/plugins/processors/clone/README.md) - Contributed by @adrianlzt
 
 #### New Aggregators
 
@@ -24,6 +28,30 @@
 - [#6465](https://github.com/influxdata/telegraf/pull/6465): Add more performance counter metrics to sqlserver input.
 - [#6476](https://github.com/influxdata/telegraf/pull/6476): Add millisecond unix time support to grok parser.
 - [#6473](https://github.com/influxdata/telegraf/pull/6473): Add container id as optional source tag to docker and docker_log input.
+- [#6504](https://github.com/influxdata/telegraf/pull/6504): Add lang parameter to OpenWeathermap input plugin.
+- [#6540](https://github.com/influxdata/telegraf/pull/6540): Log file open errors at debug level in tail input.
+- [#6553](https://github.com/influxdata/telegraf/pull/6553): Add timeout option to cloudwatch input.
+- [#6549](https://github.com/influxdata/telegraf/pull/6549): Support custom success codes in http input.
+- [#6530](https://github.com/influxdata/telegraf/pull/6530): Improve ipvs input error strings and logging.
+- [#6532](https://github.com/influxdata/telegraf/pull/6532): Add strict mode to JSON parser that can be disable to ignore invalid items.
+- [#6543](https://github.com/influxdata/telegraf/pull/6543): Add support for Kubernetes 1.16 and remove deprecated API usage.
+- [#6283](https://github.com/influxdata/telegraf/pull/6283): Add gathering of RabbitMQ federation link metrics.
+
+#### Bugfixes
+
+- [#6484](https://github.com/influxdata/telegraf/issues/6484): Show correct default settings in mysql sample config.
+
+## v1.12.4 [2019-10-23]
+
+#### Release Notes
+
+- Official packages built with Go 1.12.12.
+
+#### Bugfixes
+
+- [#6521](https://github.com/influxdata/telegraf/issues/6521): Fix metric generation with ping input native method.
+- [#6541](https://github.com/influxdata/telegraf/issues/6541): Exclude alias tag if unset from plugin internal stats.
+- [#6564](https://github.com/influxdata/telegraf/issues/6564): Fix socket_mode option in powerdns_recursor input.
 
 ## v1.12.3 [2019-10-07]
 
