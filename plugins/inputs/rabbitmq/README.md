@@ -48,6 +48,13 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
 
+  ## A list of federation upstreams to gather as the rabbitmq_federation measurement.
+  ## If not specified, metrics for all federation upstreams are gathered.
+  ## Federation link metrics will only be gathered for queues and exchanges
+  ## whose non-federation metrics will be collected (e.g a queue excluded
+  ## by the 'queue_name_exclude' option will also be excluded from federation).
+  # federation_upstreams = ["dataCentre2"]
+
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
   # queue_name_include = []
@@ -158,6 +165,16 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   - messages_publish_out (int, count)
   - messages_publish_out_rate (int, messages per second)
 
+- rabbitmq_federation
+  - acks_uncommitted (int, count)
+  - consumers (int, count)
+  - messages_unacknowledged (int, count)
+  - messages_uncommitted (int, count)
+  - messages_unconfirmed (int, count)
+  - messages_confirm (int, count)
+  - messages_publish (int, count)
+  - messages_return_unroutable (int, count)
+
 ### Tags:
 
 - All measurements have the following tags:
@@ -186,6 +203,14 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   - internal
   - durable
   - auto_delete
+
+- rabbitmq_federation
+  - url
+  - vhost
+  - type
+  - upstream
+  - local_entity
+  - upstream_entity
 
 ### Sample Queries:
 
