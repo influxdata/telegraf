@@ -34,25 +34,25 @@ const DefaultClientTimeout = 4
 // RabbitMQ defines the configuration necessary for gathering metrics,
 // see the sample config for further details
 type RabbitMQ struct {
-	URL      string
-	Name     string
-	Username string
-	Password string
+	URL      string `toml:"url"`
+	Name     string `toml:"name"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 	tls.ClientConfig
 
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
 
-	Nodes     []string
-	Queues    []string
-	Exchanges []string
+	Nodes     []string `toml:"nodes"`
+	Queues    []string `toml:"queues"`
+	Exchanges []string `toml:"exchanges"`
 
 	QueueInclude              []string `toml:"queue_name_include"`
 	QueueExclude              []string `toml:"queue_name_exclude"`
 	FederationUpstreamInclude []string `toml:"federation_upstream_include"`
 	FederationUpstreamExclude []string `toml:"federation_upstream_exclude"`
 
-	Client *http.Client
+	Client *http.Client `toml:"-"`
 
 	filterCreated     bool
 	excludeEveryQueue bool
