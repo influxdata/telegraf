@@ -39,8 +39,8 @@ type BinData struct {
 
 // Parse is ...
 func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
-	_, err := binData.getProtocol()
-	if err != nil {
+
+	if _, err := binData.getProtocol(); err != nil {
 		return nil, err
 	}
 
@@ -54,8 +54,8 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 
 	for _, field := range binData.Fields {
 		fieldBuffer := make([]byte, field.Size)
-		_, err := reader.ReadAt(fieldBuffer, int64(field.Offset))
-		if err != nil {
+
+		if _, err := reader.ReadAt(fieldBuffer, int64(field.Offset)); err != nil {
 			return nil, err
 		}
 
