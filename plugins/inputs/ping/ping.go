@@ -293,10 +293,12 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 					if strings.Contains(err.Error(), "not permitted") {
 						sent.sent = false
 					}
+					sents <- sent
 					return
 				}
 
 				resps <- resp
+				sents <- sent
 			}(i + 1)
 		}
 	}
