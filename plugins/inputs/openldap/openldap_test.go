@@ -1,9 +1,10 @@
 package openldap
 
 import (
-	"gopkg.in/ldap.v2"
 	"strconv"
 	"testing"
+
+	"gopkg.in/ldap.v2"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -74,7 +75,7 @@ func TestOpenldapStartTLS(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
-		Ssl:                "starttls",
+		SSL:                "starttls",
 		InsecureSkipVerify: true,
 	}
 
@@ -92,7 +93,7 @@ func TestOpenldapLDAPS(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
-		Ssl:                "ldaps",
+		SSL:                "ldaps",
 		InsecureSkipVerify: true,
 	}
 
@@ -110,7 +111,7 @@ func TestOpenldapInvalidSSL(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
-		Ssl:                "invalid",
+		SSL:                "invalid",
 		InsecureSkipVerify: true,
 	}
 
@@ -129,7 +130,7 @@ func TestOpenldapBind(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
-		Ssl:                "",
+		SSL:                "",
 		InsecureSkipVerify: true,
 		BindDn:             "cn=manager,cn=config",
 		BindPassword:       "secret",
@@ -157,7 +158,7 @@ func TestOpenldapReverseMetrics(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
-		Ssl:                "",
+		SSL:                "",
 		InsecureSkipVerify: true,
 		BindDn:             "cn=manager,cn=config",
 		BindPassword:       "secret",

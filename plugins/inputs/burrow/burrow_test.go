@@ -129,9 +129,9 @@ func TestBurrowPartition(t *testing.T) {
 		},
 	}
 	tags := []map[string]string{
-		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "0"},
-		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "1"},
-		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "2"},
+		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "0", "owner": "kafka1"},
+		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "1", "owner": "kafka2"},
+		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "2", "owner": "kafka3"},
 	}
 
 	require.Empty(t, acc.Errors)
@@ -160,7 +160,7 @@ func TestBurrowGroup(t *testing.T) {
 			"partition_count": 3,
 			"total_lag":       int64(0),
 			"lag":             int64(0),
-			"offset":          int64(431323195),
+			"offset":          int64(431323195 + 431322962 + 428636563),
 			"timestamp":       int64(1515609490008),
 		},
 	}
@@ -262,7 +262,7 @@ func TestFilterGroups(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	plugin.Gather(acc)
 
-	require.Exactly(t, 4, len(acc.Metrics))
+	require.Exactly(t, 1, len(acc.Metrics))
 	require.Empty(t, acc.Errors)
 }
 

@@ -19,6 +19,13 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
+  ## HTTP entity-body to send with POST/PUT requests.
+  # body = ""
+
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
@@ -32,6 +39,9 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
+
+  ## List of success status codes
+  # success_status_codes = [200]
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read

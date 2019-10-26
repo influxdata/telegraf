@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -42,8 +43,8 @@ func New() *TopK {
 	topk.Aggregation = "mean"
 	topk.GroupBy = []string{"*"}
 	topk.AddGroupByTag = ""
-	topk.AddRankFields = []string{""}
-	topk.AddAggregateFields = []string{""}
+	topk.AddRankFields = []string{}
+	topk.AddAggregateFields = []string{}
 
 	// Initialize cache
 	topk.Reset()
@@ -76,12 +77,12 @@ var sampleConfig = `
   ## tags. If this setting is different than "" the plugin will add a
   ## tag (which name will be the value of this setting) to each metric with
   ## the value of the calculated GroupBy tag. Useful for debugging
-  # add_groupby_tag = ""          
+  # add_groupby_tag = ""
 
   ## These settings provide a way to know the position of each metric in
   ## the top k. The 'add_rank_field' setting allows to specify for which
   ## fields the position is required. If the list is non empty, then a field
-  ## will be added to each and every metric for each string present in this 
+  ## will be added to each and every metric for each string present in this
   ## setting. This field will contain the ranking of the group that
   ## the metric belonged to when aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
@@ -202,14 +203,21 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	if t.aggFieldSet == nil {
 		t.aggFieldSet = make(map[string]bool)
 		for _, f := range t.AddAggregateFields {
-			t.aggFieldSet[f] = true
+			if f != "" {
+				t.aggFieldSet[f] = true
+			}
 		}
 	}
 
 	// Add the metrics received to our internal cache
 	for _, m := range in {
+		// When tracking metrics this plugin could deadlock the input by
+		// holding undelivered metrics while the input waits for metrics to be
+		// delivered.  Instead, treat all handled metrics as delivered and
+		// produced metrics as untracked in a similar way to aggregators.
+		m.Drop()
 
-		// Check if the metric has any of the fields over wich we are aggregating
+		// Check if the metric has any of the fields over which we are aggregating
 		hasField := false
 		for _, f := range t.Fields {
 			if m.HasField(f) {
@@ -273,19 +281,16 @@ func (t *TopK) push() []telegraf.Metric {
 
 	// Get the top K metrics for each field and add them to the return value
 	addedKeys := make(map[string]bool)
-	groupTag := t.AddGroupByTag
 	for _, field := range t.Fields {
 
 		// Sort the aggregations
 		sortMetrics(aggregations, field, t.Bottomk)
 
-		// Create a one dimentional list with the top K metrics of each key
+		// Create a one dimensional list with the top K metrics of each key
 		for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
-
 			// Check whether of not we need to add fields of tags to the selected metrics
-			if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || groupTag != "" {
+			if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || t.AddGroupByTag != "" {
 				for _, m := range t.cache[ag.groupbykey] {
-
 					// Add the aggregation final value if requested
 					_, addAggField := t.aggFieldSet[field]
 					if addAggField && m.HasField(field) {
@@ -311,12 +316,20 @@ func (t *TopK) push() []telegraf.Metric {
 
 	t.Reset()
 
-	return ret
+	result := make([]telegraf.Metric, 0, len(ret))
+	for _, m := range ret {
+		copy, err := metric.New(m.Name(), m.Tags(), m.Fields(), m.Time(), m.Type())
+		if err != nil {
+			continue
+		}
+		result = append(result, copy)
+	}
+
+	return result
 }
 
 // Function that generates the aggregation functions
 func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metric, []string) map[string]float64, error) {
-
 	// This is a function aggregates a set of metrics using a given aggregation function
 	var aggregator = func(ms []telegraf.Metric, fields []string, f func(map[string]float64, float64, string)) map[string]float64 {
 		agg := make(map[string]float64)
@@ -405,7 +418,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 			}
 			// Divide by the number of recorded measurements collected for every field
 			noMeasurementsFound := true // Canary to check if no field with values was found, so we can return nil
-			for k, _ := range mean {
+			for k := range mean {
 				if meanCounters[k] == 0 {
 					mean[k] = 0
 					continue

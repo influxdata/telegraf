@@ -1,6 +1,9 @@
 package syslog
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -41,12 +44,17 @@ func TestAddress(t *testing.T) {
 	require.EqualError(t, err, "unknown protocol 'unsupported' in 'example.com:6514'")
 	require.Error(t, err)
 
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	defer os.RemoveAll(tmpdir)
+	require.NoError(t, err)
+	sock := filepath.Join(tmpdir, "syslog.TestAddress.sock")
+
 	rec = &Syslog{
-		Address: "unixgram:///tmp/telegraf.sock",
+		Address: "unixgram://" + sock,
 	}
 	err = rec.Start(&testutil.Accumulator{})
 	require.NoError(t, err)
-	require.Equal(t, "/tmp/telegraf.sock", rec.Address)
+	require.Equal(t, sock, rec.Address)
 	rec.Stop()
 
 	// Default port is 6514

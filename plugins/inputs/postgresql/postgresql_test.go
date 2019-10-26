@@ -20,6 +20,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 				"host=%s user=postgres sslmode=disable",
 				testutil.GetLocalHost(),
 			),
+			IsPgBouncer: false,
 		},
 		Databases: []string{"postgres"},
 	}

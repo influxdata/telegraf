@@ -16,20 +16,30 @@ import (
 
 var (
 	measurement = "nvidia_smi"
-	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index"
+	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw,pcie.link.gen.current,pcie.link.width.current,encoder.stats.sessionCount,encoder.stats.averageFps,encoder.stats.averageLatency,clocks.current.graphics,clocks.current.sm,clocks.current.memory,clocks.current.video"
 	metricNames = [][]string{
-		[]string{"fan_speed", "field"},
-		[]string{"memory_total", "field"},
-		[]string{"memory_used", "field"},
-		[]string{"memory_free", "field"},
-		[]string{"pstate", "tag"},
-		[]string{"temperature_gpu", "field"},
-		[]string{"name", "tag"},
-		[]string{"uuid", "tag"},
-		[]string{"compute_mode", "tag"},
-		[]string{"utilization_gpu", "field"},
-		[]string{"utilization_memory", "field"},
-		[]string{"index", "tag"},
+		{"fan_speed", "integer"},
+		{"memory_total", "integer"},
+		{"memory_used", "integer"},
+		{"memory_free", "integer"},
+		{"pstate", "tag"},
+		{"temperature_gpu", "integer"},
+		{"name", "tag"},
+		{"uuid", "tag"},
+		{"compute_mode", "tag"},
+		{"utilization_gpu", "integer"},
+		{"utilization_memory", "integer"},
+		{"index", "tag"},
+		{"power_draw", "float"},
+		{"pcie_link_gen_current", "integer"},
+		{"pcie_link_width_current", "integer"},
+		{"encoder_stats_session_count", "integer"},
+		{"encoder_stats_average_fps", "integer"},
+		{"encoder_stats_average_latency", "integer"},
+		{"clocks_current_graphics", "integer"},
+		{"clocks_current_sm", "integer"},
+		{"clocks_current_memory", "integer"},
+		{"clocks_current_video", "integer"},
 	}
 )
 
@@ -49,11 +59,11 @@ func (smi *NvidiaSMI) Description() string {
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
 func (smi *NvidiaSMI) SampleConfig() string {
 	return `
-## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-# bin_path = /usr/bin/nvidia-smi
+  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  # bin_path = "/usr/bin/nvidia-smi"
 
-## Optional: timeout for GPU polling
-# timeout = 5s
+  ## Optional: timeout for GPU polling
+  # timeout = "5s"
 `
 }
 
@@ -127,22 +137,42 @@ func parseLine(line string) (map[string]string, map[string]interface{}, error) {
 		for i, m := range metricNames {
 			col := strings.TrimSpace(met[i])
 
-			// First handle the tags
+			// Handle the tags
 			if m[1] == "tag" {
 				tags[m[0]] = col
 				continue
 			}
 
-			if strings.Contains(col, "[Not Supported]") {
+			// In some cases we may not be able to get data.
+			// One such case is when the memory is overclocked.
+			// nvidia-smi reads the max supported memory clock from the stock value.
+			// If the current memory clock is greater than the max detected memory clock then we receive [Unknown Error] as a value.
+
+			// For example, the stock max memory clock speed on a 2080 Ti is 7000 MHz which nvidia-smi detects.
+			// The user has overclocked their memory using an offset of +1000 so under load the memory clock reaches 8000 MHz.
+			// Now when nvidia-smi tries to read the current memory clock it fails and spits back [Unknown Error] as the value.
+			// This value will break the parsing logic below unless it is accounted for here.
+			if strings.Contains(col, "[Not Supported]") || strings.Contains(col, "[Unknown Error]") {
 				continue
 			}
 
-			// Then parse the integers out of the fields
-			out, err := strconv.ParseInt(col, 10, 64)
-			if err != nil {
-				return tags, fields, err
+			// Parse the integers
+			if m[1] == "integer" {
+				out, err := strconv.ParseInt(col, 10, 64)
+				if err != nil {
+					return tags, fields, err
+				}
+				fields[m[0]] = out
 			}
-			fields[m[0]] = out
+
+			// Parse the floats
+			if m[1] == "float" {
+				out, err := strconv.ParseFloat(col, 64)
+				if err != nil {
+					return tags, fields, err
+				}
+				fields[m[0]] = out
+			}
 		}
 
 		// Return the tags and fields

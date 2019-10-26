@@ -173,7 +173,7 @@ func (g *Graphite) send(batch []byte) error {
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
 			log.Println("E! Graphite Error: " + e.Error())
-			// Close explicitely
+			// Close explicitly
 			g.conns[n].Close()
 			// Let's try the next one
 		} else {

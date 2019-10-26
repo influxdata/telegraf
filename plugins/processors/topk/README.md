@@ -72,3 +72,36 @@ This processor does not add tags by default. But the setting `add_groupby_tag` w
 ### Fields:
 
 This processor does not add fields by default. But the settings `add_rank_fields` and `add_aggregation_fields` will add one or several fields if set to anything other than ""
+
+
+### Example
+**Config**
+```toml
+[[processors.topk]]
+  period = 20
+  k = 3
+  group_by = ["pid"]
+  fields = ["cpu_usage"]
+```
+
+**Output difference with topk**
+```diff
+< procstat,pid=2088,process_name=Xorg cpu_usage=7.296576662282613 1546473820000000000
+< procstat,pid=2780,process_name=ibus-engine-simple cpu_usage=0 1546473820000000000
+< procstat,pid=2554,process_name=gsd-sound cpu_usage=0 1546473820000000000
+< procstat,pid=3484,process_name=chrome cpu_usage=4.274300361942799 1546473820000000000
+< procstat,pid=2467,process_name=gnome-shell-calendar-server cpu_usage=0 1546473820000000000
+< procstat,pid=2525,process_name=gvfs-goa-volume-monitor cpu_usage=0 1546473820000000000
+< procstat,pid=2888,process_name=gnome-terminal-server cpu_usage=1.0224991500287577 1546473820000000000
+< procstat,pid=2454,process_name=ibus-x11 cpu_usage=0 1546473820000000000
+< procstat,pid=2564,process_name=gsd-xsettings cpu_usage=0 1546473820000000000
+< procstat,pid=12184,process_name=docker cpu_usage=0 1546473820000000000
+< procstat,pid=2432,process_name=pulseaudio cpu_usage=9.892858669796528 1546473820000000000
+---
+> procstat,pid=2432,process_name=pulseaudio cpu_usage=11.486933087507786 1546474120000000000
+> procstat,pid=2432,process_name=pulseaudio cpu_usage=10.056503212060552 1546474130000000000
+> procstat,pid=23620,process_name=chrome cpu_usage=2.098690278123081 1546474120000000000
+> procstat,pid=23620,process_name=chrome cpu_usage=17.52514619948493 1546474130000000000
+> procstat,pid=2088,process_name=Xorg cpu_usage=1.6016732172309973 1546474120000000000
+> procstat,pid=2088,process_name=Xorg cpu_usage=8.481040931533833 1546474130000000000
+```

@@ -34,6 +34,7 @@ type MongoStatus struct {
 	ReplSetStatus *ReplSetStatus
 	ClusterStatus *ClusterStatus
 	DbStats       *DbStats
+	ColStats      *ColStats
 	ShardStats    *ShardStats
 	OplogStats    *OplogStats
 }
@@ -90,6 +91,26 @@ type DbStatsData struct {
 	IndexSize   int64       `bson:"indexSize"`
 	Ok          int64       `bson:"ok"`
 	GleStats    interface{} `bson:"gleStats"`
+}
+
+type ColStats struct {
+	Collections []Collection
+}
+
+type Collection struct {
+	Name         string
+	DbName       string
+	ColStatsData *ColStatsData
+}
+
+type ColStatsData struct {
+	Collection     string  `bson:"ns"`
+	Count          int64   `bson:"count"`
+	Size           int64   `bson:"size"`
+	AvgObjSize     float64 `bson:"avgObjSize"`
+	StorageSize    int64   `bson:"storageSize"`
+	TotalIndexSize int64   `bson:"totalIndexSize"`
+	Ok             int64   `bson:"ok"`
 }
 
 // ClusterStatus stores information related to the whole cluster
@@ -168,13 +189,19 @@ type CacheStats struct {
 	BytesReadInto             int64 `bson:"bytes read into cache"`
 	PagesEvictedByAppThread   int64 `bson:"pages evicted by application threads"`
 	PagesQueuedForEviction    int64 `bson:"pages queued for eviction"`
+	PagesReadIntoCache        int64 `bson:"pages read into cache"`
+	PagesRequestedFromCache   int64 `bson:"pages requested from the cache"`
 	ServerEvictingPages       int64 `bson:"eviction server evicting pages"`
 	WorkerThreadEvictingPages int64 `bson:"eviction worker thread evicting pages"`
+	InternalPagesEvicted      int64 `bson:"internal pages evicted"`
+	ModifiedPagesEvicted      int64 `bson:"modified pages evicted"`
+	UnmodifiedPagesEvicted    int64 `bson:"unmodified pages evicted"`
 }
 
 // TransactionStats stores transaction checkpoints in WiredTiger.
 type TransactionStats struct {
-	TransCheckpoints int64 `bson:"transaction checkpoints"`
+	TransCheckpointsTotalTimeMsecs int64 `bson:"transaction checkpoint total time (msecs)"`
+	TransCheckpoints               int64 `bson:"transaction checkpoints"`
 }
 
 // ReplStatus stores data related to replica sets.
@@ -225,7 +252,7 @@ type FlushStats struct {
 type ConnectionStats struct {
 	Current      int64 `bson:"current"`
 	Available    int64 `bson:"available"`
-	TotalCreated int64 `bson:"totalCreated"`
+	TotalCreated int64 `bson:"total_created"`
 }
 
 // DurTiming stores information related to journaling.
@@ -289,8 +316,9 @@ type OpcountStats struct {
 
 // MetricsStats stores information related to metrics
 type MetricsStats struct {
-	TTL    *TTLStats    `bson:"ttl"`
-	Cursor *CursorStats `bson:"cursor"`
+	TTL      *TTLStats      `bson:"ttl"`
+	Cursor   *CursorStats   `bson:"cursor"`
+	Document *DocumentStats `bson:"document"`
 }
 
 // TTLStats stores information related to documents with a ttl index.
@@ -303,6 +331,14 @@ type TTLStats struct {
 type CursorStats struct {
 	TimedOut int64            `bson:"timedOut"`
 	Open     *OpenCursorStats `bson:"open"`
+}
+
+// DocumentStats stores information related to document metrics.
+type DocumentStats struct {
+	Deleted  int64 `bson:"deleted"`
+	Inserted int64 `bson:"inserted"`
+	Returned int64 `bson:"returned"`
+	Updated  int64 `bson:"updated"`
 }
 
 // OpenCursorStats stores information related to open cursor metrics
@@ -448,14 +484,28 @@ type StatLine struct {
 	LastPrinted time.Time
 
 	// Opcounter fields
-	Insert, Query, Update, Delete, GetMore, Command int64
+	Insert, InsertCnt   int64
+	Query, QueryCnt     int64
+	Update, UpdateCnt   int64
+	Delete, DeleteCnt   int64
+	GetMore, GetMoreCnt int64
+	Command, CommandCnt int64
 
 	// TTL fields
-	Passes, DeletedDocuments int64
+	Passes, PassesCnt                     int64
+	DeletedDocuments, DeletedDocumentsCnt int64
 
 	// Cursor fields
-	TimedOutC                   int64
-	NoTimeoutC, PinnedC, TotalC int64
+	TimedOutC, TimedOutCCnt   int64
+	NoTimeoutC, NoTimeoutCCnt int64
+	PinnedC, PinnedCCnt       int64
+	TotalC, TotalCCnt         int64
+
+	// Document fields
+	DeletedD, InsertedD, ReturnedD, UpdatedD int64
+
+	// Connection fields
+	CurrentC, AvailableC, TotalCreatedC int64
 
 	// Collection locks (3.0 mmap only)
 	CollectionLocks *CollectionLockStatus
@@ -475,30 +525,45 @@ type StatLine struct {
 	BytesReadInto             int64
 	PagesEvictedByAppThread   int64
 	PagesQueuedForEviction    int64
+	PagesReadIntoCache        int64
+	PagesRequestedFromCache   int64
 	ServerEvictingPages       int64
 	WorkerThreadEvictingPages int64
+	InternalPagesEvicted      int64
+	ModifiedPagesEvicted      int64
+	UnmodifiedPagesEvicted    int64
 
 	// Replicated Opcounter fields
-	InsertR, QueryR, UpdateR, DeleteR, GetMoreR, CommandR int64
-	ReplLag                                               int64
-	OplogTimeDiff                                         int64
-	Flushes                                               int64
-	Mapped, Virtual, Resident, NonMapped                  int64
-	Faults                                                int64
-	HighestLocked                                         *LockStatus
-	QueuedReaders, QueuedWriters                          int64
-	ActiveReaders, ActiveWriters                          int64
-	NetIn, NetOut                                         int64
-	NumConnections                                        int64
-	ReplSetName                                           string
-	NodeType                                              string
-	NodeState                                             string
+	InsertR, InsertRCnt                  int64
+	QueryR, QueryRCnt                    int64
+	UpdateR, UpdateRCnt                  int64
+	DeleteR, DeleteRCnt                  int64
+	GetMoreR, GetMoreRCnt                int64
+	CommandR, CommandRCnt                int64
+	ReplLag                              int64
+	OplogStats                           *OplogStats
+	Flushes, FlushesCnt                  int64
+	FlushesTotalTime                     int64
+	Mapped, Virtual, Resident, NonMapped int64
+	Faults, FaultsCnt                    int64
+	HighestLocked                        *LockStatus
+	QueuedReaders, QueuedWriters         int64
+	ActiveReaders, ActiveWriters         int64
+	NetIn, NetInCnt                      int64
+	NetOut, NetOutCnt                    int64
+	NumConnections                       int64
+	ReplSetName                          string
+	NodeType                             string
+	NodeState                            string
 
 	// Cluster fields
 	JumboChunksCount int64
 
 	// DB stats field
 	DbStatsLines []DbStatLine
+
+	// Col Stats field
+	ColStatsLines []ColStatLine
 
 	// Shard stats
 	TotalInUse, TotalAvailable, TotalCreated, TotalRefreshing int64
@@ -518,6 +583,16 @@ type DbStatLine struct {
 	Indexes     int64
 	IndexSize   int64
 	Ok          int64
+}
+type ColStatLine struct {
+	Name           string
+	DbName         string
+	Count          int64
+	Size           int64
+	AvgObjSize     float64
+	StorageSize    int64
+	TotalIndexSize int64
+	Ok             int64
 }
 
 type ShardHostStatLine struct {
@@ -561,12 +636,12 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 	return lockUsages
 }
 
-func diff(newVal, oldVal, sampleTime int64) int64 {
+func diff(newVal, oldVal, sampleTime int64) (int64, int64) {
 	d := newVal - oldVal
 	if d < 0 {
 		d = newVal
 	}
-	return d / sampleTime
+	return d / sampleTime, newVal
 }
 
 // NewStatLine constructs a StatLine object from two MongoStatus objects.
@@ -584,6 +659,11 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		Faults:    -1,
 	}
 
+	// set connection info
+	returnVal.CurrentC = newStat.Connections.Current
+	returnVal.AvailableC = newStat.Connections.Available
+	returnVal.TotalCreatedC = newStat.Connections.TotalCreated
+
 	// set the storage engine appropriately
 	if newStat.StorageEngine != nil && newStat.StorageEngine["name"] != "" {
 		returnVal.StorageEngine = newStat.StorageEngine["name"]
@@ -592,42 +672,47 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	}
 
 	if newStat.Opcounters != nil && oldStat.Opcounters != nil {
-		returnVal.Insert = diff(newStat.Opcounters.Insert, oldStat.Opcounters.Insert, sampleSecs)
-		returnVal.Query = diff(newStat.Opcounters.Query, oldStat.Opcounters.Query, sampleSecs)
-		returnVal.Update = diff(newStat.Opcounters.Update, oldStat.Opcounters.Update, sampleSecs)
-		returnVal.Delete = diff(newStat.Opcounters.Delete, oldStat.Opcounters.Delete, sampleSecs)
-		returnVal.GetMore = diff(newStat.Opcounters.GetMore, oldStat.Opcounters.GetMore, sampleSecs)
-		returnVal.Command = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
+		returnVal.Insert, returnVal.InsertCnt = diff(newStat.Opcounters.Insert, oldStat.Opcounters.Insert, sampleSecs)
+		returnVal.Query, returnVal.QueryCnt = diff(newStat.Opcounters.Query, oldStat.Opcounters.Query, sampleSecs)
+		returnVal.Update, returnVal.UpdateCnt = diff(newStat.Opcounters.Update, oldStat.Opcounters.Update, sampleSecs)
+		returnVal.Delete, returnVal.DeleteCnt = diff(newStat.Opcounters.Delete, oldStat.Opcounters.Delete, sampleSecs)
+		returnVal.GetMore, returnVal.GetMoreCnt = diff(newStat.Opcounters.GetMore, oldStat.Opcounters.GetMore, sampleSecs)
+		returnVal.Command, returnVal.CommandCnt = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
 	}
 
 	if newStat.Metrics != nil && oldStat.Metrics != nil {
 		if newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
-			returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
-			returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
+			returnVal.Passes, returnVal.PassesCnt = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
+			returnVal.DeletedDocuments, returnVal.DeletedDocumentsCnt = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
 		}
 		if newStat.Metrics.Cursor != nil && oldStat.Metrics.Cursor != nil {
-			returnVal.TimedOutC = diff(newStat.Metrics.Cursor.TimedOut, oldStat.Metrics.Cursor.TimedOut, sampleSecs)
+			returnVal.TimedOutC, returnVal.TimedOutCCnt = diff(newStat.Metrics.Cursor.TimedOut, oldStat.Metrics.Cursor.TimedOut, sampleSecs)
 			if newStat.Metrics.Cursor.Open != nil && oldStat.Metrics.Cursor.Open != nil {
-				returnVal.NoTimeoutC = diff(newStat.Metrics.Cursor.Open.NoTimeout, oldStat.Metrics.Cursor.Open.NoTimeout, sampleSecs)
-				returnVal.PinnedC = diff(newStat.Metrics.Cursor.Open.Pinned, oldStat.Metrics.Cursor.Open.Pinned, sampleSecs)
-				returnVal.TotalC = diff(newStat.Metrics.Cursor.Open.Total, oldStat.Metrics.Cursor.Open.Total, sampleSecs)
+				returnVal.NoTimeoutC, returnVal.NoTimeoutCCnt = diff(newStat.Metrics.Cursor.Open.NoTimeout, oldStat.Metrics.Cursor.Open.NoTimeout, sampleSecs)
+				returnVal.PinnedC, returnVal.PinnedCCnt = diff(newStat.Metrics.Cursor.Open.Pinned, oldStat.Metrics.Cursor.Open.Pinned, sampleSecs)
+				returnVal.TotalC, returnVal.TotalCCnt = diff(newStat.Metrics.Cursor.Open.Total, oldStat.Metrics.Cursor.Open.Total, sampleSecs)
 			}
+		}
+		if newStat.Metrics.Document != nil {
+			returnVal.DeletedD = newStat.Metrics.Document.Deleted
+			returnVal.InsertedD = newStat.Metrics.Document.Inserted
+			returnVal.ReturnedD = newStat.Metrics.Document.Returned
+			returnVal.UpdatedD = newStat.Metrics.Document.Updated
 		}
 	}
 
 	if newStat.OpcountersRepl != nil && oldStat.OpcountersRepl != nil {
-		returnVal.InsertR = diff(newStat.OpcountersRepl.Insert, oldStat.OpcountersRepl.Insert, sampleSecs)
-		returnVal.QueryR = diff(newStat.OpcountersRepl.Query, oldStat.OpcountersRepl.Query, sampleSecs)
-		returnVal.UpdateR = diff(newStat.OpcountersRepl.Update, oldStat.OpcountersRepl.Update, sampleSecs)
-		returnVal.DeleteR = diff(newStat.OpcountersRepl.Delete, oldStat.OpcountersRepl.Delete, sampleSecs)
-		returnVal.GetMoreR = diff(newStat.OpcountersRepl.GetMore, oldStat.OpcountersRepl.GetMore, sampleSecs)
-		returnVal.CommandR = diff(newStat.OpcountersRepl.Command, oldStat.OpcountersRepl.Command, sampleSecs)
+		returnVal.InsertR, returnVal.InsertRCnt = diff(newStat.OpcountersRepl.Insert, oldStat.OpcountersRepl.Insert, sampleSecs)
+		returnVal.QueryR, returnVal.QueryRCnt = diff(newStat.OpcountersRepl.Query, oldStat.OpcountersRepl.Query, sampleSecs)
+		returnVal.UpdateR, returnVal.UpdateRCnt = diff(newStat.OpcountersRepl.Update, oldStat.OpcountersRepl.Update, sampleSecs)
+		returnVal.DeleteR, returnVal.DeleteRCnt = diff(newStat.OpcountersRepl.Delete, oldStat.OpcountersRepl.Delete, sampleSecs)
+		returnVal.GetMoreR, returnVal.GetMoreRCnt = diff(newStat.OpcountersRepl.GetMore, oldStat.OpcountersRepl.GetMore, sampleSecs)
+		returnVal.CommandR, returnVal.CommandRCnt = diff(newStat.OpcountersRepl.Command, oldStat.OpcountersRepl.Command, sampleSecs)
 	}
 
 	returnVal.CacheDirtyPercent = -1
 	returnVal.CacheUsedPercent = -1
-	if newStat.WiredTiger != nil && oldStat.WiredTiger != nil {
-		returnVal.Flushes = newStat.WiredTiger.Transaction.TransCheckpoints - oldStat.WiredTiger.Transaction.TransCheckpoints
+	if newStat.WiredTiger != nil {
 		returnVal.CacheDirtyPercent = float64(newStat.WiredTiger.Cache.TrackedDirtyBytes) / float64(newStat.WiredTiger.Cache.MaxBytesConfigured)
 		returnVal.CacheUsedPercent = float64(newStat.WiredTiger.Cache.CurrentCachedBytes) / float64(newStat.WiredTiger.Cache.MaxBytesConfigured)
 
@@ -641,10 +726,21 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.BytesReadInto = newStat.WiredTiger.Cache.BytesReadInto
 		returnVal.PagesEvictedByAppThread = newStat.WiredTiger.Cache.PagesEvictedByAppThread
 		returnVal.PagesQueuedForEviction = newStat.WiredTiger.Cache.PagesQueuedForEviction
+		returnVal.PagesReadIntoCache = newStat.WiredTiger.Cache.PagesReadIntoCache
+		returnVal.PagesRequestedFromCache = newStat.WiredTiger.Cache.PagesRequestedFromCache
 		returnVal.ServerEvictingPages = newStat.WiredTiger.Cache.ServerEvictingPages
 		returnVal.WorkerThreadEvictingPages = newStat.WiredTiger.Cache.WorkerThreadEvictingPages
+
+		returnVal.InternalPagesEvicted = newStat.WiredTiger.Cache.InternalPagesEvicted
+		returnVal.ModifiedPagesEvicted = newStat.WiredTiger.Cache.ModifiedPagesEvicted
+		returnVal.UnmodifiedPagesEvicted = newStat.WiredTiger.Cache.UnmodifiedPagesEvicted
+
+		returnVal.FlushesTotalTime = newStat.WiredTiger.Transaction.TransCheckpointsTotalTimeMsecs * int64(time.Millisecond)
+	}
+	if newStat.WiredTiger != nil && oldStat.WiredTiger != nil {
+		returnVal.Flushes, returnVal.FlushesCnt = diff(newStat.WiredTiger.Transaction.TransCheckpoints, oldStat.WiredTiger.Transaction.TransCheckpoints, sampleSecs)
 	} else if newStat.BackgroundFlushing != nil && oldStat.BackgroundFlushing != nil {
-		returnVal.Flushes = newStat.BackgroundFlushing.Flushes - oldStat.BackgroundFlushing.Flushes
+		returnVal.Flushes, returnVal.FlushesCnt = diff(newStat.BackgroundFlushing.Flushes, oldStat.BackgroundFlushing.Flushes, sampleSecs)
 	}
 
 	returnVal.Time = newMongo.SampleTime
@@ -687,7 +783,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	if oldStat.ExtraInfo != nil && newStat.ExtraInfo != nil &&
 		oldStat.ExtraInfo.PageFaults != nil && newStat.ExtraInfo.PageFaults != nil {
-		returnVal.Faults = diff(*(newStat.ExtraInfo.PageFaults), *(oldStat.ExtraInfo.PageFaults), sampleSecs)
+		returnVal.Faults, returnVal.FaultsCnt = diff(*(newStat.ExtraInfo.PageFaults), *(oldStat.ExtraInfo.PageFaults), sampleSecs)
 	}
 	if !returnVal.IsMongos && oldStat.Locks != nil {
 		globalCheck, hasGlobal := oldStat.Locks["Global"]
@@ -786,74 +882,104 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	}
 
 	if oldStat.Network != nil && newStat.Network != nil {
-		returnVal.NetIn = diff(newStat.Network.BytesIn, oldStat.Network.BytesIn, sampleSecs)
-		returnVal.NetOut = diff(newStat.Network.BytesOut, oldStat.Network.BytesOut, sampleSecs)
+		returnVal.NetIn, returnVal.NetInCnt = diff(newStat.Network.BytesIn, oldStat.Network.BytesIn, sampleSecs)
+		returnVal.NetOut, returnVal.NetOutCnt = diff(newStat.Network.BytesOut, oldStat.Network.BytesOut, sampleSecs)
 	}
 
 	if newStat.Connections != nil {
 		returnVal.NumConnections = newStat.Connections.Current
 	}
 
-	newReplStat := *newMongo.ReplSetStatus
+	if newMongo.ReplSetStatus != nil {
+		newReplStat := *newMongo.ReplSetStatus
 
-	if newReplStat.Members != nil {
-		myName := newStat.Repl.Me
-		// Find the master and myself
-		master := ReplSetMember{}
-		me := ReplSetMember{}
-		for _, member := range newReplStat.Members {
-			if member.Name == myName {
-				// Store my state string
-				returnVal.NodeState = member.StateStr
-				if member.State == 1 {
-					// I'm the master
-					returnVal.ReplLag = 0
-					break
-				} else {
-					// I'm secondary
-					me = member
+		if newReplStat.Members != nil {
+			myName := newStat.Repl.Me
+			// Find the master and myself
+			master := ReplSetMember{}
+			me := ReplSetMember{}
+			for _, member := range newReplStat.Members {
+				if member.Name == myName {
+					// Store my state string
+					returnVal.NodeState = member.StateStr
+					if member.State == 1 {
+						// I'm the master
+						returnVal.ReplLag = 0
+						break
+					} else {
+						// I'm secondary
+						me = member
+					}
+				} else if member.State == 1 {
+					// Master found
+					master = member
 				}
-			} else if member.State == 1 {
-				// Master found
-				master = member
 			}
-		}
 
-		if me.State == 2 {
-			// OptimeDate.Unix() type is int64
-			lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
-			if lag < 0 {
-				returnVal.ReplLag = 0
-			} else {
-				returnVal.ReplLag = lag
+			if me.State == 2 {
+				// OptimeDate.Unix() type is int64
+				lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
+				if lag < 0 {
+					returnVal.ReplLag = 0
+				} else {
+					returnVal.ReplLag = lag
+				}
 			}
 		}
 	}
 
-	newClusterStat := *newMongo.ClusterStatus
-	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
-	returnVal.OplogTimeDiff = newMongo.OplogStats.TimeDiff
+	if newMongo.ClusterStatus != nil {
+		newClusterStat := *newMongo.ClusterStatus
+		returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+	}
 
-	newDbStats := *newMongo.DbStats
-	for _, db := range newDbStats.Dbs {
-		dbStatsData := db.DbStatsData
-		// mongos doesn't have the db key, so setting the db name
-		if dbStatsData.Db == "" {
-			dbStatsData.Db = db.Name
+	if newMongo.OplogStats != nil {
+		returnVal.OplogStats = newMongo.OplogStats
+	}
+
+	if newMongo.DbStats != nil {
+		newDbStats := *newMongo.DbStats
+		for _, db := range newDbStats.Dbs {
+			dbStatsData := db.DbStatsData
+			// mongos doesn't have the db key, so setting the db name
+			if dbStatsData.Db == "" {
+				dbStatsData.Db = db.Name
+			}
+			dbStatLine := &DbStatLine{
+				Name:        dbStatsData.Db,
+				Collections: dbStatsData.Collections,
+				Objects:     dbStatsData.Objects,
+				AvgObjSize:  dbStatsData.AvgObjSize,
+				DataSize:    dbStatsData.DataSize,
+				StorageSize: dbStatsData.StorageSize,
+				NumExtents:  dbStatsData.NumExtents,
+				Indexes:     dbStatsData.Indexes,
+				IndexSize:   dbStatsData.IndexSize,
+				Ok:          dbStatsData.Ok,
+			}
+			returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 		}
-		dbStatLine := &DbStatLine{
-			Name:        dbStatsData.Db,
-			Collections: dbStatsData.Collections,
-			Objects:     dbStatsData.Objects,
-			AvgObjSize:  dbStatsData.AvgObjSize,
-			DataSize:    dbStatsData.DataSize,
-			StorageSize: dbStatsData.StorageSize,
-			NumExtents:  dbStatsData.NumExtents,
-			Indexes:     dbStatsData.Indexes,
-			IndexSize:   dbStatsData.IndexSize,
-			Ok:          dbStatsData.Ok,
+	}
+
+	if newMongo.ColStats != nil {
+		for _, col := range newMongo.ColStats.Collections {
+			colStatsData := col.ColStatsData
+			// mongos doesn't have the db key, so setting the db name
+			if colStatsData.Collection == "" {
+				colStatsData.Collection = col.Name
+			}
+			colStatLine := &ColStatLine{
+				Name:           colStatsData.Collection,
+				DbName:         col.DbName,
+				Count:          colStatsData.Count,
+				Size:           colStatsData.Size,
+				AvgObjSize:     colStatsData.AvgObjSize,
+				StorageSize:    colStatsData.StorageSize,
+				TotalIndexSize: colStatsData.TotalIndexSize,
+				Ok:             colStatsData.Ok,
+			}
+			returnVal.ColStatsLines = append(returnVal.ColStatsLines, *colStatLine)
 		}
-		returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 	}
 
 	// Set shard stats

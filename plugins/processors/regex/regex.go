@@ -18,6 +18,7 @@ type converter struct {
 	Pattern     string
 	Replacement string
 	ResultKey   string
+	Append      bool
 }
 
 const sampleConfig = `
@@ -27,14 +28,16 @@ const sampleConfig = `
   #   key = "resp_code"
   #   ## Regular expression to match on a tag value
   #   pattern = "^(\\d)\\d\\d$"
-  #   ## Pattern for constructing a new value (${1} represents first subgroup)
+  #   ## Matches of the pattern will be replaced with this string.  Use ${1}
+  #   ## notation to use the text of the first submatch.
   #   replacement = "${1}xx"
 
   # [[processors.regex.fields]]
+  #   ## Field to change
   #   key = "request"
   #   ## All the power of the Go regular expressions available here
   #   ## For example, named subgroups
-  #   pattern = "^/api(?P<method>/[\\w/]+)\\S*" 
+  #   pattern = "^/api(?P<method>/[\\w/]+)\\S*"
   #   replacement = "${method}"
   #   ## If result_key is present, a new field will be created
   #   ## instead of changing existing field
@@ -67,7 +70,14 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		for _, converter := range r.Tags {
 			if value, ok := metric.GetTag(converter.Key); ok {
-				metric.AddTag(r.convert(converter, value))
+				if key, newValue := r.convert(converter, value); newValue != "" {
+					if converter.Append {
+						if v, ok := metric.GetTag(key); ok {
+							newValue = v + newValue
+						}
+					}
+					metric.AddTag(key, newValue)
+				}
 			}
 		}
 
@@ -75,7 +85,9 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			if value, ok := metric.GetField(converter.Key); ok {
 				switch value := value.(type) {
 				case string:
-					metric.AddField(r.convert(converter, value))
+					if key, newValue := r.convert(converter, value); newValue != "" {
+						metric.AddField(key, newValue)
+					}
 				}
 			}
 		}

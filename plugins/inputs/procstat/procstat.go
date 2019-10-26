@@ -27,11 +27,13 @@ type Procstat struct {
 	Exe         string
 	Pattern     string
 	Prefix      string
+	CmdLineTag  bool `toml:"cmdline_tag"`
 	ProcessName string
 	User        string
 	SystemdUnit string
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
+	WinService  string `toml:"win_service"`
 
 	finder PIDFinder
 
@@ -54,12 +56,18 @@ var sampleConfig = `
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
+  ## Windows service name
+  # win_service = ""
+
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
   # process_name = "bar"
 
   ## Field name prefix
   # prefix = ""
+
+  ## When true add the full cmdline as a tag.
+  # cmdline_tag = false
 
   ## Add PID as a tag instead of a field; useful to differentiate between
   ## processes whose tags are otherwise the same.  Can create a large number
@@ -89,6 +97,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		case "pgrep":
 			p.createPIDFinder = NewPgrep
 		default:
+			p.PidFinder = "pgrep"
 			p.createPIDFinder = defaultPIDFinder
 		}
 
@@ -97,7 +106,22 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		p.createProcess = defaultProcess
 	}
 
-	procs, err := p.updateProcesses(p.procs)
+	pids, tags, err := p.findPids(acc)
+	if err != nil {
+		fields := map[string]interface{}{
+			"pid_count":   0,
+			"running":     0,
+			"result_code": 1,
+		}
+		tags := map[string]string{
+			"pid_finder": p.PidFinder,
+			"result":     "lookup_error",
+		}
+		acc.AddFields("procstat_lookup", fields, tags)
+		return err
+	}
+
+	procs, err := p.updateProcesses(pids, tags, p.procs)
 	if err != nil {
 		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
@@ -105,14 +129,23 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	p.procs = procs
 
 	for _, proc := range p.procs {
-		p.addMetrics(proc, acc)
+		p.addMetric(proc, acc)
 	}
+
+	fields := map[string]interface{}{
+		"pid_count":   len(pids),
+		"running":     len(procs),
+		"result_code": 0,
+	}
+	tags["pid_finder"] = p.PidFinder
+	tags["result"] = "success"
+	acc.AddFields("procstat_lookup", fields, tags)
 
 	return nil
 }
 
 // Add metrics a single Process
-func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
+func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	var prefix string
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
@@ -128,9 +161,27 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		}
 	}
 
+	//If user tag is not already set, set to actual name
+	if _, ok := proc.Tags()["user"]; !ok {
+		user, err := proc.Username()
+		if err == nil {
+			proc.Tags()["user"] = user
+		}
+	}
+
 	//If pid is not present as a tag, include it as a field.
 	if _, pidInTags := proc.Tags()["pid"]; !pidInTags {
 		fields["pid"] = int32(proc.PID())
+	}
+
+	//If cmd_line tag is true and it is not already set add cmdline as a tag
+	if p.CmdLineTag {
+		if _, ok := proc.Tags()["cmdline"]; !ok {
+			Cmdline, err := proc.Cmdline()
+			if err == nil {
+				proc.Tags()["cmdline"] = Cmdline
+			}
+		}
 	}
 
 	numThreads, err := proc.NumThreads()
@@ -147,6 +198,14 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 	if err == nil {
 		fields[prefix+"voluntary_context_switches"] = ctx.Voluntary
 		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
+	}
+
+	faults, err := proc.PageFaults()
+	if err == nil {
+		fields[prefix+"minor_faults"] = faults.MinorFaults
+		fields[prefix+"major_faults"] = faults.MajorFaults
+		fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
+		fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
 	}
 
 	io, err := proc.IOCounters()
@@ -167,7 +226,6 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"cpu_time_irq"] = cpu_time.Irq
 		fields[prefix+"cpu_time_soft_irq"] = cpu_time.Softirq
 		fields[prefix+"cpu_time_steal"] = cpu_time.Steal
-		fields[prefix+"cpu_time_stolen"] = cpu_time.Stolen
 		fields[prefix+"cpu_time_guest"] = cpu_time.Guest
 		fields[prefix+"cpu_time_guest_nice"] = cpu_time.GuestNice
 	}
@@ -185,6 +243,11 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"memory_data"] = mem.Data
 		fields[prefix+"memory_stack"] = mem.Stack
 		fields[prefix+"memory_locked"] = mem.Locked
+	}
+
+	mem_perc, err := proc.MemoryPercent()
+	if err == nil {
+		fields[prefix+"memory_usage"] = mem_perc
 	}
 
 	rlims, err := proc.RlimitUsage(true)
@@ -230,22 +293,25 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(prevInfo map[PID]Process) (map[PID]Process, error) {
-	pids, tags, err := p.findPids()
-	if err != nil {
-		return nil, err
-	}
-
+func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process) (map[PID]Process, error) {
 	procs := make(map[PID]Process, len(prevInfo))
 
 	for _, pid := range pids {
 		info, ok := prevInfo[pid]
 		if ok {
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := info.Name(); name == "" {
+				continue
+			}
 			procs[pid] = info
 		} else {
 			proc, err := p.createProcess(pid)
 			if err != nil {
 				// No problem; process may have ended after we found it
+				continue
+			}
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := proc.Name(); name == "" {
 				continue
 			}
 			procs[pid] = proc
@@ -269,7 +335,6 @@ func (p *Procstat) updateProcesses(prevInfo map[PID]Process) (map[PID]Process, e
 
 // Create and return PIDGatherer lazily
 func (p *Procstat) getPIDFinder() (PIDFinder, error) {
-
 	if p.finder == nil {
 		f, err := p.createPIDFinder()
 		if err != nil {
@@ -281,9 +346,9 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) findPids() ([]PID, map[string]string, error) {
+func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string, error) {
 	var pids []PID
-	var tags map[string]string
+	tags := make(map[string]string)
 	var err error
 
 	f, err := p.getPIDFinder()
@@ -309,8 +374,11 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 	} else if p.CGroup != "" {
 		pids, err = p.cgroupPIDs()
 		tags = map[string]string{"cgroup": p.CGroup}
+	} else if p.WinService != "" {
+		pids, err = p.winServicePIDs()
+		tags = map[string]string{"win_service": p.WinService}
 	} else {
-		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, or cgroup must be specified")
+		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
 	}
 
 	return pids, tags, err
@@ -334,7 +402,7 @@ func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 		if !bytes.Equal(kv[0], []byte("MainPID")) {
 			continue
 		}
-		if len(kv[1]) == 0 {
+		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
 			return nil, nil
 		}
 		pid, err := strconv.Atoi(string(kv[1]))
@@ -368,6 +436,19 @@ func (p *Procstat) cgroupPIDs() ([]PID, error) {
 		}
 		pids = append(pids, PID(pid))
 	}
+
+	return pids, nil
+}
+
+func (p *Procstat) winServicePIDs() ([]PID, error) {
+	var pids []PID
+
+	pid, err := queryPidWithWinServiceName(p.WinService)
+	if err != nil {
+		return pids, err
+	}
+
+	pids = append(pids, PID(pid))
 
 	return pids, nil
 }

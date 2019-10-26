@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: telegraf
+      MYSQL_DATABASE: telegraf
+      MYSQL_USER: telegraf
+      MYSQL_PASSWORD: telegraf
+  maria:
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: telegraf
+      MYSQL_DATABASE: telegraf
+      MYSQL_USER: telegraf
+      MYSQL_PASSWORD: telegraf
+    command: mysqld --userstat=1
+  percona:
+    image: percona
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: telegraf
+      MYSQL_DATABASE: telegraf
+      MYSQL_USER: telegraf
+      MYSQL_PASSWORD: telegraf
+
+  telegraf:
+    image: glinton/scratch
+    depends_on:
+      - mysql
+      - maria
+      - percona
+    volumes:
+      - ./telegraf.conf:/telegraf.conf
+      - ../../../../telegraf:/telegraf
+    entrypoint:
+      - /telegraf
+      - --config
+      - /telegraf.conf

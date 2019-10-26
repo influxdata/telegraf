@@ -1,6 +1,9 @@
 package http_test
 
 import (
+	"compress/gzip"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,10 +29,15 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 		URLs: []string{url},
 	}
 	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+
+	p, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "metricName",
+	})
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
+	plugin.Init()
 	require.NoError(t, acc.GatherError(plugin.Gather))
 
 	require.Len(t, acc.Metrics, 1)
@@ -63,11 +71,15 @@ func TestHTTPHeaders(t *testing.T) {
 		URLs:    []string{url},
 		Headers: map[string]string{header: headerValue},
 	}
-	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+
+	p, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "metricName",
+	})
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
+	plugin.Init()
 	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
@@ -83,11 +95,39 @@ func TestInvalidStatusCode(t *testing.T) {
 	}
 
 	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	p, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: metricName,
+	})
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
+	plugin.Init()
 	require.Error(t, acc.GatherError(plugin.Gather))
+}
+
+func TestSuccessStatusCodes(t *testing.T) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer fakeServer.Close()
+
+	url := fakeServer.URL + "/endpoint"
+	plugin := &plugin.HTTP{
+		URLs:               []string{url},
+		SuccessStatusCodes: []int{200, 202},
+	}
+
+	metricName := "metricName"
+	p, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: metricName,
+	})
+	plugin.SetParser(p)
+
+	var acc testutil.Accumulator
+	plugin.Init()
+	require.NoError(t, acc.GatherError(plugin.Gather))
 }
 
 func TestMethod(t *testing.T) {
@@ -105,31 +145,15 @@ func TestMethod(t *testing.T) {
 		Method: "POST",
 	}
 
-	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	p, _ := parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "metricName",
+	})
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
+	plugin.Init()
 	require.NoError(t, acc.GatherError(plugin.Gather))
-}
-
-func TestParserNotSet(t *testing.T) {
-	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/endpoint" {
-			_, _ = w.Write([]byte(simpleJSON))
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
-	defer fakeServer.Close()
-
-	url := fakeServer.URL + "/endpoint"
-	plugin := &plugin.HTTP{
-		URLs: []string{url},
-	}
-
-	var acc testutil.Accumulator
-	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
 const simpleJSON = `
@@ -137,3 +161,94 @@ const simpleJSON = `
     "a": 1.2
 }
 `
+
+func TestBodyAndContentEncoding(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	url := fmt.Sprintf("http://%s", ts.Listener.Addr().String())
+
+	tests := []struct {
+		name             string
+		plugin           *plugin.HTTP
+		queryHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
+	}{
+		{
+			name: "no body",
+			plugin: &plugin.HTTP{
+				Method: "POST",
+				URLs:   []string{url},
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				body, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Equal(t, []byte(""), body)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+		{
+			name: "post body",
+			plugin: &plugin.HTTP{
+				URLs:   []string{url},
+				Method: "POST",
+				Body:   "test",
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				body, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Equal(t, []byte("test"), body)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+		{
+			name: "get method body is sent",
+			plugin: &plugin.HTTP{
+				URLs:   []string{url},
+				Method: "GET",
+				Body:   "test",
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				body, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Equal(t, []byte("test"), body)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+		{
+			name: "gzip encoding",
+			plugin: &plugin.HTTP{
+				URLs:            []string{url},
+				Method:          "GET",
+				Body:            "test",
+				ContentEncoding: "gzip",
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.Header.Get("Content-Encoding"), "gzip")
+
+				gr, err := gzip.NewReader(r.Body)
+				require.NoError(t, err)
+				body, err := ioutil.ReadAll(gr)
+				require.NoError(t, err)
+				require.Equal(t, []byte("test"), body)
+				w.WriteHeader(http.StatusOK)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				tt.queryHandlerFunc(t, w, r)
+			})
+
+			parser, err := parsers.NewParser(&parsers.Config{DataFormat: "influx"})
+			require.NoError(t, err)
+
+			tt.plugin.SetParser(parser)
+
+			var acc testutil.Accumulator
+			tt.plugin.Init()
+			err = tt.plugin.Gather(&acc)
+			require.NoError(t, err)
+		})
+	}
+}

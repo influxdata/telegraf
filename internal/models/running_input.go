@@ -1,11 +1,9 @@
 package models
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -15,73 +13,91 @@ type RunningInput struct {
 	Input  telegraf.Input
 	Config *InputConfig
 
-	trace       bool
+	log         telegraf.Logger
 	defaultTags map[string]string
 
 	MetricsGathered selfstat.Stat
+	GatherTime      selfstat.Stat
 }
 
-func NewRunningInput(
-	input telegraf.Input,
-	config *InputConfig,
-) *RunningInput {
+func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
+	tags := map[string]string{"input": config.Name}
+	if config.Alias != "" {
+		tags["alias"] = config.Alias
+	}
+
+	logger := &Logger{
+		Name: logName("inputs", config.Name, config.Alias),
+		Errs: selfstat.Register("gather", "errors", tags),
+	}
+	setLogIfExist(input, logger)
+
 	return &RunningInput{
 		Input:  input,
 		Config: config,
 		MetricsGathered: selfstat.Register(
 			"gather",
 			"metrics_gathered",
-			map[string]string{"input": config.Name},
+			tags,
 		),
+		GatherTime: selfstat.RegisterTiming(
+			"gather",
+			"gather_time_ns",
+			tags,
+		),
+		log: logger,
 	}
 }
 
-// InputConfig containing a name, interval, and filter
+// InputConfig is the common config for all inputs.
 type InputConfig struct {
-	Name              string
+	Name     string
+	Alias    string
+	Interval time.Duration
+
 	NameOverride      string
 	MeasurementPrefix string
 	MeasurementSuffix string
 	Tags              map[string]string
 	Filter            Filter
-	Interval          time.Duration
 }
 
-func (r *RunningInput) Name() string {
-	return "inputs." + r.Config.Name
+func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
+	metric.Drop()
 }
 
-// MakeMetric either returns a metric, or returns nil if the metric doesn't
-// need to be created (because of filtering, an error, etc.)
-func (r *RunningInput) MakeMetric(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-	mType telegraf.ValueType,
-	t time.Time,
-) telegraf.Metric {
+func (r *RunningInput) LogName() string {
+	return logName("inputs", r.Config.Name, r.Config.Alias)
+}
+
+func (r *RunningInput) Init() error {
+	if p, ok := r.Input.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
+	if ok := r.Config.Filter.Select(metric); !ok {
+		r.metricFiltered(metric)
+		return nil
+	}
+
 	m := makemetric(
-		measurement,
-		fields,
-		tags,
+		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
-		r.defaultTags,
-		r.Config.Filter,
-		true,
-		mType,
-		t,
-	)
+		r.defaultTags)
 
-	if r.trace && m != nil {
-		s := influx.NewSerializer()
-		s.SetFieldSortOrder(influx.SortFields)
-		octets, err := s.Serialize(m)
-		if err == nil {
-			fmt.Print("> " + string(octets))
-		}
+	r.Config.Filter.Modify(metric)
+	if len(metric.FieldList()) == 0 {
+		r.metricFiltered(metric)
+		return nil
 	}
 
 	r.MetricsGathered.Incr(1)
@@ -89,12 +105,12 @@ func (r *RunningInput) MakeMetric(
 	return m
 }
 
-func (r *RunningInput) Trace() bool {
-	return r.trace
-}
-
-func (r *RunningInput) SetTrace(trace bool) {
-	r.trace = trace
+func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
+	start := time.Now()
+	err := r.Input.Gather(acc)
+	elapsed := time.Since(start)
+	r.GatherTime.Incr(elapsed.Nanoseconds())
+	return err
 }
 
 func (r *RunningInput) SetDefaultTags(tags map[string]string) {
