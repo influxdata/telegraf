@@ -12,25 +12,21 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const defaultPathSysfs = "/sys"
+const defaultHostSys = "/sys"
 
 type CPUFreq struct {
-	PathSysfs          string `toml:"path_sysfs"`
-	ThrottlesPerSocket bool   `toml:"throttles_per_socket"`
-	ThrottlesPerCore   bool   `toml:"throttles_per_core"`
+	PathSysfs       string `toml:"host_sys"`
+	GatherThrottles bool   `toml:"gather_throttles"`
 }
 
 var sampleConfig = `
   ## Path for sysfs filesystem.
   ## See https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
   ## Defaults:
-  # path_sysfs = "/sys"
-  ## Gather CPU throttles per socker
+  # host_sys = "/sys"
+  ## Gather CPU throttles per core
   ## Defaults:
-  # throttles_per_socket = false
-  ## Gather CPU throttles per physical core
-  ## Defaults:
-  # throttles_per_core = false
+  # gather_throttles = false
 `
 
 func (g *CPUFreq) SampleConfig() string {
@@ -44,7 +40,11 @@ func (g *CPUFreq) Description() string {
 func (g *CPUFreq) Gather(acc telegraf.Accumulator) error {
 
 	if g.PathSysfs == "" {
-		g.PathSysfs = defaultPathSysfs
+		if os.Getenv("HOST_SYS") != "" {
+			g.PathSysfs = os.Getenv("HOST_SYS")
+		} else {
+			g.PathSysfs = defaultHostSys
+		}
 	}
 
 	cpus, err := filepath.Glob(path.Join(g.PathSysfs, "devices/system/cpu/cpu[0-9]*"))
@@ -53,9 +53,6 @@ func (g *CPUFreq) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var value uint64
-	packageThrottles := make(map[uint64]uint64)
-	packageCoreThrottles := make(map[uint64]map[uint64]uint64)
-
 	// cpu loop
 	for _, cpu := range cpus {
 		fileds := make(map[string]interface{})
@@ -74,90 +71,29 @@ func (g *CPUFreq) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				continue
 			} else {
-				fileds["cur_freq"] = float64(value) * 1000.0
+				fileds["cur_freq"] = uint64(value) * 1000
 			}
 			if value, err = readUintFromFile(filepath.Join(cpu, "cpufreq", "scaling_min_freq")); err != nil {
 				acc.AddError(err)
 			} else {
-				fileds["min_freq"] = float64(value) * 1000.0
+				fileds["min_freq"] = uint64(value) * 1000
 			}
 			if value, err = readUintFromFile(filepath.Join(cpu, "cpufreq", "scaling_max_freq")); err != nil {
 				acc.AddError(err)
 			} else {
-				fileds["max_freq"] = float64(value) * 1000.0
+				fileds["max_freq"] = uint64(value) * 1000
 			}
-
-			acc.AddFields("cpufreq", fileds, tags)
 		}
 
-		if g.ThrottlesPerSocket || g.ThrottlesPerCore {
-			var physicalPackageID, coreID uint64
-
-			// topology/physical_package_id
-			if physicalPackageID, err = readUintFromFile(filepath.Join(cpu, "topology", "physical_package_id")); err != nil {
+		if g.GatherThrottles {
+			if value, err := readUintFromFile(filepath.Join(cpu, "thermal_throttle", "core_throttle_count")); err != nil {
 				acc.AddError(err)
-				continue
-			}
-			// topology/core_id
-			if coreID, err = readUintFromFile(filepath.Join(cpu, "topology", "core_id")); err != nil {
-				acc.AddError(err)
-				continue
-			}
-
-			// core_throttles
-			if _, present := packageCoreThrottles[physicalPackageID]; !present {
-				packageCoreThrottles[physicalPackageID] = make(map[uint64]uint64)
-			}
-			if _, present := packageCoreThrottles[physicalPackageID][coreID]; !present {
-				// Read thermal_throttle/core_throttle_count only once
-				if coreThrottleCount, err := readUintFromFile(filepath.Join(cpu, "thermal_throttle", "core_throttle_count")); err == nil {
-					packageCoreThrottles[physicalPackageID][coreID] = coreThrottleCount
-				} else {
-					acc.AddError(err)
-				}
-			}
-
-			// cpu_package_throttles
-			if _, present := packageThrottles[physicalPackageID]; !present {
-				// Read thermal_throttle/package_throttle_count only once
-				if packageThrottleCount, err := readUintFromFile(filepath.Join(cpu, "thermal_throttle", "package_throttle_count")); err == nil {
-					packageThrottles[physicalPackageID] = packageThrottleCount
-				} else {
-					acc.AddError(err)
-				}
+			} else {
+				fileds["throttle_count"] = uint64(value)
 			}
 		}
-	}
 
-	if g.ThrottlesPerSocket {
-		for physicalPackageID, packageThrottleCount := range packageThrottles {
-			acc.AddFields(
-				"cpufreq_cpu_throttles",
-				map[string]interface{}{
-					"count": float64(packageThrottleCount),
-				},
-				map[string]string{
-					"cpu": strconv.FormatUint(physicalPackageID, 10),
-				},
-			)
-		}
-	}
-
-	if g.ThrottlesPerCore {
-		for physicalPackageID, coreMap := range packageCoreThrottles {
-			for coreID, coreThrottleCount := range coreMap {
-				acc.AddFields(
-					"cpufreq_core_throttles",
-					map[string]interface{}{
-						"count": float64(coreThrottleCount),
-					},
-					map[string]string{
-						"cpu":  strconv.FormatUint(physicalPackageID, 10),
-						"core": strconv.FormatUint(coreID, 10),
-					},
-				)
-			}
-		}
+		acc.AddFields("cpufreq", fileds, tags)
 	}
 
 	return nil
