@@ -18,41 +18,41 @@ import (
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Controller        string            `toml:"controller"`
-	TransmissionMode  string            `toml:"transmission_mode"`
-	BaudRate          int               `toml:"baud_rate"`
-	DataBits          int               `toml:"data_bits"`
-	Parity            string            `toml:"parity"`
-	StopBits          int               `toml:"stop_bits"`
-	SlaveID           int               `toml:"slave_id"`
-	Timeout           internal.Duration `toml:"timeout"`
-	DiscreteInputs    []fieldContainer  `toml:"discrete_inputs"`
-	Coils             []fieldContainer  `toml:"coils"`
-	HoldingRegisters  []fieldContainer  `toml:"holding_registers"`
-	InputRegisters    []fieldContainer  `toml:"input_registers"`
-	registers         []register
-	isConnected       bool
-	isInitialized     bool
+	Controller       string            `toml:"controller"`
+	TransmissionMode string            `toml:"transmission_mode"`
+	BaudRate         int               `toml:"baud_rate"`
+	DataBits         int               `toml:"data_bits"`
+	Parity           string            `toml:"parity"`
+	StopBits         int               `toml:"stop_bits"`
+	SlaveID          int               `toml:"slave_id"`
+	Timeout          internal.Duration `toml:"timeout"`
+	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
+	Coils            []fieldContainer  `toml:"coils"`
+	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
+	InputRegisters   []fieldContainer  `toml:"input_registers"`
+	registers        []register
+	isConnected      bool
+	isInitialized    bool
 	tcpHandler       *mb.TCPClientHandler
 	rtuHandler       *mb.RTUClientHandler
 	asciiHandler     *mb.ASCIIClientHandler
-	client            mb.Client
+	client           mb.Client
 }
 
 type register struct {
-	Type            string
-	RegistersRange  []registerRange
-	ReadValue       func(uint16, uint16) ([]byte, error)
-	Fields          []fieldContainer
+	Type           string
+	RegistersRange []registerRange
+	ReadValue      func(uint16, uint16) ([]byte, error)
+	Fields         []fieldContainer
 }
 
 type fieldContainer struct {
-	Name       string   `toml:"name"`
-	ByteOrder  string   `toml:"byte_order"`
-	DataType   string   `toml:"data_type"`
-	Scale      string   `toml:"scale"`
-	Address    []uint16 `toml:"address"`
-	value      interface{}
+	Name      string   `toml:"name"`
+	ByteOrder string   `toml:"byte_order"`
+	DataType  string   `toml:"data_type"`
+	Scale     string   `toml:"scale"`
+	Address   []uint16 `toml:"address"`
+	value     interface{}
 }
 
 type registerRange struct {
@@ -62,7 +62,7 @@ type registerRange struct {
 
 const (
 	cDiscreteInputs   = "DiscreteInputs"
-	cCoils             = "Coils"
+	cCoils            = "Coils"
 	cHoldingRegisters = "HoldingRegisters"
 	cInputRegisters   = "InputRegisters"
 )
