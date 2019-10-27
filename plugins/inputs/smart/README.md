@@ -14,7 +14,7 @@ smartctl --scan
 Metrics will be reported from the following `smartctl` command:
 
 ```
-smartctl --info --attributes --health -n <nocheck> --format=brief <device>
+smartctl --info --attributes --health --tolerance=verypermissive -n <nocheck> --format=brief <device>
 ```
 
 This plugin supports _smartmontools_ version 5.41 and above, but v. 5.41 and v. 5.42
