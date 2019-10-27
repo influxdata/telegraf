@@ -391,6 +391,37 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 				}
 			}
 		}
+
+		if m.ErrorCounterLog {
+			ecl := errorCounterLog.FindStringSubmatch(line)
+			if len(ecl) > 1 {
+				eclTags := map[string]string{}
+				eclFields := make(map[string]interface{})
+
+				eclTags["page_name"] = ecl[1]
+
+				keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+				for _, key := range keys {
+					if value, ok := deviceTags[key]; ok {
+						eclTags[key] = value
+					}
+				}
+
+				eclFields["errors_corrected_by_eccfast"] = ecl[2]
+				eclFields["errors_corrected_by_eccdelayed"] = ecl[3]
+				eclFields["errors_corrected_by_rereads_rewrites"] = ecl[4]
+				eclFields["total_errors_corrected"] = ecl[5]
+				eclFields["correction_algorithm_invocations"] = ecl[6]
+				gigabytes_processed, err := strconv.ParseFloat(ecl[7], 64)
+				if err != nil {
+					gigabytes_processed = 0
+				}
+				eclFields["gigabytes_processed"] = gigabytes_processed * 1000 * 1000 * 1000
+				eclFields["total_uncorrected_errors"] = ecl[8]
+
+				acc.AddFields("smart_error_counter_log", eclFields, eclTags)
+			}
+		}
 	}
 	acc.AddFields("smart_device", deviceFields, deviceTags)
 }
