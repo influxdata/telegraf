@@ -268,6 +268,9 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", m.Nocheck, "--format=brief"}
+	if m.ErrorCounterLog {
+		args = append(args, "--log", "error")
+	}
 	args = append(args, strings.Split(device, " ")...)
 	out, e := runCmd(m.Timeout, m.UseSudo, m.Path, args...)
 	outStr := string(out)
