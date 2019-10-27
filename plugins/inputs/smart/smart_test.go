@@ -379,6 +379,13 @@ func TestExcludedDev(t *testing.T) {
 }
 
 func TestGatherSATAInfo(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+
 	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData), nil
 	}
@@ -389,12 +396,19 @@ func TestGatherSATAInfo(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	s.gatherDisk(acc, "", wg)
 	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSATAInfo65(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+
 	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData65), nil
 	}
@@ -405,12 +419,19 @@ func TestGatherSATAInfo65(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	s.gatherDisk(acc, "", wg)
 	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHgstSAS(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+
 	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
 	}
@@ -421,12 +442,19 @@ func TestGatherHgstSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	s.gatherDisk(acc, "", wg)
 	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHtSAS(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+
 	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(htSASInfoData), nil
 	}
@@ -437,7 +465,7 @@ func TestGatherHtSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	s.gatherDisk(acc, "", wg)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
@@ -491,6 +519,13 @@ func TestGatherHtSAS(t *testing.T) {
 }
 
 func TestGatherSSD(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+
 	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdInfoData), nil
 	}
@@ -501,12 +536,19 @@ func TestGatherSSD(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	s.gatherDisk(acc, "", wg)
 	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSDRaid(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+
 	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdRaidInfoData), nil
 	}
@@ -517,12 +559,19 @@ func TestGatherSSDRaid(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	s.gatherDisk(acc, "", wg)
 	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherNvme(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+
 	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(nvmeInfoData), nil
 	}
@@ -533,7 +582,7 @@ func TestGatherNvme(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+	s.gatherDisk(acc, "", wg)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric("smart_device",
