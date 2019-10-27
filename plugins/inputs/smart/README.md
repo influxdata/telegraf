@@ -3,7 +3,11 @@
 Get metrics using the command line utility `smartctl` for S.M.A.R.T. (Self-Monitoring, Analysis and Reporting Technology) storage devices. SMART is a monitoring system included in computer hard disk drives (HDDs) and solid-state drives (SSDs)[1] that detects and reports on various indicators of drive reliability, with the intent of enabling the anticipation of hardware failures.
 See smartmontools (https://www.smartmontools.org/).
 
-SMART information is separated between different measurements: `smart_device` is used for general information, while `smart_attribute` stores the detailed attribute information if `attributes = true` is enabled in the plugin configuration.
+SMART information is separated between different measurements:
+
+- `smart_device` - used for general information
+- `smart_attribute` - stores the detailed attribute information if `attributes = true` is enabled in the plugin configuration
+- `smart_error_counter_log` - stores metrics from Error Counter Log if `error_counter_log = true` is enabled in the plugin configuration
 
 If no devices are specified, the plugin will scan for SMART devices via the following command:
 
@@ -15,6 +19,12 @@ Metrics will be reported from the following `smartctl` command:
 
 ```
 smartctl --info --attributes --health --tolerance=verypermissive -n <nocheck> --format=brief <device>
+```
+
+Additionaly following option will be added if `error_counter_log` set to `true`:
+
+```
+--log error
 ```
 
 This plugin supports _smartmontools_ version 5.41 and above, but v. 5.41 and v. 5.42
@@ -51,6 +61,10 @@ smartctl -s on <device>
   ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
   ## information from each drive into the `smart_attribute` measurement.
   # attributes = false
+
+  ## Gather all returned S.M.A.R.T. error counter log metrics
+  ## for each drive into the 'smart_error_counter_log' measurement.
+  # error_counter_log = false
 
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
@@ -123,6 +137,25 @@ Defaults!SMARTCTL !logfile, !syslog, !pam_session
     - value
     - worst
 
+- smart_error_counter_log:
+  - tags:
+    - capacity
+    - device
+    - enabled
+    - model
+    - serial_no
+    - wwn
+    - page_name
+
+  - fields:
+    - errors_corrected_by_eccfast
+    - errors_corrected_by_eccdelayed
+    - errors_corrected_by_rereads_rewrites
+    - total_errors_corrected
+    - correction_algorithm_invocations
+    - gigabytes_processed
+    - total_uncorrected_errors
+
 #### Flags
 
 The interpretation of the tag `flags` is:
@@ -132,6 +165,13 @@ The interpretation of the tag `flags` is:
  - `S` speed/performance
  - `O` updated online
  - `P` prefailure warning
+
+### Page Name
+
+Possible valus for tag `page_name` in measurement `smart_error_counter_log`:
+- read
+- write
+- verify 
 
 #### Exit Status
 
