@@ -232,7 +232,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 	wg.Add(len(devices))
 
 	for _, device := range devices {
-		go gatherDisk(acc, m.Timeout, m.UseSudo, m.Attributes, m.Path, m.Nocheck, device, &wg)
+		go m.gatherDisk(acc, device, &wg)
 	}
 
 	wg.Wait()
@@ -249,18 +249,18 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
+func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
-	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nocheck, "--format=brief"}
+	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", m.Nocheck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
-	out, e := runCmd(timeout, usesudo, smartctl, args...)
+	out, e := runCmd(m.Timeout, m.UseSudo, m.Path, args...)
 	outStr := string(out)
 
 	// Ignore all exit statuses except if it is a command line parse error
 	exitStatus, er := exitStatus(e)
 	if er != nil {
-		acc.AddError(fmt.Errorf("failed to run command '%s %s': %s - %s", smartctl, strings.Join(args, " "), e, outStr))
+		acc.AddError(fmt.Errorf("failed to run command '%s %s': %s - %s", m.Path, strings.Join(args, " "), e, outStr))
 		return
 	}
 
@@ -308,7 +308,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
-		if collectAttributes {
+		if m.Attributes {
 			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
@@ -319,7 +319,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 
 		attr := attribute.FindStringSubmatch(line)
 		if len(attr) > 1 {
-			if collectAttributes {
+			if m.Attributes {
 				tags["id"] = attr[1]
 				tags["name"] = attr[2]
 				tags["flags"] = attr[3]
@@ -351,7 +351,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 				}
 			}
 		} else {
-			if collectAttributes {
+			if m.Attributes {
 				if matches := sasNvmeAttr.FindStringSubmatch(line); len(matches) > 2 {
 					if attr, ok := sasNvmeAttributes[matches[1]]; ok {
 						tags["name"] = attr.Name
