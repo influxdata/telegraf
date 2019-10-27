@@ -691,6 +691,30 @@ func TestGatherNvme(t *testing.T) {
 		testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
+func TestGatherHgstSASErrorCounterLog(t *testing.T) {
+	s := NewSmart()
+	s.Timeout = internal.Duration{Duration: time.Second * 30}
+	s.UseSudo = true
+	s.Attributes = true
+	s.Path = "smartctl"
+	s.Nocheck = ""
+	s.ErrorCounterLog = true
+
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(hgstSASErrorCounterLog), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	s.gatherDisk(acc, "", wg)
+	assert.Equal(t, 27, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(7), acc.NMetrics(), "Wrong number of metrics gathered")
+}
+
 // smartctl output
 var (
 	// smartctl --scan
