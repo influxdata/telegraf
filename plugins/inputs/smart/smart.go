@@ -112,13 +112,15 @@ var (
 )
 
 type Smart struct {
-	Path       string
-	Nocheck    string
-	Attributes bool
-	Excludes   []string
-	Devices    []string
-	UseSudo    bool
-	Timeout    internal.Duration
+	Path            string            `toml:"path"`
+	Nocheck         string            `toml:"nocheck"`
+	Attributes      bool              `toml:"attributes"`
+	ErrorCounterLog bool              `toml:"error_counter_log"`
+	Excludes        []string          `toml:"excludes"`
+	Devices         []string          `toml:"devices"`
+	UseSudo         bool              `toml:"use_sudo"`
+	Timeout         internal.Duration `toml:"timeout"`
+	Log             telegraf.Logger
 }
 
 var sampleConfig = `
@@ -142,6 +144,10 @@ var sampleConfig = `
   ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
   ## information from each drive into the 'smart_attribute' measurement.
   # attributes = false
+
+  ## Gather all returned S.M.A.R.T. error counter log metrics
+  ## for each drive into the 'smart_error_counter_log' measurement.
+  # error_counter_log = false
 
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
