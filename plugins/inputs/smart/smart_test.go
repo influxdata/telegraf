@@ -1141,4 +1141,57 @@ Error Information Log Entries: 119,699
 Warning Comp. Temperature Time: 0
 Critical Comp. Temperature Time: 0
 `
+
+	// smartctl.exe --info --health --attributes --tolerance=verypermissive -n "standby"  --format=brief --log error [DEVICE]
+	hgstSASErrorCounterLog = `smartctl 7.0 2018-12-30 r4883 [x86_64-w64-mingw32-2016] (sf-7.0-1)
+Copyright (C) 2002-18, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Vendor:               HGST
+Product:              HUSMM1616ASS204
+Revision:             C2D0
+Compliance:           SPC-4
+User Capacity:        1,600,321,314,816 bytes [1.60 TB]
+Logical block size:   512 bytes
+Physical block size:  4096 bytes
+LU is resource provisioned, LBPRZ=1
+Rotation Rate:        Solid State Device
+Form Factor:          2.5 inches
+Logical Unit id:      0x5000cca050b1e1a0
+Serial number:        0SX4XZ5A
+Device type:          disk
+Transport protocol:   SAS (SPL-3)
+Local Time is:        Sun Oct 27 12:54:55 2019 CEST
+SMART support is:     Available - device has SMART capability.
+SMART support is:     Enabled
+Temperature Warning:  Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART Health Status: OK
+
+Percentage used endurance indicator: 0%
+Current Drive Temperature:     25 C
+Drive Trip Temperature:        70 C
+
+Manufactured in week 32 of year 2016
+Specified cycle count over device lifetime:  0
+Accumulated start-stop cycles:  0
+Specified load-unload count over device lifetime:  0
+Accumulated load-unload cycles:  0
+defect list format 6 unknown
+Elements in grown defect list: 0
+
+Vendor (Seagate Cache) information
+	Blocks sent to initiator = 6228039079838468
+
+Error counter log:
+			Errors Corrected by           Total   Correction     Gigabytes    Total
+				ECC          rereads/    errors   algorithm      processed    uncorrected
+			fast | delayed   rewrites  corrected  invocations   [10^9 bytes]  errors
+read:          0        0         0         0          0       5621.586           0
+write:         0        0         0         0          0      12135.220           0
+verify:        0        0         0         0          0          5.713           0
+
+Non-medium error count:        0
+`
 )
