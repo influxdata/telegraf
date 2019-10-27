@@ -44,6 +44,15 @@ var (
 	// 192 Power-Off_Retract_Count -O--C-   097   097   000    -    14716
 	attribute = regexp.MustCompile("^\\s*([0-9]+)\\s(\\S+)\\s+([-P][-O][-S][-R][-C][-K])\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9-]+)\\s+([-\\w]+)\\s+([\\w\\+\\.]+).*$")
 
+	// 	Error counter log:
+	// 	Errors Corrected by           Total   Correction     Gigabytes    Total
+	// 		ECC          rereads/    errors   algorithm      processed    uncorrected
+	// 	fast | delayed   rewrites  corrected  invocations   [10^9 bytes]  errors
+	// read:          0        0         0         0          0       4797.541           0
+	// write:         0        0         0         0          0       8932.303           0
+	// verify:        0        0         0         0          0          5.713           0
+	errorCounterLog = regexp.MustCompile(`^(read|write|verify):\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\d\.]+)\s+(\d+)\s*$`)
+
 	deviceFieldIds = map[string]string{
 		"1":   "read_error_rate",
 		"7":   "seek_error_rate",
