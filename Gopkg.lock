@@ -828,6 +828,25 @@
   revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
 
 [[projects]]
+  branch = "master"
+  digest = "1:21da098cf482c4c0d756ceb52b140e3ffc34f59d5210f833616e3ecbd65db365"
+  name = "github.com/mdlayher/genetlink"
+  packages = ["."]
+  pruneopts = ""
+  revision = "a2cadeac9a63a9978182ecd0793c7c6135d140e7"
+
+[[projects]]
+  branch = "master"
+  digest = "1:8f52f4bb61ea2ef570520608a095042a324c57b668aff8e63e126e08c2a33095"
+  name = "github.com/mdlayher/netlink"
+  packages = [
+    ".",
+    "nlenc",
+  ]
+  pruneopts = ""
+  revision = "de872b0d824bf513d14fa073d5bd72e5c4d4fa3c"
+
+[[projects]]
   digest = "1:4c8d8358c45ba11ab7bb15df749d4df8664ff1582daead28bae58cf8cbe49890"
   name = "github.com/miekg/dns"
   packages = ["."]
@@ -1287,6 +1306,7 @@
   packages = [
     "bcrypt",
     "blowfish",
+    "curve25519",
     "ed25519",
     "ed25519/internal/edwards25519",
     "md4",
@@ -1413,6 +1433,31 @@
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   source = "https://github.com/golang/text.git"
   version = "v0.3.0"
+
+[[projects]]
+  digest = "1:9c3e393364215a86626c3de984ff69921b34078a1219f557cd7f4a0b72313fe5"
+  name = "golang.zx2c4.com/wireguard"
+  packages = ["ipc/winpipe"]
+  pruneopts = ""
+  revision = "f2ea85e9f9921bc29a7dcb2007212b153540c01a"
+  version = "v0.0.20191012"
+
+[[projects]]
+  branch = "master"
+  digest = "1:abdfba3b0324ddba9fce5e150e4a21175d0604191c64c79d8534bc22555704e1"
+  name = "golang.zx2c4.com/wireguard/wgctrl"
+  packages = [
+    ".",
+    "internal/wginternal",
+    "internal/wglinux",
+    "internal/wglinux/internal/wgh",
+    "internal/wgopenbsd",
+    "internal/wgopenbsd/internal/wgh",
+    "internal/wguser",
+    "wgtypes",
+  ]
+  pruneopts = ""
+  revision = "8d021180e987ca597a0dc49125c4e4dacbe56cbc"
 
 [[projects]]
   branch = "master"
@@ -1803,6 +1848,7 @@
     "golang.org/x/sys/windows",
     "golang.org/x/sys/windows/svc",
     "golang.org/x/sys/windows/svc/mgr",
+    "golang.zx2c4.com/wireguard/wgctrl",
     "google.golang.org/api/iterator",
     "google.golang.org/api/option",
     "google.golang.org/api/support/bundler",
