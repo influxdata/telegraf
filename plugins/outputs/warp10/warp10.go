@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,24 +23,30 @@ const (
 
 // Warp10 output plugin
 type Warp10 struct {
-	Prefix  string
-	WarpURL string
-	Token   string
-	Timeout internal.Duration `toml:"timeout"`
-	client  *http.Client
+	Prefix             string
+	WarpURL            string
+	Token              string
+	Timeout            internal.Duration `toml:"timeout"`
+	PrintErrorBody     bool
+	MaxStringErrorSize int
+	client             *http.Client
 	tls.ClientConfig
 }
 
 var sampleConfig = `
   # prefix for metrics class Name
-  prefix = "Prefix"
+  prefix = "telegraf."
   ## POST HTTP(or HTTPS) ##
   # Url name of the Warp 10 server
-  warp_url = "WarpUrl"
+  warp_url = "http://localhost:8080"
   # Token to access your app on warp 10
   token = "Token"
   # Warp 10 query timeout, by default 15s
   timeout = "15s"
+  ## Optional Print Warp 10 error body
+  # print_error_body = false
+  ## Optional Max string error Size
+  # max_string_error_size = 511
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -121,11 +126,12 @@ func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric, now time.Time) stri
 // Write metrics to Warp10
 func (w *Warp10) Write(metrics []telegraf.Metric) error {
 
-	if len(metrics) == 0 {
-		return nil
-	}
 	var now = time.Now()
 	payload := w.GenWarp10Payload(metrics, now)
+
+	if payload == "" {
+		return nil
+	}
 
 	req, err := http.NewRequest("POST", w.WarpURL+"/api/v0/update", bytes.NewBufferString(payload))
 	req.Header.Set("X-Warp10-Token", w.Token)
@@ -138,8 +144,16 @@ func (w *Warp10) Write(metrics []telegraf.Metric) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf(w.WarpURL + ": " + w.HandleError(string(body)))
+		if w.PrintErrorBody {
+			body, _ := ioutil.ReadAll(resp.Body)
+			return fmt.Errorf(w.WarpURL + ": " + w.HandleError(string(body), w.MaxStringErrorSize))
+		}
+
+		if len(resp.Status) < w.MaxStringErrorSize {
+			return fmt.Errorf(w.WarpURL + ": " + resp.Status)
+		}
+
+		return fmt.Errorf(w.WarpURL + ": " + resp.Status[0:w.MaxStringErrorSize])
 	}
 
 	return nil
@@ -209,6 +223,14 @@ func (w *Warp10) Close() error {
 	return nil
 }
 
+// Init Warp10 struct
+func (w *Warp10) Init() error {
+	if w.MaxStringErrorSize <= 0 {
+		w.MaxStringErrorSize = 511
+	}
+	return nil
+}
+
 func init() {
 	outputs.Add("warp10", func() telegraf.Output {
 		return &Warp10{}
@@ -216,13 +238,13 @@ func init() {
 }
 
 // HandleError read http error body and return a corresponding error
-func (w *Warp10) HandleError(body string) string {
+func (w *Warp10) HandleError(body string, maxStringSize int) string {
 	if body == "" {
 		return "Empty return"
 	}
 
 	if strings.Contains(body, "Invalid token") {
-		return fmt.Sprintf("Invalid token: %v", w.Token)
+		return "Invalid token"
 	}
 
 	if strings.Contains(body, "Write token missing") {
@@ -230,64 +252,31 @@ func (w *Warp10) HandleError(body string) string {
 	}
 
 	if strings.Contains(body, "Token Expired") {
-		return fmt.Sprintf("Token Expired: %v", w.Token)
+		return "Token Expired"
 	}
 
 	if strings.Contains(body, "Token revoked") {
-		return fmt.Sprintf("Token revoked: %v", w.Token)
+		return "Token revoked"
 	}
 
 	if strings.Contains(body, "exceed your Monthly Active Data Streams limit") || strings.Contains(body, "exceed the Monthly Active Data Streams limit") {
-		reg := regexp.MustCompile(`Monthly Active Data Streams limit(?: for application.*)? \((\d+)(.\d+)?(E-\d)?\)`)
-		parts := reg.FindStringSubmatch(body)
-		limit := "-1"
-		if len(parts) > 1 {
-			limit = parts[1]
-		}
-		return fmt.Sprintf("MADS exceeded: %v", limit)
+		return "Exceeded Monthly Active Data Streams limit"
 	}
 
 	if strings.Contains(body, "Daily Data Points limit being already exceeded") {
-		reg := regexp.MustCompile(`Current maximum rate is \((\d+)(.\d+)?(E-\d)?\) datapoints/s`)
-		parts := reg.FindStringSubmatch(body)
-		limit := "-1"
-		if len(parts) > 1 {
-			limit = parts[1]
-		}
-		return fmt.Sprintf("DDP exceeded: %v", limit)
-	}
-
-	if strings.Contains(body, "Parse error at") {
-		reg := regexp.MustCompile(`<pre>\s*Parse error at &apos;(.*)&apos;</pre>`)
-		parts := reg.FindStringSubmatch(body)
-		str := ""
-		if len(parts) > 1 {
-			str = parts[1]
-		}
-		return fmt.Sprintf("Parse error at: %v", str)
+		return "Exceeded Daily Data Points limit"
 	}
 
 	if strings.Contains(body, "Application suspended or closed") {
 		return "Application suspended or closed"
 	}
 
-	if strings.Contains(body, "For input string") {
-		reg := regexp.MustCompile(`<pre>\s*For input string: &quot;(.*)&quot;</pre>`)
-		parts := reg.FindStringSubmatch(body)
-		str := ""
-		if len(parts) > 1 {
-			str = parts[1]
-		}
-		return fmt.Sprintf("For input string: %v", str)
-	}
-
 	if strings.Contains(body, "broken pipe") {
 		return "broken pipe"
 	}
 
-	maxStringSixe := 511
-	if len(body) < maxStringSixe {
+	if len(body) < maxStringSize {
 		return body
 	}
-	return body[0:maxStringSixe]
+	return body[0:maxStringSize]
 }

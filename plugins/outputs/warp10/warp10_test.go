@@ -47,7 +47,7 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: fmt.Sprintf("Invalid token: %v", w.Token),
+			Expected: fmt.Sprintf("Invalid token"),
 		},
 		{
 			Message: `
@@ -62,7 +62,7 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: fmt.Sprintf("Token Expired: %v", w.Token),
+			Expected: fmt.Sprintf("Token Expired"),
 		},
 		{
 			Message: `
@@ -77,7 +77,7 @@ func TestHandleWarp10Error(t *testing.T) {
 			</body>
 			</html>
 			`,
-			Expected: fmt.Sprintf("Token revoked: %v", w.Token),
+			Expected: fmt.Sprintf("Token revoked"),
 		},
 		{
 			Message: `
@@ -95,28 +95,13 @@ func TestHandleWarp10Error(t *testing.T) {
 			Expected: "Write token missing",
 		},
 		{
-			Message: `
-			<html>
-			<head>
-			<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
-			<title>Error 500 Parse error at &apos;test&apos;</title>
-			</head>
-			<body><h2>HTTP ERROR 500</h2>
-			<p>Problem accessing /api/v0/update. Reason:
-			<pre>    Parse error at &apos;test&apos;</pre></p>
-			</body>
-			</html>
-			`,
-			Expected: "Parse error at: test",
-		},
-		{
 			Message:  `<title>Error 503: server unavailable</title>`,
 			Expected: "<title>Error 503: server unavailable</title>",
 		},
 	}
 
 	for _, handledError := range tests {
-		payload := w.HandleError(handledError.Message)
+		payload := w.HandleError(handledError.Message, 511)
 		require.Exactly(t, handledError.Expected, payload)
 	}
 
