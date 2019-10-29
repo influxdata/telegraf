@@ -66,19 +66,19 @@ func (k *Synproxy) getSynproxyStat() (map[string]interface{}, error) {
 		line := scanner.Text()
 		// Parse fields separated by whitespace
 		dataFields := strings.Fields(line)
+		// If number of data fields do not match number of header fields
+		if len(dataFields) != len(fields) {
+			return nil, fmt.Errorf("invalid number of columns in data, expected %d found %d", len(fields),
+				len(dataFields))
+		}
 		for i, val := range dataFields {
 			// Convert from hexstring to int32
 			x, err := strconv.ParseUint(val, 16, 32)
 			// If field is not a valid hexstring
 			if err != nil {
 				return nil, fmt.Errorf("invalid value '%s' found", val)
-			// If index is out of boundary
-			} else if i >= len(fields) {
-				return nil, fmt.Errorf("value '%s' out of column boundary", val)
-			// If field is a valid hexstring and index not out of boundary
-			} else {
-				fields[hname[i]] = fields[hname[i]].(uint32) + uint32(x)
 			}
+			fields[hname[i]] = fields[hname[i]].(uint32) + uint32(x)
 		}
 	}
 	return fields, nil

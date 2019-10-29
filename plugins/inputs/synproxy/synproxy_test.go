@@ -69,7 +69,7 @@ func TestSynproxyFileHeaderMismatch(t *testing.T) {
 	acc := testutil.Accumulator{}
 	err := k.Gather(&acc)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "out of column boundary")
+	assert.Contains(t, err.Error(), "invalid number of columns in data")
 }
 
 func TestSynproxyFileInvalidHex(t *testing.T) {
@@ -125,7 +125,7 @@ const SynproxyFile_HeaderMismatch = `entries         syn_received    cookie_inva
 00000000        00000001        00000000        00000001        00000000        00000000
 00000000        00000003        00000009        00000003        00000000        00000000`
 
-const SynproxyFile_InvalidHex = `entries         syn_received    cookie_invalid  cookie_valid    cookie_retrans
+const SynproxyFile_InvalidHex = `entries         syn_received    cookie_invalid  cookie_valid    cookie_retrans  conn_reopened
 entries        00000002        00000000        00000002        00000000        00000000
 00000000        00000003        00000009        00000003        00000000        00000000`
 
