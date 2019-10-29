@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type Synproxy struct {}
+type Synproxy struct{}
 
 func (k *Synproxy) Gather(acc telegraf.Accumulator) error {
 	return nil
