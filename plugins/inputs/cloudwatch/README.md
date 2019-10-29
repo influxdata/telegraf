@@ -70,6 +70,9 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   # ratelimit = 25
 
+  ## Timeout for http requests made by the cloudwatch client.
+  # timeout = "5s"
+
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
   # statistic_include = [ "average", "sum", "minimum", "maximum", sample_count" ]

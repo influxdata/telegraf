@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta1"
+	"github.com/ericchiang/k8s/apis/apps/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 	"github.com/ericchiang/k8s/util/intstr"
 	"github.com/influxdata/telegraf/testutil"
@@ -37,7 +37,7 @@ func TestDeployment(t *testing.T) {
 			name: "no deployments",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/deployments/": &v1beta1.DeploymentList{},
+					"/deployments/": &v1.DeploymentList{},
 				},
 			},
 			hasError: false,
@@ -46,19 +46,19 @@ func TestDeployment(t *testing.T) {
 			name: "collect deployments",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/deployments/": &v1beta1.DeploymentList{
-						Items: []*v1beta1.Deployment{
+					"/deployments/": &v1.DeploymentList{
+						Items: []*v1.Deployment{
 							{
-								Status: &v1beta1.DeploymentStatus{
+								Status: &v1.DeploymentStatus{
 									Replicas:            toInt32Ptr(3),
 									AvailableReplicas:   toInt32Ptr(1),
 									UnavailableReplicas: toInt32Ptr(4),
 									UpdatedReplicas:     toInt32Ptr(2),
 									ObservedGeneration:  toInt64Ptr(9121),
 								},
-								Spec: &v1beta1.DeploymentSpec{
-									Strategy: &v1beta1.DeploymentStrategy{
-										RollingUpdate: &v1beta1.RollingUpdateDeployment{
+								Spec: &v1.DeploymentSpec{
+									Strategy: &v1.DeploymentStrategy{
+										RollingUpdate: &v1.RollingUpdateDeployment{
 											MaxUnavailable: &intstr.IntOrString{
 												IntVal: toInt32Ptr(30),
 											},
@@ -98,7 +98,7 @@ func TestDeployment(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, deployment := range ((v.handler.responseMap["/deployments/"]).(*v1beta1.DeploymentList)).Items {
+		for _, deployment := range ((v.handler.responseMap["/deployments/"]).(*v1.DeploymentList)).Items {
 			err := ks.gatherDeployment(*deployment, acc)
 			if err != nil {
 				t.Errorf("Failed to gather deployment - %s", err.Error())

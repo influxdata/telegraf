@@ -159,7 +159,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					Logger:    tail.DiscardingLogger,
 				})
 			if err != nil {
-				t.acc.AddError(err)
+				t.Log.Debugf("Failed to open file (%s): %v", file, err)
 				continue
 			}
 
