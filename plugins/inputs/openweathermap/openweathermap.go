@@ -179,6 +179,7 @@ type WeatherEntry struct {
 		Temp     float64 `json:"temp"`
 	} `json:"main"`
 	Rain struct {
+		Rain1 float64 `json:"1h"`
 		Rain3 float64 `json:"3h"`
 	} `json:"rain"`
 	Sys struct {
@@ -227,6 +228,13 @@ func gatherWeatherUrl(r io.Reader) (*Status, error) {
 	return status, nil
 }
 
+func gatherRain(e WeatherEntry) float64 {
+	if e.Rain.Rain1 > 0 {
+		return e.Rain.Rain1
+	}
+	return e.Rain.Rain3
+}
+
 func gatherWeather(acc telegraf.Accumulator, status *Status) {
 	for _, e := range status.List {
 		tm := time.Unix(e.Dt, 0)
@@ -235,7 +243,7 @@ func gatherWeather(acc telegraf.Accumulator, status *Status) {
 			"cloudiness":   e.Clouds.All,
 			"humidity":     e.Main.Humidity,
 			"pressure":     e.Main.Pressure,
-			"rain":         e.Rain.Rain3,
+			"rain":         gatherRain(e),
 			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
 			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
 			"temperature":  e.Main.Temp,
@@ -274,7 +282,7 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 			"cloudiness":   e.Clouds.All,
 			"humidity":     e.Main.Humidity,
 			"pressure":     e.Main.Pressure,
-			"rain":         e.Rain.Rain3,
+			"rain":         gatherRain(e),
 			"temperature":  e.Main.Temp,
 			"wind_degrees": e.Wind.Deg,
 			"wind_speed":   e.Wind.Speed,
