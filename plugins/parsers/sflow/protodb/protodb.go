@@ -16,6 +16,9 @@ var (
 
 //go:generate go run ../scripts/generate-embedded-data.go
 
+// init initialises the package and either builds its internal databases or protocol:port -> service nane
+// from the embedded data in this package or from the /etc/services databases depending on the prescence of the
+// ```TELEGRAF_SFLOW_USE_ETC_SERVICES``` enbironment variable
 func init() {
 	serviceNameMap = make(map[string]string)
 	switch len(os.Getenv("TELEGRAF_SFLOW_USE_ETC_SERVICES")) {

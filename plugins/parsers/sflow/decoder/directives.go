@@ -13,7 +13,13 @@ import (
 
 // Directive is a Decode Directive, the basic building block of a decoder
 type Directive interface {
+
+	// execute performs the function of the decode directive. If DecodeContext is nil then the
+	// ask is to check that a subsequent execution (with non nill DecodeContext) is expted to work.
 	execute(*bytes.Buffer, *DecodeContext) error
+
+	// Reset the internal state of the decode director to the initial state prior to any decoding.
+	// This allows decode directives to be reused and ensure there is no residual state carried over
 	Reset()
 }
 
@@ -25,12 +31,20 @@ type Directive interface {
 type ValueDirective interface {
 	Directive
 
+	// Switch attaches a set of conditional decode directives downstream of this decode directive
 	Switch(paths ...CaseValueDirective) ValueDirective
-	Iter(maxIterations uint32, dd Directive) ValueDirective
-	Encapsulated(maxSize uint32, dd Directive) ValueDirective
-	Do(ddo DirectiveOp) ValueDirective
 
+	// Iter attaches a single downstream decode directive that will be executed repeatedly according to the iteration count
+	Iter(maxIterations uint32, dd Directive) ValueDirective
+
+	// Encapsulated will form a new buffer of the encapsulated length and pass that buffer on to the downsstream decode directive
+	Encapsulated(maxSize uint32, dd Directive) ValueDirective
+
+	// Ref records this decode directive in the passed reference
 	Ref(*interface{}) ValueDirective
+
+	// Do attaches a Decode Operation - these are uses of the decoded information to perform work on, transform, write out etc.
+	Do(ddo DirectiveOp) ValueDirective
 }
 
 type valueDirective struct {
@@ -61,6 +75,7 @@ func (dd *valueDirective) execute(buffer *bytes.Buffer, dc *DecodeContext) error
 		}
 	}
 
+	// Switch downstream?
 	if dd.cases != nil && len(dd.cases) > 0 {
 		for i, c := range dd.cases {
 			if c.equals(dd.value) {
@@ -78,6 +93,7 @@ func (dd *valueDirective) execute(buffer *bytes.Buffer, dc *DecodeContext) error
 		}
 	}
 
+	// Iter downstream?
 	if dd.iter != nil {
 		fn := func(id interface{}) error {
 			dc.tracef("%s iteration %+v\n", dd.location, id)
@@ -89,7 +105,7 @@ func (dd *valueDirective) execute(buffer *bytes.Buffer, dc *DecodeContext) error
 		switch v := dd.value.(type) {
 		case *uint32:
 			if *v > dd.maxIterations {
-				return fmt.Errorf("iter at %s exceeds configured max - value %d, limit %d\n", dd.location, *v, dd.maxIterations)
+				return fmt.Errorf("iter at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxIterations)
 			}
 			for i := uint32(0); i < *v; i++ {
 				if e := fn(i); e != nil {
@@ -102,17 +118,19 @@ func (dd *valueDirective) execute(buffer *bytes.Buffer, dc *DecodeContext) error
 		}
 	}
 
+	// Encapsualted downstream>
 	if dd.encapsulated != nil {
 		switch v := dd.value.(type) {
 		case *uint32:
 			if *v > dd.maxEncapsulation {
-				return fmt.Errorf("encap at %s exceeds configured max - value %d, limit %d\n", dd.location, *v, dd.maxEncapsulation)
+				return fmt.Errorf("encap at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxEncapsulation)
 			}
 			dc.tracef("%s encapsulated\n", dd.location)
 			return dd.encapsulated.execute(bytes.NewBuffer(buffer.Next(int(*v))), dc)
 		}
 	}
 
+	// Perform the attached operations
 	for i, op := range dd.ops {
 		dc.tracef("%s do(%d)\n", dd.location, i)
 		if err := op.process(dc, dd.value); err != nil {
@@ -123,6 +141,8 @@ func (dd *valueDirective) execute(buffer *bytes.Buffer, dc *DecodeContext) error
 	return nil
 }
 
+// panickIfNotBlackCanvas checks the state of this value directive to see if it is has
+// alrady been configured in a manner inconsistent with another configuration change
 func (dd *valueDirective) panickIfNotBlackCanvas(change string, checkDOs bool) {
 	if dd.cases != nil {
 		panic(fmt.Sprintf("already have switch cases assigned, cannot assign %s @ %s", change, dd.location))
@@ -212,6 +232,7 @@ func (dd *valueDirective) Reset() {
 	}
 }
 
+// errorDirective a decode directive that reports an error
 type errorDirective struct {
 	Directive
 }
@@ -220,6 +241,7 @@ func (dd *errorDirective) execute(buffer *bytes.Buffer, dc *DecodeContext) error
 	return fmt.Errorf("Error Directive")
 }
 
+// CaseValueDirective is a decode directive that also has a switch/case test
 type CaseValueDirective interface {
 	Directive
 	equals(interface{}) bool
@@ -274,6 +296,7 @@ func (dd *caseValueDirective) equals(value interface{}) bool {
 	return false
 }
 
+// sequenceDirective is a decode directive that is a simple sequentially executed list of other decode directives
 type sequenceDirective struct {
 	decoders []Directive
 	location string
@@ -296,6 +319,7 @@ func (di *sequenceDirective) execute(buffer *bytes.Buffer, dc *DecodeContext) er
 	return nil
 }
 
+// openMetric a decode directive that opens the recording of new fields and tags
 type openMetric struct {
 	location string
 }
@@ -310,6 +334,7 @@ func (di *openMetric) execute(buffer *bytes.Buffer, dc *DecodeContext) error {
 	return nil
 }
 
+// closeMetric a decode directive that closes the current open metric
 type closeMetric struct {
 	location string
 }
@@ -324,8 +349,13 @@ func (di *closeMetric) execute(buffer *bytes.Buffer, dc *DecodeContext) error {
 	return nil
 }
 
+// DecodeContext provides context for the decoding of a packet and primarily acts
+// as a repository for metrics that are collected during the packet decode process
 type DecodeContext struct {
-	metrics   []telegraf.Metric
+	metrics []telegraf.Metric
+
+	// oreMetric is used to capture tags or fields that may be recored before a metric has been openned
+	// these fields and tags are then copied into metrics that are then subsequently opened
 	preMetric telegraf.Metric
 	current   telegraf.Metric
 	nano      int
@@ -341,6 +371,7 @@ func (dc *DecodeContext) tracef(fmt string, v ...interface{}) {
 func (dc *DecodeContext) openMetric() {
 	m, _ := metric.New("sflow", make(map[string]string), make(map[string]interface{}), time.Now().Add(time.Duration(dc.nano)))
 	dc.nano++
+	// make sure to copy any fields and tags that were capture prior to the metric being openned
 	for t, v := range dc.preMetric.Tags() {
 		m.AddTag(t, v)
 	}
@@ -364,9 +395,12 @@ func (dc *DecodeContext) currentMetric() telegraf.Metric {
 	return dc.current
 }
 
+// Decode initiates the decoding of the supplied buffer according to the root decode directive that is provided
 func (dc *DecodeContext) Decode(dd Directive, buffer *bytes.Buffer) error {
 	return dd.execute(buffer, dc)
 }
+
+// GetMetrics answers the metrics that have been collected during the packet decode
 func (dc *DecodeContext) GetMetrics() []telegraf.Metric {
 	return dc.metrics
 }

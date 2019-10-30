@@ -6,6 +6,10 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+// DirectiveOp are operations that are performed on values that have been decoded.
+// They are expected to be chained together, in a flow programming style, and the
+// Decode Directive that they are assigned to then walks back up the linked list to find the root
+// operation that will then be performed (passing the value down through various transformations)
 type DirectiveOp interface {
 	prev() DirectiveOp
 	// process method can be executed in two contexts, one to check that the given type
@@ -47,6 +51,7 @@ func (op *baseDOp) Set(ptr interface{}) *SetDOp {
 	return result
 }
 
+// U32ToU32DOp is a deode operation that can process U32 to U32
 type U32ToU32DOp struct {
 	baseDOp
 	fn func(uint32) uint32
@@ -70,6 +75,7 @@ func (op *U32ToU32DOp) process(dc *DecodeContext, upstreamValue interface{}) err
 	return nil
 }
 
+// ToString answers a U32ToStr decode operation that will transform this output of thie U32ToU32 into a string
 func (op *U32ToU32DOp) ToString(fn func(uint32) string) *U32ToStrDOp {
 	result := &U32ToStrDOp{baseDOp: baseDOp{p: op, loc: location(2)}, fn: fn}
 	result.do = result
@@ -77,6 +83,7 @@ func (op *U32ToU32DOp) ToString(fn func(uint32) string) *U32ToStrDOp {
 	return result
 }
 
+// AsFDOp is a deode operation that writes fields to metrics
 type AsFDOp struct {
 	baseDOp
 	name string
@@ -119,6 +126,7 @@ func (op *AsFDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 	return nil
 }
 
+// AsTDOp is a deode operation that writes tags to metrics
 type AsTDOp struct {
 	baseDOp
 	name      string
@@ -168,6 +176,7 @@ func (op *AsTDOp) prev() DirectiveOp {
 	return op.p
 }
 
+// BytesToStrDOp is a decode operation that transforms []bytes to strings
 type BytesToStrDOp struct {
 	baseDOp
 	len int
@@ -193,6 +202,7 @@ func (op *BytesToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) e
 	return nil
 }
 
+// U32AssertDOp is a decode operation that asserts a particular uint32 value
 type U32AssertDOp struct {
 	baseDOp
 	fn     func(uint32) bool
@@ -211,6 +221,7 @@ func (op *U32AssertDOp) process(dc *DecodeContext, upstreamValue interface{}) er
 	return nil
 }
 
+// U32ToStrDOp is a decod eoperation that transforms a uint32 to a string
 type U32ToStrDOp struct {
 	baseDOp
 	fn func(uint32) string
@@ -234,6 +245,8 @@ func (op *U32ToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) err
 	return nil
 }
 
+// BreakIf answers a BreakIf operation that will break the current decode operation chain, without an error, if the value processed
+// is the supplied value
 func (op *U32ToStrDOp) BreakIf(value string) *BreakIfDOp {
 	result := &BreakIfDOp{baseDOp: baseDOp{p: op, loc: location(2)}, value: value}
 	result.do = result
@@ -241,6 +254,7 @@ func (op *U32ToStrDOp) BreakIf(value string) *BreakIfDOp {
 	return result
 }
 
+// U16ToStrDOp is a decode operation that transforms a uint16 to a string
 type U16ToStrDOp struct {
 	baseDOp
 	fn func(uint16) string
@@ -258,6 +272,7 @@ func (op *U16ToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) err
 	return nil
 }
 
+// BreakIfDOp is a decode operation that will break the current outer iteration
 type BreakIfDOp struct {
 	baseDOp
 	value string
@@ -280,6 +295,7 @@ func (op *BreakIfDOp) process(dc *DecodeContext, upstreamValue interface{}) erro
 	return nil
 }
 
+// U16ToU16DOp is a decode operation that transfirms one uint16 to another uint16
 type U16ToU16DOp struct {
 	baseDOp
 	fn func(uint16) uint16
@@ -306,6 +322,7 @@ func (op *U16ToU16DOp) process(dc *DecodeContext, upstreamValue interface{}) err
 	return nil
 }
 
+// BytesToU32DOp is a decode operation that transforms a []byte to a uint32
 type BytesToU32DOp struct {
 	baseDOp
 	len int
@@ -329,6 +346,7 @@ func (op *BytesToU32DOp) process(dc *DecodeContext, upstreamValue interface{}) e
 	return nil
 }
 
+// SetDOp is a decode operation that will Set a pointer to a value to be the value processes
 type SetDOp struct {
 	baseDOp
 	ptr interface{}
@@ -395,6 +413,7 @@ func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 	return nil
 }
 
+// BytesToDOp is a decode operation that will transform []byte to interface{}
 type BytesToDOp struct {
 	baseDOp
 	len int
@@ -418,6 +437,7 @@ func (op *BytesToDOp) process(dc *DecodeContext, upstreamValue interface{}) erro
 	return nil
 }
 
+// ErrorDOp is a decode operation that will generate an error
 type ErrorDOp struct {
 	baseDOp
 	errorOnTestProcess bool

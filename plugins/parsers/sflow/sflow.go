@@ -62,7 +62,7 @@ func NewDefaultV5FormatOptions() V5FormatOptions {
 	return V5FormatOptions{math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32}
 }
 
-// V5Format answers and ItemDecoder capable of decoding sFlow v5 packets in accordance
+// V5Format answers and decoder.Directive capable of decoding sFlow v5 packets in accordance
 // with SFlow v5 specification at https://sflow.org/sflow_version_5.txt
 func V5Format(options V5FormatOptions) decoder.Directive {
 	return decoder.Seq( // line: 1823
