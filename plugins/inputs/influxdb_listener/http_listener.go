@@ -115,13 +115,6 @@ const sampleConfig = `
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
   # basic_password = "barfoo"
-
-  ## Optional flag to indicate whether a batch Point members should have their timestamp
-  ## auto incremented by 1 nano second each. This is useful in cases where a batch is received with no 
-  ## timestampts for Points withint the batch and a batch timestamp is assigned. In some cases the batch may
-  ## contain what are otherwise considered to be duplicates (measurement name, tags set and "batch timestamp").
-  ## Setting this flag to true will auto increment the nano second digits of the batch timestamp for each point
-  # nano_increment_within_batch = false
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -272,8 +265,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	now := h.TimeFunc()
-	seqNo := 0
-	newSeqNo := 0
 
 	precision := req.URL.Query().Get("precision")
 	db := req.URL.Query().Get("db")
@@ -346,7 +337,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 					badRequest(res, "")
 				}
 			} else {
-				seqNo = newSeqNo
 				res.WriteHeader(http.StatusNoContent)
 			}
 			return
@@ -370,7 +360,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			h.Log.Debug(err.Error())
 			return400 = true
 		}
-		seqNo = newSeqNo
 		// rotate the bit remaining after the last newline to the front of the buffer
 		i++ // start copying after the newline
 		bufStart = len(buf) - i
@@ -388,10 +377,9 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 	h.handler.SetTimeFunc(func() time.Time { return t })
 	metrics, err := h.parser.Parse(b)
 	if err != nil {
-		return 0, fmt.Errorf("unable to parse: %s", err.Error())
+		return fmt.Errorf("unable to parse: %s", err.Error())
 	}
 
-	newSeqNo := seqNo
 	for _, m := range metrics {
 		// Do we need to keep the database name in the query string.
 		// If a tag has been supplied to put the db in and we actually got a db query,
@@ -403,7 +391,7 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
-	return newSeqNo, nil
+	return nil
 }
 
 func tooLarge(res http.ResponseWriter) {
