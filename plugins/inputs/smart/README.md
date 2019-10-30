@@ -168,7 +168,7 @@ The interpretation of the tag `flags` is:
 
 ### Page Name
 
-Possible valus for tag `page_name` in measurement `smart_error_counter_log`:
+Possible values for tag `page_name` in measurement `smart_error_counter_log`:
 - read
 - write
 - verify 
