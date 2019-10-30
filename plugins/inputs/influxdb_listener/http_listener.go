@@ -41,11 +41,6 @@ type HTTPListener struct {
 	Port int
 	tlsint.ServerConfig
 
-<<<<<<< HEAD
-	BasicUsername            string
-	BasicPassword            string
-	NanoIncrementWithinBatch bool
-=======
 	ReadTimeout   internal.Duration `toml:"read_timeout"`
 	WriteTimeout  internal.Duration `toml:"write_timeout"`
 	MaxBodySize   internal.Size     `toml:"max_body_size"`
@@ -53,7 +48,6 @@ type HTTPListener struct {
 	BasicUsername string            `toml:"basic_username"`
 	BasicPassword string            `toml:"basic_password"`
 	DatabaseTag   string            `toml:"database_tag"`
->>>>>>> 9efc37606f7eae0d72b801ba0be68d4561eee915
 
 	TimeFunc
 
@@ -340,11 +334,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-<<<<<<< HEAD
-			newSeqNo, err = h.parse(buf[:n+bufStart], now, precision, seqNo)
-=======
 			err = h.parse(buf[:n+bufStart], now, precision, db)
->>>>>>> 9efc37606f7eae0d72b801ba0be68d4561eee915
 			if err != nil {
 				h.Log.Debugf("%s: %s", err.Error(), bufStart+n)
 				return400 = true
@@ -376,13 +366,8 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			bufStart = 0
 			continue
 		}
-<<<<<<< HEAD
-		if newSeqNo, err = h.parse(buf[:i+1], now, precision, seqNo); err != nil {
-			log.Println("D! " + err.Error())
-=======
 		if err := h.parse(buf[:i+1], now, precision, db); err != nil {
 			h.Log.Debug(err.Error())
->>>>>>> 9efc37606f7eae0d72b801ba0be68d4561eee915
 			return400 = true
 		}
 		seqNo = newSeqNo
@@ -395,11 +380,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-<<<<<<< HEAD
-func (h *HTTPListener) parse(b []byte, t time.Time, precision string, seqNo int) (int, error) {
-=======
 func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error {
->>>>>>> 9efc37606f7eae0d72b801ba0be68d4561eee915
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -412,14 +393,6 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 
 	newSeqNo := seqNo
 	for _, m := range metrics {
-<<<<<<< HEAD
-		if h.NanoIncrementWithinBatch {
-			h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time().Add(time.Duration(newSeqNo)))
-			newSeqNo++
-		} else {
-			h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-		}
-=======
 		// Do we need to keep the database name in the query string.
 		// If a tag has been supplied to put the db in and we actually got a db query,
 		// then we write it in. This overwrites the database tag if one was sent.
@@ -428,7 +401,6 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 			m.AddTag(h.DatabaseTag, db)
 		}
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
->>>>>>> 9efc37606f7eae0d72b801ba0be68d4561eee915
 	}
 
 	return newSeqNo, nil
