@@ -71,7 +71,7 @@ type Config struct {
 
 	// TagKeys only apply to JSON data
 	TagKeys []string `toml:"tag_keys"`
-	// FieldKeys only apply to JSON
+	// Array of glob pattern strings keys that should be added as string fields.
 	JSONStringFields []string `toml:"json_string_fields"`
 
 	JSONNameKey string `toml:"json_name_key"`
@@ -89,6 +89,9 @@ type Config struct {
 
 	// default timezone
 	JSONTimezone string `toml:"json_timezone"`
+
+	// Whether to continue if a JSON object can't be coerced
+	JSONStrict bool `toml:"json_strict"`
 
 	// Authentication file for collectd
 	CollectdAuthFile string `toml:"collectd_auth_file"`
@@ -154,15 +157,20 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
-		parser = newJSONParser(config.MetricName,
-			config.TagKeys,
-			config.JSONNameKey,
-			config.JSONStringFields,
-			config.JSONQuery,
-			config.JSONTimeKey,
-			config.JSONTimeFormat,
-			config.JSONTimezone,
-			config.DefaultTags)
+		parser, err = json.New(
+			&json.Config{
+				MetricName:   config.MetricName,
+				TagKeys:      config.TagKeys,
+				NameKey:      config.JSONNameKey,
+				StringFields: config.JSONStringFields,
+				Query:        config.JSONQuery,
+				TimeKey:      config.JSONTimeKey,
+				TimeFormat:   config.JSONTimeFormat,
+				Timezone:     config.JSONTimezone,
+				DefaultTags:  config.DefaultTags,
+				Strict:       config.JSONStrict,
+			},
+		)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -287,31 +295,6 @@ func newCSVParser(metricName string,
 	return parser, nil
 }
 
-func newJSONParser(
-	metricName string,
-	tagKeys []string,
-	jsonNameKey string,
-	stringFields []string,
-	jsonQuery string,
-	timeKey string,
-	timeFormat string,
-	timezone string,
-	defaultTags map[string]string,
-) Parser {
-	parser := &json.JSONParser{
-		MetricName:     metricName,
-		TagKeys:        tagKeys,
-		StringFields:   stringFields,
-		JSONNameKey:    jsonNameKey,
-		JSONQuery:      jsonQuery,
-		JSONTimeKey:    timeKey,
-		JSONTimeFormat: timeFormat,
-		JSONTimezone:   timezone,
-		DefaultTags:    defaultTags,
-	}
-	return parser
-}
-
 func newGrokParser(metricName string,
 	patterns []string, nPatterns []string,
 	cPatterns string, cPatternFiles []string,
@@ -328,19 +311,6 @@ func newGrokParser(metricName string,
 
 	err := parser.Compile()
 	return &parser, err
-}
-
-func NewJSONParser(
-	metricName string,
-	tagKeys []string,
-	defaultTags map[string]string,
-) (Parser, error) {
-	parser := &json.JSONParser{
-		MetricName:  metricName,
-		TagKeys:     tagKeys,
-		DefaultTags: defaultTags,
-	}
-	return parser, nil
 }
 
 func NewNagiosParser() (Parser, error) {

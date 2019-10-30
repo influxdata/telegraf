@@ -44,6 +44,7 @@ var (
 
 func newTestHTTPListener() *HTTPListener {
 	listener := &HTTPListener{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		TimeFunc:       time.Now,
 	}
@@ -59,6 +60,7 @@ func newTestHTTPAuthListener() *HTTPListener {
 
 func newTestHTTPSListener() *HTTPListener {
 	listener := &HTTPListener{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		ServerConfig:   *pki.TLSServerConfig(),
 		TimeFunc:       time.Now,
@@ -146,8 +148,11 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 }
 
-func TestWriteHTTP(t *testing.T) {
+func TestWriteHTTPKeepDatabase(t *testing.T) {
+	testMsgWithDB := "cpu_load_short,host=server01,database=wrongdb value=12.0 1422568543702900257\n"
+
 	listener := newTestHTTPListener()
+	listener.DatabaseTag = "database"
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -162,7 +167,19 @@ func TestWriteHTTP(t *testing.T) {
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01"},
+		map[string]string{"host": "server01", "database": "mydb"},
+	)
+
+	// post single message to listener with a database tag in it already. It should be clobbered.
+	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgWithDB)))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, 204, resp.StatusCode)
+
+	acc.Wait(1)
+	acc.AssertContainsTaggedFields(t, "cpu_load_short",
+		map[string]interface{}{"value": float64(12)},
+		map[string]string{"host": "server01", "database": "mydb"},
 	)
 
 	// post multiple message to listener
@@ -177,21 +194,9 @@ func TestWriteHTTP(t *testing.T) {
 	for _, hostTag := range hostTags {
 		acc.AssertContainsTaggedFields(t, "cpu_load_short",
 			map[string]interface{}{"value": float64(12)},
-			map[string]string{"host": hostTag},
+			map[string]string{"host": hostTag, "database": "mydb"},
 		)
 	}
-
-	// Post a gigantic metric to the listener and verify that an error is returned:
-	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 400, resp.StatusCode)
-
-	acc.Wait(3)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01"},
-	)
 }
 
 // http listener should add a newline at the end of the buffer if it's not there
@@ -217,6 +222,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 
 func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	listener := &HTTPListener{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxLineSize:    internal.Size{Size: 128 * 1000},
 		TimeFunc:       time.Now,
@@ -235,6 +241,7 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	listener := &HTTPListener{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxBodySize:    internal.Size{Size: 4096},
 		TimeFunc:       time.Now,
@@ -252,6 +259,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	listener := &HTTPListener{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxLineSize:    internal.Size{Size: 70},
 		TimeFunc:       time.Now,
@@ -279,6 +287,7 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 
 func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 	listener := &HTTPListener{
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxLineSize:    internal.Size{Size: 100},
 		TimeFunc:       time.Now,

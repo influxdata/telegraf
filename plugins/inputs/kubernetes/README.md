@@ -3,15 +3,23 @@
 This input plugin talks to the kubelet api using the `/stats/summary` endpoint to gather metrics about the running pods and containers for a single host. It is assumed that this plugin is running as part of a `daemonset` within a kubernetes installation. This means that telegraf is running on every node within the cluster. Therefore, you should configure this plugin to talk to its locally running kubelet.
 
 To find the ip address of the host you are running on you can issue a command like the following:
+
 ```
 $ curl -s $API_URL/api/v1/namespaces/$POD_NAMESPACE/pods/$HOSTNAME --header "Authorization: Bearer $TOKEN" --insecure | jq -r '.status.hostIP'
 ```
+
 In this case we used the downward API to pass in the `$POD_NAMESPACE` and `$HOSTNAME` is the hostname of the pod which is set by the kubernetes API.
+
+Kubernetes is a fast moving project, with a new minor release every 3 months. As
+such, we will aim to maintain support only for versions that are supported by
+the major cloud providers; this is roughly 4 release / 2 years.
+
+**This plugin supports Kubernetes 1.11 and later.**
 
 #### Series Cardinality Warning
 
 This plugin may produce a high number of series which, when not controlled
-for, will cause high load on your database.  Use the following techniques to
+for, will cause high load on your database. Use the following techniques to
 avoid cardinality issues:
 
 - Use [metric filtering][] options to exclude unneeded measurements and tags.
@@ -48,7 +56,12 @@ avoid cardinality issues:
 ### DaemonSet
 
 For recommendations on running Telegraf as a DaemonSet see [Monitoring Kubernetes
-Architecture][k8s-telegraf] or view the [Helm charts][tick-charts].
+Architecture][k8s-telegraf] or view the Helm charts:
+
+- [Telegraf][]
+- [InfluxDB][]
+- [Chronograf][]
+- [Kapacitor][]
 
 ### Metrics
 
@@ -75,7 +88,7 @@ Architecture][k8s-telegraf] or view the [Helm charts][tick-charts].
     - runtime_image_fs_capacity_bytes
     - runtime_image_fs_used_bytes
 
-+ kubernetes_pod_container
+* kubernetes_pod_container
   - tags:
     - container_name
     - namespace
@@ -107,7 +120,7 @@ Architecture][k8s-telegraf] or view the [Helm charts][tick-charts].
     - capacity_bytes
     - used_bytes
 
-+ kubernetes_pod_network
+* kubernetes_pod_network
   - tags:
     - namespace
     - node_name
@@ -136,4 +149,7 @@ kubernetes_system_container
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
 [k8s-telegraf]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/
-[tick-charts]: https://github.com/influxdata/tick-charts
+[telegraf]: https://github.com/helm/charts/tree/master/stable/telegraf
+[influxdb]: https://github.com/helm/charts/tree/master/stable/influxdb
+[chronograf]: https://github.com/helm/charts/tree/master/stable/chronograf
+[kapacitor]: https://github.com/helm/charts/tree/master/stable/kapacitor

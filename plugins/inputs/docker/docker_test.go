@@ -252,6 +252,7 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 	var acc testutil.Accumulator
 
 	d := Docker{
+		Log: testutil.Logger{},
 		newClient: func(string, *tls.Config) (Client, error) {
 			return &MockClient{
 				InfoF: func(ctx context.Context) (types.Info, error) {
@@ -390,6 +391,7 @@ func TestContainerLabels(t *testing.T) {
 			}
 
 			d := Docker{
+				Log:          testutil.Logger{},
 				newClient:    newClientFunc,
 				LabelInclude: tt.include,
 				LabelExclude: tt.exclude,
@@ -511,6 +513,7 @@ func TestContainerNames(t *testing.T) {
 			}
 
 			d := Docker{
+				Log:              testutil.Logger{},
 				newClient:        newClientFunc,
 				ContainerInclude: tt.include,
 				ContainerExclude: tt.exclude,
@@ -625,7 +628,11 @@ func TestContainerStatus(t *testing.T) {
 
 					return &client, nil
 				}
-				d = Docker{newClient: newClientFunc}
+				d = Docker{
+					Log:              testutil.Logger{},
+					newClient:        newClientFunc,
+					IncludeSourceTag: true,
+				}
 			)
 
 			// mock time
@@ -667,6 +674,7 @@ func TestContainerStatus(t *testing.T) {
 					"label2":            "test_value_2",
 					"server_version":    "17.09.0-ce",
 					"container_status":  tt.expect.Status,
+					"source":            "e2173b9478a6",
 				})
 		})
 	}
@@ -675,6 +683,7 @@ func TestContainerStatus(t *testing.T) {
 func TestDockerGatherInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
+		Log:       testutil.Logger{},
 		newClient: newClient,
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
@@ -703,6 +712,29 @@ func TestDockerGatherInfo(t *testing.T) {
 	)
 
 	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"memory_total": int64(3840757760),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker",
+		map[string]interface{}{
+			"pool_blocksize": int64(65540),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
 		"docker_data",
 		map[string]interface{}{
 			"used":      int64(17300000000),
@@ -710,11 +742,46 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit":           "bytes",
 			"engine_host":    "absol",
 			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
 		},
 	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_metadata",
+		map[string]interface{}{
+			"used":      int64(20970000),
+			"total":     int64(2146999999),
+			"available": int64(2126999999),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"unit":           "bytes",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_devicemapper",
+		map[string]interface{}{
+			"base_device_size_bytes":             int64(10740000000),
+			"pool_blocksize_bytes":               int64(65540),
+			"data_space_used_bytes":              int64(17300000000),
+			"data_space_total_bytes":             int64(107400000000),
+			"data_space_available_bytes":         int64(36530000000),
+			"metadata_space_used_bytes":          int64(20970000),
+			"metadata_space_total_bytes":         int64(2146999999),
+			"metadata_space_available_bytes":     int64(2126999999),
+			"thin_pool_minimum_free_space_bytes": int64(10740000000),
+		},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+			"pool_name":      "docker-8:1-1182287-pool",
+		},
+	)
+
 	acc.AssertContainsTaggedFields(t,
 		"docker_container_cpu",
 		map[string]interface{}{
@@ -766,6 +833,7 @@ func TestDockerGatherInfo(t *testing.T) {
 func TestDockerGatherSwarmInfo(t *testing.T) {
 	var acc testutil.Accumulator
 	d := Docker{
+		Log:       testutil.Logger{},
 		newClient: newClient,
 	}
 
@@ -873,6 +941,7 @@ func TestContainerStateFilter(t *testing.T) {
 			}
 
 			d := Docker{
+				Log:                   testutil.Logger{},
 				newClient:             newClientFunc,
 				ContainerStateInclude: tt.include,
 				ContainerStateExclude: tt.exclude,
@@ -934,6 +1003,7 @@ func TestContainerName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := Docker{
+				Log:       testutil.Logger{},
 				newClient: tt.clientFunc,
 			}
 			var acc testutil.Accumulator
@@ -948,4 +1018,38 @@ func TestContainerName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHostnameFromID(t *testing.T) {
+	tests := []struct {
+		name   string
+		id     string
+		expect string
+	}{
+		{
+			name:   "Real ID",
+			id:     "565e3a55f5843cfdd4aa5659a1a75e4e78d47f73c3c483f782fe4a26fc8caa07",
+			expect: "565e3a55f584",
+		},
+		{
+			name:   "Short ID",
+			id:     "shortid123",
+			expect: "shortid123",
+		},
+		{
+			name:   "No ID",
+			id:     "",
+			expect: "shortid123",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			output := hostnameFromID(test.id)
+			if test.expect != output {
+				t.Logf("Container ID for hostname is wrong. Want: %s, Got: %s", output, test.expect)
+			}
+		})
+	}
+
 }

@@ -16,6 +16,9 @@ The commands & flags are:
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
   --config-directory <directory> directory containing additional *.conf files
+  --plugin-directory             directory containing *.so files, this directory will be
+                                 searched recursively. Any Plugin found will be loaded
+                                 and namespaced.
   --debug                        turn on debug logging
   --input-filter <filter>        filter the inputs to enable, separator is :
   --input-list                   print available input plugins.

@@ -32,6 +32,7 @@ Using the environment variable `HOST_PROC` the plugin will retrieve process info
     - wait (freebsd only)
     - idle (bsd and Linux 4+ only)
     - paging (linux only)
+    - parked (linux only)
     - total_threads (linux only)
 
 ### Process State Mappings

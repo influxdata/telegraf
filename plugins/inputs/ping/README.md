@@ -2,92 +2,142 @@
 
 Sends a ping message by executing the system ping command and reports the results.
 
+This plugin has two main methods of operation: `exec` and `native`.  The
+recommended method is `native`, which has greater system compatibility and
+performance.  However, for backwards compatibility the `exec` method is the
+default.
+
+When using `method = "exec"`, the systems ping utility is executed to send the
+ping packets.
+
 Most ping command implementations are supported, one notable exception being
-that there is currently no support for GNU Inetutils ping.  You may instead
-use the iputils-ping implementation:
+that there is currently no support for GNU Inetutils ping.  You may instead use
+the iputils-ping implementation:
 ```
 apt-get install iputils-ping
 ```
 
-When using `method = "native"` a ping is sent and the results are reported in pure go, eliminating the need to execute the system `ping` command. Not using the system binary allows the use of this plugin on non-english systems.
-
-There is currently no support for TTL on windows with `"native"`; track progress at https://github.com/golang/go/issues/7175 and https://github.com/golang/go/issues/7174
+When using `method = "native"` a ping is sent and the results are reported in
+native Go by the Telegraf process, eliminating the need to execute the system
+`ping` command.
 
 ### Configuration:
 
 ```toml
 [[inputs.ping]]
-  ## List of urls to ping
+  ## Hosts to send ping packets to.
   urls = ["example.org"]
 
-  ## Number of pings to send per collection (ping -c <COUNT>)
-  # count = 1
-
-  ## Interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
-  ## Not available in Windows.
-  # ping_interval = 1.0
-
-  ## Per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
-  # timeout = 1.0
-
-  ## Total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
-  # deadline = 10
-
-  ## Interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
-  ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
-  # interface = ""
-
-  ## How to ping. "native" doesn't have external dependencies, while "exec" depends on 'ping'.
+  ## Method used for sending pings, can be either "exec" or "native".  When set
+  ## to "exec" the systems ping command will be executed.  When set to "native"
+  ## the plugin will send pings directly.
+  ##
+  ## While the default is "exec" for backwards compatibility, new deployments
+  ## are encouraged to use the "native" method for improved compatibility and
+  ## performance.
   # method = "exec"
 
-  ## Specify the ping executable binary, default is "ping"
+  ## Number of ping packets to send per interval.  Corresponds to the "-c"
+  ## option of the ping command.
+  # count = 1
+
+  ## Time to wait between sending ping packets in seconds.  Operates like the
+  ## "-i" option of the ping command.
+  # ping_interval = 1.0
+
+  ## If set, the time to wait for a ping response in seconds.  Operates like
+  ## the "-W" option of the ping command.
+  # timeout = 1.0
+
+  ## If set, the total ping deadline, in seconds.  Operates like the -w option
+  ## of the ping command.
+  # deadline = 10
+
+  ## Interface or source address to send ping from.  Operates like the -I or -S
+  ## option of the ping command.
+  # interface = ""
+
+  ## Specify the ping executable binary.
   # binary = "ping"
 
-  ## Arguments for ping command. When arguments is not empty, system binary will be used and
-  ## other options (ping_interval, timeout, etc) will be ignored
+  ## Arguments for ping command. When arguments is not empty, the command from
+  ## the binary option will be used and other options (ping_interval, timeout,
+  ## etc) will be ignored.
   # arguments = ["-c", "3"]
 
-  ## Use only ipv6 addresses when resolving hostnames.
+  ## Use only IPv6 addresses when resolving a hostname.
   # ipv6 = false
 ```
 
 #### File Limit
 
-Since this plugin runs the ping command, it may need to open several files per
-host.  With a large host list you may receive a `too many open files` error.
+Since this plugin runs the ping command, it may need to open multiple files per
+host.  The number of files used is lessened with the `native` option but still
+many files are used.  With a large host list you may receive a `too many open
+files` error.
 
-To increase this limit on platforms using systemd it must be done in the
-service file.
+To increase this limit on platforms using systemd the recommended method is to
+use the "drop-in directory", usually located at
+`/etc/systemd/system/telegraf.service.d`.
 
-
-Find the service unit file:
+You can create or edit a drop-in file in the correct location using:
+```sh
+$ systemctl edit telegraf
 ```
-$ systemctl show telegraf.service -p FragmentPath
-FragmentPath=/lib/systemd/system/telegraf.service
-```
 
-Set the file number limit:
-```
+Increase the number of open files:
+```ini
 [Service]
-LimitNOFILE=4096
+LimitNOFILE=8192
 ```
 
-#### Permission Caveat (non Windows)
-
-It is preferred that this plugin listen on privileged ICMP sockets. To do so, telegraf can either be run as the root user or the root user can add the capability to access raw sockets to telegraf by running the following commant:
-
-```
-setcap cap_net_raw=eip /path/to/telegraf
+Restart Telegraf:
+```sh
+$ systemctl edit telegraf
 ```
 
-Another option (doesn't work as well or in all circumstances) is to listen on unprivileged raw sockets (non-Windows only). The system group of the user running telegraf must be allowed to create ICMP Echo sockets. [See man pages icmp(7) for `ping_group_range`](http://man7.org/linux/man-pages/man7/icmp.7.html). On Linux hosts, run the following to give a group the proper permissions:
+#### Linux Permissions
 
+When using `method = "native"`, Telegraf will attempt to use privileged raw
+ICMP sockets.  On most systems, doing so requires `CAP_NET_RAW` capabilities.
+
+With systemd:
+```sh
+$ systemctl edit telegraf
 ```
-sudo sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
+```ini
+[Service]
+CapabilityBoundingSet=CAP_NET_RAW
+AmbientCapabilities=CAP_NET_RAW
+```
+```sh
+$ systemctl restart telegraf
 ```
 
+Without systemd:
+```sh
+$ setcap cap_net_raw=eip /usr/bin/telegraf
+```
 
-### Metrics:
+Reference [`man 7 capabilities`][man 7 capabilities] for more information about
+setting capabilities.
+
+[man 7 capabilities]: http://man7.org/linux/man-pages/man7/capabilities.7.html
+
+When Telegraf cannot listen on a privileged ICMP socket it will attempt to use
+ICMP echo sockets.  If you wish to use this method you must ensure Telegraf's
+group, usually `telegraf`, is allowed to use ICMP echo sockets:
+
+```sh
+$ sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
+```
+
+Reference [`man 7 icmp`][man 7 icmp] for more information about ICMP echo
+sockets and the `ping_group_range` setting.
+
+[man 7 icmp]: http://man7.org/linux/man-pages/man7/icmp.7.html
+
+### Metrics
 
 - ping
   - tags:
@@ -102,24 +152,23 @@ sudo sysctl -w net.ipv4.ping_group_range="GROUP_ID_LOW   GROUP_ID_HIGH"
     - maximum_response_ms (integer)
     - standard_deviation_ms (integer, Available on Windows only with native ping)
     - errors (float, Windows only)
-    - reply_received (integer, Windows only*)
-    - percent_reply_loss (float, Windows only*)
+    - reply_received (integer, Windows with method = "exec" only)
+    - percent_reply_loss (float, Windows with method = "exec" only)
     - result_code (int, success = 0, no such host = 1, ping error = 2)
 
 ##### reply_received vs packets_received
 
-On Windows systems, "Destination net unreachable" reply will increment `packets_received` but not `reply_received`*
+On Windows systems with `method = "exec"`, the "Destination net unreachable" reply will increment `packets_received` but not `reply_received`*.
 
-### Example Output:
+##### ttl
 
-**Windows:**
-```
-ping,url=example.org result_code=0i,average_response_ms=7i,maximum_response_ms=9i,minimum_response_ms=7i,packets_received=4i,packets_transmitted=4i,percent_packet_loss=0,percent_reply_loss=0,reply_received=4i 1469879119000000000
-```
+There is currently no support for TTL on windows with `"native"`; track
+progress at https://github.com/golang/go/issues/7175 and
+https://github.com/golang/go/issues/7174
 
-**Linux:**
+
+### Example Output
+
 ```
 ping,url=example.org average_response_ms=23.066,ttl=63,maximum_response_ms=24.64,minimum_response_ms=22.451,packets_received=5i,packets_transmitted=5i,percent_packet_loss=0,result_code=0i,standard_deviation_ms=0.809 1535747258000000000
 ```
-
-*not when `method = "native"` is used

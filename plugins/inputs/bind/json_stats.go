@@ -16,6 +16,8 @@ import (
 type jsonStats struct {
 	OpCodes   map[string]int
 	QTypes    map[string]int
+	RCodes    map[string]int
+	ZoneStats map[string]int
 	NSStats   map[string]int
 	SockStats map[string]int
 	Views     map[string]jsonView
@@ -78,6 +80,10 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	tags["type"] = "opcode"
 	addJSONCounter(acc, tags, stats.OpCodes)
 
+	// RCodes stats
+	tags["type"] = "rcode"
+	addJSONCounter(acc, tags, stats.RCodes)
+
 	// Query RDATA types
 	tags["type"] = "qtype"
 	addJSONCounter(acc, tags, stats.QTypes)
@@ -89,6 +95,10 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 	// Socket statistics
 	tags["type"] = "sockstat"
 	addJSONCounter(acc, tags, stats.SockStats)
+
+	// Zonestats
+	tags["type"] = "zonestat"
+	addJSONCounter(acc, tags, stats.ZoneStats)
 
 	// Memory stats
 	fields := map[string]interface{}{

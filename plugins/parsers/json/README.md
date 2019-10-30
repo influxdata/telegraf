@@ -18,11 +18,15 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
+  ## When strict is true and a JSON array is being parsed, all objects within the
+  ## array must be valid
+  strict = false
+
   ## Query is a GJSON path that specifies a specific chunk of JSON to be
   ## parsed, if not specified the whole document will be parsed.
   ##
   ## GJSON query paths are described here:
-  ##   https://github.com/tidwall/gjson#path-syntax
+  ##   https://github.com/tidwall/gjson/tree/v1.3.0#path-syntax
   json_query = ""
 
   ## Tag keys is an array of keys that should be added as tags.
@@ -31,7 +35,7 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
     "my_tag_2"
   ]
 
-  ## String fields is an array of keys that should be added as string fields.
+  ## Array of glob pattern strings keys that should be added as string fields.
   json_string_fields = []
 
   ## Name key is the key to use as the measurement name.

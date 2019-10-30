@@ -9,12 +9,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-
-	"github.com/go-sql-driver/mysql"
 )
 
 type Mysql struct {
@@ -39,9 +38,12 @@ type Mysql struct {
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 	tls.ClientConfig
+	lastT            time.Time
+	initDone         bool
+	scanIntervalSlow uint32
 }
 
-var sampleConfig = `
+const sampleConfig = `
   ## specify servers via a url matching:
   ##  [username[:password]@][protocol[(address)]]/[?tls=[true|false|skip-verify|custom]]
   ##  see https://github.com/go-sql-driver/mysql#dsn-data-source-name
@@ -65,55 +67,56 @@ var sampleConfig = `
   ##           <1.6: metric_version = 1 (or unset)
   metric_version = 2
 
-  ## the limits for metrics form perf_events_statements
-  perf_events_statements_digest_text_limit  = 120
-  perf_events_statements_limit              = 250
-  perf_events_statements_time_limit         = 86400
-  #
   ## if the list is empty, then metrics are gathered from all databasee tables
-  table_schema_databases                    = []
-  #
+  # table_schema_databases = []
+
   ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list
-  gather_table_schema                       = false
-  #
+  # gather_table_schema = false
+
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
-  gather_process_list                       = true
-  #
+  # gather_process_list = false
+
   ## gather user statistics from INFORMATION_SCHEMA.USER_STATISTICS
-  gather_user_statistics                    = true
-  #
+  # gather_user_statistics = false
+
   ## gather auto_increment columns and max values from information schema
-  gather_info_schema_auto_inc               = true
-  #
+  # gather_info_schema_auto_inc = false
+
   ## gather metrics from INFORMATION_SCHEMA.INNODB_METRICS
-  gather_innodb_metrics                     = true
-  #
+  # gather_innodb_metrics = false
+
   ## gather metrics from SHOW SLAVE STATUS command output
-  gather_slave_status                       = true
-  #
+  # gather_slave_status = false
+
   ## gather metrics from SHOW BINARY LOGS command output
-  gather_binary_logs                        = false
-  #
+  # gather_binary_logs = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
-  gather_table_io_waits                     = false
-  #
+  # gather_table_io_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_LOCK_WAITS
-  gather_table_lock_waits                   = false
-  #
+  # gather_table_lock_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_INDEX_USAGE
-  gather_index_io_waits                     = false
-  #
+  # gather_index_io_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.EVENT_WAITS
-  gather_event_waits                        = false
-  #
+  # gather_event_waits = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.FILE_SUMMARY_BY_EVENT_NAME
-  gather_file_events_stats                  = false
-  #
+  # gather_file_events_stats = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.EVENTS_STATEMENTS_SUMMARY_BY_DIGEST
-  gather_perf_events_statements             = false
-  #
+  # gather_perf_events_statements = false
+
+  ## the limits for metrics form perf_events_statements
+  # perf_events_statements_digest_text_limit = 120
+  # perf_events_statements_limit = 250
+  # perf_events_statements_time_limit = 86400
+
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
-  interval_slow                   = "30m"
+  ##   example: interval_slow = "30m"
+  # interval_slow = ""
 
   ## Optional TLS Config (will be used if tls=custom parameter specified in server uri)
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -123,7 +126,12 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
-var defaultTimeout = time.Second * time.Duration(5)
+const (
+	defaultTimeout                             = 5 * time.Second
+	defaultPerfEventsStatementsDigestTextLimit = 120
+	defaultPerfEventsStatementsLimit           = 250
+	defaultPerfEventsStatementsTimeLimit       = 86400
+)
 
 func (m *Mysql) SampleConfig() string {
 	return sampleConfig
@@ -133,21 +141,16 @@ func (m *Mysql) Description() string {
 	return "Read metrics from one or many mysql servers"
 }
 
-var (
-	localhost        = ""
-	lastT            time.Time
-	initDone         = false
-	scanIntervalSlow uint32
-)
+const localhost = ""
 
 func (m *Mysql) InitMysql() {
 	if len(m.IntervalSlow) > 0 {
 		interval, err := time.ParseDuration(m.IntervalSlow)
 		if err == nil && interval.Seconds() >= 1.0 {
-			scanIntervalSlow = uint32(interval.Seconds())
+			m.scanIntervalSlow = uint32(interval.Seconds())
 		}
 	}
-	initDone = true
+	m.initDone = true
 }
 
 func (m *Mysql) Gather(acc telegraf.Accumulator) error {
@@ -156,7 +159,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		return m.gatherServer(localhost, acc)
 	}
 	// Initialise additional query intervals
-	if !initDone {
+	if !m.initDone {
 		m.InitMysql()
 	}
 
@@ -184,6 +187,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// These are const but can't be declared as such because golang doesn't allow const maps
 var (
 	// status counter
 	generalThreadStates = map[string]uint32{
@@ -426,12 +430,12 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	// Global Variables may be gathered less often
 	if len(m.IntervalSlow) > 0 {
-		if uint32(time.Since(lastT).Seconds()) >= scanIntervalSlow {
+		if uint32(time.Since(m.lastT).Seconds()) >= m.scanIntervalSlow {
 			err = m.gatherGlobalVariables(db, serv, acc)
 			if err != nil {
 				return err
 			}
-			lastT = time.Now()
+			m.lastT = time.Now()
 		}
 	}
 
@@ -1735,6 +1739,10 @@ func getDSNTag(dsn string) string {
 
 func init() {
 	inputs.Add("mysql", func() telegraf.Input {
-		return &Mysql{}
+		return &Mysql{
+			PerfEventsStatementsDigestTextLimit: defaultPerfEventsStatementsDigestTextLimit,
+			PerfEventsStatementsLimit:           defaultPerfEventsStatementsLimit,
+			PerfEventsStatementsTimeLimit:       defaultPerfEventsStatementsTimeLimit,
+		}
 	})
 }
