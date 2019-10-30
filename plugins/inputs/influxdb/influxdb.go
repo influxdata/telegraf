@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -72,10 +73,16 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	for _, u := range i.URLs {
 		wg.Add(1)
-		go func(url string) {
+		go func(u string) {
 			defer wg.Done()
-			if err := i.gatherURL(acc, url); err != nil {
-				acc.AddError(fmt.Errorf("[url=%s]: %s", url, err))
+			if err := i.gatherURL(acc, u); err != nil {
+				yourl, err2 := url.Parse(u)
+				if err2 != nil || yourl == nil {
+					acc.AddError(err)
+				} else {
+					yourl.User = nil
+					acc.AddError(fmt.Errorf("[url=%s]: %s", yourl.String(), err.Error()))
+				}
 			}
 		}(u)
 	}
