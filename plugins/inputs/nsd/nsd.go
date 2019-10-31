@@ -26,6 +26,10 @@ type Nsd struct {
 	UseSudo bool
 	Server  string
 
+	host string
+	port string
+	ip net.IP
+
 	filter filter.Filter
 	run    runner
 }
@@ -114,25 +118,28 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	fieldsServers := make(map[string]map[string]interface{})
 
-	host, port, err := net.SplitHostPort(s.Server)
-	// the port is nil since we already checked for other errors in the nsdRunner
-	if err != nil {
-		port = defaultPort
-	}
-	// this should only occur in tests
-	hostIP := net.ParseIP(host)
-	if hostIP == nil {
-		host = "localhost"
-	} else if localhostNet.Contains(hostIP) || localhostNetv6.Contains(hostIP) {
-		hostname, err := os.Hostname()
+	if s.host == "" || s.port == "" {
+		s.host, s.port, err = net.SplitHostPort(s.Server)
+		// the port is nil since we already checked for other errors in the nsdRunner
 		if err != nil {
-			host = "localhost"
-		} else {
-			host = hostname
+			s.port = defaultPort
+		}
+		s.ip = net.ParseIP(s.host)
+		if s.ip == nil {
+			return fmt.Errorf("invalid server ip for host: %s", s.host)
+		}
+
+		if localhostNet.Contains(s.ip) || localhostNetv6.Contains(s.ip) {
+			hostname, err := os.Hostname()
+			if err != nil {
+				s.host = "localhost"
+			} else {
+				s.host = hostname
+			}
 		}
 	}
 
-	tags := map[string]string{"source": host, "port": port}
+	tags := map[string]string{"source": s.host, "port": s.port}
 
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
