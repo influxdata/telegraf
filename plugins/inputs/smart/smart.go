@@ -394,7 +394,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 
 		if m.ErrorCounterLog {
 			ecl := errorCounterLog.FindStringSubmatch(line)
-			if len(ecl) > 1 {
+			if len(ecl) == 9 {
 				eclTags := map[string]string{}
 				eclFields := make(map[string]interface{})
 
