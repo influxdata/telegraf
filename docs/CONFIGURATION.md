@@ -127,9 +127,11 @@ The agent table configures Telegraf and the defaults used across all plugins.
   flush_interval + flush_jitter.
 
 - **flush_jitter**:
-  Jitter the flush [interval][] by a random amount. This is primarily to avoid
-  large write spikes for users running a large number of telegraf instances.
-  ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s.
+  Default flush jitter for all outputs. This jitters the flush [interval][]
+  by a random amount. This is primarily to avoid large write spikes for users
+  running a large number of telegraf instances. ie, a jitter of 5s and interval
+  10s means flushes will happen every 10-15s.
+
 
 - **precision**:
   Collected metrics are rounded to the precision specified as an [interval][].
@@ -260,6 +262,8 @@ Parameters that can be used with any output plugin:
 - **alias**: Name an instance of a plugin.
 - **flush_interval**: The maximum time between flushes.  Use this setting to
   override the agent `flush_interval` on a per plugin basis.
+- **flush_jitter**: The amount of time to jitter the flush interval.  Use this
+  setting to override the agent `flush_jitter` on a per plugin basis.
 - **metric_batch_size**: The maximum number of metrics to send at once.  Use
   this setting to override the agent `metric_batch_size` on a per plugin basis.
 - **metric_buffer_limit**: The maximum number of unsent metrics to buffer.
@@ -275,6 +279,7 @@ Override flush parameters for a single output:
 ```toml
 [agent]
   flush_interval = "10s"
+  flush_jitter = "5s"
   metric_batch_size = 1000
 
 [[outputs.influxdb]]
@@ -284,6 +289,7 @@ Override flush parameters for a single output:
 [[outputs.file]]
   files = [ "stdout" ]
   flush_interval = "1s"
+  flush_jitter = "1s"
   metric_batch_size = 10
 ```
 
