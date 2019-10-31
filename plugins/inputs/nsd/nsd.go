@@ -48,6 +48,10 @@ var sampleConfig = `
   # timeout = "1s"
 `
 
+const defaultPort = "8952"
+var localhostNet *net.IPNet
+var localhostNetv6 *net.IPNet
+
 func (s *Nsd) SampleConfig() string {
 	return sampleConfig
 }
@@ -113,10 +117,8 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 	host, port, err := net.SplitHostPort(s.Server)
 	// the port is nil since we already checked for other errors in the nsdRunner
 	if err != nil {
-		port = "8952"
+		port = defaultPort
 	}
-	_, localhostNet, _ := net.ParseCIDR("127.0.0.1/8")
-	_, localhostNetv6, _ := net.ParseCIDR("::1/128")
 	// this should only occur in tests
 	hostIP := net.ParseIP(host)
 	if hostIP == nil {
@@ -197,4 +199,6 @@ func init() {
 			Server:  "",
 		}
 	})
+	_, localhostNet, _ = net.ParseCIDR("127.0.0.1/8")
+	_, localhostNetv6, _ = net.ParseCIDR("::1/128")
 }
