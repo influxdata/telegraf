@@ -380,7 +380,6 @@ func TestExcludedDev(t *testing.T) {
 
 func TestGatherSATAInfo(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
@@ -403,7 +402,6 @@ func TestGatherSATAInfo(t *testing.T) {
 
 func TestGatherSATAInfo65(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
@@ -426,7 +424,6 @@ func TestGatherSATAInfo65(t *testing.T) {
 
 func TestGatherHgstSAS(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
@@ -449,7 +446,6 @@ func TestGatherHgstSAS(t *testing.T) {
 
 func TestGatherHtSAS(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
@@ -520,7 +516,6 @@ func TestGatherHtSAS(t *testing.T) {
 
 func TestGatherSSD(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
@@ -543,7 +538,6 @@ func TestGatherSSD(t *testing.T) {
 
 func TestGatherSSDRaid(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
@@ -566,7 +560,6 @@ func TestGatherSSDRaid(t *testing.T) {
 
 func TestGatherNvme(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
@@ -693,7 +686,6 @@ func TestGatherNvme(t *testing.T) {
 
 func TestGatherHgstSASErrorCounterLog(t *testing.T) {
 	s := NewSmart()
-	s.Timeout = internal.Duration{Duration: time.Second * 30}
 	s.UseSudo = true
 	s.Attributes = true
 	s.Path = "smartctl"
