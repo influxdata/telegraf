@@ -50,6 +50,7 @@ type MQTTConsumer struct {
 	QoS                    int               `toml:"qos"`
 	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
+	AutoReconnect          bool              `toml:"auto_reconnect"`
 
 	parser parsers.Parser
 
