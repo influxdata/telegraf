@@ -233,6 +233,17 @@ func (m *MQTTConsumer) connect() error {
 		return nil
 	}
 
+	return nil
+}
+
+func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
+	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
+	m.Log.Debugf("Disconnected %v", m.Servers)
+	m.state = Disconnected
+	return
+}
+
+func (m *MQTTConsumer) onConnect(c mqtt.Client) {
 	topics := make(map[string]byte)
 	for _, topic := range m.Topics {
 		topics[topic] = byte(m.QoS)
@@ -244,15 +255,6 @@ func (m *MQTTConsumer) connect() error {
 		m.acc.AddError(fmt.Errorf("subscription error: topics: %s: %v",
 			strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 	}
-
-	return nil
-}
-
-func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
-	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
-	m.Log.Debugf("Disconnected %v", m.Servers)
-	m.state = Disconnected
-	return
 }
 
 func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
@@ -307,11 +309,11 @@ func (m *MQTTConsumer) Stop() {
 }
 
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
-	if m.state == Disconnected {
+	/*if m.state == Disconnected {
 		m.state = Connecting
 		m.Log.Debugf("Connecting %v", m.Servers)
 		m.connect()
-	}
+	}*/
 
 	return nil
 }
@@ -366,6 +368,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts.SetKeepAlive(time.Second * 60)
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
+	opts.SetOnConnectHandler(m.onConnect)
 
 	return opts, nil
 }
