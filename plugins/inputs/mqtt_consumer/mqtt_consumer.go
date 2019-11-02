@@ -114,8 +114,8 @@ var sampleConfig = `
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
 
-  # auto_reconnect sets whether the automatic reconnection
-  # logic should be used when the connection is lost. 
+  ## auto_reconnect sets whether the automatic reconnection
+  ## logic should be used when the connection is lost. 
   # auto_reconnect = true
 
   ## Persistent session disables clearing of the client session on connection.
@@ -362,7 +362,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 
 		opts.AddBroker(server)
 	}
-	opts.SetAutoReconnect(false)
+	opts.SetAutoReconnect(m.AutoReconnect)
 	opts.SetKeepAlive(time.Second * 60)
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
