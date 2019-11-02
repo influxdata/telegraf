@@ -369,6 +369,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	opts.SetCleanSession(!m.PersistentSession)
 	opts.SetConnectionLostHandler(m.onConnectionLost)
 	opts.SetOnConnectHandler(m.onConnect)
+	opts.SetConnectRetry(true)
 
 	return opts, nil
 }
