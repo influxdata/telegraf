@@ -1493,14 +1493,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 							default:
 							}
 						} else if integer, ok := kv.Value.(*ast.Integer); ok {
-							v, err := strconv.Atoi(integer.Value)
+							v, err := strconv.ParseUint(integer.Value, 10, 32)
 							if err == nil {
 								fmt.Printf("D! %s %d\n", kv.Key, v)
 								switch kv.Key {
 								case "offset":
-									field.Offset = v
+									field.Offset = uint(v)
 								case "size":
-									field.Size = v
+									field.Size = uint(v)
 								default:
 								}
 							}

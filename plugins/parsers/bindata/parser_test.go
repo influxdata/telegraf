@@ -74,6 +74,52 @@ func TestAllFieldsOrderedBigEndian(t *testing.T) {
 	}, metrics[0].Fields())
 }
 
+func TestFieldsNoSize(t *testing.T) {
+
+	var noSize = BinData{
+		MetricName: "no_size",
+		Endiannes:  "be",
+		TimeFormat: "unix",
+		Fields: []Field{
+			Field{Name: "fieldBool0", Type: "bool", Offset: 0},
+			Field{Name: "fieldBool1", Type: "bool", Offset: 1},
+			Field{Name: "fieldUint8", Type: "uint8", Offset: 2},
+			Field{Name: "fieldInt8", Type: "int8", Offset: 3},
+			Field{Name: "fieldUint16", Type: "uint16", Offset: 4},
+			Field{Name: "fieldInt16", Type: "int16", Offset: 6},
+			Field{Name: "fieldUint32", Type: "uint32", Offset: 8},
+			Field{Name: "fieldInt32", Type: "int32", Offset: 12},
+			Field{Name: "fieldUint64", Type: "uint64", Offset: 16},
+			Field{Name: "fieldInt64", Type: "int64", Offset: 24},
+			Field{Name: "fieldFloat32", Type: "float32", Offset: 32},
+			Field{Name: "fieldFloat64", Type: "float64", Offset: 36},
+			Field{Name: "fieldString", Type: "string", Offset: 44, Size: 20},
+			Field{Name: "time", Type: "int32", Offset: 64},
+		},
+	}
+
+	metrics, err := noSize.Parse(binaryDataBigEndian)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, noSize.MetricName, metrics[0].Name())
+	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
+	assert.Equal(t, map[string]interface{}{
+		"fieldBool0":   false,
+		"fieldBool1":   true,
+		"fieldUint8":   uint64(2),
+		"fieldInt8":    int64(-2),
+		"fieldUint16":  uint64(4),
+		"fieldInt16":   int64(-4),
+		"fieldUint32":  uint64(6),
+		"fieldInt32":   int64(-6),
+		"fieldUint64":  uint64(8),
+		"fieldInt64":   int64(-8),
+		"fieldFloat32": 10.5625,
+		"fieldFloat64": 11.0,
+		"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
+	}, metrics[0].Fields())
+}
+
 func TestAllFieldsLittleEndian(t *testing.T) {
 
 	var allTypes = BinData{
