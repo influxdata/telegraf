@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/theovassiliou/telegraf"
+	"github.com/theovassiliou/telegraf/internal"
+	"github.com/theovassiliou/telegraf/plugins/inputs"
 )
 
 const defaultTimeout = 5 * time.Second
@@ -69,11 +69,12 @@ type Devices struct {
 	Type       string `json:"type"`
 	Enabled    bool   `json:"enabled"`
 	Properties struct {
-		Dead   interface{} `json:"dead"`
-		Energy interface{} `json:"energy"`
-		Power  interface{} `json:"power"`
-		Value  interface{} `json:"value"`
-		Value2 interface{} `json:"value2"`
+		Dead    interface{} `json:"dead"`
+		Energy  interface{} `json:"energy"`
+		Power   interface{} `json:"power"`
+		Value   interface{} `json:"value"`
+		Value2  interface{} `json:"value2"`
+		Battery interface{} `json:"batteryLevel"`
 	} `json:"properties"`
 }
 
@@ -204,6 +205,12 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 		if device.Properties.Value2 != nil {
 			if fValue, err := strconv.ParseFloat(device.Properties.Value2.(string), 64); err == nil {
 				fields["value2"] = fValue
+			}
+		}
+
+		if device.Properties.Battery != nil {
+			if fValue, err := strconv.ParseFloat(device.Properties.Battery.(string), 64); err == nil {
+				fields["battery"] = fValue
 			}
 		}
 
