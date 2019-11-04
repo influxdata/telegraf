@@ -154,7 +154,7 @@ func (w *Whatap) send(code byte, b []byte) (err error) {
 	for 0 < nbyteleft {
 		nbytethistime := 0
 		// Set Deadline
-		err = w.Session.Client.SetWriteDeadline(time.Now().Add(5 * time.Millisecond))
+		err = w.Session.Client.SetWriteDeadline(time.Now().Add(w.Timeout * time.Millisecond))
 		if err != nil {
 			log.Println("W! [outputs.whatap] cannot set tcp write deadline:", err)
 		}
