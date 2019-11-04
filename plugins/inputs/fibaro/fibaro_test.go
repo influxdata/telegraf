@@ -108,7 +108,8 @@ const devicesJSON = `
             "enabled": true,
             "properties": {
                 "dead": "false",
-                "value": "22.80"
+                "value": "22.80",
+                "batteryLevel": "88"
             },
             "sortOrder": 4
         },
@@ -196,7 +197,7 @@ func TestJSONSuccess(t *testing.T) {
 
 	// Ensure fields / values are correct - Device 4
 	tags = map[string]string{"deviceId": "4", "section": "Section 3", "room": "Room 4", "name": "Device 4", "type": "com.fibaro.temperatureSensor"}
-	fields = map[string]interface{}{"value": float64(22.8)}
+	fields = map[string]interface{}{"value": float64(22.8), "battery": float64(88)}
 	acc.AssertContainsTaggedFields(t, "fibaro", fields, tags)
 
 	// Ensure fields / values are correct - Device 5
