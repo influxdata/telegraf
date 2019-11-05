@@ -355,4 +355,5 @@ func TestPingGatherNative(t *testing.T) {
 
 	assert.NoError(t, acc.GatherError(p.Gather))
 	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
+	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
 }
