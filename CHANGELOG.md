@@ -1,3 +1,9 @@
+## v1.12.5 [unreleased]
+
+#### Bugfixes
+
+- [#6576](https://github.com/influxdata/telegraf/issues/6576): Fix incorrect results in ping input plugin.
+
 ## v1.12.4 [2019-10-23]
 
 #### Release Notes
