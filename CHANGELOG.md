@@ -46,6 +46,7 @@
 #### Bugfixes
 
 - [#6576](https://github.com/influxdata/telegraf/issues/6576): Fix incorrect results in ping input plugin.
+- [#6610](https://github.com/influxdata/telegraf/pull/6610): Add missing character replacement to sql_instance tag.
 
 ## v1.12.4 [2019-10-23]
 
