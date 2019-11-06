@@ -67,6 +67,7 @@ const sampleConfig = `
   ## - AzureDBResourceStats
   ## - AzureDBResourceGovernance
   ## - SqlRequests
+  ## - ServerProperties
   exclude_query = [ 'Schedulers' ]
 `
 
