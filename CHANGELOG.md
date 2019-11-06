@@ -36,6 +36,7 @@
 - [#6532](https://github.com/influxdata/telegraf/pull/6532): Add strict mode to JSON parser that can be disable to ignore invalid items.
 - [#6543](https://github.com/influxdata/telegraf/pull/6543): Add support for Kubernetes 1.16 and remove deprecated API usage.
 - [#6283](https://github.com/influxdata/telegraf/pull/6283): Add gathering of RabbitMQ federation link metrics.
+- [#6356](https://github.com/influxdata/telegraf/pull/6356): Add bearer token defaults for Kubernetes plugins.
 
 #### Bugfixes
 
