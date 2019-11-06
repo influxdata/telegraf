@@ -98,7 +98,7 @@ func (a *AppDynamicsMA) Close() error {
 /**************************************
 * BuildMetrics
 **************************************/
-func BuildMetrics(metrics []telegraf.Metric, metricPath string) *AppDynamicsSlice {
+func BuildMetrics(metrics []telegraf.Metric, metricPath string) AppDynamicsSlice {
 	var appdSlice AppDynamicsSlice
 	var metricPathBase string
 	var buildMetric bool
@@ -157,7 +157,7 @@ func BuildMetrics(metrics []telegraf.Metric, metricPath string) *AppDynamicsSlic
 			}
 		}
 	}
-	return &appdSlice
+	return appdSlice
 }
 
 /**************************************

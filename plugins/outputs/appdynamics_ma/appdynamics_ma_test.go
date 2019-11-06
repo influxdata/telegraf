@@ -21,19 +21,19 @@ import (
 const (
 	testHost       = "http://127.0.0.1"
 	testPort       = "8293"
-	testMetricPath = "Custom Metrics|Telegraf-Test|"
+	testMetricPath = "Custom Metrics|Telegraf|"
 )
 
 /*************************************************************************
 * Function to create and return a test AppDynamicsMA using test vals
 *************************************************************************/
-func CreateTestAppDMa() *AppDynamicsMA {
+func CreateTestAppDMa() AppDynamicsMA {
 	a := AppDynamicsMA{
 		Host:       testHost,
 		Port:       testPort,
 		MetricPath: testMetricPath}
 
-	return &a
+	return a
 }
 
 /*************************************************************************
@@ -77,16 +77,15 @@ func TestBuildMetric(t *testing.T) {
 	myTestSlice := BuildMetrics(myTestMetric, defaultMetricPath)
 
 	myManualTestMetric1 := AppDynamicsJson{
-		MetricName:     "Custom Metrics|Telegraf-Test|cpu|us-east-1|localhost|usage_busy",
+		MetricName:     "Custom Metrics|Telegraf|cpu|us-east-1|localhost|usage_idle",
 		AggregatorType: "AVERAGE",
-		Value:          1}
-
+		Value:          90}
 	myManualTestMetric2 := AppDynamicsJson{
-		MetricName:     "Custom Metrics|Telegraf-Test|cpu|us-east-1|localhost|usage_idle",
+		MetricName:     "Custom Metrics|Telegraf|cpu|us-east-1|localhost|usage_busy",
 		AggregatorType: "AVERAGE",
-		Value:          99}
+		Value:          10}
 
-	var myManualTestSlice *AppDynamicsSlice
+	var myManualTestSlice AppDynamicsSlice
 	myManualTestSlice.Appdynamics_MA = append(myManualTestSlice.Appdynamics_MA, myManualTestMetric1)
 	myManualTestSlice.Appdynamics_MA = append(myManualTestSlice.Appdynamics_MA, myManualTestMetric2)
 
@@ -114,6 +113,6 @@ func TestBadStatusCode(t *testing.T) {
 	if err == nil {
 		t.Errorf("error expected but none returned")
 	} else {
-		require.EqualError(t, fmt.Errorf("received bad status code, 500\n"), err.Error())
+		require.EqualError(t, fmt.Errorf("error POSTing metrics, Post http://127.0.0.1:8293/api/v1/metrics: dial tcp 127.0.0.1:8293: connect: connection refused\n"), err.Error())
 	}
 }
