@@ -10,13 +10,13 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/snmp"
 
 	"github.com/soniah/gosnmp"
 )
 
 type SnmpTrap struct {
 	Port uint16 `toml:"port"`
-	//todo add mib settings
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
@@ -95,29 +95,46 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 		fields := map[string]interface{}{}
 		tags := map[string]string{}
 
+		tags["trap_version"] = packet.Version.String()
+
 		for _, v := range packet.Variables {
-			//todo: determine which snmp variables are tags and which
-			//are fields.  for now everything's a tag
+			//build a name and value for each variable to use as tags
+			//and fields.  defaults are the uninterpreted values
+			name := v.Name
+			value := v.Value
 
-			//todo: look up v.Name smi
-			var name string
-			name = v.Name
-
-			//todo: format value based on its snmp type
-			var value string
-			switch v.Type {
-			//case gosnmp.OctetString:
-			//b := v.Value.([]byte)
-			//case gosnmp.ObjectIdentifier:
-			//todo: look up v.Value smi
-			default:
-				value = fmt.Sprintf("%v", v.Value)
+			//use system mibs to resolve the name if possible
+			_, _, oidText, _, err := snmp.SnmpTranslate(v.Name)
+			if nil == err {
+				name = oidText //would mib name be useful here?
 			}
 
-			tags[name] = value //fmt.Sprintf("%v", v.Value)
-			tags[name+"_type"] = fmt.Sprintf("%v", v.Type)
+			//todo: format the pdu value based on its snmp type and
+			//the mib's textual convention.  The snmp input plugin
+			//only handles textual convention for ip and mac addresses
+
+			switch v.Type {
+			//case gosnmp.OctetString:
+				//b := v.Value.([]byte)
+			case gosnmp.ObjectIdentifier:
+				s, ok := v.Value.(string)
+				if (ok) {
+					if _, _, oidText, _, err := snmp.SnmpTranslate(s); ok && nil == err {
+						value = oidText //would mib name be useful here?
+					}
+				}
+				//1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.  If
+				//v.Name is this oid, set a tag of the trap name.
+				if (v.Name == ".1.3.6.1.6.3.1.1.4.1.0") {
+					tags["trap_name"] = fmt.Sprintf("%v", value)
+					continue
+				}
+			}
+
+			fields[name] = value
+			fields[name+"_type"] = v.Type.String()
 		}
-		fields["foo"] = "bar"
+
 		s.acc.AddFields("snmp_trap", fields, tags, tm)
 	}
 }
