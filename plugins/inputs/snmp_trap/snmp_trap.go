@@ -115,17 +115,17 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 
 			switch v.Type {
 			//case gosnmp.OctetString:
-				//b := v.Value.([]byte)
+			//b := v.Value.([]byte)
 			case gosnmp.ObjectIdentifier:
 				s, ok := v.Value.(string)
-				if (ok) {
+				if ok {
 					if _, _, oidText, _, err := snmp.SnmpTranslate(s); ok && nil == err {
 						value = oidText //would mib name be useful here?
 					}
 				}
 				//1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.  If
 				//v.Name is this oid, set a tag of the trap name.
-				if (v.Name == ".1.3.6.1.6.3.1.1.4.1.0") {
+				if v.Name == ".1.3.6.1.6.3.1.1.4.1.0" {
 					tags["trap_name"] = fmt.Sprintf("%v", value)
 					continue
 				}
