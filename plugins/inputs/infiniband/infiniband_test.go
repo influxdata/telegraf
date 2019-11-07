@@ -31,6 +31,11 @@ func TestInfiniband(t *testing.T) {
 		"VL15_dropped": uint64(0),
 	}
 
+	tags := map[string]string {
+		"device": "m1x5_0",
+		"port": "1",
+	}
+
 	sample_rdmastats_entries := []rdmamap.RdmaStatEntry{
 		{
 			Name: "excessive_buffer_overrun_errors",
@@ -120,8 +125,8 @@ func TestInfiniband(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	addStats("m1x5_0", "1", sample_rdmastats_entries, acc)
+	addStats("m1x5_0", "1", sample_rdmastats_entries, &acc)
 
-	
+	acc.AssertContainsTaggedFields(t, "infiniband", fields, tags)
 	
 }
