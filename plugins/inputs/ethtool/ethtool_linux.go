@@ -52,24 +52,25 @@ func (e *Ethtool) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// Initialise the Command Tool
+func (e *Ethtool) Init() error {
+	return e.command.Init()
+}
+
 // Gather the stats for the interface.
 func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulator) {
 
 	tags := make(map[string]string)
 	tags[tagInterface] = iface.Name
 
-	// Optionally add driver name as a tag
-	if e.DriverName {
-
-		driverName, err := e.command.DriverName(iface.Name)
-		if err != nil {
-			driverErr := errors.Wrapf(err, "%s driver", iface.Name)
-			acc.AddError(driverErr)
-			return
-		}
-
-		tags[tagDriverName] = driverName
+	driverName, err := e.command.DriverName(iface.Name)
+	if err != nil {
+		driverErr := errors.Wrapf(err, "%s driver", iface.Name)
+		acc.AddError(driverErr)
+		return
 	}
+
+	tags[tagDriverName] = driverName
 
 	fields := make(map[string]interface{})
 	stats, err := e.command.Stats(iface.Name)
@@ -87,8 +88,21 @@ func (e *Ethtool) gatherEthtoolStats(iface net.Interface, acc telegraf.Accumulat
 }
 
 func NewCommandEthtool() *CommandEthtool {
-	e, _ := ethtool.NewEthtool()
-	return &CommandEthtool{e}
+	return &CommandEthtool{}
+}
+
+func (c *CommandEthtool) Init() error {
+
+	if c.ethtool != nil {
+		return nil
+	}
+
+	e, err := ethtool.NewEthtool()
+	if err == nil {
+		c.ethtool = e
+	}
+
+	return err
 }
 
 func (c *CommandEthtool) DriverName(intf string) (string, error) {
@@ -116,7 +130,6 @@ func init() {
 		return &Ethtool{
 			InterfaceInclude: []string{},
 			InterfaceExclude: []string{},
-			DriverName:       true,
 			command:          NewCommandEthtool(),
 		}
 	})

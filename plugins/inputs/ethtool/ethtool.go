@@ -5,6 +5,7 @@ import (
 )
 
 type Command interface {
+	Init() error
 	DriverName(intf string) (string, error)
 	Interfaces() ([]net.Interface, error)
 	Stats(intf string) (map[string]uint64, error)
@@ -16,9 +17,6 @@ type Ethtool struct {
 
 	// This is the list of interface names to ignore
 	InterfaceExclude []string `toml:"interface_exclude"`
-
-	// Whether to include the driver name in the tag
-	DriverName bool `toml:"driver_name_tag"`
 
 	// the ethtool command
 	command Command

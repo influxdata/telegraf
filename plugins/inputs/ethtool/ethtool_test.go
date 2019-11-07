@@ -1,5 +1,3 @@
-// +build linux
-
 package ethtool
 
 import (
@@ -23,6 +21,11 @@ type InterfaceMock struct {
 
 type CommandEthtoolMock struct {
 	InterfaceMap map[string]*InterfaceMock
+}
+
+func (c *CommandEthtoolMock) Init() error {
+	// Not required for test mock
+	return nil
 }
 
 func (c *CommandEthtoolMock) DriverName(intf string) (driverName string, err error) {
@@ -283,7 +286,6 @@ func setup() {
 	command = &Ethtool{
 		InterfaceInclude: []string{},
 		InterfaceExclude: []string{},
-		DriverName:       true,
 		command:          c,
 	}
 }
@@ -374,27 +376,4 @@ func TestGatherIgnoreInterfaces(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
 
-}
-
-func TestGatherDisableDriverName(t *testing.T) {
-
-	setup()
-	var acc testutil.Accumulator
-
-	command.DriverName = false
-
-	err := command.Gather(&acc)
-	assert.NoError(t, err)
-	assert.Len(t, acc.Metrics, 2)
-
-	expectedFieldsEth1 := toStringMapInterface(interfaceMap["eth1"].Stat)
-	expectedTagsEth1 := map[string]string{
-		"interface": "eth1",
-	}
-	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth1, expectedTagsEth1)
-	expectedFieldsEth2 := toStringMapInterface(interfaceMap["eth2"].Stat)
-	expectedTagsEth2 := map[string]string{
-		"interface": "eth2",
-	}
-	acc.AssertContainsTaggedFields(t, pluginName, expectedFieldsEth2, expectedTagsEth2)
 }
