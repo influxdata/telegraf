@@ -514,6 +514,14 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:530233672f656641b365f8efb38ed9fba80e420baff2ce87633813ab3755ed6d"
+  name = "github.com/golang/mock"
+  packages = ["gomock"]
+  pruneopts = ""
+  revision = "51421b967af1f557f93a59e0057aaf15ca02e29c"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:f958a1c137db276e52f0b50efee41a1a389dcdded59a69711f3e872757dab34b"
   name = "github.com/golang/protobuf"
   packages = [
@@ -1104,12 +1112,12 @@
   version = "v1.0.5"
 
 [[projects]]
-  branch = "master"
-  digest = "1:4b0cabe65ca903a7b2a3e6272c5304eb788ce196d35ecb901c6563e5e7582443"
+  digest = "1:a1cb5e999ad98b9838147e11ed1bdb000e750ee8872e2e21c74d9464cc9110c0"
   name = "github.com/soniah/gosnmp"
   packages = ["."]
   pruneopts = ""
-  revision = "96b86229e9b3ffb4b954144cdc7f98fe3ee1003f"
+  revision = "40eae407a1f8cbbe3f3f14c57bde0b16db1cfe85"
+  version = "v1.22.0"
 
 [[projects]]
   branch = "master"
