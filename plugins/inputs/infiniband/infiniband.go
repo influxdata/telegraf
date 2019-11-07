@@ -1,17 +1,16 @@
 package infiniband
 
 import (
-	"strconv"
 	"fmt"
 	"github.com/Mellanox/rdmamap"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"strconv"
 )
 
 // Stores the configuration values for the infiniband plugin - as there are no
 // config values, this is intentionally empty
 type Infiniband struct {
-
 }
 
 // Sample configuration for plugin
@@ -48,7 +47,7 @@ func (s *Infiniband) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				return err
 			}
-			
+
 			addStats(dev, port, stats, acc)
 		}
 	}
@@ -57,8 +56,8 @@ func (s *Infiniband) Gather(acc telegraf.Accumulator) error {
 }
 
 // Add the statistics to the accumulator
-func addStats(dev string, port string, stats[] rdmamap.RdmaStatEntry, acc telegraf.Accumulator) {
-	
+func addStats(dev string, port string, stats []rdmamap.RdmaStatEntry, acc telegraf.Accumulator) {
+
 	// Allow users to filter by card and port
 	tags := map[string]string{"device": dev, "port": port}
 	fields := make(map[string]interface{})
