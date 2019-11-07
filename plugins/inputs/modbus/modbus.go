@@ -158,9 +158,10 @@ func connect(m *Modbus) error {
 
 	switch u.Scheme {
 	case "tcp":
-		host, port, _err := net.SplitHostPort(u.Host)
-		if _err != nil {
-			return _err
+		var host, port string
+		host, port, err = net.SplitHostPort(u.Host)
+		if err != nil {
+			return err
 		}
 		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
 		m.tcpHandler.Timeout = m.Timeout.Duration
@@ -204,10 +205,10 @@ func connect(m *Modbus) error {
 			m.isConnected = true
 			return nil
 		} else {
-			return fmt.Errorf("Not valid protcol [%s] - [%s] ", u.Scheme, m.TransmissionMode)
+			return fmt.Errorf("not valid protocol [%s] - [%s] ", u.Scheme, m.TransmissionMode)
 		}
 	default:
-		return fmt.Errorf("Not valid Controller")
+		return fmt.Errorf("not valid Controller")
 	}
 }
 
@@ -270,7 +271,7 @@ func initialization(m *Modbus) error {
 			} else if name == cHoldingRegisters {
 				fn = m.client.ReadHoldingRegisters
 			} else {
-				return fmt.Errorf("Not Valid function")
+				return fmt.Errorf("not Valid function")
 			}
 
 			m.registers = append(m.registers, register{name, registersRange, fn, fields})
@@ -289,12 +290,12 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 	for i := range t {
 		//check empty name
 		if t[i].Name == "" {
-			return fmt.Errorf("Empty Name in %s", n)
+			return fmt.Errorf("empty Name in %s", n)
 		}
 
 		//search name duplicate
 		if nameEncountered[t[i].Name] {
-			return fmt.Errorf("Name [%s] in %s is Duplicated", t[i].Name, n)
+			return fmt.Errorf("name [%s] in %s is Duplicated", t[i].Name, n)
 		} else {
 			nameEncountered[t[i].Name] = true
 		}
@@ -310,7 +311,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 			}
 
 			if !byteOrderEncountered {
-				return fmt.Errorf("Not valid Byte Order [%s] in %s", t[i].ByteOrder, n)
+				return fmt.Errorf("not valid Byte Order [%s] in %s", t[i].ByteOrder, n)
 			}
 
 			// search data type
@@ -323,31 +324,31 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 			}
 
 			if !dataTypeEncountered {
-				return fmt.Errorf("Not valid Data Type [%s] in %s", t[i].DataType, n)
+				return fmt.Errorf("not valid Data Type [%s] in %s", t[i].DataType, n)
 			}
 
 			// check scale
 			_, err := strconv.ParseFloat(t[i].Scale, 32)
 			if err != nil {
-				return fmt.Errorf("Not valid Scale [%s] in %s", t[i].Scale, n)
+				return fmt.Errorf("not valid Scale [%s] in %s", t[i].Scale, n)
 			}
 		}
 
 		// check address
 		if len(t[i].Address) == 0 || len(t[i].Address) > 2 {
-			return fmt.Errorf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
+			return fmt.Errorf("not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
 		} else if n == cInputRegisters || n == cHoldingRegisters {
 			if (len(t[i].Address) == 1 && len(t[i].ByteOrder) != 2) || (len(t[i].Address) == 2 && len(t[i].ByteOrder) != 4) {
-				return fmt.Errorf("Not valid byte order [%s] and address [%v]  in %s", t[i].ByteOrder, t[i].Address, n)
+				return fmt.Errorf("not valid byte order [%s] and address [%v]  in %s", t[i].ByteOrder, t[i].Address, n)
 			}
 
 			// search duplicated
 			if len(t[i].Address) > len(removeDuplicates(t[i].Address)) {
-				return fmt.Errorf("Duplicate address [%v]  in %s", t[i].Address, n)
+				return fmt.Errorf("duplicate address [%v]  in %s", t[i].Address, n)
 			}
 
 		} else if len(t[i].Address) > 1 || (n == cInputRegisters || n == cHoldingRegisters) {
-			return fmt.Errorf("Not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
+			return fmt.Errorf("not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
 		}
 	}
 	return nil
