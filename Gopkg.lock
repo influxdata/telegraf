@@ -1629,12 +1629,12 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:367baf06b7dbd0ef0bbdd785f6a79f929c96b0c18e9d3b29c0eed1ac3f5db133"
-  name = "gopkg.in/ldap.v2"
+  digest = "1:cff622452aa789a1b2212d401f6b618ca1751a02229d26e002eb645ec22818f2"
+  name = "gopkg.in/ldap.v3"
   packages = ["."]
   pruneopts = ""
-  revision = "bb7a9ca6e4fbc2129e3db588a34bc970ffe811a9"
-  version = "v2.5.1"
+  revision = "caa044a2bfa324b735baee1722e8e2e372f76864"
+  version = "v3.1.0"
 
 [[projects]]
   branch = "v2"
@@ -1826,7 +1826,7 @@
     "google.golang.org/grpc/peer",
     "google.golang.org/grpc/status",
     "gopkg.in/gorethink/gorethink.v3",
-    "gopkg.in/ldap.v2",
+    "gopkg.in/ldap.v3",
     "gopkg.in/mgo.v2",
     "gopkg.in/mgo.v2/bson",
     "gopkg.in/olivere/elastic.v5",
