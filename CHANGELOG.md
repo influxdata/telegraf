@@ -37,6 +37,7 @@
 - [#6543](https://github.com/influxdata/telegraf/pull/6543): Add support for Kubernetes 1.16 and remove deprecated API usage.
 - [#6283](https://github.com/influxdata/telegraf/pull/6283): Add gathering of RabbitMQ federation link metrics.
 - [#6356](https://github.com/influxdata/telegraf/pull/6356): Add bearer token defaults for Kubernetes plugins.
+- [#5870](https://github.com/influxdata/telegraf/pull/5870): Add support for SNMP over TCP.
 
 #### Bugfixes
 
