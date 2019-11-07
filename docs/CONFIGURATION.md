@@ -257,6 +257,7 @@ databases, network services, and messaging systems.
 
 Parameters that can be used with any output plugin:
 
+- **alias**: Name an instance of a plugin.
 - **flush_interval**: The maximum time between flushes.  Use this setting to
   override the agent `flush_interval` on a per plugin basis.
 - **metric_batch_size**: The maximum number of metrics to send at once.  Use
@@ -294,6 +295,7 @@ input plugins and before any aggregator plugins.
 
 Parameters that can be used with any processor plugin:
 
+- **alias**: Name an instance of a plugin.
 - **order**: The order in which the processor(s) are executed. If this is not
   specified then processor execution order will be random.
 
@@ -328,6 +330,7 @@ processors have been applied.
 
 Parameters that can be used with any aggregator plugin:
 
+- **alias**: Name an instance of a plugin.
 - **period**: The period on which to flush & clear each aggregator. All
   metrics that are sent with timestamps outside of this period will be ignored
   by the aggregator.
