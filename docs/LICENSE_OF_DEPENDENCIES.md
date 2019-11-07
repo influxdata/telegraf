@@ -42,6 +42,7 @@ following works:
 - github.com/go-sql-driver/mysql [Mozilla Public License 2.0](https://github.com/go-sql-driver/mysql/blob/master/LICENSE)
 - github.com/gobwas/glob [MIT License](https://github.com/gobwas/glob/blob/master/LICENSE)
 - github.com/gogo/protobuf [BSD 3-Clause Clear License](https://github.com/gogo/protobuf/blob/master/LICENSE)
+- github.com/golang/mock [Apache License 2.0](https://github.com/golang/mock/blob/master/LICENSE)
 - github.com/golang/protobuf [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/protobuf/blob/master/LICENSE)
 - github.com/golang/snappy [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/snappy/blob/master/LICENSE)
 - github.com/google/go-cmp [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-cmp/blob/master/LICENSE)
