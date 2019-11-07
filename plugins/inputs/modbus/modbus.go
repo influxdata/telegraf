@@ -149,70 +149,7 @@ func (m *Modbus) Description() string {
 	return description
 }
 
-// Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
-func connect(m *Modbus) error {
-	u, err := url.Parse(m.Controller)
-	if err != nil {
-		return err
-	}
-
-	switch u.Scheme {
-	case "tcp":
-		var host, port string
-		host, port, err = net.SplitHostPort(u.Host)
-		if err != nil {
-			return err
-		}
-		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
-		m.tcpHandler.Timeout = m.Timeout.Duration
-		m.tcpHandler.SlaveId = byte(m.SlaveID)
-		m.client = mb.NewClient(m.tcpHandler)
-		err := m.tcpHandler.Connect()
-		if err != nil {
-			return err
-		}
-		m.isConnected = true
-		return nil
-	case "file":
-		if m.TransmissionMode == "RTU" {
-			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
-			m.rtuHandler.Timeout = m.Timeout.Duration
-			m.rtuHandler.SlaveId = byte(m.SlaveID)
-			m.rtuHandler.BaudRate = m.BaudRate
-			m.rtuHandler.DataBits = m.DataBits
-			m.rtuHandler.Parity = m.Parity
-			m.rtuHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.rtuHandler)
-			err := m.rtuHandler.Connect()
-			if err != nil {
-				return err
-			}
-			m.isConnected = true
-			return nil
-		} else if m.TransmissionMode == "ASCII" {
-			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
-			m.asciiHandler.Timeout = m.Timeout.Duration
-			m.asciiHandler.SlaveId = byte(m.SlaveID)
-			m.asciiHandler.BaudRate = m.BaudRate
-			m.asciiHandler.DataBits = m.DataBits
-			m.asciiHandler.Parity = m.Parity
-			m.asciiHandler.StopBits = m.StopBits
-			m.client = mb.NewClient(m.asciiHandler)
-			err := m.asciiHandler.Connect()
-			if err != nil {
-				return err
-			}
-			m.isConnected = true
-			return nil
-		} else {
-			return fmt.Errorf("not valid protocol [%s] - [%s] ", u.Scheme, m.TransmissionMode)
-		}
-	default:
-		return fmt.Errorf("not valid Controller")
-	}
-}
-
-func initialization(m *Modbus) error {
+func (m *Modbus) Init() error {
 	r := reflect.ValueOf(m).Elem()
 	for i := 0; i < r.NumField(); i++ {
 		f := r.Field(i)
@@ -280,6 +217,69 @@ func initialization(m *Modbus) error {
 	m.isInitialized = true
 
 	return nil
+}
+
+// Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
+func connect(m *Modbus) error {
+	u, err := url.Parse(m.Controller)
+	if err != nil {
+		return err
+	}
+
+	switch u.Scheme {
+	case "tcp":
+		var host, port string
+		host, port, err = net.SplitHostPort(u.Host)
+		if err != nil {
+			return err
+		}
+		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
+		m.tcpHandler.Timeout = m.Timeout.Duration
+		m.tcpHandler.SlaveId = byte(m.SlaveID)
+		m.client = mb.NewClient(m.tcpHandler)
+		err := m.tcpHandler.Connect()
+		if err != nil {
+			return err
+		}
+		m.isConnected = true
+		return nil
+	case "file":
+		if m.TransmissionMode == "RTU" {
+			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
+			m.rtuHandler.Timeout = m.Timeout.Duration
+			m.rtuHandler.SlaveId = byte(m.SlaveID)
+			m.rtuHandler.BaudRate = m.BaudRate
+			m.rtuHandler.DataBits = m.DataBits
+			m.rtuHandler.Parity = m.Parity
+			m.rtuHandler.StopBits = m.StopBits
+			m.client = mb.NewClient(m.rtuHandler)
+			err := m.rtuHandler.Connect()
+			if err != nil {
+				return err
+			}
+			m.isConnected = true
+			return nil
+		} else if m.TransmissionMode == "ASCII" {
+			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
+			m.asciiHandler.Timeout = m.Timeout.Duration
+			m.asciiHandler.SlaveId = byte(m.SlaveID)
+			m.asciiHandler.BaudRate = m.BaudRate
+			m.asciiHandler.DataBits = m.DataBits
+			m.asciiHandler.Parity = m.Parity
+			m.asciiHandler.StopBits = m.StopBits
+			m.client = mb.NewClient(m.asciiHandler)
+			err := m.asciiHandler.Connect()
+			if err != nil {
+				return err
+			}
+			m.isConnected = true
+			return nil
+		} else {
+			return fmt.Errorf("not valid protocol [%s] - [%s] ", u.Scheme, m.TransmissionMode)
+		}
+	default:
+		return fmt.Errorf("not valid Controller")
+	}
 }
 
 func validateFieldContainers(t []fieldContainer, n string) error {
@@ -564,13 +564,6 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		err := connect(m)
 		if err != nil {
 			m.isConnected = false
-			return err
-		}
-	}
-
-	if !m.isInitialized {
-		err := initialization(m)
-		if err != nil {
 			return err
 		}
 	}
