@@ -301,3 +301,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/Mellanox/rdmamap"
