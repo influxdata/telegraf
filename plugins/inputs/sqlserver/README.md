@@ -52,7 +52,7 @@ GO
   query_version = 2
 
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
-  # azuredb = true 
+  # azuredb = true
 
   ## If you would like to exclude some of the metrics queries, list them here
   ## Possible choices:
@@ -67,8 +67,9 @@ GO
   ## - VolumeSpace
   ## - Schedulers
   ## - AzureDBResourceStats
-  ## - AzureDBResourceGovernance 
+  ## - AzureDBResourceGovernance
   ## - SqlRequests
+  ## - ServerProperties
   exclude_query = [ 'Schedulers' , 'SqlRequests']
 ```
 
