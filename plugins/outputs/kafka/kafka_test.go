@@ -150,7 +150,8 @@ func TestRoutingKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			key := tt.kafka.routingKey(tt.metric)
+			key, err := tt.kafka.routingKey(tt.metric)
+			require.NoError(t, err)
 			tt.check(t, key)
 		})
 	}
