@@ -1,51 +1,99 @@
 package nvidia_smi
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseLineStandard(t *testing.T) {
-	line := "41, 11264, 1074, 10190, P8, 32, GeForce RTX 2080 Ti, GPU-c97b7f88-c06d-650f-5339-f8dd0c1315c0, Default, 1, 4, 0, 24.33, 1, 16, 0, 0, 0, 300, 300, 405, 540\n"
-	tags, fields, err := parseLine(line)
-	if err != nil {
-		t.Fail()
-	}
-	if tags["name"] != "GeForce RTX 2080 Ti" {
-		t.Fail()
-	}
-	if temp, ok := fields["temperature_gpu"].(int); ok && temp != 32 {
-		t.Fail()
-	}
-}
+var payload = []byte(`<?xml version="1.0" ?>
+<!DOCTYPE nvidia_smi_log SYSTEM "nvsmi_device_v10.dtd">
+<nvidia_smi_log>
+        <gpu id="00000000:01:00.0">
+                <product_name>GeForce GTX 1070 Ti</product_name>
+                <uuid>GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665</uuid>
+                <pci>
+                        <pci_gpu_link_info>
+                                <pcie_gen>
+                                        <current_link_gen>1</current_link_gen>
+                                </pcie_gen>
+                                <link_widths>
+                                        <current_link_width>16x</current_link_width>
+                                </link_widths>
+                        </pci_gpu_link_info>
+                </pci>
+                <fan_speed>100 %</fan_speed>
+                <performance_state>P8</performance_state>
+                <fb_memory_usage>
+                        <total>4096 MiB</total>
+                        <used>42 MiB</used>
+                        <free>4054 MiB</free>
+                </fb_memory_usage>
+                <compute_mode>Default</compute_mode>
+                <utilization>
+                        <gpu_util>0 %</gpu_util>
+                        <memory_util>0 %</memory_util>
+                </utilization>
+                <encoder_stats>
+                        <session_count>0</session_count>
+                        <average_fps>0</average_fps>
+                        <average_latency>0</average_latency>
+                </encoder_stats>
+                <temperature>
+                        <gpu_temp>39 C</gpu_temp>
+                </temperature>
+                <power_readings>
+                        <power_draw>N/A</power_draw>
+                </power_readings>
+                <clocks>
+                        <graphics_clock>135 MHz</graphics_clock>
+                        <sm_clock>135 MHz</sm_clock>
+                        <mem_clock>405 MHz</mem_clock>
+                        <video_clock>405 MHz</video_clock>
+                </clocks>
+        </gpu>
+</nvidia_smi_log>`)
 
-func TestParseLineEmptyLine(t *testing.T) {
-	line := "\n"
-	_, _, err := parseLine(line)
-	if err == nil {
-		t.Fail()
+func TestGatherSMI(t *testing.T) {
+	var expectedMetric = struct {
+		tags   map[string]string
+		fields map[string]interface{}
+	}{
+		tags: map[string]string{
+			"name":         "GeForce GTX 1070 Ti",
+			"compute_mode": "Default",
+			"index":        "0",
+			"pstate":       "P8",
+			"uuid":         "GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665",
+		},
+		fields: map[string]interface{}{
+			"fan_speed":                     100,
+			"memory_free":                   4054,
+			"memory_used":                   42,
+			"memory_total":                  4096,
+			"temperature_gpu":               39,
+			"utilization_gpu":               0,
+			"utilization_memory":            0,
+			"pcie_link_gen_current":         1,
+			"pcie_link_width_current":       16,
+			"encoder_stats_session_count":   0,
+			"encoder_stats_average_fps":     0,
+			"encoder_stats_average_latency": 0,
+			"clocks_current_graphics":       135,
+			"clocks_current_sm":             135,
+			"clocks_current_memory":         405,
+			"clocks_current_video":          405,
+		},
 	}
-}
 
-func TestParseLineBad(t *testing.T) {
-	line := "the quick brown fox jumped over the lazy dog"
-	_, _, err := parseLine(line)
-	if err == nil {
-		t.Fail()
-	}
-}
+	acc := &testutil.Accumulator{}
 
-func TestParseLineNotSupported(t *testing.T) {
-	line := "[Not Supported], 11264, 1074, 10190, P8, 32, GeForce RTX 2080 Ti, GPU-c97b7f88-c06d-650f-5339-f8dd0c1315c0, Default, 1, 4, 0, 24.33, 1, 16, 0, 0, 0, 300, 300, 405, 540\n"
-	_, fields, err := parseLine(line)
-	require.NoError(t, err)
-	require.Equal(t, nil, fields["fan_speed"])
-}
+	gatherNvidiaSMI(payload, acc)
+	fmt.Println()
 
-func TestParseLineUnknownError(t *testing.T) {
-	line := "[Unknown Error], 11264, 1074, 10190, P8, 32, GeForce RTX 2080 Ti, GPU-c97b7f88-c06d-650f-5339-f8dd0c1315c0, Default, 1, 4, 0, 24.33, 1, 16, 0, 0, 0, 300, 300, 405, 540\n"
-	_, fields, err := parseLine(line)
-	require.NoError(t, err)
-	require.Equal(t, nil, fields["fan_speed"])
+	require.Equal(t, 1, len(acc.Metrics))
+	require.Equal(t, expectedMetric.fields, acc.Metrics[0].Fields)
+	require.Equal(t, expectedMetric.tags, acc.Metrics[0].Tags)
 }

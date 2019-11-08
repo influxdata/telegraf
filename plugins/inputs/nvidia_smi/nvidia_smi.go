@@ -143,17 +143,23 @@ func setIfUsed(t string, m map[string]interface{}, k, v string) {
 	if len(vals) < 1 {
 		return
 	}
+
+	val := vals[0]
+	if k == "pcie_link_width_current" {
+		val = strings.TrimSuffix(vals[0], "x")
+	}
+
 	switch t {
 	case "float":
-		if vals[0] != "" {
-			f, err := strconv.ParseFloat(vals[0], 64)
+		if val != "" {
+			f, err := strconv.ParseFloat(val, 64)
 			if err == nil {
 				m[k] = f
 			}
 		}
 	case "int":
-		if vals[0] != "" {
-			i, err := strconv.Atoi(vals[0])
+		if val != "" {
+			i, err := strconv.Atoi(val)
 			if err == nil {
 				m[k] = i
 			}
