@@ -9,22 +9,17 @@ The ethtool input plugin pulls ethernet device stats.  Fields pulled will depend
 [[inputs.ethtool]]
   ## List of interfaces to pull metrics for
   # interface_include = ["eth0"]
-  
-  ## List of interfaces to ignore when pulling metrics.  
+
+  ## List of interfaces to ignore when pulling metrics.
   # interface_exclude = ["eth1"]
-  
-  ## Add driver information as tag
-  # driver_name_tag = true
 ```
 
-Interfaces can be included or ignored using 
+Interfaces can be included or ignored using
 
 - `interface_include`
 - `interface_exclude`
 
 Note that loopback interfaces will be automatically ignored
-
-The driver name can be dropped by setting `driver_name_tag` to false
 
 ### Metrics:
 

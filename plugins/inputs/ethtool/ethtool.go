@@ -31,11 +31,8 @@ const (
   ## List of interfaces to pull metrics for
   # interface_include = ["eth0"]
 
-  ## List of interfaces to ignore when pulling metrics.  
+  ## List of interfaces to ignore when pulling metrics.
   # interface_exclude = ["eth1"]
-
-  ## Add driver information as tag
-  # driver_name_tag = true
 `
 )
 
