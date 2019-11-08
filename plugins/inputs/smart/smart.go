@@ -319,6 +319,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 
 		attr := attribute.FindStringSubmatch(line)
 		if len(attr) > 1 {
+			// attribute has been found, add it only if collectAttributes is true
 			if collectAttributes {
 				tags["id"] = attr[1]
 				tags["name"] = attr[2]
@@ -351,23 +352,25 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 				}
 			}
 		} else {
-			if collectAttributes {
-				if matches := sasNvmeAttr.FindStringSubmatch(line); len(matches) > 2 {
-					if attr, ok := sasNvmeAttributes[matches[1]]; ok {
-						tags["name"] = attr.Name
-						if attr.ID != "" {
-							tags["id"] = attr.ID
-						}
+			// what was found is not a vendor attribute
+			if matches := sasNvmeAttr.FindStringSubmatch(line); len(matches) > 2 {
+				if attr, ok := sasNvmeAttributes[matches[1]]; ok {
+					tags["name"] = attr.Name
+					if attr.ID != "" {
+						tags["id"] = attr.ID
+					}
 
-						parse := parseCommaSeperatedInt
-						if attr.Parse != nil {
-							parse = attr.Parse
-						}
+					parse := parseCommaSeperatedInt
+					if attr.Parse != nil {
+						parse = attr.Parse
+					}
 
-						if err := parse(fields, deviceFields, matches[2]); err != nil {
-							continue
-						}
-
+					if err := parse(fields, deviceFields, matches[2]); err != nil {
+						continue
+					}
+					// if the field is classified as an attribute, only add it
+					// if collectAttributes is true
+					if collectAttributes {
 						acc.AddFields("smart_attribute", fields, tags)
 					}
 				}
