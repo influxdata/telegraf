@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
+	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	uuid "github.com/satori/go.uuid"
 )
 
 var ValidTopicSuffixMethods = []string{
@@ -292,20 +292,23 @@ func (k *Kafka) Description() string {
 	return "Configuration for the Kafka server to send metrics to"
 }
 
-func (k *Kafka) routingKey(metric telegraf.Metric) string {
+func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 	if k.RoutingTag != "" {
 		key, ok := metric.GetTag(k.RoutingTag)
 		if ok {
-			return key
+			return key, nil
 		}
 	}
 
 	if k.RoutingKey == "random" {
-		u := uuid.NewV4()
-		return u.String()
+		u, err := uuid.NewV4()
+		if err != nil {
+			return "", err
+		}
+		return u.String(), nil
 	}
 
-	return k.RoutingKey
+	return k.RoutingKey, nil
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
@@ -321,7 +324,12 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			Topic: k.GetTopicName(metric),
 			Value: sarama.ByteEncoder(buf),
 		}
-		key := k.routingKey(metric)
+
+		key, err := k.routingKey(metric)
+		if err != nil {
+			return fmt.Errorf("could not generate routing key: %v", err)
+		}
+
 		if key != "" {
 			m.Key = sarama.StringEncoder(key)
 		}

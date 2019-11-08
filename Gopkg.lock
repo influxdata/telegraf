@@ -506,6 +506,14 @@
   version = "v0.2.3"
 
 [[projects]]
+  digest = "1:181fe10dcb708edd7c68c5781928b6657612771f81dd1773287386b6982c94e2"
+  name = "github.com/gofrs/uuid"
+  packages = ["."]
+  pruneopts = ""
+  revision = "3a54a6416087bae7aa0ac32dd79fe1bf87bc99e4"
+  version = "v2.1.0"
+
+[[projects]]
   digest = "1:6e73003ecd35f4487a5e88270d3ca0a81bc80dc88053ac7e4dcfec5fba30d918"
   name = "github.com/gogo/protobuf"
   packages = ["proto"]
@@ -715,7 +723,7 @@
   revision = "7c63b0a71ef8300adc255344d275e10e5c3a71ec"
 
 [[projects]]
-  digest = "1:a7998e19ebb78fdd341cdaf3825fded9030ae27af9c70d298c05d88744e16a0b"
+  digest = "1:e248df365cb87001738e8c9368a6a27c504328047b196d89687c1ca918279a82"
   name = "github.com/jackc/pgx"
   packages = [
     ".",
@@ -727,8 +735,8 @@
     "stdlib",
   ]
   pruneopts = ""
-  revision = "8faa4453fc7051d1076053f8854077753ab912f2"
-  version = "v3.4.0"
+  revision = "c73e7d75061bb42b0282945710f344cfe1113d10"
+  version = "v3.6.0"
 
 [[projects]]
   digest = "1:d45477e90c25c8c6d7d4237281167aa56079382fc042db4b44a8328071649bfa"
@@ -1731,6 +1739,7 @@
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
+    "github.com/gofrs/uuid",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/duration",
     "github.com/golang/protobuf/ptypes/empty",
@@ -1772,7 +1781,6 @@
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
     "github.com/prometheus/common/expfmt",
-    "github.com/satori/go.uuid",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
     "github.com/shirou/gopsutil/host",
