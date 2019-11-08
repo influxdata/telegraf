@@ -1071,6 +1071,13 @@
   revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
 
 [[projects]]
+  digest = "1:a18bd4e530f3f36fe91a5d1fd57d492f25287546e613f892d21c2b76b848517d"
+  name = "github.com/safchain/ethtool"
+  packages = ["."]
+  pruneopts = ""
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[projects]]
   branch = "master"
   digest = "1:7fc2f428767a2521abc63f1a663d981f61610524275d6c0ea645defadd4e916f"
   name = "github.com/samuel/go-zookeeper"
@@ -1781,6 +1788,7 @@
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
     "github.com/prometheus/common/expfmt",
+    "github.com/safchain/ethtool",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
     "github.com/shirou/gopsutil/host",
