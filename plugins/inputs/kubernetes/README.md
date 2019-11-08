@@ -38,6 +38,8 @@ avoid cardinality issues:
   url = "http://127.0.0.1:10255"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ## If both of these are empty, we'll use the default serviceaccount:
+  ## at: /run/secrets/kubernetes.io/serviceaccount/token
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"

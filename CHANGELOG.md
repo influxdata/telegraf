@@ -36,6 +36,8 @@
 - [#6532](https://github.com/influxdata/telegraf/pull/6532): Add strict mode to JSON parser that can be disable to ignore invalid items.
 - [#6543](https://github.com/influxdata/telegraf/pull/6543): Add support for Kubernetes 1.16 and remove deprecated API usage.
 - [#6283](https://github.com/influxdata/telegraf/pull/6283): Add gathering of RabbitMQ federation link metrics.
+- [#6356](https://github.com/influxdata/telegraf/pull/6356): Add bearer token defaults for Kubernetes plugins.
+- [#5870](https://github.com/influxdata/telegraf/pull/5870): Add support for SNMP over TCP.
 
 #### Bugfixes
 
@@ -47,6 +49,8 @@
 
 - [#6576](https://github.com/influxdata/telegraf/issues/6576): Fix incorrect results in ping input plugin.
 - [#6610](https://github.com/influxdata/telegraf/pull/6610): Add missing character replacement to sql_instance tag.
+- [#6337](https://github.com/influxdata/telegraf/issues/6337): Change no metric error message to debug level in cloudwatch input.
+- [#6602](https://github.com/influxdata/telegraf/issues/6602): Add missing ServerProperties query to sqlserver input docs.
 
 ## v1.12.4 [2019-10-23]
 
