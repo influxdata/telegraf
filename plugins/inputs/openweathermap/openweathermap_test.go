@@ -106,9 +106,9 @@ const groupWeatherResponse = `
 {
     "cnt": 1,
     "list": [{
-		"clouds": {
-			"all": 0
-		},
+        "clouds": {
+            "all": 0
+        },
         "coord": {
             "lat": 48.85,
             "lon": 2.35
@@ -146,6 +146,145 @@ const groupWeatherResponse = `
 }
 `
 
+const rainWeatherResponse = `
+{
+    "cnt": 2,
+    "list": [{
+        "dt": 1544194800,
+        "id": 111,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "rain": {
+            "1h": 1.000
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 222,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "rain": {
+            "3h": 3.000
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 333,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "rain": {
+            "1h": 1.300,
+            "3h": 999
+        },
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    },
+    {
+        "dt": 1544194800,
+        "id": 444,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 9.25
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
+        }
+    }]
+}
+`
 const batchWeatherResponse = `
 {
 	"cnt": 3,
@@ -379,6 +518,148 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 			"weather",
 			map[string]string{
 				"city_id":        "2988507",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  0.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+// Ensure that results containing "1h", "3h", both, or no rain values are parsed correctly
+func TestRainMetrics(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var rsp string
+		if r.URL.Path == "/data/2.5/group" {
+			rsp = rainWeatherResponse
+			w.Header()["Content-Type"] = []string{"application/json"}
+		} else {
+			panic("Cannot handle request")
+		}
+
+		fmt.Fprintln(w, rsp)
+	}))
+	defer ts.Close()
+
+	n := &OpenWeatherMap{
+		BaseUrl: ts.URL,
+		AppId:   "noappid",
+		CityId:  []string{"111", "222", "333", "444"},
+		Fetch:   []string{"weather"},
+		Units:   "metric",
+	}
+	n.Init()
+
+	var acc testutil.Accumulator
+
+	err := n.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		// City with 1h rain value
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "111",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  1.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+		// City with 3h rain value
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "222",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  3.0,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+		// City with both 1h and 3h rain values, prefer the 1h value
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "333",
+				"forecast":       "*",
+				"city":           "Paris",
+				"country":        "FR",
+				"condition_id":   "300",
+				"condition_main": "Drizzle",
+			},
+			map[string]interface{}{
+				"cloudiness":            int64(0),
+				"humidity":              int64(87),
+				"pressure":              1007.0,
+				"temperature":           9.25,
+				"rain":                  1.3,
+				"sunrise":               int64(1544167818000000000),
+				"sunset":                int64(1544198047000000000),
+				"wind_degrees":          290.0,
+				"wind_speed":            8.7,
+				"visibility":            10000,
+				"condition_description": "light intensity drizzle",
+				"condition_icon":        "09d",
+			},
+			time.Unix(1544194800, 0),
+		),
+		// City with no rain values
+		testutil.MustMetric(
+			"weather",
+			map[string]string{
+				"city_id":        "444",
 				"forecast":       "*",
 				"city":           "Paris",
 				"country":        "FR",

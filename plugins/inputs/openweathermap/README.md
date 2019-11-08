@@ -56,7 +56,7 @@ condition ID, icon, and main is at [weather conditions][].
     - cloudiness (int, percent)
     - humidity (int, percent)
     - pressure (float, atmospheric pressure hPa)
-    - rain (float, rain volume for the last 3 hours in mm)
+    - rain (float, rain volume for the last 1-3 hours (depending on API response) in mm)
     - sunrise (int, nanoseconds since unix epoch)
     - sunset (int, nanoseconds since unix epoch)
     - temperature (float, degrees)
