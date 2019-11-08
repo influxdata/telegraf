@@ -301,3 +301,7 @@
 [[constraint]]
   name = "gopkg.in/ldap.v3"
   version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/safchain/ethtool"
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
