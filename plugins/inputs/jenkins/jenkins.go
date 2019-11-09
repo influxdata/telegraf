@@ -191,7 +191,7 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	}
 
 	urlTokens := strings.Split(j.URL, ":")
-	tags["source"] = urlTokens[1]
+	tags["source"] = urlTokens[1][2:]
 	tags["port"] = urlTokens[2]
 
 	fields := make(map[string]interface{})
