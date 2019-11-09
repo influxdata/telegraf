@@ -43,7 +43,7 @@ type Jenkins struct {
 }
 
 const sampleConfig = `
-  ## The Jenkins URL
+  ## The Jenkins URL in the format "schema://host:port"
   url = "http://my-jenkins-instance:8080"
   # username = "admin"
   # password = "admin"
@@ -189,6 +189,10 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	if n.Offline {
 		tags["status"] = "offline"
 	}
+
+	urlTokens := strings.Split(j.URL, ":")
+	tags["source"] = urlTokens[1]
+	tags["port"] = urlTokens[2]
 
 	fields := make(map[string]interface{})
 	fields["num_executors"] = n.NumExecutors
