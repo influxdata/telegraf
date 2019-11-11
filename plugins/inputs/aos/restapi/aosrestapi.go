@@ -106,6 +106,13 @@ type aosBlueprint struct {
 	Systems               map[string]aosBlueprintSystemNode
 }
 
+type aosVersion struct {
+	Major   string `json:"major"`
+	Minor   string `json:"minor"`
+	Build   string `json:"build"`
+	Version string `json:"version"`
+}
+
 // --------------------------------------------------------------------------
 // Datastructure return by Query Engine Query for System Node in Blueprint
 // --------------------------------------------------------------------------
@@ -139,7 +146,8 @@ type AosServerApi struct {
 	Password string
 	Protocol string
 
-	Token string
+	Token      string
+	AosVersion aosVersion
 
 	sync.RWMutex      // following fields are protected by this lock
 	Blueprints        map[string]aosBlueprint
@@ -252,16 +260,28 @@ func (api *AosServerApi) StopStreaming() error {
 	return nil
 }
 
-func (api *AosServerApi) StartStreaming(streamingType string, address string, port int) error {
+func (api *AosServerApi) StartStreaming(streamingType string, address string, port uint16, sequencing bool) error {
 
 	url := fmt.Sprintf("%v://%v:%v/api/streaming-config", api.Protocol, api.Address, api.Port)
 
-	var jsonStr = []byte(fmt.Sprintf(`{
-        "streaming_type": "%v",
-        "hostname": "%v",
-        "protocol": "protoBufOverTcp",
-        "port": %v
-      }`, streamingType, address, port))
+	var jsonStr []byte
+
+	if sequencing {
+		jsonStr = []byte(fmt.Sprintf(`{
+                    "streaming_type": "%v",
+                    "hostname": "%v",
+                    "protocol": "protoBufOverTcp",
+                    "port": %v,
+                    "sequencing_mode": "sequenced"
+                }`, streamingType, address, port))
+	} else {
+		jsonStr = []byte(fmt.Sprintf(`{
+                    "streaming_type": "%v",
+                    "hostname": "%v",
+                    "protocol": "protoBufOverTcp",
+                    "port": %v
+                }`, streamingType, address, port))
+	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 	req.Header.Set("Accept", "application/json")
@@ -418,5 +438,15 @@ func (api *AosServerApi) GetBlueprintById(blueprintId string) *aosBlueprint {
 		return &blueprint
 	}
 
+	return nil
+}
+
+func (api *AosServerApi) GetVersion() error {
+	aosVersion := aosVersion{}
+	err := api.httpRequest("GET", "version", nil, &aosVersion, 200)
+	if err != nil {
+		return err
+	}
+	api.AosVersion = aosVersion
 	return nil
 }
