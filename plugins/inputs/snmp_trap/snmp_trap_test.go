@@ -9,6 +9,7 @@ import (
 	// "log"
 	// "os"
 	"net"
+	"strconv"
 	"testing"
 	"time"
 
@@ -96,7 +97,7 @@ func TestReceiveTrap(t *testing.T) {
 
 	// set up the service input plugin
 	n := &SnmpTrap{
-		Port:               port,
+		ServiceAddress: "localhost:" + strconv.Itoa(port),
 		makeHandlerWrapper: wrap,
 		timeFunc: func() time.Time {
 			return fakeTime

@@ -12,8 +12,9 @@ the SNMP [README.md](../snmp/README.md) for details.
 
 ### Configuration
 ```toml
-  ## Port to listen on.  Default 162
-  #port = 162
+  ## Local address and port to listen on.  Omit address to listen on
+  ## all interfaces.  Example "127.0.0.1:1234", default ":162"
+  #service_address = :162
 ```
 
 ### Metrics

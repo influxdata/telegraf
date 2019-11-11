@@ -3,7 +3,6 @@ package snmp_trap
 import (
 	"fmt"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -15,7 +14,7 @@ import (
 )
 
 type SnmpTrap struct {
-	Port uint16 `toml:"port"`
+	ServiceAddress string `toml:"service_address"`
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
@@ -24,12 +23,13 @@ type SnmpTrap struct {
 
 	makeHandlerWrapper func(func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)) func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)
 	Errch              chan error
-	Log telegraf.Logger
+	Log                telegraf.Logger
 }
 
 var sampleConfig = `
-  ## Port to listen on.  Default 162
-  #port = 162
+  ## Local address and port to listen on.  Omit address to listen on
+  ## all interfaces.  Example "127.0.0.1:1234", default ":162"
+  #service_address = :162
 `
 
 func (s *SnmpTrap) SampleConfig() string {
@@ -47,8 +47,8 @@ func (s *SnmpTrap) Gather(_ telegraf.Accumulator) error {
 func init() {
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
-			timeFunc: time.Now,
-			Port:     162,
+			timeFunc:       time.Now,
+			ServiceAddress: ":162",
 		}
 	})
 }
@@ -74,7 +74,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		defer s.wg.Done()
 
 		// no ip means listen on all interfaces, ipv4 and ipv6
-		err := s.listener.Listen(":" + strconv.FormatUint(uint64(s.Port), 10))
+		err := s.listener.Listen(s.ServiceAddress)
 		if err != nil {
 			s.Errch <- err
 			s.Log.Errorf("error in listen: %s", err)
