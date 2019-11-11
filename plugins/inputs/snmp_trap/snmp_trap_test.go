@@ -1,13 +1,13 @@
 package snmp_trap
 
-//todo: tests that look up oids will pass only if snmptranslate (part
-//of net-snmp) is installed and working.  We need to mock name lookup
-//or add a way to disable it so tests will pass when snmptranslate
-//isn't available.
+// todo: tests that look up oids will pass only if snmptranslate (part
+// of net-snmp) is installed and working.  We need to mock name lookup
+// or add a way to disable it so tests will pass when snmptranslate
+// isn't available.
 
 import (
-	//"log"
-	//"os"
+	// "log"
+	// "os"
 	"net"
 	"testing"
 	"time"
@@ -39,7 +39,7 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 		Retries:   3,
 		MaxOids:   gosnmp.MaxOids,
 		Target:    "127.0.0.1",
-		//Logger:    log.New(os.Stdout, "", 0),
+		// Logger:    log.New(os.Stdout, "", 0),
 	}
 
 	err := s.Connect()
@@ -48,10 +48,10 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 	}
 	defer s.Conn.Close()
 
-	//If the first pdu isn't type TimeTicks, gosnmp.SendTrap() will
-	//prepend one with time.Now().  The time value is part of the
-	//plugin output so we need to keep track of it and verify it
-	//later.
+	// If the first pdu isn't type TimeTicks, gosnmp.SendTrap() will
+	// prepend one with time.Now().  The time value is part of the
+	// plugin output so we need to keep track of it and verify it
+	// later.
 	now := uint32(time.Now().Unix())
 	timePdu := gosnmp.SnmpPDU{
 		Name:  ".1.3.6.1.2.1.1.3.0",
@@ -60,9 +60,9 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 	}
 
 	pdu := gosnmp.SnmpPDU{
-		Name:  ".1.3.6.1.6.3.1.1.4.1.0", //SNMPv2-MIB::snmpTrapOID.0
+		Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
 		Type:  gosnmp.ObjectIdentifier,
-		Value: ".1.3.6.1.6.3.1.1.5.1", //coldStart
+		Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
 	}
 
 	trap := gosnmp.SnmpTrap{
@@ -80,12 +80,12 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 	return now
 }
 
-// TestReceiveTrap
+//  TestReceiveTrap
 func TestReceiveTrap(t *testing.T) {
-	const port = 12399 //todo: find unused port
+	const port = 12399 // todo: find unused port
 	var fakeTime = time.Now()
 
-	//hook into the trap handler so the test knows when the trap has been received
+	// hook into the trap handler so the test knows when the trap has been received
 	received := make(chan int)
 	wrap := func(f func(*gosnmp.SnmpPacket, *net.UDPAddr)) func(*gosnmp.SnmpPacket, *net.UDPAddr) {
 		return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
@@ -94,7 +94,7 @@ func TestReceiveTrap(t *testing.T) {
 		}
 	}
 
-	//set up the service input plugin
+	// set up the service input plugin
 	n := &SnmpTrap{
 		Port:               port,
 		makeHandlerWrapper: wrap,
@@ -107,7 +107,7 @@ func TestReceiveTrap(t *testing.T) {
 	n.Start(&acc)
 	defer n.Stop()
 
-	//wait until input plugin is listening
+	// wait until input plugin is listening
 	select {
 	case <-n.Listening():
 	case err := <-n.Errch:
@@ -116,25 +116,25 @@ func TestReceiveTrap(t *testing.T) {
 		t.Fatal("timed out waiting to listen")
 	}
 
-	//send the trap
+	// send the trap
 	sentTimestamp := sendTrap(t, port)
 
-	//wait for trap to be received
+	// wait for trap to be received
 	select {
 	case <-received:
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for trap to be received")
 	}
 
-	//verify plugin output
+	// verify plugin output
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
-			"snmp_trap", //name
-			map[string]string{ //tags
+			"snmp_trap", // name
+			map[string]string{ // tags
 				"trap_name":    "coldStart",
 				"trap_version": "2c",
 			},
-			map[string]interface{}{ //fields
+			map[string]interface{}{ // fields
 				"sysUpTimeInstance":      sentTimestamp,
 				"sysUpTimeInstance_type": "TimeTicks",
 			},

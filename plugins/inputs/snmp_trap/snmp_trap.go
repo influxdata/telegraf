@@ -62,9 +62,9 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
 	s.listener.Params = gosnmp.Default
-	//s.listener.Params.Logger = log.New(os.Stdout, "", 0)
+	// s.listener.Params.Logger = log.New(os.Stdout, "", 0)
 
-	//wrap the handler, used in unit tests
+	// wrap the handler, used in unit tests
 	if nil != s.makeHandlerWrapper {
 		s.listener.OnNewTrap = s.makeHandlerWrapper(s.listener.OnNewTrap)
 	}
@@ -73,7 +73,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	go func() {
 		defer s.wg.Done()
 
-		//no ip means listen on all interfaces, ipv4 and ipv6
+		// no ip means listen on all interfaces, ipv4 and ipv6
 		err := s.listener.Listen(":" + strconv.FormatUint(uint64(s.Port), 10))
 		if err != nil {
 			s.Errch <- err
@@ -98,33 +98,34 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 		tags["trap_version"] = packet.Version.String()
 
 		for _, v := range packet.Variables {
-			//build a name and value for each variable to use as tags
-			//and fields.  defaults are the uninterpreted values
+			// build a name and value for each variable to use as tags
+			// and fields.  defaults are the uninterpreted values
 			name := v.Name
 			value := v.Value
 
-			//use system mibs to resolve the name if possible
+			// use system mibs to resolve the name if possible
 			_, _, oidText, _, err := snmp.SnmpTranslate(v.Name)
 			if nil == err {
-				name = oidText //would mib name be useful here?
+				name = oidText // would mib name be useful here?
 			}
 
-			//todo: format the pdu value based on its snmp type and
-			//the mib's textual convention.  The snmp input plugin
-			//only handles textual convention for ip and mac addresses
+			// todo: format the pdu value based on its snmp type and
+			// the mib's textual convention.  The snmp input plugin
+			// only handles textual convention for ip and mac
+			// addresses
 
 			switch v.Type {
-			//case gosnmp.OctetString:
-			//b := v.Value.([]byte)
+			// case gosnmp.OctetString:
+			// b := v.Value.([]byte)
 			case gosnmp.ObjectIdentifier:
 				s, ok := v.Value.(string)
 				if ok {
 					if _, _, oidText, _, err := snmp.SnmpTranslate(s); ok && nil == err {
-						value = oidText //would mib name be useful here?
+						value = oidText // would mib name be useful here?
 					}
 				}
-				//1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.  If
-				//v.Name is this oid, set a tag of the trap name.
+				// 1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.
+				// If v.Name is this oid, set a tag of the trap name.
 				if v.Name == ".1.3.6.1.6.3.1.1.4.1.0" {
 					tags["trap_name"] = fmt.Sprintf("%v", value)
 					continue
