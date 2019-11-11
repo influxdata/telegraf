@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
+	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 type Mysql struct {
@@ -37,6 +38,8 @@ type Mysql struct {
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
+
+	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 	lastT            time.Time
 	initDone         bool
@@ -748,7 +751,10 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 		} else {
 			key = strings.ToLower(key)
-			if value, ok := m.parseValue(val); ok {
+			value, err := v2.ConvertGlobalStatus(key, val)
+			if err != nil {
+				m.Log.Debugf("Error parsing global status: %v", err)
+			} else {
 				fields[key] = value
 			}
 		}
