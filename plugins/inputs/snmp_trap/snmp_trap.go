@@ -2,7 +2,6 @@ package snmp_trap
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -25,6 +24,7 @@ type SnmpTrap struct {
 
 	makeHandlerWrapper func(func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)) func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)
 	Errch              chan error
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
@@ -77,7 +77,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		err := s.listener.Listen(":" + strconv.FormatUint(uint64(s.Port), 10))
 		if err != nil {
 			s.Errch <- err
-			log.Panicf("error in listen: %s", err)
+			s.Log.Errorf("error in listen: %s", err)
 		}
 	}()
 
