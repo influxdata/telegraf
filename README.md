@@ -301,6 +301,7 @@ For documentation on the latest development code see the [documentation index][d
   * [papertrail](./plugins/inputs/webhooks/papertrail)
   * [particle](./plugins/inputs/webhooks/particle)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
+* [win_iisproc](./plugins/inputs/win_iisproc)
 * [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
 * [win_services](./plugins/inputs/win_services)
 * [wireless](./plugins/inputs/wireless)

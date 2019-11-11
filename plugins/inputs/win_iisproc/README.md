@@ -18,7 +18,8 @@ It requires running Telegraf with administrator privileges and  WebManagementToo
     - mem : float
     - cpu : float
 
-The `mem` is current value PM(k) of app pool's worker process
+The `mem` is current value PM(k) of app pool's worker process.
+
 The `cpu` is he amount of processor time that the process has used on all processors, in seconds so it's not cpu percentage of worker process.
 
 
