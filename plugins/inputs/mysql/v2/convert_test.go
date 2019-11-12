@@ -29,6 +29,13 @@ func TestConvertGlobalStatus(t *testing.T) {
 			expected:    int64(9223372036854775807),
 			expectedErr: nil,
 		},
+		{
+			name:        "defined variable but unset",
+			key:         "ssl_ctx_verify_depth",
+			value:       []byte(""),
+			expected:    nil,
+			expectedErr: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -59,6 +66,13 @@ func TestCovertGlobalVariables(t *testing.T) {
 			key:         "gtid_mode",
 			value:       []byte("ON_PERMISSIVE"),
 			expected:    int64(1),
+			expectedErr: nil,
+		},
+		{
+			name:        "defined variable but unset",
+			key:         "ssl_ctx_verify_depth",
+			value:       []byte(""),
+			expected:    nil,
 			expectedErr: nil,
 		},
 	}

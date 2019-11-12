@@ -79,6 +79,10 @@ var GlobalVariableConversions = map[string]ConversionFunc{
 }
 
 func ConvertGlobalStatus(key string, value sql.RawBytes) (interface{}, error) {
+	if bytes.Equal(value, []byte("")) {
+		return nil, nil
+	}
+
 	if conv, ok := GlobalStatusConversions[key]; ok {
 		return conv(value)
 	}
@@ -87,6 +91,10 @@ func ConvertGlobalStatus(key string, value sql.RawBytes) (interface{}, error) {
 }
 
 func ConvertGlobalVariables(key string, value sql.RawBytes) (interface{}, error) {
+	if bytes.Equal(value, []byte("")) {
+		return nil, nil
+	}
+
 	if conv, ok := GlobalVariableConversions[key]; ok {
 		return conv(value)
 	}
