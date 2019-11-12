@@ -32,6 +32,7 @@ type Config struct {
 	TimeFormat   string
 	Timezone     string
 	DefaultTags  map[string]string
+	Strict       bool
 }
 
 type Parser struct {
@@ -44,6 +45,7 @@ type Parser struct {
 	timeFormat   string
 	timezone     string
 	defaultTags  map[string]string
+	strict       bool
 }
 
 func New(config *Config) (*Parser, error) {
@@ -62,6 +64,7 @@ func New(config *Config) (*Parser, error) {
 		timeFormat:   config.TimeFormat,
 		timezone:     config.Timezone,
 		defaultTags:  config.DefaultTags,
+		strict:       config.Strict,
 	}, nil
 }
 
@@ -73,7 +76,10 @@ func (p *Parser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
 		case map[string]interface{}:
 			metrics, err := p.parseObject(v)
 			if err != nil {
-				return nil, err
+				if p.strict {
+					return nil, err
+				}
+				continue
 			}
 			results = append(results, metrics...)
 		default:
@@ -120,7 +126,7 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 			return nil, err
 		}
 
-		nTime, err = internal.ParseTimestampWithLocation(f.Fields[p.timeKey], p.timeFormat, p.timezone)
+		nTime, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
 		if err != nil {
 			return nil, err
 		}
@@ -169,12 +175,10 @@ func (p *Parser) switchFieldToTag(tags map[string]string, fields map[string]inte
 	//remove any additional string/bool values from fields
 	for fk := range fields {
 		switch fields[fk].(type) {
-		case string:
+		case string, bool:
 			if p.stringFields != nil && p.stringFields.Match(fk) {
 				continue
 			}
-			delete(fields, fk)
-		case bool:
 			delete(fields, fk)
 		}
 	}

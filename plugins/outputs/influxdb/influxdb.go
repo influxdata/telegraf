@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/url"
 	"time"
@@ -59,6 +58,7 @@ type InfluxDB struct {
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
 
 	serializer *influx.Serializer
+	Log        telegraf.Logger
 }
 
 var sampleConfig = `
@@ -221,13 +221,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			if !i.SkipDatabaseCreation {
 				err := client.CreateDatabase(ctx, apiError.Database)
 				if err != nil {
-					log.Printf("E! [outputs.influxdb] when writing to [%s]: database %q not found and failed to recreate",
+					i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
 						client.URL(), apiError.Database)
 				}
 			}
 		}
 
-		log.Printf("E! [outputs.influxdb] when writing to [%s]: %v", client.URL(), err)
+		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 	}
 
 	return errors.New("could not write any address")
@@ -238,6 +238,7 @@ func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 		URL:            url,
 		MaxPayloadSize: int(i.UDPPayload.Size),
 		Serializer:     i.serializer,
+		Log:            i.Log,
 	}
 
 	c, err := i.CreateUDPClientF(config)
@@ -271,6 +272,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		RetentionPolicy:      i.RetentionPolicy,
 		Consistency:          i.WriteConsistency,
 		Serializer:           i.serializer,
+		Log:                  i.Log,
 	}
 
 	c, err := i.CreateHTTPClientF(config)
@@ -281,7 +283,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	if !i.SkipDatabaseCreation {
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
-			log.Printf("W! [outputs.influxdb] when writing to [%s]: database %q creation failed: %v",
+			i.Log.Warnf("When writing to [%s]: database %q creation failed: %v",
 				c.URL(), i.Database, err)
 		}
 	}

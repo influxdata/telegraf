@@ -112,7 +112,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
   This controls the size of writes that Telegraf sends to output plugins.
 
 - **metric_buffer_limit**:
-  Maximum number of unwritten metrics per output.
+  Maximum number of unwritten metrics per output.  Increasing this value
+  allows for longer periods of output downtime without dropping metrics at the
+  cost of higher maximum memory usage.
 
 - **collection_jitter**:
   Collection jitter is used to jitter the collection by a random [interval][].
@@ -122,12 +124,12 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **flush_interval**:
   Default flushing [interval][] for all outputs. Maximum flush_interval will be
-  flush_interval + flush_jitter
+  flush_interval + flush_jitter.
 
 - **flush_jitter**:
   Jitter the flush [interval][] by a random amount. This is primarily to avoid
   large write spikes for users running a large number of telegraf instances.
-  ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
+  ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s.
 
 - **precision**:
   Collected metrics are rounded to the precision specified as an [interval][].
@@ -141,8 +143,15 @@ The agent table configures Telegraf and the defaults used across all plugins.
 - **quiet**:
   Log only error level messages.
 
+- **logtarget**:
+  Log target controls the destination for logs and can be one of "file",
+  "stderr" or, on Windows, "eventlog".  When set to "file", the output file is
+  determined by the "logfile" setting.
+
 - **logfile**:
-  Log file name, the empty string means to log to stderr.
+  Name of the file to be logged to when using the "file" logtarget.  If set to
+  the empty string then logs are written to stderr.
+
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to
@@ -182,6 +191,7 @@ driven operation.
 
 Parameters that can be used with any input plugin:
 
+- **alias**: Name an instance of a plugin.
 - **interval**: How often to gather this metric. Normal plugins use a single
   global interval, but if one particular input should be run less or more
   often, you can configure that here.
@@ -247,6 +257,7 @@ databases, network services, and messaging systems.
 
 Parameters that can be used with any output plugin:
 
+- **alias**: Name an instance of a plugin.
 - **flush_interval**: The maximum time between flushes.  Use this setting to
   override the agent `flush_interval` on a per plugin basis.
 - **metric_batch_size**: The maximum number of metrics to send at once.  Use
@@ -284,6 +295,7 @@ input plugins and before any aggregator plugins.
 
 Parameters that can be used with any processor plugin:
 
+- **alias**: Name an instance of a plugin.
 - **order**: The order in which the processor(s) are executed. If this is not
   specified then processor execution order will be random.
 
@@ -318,6 +330,7 @@ processors have been applied.
 
 Parameters that can be used with any aggregator plugin:
 
+- **alias**: Name an instance of a plugin.
 - **period**: The period on which to flush & clear each aggregator. All
   metrics that are sent with timestamps outside of this period will be ignored
   by the aggregator.
@@ -550,6 +563,10 @@ output.  The tag is removed in the outputs before writing.
     influxdb_database = "other"
 ```
 
+### Transport Layer Security (TLS)
+
+Reference the detailed [TLS][] documentation.
+
 [TOML]: https://github.com/toml-lang/toml#toml
 [global tags]: #global-tags
 [interval]: #intervals
@@ -561,3 +578,4 @@ output.  The tag is removed in the outputs before writing.
 [aggregators]: #aggregator-plugins
 [metric filtering]: #metric-filtering
 [telegraf.conf]: /etc/telegraf.conf
+[TLS]: /docs/TLS.md

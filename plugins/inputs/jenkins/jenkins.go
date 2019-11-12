@@ -2,9 +2,7 @@ package jenkins
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,6 +26,8 @@ type Jenkins struct {
 
 	tls.ClientConfig
 	client *client
+
+	Log telegraf.Logger
 
 	MaxConnections    int               `toml:"max_connections"`
 	MaxBuildAge       internal.Duration `toml:"max_build_age"`
@@ -179,27 +179,36 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	tags["arch"] = n.MonitorData.HudsonNodeMonitorsArchitectureMonitor
+	monitorData := n.MonitorData
+
+	if monitorData.HudsonNodeMonitorsArchitectureMonitor != "" {
+		tags["arch"] = monitorData.HudsonNodeMonitorsArchitectureMonitor
+	}
 
 	tags["status"] = "online"
 	if n.Offline {
 		tags["status"] = "offline"
 	}
-	monitorData := n.MonitorData
-	if monitorData.HudsonNodeMonitorsArchitectureMonitor == "" {
-		return errors.New("empty monitor data, please check your permission")
-	}
-	tags["disk_path"] = monitorData.HudsonNodeMonitorsDiskSpaceMonitor.Path
-	tags["temp_path"] = monitorData.HudsonNodeMonitorsTemporarySpaceMonitor.Path
 
-	fields := map[string]interface{}{
-		"response_time":    monitorData.HudsonNodeMonitorsResponseTimeMonitor.Average,
-		"disk_available":   monitorData.HudsonNodeMonitorsDiskSpaceMonitor.Size,
-		"temp_available":   monitorData.HudsonNodeMonitorsTemporarySpaceMonitor.Size,
-		"swap_available":   monitorData.HudsonNodeMonitorsSwapSpaceMonitor.SwapAvailable,
-		"memory_available": monitorData.HudsonNodeMonitorsSwapSpaceMonitor.MemoryAvailable,
-		"swap_total":       monitorData.HudsonNodeMonitorsSwapSpaceMonitor.SwapTotal,
-		"memory_total":     monitorData.HudsonNodeMonitorsSwapSpaceMonitor.MemoryTotal,
+	fields := make(map[string]interface{})
+	fields["num_executors"] = n.NumExecutors
+
+	if monitorData.HudsonNodeMonitorsResponseTimeMonitor != nil {
+		fields["response_time"] = monitorData.HudsonNodeMonitorsResponseTimeMonitor.Average
+	}
+	if monitorData.HudsonNodeMonitorsDiskSpaceMonitor != nil {
+		tags["disk_path"] = monitorData.HudsonNodeMonitorsDiskSpaceMonitor.Path
+		fields["disk_available"] = monitorData.HudsonNodeMonitorsDiskSpaceMonitor.Size
+	}
+	if monitorData.HudsonNodeMonitorsTemporarySpaceMonitor != nil {
+		tags["temp_path"] = monitorData.HudsonNodeMonitorsTemporarySpaceMonitor.Path
+		fields["temp_available"] = monitorData.HudsonNodeMonitorsTemporarySpaceMonitor.Size
+	}
+	if monitorData.HudsonNodeMonitorsSwapSpaceMonitor != nil {
+		fields["swap_available"] = monitorData.HudsonNodeMonitorsSwapSpaceMonitor.SwapAvailable
+		fields["memory_available"] = monitorData.HudsonNodeMonitorsSwapSpaceMonitor.MemoryAvailable
+		fields["swap_total"] = monitorData.HudsonNodeMonitorsSwapSpaceMonitor.SwapTotal
+		fields["memory_total"] = monitorData.HudsonNodeMonitorsSwapSpaceMonitor.MemoryTotal
 	}
 	acc.AddFields(measurementNode, fields, tags)
 
@@ -304,7 +313,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	}
 
 	if build.Building {
-		log.Printf("D! Ignore running build on %s, build %v", jr.name, number)
+		j.Log.Debugf("Ignore running build on %s, build %v", jr.name, number)
 		return nil
 	}
 
@@ -326,29 +335,34 @@ type nodeResponse struct {
 }
 
 type node struct {
-	DisplayName string      `json:"displayName"`
-	Offline     bool        `json:"offline"`
-	MonitorData monitorData `json:"monitorData"`
+	DisplayName  string      `json:"displayName"`
+	Offline      bool        `json:"offline"`
+	NumExecutors int         `json:"numExecutors"`
+	MonitorData  monitorData `json:"monitorData"`
 }
 
 type monitorData struct {
-	HudsonNodeMonitorsArchitectureMonitor string           `json:"hudson.node_monitors.ArchitectureMonitor"`
-	HudsonNodeMonitorsDiskSpaceMonitor    nodeSpaceMonitor `json:"hudson.node_monitors.DiskSpaceMonitor"`
-	HudsonNodeMonitorsResponseTimeMonitor struct {
-		Average int64 `json:"average"`
-	} `json:"hudson.node_monitors.ResponseTimeMonitor"`
-	HudsonNodeMonitorsSwapSpaceMonitor struct {
-		SwapAvailable   float64 `json:"availableSwapSpace"`
-		SwapTotal       float64 `json:"totalSwapSpace"`
-		MemoryAvailable float64 `json:"availablePhysicalMemory"`
-		MemoryTotal     float64 `json:"totalPhysicalMemory"`
-	} `json:"hudson.node_monitors.SwapSpaceMonitor"`
-	HudsonNodeMonitorsTemporarySpaceMonitor nodeSpaceMonitor `json:"hudson.node_monitors.TemporarySpaceMonitor"`
+	HudsonNodeMonitorsArchitectureMonitor   string               `json:"hudson.node_monitors.ArchitectureMonitor"`
+	HudsonNodeMonitorsDiskSpaceMonitor      *nodeSpaceMonitor    `json:"hudson.node_monitors.DiskSpaceMonitor"`
+	HudsonNodeMonitorsResponseTimeMonitor   *responseTimeMonitor `json:"hudson.node_monitors.ResponseTimeMonitor"`
+	HudsonNodeMonitorsSwapSpaceMonitor      *swapSpaceMonitor    `json:"hudson.node_monitors.SwapSpaceMonitor"`
+	HudsonNodeMonitorsTemporarySpaceMonitor *nodeSpaceMonitor    `json:"hudson.node_monitors.TemporarySpaceMonitor"`
 }
 
 type nodeSpaceMonitor struct {
 	Path string  `json:"path"`
 	Size float64 `json:"size"`
+}
+
+type responseTimeMonitor struct {
+	Average int64 `json:"average"`
+}
+
+type swapSpaceMonitor struct {
+	SwapAvailable   float64 `json:"availableSwapSpace"`
+	SwapTotal       float64 `json:"totalSwapSpace"`
+	MemoryAvailable float64 `json:"availablePhysicalMemory"`
+	MemoryTotal     float64 `json:"totalPhysicalMemory"`
 }
 
 type jobResponse struct {

@@ -42,7 +42,7 @@ cache_miss                11653333250 samples [pages] 1 1 11653333250
 `
 
 const obdfilterJobStatsContents = `job_stats:
-- job_id:          testjob1
+- job_id:          cluster-testjob1
   snapshot_time:   1461772761
   read_bytes:      { samples:           1, unit: bytes, min:    4096, max:    4096, sum:            4096 }
   write_bytes:     { samples:          25, unit: bytes, min: 1048576, max: 1048576, sum:        26214400 }
@@ -92,7 +92,7 @@ crossdir_rename           369571 samples [reqs]
 `
 
 const mdtJobStatsContents = `job_stats:
-- job_id:          testjob1
+- job_id:          cluster-testjob1
   snapshot_time:   1461772761
   open:            { samples:           5, unit:  reqs }
   close:           { samples:           4, unit:  reqs }
@@ -207,7 +207,7 @@ func TestLustre2GeneratesJobstatsMetrics(t *testing.T) {
 
 	tempdir := os.TempDir() + "/telegraf/proc/fs/lustre/"
 	ost_name := "OST0001"
-	job_names := []string{"testjob1", "testjob2"}
+	job_names := []string{"cluster-testjob1", "testjob2"}
 
 	mdtdir := tempdir + "/mdt/"
 	err := os.MkdirAll(mdtdir+"/"+ost_name, 0755)

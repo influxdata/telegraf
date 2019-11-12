@@ -43,6 +43,9 @@ The docker plugin uses the [Official Docker Client][] to gather logs from the
   # docker_label_include = []
   # docker_label_exclude = []
 
+  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
+  source_tag = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -58,6 +61,17 @@ When using the `"ENV"` endpoint, the connection is configured using the
 
 [env]: https://godoc.org/github.com/moby/moby/client#NewEnvClient
 
+### source tag
+
+Selecting the containers can be tricky if you have many containers with the same name.
+To alleviate this issue you can set the below value to `true`
+
+```toml
+source_tag = true
+```
+
+This will cause all data points to have the `source` tag be set to the first 12 characters of the container id. The first 12 characters is the common hostname for containers that have no explicit hostname set, as defined by docker.
+
 ### Metrics
 
 - docker_log
@@ -66,6 +80,7 @@ When using the `"ENV"` endpoint, the connection is configured using the
     - container_version
     - container_name
     - stream (stdout, stderr, or tty)
+    - source
   - fields:
     - container_id
     - message

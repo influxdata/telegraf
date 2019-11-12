@@ -40,9 +40,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.10 or newer, the Makefile requires GNU make.
+Telegraf requires golang version 1.12 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.10 (1.12 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.12 (1.13 recommended)
 2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
 3. Download Telegraf source:
    ```
@@ -140,8 +140,10 @@ For documentation on the latest development code see the [documentation index][d
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [apcupsd](./plugins/inputs/apcupsd)
 * [aurora](./plugins/inputs/aurora)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
+* [azure_storage_queue](./plugins/inputs/azure_storage_queue)
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
 * [bind](./plugins/inputs/bind)
@@ -171,6 +173,7 @@ For documentation on the latest development code see the [documentation index][d
 * [dovecot](./plugins/inputs/dovecot)
 * [ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
 * [elasticsearch](./plugins/inputs/elasticsearch)
+* [ethtool](./plugins/inputs/ethtool)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
@@ -212,8 +215,10 @@ For documentation on the latest development code see the [documentation index][d
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
 * [logparser](./plugins/inputs/logparser)
+* [logstash](./plugins/inputs/logstash)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [marklogic](./plugins/inputs/marklogic)
 * [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mem](./plugins/inputs/mem)
@@ -240,6 +245,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ntpq](./plugins/inputs/ntpq)
 * [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
+* [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [openweathermap](./plugins/inputs/openweathermap)
 * [pf](./plugins/inputs/pf)
@@ -271,6 +277,7 @@ For documentation on the latest development code see the [documentation index][d
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver)
 * [statsd](./plugins/inputs/statsd)
+* [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
@@ -329,6 +336,7 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Processor Plugins
 
+* [clone](./plugins/processors/clone)
 * [converter](./plugins/processors/converter)
 * [date](./plugins/processors/date)
 * [enum](./plugins/processors/enum)
@@ -339,6 +347,7 @@ For documentation on the latest development code see the [documentation index][d
 * [regex](./plugins/processors/regex)
 * [rename](./plugins/processors/rename)
 * [strings](./plugins/processors/strings)
+* [tag_limit](./plugins/processors/tag_limit)
 * [topk](./plugins/processors/topk)
 * [unpivot](./plugins/processors/unpivot)
 
@@ -347,6 +356,7 @@ For documentation on the latest development code see the [documentation index][d
 * [basicstats](./plugins/aggregators/basicstats)
 * [final](./plugins/aggregators/final)
 * [histogram](./plugins/aggregators/histogram)
+* [merge](./plugins/aggregators/merge)
 * [minmax](./plugins/aggregators/minmax)
 * [valuecounter](./plugins/aggregators/valuecounter)
 
@@ -365,6 +375,7 @@ For documentation on the latest development code see the [documentation index][d
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
 * [elasticsearch](./plugins/outputs/elasticsearch)
+* [exec](./plugins/outputs/exec)
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
