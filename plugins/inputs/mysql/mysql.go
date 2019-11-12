@@ -9,12 +9,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
-
-	"github.com/go-sql-driver/mysql"
+	"github.com/influxdata/telegraf/plugins/inputs/mysql/v2"
 )
 
 type Mysql struct {
@@ -38,6 +38,8 @@ type Mysql struct {
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
+
+	Log telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 	lastT            time.Time
 	initDone         bool
@@ -549,14 +551,20 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			return err
 		}
 		key = strings.ToLower(key)
+
 		// parse mysql version and put into field and tag
 		if strings.Contains(key, "version") {
 			fields[key] = string(val)
 			tags[key] = string(val)
 		}
-		if value, ok := m.parseValue(val); ok {
+
+		value, err := m.parseGlobalVariables(key, val)
+		if err != nil {
+			m.Log.Debugf("Error parsing global variable %q: %v", key, err)
+		} else {
 			fields[key] = value
 		}
+
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_variables", fields, tags)
@@ -568,6 +576,18 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 		acc.AddFields("mysql_variables", fields, tags)
 	}
 	return nil
+}
+
+func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{}, error) {
+	if m.MetricVersion < 2 {
+		v, ok := v1.ParseValue(value)
+		if ok {
+			return v, nil
+		}
+		return v, fmt.Errorf("could not parse value: %q", string(value))
+	} else {
+		return v2.ConvertGlobalVariables(key, value)
+	}
 }
 
 // gatherSlaveStatuses can be used to get replication analytics
@@ -743,7 +763,10 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			}
 		} else {
 			key = strings.ToLower(key)
-			if value, ok := m.parseValue(val); ok {
+			value, err := v2.ConvertGlobalStatus(key, val)
+			if err != nil {
+				m.Log.Debugf("Error parsing global status: %v", err)
+			} else {
 				fields[key] = value
 			}
 		}
