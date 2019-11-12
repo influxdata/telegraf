@@ -32,6 +32,6 @@ the SNMP [README.md](../snmp/README.md) for details.
 
 ### Example Output
 ```
-> snmp_trap,host=debian,trap_name=coldStart,trap_version=2c sysUpTimeInstance_type="TimeTicks",snmpTrapEnterprise.0="linux",snmpTrapEnterprise.0_type="ObjectIdentifier",sysUpTimeInstance=1i 1573078928344595213
-> snmp_trap,host=debian,trap_name=nsNotifyShutdown,trap_version=2c sysUpTimeInstance=1224i,sysUpTimeInstance_type="TimeTicks",snmpTrapEnterprise.0="netSnmpNotificationPrefix",snmpTrapEnterprise.0_type="ObjectIdentifier" 1573078928299642679
+snmp_trap,source=192.168.122.102,trap_mib=SNMPv2-MIB,trap_name=coldStart,trap_oid=.1.3.6.1.6.3.1.1.5.1,trap_version=2c sysUpTimeInstance=0i,sysUpTimeInstance_type="TimeTicks",snmpTrapEnterprise.0="linux",snmpTrapEnterprise.0_type="ObjectIdentifier" 1573586012665359513
+snmp_trap,source=192.168.122.102,trap_mib=NET-SNMP-AGENT-MIB,trap_name=nsNotifyShutdown,trap_oid=.1.3.6.1.4.1.8072.4.0.2,trap_version=2c sysUpTimeInstance=2196i,sysUpTimeInstance_type="TimeTicks",snmpTrapEnterprise.0="netSnmpNotificationPrefix",snmpTrapEnterprise.0_type="ObjectIdentifier" 1573586012076284951
 ```
