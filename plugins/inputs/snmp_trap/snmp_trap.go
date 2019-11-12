@@ -1,7 +1,6 @@
 package snmp_trap
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -96,6 +95,7 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 		tags := map[string]string{}
 
 		tags["trap_version"] = packet.Version.String()
+		tags["source"] = addr.IP.String()
 
 		for _, v := range packet.Variables {
 			// build a name and value for each variable to use as tags
@@ -119,15 +119,23 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 			// b := v.Value.([]byte)
 			case gosnmp.ObjectIdentifier:
 				s, ok := v.Value.(string)
+				var mibName string
+				var oidText string
+				var err error
 				if ok {
-					if _, _, oidText, _, err := snmp.SnmpTranslate(s); ok && nil == err {
-						value = oidText // would mib name be useful here?
+					mibName, _, oidText, _, err = snmp.SnmpTranslate(s)
+					if nil == err {
+						value = oidText
 					}
 				}
 				// 1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.
 				// If v.Name is this oid, set a tag of the trap name.
 				if v.Name == ".1.3.6.1.6.3.1.1.4.1.0" {
-					tags["trap_name"] = fmt.Sprintf("%v", value)
+					tags["trap_oid"] = s
+					if err == nil {
+						tags["trap_name"] = oidText
+						tags["trap_mib"] = mibName
+					}
 					continue
 				}
 			}

@@ -21,7 +21,10 @@ the SNMP [README.md](../snmp/README.md) for details.
 
 - snmp_trap
   - tags:
+	- source (string, IP address of trap source)
 	- trap_name (string, value from SNMPv2-MIB::snmpTrapOID.0 PDU)
+	- trap_mib (string, mib from SNMPv2-MIB::snmpTrapOID.0 PDU)
+	- trap_oid (string, oid string from SNMPv2-MIB::snmpTrapOID.0 PDU)
 	- trap_version (string, "1" or "2c" or "3")
   - fields:
 	- $NAME (the type is variable and depends on the PDU)
