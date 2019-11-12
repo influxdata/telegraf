@@ -252,7 +252,7 @@ type FlushStats struct {
 type ConnectionStats struct {
 	Current      int64 `bson:"current"`
 	Available    int64 `bson:"available"`
-	TotalCreated int64 `bson:"total_created"`
+	TotalCreated int64 `bson:"totalCreated"`
 }
 
 // DurTiming stores information related to journaling.
