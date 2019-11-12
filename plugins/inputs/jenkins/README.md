@@ -67,6 +67,7 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
     - swap_available
     - swap_total
     - response_time
+    - num_executors
 
 - jenkins_job
   - tags:
