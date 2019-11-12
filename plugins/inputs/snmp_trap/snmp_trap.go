@@ -22,7 +22,7 @@ type SnmpTrap struct {
 
 	makeHandlerWrapper func(func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)) func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)
 
-	Log                telegraf.Logger
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
