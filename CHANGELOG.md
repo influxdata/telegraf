@@ -9,6 +9,8 @@
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
 - [ethtool](/plugins/inputs/ethtool/README.md) - Contributed by @philippreston
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
+- [systemd_units](/plugins/inputs/systemd_units/README.md) - Contributed by @benschweizer
+
 
 #### New Processors
 
@@ -298,9 +300,6 @@
 #### New Serializers
 
 - [wavefront](/plugins/serializers/wavefront/README.md) - Contributed by @puckpuck
-
-#### New Inputs
-- [systemd_units](/plugins/inputs/systemd_units/README.md) - Contributed by @cxcv
 
 #### Features
 
