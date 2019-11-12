@@ -100,7 +100,10 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
-			m.Log.Error(m.gatherServer(srv, acc))
+			err := m.gatherServer(srv, acc)
+			if err != nil {
+				m.Log.Errorf("Error in plugin: %v", err)
+			}
 		}(m.getMongoServer(u))
 	}
 
