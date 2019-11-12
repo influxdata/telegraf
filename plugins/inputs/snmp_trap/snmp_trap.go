@@ -61,7 +61,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
 	s.listener.Params = gosnmp.Default
-	// s.listener.Params.Logger = log.New(os.Stdout, "", 0)
 
 	// wrap the handler, used in unit tests
 	if nil != s.makeHandlerWrapper {
@@ -116,8 +115,6 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 			// addresses
 
 			switch v.Type {
-			// case gosnmp.OctetString:
-			// b := v.Value.([]byte)
 			case gosnmp.ObjectIdentifier:
 				s, ok := v.Value.(string)
 				var mibName string

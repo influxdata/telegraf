@@ -6,8 +6,6 @@ package snmp_trap
 // isn't available.
 
 import (
-	// "log"
-	// "os"
 	"net"
 	"strconv"
 	"testing"
@@ -40,7 +38,6 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 		Retries:   3,
 		MaxOids:   gosnmp.MaxOids,
 		Target:    "127.0.0.1",
-		// Logger:    log.New(os.Stdout, "", 0),
 	}
 
 	err := s.Connect()
@@ -83,10 +80,16 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 
 //  TestReceiveTrap
 func TestReceiveTrap(t *testing.T) {
-	const port = 12399 // todo: find unused port
+
+	// We would prefer to specify port 0 and let the network stack
+	// choose an unused port for us but TrapListener doesn't have a
+	// way to return the autoselected port.  Instead, we'll use an
+	// unusual port and hope it's unused.
+	const port = 12399
 	var fakeTime = time.Now()
 
-	// hook into the trap handler so the test knows when the trap has been received
+	// hook into the trap handler so the test knows when the trap has
+	// been received
 	received := make(chan int)
 	wrap := func(f func(*gosnmp.SnmpPacket, *net.UDPAddr)) func(*gosnmp.SnmpPacket, *net.UDPAddr) {
 		return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
