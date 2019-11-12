@@ -54,6 +54,10 @@
 - [#6337](https://github.com/influxdata/telegraf/issues/6337): Change no metric error message to debug level in cloudwatch input.
 - [#6602](https://github.com/influxdata/telegraf/issues/6602): Add missing ServerProperties query to sqlserver input docs.
 - [#6643](https://github.com/influxdata/telegraf/pull/6643): Fix mongodb connections_total_created field loading.
+- [#6627](https://github.com/influxdata/telegraf/issues/6578): Fix metric creation when node is offline in jenkins input.
+- [#6649](https://github.com/influxdata/telegraf/issues/6615): Fix docker uptime_ns calculation when container has been restarted.
+- [#6647](https://github.com/influxdata/telegraf/issues/6646): Fix mysql field type conflict in conversion of gtid_mode to an integer.
+- [#5529](https://github.com/influxdata/telegraf/issues/5529): Fix mysql field type conflict with ssl_verify_depth and ssl_ctx_verify_depth.
 
 ## v1.12.4 [2019-10-23]
 
