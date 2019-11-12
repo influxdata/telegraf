@@ -18,7 +18,9 @@ see `systemctl list-units --all --type help` for possible options.
   ## Set timeout for systemctl execution
   # timeout = "1s"
   #
-  ## Filter for a specific unit types, default is "service":
+  ## Filter for a specific unit type, default is "service", other possible
+  ## values are "socket", "target", "device", "mount", "automount", "swap",
+  ## "timer", "path", "slice" and "scope ":
   # unittype = "service"
 ```
 
@@ -26,10 +28,13 @@ see `systemctl list-units --all --type help` for possible options.
 - systemd_units:
   - tags:
     - name (string, unit name)
+    - load (string, load state)
+    - active (string, active state)
+    - sub (string, sub state)
   - fields:
-    - load (int, see below)
-    - active (int, see below)
-    - sub (int, see below)
+    - load_code (int, see below)
+    - active_code (int, see below)
+    - sub_code (int, see below)
 
 #### Load
 
@@ -44,7 +49,6 @@ enumeration of [unit_load_state_table](https://github.com/systemd/systemd/blob/c
 | 4     | error       | unit is ~                       |
 | 5     | merged      | unit is ~                       |
 | 6     | masked      | unit is ~                       |
-| -1    | err         | field not found in lookup table |
 
 #### Active
 
@@ -58,7 +62,6 @@ enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob
 | 3     | failed       | unit is ~                       |
 | 4     | activating   | unit is ~                       |
 | 5     | deactivating | unit is ~                       |
-| -1    | err          | field not found in lookup table |
 
 #### Sub
 
@@ -121,16 +124,15 @@ values
 |        |                       | service_state_table start at 0x00a0 |
 | 0x00a0 | elapsed               | unit is ~                           |
 |        |                       |                                     |
-| -1     | err                   | field not found in lookup table     |
 
 ### Example Output
 
 Linux Systemd Units:
 ```
 $ telegraf --test --config /tmp/telegraf.conf
-> systemd_units,host=host1.example.com,name=dbus.service load=0i,active=0i,sub=0i 1533730725000000000
-> systemd_units,host=host1.example.com,name=networking.service load=0i,active=3i,sub=12i 1533730725000000000
-> systemd_units,host=host1.example.com,name=ssh.service load=0i,active=0i,sub=0i 1533730725000000000
+> systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
+> systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=failed,sub=failed load_code=0i,active_code=3i,sub_code=12i 1533730725000000000
+> systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
 ...
 ```
 

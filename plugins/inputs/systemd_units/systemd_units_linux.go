@@ -24,93 +24,91 @@ type systemctl func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, 
 
 const measurement = "systemd_units"
 
-// Below are mappings of systemd state tables as defined at
-// https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.
-// Duplicate strings are removed from this list, zero values are
-// intentionally left free to catch string-not-found errors
-// On lookup, the values are decreased, so that string-not-found maps to -1
+// Below are mappings of systemd state tables as defined in
+// https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c
+// Duplicate strings are removed from this list.
 var load_map = map[string]int{
-	"loaded":      1,
-	"stub":        2,
-	"not-found":   3,
-	"bad-setting": 4,
-	"error":       5,
-	"merged":      6,
-	"masked":      7,
+	"loaded":      0,
+	"stub":        1,
+	"not-found":   2,
+	"bad-setting": 3,
+	"error":       4,
+	"merged":      5,
+	"masked":      6,
 }
 
 var active_map = map[string]int{
-	"active":       1,
-	"reloading":    2,
-	"inactive":     3,
-	"failed":       4,
-	"activating":   5,
-	"deactivating": 6,
+	"active":       0,
+	"reloading":    1,
+	"inactive":     2,
+	"failed":       3,
+	"activating":   4,
+	"deactivating": 5,
 }
 
 var sub_map = map[string]int{
 	// service_state_table, offset 0x0000
-	"running":       0x0001,
-	"dead":          0x0002,
-	"start-pre":     0x0003,
-	"start":         0x0004,
-	"exited":        0x0005,
-	"reload":        0x0006,
-	"stop":          0x0007,
-	"stop-watchdog": 0x0008,
-	"stop-sigterm":  0x0009,
-	"stop-sigkill":  0x000a,
-	"stop-post":     0x000b,
-	"final-sigterm": 0x000c,
-	"failed":        0x000d,
-	"auto-restart":  0x000e,
+	"running":       0x0000,
+	"dead":          0x0001,
+	"start-pre":     0x0002,
+	"start":         0x0003,
+	"exited":        0x0004,
+	"reload":        0x0005,
+	"stop":          0x0006,
+	"stop-watchdog": 0x0007,
+	"stop-sigterm":  0x0008,
+	"stop-sigkill":  0x0009,
+	"stop-post":     0x000a,
+	"final-sigterm": 0x000b,
+	"failed":        0x000c,
+	"auto-restart":  0x000d,
 
 	// automount_state_table, offset 0x0010
-	"waiting": 0x0011,
+	"waiting": 0x0010,
 
 	// device_state_table, offset 0x0020
-	"tentative": 0x0021,
-	"plugged":   0x0022,
+	"tentative": 0x0020,
+	"plugged":   0x0021,
 
 	// mount_state_table, offset 0x0030
-	"mounting":           0x0031,
-	"mounting-done":      0x0032,
-	"mounted":            0x0033,
-	"remounting":         0x0034,
-	"unmounting":         0x0035,
-	"remounting-sigterm": 0x0036,
-	"remounting-sigkill": 0x0037,
-	"unmounting-sigterm": 0x0038,
-	"unmounting-sigkill": 0x0039,
+	"mounting":           0x0030,
+	"mounting-done":      0x0031,
+	"mounted":            0x0032,
+	"remounting":         0x0033,
+	"unmounting":         0x0034,
+	"remounting-sigterm": 0x0035,
+	"remounting-sigkill": 0x0036,
+	"unmounting-sigterm": 0x0037,
+	"unmounting-sigkill": 0x0038,
 
 	// path_state_table, offset 0x0040
 
 	// scope_state_table, offset 0x0050
-	"abandoned": 0x0051,
+	"abandoned": 0x0050,
 
 	// slice_state_table, offset 0x0060
-	"active": 0x0061,
+	"active": 0x0060,
 
 	// socket_state_table, offset 0x0070
-	"start-chown":      0x0071,
-	"start-post":       0x0072,
-	"listening":        0x0073,
-	"stop-pre":         0x0074,
-	"stop-pre-sigterm": 0x0075,
-	"stop-pre-sigkill": 0x0076,
-	"final-sigkill":    0x0077,
+	"start-chown":      0x0070,
+	"start-post":       0x0071,
+	"listening":        0x0072,
+	"stop-pre":         0x0073,
+	"stop-pre-sigterm": 0x0074,
+	"stop-pre-sigkill": 0x0075,
+	"final-sigkill":    0x0076,
 
 	// swap_state_table, offset 0x0080
-	"activating":           0x0081,
-	"activating-done":      0x0082,
-	"deactivating":         0x0083,
-	"deactivating-sigterm": 0x0084,
-	"deactivating-sigkill": 0x0085,
+	"activating":           0x0080,
+	"activating-done":      0x0081,
+	"deactivating":         0x0082,
+	"deactivating-sigterm": 0x0083,
+	"deactivating-sigkill": 0x0084,
 
 	// target_state_table, offset 0x0090
 
 	// timer_state_table, offset 0x00a0
-	"elapsed": 0x00a1,
+	"elapsed": 0x00a0,
 }
 
 var (
@@ -119,24 +117,26 @@ var (
 )
 
 // Description returns a short description of the plugin
-func (systemd_units *SystemdUnits) Description() string {
+func (s *SystemdUnits) Description() string {
 	return "Gather systemd units state"
 }
 
 // SampleConfig returns sample configuration options.
-func (systemd_units *SystemdUnits) SampleConfig() string {
+func (s *SystemdUnits) SampleConfig() string {
 	return `
   ## Set timeout for systemctl execution
   # timeout = "1s"
   #
-  ## Filter for a specific unit types, default is "service":
+  ## Filter for a specific unit type, default is "service", other possible
+  ## values are "socket", "target", "device", "mount", "automount", "swap",
+  ## "timer", "path", "slice" and "scope ":
   # unittype = "service"
 `
 }
 
 // Gather parses systemctl outputs and adds counters to the Accumulator
-func (systemd_units *SystemdUnits) Gather(acc telegraf.Accumulator) error {
-	out, err := systemd_units.systemctl(systemd_units.Timeout, systemd_units.UnitType)
+func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
+	out, err := s.systemctl(s.Timeout, s.UnitType)
 	if err != nil {
 		return err
 	}
@@ -150,19 +150,42 @@ func (systemd_units *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Error parsing line (expected at least 4 fields): %s", line))
 			continue
 		}
+		name := data[0]
+		load := data[1]
+		active := data[2]
+		sub := data[3]
 		tags := map[string]string{
-			"name": data[0],
-		}
-		load := load_map[data[1]] - 1
-		active := active_map[data[2]] - 1
-		sub := sub_map[data[3]] - 1
-
-		fields := map[string]interface{}{
-			"load":   load,
+			"name": name,
+			"load": load,
 			"active": active,
-			"sub":    sub,
+			"sub": sub,
 		}
-		acc.AddCounter(measurement, fields, tags)
+
+		var (
+			load_code int
+			active_code int
+			sub_code int
+			ok bool
+		)
+		if load_code, ok = load_map[load]; !ok {
+			acc.AddError(fmt.Errorf("Error parsing field 'load', value not in map: %s", load))
+			continue
+		}
+		if active_code, ok = active_map[active]; !ok {
+			acc.AddError(fmt.Errorf("Error parsing field 'active', value not in map: %s", active))
+			continue
+		}
+		if sub_code, ok = sub_map[sub]; !ok {
+			acc.AddError(fmt.Errorf("Error parsing field 'sub', value not in map: %s", sub))
+			continue
+		}
+		fields := map[string]interface{}{
+			"load_code":   load_code,
+			"active_code": active_code,
+			"sub_code":    sub_code,
+		}
+
+		acc.AddFields(measurement, fields, tags)
 	}
 
 	return nil
