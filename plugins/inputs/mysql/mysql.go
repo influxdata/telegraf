@@ -566,7 +566,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 
 		value, err := m.parseGlobalVariables(key, val)
 		if err != nil {
-			m.Log.Debugf("Error parsing global variables: %v", err)
+			m.Log.Debugf("Error parsing global variable %q: %v", key, err)
 		} else {
 			fields[key] = value
 		}
