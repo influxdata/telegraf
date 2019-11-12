@@ -664,6 +664,44 @@ func TestContainerStatus(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "container has been restarted",
+			now: func() time.Time {
+				return time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC)
+			},
+			inspect: func() types.ContainerJSON {
+				i := containerInspect()
+				i.ContainerJSONBase.State.StartedAt = "2019-01-01T00:00:02Z"
+				i.ContainerJSONBase.State.FinishedAt = "2019-01-01T00:00:01Z"
+				return i
+			}(),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"docker_container_status",
+					map[string]string{
+						"container_name":    "etcd",
+						"container_image":   "quay.io/coreos/etcd",
+						"container_version": "v2.2.2",
+						"engine_host":       "absol",
+						"label1":            "test_value_1",
+						"label2":            "test_value_2",
+						"server_version":    "17.09.0-ce",
+						"container_status":  "running",
+						"source":            "e2173b9478a6",
+					},
+					map[string]interface{}{
+						"oomkilled":    false,
+						"pid":          1234,
+						"exitcode":     0,
+						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"started_at":   time.Date(2019, 1, 1, 0, 0, 2, 0, time.UTC).UnixNano(),
+						"finished_at":  time.Date(2019, 1, 1, 0, 0, 1, 0, time.UTC).UnixNano(),
+						"uptime_ns":    int64(1 * time.Second),
+					},
+					time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
