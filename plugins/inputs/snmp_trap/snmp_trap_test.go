@@ -1,10 +1,5 @@
 package snmp_trap
 
-// todo: tests that look up oids will pass only if snmptranslate (part
-// of net-snmp) is installed and working.  We need to mock name lookup
-// or add a way to disable it so tests will pass when snmptranslate
-// isn't available.
-
 import (
 	"net"
 	"strconv"
@@ -21,6 +16,15 @@ import (
 )
 
 func TestTranslate(t *testing.T) {
+	defer snmp.SnmpTranslateClear()
+	snmp.SnmpTranslateForce(
+		".1.3.6.1.6.3.1.1.5.1",
+		"SNMPv2-MIB",
+		".1.3.6.1.6.3.1.1.5.1",
+		"coldStart",
+		"",
+	)
+
 	mibName, oidNum, oidText, conversion, err := snmp.SnmpTranslate(".1.3.6.1.6.3.1.1.5.1")
 	require.NoError(t, err)
 	require.Equal(t, "SNMPv2-MIB", mibName)
@@ -78,8 +82,31 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 	return now
 }
 
-//  TestReceiveTrap
 func TestReceiveTrap(t *testing.T) {
+	// Preload the cache with the oids we'll use in this test so
+	// snmptranslate and mibs don't need to be installed.
+	defer snmp.SnmpTranslateClear()
+	snmp.SnmpTranslateForce(
+		".1.3.6.1.6.3.1.1.4.1.0",
+		"SNMPv2-MIB",
+		".1.3.6.1.6.3.1.1.4.1.0",
+		"snmpTrapOID.0",
+		"",
+	)
+	snmp.SnmpTranslateForce(
+		".1.3.6.1.6.3.1.1.5.1",
+		"SNMPv2-MIB",
+		".1.3.6.1.6.3.1.1.5.1",
+		"coldStart",
+		"",
+	)
+	snmp.SnmpTranslateForce(
+		".1.3.6.1.2.1.1.3.0",
+		"UNUSED_MIB_NAME",
+		".1.3.6.1.2.1.1.3.0",
+		"sysUpTimeInstance",
+		"",
+	)
 
 	// We would prefer to specify port 0 and let the network stack
 	// choose an unused port for us but TrapListener doesn't have a

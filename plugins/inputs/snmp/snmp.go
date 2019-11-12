@@ -974,6 +974,28 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
 }
 
+func SnmpTranslateForce(oid string, mibName string, oidNum string, oidText string, conversion string) {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	if snmpTranslateCaches == nil {
+		snmpTranslateCaches = map[string]snmpTranslateCache{}
+	}
+
+	var stc snmpTranslateCache
+	stc.mibName = mibName
+	stc.oidNum = oidNum
+	stc.oidText = oidText
+	stc.conversion = conversion
+	stc.err = nil
+	snmpTranslateCaches[oid] = stc
+}
+
+func SnmpTranslateClear() {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	snmpTranslateCaches = map[string]snmpTranslateCache{}
+}
+
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	var out []byte
 	if strings.ContainsAny(oid, ":abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") {

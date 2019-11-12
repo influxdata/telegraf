@@ -106,7 +106,7 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 			// use system mibs to resolve the name if possible
 			_, _, oidText, _, err := snmp.SnmpTranslate(v.Name)
 			if nil == err {
-				name = oidText // would mib name be useful here?
+				name = oidText
 			}
 
 			// todo: format the pdu value based on its snmp type and
