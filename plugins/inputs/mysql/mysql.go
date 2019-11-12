@@ -557,14 +557,20 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			return err
 		}
 		key = strings.ToLower(key)
+
 		// parse mysql version and put into field and tag
 		if strings.Contains(key, "version") {
 			fields[key] = string(val)
 			tags[key] = string(val)
 		}
-		if value, ok := m.parseValue(val); ok {
+
+		value, err := m.parseGlobalVariables(key, val)
+		if err != nil {
+			m.Log.Debugf("Error parsing global variables: %v", err)
+		} else {
 			fields[key] = value
 		}
+
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_variables", fields, tags)
@@ -576,6 +582,18 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 		acc.AddFields("mysql_variables", fields, tags)
 	}
 	return nil
+}
+
+func (m *Mysql) parseGlobalVariables(key string, value sql.RawBytes) (interface{}, error) {
+	if m.MetricVersion < 2 {
+		v, ok := v1.ParseValue(value)
+		if ok {
+			return v, nil
+		}
+		return v, fmt.Errorf("could not parse value: %q", string(value))
+	} else {
+		return v2.ConvertGlobalVariables(key, value)
+	}
 }
 
 // gatherSlaveStatuses can be used to get replication analytics
