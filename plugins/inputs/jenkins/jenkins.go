@@ -191,11 +191,11 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	}
 
 	fields := make(map[string]interface{})
+	fields["num_executors"] = n.NumExecutors
 
 	if monitorData.HudsonNodeMonitorsResponseTimeMonitor != nil {
 		fields["response_time"] = monitorData.HudsonNodeMonitorsResponseTimeMonitor.Average
 	}
-
 	if monitorData.HudsonNodeMonitorsDiskSpaceMonitor != nil {
 		tags["disk_path"] = monitorData.HudsonNodeMonitorsDiskSpaceMonitor.Path
 		fields["disk_available"] = monitorData.HudsonNodeMonitorsDiskSpaceMonitor.Size
@@ -335,9 +335,10 @@ type nodeResponse struct {
 }
 
 type node struct {
-	DisplayName string      `json:"displayName"`
-	Offline     bool        `json:"offline"`
-	MonitorData monitorData `json:"monitorData"`
+	DisplayName  string      `json:"displayName"`
+	Offline      bool        `json:"offline"`
+	NumExecutors int         `json:"numExecutors"`
+	MonitorData  monitorData `json:"monitorData"`
 }
 
 type monitorData struct {

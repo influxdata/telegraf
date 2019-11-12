@@ -203,13 +203,10 @@ func TestGatherNodeData(t *testing.T) {
 					"/computer/api/json": nodeResponse{
 						Computers: []node{
 							{
-								DisplayName: "slave",
-								MonitorData: monitorData{
-									HudsonNodeMonitorsResponseTimeMonitor: &responseTimeMonitor{
-										Average: 10032,
-									},
-								},
-								Offline: true,
+								DisplayName:  "slave",
+								MonitorData:  monitorData{},
+								NumExecutors: 1,
+								Offline:      true,
 							},
 						},
 					},
@@ -223,7 +220,7 @@ func TestGatherNodeData(t *testing.T) {
 							"status":    "offline",
 						},
 						Fields: map[string]interface{}{
-							"response_time": int64(10032),
+							"num_executors": 1,
 						},
 					},
 				},
