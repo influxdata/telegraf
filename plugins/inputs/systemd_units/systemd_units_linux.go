@@ -155,17 +155,17 @@ func (s *SystemdUnits) Gather(acc telegraf.Accumulator) error {
 		active := data[2]
 		sub := data[3]
 		tags := map[string]string{
-			"name": name,
-			"load": load,
+			"name":   name,
+			"load":   load,
 			"active": active,
-			"sub": sub,
+			"sub":    sub,
 		}
 
 		var (
-			load_code int
+			load_code   int
 			active_code int
-			sub_code int
-			ok bool
+			sub_code    int
+			ok          bool
 		)
 		if load_code, ok = load_map[load]; !ok {
 			acc.AddError(fmt.Errorf("Error parsing field 'load', value not in map: %s", load))

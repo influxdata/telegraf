@@ -42,7 +42,7 @@ func TestSystemdUnits(t *testing.T) {
 		{
 			name: "example loaded failed failed",
 			line: "example.service                loaded failed failed  example service description",
-			tags: map[string]string{"name": "example.service", "load": "loaded", "active": "failed", "sub": "failed" },
+			tags: map[string]string{"name": "example.service", "load": "loaded", "active": "failed", "sub": "failed"},
 			fields: map[string]interface{}{
 				"load_code":   0,
 				"active_code": 3,
