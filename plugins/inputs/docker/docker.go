@@ -546,17 +546,22 @@ func (d *Docker) gatherContainerInspect(
 		started, err := time.Parse(time.RFC3339, info.State.StartedAt)
 		if err == nil && !started.IsZero() {
 			statefields["started_at"] = started.UnixNano()
-			statefields["uptime_ns"] = finished.Sub(started).Nanoseconds()
+
+			uptime := finished.Sub(started)
+			if finished.Before(started) {
+				uptime = now().Sub(started)
+			}
+			statefields["uptime_ns"] = uptime.Nanoseconds()
 		}
 
-		acc.AddFields("docker_container_status", statefields, tags, time.Now())
+		acc.AddFields("docker_container_status", statefields, tags, now())
 
 		if info.State.Health != nil {
 			healthfields := map[string]interface{}{
 				"health_status":  info.State.Health.Status,
 				"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
 			}
-			acc.AddFields("docker_container_health", healthfields, tags, time.Now())
+			acc.AddFields("docker_container_health", healthfields, tags, now())
 		}
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -541,25 +542,22 @@ func TestContainerNames(t *testing.T) {
 	}
 }
 
-func TestContainerStatus(t *testing.T) {
-	type expectation struct {
-		// tags
-		Status string
-		// fields
-		ContainerID string
-		OOMKilled   bool
-		Pid         int
-		ExitCode    int
-		StartedAt   time.Time
-		FinishedAt  time.Time
-		UptimeNs    int64
+func FilterMetrics(metrics []telegraf.Metric, f func(telegraf.Metric) bool) []telegraf.Metric {
+	results := []telegraf.Metric{}
+	for _, m := range metrics {
+		if f(m) {
+			results = append(results, m)
+		}
 	}
+	return results
+}
 
+func TestContainerStatus(t *testing.T) {
 	var tests = []struct {
-		name    string
-		now     func() time.Time
-		inspect types.ContainerJSON
-		expect  expectation
+		name     string
+		now      func() time.Time
+		inspect  types.ContainerJSON
+		expected []telegraf.Metric
 	}{
 		{
 			name: "finished_at is zero value",
@@ -567,49 +565,141 @@ func TestContainerStatus(t *testing.T) {
 				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
 			},
 			inspect: containerInspect(),
-			expect: expectation{
-				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
-				Status:      "running",
-				OOMKilled:   false,
-				Pid:         1234,
-				ExitCode:    0,
-				StartedAt:   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
-				UptimeNs:    int64(3 * time.Minute),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"docker_container_status",
+					map[string]string{
+						"container_name":    "etcd",
+						"container_image":   "quay.io/coreos/etcd",
+						"container_version": "v2.2.2",
+						"engine_host":       "absol",
+						"label1":            "test_value_1",
+						"label2":            "test_value_2",
+						"server_version":    "17.09.0-ce",
+						"container_status":  "running",
+						"source":            "e2173b9478a6",
+					},
+					map[string]interface{}{
+						"oomkilled":    false,
+						"pid":          1234,
+						"exitcode":     0,
+						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"started_at":   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC).UnixNano(),
+						"uptime_ns":    int64(3 * time.Minute),
+					},
+					time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+				),
 			},
 		},
 		{
 			name: "finished_at is non-zero value",
+			now: func() time.Time {
+				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
+			},
 			inspect: func() types.ContainerJSON {
 				i := containerInspect()
 				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
 				return i
 			}(),
-			expect: expectation{
-				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
-				Status:      "running",
-				OOMKilled:   false,
-				Pid:         1234,
-				ExitCode:    0,
-				StartedAt:   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC),
-				FinishedAt:  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
-				UptimeNs:    int64(5 * time.Minute),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"docker_container_status",
+					map[string]string{
+						"container_name":    "etcd",
+						"container_image":   "quay.io/coreos/etcd",
+						"container_version": "v2.2.2",
+						"engine_host":       "absol",
+						"label1":            "test_value_1",
+						"label2":            "test_value_2",
+						"server_version":    "17.09.0-ce",
+						"container_status":  "running",
+						"source":            "e2173b9478a6",
+					},
+					map[string]interface{}{
+						"oomkilled":    false,
+						"pid":          1234,
+						"exitcode":     0,
+						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"started_at":   time.Date(2018, 6, 14, 5, 48, 53, 266176036, time.UTC).UnixNano(),
+						"finished_at":  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC).UnixNano(),
+						"uptime_ns":    int64(5 * time.Minute),
+					},
+					time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+				),
 			},
 		},
 		{
 			name: "started_at is zero value",
+			now: func() time.Time {
+				return time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC)
+			},
 			inspect: func() types.ContainerJSON {
 				i := containerInspect()
 				i.ContainerJSONBase.State.StartedAt = ""
 				i.ContainerJSONBase.State.FinishedAt = "2018-06-14T05:53:53.266176036Z"
 				return i
 			}(),
-			expect: expectation{
-				ContainerID: "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
-				Status:      "running",
-				OOMKilled:   false,
-				Pid:         1234,
-				ExitCode:    0,
-				FinishedAt:  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"docker_container_status",
+					map[string]string{
+						"container_name":    "etcd",
+						"container_image":   "quay.io/coreos/etcd",
+						"container_version": "v2.2.2",
+						"engine_host":       "absol",
+						"label1":            "test_value_1",
+						"label2":            "test_value_2",
+						"server_version":    "17.09.0-ce",
+						"container_status":  "running",
+						"source":            "e2173b9478a6",
+					},
+					map[string]interface{}{
+						"oomkilled":    false,
+						"pid":          1234,
+						"exitcode":     0,
+						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"finished_at":  time.Date(2018, 6, 14, 5, 53, 53, 266176036, time.UTC).UnixNano(),
+					},
+					time.Date(2018, 6, 14, 5, 51, 53, 266176036, time.UTC),
+				),
+			},
+		},
+		{
+			name: "container has been restarted",
+			now: func() time.Time {
+				return time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC)
+			},
+			inspect: func() types.ContainerJSON {
+				i := containerInspect()
+				i.ContainerJSONBase.State.StartedAt = "2019-01-01T00:00:02Z"
+				i.ContainerJSONBase.State.FinishedAt = "2019-01-01T00:00:01Z"
+				return i
+			}(),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"docker_container_status",
+					map[string]string{
+						"container_name":    "etcd",
+						"container_image":   "quay.io/coreos/etcd",
+						"container_version": "v2.2.2",
+						"engine_host":       "absol",
+						"label1":            "test_value_1",
+						"label2":            "test_value_2",
+						"server_version":    "17.09.0-ce",
+						"container_status":  "running",
+						"source":            "e2173b9478a6",
+					},
+					map[string]interface{}{
+						"oomkilled":    false,
+						"pid":          1234,
+						"exitcode":     0,
+						"container_id": "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
+						"started_at":   time.Date(2019, 1, 1, 0, 0, 2, 0, time.UTC).UnixNano(),
+						"finished_at":  time.Date(2019, 1, 1, 0, 0, 1, 0, time.UTC).UnixNano(),
+						"uptime_ns":    int64(1 * time.Second),
+					},
+					time.Date(2019, 1, 1, 0, 0, 3, 0, time.UTC),
+				),
 			},
 		},
 	}
@@ -643,39 +733,13 @@ func TestContainerStatus(t *testing.T) {
 				now = time.Now
 			}()
 
-			err := acc.GatherError(d.Gather)
+			err := d.Gather(&acc)
 			require.NoError(t, err)
 
-			fields := map[string]interface{}{
-				"oomkilled":    tt.expect.OOMKilled,
-				"pid":          tt.expect.Pid,
-				"exitcode":     tt.expect.ExitCode,
-				"container_id": tt.expect.ContainerID,
-			}
-
-			if started := tt.expect.StartedAt; !started.IsZero() {
-				fields["started_at"] = started.UnixNano()
-				fields["uptime_ns"] = tt.expect.UptimeNs
-			}
-
-			if finished := tt.expect.FinishedAt; !finished.IsZero() {
-				fields["finished_at"] = finished.UnixNano()
-			}
-
-			acc.AssertContainsTaggedFields(t,
-				"docker_container_status",
-				fields,
-				map[string]string{
-					"container_name":    "etcd",
-					"container_image":   "quay.io/coreos/etcd",
-					"container_version": "v2.2.2",
-					"engine_host":       "absol",
-					"label1":            "test_value_1",
-					"label2":            "test_value_2",
-					"server_version":    "17.09.0-ce",
-					"container_status":  tt.expect.Status,
-					"source":            "e2173b9478a6",
-				})
+			actual := FilterMetrics(acc.GetTelegrafMetrics(), func(m telegraf.Metric) bool {
+				return m.Name() == "docker_container_status"
+			})
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
 		})
 	}
 }
