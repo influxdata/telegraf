@@ -46,14 +46,6 @@ func ParseGTIDMode(value sql.RawBytes) (interface{}, error) {
 	}
 }
 
-var GlobalStatusConversions = map[string]ConversionFunc{
-	"ssl_ctx_verify_depth": ParseInt,
-}
-
-var GlobalVariableConversions = map[string]ConversionFunc{
-	"gtid_mode": ParseGTIDMode,
-}
-
 func ParseValue(value sql.RawBytes) (interface{}, error) {
 	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
 		return 1, nil
@@ -75,6 +67,15 @@ func ParseValue(value sql.RawBytes) (interface{}, error) {
 	}
 
 	return nil, fmt.Errorf("unconvertible value: %q", string(value))
+}
+
+var GlobalStatusConversions = map[string]ConversionFunc{
+	"ssl_ctx_verify_depth": ParseInt,
+	"ssl_verify_depth":     ParseInt,
+}
+
+var GlobalVariableConversions = map[string]ConversionFunc{
+	"gtid_mode": ParseGTIDMode,
 }
 
 func ConvertGlobalStatus(key string, value sql.RawBytes) (interface{}, error) {
