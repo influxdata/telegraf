@@ -21,7 +21,7 @@ type SnmpTrap struct {
 	timeFunc func() time.Time
 
 	makeHandlerWrapper func(func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)) func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)
-	Errch              chan error
+
 	Log                telegraf.Logger
 }
 
@@ -75,10 +75,11 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		// no ip means listen on all interfaces, ipv4 and ipv6
 		err := s.listener.Listen(s.ServiceAddress)
 		if err != nil {
-			s.Errch <- err
 			s.Log.Errorf("error in listen: %s", err)
 		}
 	}()
+
+	<-s.listener.Listening()
 
 	return nil
 }
@@ -146,8 +147,4 @@ func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPA
 
 		s.acc.AddFields("snmp_trap", fields, tags, tm)
 	}
-}
-
-func (s *SnmpTrap) Listening() <-chan bool {
-	return s.listener.Listening()
 }

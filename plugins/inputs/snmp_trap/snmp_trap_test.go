@@ -108,15 +108,6 @@ func TestReceiveTrap(t *testing.T) {
 	n.Start(&acc)
 	defer n.Stop()
 
-	// wait until input plugin is listening
-	select {
-	case <-n.Listening():
-	case err := <-n.Errch:
-		t.Fatalf("error in listen: %v", err)
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting to listen")
-	}
-
 	// send the trap
 	sentTimestamp := sendTrap(t, port)
 
