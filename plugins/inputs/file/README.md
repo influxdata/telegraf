@@ -7,6 +7,7 @@ Files will always be read in their entirety, if you wish to tail/follow a file
 use the [tail input plugin](/plugins/inputs/tail) instead.
 
 ### Configuration:
+
 ```toml
 [[inputs.file]]
   ## Files to parse each interval.
@@ -22,4 +23,8 @@ use the [tail input plugin](/plugins/inputs/tail) instead.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
+  ## to disable.
+  # file_tag = ""
 ```

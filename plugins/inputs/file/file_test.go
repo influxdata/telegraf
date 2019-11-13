@@ -21,6 +21,34 @@ func TestRefreshFilePaths(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(r.filenames))
 }
+
+func TestFileTag(t *testing.T) {
+	acc := testutil.Accumulator{}
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	r := File{
+		Files:   []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
+		FileTag: "filename",
+	}
+
+	parserConfig := parsers.Config{
+		DataFormat: "json",
+	}
+	nParser, err := parsers.NewParser(&parserConfig)
+	assert.NoError(t, err)
+	r.parser = nParser
+
+	err = r.Gather(&acc)
+	require.NoError(t, err)
+
+	for _, m := range acc.Metrics {
+		for key, value := range m.Tags {
+			assert.Equal(t, r.FileTag, key)
+			assert.Equal(t, filepath.Base(r.Files[0]), value)
+		}
+	}
+}
+
 func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
 	wd, _ := os.Getwd()
