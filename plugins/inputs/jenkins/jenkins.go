@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -190,9 +191,12 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 		tags["status"] = "offline"
 	}
 
-	urlTokens := strings.Split(j.URL, ":")
-	tags["source"] = urlTokens[1][2:]
-	tags["port"] = urlTokens[2]
+	u, err := url.Parse(j.URL)
+	if err != nil {
+		return err
+	}
+	tags["source"] = u.Hostname()
+	tags["port"] = u.Port()
 
 	fields := make(map[string]interface{})
 	fields["num_executors"] = n.NumExecutors
