@@ -96,8 +96,7 @@ type InfluxDB struct {
 	UintSupport      bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
-	clients    []Client
-	serializer *influx.Serializer
+	clients []Client
 }
 
 func (i *InfluxDB) Connect() error {
@@ -105,11 +104,6 @@ func (i *InfluxDB) Connect() error {
 
 	if len(i.URLs) == 0 {
 		i.URLs = append(i.URLs, defaultURL)
-	}
-
-	i.serializer = influx.NewSerializer()
-	if i.UintSupport {
-		i.serializer.SetFieldTypeSupport(influx.UintSupport)
 	}
 
 	for _, u := range i.URLs {
@@ -196,7 +190,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 		UserAgent:        i.UserAgent,
 		ContentEncoding:  i.ContentEncoding,
 		TLSConfig:        tlsConfig,
-		Serializer:       i.serializer,
+		Serializer:       i.newSerializer(),
 	}
 
 	c, err := NewHTTPClient(config)
@@ -205,6 +199,15 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 	}
 
 	return c, nil
+}
+
+func (i *InfluxDB) newSerializer() *influx.Serializer {
+	serializer := influx.NewSerializer()
+	if i.UintSupport {
+		serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
+
+	return serializer
 }
 
 func init() {

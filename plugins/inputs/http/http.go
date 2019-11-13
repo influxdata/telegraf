@@ -153,6 +153,7 @@ func (h *HTTP) gatherURL(
 	if err != nil {
 		return err
 	}
+	defer body.Close()
 
 	request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
@@ -216,16 +217,16 @@ func (h *HTTP) gatherURL(
 	return nil
 }
 
-func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
-	var err error
+func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
-		reader, err = internal.CompressWithGzip(reader)
+		rc, err := internal.CompressWithGzip(reader)
 		if err != nil {
 			return nil, err
 		}
+		return rc, nil
 	}
-	return reader, nil
+	return ioutil.NopCloser(reader), nil
 }
 
 func init() {
