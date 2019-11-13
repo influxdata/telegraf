@@ -12,9 +12,9 @@ import (
 )
 
 type File struct {
-	Files  []string `toml:"files"`
-	File   string   `toml:"file_tag"`
-	parser parsers.Parser
+	Files   []string `toml:"files"`
+	FileTag string   `toml:"file_tag"`
+	parser  parsers.Parser
 
 	filenames []string
 }
@@ -36,7 +36,7 @@ const sampleConfig = `
   
   ## Name a tag containing the name of the file the data was parsed from.  Leave empty 
   ## to disable.
-  # file_tag = "filename"
+  # file_tag = ""
 `
 
 // SampleConfig returns the default configuration of the Input
@@ -60,8 +60,8 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, m := range metrics {
-			if f.File != "" {
-				m.AddTag(f.File, filepath.Base(k))
+			if f.FileTag != "" {
+				m.AddTag(f.FileTag, filepath.Base(k))
 			}
 			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}

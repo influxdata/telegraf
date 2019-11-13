@@ -26,5 +26,5 @@ use the [tail input plugin](/plugins/inputs/tail) instead.
 
   ## Name a tag containing the name of the file the data was parsed from.  Leave empty
   ## to disable.
-  # file_tag = "filename"
+  # file_tag = ""
 ```

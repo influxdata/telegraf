@@ -27,8 +27,8 @@ func TestFileTag(t *testing.T) {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 	r := File{
-		Files: []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
-		File:  "filename",
+		Files:   []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
+		FileTag: "filename",
 	}
 
 	parserConfig := parsers.Config{
@@ -43,7 +43,7 @@ func TestFileTag(t *testing.T) {
 
 	for _, m := range acc.Metrics {
 		for key, value := range m.Tags {
-			assert.Equal(t, r.File, key)
+			assert.Equal(t, r.FileTag, key)
 			assert.Equal(t, filepath.Base(r.Files[0]), value)
 		}
 	}
