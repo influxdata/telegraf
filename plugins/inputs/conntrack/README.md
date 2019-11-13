@@ -36,6 +36,11 @@ For more information on conntrack-tools, see the
    ## Directories to search within for the conntrack files above.
    ## Missing directrories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
+
+   ## Use conntrack to enable the nf_conntrack metrics
+   conntrack = false
+   ## Change the location path as needed
+   conntable = ["/usr/sbin/conntrack", "-L", "-o", "extended"]
 ```
 
 ### Measurements & Fields:
