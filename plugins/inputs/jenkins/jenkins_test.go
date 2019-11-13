@@ -107,7 +107,7 @@ func TestGatherNodeData(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "bad empty monitor data",
+			name: "empty monitor data",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
 					"/api/json": struct{}{},
@@ -119,7 +119,9 @@ func TestGatherNodeData(t *testing.T) {
 					},
 				},
 			},
-			wantErr: true,
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{},
+			},
 		},
 		{
 			name: "filtered nodes",
@@ -135,7 +137,6 @@ func TestGatherNodeData(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name: "normal data collection",
 			input: mockHandler{
@@ -147,25 +148,18 @@ func TestGatherNodeData(t *testing.T) {
 								DisplayName: "master",
 								MonitorData: monitorData{
 									HudsonNodeMonitorsArchitectureMonitor: "linux",
-									HudsonNodeMonitorsResponseTimeMonitor: struct {
-										Average int64 `json:"average"`
-									}{
+									HudsonNodeMonitorsResponseTimeMonitor: &responseTimeMonitor{
 										Average: 10032,
 									},
-									HudsonNodeMonitorsDiskSpaceMonitor: nodeSpaceMonitor{
+									HudsonNodeMonitorsDiskSpaceMonitor: &nodeSpaceMonitor{
 										Path: "/path/1",
 										Size: 123,
 									},
-									HudsonNodeMonitorsTemporarySpaceMonitor: nodeSpaceMonitor{
+									HudsonNodeMonitorsTemporarySpaceMonitor: &nodeSpaceMonitor{
 										Path: "/path/2",
 										Size: 245,
 									},
-									HudsonNodeMonitorsSwapSpaceMonitor: struct {
-										SwapAvailable   float64 `json:"availableSwapSpace"`
-										SwapTotal       float64 `json:"totalSwapSpace"`
-										MemoryAvailable float64 `json:"availablePhysicalMemory"`
-										MemoryTotal     float64 `json:"totalPhysicalMemory"`
-									}{
+									HudsonNodeMonitorsSwapSpaceMonitor: &swapSpaceMonitor{
 										SwapAvailable:   212,
 										SwapTotal:       500,
 										MemoryAvailable: 101,
@@ -201,42 +195,75 @@ func TestGatherNodeData(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "slave is offline",
+			input: mockHandler{
+				responseMap: map[string]interface{}{
+					"/api/json": struct{}{},
+					"/computer/api/json": nodeResponse{
+						Computers: []node{
+							{
+								DisplayName:  "slave",
+								MonitorData:  monitorData{},
+								NumExecutors: 1,
+								Offline:      true,
+							},
+						},
+					},
+				},
+			},
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"node_name": "slave",
+							"status":    "offline",
+						},
+						Fields: map[string]interface{}{
+							"num_executors": 1,
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
-		ts := httptest.NewServer(test.input)
-		defer ts.Close()
-		j := &Jenkins{
-			Log:             testutil.Logger{},
-			URL:             ts.URL,
-			ResponseTimeout: internal.Duration{Duration: time.Microsecond},
-			NodeExclude:     []string{"ignore-1", "ignore-2"},
-		}
-		te := j.initialize(&http.Client{Transport: &http.Transport{}})
-		acc := new(testutil.Accumulator)
-		j.gatherNodesData(acc)
-		if err := acc.FirstError(); err != nil {
-			te = err
-		}
+		t.Run(test.name, func(t *testing.T) {
+			ts := httptest.NewServer(test.input)
+			defer ts.Close()
+			j := &Jenkins{
+				Log:             testutil.Logger{},
+				URL:             ts.URL,
+				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				NodeExclude:     []string{"ignore-1", "ignore-2"},
+			}
+			te := j.initialize(&http.Client{Transport: &http.Transport{}})
+			acc := new(testutil.Accumulator)
+			j.gatherNodesData(acc)
+			if err := acc.FirstError(); err != nil {
+				te = err
+			}
 
-		if !test.wantErr && te != nil {
-			t.Fatalf("%s: failed %s, expected to be nil", test.name, te.Error())
-		} else if test.wantErr && te == nil {
-			t.Fatalf("%s: expected err, got nil", test.name)
-		}
-		if test.output == nil && len(acc.Metrics) > 0 {
-			t.Fatalf("%s: collected extra data", test.name)
-		} else if test.output != nil && len(test.output.Metrics) > 0 {
-			for k, m := range test.output.Metrics[0].Tags {
-				if acc.Metrics[0].Tags[k] != m {
-					t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", test.name, k, m, acc.Metrics[0].Tags[k])
+			if !test.wantErr && te != nil {
+				t.Fatalf("%s: failed %s, expected to be nil", test.name, te.Error())
+			} else if test.wantErr && te == nil {
+				t.Fatalf("%s: expected err, got nil", test.name)
+			}
+			if test.output == nil && len(acc.Metrics) > 0 {
+				t.Fatalf("%s: collected extra data", test.name)
+			} else if test.output != nil && len(test.output.Metrics) > 0 {
+				for k, m := range test.output.Metrics[0].Tags {
+					if acc.Metrics[0].Tags[k] != m {
+						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", test.name, k, m, acc.Metrics[0].Tags[k])
+					}
+				}
+				for k, m := range test.output.Metrics[0].Fields {
+					if acc.Metrics[0].Fields[k] != m {
+						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[0].Fields[k], acc.Metrics[0].Fields[k])
+					}
 				}
 			}
-			for k, m := range test.output.Metrics[0].Fields {
-				if acc.Metrics[0].Fields[k] != m {
-					t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[0].Fields[k], acc.Metrics[0].Fields[k])
-				}
-			}
-		}
+		})
 	}
 }
 
@@ -290,21 +317,22 @@ func TestInitialize(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		te := test.input.initialize(mockClient)
-		if !test.wantErr && te != nil {
-			t.Fatalf("%s: failed %s, expected to be nil", test.name, te.Error())
-		} else if test.wantErr && te == nil {
-			t.Fatalf("%s: expected err, got nil", test.name)
-		}
-		if test.output != nil {
-			if test.input.client == nil {
-				t.Fatalf("%s: failed %s, jenkins instance shouldn't be nil", test.name, te.Error())
+		t.Run(test.name, func(t *testing.T) {
+			te := test.input.initialize(mockClient)
+			if !test.wantErr && te != nil {
+				t.Fatalf("%s: failed %s, expected to be nil", test.name, te.Error())
+			} else if test.wantErr && te == nil {
+				t.Fatalf("%s: expected err, got nil", test.name)
 			}
-			if test.input.MaxConnections != test.output.MaxConnections {
-				t.Fatalf("%s: different MaxConnections Expected %d, got %d\n", test.name, test.output.MaxConnections, test.input.MaxConnections)
+			if test.output != nil {
+				if test.input.client == nil {
+					t.Fatalf("%s: failed %s, jenkins instance shouldn't be nil", test.name, te.Error())
+				}
+				if test.input.MaxConnections != test.output.MaxConnections {
+					t.Fatalf("%s: different MaxConnections Expected %d, got %d\n", test.name, test.output.MaxConnections, test.input.MaxConnections)
+				}
 			}
-		}
-
+		})
 	}
 }
 
@@ -572,50 +600,51 @@ func TestGatherJobs(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		ts := httptest.NewServer(test.input)
-		defer ts.Close()
-		j := &Jenkins{
-			Log:             testutil.Logger{},
-			URL:             ts.URL,
-			MaxBuildAge:     internal.Duration{Duration: time.Hour},
-			ResponseTimeout: internal.Duration{Duration: time.Microsecond},
-			JobExclude: []string{
-				"ignore-1",
-				"apps/ignore-all/*",
-				"apps/k8s-cloud/PR-ignore2",
-			},
-		}
-		te := j.initialize(&http.Client{Transport: &http.Transport{}})
-		acc := new(testutil.Accumulator)
-		acc.SetDebug(true)
-		j.gatherJobs(acc)
-		if err := acc.FirstError(); err != nil {
-			te = err
-		}
-		if !test.wantErr && te != nil {
-			t.Fatalf("%s: failed %s, expected to be nil", test.name, te.Error())
-		} else if test.wantErr && te == nil {
-			t.Fatalf("%s: expected err, got nil", test.name)
-		}
-
-		if test.output != nil && len(test.output.Metrics) > 0 {
-			// sort metrics
-			sort.Slice(acc.Metrics, func(i, j int) bool {
-				return strings.Compare(acc.Metrics[i].Tags["name"], acc.Metrics[j].Tags["name"]) < 0
-			})
-			for i := range test.output.Metrics {
-				for k, m := range test.output.Metrics[i].Tags {
-					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", test.name, k, m, acc.Metrics[i].Tags[k])
-					}
-				}
-				for k, m := range test.output.Metrics[i].Fields {
-					if acc.Metrics[i].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[0].Fields[k])
-					}
-				}
+		t.Run(test.name, func(t *testing.T) {
+			ts := httptest.NewServer(test.input)
+			defer ts.Close()
+			j := &Jenkins{
+				Log:             testutil.Logger{},
+				URL:             ts.URL,
+				MaxBuildAge:     internal.Duration{Duration: time.Hour},
+				ResponseTimeout: internal.Duration{Duration: time.Microsecond},
+				JobExclude: []string{
+					"ignore-1",
+					"apps/ignore-all/*",
+					"apps/k8s-cloud/PR-ignore2",
+				},
+			}
+			te := j.initialize(&http.Client{Transport: &http.Transport{}})
+			acc := new(testutil.Accumulator)
+			j.gatherJobs(acc)
+			if err := acc.FirstError(); err != nil {
+				te = err
+			}
+			if !test.wantErr && te != nil {
+				t.Fatalf("%s: failed %s, expected to be nil", test.name, te.Error())
+			} else if test.wantErr && te == nil {
+				t.Fatalf("%s: expected err, got nil", test.name)
 			}
 
-		}
+			if test.output != nil && len(test.output.Metrics) > 0 {
+				// sort metrics
+				sort.Slice(acc.Metrics, func(i, j int) bool {
+					return strings.Compare(acc.Metrics[i].Tags["name"], acc.Metrics[j].Tags["name"]) < 0
+				})
+				for i := range test.output.Metrics {
+					for k, m := range test.output.Metrics[i].Tags {
+						if acc.Metrics[i].Tags[k] != m {
+							t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", test.name, k, m, acc.Metrics[i].Tags[k])
+						}
+					}
+					for k, m := range test.output.Metrics[i].Fields {
+						if acc.Metrics[i].Fields[k] != m {
+							t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[i].Fields[k], acc.Metrics[0].Fields[k])
+						}
+					}
+				}
+
+			}
+		})
 	}
 }

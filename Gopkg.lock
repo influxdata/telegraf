@@ -506,6 +506,14 @@
   version = "v0.2.3"
 
 [[projects]]
+  digest = "1:181fe10dcb708edd7c68c5781928b6657612771f81dd1773287386b6982c94e2"
+  name = "github.com/gofrs/uuid"
+  packages = ["."]
+  pruneopts = ""
+  revision = "3a54a6416087bae7aa0ac32dd79fe1bf87bc99e4"
+  version = "v2.1.0"
+
+[[projects]]
   digest = "1:6e73003ecd35f4487a5e88270d3ca0a81bc80dc88053ac7e4dcfec5fba30d918"
   name = "github.com/gogo/protobuf"
   packages = ["proto"]
@@ -715,7 +723,7 @@
   revision = "7c63b0a71ef8300adc255344d275e10e5c3a71ec"
 
 [[projects]]
-  digest = "1:a7998e19ebb78fdd341cdaf3825fded9030ae27af9c70d298c05d88744e16a0b"
+  digest = "1:e248df365cb87001738e8c9368a6a27c504328047b196d89687c1ca918279a82"
   name = "github.com/jackc/pgx"
   packages = [
     ".",
@@ -727,8 +735,8 @@
     "stdlib",
   ]
   pruneopts = ""
-  revision = "8faa4453fc7051d1076053f8854077753ab912f2"
-  version = "v3.4.0"
+  revision = "c73e7d75061bb42b0282945710f344cfe1113d10"
+  version = "v3.6.0"
 
 [[projects]]
   digest = "1:d45477e90c25c8c6d7d4237281167aa56079382fc042db4b44a8328071649bfa"
@@ -836,12 +844,12 @@
   revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
 
 [[projects]]
-  digest = "1:4c8d8358c45ba11ab7bb15df749d4df8664ff1582daead28bae58cf8cbe49890"
+  digest = "1:1eef80a63549d929a5d922dc3d9ad0d489ed490f52b90887ad577b65a16d071c"
   name = "github.com/miekg/dns"
   packages = ["."]
   pruneopts = ""
-  revision = "5a2b9fab83ff0f8bfc99684bd5f43a37abe560f1"
-  version = "v1.0.8"
+  revision = "f4db2ca6edc3af0ee51bf332099cc480bcf3ef9d"
+  version = "v1.0.10"
 
 [[projects]]
   branch = "master"
@@ -1063,6 +1071,13 @@
   revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
 
 [[projects]]
+  digest = "1:a18bd4e530f3f36fe91a5d1fd57d492f25287546e613f892d21c2b76b848517d"
+  name = "github.com/safchain/ethtool"
+  packages = ["."]
+  pruneopts = ""
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[projects]]
   branch = "master"
   digest = "1:7fc2f428767a2521abc63f1a663d981f61610524275d6c0ea645defadd4e916f"
   name = "github.com/samuel/go-zookeeper"
@@ -1112,12 +1127,12 @@
   version = "v1.0.5"
 
 [[projects]]
-  branch = "master"
-  digest = "1:c74e7ad448ffae5fd76a71079615467e229c5c7ab4bfa309b80f796fe9c0da82"
+  digest = "1:a1cb5e999ad98b9838147e11ed1bdb000e750ee8872e2e21c74d9464cc9110c0"
   name = "github.com/soniah/gosnmp"
   packages = ["."]
   pruneopts = ""
-  revision = "b3532de686f6834255deeb98a64768a591f42195"
+  revision = "40eae407a1f8cbbe3f3f14c57bde0b16db1cfe85"
+  version = "v1.22.0"
 
 [[projects]]
   branch = "master"
@@ -1290,7 +1305,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0773b5c3be42874166670a20aa177872edb450cd9fc70b1df97303d977702a50"
+  digest = "1:d709f6b44dffe11337b3730ebf5ae6bb1bc9273a1c204266921205158a5a523f"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -1304,7 +1319,7 @@
     "ssh/terminal",
   ]
   pruneopts = ""
-  revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
+  revision = "87dc89f01550277dc22b74ffcf4cd89fa2f40f4c"
   source = "https://github.com/golang/crypto.git"
 
 [[projects]]
@@ -1629,12 +1644,12 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:367baf06b7dbd0ef0bbdd785f6a79f929c96b0c18e9d3b29c0eed1ac3f5db133"
-  name = "gopkg.in/ldap.v2"
+  digest = "1:cff622452aa789a1b2212d401f6b618ca1751a02229d26e002eb645ec22818f2"
+  name = "gopkg.in/ldap.v3"
   packages = ["."]
   pruneopts = ""
-  revision = "bb7a9ca6e4fbc2129e3db588a34bc970ffe811a9"
-  version = "v2.5.1"
+  revision = "caa044a2bfa324b735baee1722e8e2e372f76864"
+  version = "v3.1.0"
 
 [[projects]]
   branch = "v2"
@@ -1731,6 +1746,7 @@
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
+    "github.com/gofrs/uuid",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/duration",
     "github.com/golang/protobuf/ptypes/empty",
@@ -1772,7 +1788,7 @@
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
     "github.com/prometheus/common/expfmt",
-    "github.com/satori/go.uuid",
+    "github.com/safchain/ethtool",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
     "github.com/shirou/gopsutil/host",
@@ -1826,7 +1842,7 @@
     "google.golang.org/grpc/peer",
     "google.golang.org/grpc/status",
     "gopkg.in/gorethink/gorethink.v3",
-    "gopkg.in/ldap.v2",
+    "gopkg.in/ldap.v3",
     "gopkg.in/mgo.v2",
     "gopkg.in/mgo.v2/bson",
     "gopkg.in/olivere/elastic.v5",
