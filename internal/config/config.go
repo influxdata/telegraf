@@ -2026,6 +2026,19 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["flush_jitter"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+				oc.FlushJitter = new(time.Duration)
+				*oc.FlushJitter = dur
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -2059,6 +2072,7 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	}
 
 	delete(tbl.Fields, "flush_interval")
+	delete(tbl.Fields, "flush_jitter")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")
