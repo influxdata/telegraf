@@ -64,18 +64,21 @@
   version = "0.2.0"
 
 [[projects]]
-  digest = "1:5923e22a060ab818a015593422f9e8a35b9d881d4cfcfed0669a82959b11c7ee"
+  digest = "1:e4a02906493a47ee87ef61aeea130ce6624da07349a6dc62494a4e72b550ca8e"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
     "autorest/adal",
     "autorest/azure",
     "autorest/azure/auth",
+    "autorest/azure/cli",
     "autorest/date",
+    "logger",
+    "tracing",
   ]
   pruneopts = ""
-  revision = "1f7cd6cfe0adea687ad44a512dfe76140f804318"
-  version = "v10.12.0"
+  revision = "3492b2aff5036c67228ab3c7dba3577c871db200"
+  version = "v13.3.0"
 
 [[projects]]
   branch = "master"
@@ -301,12 +304,12 @@
   version = "v3.2.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:654ac9799e7a8a586d8690bb2229a4f3408bbfe2c5494bf4dfe043053eeb5496"
+  digest = "1:459dfcae44c32c1a6831fb99c75b40e7139aa800a04f55f6e47fedb33ee4407d"
   name = "github.com/dimchansky/utfbom"
   packages = ["."]
   pruneopts = ""
-  revision = "6c6132ff69f0f6c088739067407b5d32c52e1d0f"
+  revision = "d2133a1ce379ef6fa992b0514a77146c60db9d1c"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:522eff2a1f014a64fb403db60fc0110653e4dc5b59779894d208e697b0708ddc"
@@ -852,12 +855,12 @@
   version = "v1.0.10"
 
 [[projects]]
-  branch = "master"
-  digest = "1:99651e95333755cbe5c9768c1b80031300acca64a80870b40309202b32585a5a"
+  digest = "1:6dbb0eb72090871f2e58d1e37973fe3cb8c0f45f49459398d3fc740cb30e13bd"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
   pruneopts = ""
-  revision = "3864e76763d94a6df2f9960b16a20a33da9f9a66"
+  revision = "af06845cf3004701891bf4fdb884bfe4920b3727"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
