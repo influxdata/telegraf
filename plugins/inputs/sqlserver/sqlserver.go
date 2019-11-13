@@ -68,6 +68,7 @@ const sampleConfig = `
   ## - AzureDBResourceStats
   ## - AzureDBResourceGovernance
   ## - SqlRequests
+  ## - ServerProperties
   exclude_query = [ 'Schedulers' ]
 `
 
@@ -1305,7 +1306,7 @@ const sqlAzureDBResourceGovernance string = `
 IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
   'sqlserver_db_resource_governance' AS [measurement],
-   @@servername AS [sql_instance],
+   REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
    DB_NAME() as [database_name],
    slo_name,
 	dtu_limit,
@@ -1344,7 +1345,7 @@ BEGIN
         IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
          SELECT
            'sqlserver_instance_resource_governance' AS [measurement],
-           @@SERVERNAME AS [sql_instance],
+           REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
            instance_cap_cpu,
            instance_max_log_rate,
            instance_max_worker_threads,
@@ -1367,7 +1368,7 @@ SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHE
 create index ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
 SELECT	
    'sqlserver_requests' AS [measurement],
-    @@servername AS [sql_instance],
+    REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
     DB_NAME() as [database_name],
 	r.session_id
 	, r.request_id

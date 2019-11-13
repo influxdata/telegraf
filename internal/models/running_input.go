@@ -21,12 +21,15 @@ type RunningInput struct {
 }
 
 func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
-	logger := &Logger{
-		Name: logName("inputs", config.Name, config.Alias),
-		Errs: selfstat.Register("gather", "errors",
-			map[string]string{"input": config.Name, "alias": config.Alias}),
+	tags := map[string]string{"input": config.Name}
+	if config.Alias != "" {
+		tags["alias"] = config.Alias
 	}
 
+	logger := &Logger{
+		Name: logName("inputs", config.Name, config.Alias),
+		Errs: selfstat.Register("gather", "errors", tags),
+	}
 	setLogIfExist(input, logger)
 
 	return &RunningInput{
@@ -35,12 +38,12 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		MetricsGathered: selfstat.Register(
 			"gather",
 			"metrics_gathered",
-			map[string]string{"input": config.Name, "alias": config.Alias},
+			tags,
 		),
 		GatherTime: selfstat.RegisterTiming(
 			"gather",
 			"gather_time_ns",
-			map[string]string{"input": config.Name, "alias": config.Alias},
+			tags,
 		),
 		log: logger,
 	}

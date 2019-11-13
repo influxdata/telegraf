@@ -6,11 +6,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/satori/go.uuid"
 )
 
 type (
@@ -183,7 +183,10 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		case "static":
 			return k.Partition.Key
 		case "random":
-			u := uuid.NewV4()
+			u, err := uuid.NewV4()
+			if err != nil {
+				return k.Partition.Default
+			}
 			return u.String()
 		case "measurement":
 			return metric.Name()
@@ -200,7 +203,10 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		}
 	}
 	if k.RandomPartitionKey {
-		u := uuid.NewV4()
+		u, err := uuid.NewV4()
+		if err != nil {
+			return k.Partition.Default
+		}
 		return u.String()
 	}
 	return k.PartitionKey

@@ -173,6 +173,7 @@ For documentation on the latest development code see the [documentation index][d
 * [dovecot](./plugins/inputs/dovecot)
 * [ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
 * [elasticsearch](./plugins/inputs/elasticsearch)
+* [ethtool](./plugins/inputs/ethtool)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
@@ -335,6 +336,7 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Processor Plugins
 
+* [clone](./plugins/processors/clone)
 * [converter](./plugins/processors/converter)
 * [date](./plugins/processors/date)
 * [enum](./plugins/processors/enum)

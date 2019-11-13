@@ -104,7 +104,7 @@
 
 [[constraint]]
   name = "github.com/miekg/dns"
-  version = "1.0.8"
+  version = "1.0.10"
 
 [[constraint]]
   name = "github.com/multiplay/go-ts3"
@@ -139,8 +139,8 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/satori/go.uuid"
-  version = "1.2.0"
+  name = "github.com/gofrs/uuid"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
@@ -153,7 +153,7 @@
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
-  branch = "master"
+  version = "1.22.0"
 
 [[constraint]]
   name = "github.com/StackExchange/wmi"
@@ -200,10 +200,6 @@
 [[constraint]]
   name = "gopkg.in/gorethink/gorethink.v3"
   version = "3.0.5"
-
-[[constraint]]
-  name = "gopkg.in/ldap.v2"
-  version = "2.5.1"
 
 [[constraint]]
   name = "gopkg.in/mgo.v2"
@@ -260,7 +256,7 @@
 
 [[constraint]]
   name = "github.com/karrick/godirwalk"
-  version = "1.7.5"
+  version = "1.10"
 
 [[override]]
   name = "github.com/harlow/kinesis-consumer"
@@ -301,3 +297,11 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  name = "gopkg.in/ldap.v3"
+  version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/safchain/ethtool"
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
