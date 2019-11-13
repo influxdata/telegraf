@@ -231,7 +231,7 @@
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "10.12.0"
+  version = "^13.0.0"
 
 [[constraint]]
   name = "github.com/Azure/azure-storage-queue-go"
