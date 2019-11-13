@@ -1,3 +1,3 @@
-// +build freebsd
+// +build freebsd,!cgo
 
 package nats

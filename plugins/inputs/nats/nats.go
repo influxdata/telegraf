@@ -1,20 +1,18 @@
-// +build !freebsd
+// +build !freebsd freebsd,cgo
 
 package nats
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
 	"time"
 
-	"encoding/json"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
 	gnatsd "github.com/nats-io/gnatsd/server"
 )
 
