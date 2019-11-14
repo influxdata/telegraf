@@ -12,6 +12,8 @@ import (
 	"github.com/soniah/gosnmp"
 )
 
+type handler func(*gosnmp.SnmpPacket, *net.UDPAddr)
+
 type SnmpTrap struct {
 	ServiceAddress string `toml:"service_address"`
 
@@ -20,7 +22,7 @@ type SnmpTrap struct {
 	wg       sync.WaitGroup
 	timeFunc func() time.Time
 
-	makeHandlerWrapper func(func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)) func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr)
+	makeHandlerWrapper func(handler) handler
 
 	Log telegraf.Logger
 }
@@ -88,7 +90,7 @@ func (s *SnmpTrap) Stop() {
 	s.wg.Wait()
 }
 
-func makeTrapHandler(s *SnmpTrap) func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
+func makeTrapHandler(s *SnmpTrap) handler {
 	return func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 		tm := s.timeFunc()
 		fields := map[string]interface{}{}
