@@ -24,7 +24,7 @@ type SnmpTrap struct {
 
 	makeHandlerWrapper func(handler) handler
 
-	Log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `
