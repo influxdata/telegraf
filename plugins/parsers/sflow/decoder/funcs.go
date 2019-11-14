@@ -25,6 +25,30 @@ func U32() ValueDirective {
 	}}
 }
 
+// U64 answers a directive for 64bit Unsigned Integers
+func U64() ValueDirective {
+	return &valueDirective{value: new(uint64), location: location(2), resetFn: func(in interface{}) {
+		ui64Ptr, ok := in.(*uint64)
+		if !ok {
+			// Can't be tested
+			panic("must be an *uint64")
+		}
+		(*ui64Ptr) = 0
+	}}
+}
+
+// U8 answers a directive for 8bit Unsigned Integers
+func U8() ValueDirective {
+	return &valueDirective{value: new(uint8), location: location(2), resetFn: func(in interface{}) {
+		ui8Ptr, ok := in.(*uint8)
+		if !ok {
+			// Can't be tested
+			panic("must be an *uint8")
+		}
+		(*ui8Ptr) = 0
+	}}
+}
+
 // U16 answers a directive for 32bit Unsigned Integers
 func U16() ValueDirective {
 	return &valueDirective{value: new(uint16), location: location(2)}
@@ -73,6 +97,10 @@ func Ref(target interface{}) ValueDirective {
 
 // Seq ansers a directive that sequentially executes a list of provided directives
 func Seq(decoders ...Directive) Directive {
+	return &sequenceDirective{decoders: decoders, location: location(2)}
+}
+
+func SeqOf(decoders []Directive) Directive {
 	return &sequenceDirective{decoders: decoders, location: location(2)}
 }
 
@@ -134,6 +162,13 @@ func AsT(name string) *AsTDOp {
 	return result
 }
 
+// AsTimestamp answers a decode operation that will set the tiemstamp on the metric
+func AsTimestamp() *AsTimestampDOp {
+	result := &AsTimestampDOp{baseDOp: baseDOp{loc: location(2)}}
+	result.do = result
+	return result
+}
+
 // BytesToStr answers a decode operation that transforms a []bytes to a string via the supplied fn
 func BytesToStr(len int, fn func([]byte) string) *BytesToStrDOp {
 	result := &BytesToStrDOp{baseDOp: baseDOp{loc: location(2)}, len: len, fn: fn}
@@ -171,6 +206,12 @@ func U32Assert(fn func(v uint32) bool, fmtStr string) *U32AssertDOp {
 	return result
 }
 
+func U16Assert(fn func(v uint16) bool, fmtStr string) *U16AssertDOp {
+	result := &U16AssertDOp{baseDOp: baseDOp{loc: location(2)}, fn: fn, fmtStr: fmtStr}
+	result.do = result
+	return result
+}
+
 // MapU16ToStr answers a decode operation that maps an uint16 to a string via the supplied map
 func MapU16ToStr(m map[uint16]string) *U16ToStrDOp {
 	result := &U16ToStrDOp{baseDOp: baseDOp{loc: location(2)}, fn: func(in uint16) string {
@@ -198,4 +239,8 @@ func ErrorOp(errorOnTestProcess bool) *ErrorDOp {
 	result.do = result
 	return result
 
+}
+
+func Notify(fn func()) Directive {
+	return &notifyDirective{fn}
 }

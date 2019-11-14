@@ -95,3 +95,5 @@ Example: ````s/(.*)(?:-net[0-9])/$1```` will strip ```-net<n>``` from the host n
 The parsing of SFlow packets is handled by the SFlow Parser and the schema is described [here](../../parsers/sflow/README.md).
 
 At a high level, individual Flow Samples within the V5 Flow Packet are translated to individual Metric objects.
+
+

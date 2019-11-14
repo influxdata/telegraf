@@ -14,7 +14,7 @@ import (
 // Execute will ececute the decode directive relative to the supplied buffer
 func Execute(dd Directive, buffer *bytes.Buffer) error {
 	dc := &DecodeContext{}
-	return dd.execute(buffer, dc)
+	return dd.Execute(buffer, dc)
 }
 
 func Test_basicUI32NotEnoughBytes(t *testing.T) {

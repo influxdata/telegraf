@@ -2,6 +2,7 @@ package decoder
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -95,6 +96,11 @@ func (op *AsFDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 		m = dc.currentMetric()
 	}
 	switch v := upstreamValue.(type) {
+	case *uint64:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
+			m.AddField(op.name, *v)
+		}
 	case *uint32:
 		if dc != nil {
 			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
@@ -115,6 +121,11 @@ func (op *AsFDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
 			m.AddField(op.name, v)
 		}
+	case *uint8:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
+			m.AddField(op.name, *v)
+		}
 	case uint8:
 		if dc != nil {
 			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
@@ -122,6 +133,29 @@ func (op *AsFDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 		}
 	default:
 		return fmt.Errorf("%s AsF cannot process %T", op.loc, v)
+	}
+	return nil
+}
+
+// AsTimestampDOp is a deode operation that sets the timestamp on the metric
+type AsTimestampDOp struct {
+	baseDOp
+}
+
+func (op *AsTimestampDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	var m telegraf.Metric
+	if dc != nil {
+		m = dc.currentMetric()
+	}
+	switch v := upstreamValue.(type) {
+	case *uint32:
+		if dc != nil {
+			dc.tracef("%s AsTimestamp %d\n", op.loc, *v)
+			m.SetTime(time.Unix(int64(*v), 0))
+			dc.timeHasBeenSet = true
+		}
+	default:
+		return fmt.Errorf("can't process %T", upstreamValue)
 	}
 	return nil
 }
@@ -212,6 +246,25 @@ type U32AssertDOp struct {
 func (op *U32AssertDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 	switch v := upstreamValue.(type) {
 	case *uint32:
+		if dc != nil && !op.fn(*v) {
+			return fmt.Errorf(op.fmtStr, *v)
+		}
+	default:
+		return fmt.Errorf("cannot process %T", upstreamValue)
+	}
+	return nil
+}
+
+// U16AssertDOp is a decode operation that asserts a particular uint32 value
+type U16AssertDOp struct {
+	baseDOp
+	fn     func(uint16) bool
+	fmtStr string
+}
+
+func (op *U16AssertDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
+	switch v := upstreamValue.(type) {
+	case *uint16:
 		if dc != nil && !op.fn(*v) {
 			return fmt.Errorf(op.fmtStr, *v)
 		}
