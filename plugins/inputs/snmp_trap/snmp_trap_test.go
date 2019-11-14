@@ -118,7 +118,7 @@ func TestReceiveTrap(t *testing.T) {
 	// hook into the trap handler so the test knows when the trap has
 	// been received
 	received := make(chan int)
-	wrap := func(f func(*gosnmp.SnmpPacket, *net.UDPAddr)) func(*gosnmp.SnmpPacket, *net.UDPAddr) {
+	wrap := func(f handler) handler {
 		return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
 			f(p, a)
 			received <- 0
