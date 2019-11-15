@@ -12,9 +12,12 @@ the SNMP [README.md](../snmp/README.md) for details.
 
 ### Configuration
 ```toml
-  ## Local address and port to listen on.  Omit address to listen on
-  ## all interfaces.  Example "127.0.0.1:1234", default ":162"
-  #service_address = :162
+# Snmp trap listener
+[[inputs.snmp_trap]]
+  ## Transport, local address, and port to listen on.  Transport must
+  ## be "udp://".  Omit local address to listen on all interfaces.
+  ## Example "udp://127.0.0.1:1234", default "udp://:162"
+  #service_address = udp://:162
 ```
 
 ### Metrics

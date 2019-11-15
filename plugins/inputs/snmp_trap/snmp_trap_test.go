@@ -127,15 +127,16 @@ func TestReceiveTrap(t *testing.T) {
 
 	// set up the service input plugin
 	n := &SnmpTrap{
-		ServiceAddress:     "localhost:" + strconv.Itoa(port),
+		ServiceAddress:     "udp://:" + strconv.Itoa(port),
 		makeHandlerWrapper: wrap,
 		timeFunc: func() time.Time {
 			return fakeTime
 		},
+		Log: testutil.Logger{},
 	}
-	n.Init()
+	require.Nil(t, n.Init())
 	var acc testutil.Accumulator
-	n.Start(&acc)
+	require.Nil(t, n.Start(&acc))
 	defer n.Stop()
 
 	// send the trap
