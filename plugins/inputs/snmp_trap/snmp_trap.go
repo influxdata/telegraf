@@ -114,7 +114,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 		fields := map[string]interface{}{}
 		tags := map[string]string{}
 
-		tags["trap_version"] = packet.Version.String()
+		tags["version"] = packet.Version.String()
 		tags["source"] = addr.IP.String()
 
 		for _, v := range packet.Variables {
@@ -149,17 +149,16 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				// 1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.
 				// If v.Name is this oid, set a tag of the trap name.
 				if v.Name == ".1.3.6.1.6.3.1.1.4.1.0" {
-					tags["trap_oid"] = s
+					tags["oid"] = s
 					if err == nil {
-						tags["trap_name"] = oidText
-						tags["trap_mib"] = mibName
+						tags["name"] = oidText
+						tags["mib"] = mibName
 					}
 					continue
 				}
 			}
 
 			fields[name] = value
-			fields[name+"_type"] = v.Type.String()
 		}
 
 		s.acc.AddFields("snmp_trap", fields, tags, tm)

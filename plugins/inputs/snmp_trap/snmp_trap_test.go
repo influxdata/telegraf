@@ -154,15 +154,14 @@ func TestReceiveTrap(t *testing.T) {
 		testutil.MustMetric(
 			"snmp_trap", // name
 			map[string]string{ // tags
-				"trap_oid":     ".1.3.6.1.6.3.1.1.5.1",
-				"trap_name":    "coldStart",
-				"trap_mib":     "SNMPv2-MIB",
-				"trap_version": "2c",
-				"source":       "127.0.0.1",
+				"oid":     ".1.3.6.1.6.3.1.1.5.1",
+				"name":    "coldStart",
+				"mib":     "SNMPv2-MIB",
+				"version": "2c",
+				"source":  "127.0.0.1",
 			},
 			map[string]interface{}{ // fields
-				"sysUpTimeInstance":      sentTimestamp,
-				"sysUpTimeInstance_type": "TimeTicks",
+				"sysUpTimeInstance": sentTimestamp,
 			},
 			fakeTime,
 		),
