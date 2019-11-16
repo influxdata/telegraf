@@ -1,3 +1,9 @@
+## v1.12.6 [unreleased]
+
+#### Bugfixes
+
+- [#6666](https://github.com/influxdata/telegraf/issues/6666): Fix many plugin errors are logged at debug logging level.
+
 ## v1.12.5 [2019-11-12]
 
 #### Bugfixes
