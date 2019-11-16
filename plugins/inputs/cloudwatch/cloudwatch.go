@@ -1,7 +1,6 @@
 package cloudwatch
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
@@ -40,6 +38,8 @@ type (
 		Metrics   []*Metric         `toml:"metrics"`
 		CacheTTL  internal.Duration `toml:"cache_ttl"`
 		RateLimit int               `toml:"ratelimit"`
+
+		Log telegraf.Logger `toml:"-"`
 
 		client          cloudwatchClient
 		statFilter      filter.Filter
@@ -192,6 +192,10 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	queries, err := c.getDataQueries(filteredMetrics)
 	if err != nil {
 		return err
+	}
+
+	if len(queries) == 0 {
+		return nil
 	}
 
 	// Limit concurrency or we can easily exhaust user connection limit.
@@ -463,7 +467,8 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 	}
 
 	if len(dataQueries) == 0 {
-		return nil, errors.New("no metrics found to collect")
+		c.Log.Debug("no metrics found to collect")
+		return nil, nil
 	}
 
 	if c.metricCache == nil {
