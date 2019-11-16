@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/parsers/sflow/decoder"
+	"github.com/influxdata/telegraf/plugins/parsers/network_flow/decoder"
 )
 
 func max(x, y int) int {

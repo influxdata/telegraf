@@ -6,7 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 
-	"github.com/influxdata/telegraf/plugins/parsers/sflow/decoder"
+	"github.com/influxdata/telegraf/plugins/parsers/network_flow/decoder"
 )
 
 // Parser is Telegraf parser capable of parsing an sFlow v5 network packet

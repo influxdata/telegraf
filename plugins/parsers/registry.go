@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/influxdata/telegraf/plugins/parsers/sflow"
+	"github.com/influxdata/telegraf/plugins/parsers/network_flow/sflow"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )

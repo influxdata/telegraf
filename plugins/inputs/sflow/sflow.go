@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/sflow"
+	"github.com/influxdata/telegraf/plugins/parsers/network_flow/sflow"
 )
 
 type setReadBufferer interface {
