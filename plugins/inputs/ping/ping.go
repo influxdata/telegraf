@@ -118,7 +118,7 @@ func (*Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	if p.Interface != "" && p.listenAddr != "" {
+	if p.Interface != "" && p.listenAddr == "" {
 		p.listenAddr = getAddr(p.Interface)
 	}
 
