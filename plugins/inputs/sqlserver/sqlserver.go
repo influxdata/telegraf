@@ -1,6 +1,7 @@
 package sqlserver
 
 import (
+	"context"
 	"database/sql"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ type SQLServer struct {
 	QueryVersion  int      `toml:"query_version"`
 	AzureDB       bool     `toml:"azuredb"`
 	ExcludeQuery  []string `toml:"exclude_query"`
+	QueryTimeout  int      `toml:"query_timeout"`
 	queries       MapQuery
 	isInitialized bool
 }
@@ -70,6 +72,9 @@ const sampleConfig = `
   ## - SqlRequests
   ## - ServerProperties
   exclude_query = [ 'Schedulers' ]
+
+  ## Sets a timeout for the query in milliseconds.  A value of 0 or less will be ignored.
+  # query_timeout = 0
 `
 
 // SampleConfig return the sample configuration
@@ -159,8 +164,15 @@ func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumu
 	}
 	defer conn.Close()
 
+	ctx := context.Background()
+	if s.QueryTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(s.QueryTimeout)*time.Millisecond)
+		defer cancel()
+	}
+
 	// execute query
-	rows, err := conn.Query(query.Script)
+	rows, err := conn.QueryContext(ctx, query.Script)
 	if err != nil {
 		return err
 	}

@@ -71,6 +71,9 @@ GO
   ## - SqlRequests
   ## - ServerProperties
   exclude_query = [ 'Schedulers' , 'SqlRequests']
+
+  ## Sets a timeout for the query in milliseconds.  A value of 0 or less will be ignored.
+  # query_timeout = 0
 ```
 
 ### Metrics:
