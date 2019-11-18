@@ -41,6 +41,7 @@
 - [#5870](https://github.com/influxdata/telegraf/pull/5870): Add support for SNMP over TCP.
 - [#6603](https://github.com/influxdata/telegraf/pull/6603): Add support for per output flush jitter.
 - [#6650](https://github.com/influxdata/telegraf/pull/6650): Add a nameable file tag to file input plugin.
+- [#6640](https://github.com/influxdata/telegraf/pull/6640): Add Splunk MultiMetric support.
 
 #### Bugfixes
 
