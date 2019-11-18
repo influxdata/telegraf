@@ -73,6 +73,9 @@ type Config struct {
 	// Include HEC routing fields for splunkmetric output
 	HecRouting bool
 
+	// Enable Splunk MultiMetric output (Splunk 8.0+)
+	SplunkmetricMultiMetric bool
+
 	// Point tags to use as the source name for Wavefront (if none found, host will be used).
 	WavefrontSourceOverride []string
 
@@ -93,7 +96,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	case "splunkmetric":
-		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting, config.SplunkmetricMultiMetric)
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
 	case "carbon2":
@@ -118,8 +121,8 @@ func NewCarbon2Serializer() (Serializer, error) {
 	return carbon2.NewSerializer()
 }
 
-func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
-	return splunkmetric.NewSerializer(splunkmetric_hec_routing)
+func NewSplunkmetricSerializer(splunkmetric_hec_routing bool, splunkmetric_multimetric bool) (Serializer, error) {
+	return splunkmetric.NewSerializer(splunkmetric_hec_routing, splunkmetric_multimetric)
 }
 
 func NewNowSerializer() (Serializer, error) {
