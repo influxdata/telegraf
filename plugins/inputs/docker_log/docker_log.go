@@ -203,6 +203,7 @@ func (d *DockerLogs) matchedContainerName(names []string) string {
 
 func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
+	acc.SetPrecision(time.Nanosecond)
 
 	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
 	defer cancel()
