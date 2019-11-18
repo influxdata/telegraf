@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -21,8 +20,8 @@ type SnmpTrap struct {
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
-	wg       sync.WaitGroup
 	timeFunc func() time.Time
+	errCh    chan error
 
 	makeHandlerWrapper func(handler) handler
 
@@ -52,7 +51,7 @@ func init() {
 	inputs.Add("snmp_trap", func() telegraf.Input {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
-			ServiceAddress: ":162",
+			ServiceAddress: "udp://:162",
 		}
 	})
 }
@@ -86,26 +85,28 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, s.ServiceAddress)
 	}
 
-	s.wg.Add(1)
+	// If (*TrapListener).Listen immediately returns an error we need
+	// to return it from this function.  Use a channel to get it here
+	// from the goroutine.  Buffer one in case Listen returns after
+	// Listening but before our Close is called.
+	s.errCh = make(chan error, 1)
 	go func() {
-		defer s.wg.Done()
-
-		// no ip means listen on all interfaces, ipv4 and ipv6
-		err := s.listener.Listen(addr)
-		if err != nil {
-			s.Log.Errorf("error in listen: %s", err)
-		}
+		s.errCh <- s.listener.Listen(addr)
 	}()
 
-	<-s.listener.Listening()
-	s.Log.Infof("Listening on %s", s.ServiceAddress)
+	select {
+	case <-s.listener.Listening():
+		s.Log.Infof("Listening on %s", s.ServiceAddress)
+	case err := <-s.errCh:
+		return err
+	}
 
 	return nil
 }
 
 func (s *SnmpTrap) Stop() {
 	s.listener.Close()
-	s.wg.Wait()
+	_ = <-s.errCh
 }
 
 func makeTrapHandler(s *SnmpTrap) handler {
