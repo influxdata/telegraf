@@ -55,6 +55,7 @@
 
 - [#6666](https://github.com/influxdata/telegraf/issues/6666): Fix many plugin errors are logged at debug logging level.
 - [#6652](https://github.com/influxdata/telegraf/issues/6652): Use nanosecond precision in docker_log input.
+- [#6642](https://github.com/influxdata/telegraf/issues/6642): Fix interface option with method = native in ping input.
 
 ## v1.12.5 [2019-11-12]
 
