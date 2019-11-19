@@ -88,7 +88,6 @@ func BenchmarkHTTPListener_serveWrite(b *testing.B) {
 			}
 		})
 	}
-	//}
 }
 
 func lines(lines, numTags, numFields int) string {
