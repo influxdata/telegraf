@@ -50,7 +50,7 @@
 - [#6573](https://github.com/influxdata/telegraf/issues/6573): Fix not a valid field error in Windows with nvidia input.
 - [#6614](https://github.com/influxdata/telegraf/issues/6614): Fix influxdb output serialization on connection closed.
 
-## v1.12.6 [unreleased]
+## v1.12.6 [2019-11-19]
 
 #### Bugfixes
 
