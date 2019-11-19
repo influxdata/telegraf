@@ -1,11 +1,12 @@
 package sqlserver
 
 import (
-	"github.com/stretchr/testify/assert"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -138,6 +139,42 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 	assert.False(t, ok)
 	assert.Equal(t, s.isInitialized, true)
 	assert.Equal(t, s2.isInitialized, true)
+}
+
+func TestSqlServer_Timeout(t *testing.T) {
+	tests := []struct {
+		timeout   int
+		hasErrors bool
+	}{
+		{
+			timeout:   1,
+			hasErrors: true,
+		},
+		{
+			timeout:   10000,
+			hasErrors: false,
+		},
+		{
+			timeout:   0,
+			hasErrors: false,
+		},
+	}
+
+	for _, test := range tests {
+		s := &SQLServer{
+			Servers:      []string{"Server=127.0.0.1;Port=1433;User Id=SA;Password=ABCabc01;app name=telegraf;log=1"},
+			QueryTimeout: test.timeout,
+		}
+		var acc testutil.Accumulator
+
+		err := s.Gather(&acc)
+		require.NoError(t, err)
+
+		assert.Equal(t, len(acc.Errors) > 0, test.hasErrors)
+		if test.hasErrors {
+			require.Error(t, acc.Errors[0])
+		}
+	}
 }
 
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
