@@ -142,6 +142,9 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 }
 
 func TestSqlServer_Timeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	tests := []struct {
 		timeout   int
 		hasErrors bool
