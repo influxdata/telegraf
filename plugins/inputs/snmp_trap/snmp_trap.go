@@ -119,16 +119,12 @@ func makeTrapHandler(s *SnmpTrap) handler {
 		tags["source"] = addr.IP.String()
 
 		for _, v := range packet.Variables {
-			// build a name and value for each variable to use as tags
-			// and fields.  defaults are the uninterpreted values
-			name := v.Name
-			value := v.Value
+			// Use system mibs to resolve oids.  Don't fall back to
+			// numeric oid because it's not useful enough to the end
+			// user and can be difficult to translate or remove from
+			// the database later.
 
-			// use system mibs to resolve the name if possible
-			_, _, oidText, _, err := snmp.SnmpTranslate(v.Name)
-			if nil == err {
-				name = oidText
-			}
+			var value interface{}
 
 			// todo: format the pdu value based on its snmp type and
 			// the mib's textual convention.  The snmp input plugin
@@ -137,27 +133,42 @@ func makeTrapHandler(s *SnmpTrap) handler {
 
 			switch v.Type {
 			case gosnmp.ObjectIdentifier:
-				s, ok := v.Value.(string)
+				val, ok := v.Value.(string)
 				var mibName string
 				var oidText string
 				var err error
-				if ok {
-					mibName, _, oidText, _, err = snmp.SnmpTranslate(s)
-					if nil == err {
-						value = oidText
-					}
+				if ! ok {
+					s.Log.Errorf("Error getting value OID: %v", err)
+					return
 				}
+
+				mibName, _, oidText, _, err = snmp.SnmpTranslate(val)
+				if nil != err {
+					s.Log.Errorf("Error resolving value OID: %v", err)
+					return
+				}
+
+				value = oidText
+
 				// 1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.
 				// If v.Name is this oid, set a tag of the trap name.
 				if v.Name == ".1.3.6.1.6.3.1.1.4.1.0" {
-					tags["oid"] = s
-					if err == nil {
-						tags["name"] = oidText
-						tags["mib"] = mibName
-					}
+					tags["oid"] = val
+					tags["name"] = oidText
+					tags["mib"] = mibName
 					continue
 				}
+			default:
+				value = v.Value
 			}
+
+			_, _, oidText, _, err := snmp.SnmpTranslate(v.Name)
+			if nil != err {
+				s.Log.Errorf("Error resolving OID: %v", err)
+				return
+			}
+
+			name := oidText
 
 			fields[name] = value
 		}
