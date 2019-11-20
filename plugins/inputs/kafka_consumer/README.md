@@ -44,6 +44,9 @@ and use the old zookeeper connection method.
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
 
+  ## Consumer group partition assignment strategy; one of "range", "roundrobin" or "sticky".
+  # balance_strategy = "range"
+
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
   max_message_len = 1000000
