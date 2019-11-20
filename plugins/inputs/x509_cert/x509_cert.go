@@ -4,7 +4,6 @@ package x509_cert
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +25,14 @@ const sampleConfig = `
   ## Timeout for SSL connection
   # timeout = "5s"
 
+  ## Include Certificate Issuer information in tags
+  # include_issuer = false
+
+  ## Include Certificate SAN in tag
+  # include_san = false
+  ## Separator between each SAN in tag
+  # san_separator = ","
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -35,9 +42,12 @@ const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources []string          `toml:"sources"`
-	Timeout internal.Duration `toml:"timeout"`
-	tlsCfg  *tls.Config
+	Sources       []string          `toml:"sources"`
+	Timeout       internal.Duration `toml:"timeout"`
+	IncludeIssuer bool              `toml:"include_issuer"`
+	IncludeSAN    bool              `toml:"include_san"`
+	SANSeperator  string            `toml:"san_separator"`
+	tlsCfg        *tls.Config
 	_tls.ClientConfig
 }
 
@@ -129,10 +139,15 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	return fields
 }
 
-func getTags(subject pkix.Name, location string) map[string]string {
+func (c *X509Cert) getTags(cert *x509.Certificate, location string) map[string]string {
+	subject := cert.Subject
+
 	tags := map[string]string{
-		"source":      location,
-		"common_name": subject.CommonName,
+		"source":               location,
+		"common_name":          subject.CommonName,
+		"serial_number":        cert.SerialNumber.Text(16),
+		"signature_algorithm":  cert.SignatureAlgorithm.String(),
+		"public_key_algorithm": cert.PublicKeyAlgorithm.String(),
 	}
 
 	if len(subject.Organization) > 0 {
@@ -149,6 +164,23 @@ func getTags(subject pkix.Name, location string) map[string]string {
 	}
 	if len(subject.Locality) > 0 {
 		tags["locality"] = subject.Locality[0]
+	}
+
+	if c.IncludeIssuer {
+		issuer := cert.Issuer
+		tags["issuer_common_name"] = issuer.CommonName
+		tags["issuer_serial_number"] = issuer.SerialNumber
+	}
+
+	if c.IncludeSAN {
+		san := append(cert.DNSNames, cert.EmailAddresses...)
+		for _, ip := range cert.IPAddresses {
+			san = append(san, ip.String())
+		}
+		for _, uri := range cert.URIs {
+			san = append(san, uri.String())
+		}
+		tags["san"] = strings.Join(san, c.SANSeperator)
 	}
 
 	return tags
@@ -172,7 +204,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 		for i, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert.Subject, location)
+			tags := c.getTags(cert, location)
 
 			// The first certificate is the leaf/end-entity certificate which needs DNS
 			// name validation against the URL hostname.
@@ -225,8 +257,11 @@ func (c *X509Cert) Init() error {
 func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
-			Sources: []string{},
-			Timeout: internal.Duration{Duration: 5},
+			Sources:       []string{},
+			Timeout:       internal.Duration{Duration: 5},
+			IncludeIssuer: false,
+			IncludeSAN:    false,
+			SANSeperator:  ",",
 		}
 	})
 }
