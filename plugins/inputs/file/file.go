@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -11,8 +12,9 @@ import (
 )
 
 type File struct {
-	Files  []string `toml:"files"`
-	parser parsers.Parser
+	Files   []string `toml:"files"`
+	FileTag string   `toml:"file_tag"`
+	parser  parsers.Parser
 
 	filenames []string
 }
@@ -31,6 +33,10 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+  
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty 
+  ## to disable.
+  # file_tag = ""
 `
 
 // SampleConfig returns the default configuration of the Input
@@ -54,6 +60,9 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, m := range metrics {
+			if f.FileTag != "" {
+				m.AddTag(f.FileTag, filepath.Base(k))
+			}
 			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}

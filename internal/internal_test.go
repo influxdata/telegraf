@@ -3,6 +3,8 @@ package internal
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
+	"io"
 	"io/ioutil"
 	"log"
 	"os/exec"
@@ -230,6 +232,38 @@ func TestCompressWithGzip(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, testData, string(output))
+}
+
+type mockReader struct {
+	readN uint64 // record the number of calls to Read
+}
+
+func (r *mockReader) Read(p []byte) (n int, err error) {
+	r.readN++
+	return rand.Read(p)
+}
+
+func TestCompressWithGzipEarlyClose(t *testing.T) {
+	mr := &mockReader{}
+
+	rc, err := CompressWithGzip(mr)
+	assert.NoError(t, err)
+
+	n, err := io.CopyN(ioutil.Discard, rc, 10000)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(10000), n)
+
+	r1 := mr.readN
+	err = rc.Close()
+	assert.NoError(t, err)
+
+	n, err = io.CopyN(ioutil.Discard, rc, 10000)
+	assert.Error(t, io.EOF, err)
+	assert.Equal(t, int64(0), n)
+
+	r2 := mr.readN
+	// no more read to the source after closing
+	assert.Equal(t, r1, r2)
 }
 
 func TestVersionAlreadySet(t *testing.T) {

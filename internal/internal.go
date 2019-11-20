@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode"
@@ -48,6 +49,11 @@ type Size struct {
 
 type Number struct {
 	Value float64
+}
+
+type ReadWaitCloser struct {
+	pipeReader *io.PipeReader
+	wg         sync.WaitGroup
 }
 
 // SetVersion sets the telegraf agent version
@@ -281,14 +287,25 @@ func ExitStatus(err error) (int, bool) {
 	return 0, false
 }
 
+func (r *ReadWaitCloser) Close() error {
+	err := r.pipeReader.Close()
+	r.wg.Wait() // wait for the gzip goroutine finish
+	return err
+}
+
 // CompressWithGzip takes an io.Reader as input and pipes
 // it through a gzip.Writer returning an io.Reader containing
 // the gzipped data.
 // An error is returned if passing data to the gzip.Writer fails
-func CompressWithGzip(data io.Reader) (io.Reader, error) {
+func CompressWithGzip(data io.Reader) (io.ReadCloser, error) {
 	pipeReader, pipeWriter := io.Pipe()
 	gzipWriter := gzip.NewWriter(pipeWriter)
 
+	rc := &ReadWaitCloser{
+		pipeReader: pipeReader,
+	}
+
+	rc.wg.Add(1)
 	var err error
 	go func() {
 		_, err = io.Copy(gzipWriter, data)
@@ -296,6 +313,7 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 		// subsequent reads from the read half of the pipe will
 		// return no bytes and the error err, or EOF if err is nil.
 		pipeWriter.CloseWithError(err)
+		rc.wg.Done()
 	}()
 
 	return pipeReader, err

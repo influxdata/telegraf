@@ -40,12 +40,24 @@
 - [#6356](https://github.com/influxdata/telegraf/pull/6356): Add bearer token defaults for Kubernetes plugins.
 - [#5870](https://github.com/influxdata/telegraf/pull/5870): Add support for SNMP over TCP.
 - [#6603](https://github.com/influxdata/telegraf/pull/6603): Add support for per output flush jitter.
+- [#6650](https://github.com/influxdata/telegraf/pull/6650): Add a nameable file tag to file input plugin.
+- [#6640](https://github.com/influxdata/telegraf/pull/6640): Add Splunk MultiMetric support.
 
 #### Bugfixes
 
 - [#6484](https://github.com/influxdata/telegraf/issues/6484): Show correct default settings in mysql sample config.
 - [#6583](https://github.com/influxdata/telegraf/issues/6583): Use 1h or 3h rain values as appropriate in openweathermap input.
 - [#6573](https://github.com/influxdata/telegraf/issues/6573): Fix not a valid field error in Windows with nvidia input.
+- [#6614](https://github.com/influxdata/telegraf/issues/6614): Fix influxdb output serialization on connection closed.
+
+## v1.12.6 [2019-11-19]
+
+#### Bugfixes
+
+- [#6666](https://github.com/influxdata/telegraf/issues/6666): Fix many plugin errors are logged at debug logging level.
+- [#6652](https://github.com/influxdata/telegraf/issues/6652): Use nanosecond precision in docker_log input.
+- [#6642](https://github.com/influxdata/telegraf/issues/6642): Fix interface option with method = native in ping input.
+- [#6680](https://github.com/influxdata/telegraf/pull/6680): Fix panic in mongodb input if shard connection pool stats are unreadable. (#6680)
 
 ## v1.12.5 [2019-11-12]
 
