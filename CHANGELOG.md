@@ -42,6 +42,7 @@
 - [#6603](https://github.com/influxdata/telegraf/pull/6603): Add support for per output flush jitter.
 - [#6650](https://github.com/influxdata/telegraf/pull/6650): Add a nameable file tag to file input plugin.
 - [#6640](https://github.com/influxdata/telegraf/pull/6640): Add Splunk MultiMetric support.
+- [#6680](https://github.com/influxdata/telegraf/pull/6668): Add support for sending HTTP Basic Auth in influxdb input
 
 #### Bugfixes
 
