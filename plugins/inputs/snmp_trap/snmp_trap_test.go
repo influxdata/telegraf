@@ -1,6 +1,7 @@
 package snmp_trap
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"testing"
@@ -11,26 +12,26 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/stretchr/testify/require"
 )
 
-func TestTranslate(t *testing.T) {
-	defer snmp.SnmpTranslateClear()
-	snmp.SnmpTranslateForce(
+func TestLoad(t *testing.T) {
+	s := &SnmpTrap{}
+	require.Nil(t, s.Init())
+
+	defer s.clear()
+	s.load(
 		".1.3.6.1.6.3.1.1.5.1",
-		"SNMPv2-MIB",
-		".1.3.6.1.6.3.1.1.5.1",
-		"coldStart",
-		"",
+		mibEntry{
+			"SNMPv2-MIB",
+			"coldStart",
+		},
 	)
 
-	mibName, oidNum, oidText, conversion, err := snmp.SnmpTranslate(".1.3.6.1.6.3.1.1.5.1")
+	e, err := s.lookup(".1.3.6.1.6.3.1.1.5.1")
 	require.NoError(t, err)
-	require.Equal(t, "SNMPv2-MIB", mibName)
-	require.Equal(t, ".1.3.6.1.6.3.1.1.5.1", oidNum)
-	require.Equal(t, "coldStart", oidText)
-	require.Equal(t, "", conversion)
+	require.Equal(t, "SNMPv2-MIB", e.mibName)
+	require.Equal(t, "coldStart", e.oidText)
 }
 
 func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
@@ -83,31 +84,6 @@ func sendTrap(t *testing.T, port uint16) (sentTimestamp uint32) {
 }
 
 func TestReceiveTrap(t *testing.T) {
-	// Preload the cache with the oids we'll use in this test so
-	// snmptranslate and mibs don't need to be installed.
-	defer snmp.SnmpTranslateClear()
-	snmp.SnmpTranslateForce(
-		".1.3.6.1.6.3.1.1.4.1.0",
-		"SNMPv2-MIB",
-		".1.3.6.1.6.3.1.1.4.1.0",
-		"snmpTrapOID.0",
-		"",
-	)
-	snmp.SnmpTranslateForce(
-		".1.3.6.1.6.3.1.1.5.1",
-		"SNMPv2-MIB",
-		".1.3.6.1.6.3.1.1.5.1",
-		"coldStart",
-		"",
-	)
-	snmp.SnmpTranslateForce(
-		".1.3.6.1.2.1.1.3.0",
-		"UNUSED_MIB_NAME",
-		".1.3.6.1.2.1.1.3.0",
-		"sysUpTimeInstance",
-		"",
-	)
-
 	// We would prefer to specify port 0 and let the network stack
 	// choose an unused port for us but TrapListener doesn't have a
 	// way to return the autoselected port.  Instead, we'll use an
@@ -126,7 +102,7 @@ func TestReceiveTrap(t *testing.T) {
 	}
 
 	// set up the service input plugin
-	n := &SnmpTrap{
+	s := &SnmpTrap{
 		ServiceAddress:     "udp://:" + strconv.Itoa(port),
 		makeHandlerWrapper: wrap,
 		timeFunc: func() time.Time {
@@ -134,10 +110,29 @@ func TestReceiveTrap(t *testing.T) {
 		},
 		Log: testutil.Logger{},
 	}
-	require.Nil(t, n.Init())
+	require.Nil(t, s.Init())
 	var acc testutil.Accumulator
-	require.Nil(t, n.Start(&acc))
-	defer n.Stop()
+	require.Nil(t, s.Start(&acc))
+	defer s.Stop()
+
+	// Preload the cache with the oids we'll use in this test so
+	// snmptranslate and mibs don't need to be installed.
+	defer s.clear()
+	s.load(".1.3.6.1.6.3.1.1.4.1.0",
+		mibEntry{
+			"SNMPv2-MIB",
+			"snmpTrapOID.0",
+		})
+	s.load(".1.3.6.1.6.3.1.1.5.1",
+		mibEntry{
+			"SNMPv2-MIB",
+			"coldStart",
+		})
+	s.load(".1.3.6.1.2.1.1.3.0",
+		mibEntry{
+			"UNUSED_MIB_NAME",
+			"sysUpTimeInstance",
+		})
 
 	// send the trap
 	sentTimestamp := sendTrap(t, port)
@@ -171,4 +166,56 @@ func TestReceiveTrap(t *testing.T) {
 		expected, acc.GetTelegrafMetrics(),
 		testutil.SortMetrics())
 
+}
+
+func fakeExecCmd(_ string, _ ...string) ([]byte, error) {
+	return nil, fmt.Errorf("intentional failure")
+}
+
+func TestMissingOid(t *testing.T) {
+	// should fail even if snmptranslate is installed
+	const port = 12399
+	var fakeTime = time.Now()
+
+	received := make(chan int)
+	wrap := func(f handler) handler {
+		return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
+			f(p, a)
+			received <- 0
+		}
+	}
+
+	s := &SnmpTrap{
+		ServiceAddress:     "udp://:" + strconv.Itoa(port),
+		makeHandlerWrapper: wrap,
+		timeFunc: func() time.Time {
+			return fakeTime
+		},
+		Log: testutil.Logger{},
+	}
+	require.Nil(t, s.Init())
+	var acc testutil.Accumulator
+	require.Nil(t, s.Start(&acc))
+	defer s.Stop()
+
+	// make sure the cache is empty
+	s.clear()
+
+	// don't call the real snmptranslate
+	s.execCmd = fakeExecCmd
+
+	_ = sendTrap(t, port)
+
+	select {
+	case <-received:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for trap to be received")
+	}
+
+	// oid lookup should fail so we shouldn't get a metric
+	expected := []telegraf.Metric{}
+
+	testutil.RequireMetricsEqual(t,
+		expected, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics())
 }
