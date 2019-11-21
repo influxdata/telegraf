@@ -258,6 +258,18 @@ func (a *Accumulator) HasTag(measurement string, key string) bool {
 	return false
 }
 
+func (a *Accumulator) TagSetValue(measurement string, key string) string {
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			v, ok := p.Tags[key]
+			if ok {
+				return v
+			}
+		}
+	}
+	return ""
+}
+
 func (a *Accumulator) TagValue(measurement string, key string) string {
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
