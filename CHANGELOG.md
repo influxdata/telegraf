@@ -9,6 +9,7 @@
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
 - [ethtool](/plugins/inputs/ethtool/README.md) - Contributed by @philippreston
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
+- [synproxy](/plugins/inputs/synproxy/README.md) - Contributed by @rfrenayworldstream
 
 #### New Processors
 
