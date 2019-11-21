@@ -1,6 +1,8 @@
 # Synproxy Input Plugin
 
-The synproxy plugin gathers the synproxy counters.
+The synproxy plugin gathers the synproxy counters. Synproxy is a Linux netfilter module used for SYN attack mitigation. 
+The use of synproxy is documented in `man iptables-extensions` under the SYNPROXY section.
+
 
 ### Configuration
 
