@@ -43,6 +43,8 @@
 - [#6650](https://github.com/influxdata/telegraf/pull/6650): Add a nameable file tag to file input plugin.
 - [#6640](https://github.com/influxdata/telegraf/pull/6640): Add Splunk MultiMetric support.
 - [#6680](https://github.com/influxdata/telegraf/pull/6668): Add support for sending HTTP Basic Auth in influxdb input
+- [#5767](https://github.com/influxdata/telegraf/pull/5767): Add ability to configure the url tag in the prometheus input.
+- [#5767](https://github.com/influxdata/telegraf/pull/5767): Add prometheus metric_version=2 mapping to internal metrics/line protocol.
 
 #### Bugfixes
 
@@ -58,7 +60,7 @@
 - [#6666](https://github.com/influxdata/telegraf/issues/6666): Fix many plugin errors are logged at debug logging level.
 - [#6652](https://github.com/influxdata/telegraf/issues/6652): Use nanosecond precision in docker_log input.
 - [#6642](https://github.com/influxdata/telegraf/issues/6642): Fix interface option with method = native in ping input.
-- [#6680](https://github.com/influxdata/telegraf/pull/6680): Fix panic in mongodb input if shard connection pool stats are unreadable. (#6680)
+- [#6680](https://github.com/influxdata/telegraf/pull/6680): Fix panic in mongodb input if shard connection pool stats are unreadable.
 
 ## v1.12.5 [2019-11-12]
 
