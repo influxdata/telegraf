@@ -20,7 +20,7 @@ type Synproxy struct {
 }
 
 func (k *Synproxy) Description() string {
-	return "Get synproxy statistics from /proc/net/stat/synproxy"
+	return "Get synproxy counter statistics from procfs"
 }
 
 func (k *Synproxy) SampleConfig() string {
