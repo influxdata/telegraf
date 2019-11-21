@@ -729,11 +729,11 @@ func TestGatherRefreshingWithExpansion(t *testing.T) {
 		vistaAndNewer: true,
 	}
 	m := Win_PerfCounters{
-		Log:                   testutil.Logger{},
-		PrintValid:            false,
-		Object:                perfObjects,
-		UseWildcardsExpansion: true,
-		query: fpm,
+		Log:                     testutil.Logger{},
+		PrintValid:              false,
+		Object:                  perfObjects,
+		UseWildcardsExpansion:   true,
+		query:                   fpm,
 		CountersRefreshInterval: internal.Duration{Duration: time.Second * 10},
 	}
 	var acc1 testutil.Accumulator
@@ -822,11 +822,11 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 		vistaAndNewer: true,
 	}
 	m := Win_PerfCounters{
-		Log:                   testutil.Logger{},
-		PrintValid:            false,
-		Object:                perfObjects,
-		UseWildcardsExpansion: false,
-		query: fpm,
+		Log:                     testutil.Logger{},
+		PrintValid:              false,
+		Object:                  perfObjects,
+		UseWildcardsExpansion:   false,
+		query:                   fpm,
 		CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
