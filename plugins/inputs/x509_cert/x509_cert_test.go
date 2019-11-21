@@ -140,7 +140,7 @@ func TestGatherLocal(t *testing.T) {
 		{name: "permission denied", mode: 0001, error: true},
 		{name: "not a certificate", mode: 0640, content: "test", error: true},
 		{name: "wrong certificate", mode: 0640, content: wrongCert, error: true},
-		{name: "correct certificate", mode: 0640, content: pki.ReadServerCert()},
+		{name: "correct certificate", mode: 0640, content: pki.ReadServerCert() + pki.ReadCACert()},
 	}
 
 	for _, test := range tests {
