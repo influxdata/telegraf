@@ -40,9 +40,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.10 or newer, the Makefile requires GNU make.
+Telegraf requires golang version 1.12 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.10 (1.12 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.12 (1.13 recommended)
 2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
 3. Download Telegraf source:
    ```
@@ -173,6 +173,7 @@ For documentation on the latest development code see the [documentation index][d
 * [dovecot](./plugins/inputs/dovecot)
 * [ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
 * [elasticsearch](./plugins/inputs/elasticsearch)
+* [ethtool](./plugins/inputs/ethtool)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
@@ -278,6 +279,7 @@ For documentation on the latest development code see the [documentation index][d
 * [statsd](./plugins/inputs/statsd)
 * [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
+* [synproxy](./plugins/inputs/synproxy)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
 * [system](./plugins/inputs/system)
@@ -335,6 +337,7 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Processor Plugins
 
+* [clone](./plugins/processors/clone)
 * [converter](./plugins/processors/converter)
 * [date](./plugins/processors/date)
 * [enum](./plugins/processors/enum)
@@ -354,6 +357,7 @@ For documentation on the latest development code see the [documentation index][d
 * [basicstats](./plugins/aggregators/basicstats)
 * [final](./plugins/aggregators/final)
 * [histogram](./plugins/aggregators/histogram)
+* [merge](./plugins/aggregators/merge)
 * [minmax](./plugins/aggregators/minmax)
 * [valuecounter](./plugins/aggregators/valuecounter)
 

@@ -23,7 +23,7 @@ var (
 	// Model Number: TS128GMTE850
 	modelInfo = regexp.MustCompile("^(Device Model|Product|Model Number):\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
-	serialInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
+	serialInfo = regexp.MustCompile("(?i)^Serial Number:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
 	wwnInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
 	// User Capacity:    251,000,193,024 bytes [251 GB]
@@ -119,7 +119,6 @@ type Smart struct {
 	Devices    []string
 	UseSudo    bool
 	Timeout    internal.Duration
-	Log        telegraf.Logger
 }
 
 var sampleConfig = `
@@ -209,10 +208,7 @@ func (m *Smart) scan() ([]string, error) {
 	for _, line := range strings.Split(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
-			m.Log.Debugf("Adding device: %+#v", dev)
 			devices = append(devices, strings.TrimSpace(dev[0]))
-		} else {
-			m.Log.Debugf("Skipping device: %+#v", dev)
 		}
 	}
 	return devices, nil

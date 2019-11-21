@@ -623,6 +623,10 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
 	s.connectionCache[idx] = gs
 
+	if strings.HasPrefix(agent, "tcp://") {
+		agent = strings.TrimPrefix(agent, "tcp://")
+		gs.Transport = "tcp"
+	}
 	host, portStr, err := net.SplitHostPort(agent)
 	if err != nil {
 		if err, ok := err.(*net.AddrError); !ok || err.Err != "missing port in address" {

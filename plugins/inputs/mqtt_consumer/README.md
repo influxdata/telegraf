@@ -45,7 +45,7 @@ and creates metrics using one of the supported [input data formats][].
   # max_undelivered_messages = 1000
 
   ## Persistent session disables clearing of the client session on connection.
-  ## In order for this option to work you must also set client_id to identity
+  ## In order for this option to work you must also set client_id to identify
   ## the client.  To receive messages that arrived while the client is offline,
   ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
   ## publishing.

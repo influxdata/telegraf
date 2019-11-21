@@ -12,10 +12,12 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	ExcludeQuery []string `toml:"exclude_query"`
+	Servers       []string `toml:"servers"`
+	QueryVersion  int      `toml:"query_version"`
+	AzureDB       bool     `toml:"azuredb"`
+	ExcludeQuery  []string `toml:"exclude_query"`
+	queries       MapQuery
+	isInitialized bool
 }
 
 // Query struct
@@ -28,14 +30,9 @@ type Query struct {
 // MapQuery type
 type MapQuery map[string]Query
 
-var queries MapQuery
+const defaultServer = "Server=.;app name=telegraf;log=1;"
 
-// Initialized flag
-var isInitialized = false
-
-var defaultServer = "Server=.;app name=telegraf;log=1;"
-
-var sampleConfig = `
+const sampleConfig = `
   ## Specify instances to monitor with a list of connection strings.
   ## All connection parameters are optional.
   ## By default, the host is localhost, listening on default port, TCP 1433.
@@ -71,6 +68,7 @@ var sampleConfig = `
   ## - AzureDBResourceStats
   ## - AzureDBResourceGovernance
   ## - SqlRequests
+  ## - ServerProperties
   exclude_query = [ 'Schedulers' ]
 `
 
@@ -89,8 +87,8 @@ type scanner interface {
 }
 
 func initQueries(s *SQLServer) {
-	queries = make(MapQuery)
-
+	s.queries = make(MapQuery)
+	queries := s.queries
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
 		queries["AzureDBResourceStats"] = Query{Script: sqlAzureDBResourceStats, ResultByRow: false}
@@ -124,12 +122,12 @@ func initQueries(s *SQLServer) {
 	}
 
 	// Set a flag so we know that queries have already been initialized
-	isInitialized = true
+	s.isInitialized = true
 }
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
-	if !isInitialized {
+	if !s.isInitialized {
 		initQueries(s)
 	}
 
@@ -140,7 +138,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, serv := range s.Servers {
-		for _, query := range queries {
+		for _, query := range s.queries {
 			wg.Add(1)
 			go func(serv string, query Query) {
 				defer wg.Done()
@@ -592,11 +590,16 @@ WHERE	(
 				'Background Writer pages/sec',
 				'Percent Log Used',
 				'Log Send Queue KB',
-				'Redo Queue KB'
+				'Redo Queue KB',
+				'Mirrored Write Transactions/sec',
+				'Group Commit Time',
+				'Group Commits/sec'
 			)
 		) OR (
 			object_name LIKE '%User Settable%'
 			OR object_name LIKE '%SQL Errors%'
+		) OR (
+			object_name LIKE 'SQLServer:Batch Resp Statistics%'
 		) OR (
 			instance_name IN ('_Total')
 			AND counter_name IN (
@@ -1303,7 +1306,7 @@ const sqlAzureDBResourceGovernance string = `
 IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
   'sqlserver_db_resource_governance' AS [measurement],
-   @@servername AS [sql_instance],
+   REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
    DB_NAME() as [database_name],
    slo_name,
 	dtu_limit,
@@ -1342,7 +1345,7 @@ BEGIN
         IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
          SELECT
            'sqlserver_instance_resource_governance' AS [measurement],
-           @@SERVERNAME AS [sql_instance],
+           REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
            instance_cap_cpu,
            instance_max_log_rate,
            instance_max_worker_threads,
@@ -1365,7 +1368,7 @@ SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHE
 create index ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
 SELECT	
    'sqlserver_requests' AS [measurement],
-    @@servername AS [sql_instance],
+    REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
     DB_NAME() as [database_name],
 	r.session_id
 	, r.request_id

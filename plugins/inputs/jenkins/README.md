@@ -8,7 +8,7 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 ```toml
 [[inputs.jenkins]]
-  ## The Jenkins URL
+  ## The Jenkins URL in the format "schema://host:port"
   url = "http://my-jenkins-instance:8080"
   # username = "admin"
   # password = "admin"
@@ -59,6 +59,7 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
     - temp_path
     - node_name
     - status ("online", "offline")
+    - source
   - fields:
     - disk_available
     - temp_available
@@ -67,12 +68,14 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
     - swap_available
     - swap_total
     - response_time
+    - num_executors
 
 - jenkins_job
   - tags:
     - name
     - parents
     - result
+    - source
   - fields:
     - duration
     - result_code (0 = SUCCESS, 1 = FAILURE, 2 = NOT_BUILD, 3 = UNSTABLE, 4 = ABORTED)

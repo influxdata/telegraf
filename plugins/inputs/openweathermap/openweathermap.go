@@ -23,20 +23,23 @@ const (
 	// The limit of locations is 20.
 	owmRequestSeveralCityId int = 20
 
-	defaultBaseURL                       = "https://api.openweathermap.org/"
+	defaultBaseUrl                       = "https://api.openweathermap.org/"
 	defaultResponseTimeout time.Duration = time.Second * 5
 	defaultUnits           string        = "metric"
+	defaultLang            string        = "en"
 )
 
 type OpenWeatherMap struct {
 	AppId           string            `toml:"app_id"`
 	CityId          []string          `toml:"city_id"`
+	Lang            string            `toml:"lang"`
 	Fetch           []string          `toml:"fetch"`
 	BaseUrl         string            `toml:"base_url"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 	Units           string            `toml:"units"`
 
-	client *http.Client
+	client  *http.Client
+	baseUrl *url.URL
 }
 
 var sampleConfig = `
@@ -45,6 +48,12 @@ var sampleConfig = `
 
   ## City ID's to collect weather data from.
   city_id = ["5391959"]
+
+  ## Language of the description field. Can be one of "ar", "bg",
+  ## "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl", "hr", "hu",
+  ## "it", "ja", "kr", "la", "lt", "mk", "nl", "pl", "pt", "ro", "ru",
+  ## "se", "sk", "sl", "es", "tr", "ua", "vi", "zh_cn", "zh_tw"
+  # lang = "en"
 
   ## APIs to fetch; can contain "weather" or "forecast".
   fetch = ["weather", "forecast"]
@@ -76,41 +85,10 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	var strs []string
 
-	base, err := url.Parse(n.BaseUrl)
-	if err != nil {
-		return err
-	}
-
-	// Create an HTTP client that is re-used for each
-	// collection interval
-	if n.client == nil {
-		client, err := n.createHttpClient()
-		if err != nil {
-			return err
-		}
-		n.client = client
-	}
-
-	units := n.Units
-	switch n.Units {
-	case "imperial", "standard":
-		break
-	default:
-		units = defaultUnits
-	}
-
 	for _, fetch := range n.Fetch {
 		if fetch == "forecast" {
-			var u *url.URL
-
 			for _, city := range n.CityId {
-				u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s&units=%s", city, n.AppId, units))
-				if err != nil {
-					acc.AddError(fmt.Errorf("unable to parse address '%s': %s", u, err))
-					continue
-				}
-
-				addr := base.ResolveReference(u).String()
+				addr := n.formatURL("/data/2.5/forecast", city)
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
@@ -126,7 +104,6 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		} else if fetch == "weather" {
 			j := 0
 			for j < len(n.CityId) {
-				var u *url.URL
 				strs = make([]string, 0)
 				for i := 0; j < len(n.CityId) && i < owmRequestSeveralCityId; i++ {
 					strs = append(strs, n.CityId[j])
@@ -134,13 +111,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				}
 				cities := strings.Join(strs, ",")
 
-				u, err = url.Parse(fmt.Sprintf("/data/2.5/group?id=%s&APPID=%s&units=%s", cities, n.AppId, units))
-				if err != nil {
-					acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
-					continue
-				}
-
-				addr := base.ResolveReference(u).String()
+				addr := n.formatURL("/data/2.5/group", cities)
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
@@ -208,6 +179,7 @@ type WeatherEntry struct {
 		Temp     float64 `json:"temp"`
 	} `json:"main"`
 	Rain struct {
+		Rain1 float64 `json:"1h"`
 		Rain3 float64 `json:"3h"`
 	} `json:"rain"`
 	Sys struct {
@@ -226,6 +198,12 @@ type WeatherEntry struct {
 		Lon float64 `json:"lon"`
 	} `json:"coord"`
 	Visibility int64 `json:"visibility"`
+	Weather    []struct {
+		ID          int64  `json:"id"`
+		Main        string `json:"main"`
+		Description string `json:"description"`
+		Icon        string `json:"icon"`
+	} `json:"weather"`
 }
 
 type Status struct {
@@ -250,30 +228,44 @@ func gatherWeatherUrl(r io.Reader) (*Status, error) {
 	return status, nil
 }
 
+func gatherRain(e WeatherEntry) float64 {
+	if e.Rain.Rain1 > 0 {
+		return e.Rain.Rain1
+	}
+	return e.Rain.Rain3
+}
+
 func gatherWeather(acc telegraf.Accumulator, status *Status) {
 	for _, e := range status.List {
 		tm := time.Unix(e.Dt, 0)
-		acc.AddFields(
-			"weather",
-			map[string]interface{}{
-				"cloudiness":   e.Clouds.All,
-				"humidity":     e.Main.Humidity,
-				"pressure":     e.Main.Pressure,
-				"rain":         e.Rain.Rain3,
-				"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
-				"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
-				"temperature":  e.Main.Temp,
-				"visibility":   e.Visibility,
-				"wind_degrees": e.Wind.Deg,
-				"wind_speed":   e.Wind.Speed,
-			},
-			map[string]string{
-				"city":     e.Name,
-				"city_id":  strconv.FormatInt(e.Id, 10),
-				"country":  e.Sys.Country,
-				"forecast": "*",
-			},
-			tm)
+
+		fields := map[string]interface{}{
+			"cloudiness":   e.Clouds.All,
+			"humidity":     e.Main.Humidity,
+			"pressure":     e.Main.Pressure,
+			"rain":         gatherRain(e),
+			"sunrise":      time.Unix(e.Sys.Sunrise, 0).UnixNano(),
+			"sunset":       time.Unix(e.Sys.Sunset, 0).UnixNano(),
+			"temperature":  e.Main.Temp,
+			"visibility":   e.Visibility,
+			"wind_degrees": e.Wind.Deg,
+			"wind_speed":   e.Wind.Speed,
+		}
+		tags := map[string]string{
+			"city":     e.Name,
+			"city_id":  strconv.FormatInt(e.Id, 10),
+			"country":  e.Sys.Country,
+			"forecast": "*",
+		}
+
+		if len(e.Weather) > 0 {
+			fields["condition_description"] = e.Weather[0].Description
+			fields["condition_icon"] = e.Weather[0].Icon
+			tags["condition_id"] = strconv.FormatInt(e.Weather[0].ID, 10)
+			tags["condition_main"] = e.Weather[0].Main
+		}
+
+		acc.AddFields("weather", fields, tags, tm)
 	}
 }
 
@@ -286,20 +278,23 @@ func gatherForecast(acc telegraf.Accumulator, status *Status) {
 	}
 	for i, e := range status.List {
 		tm := time.Unix(e.Dt, 0)
+		fields := map[string]interface{}{
+			"cloudiness":   e.Clouds.All,
+			"humidity":     e.Main.Humidity,
+			"pressure":     e.Main.Pressure,
+			"rain":         gatherRain(e),
+			"temperature":  e.Main.Temp,
+			"wind_degrees": e.Wind.Deg,
+			"wind_speed":   e.Wind.Speed,
+		}
+		if len(e.Weather) > 0 {
+			fields["condition_description"] = e.Weather[0].Description
+			fields["condition_icon"] = e.Weather[0].Icon
+			tags["condition_id"] = strconv.FormatInt(e.Weather[0].ID, 10)
+			tags["condition_main"] = e.Weather[0].Main
+		}
 		tags["forecast"] = fmt.Sprintf("%dh", (i+1)*3)
-		acc.AddFields(
-			"weather",
-			map[string]interface{}{
-				"cloudiness":   e.Clouds.All,
-				"humidity":     e.Main.Humidity,
-				"pressure":     e.Main.Pressure,
-				"rain":         e.Rain.Rain3,
-				"temperature":  e.Main.Temp,
-				"wind_degrees": e.Wind.Deg,
-				"wind_speed":   e.Wind.Speed,
-			},
-			tags,
-			tm)
+		acc.AddFields("weather", fields, tags, tm)
 	}
 }
 
@@ -310,8 +305,59 @@ func init() {
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
-			Units:           defaultUnits,
-			BaseUrl:         defaultBaseURL,
+			BaseUrl:         defaultBaseUrl,
 		}
 	})
+}
+
+func (n *OpenWeatherMap) Init() error {
+	var err error
+	n.baseUrl, err = url.Parse(n.BaseUrl)
+	if err != nil {
+		return err
+	}
+
+	// Create an HTTP client that is re-used for each
+	// collection interval
+	n.client, err = n.createHttpClient()
+	if err != nil {
+		return err
+	}
+
+	switch n.Units {
+	case "imperial", "standard", "metric":
+	case "":
+		n.Units = defaultUnits
+	default:
+		return fmt.Errorf("unknown units: %s", n.Units)
+	}
+
+	switch n.Lang {
+	case "ar", "bg", "ca", "cz", "de", "el", "en", "fa", "fi", "fr", "gl",
+		"hr", "hu", "it", "ja", "kr", "la", "lt", "mk", "nl", "pl",
+		"pt", "ro", "ru", "se", "sk", "sl", "es", "tr", "ua", "vi",
+		"zh_cn", "zh_tw":
+	case "":
+		n.Lang = defaultLang
+	default:
+		return fmt.Errorf("unknown language: %s", n.Lang)
+	}
+
+	return nil
+}
+
+func (n *OpenWeatherMap) formatURL(path string, city string) string {
+	v := url.Values{
+		"id":    []string{city},
+		"APPID": []string{n.AppId},
+		"lang":  []string{n.Lang},
+		"units": []string{n.Units},
+	}
+
+	relative := &url.URL{
+		Path:     path,
+		RawQuery: v.Encode(),
+	}
+
+	return n.baseUrl.ResolveReference(relative).String()
 }

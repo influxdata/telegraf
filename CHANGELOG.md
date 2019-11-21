@@ -1,9 +1,23 @@
 ## v1.13 [unreleased]
 
+#### Release Notes
+
+- Official packages built with Go 1.13.3.
+
 #### New Inputs
 
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
+- [ethtool](/plugins/inputs/ethtool/README.md) - Contributed by @philippreston
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
+- [synproxy](/plugins/inputs/synproxy/README.md) - Contributed by @rfrenayworldstream
+
+#### New Processors
+
+- [clone](/plugins/processors/clone/README.md) - Contributed by @adrianlzt
+
+#### New Aggregators
+
+- [merge](/plugins/aggregators/merge/README.md) - Contributed by @influxdata
 
 #### Features
 
@@ -13,8 +27,81 @@
 - [#6177](https://github.com/influxdata/telegraf/pull/6177): Support NX-OS telemetry extensions in cisco_telemetry_mdt.
 - [#6415](https://github.com/influxdata/telegraf/pull/6415): Allow graphite parser to create Inf and NaN values.
 - [#6434](https://github.com/influxdata/telegraf/pull/6434): Use prefix base detection for ints in grok parser.
+- [#6465](https://github.com/influxdata/telegraf/pull/6465): Add more performance counter metrics to sqlserver input.
+- [#6476](https://github.com/influxdata/telegraf/pull/6476): Add millisecond unix time support to grok parser.
+- [#6473](https://github.com/influxdata/telegraf/pull/6473): Add container id as optional source tag to docker and docker_log input.
+- [#6504](https://github.com/influxdata/telegraf/pull/6504): Add lang parameter to OpenWeathermap input plugin.
+- [#6540](https://github.com/influxdata/telegraf/pull/6540): Log file open errors at debug level in tail input.
+- [#6553](https://github.com/influxdata/telegraf/pull/6553): Add timeout option to cloudwatch input.
+- [#6549](https://github.com/influxdata/telegraf/pull/6549): Support custom success codes in http input.
+- [#6530](https://github.com/influxdata/telegraf/pull/6530): Improve ipvs input error strings and logging.
+- [#6532](https://github.com/influxdata/telegraf/pull/6532): Add strict mode to JSON parser that can be disable to ignore invalid items.
+- [#6543](https://github.com/influxdata/telegraf/pull/6543): Add support for Kubernetes 1.16 and remove deprecated API usage.
+- [#6283](https://github.com/influxdata/telegraf/pull/6283): Add gathering of RabbitMQ federation link metrics.
+- [#6356](https://github.com/influxdata/telegraf/pull/6356): Add bearer token defaults for Kubernetes plugins.
+- [#5870](https://github.com/influxdata/telegraf/pull/5870): Add support for SNMP over TCP.
+- [#6603](https://github.com/influxdata/telegraf/pull/6603): Add support for per output flush jitter.
+- [#6650](https://github.com/influxdata/telegraf/pull/6650): Add a nameable file tag to file input plugin.
+- [#6640](https://github.com/influxdata/telegraf/pull/6640): Add Splunk MultiMetric support.
+- [#6680](https://github.com/influxdata/telegraf/pull/6668): Add support for sending HTTP Basic Auth in influxdb input
+- [#5767](https://github.com/influxdata/telegraf/pull/5767): Add ability to configure the url tag in the prometheus input.
+- [#5767](https://github.com/influxdata/telegraf/pull/5767): Add prometheus metric_version=2 mapping to internal metrics/line protocol.
 
-## v1.12.2 [unreleased]
+#### Bugfixes
+
+- [#6484](https://github.com/influxdata/telegraf/issues/6484): Show correct default settings in mysql sample config.
+- [#6583](https://github.com/influxdata/telegraf/issues/6583): Use 1h or 3h rain values as appropriate in openweathermap input.
+- [#6573](https://github.com/influxdata/telegraf/issues/6573): Fix not a valid field error in Windows with nvidia input.
+- [#6614](https://github.com/influxdata/telegraf/issues/6614): Fix influxdb output serialization on connection closed.
+
+## v1.12.6 [2019-11-19]
+
+#### Bugfixes
+
+- [#6666](https://github.com/influxdata/telegraf/issues/6666): Fix many plugin errors are logged at debug logging level.
+- [#6652](https://github.com/influxdata/telegraf/issues/6652): Use nanosecond precision in docker_log input.
+- [#6642](https://github.com/influxdata/telegraf/issues/6642): Fix interface option with method = native in ping input.
+- [#6680](https://github.com/influxdata/telegraf/pull/6680): Fix panic in mongodb input if shard connection pool stats are unreadable.
+
+## v1.12.5 [2019-11-12]
+
+#### Bugfixes
+
+- [#6576](https://github.com/influxdata/telegraf/issues/6576): Fix incorrect results in ping input plugin.
+- [#6610](https://github.com/influxdata/telegraf/pull/6610): Add missing character replacement to sql_instance tag.
+- [#6337](https://github.com/influxdata/telegraf/issues/6337): Change no metric error message to debug level in cloudwatch input.
+- [#6602](https://github.com/influxdata/telegraf/issues/6602): Add missing ServerProperties query to sqlserver input docs.
+- [#6643](https://github.com/influxdata/telegraf/pull/6643): Fix mongodb connections_total_created field loading.
+- [#6627](https://github.com/influxdata/telegraf/issues/6578): Fix metric creation when node is offline in jenkins input.
+- [#6649](https://github.com/influxdata/telegraf/issues/6615): Fix docker uptime_ns calculation when container has been restarted.
+- [#6647](https://github.com/influxdata/telegraf/issues/6646): Fix mysql field type conflict in conversion of gtid_mode to an integer.
+- [#5529](https://github.com/influxdata/telegraf/issues/5529): Fix mysql field type conflict with ssl_verify_depth and ssl_ctx_verify_depth.
+
+## v1.12.4 [2019-10-23]
+
+#### Release Notes
+
+- Official packages built with Go 1.12.12.
+
+#### Bugfixes
+
+- [#6521](https://github.com/influxdata/telegraf/issues/6521): Fix metric generation with ping input native method.
+- [#6541](https://github.com/influxdata/telegraf/issues/6541): Exclude alias tag if unset from plugin internal stats.
+- [#6564](https://github.com/influxdata/telegraf/issues/6564): Fix socket_mode option in powerdns_recursor input.
+
+## v1.12.3 [2019-10-07]
+
+#### Bugfixes
+
+- [#6445](https://github.com/influxdata/telegraf/issues/6445): Use batch serialization format in exec output.
+- [#6455](https://github.com/influxdata/telegraf/issues/6455): Build official packages with Go 1.12.10.
+- [#6464](https://github.com/influxdata/telegraf/pull/6464): Use case insensitive serial numer match in smart input.
+- [#6469](https://github.com/influxdata/telegraf/pull/6469): Add auth header only when env var is set.
+- [#6468](https://github.com/influxdata/telegraf/pull/6468): Fix running multiple mysql and sqlserver plugin instances.
+- [#6471](https://github.com/influxdata/telegraf/issues/6471): Fix database routing on retry with exclude_database_tag.
+- [#6488](https://github.com/influxdata/telegraf/issues/6488): Fix logging panic in exec input with nagios data format.
+
+## v1.12.2 [2019-09-24]
 
 #### Bugfixes
 
@@ -22,6 +109,7 @@
 - [#6394](https://github.com/influxdata/telegraf/issues/6394): Fix parsing of BATTDATE in apcupsd input.
 - [#6398](https://github.com/influxdata/telegraf/issues/6398): Keep boolean values listed in json_string_fields.
 - [#6393](https://github.com/influxdata/telegraf/issues/6393): Disable Go plugin support in official builds.
+- [#6391](https://github.com/influxdata/telegraf/issues/6391): Fix path handling issues in cisco_telemetry_gnmi.
 
 ## v1.12.1 [2019-09-10]
 

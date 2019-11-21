@@ -105,6 +105,7 @@ Patterns that convert all captures to tags will result in points that can't be w
   - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
   - ts-epoch         (seconds since unix epoch, may contain decimal)
+  - ts-epochmilli    (milliseconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
   - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
