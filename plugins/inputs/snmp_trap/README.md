@@ -16,8 +16,8 @@ the SNMP [README.md](../snmp/README.md) for details.
 [[inputs.snmp_trap]]
   ## Transport, local address, and port to listen on.  Transport must
   ## be "udp://".  Omit local address to listen on all interfaces.
-  ## Example "udp://127.0.0.1:1234", default "udp://:162"
-  #service_address = udp://:162
+  ##   example: "udp://127.0.0.1:1234"
+  # service_address = udp://:162
 ```
 
 ### Metrics
