@@ -39,6 +39,10 @@ type Prometheus struct {
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
+	MetricVersion int `toml:"metric_version"`
+
+	URLTag string `toml:"url_tag"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -57,6 +61,12 @@ type Prometheus struct {
 var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
+
+  ## Metric version (optional, default=1, supported values are 1 and 2)
+  # metric_version = 2
+
+  ## Url tag name (tag containing scrapped url. optional, default is "url")
+  # url_tag = "scrapeUrl"
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -224,6 +234,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	var req *http.Request
 	var err error
 	var uClient *http.Client
+	var metrics []telegraf.Metric
 	if u.URL.Scheme == "unix" {
 		path := u.URL.Query().Get("path")
 		if path == "" {
@@ -285,7 +296,12 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("error reading body: %s", err)
 	}
 
-	metrics, err := Parse(body, resp.Header)
+	if p.MetricVersion == 2 {
+		metrics, err = ParseV2(body, resp.Header)
+	} else {
+		metrics, err = Parse(body, resp.Header)
+	}
+
 	if err != nil {
 		return fmt.Errorf("error reading metrics for %s: %s",
 			u.URL, err)
@@ -295,7 +311,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		tags := metric.Tags()
 		// strip user and password from URL
 		u.OriginalURL.User = nil
-		tags["url"] = u.OriginalURL.String()
+		tags[p.URLTag] = u.OriginalURL.String()
 		if u.Address != "" {
 			tags["address"] = u.Address
 		}
@@ -342,6 +358,7 @@ func init() {
 		return &Prometheus{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
 			kubernetesPods:  map[string]URLAndAddress{},
+			URLTag:          "url",
 		}
 	})
 }
