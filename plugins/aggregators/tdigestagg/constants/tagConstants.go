@@ -37,6 +37,9 @@ var TagKeyService = "service"
 var TagKeyHost = "host"
 var TagKeySource = "source"
 var TagKeyAtom = "atom"
+var TagKeyCentroid = "centroid"
+var TagKeyMean = "mean"
+var TagKeyWeight = "weight"
 
 // _rollup tag macros
 var MacroDefault = "default" // Deprecated

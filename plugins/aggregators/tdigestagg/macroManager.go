@@ -32,8 +32,8 @@ package tdigestagg
 
 import (
 	"fmt"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/bucketing"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/bucketing"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
 	"strings"
 )
 
@@ -88,6 +88,12 @@ func reduceToRollupTags(allTags map[string]string, macroDimensionString string) 
 		keySet = append(keySet, key)
 	}
 
+	addative := true
+	if strings.HasPrefix(macroDimensionString, "*-") {
+		addative = false
+		macroDimensionString = strings.TrimPrefix(macroDimensionString, "*-")
+	}
+
 	var rollupTagKeys []string
 	if macroDimensionString == constants.MacroWildcard {
 		// for *, add all tag keys
@@ -103,9 +109,18 @@ func reduceToRollupTags(allTags map[string]string, macroDimensionString string) 
 	}
 
 	var tagsIncludedByRollup = make(map[string]string)
-	for _, tagKey := range rollupTagKeys {
-		if tagValue, hasTag := allTags[tagKey]; hasTag {
-			tagsIncludedByRollup[tagKey] = tagValue
+	if addative {
+		for _, tagKey := range rollupTagKeys {
+			if tagValue, hasTag := allTags[tagKey]; hasTag {
+				tagsIncludedByRollup[tagKey] = tagValue
+			}
+		}
+	} else {
+		for key, value := range allTags {
+			tagsIncludedByRollup[key] = value
+		}
+		for _, tagKey := range rollupTagKeys {
+			delete(tagsIncludedByRollup, tagKey)
 		}
 	}
 

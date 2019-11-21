@@ -32,8 +32,10 @@ package tdigestagg
 
 import (
 	"fmt"
+	"github.com/influxdata/tdigest"
 	"github.com/influxdata/telegraf"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -41,7 +43,7 @@ import (
 var weight = 1.
 
 type Aggregation interface {
-	histogram() *TDigest
+	histogram() *tdigest.TDigest
 	tags() map[string]string
 	basicName() string
 	sum() float64
@@ -52,30 +54,36 @@ type Aggregation interface {
 }
 
 type AggregationData struct {
-	_histogram *TDigest
+	_histogram *tdigest.TDigest
 	_tags      map[string]string
 	_basicName string
 	_sum       float64
 	_time      time.Time
 }
 
-type CentralAggregation struct {
+type CentroidAggregation struct {
 	AggregationData
 }
 
-func (ca *CentralAggregation) emit(acc telegraf.Accumulator) {
-	fields := map[string]interface{}{}
-
+// TODO: add logic to support output format that is used by CLAM
+func (ca *CentroidAggregation) emit(acc telegraf.Accumulator) {
 	if strings.Contains(ca._tags[constants.TagKeyAggregates], constants.FieldSum) {
-		fields[constants.FieldSum+constants.UtilityFieldModifier] = ca._sum
+		//fields[constants.FieldSum+constants.UtilityFieldModifier] = ca._sum
+
+		sumField := map[string]interface{}{}
+		sumField[constants.FieldSum] = ca._sum
+		acc.AddFields(ca._basicName, sumField, ca._tags, ca._time)
 	}
 
-	var histOut = ca._histogram.ForJson()
-	fields[constants.FieldCompression] = histOut.Compression
-	// TODO: Create formatter to ensure consistent behaviour
-	fields[constants.FieldCentroids] = fmt.Sprint(histOut.Centroids)
+	centroidFields := map[string]interface{}{}
+	for num, centroid := range ca._histogram.Centroids() {
+		//var histOut = ca._histogram.Centroids()
+		centroidFields[constants.TagKeyWeight] = centroid.Weight
+		centroidFields[constants.TagKeyMean] = centroid.Mean
 
-	acc.AddFields(ca._basicName, fields, ca._tags, ca._time)
+		ca._tags[constants.TagKeyCentroid] = strconv.Itoa(num)
+		acc.AddFields(ca._basicName, centroidFields, ca._tags, ca._time)
+	}
 }
 
 type LocalAggregation struct {
@@ -90,23 +98,23 @@ func (la *LocalAggregation) emit(acc telegraf.Accumulator) {
 	la._tags[constants.TagKeySource] = la._tags[constants.TagKeyHost]
 
 	// local aggregations
-	fields[constants.FieldMaximum] = la._histogram.Max()
-	fields[constants.FieldMinimum] = la._histogram.Min()
+	fields[constants.FieldMaximum] = la._histogram.Quantile(1.00)
+	fields[constants.FieldMinimum] = la._histogram.Quantile(0.00)
 	fields[constants.FieldCount] = la._histogram.Count()
 	fields[constants.FieldMedian] = la._histogram.Quantile(0.50)
 
 	acc.AddFields(la._basicName, fields, la._tags)
 }
 
-func (ad *AggregationData) histogram() *TDigest     { return ad._histogram }
-func (ad *AggregationData) tags() map[string]string { return ad._tags }
-func (ad *AggregationData) basicName() string       { return ad._basicName }
-func (ad *AggregationData) sum() float64            { return ad._sum }
-func (ad *AggregationData) time() time.Time         { return ad._time }
+func (ad *AggregationData) histogram() *tdigest.TDigest { return ad._histogram }
+func (ad *AggregationData) tags() map[string]string     { return ad._tags }
+func (ad *AggregationData) basicName() string           { return ad._basicName }
+func (ad *AggregationData) sum() float64                { return ad._sum }
+func (ad *AggregationData) time() time.Time             { return ad._time }
 
 func newAggregationData(name string, tags map[string]string, compression float64, firstValue float64, time time.Time) AggregationData {
 	aggregationData := AggregationData{
-		_histogram: NewTDigest(compression),
+		_histogram: tdigest.NewWithCompression(compression),
 		_tags:      tags,
 		_basicName: name,
 		_sum:       0,
@@ -125,9 +133,9 @@ func (ad *AggregationData) addValue(floatValue float64) {
 func (ad *AggregationData) getAggregation(name string) float64 {
 	switch name {
 	case constants.FieldMinimum:
-		return ad._histogram.Min()
+		return ad._histogram.Quantile(0.00)
 	case constants.FieldMaximum:
-		return ad._histogram.Max()
+		return ad._histogram.Quantile(1.00)
 	case constants.FieldSum:
 		return ad._sum
 	case constants.FieldCount:

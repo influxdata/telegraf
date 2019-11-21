@@ -30,7 +30,7 @@
 
 package bucketing
 
-import "github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
+import "github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
 
 type BucketData struct {
 	BucketInput

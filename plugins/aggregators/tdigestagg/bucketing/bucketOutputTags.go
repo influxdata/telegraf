@@ -30,7 +30,7 @@
 
 package bucketing
 
-import "github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
+import "github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
 
 type BucketOutputTags struct {
 	// Tags to be emitted with metrics and included in config key

@@ -31,8 +31,8 @@
 package bucketing
 
 import (
-	"github.com/docker/docker/pkg/testutil/assert"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -104,6 +104,30 @@ func TestExtractAtomTagAtomOverridesReplacement(t *testing.T) {
 	bucketInput.extractAtomTag(&bucketOutput)
 
 	assert.Equal(t, bucketOutput.OutputTags()["atom"], "atomValue")
+}
+
+func TestExcludeAtomTag(t *testing.T) {
+	bucketInput := BucketInput{
+		config: BucketConfig{
+			ExcludeTags:           []string{"atom"},
+			SourceTagKey:          "k1",
+			AtomReplacementTagKey: "k2",
+		},
+		allTags: map[string]string{
+			"k1":   "v1",
+			"k2":   "v2",
+			"k3":   "v3",
+			"atom": "atomValue",
+		},
+	}
+
+	bucketOutput := BucketOutputTags{
+		aggregationDimensions: make(map[string]string),
+		otherTags:             make(map[string]string),
+	}
+	bucketInput.extractAtomTag(&bucketOutput)
+
+	assert.Equal(t, bucketOutput.OutputTags()["atom"], "v2")
 }
 
 func TestExtractMissingAtomTagNoOverride(t *testing.T) {
@@ -279,4 +303,26 @@ func TestExtractBucketKeyExcludeTag(t *testing.T) {
 	bucketInput.extractBucketKey("name", "source", &bucketOutput)
 
 	assert.Equal(t, bucketOutput.OutputTags()[constants.TagKeyBucketKey], "name_source_fred")
+}
+
+func TestExtractBucketKeyExcludeAtom(t *testing.T) {
+	bucketInput := BucketInput{
+		config: BucketConfig{
+			ExcludeTags: []string{"atom"},
+		},
+	}
+
+	bucketOutput := BucketOutputTags{
+		aggregationDimensions: map[string]string{
+			constants.TagKeyAtom: "fred",
+			"k1":                 "v1",
+		},
+		otherTags: map[string]string{
+			"NotAggregationTag": "extra",
+		},
+	}
+
+	bucketInput.extractBucketKey("name", "source", &bucketOutput)
+
+	assert.Equal(t, bucketOutput.OutputTags()[constants.TagKeyBucketKey], "name_source_v1")
 }

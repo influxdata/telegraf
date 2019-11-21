@@ -31,9 +31,11 @@
 package tdigestagg
 
 import (
+	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/bucketing"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/bucketing"
+	"github.com/influxdata/telegraf/selfstat"
 	"time"
 )
 
@@ -146,7 +148,7 @@ func (agg *TDigestAgg) Add(input telegraf.Metric) {
 						// TODO: Evaluate - Local aggregations add late data into "current" config or drop it
 						aggregation = &LocalAggregation{aggregationData}
 					} else {
-						aggregation = &CentralAggregation{aggregationData}
+						aggregation = &CentroidAggregation{aggregationData}
 					}
 
 					agg.cache[cacheKey] = &aggregation
@@ -157,11 +159,12 @@ func (agg *TDigestAgg) Add(input telegraf.Metric) {
 }
 
 func (agg *TDigestAgg) Push(acc telegraf.Accumulator) {
-	// TODO: Evaluate cardinality metric
-	//selfstat.Register("aggregation-window", "cardinality", map[string]string{}).Set(len(agg.cache))
 
 	for _, agg := range agg.cache {
 		(*agg).emit(acc)
+
+		delay := fmt.Sprintf("%.1f", time.Since((*agg).time()).Minutes()-1)
+		selfstat.Register("tdigest", "window_cardinality", map[string]string{"delay": delay}).Incr(1)
 	}
 }
 
@@ -180,15 +183,16 @@ func convert(input interface{}) (float64, bool) {
 	}
 }
 
-// Validate the required input parameter
-// This function will be added to the Aggregation plugin interface in 1.11+
+// TODO: Create ticket for adding init check
 //func (agg *TDigestAgg) Init() error {
-//	if "" == agg.SourceTagKey {
-//		return errors.New("missing config parameter: \"source_tag\"")
+//	if len(agg.Bucketing) == 0 {
+//		return errors.New("no bucket configurations defined")
 //	}
 //
-//	if "" == agg.DefaultAtomTagKey {
-//		return errors.New("missing config parameter: \"atom_tag\"")
+//	for _, bucket := range agg.Bucketing {
+//		if "" == bucket.SourceTagKey {
+//			return errors.New("every bucket configuration must define \"source_tag_key\"")
+//		}
 //	}
 //
 //	return nil

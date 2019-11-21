@@ -31,8 +31,8 @@
 package bucketing
 
 import (
-	"github.com/docker/docker/pkg/testutil/assert"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 

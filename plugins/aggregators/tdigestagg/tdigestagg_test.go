@@ -31,13 +31,14 @@
 package tdigestagg
 
 import (
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/bucketing"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
+	"github.com/influxdata/tdigest"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/bucketing"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
+	"github.com/stretchr/testify/assert"
+	"strconv"
 	"testing"
 	"time"
 
-	"fmt"
-	"github.com/docker/docker/pkg/testutil/assert"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -46,8 +47,15 @@ var valueSeattle = "sea1"
 var valueDevelopment = "dev"
 var valueHost = "ubuntu"
 var valueService = "telegraf"
+var firstCentroid = "0"
+
 var tagKeyAZ = "az"
 var tagKeyEnv = "env"
+
+var expectedSingle9 = map[string]interface{}{
+	constants.TagKeyWeight: 1.,
+	constants.TagKeyMean:   9.,
+}
 
 var m1, _ = metric.New("m1",
 	map[string]string{
@@ -174,8 +182,6 @@ var mCounter, _ = metric.New("m1",
 	},
 	map[string]interface{}{
 		"a": float64(9),
-		"b": float64(8),
-		"c": float64(7),
 	},
 	time.Now(),
 )
@@ -245,23 +251,29 @@ func TestSameTags(t *testing.T) {
 	histogram.Add(m2)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
+	var expected = tdigest.NewWithCompression(0)
 	expected.Add(1, 1)
 	expected.Add(3, 1)
-	out := expected.ForJson()
 
 	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
+		constants.TagKeyWeight: 1.,
+		constants.TagKeyMean:   1.,
 	}
 	expectedTags := map[string]string{
-		"foo": "bar",
+		"foo":                      "bar",
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
 		constants.TagKeyBucketKey:  "m1_a_telegraf_sea1_bar",
 		constants.TagKeySource:     valueService,
 		constants.TagKeyAtom:       valueHost,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
+
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, expectedTags)
+
+	// The order of these centroids is not random they are sorted by value
+	expectedFields[constants.TagKeyMean] = 3.
+	expectedTags[constants.TagKeyCentroid] = "1"
 	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, expectedTags)
 
 	// Tag that exists on data but not in aggregation list
@@ -273,7 +285,9 @@ func TestSameTags(t *testing.T) {
 	acc.AssertDoesNotContainsTaggedFields(t, "m1_a", expectedFields, expectedTags)
 }
 
-func TestTimeBucket(t *testing.T) {
+// This function needs to be enabled only for CLAM output once a switch is enabled
+// Outputing each centroid removes the combination into a single measurement for the values sharing a time
+func testTimeBucket(t *testing.T) {
 	acc := testutil.Accumulator{}
 	histogram := NewTDigestAgg()
 	histogram.Bucketing = []bucketing.BucketConfig{{
@@ -288,17 +302,8 @@ func TestTimeBucket(t *testing.T) {
 	histogram.Add(mSingleTimer)
 	histogram.Push(&acc)
 
-	// 1 aggregations expected for each time config
-	assert.Equal(t, len(acc.Metrics), 2)
-
-	centroidSet := make(map[interface{}]int)
-	for _, m := range acc.Metrics {
-		fred := m.Fields[constants.FieldCentroids]
-		centroidSet[fred] = 1
-	}
-
-	// assert that there are two distinct centroids created, one for each time config
-	assert.Equal(t, len(centroidSet), 2)
+	// 1 measurement expected for each time
+	assert.Equal(t, 2, len(acc.Metrics))
 }
 
 func TestAtomAsSource(t *testing.T) {
@@ -317,15 +322,6 @@ func TestAtomAsSource(t *testing.T) {
 	histogram.Add(mTimer)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	serviceTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
@@ -334,8 +330,9 @@ func TestAtomAsSource(t *testing.T) {
 		constants.TagKeyBucketKey:  "m1_a_telegraf_sea1_dev_telegraf",
 		constants.TagKeySource:     valueService,
 		constants.TagKeyAtom:       valueService,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, serviceTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, serviceTags)
 
 	hostTags := map[string]string{
 		constants.TagKeyAggregates: serviceTags[constants.TagKeyAggregates],
@@ -346,8 +343,9 @@ func TestAtomAsSource(t *testing.T) {
 		constants.TagKeySource:     valueHost,
 		constants.TagKeyAtom:       valueHost,
 		constants.TagKeyHost:       valueHost,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, hostTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, hostTags)
 }
 
 func TestCloudExample(t *testing.T) {
@@ -368,28 +366,28 @@ func TestCloudExample(t *testing.T) {
 	histogram.Add(mCloud3)
 	histogram.Push(&acc)
 
-	var atom1Expected = NewTDigest(0)
+	var atom1Expected = tdigest.NewWithCompression(0)
 	atom1Expected.Add(1, 1)
 	atom1Expected.Add(3, 1)
 	atom1Fields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(atom1Expected.ForJson().Centroids),
+		constants.TagKeyWeight: 1.,
+		constants.TagKeyMean:   1.,
 	}
 
-	var atom2Expected = NewTDigest(0)
+	var atom2Expected = tdigest.NewWithCompression(0)
 	atom2Expected.Add(4, 1)
 	atom2Fields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(atom2Expected.ForJson().Centroids),
+		constants.TagKeyWeight: 1.,
+		constants.TagKeyMean:   4.,
 	}
 
-	var atomSourceExpected = NewTDigest(0)
+	var atomSourceExpected = tdigest.NewWithCompression(0)
 	atomSourceExpected.Add(1, 1)
 	atomSourceExpected.Add(3, 1)
 	atomSourceExpected.Add(4, 1)
 	atomSourceFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(atomSourceExpected.ForJson().Centroids),
+		constants.TagKeyWeight: 1.,
+		constants.TagKeyMean:   1.,
 	}
 
 	atom2Tags := map[string]string{
@@ -402,10 +400,10 @@ func TestCloudExample(t *testing.T) {
 		"namespace":                "kubeName",
 		constants.TagKeyAtom:       "h2",
 		"replicaHash":              "h2",
+		constants.TagKeyCentroid:   firstCentroid,
 	}
 	acc.AssertContainsTaggedFields(t, "cloud_a", atom2Fields, atom2Tags)
 
-	// Tags for L1 level aggregation
 	atom1Tags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   atom2Tags[tagKeyAZ],
@@ -416,6 +414,7 @@ func TestCloudExample(t *testing.T) {
 		constants.TagKeyBucketKey:  "cloud_a_kubeName_aws_us-west-1_kubeName_h1_cloud",
 		constants.TagKeyAtom:       "h1",
 		"replicaHash":              "h1",
+		constants.TagKeyCentroid:   firstCentroid,
 	}
 	acc.AssertContainsTaggedFields(t, "cloud_a", atom1Fields, atom1Tags)
 
@@ -428,6 +427,7 @@ func TestCloudExample(t *testing.T) {
 		constants.TagKeySource:     "kubeName",
 		"namespace":                "kubeName",
 		constants.TagKeyAtom:       "kubeName",
+		constants.TagKeyCentroid:   firstCentroid,
 	}
 	acc.AssertContainsTaggedFields(t, "cloud_a", atomSourceFields, atomSourceTags)
 }
@@ -443,15 +443,6 @@ func TestCustomAtomTag(t *testing.T) {
 	histogram.Add(mAtom)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	atomTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
@@ -460,8 +451,9 @@ func TestCustomAtomTag(t *testing.T) {
 		constants.TagKeyBucketKey:  "m1_a_telegraf_carbon_sea1_dev_telegraf",
 		constants.TagKeySource:     valueService,
 		constants.TagKeyAtom:       "carbon",
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, atomTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, atomTags)
 }
 
 func TestMissingAtomReplacementTag(t *testing.T) {
@@ -491,15 +483,6 @@ func TestMissingAtomReplacementTag(t *testing.T) {
 	histogram.Add(noAtom)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	invalidAtomTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
@@ -510,8 +493,9 @@ func TestMissingAtomReplacementTag(t *testing.T) {
 		constants.TagKeyAtom:       constants.MissingValueForRequiredTagPrefix + constants.TagKeyHost,
 		constants.TagKeyHost:       constants.MissingValueForRequiredTagPrefix + constants.TagKeyHost,
 		constants.AtomSlaViolation: constants.SlaViolationMissing,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, invalidAtomTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, invalidAtomTags)
 }
 
 func TestMissingAtomTagNoOverride(t *testing.T) {
@@ -525,15 +509,6 @@ func TestMissingAtomTagNoOverride(t *testing.T) {
 	histogram.Add(mTimer)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	L2Tags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
@@ -544,8 +519,9 @@ func TestMissingAtomTagNoOverride(t *testing.T) {
 		constants.TagKeyAtom:       constants.MissingValueForRequiredTagPrefix + constants.TagKeyAtom,
 		constants.TagKeyHost:       valueHost,
 		"sla.violation.atom_tag":   "MISSING",
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, L2Tags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, L2Tags)
 }
 
 func TestMissingSourceTag(t *testing.T) {
@@ -575,15 +551,6 @@ func TestMissingSourceTag(t *testing.T) {
 	histogram.Add(noSource)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	expectedTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
@@ -594,8 +561,9 @@ func TestMissingSourceTag(t *testing.T) {
 		constants.TagKeyHost:       valueHost,
 		constants.TagKeyAtom:       valueHost,
 		"sla.violation.source_tag": "MISSING",
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, expectedTags)
 }
 
 func TestTimerTag(t *testing.T) {
@@ -610,15 +578,6 @@ func TestTimerTag(t *testing.T) {
 	histogram.Add(mTimer)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	L2Tags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
@@ -628,8 +587,9 @@ func TestTimerTag(t *testing.T) {
 		constants.TagKeySource:     valueService,
 		constants.TagKeyAtom:       valueHost,
 		constants.TagKeyHost:       valueHost,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, L2Tags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, L2Tags)
 }
 
 func TestLocalTag(t *testing.T) {
@@ -644,9 +604,9 @@ func TestLocalTag(t *testing.T) {
 	histogram.Add(mLocal)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
+	var expected = tdigest.NewWithCompression(0)
 	expected.Add(9, 1)
-	//out := expected.ForJson()
+	//out := expected.Centroids()
 
 	expectedFields := map[string]interface{}{
 		constants.FieldMaximum: 9.,
@@ -681,15 +641,6 @@ func TestDefaultTag(t *testing.T) {
 	histogram.Add(mDefault)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	expectedTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsGauge,
 		tagKeyAZ:                   valueSeattle,
@@ -699,8 +650,54 @@ func TestDefaultTag(t *testing.T) {
 		constants.TagKeySource:     valueService,
 		constants.TagKeyAtom:       valueHost,
 		constants.TagKeyHost:       valueHost,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, expectedTags)
+}
+
+func TestCpuCoreQuantile(t *testing.T) {
+	acc := testutil.Accumulator{}
+	histogram := NewTDigestAgg()
+	histogram.Bucketing = []bucketing.BucketConfig{{
+		ExcludeTags:           nil,
+		SourceTagKey:          constants.TagKeyService,
+		AtomReplacementTagKey: constants.TagKeyHost,
+	}}
+
+	var expected = tdigest.NewWithCompression(0)
+	for i := 0; i < 10; i++ {
+		var mCpu, _ = metric.New("cpu",
+			map[string]string{
+				tagKeyAZ:                valueSeattle,
+				tagKeyEnv:               valueDevelopment,
+				constants.TagKeyHost:    valueHost,
+				constants.TagKeyService: valueService,
+				constants.TagKeyRollup:  "gauge:*-core",
+				"core":                  strconv.Itoa(i),
+			},
+			map[string]interface{}{
+				"used": float64(i),
+			},
+			time.Now(),
+		)
+		histogram.Add(mCpu)
+		expected.Add(float64(i), 1)
+	}
+
+	histogram.Push(&acc)
+
+	expectedTags := map[string]string{
+		constants.TagKeyAggregates: constants.AggregationsGauge,
+		tagKeyAZ:                   valueSeattle,
+		tagKeyEnv:                  valueDevelopment,
+		constants.TagKeyService:    valueService,
+		constants.TagKeyBucketKey:  "cpu_used_telegraf_sea1_dev_ubuntu_telegraf",
+		constants.TagKeySource:     valueService,
+		constants.TagKeyAtom:       valueHost,
+		constants.TagKeyHost:       valueHost,
+		constants.TagKeyCentroid:   "9",
+	}
+	acc.AssertContainsTaggedFields(t, "cpu_used", expectedSingle9, expectedTags)
 }
 
 func TestGaugeTag(t *testing.T) {
@@ -715,15 +712,6 @@ func TestGaugeTag(t *testing.T) {
 	histogram.Add(mGauge)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
 	expectedTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsGauge,
 		tagKeyAZ:                   valueSeattle,
@@ -733,8 +721,9 @@ func TestGaugeTag(t *testing.T) {
 		constants.TagKeySource:     valueService,
 		constants.TagKeyAtom:       valueHost,
 		constants.TagKeyHost:       valueHost,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, expectedTags)
 }
 
 func TestCounterTag(t *testing.T) {
@@ -750,14 +739,8 @@ func TestCounterTag(t *testing.T) {
 	histogram.Add(mCounter)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 2)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldSum + constants.UtilityFieldModifier: 18.,
-		constants.FieldCompression:                          0.,
-		constants.FieldCentroids:                            fmt.Sprint(out.Centroids),
+	expectedSum := map[string]interface{}{
+		constants.FieldSum: 18.,
 	}
 
 	expectedTags := map[string]string{
@@ -770,7 +753,10 @@ func TestCounterTag(t *testing.T) {
 		constants.TagKeyAtom:       valueHost,
 		constants.TagKeyHost:       valueHost,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, expectedTags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSum, expectedTags)
+
+	expectedTags[constants.TagKeyCentroid] = firstCentroid
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, expectedTags)
 }
 
 func TestExcludeTags(t *testing.T) {
@@ -785,16 +771,7 @@ func TestExcludeTags(t *testing.T) {
 	histogram.Add(mTimer)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
-	L2Tags := map[string]string{
+	expectedTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyEnv:                  valueDevelopment,
 		constants.TagKeyService:    valueService,
@@ -802,8 +779,9 @@ func TestExcludeTags(t *testing.T) {
 		constants.TagKeySource:     valueService,
 		constants.TagKeyAtom:       valueHost,
 		constants.TagKeyHost:       valueHost,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, L2Tags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, expectedTags)
 }
 
 func TestExcludeTagsAsAtom(t *testing.T) {
@@ -818,16 +796,7 @@ func TestExcludeTagsAsAtom(t *testing.T) {
 	histogram.Add(mTimer)
 	histogram.Push(&acc)
 
-	var expected = NewTDigest(0)
-	expected.Add(9, 1)
-	out := expected.ForJson()
-
-	expectedFields := map[string]interface{}{
-		constants.FieldCompression: 0.,
-		constants.FieldCentroids:   fmt.Sprint(out.Centroids),
-	}
-
-	L2Tags := map[string]string{
+	expectedTags := map[string]string{
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyEnv:                  valueDevelopment,
 		constants.TagKeyService:    valueService,
@@ -835,6 +804,7 @@ func TestExcludeTagsAsAtom(t *testing.T) {
 		constants.TagKeySource:     valueService,
 		tagKeyAZ:                   valueSeattle,
 		constants.TagKeyAtom:       valueHost,
+		constants.TagKeyCentroid:   firstCentroid,
 	}
-	acc.AssertContainsTaggedFields(t, "m1_a", expectedFields, L2Tags)
+	acc.AssertContainsTaggedFields(t, "m1_a", expectedSingle9, expectedTags)
 }

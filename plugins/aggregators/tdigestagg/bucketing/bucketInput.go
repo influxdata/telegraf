@@ -32,8 +32,8 @@ package bucketing
 
 import (
 	"fmt"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/constants"
-	"github.groupondev.com/metrics/telegraf-tdigest-plugin/plugins/aggregators/tdigestagg/utility"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/constants"
+	"github.com/influxdata/telegraf/plugins/aggregators/tdigestagg/utility"
 )
 
 var alwaysSkipTags = []string{constants.TagKeyRollup, constants.TagKeyAggregates}
@@ -46,7 +46,16 @@ type BucketInput struct {
 func (bi *BucketInput) extractAtomTag(bot *BucketOutputTags) {
 	atomKey := bi.config.AtomReplacementTagKey
 	atomValue, hasAtomTag := bi.allTags[constants.TagKeyAtom]
-	if !hasAtomTag {
+
+	// Need to be able to exclude a per-metric atom tag from the bucket config
+	atomExcluded := false
+	for _, tag := range bi.config.ExcludeTags {
+		if "atom" == tag {
+			atomExcluded = true
+		}
+	}
+
+	if !hasAtomTag || atomExcluded {
 		if "" != bi.config.AtomReplacementTagKey {
 			atomReplacementValue, hasAtomReplacement := bi.allTags[bi.config.AtomReplacementTagKey]
 			if !hasAtomReplacement {
