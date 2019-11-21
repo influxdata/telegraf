@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-
 func TestSynproxyFileNormal(t *testing.T) {
 	testSynproxyFileData(t, synproxyFileNormal, synproxyResultNormal)
 }
@@ -70,7 +69,6 @@ func TestNoSynproxyFile(t *testing.T) {
 	err := k.Gather(&acc)
 	assert.Error(t, err)
 }
-
 
 // Valid Synproxy file
 const synproxyFileNormal = `entries         syn_received    cookie_invalid  cookie_valid    cookie_retrans  conn_reopened
