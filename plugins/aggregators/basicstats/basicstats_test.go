@@ -126,21 +126,21 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 		"g_count": float64(1), //g
 	}
 	expectedGaugeFields := map[string]interface{}{
-		"a_max":   float64(1), //a
-		"a_min":   float64(1),
-		"a_mean":  float64(1),
-		"b_max":   float64(1), //b
-		"b_min":   float64(1),
-		"b_mean":  float64(1),
-		"c_max":   float64(2), //c
-		"c_min":   float64(2),
-		"c_mean":  float64(2),
-		"d_max":   float64(2), //d
-		"d_min":   float64(2),
-		"d_mean":  float64(2),
-		"g_max":   float64(3), //g
-		"g_min":   float64(3),
-		"g_mean":  float64(3),
+		"a_max":  float64(1), //a
+		"a_min":  float64(1),
+		"a_mean": float64(1),
+		"b_max":  float64(1), //b
+		"b_min":  float64(1),
+		"b_mean": float64(1),
+		"c_max":  float64(2), //c
+		"c_min":  float64(2),
+		"c_mean": float64(2),
+		"d_max":  float64(2), //d
+		"d_min":  float64(2),
+		"d_mean": float64(2),
+		"g_max":  float64(3), //g
+		"g_min":  float64(3),
+		"g_mean": float64(3),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -162,27 +162,27 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 		"g_count": float64(1), //g
 	}
 	expectedGaugeFields = map[string]interface{}{
-		"a_max":   float64(1), //a
-		"a_min":   float64(1),
-		"a_mean":  float64(1),
-		"b_max":   float64(3), //b
-		"b_min":   float64(3),
-		"b_mean":  float64(3),
-		"c_max":   float64(4), //c
-		"c_min":   float64(4),
-		"c_mean":  float64(4),
-		"d_max":   float64(6), //d
-		"d_min":   float64(6),
-		"d_mean":  float64(6),
-		"e_max":   float64(200), //e
-		"e_min":   float64(200),
-		"e_mean":  float64(200),
-		"f_max":   float64(200), //f
-		"f_min":   float64(200),
-		"f_mean":  float64(200),
-		"g_max":   float64(1), //g
-		"g_min":   float64(1),
-		"g_mean":  float64(1),
+		"a_max":  float64(1), //a
+		"a_min":  float64(1),
+		"a_mean": float64(1),
+		"b_max":  float64(3), //b
+		"b_min":  float64(3),
+		"b_mean": float64(3),
+		"c_max":  float64(4), //c
+		"c_min":  float64(4),
+		"c_mean": float64(4),
+		"d_max":  float64(6), //d
+		"d_min":  float64(6),
+		"d_mean": float64(6),
+		"e_max":  float64(200), //e
+		"e_min":  float64(200),
+		"e_mean": float64(200),
+		"f_max":  float64(200), //f
+		"f_min":  float64(200),
+		"f_mean": float64(200),
+		"g_max":  float64(1), //g
+		"g_min":  float64(1),
+		"g_mean": float64(1),
 	}
 	expectedTags = map[string]string{
 		"foo": "bar",

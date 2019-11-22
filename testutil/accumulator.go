@@ -499,7 +499,6 @@ func (a *Accumulator) hasFieldWithType(measurement string, field string, tp tele
 	return false
 }
 
-
 // HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
 	a.Lock()
