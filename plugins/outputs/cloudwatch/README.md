@@ -47,5 +47,5 @@ also save AWS API cost. If enable this flag, this plugin would parse the require
 aggregator to calculate those fields. If not all statistic fields are available, 
 all fields would still be sent as raw metrics.
 
-## high_resolution_metrics
+### high_resolution_metrics
 Enable high resolution metrics (1 second precision) instead of standard ones (60 seconds precision)

@@ -192,8 +192,8 @@ var sampleConfig = `
   ## fields are available, all fields would still be sent as raw metrics. 
   # write_statistics = false
 
-  ## Enable high resolution metrics of 1 second (standard resolution metrics are 60 seconds)
-  ## high_resolution_metrics = false
+  ## Enable high resolution metrics of 1 second (if not enabled, standard resolution are of 60 seconds precision)
+  # high_resolution_metrics = false
 `
 
 func (c *CloudWatch) SampleConfig() string {
