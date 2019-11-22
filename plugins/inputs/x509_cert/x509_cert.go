@@ -2,6 +2,7 @@
 package x509_cert
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -98,7 +99,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		var certs []*x509.Certificate
 		for {
-			block, rest := pem.Decode(content)
+			block, rest := pem.Decode(bytes.TrimSpace(content))
 			if block == nil {
 				return nil, fmt.Errorf("failed to parse certificate PEM")
 			}

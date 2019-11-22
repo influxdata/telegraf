@@ -140,7 +140,15 @@ func TestGatherLocal(t *testing.T) {
 		{name: "permission denied", mode: 0001, error: true},
 		{name: "not a certificate", mode: 0640, content: "test", error: true},
 		{name: "wrong certificate", mode: 0640, content: wrongCert, error: true},
-		{name: "correct certificate", mode: 0640, content: pki.ReadServerCert() + pki.ReadCACert()},
+		{name: "correct certificate", mode: 0640, content: pki.ReadServerCert()},
+		{name: "correct certificate and extra trailing space", mode: 0640, content: pki.ReadServerCert() + " "},
+		{name: "correct certificate and extra leading space", mode: 0640, content: " " + pki.ReadServerCert()},
+		{name: "correct multiple certificates", mode: 0640, content: pki.ReadServerCert() + pki.ReadCACert()},
+		{name: "correct certificate and wrong certificate", mode: 0640, content: pki.ReadServerCert() + "\n" + wrongCert, error: true},
+		{name: "correct certificate and not a certificate", mode: 0640, content: pki.ReadServerCert() + "\ntest", error: true},
+		{name: "correct multiple certificates and extra trailing space", mode: 0640, content: pki.ReadServerCert() + pki.ReadServerCert() + " "},
+		{name: "correct multiple certificates and extra leading space", mode: 0640, content: " " + pki.ReadServerCert() + pki.ReadServerCert()},
+		{name: "correct multiple certificates and extra middle space", mode: 0640, content: pki.ReadServerCert() + " " + pki.ReadServerCert()},
 	}
 
 	for _, test := range tests {
