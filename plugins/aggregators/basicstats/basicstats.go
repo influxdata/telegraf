@@ -147,23 +147,24 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 
 func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range b.cache {
-		fields := map[string]interface{}{}
+		counters := map[string]interface{}{}
+		gauges := map[string]interface{}{}
 		for k, v := range aggregate.fields {
 
 			if b.statsConfig.count {
-				fields[k+"_count"] = v.count
+				counters[k+"_count"] = v.count
 			}
 			if b.statsConfig.min {
-				fields[k+"_min"] = v.min
+				gauges[k+"_min"] = v.min
 			}
 			if b.statsConfig.max {
-				fields[k+"_max"] = v.max
+				gauges[k+"_max"] = v.max
 			}
 			if b.statsConfig.mean {
-				fields[k+"_mean"] = v.mean
+				gauges[k+"_mean"] = v.mean
 			}
 			if b.statsConfig.sum {
-				fields[k+"_sum"] = v.sum
+				gauges[k+"_sum"] = v.sum
 			}
 
 			//v.count always >=1
@@ -171,24 +172,27 @@ func (b *BasicStats) Push(acc telegraf.Accumulator) {
 				variance := v.M2 / (v.count - 1)
 
 				if b.statsConfig.variance {
-					fields[k+"_s2"] = variance
+					gauges[k+"_s2"] = variance
 				}
 				if b.statsConfig.stdev {
-					fields[k+"_stdev"] = math.Sqrt(variance)
+					gauges[k+"_stdev"] = math.Sqrt(variance)
 				}
 				if b.statsConfig.diff {
-					fields[k+"_diff"] = v.diff
+					gauges[k+"_diff"] = v.diff
 				}
 				if b.statsConfig.non_negative_diff && v.diff >= 0 {
-					fields[k+"_non_negative_diff"] = v.diff
+					gauges[k+"_non_negative_diff"] = v.diff
 				}
 
 			}
 			//if count == 1 StdDev = infinite => so I won't send data
 		}
 
-		if len(fields) > 0 {
-			acc.AddFields(aggregate.name, fields, aggregate.tags)
+		if len(counters) > 0 {
+			acc.AddCounter(aggregate.name, counters, aggregate.tags)
+		}
+		if len(gauges) > 0 {
+			acc.AddGauge(aggregate.name, gauges, aggregate.tags)
 		}
 	}
 }

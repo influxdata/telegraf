@@ -28,6 +28,7 @@ type Metric struct {
 	Tags        map[string]string
 	Fields      map[string]interface{}
 	Time        time.Time
+	Type        telegraf.ValueType
 }
 
 func (p *Metric) String() string {
@@ -82,59 +83,7 @@ func (a *Accumulator) AddFields(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.Lock()
-	defer a.Unlock()
-	atomic.AddUint64(&a.nMetrics, 1)
-	if a.Cond != nil {
-		a.Cond.Broadcast()
-	}
-	if a.Discard {
-		return
-	}
-
-	if len(fields) == 0 {
-		return
-	}
-
-	tagsCopy := map[string]string{}
-	for k, v := range tags {
-		tagsCopy[k] = v
-	}
-
-	fieldsCopy := map[string]interface{}{}
-	for k, v := range fields {
-		fieldsCopy[k] = v
-	}
-
-	var t time.Time
-	if len(timestamp) > 0 {
-		t = timestamp[0]
-	} else {
-		t = time.Now()
-		if a.TimeFunc == nil {
-			t = time.Now()
-		} else {
-			t = a.TimeFunc()
-		}
-
-	}
-
-	if a.debug {
-		pretty, _ := json.MarshalIndent(fields, "", "  ")
-		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
-		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
-			measurement, string(pretty), string(prettyTags))
-		fmt.Print(msg)
-	}
-
-	p := &Metric{
-		Measurement: measurement,
-		Fields:      fieldsCopy,
-		Tags:        tagsCopy,
-		Time:        t,
-	}
-
-	a.Metrics = append(a.Metrics, p)
+	a.addFields(measurement, fields, tags, telegraf.Untyped, timestamp...)
 }
 
 func (a *Accumulator) AddCounter(
@@ -143,7 +92,7 @@ func (a *Accumulator) AddCounter(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, fields, tags, telegraf.Counter, timestamp...)
 }
 
 func (a *Accumulator) AddGauge(
@@ -152,12 +101,12 @@ func (a *Accumulator) AddGauge(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, fields, tags, telegraf.Gauge, timestamp...)
 }
 
 func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 	for _, m := range metrics {
-		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		a.addFields(m.Name(), m.Fields(), m.Tags(), m.Type(), m.Time())
 	}
 }
 
@@ -167,7 +116,7 @@ func (a *Accumulator) AddSummary(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, fields, tags, telegraf.Summary, timestamp...)
 }
 
 func (a *Accumulator) AddHistogram(
@@ -176,11 +125,11 @@ func (a *Accumulator) AddHistogram(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, fields, tags, telegraf.Histogram, timestamp...)
 }
 
 func (a *Accumulator) AddMetric(m telegraf.Metric) {
-	a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	a.addFields(m.Name(), m.Fields(), m.Tags(), m.Type(), m.Time())
 }
 
 func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
@@ -308,6 +257,33 @@ func (a *Accumulator) NFields() int {
 	return counter
 }
 
+// NCounterFields returns the total number of fields in the accumulator, across all
+// counter measurements
+func (a *Accumulator) NCounterFields() int {
+	return a.nCounterFieldsWithType(telegraf.Counter)
+}
+
+// NGaugeFields returns the total number of fields in the accumulator, across all
+// gauge measurements
+func (a *Accumulator) NGaugeFields() int {
+	return a.nCounterFieldsWithType(telegraf.Gauge)
+}
+
+
+func (a *Accumulator) nCounterFieldsWithType(tp telegraf.ValueType) int {
+	a.Lock()
+	defer a.Unlock()
+	counter := 0
+	for _, pt := range a.Metrics {
+		if pt.Type == tp {
+			for range pt.Fields {
+				counter++
+			}
+		}
+	}
+	return counter
+}
+
 // Wait waits for the given number of metrics to be added to the accumulator.
 func (a *Accumulator) Wait(n int) {
 	a.Lock()
@@ -350,6 +326,46 @@ func (a *Accumulator) AssertContainsTaggedFields(
 		}
 	}
 	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
+	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) AssertContainsTaggedCounterFields(
+	t *testing.T,
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) {
+	a.AssertContainsTaggedFieldsWithType(t, measurement, fields, telegraf.Counter, tags)
+}
+
+func (a *Accumulator) AssertContainsTaggedGaugeFields(
+	t *testing.T,
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+) {
+	a.AssertContainsTaggedFieldsWithType(t, measurement, fields, telegraf.Gauge, tags)
+}
+
+func (a *Accumulator) AssertContainsTaggedFieldsWithType(
+	t *testing.T,
+	measurement string,
+	fields map[string]interface{},
+	tp telegraf.ValueType,
+	tags map[string]string,
+) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		if p.Measurement == measurement && p.Type == tp && reflect.DeepEqual(fields, p.Fields) {
+			return
+		}
+	}
+	msg := fmt.Sprintf("unknown measurement %s of type %v with tags %v", measurement, tp, tags)
 	assert.Fail(t, msg)
 }
 
@@ -457,6 +473,33 @@ func (a *Accumulator) HasField(measurement string, field string) bool {
 
 	return false
 }
+
+// HasCounterField returns true if the given measurement is a Counter and
+// has a field with the given name
+func (a *Accumulator) HasCounterField(measurement string, field string) bool {
+	return a.hasFieldWithType(measurement, field, telegraf.Counter)
+}
+
+// HasGaugeField returns true if the given measurement is a Counter and
+// has a field with the given name
+func (a *Accumulator) HasGaugeField(measurement string, field string) bool {
+	return a.hasFieldWithType(measurement, field, telegraf.Gauge)
+}
+
+func (a *Accumulator) hasFieldWithType(measurement string, field string, tp telegraf.ValueType) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement && p.Type == tp {
+			if _, ok := p.Fields[field]; ok {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 
 // HasIntField returns true if the measurement has an Int value
 func (a *Accumulator) HasIntField(measurement string, field string) bool {
@@ -702,4 +745,67 @@ func (a *Accumulator) BoolField(measurement string, field string) (bool, bool) {
 	}
 
 	return false, false
+}
+
+func (a *Accumulator) addFields(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	tp telegraf.ValueType,
+	timestamp ...time.Time,
+) {
+	a.Lock()
+	defer a.Unlock()
+	atomic.AddUint64(&a.nMetrics, 1)
+	if a.Cond != nil {
+		a.Cond.Broadcast()
+	}
+	if a.Discard {
+		return
+	}
+
+	if len(fields) == 0 {
+		return
+	}
+
+	tagsCopy := map[string]string{}
+	for k, v := range tags {
+		tagsCopy[k] = v
+	}
+
+	fieldsCopy := map[string]interface{}{}
+	for k, v := range fields {
+		fieldsCopy[k] = v
+	}
+
+	var t time.Time
+	if len(timestamp) > 0 {
+		t = timestamp[0]
+	} else {
+		t = time.Now()
+		if a.TimeFunc == nil {
+			t = time.Now()
+		} else {
+			t = a.TimeFunc()
+		}
+
+	}
+
+	if a.debug {
+		pretty, _ := json.MarshalIndent(fields, "", "  ")
+		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
+		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
+			measurement, string(pretty), string(prettyTags))
+		fmt.Print(msg)
+	}
+
+	p := &Metric{
+		Measurement: measurement,
+		Fields:      fieldsCopy,
+		Tags:        tagsCopy,
+		Type:        tp,
+		Time:        t,
+	}
+
+	a.Metrics = append(a.Metrics, p)
 }
