@@ -83,7 +83,59 @@ func (a *Accumulator) AddFields(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.addFields(measurement, fields, tags, telegraf.Untyped, timestamp...)
+	a.Lock()
+	defer a.Unlock()
+	atomic.AddUint64(&a.nMetrics, 1)
+	if a.Cond != nil {
+		a.Cond.Broadcast()
+	}
+	if a.Discard {
+		return
+	}
+
+	if len(fields) == 0 {
+		return
+	}
+
+	tagsCopy := map[string]string{}
+	for k, v := range tags {
+		tagsCopy[k] = v
+	}
+
+	fieldsCopy := map[string]interface{}{}
+	for k, v := range fields {
+		fieldsCopy[k] = v
+	}
+
+	var t time.Time
+	if len(timestamp) > 0 {
+		t = timestamp[0]
+	} else {
+		t = time.Now()
+		if a.TimeFunc == nil {
+			t = time.Now()
+		} else {
+			t = a.TimeFunc()
+		}
+
+	}
+
+	if a.debug {
+		pretty, _ := json.MarshalIndent(fields, "", "  ")
+		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
+		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
+			measurement, string(pretty), string(prettyTags))
+		fmt.Print(msg)
+	}
+
+	p := &Metric{
+		Measurement: measurement,
+		Fields:      fieldsCopy,
+		Tags:        tagsCopy,
+		Time:        t,
+	}
+
+	a.Metrics = append(a.Metrics, p)
 }
 
 func (a *Accumulator) AddCounter(
@@ -92,7 +144,7 @@ func (a *Accumulator) AddCounter(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.addFields(measurement, fields, tags, telegraf.Counter, timestamp...)
+	a.addFieldsWithType(measurement, fields, tags, telegraf.Counter, timestamp...)
 }
 
 func (a *Accumulator) AddGauge(
@@ -101,12 +153,12 @@ func (a *Accumulator) AddGauge(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.addFields(measurement, fields, tags, telegraf.Gauge, timestamp...)
+	a.addFieldsWithType(measurement, fields, tags, telegraf.Gauge, timestamp...)
 }
 
 func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 	for _, m := range metrics {
-		a.addFields(m.Name(), m.Fields(), m.Tags(), m.Type(), m.Time())
+		a.addFieldsWithType(m.Name(), m.Fields(), m.Tags(), m.Type(), m.Time())
 	}
 }
 
@@ -116,7 +168,7 @@ func (a *Accumulator) AddSummary(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.addFields(measurement, fields, tags, telegraf.Summary, timestamp...)
+	a.addFieldsWithType(measurement, fields, tags, telegraf.Summary, timestamp...)
 }
 
 func (a *Accumulator) AddHistogram(
@@ -125,11 +177,11 @@ func (a *Accumulator) AddHistogram(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.addFields(measurement, fields, tags, telegraf.Histogram, timestamp...)
+	a.addFieldsWithType(measurement, fields, tags, telegraf.Histogram, timestamp...)
 }
 
 func (a *Accumulator) AddMetric(m telegraf.Metric) {
-	a.addFields(m.Name(), m.Fields(), m.Tags(), m.Type(), m.Time())
+	a.addFieldsWithType(m.Name(), m.Fields(), m.Tags(), m.Type(), m.Time())
 }
 
 func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
@@ -745,7 +797,7 @@ func (a *Accumulator) BoolField(measurement string, field string) (bool, bool) {
 	return false, false
 }
 
-func (a *Accumulator) addFields(
+func (a *Accumulator) addFieldsWithType(
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
@@ -792,8 +844,8 @@ func (a *Accumulator) addFields(
 	if a.debug {
 		pretty, _ := json.MarshalIndent(fields, "", "  ")
 		prettyTags, _ := json.MarshalIndent(tags, "", "  ")
-		msg := fmt.Sprintf("Adding Measurement [%s]\nFields:%s\nTags:%s\n",
-			measurement, string(pretty), string(prettyTags))
+		msg := fmt.Sprintf("Adding Measurement [%s]\nType:%s,\nFields:%s\nTags:%s\n",
+			measurement, tp, string(pretty), string(prettyTags))
 		fmt.Print(msg)
 	}
 
