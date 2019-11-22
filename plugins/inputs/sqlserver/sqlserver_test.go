@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -146,19 +147,19 @@ func TestSqlServer_Timeout(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	tests := []struct {
-		timeout   int
+		timeout   internal.Duration
 		hasErrors bool
 	}{
 		{
-			timeout:   1,
+			timeout:   internal.Duration{Duration: 1 * time.Microsecond},
 			hasErrors: true,
 		},
 		{
-			timeout:   10000,
+			timeout:   internal.Duration{Duration: 10 * time.Second},
 			hasErrors: false,
 		},
 		{
-			timeout:   0,
+			timeout:   internal.Duration{Duration: 0},
 			hasErrors: false,
 		},
 	}

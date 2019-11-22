@@ -8,16 +8,17 @@ import (
 
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // SQLServer struct
 type SQLServer struct {
-	Servers       []string `toml:"servers"`
-	QueryVersion  int      `toml:"query_version"`
-	AzureDB       bool     `toml:"azuredb"`
-	ExcludeQuery  []string `toml:"exclude_query"`
-	QueryTimeout  int      `toml:"query_timeout"`
+	Servers       []string          `toml:"servers"`
+	QueryVersion  int               `toml:"query_version"`
+	AzureDB       bool              `toml:"azuredb"`
+	ExcludeQuery  []string          `toml:"exclude_query"`
+	QueryTimeout  internal.Duration `toml:"query_timeout"`
 	queries       MapQuery
 	isInitialized bool
 }
@@ -74,6 +75,7 @@ const sampleConfig = `
   exclude_query = [ 'Schedulers' ]
 
   ## Sets a timeout for the query in milliseconds.  A value of 0 or less will be ignored.
+  ## Define time in the format 5s = 5 seconds, 10 ms = 10 microseconds, 1 us = 1 microsecond, etc
   # query_timeout = 0
 `
 
@@ -132,6 +134,14 @@ func initQueries(s *SQLServer) {
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
+	ctx := context.Background()
+
+	if s.QueryTimeout.Duration > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, s.QueryTimeout.Duration)
+		defer cancel()
+	}
+
 	if !s.isInitialized {
 		initQueries(s)
 	}
@@ -147,7 +157,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 			wg.Add(1)
 			go func(serv string, query Query) {
 				defer wg.Done()
-				acc.AddError(s.gatherServer(serv, query, acc))
+				acc.AddError(s.gatherServer(ctx, serv, query, acc))
 			}(serv, query)
 		}
 	}
@@ -156,20 +166,13 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumulator) error {
+func (s *SQLServer) gatherServer(ctx context.Context, server string, query Query, acc telegraf.Accumulator) error {
 	// deferred opening
 	conn, err := sql.Open("mssql", server)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-
-	ctx := context.Background()
-	if s.QueryTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(s.QueryTimeout)*time.Millisecond)
-		defer cancel()
-	}
 
 	// execute query
 	rows, err := conn.QueryContext(ctx, query.Script)
