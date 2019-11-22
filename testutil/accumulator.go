@@ -269,7 +269,6 @@ func (a *Accumulator) NGaugeFields() int {
 	return a.nCounterFieldsWithType(telegraf.Gauge)
 }
 
-
 func (a *Accumulator) nCounterFieldsWithType(tp telegraf.ValueType) int {
 	a.Lock()
 	defer a.Unlock()
