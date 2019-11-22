@@ -25,13 +25,14 @@ the SNMP [README.md](../snmp/README.md) for details.
 - snmp_trap
   - tags:
 	- source (string, IP address of trap source)
-	- trap_name (string, value from SNMPv2-MIB::snmpTrapOID.0 PDU)
-	- trap_mib (string, mib from SNMPv2-MIB::snmpTrapOID.0 PDU)
-	- trap_oid (string, oid string from SNMPv2-MIB::snmpTrapOID.0 PDU)
-	- trap_version (string, "1" or "2c" or "3")
+	- name (string, value from SNMPv2-MIB::snmpTrapOID.0 PDU)
+	- mib (string, MIB from SNMPv2-MIB::snmpTrapOID.0 PDU)
+	- oid (string, OID string from SNMPv2-MIB::snmpTrapOID.0 PDU)
+	- version (string, "1" or "2c" or "3")
   - fields:
-	- $NAME (the type is variable and depends on the PDU)
-	- $NAME_type (string, description of the Asn1BER type of the PDU.  Examples: "Integer", "TimeTicks", "IPAddress")
+	- Fields are mapped from variables in the trap. Field names are
+      the trap variable names after MIB lookup. Field values are trap
+      variable values.
 
 ### Example Output
 ```
