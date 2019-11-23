@@ -124,6 +124,14 @@ var sampleConfig = `
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
+  # TODO: Explain the configuration here
+  ## Send measurements whose measurement names contain foo, to the bar topic.
+  # [outputs.kafka.custom_routing]
+  #		method = "measurement"
+  #		matchtype = "substring"
+  #		matchvalue = "foo"
+  #		topic = "bar"
+
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
@@ -196,22 +204,76 @@ func ValidateTopicSuffixMethod(method string) error {
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 	var topicName string
-	switch k.TopicSuffix.Method {
-	case "measurement":
-		topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
-	case "tags":
-		var topicNameComponents []string
-		topicNameComponents = append(topicNameComponents, k.Topic)
-		for _, tag := range k.TopicSuffix.Keys {
-			tagValue := metric.Tags()[tag]
-			if tagValue != "" {
-				topicNameComponents = append(topicNameComponents, tagValue)
+	// configuration before change
+	// switch k.TopicSuffix.Method {
+	// case "measurement":
+	// 	topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
+	// case "tags":
+	// 	var topicNameComponents []string
+	// 	topicNameComponents = append(topicNameComponents, k.Topic)
+	// 	for _, tag := range k.TopicSuffix.Keys {
+	// 		tagValue := metric.Tags()[tag]
+	// 		if tagValue != "" {
+	// 			topicNameComponents = append(topicNameComponents, tagValue)
+	// 		}
+	// 	}
+	// 	topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
+	// default:
+	// 	topicName = k.Topic
+	// }
+	// return topicName
+
+	// My previous configuration
+	if k.TopicSuffix.Method != "" {
+		switch k.TopicSuffix.Method {
+		case "measurement":
+			topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
+		case "tags":
+			var topicNameComponents []string
+			topicNameComponents = append(topicNameComponents, k.Topic)
+			for _, tag := range k.TopicSuffix.Keys {
+				tagValue := metric.Tags()[tag]
+				if tagValue != "" {
+					topicNameComponents = append(topicNameComponents, tagValue)
+				}
 			}
+			topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
+		default:
+			topicName = k.Topic
 		}
-		topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
-	default:
+	} else if k.CustomRouting.Method != "" {
+		switch k.CustomRouting.Method {
+		// This logic handles routing based on measurement name
+		case "measurement":
+			switch k.CustomRouting.MatchType {
+			case "substring":
+				if strings.Contains(metric.Name(), k.CustomRouting.MatchValue) {
+					topicName = k.CustomRouting.Topic
+				}
+			case "full_match":
+				if topicName == k.CustomRouting.MatchValue {
+					topicName = k.CustomRouting.Topic
+				}
+			}
+		// This logic should handle routing based on tags
+		// case "tags":
+		// 	switch k.CustomRouting.MatchType {
+		// 	case "substring":
+		// 		if strings.Contains(metric.Name(), k.CustomRouting.MatchValue) {
+		// 			topicName = k.CustomRouting.Topic
+		// 		}
+		// 	case "full_match":
+		// 		if topicName == k.CustomRouting.MatchValue {
+		// 			topicName = k.CustomRouting.Topic
+		// 		}
+		// }
+		default:
+			topicName = k.Topic
+		}
+	} else {
 		topicName = k.Topic
 	}
+
 	return topicName
 }
 
