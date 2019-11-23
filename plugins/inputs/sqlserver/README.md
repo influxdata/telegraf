@@ -70,6 +70,7 @@ GO
   ## - AzureDBResourceGovernance
   ## - SqlRequests
   ## - ServerProperties
+  ## - LogFileSizes
   exclude_query = [ 'Schedulers' , 'SqlRequests']
 ```
 
@@ -110,6 +111,7 @@ The new (version 2) metrics provide:
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
 - *Schedulers* - This captures sys.dm_os_schedulers.
 - *SqlRequests* - This captures a snapshot of dm_exec_requests and dm_exec_sessions that gives you running requests as well as wait types and blocking sessions
+- _Log File Sizes_: Current and maximum log file sizes from `sys.master_files`
 - *Azure Managed Instances*
   - Stats from `sys.server_resource_stats`:
     - cpu_count

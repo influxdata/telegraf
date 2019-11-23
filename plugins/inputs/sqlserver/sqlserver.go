@@ -69,6 +69,7 @@ const sampleConfig = `
   ## - AzureDBResourceGovernance
   ## - SqlRequests
   ## - ServerProperties
+  ## - LogFileSizes
   exclude_query = [ 'Schedulers' ]
 `
 
@@ -104,6 +105,7 @@ func initQueries(s *SQLServer) {
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
+		queries["LogFileSizes"] = Query{Script: sqlLogFileSizesV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1360,6 +1362,24 @@ BEGIN
            from
             sys.dm_instance_resource_governance
   END;
+`
+
+const sqlLogFileSizesV2 string = `SET DEADLOCK_PRIORITY -10;
+WITH fs
+AS
+(
+    SELECT database_id, type, size * 8 / 1024 size, max_size * 8 / 1024 max_size
+    FROM sys.master_files
+    WHERE database_id NOT IN (3,1,4)
+)
+SELECT
+    'sqlserver_log_size' AS [measurement],
+    REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+    DB_NAME() as [database_name],
+    (SELECT SUM(size) FROM fs WHERE type = 0 AND fs.database_id = db.database_id) log_size_mb,
+    (SELECT SUM(max_size) FROM fs WHERE type = 1 AND fs.database_id = db.database_id) max_log_size_mb
+FROM sys.databases db
+WHERE database_id NOT IN (3,1,4) 
 `
 
 const sqlServerRequestsV2 string = `
