@@ -417,6 +417,8 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
+	// TODO: build a map of values containing measurement names, from the config, to route based off of here
+
 	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
