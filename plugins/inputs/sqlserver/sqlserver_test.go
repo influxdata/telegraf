@@ -130,15 +130,13 @@ func TestSqlServer_MultipleInstance(t *testing.T) {
 	}
 
 	var acc, acc2 testutil.Accumulator
+	s.Start(&acc)
 	err := s.Gather(&acc)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
 
+	s2.Start(&acc2)
 	err = s2.Gather(&acc2)
 	require.NoError(t, err)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
 
 	// acc includes size metrics, and excludes memory metrics
 	assert.False(t, acc.HasMeasurement("Memory breakdown (%)"))
@@ -147,6 +145,9 @@ func TestSqlServer_MultipleInstance(t *testing.T) {
 	// acc2 includes memory metrics, and excludes size metrics
 	assert.True(t, acc2.HasMeasurement("Memory breakdown (%)"))
 	assert.False(t, acc2.HasMeasurement("Log size (bytes)"))
+
+	s.Stop()
+	s2.Stop()
 }
 
 func TestSqlServer_MultipleInit(t *testing.T) {
@@ -160,15 +161,14 @@ func TestSqlServer_MultipleInit(t *testing.T) {
 	_, ok := s.queries["DatabaseSize"]
 	// acc includes size metrics
 	assert.True(t, ok)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, false)
 
 	initQueries(s2)
 	_, ok = s2.queries["DatabaseSize"]
 	// acc2 excludes size metrics
 	assert.False(t, ok)
-	assert.Equal(t, s.isInitialized, true)
-	assert.Equal(t, s2.isInitialized, true)
+
+	s.Stop()
+	s2.Stop()
 }
 
 const mockPerformanceMetrics = `measurement;servername;type;Point In Time Recovery;Available physical memory (bytes);Average pending disk IO;Average runnable tasks;Average tasks;Buffer pool rate (bytes/sec);Connection memory per connection (bytes);Memory grant pending;Page File Usage (%);Page lookup per batch request;Page split per batch request;Readahead per page read;Signal wait (%);Sql compilation per batch request;Sql recompilation per batch request;Total target memory ratio
