@@ -742,7 +742,7 @@ func TestFieldConvert(t *testing.T) {
 func TestSnmpTranslateCache_miss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
-	mibName, oidNum, oidText, conversion, err := snmpTranslate(oid)
+	mibName, oidNum, oidText, conversion, err := SnmpTranslate(oid)
 	assert.Len(t, snmpTranslateCaches, 1)
 	stc := snmpTranslateCaches[oid]
 	require.NotNil(t, stc)
@@ -763,7 +763,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 			err:        fmt.Errorf("e"),
 		},
 	}
-	mibName, oidNum, oidText, conversion, err := snmpTranslate("foo")
+	mibName, oidNum, oidText, conversion, err := SnmpTranslate("foo")
 	assert.Equal(t, "a", mibName)
 	assert.Equal(t, "b", oidNum)
 	assert.Equal(t, "c", oidText)

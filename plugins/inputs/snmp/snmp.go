@@ -277,7 +277,7 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := snmpTranslate(f.Oid)
+	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
 	if err != nil {
 		return Errorf(err, "translating")
 	}
@@ -882,7 +882,7 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 }
 
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, err = snmpTranslate(oid)
+	mibName, oidNum, oidText, _, err = SnmpTranslate(oid)
 	if err != nil {
 		return "", "", "", nil, Errorf(err, "translating")
 	}
@@ -952,7 +952,7 @@ var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
-func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	snmpTranslateCachesLock.Lock()
 	if snmpTranslateCaches == nil {
 		snmpTranslateCaches = map[string]snmpTranslateCache{}
@@ -976,6 +976,28 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 	snmpTranslateCachesLock.Unlock()
 
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
+}
+
+func SnmpTranslateForce(oid string, mibName string, oidNum string, oidText string, conversion string) {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	if snmpTranslateCaches == nil {
+		snmpTranslateCaches = map[string]snmpTranslateCache{}
+	}
+
+	var stc snmpTranslateCache
+	stc.mibName = mibName
+	stc.oidNum = oidNum
+	stc.oidText = oidText
+	stc.conversion = conversion
+	stc.err = nil
+	snmpTranslateCaches[oid] = stc
+}
+
+func SnmpTranslateClear() {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	snmpTranslateCaches = map[string]snmpTranslateCache{}
 }
 
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
