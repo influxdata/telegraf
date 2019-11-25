@@ -10,12 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
+// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio,freeing,leaked
 var zpool_output = []string{
-	"freenas-boot	ONLINE	30601641984	2022177280	28579464704	-	6	1.00x",
-	"red1	ONLINE	8933531975680	1126164848640	7807367127040	8%	12	1.83x",
-	"temp1	ONLINE	2989297238016	1626309320704	1362987917312	38%	54	1.28x",
-	"temp2	ONLINE	2989297238016	626958278656	2362338959360	12%	20	1.00x",
+	"freenas-boot	ONLINE	30601641984	2022177280	28579464704	-	6	1.00x	0	0",
+	"red1	ONLINE	8933531975680	1126164848640	7807367127040	8%	12	1.83x	0	0",
+	"temp1	ONLINE	2989297238016	1626309320704	1362987917312	38%	54	1.28x	0	0",
+	"temp2	ONLINE	2989297238016	626958278656	2362338959360	12%	20	1.00x	0	0",
 }
 
 func mock_zpool() ([]string, error) {
@@ -24,7 +24,7 @@ func mock_zpool() ([]string, error) {
 
 // $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
 var zpool_output_unavail = []string{
-	"temp2	UNAVAIL	-	-	-	-	-	-",
+	"temp2	UNAVAIL	-	-	-	-	-	-	-	-",
 }
 
 func mock_zpool_unavail() ([]string, error) {
@@ -169,6 +169,8 @@ func getFreeNasBootPoolMetrics() map[string]interface{} {
 		"free":          int64(28579464704),
 		"size":          int64(30601641984),
 		"fragmentation": int64(0),
+		"freeing":       int64(0),
+		"leaked":        int64(0),
 	}
 }
 

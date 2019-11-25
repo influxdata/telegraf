@@ -1,7 +1,7 @@
 # ZFS plugin
 
 This ZFS plugin provides metrics from your ZFS filesystems. It supports ZFS on
-Linux and FreeBSD. It gets ZFS stat from `/proc/spl/kstat/zfs` on Linux and
+Linux and FreeBSD. It gets ZFS stat from `/proc/spl/kstat/zfs` and zpool on Linux and
 from `sysctl` and `zpool` on FreeBSD.
 
 ### Configuration:
@@ -180,7 +180,7 @@ each pool.
 
 #### Pool Metrics (optional)
 
-On Linux (reference: kstat accumulated time and queue length statistics):
+On Linux (reference: kstat accumulated time and queue length statistics) and zpool statistics:
 
 - zfs_pool
     - nread (integer, bytes)
@@ -195,6 +195,12 @@ On Linux (reference: kstat accumulated time and queue length statistics):
     - rupdate (integer, timestamp)
     - wcnt (integer, count)
     - rcnt (integer, count)
+    - allocated (integer, bytes)
+    - capacity (integer, bytes)
+    - dedupratio (float, ratio)
+    - free (integer, bytes)
+    - size (integer, bytes)
+    - fragmentation (integer, percent)
 
 On FreeBSD:
 
@@ -327,3 +333,27 @@ ABD is a linear/scatter dual typed buffer for ARC
 note: ZIL measurements are system-wide, neither per-pool nor per-dataset
 
 `zil_commit_count` counts when ZFS transactions are committed to a ZIL
+
+#### Pool Metrics (optional)
+
+`nread` - counts bytes read from the pool
+`nwritten` - counts bytes written to the pool 
+`reads` - counts read requests to the pool 
+`writes` - counts write request to the pool
+`wtime` - counts total time all read/write requests spend in  wait queue (integer, nanoseconds) 
+`wcnt` - its a gauge, not increment counter. It counts number of IO requests in the wait queue of the pool at the moment of measurement. 
+`wlentime` - cumulative value, calculated as number of IO requests in a wait queue multiplied by time(in nanoseconds) this requests spend in a wait queue. Value is updated every time new IO request added/removed to/from wait queue. It can be very helpful to notice short-living spikes in number of IO requests, which can not be reveal by `wcnt` 
+`wupdate` - timestamp of last wait queue update(new IO request added or exist one removed)
+`rtime` - counts total time all read/write requests spend in run queue (integer, nanoseconds)
+`rlentime` - same as `wlentime` but for run queue
+`rupdate` - timestamp of last run queue update
+`rcnt` - same as `wcnt`, but for run queue
+`allocated` - amount of storage available within the pool (integer, bytes)
+`capacity` - percentage of pool space used (integer)
+`dedupratio` (float, ratio)
+`free` - the amount of free space available in the pool (integer, bytes)
+`size` - total size of the storage pool (integer, bytes)
+`fragmentation` - the amount of fragmentation in the pool (integer, percent). Calculated only for free space, not the total pool capacity.
+`freeing` - After a file system or snapshot is destroyed, the space it was using is returned to the pool asynchronously.  freeing is the amount of space remaining to be reclaimed.  Over time freeing will decrease while free increases.(integer, bytes)
+`leaked` - (integer, bytes)
+
