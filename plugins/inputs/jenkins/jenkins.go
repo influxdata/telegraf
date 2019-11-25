@@ -391,10 +391,20 @@ type jobBuild struct {
 }
 
 type buildResponse struct {
-	Building  bool   `json:"building"`
-	Duration  int64  `json:"duration"`
-	Result    string `json:"result"`
-	Timestamp int64  `json:"timestamp"`
+	Building          bool   `json:"building"`
+	BuiltOn           string `json:"builtOn"`
+	Description       string `json:"description"`
+	Duration          int64  `json:"duration"`
+	EstimatedDuration int64  `json:"estimatedDuration"`
+	Executor          string `json:"executor"`
+	FullDisplayName   string `json:"fullDisplayName"`
+	Id                string `json:"id"`
+	KeepLog           bool   `json:"keepLog"`
+	Number            int32  `json:"number"`
+	QueueId           int64  `json:"queueId"`
+	Result            string `json:"result"`
+	Timestamp         int64  `json:"timestamp"`
+	Url               string `json:"url"`
 }
 
 func (b *buildResponse) GetTimestamp() time.Time {
@@ -435,10 +445,19 @@ func (jr jobRequest) parentsString() string {
 func gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
 	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result}
 	fields := make(map[string]interface{})
+	fields["building"] = b.Building
+	fields["builtOn"] = b.BuiltOn
+	fields["description"] = b.Description
 	fields["duration"] = b.Duration
+	fields["estimateDuration"] = b.EstimatedDuration
+	fields["executor"] = b.Executor
+	fields["fullDisplayName"] = b.FullDisplayName
+	fields["id"] = b.Id
+	fields["keepLog"] = b.KeepLog
+	fields["number"] = b.Number
+	fields["queueId"] = b.QueueId
 	fields["result_code"] = mapResultCode(b.Result)
 
-	fmt.Printf("MyFields: %#v", fields)
 	acc.AddFields(measurementJob, fields, tags, b.GetTimestamp())
 }
 
