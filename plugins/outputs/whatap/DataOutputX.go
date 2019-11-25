@@ -2,6 +2,7 @@ package whatap
 
 import (
 	"bytes"
+	"encoding/binary"
 	"math"
 )
 
@@ -149,29 +150,21 @@ func ToBytesBool(b bool) []byte {
 }
 
 func ToBytesShort(v int16) []byte {
-	buf := []byte{0, 0}
-	buf[0] = byte(v >> 8)
-	buf[1] = byte(v >> 0)
+	buf := make([]byte, 2)
+	binary.BigEndian.PutUint16(buf[0:], uint16(v))
 	return buf
 }
 func SetBytesShort(buf []byte, off int, v int16) []byte {
-	buf[off] = byte(v >> 8)
-	buf[off+1] = byte(v >> 0)
+	binary.BigEndian.PutUint16(buf[off:], uint16(v))
 	return buf
 }
 func ToBytesInt(v int32) []byte {
-	buf := []byte{0, 0, 0, 0}
-	buf[0] = byte(v >> 24)
-	buf[1] = byte(v >> 16)
-	buf[2] = byte(v >> 8)
-	buf[3] = byte(v >> 0)
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf[0:], uint32(v))
 	return buf
 }
 func SetBytesInt(buf []byte, off int, v int32) []byte {
-	buf[off] = byte(v >> 24)
-	buf[off+1] = byte(v >> 16)
-	buf[off+2] = byte(v >> 8)
-	buf[off+3] = byte(v >> 0)
+	binary.BigEndian.PutUint32(buf[off:], uint32(v))
 	return buf
 }
 func SetBytesInt3(buf []byte, off int, v int32) []byte {
@@ -181,27 +174,13 @@ func SetBytesInt3(buf []byte, off int, v int32) []byte {
 	return buf
 }
 func ToBytesLong(v int64) []byte {
-	buf := []byte{0, 0, 0, 0, 0, 0, 0, 0}
-	buf[0] = byte(v >> 56)
-	buf[1] = byte(v >> 48)
-	buf[2] = byte(v >> 40)
-	buf[3] = byte(v >> 32)
-	buf[4] = byte(v >> 24)
-	buf[5] = byte(v >> 16)
-	buf[6] = byte(v >> 8)
-	buf[7] = byte(v >> 0)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf[0:], uint64(v))
 	return buf
 }
 
 func SetBytesLong(buf []byte, off int, v int64) []byte {
-	buf[off] = byte(v >> 56)
-	buf[off+1] = byte(v >> 48)
-	buf[off+2] = byte(v >> 40)
-	buf[off+3] = byte(v >> 32)
-	buf[off+4] = byte(v >> 24)
-	buf[off+5] = byte(v >> 16)
-	buf[off+6] = byte(v >> 8)
-	buf[off+7] = byte(v >> 0)
+	binary.BigEndian.PutUint64(buf[off:], uint64(v))
 	return buf
 }
 
