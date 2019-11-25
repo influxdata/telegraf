@@ -2,6 +2,7 @@
 package x509_cert
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -96,18 +97,24 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		if err != nil {
 			return nil, err
 		}
+		var certs []*x509.Certificate
+		for {
+			block, rest := pem.Decode(bytes.TrimSpace(content))
+			if block == nil {
+				return nil, fmt.Errorf("failed to parse certificate PEM")
+			}
 
-		block, _ := pem.Decode(content)
-		if block == nil {
-			return nil, fmt.Errorf("failed to parse certificate PEM")
+			cert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return nil, err
+			}
+			certs = append(certs, cert)
+			if rest == nil || len(rest) == 0 {
+				break
+			}
+			content = rest
 		}
-
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-
-		return []*x509.Certificate{cert}, nil
+		return certs, nil
 	default:
 		return nil, fmt.Errorf("unsuported scheme '%s' in location %s", u.Scheme, u.String())
 	}
