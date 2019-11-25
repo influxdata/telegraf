@@ -50,6 +50,8 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		"mapped":            vm.Mapped,
 		"page_tables":       vm.PageTables,
 		"shared":            vm.Shared,
+		"sreclaimable":      vm.SReclaimable,
+		"sunreclaim":        vm.SUnreclaim,
 		"swap_cached":       vm.SwapCached,
 		"swap_free":         vm.SwapFree,
 		"swap_total":        vm.SwapTotal,
