@@ -20,21 +20,26 @@ var (
 	defaultProcess   = NewProc
 )
 
+const (
+	MetricsConnections = "connections"
+)
+
 type PID int32
 
 type Procstat struct {
-	PidFinder   string `toml:"pid_finder"`
-	PidFile     string `toml:"pid_file"`
-	Exe         string
-	Pattern     string
-	Prefix      string
-	CmdLineTag  bool `toml:"cmdline_tag"`
-	ProcessName string
-	User        string
-	SystemdUnit string
-	CGroup      string `toml:"cgroup"`
-	PidTag      bool
-	WinService  string `toml:"win_service"`
+	PidFinder      string `toml:"pid_finder"`
+	PidFile        string `toml:"pid_file"`
+	Exe            string
+	Pattern        string
+	Prefix         string
+	CmdLineTag     bool `toml:"cmdline_tag"`
+	ProcessName    string
+	User           string
+	SystemdUnit    string
+	CGroup         string `toml:"cgroup"`
+	PidTag         bool
+	WinService     string   `toml:"win_service"`
+	MetricsInclude []string `toml:"metrics_include"`
 
 	finder PIDFinder
 
@@ -80,6 +85,11 @@ var sampleConfig = `
   ## the native finder performs the search directly in a manor dependent on the
   ## platform.  Default is 'pgrep'
   # pid_finder = "pgrep"
+
+  ## Select which extra metrics should be added:
+  ##   - "connections": tcp_* and upd_socket metrics
+  ## Default is empty list.
+  # metrics_include = ["connections"]
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -290,30 +300,32 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		}
 	}
 
-	netconns, err := getConnectionsByPid("all", int32(proc.PID()))
-	if err == nil {
-		counts := make(map[string]int)
-		for _, netcon := range netconns {
-			if netcon.Type == syscall.SOCK_DGRAM {
-				counts["UDP"] += 1
-				continue // UDP has no status
+	if p.metricEnabled(MetricsConnections) {
+		netconns, err := getConnectionsByPid("all", int32(proc.PID()))
+		if err == nil {
+			counts := make(map[string]int)
+			for _, netcon := range netconns {
+				if netcon.Type == syscall.SOCK_DGRAM {
+					counts["UDP"] += 1
+					continue // UDP has no status
+				}
+				counts[netcon.Status] += 1
 			}
-			counts[netcon.Status] += 1
-		}
 
-		fields[prefix+"tcp_established"] = counts["ESTABLISHED"]
-		fields[prefix+"tcp_syn_sent"] = counts["SYN_SENT"]
-		fields[prefix+"tcp_syn_recv"] = counts["SYN_RECV"]
-		fields[prefix+"tcp_fin_wait1"] = counts["FIN_WAIT1"]
-		fields[prefix+"tcp_fin_wait2"] = counts["FIN_WAIT2"]
-		fields[prefix+"tcp_time_wait"] = counts["TIME_WAIT"]
-		fields[prefix+"tcp_close"] = counts["CLOSE"]
-		fields[prefix+"tcp_close_wait"] = counts["CLOSE_WAIT"]
-		fields[prefix+"tcp_last_ack"] = counts["LAST_ACK"]
-		fields[prefix+"tcp_listen"] = counts["LISTEN"]
-		fields[prefix+"tcp_closing"] = counts["CLOSING"]
-		fields[prefix+"tcp_none"] = counts["NONE"]
-		fields[prefix+"udp_socket"] = counts["UDP"]
+			fields[prefix+"tcp_established"] = counts["ESTABLISHED"]
+			fields[prefix+"tcp_syn_sent"] = counts["SYN_SENT"]
+			fields[prefix+"tcp_syn_recv"] = counts["SYN_RECV"]
+			fields[prefix+"tcp_fin_wait1"] = counts["FIN_WAIT1"]
+			fields[prefix+"tcp_fin_wait2"] = counts["FIN_WAIT2"]
+			fields[prefix+"tcp_time_wait"] = counts["TIME_WAIT"]
+			fields[prefix+"tcp_close"] = counts["CLOSE"]
+			fields[prefix+"tcp_close_wait"] = counts["CLOSE_WAIT"]
+			fields[prefix+"tcp_last_ack"] = counts["LAST_ACK"]
+			fields[prefix+"tcp_listen"] = counts["LISTEN"]
+			fields[prefix+"tcp_closing"] = counts["CLOSING"]
+			fields[prefix+"tcp_none"] = counts["NONE"]
+			fields[prefix+"udp_socket"] = counts["UDP"]
+		}
 	}
 
 	acc.AddFields("procstat", fields, proc.Tags())
@@ -478,6 +490,16 @@ func (p *Procstat) winServicePIDs() ([]PID, error) {
 	pids = append(pids, PID(pid))
 
 	return pids, nil
+}
+
+// metricEnabled check is some group of metrics are enabled in the config file
+func (p *Procstat) metricEnabled(m string) bool {
+	for _, n := range p.MetricsInclude {
+		if m == n {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {

@@ -1,7 +1,7 @@
 # Procstat Input Plugin
 
 The procstat plugin can be used to monitor the system resource usage of one or more processes.
-The procstat_lookup metric displays the query information, 
+The procstat_lookup metric displays the query information,
 specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
@@ -54,6 +54,11 @@ Processes can be selected for monitoring using one of several methods:
   ## the native finder performs the search directly in a manor dependent on the
   ## platform.  Default is 'pgrep'
   # pid_finder = "pgrep"
+
+  ## Select which extra metrics should be added:
+  ##   - "connections": tcp_* and upd_socket metrics
+  ## Default is empty list.
+  # metrics_include = ["connections"]
 ```
 
 #### Windows support
@@ -72,6 +77,22 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
 
 ### Metrics:
 
+- procstat_lookup
+  - tags:
+    - exe
+    - pid_finder
+    - pid_file
+    - pattern
+    - prefix
+    - user
+    - systemd_unit
+    - cgroup
+    - win_service
+    - result
+  - fields:
+    - pid_count (int)
+    - running (int)
+    - result_code (int, success = 0, lookup_error = 1)
 - procstat
   - tags:
     - pid (when `pid_tag` is true)
@@ -139,6 +160,15 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - rlimit_signals_pending_hard (int)
     - rlimit_signals_pending_soft (int)
     - signals_pending (int)
+    - voluntary_context_switches (int)
+    - write_bytes (int, *telegraf* may need to be ran as **root**)
+    - write_count (int, *telegraf* may need to be ran as **root**)
+
+Extra metrics added by ``metrics_include``.
+
+If ``connections`` enabled:
+- procstat
+  - fields:
     - tcp_close (int)
     - tcp_close_wait (int)
     - tcp_closing (int)
@@ -152,25 +182,6 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - tcp_syn_sent (int)
     - tcp_time_wait (int)
     - udp_socket (int)
-    - voluntary_context_switches (int)
-    - write_bytes (int, *telegraf* may need to be ran as **root**)
-    - write_count (int, *telegraf* may need to be ran as **root**)
-- procstat_lookup
-  - tags:
-    - exe
-    - pid_finder
-    - pid_file
-    - pattern
-    - prefix
-    - user
-    - systemd_unit
-    - cgroup
-    - win_service
-    - result
-  - fields:
-    - pid_count (int)
-    - running (int)
-    - result_code (int, success = 0, lookup_error = 1)
 
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
@@ -179,6 +190,4 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
 ```
 procstat,pidfile=/var/run/lxc/dnsmasq.pid,process_name=dnsmasq rlimit_file_locks_soft=2147483647i,rlimit_signals_pending_hard=1758i,voluntary_context_switches=478i,read_bytes=307200i,cpu_time_user=0.01,cpu_time_guest=0,memory_swap=0i,memory_locked=0i,rlimit_num_fds_hard=4096i,rlimit_nice_priority_hard=0i,num_fds=11i,involuntary_context_switches=20i,read_count=23i,memory_rss=1388544i,rlimit_memory_rss_soft=2147483647i,rlimit_memory_rss_hard=2147483647i,nice_priority=20i,rlimit_cpu_time_hard=2147483647i,cpu_time=0i,write_bytes=0i,cpu_time_idle=0,cpu_time_nice=0,memory_data=229376i,memory_stack=135168i,rlimit_cpu_time_soft=2147483647i,rlimit_memory_data_hard=2147483647i,rlimit_memory_locked_hard=65536i,rlimit_signals_pending_soft=1758i,write_count=11i,cpu_time_iowait=0,cpu_time_steal=0,rlimit_memory_stack_soft=8388608i,cpu_time_system=0.02,cpu_time_guest_nice=0,rlimit_memory_locked_soft=65536i,rlimit_memory_vms_soft=2147483647i,rlimit_file_locks_hard=2147483647i,rlimit_realtime_priority_hard=0i,pid=828i,num_threads=1i,cpu_time_soft_irq=0,rlimit_memory_vms_hard=2147483647i,rlimit_realtime_priority_soft=0i,memory_vms=15884288i,rlimit_memory_stack_hard=2147483647i,cpu_time_irq=0,rlimit_memory_data_soft=2147483647i,rlimit_num_fds_soft=1024i,signals_pending=0i,rlimit_nice_priority_soft=0i,realtime_priority=0i
 procstat,exe=influxd,process_name=influxd rlimit_num_fds_hard=16384i,rlimit_signals_pending_hard=1758i,realtime_priority=0i,rlimit_memory_vms_hard=2147483647i,rlimit_signals_pending_soft=1758i,rlimit_memory_stack_hard=2147483647i,rlimit_realtime_priority_hard=0i,cpu_time=0i,pid=500i,voluntary_context_switches=975i,cpu_time_idle=0,memory_rss=3072000i,memory_locked=0i,rlimit_nice_priority_soft=0i,signals_pending=0i,nice_priority=20i,read_bytes=823296i,cpu_time_soft_irq=0,rlimit_memory_data_hard=2147483647i,rlimit_memory_locked_soft=65536i,write_count=8i,cpu_time_irq=0,memory_vms=33501184i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,rlimit_memory_vms_soft=2147483647i,rlimit_nice_priority_hard=0i,num_fds=29i,memory_data=229376i,rlimit_cpu_time_soft=2147483647i,rlimit_file_locks_soft=2147483647i,num_threads=1i,write_bytes=0i,cpu_time_steal=0,rlimit_memory_rss_hard=2147483647i,cpu_time_guest=0,cpu_time_guest_nice=0,cpu_usage=0,rlimit_memory_locked_hard=65536i,rlimit_file_locks_hard=2147483647i,involuntary_context_switches=38i,read_count=16851i,memory_swap=0i,rlimit_memory_data_soft=2147483647i,cpu_time_user=0.11,rlimit_cpu_time_hard=2147483647i,rlimit_num_fds_soft=16384i,rlimit_realtime_priority_soft=0i,cpu_time_system=0.27,cpu_time_nice=0,memory_stack=135168i,rlimit_memory_rss_soft=2147483647i
-procstat,pidfile=/var/run/lxc/dnsmasq.pid,process_name=dnsmasq rlimit_file_locks_soft=2147483647i,rlimit_signals_pending_hard=1758i,voluntary_context_switches=478i,read_bytes=307200i,cpu_time_user=0.01,cpu_time_guest=0,memory_swap=0i,memory_locked=0i,rlimit_num_fds_hard=4096i,rlimit_nice_priority_hard=0i,num_fds=11i,involuntary_context_switches=20i,read_count=23i,memory_rss=1388544i,rlimit_memory_rss_soft=2147483647i,rlimit_memory_rss_hard=2147483647i,nice_priority=20i,rlimit_cpu_time_hard=2147483647i,cpu_time=0i,write_bytes=0i,cpu_time_idle=0,cpu_time_nice=0,memory_data=229376i,memory_stack=135168i,rlimit_cpu_time_soft=2147483647i,rlimit_memory_data_hard=2147483647i,rlimit_memory_locked_hard=65536i,rlimit_signals_pending_soft=1758i,write_count=11i,cpu_time_iowait=0,cpu_time_steal=0,cpu_time_stolen=0,rlimit_memory_stack_soft=8388608i,cpu_time_system=0.02,cpu_time_guest_nice=0,rlimit_memory_locked_soft=65536i,rlimit_memory_vms_soft=2147483647i,rlimit_file_locks_hard=2147483647i,rlimit_realtime_priority_hard=0i,pid=828i,num_threads=1i,cpu_time_soft_irq=0,rlimit_memory_vms_hard=2147483647i,rlimit_realtime_priority_soft=0i,memory_vms=15884288i,rlimit_memory_stack_hard=2147483647i,cpu_time_irq=0,rlimit_memory_data_soft=2147483647i,rlimit_num_fds_soft=1024i,signals_pending=0i,rlimit_nice_priority_soft=0i,realtime_priority=0i,tcp_close=0i,tcp_close_wait=0i,tcp_closing=0i,tcp_established=0i,tcp_fin_wait1=0i,tcp_fin_wait2=0i,tcp_last_ack=0i,tcp_listen=0i,tcp_none=0i,tcp_syn_recv=0i,tcp_syn_sent=0i,tcp_time_wait=0i,udp_socket=0i
-procstat,exe=influxd,process_name=influxd rlimit_num_fds_hard=16384i,rlimit_signals_pending_hard=1758i,realtime_priority=0i,rlimit_memory_vms_hard=2147483647i,rlimit_signals_pending_soft=1758i,cpu_time_stolen=0,rlimit_memory_stack_hard=2147483647i,rlimit_realtime_priority_hard=0i,cpu_time=0i,pid=500i,voluntary_context_switches=975i,cpu_time_idle=0,memory_rss=3072000i,memory_locked=0i,rlimit_nice_priority_soft=0i,signals_pending=0i,nice_priority=20i,read_bytes=823296i,cpu_time_soft_irq=0,rlimit_memory_data_hard=2147483647i,rlimit_memory_locked_soft=65536i,write_count=8i,cpu_time_irq=0,memory_vms=33501184i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,rlimit_memory_vms_soft=2147483647i,rlimit_nice_priority_hard=0i,num_fds=29i,memory_data=229376i,rlimit_cpu_time_soft=2147483647i,rlimit_file_locks_soft=2147483647i,num_threads=1i,write_bytes=0i,cpu_time_steal=0,rlimit_memory_rss_hard=2147483647i,cpu_time_guest=0,cpu_time_guest_nice=0,cpu_usage=0,rlimit_memory_locked_hard=65536i,rlimit_file_locks_hard=2147483647i,involuntary_context_switches=38i,read_count=16851i,memory_swap=0i,rlimit_memory_data_soft=2147483647i,cpu_time_user=0.11,rlimit_cpu_time_hard=2147483647i,rlimit_num_fds_soft=16384i,rlimit_realtime_priority_soft=0i,cpu_time_system=0.27,cpu_time_nice=0,memory_stack=135168i,rlimit_memory_rss_soft=2147483647i,tcp_close=0i,tcp_close_wait=0i,tcp_closing=0i,tcp_established=0i,tcp_fin_wait1=0i,tcp_fin_wait2=0i,tcp_last_ack=0i,tcp_listen=0i,tcp_none=0i,tcp_syn_recv=0i,tcp_syn_sent=0i,tcp_time_wait=0i,udp_socket=0i
 ```
