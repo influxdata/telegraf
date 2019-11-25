@@ -113,7 +113,7 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	protocol := split[0]
 	addr := split[1]
 
-	// gosnmp.TrapListener currentl supports udp only.  For forward
+	// gosnmp.TrapListener currently supports udp only.  For forward
 	// compatibility, require udp in the service address
 	if protocol != "udp" {
 		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, s.ServiceAddress)
@@ -251,7 +251,7 @@ func (s *SnmpTrap) snmptranslate(oid string) (e mibEntry, err error) {
 	scanner := bufio.NewScanner(bytes.NewBuffer(out))
 	ok := scanner.Scan()
 	if err = scanner.Err(); !ok && err != nil {
-		return e, err //Errorf(scanner.Err(), "getting OID text")
+		return e, err
 	}
 
 	e.oidText = scanner.Text()
