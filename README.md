@@ -272,6 +272,7 @@ For documentation on the latest development code see the [documentation index][d
 * [smart](./plugins/inputs/smart)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [snmp](./plugins/inputs/snmp)
+* [snmp_trap](./plugins/inputs/snmp_trap)
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)

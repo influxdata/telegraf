@@ -8,6 +8,7 @@
 
 - [azure_storage_queue](/plugins/inputs/azure_storage_queue/README.md) - Contributed by @mjiderhamn
 - [ethtool](/plugins/inputs/ethtool/README.md) - Contributed by @philippreston
+- [snmp_trap](/plugins/inputs/snmp_trap/README.md) - Contributed by @influxdata
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
 - [synproxy](/plugins/inputs/synproxy/README.md) - Contributed by @rfrenayworldstream
 
