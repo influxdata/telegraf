@@ -18,6 +18,8 @@ the SNMP [README.md](../snmp/README.md) for details.
   ## be "udp://".  Omit local address to listen on all interfaces.
   ##   example: "udp://127.0.0.1:1234"
   # service_address = udp://:162
+  ## Timeout running snmptranslate command
+  # timeout = "5s"
 ```
 
 ### Metrics

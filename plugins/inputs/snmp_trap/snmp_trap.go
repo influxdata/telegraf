@@ -11,13 +11,16 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/soniah/gosnmp"
 )
 
+var defaultTimeout = internal.Duration{Duration: time.Second * 5}
+
 type handler func(*gosnmp.SnmpPacket, *net.UDPAddr)
-type execer func(string, ...string) ([]byte, error)
+type execer func(internal.Duration, string, ...string) ([]byte, error)
 
 type mibEntry struct {
 	mibName string
@@ -25,7 +28,8 @@ type mibEntry struct {
 }
 
 type SnmpTrap struct {
-	ServiceAddress string `toml:"service_address"`
+	ServiceAddress string            `toml:"service_address"`
+	Timeout        internal.Duration `toml:"timeout"`
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
@@ -47,6 +51,8 @@ var sampleConfig = `
   ## be "udp://".  Omit local address to listen on all interfaces.
   ##   example: "udp://127.0.0.1:1234"
   # service_address = udp://:162
+  ## Timeout running snmptranslate command
+  # timeout = "5s"
 `
 
 func (s *SnmpTrap) SampleConfig() string {
@@ -66,12 +72,20 @@ func init() {
 		return &SnmpTrap{
 			timeFunc:       time.Now,
 			ServiceAddress: "udp://:162",
+			Timeout:        defaultTimeout,
 		}
 	})
 }
 
-func realExecCmd(arg0 string, args ...string) ([]byte, error) {
-	return exec.Command(arg0, args...).Output()
+func realExecCmd(Timeout internal.Duration, arg0 string, args ...string) ([]byte, error) {
+	cmd := exec.Command(arg0, args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := internal.RunTimeout(cmd, Timeout.Duration)
+	if err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }
 
 func (s *SnmpTrap) Init() error {
@@ -154,13 +168,13 @@ func makeTrapHandler(s *SnmpTrap) handler {
 			switch v.Type {
 			case gosnmp.ObjectIdentifier:
 				val, ok := v.Value.(string)
-				var e mibEntry
-				var err error
 				if !ok {
-					s.Log.Errorf("Error getting value OID: %v", err)
+					s.Log.Errorf("Error getting value OID")
 					return
 				}
 
+				var e mibEntry
+				var err error
 				e, err = s.lookup(val)
 				if nil != err {
 					s.Log.Errorf("Error resolving value OID: %v", err)
@@ -225,9 +239,7 @@ func (s *SnmpTrap) load(oid string, e mibEntry) {
 
 func (s *SnmpTrap) snmptranslate(oid string) (e mibEntry, err error) {
 	var out []byte
-	out, err = s.execCmd("snmptranslate", "-Td", "-Ob", "-m", "all", oid)
-
-	//var e mibEntry
+	out, err = s.execCmd(s.Timeout, "snmptranslate", "-Td", "-Ob", "-m", "all", oid)
 
 	if err != nil {
 		return e, err

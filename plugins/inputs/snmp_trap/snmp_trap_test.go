@@ -10,6 +10,7 @@ import (
 	"github.com/soniah/gosnmp"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -168,7 +169,7 @@ func TestReceiveTrap(t *testing.T) {
 
 }
 
-func fakeExecCmd(_ string, _ ...string) ([]byte, error) {
+func fakeExecCmd(_ internal.Duration, _ string, _ ...string) ([]byte, error) {
 	return nil, fmt.Errorf("intentional failure")
 }
 
