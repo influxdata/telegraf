@@ -144,7 +144,7 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.12"
+  version = "2.19.7"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
