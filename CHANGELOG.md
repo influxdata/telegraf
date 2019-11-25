@@ -49,6 +49,7 @@
 - [#5767](https://github.com/influxdata/telegraf/pull/5767): Add prometheus metric_version=2 mapping to internal metrics/line protocol.
 - [#6660](https://github.com/influxdata/telegraf/pull/6660): Add content_encoding compression support to socket_listener.
 - [#6689](https://github.com/influxdata/telegraf/pull/6689): Add high resolution metrics support to CloudWatch output.
+- [#6716](https://github.com/influxdata/telegraf/pull/6716): Add SReclaimable and SUnreclaim to mem input.
 
 #### Bugfixes
 
