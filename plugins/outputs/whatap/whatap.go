@@ -154,9 +154,11 @@ func (w *Whatap) send(code byte, b []byte) (err error) {
 	for 0 < nbyteleft {
 		nbytethistime := 0
 		// Set Deadline
-		err = w.Session.Client.SetWriteDeadline(time.Now().Add(w.Timeout * time.Millisecond))
+		err = w.Session.Client.SetWriteDeadline(time.Now().Add(
+			w.Timeout * time.Millisecond))
 		if err != nil {
-			log.Println("W! [outputs.whatap] cannot set tcp write deadline:", err)
+			log.Println("W! [outputs.whatap] cannot set tcp write deadline:",
+				err)
 		}
 		nbytethistime, err = w.Session.Client.Write(sendbuf[pos : pos+nbyteleft])
 		if err != nil {
@@ -170,6 +172,21 @@ func (w *Whatap) send(code byte, b []byte) (err error) {
 
 }
 
+/**
+ * The following table array is a hash lookup table.
+ * Generate int32, int64 hash of string or byte array based on the table.
+ *
+ * The generated hash must be the same as the WhaTap server side.
+ * (The same hash lookup table and function are on the WhaTap server.)
+ * This is because the WhaTap server caches or indexes data
+ * with that hash value.
+ *
+ * The HashBytes, HashStr function converts a string or byte array
+ * to an int32 hash value.
+ *
+ * The Hash64Bytes, Hash64Str function converts a string or byte array
+ * to an int64 hash value.
+ */
 var table = [...]int64{
 	0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419,
 	0x706af48f, 0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4,
@@ -284,17 +301,18 @@ func (this *TagCountPack) Write(dout *DataOutputX) {
 	dout.WriteLong(this.Time)
 	dout.WriteByte1(0)
 	dout.WriteText(this.Category)
-	if this.tagHash == 0 && len(this.Tags) > 0 {
-		tagIO := NewDataOutputX()
-		this.WriteTag(tagIO)
-		tagBytes := tagIO.ToByteArray()
-		this.tagHash = Hash64Bytes(tagBytes)
-		dout.WriteDecimal(this.tagHash)
-		dout.WriteBytes(tagBytes)
-	} else {
-		dout.WriteDecimal(this.tagHash)
-		this.WriteTag(dout)
-	}
+
+	// Outputs the tag information of the matrix to a byte array
+	// and converts it to an int64 hash.
+	// The server caches or indexes data with that hash value.
+	tagIO := NewDataOutputX()
+	this.WriteTag(tagIO)
+	tagBytes := tagIO.ToByteArray()
+	this.tagHash = Hash64Bytes(tagBytes)
+
+	dout.WriteDecimal(this.tagHash)
+	dout.WriteBytes(tagBytes)
+
 	this.WriteData(dout)
 }
 
