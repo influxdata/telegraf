@@ -140,7 +140,10 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 
 func (s *SnmpTrap) Stop() {
 	s.listener.Close()
-	_ = <-s.errCh
+	err := <-s.errCh
+	if nil != err {
+		s.Log.Errorf("Error stopping trap listener %v", err)
+	}
 }
 
 func makeTrapHandler(s *SnmpTrap) handler {
