@@ -51,6 +51,7 @@
 - [#6689](https://github.com/influxdata/telegraf/pull/6689): Add high resolution metrics support to CloudWatch output.
 - [#6716](https://github.com/influxdata/telegraf/pull/6716): Add SReclaimable and SUnreclaim to mem input.
 - [#6695](https://github.com/influxdata/telegraf/pull/6695): Allow multiple certificates per file in x509_cert input.
+- [#6686](https://github.com/influxdata/telegraf/pull/6686): Add additional tags to the x509 input.
 
 #### Bugfixes
 
