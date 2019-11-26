@@ -28,6 +28,7 @@ type Metric struct {
 	Tags        map[string]string
 	Fields      map[string]interface{}
 	Time        time.Time
+	Type        telegraf.ValueType
 }
 
 func (p *Metric) String() string {
@@ -75,11 +76,11 @@ func (a *Accumulator) ClearMetrics() {
 	a.Metrics = make([]*Metric, 0)
 }
 
-// AddFields adds a measurement point with a specified timestamp.
-func (a *Accumulator) AddFields(
+func (a *Accumulator) addFields(
 	measurement string,
-	fields map[string]interface{},
 	tags map[string]string,
+	fields map[string]interface{},
+	tp telegraf.ValueType,
 	timestamp ...time.Time,
 ) {
 	a.Lock()
@@ -132,9 +133,20 @@ func (a *Accumulator) AddFields(
 		Fields:      fieldsCopy,
 		Tags:        tagsCopy,
 		Time:        t,
+		Type:        tp,
 	}
 
 	a.Metrics = append(a.Metrics, p)
+}
+
+// AddFields adds a measurement point with a specified timestamp.
+func (a *Accumulator) AddFields(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.addFields(measurement, tags, fields, telegraf.Untyped, timestamp...)
 }
 
 func (a *Accumulator) AddCounter(
@@ -143,7 +155,7 @@ func (a *Accumulator) AddCounter(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Counter, timestamp...)
 }
 
 func (a *Accumulator) AddGauge(
@@ -152,12 +164,12 @@ func (a *Accumulator) AddGauge(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Gauge, timestamp...)
 }
 
 func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 	for _, m := range metrics {
-		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		a.addFields(m.Name(), m.Tags(), m.Fields(), m.Type(), m.Time())
 	}
 }
 
@@ -167,7 +179,7 @@ func (a *Accumulator) AddSummary(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Summary, timestamp...)
 }
 
 func (a *Accumulator) AddHistogram(
@@ -176,11 +188,11 @@ func (a *Accumulator) AddHistogram(
 	tags map[string]string,
 	timestamp ...time.Time,
 ) {
-	a.AddFields(measurement, fields, tags, timestamp...)
+	a.addFields(measurement, tags, fields, telegraf.Histogram, timestamp...)
 }
 
 func (a *Accumulator) AddMetric(m telegraf.Metric) {
-	a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	a.addFields(m.Name(), m.Tags(), m.Fields(), m.Type(), m.Time())
 }
 
 func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
