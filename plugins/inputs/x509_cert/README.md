@@ -15,19 +15,10 @@ file or network connection.
   ## Timeout for SSL connection
   # timeout = "5s"
 
-  ## Include Certificate Issuer information in tags
-  # include_issuer = false
-
-  ## Include Certificate SAN in tag
-  # include_san = false
-  ## Separator between each SAN in tag
-  # san_separator = ","
-
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
-
 ```
 
 
