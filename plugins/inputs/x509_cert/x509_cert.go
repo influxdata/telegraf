@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -136,27 +135,42 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	return fields
 }
 
-func getTags(subject pkix.Name, location string) map[string]string {
+func getTags(cert *x509.Certificate, location string) map[string]string {
 	tags := map[string]string{
-		"source":      location,
-		"common_name": subject.CommonName,
+		"source":               location,
+		"common_name":          cert.Subject.CommonName,
+		"serial_number":        cert.SerialNumber.Text(16),
+		"signature_algorithm":  cert.SignatureAlgorithm.String(),
+		"public_key_algorithm": cert.PublicKeyAlgorithm.String(),
 	}
 
-	if len(subject.Organization) > 0 {
-		tags["organization"] = subject.Organization[0]
+	if len(cert.Subject.Organization) > 0 {
+		tags["organization"] = cert.Subject.Organization[0]
 	}
-	if len(subject.OrganizationalUnit) > 0 {
-		tags["organizational_unit"] = subject.OrganizationalUnit[0]
+	if len(cert.Subject.OrganizationalUnit) > 0 {
+		tags["organizational_unit"] = cert.Subject.OrganizationalUnit[0]
 	}
-	if len(subject.Country) > 0 {
-		tags["country"] = subject.Country[0]
+	if len(cert.Subject.Country) > 0 {
+		tags["country"] = cert.Subject.Country[0]
 	}
-	if len(subject.Province) > 0 {
-		tags["province"] = subject.Province[0]
+	if len(cert.Subject.Province) > 0 {
+		tags["province"] = cert.Subject.Province[0]
 	}
-	if len(subject.Locality) > 0 {
-		tags["locality"] = subject.Locality[0]
+	if len(cert.Subject.Locality) > 0 {
+		tags["locality"] = cert.Subject.Locality[0]
 	}
+
+	tags["issuer_common_name"] = cert.Issuer.CommonName
+	tags["issuer_serial_number"] = cert.Issuer.SerialNumber
+
+	san := append(cert.DNSNames, cert.EmailAddresses...)
+	for _, ip := range cert.IPAddresses {
+		san = append(san, ip.String())
+	}
+	for _, uri := range cert.URIs {
+		san = append(san, uri.String())
+	}
+	tags["san"] = strings.Join(san, ",")
 
 	return tags
 }
@@ -179,7 +193,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 		for i, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert.Subject, location)
+			tags := getTags(cert, location)
 
 			// The first certificate is the leaf/end-entity certificate which needs DNS
 			// name validation against the URL hostname.
