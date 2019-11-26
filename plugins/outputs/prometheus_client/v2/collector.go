@@ -44,9 +44,13 @@ type Collector struct {
 }
 
 func NewCollector(expire time.Duration, stringsAsLabel bool) *Collector {
+	config := serializer.FormatConfig{}
+	if stringsAsLabel {
+		config.StringHandling = serializer.StringAsLabel
+	}
 	return &Collector{
 		expireDuration: expire,
-		coll:           serializer.NewCollection(serializer.FormatConfig{}),
+		coll:           serializer.NewCollection(config),
 	}
 }
 

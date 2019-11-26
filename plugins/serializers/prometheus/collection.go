@@ -381,14 +381,14 @@ func (c *Collection) GetMetrics(entry Entry, order MetricSortOrder) []*Metric {
 func (c *Collection) GetProto() []*dto.MetricFamily {
 	result := make([]*dto.MetricFamily, 0, len(c.Entries))
 
-	for _, entry := range c.GetEntries(SortMetrics) {
+	for _, entry := range c.GetEntries(c.config.MetricSortOrder) {
 		mf := &dto.MetricFamily{
 			Name: proto.String(entry.Family.Name),
 			Help: proto.String(helpString),
 			Type: MetricType(entry.Family.Type),
 		}
 
-		for _, metric := range c.GetMetrics(entry, SortMetrics) {
+		for _, metric := range c.GetMetrics(entry, c.config.MetricSortOrder) {
 			l := make([]*dto.LabelPair, 0, len(metric.Labels))
 			for _, label := range metric.Labels {
 				l = append(l, &dto.LabelPair{
