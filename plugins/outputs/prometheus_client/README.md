@@ -16,7 +16,7 @@ all metrics on `/metrics` (default) to be polled by a Prometheus server.
   ## both plugins to ensure metrics are round-tripped without modification.
   ##
   ##   example: metric_version = 1; deprecated in 1.13
-  ##            metric_version = 2
+  ##            metric_version = 2; recommended version
   # metric_version = 1
 
   ## Use HTTP Basic Authentication.

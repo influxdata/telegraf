@@ -62,8 +62,14 @@ var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
 
-  ## Metric version (optional, default=1, supported values are 1 and 2)
-  # metric_version = 2
+  ## Metric version controls the mapping from Prometheus metrics into
+  ## Telegraf metrics.  When using the prometheus_client output, use the same
+  ## value in both plugins to ensure metrics are round-tripped without
+  ## modification.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.13
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "scrapeUrl"
