@@ -317,7 +317,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		tags := metric.Tags()
 		// strip user and password from URL
 		u.OriginalURL.User = nil
-		tags[p.URLTag] = u.OriginalURL.String()
+		if p.URLTag != "" {
+			tags[p.URLTag] = u.OriginalURL.String()
+		}
 		if u.Address != "" {
 			tags["address"] = u.Address
 		}
