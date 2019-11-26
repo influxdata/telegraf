@@ -5,10 +5,11 @@ standard data formats that may be selected from when configuring many output
 plugins.
 
 1. [InfluxDB Line Protocol](/plugins/serializers/influx)
-1. [JSON](/plugins/serializers/json)
-1. [Graphite](/plugins/serializers/graphite)
-1. [SplunkMetric](/plugins/serializers/splunkmetric)
 1. [Carbon2](/plugins/serializers/carbon2)
+1. [Graphite](/plugins/serializers/graphite)
+1. [JSON](/plugins/serializers/json)
+1. [Prometheus](/plugins/serializers/prometheus)
+1. [SplunkMetric](/plugins/serializers/splunkmetric)
 1. [Wavefront](/plugins/serializers/wavefront)
 
 You will be able to identify the plugins with support by the presence of a

@@ -62,8 +62,14 @@ var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
 
-  ## Metric version (optional, default=1, supported values are 1 and 2)
-  # metric_version = 2
+  ## Metric version controls the mapping from Prometheus metrics into
+  ## Telegraf metrics.  When using the prometheus_client output, use the same
+  ## value in both plugins to ensure metrics are round-tripped without
+  ## modification.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.13
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
 
   ## Url tag name (tag containing scrapped url. optional, default is "url")
   # url_tag = "scrapeUrl"
@@ -95,7 +101,7 @@ var sampleConfig = `
   # username = ""
   # password = ""
 
-	## Specify timeout duration for slower prometheus clients (default is 3s)
+  ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
   ## Optional TLS Config
@@ -112,6 +118,13 @@ func (p *Prometheus) SampleConfig() string {
 
 func (p *Prometheus) Description() string {
 	return "Read metrics from one or many prometheus clients"
+}
+
+func (p *Prometheus) Init() error {
+	if p.MetricVersion != 2 {
+		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
+	}
+	return nil
 }
 
 var ErrProtocolError = errors.New("prometheus protocol error")
@@ -311,7 +324,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		tags := metric.Tags()
 		// strip user and password from URL
 		u.OriginalURL.User = nil
-		tags[p.URLTag] = u.OriginalURL.String()
+		if p.URLTag != "" {
+			tags[p.URLTag] = u.OriginalURL.String()
+		}
 		if u.Address != "" {
 			tags["address"] = u.Address
 		}

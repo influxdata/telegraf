@@ -33,8 +33,8 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-  
-  ## Name a tag containing the name of the file the data was parsed from.  Leave empty 
+
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
   ## to disable.
   # file_tag = ""
 `
