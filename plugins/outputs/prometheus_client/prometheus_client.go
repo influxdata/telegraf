@@ -118,7 +118,6 @@ func (p *PrometheusClient) Init() error {
 
 	registry := prometheus.NewRegistry()
 	for collector := range defaultCollectors {
-		_ = collector
 		switch collector {
 		case "gocollector":
 			registry.Register(prometheus.NewGoCollector())
@@ -161,6 +160,9 @@ func (p *PrometheusClient) Init() error {
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 
 	mux := http.NewServeMux()
+	if p.Path == "" {
+		p.Path = "/"
+	}
 	mux.Handle(p.Path, authHandler(rangeHandler(promHandler)))
 
 	tlsConfig, err := p.TLSConfig()
