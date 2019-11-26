@@ -140,30 +140,28 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 }
 
 func (c *X509Cert) getTags(cert *x509.Certificate, location string) map[string]string {
-	subject := cert.Subject
-
 	tags := map[string]string{
 		"source":               location,
-		"common_name":          subject.CommonName,
+		"common_name":          cert.Subject.CommonName,
 		"serial_number":        cert.SerialNumber.Text(16),
 		"signature_algorithm":  cert.SignatureAlgorithm.String(),
 		"public_key_algorithm": cert.PublicKeyAlgorithm.String(),
 	}
 
-	if len(subject.Organization) > 0 {
-		tags["organization"] = subject.Organization[0]
+	if len(cert.Subject.Organization) > 0 {
+		tags["organization"] = cert.Subject.Organization[0]
 	}
-	if len(subject.OrganizationalUnit) > 0 {
-		tags["organizational_unit"] = subject.OrganizationalUnit[0]
+	if len(cert.Subject.OrganizationalUnit) > 0 {
+		tags["organizational_unit"] = cert.Subject.OrganizationalUnit[0]
 	}
-	if len(subject.Country) > 0 {
-		tags["country"] = subject.Country[0]
+	if len(cert.Subject.Country) > 0 {
+		tags["country"] = cert.Subject.Country[0]
 	}
-	if len(subject.Province) > 0 {
-		tags["province"] = subject.Province[0]
+	if len(cert.Subject.Province) > 0 {
+		tags["province"] = cert.Subject.Province[0]
 	}
-	if len(subject.Locality) > 0 {
-		tags["locality"] = subject.Locality[0]
+	if len(cert.Subject.Locality) > 0 {
+		tags["locality"] = cert.Subject.Locality[0]
 	}
 
 	if c.IncludeIssuer {
