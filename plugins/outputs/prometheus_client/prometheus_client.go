@@ -132,6 +132,7 @@ func (p *PrometheusClient) Init() error {
 	default:
 		fallthrough
 	case 1:
+		p.Log.Warnf("Use of deprecated configuration: metric_version = 1; please update to metric_version = 2")
 		p.collector = v1.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.Log)
 		err := registry.Register(p.collector)
 		if err != nil {

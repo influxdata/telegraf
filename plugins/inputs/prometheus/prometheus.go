@@ -101,7 +101,7 @@ var sampleConfig = `
   # username = ""
   # password = ""
 
-	## Specify timeout duration for slower prometheus clients (default is 3s)
+  ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
   ## Optional TLS Config
@@ -118,6 +118,13 @@ func (p *Prometheus) SampleConfig() string {
 
 func (p *Prometheus) Description() string {
 	return "Read metrics from one or many prometheus clients"
+}
+
+func (p *Prometheus) Init() error {
+	if p.MetricVersion != 2 {
+		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
+	}
+	return nil
 }
 
 var ErrProtocolError = errors.New("prometheus protocol error")
