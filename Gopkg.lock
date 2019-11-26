@@ -1750,6 +1750,7 @@
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
     "github.com/gofrs/uuid",
+    "github.com/gogo/protobuf/proto",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/duration",
     "github.com/golang/protobuf/ptypes/empty",
