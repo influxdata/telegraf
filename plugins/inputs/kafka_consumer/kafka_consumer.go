@@ -49,6 +49,9 @@ const sampleConfig = `
   ## Initial offset position; one of "oldest" or "newest".
   # offset = "oldest"
 
+  ## Consumer group partition assignment strategy; one of "range", "roundrobin" or "sticky".
+  # balance_strategy = "range"
+
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
   max_message_len = 1000000
@@ -86,6 +89,7 @@ type KafkaConsumer struct {
 	MaxMessageLen          int      `toml:"max_message_len"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
 	Offset                 string   `toml:"offset"`
+	BalanceStrategy        string   `toml:"balance_strategy"`
 	Topics                 []string `toml:"topics"`
 	TopicTag               string   `toml:"topic_tag"`
 	Version                string   `toml:"version"`
@@ -183,6 +187,17 @@ func (k *KafkaConsumer) Init() error {
 		config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	default:
 		return fmt.Errorf("invalid offset %q", k.Offset)
+	}
+
+	switch strings.ToLower(k.BalanceStrategy) {
+	case "range", "":
+		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	case "roundrobin":
+		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+	case "sticky":
+		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
+	default:
+		return fmt.Errorf("invalid balance strategy %q", k.BalanceStrategy)
 	}
 
 	if k.ConsumerCreator == nil {
