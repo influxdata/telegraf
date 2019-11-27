@@ -144,6 +144,7 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 				"size_bytes": 5096,
 			},
 			time.Unix(0, 0),
+			telegraf.Gauge,
 		),
 	}
 
