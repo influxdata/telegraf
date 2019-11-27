@@ -59,6 +59,7 @@
 - [#6695](https://github.com/influxdata/telegraf/pull/6695): Allow multiple certificates per file in x509_cert input.
 - [#6686](https://github.com/influxdata/telegraf/pull/6686): Add additional tags to the x509 input.
 - [#6703](https://github.com/influxdata/telegraf/pull/6703): Add batch data format support to file output.
+- [#6688](https://github.com/influxdata/telegraf/pull/6688): Support partition assignement strategy configuration in kafka_consumer.
 
 #### Bugfixes
 
