@@ -77,3 +77,18 @@ type Metric interface {
 	SetAggregate(bool)
 	IsAggregate() bool
 }
+
+func (valueType ValueType) String() string {
+	names := [...]string{
+		"_",
+		"Counter",
+		"Gauge",
+		"Untyped",
+		"Summary",
+		"Histogram"}
+
+	if valueType < Counter || valueType > Histogram {
+		return "Unknown"
+	}
+	return names[valueType]
+}
