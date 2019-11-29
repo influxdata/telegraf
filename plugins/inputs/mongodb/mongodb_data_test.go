@@ -189,6 +189,7 @@ func TestStateTag(t *testing.T) {
 	)
 
 	stateTags := make(map[string]string)
+	stateTags["node_type"] = "PRI"
 
 	var acc testutil.Accumulator
 
