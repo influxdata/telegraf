@@ -19,6 +19,10 @@
   version = "1.19.41"
 
 [[constraint]]
+  name = "github.com/ChimeraCoder/anaconda"
+  version = "2.0.0"
+
+[[constraint]]
   name = "github.com/couchbase/go-couchbase"
   branch = "master"
 

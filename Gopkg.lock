@@ -81,6 +81,22 @@
   version = "v13.3.0"
 
 [[projects]]
+  digest = "1:c6e7477310b8e3223a26640696831b194b51d3c43ea0199926c28d0eeae8be20"
+  name = "github.com/ChimeraCoder/anaconda"
+  packages = ["."]
+  pruneopts = ""
+  revision = "9c68684170b980d5b4c2ed08fae9b530e659904d"
+  version = "v2.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:1632705b0fa9266d58506dfb2bf26dc502709c3911d5660cf278503fcfadf6ac"
+  name = "github.com/ChimeraCoder/tokenbucket"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c5a927568de7aad8a58127d80bcd36ca4e71e454"
+
+[[projects]]
   branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
@@ -210,6 +226,14 @@
   pruneopts = ""
   revision = "5312c8dac9067d339c4e68d7e0dd5507b2f01849"
   version = "v1.19.41"
+
+[[projects]]
+  branch = "master"
+  digest = "1:650520e175941762d4781168477eda2561c4e24fb0b0578761dda5b0e1382237"
+  name = "github.com/azr/backoff"
+  packages = ["."]
+  pruneopts = ""
+  revision = "53511d3c733003985b0b76f733df1f4d0095ee6a"
 
 [[projects]]
   branch = "master"
@@ -376,6 +400,22 @@
   revision = "d7b61745d16675c9f548b19f06fda80d422a74f0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5a57f88a1196908f330b6b10340aaa34b5594183e80a7659cac1bfbb3a88d84e"
+  name = "github.com/dustin/go-jsonpointer"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ba0abeacc3dcca5b9b20f31509c46794edbc9965"
+
+[[projects]]
+  branch = "master"
+  digest = "1:9140f1215e69e5b5f05ee4faf473f8532f8a62b2588c55f6ab4f467c31b5a5f8"
+  name = "github.com/dustin/gojson"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2e71ec9dd5adce3b168cd0dbde03b5cc04951c30"
+
+[[projects]]
   digest = "1:6d6672f85a84411509885eaa32f597577873de00e30729b9bb0eb1e1faa49c12"
   name = "github.com/eapache/go-resiliency"
   packages = ["breaker"]
@@ -430,6 +470,14 @@
   pruneopts = ""
   revision = "d1bbc0cffaf9849ddcae7b9efffae33e2dd52e9a"
   version = "v1.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:3e475864c53cf4225f5c050640fca1aef1157f4208752c92cc01a1b430e759f7"
+  name = "github.com/garyburd/go-oauth"
+  packages = ["oauth"]
+  pruneopts = ""
+  revision = "bca2e7f09a178fd36b034107a00e2323bca6a82e"
 
 [[projects]]
   branch = "master"
@@ -1721,6 +1769,7 @@
     "github.com/Azure/azure-storage-queue-go/azqueue",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
+    "github.com/ChimeraCoder/anaconda",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",
     "github.com/Shopify/sarama",
     "github.com/StackExchange/wmi",

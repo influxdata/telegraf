@@ -291,6 +291,7 @@ For documentation on the latest development code see the [documentation index][d
 * [tengine](./plugins/inputs/tengine)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
+* [twitter](./plugins/inputs/twitter)
 * [udp_listener](./plugins/inputs/socket_listener)
 * [unbound](./plugins/inputs/unbound)
 * [uswgi](./plugins/inputs/uswgi)
