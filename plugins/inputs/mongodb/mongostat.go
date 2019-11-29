@@ -58,6 +58,7 @@ type ServerStatus struct {
 	Network            *NetworkStats          `bson:"network"`
 	Opcounters         *OpcountStats          `bson:"opcounters"`
 	OpcountersRepl     *OpcountStats          `bson:"opcountersRepl"`
+	OpLatencies        *OpLatenciesStats      `bson:"opLatencies"`
 	RecordStats        *DBRecordStats         `bson:"recordStats"`
 	Mem                *MemStats              `bson:"mem"`
 	Repl               *ReplStatus            `bson:"repl"`
@@ -314,6 +315,19 @@ type OpcountStats struct {
 	Command int64 `bson:"command"`
 }
 
+// OpLatenciesStats stores information related to operation latencies for the database as a whole
+type OpLatenciesStats struct {
+	Reads    *LatencyStats `bson:"reads"`
+	Writes   *LatencyStats `bson:"writes"`
+	Commands *LatencyStats `bson:"commands"`
+}
+
+// LatencyStats lists total latency in microseconds and count of operations, enabling you to obtain an average
+type LatencyStats struct {
+	Latency int64 `bson:"latency"`
+	Ops     int64 `bson:"ops"`
+}
+
 // MetricsStats stores information related to metrics
 type MetricsStats struct {
 	TTL      *TTLStats      `bson:"ttl"`
@@ -491,6 +505,11 @@ type StatLine struct {
 	GetMore, GetMoreCnt int64
 	Command, CommandCnt int64
 
+	// OpLatency fields
+	WriteLatency   int64
+	ReadLatency    int64
+	CommandLatency int64
+
 	// TTL fields
 	Passes, PassesCnt                     int64
 	DeletedDocuments, DeletedDocumentsCnt int64
@@ -636,6 +655,18 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 	return lockUsages
 }
 
+func computeLatencyDiff(newVal *LatencyStats, oldVal *LatencyStats) int64 {
+	if newVal != nil && oldVal != nil {
+		opsD := newVal.Ops - oldVal.Ops
+		latencyD := newVal.Latency - oldVal.Latency
+
+		if latencyD > 0 && opsD > 0 {
+			return latencyD / opsD
+		}
+	}
+	return 0
+}
+
 func diff(newVal, oldVal, sampleTime int64) (int64, int64) {
 	d := newVal - oldVal
 	if d < 0 {
@@ -678,6 +709,12 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Delete, returnVal.DeleteCnt = diff(newStat.Opcounters.Delete, oldStat.Opcounters.Delete, sampleSecs)
 		returnVal.GetMore, returnVal.GetMoreCnt = diff(newStat.Opcounters.GetMore, oldStat.Opcounters.GetMore, sampleSecs)
 		returnVal.Command, returnVal.CommandCnt = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
+	}
+
+	if newStat.OpLatencies != nil && oldStat.OpLatencies != nil {
+		returnVal.ReadLatency = computeLatencyDiff(newStat.OpLatencies.Reads, oldStat.OpLatencies.Reads)
+		returnVal.WriteLatency = computeLatencyDiff(newStat.OpLatencies.Writes, oldStat.OpLatencies.Writes)
+		returnVal.CommandLatency = computeLatencyDiff(newStat.OpLatencies.Commands, oldStat.OpLatencies.Commands)
 	}
 
 	if newStat.Metrics != nil && oldStat.Metrics != nil {

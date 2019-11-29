@@ -138,6 +138,26 @@ func TestAddShardStats(t *testing.T) {
 	}
 }
 
+func TestAddLatencyStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			CommandLatency: 364,
+			ReadLatency:    201,
+			WriteLatency:   55,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key := range DefaultLatencyStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
 func TestAddShardHostStats(t *testing.T) {
 	expectedHosts := []string{"hostA", "hostB"}
 	hostStatLines := map[string]ShardHostStatLine{}

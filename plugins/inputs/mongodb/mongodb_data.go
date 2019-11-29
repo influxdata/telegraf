@@ -85,6 +85,12 @@ var DefaultStats = map[string]string{
 	"connections_total_created": "TotalCreatedC",
 }
 
+var DefaultLatencyStats = map[string]string{
+	"latency_writes":   "WriteLatency",
+	"latency_reads":    "ReadLatency",
+	"latency_commands": "CommandLatency",
+}
+
 var DefaultReplStats = map[string]string{
 	"repl_inserts":          "InsertRCnt",
 	"repl_inserts_per_sec":  "InsertR",
@@ -228,6 +234,10 @@ func (d *MongodbData) AddDefaultStats() {
 	d.addStat(statLine, DefaultStats)
 	if d.StatLine.NodeType != "" {
 		d.addStat(statLine, DefaultReplStats)
+	}
+
+	if d.StatLine.ReadLatency > 0 {
+		d.addStat(statLine, DefaultLatencyStats)
 	}
 
 	if d.StatLine.OplogStats != nil {
