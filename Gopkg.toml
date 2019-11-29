@@ -104,7 +104,7 @@
 
 [[constraint]]
   name = "github.com/miekg/dns"
-  version = "1.0.8"
+  version = "1.0.10"
 
 [[constraint]]
   name = "github.com/multiplay/go-ts3"
@@ -139,21 +139,20 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/satori/go.uuid"
-  version = "1.2.0"
+  name = "github.com/gofrs/uuid"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.12"
+  version = "2.19.7"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  revision = "b12709e6ca29240128c89fe0b30b6a76be42b457"
-  source = "https://github.com/influxdata/sarama.git"
+  version = "1.24.0"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
-  branch = "master"
+  version = "1.22.0"
 
 [[constraint]]
   name = "github.com/StackExchange/wmi"
@@ -202,10 +201,6 @@
   version = "3.0.5"
 
 [[constraint]]
-  name = "gopkg.in/ldap.v2"
-  version = "2.5.1"
-
-[[constraint]]
   name = "gopkg.in/mgo.v2"
   branch = "v2"
 
@@ -235,7 +230,7 @@
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "10.12.0"
+  version = "^13.0.0"
 
 [[constraint]]
   name = "github.com/Azure/azure-storage-queue-go"
@@ -301,3 +296,11 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  name = "gopkg.in/ldap.v3"
+  version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/safchain/ethtool"
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"

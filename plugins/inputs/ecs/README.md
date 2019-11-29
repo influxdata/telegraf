@@ -1,6 +1,6 @@
-# ECS Input Plugin
+# Amazon ECS Input Plugin
 
-ECS, Fargate compatible, input plugin which uses the [ECS v2 metadata and
+Amazon ECS, Fargate compatible, input plugin which uses the [Amazon ECS v2 metadata and
 stats API][task-metadata-endpoint-v2] endpoints to gather stats on running
 containers in a Task.
 

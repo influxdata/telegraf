@@ -3,8 +3,8 @@ package kinesis
 import (
 	"testing"
 
+	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf/testutil"
-	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
 

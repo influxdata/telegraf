@@ -252,7 +252,7 @@ type FlushStats struct {
 type ConnectionStats struct {
 	Current      int64 `bson:"current"`
 	Available    int64 `bson:"available"`
-	TotalCreated int64 `bson:"total_created"`
+	TotalCreated int64 `bson:"totalCreated"`
 }
 
 // DurTiming stores information related to journaling.
@@ -983,21 +983,23 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	}
 
 	// Set shard stats
-	newShardStats := *newMongo.ShardStats
-	returnVal.TotalInUse = newShardStats.TotalInUse
-	returnVal.TotalAvailable = newShardStats.TotalAvailable
-	returnVal.TotalCreated = newShardStats.TotalCreated
-	returnVal.TotalRefreshing = newShardStats.TotalRefreshing
-	returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
-	for host, stats := range newShardStats.Hosts {
-		shardStatLine := &ShardHostStatLine{
-			InUse:      stats.InUse,
-			Available:  stats.Available,
-			Created:    stats.Created,
-			Refreshing: stats.Refreshing,
-		}
+	if newMongo.ShardStats != nil {
+		newShardStats := *newMongo.ShardStats
+		returnVal.TotalInUse = newShardStats.TotalInUse
+		returnVal.TotalAvailable = newShardStats.TotalAvailable
+		returnVal.TotalCreated = newShardStats.TotalCreated
+		returnVal.TotalRefreshing = newShardStats.TotalRefreshing
+		returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
+		for host, stats := range newShardStats.Hosts {
+			shardStatLine := &ShardHostStatLine{
+				InUse:      stats.InUse,
+				Available:  stats.Available,
+				Created:    stats.Created,
+				Refreshing: stats.Refreshing,
+			}
 
-		returnVal.ShardHostStatsLines[host] = *shardStatLine
+			returnVal.ShardHostStatsLines[host] = *shardStatLine
+		}
 	}
 
 	return returnVal

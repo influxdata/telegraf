@@ -41,6 +41,8 @@ avoid cardinality issues:
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ## If both of these are empty, we'll use the default serviceaccount:
+  ## at: /run/secrets/kubernetes.io/serviceaccount/token
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"
@@ -264,6 +266,7 @@ The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated 
 | lost      | 1                         |
 | pending   | 2                         |
 | unknown   | 3                         |
+
 
 ### Example Output:
 

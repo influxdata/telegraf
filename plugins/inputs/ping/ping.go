@@ -118,7 +118,7 @@ func (*Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	if p.Interface != "" && p.listenAddr != "" {
+	if p.Interface != "" && p.listenAddr == "" {
 		p.listenAddr = getAddr(p.Interface)
 	}
 
@@ -293,10 +293,12 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 					if strings.Contains(err.Error(), "not permitted") {
 						sent.sent = false
 					}
+					sents <- sent
 					return
 				}
 
 				resps <- resp
+				sents <- sent
 			}(i + 1)
 		}
 	}
