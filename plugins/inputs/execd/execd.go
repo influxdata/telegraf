@@ -41,6 +41,7 @@ type Execd struct {
 	Signal  string
 
 	acc     telegraf.Accumulator
+	args    []string
 	cmd     *exec.Cmd
 	parser  parsers.Parser
 	stdin   io.WriteCloser
@@ -67,7 +68,8 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("unable to parse command: %s", err)
 	}
 
-	go e.cmdRun(args)
+	e.args = args
+	go e.cmdRun()
 
 	return nil
 }
@@ -84,13 +86,13 @@ func (e *Execd) Stop() {
 	}
 }
 
-func (e *Execd) cmdRun(args []string) error {
+func (e *Execd) cmdRun() error {
 	var wg sync.WaitGroup
 
-	if len(args) > 1 {
-		e.cmd = exec.Command(args[0], args[1:]...)
+	if len(e.args) > 1 {
+		e.cmd = exec.Command(e.args[0], e.args[1:]...)
 	} else {
-		e.cmd = exec.Command(args[0])
+		e.cmd = exec.Command(e.args[0])
 	}
 
 	stdin, err := e.cmd.StdinPipe()
@@ -140,7 +142,7 @@ func (e *Execd) cmdRun(args []string) error {
 
 	go func() {
 		<-time.After(time.Second)
-		e.cmdRun(args)
+		e.cmdRun()
 	}()
 
 	return nil
