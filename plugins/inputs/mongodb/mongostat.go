@@ -477,7 +477,7 @@ type StatLine struct {
 	IsMongos bool
 	Host     string
 
-	UptimeMillis int64
+	UptimeNanos int64
 
 	// The time at which this StatLine was generated.
 	Time time.Time
@@ -661,7 +661,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		Faults:    -1,
 	}
 
-	returnVal.UptimeMillis = newStat.UptimeMillis
+	returnVal.UptimeNanos = 1000 * 1000 * newStat.UptimeMillis
 
 	// set connection info
 	returnVal.CurrentC = newStat.Connections.Current

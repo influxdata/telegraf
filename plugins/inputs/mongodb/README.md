@@ -102,7 +102,7 @@ by running Telegraf with the `--debug` argument.
     - ttl_deletes (integer)
     - ttl_passes (integer)
     - updates (integer)
-    - uptime_ms (integer)
+    - uptime_ns (integer)
     - vsize_megabytes (integer)
     - wtcache_app_threads_page_read_count (integer)
     - wtcache_app_threads_page_read_time (integer)
