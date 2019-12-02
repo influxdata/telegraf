@@ -1952,6 +1952,18 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["splunkmetric_multimetric"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.SplunkmetricMultiMetric, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["wavefront_source_override"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1985,6 +1997,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
 	delete(tbl.Fields, "splunkmetric_hec_routing")
+	delete(tbl.Fields, "splunkmetric_multimetric")
 	delete(tbl.Fields, "wavefront_source_override")
 	delete(tbl.Fields, "wavefront_use_strict")
 	return serializers.NewSerializer(c)
@@ -2026,6 +2039,19 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["flush_jitter"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+				oc.FlushJitter = new(time.Duration)
+				*oc.FlushJitter = dur
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -2059,6 +2085,7 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	}
 
 	delete(tbl.Fields, "flush_interval")
+	delete(tbl.Fields, "flush_jitter")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")

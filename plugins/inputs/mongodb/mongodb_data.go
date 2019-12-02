@@ -38,6 +38,7 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 }
 
 var DefaultStats = map[string]string{
+	"uptime_ns":                 "UptimeNanos",
 	"inserts":                   "InsertCnt",
 	"inserts_per_sec":           "Insert",
 	"queries":                   "QueryCnt",
@@ -228,6 +229,7 @@ func (d *MongodbData) AddDefaultStats() {
 	d.addStat(statLine, DefaultStats)
 	if d.StatLine.NodeType != "" {
 		d.addStat(statLine, DefaultReplStats)
+		d.Tags["node_type"] = d.StatLine.NodeType
 	}
 
 	if d.StatLine.OplogStats != nil {

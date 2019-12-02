@@ -477,6 +477,8 @@ type StatLine struct {
 	IsMongos bool
 	Host     string
 
+	UptimeNanos int64
+
 	// The time at which this StatLine was generated.
 	Time time.Time
 
@@ -658,6 +660,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		NonMapped: -1,
 		Faults:    -1,
 	}
+
+	returnVal.UptimeNanos = 1000 * 1000 * newStat.UptimeMillis
 
 	// set connection info
 	returnVal.CurrentC = newStat.Connections.Current
@@ -983,21 +987,23 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	}
 
 	// Set shard stats
-	newShardStats := *newMongo.ShardStats
-	returnVal.TotalInUse = newShardStats.TotalInUse
-	returnVal.TotalAvailable = newShardStats.TotalAvailable
-	returnVal.TotalCreated = newShardStats.TotalCreated
-	returnVal.TotalRefreshing = newShardStats.TotalRefreshing
-	returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
-	for host, stats := range newShardStats.Hosts {
-		shardStatLine := &ShardHostStatLine{
-			InUse:      stats.InUse,
-			Available:  stats.Available,
-			Created:    stats.Created,
-			Refreshing: stats.Refreshing,
-		}
+	if newMongo.ShardStats != nil {
+		newShardStats := *newMongo.ShardStats
+		returnVal.TotalInUse = newShardStats.TotalInUse
+		returnVal.TotalAvailable = newShardStats.TotalAvailable
+		returnVal.TotalCreated = newShardStats.TotalCreated
+		returnVal.TotalRefreshing = newShardStats.TotalRefreshing
+		returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
+		for host, stats := range newShardStats.Hosts {
+			shardStatLine := &ShardHostStatLine{
+				InUse:      stats.InUse,
+				Available:  stats.Available,
+				Created:    stats.Created,
+				Refreshing: stats.Refreshing,
+			}
 
-		returnVal.ShardHostStatsLines[host] = *shardStatLine
+			returnVal.ShardHostStatsLines[host] = *shardStatLine
+		}
 	}
 
 	return returnVal

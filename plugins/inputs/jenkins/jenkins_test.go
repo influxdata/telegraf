@@ -181,6 +181,7 @@ func TestGatherNodeData(t *testing.T) {
 							"status":    "online",
 							"disk_path": "/path/1",
 							"temp_path": "/path/2",
+							"source":    "127.0.0.1",
 						},
 						Fields: map[string]interface{}{
 							"response_time":    int64(10032),

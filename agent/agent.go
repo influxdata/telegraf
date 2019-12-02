@@ -503,6 +503,12 @@ func (a *Agent) runOutputs(
 			interval = output.Config.FlushInterval
 		}
 
+		jitter := jitter
+		// Overwrite agent flush_jitter if this plugin has its own.
+		if output.Config.FlushJitter != nil {
+			jitter = *output.Config.FlushJitter
+		}
+
 		wg.Add(1)
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
