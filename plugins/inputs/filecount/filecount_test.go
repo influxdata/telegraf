@@ -102,7 +102,6 @@ func TestSizeFilter(t *testing.T) {
 }
 
 func TestMTimeFilter(t *testing.T) {
-
 	mtime := time.Date(2011, time.December, 14, 18, 25, 5, 0, time.UTC)
 	fileAge := time.Since(mtime) - (60 * time.Second)
 
@@ -117,6 +116,19 @@ func TestMTimeFilter(t *testing.T) {
 	fc.MTime = internal.Duration{Duration: fileAge}
 	matches = []string{"baz"}
 	fileCountEquals(t, fc, len(matches), 0)
+}
+
+// The library dependency karrick/godirwalk completely abstracts out the
+// behavior of the FollowSymlinks plugin input option. However, it should at
+// least behave identically when enabled on a filesystem with no symlinks.
+func TestFollowSymlinks(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.FollowSymlinks = true
+	matches := []string{"foo", "bar", "baz", "qux",
+		"subdir/", "subdir/quux", "subdir/quuz",
+		"subdir/nested2", "subdir/nested2/qux"}
+
+	fileCountEquals(t, fc, len(matches), 5096)
 }
 
 // Paths with a trailing slash will not exactly match paths produced during the
