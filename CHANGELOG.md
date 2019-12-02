@@ -15,9 +15,8 @@
 - [ethtool](/plugins/inputs/ethtool/README.md) - Contributed by @philippreston
 - [snmp_trap](/plugins/inputs/snmp_trap/README.md) - Contributed by @influxdata
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
-- [systemd_units](/plugins/inputs/systemd_units/README.md) - Contributed by @benschweizer
-
 - [synproxy](/plugins/inputs/synproxy/README.md) - Contributed by @rfrenayworldstream
+- [systemd_units](/plugins/inputs/systemd_units/README.md) - Contributed by @benschweizer
 
 #### New Processors
 
