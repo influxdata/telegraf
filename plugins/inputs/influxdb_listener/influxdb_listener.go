@@ -1,4 +1,4 @@
-package http_listener
+package influxdb_listener
 
 import (
 	"bytes"
@@ -36,7 +36,7 @@ const (
 
 type TimeFunc func() time.Time
 
-type HTTPListener struct {
+type InfluxDBListener struct {
 	ServiceAddress string `toml:"service_address"`
 	// Port gets pulled out of ServiceAddress
 	Port int
@@ -118,40 +118,40 @@ const sampleConfig = `
   # basic_password = "barfoo"
 `
 
-func (h *HTTPListener) SampleConfig() string {
+func (h *InfluxDBListener) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *HTTPListener) Description() string {
+func (h *InfluxDBListener) Description() string {
 	return "Influx HTTP write listener"
 }
 
-func (h *HTTPListener) Gather(_ telegraf.Accumulator) error {
+func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 	h.BuffersCreated.Set(h.pool.ncreated())
 	return nil
 }
 
 // Start starts the http listener service.
-func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
+func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
-	h.BytesRecv = selfstat.Register("http_listener", "bytes_received", tags)
-	h.RequestsServed = selfstat.Register("http_listener", "requests_served", tags)
-	h.WritesServed = selfstat.Register("http_listener", "writes_served", tags)
-	h.QueriesServed = selfstat.Register("http_listener", "queries_served", tags)
-	h.PingsServed = selfstat.Register("http_listener", "pings_served", tags)
-	h.RequestsRecv = selfstat.Register("http_listener", "requests_received", tags)
-	h.WritesRecv = selfstat.Register("http_listener", "writes_received", tags)
-	h.QueriesRecv = selfstat.Register("http_listener", "queries_received", tags)
-	h.PingsRecv = selfstat.Register("http_listener", "pings_received", tags)
-	h.NotFoundsServed = selfstat.Register("http_listener", "not_founds_served", tags)
-	h.BuffersCreated = selfstat.Register("http_listener", "buffers_created", tags)
-	h.AuthFailures = selfstat.Register("http_listener", "auth_failures", tags)
-	h.longLines = selfstat.Register("http_listener", "long_lines", tags)
+	h.BytesRecv = selfstat.Register("influxdb_listener", "bytes_received", tags)
+	h.RequestsServed = selfstat.Register("influxdb_listener", "requests_served", tags)
+	h.WritesServed = selfstat.Register("influxdb_listener", "writes_served", tags)
+	h.QueriesServed = selfstat.Register("influxdb_listener", "queries_served", tags)
+	h.PingsServed = selfstat.Register("influxdb_listener", "pings_served", tags)
+	h.RequestsRecv = selfstat.Register("influxdb_listener", "requests_received", tags)
+	h.WritesRecv = selfstat.Register("influxdb_listener", "writes_received", tags)
+	h.QueriesRecv = selfstat.Register("influxdb_listener", "queries_received", tags)
+	h.PingsRecv = selfstat.Register("influxdb_listener", "pings_received", tags)
+	h.NotFoundsServed = selfstat.Register("influxdb_listener", "not_founds_served", tags)
+	h.BuffersCreated = selfstat.Register("influxdb_listener", "buffers_created", tags)
+	h.AuthFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
+	h.longLines = selfstat.Register("influxdb_listener", "long_lines", tags)
 
 	if h.MaxBodySize.Size == 0 {
 		h.MaxBodySize.Size = DEFAULT_MAX_BODY_SIZE
@@ -210,7 +210,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 }
 
 // Stop cleans up all resources
-func (h *HTTPListener) Stop() {
+func (h *InfluxDBListener) Stop() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -220,7 +220,7 @@ func (h *HTTPListener) Stop() {
 	h.Log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
 }
 
-func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	h.RequestsRecv.Incr(1)
 	defer h.RequestsServed.Incr(1)
 	switch req.URL.Path {
@@ -259,7 +259,7 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
+func (h *InfluxDBListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
 	if req.ContentLength > h.MaxBodySize.Size {
 		tooLarge(res)
@@ -354,7 +354,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		if i == -1 {
 			h.longLines.Incr(1)
 			// drop any line longer than the max buffer size
-			h.Log.Debugf("Http_listener received a single line longer than the maximum of %d bytes",
+			h.Log.Debugf("Influxdb_listener received a single line longer than the maximum of %d bytes",
 				len(buf))
 			hangingBytes = true
 			return400 = true
@@ -374,7 +374,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error {
+func (h *InfluxDBListener) parse(b []byte, t time.Time, precision, db string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -430,7 +430,7 @@ func partialWrite(res http.ResponseWriter, errString string) {
 	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
 }
 
-func (h *HTTPListener) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+func (h *InfluxDBListener) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
 	if h.BasicUsername != "" && h.BasicPassword != "" {
 		reqUsername, reqPassword, ok := req.BasicAuth()
 		if !ok ||
@@ -467,13 +467,13 @@ func getPrecisionMultiplier(precision string) time.Duration {
 func init() {
 	// http_listener deprecated in 1.9
 	inputs.Add("http_listener", func() telegraf.Input {
-		return &HTTPListener{
+		return &InfluxDBListener{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
 		}
 	})
 	inputs.Add("influxdb_listener", func() telegraf.Input {
-		return &HTTPListener{
+		return &InfluxDBListener{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
 		}

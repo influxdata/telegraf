@@ -1,4 +1,4 @@
-package http_listener
+package influxdb_listener
 
 import (
 	"fmt"
@@ -14,12 +14,12 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// newListener is the minimal HTTPListener construction to serve writes.
-func newListener() *HTTPListener {
-	listener := &HTTPListener{
+// newListener is the minimal InfluxDBListener construction to serve writes.
+func newListener() *InfluxDBListener {
+	listener := &InfluxDBListener{
 		TimeFunc:  time.Now,
 		acc:       &testutil.NopAccumulator{},
-		BytesRecv: selfstat.Register("http_listener", "bytes_received", map[string]string{}),
+		BytesRecv: selfstat.Register("influxdb_listener", "bytes_received", map[string]string{}),
 		handler:   influx.NewMetricHandler(),
 		pool:      NewPool(200, DEFAULT_MAX_LINE_SIZE),
 		MaxLineSize: internal.Size{
@@ -33,7 +33,7 @@ func newListener() *HTTPListener {
 	return listener
 }
 
-func BenchmarkHTTPListener_serveWrite(b *testing.B) {
+func BenchmarkInfluxDBListener_serveWrite(b *testing.B) {
 	res := httptest.NewRecorder()
 	addr := "http://localhost/write?db=mydb"
 

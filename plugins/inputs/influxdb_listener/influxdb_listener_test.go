@@ -1,4 +1,4 @@
-package http_listener
+package influxdb_listener
 
 import (
 	"bytes"
@@ -46,8 +46,8 @@ var (
 	pki = testutil.NewPKI("../../../testutil/pki")
 )
 
-func newTestHTTPListener() *HTTPListener {
-	listener := &HTTPListener{
+func newTestListener() *InfluxDBListener {
+	listener := &InfluxDBListener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		TimeFunc:       time.Now,
@@ -55,15 +55,15 @@ func newTestHTTPListener() *HTTPListener {
 	return listener
 }
 
-func newTestHTTPAuthListener() *HTTPListener {
-	listener := newTestHTTPListener()
+func newTestAuthListener() *InfluxDBListener {
+	listener := newTestListener()
 	listener.BasicUsername = basicUsername
 	listener.BasicPassword = basicPassword
 	return listener
 }
 
-func newTestHTTPSListener() *HTTPListener {
-	listener := &HTTPListener{
+func newTestSecureListener() *InfluxDBListener {
+	listener := &InfluxDBListener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		ServerConfig:   *pki.TLSServerConfig(),
@@ -73,7 +73,7 @@ func newTestHTTPSListener() *HTTPListener {
 	return listener
 }
 
-func getHTTPSClient() *http.Client {
+func getSecureClient() *http.Client {
 	tlsConfig, err := pki.TLSClientConfig().TLSConfig()
 	if err != nil {
 		panic(err)
@@ -85,7 +85,7 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(listener *HTTPListener, scheme string, path string, rawquery string) string {
+func createURL(listener *InfluxDBListener, scheme string, path string, rawquery string) string {
 	u := url.URL{
 		Scheme:   scheme,
 		Host:     "localhost:" + strconv.Itoa(listener.Port),
@@ -95,8 +95,8 @@ func createURL(listener *HTTPListener, scheme string, path string, rawquery stri
 	return u.String()
 }
 
-func TestWriteHTTPSNoClientAuth(t *testing.T) {
-	listener := newTestHTTPSListener()
+func TestWriteSecureNoClientAuth(t *testing.T) {
+	listener := newTestSecureListener()
 	listener.TLSAllowedCACerts = nil
 
 	acc := &testutil.Accumulator{}
@@ -120,22 +120,22 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
-func TestWriteHTTPSWithClientAuth(t *testing.T) {
-	listener := newTestHTTPSListener()
+func TestWriteSecureWithClientAuth(t *testing.T) {
+	listener := newTestSecureListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := getHTTPSClient().Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := getSecureClient().Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
-func TestWriteHTTPBasicAuth(t *testing.T) {
-	listener := newTestHTTPAuthListener()
+func TestWriteBasicAuth(t *testing.T) {
+	listener := newTestAuthListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -152,10 +152,10 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 }
 
-func TestWriteHTTPKeepDatabase(t *testing.T) {
+func TestWriteKeepDatabase(t *testing.T) {
 	testMsgWithDB := "cpu_load_short,host=server01,database=wrongdb value=12.0 1422568543702900257\n"
 
-	listener := newTestHTTPListener()
+	listener := newTestListener()
 	listener.DatabaseTag = "database"
 
 	acc := &testutil.Accumulator{}
@@ -204,8 +204,8 @@ func TestWriteHTTPKeepDatabase(t *testing.T) {
 }
 
 // http listener should add a newline at the end of the buffer if it's not there
-func TestWriteHTTPNoNewline(t *testing.T) {
-	listener := newTestHTTPListener()
+func TestWriteNoNewline(t *testing.T) {
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -224,8 +224,8 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	)
 }
 
-func TestPartialWriteHTTP(t *testing.T) {
-	listener := newTestHTTPListener()
+func TestPartialWrite(t *testing.T) {
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -248,8 +248,8 @@ func TestPartialWriteHTTP(t *testing.T) {
 	)
 }
 
-func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
-	listener := &HTTPListener{
+func TestWriteMaxLineSizeIncrease(t *testing.T) {
+	listener := &InfluxDBListener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxLineSize:    internal.Size{Size: 128 * 1000},
@@ -267,8 +267,8 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
-func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	listener := &HTTPListener{
+func TestWriteVerySmallMaxBody(t *testing.T) {
+	listener := &InfluxDBListener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxBodySize:    internal.Size{Size: 4096},
@@ -285,8 +285,8 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	require.EqualValues(t, 413, resp.StatusCode)
 }
 
-func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
-	listener := &HTTPListener{
+func TestWriteVerySmallMaxLineSize(t *testing.T) {
+	listener := &InfluxDBListener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxLineSize:    internal.Size{Size: 70},
@@ -313,8 +313,8 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	}
 }
 
-func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
-	listener := &HTTPListener{
+func TestWriteLargeLinesSkipped(t *testing.T) {
+	listener := &InfluxDBListener{
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxLineSize:    internal.Size{Size: 100},
@@ -342,8 +342,8 @@ func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 }
 
 // test that writing gzipped data works
-func TestWriteHTTPGzippedData(t *testing.T) {
-	listener := newTestHTTPListener()
+func TestWriteGzippedData(t *testing.T) {
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -373,11 +373,11 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 }
 
 // writes 25,000 metrics to the listener with 10 different writers
-func TestWriteHTTPHighTraffic(t *testing.T) {
+func TestWriteHighTraffic(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("Skipping due to hang on darwin")
 	}
-	listener := newTestHTTPListener()
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -406,7 +406,7 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	listener := newTestHTTPListener()
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -419,8 +419,8 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	require.EqualValues(t, 404, resp.StatusCode)
 }
 
-func TestWriteHTTPInvalid(t *testing.T) {
-	listener := newTestHTTPListener()
+func TestWriteInvalid(t *testing.T) {
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -433,8 +433,8 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	require.EqualValues(t, 400, resp.StatusCode)
 }
 
-func TestWriteHTTPEmpty(t *testing.T) {
-	listener := newTestHTTPListener()
+func TestWriteEmpty(t *testing.T) {
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -447,8 +447,8 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
-func TestQueryAndPingHTTP(t *testing.T) {
-	listener := newTestHTTPListener()
+func TestQueryAndPing(t *testing.T) {
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -468,7 +468,7 @@ func TestQueryAndPingHTTP(t *testing.T) {
 }
 
 func TestWriteWithPrecision(t *testing.T) {
-	listener := newTestHTTPListener()
+	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -487,7 +487,7 @@ func TestWriteWithPrecision(t *testing.T) {
 }
 
 func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
-	listener := newTestHTTPListener()
+	listener := newTestListener()
 	listener.TimeFunc = func() time.Time {
 		return time.Unix(42, 123456789)
 	}

@@ -1,4 +1,4 @@
-package http_listener
+package influxdb_listener
 
 import (
 	"sync/atomic"
