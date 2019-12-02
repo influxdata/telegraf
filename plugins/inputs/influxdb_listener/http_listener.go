@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -328,6 +329,10 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			err = h.parse(buf[:n+bufStart], now, precision, db)
 			if err != nil {
 				h.Log.Debugf("%s: %s", err.Error(), bufStart+n)
+				if strings.HasPrefix(err.Error(), "partial write:") {
+					partialWrite(res, err.Error())
+					return
+				}
 				return400 = true
 			}
 			if return400 {
@@ -375,10 +380,7 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 
 	h.handler.SetTimePrecision(getPrecisionMultiplier(precision))
 	h.handler.SetTimeFunc(func() time.Time { return t })
-	metrics, err := h.parser.Parse(b)
-	if err != nil {
-		return fmt.Errorf("unable to parse: %s", err.Error())
-	}
+	metrics, err := h.parser.EagerParse(b)
 
 	for _, m := range metrics {
 		// Do we need to keep the database name in the query string.
@@ -389,6 +391,13 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 			m.AddTag(h.DatabaseTag, db)
 		}
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+	}
+
+	if err != nil {
+		if len(metrics) > 0 {
+			return fmt.Errorf("partial write: unable to parse: %s", err.Error())
+		}
+		return fmt.Errorf("unable to parse: %s", err.Error())
 	}
 
 	return nil
@@ -408,6 +417,14 @@ func badRequest(res http.ResponseWriter, errString string) {
 	if errString == "" {
 		errString = "http: bad request"
 	}
+	res.Header().Set("X-Influxdb-Error", errString)
+	res.WriteHeader(http.StatusBadRequest)
+	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+}
+
+func partialWrite(res http.ResponseWriter, errString string) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
 	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))

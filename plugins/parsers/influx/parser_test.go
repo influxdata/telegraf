@@ -674,6 +674,52 @@ func TestParser(t *testing.T) {
 	}
 }
 
+func TestEagerParser(t *testing.T) {
+	partialInput := []byte(`cpu,host=a value1=1
+cpu,host=b value1=1,value2=+Inf,value3=3
+cpu,host=c value1=1`)
+
+	metrics, err := NewParser(NewMetricHandler()).EagerParse(partialInput)
+
+	require.Equal(t,
+		&ParseError{
+			Offset:     47,
+			LineOffset: 20,
+			LineNumber: 2,
+			Column:     28,
+			msg:        "expected field",
+			buf:        "cpu,host=a value1=1\ncpu,host=b value1=1,value2=+Inf,value3=3\ncpu,host=c value1=1",
+		},
+		err)
+	require.Equal(t, 2, len(metrics))
+
+	// Ensure old behavior still works
+	for _, tt := range ptests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := NewMetricHandler()
+			handler.SetTimeFunc(DefaultTime)
+			if tt.timeFunc != nil {
+				handler.SetTimeFunc(tt.timeFunc)
+			}
+			if tt.precision > 0 {
+				handler.SetTimePrecision(tt.precision)
+			}
+			parser := NewParser(handler)
+
+			metrics, err := parser.EagerParse(tt.input)
+			require.Equal(t, tt.err, err)
+
+			require.Equal(t, len(tt.metrics), len(metrics))
+			for i, expected := range tt.metrics {
+				require.Equal(t, expected.Name(), metrics[i].Name())
+				require.Equal(t, expected.Tags(), metrics[i].Tags())
+				require.Equal(t, expected.Fields(), metrics[i].Fields())
+				require.Equal(t, expected.Time(), metrics[i].Time())
+			}
+		})
+	}
+}
+
 func BenchmarkParser(b *testing.B) {
 	for _, tt := range ptests {
 		b.Run(tt.name, func(b *testing.B) {
