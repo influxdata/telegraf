@@ -715,3 +715,22 @@ func (a *Accumulator) BoolField(measurement string, field string) (bool, bool) {
 
 	return false, false
 }
+
+// NopAccumulator is used for benchmarking to isolate the plugin from the internal
+// telegraf accumulator machinary.
+type NopAccumulator struct{}
+
+func (n *NopAccumulator) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddGauge(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddCounter(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddSummary(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddHistogram(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+}
+func (n *NopAccumulator) AddMetric(telegraf.Metric)                                {}
+func (n *NopAccumulator) SetPrecision(precision time.Duration)                     {}
+func (n *NopAccumulator) AddError(err error)                                       {}
+func (n *NopAccumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator { return nil }
