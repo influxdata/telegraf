@@ -38,6 +38,7 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 }
 
 var DefaultStats = map[string]string{
+	"uptime_ns":                 "UptimeNanos",
 	"inserts":                   "InsertCnt",
 	"inserts_per_sec":           "Insert",
 	"queries":                   "QueryCnt",

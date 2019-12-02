@@ -74,7 +74,7 @@ by running Telegraf with the `--debug` argument.
     - flushes (integer)
     - flushes_total_time_ns (integer)
     - getmores (integer)
-    - inserts (integer
+    - inserts (integer)
     - jumbo_chunks (integer)
     - member_status (string)
     - net_in_bytes_count (integer)
@@ -102,6 +102,7 @@ by running Telegraf with the `--debug` argument.
     - ttl_deletes (integer)
     - ttl_passes (integer)
     - updates (integer)
+    - uptime_ns (integer)
     - vsize_megabytes (integer)
     - wtcache_app_threads_page_read_count (integer)
     - wtcache_app_threads_page_read_time (integer)

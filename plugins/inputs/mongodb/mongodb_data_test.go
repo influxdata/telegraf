@@ -16,6 +16,7 @@ func TestAddNonReplStats(t *testing.T) {
 		&StatLine{
 			StorageEngine:    "",
 			Time:             time.Now(),
+			UptimeNanos:      0,
 			Insert:           0,
 			Query:            0,
 			Update:           0,
@@ -235,6 +236,7 @@ func TestStateTag(t *testing.T) {
 		"resident_megabytes":        int64(0),
 		"updates":                   int64(0),
 		"updates_per_sec":           int64(0),
+		"uptime_ns":                 int64(0),
 		"vsize_megabytes":           int64(0),
 		"ttl_deletes":               int64(0),
 		"ttl_deletes_per_sec":       int64(0),
