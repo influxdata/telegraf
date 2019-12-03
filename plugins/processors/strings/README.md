@@ -68,6 +68,10 @@ If you'd like to apply multiple processings to the same `tag_key` or `field_key`
   # [[processors.strings.left]]
   #   field = "message"
   #   width = 10
+
+  ## Decode a base64 encoded string
+  # [[processors.strings.base64decode]]
+  #   field = "message"
 ```
 
 #### Trim, TrimLeft, TrimRight
