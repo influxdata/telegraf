@@ -922,3 +922,44 @@ func TestParseArrayWithWrongType(t *testing.T) {
 	_, err = parser.Parse([]byte(data))
 	require.Error(t, err)
 }
+
+func TestParse(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *Config
+		input    []byte
+		expected []telegraf.Metric
+	}{
+		{
+			name: "tag keys with underscore issue 6705",
+			config: &Config{
+				MetricName: "json",
+				TagKeys:    []string{"metric___name__"},
+			},
+			input: []byte(`{"metric": {"__name__": "howdy", "time_idle": 42}}`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{
+						"metric___name__": "howdy",
+					},
+					map[string]interface{}{
+						"metric_time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, err := New(tt.config)
+			require.NoError(t, err)
+
+			actual, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
+}
