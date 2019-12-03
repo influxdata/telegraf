@@ -61,6 +61,9 @@
 - [#6686](https://github.com/influxdata/telegraf/pull/6686): Add additional tags to the x509 input.
 - [#6703](https://github.com/influxdata/telegraf/pull/6703): Add batch data format support to file output.
 - [#6688](https://github.com/influxdata/telegraf/pull/6688): Support partition assignement strategy configuration in kafka_consumer.
+- [#6731](https://github.com/influxdata/telegraf/pull/6731): Add node type tag to mongodb input.
+- [#6669](https://github.com/influxdata/telegraf/pull/6669): Add uptime_ns field to mongodb input.
+- [#6735](https://github.com/influxdata/telegraf/pull/6735): Support resolution of symlinks in filecount input.
 
 #### Bugfixes
 
