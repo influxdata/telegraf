@@ -125,7 +125,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	for _, host := range p.Urls {
 		_, err := net.LookupHost(host)
 		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"ip": host})
+			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": host})
 			acc.AddError(err)
 			continue
 		}
