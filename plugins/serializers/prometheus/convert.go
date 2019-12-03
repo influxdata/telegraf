@@ -8,26 +8,53 @@ import (
 	dto "github.com/prometheus/client_model/go"
 )
 
-var FirstTable = &unicode.RangeTable{
-	R16: []unicode.Range16{
-		{0x0041, 0x005A, 1}, // A-Z
-		{0x005F, 0x005F, 1}, // _
-		{0x0061, 0x007A, 1}, // a-z
-	},
-	LatinOffset: 3,
+type Table struct {
+	First *unicode.RangeTable
+	Rest  *unicode.RangeTable
 }
 
-var RestTable = &unicode.RangeTable{
-	R16: []unicode.Range16{
-		{0x0030, 0x0039, 1}, // 0-9
-		{0x0041, 0x005A, 1}, // A-Z
-		{0x005F, 0x005F, 1}, // _
-		{0x0061, 0x007A, 1}, // a-z
+var MetricNameTable = Table{
+	First: &unicode.RangeTable{
+		R16: []unicode.Range16{
+			{0x003A, 0x003A, 1}, // :
+			{0x0041, 0x005A, 1}, // A-Z
+			{0x005F, 0x005F, 1}, // _
+			{0x0061, 0x007A, 1}, // a-z
+		},
+		LatinOffset: 4,
 	},
-	LatinOffset: 4,
+	Rest: &unicode.RangeTable{
+		R16: []unicode.Range16{
+			{0x0030, 0x003A, 1}, // 0-:
+			{0x0041, 0x005A, 1}, // A-Z
+			{0x005F, 0x005F, 1}, // _
+			{0x0061, 0x007A, 1}, // a-z
+		},
+		LatinOffset: 4,
+	},
 }
 
-func isValid(name string) bool {
+var LabelNameTable = Table{
+	First: &unicode.RangeTable{
+		R16: []unicode.Range16{
+			{0x0041, 0x005A, 1}, // A-Z
+			{0x005F, 0x005F, 1}, // _
+			{0x0061, 0x007A, 1}, // a-z
+		},
+		LatinOffset: 3,
+	},
+	Rest: &unicode.RangeTable{
+		R16: []unicode.Range16{
+			{0x0030, 0x0039, 1}, // 0-9
+			{0x0041, 0x005A, 1}, // A-Z
+			{0x005F, 0x005F, 1}, // _
+			{0x0061, 0x007A, 1}, // a-z
+		},
+		LatinOffset: 4,
+	},
+}
+
+func isValid(name string, table Table) bool {
 	if name == "" {
 		return false
 	}
@@ -35,11 +62,11 @@ func isValid(name string) bool {
 	for i, r := range name {
 		switch {
 		case i == 0:
-			if !unicode.In(r, FirstTable) {
+			if !unicode.In(r, table.First) {
 				return false
 			}
 		default:
-			if !unicode.In(r, RestTable) {
+			if !unicode.In(r, table.Rest) {
 				return false
 			}
 		}
@@ -48,12 +75,11 @@ func isValid(name string) bool {
 	return true
 }
 
-// SanitizeName check if the name is a valid Prometheus metric name and label
-// name.  If not, it attempts to replaces invalid runes with an underscore to
-// create a valid name.  Returns the metric name and true if the name is valid
-// to use.
-func SanitizeName(name string) (string, bool) {
-	if isValid(name) {
+// Sanitize checks if the name is valid according to the table.  If not, it
+// attempts to replaces invalid runes with an underscore to create a valid
+// name.
+func sanitize(name string, table Table) (string, bool) {
+	if isValid(name, table) {
 		return name, true
 	}
 
@@ -62,11 +88,11 @@ func SanitizeName(name string) (string, bool) {
 	for i, r := range name {
 		switch {
 		case i == 0:
-			if unicode.In(r, FirstTable) {
+			if unicode.In(r, table.First) {
 				b.WriteRune(r)
 			}
 		default:
-			if unicode.In(r, RestTable) {
+			if unicode.In(r, table.Rest) {
 				b.WriteRune(r)
 			} else {
 				b.WriteString("_")
@@ -80,6 +106,20 @@ func SanitizeName(name string) (string, bool) {
 	}
 
 	return name, true
+}
+
+// SanitizeMetricName checks if the name is a valid Prometheus metric name.  If
+// not, it attempts to replaces invalid runes with an underscore to create a
+// valid name.
+func SanitizeMetricName(name string) (string, bool) {
+	return sanitize(name, MetricNameTable)
+}
+
+// SanitizeLabelName checks if the name is a valid Prometheus label name.  If
+// not, it attempts to replaces invalid runes with an underscore to create a
+// valid name.
+func SanitizeLabelName(name string) (string, bool) {
+	return sanitize(name, LabelNameTable)
 }
 
 // MetricName returns the Prometheus metric name.
