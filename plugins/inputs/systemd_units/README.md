@@ -6,14 +6,14 @@ The systemd_units plugin gathers systemd unit status on Linux. It relies on
 The results are tagged with the unit name and provide enumerated fields for
 loaded, active and running fields, indicating the unit health.
 
-This plugin is related to the [win_services module](../win_services/), which
+This plugin is related to the [win_services module](/plugins/inputs/win_services/), which
 fulfills the same purpose on windows.
 
 In addition to services, this plugin can gather other unit types as well,
 see `systemctl list-units --all --type help` for possible options.
 
 ### Configuration
-```
+```toml
 [[inputs.systemd_units]]
   ## Set timeout for systemctl execution
   # timeout = "1s"
@@ -127,14 +127,9 @@ values
 
 ### Example Output
 
-Linux Systemd Units:
 ```
-$ telegraf --test --config /tmp/telegraf.conf
-> systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
-> systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=failed,sub=failed load_code=0i,active_code=3i,sub_code=12i 1533730725000000000
-> systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
+systemd_units,host=host1.example.com,name=dbus.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
+systemd_units,host=host1.example.com,name=networking.service,load=loaded,active=failed,sub=failed load_code=0i,active_code=3i,sub_code=12i 1533730725000000000
+systemd_units,host=host1.example.com,name=ssh.service,load=loaded,active=active,sub=running load_code=0i,active_code=0i,sub_code=0i 1533730725000000000
 ...
 ```
-
-### Possible Improvements
-- add blacklist to filter names

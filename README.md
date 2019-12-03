@@ -283,6 +283,7 @@ For documentation on the latest development code see the [documentation index][d
 * [synproxy](./plugins/inputs/synproxy)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
+* [systemd_units](./plugins/inputs/systemd_units)
 * [system](./plugins/inputs/system)
 * [tail](./plugins/inputs/tail)
 * [temp](./plugins/inputs/temp)
