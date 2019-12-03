@@ -113,7 +113,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 			}
 		}
 
-		name, ok := SanitizeName(tag.Key)
+		name, ok := SanitizeLabelName(tag.Key)
 		if !ok {
 			continue
 		}
@@ -132,7 +132,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 			continue
 		}
 
-		name, ok := SanitizeName(field.Key)
+		name, ok := SanitizeLabelName(field.Key)
 		if !ok {
 			continue
 		}
@@ -161,7 +161,7 @@ func (c *Collection) Add(metric telegraf.Metric) {
 	labels := c.createLabels(metric)
 	for _, field := range metric.FieldList() {
 		metricName := MetricName(metric.Name(), field.Key, metric.Type())
-		metricName, ok := SanitizeName(metricName)
+		metricName, ok := SanitizeMetricName(metricName)
 		if !ok {
 			continue
 		}

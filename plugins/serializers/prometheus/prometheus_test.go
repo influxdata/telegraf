@@ -412,12 +412,68 @@ cpu_time_idle 43
 `),
 		},
 		{
+			name: "colons are not replaced in metric name from measurement",
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu::xyzzy",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu::xyzzy_time_idle Telegraf collected metric
+# TYPE cpu::xyzzy_time_idle untyped
+cpu::xyzzy_time_idle 42
+`),
+		},
+		{
+			name: "colons are not replaced in metric name from field",
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time:idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time:idle Telegraf collected metric
+# TYPE cpu_time:idle untyped
+cpu_time:idle 42
+`),
+		},
+		{
 			name: "invalid label",
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"host-name": "example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle untyped
+cpu_time_idle{host_name="example.org"} 42
+`),
+		},
+		{
+			name: "colons are replaced in label name",
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"host:name": "example.org",
 					},
 					map[string]interface{}{
 						"time_idle": 42.0,
