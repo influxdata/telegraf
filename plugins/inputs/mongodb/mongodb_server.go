@@ -214,7 +214,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool, gather
 	if replSetStatus != nil {
 		oplogStats, err = s.gatherOplogStats()
 		if err != nil {
-			return err
+			s.authLog(fmt.Errorf("Unable to get oplog stats: %v", err))
 		}
 	}
 
