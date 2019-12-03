@@ -16,6 +16,7 @@
 - [snmp_trap](/plugins/inputs/snmp_trap/README.md) - Contributed by @influxdata
 - [suricata](/plugins/inputs/suricata/README.md) - Contributed by @satta
 - [synproxy](/plugins/inputs/synproxy/README.md) - Contributed by @rfrenayworldstream
+- [systemd_units](/plugins/inputs/systemd_units/README.md) - Contributed by @benschweizer
 
 #### New Processors
 
