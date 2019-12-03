@@ -71,6 +71,8 @@
 - [#6583](https://github.com/influxdata/telegraf/issues/6583): Use 1h or 3h rain values as appropriate in openweathermap input.
 - [#6573](https://github.com/influxdata/telegraf/issues/6573): Fix not a valid field error in Windows with nvidia input.
 - [#6614](https://github.com/influxdata/telegraf/issues/6614): Fix influxdb output serialization on connection closed.
+- [#6690](https://github.com/influxdata/telegraf/issues/6690): Fix ping skips remaining hosts after dns lookup error.
+- [#6684](https://github.com/influxdata/telegraf/issues/6684): Log mongodb oplog auth errors at debug level.
 
 ## v1.12.6 [2019-11-19]
 
