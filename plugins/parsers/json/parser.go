@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -260,19 +259,27 @@ func (f *JSONFlattener) FullFlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
-	fieldname = strings.Trim(fieldname, "_")
+
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			fieldkey := k
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {
 				return err
 			}
 		}
 	case []interface{}:
 		for i, v := range t {
-			k := strconv.Itoa(i)
-			err := f.FullFlattenJSON(fieldname+"_"+k+"_", v, convertString, convertBool)
+			fieldkey := strconv.Itoa(i)
+			if fieldname != "" {
+				fieldkey = fieldname + "_" + fieldkey
+			}
+			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {
 				return nil
 			}
