@@ -305,7 +305,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to int: %s", v, err)
 			} else {
 				timestamp = time.Unix(0, ms*int64(time.Millisecond))
-				fmt.Println(timestamp)
 			}
 		case EPOCH_NANO:
 			iv, err := strconv.ParseInt(v, 10, 64)
