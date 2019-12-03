@@ -815,104 +815,6 @@ func TestNameKey(t *testing.T) {
 	require.Equal(t, "this is my name", metrics[0].Name())
 }
 
-func TestTimeKeyDelete(t *testing.T) {
-	data := `{
-		"timestamp": 1541183052,
-		"value": 42
-	}`
-
-	parser, err := New(&Config{
-		MetricName: "json",
-		TimeKey:    "timestamp",
-		TimeFormat: "unix",
-	})
-	require.NoError(t, err)
-
-	metrics, err := parser.Parse([]byte(data))
-	require.NoError(t, err)
-	expected := []telegraf.Metric{
-		testutil.MustMetric("json",
-			map[string]string{},
-			map[string]interface{}{"value": 42.0},
-			time.Unix(1541183052, 0)),
-	}
-
-	testutil.RequireMetricsEqual(t, expected, metrics)
-}
-
-func TestStringFieldGlob(t *testing.T) {
-	data := `
-{
-    "color": "red",
-    "status": "error",
-    "time": "1541183052"
-}
-`
-
-	parser, err := New(&Config{
-		MetricName:   "json",
-		StringFields: []string{"*"},
-		TimeKey:      "time",
-		TimeFormat:   "unix",
-	})
-	require.NoError(t, err)
-
-	actual, err := parser.Parse([]byte(data))
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"json",
-			map[string]string{},
-			map[string]interface{}{
-				"color":  "red",
-				"status": "error",
-			},
-			time.Unix(1541183052, 0),
-		),
-	}
-
-	testutil.RequireMetricsEqual(t, expected, actual)
-}
-
-func TestParseEmptyArray(t *testing.T) {
-	data := `[]`
-
-	parser, err := New(&Config{})
-	require.NoError(t, err)
-
-	actual, err := parser.Parse([]byte(data))
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{}
-	testutil.RequireMetricsEqual(t, expected, actual)
-}
-
-func TestParseSimpleArray(t *testing.T) {
-	data := `[{"answer": 42}]`
-
-	parser, err := New(&Config{
-		MetricName: "json",
-	})
-	require.NoError(t, err)
-
-	actual, err := parser.Parse([]byte(data))
-	require.NoError(t, err)
-
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"json",
-			map[string]string{},
-			map[string]interface{}{
-				"answer": 42.0,
-			},
-			time.Unix(0, 0),
-		),
-	}
-
-	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
-}
-
 func TestParseArrayWithWrongType(t *testing.T) {
 	data := `[{"answer": 42}, 123]`
 
@@ -921,4 +823,116 @@ func TestParseArrayWithWrongType(t *testing.T) {
 
 	_, err = parser.Parse([]byte(data))
 	require.Error(t, err)
+}
+
+func TestParse(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *Config
+		input    []byte
+		expected []telegraf.Metric
+	}{
+		{
+			name: "tag keys with underscore issue 6705",
+			config: &Config{
+				MetricName: "json",
+				TagKeys:    []string{"metric___name__"},
+			},
+			input: []byte(`{"metric": {"__name__": "howdy", "time_idle": 42}}`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{
+						"metric___name__": "howdy",
+					},
+					map[string]interface{}{
+						"metric_time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "parse empty array",
+			config:   &Config{},
+			input:    []byte(`[]`),
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "parse simple array",
+			config: &Config{
+				MetricName: "json",
+			},
+			input: []byte(`[{"answer": 42}]`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{},
+					map[string]interface{}{
+						"answer": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "string field glob",
+			config: &Config{
+				MetricName:   "json",
+				StringFields: []string{"*"},
+			},
+			input: []byte(`
+{
+    "color": "red",
+    "status": "error"
+}
+`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{},
+					map[string]interface{}{
+						"color":  "red",
+						"status": "error",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "time key is deleted from fields",
+			config: &Config{
+				MetricName: "json",
+				TimeKey:    "timestamp",
+				TimeFormat: "unix",
+			},
+			input: []byte(`
+{
+	"value": 42,
+	"timestamp":  1541183052
+}
+`),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"json",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(1541183052, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser, err := New(tt.config)
+			require.NoError(t, err)
+
+			actual, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
 }
