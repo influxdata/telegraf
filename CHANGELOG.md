@@ -64,6 +64,8 @@
 - [#6731](https://github.com/influxdata/telegraf/pull/6731): Add node type tag to mongodb input.
 - [#6669](https://github.com/influxdata/telegraf/pull/6669): Add uptime_ns field to mongodb input.
 - [#6735](https://github.com/influxdata/telegraf/pull/6735): Support resolution of symlinks in filecount input.
+- [#6746](https://github.com/influxdata/telegraf/pull/6746): Set message timestamp to the metric time in kafka output.
+- [#6740](https://github.com/influxdata/telegraf/pull/6740): Add base64decode operation to string processor.
 
 #### Bugfixes
 
@@ -73,6 +75,9 @@
 - [#6614](https://github.com/influxdata/telegraf/issues/6614): Fix influxdb output serialization on connection closed.
 - [#6690](https://github.com/influxdata/telegraf/issues/6690): Fix ping skips remaining hosts after dns lookup error.
 - [#6684](https://github.com/influxdata/telegraf/issues/6684): Log mongodb oplog auth errors at debug level.
+- [#6705](https://github.com/influxdata/telegraf/issues/6705): Remove trailing underscore trimming from json flattener.
+- [#6421](https://github.com/influxdata/telegraf/issues/6421): Revert change causing cpu usage to be capped at 100 percent.
+- [#6523](https://github.com/influxdata/telegraf/issues/6523): Accept any media type in the prometheus input.
 
 ## v1.12.6 [2019-11-19]
 
