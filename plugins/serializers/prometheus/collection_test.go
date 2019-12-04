@@ -49,6 +49,78 @@ func TestCollectionExpire(t *testing.T) {
 			},
 		},
 		{
+			name: "update metric expiration",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 43.0,
+					},
+					time.Unix(12, 0),
+				),
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("cpu_time_idle"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_UNTYPED.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label:   []*dto.LabelPair{},
+							Untyped: &dto.Untyped{Value: proto.Float64(43.0)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "update metric expiration descending order",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(12, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 43.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("cpu_time_idle"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_UNTYPED.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label:   []*dto.LabelPair{},
+							Untyped: &dto.Untyped{Value: proto.Float64(42.0)},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "expired single metric in metric family",
 			now:  time.Unix(20, 0),
 			age:  10 * time.Second,
