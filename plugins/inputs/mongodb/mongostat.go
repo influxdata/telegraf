@@ -506,8 +506,11 @@ type StatLine struct {
 	Command, CommandCnt int64
 
 	// OpLatency fields
+	WriteOpsCnt    int64
 	WriteLatency   int64
+	ReadOpsCnt     int64
 	ReadLatency    int64
+	CommandOpsCnt  int64
 	CommandLatency int64
 
 	// TTL fields
@@ -655,18 +658,6 @@ func computeLockDiffs(prevLocks, curLocks map[string]LockUsage) []LockUsage {
 	return lockUsages
 }
 
-func computeLatencyDiff(newVal *LatencyStats, oldVal *LatencyStats) int64 {
-	if newVal != nil && oldVal != nil {
-		opsD := newVal.Ops - oldVal.Ops
-		latencyD := newVal.Latency - oldVal.Latency
-
-		if latencyD > 0 && opsD > 0 {
-			return latencyD / opsD
-		}
-	}
-	return 0
-}
-
 func diff(newVal, oldVal, sampleTime int64) (int64, int64) {
 	d := newVal - oldVal
 	if d < 0 {
@@ -711,10 +702,19 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Command, returnVal.CommandCnt = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
 	}
 
-	if newStat.OpLatencies != nil && oldStat.OpLatencies != nil {
-		returnVal.ReadLatency = computeLatencyDiff(newStat.OpLatencies.Reads, oldStat.OpLatencies.Reads)
-		returnVal.WriteLatency = computeLatencyDiff(newStat.OpLatencies.Writes, oldStat.OpLatencies.Writes)
-		returnVal.CommandLatency = computeLatencyDiff(newStat.OpLatencies.Commands, oldStat.OpLatencies.Commands)
+	if newStat.OpLatencies != nil {
+		if newStat.OpLatencies.Reads != nil {
+			returnVal.ReadOpsCnt = newStat.OpLatencies.Reads.Ops
+			returnVal.ReadLatency = newStat.OpLatencies.Reads.Latency
+		}
+		if newStat.OpLatencies.Writes != nil {
+			returnVal.WriteOpsCnt = newStat.OpLatencies.Writes.Ops
+			returnVal.WriteLatency = newStat.OpLatencies.Writes.Latency
+		}
+		if newStat.OpLatencies.Commands != nil {
+			returnVal.CommandOpsCnt = newStat.OpLatencies.Commands.Ops
+			returnVal.CommandLatency = newStat.OpLatencies.Commands.Latency
+		}
 	}
 
 	if newStat.Metrics != nil && oldStat.Metrics != nil {

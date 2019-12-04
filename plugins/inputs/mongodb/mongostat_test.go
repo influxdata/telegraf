@@ -59,6 +59,9 @@ func TestLatencyStats(t *testing.T) {
 	assert.Equal(t, sl.CommandLatency, int64(0))
 	assert.Equal(t, sl.ReadLatency, int64(0))
 	assert.Equal(t, sl.WriteLatency, int64(0))
+	assert.Equal(t, sl.CommandOpsCnt, int64(0))
+	assert.Equal(t, sl.ReadOpsCnt, int64(0))
+	assert.Equal(t, sl.WriteOpsCnt, int64(0))
 }
 
 func TestLatencyStatsDiffZero(t *testing.T) {
@@ -126,6 +129,9 @@ func TestLatencyStatsDiffZero(t *testing.T) {
 	assert.Equal(t, sl.CommandLatency, int64(0))
 	assert.Equal(t, sl.ReadLatency, int64(0))
 	assert.Equal(t, sl.WriteLatency, int64(0))
+	assert.Equal(t, sl.CommandOpsCnt, int64(0))
+	assert.Equal(t, sl.ReadOpsCnt, int64(0))
+	assert.Equal(t, sl.WriteOpsCnt, int64(0))
 }
 
 func TestLatencyStatsDiff(t *testing.T) {
@@ -190,7 +196,10 @@ func TestLatencyStatsDiff(t *testing.T) {
 		60,
 	)
 
-	assert.Equal(t, sl.CommandLatency, int64( (59177981552 - 59177710371) / (1019152861 - 1019150402) ))
-	assert.Equal(t, sl.ReadLatency, int64( (2255946760057 - 2255922322753) / (4189049884 - 4189041956) ))
-	assert.Equal(t, sl.WriteLatency, int64( (494479456987 - 494478256915) / (1691021287 - 1691019457) ))
+	assert.Equal(t, sl.CommandLatency, int64(59177981552))
+	assert.Equal(t, sl.ReadLatency, int64(2255946760057))
+	assert.Equal(t, sl.WriteLatency, int64(494479456987))
+	assert.Equal(t, sl.CommandOpsCnt, int64(1019152861))
+	assert.Equal(t, sl.ReadOpsCnt, int64(4189049884))
+	assert.Equal(t, sl.WriteOpsCnt, int64(1691021287))
 }

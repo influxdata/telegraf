@@ -141,8 +141,11 @@ func TestAddShardStats(t *testing.T) {
 func TestAddLatencyStats(t *testing.T) {
 	d := NewMongodbData(
 		&StatLine{
+			CommandOpsCnt:  73,
 			CommandLatency: 364,
+			ReadOpsCnt:     113,
 			ReadLatency:    201,
+			WriteOpsCnt:    7,
 			WriteLatency:   55,
 		},
 		tags,
