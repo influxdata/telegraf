@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	InvalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
-	ValidNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
+	InvalidNameCharRE  = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
+	ValidTagNameCharRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 )
 
 // SampleID uniquely identifies a Sample
@@ -347,7 +347,7 @@ func Sanitize(value string) string {
 }
 
 func IsValidTagName(tag string) bool {
-	return ValidNameCharRE.MatchString(tag)
+	return ValidTagNameCharRE.MatchString(tag)
 }
 
 func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
