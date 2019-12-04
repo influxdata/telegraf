@@ -131,11 +131,7 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-// Start starts the http listener service.
-func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
+func (h *InfluxDBListener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
@@ -166,6 +162,14 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	if h.WriteTimeout.Duration < time.Second {
 		h.WriteTimeout.Duration = time.Second * 10
 	}
+
+	return nil
+}
+
+// Start starts the http listener service.
+func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	h.acc = acc
 	h.pool = NewPool(200, int(h.MaxLineSize.Size))

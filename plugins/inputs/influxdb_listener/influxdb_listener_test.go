@@ -100,6 +100,7 @@ func TestWriteSecureNoClientAuth(t *testing.T) {
 	listener.TLSAllowedCACerts = nil
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -124,6 +125,7 @@ func TestWriteSecureWithClientAuth(t *testing.T) {
 	listener := newTestSecureListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -138,6 +140,7 @@ func TestWriteBasicAuth(t *testing.T) {
 	listener := newTestAuthListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -159,6 +162,7 @@ func TestWriteKeepDatabase(t *testing.T) {
 	listener.DatabaseTag = "database"
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -208,6 +212,7 @@ func TestWriteNoNewline(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -228,6 +233,7 @@ func TestPartialWrite(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -257,6 +263,7 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -276,6 +283,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -294,6 +302,7 @@ func TestWriteVerySmallMaxLineSize(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -322,6 +331,7 @@ func TestWriteLargeLinesSkipped(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -346,6 +356,7 @@ func TestWriteGzippedData(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -380,6 +391,7 @@ func TestWriteHighTraffic(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -409,6 +421,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -423,6 +436,7 @@ func TestWriteInvalid(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -437,6 +451,7 @@ func TestWriteEmpty(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -451,6 +466,7 @@ func TestQueryAndPing(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -471,6 +487,7 @@ func TestWriteWithPrecision(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
@@ -493,6 +510,7 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 	}
 
 	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
