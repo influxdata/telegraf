@@ -471,6 +471,34 @@ func TestWrite_StringFields(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestWrite_SpecialCharacter(t *testing.T) {
+	now := time.Now()
+	p1, err := metric.New(
+		"foo",
+		make(map[string]string),
+		map[string]interface{}{"value": 1.0, "status:colon": "good"},
+		now,
+		telegraf.Counter)
+	p2, err := metric.New(
+		"bar",
+		make(map[string]string),
+		map[string]interface{}{"status": "needs numeric field"},
+		now,
+		telegraf.Gauge)
+	var metrics = []telegraf.Metric{p1, p2}
+
+	client := NewClient()
+	err = client.Write(metrics)
+	require.NoError(t, err)
+
+	fam, ok := client.fam["foo"]
+	require.True(t, ok)
+	require.Equal(t, 1, fam.LabelSet["status"])
+
+	fam, ok = client.fam["bar"]
+	require.False(t, ok)
+}
+
 func TestDoNotWrite_StringFields(t *testing.T) {
 	now := time.Now()
 	p1, err := metric.New(
