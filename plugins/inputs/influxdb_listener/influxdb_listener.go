@@ -81,7 +81,7 @@ type InfluxDBListener struct {
 }
 
 const sampleConfig = `
-  ## Address and port to host HTTP listener on
+  ## Address and port to host InfluxDB listener on
   service_address = ":8186"
 
   ## maximum duration before timing out read of the request
@@ -89,7 +89,7 @@ const sampleConfig = `
   ## maximum duration before timing out write of the response
   write_timeout = "10s"
 
-  ## Maximum allowed http request body size in bytes.
+  ## Maximum allowed HTTP request body size in bytes.
   ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
   max_body_size = "500MiB"
 
@@ -123,7 +123,7 @@ func (h *InfluxDBListener) SampleConfig() string {
 }
 
 func (h *InfluxDBListener) Description() string {
-	return "Influx HTTP write listener"
+	return "InfluxDB listener"
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
@@ -166,7 +166,7 @@ func (h *InfluxDBListener) Init() error {
 	return nil
 }
 
-// Start starts the http listener service.
+// Start starts the InfluxDB listener service.
 func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
