@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -22,17 +23,20 @@ type runner func(cmdName string, UseSudo bool, InstanceName string, Timeout inte
 // Varnish is used to store configuration values
 type Varnish struct {
 	Stats        []string
-	Binary       string
+	StatBinary   string
+	AdmBinary    string
 	UseSudo      bool
 	InstanceName string
 	Timeout      internal.Duration
 
-	filter filter.Filter
-	run    runner
+	filter  filter.Filter
+	statrun runner
+	admrun  runner
 }
 
 var defaultStats = []string{"MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"}
-var defaultBinary = "/usr/bin/varnishstat"
+var defaultStatBinary = "/usr/bin/varnishstat"
+var defaultAdmBinary = "/usr/bin/varnishadm"
 var defaultTimeout = internal.Duration{Duration: time.Second}
 
 var sampleConfig = `
@@ -40,7 +44,10 @@ var sampleConfig = `
   #use_sudo = false
 
   ## The default location of the varnishstat binary can be overridden with:
-  binary = "/usr/bin/varnishstat"
+  varnishstat_binary = "/usr/bin/varnishstat"
+
+  ## The default location of the varnishadm binary can be overridden with:
+  varnishsadm_binary = "/usr/bin/varnishstat"
 
   ## By default, telegraf gather stats for 3 metric points.
   ## Setting stats will override the defaults shown below.
@@ -65,8 +72,35 @@ func (s *Varnish) SampleConfig() string {
 	return sampleConfig
 }
 
+// Shell out to varnish_adm and return the output
+func varnishAdmRunner(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error) {
+	cmdArgs := []string{"vcl.list"}
+
+	if InstanceName != "" {
+		cmdArgs = append(cmdArgs, []string{"-n", InstanceName}...)
+	}
+
+	cmd := exec.Command(cmdName, cmdArgs...)
+
+	if UseSudo {
+		cmdArgs = append([]string{cmdName}, cmdArgs...)
+		cmdArgs = append([]string{"-n"}, cmdArgs...)
+		cmd = exec.Command("sudo", cmdArgs...)
+	}
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := internal.RunTimeout(cmd, Timeout.Duration)
+	if err != nil {
+		return &out, fmt.Errorf("error running varnishadm: %s", err)
+	}
+
+	return &out, nil
+}
+
 // Shell out to varnish_stat and return the output
-func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error) {
+func varnishStatRunner(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-1"}
 
 	if InstanceName != "" {
@@ -115,13 +149,35 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	out, err := s.run(s.Binary, s.UseSudo, s.InstanceName, s.Timeout)
+	admout, err := s.admrun(s.AdmBinary, s.UseSudo, s.InstanceName, s.Timeout)
+	if err != nil {
+		return fmt.Errorf("error gathering vcl list from varnishadm: %s", err)
+	}
+
+	admscanner := bufio.NewScanner(admout)
+	vclactive := ""
+	for admscanner.Scan() {
+		vcllist := strings.Fields(admscanner.Text())
+		if len(vcllist) == 0 {
+			continue
+		}
+
+		status := vcllist[0]
+		vclname := vcllist[3]
+
+		if status == "active" {
+			vclactive = vclname
+			continue
+		}
+	}
+
+	statout, err := s.statrun(s.StatBinary, s.UseSudo, s.InstanceName, s.Timeout)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
 
 	sectionMap := make(map[string]map[string]interface{})
-	scanner := bufio.NewScanner(out)
+	scanner := bufio.NewScanner(statout)
 	for scanner.Scan() {
 		cols := strings.Fields(scanner.Text())
 		if len(cols) < 2 {
@@ -136,6 +192,20 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 
 		if s.filter != nil && !s.filter.Match(stat) {
 			continue
+		}
+
+		if strings.HasPrefix(stat, "VBE.") {
+			if !strings.Contains(stat, vclactive) {
+				continue
+			}
+			if strings.Contains(stat, vclactive) {
+				stat = strings.Replace(stat, "."+vclactive, "", 1)
+			}
+			if strings.HasPrefix(stat, "VBE.goto") {
+				re := regexp.MustCompile("^VBE\\.goto\\.[0-9a-f]+\\.\\([^\\)]*\\)\\.(.+)$")
+				match := re.FindStringSubmatch(stat)
+				stat = ("VBE.goto" + match[1])
+			}
 		}
 
 		parts := strings.SplitN(stat, ".", 2)
@@ -157,6 +227,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 	for section, fields := range sectionMap {
 		tags := map[string]string{
 			"section": section,
+			"vcl":     vclactive,
 		}
 		if len(fields) == 0 {
 			continue
@@ -171,9 +242,11 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("varnish", func() telegraf.Input {
 		return &Varnish{
-			run:          varnishRunner,
+			statrun:      varnishStatRunner,
+			admrun:       varnishAdmRunner,
 			Stats:        defaultStats,
-			Binary:       defaultBinary,
+			StatBinary:   defaultStatBinary,
+			AdmBinary:    defaultAdmBinary,
 			UseSudo:      false,
 			InstanceName: "",
 			Timeout:      defaultTimeout,

@@ -10,7 +10,10 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
   #use_sudo = false
 
   ## The default location of the varnishstat binary can be overridden with:
-  binary = "/usr/bin/varnishstat"
+  statbinary = "/usr/bin/varnishstat"
+
+  ## The default location of the varnishadm binary can be overridden with:
+  admbinary = "/usr/bin/varnishadm"
 
   ## By default, telegraf gather stats for 3 metric points.
   ## Setting stats will override the defaults shown below.
@@ -22,7 +25,7 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
   ## Usually appened after -n in varnish cli
   # instance_name = instanceName
 
-  ## Timeout for varnishstat command
+  ## Timeout for varnishstat and varnishadm command
   # timeout = "1s"
 ```
 
@@ -338,6 +341,7 @@ the following values:
   - SMA
   - VBE
   - LCK
+- vcl: vcl active
   
   
 
@@ -403,5 +407,5 @@ Please use the solution you see as most appropriate.
 ```
  telegraf --config etc/telegraf.conf --input-filter varnish --test
 * Plugin: varnish, Collection 1
-> varnish,host=rpercy-VirtualBox,section=MAIN cache_hit=0i,cache_miss=0i,uptime=8416i 1462765437090957980
+> varnish,host=rpercy-VirtualBox,section=MAIN,vcl=boot cache_hit=0i,cache_miss=0i,uptime=8416i 1462765437090957980
 ```
