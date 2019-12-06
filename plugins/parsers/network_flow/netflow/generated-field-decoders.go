@@ -17,7 +17,7 @@ func bytesToHexStr(buf []byte) string {
 	return hex.EncodeToString(buf)
 }
 
-func getFieldDecoderNOT(elementID uint16, l uint16) decoder.Directive {
+func getFieldDecoder(elementID uint16, l uint16) decoder.Directive {
 	switch elementID {
 	// TAGS
 	case 4:

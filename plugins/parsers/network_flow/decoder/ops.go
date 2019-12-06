@@ -131,6 +131,11 @@ func (op *AsFDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
 			m.AddField(op.name, v)
 		}
+	case string:
+		if dc != nil {
+			dc.tracef("%s AsF %s=%s\n", op.loc, op.name, v)
+			m.AddField(op.name, v)
+		}
 	default:
 		return fmt.Errorf("%s AsF cannot process %T", op.loc, v)
 	}
