@@ -36,6 +36,7 @@ type Mysql struct {
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
+	GatherGlobalVars                    bool     `toml:"gather_global_variables"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 
@@ -431,17 +432,19 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// Global Variables may be gathered less often
-	if len(m.IntervalSlow) > 0 {
-		if uint32(time.Since(m.lastT).Seconds()) >= m.scanIntervalSlow {
-			err = m.gatherGlobalVariables(db, serv, acc)
-			if err != nil {
-				return err
+	if m.GatherGlobalVars {
+		// Global Variables may be gathered less often
+		if len(m.IntervalSlow) > 0 {
+			if uint32(time.Since(m.lastT).Seconds()) >= m.scanIntervalSlow {
+				err = m.gatherGlobalVariables(db, serv, acc)
+				if err != nil {
+					return err
+				}
+				m.lastT = time.Now()
 			}
-			m.lastT = time.Now()
 		}
 	}
-
+	
 	if m.GatherBinaryLogs {
 		err = m.gatherBinaryLogs(db, serv, acc)
 		if err != nil {
