@@ -7,6 +7,11 @@ variables:
 ```
 docker run --name telegraf
         -v /:/hostfs:ro
+        -v /etc:/hostfs/etc:ro
+	-v /proc:/hostfs/proc:ro
+	-v /sys:/hostfs/sys:ro
+	-v /var:/hostfs/var:ro
+	-v /run:/hostfs/run:ro
 	-e HOST_ETC=/hostfs/etc
 	-e HOST_PROC=/hostfs/proc
 	-e HOST_SYS=/hostfs/sys
