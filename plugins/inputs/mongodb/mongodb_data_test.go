@@ -100,6 +100,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 			PagesQueuedForEviction:    0,
 			ServerEvictingPages:       0,
 			WorkerThreadEvictingPages: 0,
+			FaultsCnt:                 204,
 		},
 		tags,
 	)
@@ -116,6 +117,8 @@ func TestAddWiredTigerStats(t *testing.T) {
 	for key := range WiredTigerExtStats {
 		assert.True(t, acc.HasFloatField("mongodb", key) || acc.HasInt64Field("mongodb", key), key)
 	}
+
+	assert.True(t, acc.HasInt64Field("mongodb", "page_faults"))
 }
 
 func TestAddShardStats(t *testing.T) {
