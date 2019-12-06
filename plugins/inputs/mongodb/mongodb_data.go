@@ -248,6 +248,7 @@ func (d *MongodbData) AddDefaultStats() {
 			d.add(key, floatVal)
 		}
 		d.addStat(statLine, WiredTigerExtStats)
+		d.add("page_faults", d.StatLine.FaultsCnt)
 	}
 }
 
