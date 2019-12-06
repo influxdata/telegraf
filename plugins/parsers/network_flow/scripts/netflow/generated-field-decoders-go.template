@@ -1,0 +1,49 @@
+package netflow
+
+// GENERATED do not edit
+
+import (
+	"encoding/hex"
+)
+
+func bytesToMACStr (b []byte) string {
+	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", b[0], b[1], b[2], b[3], b[4], b[5])
+}
+
+func bytesToHexStr (buf []byte) string {
+    return hex.EncodeToString(buf)
+}
+
+func getFieldDecoder (elementID uint16, l uint16) decoder.Directive {
+    switch elementID {
+    // TAGS
+{{range .}}{{if .AsTag}}{{if or (eq .Type "unsigned8") (eq .Type "unsigned16") (eq .Type "unsigned32") (eq .Type "unsigned64")}}    case {{.ID}}:
+        return uintDecoderByLen(l).Do(decoder.AsT("{{.Name}}"))
+{{else if eq .Type "ipv4Address"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, 4).Do(decoder.BytesToStr(4, bytesToIPStr).AsT("{{.Name}}"))
+{{else if eq .Type "ipv6Address"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, 16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("{{.Name}}"))
+{{else if eq .Type "macAddress"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, 6).Do(decoder.BytesToStr(6, bytesToMACStr).AsT("{{.Name}}"))
+{{else if eq .Type "octetArray"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, l).Do(decoder.BytesToStr(int(l), bytesToHexStr).AsT("{{.Name}}"))
+{{end}}{{end}}{{end}} 
+    // FIELDS
+{{range .}}{{if .NotAsTag}}{{if or (eq .Type "unsigned8") (eq .Type "unsigned16") (eq .Type "unsigned32") (eq .Type "unsigned64")}}    case {{.ID}}:
+        return uintDecoderByLen(l).Do(decoder.AsF("{{.Name}}"))
+{{else if eq .Type "ipv4Address"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, 4).Do(decoder.BytesToStr(4, bytesToIPStr).AsF("{{.Name}}"))
+{{else if eq .Type "ipv6Address"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, 16).Do(decoder.BytesToStr(16, bytesToIPStr).AsF("{{.Name}}"))
+{{else if eq .Type "macAddress"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, 6).Do(decoder.BytesToStr(6, bytesToMACStr).AsF("{{.Name}}"))
+{{else if eq .Type "octetArray"}}    case {{.ID}}:
+        return bytesDecoderByLen(l, l).Do(decoder.BytesToStr(int(l), bytesToHexStr).AsF("{{.Name}}"))
+{{end}}{{end}}{{end}}    
+  default:
+  // UNHANDLED AT THE MOMENT 
+  // ID TYPE NAME 
+{{range .}}{{if or (eq .Name "Reserved") (eq .Type "unsigned8") (eq .Type "unsigned16") (eq .Type "unsigned32") (eq .Type "unsigned64") (eq .Type "ipv4Address") (eq .Type "ipv6Address") (eq .Type "macAddress") (eq .Type "octetArray")}}{{else}}        // {{.ID}} {{.Type}} {{.Name}}
+{{end}}{{end}}    return bytesDecoderByLen(l, l)    
+    }
+}

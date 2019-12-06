@@ -7,7 +7,7 @@ Currently this SFlow Packet parser will only parse SFlow Version 5 and within th
 Within Flow Samples, Ethernet samples with {IPv4, IPv6} and {UDP,TCP} headers are parsed.
 
 # Schema
-## Natural Tags
+## Tags
 | Name | Description |
 |---|---|
 | agent_address | IP address of the agent that obtained the sflow sample and sent it to this collector | 

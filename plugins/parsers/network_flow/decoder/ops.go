@@ -193,6 +193,16 @@ func (op *AsTDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, v)
 			m.AddTag(op.name, fmt.Sprintf("%d", v))
 		}
+	case *uint8:
+		if dc != nil {
+			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, *v)
+			m.AddTag(op.name, fmt.Sprintf("%d", *v))
+		}
+	case uint8:
+		if dc != nil {
+			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, v)
+			m.AddTag(op.name, fmt.Sprintf("%d", v))
+		}
 	case string:
 		if dc != nil {
 			if !op.skipEmpty || v != "" {

@@ -105,8 +105,8 @@ func SeqOf(decoders []Directive) Directive {
 }
 
 // OpenMetric answers a directive that opens a new metrics for collecting tags and fields
-func OpenMetric() Directive {
-	return &openMetric{location: location(2)}
+func OpenMetric(name string) Directive {
+	return &openMetric{location: location(2), name: name}
 }
 
 // CloseMetric answers a directive that close the current metrics
@@ -243,4 +243,8 @@ func ErrorOp(errorOnTestProcess bool) *ErrorDOp {
 
 func Notify(fn func()) Directive {
 	return &notifyDirective{fn}
+}
+
+func Nop() Directive {
+	return Notify(func() {})
 }

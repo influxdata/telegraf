@@ -23,6 +23,8 @@ const (
 
 	ipProtocolTCP = byte(6)
 	ipProtocolUDP = byte(17)
+
+	metricName = "sflow"
 )
 
 var headerProtocolMap = map[uint32]string{
@@ -204,7 +206,7 @@ func ethHeader(options V5FormatOptions) decoder.Directive {
 	var tagOrEType interface{}
 	etype := new(uint16)
 	return decoder.Seq(
-		decoder.OpenMetric(),
+		decoder.OpenMetric(metricName),
 		decoder.Bytes(6).Do(decoder.BytesToStr(6, bytesToMACStr).AsT("dst_mac")),
 		decoder.Bytes(6).Do(decoder.BytesToStr(6, bytesToMACStr).AsT("src_mac")),
 		decoder.U16().Ref(&tagOrEType).Switch(
@@ -259,44 +261,23 @@ func ipv4Header(options V5FormatOptions) decoder.Directive {
 // ipv6Header answers a decode Directive that decode an IPv6 header according to
 // https://en.wikipedia.org/wiki/IPv6_packet
 func ipv6Header(options V5FormatOptions) decoder.Directive {
-
-	// TODO: consider options offset
-	newHeader := true
-
-	if newHeader {
-		nextHeader := new(uint16)
-		return decoder.Seq(
-			decoder.U32().
-				//func(v uint32) (string, uint32) { return "IPversion", (v & 0xF000) >> 28 },
-				Do(decoder.U32ToU32(func(in uint32) uint32 { return (in & 0xFC00000) >> 22 }).AsF("ip_dscp")).
-				Do(decoder.U32ToU32(func(in uint32) uint32 { return (in & 0x300000) >> 20 }).AsF("ip_ecn")),
-			decoder.U16(), //"paylloadLength"),
-			decoder.U16().
-				Do(decoder.U16ToU16(func(in uint16) uint16 { return (in & 0xFF00) >> 8 }).Set(nextHeader)),
-			decoder.Bytes(16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("src_ip")),
-			decoder.Bytes(16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("dst_ip")),
-			decoder.U16Value(nextHeader).Switch(
-				decoder.Case(uint16(ipProtocolTCP), tcpHeader(options)),
-				decoder.Case(uint16(ipProtocolUDP), udpHeader(options)),
-				decoder.DefaultCase(nil),
-			),
-		)
-	}
-
+	nextHeader := new(uint16)
 	return decoder.Seq(
-		decoder.U32(), //"",
-		//func(v uint32) (string, uint32) { return "IPversion", (v & 0xF000) >> 28 },
-		//func(v uint32) (string, uint32) { return "ds", (v & 0xFC00000) >> 22 }, UNUSED
-		//func(v uint32) (string, uint32) { return "ecn", (v & 0x300000) >> 20 },
-		//func(v uint32) (string, uint32) { return "IPv6FlowLabel", v & 0xFFFFF }),
+		decoder.U32().
+			//func(v uint32) (string, uint32) { return "IPversion", (v & 0xF000) >> 28 },
+			Do(decoder.U32ToU32(func(in uint32) uint32 { return (in & 0xFC00000) >> 22 }).AsF("ip_dscp")).
+			Do(decoder.U32ToU32(func(in uint32) uint32 { return (in & 0x300000) >> 20 }).AsF("ip_ecn")),
 		decoder.U16(), //"paylloadLength"),
-		decoder.U16(), //"",
-		//	func(v uint16) (string, uint16) { return "nextHeader", (v & 0xFF00) >> 8 },
-		//	func(v uint16) (string, uint16) { return "hopLimit", (v & 0xFF) }),
+		decoder.U16().
+			Do(decoder.U16ToU16(func(in uint16) uint16 { return (in & 0xFF00) >> 8 }).Set(nextHeader)),
 		decoder.Bytes(16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("src_ip")),
 		decoder.Bytes(16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("dst_ip")),
+		decoder.U16Value(nextHeader).Switch(
+			decoder.Case(uint16(ipProtocolTCP), tcpHeader(options)),
+			decoder.Case(uint16(ipProtocolUDP), udpHeader(options)),
+			decoder.DefaultCase(nil),
+		),
 	)
-
 }
 
 func portNumToServiceName(protocol string) func(uint16) string {

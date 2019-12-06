@@ -135,6 +135,7 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 			if *v > dd.maxIterations {
 				return fmt.Errorf("iter at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxIterations)
 			}
+			dc.tracef("%s iteration starting i < %d\n", dd.location, *v)
 			for i := uint32(0); i < *v; i++ {
 				if e := fn(i); e != nil {
 					return e
@@ -144,6 +145,7 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 			if *v > uint16(dd.maxIterations) {
 				return fmt.Errorf("iter at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxIterations)
 			}
+			dc.tracef("%s iteration starting i < %d\n", dd.location, *v)
 			for i := uint16(0); i < *v; i++ {
 				if e := fn(i); e != nil {
 					return e
@@ -370,6 +372,7 @@ func (di *sequenceDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) er
 // openMetric a decode directive that opens the recording of new fields and tags
 type openMetric struct {
 	location string
+	name     string
 }
 
 func (di *openMetric) Reset() {
@@ -378,7 +381,7 @@ func (di *openMetric) Reset() {
 
 func (di *openMetric) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
 	dc.tracef("%s open metric\n", di.location)
-	dc.openMetric()
+	dc.openMetric(di.name)
 	return nil
 }
 
@@ -417,12 +420,12 @@ func (dc *DecodeContext) tracef(fmt string, v ...interface{}) {
 	}
 }
 
-func (dc *DecodeContext) openMetric() {
+func (dc *DecodeContext) openMetric(name string) {
 	t := dc.preMetric.Time()
 	if !dc.timeHasBeenSet {
 		t = time.Now().Add(time.Duration(dc.nano))
 	}
-	m, _ := metric.New("sflow", make(map[string]string), make(map[string]interface{}), t)
+	m, _ := metric.New(name, make(map[string]string), make(map[string]interface{}), t)
 	dc.nano++
 	// make sure to copy any fields and tags that were capture prior to the metric being openned
 	for t, v := range dc.preMetric.Tags() {

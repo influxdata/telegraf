@@ -71,6 +71,30 @@ func Test_basicSeq(t *testing.T) {
 	assert.Equal(t, &value, x.value)
 }
 
+func Test_basicSeqOf(t *testing.T) {
+
+	// SeqOf with no members compiles and executed but buffer is left untouched
+	dd := SeqOf([]Directive{})
+	value := uint32(1001)
+	var buffer bytes.Buffer
+	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &value))
+	originalLen := buffer.Len()
+	assert.NoError(t, Execute(dd, &buffer))
+	assert.Equal(t, originalLen, buffer.Len())
+
+	u := U32()
+	dd = SeqOf(
+		[]Directive{u},
+	)
+	value = uint32(1001)
+	buffer.Reset()
+	assert.NoError(t, binary.Write(&buffer, binary.BigEndian, &value))
+	assert.NoError(t, Execute(dd, &buffer))
+	assert.Equal(t, 0, buffer.Len())
+	x, _ := u.(*valueDirective)
+	assert.Equal(t, &value, x.value)
+}
+
 func Test_errorInSeq(t *testing.T) {
 
 	// Seq with no members compiles and executed but buffer is left untouched
@@ -279,7 +303,7 @@ func Test_cantIterBytes(t *testing.T) {
 func Test_OpenMetric(t *testing.T) {
 	innerDD := U32()
 	dd := U32().Iter(math.MaxInt32, Seq(
-		OpenMetric(),
+		OpenMetric(""),
 		innerDD,
 		CloseMetric(),
 	))
@@ -299,7 +323,7 @@ func Test_OpenMetric(t *testing.T) {
 func Test_AsF(t *testing.T) {
 	innerDD := U32().Do(AsF("foo"))
 	dd := U32().Iter(math.MaxInt32, Seq(
-		OpenMetric(),
+		OpenMetric(""),
 		innerDD,
 		CloseMetric(),
 	))
@@ -322,7 +346,7 @@ func Test_AsF(t *testing.T) {
 func Test_AsT(t *testing.T) {
 	innerDD := U32().Do(AsT("foo"))
 	dd := U32().Iter(math.MaxInt32, Seq(
-		OpenMetric(),
+		OpenMetric(""),
 		innerDD,
 		CloseMetric(),
 	))
@@ -359,7 +383,7 @@ func Test_preMetricNesting(t *testing.T) {
 		U32().Do(AsT("baz")),
 		U32().Iter(math.MaxInt32,
 			Seq(
-				OpenMetric(),
+				OpenMetric(""),
 				innerDD,
 				CloseMetric(),
 			),
@@ -495,7 +519,7 @@ func Test_RefReassignError(t *testing.T) {
 
 func Test_ToU32(t *testing.T) {
 	u := U32().Do(U32ToU32(func(in uint32) uint32 { return in >> 2 }).AsF("x"))
-	dd := Seq(OpenMetric(), u, CloseMetric())
+	dd := Seq(OpenMetric(""), u, CloseMetric())
 
 	value := uint32(1001)
 	var buffer bytes.Buffer
