@@ -29,6 +29,16 @@ There are many ways to contribute:
 - Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
 
+## Minimum Requirements
+
+Telegraf shares the same [minimum requirements][] as Go:
+- Linux kernel version 2.6.23 or later
+- Windows 7 or later
+- FreeBSD 11.2 or later
+- MacOS 10.11 El Capitan or later
+
+[minimum requirements]: https://github.com/golang/go/wiki/MinimumRequirements#minimum-requirements
+
 ## Installation:
 
 You can download the binaries directly from the [downloads](https://www.influxdata.com/downloads) page
@@ -283,6 +293,7 @@ For documentation on the latest development code see the [documentation index][d
 * [synproxy](./plugins/inputs/synproxy)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
+* [systemd_units](./plugins/inputs/systemd_units)
 * [system](./plugins/inputs/system)
 * [tail](./plugins/inputs/tail)
 * [temp](./plugins/inputs/temp)

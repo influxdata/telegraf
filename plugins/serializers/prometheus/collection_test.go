@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -29,6 +30,78 @@ func TestCollectionExpire(t *testing.T) {
 					map[string]string{},
 					map[string]interface{}{
 						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("cpu_time_idle"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_UNTYPED.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label:   []*dto.LabelPair{},
+							Untyped: &dto.Untyped{Value: proto.Float64(42.0)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "update metric expiration",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 43.0,
+					},
+					time.Unix(12, 0),
+				),
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("cpu_time_idle"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_UNTYPED.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label:   []*dto.LabelPair{},
+							Untyped: &dto.Untyped{Value: proto.Float64(43.0)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "update metric expiration descending order",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(12, 0),
+				),
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 43.0,
 					},
 					time.Unix(0, 0),
 				),
@@ -94,6 +167,164 @@ func TestCollectionExpire(t *testing.T) {
 						{
 							Label:   []*dto.LabelPair{},
 							Untyped: &dto.Untyped{Value: proto.Float64(42.0)},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "histogram bucket updates",
+			now:  time.Unix(0, 0),
+			age:  10 * time.Second,
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"http_request_duration_seconds_sum":   10.0,
+						"http_request_duration_seconds_count": 2,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "0.05"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 1.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "+Inf"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 1.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				// Next interval
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"http_request_duration_seconds_sum":   20.0,
+						"http_request_duration_seconds_count": 4,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "0.05"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 2.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"le": "+Inf"},
+					map[string]interface{}{
+						"http_request_duration_seconds_bucket": 2.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("http_request_duration_seconds"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_HISTOGRAM.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label: []*dto.LabelPair{},
+							Histogram: &dto.Histogram{
+								SampleCount: proto.Uint64(4),
+								SampleSum:   proto.Float64(20.0),
+								Bucket: []*dto.Bucket{
+									{
+										UpperBound:      proto.Float64(0.05),
+										CumulativeCount: proto.Uint64(2),
+									},
+									{
+										UpperBound:      proto.Float64(math.Inf(1)),
+										CumulativeCount: proto.Uint64(2),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "summary quantile updates",
+			now:  time.Unix(0, 0),
+			age:  10 * time.Second,
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"rpc_duration_seconds_sum":   1.0,
+						"rpc_duration_seconds_count": 1,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"quantile": "0.01"},
+					map[string]interface{}{
+						"rpc_duration_seconds": 1.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+				// Updated Summary
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"rpc_duration_seconds_sum":   2.0,
+						"rpc_duration_seconds_count": 2,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{"quantile": "0.01"},
+					map[string]interface{}{
+						"rpc_duration_seconds": 2.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("rpc_duration_seconds"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_SUMMARY.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label: []*dto.LabelPair{},
+							Summary: &dto.Summary{
+								SampleCount: proto.Uint64(2),
+								SampleSum:   proto.Float64(2.0),
+								Quantile: []*dto.Quantile{
+									{
+										Quantile: proto.Float64(0.01),
+										Value:    proto.Float64(2),
+									},
+								},
+							},
 						},
 					},
 				},
