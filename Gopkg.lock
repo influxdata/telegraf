@@ -277,6 +277,14 @@
   revision = "e865a1461c8ac0032bd37e2d4dab3289faea3873"
 
 [[projects]]
+  digest = "1:9d61bff34bb5956a90c14c285c11138d1c205729f8dafcd340f2a21c6268b9b5"
+  name = "github.com/datadope-io/go-zabbix"
+  packages = ["."]
+  pruneopts = ""
+  revision = "7d168a562c81a8b7c912faa0899f0e54b7fe7977"
+  version = "1.2.0"
+
+[[projects]]
   digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -1739,6 +1747,7 @@
     "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout",
     "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis",
     "github.com/couchbase/go-couchbase",
+    "github.com/datadope-io/go-zabbix",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
     "github.com/docker/docker/api/types",

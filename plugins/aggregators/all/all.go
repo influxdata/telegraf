@@ -7,4 +7,5 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/aggregators/merge"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/minmax"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/valuecounter"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/zabbix_lld"
 )
