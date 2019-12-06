@@ -135,7 +135,6 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	if err != nil {
 		return err
 	}
-
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc)
 	buildPodMetrics(baseURL, summaryMetrics, podInfos, acc)
@@ -255,9 +254,8 @@ func (k *Kubernetes) LoadJson(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []PodInfo, acc telegraf.Accumulator) error {
+func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []PodInfo, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
-
 		for _, container := range pod.Containers {
 			tags := map[string]string{
 				"node_name":      summaryMetrics.Node.NodeName,
@@ -316,5 +314,4 @@ func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []P
 		fields["tx_errors"] = pod.Network.TXErrors
 		acc.AddFields("kubernetes_pod_network", fields, tags)
 	}
-	return nil
 }
