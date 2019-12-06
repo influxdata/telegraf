@@ -1,3 +1,9 @@
+## v1.14 [unreleased]
+
+#### Features
+
+- [#6730](https://github.com/influxdata/telegraf/pull/6730): Add page_faults for mongodb wired tiger.
+
 ## v1.13 [unreleased]
 
 #### Release Notes
