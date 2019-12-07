@@ -100,7 +100,7 @@
 
 [[constraint]]
   name = "github.com/Microsoft/ApplicationInsights-Go"
-  branch = "master"
+  version = "0.4.2"
 
 [[constraint]]
   name = "github.com/miekg/dns"
@@ -304,3 +304,7 @@
 [[constraint]]
   name = "github.com/safchain/ethtool"
   revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[override]]
+  name = "github.com/satori/go.uuid"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
