@@ -81,7 +81,6 @@
   version = "v13.3.0"
 
 [[projects]]
-  branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
   packages = [
@@ -90,6 +89,7 @@
   ]
   pruneopts = ""
   revision = "d2df5d440eda5372f24fcac03839a64d6cb5f7e5"
+  version = "v0.4.2"
 
 [[projects]]
   digest = "1:45ec6eb579713a01991ad07f538fed3b576ee55f5ce9f248320152a9270d9258"
@@ -1103,12 +1103,11 @@
   revision = "c4fab1ac1bec58281ad0667dc3f0907a9476ac47"
 
 [[projects]]
-  digest = "1:7f569d906bdd20d906b606415b7d794f798f91a62fcfb6a4daa6d50690fb7a3f"
+  digest = "1:47081c00d00c1dfc9a530c2556e78be391a5c24db1043efe6d406af882a169a1"
   name = "github.com/satori/go.uuid"
   packages = ["."]
   pruneopts = ""
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
 
 [[projects]]
   digest = "1:9024df427b3c8a80a0c4b34e535e5e1ae922c7174e3242b6c7f30ffb3b9f715e"
