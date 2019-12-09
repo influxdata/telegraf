@@ -170,7 +170,8 @@ var responsePods = `
         "namespace": "foons",
         "labels": {
           "superkey": "foobar",
-          "app": "foo"
+          "app": "foo",
+          "exclude": "exclude0"
         }
       }
     },
@@ -180,7 +181,8 @@ var responsePods = `
         "namespace": "foons",
         "labels": {
           "superkey": "superfoo",
-          "app": "foo-stop"
+          "app": "foo-stop",
+          "exclude": "exclude1"
         }
       }
     }
