@@ -50,8 +50,8 @@ var sampleConfig = `
 
   # Labels to include and exclude
   # An empty array for include and exclude will include all labels
-  label_include = []
-  label_exclude = []
+  # label_include = []
+  # label_exclude = ["*"]
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -71,7 +71,10 @@ const (
 
 func init() {
 	inputs.Add("kubernetes", func() telegraf.Input {
-		return &Kubernetes{}
+		return &Kubernetes{
+			LabelInclude: []string{},
+			LabelExclude: []string{"*"},
+		}
 	})
 }
 
@@ -190,7 +193,7 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 }
 
 func (k *Kubernetes) gatherPodInfo(baseURL string) ([]PodInfo, error) {
-	var podapi Podlist
+	var podapi Pods
 	err := k.LoadJson(fmt.Sprintf("%s/pods", baseURL), &podapi)
 	if err != nil {
 		return nil, err
@@ -263,9 +266,9 @@ func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []P
 				"container_name": container.Name,
 				"pod_name":       pod.PodRef.Name,
 			}
-			for i := range podInfo {
-				if podInfo[i].Name == pod.PodRef.Name && podInfo[i].NameSpace == pod.PodRef.Namespace {
-					for k, v := range podInfo[i].Labels {
+			for _, info := range podInfo {
+				if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
+					for k, v := range info.Labels {
 						tags[k] = v
 					}
 				}

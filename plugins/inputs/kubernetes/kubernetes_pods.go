@@ -2,7 +2,7 @@ package kubernetes
 
 import "encoding/json"
 
-type Podlist struct {
+type Pods struct {
 	Kind       string                       `json:"kind"`
 	ApiVersion string                       `json:"apiVersion"`
 	Items      []map[string]json.RawMessage `json:"items"`
@@ -10,6 +10,6 @@ type Podlist struct {
 
 type PodInfo struct {
 	Name      string            `json:"name"`
-	NameSpace string            `json:"namespace"`
+	Namespace string            `json:"namespace"`
 	Labels    map[string]string `json:"labels"`
 }

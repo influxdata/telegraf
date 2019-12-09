@@ -46,8 +46,8 @@ avoid cardinality issues:
 
   # Labels to include and exclude
   # An empty array for include and exclude will include all labels
-  #label_include = []
-  #label_exclude = []
+  # label_include = []
+  # label_exclude = ["*"]
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
