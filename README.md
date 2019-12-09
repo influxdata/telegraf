@@ -243,7 +243,7 @@ For documentation on the latest development code see the [documentation index][d
 * [neptune_apex](./plugins/inputs/neptune_apex)
 * [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
-* [netstat](./plugins/inputs/net)
+* [netstat](./plugins/inputs/netstat)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus_api](./plugins/inputs/nginx_plus_api)
 * [nginx_plus](./plugins/inputs/nginx_plus)

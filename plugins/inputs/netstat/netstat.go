@@ -1,4 +1,6 @@
-package net
+// +build !linux
+
+package netstat
 
 import (
 	"fmt"
