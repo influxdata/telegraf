@@ -414,7 +414,7 @@ func (op *BytesToU32DOp) process(dc *DecodeContext, upstreamValue interface{}) e
 	return nil
 }
 
-// SetDOp is a decode operation that will Set a pointer to a value to be the value processes
+// SetDOp is a decode operation that will Set a pointer to a value to be the value processed
 type SetDOp struct {
 	baseDOp
 	ptr interface{}
@@ -481,7 +481,7 @@ func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 	return nil
 }
 
-// BytesToDOp is a decode operation that will transform []byte to interface{}
+// BytesToDOp is a decode operation that will transform []byte to interface{} according to a suppied function
 type BytesToDOp struct {
 	baseDOp
 	len int

@@ -31,24 +31,27 @@ type packetListener struct {
 func (psl *packetListener) listen() {
 	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
 	for {
-		n, _, err := psl.ReadFrom(buf)
+		n, a, err := psl.ReadFrom(buf)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 				psl.AddError(err)
 			}
 			break
 		}
-		psl.process(buf[:n])
+		psl.process(a, buf[:n])
 	}
 }
 
-func (psl *packetListener) process(buf []byte) {
+func (psl *packetListener) process(addr net.Addr, buf []byte) {
 	metrics, err := psl.Parse(buf)
 	if err != nil {
 		psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 
 	}
 	for _, m := range metrics {
+		if h, _, e := net.SplitHostPort(addr.String()); e == nil {
+			m.AddTag("agentAddress", h)
+		}
 		psl.Resolver.Resolve(m, func(resolvedM telegraf.Metric) {
 			psl.AddMetric(resolvedM)
 		})
@@ -120,8 +123,19 @@ func (sl *Listener) Gather(_ telegraf.Accumulator) error {
 
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (sl *Listener) Start(acc telegraf.Accumulator) error {
+
+	dnsToResolve := map[string]string{
+		"agentAddress":           "agentHost",
+		"sourceIPv4Address":      "sourceIPv4Host",
+		"destinationIPv4Address": "sourceIPv4Host",
+		"sourceIPv6Address":      "sourceIPv6Host",
+		"destinationIPv6Address": "destinationIPv6Host",
+		"exporterIPv4Address":    "exporterIPv4Host",
+		"exporterIPv6Address":    "exporterIPv6Host",
+	}
+
 	sl.Accumulator = acc
-	sl.nameResolver = network_flow.NewAsyncResolver(sl.DNSFQDNResolve, time.Duration(sl.DNSFQDNCacheTTL)*time.Second, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second, sl.SNMPCommunity, "netflow")
+	sl.nameResolver = network_flow.NewAsyncResolver(sl.DNSFQDNResolve, time.Duration(sl.DNSFQDNCacheTTL)*time.Second, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second, sl.SNMPCommunity, "netflow", dnsToResolve)
 	sl.nameResolver.Start()
 
 	parser, err := netflow.NewParser("netflow", make(map[string]string))

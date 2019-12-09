@@ -1,8 +1,7 @@
 # SFlow Input Plugin
 
-The Netflow Input Plugin provides support for acting as an Netflow V9/V10 collector in accordance with the specification from [sflow.org](https://sflow.org/).
+The Netflow Input Plugin provides support for acting as an Netflow V9/V10 collector in accordance with the specification from [IETF](https://tools.ietf.org/html/rfc7011).
 
-Currently only Flow Samples of Ethernet / IPv4 & IPv4 TCP & UDP headers are turned into metrics - counters and other header samples may come later.
 
 # Configuration
 The following configuration options are availabe:
@@ -19,19 +18,13 @@ The following configuration options are availabe:
 ||Example: ```dns_fqdn_resolve = true```
 |dns_fqdn_cache_ttl|The time to live for entries in the DNS name cache expressed in seconds. Default is 0 which is infinite
 ||Example: ```dns_fwdn_cache_ttl = 3600```
-|snmp_iface_resolve = false|Determines whether interface indexes should be looked up using SNMP to provide the natural show name|
-||Example: ```snmp_iface_resolve = true```
-|snmp_community|The SNMP community string to use for access SNMP on the agents in order to resolve interface names
-||Example: ```snmp_community = "public"```
-|snmp_iface_cache_ttl| The time to live for entries in the SNMP Interface cache expressed in seconds. Default is 0 which is infinite.
-||Example: ```snmp_iface_cache_ttl = 3600```
 
 ## Configuration:
 
 This is a sample configuration for the plugin.
 
 ```toml
-[[inputs.sflow]]
+[[inputs.netflow]]
 	## URL to listen on
 	# service_address = "udp://:2055"
 	# service_address = "udp4://:2055"
@@ -51,36 +44,26 @@ This is a sample configuration for the plugin.
 	
 	# Optional processing instructions for transforming DNS resolve host names
 	# dns_multi_name_processor = "s/(.*)(?:-net[0-9])/$1"
-
-	# Whether Interface Indexes should be resolved to Interface Names via SNMP
-	# snmp_iface_resolve = true
-	
-	# SNMP Community string to use when resolving Interface Names
-	# snmp_community = "public"
-
-	# How long should resolved Iface Index->Iface Name be cached (in seconds)
-	# snmp_iface_cache_ttl = 3600
 ```
 
 ## DNS Name and SNMP Interface name resolution and caching
 
-Raw SFlow packets, and their samples headers, communicate IP addresses and Interface identifiers, neither of which are useful to humans.
+Raw Netflow packets, and their sample data, communicate IP addresses which are not very useful to humans.
 
-The sflow plugin can be configured to attempt to resolve IP addresses to host names via DNS and interface identifiers to interface short names via SNMP agent interaction.
+The Netflow plugin can be configured to attempt to resolve IP addresses to host names via DNS.
 
 The resolved names, or in the case of a resolution error the ip/id will be used as 'the' name, are configurably cached for a period of time to avoid continual lookups.
 
 | Source IP Tag | Resolved Host Tag 
 |---|---|
-|agent_address|agent_host
-|src_ip|src_host
-|dst_ip|dst_host
+|agentAddress|agentHost|
+|sourceIPv4Address|sourceIPv4Host|
+|destinationIPv4Address|sourceIPv4Host|
+|sourceIPv6Address|sourceIPv6Host|
+|destinationIPv6Address|destinationIPv6Host|
+|exporterIPv4Address|exporterIPv4Host|
+|exporterIPv6Address|exporterIPv6Host|
 
-| Source IFace Index Tag | Resolved IFace Name Tag 
-|---|---|
-|source_id_index|source_id_name
-|input_ifindex|input_ifname
-|output_ifindex|output_ifname
 
 ### Multipe DNS Name resolution & processing
 
@@ -92,8 +75,8 @@ Example: ````s/(.*)(?:-net[0-9])/$1```` will strip ```-net<n>``` from the host n
 
 # Schema
 
-The parsing of SFlow packets is handled by the SFlow Parser and the schema is described [here](../../parsers/sflow/README.md).
+The parsing of Netflow packets is handled by the Netflow Parser and the schema is described [here](../../parsers/network_flow/netflow/README.md).
 
-At a high level, individual Flow Samples within the V5 Flow Packet are translated to individual Metric objects.
+At a high level, individual Flow Samples within the V10 Flow Packet are translated to individual Metric objects.
 
 

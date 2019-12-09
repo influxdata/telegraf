@@ -150,8 +150,13 @@ func (sl *Listener) getSflowConfig() sflow.V5FormatOptions {
 
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (sl *Listener) Start(acc telegraf.Accumulator) error {
+	dnsToResolve := map[string]string{
+		"agent_address": "agent_host",
+		"src_ip":        "src_host",
+		"dst_ip":        "dst_host",
+	}
 	sl.Accumulator = acc
-	sl.nameResolver = network_flow.NewAsyncResolver(sl.DNSFQDNResolve, time.Duration(sl.DNSFQDNCacheTTL)*time.Second, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second, sl.SNMPCommunity, "sflow")
+	sl.nameResolver = network_flow.NewAsyncResolver(sl.DNSFQDNResolve, time.Duration(sl.DNSFQDNCacheTTL)*time.Second, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second, sl.SNMPCommunity, "sflow", dnsToResolve)
 	sl.nameResolver.Start()
 
 	parser, err := sflow.NewParser("sflow", make(map[string]string), sl.getSflowConfig())

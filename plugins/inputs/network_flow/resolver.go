@@ -68,10 +68,11 @@ type asyncResolver struct {
 	snmpTTL           time.Duration
 	dnsTTL            time.Duration
 	logAs             string
+	dnsToResolve      map[string]string
 }
 
 // NewAsyncResolver answers a new asynchronous resolver with the given configuration
-func NewAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor string, snmpResolve bool, snmpTTL time.Duration, snmpCommunity string, logAs string) Resolver {
+func NewAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor string, snmpResolve bool, snmpTTL time.Duration, snmpCommunity string, logAs string, dnsToResolve map[string]string) Resolver {
 
 	log.Printf("I! [inputs.%s] dns cache = %t", logAs, dnsResolve)
 	log.Printf("I! [inputs.%s] dbs cache ttl = %d\n", logAs, dnsTTL)
@@ -90,31 +91,33 @@ func NewAsyncResolver(dnsResolve bool, dnsTTL time.Duration, dnsMultiProcessor s
 		dnsTTL:            dnsTTL,
 		ifIndexToIfNameFn: snmpAgentLookupOfIfaceName,
 		logAs:             logAs,
+		dnsToResolve:      dnsToResolve,
 	}
 }
 
 // resolve the resolvable entries in the given Metric and provide the resolved result metric via the callback function
 // when available
 func (r *asyncResolver) Resolve(m telegraf.Metric, onResolveFn func(resolved telegraf.Metric)) {
-	dnsToResolve := map[string]string{
+	/*dnsToResolve := map[string]string{
 		"agent_address": "agent_host",
 		"src_ip":        "src_host",
 		"dst_ip":        "dst_host",
 	}
+	*/
 	ifaceToResolve := map[string]string{
 		"source_id_index": "source_id_name",
 		"output_ifindex":  "output_ifname",
 		"input_ifindex":   "input_ifname",
 	}
 	agentIP, _ := m.GetTag("agent_address")
-	dnsCompletelyResolved := r.resolveDNSFromCache(m, dnsToResolve)
+	dnsCompletelyResolved := r.resolveDNSFromCache(m, r.dnsToResolve)
 	ifaceCompletelyResolved := r.resolveIFaceFromCache(agentIP, m, ifaceToResolve)
 	if dnsCompletelyResolved && ifaceCompletelyResolved {
 		onResolveFn(m)
 	} else {
 		// place this function into the channel for the async worker to process
 		r.fnWorkerChannel <- func() error {
-			r.resolveAsyncDNS(m, dnsToResolve)
+			r.resolveAsyncDNS(m, r.dnsToResolve)
 			r.resolveAsyncIFace(agentIP, m, ifaceToResolve)
 			onResolveFn(m)
 			return nil

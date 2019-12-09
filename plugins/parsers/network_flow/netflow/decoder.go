@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"math"
-	"net"
 
 	"github.com/influxdata/telegraf/plugins/parsers/network_flow/decoder"
 )
@@ -37,8 +36,6 @@ type templateDefn struct {
 }
 
 type templateMapCase struct {
-	//od *obsDomain
-	//templateMap          map[uint16]*templateDefn
 	od                   *uint32
 	lastSelectedTemplate *templateDefn
 }
@@ -76,24 +73,14 @@ type obsDomain struct {
 	templateMap map[uint16]*templateDefn
 }
 
-var obsDomains map[uint32]*obsDomain
-
-//var templateMap map[uint16]*templateDefn
-
-func bytesToIPStr(b []byte) string {
-	return net.IP(b).String()
-}
-
-func uintByLenAsF(n string) func(l uint16) decoder.Directive {
-	return func(l uint16) decoder.Directive {
-		return uintDecoderByLen(l).Do(decoder.AsF(n))
-	}
-}
+// obsDomains is a map of observation domain id to obsDomain structures that hold templates
+var obsDomains = make(map[uint32]*obsDomain)
 
 func minusFourBytes() *decoder.U16ToU16DOp {
 	return decoder.U16ToU16(func(in uint16) uint16 { return in - 4 })
 }
 
+// templateFormat answer a decode directive that decodes a template definition and updates the internal cache of templates
 func templateFormat(sourceID *uint32) decoder.Directive {
 
 	td := &templateDefn{}
@@ -101,17 +88,6 @@ func templateFormat(sourceID *uint32) decoder.Directive {
 	addTemplateField := func(ft uint16, fl uint16) {
 		nf := fieldDefn{fieldType: ft, fieldLength: fl}
 		nf.dd = getFieldDecoder(ft, fl)
-		/*
-			ldd := fieldDecoderMap[ft]
-			if ldd != nil {
-				nf.dd = ldd(fl)
-			}
-			if nf.dd == nil {
-				// we don't have a field specific decoder
-				// use the nop decoder that will consume the bytes and do nothing with them
-				nf.dd = decoder.Bytes(int(fl))
-			}
-		*/
 		td.fields = append(td.fields, nf)
 		td.totalLength += fl
 	}
@@ -171,6 +147,7 @@ func templateFormat(sourceID *uint32) decoder.Directive {
 	)
 }
 
+// templateFlowSet answers a decode directive that will process a flow template - and create, or replace, a template {observation domain, tempalte id}->template
 func templateFlowSet(sourceID *uint32) decoder.Directive {
 	flowSetLength := new(uint16)
 	maxUint16 := uint16(math.MaxUint16)
@@ -187,14 +164,16 @@ func templateFlowSet(sourceID *uint32) decoder.Directive {
 	)
 }
 
+// flowSetFormat answers a decode directive that will process flow set templates, option template or data sets
 func flowSetFormat(sourceID *uint32) decoder.Directive {
 	flowSetLength := new(uint16)
+	// Options templates are just swallowed
 	optionsTemplateSet := decoder.Seq(
-		decoder.U16().Do(decoder.U16ToU16(
-			func(in uint16) uint16 { return in - 4 }).Set(flowSetLength)), // -2 * UI16
+
+		decoder.U16().Do(minusFourBytes().Set(flowSetLength)), // -2 * UI16
 		decoder.U16Value(flowSetLength).Encapsulated(
 			math.MaxUint32,
-			nil, // NOP
+			decoder.Nop(),
 		),
 	)
 
@@ -203,7 +182,9 @@ func flowSetFormat(sourceID *uint32) decoder.Directive {
 	return decoder.Seq(
 		decoder.U16().Do(decoder.Set(&flowSetID)),
 		decoder.U16Value(&flowSetID).Switch(
+			// It is a template if the id is 0
 			decoder.Case(uint16(0), templateFlowSet(sourceID)),
+			// It is an option template if the id is 1
 			decoder.Case(uint16(1), optionsTemplateSet),
 
 			// use the template map to selected a decoder, if we have a template for the flowSetId

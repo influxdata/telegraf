@@ -61,6 +61,7 @@ func TestNetflowToMetrics(t *testing.T) {
 	sl := newListener()
 	sl.ServiceAddress = "udp://127.0.0.1:0"
 	sl.ReadBufferSize = internal.Size{Size: 1024}
+	sl.DNSFQDNResolve = false
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -72,7 +73,7 @@ func TestNetflowToMetrics(t *testing.T) {
 
 	template257And258 := []byte("00090004000071d45dc583690000000000000041000000840101000f00010004000200040004000100050001000600010007000200080004000a0004000b0002000c0004000e0004001000040011000400150004001600040102000f000100040002000400040001000500010006000100070002000a0004000b0002000e000400100004001100040015000400160004001b0010001c00100001001801030004000800010004002a000400290004000001030010000000000000000100000000")
 	dataAgainst257And258 := []byte("00090004000071d45dc583690000000100000041010100340000004800000001110000e115ac10ec0100000000e115ac10ecff000000000000000000000000000000000000000004")
-	expected := "[netflow map[bgpDestinationAsNumber:0 bgpSourceAsNumber:0 destinationIPv4Address:172.16.236.255 destinationTransportPort:57621 egressInterface:0 ingressInterface:0 ipClassOfService:0 protocolIdentifier:17 sourceID:65 sourceIPv4Address:172.16.236.1 sourceTransportPort:57621 tcpControlBits:0] map[flowEndSysUpTime:0 flowStartSysUpTime:0 octetDeltaCount:72 packetDeltaCount:1]]"
+	expected := "[netflow map[agentAddress:127.0.0.1 bgpDestinationAsNumber:0 bgpSourceAsNumber:0 destinationIPv4Address:172.16.236.255 destinationTransportPort:57621 destinationTransportSvc:57621 egressInterface:0 ingressInterface:0 ipClassOfService:0 protocolIdentifier:17 sourceID:65 sourceIPv4Address:172.16.236.1 sourceTransportPort:57621 sourceTransportSvc:57621 tcpControlBits:0] map[flowEndSysUpTime:0 flowStartSysUpTime:0 octetDeltaCount:72 packetDeltaCount:1]]"
 
 	packetBytes := make([]byte, hex.DecodedLen(len(template257And258)))
 	_, err = hex.Decode(packetBytes, template257And258)

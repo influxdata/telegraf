@@ -3,10 +3,12 @@ package netflow
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 
 	"github.com/influxdata/telegraf/plugins/parsers/network_flow/decoder"
+	"github.com/influxdata/telegraf/plugins/parsers/network_flow/protodb"
 )
 
 // Parser is Telegraf parser capable of parsing an sFlow v5 network packet
@@ -35,7 +37,31 @@ func (sfp *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err := dc.Decode(sfp.netflowFormat, bytes.NewBuffer(buf)); err != nil {
 		return nil, err
 	}
-	return dc.GetMetrics(), nil
+	m := dc.GetMetrics()
+	sfp.mapPortsToServices(m)
+	return m, nil
+}
+
+var portsToMap = map[string]string{
+	"sourceTransportPort":      "sourceTransportSvc",
+	"destinationTransportPort": "destinationTransportSvc",
+}
+
+func (sfp *Parser) mapPortsToServices(metrics []telegraf.Metric) {
+	for _, m := range metrics {
+		for k, v := range portsToMap {
+			fmt.Println(m, k, v)
+			if t, ok := m.GetTag(k); ok {
+				if i, e := strconv.ParseInt(t, 10, 32); e == nil {
+					if svc, ok := protodb.GetServByPort("tcp", int(i)); ok {
+						m.AddTag(v, svc)
+					} else {
+						m.AddTag(v, t)
+					}
+				}
+			}
+		}
+	}
 }
 
 // ParseLine takes a single string metric

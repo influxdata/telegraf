@@ -143,11 +143,18 @@ func Test_exampleDNSProcessor(t *testing.T) {
 
 // dnsResolveTest is a helper for the dns resolution tests below
 func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTagName string) {
+
+	dnsToResolve := map[string]string{
+		"agent_address": "agent_host",
+		"src_ip":        "src_host",
+		"dst_ip":        "dst_host",
+	}
+
 	defer testEmptyLog(t)()
 
 	// Create a resole and replace its lowest level dns lookup function with something we can
 	// control via channel reads and writes
-	resolver := NewAsyncResolver(true, time.Duration(30)*time.Second, "", true, time.Duration(30)*time.Second, "", "")
+	resolver := NewAsyncResolver(true, time.Duration(30)*time.Second, "", true, time.Duration(30)*time.Second, "", "", dnsToResolve)
 	resolver.Start()
 	defer resolver.Stop()
 	asyncResolver, ok := resolver.(*asyncResolver)
@@ -229,9 +236,15 @@ func dnsResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTag
 func ifaceResolveTest(t *testing.T, srcTagName, srcTagValue, resolvedValue, dstTagName string) {
 	defer testEmptyLog(t)()
 
+	dnsToResolve := map[string]string{
+		"agent_address": "agent_host",
+		"src_ip":        "src_host",
+		"dst_ip":        "dst_host",
+	}
+
 	// Create a resole and replace its lowest level iface lookup function with something we can
 	// control via channel reads and writes
-	resolver := NewAsyncResolver(true, time.Duration(30)*time.Second, "", true, time.Duration(30)*time.Second, "", "")
+	resolver := NewAsyncResolver(true, time.Duration(30)*time.Second, "", true, time.Duration(30)*time.Second, "", "", dnsToResolve)
 	resolver.Start()
 	defer resolver.Stop()
 	asyncResolver, ok := resolver.(*asyncResolver)

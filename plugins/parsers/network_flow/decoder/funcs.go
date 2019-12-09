@@ -241,10 +241,12 @@ func ErrorOp(errorOnTestProcess bool) *ErrorDOp {
 
 }
 
+// Notify answers a decode directive that will notify the supplied function upon execution
 func Notify(fn func()) Directive {
 	return &notifyDirective{fn}
 }
 
+// Nop answer a decode directive that is the null, benign, deocder
 func Nop() Directive {
 	return Notify(func() {})
 }

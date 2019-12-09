@@ -14,6 +14,38 @@ func bytesToHexStr (buf []byte) string {
     return hex.EncodeToString(buf)
 }
 
+func bytesToIPStr(b []byte) string {
+	return net.IP(b).String()
+}
+
+func uintDecoderByLen(len uint16) decoder.ValueDirective {
+	switch len {
+	case 1:
+		return decoder.U8()
+	case 2:
+		return decoder.U16()
+	case 4:
+		return decoder.U32()
+	case 8:
+		return decoder.U64()
+	default:
+		panic(fmt.Sprintf("no decoder.U%d available", len))
+	}
+}
+
+func bytesDecoderByLen(len uint16, assertion uint16) decoder.ValueDirective {
+	if len != assertion {
+		panic(fmt.Sprintf("decoder.Bytes(%d) not possible - hard requirement Bytes(%d) ", len, assertion))
+	}
+	return decoder.Bytes(int(assertion))
+}
+
+func uintByLenAsF(n string) func(l uint16) decoder.Directive {
+	return func(l uint16) decoder.Directive {
+		return uintDecoderByLen(l).Do(decoder.AsF(n))
+	}
+}
+
 func getFieldDecoder (elementID uint16, l uint16) decoder.Directive {
     switch elementID {
     // TAGS
