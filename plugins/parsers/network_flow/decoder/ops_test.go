@@ -70,14 +70,6 @@ func Test_U8PtrAsF(t *testing.T) {
 	assert.Equal(t, uint64(in), getField(m, "out"))
 }
 
-func Test_BadAsF(t *testing.T) {
-	dc := NewDecodeContext(true)
-	dc.openMetric("")
-	ddo := AsF("out")
-	in := "hello"
-	assert.Error(t, ddo.process(dc, in))
-}
-
 func Test_U32AsT(t *testing.T) {
 	dc := NewDecodeContext(true)
 	dc.openMetric("")
