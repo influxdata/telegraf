@@ -140,7 +140,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	}
 	buildSystemContainerMetrics(summaryMetrics, acc)
 	buildNodeMetrics(summaryMetrics, acc)
-	buildPodMetrics(baseURL, summaryMetrics, podInfos, acc)
+	buildPodMetrics(baseURL, summaryMetrics, podInfos, k.labelFilter, acc)
 	return nil
 }
 
@@ -192,33 +192,17 @@ func buildNodeMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) 
 	acc.AddFields("kubernetes_node", fields, tags)
 }
 
-func (k *Kubernetes) gatherPodInfo(baseURL string) ([]PodInfo, error) {
-	var podapi Pods
-	err := k.LoadJson(fmt.Sprintf("%s/pods", baseURL), &podapi)
+func (k *Kubernetes) gatherPodInfo(baseURL string) ([]Metadata, error) {
+	var podApi Pods
+	err := k.LoadJson(fmt.Sprintf("%s/pods", baseURL), &podApi)
 	if err != nil {
 		return nil, err
 	}
-
-	var podinfo []PodInfo
-
-	for i := 0; i < len(podapi.Items); i++ {
-		var meta PodInfo
-		err = json.Unmarshal(podapi.Items[i]["metadata"], &meta)
-		if err != nil {
-			fmt.Printf(`Error parsing response: %s\n`, err)
-			return nil, fmt.Errorf(`Error parsing response: %s`, err)
-		}
-		for key := range meta.Labels {
-			if !k.labelFilter.Match(key) {
-				delete(meta.Labels, key)
-			}
-		}
-		podinfo = append(podinfo, meta)
-
+	var podInfos []Metadata
+	for _, podMetadata := range podApi.Items {
+		podInfos = append(podInfos, podMetadata.Metadata)
 	}
-
-	return podinfo, nil
-
+	return podInfos, nil
 }
 
 func (k *Kubernetes) LoadJson(url string, v interface{}) error {
@@ -257,7 +241,7 @@ func (k *Kubernetes) LoadJson(url string, v interface{}) error {
 	return nil
 }
 
-func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []PodInfo, acc telegraf.Accumulator) {
+func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []Metadata, labelFilter filter.Filter, acc telegraf.Accumulator) {
 	for _, pod := range summaryMetrics.Pods {
 		for _, container := range pod.Containers {
 			tags := map[string]string{
@@ -269,7 +253,9 @@ func buildPodMetrics(baseURL string, summaryMetrics *SummaryMetrics, podInfo []P
 			for _, info := range podInfo {
 				if info.Name == pod.PodRef.Name && info.Namespace == pod.PodRef.Namespace {
 					for k, v := range info.Labels {
-						tags[k] = v
+						if labelFilter.Match(k) {
+							tags[k] = v
+						}
 					}
 				}
 			}
