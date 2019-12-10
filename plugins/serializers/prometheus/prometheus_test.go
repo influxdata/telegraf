@@ -553,6 +553,28 @@ cpu_time_idle{cpu="cpu0"} 42
 `),
 		},
 		{
+			name: "replace characters when using string as label",
+			config: FormatConfig{
+				StringHandling: StringAsLabel,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"host:name": "example.org",
+						"time_idle": 42.0,
+					},
+					time.Unix(1574279268, 0),
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle untyped
+cpu_time_idle{host_name="example.org"} 42
+`),
+		},
+		{
 			name: "multiple fields grouping",
 			metrics: []telegraf.Metric{
 				testutil.MustMetric(
