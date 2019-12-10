@@ -278,7 +278,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
 			i.Log.Warnf("When writing to [%s]: database %q creation failed: %v",
-				c.URL(), i.Database, err)
+				c.URL(), c.Database(), err)
 		}
 	}
 
