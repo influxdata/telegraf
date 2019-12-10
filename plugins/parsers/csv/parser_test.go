@@ -243,6 +243,30 @@ func TestTrimSpace(t *testing.T) {
 	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
+func TestTrimSpaceDelimetedBySpace(t *testing.T) {
+	p := Parser{
+		Delimiter:      " ",
+		HeaderRowCount: 1,
+		TrimSpace:      true,
+		TimeFunc:       DefaultTime,
+	}
+	testCSV := `   first   second   third   fourth
+abcdefgh        0       2    false
+  abcdef      3.3       4     true
+       f        0       2    false`
+
+	expectedFields := map[string]interface{}{
+		"first":  "abcdef",
+		"second": 3.3,
+		"third":  int64(4),
+		"fourth": true,
+	}
+
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, expectedFields, metrics[1].Fields())
+}
+
 func TestSkipRows(t *testing.T) {
 	p := Parser{
 		HeaderRowCount:    1,
