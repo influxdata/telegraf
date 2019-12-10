@@ -85,6 +85,7 @@
 - [#6421](https://github.com/influxdata/telegraf/issues/6421): Revert change causing cpu usage to be capped at 100 percent.
 - [#6523](https://github.com/influxdata/telegraf/issues/6523): Accept any media type in the prometheus input.
 - [#6769](https://github.com/influxdata/telegraf/issues/6769): Fix unix socket dial arguments in uwsgi input.
+- [#6757](https://github.com/influxdata/telegraf/issues/6757): Replace colon chars in prometheus output labels with metric_version=1.
 
 ## v1.12.6 [2019-11-19]
 
