@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	serializer "github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -201,11 +202,11 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			tName := sanitize(k)
-			if !isValidTagName(tName) {
+			name, ok := serializer.SanitizeLabelName(k)
+			if !ok {
 				continue
 			}
-			labels[tName] = v
+			labels[name] = v
 		}
 
 		// Prometheus doesn't have a string value type, so convert string
@@ -214,11 +215,11 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 			for fn, fv := range point.Fields() {
 				switch fv := fv.(type) {
 				case string:
-					tName := sanitize(fn)
-					if !isValidTagName(tName) {
+					name, ok := serializer.SanitizeLabelName(fn)
+					if !ok {
 						continue
 					}
-					labels[tName] = fv
+					labels[name] = fv
 				}
 			}
 		}

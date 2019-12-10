@@ -106,6 +106,34 @@ cpu_time_idle{host="example.org"} 42
 `),
 		},
 		{
+			name: "replace characters when using string as label",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     1,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				StringAsLabel:     true,
+				Log:               Logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu_time_idle",
+					map[string]string{},
+					map[string]interface{}{
+						"host:name": "example.org",
+						"counter":   42.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Counter,
+				),
+			},
+			expected: []byte(`
+# HELP cpu_time_idle Telegraf collected metric
+# TYPE cpu_time_idle counter
+cpu_time_idle{host_name="example.org"} 42
+`),
+		},
+		{
 			name: "prometheus gauge",
 			output: &PrometheusClient{
 				Listen:            ":0",
