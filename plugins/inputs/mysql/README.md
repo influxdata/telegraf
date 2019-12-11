@@ -70,7 +70,7 @@ This plugin gathers the statistic data from MySQL server
   # gather_binary_logs = false
 
   ## gather metrics from SHOW GLOBAL VARIABLES command output
-  # gather_global_variables = false
+  # gather_global_variables = true
 
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
   # gather_table_io_waits = false

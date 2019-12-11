@@ -96,7 +96,7 @@ const sampleConfig = `
   # gather_binary_logs = false
 
   ## gather metrics from PERFORMANCE_SCHEMA.GLOBAL_VARIABLES
-  # gather_global_variables = false
+  # gather_global_variables = true
 
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
   # gather_table_io_waits = false
@@ -138,6 +138,7 @@ const (
 	defaultPerfEventsStatementsDigestTextLimit = 120
 	defaultPerfEventsStatementsLimit           = 250
 	defaultPerfEventsStatementsTimeLimit       = 86400
+	defaultGatherGlobalVars                    = true
 )
 
 func (m *Mysql) SampleConfig() string {
@@ -1773,6 +1774,7 @@ func init() {
 			PerfEventsStatementsDigestTextLimit: defaultPerfEventsStatementsDigestTextLimit,
 			PerfEventsStatementsLimit:           defaultPerfEventsStatementsLimit,
 			PerfEventsStatementsTimeLimit:       defaultPerfEventsStatementsTimeLimit,
+			GatherGlobalVars:                    defaultGatherGlobalVars,
 		}
 	})
 }
