@@ -181,7 +181,10 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				}
 				setTrapOid(tags, trapOid, e)
 			}
-			tags["agent_address"] = packet.AgentAddress
+
+			if packet.AgentAddress != "" {
+				tags["agent_address"] = packet.AgentAddress
+			}
 
 			fields["sysUpTimeInstance"] = packet.Timestamp
 		}
