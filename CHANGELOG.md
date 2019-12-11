@@ -72,6 +72,7 @@
 - [#6735](https://github.com/influxdata/telegraf/pull/6735): Support resolution of symlinks in filecount input.
 - [#6746](https://github.com/influxdata/telegraf/pull/6746): Set message timestamp to the metric time in kafka output.
 - [#6740](https://github.com/influxdata/telegraf/pull/6740): Add base64decode operation to string processor.
+- [#6790](https://github.com/influxdata/telegraf/pull/6790): Add option to control collecting global variables to mysql input.
 
 #### Bugfixes
 
@@ -86,6 +87,7 @@
 - [#6523](https://github.com/influxdata/telegraf/issues/6523): Accept any media type in the prometheus input.
 - [#6769](https://github.com/influxdata/telegraf/issues/6769): Fix unix socket dial arguments in uwsgi input.
 - [#6757](https://github.com/influxdata/telegraf/issues/6757): Replace colon chars in prometheus output labels with metric_version=1.
+- [#6773](https://github.com/influxdata/telegraf/issues/6773): Set TrimLeadingSpace when TrimSpace is on in csv parser.
 
 ## v1.12.6 [2019-11-19]
 
