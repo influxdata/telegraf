@@ -36,6 +36,7 @@ type Mysql struct {
 	GatherTableSchema                   bool     `toml:"gather_table_schema"`
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
+	GatherGlobalVars                    bool     `toml:"gather_global_variables"`
 	IntervalSlow                        string   `toml:"interval_slow"`
 	MetricVersion                       int      `toml:"metric_version"`
 
@@ -94,6 +95,9 @@ const sampleConfig = `
   ## gather metrics from SHOW BINARY LOGS command output
   # gather_binary_logs = false
 
+  ## gather metrics from PERFORMANCE_SCHEMA.GLOBAL_VARIABLES
+  # gather_global_variables = true
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
   # gather_table_io_waits = false
 
@@ -134,6 +138,7 @@ const (
 	defaultPerfEventsStatementsDigestTextLimit = 120
 	defaultPerfEventsStatementsLimit           = 250
 	defaultPerfEventsStatementsTimeLimit       = 86400
+	defaultGatherGlobalVars                    = true
 )
 
 func (m *Mysql) SampleConfig() string {
@@ -431,14 +436,16 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// Global Variables may be gathered less often
-	if len(m.IntervalSlow) > 0 {
-		if uint32(time.Since(m.lastT).Seconds()) >= m.scanIntervalSlow {
-			err = m.gatherGlobalVariables(db, serv, acc)
-			if err != nil {
-				return err
+	if m.GatherGlobalVars {
+		// Global Variables may be gathered less often
+		if len(m.IntervalSlow) > 0 {
+			if uint32(time.Since(m.lastT).Seconds()) >= m.scanIntervalSlow {
+				err = m.gatherGlobalVariables(db, serv, acc)
+				if err != nil {
+					return err
+				}
+				m.lastT = time.Now()
 			}
-			m.lastT = time.Now()
 		}
 	}
 
@@ -1767,6 +1774,7 @@ func init() {
 			PerfEventsStatementsDigestTextLimit: defaultPerfEventsStatementsDigestTextLimit,
 			PerfEventsStatementsLimit:           defaultPerfEventsStatementsLimit,
 			PerfEventsStatementsTimeLimit:       defaultPerfEventsStatementsTimeLimit,
+			GatherGlobalVars:                    defaultGatherGlobalVars,
 		}
 	})
 }
