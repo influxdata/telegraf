@@ -155,6 +155,12 @@ func makeTrapHandler(s *SnmpTrap) handler {
 		tags["version"] = packet.Version.String()
 		tags["source"] = addr.IP.String()
 
+		if packet.Version == gosnmp.Version1 {
+			// RFC 2576 3.1 describes how to translate a v1 trap to
+			// v2.  It says to use the v1 timestamp as sysUpTime.
+			fields["sysUpTimeInstance"] = packet.Timestamp
+		}
+
 		for _, v := range packet.Variables {
 			// Use system mibs to resolve oids.  Don't fall back to
 			// numeric oid because it's not useful enough to the end
