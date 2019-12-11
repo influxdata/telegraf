@@ -95,6 +95,9 @@ const sampleConfig = `
   ## gather metrics from SHOW BINARY LOGS command output
   # gather_binary_logs = false
 
+  ## gather metrics from PERFORMANCE_SCHEMA.GLOBAL_VARIABLES
+  # gather_global_variables = false
+
   ## gather metrics from PERFORMANCE_SCHEMA.TABLE_IO_WAITS_SUMMARY_BY_TABLE
   # gather_table_io_waits = false
 
