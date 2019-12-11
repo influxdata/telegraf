@@ -508,10 +508,11 @@ INSERT	INTO @PCounters
 SELECT	DISTINCT
 		RTrim(spi.object_name) object_name,
 		RTrim(spi.counter_name) counter_name,
-		RTrim(spi.instance_name) instance_name,
+		RTrim(isnull(d.name,spi.instance_name) instance_name,
 		CAST(spi.cntr_value AS BIGINT) AS cntr_value,
 		spi.cntr_type
-FROM	sys.dm_os_performance_counters AS spi
+FROM	sys.dm_os_performance_counters AS spi 
+LEFT OUTER JOIN sys.databases AS d ON spi.instance_name = d.physical_database_name
 WHERE	(
 			counter_name IN (
 				'SQL Compilations/sec',
