@@ -45,6 +45,7 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
+	csvReader.TrimLeadingSpace = p.TrimSpace
 	return csvReader, nil
 }
 
