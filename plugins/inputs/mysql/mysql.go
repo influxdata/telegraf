@@ -444,7 +444,7 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 			}
 		}
 	}
-	
+
 	if m.GatherBinaryLogs {
 		err = m.gatherBinaryLogs(db, serv, acc)
 		if err != nil {
