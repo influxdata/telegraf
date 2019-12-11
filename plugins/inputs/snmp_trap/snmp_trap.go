@@ -50,7 +50,11 @@ var sampleConfig = `
   ## Transport, local address, and port to listen on.  Transport must
   ## be "udp://".  Omit local address to listen on all interfaces.
   ##   example: "udp://127.0.0.1:1234"
-  # service_address = udp://:162
+  ##
+  ## Special permissions may be required to listen on a port less than
+  ## 1024.  See README.md for details
+  ##
+  # service_address = "udp://:162"
   ## Timeout running snmptranslate command
   # timeout = "5s"
 `
