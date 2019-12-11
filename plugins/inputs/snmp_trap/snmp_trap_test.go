@@ -220,3 +220,115 @@ func TestMissingOid(t *testing.T) {
 		expected, acc.GetTelegrafMetrics(),
 		testutil.SortMetrics())
 }
+
+func sendV1Trap(t *testing.T, port uint16) (sentTimestamp uint) {
+	s := &gosnmp.GoSNMP{
+		Port:      port,
+		Community: "public",
+		Version:   gosnmp.Version1,
+		Timeout:   time.Duration(2) * time.Second,
+		Retries:   3,
+		MaxOids:   gosnmp.MaxOids,
+		Target:    "127.0.0.1",
+	}
+
+	err := s.Connect()
+	if err != nil {
+		t.Fatalf("Connect() err: %v", err)
+	}
+	defer s.Conn.Close()
+
+	now := uint(time.Now().Unix())
+
+	pdu := gosnmp.SnmpPDU{
+		Name:  ".1.2.3.4.5",
+		Type:  gosnmp.OctetString,
+		Value: "payload",
+	}
+
+	trap := gosnmp.SnmpTrap{
+		Variables:    []gosnmp.SnmpPDU{pdu},
+		Enterprise:   ".1.2.3",
+		AgentAddress: "10.20.30.40",
+		GenericTrap:  6, // enterpriseSpecific
+		SpecificTrap: 55,
+		Timestamp:    now,
+	}
+
+	_, err = s.SendTrap(trap)
+	if err != nil {
+		t.Fatalf("SendTrap() err: %v", err)
+	}
+
+	return now
+}
+
+func TestReceiveV1Trap(t *testing.T) {
+	const port = 12399
+	var fakeTime = time.Now()
+
+	received := make(chan int)
+	wrap := func(f handler) handler {
+		return func(p *gosnmp.SnmpPacket, a *net.UDPAddr) {
+			f(p, a)
+			received <- 0
+		}
+	}
+
+	s := &SnmpTrap{
+		ServiceAddress:     "udp://:" + strconv.Itoa(port),
+		makeHandlerWrapper: wrap,
+		timeFunc: func() time.Time {
+			return fakeTime
+		},
+		Log: testutil.Logger{},
+	}
+	require.Nil(t, s.Init())
+	var acc testutil.Accumulator
+	require.Nil(t, s.Start(&acc))
+	defer s.Stop()
+
+	defer s.clear()
+	s.load(".1.2.3.4.5",
+		mibEntry{
+			"valueMIB",
+			"valueOID",
+		})
+	s.load(".1.2.3.0.55",
+		mibEntry{
+			"enterpriseMIB",
+			"enterpriseOID",
+		})
+
+	sentTimestamp := sendV1Trap(t, port)
+
+	select {
+	case <-received:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for trap to be received")
+	}
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"snmp_trap", // name
+			map[string]string{ // tags
+				"oid":           ".1.2.3.0.55",
+				"name":          "enterpriseOID",
+				"mib":           "enterpriseMIB",
+				"version":       "1",
+				"source":        "127.0.0.1",
+				"agent_address": "10.20.30.40",
+			},
+			map[string]interface{}{ // fields
+				"sysUpTimeInstance": sentTimestamp,
+				"valueOID":          "payload",
+			},
+			fakeTime,
+		),
+	}
+
+	testutil.RequireMetricsEqual(t,
+		expected, acc.GetTelegrafMetrics(),
+		testutil.SortMetrics())
+
+}

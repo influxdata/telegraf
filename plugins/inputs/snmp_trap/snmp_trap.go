@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -150,6 +151,12 @@ func (s *SnmpTrap) Stop() {
 	}
 }
 
+func setTrapOid(tags map[string]string, oid string, e mibEntry) {
+	tags["oid"] = oid
+	tags["name"] = e.oidText
+	tags["mib"] = e.mibName
+}
+
 func makeTrapHandler(s *SnmpTrap) handler {
 	return func(packet *gosnmp.SnmpPacket, addr *net.UDPAddr) {
 		tm := s.timeFunc()
@@ -158,6 +165,33 @@ func makeTrapHandler(s *SnmpTrap) handler {
 
 		tags["version"] = packet.Version.String()
 		tags["source"] = addr.IP.String()
+
+		if packet.Version == gosnmp.Version1 {
+			// Follow the procedure described in RFC 2576 3.1 to
+			// translate a v1 trap to v2.
+			var trapOid string
+
+			if packet.GenericTrap > 0 && packet.GenericTrap < 6 {
+				trapOid = "1.3.6.1.6.3.1.1.5." + strconv.Itoa(packet.GenericTrap+1)
+			} else if packet.GenericTrap == 6 {
+				trapOid = packet.Enterprise + ".0." + strconv.Itoa(packet.SpecificTrap)
+			}
+
+			if trapOid != "" {
+				e, err := s.lookup(trapOid)
+				if err != nil {
+					s.Log.Errorf("Error resolving V1 OID: %v", err)
+					return
+				}
+				setTrapOid(tags, trapOid, e)
+			}
+
+			if packet.AgentAddress != "" {
+				tags["agent_address"] = packet.AgentAddress
+			}
+
+			fields["sysUpTimeInstance"] = packet.Timestamp
+		}
 
 		for _, v := range packet.Variables {
 			// Use system mibs to resolve oids.  Don't fall back to
@@ -193,9 +227,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 				// 1.3.6.1.6.3.1.1.4.1.0 is SNMPv2-MIB::snmpTrapOID.0.
 				// If v.Name is this oid, set a tag of the trap name.
 				if v.Name == ".1.3.6.1.6.3.1.1.4.1.0" {
-					tags["oid"] = val
-					tags["name"] = e.oidText
-					tags["mib"] = e.mibName
+					setTrapOid(tags, val, e)
 					continue
 				}
 			default:
