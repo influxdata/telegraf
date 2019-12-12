@@ -27,6 +27,11 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
   ## optionally specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
   ##
+  ## Setting 'use_sudo' to true will make use of sudo to run ipmitool.
+  ## Sudo must be configured to allow the telegraf user to run ipmitool
+  ## without a password.
+  # use_sudo = false
+  ##
   ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
   # privilege = "ADMINISTRATOR"
   ##
@@ -85,6 +90,21 @@ ipmi device node.  When using udev you can create the device node giving
 
 ```
 KERNEL=="ipmi*", MODE="660", GROUP="telegraf"
+```
+Alternatively, it is possible to use sudo. You will need the following in your telegraf config:
+```toml
+[[inputs.ipmi_sensor]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias IPMITOOL = /usr/bin/ipmitool *
+telegraf  ALL=(root) NOPASSWD: IPMITOOL
+Defaults!IPMITOOL !logfile, !syslog, !pam_session
 ```
 
 ### Example Output
