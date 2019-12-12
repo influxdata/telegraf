@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf/filter"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -48,8 +48,8 @@ var sampleConfig = `
   ## OR
   # bearer_token_string = "abc_123"
 
-  # Labels to include and exclude
-  # An empty array for include and exclude will include all labels
+  ## Pod labels to be added as tags.  An empty array for both include and
+  ## exclude will include all labels.
   # label_include = []
   # label_exclude = ["*"]
 
