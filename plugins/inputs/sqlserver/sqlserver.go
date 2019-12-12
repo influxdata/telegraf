@@ -504,9 +504,7 @@ DECLARE @PCounters TABLE
     cntr_type INT,
     Primary Key(object_name, counter_name, instance_name)
 );
-
 DECLARE @SQL NVARCHAR(MAX)
-
 IF SERVERPROPERTY('EngineEdition') = 8
 SET @SQL = '
 SELECT  DISTINCT
@@ -532,7 +530,6 @@ SELECT  DISTINCT
         spi.cntr_type
 FROM    sys.dm_os_performance_counters AS spi
 '
-
 SET  @SQL = @SQL + '
 WHERE   (
             counter_name IN (
@@ -666,23 +663,23 @@ UNPIVOT (
 INSERT INTO @PCounters
 EXEC( @SQL )
 
-SELECT  'sqlserver_performance' AS [measurement],
-        REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-        DB_NAME() as [database_name],
-        pc.object_name AS [object],
-        pc.counter_name AS [counter],
-        CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
-        CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS float(10)) AS [value]
-FROM    @PCounters AS pc
-        LEFT OUTER JOIN @PCounters AS pc1
-            ON (
-                pc.counter_name = REPLACE(pc1.counter_name,' base','')
-                OR pc.counter_name = REPLACE(pc1.counter_name,' base',' (ms)')
-            )
-            AND pc.object_name = pc1.object_name
-            AND pc.instance_name = pc1.instance_name
-            AND pc1.counter_name LIKE '%base'
-WHERE   pc.counter_name NOT LIKE '% base'
+SELECT	'sqlserver_performance' AS [measurement],
+		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		DB_NAME() as [database_name],
+		pc.object_name AS [object],
+		pc.counter_name AS [counter],
+		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
+		CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS float(10)) AS [value]
+FROM	@PCounters AS pc
+		LEFT OUTER JOIN @PCounters AS pc1
+			ON (
+				pc.counter_name = REPLACE(pc1.counter_name,' base','')
+				OR pc.counter_name = REPLACE(pc1.counter_name,' base',' (ms)')
+			)
+			AND pc.object_name = pc1.object_name
+			AND pc.instance_name = pc1.instance_name
+			AND pc1.counter_name LIKE '%base'
+WHERE	pc.counter_name NOT LIKE '% base'
 OPTION(RECOMPILE);
 `
 
