@@ -432,8 +432,9 @@ IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
 			NULL AS available_storage_mb,  -- Can we find out storage?
 			NULL as uptime
 	FROM	 sys.databases d   
-			JOIN sys.database_service_objectives slo    
-			ON d.database_id = slo.database_id
+		-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
+		CROSS JOIN sys.database_service_objectives slo
+		WHERE d.name = DB_NAME() AND slo.database_id = DB_ID()
 
 ELSE
 BEGIN
