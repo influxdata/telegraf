@@ -3,6 +3,13 @@
 #### Features
 
 - [#6730](https://github.com/influxdata/telegraf/pull/6730): Add page_faults for mongodb wired tiger.
+- [#6798](https://github.com/influxdata/telegraf/pull/6798): Add use_sudo option to ipmi_sensor input.
+
+## v1.13.1 [unreleased]
+
+#### Bugfixes
+
+- [#6788](https://github.com/influxdata/telegraf/issues/6788): Fix ServerProperty query stops working on Azure after failover.
 
 ## v1.13 [2019-12-12]
 
