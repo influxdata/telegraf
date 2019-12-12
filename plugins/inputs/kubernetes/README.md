@@ -1,6 +1,10 @@
 # Kubernetes Input Plugin
 
-This input plugin talks to the kubelet api using the `/stats/summary` and `/pods` endpoint to gather metrics about the running pods and containers for a single host. It is assumed that this plugin is running as part of a `daemonset` within a kubernetes installation. This means that telegraf is running on every node within the cluster. Therefore, you should configure this plugin to talk to its locally running kubelet.
+The Kubernetes plugin talks to the Kubelet API and gathers metrics about the
+running pods and containers for a single host. It is assumed that this plugin
+is running as part of a `daemonset` within a kubernetes installation. This
+means that telegraf is running on every node within the cluster. Therefore, you
+should configure this plugin to talk to its locally running kubelet.
 
 To find the ip address of the host you are running on you can issue a command like the following:
 
@@ -44,8 +48,8 @@ avoid cardinality issues:
   ## OR
   # bearer_token_string = "abc_123"
 
-  # Labels to include and exclude
-  # An empty array for include and exclude will include all labels
+  ## Pod labels to be added as tags.  An empty array for both include and
+  ## exclude will include all labels.
   # label_include = []
   # label_exclude = ["*"]
 
