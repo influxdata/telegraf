@@ -9,14 +9,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type Synproxy struct{}
+type Synproxy struct {
+	Log telegraf.Logger `toml:"-"`
+}
+
+func (k *Synproxy) Init() error {
+	log.Warn("Current platform is not supported")
+}
 
 func (k *Synproxy) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
 func (k *Synproxy) Description() string {
-	return ""
+	return "Get synproxy counter statistics from procfs"
 }
 
 func (k *Synproxy) SampleConfig() string {
@@ -25,7 +31,6 @@ func (k *Synproxy) SampleConfig() string {
 
 func init() {
 	inputs.Add("synproxy", func() telegraf.Input {
-		log.Print("W! [inputs.synproxy] Current platform is not supported")
 		return &Synproxy{}
 	})
 }
