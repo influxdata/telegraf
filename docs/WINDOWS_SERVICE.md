@@ -48,18 +48,21 @@ Telegraf can manage its own service through the --service flag:
 
 ## Install multiple services
 
-You can install multiple telegraf instances with --service-name flag:
+Running multiple instances of Telegraf is seldom needed, as you can run
+multiple instances of each plugin and route metric flow using the metric
+filtering options.  However, if you do need to run multiple telegraf instances
+on a single system, you can install the service with the `--service-name` and
+`--service-display-name` flags to give the services unique names:
 
 ```
-   > C:\"Program Files"\Telegraf\telegraf.exe --service install --service-name telegraf-1
-   > C:\"Program Files"\Telegraf\telegraf.exe --service install --service-name telegraf-2
-   > C:\"Program Files"\Telegraf\telegraf.exe --service uninstall --service-name telegraf-1
+> C:\"Program Files"\Telegraf\telegraf.exe --service install --service-name telegraf-1 --service-display-name "Telegraf 1"
+> C:\"Program Files"\Telegraf\telegraf.exe --service install --service-name telegraf-2 --service-display-name "Telegraf 2"
 ```
 
 ## Troubleshooting
 
 When Telegraf runs as a Windows service, Telegraf logs messages to Windows events log before configuration file with logging settings is loaded.
-Check event log for an error reported by `telegraf` service in case of Telegraf service reports failure on its start: Event Viewer->Windows Logs->Application 
+Check event log for an error reported by `telegraf` service in case of Telegraf service reports failure on its start: Event Viewer->Windows Logs->Application
 
 **Troubleshooting  common error #1067**
 
