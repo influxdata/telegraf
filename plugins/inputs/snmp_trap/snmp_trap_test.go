@@ -94,12 +94,12 @@ func TestReceiveTrap(t *testing.T) {
 			version: gosnmp.Version2c,
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
-					gosnmp.SnmpPDU{
+					{
 						Name:  ".1.3.6.1.2.1.1.3.0",
 						Type:  gosnmp.TimeTicks,
 						Value: now,
 					},
-					gosnmp.SnmpPDU{
+					{
 						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
 						Type:  gosnmp.ObjectIdentifier,
 						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
@@ -155,12 +155,12 @@ func TestReceiveTrap(t *testing.T) {
 			version: gosnmp.Version2c,
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
-					gosnmp.SnmpPDU{
+					{
 						Name:  ".1.3.6.1.2.1.1.3.0",
 						Type:  gosnmp.TimeTicks,
 						Value: now,
 					},
-					gosnmp.SnmpPDU{
+					{
 						Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
 						Type:  gosnmp.ObjectIdentifier,
 						Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
@@ -176,7 +176,7 @@ func TestReceiveTrap(t *testing.T) {
 			version: gosnmp.Version1,
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
-					gosnmp.SnmpPDU{
+					{
 						Name:  ".1.2.3.4.5",
 						Type:  gosnmp.OctetString,
 						Value: "payload",
@@ -229,7 +229,7 @@ func TestReceiveTrap(t *testing.T) {
 			version: gosnmp.Version1,
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
-					gosnmp.SnmpPDU{
+					{
 						Name:  ".1.2.3.4.5",
 						Type:  gosnmp.OctetString,
 						Value: "payload",
