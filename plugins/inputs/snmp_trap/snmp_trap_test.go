@@ -88,7 +88,7 @@ func TestReceiveTrap(t *testing.T) {
 		entries []entry
 		metrics []telegraf.Metric
 	}{
-		//ordinary v2c coldStart trap 
+		//ordinary v2c coldStart trap
 		{
 			name:    "v2c coldStart",
 			version: gosnmp.Version2c,
