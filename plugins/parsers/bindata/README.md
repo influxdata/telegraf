@@ -1,21 +1,40 @@
 
+# Feature request
 
+Binary Parser similar to the existing Value Parser with a possibility of parsing binary data (records) with multiple fields.
 
-[IBM ZID file](https://www.ibm.com/support/knowledgecenter/en/SSVRGU_8.5.3/com.ibm.designer.domino.main.doc/H_FIELD_OPTIONS_AND_TEXT_INFORMATION_DEFINITION_SYNTAX_2922_OVER.html)
+# Propsal
 
-[IBM ZID Example](https://www.ibm.com/support/knowledgecenter/en/SSVRGU_10.0.0/basic/H_BINARY_INPUT_FILES_USING_FIXED_LENGTH_RECORDS_6416_OVER.html)
+Implement a Binary Parser able to parse binary data (records) containing multiple fields.
 
+At the end the Binary Parser will also support other binary data encoding protocols such as Protobuf or CBOR.
 
+The binary data (record) configuration is shown below, where record's fields are specified by name, type, offset and optional size. Also common parameters such as endianess, binary protocol and time field format are specified:
 
 ```toml
-[fixed_record]
-  metric_name = "drone_status"
-  endiannes = "be"
+[[inputs.mqtt_consumer]]
+  name_override = "drone_status"
 
-  fields = [
-    {name="version",type="uint16",offset=0},
-    {name="time",type="int32",offset=2},
+  ...
+
+  data_format = "bindata"
+  bindata_protocol = "raw"
+  bindata_endiannes = "be"
+  bindata_time_format = "unix"
+  bindata_fields = [
+    {name="version",type="uint16",offset=0,size=2},
+    {name="time",type="int32",offset=2,size=4},
+    {name="location_latitude",type="float64",offset=6,size=8},
+    {name="location_longitude",type="float64",offset=14,size=8},
+    {name="location_altitude",type="float32",offset=22,size=4},
+    {name="orientation_heading",type="float32",offset=26,size=4},
+    {name="orientation_elevation",type="float32",offset=30,size=4},
+    {name="orientation_bank",type="float32",offset=34,size=4},
+    {name="speed_ground",type="float32",offset=38,size=4},
+    {name="speed_air",type="float32",offset=42,size=4},
   ]
-
 ```
 
+# Use case
+
+Parsing binary-encoded data from IoT and other domains.
