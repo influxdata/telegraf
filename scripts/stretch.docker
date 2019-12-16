@@ -1,4 +1,4 @@
-FROM golang:1.11.0 as builder
+FROM golang:1.12.0 as builder
 ENV DEP_VERSION 0.5.0
 RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 && chmod +x /usr/local/bin/dep
 WORKDIR /go/src/github.com/influxdata/telegraf
