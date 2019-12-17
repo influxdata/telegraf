@@ -12,7 +12,7 @@ order to be located.  Other utilities from the net-snmp project may be useful
 for troubleshooting, but are not directly used by the plugin.
 
 These programs will load available MIBs on the system.  Typically the default
-directory for MIBs is `/usr/share/snmp/mibs`, but if you MIBs are in a
+directory for MIBs is `/usr/share/snmp/mibs`, but if your MIBs are in a
 different location you may need to make the paths known to net-snmp.  The
 location of these files can be configured in the `snmp.conf` or via the
 `MIBDIRS` environment variable. See [`man 1 snmpcmd`][man snmpcmd] for more
