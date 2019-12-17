@@ -1,5 +1,12 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
+## v1.13.1 [unreleased]
+
+#### Bugfixes
+
+- [#6788](https://github.com/influxdata/telegraf/issues/6788): Fix ServerProperty query stops working on Azure after failover.
+- [#6803](https://github.com/influxdata/telegraf/pull/6803): Add leading period to OID in SNMP v1 generic traps
+
 ## v1.13 [2019-12-12]
 
 ## v1.25.2 [2023-02-13]
