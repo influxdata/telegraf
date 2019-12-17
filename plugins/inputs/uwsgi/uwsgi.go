@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -96,10 +95,7 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 		if err != nil {
 			return err
 		}
-		s.source, err = os.Hostname()
-		if err != nil {
-			s.source = ""
-		}
+		s.source = url.Path
 	case "http":
 		resp, err := u.client.Get(url.String())
 		if err != nil {
