@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -67,7 +68,7 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if err := u.gatherServer(acc, n); err != nil {
-				acc.AddError(err)
+				log.Printf(fmt.Sprintf("D! [input.uwsgi] %s", err.Error()))
 				return
 			}
 		}(s)
