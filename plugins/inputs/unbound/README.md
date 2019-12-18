@@ -18,6 +18,9 @@ a validating, recursive, and caching DNS resolver.
   ## The default location of the unbound-control binary can be overridden with:
   # binary = "/usr/sbin/unbound-control"
 
+  ## The default location of the unbound config file can be overridden with:
+  # config_file = "/etc/unbound/unbound.conf"
+
   ## The default timeout of 1s can be overriden with:
   # timeout = "1s"
 
