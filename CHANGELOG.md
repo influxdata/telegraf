@@ -5,6 +5,7 @@
 - [#6730](https://github.com/influxdata/telegraf/pull/6730): Add page_faults for mongodb wired tiger.
 - [#6798](https://github.com/influxdata/telegraf/pull/6798): Add use_sudo option to ipmi_sensor input.
 - [#6764](https://github.com/influxdata/telegraf/pull/6764): Add ability to collect pod labels to kubernetes input.
+- [#6770](https://github.com/influxdata/telegraf/pull/6770): Expose unbound-control config file option.
 
 ## v1.13.1 [unreleased]
 
