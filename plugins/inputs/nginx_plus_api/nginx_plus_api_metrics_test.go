@@ -35,6 +35,45 @@ const sslPayload = `
 }
 `
 
+const resolverZonesPayload = `
+{
+  "resolver_zone1": {
+    "requests": {
+      "name": 25460,
+      "srv": 130,
+      "addr": 2580
+    },
+    "responses": {
+      "noerror": 26499,
+      "formerr": 0,
+      "servfail": 3,
+      "nxdomain": 0,
+      "notimp": 0,
+      "refused": 0,
+      "timedout": 243,
+      "unknown": 478
+    }
+  },
+  "resolver_zone2": {
+    "requests": {
+      "name": 325460,
+      "srv": 1130,
+      "addr": 12580
+    },
+    "responses": {
+      "noerror": 226499,
+      "formerr": 0,
+      "servfail": 283,
+      "nxdomain": 0,
+      "notimp": 0,
+      "refused": 0,
+      "timedout": 743,
+      "unknown": 1478
+    }
+  }
+}
+`
+
 const httpRequestsPayload = `
 {
 	"total": 10624511,
@@ -74,6 +113,39 @@ const httpServerZonesPayload = `
 		"received": 51575327,
 		"sent": 2983241510
 	}
+}
+`
+
+const httpLocationZonesPayload = `
+{
+  "site1": {
+    "requests": 736395,
+    "responses": {
+      "1xx": 0,
+      "2xx": 727290,
+      "3xx": 4614,
+      "4xx": 934,
+      "5xx": 1535,
+      "total": 734373
+    },
+    "discarded": 2020,
+    "received": 180157219,
+    "sent": 20183175459
+  },
+  "site2": {
+    "requests": 185307,
+    "responses": {
+      "1xx": 0,
+      "2xx": 112674,
+      "3xx": 45383,
+      "4xx": 2504,
+      "5xx": 4419,
+      "total": 164980
+    },
+    "discarded": 20326,
+    "received": 51575327,
+    "sent": 2983241510
+  }
 }
 `
 
@@ -591,6 +663,58 @@ func TestGatherHttpServerZonesMetrics(t *testing.T) {
 		})
 }
 
+func TestGatherHttpLocationZonesMetrics(t *testing.T) {
+	ts, n := prepareEndpoint(t, httpLocationZonesPath, defaultApiVersion, httpLocationZonesPayload)
+	defer ts.Close()
+
+	var acc testutil.Accumulator
+	addr, host, port := prepareAddr(t, ts)
+
+	require.NoError(t, n.gatherHttpLocationZonesMetrics(addr, &acc))
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"nginx_plus_api_http_location_zones",
+		map[string]interface{}{
+			"discarded":       int64(2020),
+			"received":        int64(180157219),
+			"requests":        int64(736395),
+			"responses_1xx":   int64(0),
+			"responses_2xx":   int64(727290),
+			"responses_3xx":   int64(4614),
+			"responses_4xx":   int64(934),
+			"responses_5xx":   int64(1535),
+			"responses_total": int64(734373),
+			"sent":            int64(20183175459),
+		},
+		map[string]string{
+			"source": host,
+			"port":   port,
+			"zone":   "site1",
+		})
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"nginx_plus_api_http_location_zones",
+		map[string]interface{}{
+			"discarded":       int64(20326),
+			"received":        int64(51575327),
+			"requests":        int64(185307),
+			"responses_1xx":   int64(0),
+			"responses_2xx":   int64(112674),
+			"responses_3xx":   int64(45383),
+			"responses_4xx":   int64(2504),
+			"responses_5xx":   int64(4419),
+			"responses_total": int64(164980),
+			"sent":            int64(2983241510),
+		},
+		map[string]string{
+			"source": host,
+			"port":   port,
+			"zone":   "site2",
+		})
+}
+
 func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 	ts, n := prepareEndpoint(t, httpUpstreamsPath, defaultApiVersion, httpUpstreamsPayload)
 	defer ts.Close()
@@ -841,6 +965,60 @@ func TestGatherHttpCachesMetrics(t *testing.T) {
 		})
 }
 
+func TestGatherResolverZonesMetrics(t *testing.T) {
+	ts, n := prepareEndpoint(t, resolverZonesPath, defaultApiVersion, resolverZonesPayload)
+	defer ts.Close()
+
+	var acc testutil.Accumulator
+	addr, host, port := prepareAddr(t, ts)
+
+	require.NoError(t, n.gatherResolverZonesMetrics(addr, &acc))
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"nginx_plus_api_resolver_zones",
+		map[string]interface{}{
+			"name":     int64(25460),
+			"srv":      int64(130),
+			"addr":     int64(2580),
+			"noerror":  int64(26499),
+			"formerr":  int64(0),
+			"servfail": int64(3),
+			"nxdomain": int64(0),
+			"notimp":   int64(0),
+			"refused":  int64(0),
+			"timedout": int64(243),
+			"unknown":  int64(478),
+		},
+		map[string]string{
+			"source": host,
+			"port":   port,
+			"zone":   "resolver_zone1",
+		})
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"nginx_plus_api_resolver_zones",
+		map[string]interface{}{
+			"name":     int64(325460),
+			"srv":      int64(1130),
+			"addr":     int64(12580),
+			"noerror":  int64(226499),
+			"formerr":  int64(0),
+			"servfail": int64(283),
+			"nxdomain": int64(0),
+			"notimp":   int64(0),
+			"refused":  int64(0),
+			"timedout": int64(743),
+			"unknown":  int64(1478),
+		},
+		map[string]string{
+			"source": host,
+			"port":   port,
+			"zone":   "resolver_zone2",
+		})
+}
+
 func TestGatherStreamUpstreams(t *testing.T) {
 	ts, n := prepareEndpoint(t, streamUpstreamsPath, defaultApiVersion, streamUpstreamsPayload)
 	defer ts.Close()
@@ -1023,6 +1201,7 @@ func TestGatherStreamServerZonesMetrics(t *testing.T) {
 			"zone":   "dns",
 		})
 }
+
 func TestUnavailableEndpoints(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)

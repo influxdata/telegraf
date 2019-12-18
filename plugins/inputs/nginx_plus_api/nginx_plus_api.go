@@ -31,10 +31,13 @@ const (
 	connectionsPath = "connections"
 	sslPath         = "ssl"
 
-	httpRequestsPath    = "http/requests"
-	httpServerZonesPath = "http/server_zones"
-	httpUpstreamsPath   = "http/upstreams"
-	httpCachesPath      = "http/caches"
+	httpRequestsPath      = "http/requests"
+	httpServerZonesPath   = "http/server_zones"
+	httpLocationZonesPath = "http/location_zones"
+	httpUpstreamsPath     = "http/upstreams"
+	httpCachesPath        = "http/caches"
+
+	resolverZonesPath = "resolvers"
 
 	streamServerZonesPath = "stream/server_zones"
 	streamUpstreamsPath   = "stream/upstreams"
