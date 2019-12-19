@@ -1,7 +1,6 @@
 package suricata
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -14,8 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -94,14 +93,23 @@ func TestSuricata(t *testing.T) {
 		},
 	}
 
-	acc.AssertContainsTaggedFields(t, "suricata",
-		map[string]interface{}{
-			"capture.kernel_packets":       float64(905344474),
-			"capture.kernel_drops":         float64(78355440),
-			"capture.kernel_packets_delta": float64(2376742),
-			"capture.kernel_drops_delta":   float64(82049),
-		},
-		map[string]string{"thread": "total"})
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"suricata",
+			map[string]string{
+				"thread": "total",
+			},
+			map[string]interface{}{
+				"capture.kernel_packets":       float64(905344474),
+				"capture.kernel_drops":         float64(78355440),
+				"capture.kernel_packets_delta": float64(2376742),
+				"capture.kernel_drops_delta":   float64(82049),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestThreadStats(t *testing.T) {
@@ -132,12 +140,21 @@ func TestThreadStats(t *testing.T) {
 	c.Close()
 	acc.Wait(1)
 
-	acc.AssertContainsTaggedFields(t, "suricata",
-		map[string]interface{}{
-			"capture.kernel_packets": float64(905344474),
-			"capture.kernel_drops":   float64(78355440),
-		},
-		map[string]string{"thread": "W#05-wlp4s0"})
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"suricata",
+			map[string]string{
+				"thread": "W#05-wlp4s0",
+			},
+			map[string]interface{}{
+				"capture.kernel_packets": float64(905344474),
+				"capture.kernel_drops":   float64(78355440),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestSuricataInvalid(t *testing.T) {
@@ -226,67 +243,12 @@ func TestSuricataEmptyJSON(t *testing.T) {
 	c, err := net.Dial("unix", tmpfn)
 	if err != nil {
 		log.Println(err)
+
 	}
 	c.Write([]byte("\n"))
 	c.Close()
 
 	acc.WaitError(1)
-}
-
-func TestSuricataInvalidInputs(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-	tmpfn := filepath.Join(dir, fmt.Sprintf("t%d", rand.Int63()))
-
-	for input, errmsg := range map[string]string{
-		brokenType1:   `Unsupported type bool encountered`,
-		brokenType2:   `Unsupported type []interface {} encountered`,
-		brokenType3:   `Unsupported type string encountered`,
-		brokenType4:   `Unsupported type <nil> encountered`,
-		brokenType5:   `Unsupported type <nil> encountered`,
-		brokenStruct1: `The 'threads' sub-object does not have required structure`,
-		brokenStruct2: `Input does not contain necessary 'stats' sub-object`,
-		brokenStruct3: `The 'stats' sub-object does not have required structure`,
-		brokenStruct4: `The 'stats' sub-object does not have required structure`,
-	} {
-		var logBuf buffer
-		logBuf.Reset()
-		log.SetOutput(&logBuf)
-
-		acc := testutil.Accumulator{}
-		acc.SetDebug(true)
-
-		s := Suricata{
-			Source:    tmpfn,
-			Delimiter: ".",
-			Log: testutil.Logger{
-				Name: "inputs.suricata",
-			},
-		}
-		assert.NoError(t, s.Start(&acc))
-
-		c, err := net.Dial("unix", tmpfn)
-		if err != nil {
-			t.Fatal(err)
-		}
-		c.Write([]byte(input))
-		c.Write([]byte("\n"))
-		c.Close()
-
-		for {
-			if bytes.Count(logBuf.Bytes(), []byte{'\n'}) > 0 {
-				break
-			}
-			time.Sleep(50 * time.Millisecond)
-		}
-
-		assert.Contains(t, logBuf.String(), errmsg)
-		s.Stop()
-	}
 }
 
 func TestSuricataDisconnectSocket(t *testing.T) {
