@@ -2,7 +2,6 @@ package vsphere
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
@@ -22,19 +21,28 @@ type VSphere struct {
 	DatacenterInstances     bool
 	DatacenterMetricInclude []string
 	DatacenterMetricExclude []string
+	DatacenterInclude       []string
 	ClusterInstances        bool
 	ClusterMetricInclude    []string
 	ClusterMetricExclude    []string
+	ClusterInclude          []string
 	HostInstances           bool
 	HostMetricInclude       []string
 	HostMetricExclude       []string
+	HostInclude             []string
 	VMInstances             bool     `toml:"vm_instances"`
 	VMMetricInclude         []string `toml:"vm_metric_include"`
 	VMMetricExclude         []string `toml:"vm_metric_exclude"`
+	VMInclude               []string `toml:"vm_include"`
 	DatastoreInstances      bool
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
+	DatastoreInclude        []string
 	Separator               string
+	CustomAttributeInclude  []string
+	CustomAttributeExclude  []string
+	UseIntSamples           bool
+	IpAddresses             []string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -49,6 +57,8 @@ type VSphere struct {
 
 	// Mix in the TLS/SSL goodness from core
 	tls.ClientConfig
+
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
@@ -84,7 +94,7 @@ var sampleConfig = `
     "net.droppedRx.summation",
     "net.droppedTx.summation",
     "net.usage.average",
-    "power.power.average",    
+    "power.power.average",
     "virtualDisk.numberReadAveraged.average",
     "virtualDisk.numberWriteAveraged.average",
     "virtualDisk.read.average",
@@ -99,7 +109,7 @@ var sampleConfig = `
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
 
-  ## Hosts 
+  ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   host_metric_include = [
     "cpu.coreUtilization.average",
@@ -149,15 +159,17 @@ var sampleConfig = `
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
+  ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+  # ip_addresses = ["ipv6", "ipv4" ]
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
-  ## Clusters 
+  ## Clusters
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
-  # cluster_instances = true ## true by default
+  # cluster_instances = false ## false by default
 
-  ## Datastores 
+  ## Datastores
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default for Datastores only
@@ -194,6 +206,22 @@ var sampleConfig = `
   ## timeout applies to any of the api request made to vcenter
   # timeout = "60s"
 
+  ## When set to true, all samples are sent as integers. This makes the output
+  ## data types backwards compatible with Telegraf 1.9 or lower. Normally all
+  ## samples from vCenter, with the exception of percentages, are integer
+  ## values, but under some conditions, some averaging takes place internally in
+  ## the plugin. Setting this flag to "false" will send values as floats to
+  ## preserve the full precision when averaging takes place.
+  # use_int_samples = true
+
+  ## Custom attributes from vCenter can be very useful for queries in order to slice the
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  ## by default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  # custom_attribute_include = []
+  # custom_attribute_exclude = ["*"] 
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
@@ -216,7 +244,7 @@ func (v *VSphere) Description() string {
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
 func (v *VSphere) Start(acc telegraf.Accumulator) error {
-	log.Println("D! [input.vsphere]: Starting plugin")
+	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
 
@@ -239,7 +267,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
 func (v *VSphere) Stop() {
-	log.Println("D! [input.vsphere]: Stopping plugin")
+	v.Log.Info("Stopping plugin")
 	v.cancel()
 
 	// Wait for all endpoints to finish. No need to wait for
@@ -248,7 +276,7 @@ func (v *VSphere) Stop() {
 	// wait for any discovery to complete by trying to grab the
 	// "busy" mutex.
 	for _, ep := range v.endpoints {
-		log.Printf("D! [input.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
+		v.Log.Debugf("Waiting for endpoint %q to finish", ep.URL.Host)
 		func() {
 			ep.busy.Lock() // Wait until discovery is finished
 			defer ep.busy.Unlock()
@@ -260,7 +288,6 @@ func (v *VSphere) Stop() {
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
-	merr := make(multiError, 0)
 	var wg sync.WaitGroup
 	for _, ep := range v.endpoints {
 		wg.Add(1)
@@ -274,15 +301,11 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			}
 			if err != nil {
 				acc.AddError(err)
-				merr = append(merr, err)
 			}
 		}(ep)
 	}
 
 	wg.Wait()
-	if len(merr) > 0 {
-		return merr
-	}
 	return nil
 }
 
@@ -291,19 +314,31 @@ func init() {
 		return &VSphere{
 			Vcenters: []string{},
 
-			ClusterInstances:       true,
-			ClusterMetricInclude:   nil,
-			ClusterMetricExclude:   nil,
-			HostInstances:          true,
-			HostMetricInclude:      nil,
-			HostMetricExclude:      nil,
-			VMInstances:            true,
-			VMMetricInclude:        nil,
-			VMMetricExclude:        nil,
-			DatastoreInstances:     false,
-			DatastoreMetricInclude: nil,
-			DatastoreMetricExclude: nil,
-			Separator:              "_",
+			DatacenterInstances:     false,
+			DatacenterMetricInclude: nil,
+			DatacenterMetricExclude: nil,
+			DatacenterInclude:       []string{"/*"},
+			ClusterInstances:        false,
+			ClusterMetricInclude:    nil,
+			ClusterMetricExclude:    nil,
+			ClusterInclude:          []string{"/*/host/**"},
+			HostInstances:           true,
+			HostMetricInclude:       nil,
+			HostMetricExclude:       nil,
+			HostInclude:             []string{"/*/host/**"},
+			VMInstances:             true,
+			VMMetricInclude:         nil,
+			VMMetricExclude:         nil,
+			VMInclude:               []string{"/*/vm/**"},
+			DatastoreInstances:      false,
+			DatastoreMetricInclude:  nil,
+			DatastoreMetricExclude:  nil,
+			DatastoreInclude:        []string{"/*/datastore/**"},
+			Separator:               "_",
+			CustomAttributeInclude:  []string{},
+			CustomAttributeExclude:  []string{"*"},
+			UseIntSamples:           true,
+			IpAddresses:             []string{},
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

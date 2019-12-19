@@ -16,13 +16,16 @@ func TestAddNonReplStats(t *testing.T) {
 		&StatLine{
 			StorageEngine:    "",
 			Time:             time.Now(),
+			UptimeNanos:      0,
 			Insert:           0,
 			Query:            0,
 			Update:           0,
+			UpdateCnt:        0,
 			Delete:           0,
 			GetMore:          0,
 			Command:          0,
 			Flushes:          0,
+			FlushesCnt:       0,
 			Virtual:          0,
 			Resident:         0,
 			QueuedReaders:    0,
@@ -54,7 +57,7 @@ func TestAddNonReplStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range DefaultStats {
-		assert.True(t, acc.HasInt64Field("mongodb", key))
+		assert.True(t, acc.HasFloatField("mongodb", key) || acc.HasInt64Field("mongodb", key), key)
 	}
 }
 
@@ -75,7 +78,7 @@ func TestAddReplStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range MmapStats {
-		assert.True(t, acc.HasInt64Field("mongodb", key))
+		assert.True(t, acc.HasInt64Field("mongodb", key), key)
 	}
 }
 
@@ -97,6 +100,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 			PagesQueuedForEviction:    0,
 			ServerEvictingPages:       0,
 			WorkerThreadEvictingPages: 0,
+			FaultsCnt:                 204,
 		},
 		tags,
 	)
@@ -107,8 +111,14 @@ func TestAddWiredTigerStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range WiredTigerStats {
-		assert.True(t, acc.HasFloatField("mongodb", key))
+		assert.True(t, acc.HasFloatField("mongodb", key), key)
 	}
+
+	for key := range WiredTigerExtStats {
+		assert.True(t, acc.HasFloatField("mongodb", key) || acc.HasInt64Field("mongodb", key), key)
+	}
+
+	assert.True(t, acc.HasInt64Field("mongodb", "page_faults"))
 }
 
 func TestAddShardStats(t *testing.T) {
@@ -183,6 +193,7 @@ func TestStateTag(t *testing.T) {
 	)
 
 	stateTags := make(map[string]string)
+	stateTags["node_type"] = "PRI"
 
 	var acc testutil.Accumulator
 
@@ -191,31 +202,49 @@ func TestStateTag(t *testing.T) {
 	fields := map[string]interface{}{
 		"active_reads":              int64(0),
 		"active_writes":             int64(0),
+		"commands":                  int64(0),
 		"commands_per_sec":          int64(0),
+		"deletes":                   int64(0),
 		"deletes_per_sec":           int64(0),
+		"flushes":                   int64(0),
 		"flushes_per_sec":           int64(0),
+		"flushes_total_time_ns":     int64(0),
+		"getmores":                  int64(0),
 		"getmores_per_sec":          int64(0),
+		"inserts":                   int64(0),
 		"inserts_per_sec":           int64(0),
 		"member_status":             "PRI",
 		"state":                     "PRIMARY",
+		"net_in_bytes_count":        int64(0),
 		"net_in_bytes":              int64(0),
+		"net_out_bytes_count":       int64(0),
 		"net_out_bytes":             int64(0),
 		"open_connections":          int64(0),
+		"queries":                   int64(0),
 		"queries_per_sec":           int64(0),
 		"queued_reads":              int64(0),
 		"queued_writes":             int64(0),
+		"repl_commands":             int64(0),
 		"repl_commands_per_sec":     int64(0),
+		"repl_deletes":              int64(0),
 		"repl_deletes_per_sec":      int64(0),
+		"repl_getmores":             int64(0),
 		"repl_getmores_per_sec":     int64(0),
+		"repl_inserts":              int64(0),
 		"repl_inserts_per_sec":      int64(0),
+		"repl_queries":              int64(0),
 		"repl_queries_per_sec":      int64(0),
+		"repl_updates":              int64(0),
 		"repl_updates_per_sec":      int64(0),
 		"repl_lag":                  int64(0),
-		"repl_oplog_window_sec":     int64(0),
 		"resident_megabytes":        int64(0),
+		"updates":                   int64(0),
 		"updates_per_sec":           int64(0),
+		"uptime_ns":                 int64(0),
 		"vsize_megabytes":           int64(0),
+		"ttl_deletes":               int64(0),
 		"ttl_deletes_per_sec":       int64(0),
+		"ttl_passes":                int64(0),
 		"ttl_passes_per_sec":        int64(0),
 		"jumbo_chunks":              int64(0),
 		"total_in_use":              int64(0),
@@ -223,9 +252,13 @@ func TestStateTag(t *testing.T) {
 		"total_created":             int64(0),
 		"total_refreshing":          int64(0),
 		"cursor_timed_out":          int64(0),
+		"cursor_timed_out_count":    int64(0),
 		"cursor_no_timeout":         int64(0),
+		"cursor_no_timeout_count":   int64(0),
 		"cursor_pinned":             int64(0),
+		"cursor_pinned_count":       int64(0),
 		"cursor_total":              int64(0),
+		"cursor_total_count":        int64(0),
 		"document_deleted":          int64(0),
 		"document_inserted":         int64(0),
 		"document_returned":         int64(0),

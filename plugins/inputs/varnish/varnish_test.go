@@ -7,13 +7,15 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-func fakeVarnishStat(output string, useSudo bool, InstanceName string) func(string, bool, string) (*bytes.Buffer, error) {
-	return func(string, bool, string) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout internal.Duration) func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
+	return func(string, bool, string, internal.Duration) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,7 +23,7 @@ func fakeVarnishStat(output string, useSudo bool, InstanceName string) func(stri
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput, false, ""),
+		run:   fakeVarnishStat(smOutput, false, "", internal.Duration{Duration: time.Second}),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
@@ -37,7 +39,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, true, ""),
+		run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
@@ -52,7 +54,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, false, ""),
+		run:   fakeVarnishStat(fullOutput, false, "", internal.Duration{Duration: time.Second}),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
 	err := v.Gather(acc)
@@ -75,7 +77,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput, true, ""),
+			run:   fakeVarnishStat(fullOutput, true, "", internal.Duration{Duration: time.Second}),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)

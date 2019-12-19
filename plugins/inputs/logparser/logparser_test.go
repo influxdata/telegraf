@@ -14,6 +14,7 @@ import (
 
 func TestStartNoParsers(t *testing.T) {
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{"testdata/*.log"},
 	}
@@ -26,6 +27,7 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{thisdir + "testdata/*.log"},
 		GrokConfig: GrokConfig{
@@ -43,9 +45,10 @@ func TestGrokParseLogFiles(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log: testutil.Logger{},
 		GrokConfig: GrokConfig{
 			MeasurementName:    "logparser_grok",
-			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}", "%{TEST_LOG_C}"},
 			CustomPatternFiles: []string{thisdir + "testdata/test-patterns"},
 		},
 		FromBeginning: true,
@@ -89,6 +92,7 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{emptydir + "/*.log"},
 		GrokConfig: GrokConfig{
@@ -128,6 +132,7 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
+		Log:           testutil.Logger{},
 		FromBeginning: true,
 		Files:         []string{thisdir + "testdata/test_a.log"},
 		GrokConfig: GrokConfig{
@@ -154,6 +159,40 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 		map[string]string{
 			"response_code": "200",
 			"path":          thisdir + "testdata/test_a.log",
+		})
+}
+
+func TestGrokParseLogFiles_TimestampInEpochMilli(t *testing.T) {
+	thisdir := getCurrentDir()
+
+	logparser := &LogParserPlugin{
+		Log: testutil.Logger{},
+		GrokConfig: GrokConfig{
+			MeasurementName:    "logparser_grok",
+			Patterns:           []string{"%{TEST_LOG_C}"},
+			CustomPatternFiles: []string{thisdir + "testdata/test-patterns"},
+		},
+		FromBeginning: true,
+		Files:         []string{thisdir + "testdata/test_c.log"},
+	}
+
+	acc := testutil.Accumulator{}
+	acc.SetDebug(true)
+	assert.NoError(t, logparser.Start(&acc))
+	acc.Wait(1)
+
+	logparser.Stop()
+
+	acc.AssertContainsTaggedFields(t, "logparser_grok",
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"myfloat":       float64(1.25),
+			"response_time": int64(5432),
+			"myint":         int64(101),
+		},
+		map[string]string{
+			"response_code": "200",
+			"path":          thisdir + "testdata/test_c.log",
 		})
 }
 

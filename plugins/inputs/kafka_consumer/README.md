@@ -10,19 +10,20 @@ and use the old zookeeper connection method.
 
 ```toml
 [[inputs.kafka_consumer]]
-  ## kafka servers
+  ## Kafka brokers.
   brokers = ["localhost:9092"]
-  ## topic(s) to consume
+
+  ## Topics to consume.
   topics = ["telegraf"]
-  ## Add topic as tag if topic_tag is not empty
+
+  ## When set this tag will be added to all metrics with the topic as the value.
   # topic_tag = ""
 
   ## Optional Client id
   # client_id = "Telegraf"
 
   ## Set the minimal supported Kafka version.  Setting this enables the use of new
-  ## Kafka features and APIs.  Of particular interest, lz4 compression
-  ## requires at least version 0.10.0.0.
+  ## Kafka features and APIs.  Must be 0.10.2.0 or greater.
   ##   ex: version = "1.1.0"
   # version = ""
 
@@ -37,10 +38,14 @@ and use the old zookeeper connection method.
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
-  ## the name of the consumer group
-  consumer_group = "telegraf_metrics_consumers"
-  ## Offset (must be either "oldest" or "newest")
-  offset = "oldest"
+  ## Name of the consumer group.
+  # consumer_group = "telegraf_metrics_consumers"
+
+  ## Initial offset position; one of "oldest" or "newest".
+  # offset = "oldest"
+
+  ## Consumer group partition assignment strategy; one of "range", "roundrobin" or "sticky".
+  # balance_strategy = "range"
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped

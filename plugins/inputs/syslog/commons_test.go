@@ -1,9 +1,12 @@
 package syslog
 
 import (
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	framing "github.com/influxdata/telegraf/internal/syslog"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var (
@@ -13,16 +16,16 @@ var (
 type testCasePacket struct {
 	name           string
 	data           []byte
-	wantBestEffort *testutil.Metric
-	wantStrict     *testutil.Metric
+	wantBestEffort telegraf.Metric
+	wantStrict     telegraf.Metric
 	werr           bool
 }
 
 type testCaseStream struct {
 	name           string
 	data           []byte
-	wantBestEffort []testutil.Metric
-	wantStrict     []testutil.Metric
+	wantBestEffort []telegraf.Metric
+	wantStrict     []telegraf.Metric
 	werr           int // how many errors we expect in the strict mode?
 }
 
@@ -37,7 +40,7 @@ func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
 	}
 }
 
-func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool, f Framing) *Syslog {
+func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool, f framing.Framing) *Syslog {
 	d := &internal.Duration{
 		Duration: defaultReadTimeout,
 	}

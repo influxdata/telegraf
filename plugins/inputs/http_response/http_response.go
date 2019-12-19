@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -22,15 +21,19 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address             string
-	HTTPProxy           string `toml:"http_proxy"`
+	Address             string   // deprecated in 1.12
+	URLs                []string `toml:"urls"`
+	HTTPProxy           string   `toml:"http_proxy"`
 	Body                string
 	Method              string
 	ResponseTimeout     internal.Duration
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
+	Interface           string
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
 	client              *http.Client
@@ -42,8 +45,12 @@ func (h *HTTPResponse) Description() string {
 }
 
 var sampleConfig = `
+  ## Deprecated in 1.12, use 'urls'
   ## Server address (default http://localhost)
   # address = "http://localhost"
+
+  ## List of urls to query.
+  # urls = ["http://localhost"]
 
   ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
   # http_proxy = "http://localhost:8888"
@@ -77,6 +84,9 @@ var sampleConfig = `
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Interface to use when dialing an address
+  # interface = "eth0"
 `
 
 // SampleConfig returns the plugin SampleConfig
@@ -103,16 +113,27 @@ func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
 	}
 }
 
-// CreateHttpClient creates an http client which will timeout at the specified
+// createHttpClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
 func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
+
+	dialer := &net.Dialer{}
+
+	if h.Interface != "" {
+		dialer.LocalAddr, err = localAddress(h.Interface)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy:             getProxyFunc(h.HTTPProxy),
+			DialContext:       dialer.DialContext,
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},
@@ -121,10 +142,31 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 
 	if h.FollowRedirects == false {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return ErrRedirectAttempted
+			return http.ErrUseLastResponse
 		}
 	}
 	return client, nil
+}
+
+func localAddress(interfaceName string) (net.Addr, error) {
+	i, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs, err := i.Addrs()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, addr := range addrs {
+		if naddr, ok := addr.(*net.IPNet); ok {
+			// leaving port set to zero to let kernel pick
+			return &net.TCPAddr{IP: naddr.IP}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("cannot create local address for interface %q", interfaceName)
 }
 
 func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
@@ -171,16 +213,16 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 }
 
 // HTTPGather gathers all fields and returns any errors it encounters
-func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, error) {
+func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]string, error) {
 	// Prepare fields and tags
 	fields := make(map[string]interface{})
-	tags := map[string]string{"server": h.Address, "method": h.Method}
+	tags := map[string]string{"server": u, "method": h.Method}
 
 	var body io.Reader
 	if h.Body != "" {
 		body = strings.NewReader(h.Body)
 	}
-	request, err := http.NewRequest(h.Method, h.Address, body)
+	request, err := http.NewRequest(h.Method, u, body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -201,7 +243,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
 		// Log error
-		log.Printf("D! Network error while polling %s: %s", h.Address, err.Error())
+		h.Log.Debugf("Network error while polling %s: %s", u, err.Error())
 
 		// Get error details
 		netErr := setError(err, fields, tags)
@@ -213,16 +255,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 
 		// Any error not recognized by `set_error` is considered a "connection_failed"
 		setResult("connection_failed", fields, tags)
-
-		// If the error is a redirect we continue processing and log the HTTP code
-		urlError, isUrlError := err.(*url.Error)
-		if !h.FollowRedirects && isUrlError && urlError.Err == ErrRedirectAttempted {
-			err = nil
-		} else {
-			// If the error isn't a timeout or a redirect stop
-			// processing the request
-			return fields, tags, nil
-		}
+		return fields, tags, nil
 	}
 
 	if _, ok := fields["response_time"]; !ok {
@@ -231,26 +264,27 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 
 	// This function closes the response body, as
 	// required by the net/http library
-	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
-	}()
+	defer resp.Body.Close()
 
 	// Set log the HTTP response code
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		h.Log.Debugf("Failed to read body of HTTP Response : %s", err.Error())
+		setResult("body_read_error", fields, tags)
+		fields["content_length"] = len(bodyBytes)
+		if h.ResponseStringMatch != "" {
+			fields["response_string_match"] = 0
+		}
+		return fields, tags, nil
+	}
+
+	fields["content_length"] = len(bodyBytes)
+
 	// Check the response for a regex match.
 	if h.ResponseStringMatch != "" {
-
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Printf("D! Failed to read body of HTTP Response : %s", err)
-			setResult("body_read_error", fields, tags)
-			fields["response_string_match"] = 0
-			return fields, tags, nil
-		}
-
 		if h.compiledStringMatch.Match(bodyBytes) {
 			setResult("success", fields, tags)
 			fields["response_string_match"] = 1
@@ -284,20 +318,15 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	if h.Method == "" {
 		h.Method = "GET"
 	}
-	if h.Address == "" {
-		h.Address = "http://localhost"
-	}
-	addr, err := url.Parse(h.Address)
-	if err != nil {
-		return err
-	}
-	if addr.Scheme != "http" && addr.Scheme != "https" {
-		return errors.New("Only http and https are supported")
-	}
 
-	// Prepare data
-	var fields map[string]interface{}
-	var tags map[string]string
+	if len(h.URLs) == 0 {
+		if h.Address == "" {
+			h.URLs = []string{"http://localhost"}
+		} else {
+			h.Log.Warn("'address' deprecated in telegraf 1.12, please use 'urls'")
+			h.URLs = []string{h.Address}
+		}
+	}
 
 	if h.client == nil {
 		client, err := h.createHttpClient()
@@ -307,14 +336,33 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		h.client = client
 	}
 
-	// Gather data
-	fields, tags, err = h.httpGather()
-	if err != nil {
-		return err
+	for _, u := range h.URLs {
+		addr, err := url.Parse(u)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		if addr.Scheme != "http" && addr.Scheme != "https" {
+			acc.AddError(errors.New("Only http and https are supported"))
+			continue
+		}
+
+		// Prepare data
+		var fields map[string]interface{}
+		var tags map[string]string
+
+		// Gather data
+		fields, tags, err = h.httpGather(u)
+		if err != nil {
+			acc.AddError(err)
+			continue
+		}
+
+		// Add metrics
+		acc.AddFields("http_response", fields, tags)
 	}
 
-	// Add metrics
-	acc.AddFields("http_response", fields, tags)
 	return nil
 }
 

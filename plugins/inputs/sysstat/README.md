@@ -16,18 +16,15 @@ the created binary data file with the `sadf` utility.
   ## On Debian and Arch Linux the default path is /usr/lib/sa/sadc whereas
   ## on RHEL and CentOS the default path is /usr/lib64/sa/sadc
   sadc_path = "/usr/lib/sa/sadc" # required
-  #
-  #
+
   ## Path to the sadf command, if it is not in PATH
   # sadf_path = "/usr/bin/sadf"
-  #
-  #
+
   ## Activities is a list of activities, that are passed as argument to the
   ## sadc collector utility (e.g: DISK, SNMP etc...)
   ## The more activities that are added, the more data is collected.
   # activities = ["DISK"]
-  #
-  #
+
   ## Group metrics to measurements.
   ##
   ## If group is false each metric will be prefixed with a description
@@ -35,8 +32,7 @@ the created binary data file with the `sadf` utility.
   ##
   ## If Group is true, corresponding metrics are grouped to a single measurement.
   # group = true
-  #
-  #
+
   ## Options for the sadf command. The values on the left represent the sadf options and
   ## the values on the right their description (wich are used for grouping and prefixing metrics).
   ##
@@ -58,8 +54,7 @@ the created binary data file with the `sadf` utility.
 	-w = "task"
   #	-H = "hugepages"        # only available for newer linux distributions
   #	"-I ALL" = "interrupts" # requires INT activity
-  #
-  #
+
   ## Device tags can be used to add additional tags for devices. For example the configuration below
   ## adds a tag vg with value rootvg for all metrics with sda devices.
   # [[inputs.sysstat.device_tags.sda]]

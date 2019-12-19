@@ -50,7 +50,7 @@ type trackingData struct {
 	rc          int32
 	acceptCount int32
 	rejectCount int32
-	notify      NotifyFunc
+	notifyFunc  NotifyFunc
 }
 
 func (d *trackingData) incr() {
@@ -69,6 +69,16 @@ func (d *trackingData) reject() {
 	atomic.AddInt32(&d.rejectCount, 1)
 }
 
+func (d *trackingData) notify() {
+	d.notifyFunc(
+		&deliveryInfo{
+			id:       d.id,
+			accepted: int(d.acceptCount),
+			rejected: int(d.rejectCount),
+		},
+	)
+}
+
 type trackingMetric struct {
 	telegraf.Metric
 	d *trackingData
@@ -82,7 +92,7 @@ func newTrackingMetric(metric telegraf.Metric, fn NotifyFunc) (telegraf.Metric, 
 			rc:          1,
 			acceptCount: 0,
 			rejectCount: 0,
-			notify:      fn,
+			notifyFunc:  fn,
 		},
 	}
 
@@ -98,7 +108,7 @@ func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.
 		rc:          0,
 		acceptCount: 0,
 		rejectCount: 0,
-		notify:      fn,
+		notifyFunc:  fn,
 	}
 
 	for i, m := range group {
@@ -112,6 +122,10 @@ func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.
 	}
 	if finalizer != nil {
 		runtime.SetFinalizer(d, finalizer)
+	}
+
+	if len(group) == 0 {
+		d.notify()
 	}
 
 	return group, d.id
@@ -146,13 +160,7 @@ func (m *trackingMetric) decr() {
 	}
 
 	if v == 0 {
-		m.d.notify(
-			&deliveryInfo{
-				id:       m.d.id,
-				accepted: int(m.d.acceptCount),
-				rejected: int(m.d.rejectCount),
-			},
-		)
+		m.d.notify()
 	}
 }
 

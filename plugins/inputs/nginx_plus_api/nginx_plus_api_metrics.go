@@ -2,6 +2,7 @@ package nginx_plus_api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -13,16 +14,38 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+var (
+	// errNotFound signals that the NGINX API routes does not exist.
+	errNotFound = errors.New("not found")
+)
+
 func (n *NginxPlusApi) gatherMetrics(addr *url.URL, acc telegraf.Accumulator) {
-	acc.AddError(n.gatherProcessesMetrics(addr, acc))
-	acc.AddError(n.gatherConnectionsMetrics(addr, acc))
-	acc.AddError(n.gatherSslMetrics(addr, acc))
-	acc.AddError(n.gatherHttpRequestsMetrics(addr, acc))
-	acc.AddError(n.gatherHttpServerZonesMetrics(addr, acc))
-	acc.AddError(n.gatherHttpUpstreamsMetrics(addr, acc))
-	acc.AddError(n.gatherHttpCachesMetrics(addr, acc))
-	acc.AddError(n.gatherStreamServerZonesMetrics(addr, acc))
-	acc.AddError(n.gatherStreamUpstreamsMetrics(addr, acc))
+	addError(acc, n.gatherProcessesMetrics(addr, acc))
+	addError(acc, n.gatherConnectionsMetrics(addr, acc))
+	addError(acc, n.gatherSslMetrics(addr, acc))
+	addError(acc, n.gatherHttpRequestsMetrics(addr, acc))
+	addError(acc, n.gatherHttpServerZonesMetrics(addr, acc))
+	addError(acc, n.gatherHttpUpstreamsMetrics(addr, acc))
+	addError(acc, n.gatherHttpCachesMetrics(addr, acc))
+	addError(acc, n.gatherStreamServerZonesMetrics(addr, acc))
+	addError(acc, n.gatherStreamUpstreamsMetrics(addr, acc))
+
+	if n.ApiVersion >= 5 {
+		addError(acc, n.gatherHttpLocationZonesMetrics(addr, acc))
+		addError(acc, n.gatherResolverZonesMetrics(addr, acc))
+	}
+}
+
+func addError(acc telegraf.Accumulator, err error) {
+	// This plugin has hardcoded API resource paths it checks that may not
+	// be in the nginx.conf.  Currently, this is to prevent logging of
+	// paths that are not configured.
+	//
+	// The correct solution is to do a GET to /api to get the available paths
+	// on the server rather than simply ignore.
+	if err != errNotFound {
+		acc.AddError(err)
+	}
 }
 
 func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
@@ -30,12 +53,20 @@ func (n *NginxPlusApi) gatherUrl(addr *url.URL, path string) ([]byte, error) {
 	resp, err := n.client.Get(url)
 
 	if err != nil {
-		return nil, fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+		return nil, fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+	case http.StatusNotFound:
+		// format as special error to catch and ignore as some nginx API
+		// features are either optional, or only available in some versions
+		return nil, errNotFound
+	default:
+		return nil, fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
+
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	switch contentType {
 	case "application/json":
@@ -173,6 +204,53 @@ func (n *NginxPlusApi) gatherHttpServerZonesMetrics(addr *url.URL, acc telegraf.
 			func() map[string]interface{} {
 				result := map[string]interface{}{
 					"processing":      zone.Processing,
+					"requests":        zone.Requests,
+					"responses_1xx":   zone.Responses.Responses1xx,
+					"responses_2xx":   zone.Responses.Responses2xx,
+					"responses_3xx":   zone.Responses.Responses3xx,
+					"responses_4xx":   zone.Responses.Responses4xx,
+					"responses_5xx":   zone.Responses.Responses5xx,
+					"responses_total": zone.Responses.Total,
+					"received":        zone.Received,
+					"sent":            zone.Sent,
+				}
+				if zone.Discarded != nil {
+					result["discarded"] = *zone.Discarded
+				}
+				return result
+			}(),
+			zoneTags,
+		)
+	}
+
+	return nil
+}
+
+// Added in 5 API version
+func (n *NginxPlusApi) gatherHttpLocationZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherUrl(addr, httpLocationZonesPath)
+	if err != nil {
+		return err
+	}
+
+	var httpLocationZones HttpLocationZones
+
+	if err := json.Unmarshal(body, &httpLocationZones); err != nil {
+		return err
+	}
+
+	tags := getTags(addr)
+
+	for zoneName, zone := range httpLocationZones {
+		zoneTags := map[string]string{}
+		for k, v := range tags {
+			zoneTags[k] = v
+		}
+		zoneTags["zone"] = zoneName
+		acc.AddFields(
+			"nginx_plus_api_http_location_zones",
+			func() map[string]interface{} {
+				result := map[string]interface{}{
 					"requests":        zone.Requests,
 					"responses_1xx":   zone.Responses.Responses1xx,
 					"responses_2xx":   zone.Responses.Responses2xx,
@@ -360,6 +438,50 @@ func (n *NginxPlusApi) gatherStreamServerZonesMetrics(addr *url.URL, acc telegra
 				"connections": zone.Connections,
 				"received":    zone.Received,
 				"sent":        zone.Sent,
+			},
+			zoneTags,
+		)
+	}
+
+	return nil
+}
+
+// Added in 5 API version
+func (n *NginxPlusApi) gatherResolverZonesMetrics(addr *url.URL, acc telegraf.Accumulator) error {
+	body, err := n.gatherUrl(addr, resolverZonesPath)
+	if err != nil {
+		return err
+	}
+
+	var resolverZones ResolverZones
+
+	if err := json.Unmarshal(body, &resolverZones); err != nil {
+		return err
+	}
+
+	tags := getTags(addr)
+
+	for zoneName, resolver := range resolverZones {
+		zoneTags := map[string]string{}
+		for k, v := range tags {
+			zoneTags[k] = v
+		}
+		zoneTags["zone"] = zoneName
+		acc.AddFields(
+			"nginx_plus_api_resolver_zones",
+			map[string]interface{}{
+				"name": resolver.Requests.Name,
+				"srv":  resolver.Requests.Srv,
+				"addr": resolver.Requests.Addr,
+
+				"noerror":  resolver.Responses.Noerror,
+				"formerr":  resolver.Responses.Formerr,
+				"servfail": resolver.Responses.Servfail,
+				"nxdomain": resolver.Responses.Nxdomain,
+				"notimp":   resolver.Responses.Notimp,
+				"refused":  resolver.Responses.Refused,
+				"timedout": resolver.Responses.Timedout,
+				"unknown":  resolver.Responses.Unknown,
 			},
 			zoneTags,
 		)

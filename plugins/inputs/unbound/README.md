@@ -18,6 +18,9 @@ a validating, recursive, and caching DNS resolver.
   ## The default location of the unbound-control binary can be overridden with:
   # binary = "/usr/sbin/unbound-control"
 
+  ## The default location of the unbound config file can be overridden with:
+  # config_file = "/etc/unbound/unbound.conf"
+
   ## The default timeout of 1s can be overriden with:
   # timeout = "1s"
 
@@ -56,7 +59,9 @@ You will also need to update your sudoers file:
 ```bash
 $ visudo
 # Add the following line:
-telegraf ALL=(ALL) NOPASSWD: /usr/sbin/unbound-control
+Cmnd_Alias UNBOUNDCTL = /usr/sbin/unbound-control
+telegraf  ALL=(ALL) NOPASSWD: UNBOUNDCTL
+Defaults!UNBOUNDCTL !logfile, !syslog, !pam_session
 ```
 
 Please use the solution you see as most appropriate.

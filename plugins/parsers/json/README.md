@@ -18,20 +18,25 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
+  ## When strict is true and a JSON array is being parsed, all objects within the
+  ## array must be valid
+  strict = false
+
   ## Query is a GJSON path that specifies a specific chunk of JSON to be
   ## parsed, if not specified the whole document will be parsed.
   ##
   ## GJSON query paths are described here:
-  ##   https://github.com/tidwall/gjson#path-syntax
+  ##   https://github.com/tidwall/gjson/tree/v1.3.0#path-syntax
   json_query = ""
 
-  ## Tag keys is an array of keys that should be added as tags.
+  ## Tag keys is an array of keys that should be added as tags.  Matching keys
+  ## are no longer saved as fields.
   tag_keys = [
     "my_tag_1",
     "my_tag_2"
   ]
 
-  ## String fields is an array of keys that should be added as string fields.
+  ## Array of glob pattern strings keys that should be added as string fields.
   json_string_fields = []
 
   ## Name key is the key to use as the measurement name.
@@ -49,9 +54,21 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## https://golang.org/pkg/time/#Time.Format
   ##   ex: json_time_format = "Mon Jan 2 15:04:05 -0700 MST 2006"
   ##       json_time_format = "2006-01-02T15:04:05Z07:00"
+  ##       json_time_format = "01/02/2006 15:04:05"
   ##       json_time_format = "unix"
   ##       json_time_format = "unix_ms"
   json_time_format = ""
+
+  ## Timezone allows you to provide an override for timestamps that
+  ## don't already include an offset
+  ## e.g. 04/06/2016 12:41:45
+  ##
+  ## Default: "" which renders UTC
+  ## Options are as follows:
+  ##   1. Local               -- interpret based on machine localtime
+  ##   2. "America/New_York"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  ##   3. UTC                 -- or blank/unspecified, will return timestamp in UTC
+  json_timezone = ""
 ```
 
 #### json_query
@@ -62,7 +79,7 @@ query should contain a JSON object or an array of objects.
 
 Consult the GJSON [path syntax][gjson syntax] for details and examples.
 
-#### json_time_key, json_time_format
+#### json_time_key, json_time_format, json_timezone
 
 By default the current time will be used for all created metrics, to set the
 time using the JSON document you can use the `json_time_key` and
@@ -76,6 +93,12 @@ the Go "reference time" which is defined to be the specific time:
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
+
+When parsing times that don't include a timezone specifier, times are assumed
+to be UTC. To default to another timezone, or to local time, specify the
+`json_timezone` option.  This option should be set to a
+[Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
+such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`.
 
 ### Examples
 

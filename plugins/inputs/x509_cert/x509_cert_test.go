@@ -4,12 +4,14 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -109,13 +111,14 @@ func TestGatherRemote(t *testing.T) {
 				Sources: []string{test.server},
 				Timeout: internal.Duration{Duration: test.timeout},
 			}
+			sc.Init()
 
 			sc.InsecureSkipVerify = true
 			testErr := false
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				testErr = true
 			}
 
@@ -139,6 +142,14 @@ func TestGatherLocal(t *testing.T) {
 		{name: "not a certificate", mode: 0640, content: "test", error: true},
 		{name: "wrong certificate", mode: 0640, content: wrongCert, error: true},
 		{name: "correct certificate", mode: 0640, content: pki.ReadServerCert()},
+		{name: "correct certificate and extra trailing space", mode: 0640, content: pki.ReadServerCert() + " "},
+		{name: "correct certificate and extra leading space", mode: 0640, content: " " + pki.ReadServerCert()},
+		{name: "correct multiple certificates", mode: 0640, content: pki.ReadServerCert() + pki.ReadCACert()},
+		{name: "correct certificate and wrong certificate", mode: 0640, content: pki.ReadServerCert() + "\n" + wrongCert, error: true},
+		{name: "correct certificate and not a certificate", mode: 0640, content: pki.ReadServerCert() + "\ntest", error: true},
+		{name: "correct multiple certificates and extra trailing space", mode: 0640, content: pki.ReadServerCert() + pki.ReadServerCert() + " "},
+		{name: "correct multiple certificates and extra leading space", mode: 0640, content: " " + pki.ReadServerCert() + pki.ReadServerCert()},
+		{name: "correct multiple certificates and extra middle space", mode: 0640, content: pki.ReadServerCert() + " " + pki.ReadServerCert()},
 	}
 
 	for _, test := range tests {
@@ -168,12 +179,13 @@ func TestGatherLocal(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
+			sc.Init()
 
 			error := false
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				error = true
 			}
 
@@ -182,6 +194,61 @@ func TestGatherLocal(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTags(t *testing.T) {
+	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
+
+	f, err := ioutil.TempFile("", "x509_cert")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = f.Write([]byte(cert))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(f.Name())
+
+	sc := X509Cert{
+		Sources: []string{f.Name()},
+	}
+	sc.Init()
+
+	acc := testutil.Accumulator{}
+	err = sc.Gather(&acc)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasMeasurement("x509_cert"))
+
+	assert.True(t, acc.HasTag("x509_cert", "common_name"))
+	assert.Equal(t, "server.localdomain", acc.TagValue("x509_cert", "common_name"))
+
+	assert.True(t, acc.HasTag("x509_cert", "signature_algorithm"))
+	assert.Equal(t, "SHA256-RSA", acc.TagValue("x509_cert", "signature_algorithm"))
+
+	assert.True(t, acc.HasTag("x509_cert", "public_key_algorithm"))
+	assert.Equal(t, "RSA", acc.TagValue("x509_cert", "public_key_algorithm"))
+
+	assert.True(t, acc.HasTag("x509_cert", "issuer_common_name"))
+	assert.Equal(t, "Telegraf Test CA", acc.TagValue("x509_cert", "issuer_common_name"))
+
+	assert.True(t, acc.HasTag("x509_cert", "san"))
+	assert.Equal(t, "localhost,127.0.0.1", acc.TagValue("x509_cert", "san"))
+
+	assert.True(t, acc.HasTag("x509_cert", "serial_number"))
+	serialNumber := new(big.Int)
+	_, validSerialNumber := serialNumber.SetString(acc.TagValue("x509_cert", "serial_number"), 16)
+	if !validSerialNumber {
+		t.Errorf("Expected a valid Hex serial number but got %s", acc.TagValue("x509_cert", "serial_number"))
+	}
+	assert.Equal(t, big.NewInt(1), serialNumber)
 }
 
 func TestGatherChain(t *testing.T) {
@@ -217,6 +284,7 @@ func TestGatherChain(t *testing.T) {
 			sc := X509Cert{
 				Sources: []string{f.Name()},
 			}
+			sc.Init()
 
 			error := false
 
@@ -236,6 +304,7 @@ func TestGatherChain(t *testing.T) {
 
 func TestStrings(t *testing.T) {
 	sc := X509Cert{}
+	sc.Init()
 
 	tests := []struct {
 		name     string
@@ -264,6 +333,7 @@ func TestGatherCert(t *testing.T) {
 	m := &X509Cert{
 		Sources: []string{"https://www.influxdata.com:443"},
 	}
+	m.Init()
 
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)

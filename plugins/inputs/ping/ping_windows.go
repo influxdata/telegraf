@@ -5,142 +5,20 @@ package ping
 import (
 	"errors"
 	"fmt"
-	"log"
-	"net"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/ping/pinger"
 )
 
-// HostPinger is a function that runs the "ping" function using a list of
-// passed arguments. This can be easily switched with a mocked ping function
-// for unit test purposes (see ping_test.go)
-type HostPinger func(binary string, timeout float64, args ...string) (string, error)
-
-type Ping struct {
-	wg sync.WaitGroup
-
-	// Number of pings to send (ping -c <COUNT>)
-	Count int
-
-	// Ping timeout, in seconds. 0 means no timeout (ping -W <TIMEOUT>)
-	Timeout float64
-
-	// URLs to ping
-	Urls []string
-
-	// Ping executable binary
-	Binary string
-
-	// Arguments for ping command.
-	// when `Arguments` is not empty, other options (ping_interval, timeout, etc) will be ignored
-	Arguments []string
-
-	// host ping function
-	pingHost HostPinger
-	pinger   *pinger.Pinger
-}
-
-func (s *Ping) Description() string {
-	return "Ping given url(s) and return statistics"
-}
-
-const sampleConfig = `
-	## List of urls to ping
-	urls = ["www.google.com"]
-
-	## number of pings to send per collection (ping -n <COUNT>)
-	# count = 1
-
-	## Ping timeout, in seconds. 0.0 means default timeout (ping -w <TIMEOUT>)
-	# timeout = 0.0
-
-	## Specify the ping executable binary, default is "ping"
-	# binary = "ping"
-
-	## Arguments for ping command
-	## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
-	# arguments = ["-c", "3"]
-`
-
-func (s *Ping) SampleConfig() string {
-	return sampleConfig
-}
-
-func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
-
+func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	if p.Count < 1 {
 		p.Count = 1
 	}
 
-	// Spin off a go routine for each url to ping
-	for _, url := range p.Urls {
-		wg.Add(1)
-		go p.pingToHost(url, acc, &wg)
-	}
-
-	wg.Wait()
-
-	return nil
-}
-
-func (p *Ping) pingToHost(h string, acc telegraf.Accumulator, pwg *sync.WaitGroup) {
-	defer pwg.Done()
-
-	tags := map[string]string{"url": h}
-	fields := map[string]interface{}{"result_code": 0}
-
-	_, err := net.LookupHost(h)
-	if err != nil {
-		acc.AddError(err)
-		fields["result_code"] = 1
-		acc.AddFields("ping", fields, tags)
-		return
-	}
-
-	timeout := int64(p.Timeout)
-	result, err := p.pinger.Send(h, timeout)
-
-	if err != nil {
-		fields["packets_transmitted"] = 1
-		fields["packets_received"] = 0
-		fields["percent_packet_loss"] = float64(100.0)
-		fields["ping_response_ms"] = 0
-		if err.Error() == "timed out" {
-			fields["ping_response_ms"] = int64(result.Rtt / 1000000)
-		}
-	} else {
-		fields["packets_transmitted"] = result.PacketsSent
-		fields["packets_received"] = result.PacketsRecv
-		fields["percent_packet_loss"] = float64(0.0)
-		fields["ping_response_ms"] = int64(result.Rtt / 1000000)
-	}
-
-	acc.AddFields("ping", fields, tags)
-}
-
-func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
-	defer p.wg.Done()
-
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
-
-	_, err := net.LookupHost(u)
-	if err != nil {
-		acc.AddError(err)
-		fields["result_code"] = 1
-		acc.AddFields("ping", fields, tags)
-		return
-	}
 
 	args := p.args(u)
 	totalTimeout := 60.0
@@ -189,17 +67,6 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		fields["maximum_response_ms"] = float64(max)
 	}
 	acc.AddFields("ping", fields, tags)
-}
-
-func hostPinger(binary string, timeout float64, args ...string) (string, error) {
-	bin, err := exec.LookPath(binary)
-	if err != nil {
-		return "", err
-	}
-	c := exec.Command(bin, args...)
-	out, err := internal.CombinedOutputTimeout(c,
-		time.Second*time.Duration(timeout+1))
-	return string(out), err
 }
 
 // args returns the arguments for the 'ping' executable
@@ -285,22 +152,4 @@ func (p *Ping) timeout() float64 {
 		return p.Timeout + 1
 	}
 	return 4 + 1
-}
-
-func init() {
-	inputs.Add("ping", func() telegraf.Input {
-		pinger, err := pinger.NewPinger(true)
-		if err != nil {
-			log.Println("ERROR: [ping.NewPinger]", err)
-			return nil
-		}
-
-		return &Ping{
-			pinger:    pinger,
-			pingHost:  hostPinger,
-			Count:     1,
-			Binary:    "ping",
-			Arguments: []string{},
-		}
-	})
 }

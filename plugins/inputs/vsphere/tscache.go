@@ -34,7 +34,7 @@ func (t *TSCache) Purge() {
 			n++
 		}
 	}
-	log.Printf("D! [input.vsphere] Purged timestamp cache. %d deleted with %d remaining", n, len(t.table))
+	log.Printf("D! [inputs.vsphere] purged timestamp cache. %d deleted with %d remaining", n, len(t.table))
 }
 
 // IsNew returns true if the supplied timestamp for the supplied key is more recent than the
@@ -47,6 +47,14 @@ func (t *TSCache) IsNew(key string, tm time.Time) bool {
 		return true // We've never seen this before, so consider everything a new sample
 	}
 	return !tm.Before(v)
+}
+
+// Get returns a timestamp (if present)
+func (t *TSCache) Get(key string) (time.Time, bool) {
+	t.mux.RLock()
+	defer t.mux.RUnlock()
+	ts, ok := t.table[key]
+	return ts, ok
 }
 
 // Put updates the latest timestamp for the supplied key.

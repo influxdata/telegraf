@@ -3,13 +3,14 @@ package vsphere
 import (
 	"context"
 	"crypto/tls"
-	"log"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
@@ -18,6 +19,7 @@ import (
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 // The highest number of metrics we can query for, no matter what settings
@@ -43,6 +45,7 @@ type Client struct {
 	Valid     bool
 	Timeout   time.Duration
 	closeGate sync.Once
+	log       telegraf.Logger
 }
 
 // NewClientFactory creates a new ClientFactory and prepares it for use.
@@ -59,28 +62,39 @@ func NewClientFactory(ctx context.Context, url *url.URL, parent *VSphere) *Clien
 func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 	cf.mux.Lock()
 	defer cf.mux.Unlock()
-	if cf.client == nil {
-		var err error
-		if cf.client, err = NewClient(ctx, cf.url, cf.parent); err != nil {
-			return nil, err
+	retrying := false
+	for {
+		if cf.client == nil {
+			var err error
+			if cf.client, err = NewClient(ctx, cf.url, cf.parent); err != nil {
+				return nil, err
+			}
 		}
-	}
 
-	// Execute a dummy call against the server to make sure the client is
-	// still functional. If not, try to log back in. If that doesn't work,
-	// we give up.
-	ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
-	defer cancel1()
-	if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
-		log.Printf("I! [input.vsphere]: Client session seems to have time out. Reauthenticating!")
-		ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
-		defer cancel2()
-		if cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
-			return nil, err
+		// Execute a dummy call against the server to make sure the client is
+		// still functional. If not, try to log back in. If that doesn't work,
+		// we give up.
+		ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+		defer cancel1()
+		if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
+			cf.parent.Log.Info("Client session seems to have time out. Reauthenticating!")
+			ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+			defer cancel2()
+			if err := cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)); err != nil {
+				if !retrying {
+					// The client went stale. Probably because someone rebooted vCenter. Clear it to
+					// force us to create a fresh one. We only get one chance at this. If we fail a second time
+					// we will simply skip this collection round and hope things have stabilized for the next one.
+					retrying = true
+					cf.client = nil
+					continue
+				}
+				return nil, fmt.Errorf("renewing authentication failed: %s", err.Error())
+			}
 		}
-	}
 
-	return cf.client, nil
+		return cf.client, nil
+	}
 }
 
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.
@@ -100,7 +114,7 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 		u.User = url.UserPassword(vs.Username, vs.Password)
 	}
 
-	log.Printf("D! [input.vsphere]: Creating client: %s", u.Host)
+	vs.Log.Debugf("Creating client: %s", u.Host)
 	soapClient := soap.NewClient(u, tlsCfg.InsecureSkipVerify)
 
 	// Add certificate if we have it. Use it to log us in.
@@ -157,6 +171,7 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	p := performance.NewManager(c.Client)
 
 	client := &Client{
+		log:     vs.Log,
 		Client:  c,
 		Views:   m,
 		Root:    v,
@@ -171,9 +186,9 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("D! [input.vsphere] vCenter says max_query_metrics should be %d", n)
+	vs.Log.Debugf("vCenter says max_query_metrics should be %d", n)
 	if n < vs.MaxQueryMetrics {
-		log.Printf("W! [input.vsphere] Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
+		vs.Log.Warnf("Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
 		vs.MaxQueryMetrics = n
 	}
 	return client, nil
@@ -189,7 +204,6 @@ func (cf *ClientFactory) Close() {
 }
 
 func (c *Client) close() {
-
 	// Use a Once to prevent us from panics stemming from trying
 	// to close it multiple times.
 	c.closeGate.Do(func() {
@@ -197,7 +211,7 @@ func (c *Client) close() {
 		defer cancel()
 		if c.Client != nil {
 			if err := c.Client.Logout(ctx); err != nil {
-				log.Printf("E! [input.vsphere]: Error during logout: %s", err)
+				c.log.Errorf("Logout: %s", err.Error())
 			}
 		}
 	})
@@ -205,6 +219,8 @@ func (c *Client) close() {
 
 // GetServerTime returns the time at the vCenter server
 func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
 	t, err := methods.GetCurrentTime(ctx, c.Client)
 	if err != nil {
 		return time.Time{}, err
@@ -224,7 +240,7 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			if s, ok := res[0].GetOptionValue().Value.(string); ok {
 				v, err := strconv.Atoi(s)
 				if err == nil {
-					log.Printf("D! [input.vsphere] vCenter maxQueryMetrics is defined: %d", v)
+					c.log.Debugf("vCenter maxQueryMetrics is defined: %d", v)
 					if v == -1 {
 						// Whatever the server says, we never ask for more metrics than this.
 						return absoluteMaxMetrics, nil
@@ -235,17 +251,17 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			// Fall through version-based inference if value isn't usable
 		}
 	} else {
-		log.Println("I! [input.vsphere] Option query for maxQueryMetrics failed. Using default")
+		c.log.Debug("Option query for maxQueryMetrics failed. Using default")
 	}
 
 	// No usable maxQueryMetrics setting. Infer based on version
 	ver := c.Client.Client.ServiceContent.About.Version
 	parts := strings.Split(ver, ".")
 	if len(parts) < 2 {
-		log.Printf("W! [input.vsphere] vCenter returned an invalid version string: %s. Using default query size=64", ver)
+		c.log.Warnf("vCenter returned an invalid version string: %s. Using default query size=64", ver)
 		return 64, nil
 	}
-	log.Printf("D! [input.vsphere] vCenter version is: %s", ver)
+	c.log.Debugf("vCenter version is: %s", ver)
 	major, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return 0, err
@@ -254,4 +270,54 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 		return 64, nil
 	}
 	return 256, nil
+}
+
+// QueryMetrics wraps performance.Query to give it proper timeouts
+func (c *Client) QueryMetrics(ctx context.Context, pqs []types.PerfQuerySpec) ([]performance.EntityMetric, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	metrics, err := c.Perf.Query(ctx1, pqs)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx2, cancel2 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel2()
+	return c.Perf.ToMetricSeries(ctx2, metrics)
+}
+
+// CounterInfoByName wraps performance.CounterInfoByName to give it proper timeouts
+func (c *Client) CounterInfoByName(ctx context.Context) (map[string]*types.PerfCounterInfo, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	return c.Perf.CounterInfoByName(ctx1)
+}
+
+// CounterInfoByKey wraps performance.CounterInfoByKey to give it proper timeouts
+func (c *Client) CounterInfoByKey(ctx context.Context) (map[int32]*types.PerfCounterInfo, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	return c.Perf.CounterInfoByKey(ctx1)
+}
+
+// ListResources wraps property.Collector.Retrieve to give it proper timeouts
+func (c *Client) ListResources(ctx context.Context, root *view.ContainerView, kind []string, ps []string, dst interface{}) error {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	return root.Retrieve(ctx1, kind, ps, dst)
+}
+
+func (c *Client) GetCustomFields(ctx context.Context) (map[int32]string, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	cfm := object.NewCustomFieldsManager(c.Client.Client)
+	fields, err := cfm.Field(ctx1)
+	if err != nil {
+		return nil, err
+	}
+	r := make(map[int32]string)
+	for _, f := range fields {
+		r[f.Key] = f.Name
+	}
+	return r, nil
 }

@@ -2,7 +2,6 @@ package valuecounter
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -68,14 +67,6 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 	for fk, fv := range in.Fields() {
 		for _, cf := range vc.Fields {
 			if fk == cf {
-				// Do not process float types to prevent memory from blowing up
-				switch fv.(type) {
-				default:
-					log.Printf("I! Valuecounter: Unsupported field type. " +
-						"Must be an int, string or bool. Ignoring.")
-					continue
-				case uint64, int64, string, bool:
-				}
 				fn := fmt.Sprintf("%v_%v", fk, fv)
 				vc.cache[id].fieldCount[fn]++
 			}

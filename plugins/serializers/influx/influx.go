@@ -113,6 +113,9 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, m := range metrics {
 		_, err := s.Write(&s.buf, m)
 		if err != nil {
+			if _, ok := err.(*MetricError); ok {
+				continue
+			}
 			return nil, err
 		}
 	}
@@ -240,6 +243,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 				return err
 			}
 
+			pairsLen = 0
 			firstField = true
 			bytesNeeded = len(s.header) + len(s.pair) + len(s.footer)
 

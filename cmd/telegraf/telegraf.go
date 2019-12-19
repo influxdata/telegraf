@@ -12,12 +12,15 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sort"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
+	"github.com/influxdata/telegraf/internal/goplugin"
 	"github.com/influxdata/telegraf/logger"
 
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
@@ -42,7 +45,8 @@ var pprofAddr = flag.String("pprof-addr", "",
 	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
-var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
+var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit")
+var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -50,6 +54,8 @@ var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fSectionFilters = flag.String("section-filter", "",
+	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
 var fInputList = flag.Bool("input-list", false,
@@ -69,7 +75,10 @@ var fService = flag.String("service", "",
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fServiceDisplayName = flag.String("service-displayname", "Telegraf Data Collector Service",
 	"Use this as the service display name")
+var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
+var fPlugins = flag.String("plugin-directory", "",
+	"path to directory containing external plugins")
 
 var (
 	version string
@@ -111,7 +120,7 @@ func reloadLoop(
 		}()
 
 		err := runAgent(ctx, inputFilters, outputFilters)
-		if err != nil {
+		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
@@ -121,9 +130,6 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
-	// Setup default logging. This may need to change after reading the config
-	// file, but we can configure it to use our logger implementation now.
-	logger.SetupLogging(false, false, "")
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
@@ -146,6 +152,8 @@ func runAgent(ctx context.Context,
 	}
 	if len(c.Inputs) == 0 && len(c.Services) == 0 {
 		return errors.New("Error: no inputs or services found, did you provide a valid config file?")
+	if *fPlugins == "" && len(c.Inputs) == 0 {
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
 	}
 
 	if int64(c.Agent.Interval.Duration) <= 0 {
@@ -164,14 +172,21 @@ func runAgent(ctx context.Context,
 	}
 
 	// Setup logging as configured.
-	logger.SetupLogging(
-		ag.Config.Agent.Debug || *fDebug,
-		ag.Config.Agent.Quiet || *fQuiet,
-		ag.Config.Agent.Logfile,
-	)
+	logConfig := logger.LogConfig{
+		Debug:               ag.Config.Agent.Debug || *fDebug,
+		Quiet:               ag.Config.Agent.Quiet || *fQuiet,
+		LogTarget:           ag.Config.Agent.LogTarget,
+		Logfile:             ag.Config.Agent.Logfile,
+		RotationInterval:    ag.Config.Agent.LogfileRotationInterval,
+		RotationMaxSize:     ag.Config.Agent.LogfileRotationMaxSize,
+		RotationMaxArchives: ag.Config.Agent.LogfileRotationMaxArchives,
+	}
 
-	if *fTest {
-		return ag.Test(ctx)
+	logger.SetupLogging(logConfig)
+
+	if *fTest || *fTestWait != 0 {
+		testWaitDuration := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, testWaitDuration)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
@@ -261,7 +276,10 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	inputFilters, outputFilters := []string{}, []string{}
+	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
+	if *fSectionFilters != "" {
+		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
+	}
 	if *fInputFilters != "" {
 		inputFilters = strings.Split(":"+strings.TrimSpace(*fInputFilters)+":", ":")
 	}
@@ -275,6 +293,16 @@ func main() {
 	}
 	if *fProcessorFilters != "" {
 		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
+	}
+
+	logger.SetupLogging(logger.LogConfig{})
+
+	// Load external plugins, if requested.
+	if *fPlugins != "" {
+		log.Printf("I! Loading external plugins from: %s", *fPlugins)
+		if err := goplugin.LoadExternalPlugins(*fPlugins); err != nil {
+			log.Fatal("E! " + err.Error())
+		}
 	}
 
 	if *pprofAddr != "" {
@@ -301,6 +329,7 @@ func main() {
 			return
 		case "config":
 			config.PrintSampleConfig(
+				sectionFilters,
 				inputFilters,
 				outputFilters,
 				aggregatorFilters,
@@ -313,14 +342,24 @@ func main() {
 	// switch for flags which just do something and exit immediately
 	switch {
 	case *fOutputList:
-		fmt.Println("Available Output Plugins:")
+		fmt.Println("Available Output Plugins: ")
+		names := make([]string, 0, len(outputs.Outputs))
 		for k := range outputs.Outputs {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		for _, k := range names {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fInputList:
 		fmt.Println("Available Input Plugins:")
+		names := make([]string, 0, len(inputs.Inputs))
 		for k := range inputs.Inputs {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		for _, k := range names {
 			fmt.Printf("  %s\n", k)
 		}
 		return
@@ -329,6 +368,7 @@ func main() {
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
+			sectionFilters,
 			inputFilters,
 			outputFilters,
 			aggregatorFilters,
@@ -354,13 +394,17 @@ func main() {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
-	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
+	if runtime.GOOS == "windows" && windowsRunAsService() {
+		programFiles := os.Getenv("ProgramFiles")
+		if programFiles == "" { // Should never happen
+			programFiles = "C:\\Program Files"
+		}
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
-			DisplayName: "Telegraf Data Collector Service",
+			DisplayName: *fServiceDisplayName,
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
-			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+			Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
 		}
 
 		prg := &program{
@@ -377,10 +421,10 @@ func main() {
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
 			if *fConfig != "" {
-				(*svcConfig).Arguments = []string{"--config", *fConfig}
+				svcConfig.Arguments = []string{"--config", *fConfig}
 			}
 			if *fConfigDirectory != "" {
-				(*svcConfig).Arguments = append((*svcConfig).Arguments, "--config-directory", *fConfigDirectory)
+				svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
 			}
 			if *fServiceName != "" {
 				(*svcConfig).Name = *fServiceName
@@ -388,6 +432,8 @@ func main() {
 			if *fServiceDisplayName != "" {
 				(*svcConfig).DisplayName = *fServiceDisplayName
 			}
+			//set servicename to service cmd line, to have a custom name after relaunch as a service
+			svcConfig.Arguments = append(svcConfig.Arguments, "--service-name", *fServiceName)
 
 			err := service.Control(s, *fService)
 			if err != nil {
@@ -395,7 +441,14 @@ func main() {
 			}
 			os.Exit(0)
 		} else {
+			winlogger, err := s.Logger(nil)
+			if err == nil {
+				//When in service mode, register eventlog target andd setup default logging to eventlog
+				logger.RegisterEventLogger(winlogger)
+				logger.SetupLogging(logger.LogConfig{LogTarget: logger.LogTargetEventlog})
+			}
 			err = s.Run()
+
 			if err != nil {
 				log.Println("E! " + err.Error())
 			}
@@ -410,4 +463,17 @@ func main() {
 			processorFilters,
 		)
 	}
+}
+
+// Return true if Telegraf should create a Windows service.
+func windowsRunAsService() bool {
+	if *fService != "" {
+		return true
+	}
+
+	if *fRunAsConsole {
+		return false
+	}
+
+	return !service.Interactive()
 }

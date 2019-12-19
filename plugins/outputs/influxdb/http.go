@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -17,13 +17,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
-)
-
-type APIErrorType int
-
-const (
-	_ APIErrorType = iota
-	DatabaseNotFound
 )
 
 const (
@@ -37,7 +30,6 @@ const (
 )
 
 var (
-
 	// Escape an identifier in InfluxQL.
 	escapeIdentifier = strings.NewReplacer(
 		"\n", `\n`,
@@ -46,12 +38,11 @@ var (
 	)
 )
 
-// APIError is an error reported by the InfluxDB server
+// APIError is a general error reported by the InfluxDB server
 type APIError struct {
 	StatusCode  int
 	Title       string
 	Description string
-	Type        APIErrorType
 }
 
 func (e APIError) Error() string {
@@ -59,6 +50,11 @@ func (e APIError) Error() string {
 		return fmt.Sprintf("%s: %s", e.Title, e.Description)
 	}
 	return e.Title
+}
+
+type DatabaseNotFoundError struct {
+	APIError
+	Database string
 }
 
 // QueryResponse is the response body from the /query endpoint
@@ -87,51 +83,46 @@ func (r WriteResponse) Error() string {
 }
 
 type HTTPConfig struct {
-	URL             *url.URL
-	UserAgent       string
-	Timeout         time.Duration
-	Username        string
-	Password        string
-	TLSConfig       *tls.Config
-	Proxy           *url.URL
-	Headers         map[string]string
-	ContentEncoding string
-	Database        string
-	RetentionPolicy string
-	Consistency     string
+	URL                  *url.URL
+	UserAgent            string
+	Timeout              time.Duration
+	Username             string
+	Password             string
+	TLSConfig            *tls.Config
+	Proxy                *url.URL
+	Headers              map[string]string
+	ContentEncoding      string
+	Database             string
+	DatabaseTag          string
+	ExcludeDatabaseTag   bool
+	RetentionPolicy      string
+	Consistency          string
+	SkipDatabaseCreation bool
 
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
+	Log               telegraf.Logger
 }
 
 type httpClient struct {
-	WriteURL        string
-	QueryURL        string
-	ContentEncoding string
-	Timeout         time.Duration
-	Username        string
-	Password        string
-	Headers         map[string]string
+	client           *http.Client
+	config           HTTPConfig
+	createdDatabases map[string]bool
 
-	client     *http.Client
-	serializer *influx.Serializer
-	url        *url.URL
-	database   string
+	log telegraf.Logger
 }
 
-func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
+func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 	if config.URL == nil {
 		return nil, ErrMissingURL
 	}
 
-	database := config.Database
-	if database == "" {
-		database = defaultDatabase
+	if config.Database == "" {
+		config.Database = defaultDatabase
 	}
 
-	timeout := config.Timeout
-	if timeout == 0 {
-		timeout = defaultRequestTimeout
+	if config.Timeout == 0 {
+		config.Timeout = defaultRequestTimeout
 	}
 
 	userAgent := config.UserAgent
@@ -139,10 +130,12 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		userAgent = "Telegraf/" + internal.Version()
 	}
 
-	var headers = make(map[string]string, len(config.Headers)+1)
-	headers["User-Agent"] = userAgent
+	if config.Headers == nil {
+		config.Headers = make(map[string]string)
+	}
+	config.Headers["User-Agent"] = userAgent
 	for k, v := range config.Headers {
-		headers[k] = v
+		config.Headers[k] = v
 	}
 
 	var proxy func(*http.Request) (*url.URL, error)
@@ -152,22 +145,8 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		proxy = http.ProxyFromEnvironment
 	}
 
-	serializer := config.Serializer
-	if serializer == nil {
-		serializer = influx.NewSerializer()
-	}
-
-	writeURL, err := makeWriteURL(
-		config.URL,
-		database,
-		config.RetentionPolicy,
-		config.Consistency)
-	if err != nil {
-		return nil, err
-	}
-	queryURL, err := makeQueryURL(config.URL)
-	if err != nil {
-		return nil, err
+	if config.Serializer == nil {
+		config.Serializer = influx.NewSerializer()
 	}
 
 	var transport *http.Transport
@@ -192,40 +171,33 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 	}
 
 	client := &httpClient{
-		serializer: serializer,
 		client: &http.Client{
-			Timeout:   timeout,
+			Timeout:   config.Timeout,
 			Transport: transport,
 		},
-		database:        database,
-		url:             config.URL,
-		WriteURL:        writeURL,
-		QueryURL:        queryURL,
-		ContentEncoding: config.ContentEncoding,
-		Timeout:         timeout,
-		Username:        config.Username,
-		Password:        config.Password,
-		Headers:         headers,
+		createdDatabases: make(map[string]bool),
+		config:           config,
+		log:              config.Log,
 	}
 	return client, nil
 }
 
 // URL returns the origin URL that this client connects too.
 func (c *httpClient) URL() string {
-	return c.url.String()
+	return c.config.URL.String()
 }
 
-// URL returns the database that this client connects too.
+// Database returns the default database that this client connects too.
 func (c *httpClient) Database() string {
-	return c.database
+	return c.config.Database
 }
 
 // CreateDatabase attempts to create a new database in the InfluxDB server.
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
-func (c *httpClient) CreateDatabase(ctx context.Context) error {
+func (c *httpClient) CreateDatabase(ctx context.Context, database string) error {
 	query := fmt.Sprintf(`CREATE DATABASE "%s"`,
-		escapeIdentifier.Replace(c.database))
+		escapeIdentifier.Replace(database))
 
 	req, err := c.makeQueryRequest(query)
 
@@ -241,6 +213,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context) error {
 
 	if err != nil {
 		if resp.StatusCode == 200 {
+			c.createdDatabases[database] = true
 			return nil
 		}
 
@@ -252,6 +225,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context) error {
 
 	// Even with a 200 response there can be an error
 	if resp.StatusCode == http.StatusOK && queryResp.Error() == "" {
+		c.createdDatabases[database] = true
 		return nil
 	}
 
@@ -264,10 +238,64 @@ func (c *httpClient) CreateDatabase(ctx context.Context) error {
 
 // Write sends the metrics to InfluxDB
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
-	var err error
+	batches := make(map[string][]telegraf.Metric)
+	if c.config.DatabaseTag == "" {
+		err := c.writeBatch(ctx, c.config.Database, metrics)
+		if err != nil {
+			return err
+		}
+	} else {
+		for _, metric := range metrics {
+			db, ok := metric.GetTag(c.config.DatabaseTag)
+			if !ok {
+				db = c.config.Database
+			}
 
-	reader := influx.NewReader(metrics, c.serializer)
-	req, err := c.makeWriteRequest(reader)
+			if _, ok := batches[db]; !ok {
+				batches[db] = make([]telegraf.Metric, 0)
+			}
+
+			if c.config.ExcludeDatabaseTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
+				metric.RemoveTag(c.config.DatabaseTag)
+			}
+
+			batches[db] = append(batches[db], metric)
+		}
+
+		for db, batch := range batches {
+			if !c.config.SkipDatabaseCreation && !c.createdDatabases[db] {
+				err := c.CreateDatabase(ctx, db)
+				if err != nil {
+					c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
+						c.config.URL, db, err)
+				}
+			}
+
+			err := c.writeBatch(ctx, db, batch)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegraf.Metric) error {
+	url, err := makeWriteURL(c.config.URL, db, c.config.RetentionPolicy, c.config.Consistency)
+	if err != nil {
+		return err
+	}
+
+	reader, err := c.requestBodyReader(metrics)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	req, err := c.makeWriteRequest(url, reader)
 	if err != nil {
 		return err
 	}
@@ -292,11 +320,13 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	if strings.Contains(desc, errStringDatabaseNotFound) {
-		return &APIError{
-			StatusCode:  resp.StatusCode,
-			Title:       resp.Status,
-			Description: desc,
-			Type:        DatabaseNotFound,
+		return &DatabaseNotFoundError{
+			APIError: APIError{
+				StatusCode:  resp.StatusCode,
+				Title:       resp.Status,
+				Description: desc,
+			},
+			Database: db,
 		}
 	}
 
@@ -310,7 +340,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	// discarded for being older than the retention policy.  Usually this not
 	// a cause for concern and we don't want to retry.
 	if strings.Contains(desc, errStringPointsBeyondRP) {
-		log.Printf("W! [outputs.influxdb]: when writing to [%s]: received error %v",
+		c.log.Warnf("When writing to [%s]: received error %v",
 			c.URL(), desc)
 		return nil
 	}
@@ -319,7 +349,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	// correctable at this point and so the point is dropped instead of
 	// retrying.
 	if strings.Contains(desc, errStringPartialWrite) {
-		log.Printf("E! [outputs.influxdb]: when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -327,7 +357,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	// This error indicates a bug in either Telegraf line protocol
 	// serialization, retries would not be successful.
 	if strings.Contains(desc, errStringUnableToParse) {
-		log.Printf("E! [outputs.influxdb]: when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -340,11 +370,16 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
+	queryURL, err := makeQueryURL(c.config.URL)
+	if err != nil {
+		return nil, err
+	}
+
 	params := url.Values{}
 	params.Set("q", query)
 	form := strings.NewReader(params.Encode())
 
-	req, err := http.NewRequest("POST", c.QueryURL, form)
+	req, err := http.NewRequest("POST", queryURL, form)
 	if err != nil {
 		return nil, err
 	}
@@ -355,16 +390,10 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
+func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
 	var err error
-	if c.ContentEncoding == "gzip" {
-		body, err = internal.CompressWithGzip(body)
-		if err != nil {
-			return nil, err
-		}
-	}
 
-	req, err := http.NewRequest("POST", c.WriteURL, body)
+	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -372,19 +401,36 @@ func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
 	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
 	c.addHeaders(req)
 
-	if c.ContentEncoding == "gzip" {
+	if c.config.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
 
 	return req, nil
 }
 
-func (c *httpClient) addHeaders(req *http.Request) {
-	if c.Username != "" || c.Password != "" {
-		req.SetBasicAuth(c.Username, c.Password)
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// side of the connection in case of error
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser, error) {
+	reader := influx.NewReader(metrics, c.config.Serializer)
+
+	if c.config.ContentEncoding == "gzip" {
+		rc, err := internal.CompressWithGzip(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		return rc, nil
 	}
 
-	for header, value := range c.Headers {
+	return ioutil.NopCloser(reader), nil
+}
+
+func (c *httpClient) addHeaders(req *http.Request) {
+	if c.config.Username != "" || c.config.Password != "" {
+		req.SetBasicAuth(c.config.Username, c.config.Password)
+	}
+
+	for header, value := range c.config.Headers {
 		req.Header.Set(header, value)
 	}
 }
@@ -429,4 +475,8 @@ func makeQueryURL(loc *url.URL) (string, error) {
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
 	return u.String(), nil
+}
+
+func (c *httpClient) Close() {
+	internal.CloseIdleConnections(c.client)
 }

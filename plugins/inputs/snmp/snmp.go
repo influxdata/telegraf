@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
+	"github.com/influxdata/wlog"
 	"github.com/soniah/gosnmp"
 )
 
@@ -84,6 +85,14 @@ var execCommand = exec.Command
 // execCmd executes the specified command, returning the STDOUT content.
 // If command exits with error status, the output is captured into the returned error.
 func execCmd(arg0 string, args ...string) ([]byte, error) {
+	if wlog.LogLevel() == wlog.DEBUG {
+		quoted := make([]string, 0, len(args))
+		for _, arg := range args {
+			quoted = append(quoted, fmt.Sprintf("%q", arg))
+		}
+		log.Printf("D! [inputs.snmp] executing %q %s", arg0, strings.Join(quoted, " "))
+	}
+
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
 		if err, ok := err.(*exec.ExitError); ok {
@@ -268,7 +277,7 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := snmpTranslate(f.Oid)
+	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
 	if err != nil {
 		return Errorf(err, "translating")
 	}
@@ -614,6 +623,10 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
 	s.connectionCache[idx] = gs
 
+	if strings.HasPrefix(agent, "tcp://") {
+		agent = strings.TrimPrefix(agent, "tcp://")
+		gs.Transport = "tcp"
+	}
 	host, portStr, err := net.SplitHostPort(agent)
 	if err != nil {
 		if err, ok := err.(*net.AddrError); !ok || err.Err != "missing port in address" {
@@ -869,7 +882,7 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 }
 
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, err = snmpTranslate(oid)
+	mibName, oidNum, oidText, _, err = SnmpTranslate(oid)
 	if err != nil {
 		return "", "", "", nil, Errorf(err, "translating")
 	}
@@ -939,7 +952,7 @@ var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
-func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	snmpTranslateCachesLock.Lock()
 	if snmpTranslateCaches == nil {
 		snmpTranslateCaches = map[string]snmpTranslateCache{}
@@ -963,6 +976,28 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 	snmpTranslateCachesLock.Unlock()
 
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
+}
+
+func SnmpTranslateForce(oid string, mibName string, oidNum string, oidText string, conversion string) {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	if snmpTranslateCaches == nil {
+		snmpTranslateCaches = map[string]snmpTranslateCache{}
+	}
+
+	var stc snmpTranslateCache
+	stc.mibName = mibName
+	stc.oidNum = oidNum
+	stc.oidText = oidText
+	stc.conversion = conversion
+	stc.err = nil
+	snmpTranslateCaches[oid] = stc
+}
+
+func SnmpTranslateClear() {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	snmpTranslateCaches = map[string]snmpTranslateCache{}
 }
 
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {

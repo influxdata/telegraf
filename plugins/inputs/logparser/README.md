@@ -81,7 +81,8 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
 
-You must capture at least one field per line.
+**Note:** You must capture at least one field per line.
+Patterns that convert all captures to tags will result in points that can't be written to InfluxDB.
 
 - Available modifiers:
   - string   (default if nothing is specified)
@@ -104,6 +105,7 @@ You must capture at least one field per line.
   - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
   - ts-epoch         (seconds since unix epoch, may contain decimal)
+  - ts-epochmilli    (milliseconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
   - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
@@ -114,7 +116,7 @@ To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:t
 To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),
+Telegraf has many of its own [built-in patterns](/plugins/parsers/grok/influx_patterns.go),
 as well as support for most of
 [logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
 _Golang regular expressions do not support lookahead or lookbehind.

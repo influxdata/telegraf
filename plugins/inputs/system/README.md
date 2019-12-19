@@ -3,6 +3,8 @@
 The system plugin gathers general stats on system load, uptime,
 and number of users logged in. It is similar to the unix `uptime` command.
 
+Number of CPUs is obtained from the /proc/cpuinfo file.
+
 ### Configuration:
 
 ```toml
@@ -13,7 +15,7 @@ and number of users logged in. It is similar to the unix `uptime` command.
 #### Permissions:
 
 The `n_users` field requires read access to `/var/run/utmp`, and may require
-the `telegraf` user to be added to the `utmp` group on some systems.
+the `telegraf` user to be added to the `utmp` group on some systems. If this file does not exist `n_users` will be skipped.
 
 ### Metrics:
 
@@ -25,7 +27,7 @@ the `telegraf` user to be added to the `utmp` group on some systems.
 	- n_users (integer)
 	- n_cpus (integer)
 	- uptime (integer, seconds)
-	- uptime_format (string)
+	- uptime_format (string, deprecated in 1.10, use `uptime` field)
 
 ### Example Output:
 

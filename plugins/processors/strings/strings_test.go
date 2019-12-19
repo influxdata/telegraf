@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,21 +27,19 @@ func newM1() telegraf.Metric {
 }
 
 func newM2() telegraf.Metric {
-	m2, _ := metric.New("IIS_log",
+	m1, _ := metric.New("IIS_log",
 		map[string]string{
 			"verb":           "GET",
-			"resp_code":      "200",
-			"s-computername": "MIXEDCASE_hostname",
+			"S-ComputerName": "MIXEDCASE_hostname",
 		},
 		map[string]interface{}{
-			"request":       "/mixed/CASE/paTH/?from=-1D&to=now",
-			"cs-host":       "AAAbbb",
-			"ignore_number": int64(200),
-			"ignore_bool":   true,
+			"Request":      "/mixed/CASE/paTH/?from=-1D&to=now",
+			"req/sec":      5,
+			" whitespace ": "  whitespace\t",
 		},
 		time.Now(),
 	)
-	return m2
+	return m1
 }
 
 func TestFieldConversions(t *testing.T) {
@@ -271,6 +270,258 @@ func TestFieldConversions(t *testing.T) {
 	}
 }
 
+func TestFieldKeyConversions(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *Strings
+		check  func(t *testing.T, actual telegraf.Metric)
+	}{
+		{
+			name: "Should change existing field key to lowercase",
+			plugin: &Strings{
+				Lowercase: []converter{
+					{
+						FieldKey: "Request",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("request")
+				require.True(t, ok)
+				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
+			},
+		},
+		{
+			name: "Should change existing field key to uppercase",
+			plugin: &Strings{
+				Uppercase: []converter{
+					{
+						FieldKey: "Request",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("Request")
+				require.False(t, ok)
+
+				fv, ok = actual.GetField("REQUEST")
+				require.True(t, ok)
+				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
+			},
+		},
+		{
+			name: "Should trim from both sides",
+			plugin: &Strings{
+				Trim: []converter{
+					{
+						FieldKey: "Request",
+						Cutset:   "eR",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("quest")
+				require.True(t, ok)
+				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
+			},
+		},
+		{
+			name: "Should trim from both sides but not make lowercase",
+			plugin: &Strings{
+				// Tag/field key multiple executions occur in the following order: (initOnce)
+				//   Lowercase
+				//   Uppercase
+				//   Trim
+				//   TrimLeft
+				//   TrimRight
+				//   TrimPrefix
+				//   TrimSuffix
+				//   Replace
+				Lowercase: []converter{
+					{
+						FieldKey: "Request",
+					},
+				},
+				Trim: []converter{
+					{
+						FieldKey: "request",
+						Cutset:   "tse",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("requ")
+				require.True(t, ok)
+				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
+			},
+		},
+		{
+			name: "Should trim from left side",
+			plugin: &Strings{
+				TrimLeft: []converter{
+					{
+						FieldKey: "req/sec",
+						Cutset:   "req/",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("sec")
+				require.True(t, ok)
+				require.Equal(t, int64(5), fv)
+			},
+		},
+		{
+			name: "Should trim from right side",
+			plugin: &Strings{
+				TrimRight: []converter{
+					{
+						FieldKey: "req/sec",
+						Cutset:   "req/",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("req/sec")
+				require.True(t, ok)
+				require.Equal(t, int64(5), fv)
+			},
+		},
+		{
+			name: "Should trim prefix 'req/'",
+			plugin: &Strings{
+				TrimPrefix: []converter{
+					{
+						FieldKey: "req/sec",
+						Prefix:   "req/",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("sec")
+				require.True(t, ok)
+				require.Equal(t, int64(5), fv)
+			},
+		},
+		{
+			name: "Should trim suffix '/sec'",
+			plugin: &Strings{
+				TrimSuffix: []converter{
+					{
+						FieldKey: "req/sec",
+						Suffix:   "/sec",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("req")
+				require.True(t, ok)
+				require.Equal(t, int64(5), fv)
+			},
+		},
+		{
+			name: "Trim without cutset removes whitespace",
+			plugin: &Strings{
+				Trim: []converter{
+					{
+						FieldKey: " whitespace ",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("whitespace")
+				require.True(t, ok)
+				require.Equal(t, "  whitespace\t", fv)
+			},
+		},
+		{
+			name: "Trim left without cutset removes whitespace",
+			plugin: &Strings{
+				TrimLeft: []converter{
+					{
+						FieldKey: " whitespace ",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("whitespace ")
+				require.True(t, ok)
+				require.Equal(t, "  whitespace\t", fv)
+			},
+		},
+		{
+			name: "Trim right without cutset removes whitespace",
+			plugin: &Strings{
+				TrimRight: []converter{
+					{
+						FieldKey: " whitespace ",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField(" whitespace")
+				require.True(t, ok)
+				require.Equal(t, "  whitespace\t", fv)
+			},
+		},
+		{
+			name: "No change if field missing",
+			plugin: &Strings{
+				Lowercase: []converter{
+					{
+						FieldKey: "xyzzy",
+						Suffix:   "-1D&to=now",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("Request")
+				require.True(t, ok)
+				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
+			},
+		},
+		{
+			name: "Should trim the existing field to 6 characters",
+			plugin: &Strings{
+				Left: []converter{
+					{
+						Field: "Request",
+						Width: 6,
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("Request")
+				require.True(t, ok)
+				require.Equal(t, "/mixed", fv)
+			},
+		},
+		{
+			name: "Should do nothing to the string",
+			plugin: &Strings{
+				Left: []converter{
+					{
+						Field: "Request",
+						Width: 600,
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("Request")
+				require.True(t, ok)
+				require.Equal(t, "/mixed/CASE/paTH/?from=-1D&to=now", fv)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics := tt.plugin.Apply(newM2())
+			require.Len(t, metrics, 1)
+			tt.check(t, metrics[0])
+		})
+	}
+}
+
 func TestTagConversions(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -355,6 +606,87 @@ func TestTagConversions(t *testing.T) {
 	}
 }
 
+func TestTagKeyConversions(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *Strings
+		check  func(t *testing.T, actual telegraf.Metric)
+	}{
+		{
+			name: "Should change existing tag key to lowercase",
+			plugin: &Strings{
+				Lowercase: []converter{
+					{
+						Tag:    "S-ComputerName",
+						TagKey: "S-ComputerName",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				tv, ok := actual.GetTag("verb")
+				require.True(t, ok)
+				require.Equal(t, "GET", tv)
+
+				tv, ok = actual.GetTag("s-computername")
+				require.True(t, ok)
+				require.Equal(t, "mixedcase_hostname", tv)
+			},
+		},
+		{
+			name: "Should add new lowercase tag key",
+			plugin: &Strings{
+				Lowercase: []converter{
+					{
+						TagKey: "S-ComputerName",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				tv, ok := actual.GetTag("verb")
+				require.True(t, ok)
+				require.Equal(t, "GET", tv)
+
+				tv, ok = actual.GetTag("S-ComputerName")
+				require.False(t, ok)
+
+				tv, ok = actual.GetTag("s-computername")
+				require.True(t, ok)
+				require.Equal(t, "MIXEDCASE_hostname", tv)
+			},
+		},
+		{
+			name: "Should add new uppercase tag key",
+			plugin: &Strings{
+				Uppercase: []converter{
+					{
+						TagKey: "S-ComputerName",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				tv, ok := actual.GetTag("verb")
+				require.True(t, ok)
+				require.Equal(t, "GET", tv)
+
+				tv, ok = actual.GetTag("S-ComputerName")
+				require.False(t, ok)
+
+				tv, ok = actual.GetTag("S-COMPUTERNAME")
+				require.True(t, ok)
+				require.Equal(t, "MIXEDCASE_hostname", tv)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics := tt.plugin.Apply(newM2())
+			require.Len(t, metrics, 1)
+			tt.check(t, metrics[0])
+		})
+	}
+}
+
 func TestMeasurementConversions(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -404,9 +736,38 @@ func TestMultipleConversions(t *testing.T) {
 				Tag: "verb",
 			},
 		},
+		Replace: []converter{
+			{
+				Tag: "foo",
+				Old: "a",
+				New: "x",
+			},
+			{
+				Tag: "bar",
+				Old: "b",
+				New: "y",
+			},
+		},
 	}
 
-	processed := plugin.Apply(newM2())
+	m, _ := metric.New("IIS_log",
+		map[string]string{
+			"verb":           "GET",
+			"resp_code":      "200",
+			"s-computername": "MIXEDCASE_hostname",
+			"foo":            "a",
+			"bar":            "b",
+		},
+		map[string]interface{}{
+			"request":       "/mixed/CASE/paTH/?from=-1D&to=now",
+			"cs-host":       "AAAbbb",
+			"ignore_number": int64(200),
+			"ignore_bool":   true,
+		},
+		time.Now(),
+	)
+
+	processed := plugin.Apply(m)
 
 	expectedFields := map[string]interface{}{
 		"request":           "/mixed/case/path/?from=-1d&to=now",
@@ -419,6 +780,8 @@ func TestMultipleConversions(t *testing.T) {
 		"verb":           "GET",
 		"resp_code":      "200",
 		"s-computername": "mixedcase_hostname",
+		"foo":            "x",
+		"bar":            "y",
 	}
 
 	assert.Equal(t, expectedFields, processed[0].Fields())
@@ -529,4 +892,111 @@ func TestMeasurementCharDeletion(t *testing.T) {
 	assert.Equal(t, ":bar:baz", results[0].Name(), "Should have deleted the initial `foo`")
 	assert.Equal(t, "foofoofoo", results[1].Name(), "Should have refused to delete the whole string")
 	assert.Equal(t, "barbarbar", results[2].Name(), "Should not have changed the input")
+}
+
+func TestBase64Decode(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *Strings
+		metric   []telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name: "base64decode success",
+			plugin: &Strings{
+				Base64Decode: []converter{
+					{
+						Field: "message",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "aG93ZHk=",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "howdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "base64decode not valid base64 returns original string",
+			plugin: &Strings{
+				Base64Decode: []converter{
+					{
+						Field: "message",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "_not_base64_",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "_not_base64_",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "base64decode not valid utf-8 returns original string",
+			plugin: &Strings{
+				Base64Decode: []converter{
+					{
+						Field: "message",
+					},
+				},
+			},
+			metric: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "//5oAG8AdwBkAHkA",
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"message": "//5oAG8AdwBkAHkA",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := tt.plugin.Apply(tt.metric...)
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
 }

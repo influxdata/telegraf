@@ -16,11 +16,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.15.54"
-
-[[constraint]]
-  name = "github.com/bsm/sarama-cluster"
-  version = "2.1.13"
+  version = "1.19.41"
 
 [[constraint]]
   name = "github.com/couchbase/go-couchbase"
@@ -40,7 +36,7 @@
 
 [[constraint]]
   name = "github.com/eclipse/paho.mqtt.golang"
-  version = "~1.1.1"
+  version = "1"
 
 [[constraint]]
   name = "github.com/go-sql-driver/mysql"
@@ -80,7 +76,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/toml"
-  branch = "master"
+  branch = "telegraf"
 
 [[constraint]]
   name = "github.com/influxdata/wlog"
@@ -88,7 +84,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.2.0"
+  version = "3.4.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
@@ -104,11 +100,11 @@
 
 [[constraint]]
   name = "github.com/Microsoft/ApplicationInsights-Go"
-  branch = "master"
+  version = "0.4.2"
 
 [[constraint]]
   name = "github.com/miekg/dns"
-  version = "1.0.8"
+  version = "1.0.10"
 
 [[constraint]]
   name = "github.com/multiplay/go-ts3"
@@ -132,7 +128,7 @@
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
+  version = "0.9.2"
 
 [[constraint]]
   name = "github.com/prometheus/client_model"
@@ -143,20 +139,20 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/satori/go.uuid"
-  version = "1.2.0"
+  name = "github.com/gofrs/uuid"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.07"
+  version = "2.19.7"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.18.0"
+  version = "1.24.0"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
-  branch = "master"
+  version = "1.22.0"
 
 [[constraint]]
   name = "github.com/StackExchange/wmi"
@@ -189,10 +185,12 @@
 [[constraint]]
   name = "golang.org/x/net"
   branch = "master"
+  source = "https://github.com/golang/net.git"
 
 [[constraint]]
   name = "golang.org/x/sys"
   branch = "master"
+  source = "https://github.com/golang/sys.git"
 
 [[constraint]]
   name = "google.golang.org/grpc"
@@ -201,10 +199,6 @@
 [[constraint]]
   name = "gopkg.in/gorethink/gorethink.v3"
   version = "3.0.5"
-
-[[constraint]]
-  name = "gopkg.in/ldap.v2"
-  version = "2.5.1"
 
 [[constraint]]
   name = "gopkg.in/mgo.v2"
@@ -223,20 +217,29 @@
   name = "gopkg.in/fsnotify.v1"
 
 [[constraint]]
+  name = "github.com/mdlayher/apcupsd"
+  revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
+
+[[constraint]]
   branch = "master"
   name = "google.golang.org/genproto"
 
 [[constraint]]
   name = "github.com/vmware/govmomi"
-  version = "0.18.0"
+  version = "0.19.0"
 
- [[constraint]] 
+[[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "10.12.0"
+  version = "^13.0.0"
+
+[[constraint]]
+  name = "github.com/Azure/azure-storage-queue-go"
+  version = "0.2.0"
 
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+  source = "https://github.com/golang/oauth2.git"
 
 [[constraint]]
   branch = "master"
@@ -248,9 +251,60 @@
 
 [[constraint]]
   name = "github.com/wavefronthq/wavefront-sdk-go"
-  version = "v0.9.0"
+  version = "^0.9.1"
 
 [[constraint]]
   name = "github.com/karrick/godirwalk"
-  version = "1.7.5"
+  version = "1.10"
 
+[[override]]
+  name = "github.com/harlow/kinesis-consumer"
+  branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kubernetes/apimachinery"
+
+[[constraint]]
+  name = "github.com/go-logfmt/logfmt"
+  version = "0.4.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/ghodss/yaml"
+
+[[override]]
+  name = "golang.org/x/crypto"
+  source = "https://github.com/golang/crypto.git"
+
+[[override]]
+  name = "golang.org/x/sync"
+  source = "https://github.com/golang/sync.git"
+
+[[override]]
+  name = "golang.org/x/text"
+  source = "https://github.com/golang/text.git"
+
+[[constraint]]
+  name = "github.com/google/go-github"
+  version = "24.0.1"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/openconfig/gnmi"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  name = "gopkg.in/ldap.v3"
+  version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/safchain/ethtool"
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[override]]
+  name = "github.com/satori/go.uuid"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"

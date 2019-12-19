@@ -1,7 +1,7 @@
 # SQL Server Input Plugin
 
 The `sqlserver` plugin provides metrics for your SQL Server instance. It
-currently works with SQL Server versions 2008+. Recorded metrics are
+currently works with SQL Server 2008 SP3 and newer. Recorded metrics are
 lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ### Additional Setup:
@@ -18,9 +18,21 @@ GRANT VIEW ANY DEFINITION TO [telegraf];
 GO
 ```
 
+For Azure SQL Database, you require the View Database State permission and can create a user with a password directly in the database.
+```sql
+CREATE USER [telegraf] WITH PASSWORD = N'mystrongpassword';
+GO
+GRANT VIEW DATABASE STATE TO [telegraf];
+GO
+```
+
 ### Configuration:
 
 ```toml
+[agent]
+  ## Default data collection interval for all inputs, can be changed as per collection interval needs
+  interval = "10s"
+
 # Read metrics from Microsoft SQL Server
 [[inputs.sqlserver]]
   ## Specify instances to monitor with a list of connection strings.
@@ -28,18 +40,19 @@ GO
   ## By default, the host is localhost, listening on default port, TCP 1433.
   ##   for Windows, the user is the currently running AD user (SSO).
   ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-  ##   parameters.
+  ##   parameters, in particular, tls connections can be created like so:
+  ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
   # servers = [
   #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
   # ]
 
   ## Optional parameter, setting this to 2 will use a new version
   ## of the collection queries that break compatibility with the original
-  ## dashboards.
+  ## dashboards. All new functionality is under V2
   query_version = 2
 
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
-  # azuredb = false
+  # azuredb = true
 
   ## If you would like to exclude some of the metrics queries, list them here
   ## Possible choices:
@@ -52,7 +65,12 @@ GO
   ## - DatabaseStats
   ## - MemoryClerk
   ## - VolumeSpace
-  exclude_query = [ 'DatabaseIO' ]
+  ## - Schedulers
+  ## - AzureDBResourceStats
+  ## - AzureDBResourceGovernance
+  ## - SqlRequests
+  ## - ServerProperties
+  exclude_query = [ 'Schedulers' , 'SqlRequests']
 ```
 
 ### Metrics:
@@ -79,7 +97,6 @@ If you are using the original queries all stats have the following tags:
 
 #### Version 2:
 The new (version 2) metrics provide:
-- *AzureDB*: AzureDB resource utilization from `sys.dm_db_resource_stats`
 - *Database IO*: IO stats from `sys.dm_io_virtual_file_stats`
 - *Memory Clerk*: Memory clerk breakdown from `sys.dm_os_memory_clerks`, most clerks have been given a friendly name.
 - *Performance Counters*: A select list of performance counters from `sys.dm_os_performance_counters`. Some of the important metrics included:
@@ -89,8 +106,10 @@ The new (version 2) metrics provide:
   - *Memory*: PLE, Page reads/sec, Page writes/sec, + more
   - *TempDB*: Free space, Version store usage, Active temp tables, temp table creation rate, + more
   - *Resource Governor*: CPU Usage, Requests/sec, Queued Requests, and Blocked tasks per workload group + more
-- *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version
+- *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version. In the case of Azure SQL relevent properties such as Tier, #Vcores, Memory etc.
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
+- *Schedulers* - This captures sys.dm_os_schedulers.
+- *SqlRequests* - This captures a snapshot of dm_exec_requests and dm_exec_sessions that gives you running requests as well as wait types and blocking sessions
 - *Azure Managed Instances*
   - Stats from `sys.server_resource_stats`:
     - cpu_count
@@ -101,6 +120,11 @@ The new (version 2) metrics provide:
     - total_storage_mb
     - available_storage_mb
     - uptime
+  - Resource governance stats from sys.dm_instance_resource_governance
+- *Azure SQL Database*
+  - Stats from sys.dm_db_wait_stats
+  - Resource governance stats from sys.dm_user_db_resource_governance
+  - Stats from sys.dm_db_resource_stats
 
 The following metrics can be used directly, with no delta calculations:
  - SQLServer:Buffer Manager\Buffer cache hit ratio
@@ -140,3 +164,4 @@ The following metrics can be used directly, with no delta calculations:
 
 Version 2 queries have the following tags:
 - `sql_instance`: Physical host and instance name (hostname:instance)
+- database_name:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.

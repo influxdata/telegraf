@@ -50,6 +50,7 @@ You must capture at least one field per line.
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
   - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-epochmilli    (milliseconds since unix epoch)
   - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
 
@@ -59,11 +60,15 @@ To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:t
 To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of its own [built-in patterns](/plugins/parsers/grok/influx_patterns.go),
-as well as support for most of
-[logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
-_Golang regular expressions do not support lookahead or lookbehind.
-logstash patterns that depend on these are not supported._
+Telegraf has many of its own [built-in patterns][] as well as support for most
+of the Logstash builtin patterns using [these Go compatible patterns][grok-patterns].
+
+**Note:** Golang regular expressions do not support lookahead or lookbehind.
+Logstash patterns that use these features may not be supported, or may use a Go
+friendly pattern that is not fully compatible with the Logstash pattern.
+
+[built-in patterns]: /plugins/parsers/grok/influx_patterns.go
+[grok-patterns]: https://github.com/vjeantet/grok/blob/master/patterns/grok-patterns
 
 If you need help building patterns to match your logs,
 you will find the https://grokdebug.herokuapp.com application quite useful!
@@ -110,6 +115,10 @@ you will find the https://grokdebug.herokuapp.com application quite useful!
   ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
+
+  ## When set to "disable" timestamp will not incremented if there is a
+  ## duplicate.
+  # grok_unique_timestamp = "auto"
 ```
 
 #### Timestamp Examples
@@ -220,4 +229,14 @@ the file output will only print once per `flush_interval`.
 - If successful, add the next token, update the pattern and retest.
 - Continue one token at a time until the entire line is successfully parsed.
 
+#### Performance
 
+Performance depends heavily on the regular expressions that you use, but there
+are a few techniques that can help:
+
+- Avoid using patterns such as `%{DATA}` that will always match.
+- If possible, add `^` and `$` anchors to your pattern:
+  ```
+  [[inputs.file]]
+    grok_patterns = ["^%{COMBINED_LOG_FORMAT}$"]
+  ```

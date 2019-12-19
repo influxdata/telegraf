@@ -101,12 +101,12 @@ func (c *Ceph) gatherAdminSocketStats(acc telegraf.Accumulator) error {
 	for _, s := range sockets {
 		dump, err := perfDump(c.CephBinary, s)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error reading from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error reading from socket '%s': %v", s.socket, err))
 			continue
 		}
 		data, err := parseDump(dump)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error parsing dump from socket '%s': %v", s.socket, err))
+			acc.AddError(fmt.Errorf("error parsing dump from socket '%s': %v", s.socket, err))
 			continue
 		}
 		for tag, metrics := range data {
@@ -157,7 +157,6 @@ func init() {
 	}
 
 	inputs.Add(measurement, func() telegraf.Input { return &c })
-
 }
 
 var perfDump = func(binary string, socket *socket) (string, error) {
@@ -288,7 +287,7 @@ func flatten(data interface{}) []*metric {
 			}
 		}
 	default:
-		log.Printf("I! Ignoring unexpected type '%T' for value %v", val, val)
+		log.Printf("I! [inputs.ceph] ignoring unexpected type '%T' for value %v", val, val)
 	}
 
 	return metrics
@@ -320,6 +319,10 @@ func (c *Ceph) exec(command string) (string, error) {
 
 // CephStatus is used to unmarshal "ceph -s" output
 type CephStatus struct {
+	Health struct {
+		Status        string `json:"status"`
+		OverallStatus string `json:"overall_status"`
+	} `json:"health"`
 	OSDMap struct {
 		OSDMap struct {
 			Epoch          float64 `json:"epoch"`
@@ -336,15 +339,17 @@ type CephStatus struct {
 			StateName string  `json:"state_name"`
 			Count     float64 `json:"count"`
 		} `json:"pgs_by_state"`
-		Version       float64 `json:"version"`
-		NumPGs        float64 `json:"num_pgs"`
-		DataBytes     float64 `json:"data_bytes"`
-		BytesUsed     float64 `json:"bytes_used"`
-		BytesAvail    float64 `json:"bytes_avail"`
-		BytesTotal    float64 `json:"bytes_total"`
-		ReadBytesSec  float64 `json:"read_bytes_sec"`
-		WriteBytesSec float64 `json:"write_bytes_sec"`
-		OpPerSec      float64 `json:"op_per_sec"`
+		Version       float64  `json:"version"`
+		NumPGs        float64  `json:"num_pgs"`
+		DataBytes     float64  `json:"data_bytes"`
+		BytesUsed     float64  `json:"bytes_used"`
+		BytesAvail    float64  `json:"bytes_avail"`
+		BytesTotal    float64  `json:"bytes_total"`
+		ReadBytesSec  float64  `json:"read_bytes_sec"`
+		WriteBytesSec float64  `json:"write_bytes_sec"`
+		OpPerSec      *float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
+		ReadOpPerSec  float64  `json:"read_op_per_sec"`
+		WriteOpPerSec float64  `json:"write_op_per_sec"`
 	} `json:"pgmap"`
 }
 
@@ -356,6 +361,7 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 	}
 
 	decoders := []func(telegraf.Accumulator, *CephStatus) error{
+		decodeStatusHealth,
 		decodeStatusOsdmap,
 		decodeStatusPgmap,
 		decodeStatusPgmapState,
@@ -367,6 +373,16 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 		}
 	}
 
+	return nil
+}
+
+// decodeStatusHealth decodes the health portion of the output of 'ceph status'
+func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
+	fields := map[string]interface{}{
+		"status":         data.Health.Status,
+		"overall_status": data.Health.OverallStatus,
+	}
+	acc.AddFields("ceph_health", fields, map[string]string{})
 	return nil
 }
 
@@ -388,15 +404,17 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 // decodeStatusPgmap decodes the PG map portion of the output of 'ceph -s'
 func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
-		"version":         data.PGMap.Version,
-		"num_pgs":         data.PGMap.NumPGs,
-		"data_bytes":      data.PGMap.DataBytes,
-		"bytes_used":      data.PGMap.BytesUsed,
-		"bytes_avail":     data.PGMap.BytesAvail,
-		"bytes_total":     data.PGMap.BytesTotal,
-		"read_bytes_sec":  data.PGMap.ReadBytesSec,
-		"write_bytes_sec": data.PGMap.WriteBytesSec,
-		"op_per_sec":      data.PGMap.OpPerSec,
+		"version":          data.PGMap.Version,
+		"num_pgs":          data.PGMap.NumPGs,
+		"data_bytes":       data.PGMap.DataBytes,
+		"bytes_used":       data.PGMap.BytesUsed,
+		"bytes_avail":      data.PGMap.BytesAvail,
+		"bytes_total":      data.PGMap.BytesTotal,
+		"read_bytes_sec":   data.PGMap.ReadBytesSec,
+		"write_bytes_sec":  data.PGMap.WriteBytesSec,
+		"op_per_sec":       data.PGMap.OpPerSec, // This field is no longer reported in ceph 10 and later
+		"read_op_per_sec":  data.PGMap.ReadOpPerSec,
+		"write_op_per_sec": data.PGMap.WriteOpPerSec,
 	}
 	acc.AddFields("ceph_pgmap", fields, map[string]string{})
 	return nil
@@ -419,16 +437,21 @@ func decodeStatusPgmapState(acc telegraf.Accumulator, data *CephStatus) error {
 // CephDF is used to unmarshal 'ceph df' output
 type CephDf struct {
 	Stats struct {
-		TotalSpace float64 `json:"total_space"`
-		TotalUsed  float64 `json:"total_used"`
-		TotalAvail float64 `json:"total_avail"`
+		TotalSpace      *float64 `json:"total_space"` // pre ceph 0.84
+		TotalUsed       *float64 `json:"total_used"`  // pre ceph 0.84
+		TotalAvail      *float64 `json:"total_avail"` // pre ceph 0.84
+		TotalBytes      *float64 `json:"total_bytes"`
+		TotalUsedBytes  *float64 `json:"total_used_bytes"`
+		TotalAvailBytes *float64 `json:"total_avail_bytes"`
 	} `json:"stats"`
 	Pools []struct {
 		Name  string `json:"name"`
 		Stats struct {
-			KBUsed    float64 `json:"kb_used"`
-			BytesUsed float64 `json:"bytes_used"`
-			Objects   float64 `json:"objects"`
+			KBUsed      float64  `json:"kb_used"`
+			BytesUsed   float64  `json:"bytes_used"`
+			Objects     float64  `json:"objects"`
+			PercentUsed *float64 `json:"percent_used"`
+			MaxAvail    *float64 `json:"max_avail"`
 		} `json:"stats"`
 	} `json:"pools"`
 }
@@ -442,9 +465,12 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 
 	// ceph.usage: records global utilization and number of objects
 	fields := map[string]interface{}{
-		"total_space": data.Stats.TotalSpace,
-		"total_used":  data.Stats.TotalUsed,
-		"total_avail": data.Stats.TotalAvail,
+		"total_space":       data.Stats.TotalSpace,
+		"total_used":        data.Stats.TotalUsed,
+		"total_avail":       data.Stats.TotalAvail,
+		"total_bytes":       data.Stats.TotalBytes,
+		"total_used_bytes":  data.Stats.TotalUsedBytes,
+		"total_avail_bytes": data.Stats.TotalAvailBytes,
 	}
 	acc.AddFields("ceph_usage", fields, map[string]string{})
 
@@ -454,9 +480,11 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 			"name": pool.Name,
 		}
 		fields := map[string]interface{}{
-			"kb_used":    pool.Stats.KBUsed,
-			"bytes_used": pool.Stats.BytesUsed,
-			"objects":    pool.Stats.Objects,
+			"kb_used":      pool.Stats.KBUsed,
+			"bytes_used":   pool.Stats.BytesUsed,
+			"objects":      pool.Stats.Objects,
+			"percent_used": pool.Stats.PercentUsed,
+			"max_avail":    pool.Stats.MaxAvail,
 		}
 		acc.AddFields("ceph_pool_usage", fields, tags)
 	}
@@ -468,9 +496,11 @@ func decodeDf(acc telegraf.Accumulator, input string) error {
 type CephOSDPoolStats []struct {
 	PoolName     string `json:"pool_name"`
 	ClientIORate struct {
-		ReadBytesSec  float64 `json:"read_bytes_sec"`
-		WriteBytesSec float64 `json:"write_bytes_sec"`
-		OpPerSec      float64 `json:"op_per_sec"`
+		ReadBytesSec  float64  `json:"read_bytes_sec"`
+		WriteBytesSec float64  `json:"write_bytes_sec"`
+		OpPerSec      *float64 `json:"op_per_sec"` // This field is no longer reported in ceph 10 and later
+		ReadOpPerSec  float64  `json:"read_op_per_sec"`
+		WriteOpPerSec float64  `json:"write_op_per_sec"`
 	} `json:"client_io_rate"`
 	RecoveryRate struct {
 		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
@@ -494,7 +524,9 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 		fields := map[string]interface{}{
 			"read_bytes_sec":             pool.ClientIORate.ReadBytesSec,
 			"write_bytes_sec":            pool.ClientIORate.WriteBytesSec,
-			"op_per_sec":                 pool.ClientIORate.OpPerSec,
+			"op_per_sec":                 pool.ClientIORate.OpPerSec, // This field is no longer reported in ceph 10 and later
+			"read_op_per_sec":            pool.ClientIORate.ReadOpPerSec,
+			"write_op_per_sec":           pool.ClientIORate.WriteOpPerSec,
 			"recovering_objects_per_sec": pool.RecoveryRate.RecoveringObjectsPerSec,
 			"recovering_bytes_per_sec":   pool.RecoveryRate.RecoveringBytesPerSec,
 			"recovering_keys_per_sec":    pool.RecoveryRate.RecoveringKeysPerSec,

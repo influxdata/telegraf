@@ -15,6 +15,7 @@ similar constructs.
   plugin can be configured. This is included in `telegraf config`.  Please
   consult the [SampleConfig][] page for the latest style guidelines.
 - The `Description` function should say in one line what this output does.
+- Follow the recommended [CodeStyle][].
 
 ### Output Plugin Example
 
@@ -29,7 +30,7 @@ import (
 )
 
 type Simple struct {
-    Ok bool
+    Ok bool `toml:"ok"`
 }
 
 func (s *Simple) Description() string {
@@ -40,6 +41,10 @@ func (s *Simple) SampleConfig() string {
     return `
   ok = true
 `
+}
+
+func (s *Simple) Init() error {
+	return nil
 }
 
 func (s *Simple) Connect() error {
@@ -92,4 +97,5 @@ You should also add the following to your `SampleConfig()`:
 [file]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/file
 [output data formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
 [SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
+[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
 [telegraf.Output]: https://godoc.org/github.com/influxdata/telegraf#Output

@@ -272,12 +272,46 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	assert.EqualValues(t, 567, gs.Port)
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
 	assert.Equal(t, "foo", gs.Community)
+	assert.Equal(t, "udp", gs.Transport)
 
 	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
 	gs = gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
+	assert.Equal(t, "udp", gs.Transport)
+}
+
+func TestGetSNMPConnectionTCP(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go stubTCPServer(&wg)
+	wg.Wait()
+
+	s := &Snmp{
+		Agents: []string{"tcp://127.0.0.1:56789"},
+	}
+	err := s.init()
+	require.NoError(t, err)
+
+	wg.Add(1)
+	gsc, err := s.getConnection(0)
+	require.NoError(t, err)
+	gs := gsc.(gosnmpWrapper)
+	assert.Equal(t, "127.0.0.1", gs.Target)
+	assert.EqualValues(t, 56789, gs.Port)
+	assert.Equal(t, "tcp", gs.Transport)
+	wg.Wait()
+}
+
+func stubTCPServer(wg *sync.WaitGroup) {
+	defer wg.Done()
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:56789")
+	tcpServer, _ := net.ListenTCP("tcp", tcpAddr)
+	defer tcpServer.Close()
+	wg.Done()
+	conn, _ := tcpServer.AcceptTCP()
+	defer conn.Close()
 }
 
 func TestGetSNMPConnection_v3(t *testing.T) {
@@ -708,7 +742,7 @@ func TestFieldConvert(t *testing.T) {
 func TestSnmpTranslateCache_miss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
-	mibName, oidNum, oidText, conversion, err := snmpTranslate(oid)
+	mibName, oidNum, oidText, conversion, err := SnmpTranslate(oid)
 	assert.Len(t, snmpTranslateCaches, 1)
 	stc := snmpTranslateCaches[oid]
 	require.NotNil(t, stc)
@@ -729,7 +763,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 			err:        fmt.Errorf("e"),
 		},
 	}
-	mibName, oidNum, oidText, conversion, err := snmpTranslate("foo")
+	mibName, oidNum, oidText, conversion, err := SnmpTranslate("foo")
 	assert.Equal(t, "a", mibName)
 	assert.Equal(t, "b", oidNum)
 	assert.Equal(t, "c", oidText)

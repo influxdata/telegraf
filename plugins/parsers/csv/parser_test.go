@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -242,6 +243,30 @@ func TestTrimSpace(t *testing.T) {
 	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
+func TestTrimSpaceDelimetedBySpace(t *testing.T) {
+	p := Parser{
+		Delimiter:      " ",
+		HeaderRowCount: 1,
+		TrimSpace:      true,
+		TimeFunc:       DefaultTime,
+	}
+	testCSV := `   first   second   third   fourth
+abcdefgh        0       2    false
+  abcdef      3.3       4     true
+       f        0       2    false`
+
+	expectedFields := map[string]interface{}{
+		"first":  "abcdef",
+		"second": 3.3,
+		"third":  int64(4),
+		"fourth": true,
+	}
+
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, expectedFields, metrics[1].Fields())
+}
+
 func TestSkipRows(t *testing.T) {
 	p := Parser{
 		HeaderRowCount:    1,
@@ -321,4 +346,31 @@ func TestParseStream(t *testing.T) {
 			},
 			DefaultTime(),
 		), metric)
+}
+
+func TestTimestampUnixFloatPrecision(t *testing.T) {
+	p := Parser{
+		MetricName:      "csv",
+		ColumnNames:     []string{"time", "value"},
+		TimestampColumn: "time",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+	}
+	data := `1551129661.95456123352050781250,42`
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"value": 42,
+				"time":  1551129661.954561233,
+			},
+			time.Unix(1551129661, 954561233),
+		),
+	}
+
+	metrics, err := p.Parse([]byte(data))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
 }
