@@ -2,7 +2,6 @@ package kafka_consumer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -34,15 +34,20 @@ const sampleConfig = `
   # version = ""
 
   ## Optional TLS Config
+  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional SASL Config
+  ## SASL authentication credentials.  These settings should typically be used
+  ## with TLS encryption enabled using the "enable_tls" option.
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
 
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
@@ -98,6 +103,7 @@ type KafkaConsumer struct {
 	SASLUsername           string   `toml:"sasl_username"`
 	SASLVersion            *int     `toml:"sasl_version"`
 
+	EnableTLS bool `toml:"enable_tls"`
 	tls.ClientConfig
 
 	ConsumerCreator ConsumerGroupCreator `toml:"-"`
@@ -160,6 +166,10 @@ func (k *KafkaConsumer) Init() error {
 		config.Version = version
 	}
 
+	if k.EnableTLS {
+		config.Net.TLS.Enable = true
+	}
+
 	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -167,6 +177,8 @@ func (k *KafkaConsumer) Init() error {
 
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
+
+		// TLS is forced on if a custom tls.Config is set.
 		config.Net.TLS.Enable = true
 	}
 
@@ -175,7 +187,7 @@ func (k *KafkaConsumer) Init() error {
 		config.Net.SASL.Password = k.SASLPassword
 		config.Net.SASL.Enable = true
 
-		version, err := SASLVersion(config.Version, k.SASLVersion)
+		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
 		if err != nil {
 			return err
 		}
@@ -214,24 +226,6 @@ func (k *KafkaConsumer) Init() error {
 
 	k.config = config
 	return nil
-}
-
-func SASLVersion(kafkaVersion sarama.KafkaVersion, saslVersion *int) (int16, error) {
-	if saslVersion == nil {
-		if kafkaVersion.IsAtLeast(sarama.V1_0_0_0) {
-			return sarama.SASLHandshakeV1, nil
-		}
-		return sarama.SASLHandshakeV0, nil
-	}
-
-	switch *saslVersion {
-	case 0:
-		return sarama.SASLHandshakeV0, nil
-	case 1:
-		return sarama.SASLHandshakeV1, nil
-	default:
-		return 0, errors.New("invalid SASL version")
-	}
 }
 
 func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
