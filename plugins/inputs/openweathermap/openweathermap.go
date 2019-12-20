@@ -111,7 +111,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				}
 				cities := strings.Join(strs, ",")
 
-				addr := n.formatURL("/data/2.5/group", cities)
+				addr := n.formatURL("/data/2.5/weather", cities)
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
