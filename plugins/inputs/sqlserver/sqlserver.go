@@ -1408,8 +1408,8 @@ SELECT
 	, qt.objectid
 	, QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + '.' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
 	, DB_NAME(qt.dbid) stmt_db_name
-	, r.query_hash
-	, r.query_plan_hash
+	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
+	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
 	FROM	sys.dm_exec_requests r
 		LEFT OUTER JOIN sys.dm_exec_sessions s ON (s.session_id = r.session_id)
 		OUTER APPLY sys.dm_exec_sql_text(sql_handle) AS qt
