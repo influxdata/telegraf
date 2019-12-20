@@ -23,7 +23,7 @@ import (
 type Uwsgi struct {
 	Servers []string          `toml:"servers"`
 	Timeout internal.Duration `toml:"timeout"`
-	SkipErrors bool			  `toml:"skip_errors"`
+	SkipErrors bool           `toml:"skip_errors"`
 
 	client *http.Client
 }
