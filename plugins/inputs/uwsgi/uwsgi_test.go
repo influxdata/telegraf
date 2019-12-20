@@ -186,7 +186,7 @@ func TestUnixSocketError(t *testing.T) {
 
 func TestSkipErrorFlag(t *testing.T) {
 	plugin := &uwsgi.Uwsgi{
-		Servers: []string{"tcp://localhost:9191"},
+		Servers:    []string{"tcp://localhost:9191"},
 		SkipErrors: true,
 	}
 	var acc testutil.Accumulator
