@@ -23,6 +23,7 @@ import (
 type Uwsgi struct {
 	Servers []string          `toml:"servers"`
 	Timeout internal.Duration `toml:"timeout"`
+	SkipErrors bool			  `toml:"skip_errors"`
 
 	client *http.Client
 }
@@ -44,6 +45,9 @@ func (u *Uwsgi) SampleConfig() string {
 
   ## General connection timout
   # timeout = "5s"
+
+  ## Skip if any error might occur retrieving the data uWSGI Stats servers. 
+  # skip_errors = false
 `
 }
 
@@ -67,8 +71,11 @@ func (u *Uwsgi) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if err := u.gatherServer(acc, n); err != nil {
-				log.Printf(fmt.Sprintf("D! [input.uwsgi] %s", err.Error()))
-				return
+				if u.SkipErrors {
+					log.Printf(fmt.Sprintf("D! [input.uwsgi] %s", err.Error()))
+					return
+				}
+				acc.AddError(err)
 			}
 		}(s)
 	}

@@ -15,6 +15,9 @@ The uWSGI input plugin gathers metrics about uWSGI using its [Stats Server](http
 
   ## General connection timout
   # timeout = "5s"
+
+  ## Skip if any error might occur retrieving the data uWSGI Stats servers. 
+  # skip_errors = false
 ```
 
 
