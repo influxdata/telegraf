@@ -183,3 +183,14 @@ func TestUnixSocketError(t *testing.T) {
 	plugin.Gather(&acc)
 	require.Equal(t, 1, len(acc.Errors))
 }
+
+func TestSkipErrorFlag(t *testing.T) {
+	plugin := &uwsgi.Uwsgi{
+		Servers: []string{"tcp://localhost:9191"},
+		SkipErrors: true,
+	}
+	var acc testutil.Accumulator
+	plugin.Gather(&acc)
+
+	require.Equal(t, 0, len(acc.Errors))
+}
