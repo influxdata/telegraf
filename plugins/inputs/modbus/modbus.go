@@ -50,7 +50,7 @@ type fieldContainer struct {
 	Name      string   `toml:"name"`
 	ByteOrder string   `toml:"byte_order"`
 	DataType  string   `toml:"data_type"`
-	Scale     string   `toml:"scale"`
+	Scale     float32   `toml:"scale"`
 	Address   []uint16 `toml:"address"`
 	value     interface{}
 }
