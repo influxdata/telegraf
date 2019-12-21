@@ -97,6 +97,7 @@ func TestCoils(t *testing.T) {
 				SlaveID:    1,
 				Coils: []fieldContainer{
 					{
+						Name : ct.name,
 						Address: []uint16{ct.address},
 					},
 				},
