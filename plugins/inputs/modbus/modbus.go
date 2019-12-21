@@ -147,13 +147,34 @@ func (m *Modbus) Description() string {
 }
 
 func (m *Modbus) Init() error {
-	r := reflect.ValueOf(m).Elem()
-	for i := 0; i < r.NumField(); i++ {
-		f := r.Field(i)
+	err := connect(m)
+	if err != nil {
+		m.isConnected = false
+		return err
+	}
 
-		if f.Type().String() == "[]modbus.fieldContainer" {
-			fields := f.Interface().([]fieldContainer)
-			name := r.Type().Field(i).Name
+	err = m.InitRegister(m.DiscreteInputs, cDiscreteInputs)
+	if err != nil {
+		return err
+	}
+
+	err = m.InitRegister(m.Coils, cCoils)
+	if err != nil {
+		return err
+	}
+
+	err = m.InitRegister(m.HoldingRegisters, cHoldingRegisters)
+	if err != nil {
+		return err
+	}
+
+	err = m.InitRegister(m.InputRegisters, cInputRegisters)
+	if err != nil {
+		return err
+	}
+	
+	return nil
+}
 
 			if len(fields) == 0 {
 				continue
