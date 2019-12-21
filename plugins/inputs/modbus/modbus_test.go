@@ -19,56 +19,56 @@ func TestCoils(t *testing.T) {
 		read     uint16
 	}{
 		{
-			name:     "Coil0-TurnOff",
+			name:     "coil0_turn_off",
 			address:  0,
 			quantity: 1,
 			write:    []byte{0x00},
 			read:     0,
 		},
 		{
-			name:     "Coil0-TurnOn",
+			name:     "coil0_turn_on",
 			address:  0,
 			quantity: 1,
 			write:    []byte{0x01},
 			read:     1,
 		},
 		{
-			name:     "Coil1-TurnOn",
+			name:     "coil1_turn_on",
 			address:  1,
 			quantity: 1,
 			write:    []byte{0x01},
 			read:     1,
 		},
 		{
-			name:     "Coil2-TurnOn",
+			name:     "coil2_turn_on",
 			address:  2,
 			quantity: 1,
 			write:    []byte{0x01},
 			read:     1,
 		},
 		{
-			name:     "Coil3-TurnOn",
+			name:     "coil3_turn_on",
 			address:  3,
 			quantity: 1,
 			write:    []byte{0x01},
 			read:     1,
 		},
 		{
-			name:     "Coil1-TurnOff",
+			name:     "coil1_turn_off",
 			address:  1,
 			quantity: 1,
 			write:    []byte{0x00},
 			read:     0,
 		},
 		{
-			name:     "Coil2-TurnOff",
+			name:     "coil2_turn_off",
 			address:  2,
 			quantity: 1,
 			write:    []byte{0x00},
 			read:     0,
 		},
 		{
-			name:     "Coil3-TurnOff",
+			name:     "coil3_turn_off",
 			address:  3,
 			quantity: 1,
 			write:    []byte{0x00},
@@ -124,7 +124,7 @@ func TestHoldingRegisters(t *testing.T) {
 		read      interface{}
 	}{
 		{
-			name:      "Register0-AB-FLOAT32",
+			name:      "register0_ab_float32",
 			address:   []uint16{0},
 			quantity:  1,
 			byteOrder: "AB",
@@ -134,7 +134,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      float32(220),
 		},
 		{
-			name:      "Register0-Register1-AB-FLOAT32",
+			name:      "register0_register1_ab_float32",
 			address:   []uint16{0, 1},
 			quantity:  2,
 			byteOrder: "ABCD",
@@ -144,7 +144,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      float32(1),
 		},
 		{
-			name:      "Register1-Register2-ABCD-FLOAT32",
+			name:      "register1_register2_abcd_float32",
 			address:   []uint16{1, 2},
 			quantity:  2,
 			byteOrder: "ABCD",
@@ -154,7 +154,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      float32(220),
 		},
 		{
-			name:      "Register3-Register4-ABCD-FLOAT32",
+			name:      "register3_register4_abcd_float32",
 			address:   []uint16{3, 4},
 			quantity:  2,
 			byteOrder: "ABCD",
@@ -164,7 +164,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      float32(220),
 		},
 		{
-			name:      "Register7-AB-FLOAT32",
+			name:      "register7_ab_float32",
 			address:   []uint16{7},
 			quantity:  1,
 			byteOrder: "AB",
@@ -174,7 +174,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      float32(50),
 		},
 		{
-			name:      "Register10-AB-UINT16",
+			name:      "register10_ab_uint16",
 			address:   []uint16{10},
 			quantity:  1,
 			byteOrder: "AB",
@@ -194,7 +194,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      uint16(52651),
 		},
 		{
-			name:      "Register30-AB-INT16",
+			name:      "register30_ab_int16",
 			address:   []uint16{20},
 			quantity:  1,
 			byteOrder: "AB",
@@ -204,7 +204,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      int16(-21555),
 		},
 		{
-			name:      "Register40-BA-INT16",
+			name:      "register40_ba_int16",
 			address:   []uint16{40},
 			quantity:  1,
 			byteOrder: "BA",
@@ -214,7 +214,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      int16(-12885),
 		},
 		{
-			name:      "Register50-Register51-ABCD-INT32",
+			name:      "register50_register51_abcd_int32",
 			address:   []uint16{50, 51},
 			quantity:  2,
 			byteOrder: "ABCD",
@@ -224,7 +224,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      int32(-1430532899),
 		},
 		{
-			name:      "Register60-Register61-DCBA-INT32",
+			name:      "register60_register61_dcba_int32",
 			address:   []uint16{60, 61},
 			quantity:  2,
 			byteOrder: "DCBA",
@@ -234,7 +234,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      int32(-573785174),
 		},
 		{
-			name:      "Register70-Register71-BADC-INT32",
+			name:      "register70_register71_badc_int32",
 			address:   []uint16{70, 71},
 			quantity:  2,
 			byteOrder: "BADC",
@@ -244,7 +244,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      int32(-1146430004),
 		},
 		{
-			name:      "Register80-Register81-CDAB-INT32",
+			name:      "register80_register81_cdab_int32",
 			address:   []uint16{80, 81},
 			quantity:  2,
 			byteOrder: "CDAB",
@@ -254,7 +254,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      int32(-857888069),
 		},
 		{
-			name:      "Register90-Register91-ABCD-UINT32",
+			name:      "register90_register91_abcd_uint32",
 			address:   []uint16{90, 91},
 			quantity:  2,
 			byteOrder: "ABCD",
@@ -264,7 +264,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      uint32(2864434397),
 		},
 		{
-			name:      "Register100-Register101-DCBA-UINT32",
+			name:      "register100_register101_dcba_uint32",
 			address:   []uint16{100, 101},
 			quantity:  2,
 			byteOrder: "DCBA",
@@ -274,7 +274,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      uint32(3721182122),
 		},
 		{
-			name:      "Register110-Register111-BADC-UINT32",
+			name:      "register110_register111_badc_uint32",
 			address:   []uint16{110, 111},
 			quantity:  2,
 			byteOrder: "BADC",
@@ -284,7 +284,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      uint32(3148537292),
 		},
 		{
-			name:      "Register120-Register121-CDAB-UINT32",
+			name:      "register120_register121_cdab_uint32",
 			address:   []uint16{120, 121},
 			quantity:  2,
 			byteOrder: "CDAB",
@@ -294,7 +294,7 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      uint32(3437079227),
 		},
 		{
-			name:      "Register130-Register131-ABCD-FLOAT32-IEEE",
+			name:      "register130_register131_abcd_float32_ieee",
 			address:   []uint16{130, 131},
 			quantity:  2,
 			byteOrder: "ABCD",

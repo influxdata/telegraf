@@ -61,10 +61,10 @@ type registerRange struct {
 }
 
 const (
-	cDiscreteInputs   = "DiscreteInputs"
-	cCoils            = "Coils"
-	cHoldingRegisters = "HoldingRegisters"
-	cInputRegisters   = "InputRegisters"
+	cDiscreteInputs   = "discrete_input"
+	cCoils            = "coil"
+	cHoldingRegisters = "holding_register"
+	cInputRegisters   = "input_register"
 )
 
 const description = `Retrieve data from MODBUS slave devices`
@@ -102,15 +102,15 @@ const sampleConfig = `
  ## address - variable address
  
  discrete_inputs = [
-   { name = "Start",          address = [0]},
-   { name = "Stop",           address = [1]},
-   { name = "Reset",          address = [2]},
-   { name = "EmergencyStop",  address = [3]},
+   { name = "start",          address = [0]},
+   { name = "stop",           address = [1]},
+   { name = "reset",          address = [2]},
+   { name = "emergency_stop",  address = [3]},
  ]
  coils = [
-   { name = "Motor1-Run",     address = [0]},
-   { name = "Motor1-Jog",     address = [1]},
-   { name = "Motor1-Stop",    address = [2]},
+   { name = "motor1_run",     address = [0]},
+   { name = "motor1_jog",     address = [1]},
+   { name = "motor1_stop",    address = [2]},
  ]
  
  ## Analog Variables, Input Registers and Holding Registers
@@ -125,17 +125,17 @@ const sampleConfig = `
  ## address    - variable address
  
  holding_registers = [
-   { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01",  address = [8]},
-   { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [0]},
-   { name = "Energy",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [5,6]},
-   { name = "Current",     byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [1, 2]},
-   { name = "Frequency",   byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [7]},
-   { name = "Power",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.1",   address = [3,4]},
+   { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01",  address = [8]},
+   { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [0]},
+   { name = "energy",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [5,6]},
+   { name = "current",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [1, 2]},
+   { name = "frequency",    byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [7]},
+   { name = "power",        byte_order = "ABCD", data_type = "FLOAT32", scale="0.1",   address = [3,4]},
  ]
  input_registers = [
-   { name = "TankLevel",   byte_order = "AB",   data_type = "INT16",   scale="1",     address = [0]},
-   { name = "TankPH",      byte_order = "AB",   data_type = "INT16",   scale="1",     address = [1]},
-   { name = "Pump1-Speed", byte_order = "ABCD", data_type = "INT32",   scale="1",     address = [3,4]},
+   { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale="1",     address = [0]},
+   { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale="1",     address = [1]},
+   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale="1",     address = [3,4]},
  ]
 `
 
