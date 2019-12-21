@@ -30,7 +30,6 @@ type Modbus struct {
 	InputRegisters   []fieldContainer  `toml:"input_registers"`
 	registers        []register
 	isConnected      bool
-	isInitialized    bool
 	tcpHandler       *mb.TCPClientHandler
 	rtuHandler       *mb.RTUClientHandler
 	asciiHandler     *mb.ASCIIClientHandler
@@ -210,9 +209,6 @@ func (m *Modbus) Init() error {
 			}
 
 			m.registers = append(m.registers, register{name, registersRange, fn, fields})
-		}
-	}
-	m.isInitialized = true
 
 	return nil
 }
@@ -281,9 +277,6 @@ func connect(m *Modbus) error {
 }
 
 func validateFieldContainers(t []fieldContainer, n string) error {
-	byteOrder := []string{"AB", "BA", "ABCD", "CDAB", "BADC", "DCBA"}
-	dataType := []string{"UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32"}
-
 	nameEncountered := map[string]bool{}
 	for i := range t {
 		//check empty name
@@ -367,24 +360,6 @@ func removeDuplicates(elements []uint16) []uint16 {
 	return result
 }
 
-func addFields(t []fieldContainer) map[string]interface{} {
-	fields := make(map[string]interface{})
-	for i := 0; i < len(t); i++ {
-		if len(t[i].Name) > 0 {
-			fields[t[i].Name] = t[i].value
-		} else {
-			name := ""
-			for _, e := range t[i].Address {
-				name = name + "-" + strconv.Itoa(int(e))
-			}
-			name = name[:len(name)-1]
-			fields[name] = t[i]
-		}
-	}
-
-	return fields
-}
-
 func (m *Modbus) getFields() error {
 	for _, r := range m.registers {
 		rawValues := make(map[uint16]uint16)
@@ -400,7 +375,6 @@ func (m *Modbus) getFields() error {
 						rawValues[rr.address+j] = uint16(res[i] >> uint(j) & 0x01)
 					}
 				}
-				continue
 			}
 
 			if r.Type == cInputRegisters || r.Type == cHoldingRegisters {
@@ -422,20 +396,10 @@ func (m *Modbus) getFields() error {
 	return nil
 }
 
-func setDigitalValue(r register, rawValues map[uint16]uint16) error {
-	for i := 0; i < len(r.Fields); i++ {
-		r.Fields[i].value = rawValues[r.Fields[i].Address[0]]
+				register.Fields[i].value = convertDataType(register.Fields[i], values_t)
 	}
 
-	return nil
 }
-
-func setAnalogValue(r register, rawValues map[uint16]uint16) error {
-	for i := 0; i < len(r.Fields); i++ {
-		bytes := []byte{}
-		for _, rv := range r.Fields[i].Address {
-			bytes = append(bytes, byte(rawValues[rv]>>8))
-			bytes = append(bytes, byte(rawValues[rv]&255))
 		}
 
 		r.Fields[i].value = convertDataType(r.Fields[i], bytes)
@@ -555,9 +519,6 @@ func scale32(s string, v uint32) interface{} {
 
 // Gather implements the telegraf plugin interface method for data accumulation
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-
 	if !m.isConnected {
 		err := connect(m)
 		if err != nil {
