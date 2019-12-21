@@ -6,9 +6,7 @@ import (
 	"math"
 	"net"
 	"net/url"
-	"reflect"
 	"sort"
-	"strconv"
 
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"

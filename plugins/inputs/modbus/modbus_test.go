@@ -8,6 +8,7 @@ import (
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf/testutil"
+	//"fmt"
 )
 
 func TestCoils(t *testing.T) {
