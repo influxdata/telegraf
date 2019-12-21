@@ -103,8 +103,12 @@ func TestCoils(t *testing.T) {
 				},
 			}
 
+			err = modbus.Init()
+			assert.NoError(t, err)
 			var acc testutil.Accumulator
-			modbus.Gather(&acc)
+			err = modbus.Gather(&acc)
+			assert.NoError(t, err)			
+			assert.NotEmpty(t, modbus.registers)
 
 			for _, coil := range modbus.registers {
 				assert.Equal(t, ct.read, coil.Fields[0].value)
@@ -347,6 +351,7 @@ func TestHoldingRegisters(t *testing.T) {
 				SlaveID:    1,
 				HoldingRegisters: []fieldContainer{
 					{
+						Name: hrt.name,
 						ByteOrder: hrt.byteOrder,
 						DataType:  hrt.dataType,
 						Scale:     hrt.scale,
@@ -355,8 +360,11 @@ func TestHoldingRegisters(t *testing.T) {
 				},
 			}
 
+			err = modbus.Init()
+			assert.NoError(t, err)
 			var acc testutil.Accumulator
 			modbus.Gather(&acc)
+			assert.NotEmpty(t, modbus.registers)
 
 			for _, coil := range modbus.registers {
 				assert.Equal(t, hrt.read, coil.Fields[0].value)
