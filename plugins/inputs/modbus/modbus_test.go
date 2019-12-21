@@ -119,7 +119,7 @@ func TestHoldingRegisters(t *testing.T) {
 		quantity  uint16
 		byteOrder string
 		dataType  string
-		scale     string
+		scale     float32
 		write     []byte
 		read      interface{}
 	}{
