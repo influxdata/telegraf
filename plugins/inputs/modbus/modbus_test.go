@@ -8,7 +8,6 @@ import (
 	"github.com/tbrandon/mbserver"
 
 	"github.com/influxdata/telegraf/testutil"
-	//"fmt"
 )
 
 func TestCoils(t *testing.T) {
@@ -103,7 +102,7 @@ func TestCoils(t *testing.T) {
 					},
 				},
 			}
-
+			
 			err = modbus.Init()
 			assert.NoError(t, err)
 			var acc testutil.Accumulator
@@ -343,7 +342,7 @@ func TestHoldingRegisters(t *testing.T) {
 	client := m.NewClient(handler)
 
 	for _, hrt := range holdingRegisterTests {
-		t.Run(hrt.name, func(t *testing.T) {
+		t.Run(hrt.name, func(t *testing.T) {			
 			_, err = client.WriteMultipleRegisters(hrt.address[0], hrt.quantity, hrt.write)
 			assert.NoError(t, err)
 
@@ -360,14 +359,14 @@ func TestHoldingRegisters(t *testing.T) {
 					},
 				},
 			}
-
+			
 			err = modbus.Init()
 			assert.NoError(t, err)
 			var acc testutil.Accumulator
 			modbus.Gather(&acc)
 			assert.NotEmpty(t, modbus.registers)
-
-			for _, coil := range modbus.registers {
+			
+			for _, coil := range modbus.registers {			
 				assert.Equal(t, hrt.read, coil.Fields[0].value)
 			}
 		})
