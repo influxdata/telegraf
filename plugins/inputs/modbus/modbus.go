@@ -176,8 +176,9 @@ func (m *Modbus) Init() error {
 	return nil
 }
 
+func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 			if len(fields) == 0 {
-				continue
+		return nil
 			}
 
 			err := validateFieldContainers(fields, name)
@@ -290,77 +291,66 @@ func connect(m *Modbus) error {
 			m.isConnected = true
 			return nil
 		} else {
-			return fmt.Errorf("not valid protocol [%s] - [%s] ", u.Scheme, m.TransmissionMode)
+			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
 		}
 	default:
-		return fmt.Errorf("not valid Controller")
+		return fmt.Errorf("invalid controller")
 	}
 }
 
 func validateFieldContainers(t []fieldContainer, n string) error {
 	nameEncountered := map[string]bool{}
-	for i := range t {
+	for _, item := range t {
 		//check empty name
-		if t[i].Name == "" {
-			return fmt.Errorf("empty Name in %s", n)
+		if item.Name == "" {
+			return fmt.Errorf("empty name in '%s'", n)
 		}
 
 		//search name duplicate
-		if nameEncountered[t[i].Name] {
-			return fmt.Errorf("name [%s] in %s is Duplicated", t[i].Name, n)
+		if nameEncountered[item.Name] {
+			return fmt.Errorf("name '%s' is duplicated in '%s' - '%s'", item.Name, n, item.Name)
 		} else {
-			nameEncountered[t[i].Name] = true
+			nameEncountered[item.Name] = true
 		}
 
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
-			byteOrderEncountered := false
-			for j := range byteOrder {
-				if byteOrder[j] == t[i].ByteOrder {
-					byteOrderEncountered = true
+			switch item.ByteOrder {
+			case "AB", "BA", "ABCD", "CDAB", "BADC", "DCBA":
 					break
+			default:
+				return fmt.Errorf("invalid byte order '%s' in '%s' - '%s'", item.ByteOrder, n, item.Name)
 				}
-			}
-
-			if !byteOrderEncountered {
-				return fmt.Errorf("not valid Byte Order [%s] in %s", t[i].ByteOrder, n)
-			}
 
 			// search data type
-			dataTypeEncountered := false
-			for j := range byteOrder {
-				if dataType[j] == t[i].DataType {
-					dataTypeEncountered = true
+			switch item.DataType {
+			case "UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32":
 					break
+			default:
+				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
 				}
-			}
-
-			if !dataTypeEncountered {
-				return fmt.Errorf("not valid Data Type [%s] in %s", t[i].DataType, n)
-			}
 
 			// check scale
-			_, err := strconv.ParseFloat(t[i].Scale, 32)
-			if err != nil {
-				return fmt.Errorf("not valid Scale [%s] in %s", t[i].Scale, n)
+			if item.Scale == 0.0 {
+				return fmt.Errorf("invalid scale '%f' in '%s' - '%s'", item.Scale, n, item.Name)
 			}
 		}
 
 		// check address
-		if len(t[i].Address) == 0 || len(t[i].Address) > 2 {
-			return fmt.Errorf("not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
+		if len(item.Address) == 0 || len(item.Address) > 2 {
+			return fmt.Errorf("invalid address '%v' length '%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
 		} else if n == cInputRegisters || n == cHoldingRegisters {
-			if (len(t[i].Address) == 1 && len(t[i].ByteOrder) != 2) || (len(t[i].Address) == 2 && len(t[i].ByteOrder) != 4) {
-				return fmt.Errorf("not valid byte order [%s] and address [%v]  in %s", t[i].ByteOrder, t[i].Address, n)
+			if (len(item.Address) == 1 && len(item.ByteOrder) != 2) || (len(item.Address) == 2 && len(item.ByteOrder) != 4) {
+				return fmt.Errorf("invalid byte order '%s' and address '%v'  in '%s' - '%s'", item.ByteOrder, item.Address, n, item.Name)
 			}
 
 			// search duplicated
-			if len(t[i].Address) > len(removeDuplicates(t[i].Address)) {
-				return fmt.Errorf("duplicate address [%v]  in %s", t[i].Address, n)
+			if len(item.Address) > len(removeDuplicates(item.Address)) {
+				return fmt.Errorf("duplicate address '%v'  in '%s' - '%s'", item.Address, n, item.Name)
 			}
 
-		} else if len(t[i].Address) > 1 || (n == cInputRegisters || n == cHoldingRegisters) {
-			return fmt.Errorf("not valid address [%v] length [%v] in %s", t[i].Address, len(t[i].Address), n)
+		} else if len(item.Address) > 1 || (n == cInputRegisters || n == cHoldingRegisters) {
+			return fmt.Errorf("invalid address'%v' length'%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
 		}
 	}
 	return nil
