@@ -23,7 +23,7 @@ var expectedParseResult = map[string]interface{}{
 	"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
 }
 
-var expectedParseResultWithOmitedFields = map[string]interface{}{
+var expectedParseResultWithOmittedFields = map[string]interface{}{
 	"fieldBool1":   true,
 	"fieldUint8":   uint64(2),
 	"fieldInt8":    int64(-2),
@@ -69,7 +69,7 @@ var fieldsWithSizes = []Field{
 	Field{Name: "time", Type: "int32", Size: 21},
 }
 
-var withOmitedFields = []Field{
+var withOmittedFields = []Field{
 	Field{Type: "padding", Size: 1},
 	Field{Name: "fieldBool1", Type: "bool"},
 	Field{Name: "fieldUint8", Type: "uint8"},
@@ -157,21 +157,21 @@ func TestFieldsWithSize(t *testing.T) {
 	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
-func TestWithOmitedFields(t *testing.T) {
+func TestWithOmittedFields(t *testing.T) {
 
-	var withFieldsOmited = BinData{
-		MetricName: "with_omited_fields",
+	var withFieldsOmitted = BinData{
+		MetricName: "with_omitted_fields",
 		Endiannes:  "be",
 		TimeFormat: "unix",
-		Fields:     withOmitedFields,
+		Fields:     withOmittedFields,
 	}
 
-	metrics, err := withFieldsOmited.Parse(binaryDataBigEndian)
+	metrics, err := withFieldsOmitted.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, withFieldsOmited.MetricName, metrics[0].Name())
+	require.Equal(t, withFieldsOmitted.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
-	assert.Equal(t, expectedParseResultWithOmitedFields, metrics[0].Fields())
+	assert.Equal(t, expectedParseResultWithOmittedFields, metrics[0].Fields())
 }
 
 func TestTimeAddedByParser(t *testing.T) {
