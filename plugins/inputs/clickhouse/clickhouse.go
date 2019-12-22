@@ -80,11 +80,6 @@ func (ch *ClickHouse) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-// Stop ClickHouse input service
-func (ch *ClickHouse) Stop() {
-	ch.client.CloseIdleConnections()
-}
-
 // Gather collect data from ClickHouse server
 func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	var (
