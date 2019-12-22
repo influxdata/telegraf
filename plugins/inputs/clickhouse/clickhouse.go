@@ -1,6 +1,7 @@
 package clickhouse
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -17,15 +18,12 @@ import (
 var defaultTimeout = 5 * time.Second
 
 var sampleConfig = `
-[[inputs.clickhouse]]
-  timeout         = 5
-  servers         = ["http://username:password@127.0.0.1:8123"]
-  auto_discovery  = true
+  timeout = 5
+  servers = ["http://username:password@127.0.0.1:8123"]
+  auto_discovery = true
   cluster_include = []
   cluster_exclude = ["test_shard_localhost"]
-
-[[outputs.file]]
-  files = ["stdout"]
+  http_tls_insecure_skip_verify = true
 `
 
 type connect struct {
@@ -35,14 +33,24 @@ type connect struct {
 	url      *url.URL
 }
 
+func init() {
+	inputs.Add("clickhouse", func() telegraf.Input {
+		return &ClickHouse{
+			AutoDiscovery:      true,
+			InsecureSkipVerify: true,
+		}
+	})
+}
+
 // ClickHouse Telegraf Input Plugin
 type ClickHouse struct {
-	Servers        []string `toml:"servers"`
-	AutoDiscovery  bool     `toml:"auto_discovery"`
-	ClusterInclude []string `toml:"cluster_include"`
-	ClusterExclude []string `toml:"cluster_exclude"`
-	Timeout        int      `toml:"timeout"`
-	client         http.Client
+	Servers            []string `toml:"servers"`
+	AutoDiscovery      bool     `toml:"auto_discovery"`
+	ClusterInclude     []string `toml:"cluster_include"`
+	ClusterExclude     []string `toml:"cluster_exclude"`
+	Timeout            int      `toml:"timeout"`
+	InsecureSkipVerify bool     `toml:"http_tls_insecure_skip_verify"`
+	client             http.Client
 }
 
 // SampleConfig returns the sample config
@@ -63,12 +71,19 @@ func (ch *ClickHouse) Start(telegraf.Accumulator) error {
 	}
 	ch.client = http.Client{
 		Timeout: timeout,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: ch.InsecureSkipVerify,
+			},
+		},
 	}
 	return nil
 }
 
 // Stop ClickHouse input service
-func (ch *ClickHouse) Stop() {}
+func (ch *ClickHouse) Stop() {
+	ch.client.CloseIdleConnections()
+}
 
 // Gather collect data from ClickHouse server
 func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
@@ -87,7 +102,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	for _, server := range ch.Servers {
 		u, err := url.Parse(server)
 		if err != nil {
-			acc.AddError(err)
 			return err
 		}
 		switch {
@@ -161,7 +175,7 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 	}
 
 	tags := map[string]string{
-		"hostname": conn.Hostname,
+		"source": conn.Hostname,
 	}
 	if len(conn.Cluster) != 0 {
 		tags["cluster"] = conn.Cluster
@@ -172,7 +186,7 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 
 	fields := make(map[string]interface{})
 	for _, r := range result {
-		fields[internal.SnakeCase(r.Metric)] = r.Value.toUInt64()
+		fields[internal.SnakeCase(r.Metric)] = uint64(r.Value)
 	}
 
 	acc.AddFields("clickhouse_"+metric, fields, tags)
@@ -193,7 +207,7 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		return err
 	}
 	tags := map[string]string{
-		"hostname": conn.Hostname,
+		"source": conn.Hostname,
 	}
 	if len(conn.Cluster) != 0 {
 		tags["cluster"] = conn.Cluster
@@ -206,9 +220,9 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		tags["database"] = part.Database
 		acc.AddFields("clickhouse_tables",
 			map[string]interface{}{
-				"bytes": part.Bytes.toUInt64(),
-				"parts": part.Parts.toUInt64(),
-				"rows":  part.Rows.toUInt64(),
+				"bytes": uint64(part.Bytes),
+				"parts": uint64(part.Parts),
+				"rows":  uint64(part.Rows),
 			},
 			tags,
 		)
@@ -252,16 +266,6 @@ func (i *chUInt64) UnmarshalJSON(b []byte) error {
 	}
 	*i = chUInt64(v)
 	return nil
-}
-
-func (i chUInt64) toUInt64() uint64 {
-	return uint64(i)
-}
-
-func init() {
-	inputs.Add("clickhouse", func() telegraf.Input {
-		return &ClickHouse{}
-	})
 }
 
 const (
