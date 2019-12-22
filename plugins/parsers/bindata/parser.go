@@ -20,16 +20,14 @@ const defaultProtocol = "raw"
 
 // Field is ...
 type Field struct {
-	Name   string
-	Type   string
-	Offset uint
-	Size   uint
+	Name string
+	Type string
+	Size uint
 }
 
 // BinData is ...
 type BinData struct {
 	MetricName string
-	Protocol   string
 	TimeFormat string
 	Endiannes  string
 	Fields     []Field
@@ -39,10 +37,6 @@ type BinData struct {
 
 // Parse is ...
 func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
-
-	if _, err := binData.getProtocol(); err != nil {
-		return nil, err
-	}
 
 	endiannes, err := binData.getEndiannes()
 	if err != nil {
@@ -57,28 +51,32 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 
 	fields := make(map[string]interface{})
 	reader := io.NewSectionReader(bytes.NewReader(data), 0, int64(len(data)))
+	var offset int64 = 0
 
 	for _, field := range binData.Fields {
-		fieldBuffer := make([]byte, field.Size)
+		if field.Type != "padding" {
+			fieldBuffer := make([]byte, field.Size)
 
-		if _, err := reader.ReadAt(fieldBuffer, int64(field.Offset)); err != nil {
-			return nil, err
-		}
+			if _, err := reader.ReadAt(fieldBuffer, offset); err != nil {
+				return nil, err
+			}
 
-		fieldType, ok := fieldTypes[strings.ToLower(field.Type)]
-		if !ok {
-			return nil, fmt.Errorf(`invalid field type %s`, field.Type)
-		}
+			fieldType, ok := fieldTypes[strings.ToLower(field.Type)]
+			if !ok {
+				return nil, fmt.Errorf(`invalid field type %s`, field.Type)
+			}
 
-		switch fieldType.Name() {
-		case "string":
-			fields[field.Name] = string(fieldBuffer)
-		default:
-			fieldValue := reflect.New(fieldType)
-			byteReader := bytes.NewReader(fieldBuffer)
-			binary.Read(byteReader, endiannes, fieldValue.Interface())
-			fields[field.Name] = fieldValue.Elem().Interface()
+			switch fieldType.Name() {
+			case "string":
+				fields[field.Name] = string(fieldBuffer)
+			default:
+				fieldValue := reflect.New(fieldType)
+				byteReader := bytes.NewReader(fieldBuffer)
+				binary.Read(byteReader, endiannes, fieldValue.Interface())
+				fields[field.Name] = fieldValue.Elem().Interface()
+			}
 		}
+		offset += int64(field.Size)
 	}
 
 	metricTime, err := binData.getTime(fields)
@@ -123,6 +121,7 @@ var fieldTypes = map[string]reflect.Type{
 	"float32": reflect.TypeOf((*float32)(nil)).Elem(),
 	"float64": reflect.TypeOf((*float64)(nil)).Elem(),
 	"string":  reflect.TypeOf((*string)(nil)).Elem(),
+	"padding": reflect.TypeOf((*[]byte)(nil)).Elem(),
 }
 
 func (binData *BinData) validate() error {
@@ -131,20 +130,12 @@ func (binData *BinData) validate() error {
 		if !ok {
 			return fmt.Errorf(`invalid field type %s`, binData.Fields[i].Type)
 		}
-		if binData.Fields[i].Size == 0 && fieldType.Name() != "string" {
+		// Overwrite non-string field size
+		if fieldType.Name() != "string" && binData.Fields[i].Type != "padding" {
 			binData.Fields[i].Size = uint(fieldType.Size())
 		}
 	}
 	return nil
-}
-
-func (binData *BinData) getProtocol() (string, error) {
-	protocol := strings.ToLower(binData.Protocol)
-	if protocol == "" {
-	} else if protocol != defaultProtocol {
-		return defaultProtocol, fmt.Errorf("only protocol %s is supported", defaultProtocol)
-	}
-	return defaultProtocol, nil
 }
 
 func (binData *BinData) getEndiannes() (binary.ByteOrder, error) {
@@ -155,7 +146,7 @@ func (binData *BinData) getEndiannes() (binary.ByteOrder, error) {
 	} else if cfgEndiannes == "le" {
 		endiannes = binary.LittleEndian
 	} else {
-		return nil, fmt.Errorf("invalid binmetric_endiannes %s", cfgEndiannes)
+		return nil, fmt.Errorf("invalid bindata_endiannes %s", cfgEndiannes)
 	}
 	return endiannes, nil
 }
