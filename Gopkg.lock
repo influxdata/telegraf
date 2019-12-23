@@ -1770,12 +1770,9 @@
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
-<<<<<<< HEAD
     "github.com/gofrs/uuid",
     "github.com/gogo/protobuf/proto",
-=======
     "github.com/golang/groupcache/lru",
->>>>>>> Optimize insert performance of metrics and tag_id lookup
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes/duration",
     "github.com/golang/protobuf/ptypes/empty",

@@ -1,8 +1,8 @@
 package tables
 
 import (
-	"database/sql"
 	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"strings"
 
@@ -11,11 +11,9 @@ import (
 )
 
 const (
-	addColumnTemplate          = "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;"
-	tableExistsTemplate        = "SELECT tablename FROM pg_tables WHERE tablename = $1 AND schemaname = $2;"
-	findColumnPresenceTemplate = "WITH available AS (SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = $1 and table_name = $2)," +
-		"required AS (SELECT c FROM unnest(array [%s]) AS c) " +
-		"SELECT required.c as column_name, available.column_name IS NOT NULL as exists, available.data_type FROM required LEFT JOIN available ON required.c = available.column_name;"
+	addColumnTemplate           = "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;"
+	tableExistsTemplate         = "SELECT tablename FROM pg_tables WHERE tablename = $1 AND schemaname = $2;"
+	findExistingColumnsTemplate = "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = $1 and table_name = $2"
 )
 
 type columnInDbDef struct {
@@ -114,7 +112,7 @@ func (t *defTableManager) FindColumnMismatch(tableName string, colDetails *utils
 		return nil, err
 	}
 
-	missingCols := []int{}
+	var missingCols []int
 	for colIndex := range colDetails.Names {
 		colStateInDb := columnPresence[colIndex]
 		if !colStateInDb.exists {
@@ -154,7 +152,7 @@ func (t *defTableManager) AddColumnsToTable(tableName string, columnIndices []in
 // The order, column names and data types are given in 'colDetails'.
 func (t *defTableManager) generateCreateTableSQL(tableName string, colDetails *utils.TargetColumns) string {
 	colDefs := make([]string, len(colDetails.Names))
-	pk := []string{}
+	var pk []string
 	for colIndex, colName := range colDetails.Names {
 		colDefs[colIndex] = utils.QuoteIdent(colName) + " " + string(colDetails.DataTypes[colIndex])
 		if colDetails.Roles[colIndex] != utils.FieldColType {
@@ -174,43 +172,48 @@ func (t *defTableManager) generateCreateTableSQL(tableName string, colDetails *u
 // For a given table and an array of column names it checks the database if those columns exist,
 // and what's their data type.
 func (t *defTableManager) findColumnPresence(tableName string, columns []string) ([]*columnInDbDef, error) {
-	columnPresenseQuery := prepareColumnPresenceQuery(columns)
-	result, err := t.db.Query(columnPresenseQuery, t.schema, tableName)
+	existingCols, err := t.findExistingColumns(tableName)
 	if err != nil {
-		log.Printf("E! Couldn't discover columns of table: %s\nQuery failed: %s\n%v", tableName, columnPresenseQuery, err)
 		return nil, err
 	}
-	defer result.Close()
-	columnStatus := make([]*columnInDbDef, len(columns))
-	var exists bool
-	var columnName string
-	var pgLongType sql.NullString
-	currentColumn := 0
+	if len(existingCols) == 0 {
+		log.Printf("E! Table exists, but no columns discovered, user doesn't have enough permissions")
+		return nil, errors.New("Table exists, but no columns discovered, user doesn't have enough permissions")
+	}
 
-	for result.Next() {
-		err := result.Scan(&columnName, &exists, &pgLongType)
-		if err != nil {
-			log.Printf("E! Couldn't discover columns of table: %s\n%v", tableName, err)
-			return nil, err
+	columnStatus := make([]*columnInDbDef, len(columns))
+	for i := 0; i < len(columns); i++ {
+		currentColumn := columns[i]
+		colType, exists := existingCols[currentColumn]
+		if !exists {
+			colType = ""
 		}
-		pgShortType := utils.PgDataType("")
-		if pgLongType.Valid {
-			pgShortType = utils.LongToShortPgType(pgLongType.String)
-		}
-		columnStatus[currentColumn] = &columnInDbDef{
+		columnStatus[i] = &columnInDbDef{
 			exists:   exists,
-			dataType: pgShortType,
+			dataType: colType,
 		}
-		currentColumn++
 	}
 
 	return columnStatus, nil
 }
 
-func prepareColumnPresenceQuery(columns []string) string {
-	quotedColumns := make([]string, len(columns))
-	for i, column := range columns {
-		quotedColumns[i] = utils.QuoteLiteral(column)
+func (t *defTableManager) findExistingColumns(table string) (map[string]utils.PgDataType, error) {
+	rows, err := t.db.Query(findExistingColumnsTemplate, t.schema, table)
+	if err != nil {
+		log.Printf("E! Couldn't discover existing columns of table: %s\n%v", table, err)
+		return nil, errors.Wrap(err, "could not discover existing columns")
 	}
-	return fmt.Sprintf(findColumnPresenceTemplate, strings.Join(quotedColumns, ","))
+	defer rows.Close()
+	cols := make(map[string]utils.PgDataType)
+	for rows.Next() {
+		var colName, colTypeStr string
+		err := rows.Scan(&colName, &colTypeStr)
+		if err != nil {
+			log.Printf("E! Couldn't discover columns of table: %s\n%v", table, err)
+			return nil, err
+		}
+		pgShortType := utils.LongToShortPgType(colTypeStr)
+		cols[colName] = pgShortType
+	}
+	return cols, nil
 }

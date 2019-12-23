@@ -146,6 +146,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 	for measureName, indices := range metricsByMeasurement {
 		err := p.writeMetricsFromMeasure(measureName, indices, metrics)
 		if err != nil {
+			log.Printf("copy error: %v", err)
 			return err
 		}
 	}

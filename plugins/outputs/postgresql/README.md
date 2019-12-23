@@ -3,6 +3,11 @@
 This output plugin writes all metrics to PostgreSQL. 
 The plugin manages the schema automatically updating missing columns, and checking if existing ones are of the proper type. 
 
+**_WARNING_**: In order to enable automatic schema update, the connection to the database must
+be established with a user that has sufficient permissions. Either be a admin, or an owner of the 
+target schema.
+
+
 ### Configuration:
 
 ```toml
