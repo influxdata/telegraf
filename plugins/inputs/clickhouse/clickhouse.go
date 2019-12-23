@@ -3,7 +3,10 @@ package clickhouse
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net"
+	"bytes"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -225,6 +228,15 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 	return nil
 }
 
+type clickhouseError struct {
+	StatusCode int
+	body       []byte
+}
+
+func (e *clickhouseError) Error() string {
+	return fmt.Sprintf("ClickHouse server returned an error code: %d\n%s", e.StatusCode, e.body)
+}
+
 func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error {
 	q := url.Query()
 	q.Set("query", query+" FORMAT JSON")
@@ -234,6 +246,13 @@ func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return &clickhouseError{
+			StatusCode: resp.StatusCode,
+			body:       body,
+		}
+	}
 	var response struct {
 		Data json.RawMessage
 	}
@@ -243,18 +262,12 @@ func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error
 	return json.Unmarshal(response.Data, i)
 }
 
-// see output_format_json_quote_64bit_integers
+// see https://clickhouse.yandex/docs/en/operations/settings/settings/#session_settings-output_format_json_quote_64bit_integers
 type chUInt64 uint64
 
 func (i *chUInt64) UnmarshalJSON(b []byte) error {
-	if len(b) >= 3 {
-		if b[len(b)-1] == '"' {
-			b = b[:len(b)-1]
-		}
-		if b[0] == '"' {
-			b = b[1:]
-		}
-	}
+	b = bytes.TrimPrefix(b, []byte(`"`))
+	b = bytes.TrimSuffix(b, []byte(`"`))
 	v, err := strconv.ParseUint(string(b), 10, 64)
 	if err != nil {
 		return err
