@@ -1,12 +1,12 @@
 package clickhouse
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
-	"bytes"
 	"net/http"
 	"net/url"
 	"strconv"
