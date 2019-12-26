@@ -122,17 +122,17 @@ const sampleConfig = `
  ## address    - variable address
  
  holding_registers = [
-   { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale="0.01",  address = [8]},
-   { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [0]},
-   { name = "energy",       byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [5,6]},
-   { name = "current",      byte_order = "ABCD", data_type = "FLOAT32", scale="0.001", address = [1, 2]},
-   { name = "frequency",    byte_order = "AB",   data_type = "FLOAT32", scale="0.1",   address = [7]},
-   { name = "power",        byte_order = "ABCD", data_type = "FLOAT32", scale="0.1",   address = [3,4]},
+   { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale=0.01,  address = [8]},
+   { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [0]},
+   { name = "energy",       byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [5,6]},
+   { name = "current",      byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [1,2]},
+   { name = "frequency",    byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [7]},
+   { name = "power",        byte_order = "ABCD", data_type = "FLOAT32", scale=0.1,   address = [3,4]},
  ]
  input_registers = [
-   { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale="1",     address = [0]},
-   { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale="1",     address = [1]},
-   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale="1",     address = [3,4]},
+   { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1,     address = [0]},
+   { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1,     address = [1]},
+   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale=1,     address = [3,4]},
  ]
 `
 
