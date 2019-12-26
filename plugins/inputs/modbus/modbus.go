@@ -130,9 +130,9 @@ const sampleConfig = `
    { name = "power",        byte_order = "ABCD", data_type = "FLOAT32", scale=0.1,   address = [3,4]},
  ]
  input_registers = [
-   { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1,     address = [0]},
-   { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1,     address = [1]},
-   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale=1,     address = [3,4]},
+   { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
+   { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
+   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale=1.0,     address = [3,4]},
  ]
 `
 
