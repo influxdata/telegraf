@@ -10,6 +10,8 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ## The module supports connections to PLCs via MODBUS/TCP or
  ## via serial line communication in binary (RTU) or readable (ASCII) encoding
  ##
+ ## Device name
+ name = "Device"
  
  ## Slave ID - addresses a MODBUS device on the bus
  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]

@@ -16,6 +16,7 @@ import (
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
+	Name       string                  `toml:"name"`
 	Controller       string            `toml:"controller"`
 	TransmissionMode string            `toml:"transmission_mode"`
 	BaudRate         int               `toml:"baud_rate"`
@@ -71,6 +72,8 @@ const sampleConfig = `
  ## The plugin supports connections to PLCs via MODBUS/TCP or
  ## via serial line communication in binary (RTU) or readable (ASCII) encoding
  ##
+ ## Device name
+ name = "Device"
  
  ## Slave ID - addresses a MODBUS device on the bus
  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
@@ -147,6 +150,11 @@ func (m *Modbus) Description() string {
 }
 
 func (m *Modbus) Init() error {
+	//check device name
+	if m.Name == "" {
+		return fmt.Errorf("device name is empty")
+	}
+
 	err := connect(m)
 	if err != nil {
 		m.isConnected = false
@@ -561,6 +569,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	for _, reg := range m.registers {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
+			"name": m.Name,
 			"type": reg.Type,
 		}
 
