@@ -76,7 +76,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 					} else {
 						if converter.Append {
 							if v, ok := metric.GetTag(key); ok {
-							newValue = v + newValue
+								newValue = v + newValue
 							}
 						}
 						metric.AddTag(key, newValue)
