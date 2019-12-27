@@ -93,7 +93,7 @@ func TestCoils(t *testing.T) {
 			assert.NoError(t, err)
 
 			modbus := Modbus{
-				Name: "TestCoils",
+				Name:       "TestCoils",
 				Controller: "tcp://localhost:1502",
 				SlaveID:    1,
 				Coils: []fieldContainer{
@@ -348,7 +348,7 @@ func TestHoldingRegisters(t *testing.T) {
 			assert.NoError(t, err)
 
 			modbus := Modbus{
-				Name: "TestHoldingRegisters",
+				Name:       "TestHoldingRegisters",
 				Controller: "tcp://localhost:1502",
 				SlaveID:    1,
 				HoldingRegisters: []fieldContainer{

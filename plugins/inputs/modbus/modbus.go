@@ -16,7 +16,7 @@ import (
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name       string                  `toml:"name"`
+	Name             string            `toml:"name"`
 	Controller       string            `toml:"controller"`
 	TransmissionMode string            `toml:"transmission_mode"`
 	BaudRate         int               `toml:"baud_rate"`
