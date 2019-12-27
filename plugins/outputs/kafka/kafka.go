@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -31,9 +32,9 @@ type (
 		CompressionCodec int
 		RequiredAcks     int
 		MaxRetry         int
-		MaxMessageBytes  int `toml:"max_message_bytes"`
-
-		Version string `toml:"version"`
+		MaxMessageBytes  int    `toml:"max_message_bytes"`
+		Partitioner      string `toml:"partitioner"`
+		Version          string `toml:"version"`
 
 		// Legacy TLS config options
 		// TLS client certificate
@@ -52,9 +53,8 @@ type (
 
 		Log telegraf.Logger `toml:"-"`
 
-		tlsConfig tls.Config
-		producer  sarama.SyncProducer
-
+		tlsConfig  tls.Config
+		producer   sarama.SyncProducer
 		serializer serializers.Serializer
 	}
 	TopicSuffix struct {
@@ -136,6 +136,17 @@ var sampleConfig = `
   ##   ex: routing_key = "random"
   ##       routing_key = "telegraf"
   # routing_key = ""
+
+  ## Partitioner determines which partition a message is sent to.  Available
+  ## options are "round_robin" and "hash".
+  ##
+  ## The default "hash" partitioner uses the hash of the message key,
+  ## determined by the "routing_tag" and and "routing_key" options.  If the
+  ## message key is not set, a random partition is selected.
+  ##
+  ## The "round_robin" partitioner sends messages to the partitions in round
+  ## robin order.
+  # partitioner = "hash"
 
   ## CompressionCodec represents the various compression codecs recognized by
   ## Kafka in messages.
@@ -246,6 +257,15 @@ func (k *Kafka) Connect() error {
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 	config.Producer.Retry.Max = k.MaxRetry
 	config.Producer.Return.Successes = true
+
+	switch k.Partitioner {
+	case "round_robin":
+		config.Producer.Partitioner = sarama.NewRoundRobinPartitioner
+	case "", "hash":
+		break
+	default:
+		return errors.New("unknown partitioner")
+	}
 
 	if k.MaxMessageBytes > 0 {
 		config.Producer.MaxMessageBytes = k.MaxMessageBytes

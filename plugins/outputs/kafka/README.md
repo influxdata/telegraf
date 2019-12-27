@@ -57,6 +57,17 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##       routing_key = "telegraf"
   # routing_key = ""
 
+  ## Partitioner determines which partition a message is sent to.  Available
+  ## options are "round_robin" and "hash".
+  ##
+  ## The default "hash" partitioner uses the hash of the message key,
+  ## determined by the "routing_tag" and and "routing_key" options.  If the
+  ## message key is not set, a random partition is selected.
+  ##
+  ## The "round_robin" partitioner sends messages to the partitions in round
+  ## robin order.
+  # partitioner = "hash"
+
   ## CompressionCodec represents the various compression codecs recognized by
   ## Kafka in messages.
   ##  0 : No compression
