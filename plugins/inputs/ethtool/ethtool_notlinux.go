@@ -9,6 +9,7 @@ import (
 
 func (e *Ethtool) Init() error {
 	e.Log.Warn("Current platform is not supported")
+	return nil
 }
 
 func (e *Ethtool) Gather(acc telegraf.Accumulator) error {

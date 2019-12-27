@@ -8,7 +8,8 @@ import (
 )
 
 func (w *Wireless) Init() error {
-	e.Log.Warn("Current platform is not supported")
+	w.Log.Warn("Current platform is not supported")
+	return nil
 }
 
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {

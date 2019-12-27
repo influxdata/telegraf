@@ -1,6 +1,7 @@
 package synproxy
 
 import (
+	"os"
 	"path"
 
 	"github.com/influxdata/telegraf"
@@ -20,6 +21,14 @@ func (k *Synproxy) Description() string {
 
 func (k *Synproxy) SampleConfig() string {
 	return ""
+}
+
+func getHostProc() string {
+	procPath := "/proc"
+	if os.Getenv("HOST_PROC") != "" {
+		procPath = os.Getenv("HOST_PROC")
+	}
+	return procPath
 }
 
 func init() {
