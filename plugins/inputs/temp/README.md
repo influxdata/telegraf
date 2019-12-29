@@ -5,13 +5,14 @@ meant to be multi platform and uses platform specific collection methods.
 
 Currently supports Linux and Windows.
 
-### Configuration:
+### Configuration
 
-```
+```toml
 [[inputs.temp]]
+  # no configuration
 ```
 
-### Metrics:
+### Metrics
 
 - temp
   - tags:
@@ -19,7 +20,16 @@ Currently supports Linux and Windows.
   - fields:
     - temp (float, celcius)
 
-### Example Output:
+
+### Troubleshooting
+
+On **Windows**, the plugin uses a WMI call that is can be replicated with the
+following command:
+```
+wmic /namespace:\\root\wmi PATH MSAcpi_ThermalZoneTemperature
+```
+
+### Example Output
 
 ```
 temp,sensor=coretemp_physicalid0_crit temp=100 1531298763000000000

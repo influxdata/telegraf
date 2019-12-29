@@ -1,8 +1,27 @@
-## v1.13 [unreleased]
+## v1.14 [unreleased]
+
+#### Features
+
+- [#6730](https://github.com/influxdata/telegraf/pull/6730): Add page_faults for mongodb wired tiger.
+- [#6798](https://github.com/influxdata/telegraf/pull/6798): Add use_sudo option to ipmi_sensor input.
+- [#6764](https://github.com/influxdata/telegraf/pull/6764): Add ability to collect pod labels to kubernetes input.
+- [#6770](https://github.com/influxdata/telegraf/pull/6770): Expose unbound-control config file option.
+- [#6508](https://github.com/influxdata/telegraf/pull/6508):  Add support for new nginx plus api endpoints.
+
+## v1.13.1 [unreleased]
+
+#### Bugfixes
+
+- [#6788](https://github.com/influxdata/telegraf/issues/6788): Fix ServerProperty query stops working on Azure after failover.
+- [#6803](https://github.com/influxdata/telegraf/pull/6803): Add leading period to OID in SNMP v1 generic traps.
+- [#6823](https://github.com/influxdata/telegraf/pull/6823): Fix missing config fields in prometheus serializer.
+- [#6694](https://github.com/influxdata/telegraf/pull/6694): Fix panic on connection loss with undelivered messages in mqtt_consumer.
+
+## v1.13 [2019-12-12]
 
 #### Release Notes
 
-- Official packages built with Go 1.13.3.
+- Official packages built with Go 1.13.5.
 - The `prometheus` input and `prometheus_client` output have a new mapping to
   and from Telegraf metrics, which can be enabled by setting `metric_version = 2`.
   The original mapping is deprecated.  When both plugins have the same setting,
@@ -66,6 +85,7 @@
 - [#6735](https://github.com/influxdata/telegraf/pull/6735): Support resolution of symlinks in filecount input.
 - [#6746](https://github.com/influxdata/telegraf/pull/6746): Set message timestamp to the metric time in kafka output.
 - [#6740](https://github.com/influxdata/telegraf/pull/6740): Add base64decode operation to string processor.
+- [#6790](https://github.com/influxdata/telegraf/pull/6790): Add option to control collecting global variables to mysql input.
 
 #### Bugfixes
 
@@ -78,6 +98,9 @@
 - [#6705](https://github.com/influxdata/telegraf/issues/6705): Remove trailing underscore trimming from json flattener.
 - [#6421](https://github.com/influxdata/telegraf/issues/6421): Revert change causing cpu usage to be capped at 100 percent.
 - [#6523](https://github.com/influxdata/telegraf/issues/6523): Accept any media type in the prometheus input.
+- [#6769](https://github.com/influxdata/telegraf/issues/6769): Fix unix socket dial arguments in uwsgi input.
+- [#6757](https://github.com/influxdata/telegraf/issues/6757): Replace colon chars in prometheus output labels with metric_version=1.
+- [#6773](https://github.com/influxdata/telegraf/issues/6773): Set TrimLeadingSpace when TrimSpace is on in csv parser.
 
 ## v1.12.6 [2019-11-19]
 

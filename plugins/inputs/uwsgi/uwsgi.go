@@ -91,13 +91,13 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, url *url.URL) error {
 		}
 		s.source = url.Host
 	case "unix":
-		r, err = net.DialTimeout(url.Scheme, url.Host, u.Timeout.Duration)
+		r, err = net.DialTimeout(url.Scheme, url.Path, u.Timeout.Duration)
 		if err != nil {
 			return err
 		}
 		s.source, err = os.Hostname()
 		if err != nil {
-			s.source = url.Host
+			s.source = ""
 		}
 	case "http":
 		resp, err := u.client.Get(url.String())
