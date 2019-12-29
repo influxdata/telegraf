@@ -341,7 +341,7 @@ the following values:
   - SMA
   - VBE
   - LCK
-- vcl: vcl active
+  - vcl: vcl active
   
   
 
