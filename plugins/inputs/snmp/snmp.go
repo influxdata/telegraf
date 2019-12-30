@@ -22,61 +22,46 @@ import (
 
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
-  agents = [ "127.0.0.1:161" ]
-  ## Timeout for each SNMP query.
-  timeout = "5s"
-  ## Number of retries to attempt within timeout.
-  retries = 3
-  ## SNMP version, values can be 1, 2, or 3
-  version = 2
+  ## Agent addresses to retrieve values from.
+  ##   example: agents = ["udp://127.0.0.1:161"]
+  ##            agents = ["tcp://127.0.0.1:161"]
+  agents = ["udp://127.0.0.1:161"]
+
+  ## Timeout for each request.
+  # timeout = "5s"
+
+  ## SNMP version; can be 1, 2, or 3.
+  # version = 2
 
   ## SNMP community string.
-  community = "public"
+  # community = "public"
 
-  ## The GETBULK max-repetitions parameter
-  max_repetitions = 10
+  ## Number of retries to attempt.
+  # retries = 3
 
-  ## SNMPv3 auth parameters
-  #sec_name = "myuser"
-  #auth_protocol = "md5"      # Values: "MD5", "SHA", ""
-  #auth_password = "pass"
-  #sec_level = "authNoPriv"   # Values: "noAuthNoPriv", "authNoPriv", "authPriv"
-  #context_name = ""
-  #priv_protocol = ""         # Values: "DES", "AES", ""
-  #priv_password = ""
+  ## The GETBULK max-repetitions parameter.
+  # max_repetitions = 10
 
-  ## measurement name
-  name = "system"
-  [[inputs.snmp.field]]
-    name = "hostname"
-    oid = ".1.0.0.1.1"
-  [[inputs.snmp.field]]
-    name = "uptime"
-    oid = ".1.0.0.1.2"
-  [[inputs.snmp.field]]
-    name = "load"
-    oid = ".1.0.0.1.3"
-  [[inputs.snmp.field]]
-    oid = "HOST-RESOURCES-MIB::hrMemorySize"
+  ## SNMPv3 authentication and encryption options.
+  ##
+  ## Security Name.
+  # sec_name = "myuser"
+  ## Authentication protocol; one of "MD5", "SHA", or "".
+  # auth_protocol = "MD5"
+  ## Authentication password.
+  # auth_password = "pass"
+  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
+  # sec_level = "authNoPriv"
+  ## Context Name.
+  # context_name = ""
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
+  # priv_protocol = ""
+  ## Privacy password used for encrypted messages.
+  # priv_password = ""
 
-  [[inputs.snmp.table]]
-    ## measurement name
-    name = "remote_servers"
-    inherit_tags = [ "hostname" ]
-    [[inputs.snmp.table.field]]
-      name = "server"
-      oid = ".1.0.0.0.1.0"
-      is_tag = true
-    [[inputs.snmp.table.field]]
-      name = "connections"
-      oid = ".1.0.0.0.1.1"
-    [[inputs.snmp.table.field]]
-      name = "latency"
-      oid = ".1.0.0.0.1.2"
-
-  [[inputs.snmp.table]]
-    ## auto populate table's fields using the MIB
-    oid = "HOST-RESOURCES-MIB::hrNetworkTable"
+  ## Add fields and tables defining the variables you wish to collect.  This
+  ## example collects the system uptime and interface variables.  Reference the
+  ## full plugin documentation for configuration details.
 `
 
 // execCommand is so tests can mock out exec.Command usage.
@@ -108,41 +93,42 @@ func execCmd(arg0 string, args ...string) ([]byte, error) {
 
 // Snmp holds the configuration for the plugin.
 type Snmp struct {
-	// The SNMP agent to query. Format is ADDR[:PORT] (e.g. 1.2.3.4:161).
-	Agents []string
+	// The SNMP agent to query. Format is [SCHEME://]ADDR[:PORT] (e.g.
+	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
+	Agents []string `toml:"agents"`
 	// Timeout to wait for a response.
-	Timeout internal.Duration
-	Retries int
+	Timeout internal.Duration `toml:"timeout"`
+	Retries int               `toml:"retries"`
 	// Values: 1, 2, 3
-	Version uint8
+	Version uint8 `toml:"version"`
 
 	// Parameters for Version 1 & 2
-	Community string
+	Community string `toml:"community"`
 
 	// Parameters for Version 2 & 3
-	MaxRepetitions uint8
+	MaxRepetitions uint8 `toml:"max_repetitions"`
 
 	// Parameters for Version 3
-	ContextName string
+	ContextName string `toml:"context_name"`
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
-	SecLevel string
-	SecName  string
+	SecLevel string `toml:"sec_level"`
+	SecName  string `toml:"sec_name"`
 	// Values: "MD5", "SHA", "". Default: ""
-	AuthProtocol string
-	AuthPassword string
+	AuthProtocol string `toml:"auth_protocol"`
+	AuthPassword string `toml:"auth_password"`
 	// Values: "DES", "AES", "". Default: ""
-	PrivProtocol string
-	PrivPassword string
-	EngineID     string
-	EngineBoots  uint32
-	EngineTime   uint32
+	PrivProtocol string `toml:"priv_protocol"`
+	PrivPassword string `toml:"priv_password"`
+	EngineID     string `toml:"-"`
+	EngineBoots  uint32 `toml:"-"`
+	EngineTime   uint32 `toml:"-"`
 
 	Tables []Table `toml:"table"`
 
 	// Name & Fields are the elements of a Table.
 	// Telegraf chokes if we try to embed a Table. So instead we have to embed the
 	// fields of a Table, and construct a Table during runtime.
-	Name   string
+	Name   string  // deprecated in 1.14; use name_override
 	Fields []Field `toml:"field"`
 
 	connectionCache []snmpConnection
