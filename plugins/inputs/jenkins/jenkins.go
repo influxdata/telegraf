@@ -170,10 +170,10 @@ func (j *Jenkins) initialize(client *http.Client) error {
 // Function to get source and port tags
 func (j *Jenkins) getInitialTags() (map[string]string, error) {
 	tags := map[string]string{}
-	u, err := url.Parse(j.URL)	
+	u, err := url.Parse(j.URL)
 	if err != nil {
 		return tags, err
-		}
+	}
 	tags["source"] = u.Hostname()
 	tags["port"] = u.Port()
 	return tags, nil
@@ -234,12 +234,12 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
-	// Get source and port tags 
+	// Get source and port tags
 	tags, err := j.getInitialTags()
-        if err != nil {
+	if err != nil {
 		acc.AddError(err)
-                return
-        }
+		return
+	}
 	// get node data
 	for _, node := range nodeResp.Computers {
 		err = j.gatherNodeData(tags, node, acc)
