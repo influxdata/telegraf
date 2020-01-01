@@ -167,9 +167,20 @@ func (j *Jenkins) initialize(client *http.Client) error {
 	return j.client.init()
 }
 
-func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
-
+// Function to get source and port tags
+func (j *Jenkins) getInitialTags() (map[string]string, error) {
 	tags := map[string]string{}
+	u, err := url.Parse(j.URL)	
+	if err != nil {
+		return tags, err
+		}
+	tags["source"] = u.Hostname()
+	tags["port"] = u.Port()
+	return tags, nil
+}
+
+func (j *Jenkins) gatherNodeData(tags map[string]string, n node, acc telegraf.Accumulator) error {
+
 	if n.DisplayName == "" {
 		return fmt.Errorf("error empty node name")
 	}
@@ -190,13 +201,6 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	if n.Offline {
 		tags["status"] = "offline"
 	}
-
-	u, err := url.Parse(j.URL)
-	if err != nil {
-		return err
-	}
-	tags["source"] = u.Hostname()
-	tags["port"] = u.Port()
 
 	fields := make(map[string]interface{})
 	fields["num_executors"] = n.NumExecutors
@@ -230,9 +234,15 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
+	// Get source and port tags 
+	tags, err := j.getInitialTags()
+        if err != nil {
+		acc.AddError(err)
+                return
+        }
 	// get node data
 	for _, node := range nodeResp.Computers {
-		err = j.gatherNodeData(node, acc)
+		err = j.gatherNodeData(tags, node, acc)
 		if err == nil {
 			continue
 		}
@@ -246,12 +256,18 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
+	// Get source and port tags
+	tags, err := j.getInitialTags()
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
 	var wg sync.WaitGroup
 	for _, job := range js.Jobs {
 		wg.Add(1)
 		go func(name string, wg *sync.WaitGroup, acc telegraf.Accumulator) {
 			defer wg.Done()
-			if err := j.getJobDetail(jobRequest{
+			if err := j.getJobDetail(tags, jobRequest{
 				name:    name,
 				parents: []string{},
 				layer:   0,
@@ -275,7 +291,7 @@ func (j *Jenkins) doGet(tcp func() error) error {
 	return nil
 }
 
-func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
+func (j *Jenkins) getJobDetail(tags map[string]string, jr jobRequest, acc telegraf.Accumulator) error {
 	if j.MaxSubJobDepth > 0 && jr.layer == j.MaxSubJobDepth {
 		return nil
 	}
@@ -298,7 +314,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 		// schedule tcp fetch for inner jobs
 		go func(ij innerJob, jr jobRequest, acc telegraf.Accumulator) {
 			defer wg.Done()
-			if err := j.getJobDetail(jobRequest{
+			if err := j.getJobDetail(tags, jobRequest{
 				name:    ij.Name,
 				parents: jr.combined(),
 				layer:   jr.layer + 1,
@@ -334,7 +350,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	gatherJobBuild(jr, build, acc)
+	gatherJobBuild(tags, jr, build, acc)
 	return nil
 }
 
@@ -432,8 +448,10 @@ func (jr jobRequest) parentsString() string {
 	return strings.Join(jr.parents, "/")
 }
 
-func gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
-	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result}
+func gatherJobBuild(tags map[string]string, jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
+	tags["name"] = jr.name
+	tags["parents"] = jr.parentsString()
+	tags["result"] = b.Result
 	fields := make(map[string]interface{})
 	fields["duration"] = b.Duration
 	fields["result_code"] = mapResultCode(b.Result)
