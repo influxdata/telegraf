@@ -44,7 +44,7 @@ type (
 		// TLS certificate authority
 		CA string
 
-		EnableTLS bool `toml:"enable_tls"`
+		EnableTLS *bool `toml:"enable_tls"`
 		tlsint.ClientConfig
 
 		SASLUsername string `toml:"sasl_username"`
@@ -263,7 +263,7 @@ func (k *Kafka) Connect() error {
 		k.TLSKey = k.Key
 	}
 
-	if k.EnableTLS {
+	if k.EnableTLS != nil && *k.EnableTLS {
 		config.Net.TLS.Enable = true
 	}
 
@@ -275,8 +275,12 @@ func (k *Kafka) Connect() error {
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
 
-		// TLS is forced on if a custom tls.Config is set.
-		config.Net.TLS.Enable = true
+		// To maintain backwards compatibility, if the enable_tls option is not
+		// set TLS is enabled if a non-default TLS config is used.
+		if k.EnableTLS == nil {
+			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
+			config.Net.TLS.Enable = true
+		}
 	}
 
 	if k.SASLUsername != "" && k.SASLPassword != "" {

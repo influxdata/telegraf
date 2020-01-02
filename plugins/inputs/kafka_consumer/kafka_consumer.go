@@ -103,8 +103,10 @@ type KafkaConsumer struct {
 	SASLUsername           string   `toml:"sasl_username"`
 	SASLVersion            *int     `toml:"sasl_version"`
 
-	EnableTLS bool `toml:"enable_tls"`
+	EnableTLS *bool `toml:"enable_tls"`
 	tls.ClientConfig
+
+	Log telegraf.Logger `toml:"-"`
 
 	ConsumerCreator ConsumerGroupCreator `toml:"-"`
 	consumer        ConsumerGroup
@@ -166,7 +168,7 @@ func (k *KafkaConsumer) Init() error {
 		config.Version = version
 	}
 
-	if k.EnableTLS {
+	if k.EnableTLS != nil && *k.EnableTLS {
 		config.Net.TLS.Enable = true
 	}
 
@@ -178,8 +180,12 @@ func (k *KafkaConsumer) Init() error {
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
 
-		// TLS is forced on if a custom tls.Config is set.
-		config.Net.TLS.Enable = true
+		// To maintain backwards compatibility, if the enable_tls option is not
+		// set TLS is enabled if a non-default TLS config is used.
+		if k.EnableTLS == nil {
+			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
+			config.Net.TLS.Enable = true
+		}
 	}
 
 	if k.SASLUsername != "" && k.SASLPassword != "" {
