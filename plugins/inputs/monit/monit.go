@@ -1,4 +1,4 @@
-// Copyright 2019, Verizon
+// Copyright 2020, Verizon
 // Licensed under the terms of the MIT License. See LICENSE file in project root for terms.
 
 package monit
