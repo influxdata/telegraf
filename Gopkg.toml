@@ -88,7 +88,7 @@
 
 [[constraint]]
   name = "github.com/kardianos/service"
-  branch = "master"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/kballard/go-shellquote"
