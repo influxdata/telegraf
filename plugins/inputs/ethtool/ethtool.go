@@ -2,6 +2,8 @@ package ethtool
 
 import (
 	"net"
+
+	"github.com/influxdata/telegraf"
 )
 
 type Command interface {
@@ -17,6 +19,8 @@ type Ethtool struct {
 
 	// This is the list of interface names to ignore
 	InterfaceExclude []string `toml:"interface_exclude"`
+
+	Log telegraf.Logger `toml:"-"`
 
 	// the ethtool command
 	command Command
