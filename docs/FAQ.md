@@ -45,11 +45,11 @@ GODEBUG=netdns=cgo
 
 ### Q: How can I manage series cardinality?
 
-High cardinality, when not properly managed, can cause high load on your
-database.  Telegraf attempts to avoid creating series with high cardinality,
-but some monitoring workloads such as tracking containers are are inherently
-high cardinality.  These workloads can still be monitored, but care must be
-taken to manage cardinality growth.
+High [series cardinality][], when not properly managed, can cause high load on
+your database.  Telegraf attempts to avoid creating series with high
+cardinality, but some monitoring workloads such as tracking containers are are
+inherently high cardinality.  These workloads can still be monitored, but care
+must be taken to manage cardinality growth.
 
 You can use the following techniques to avoid cardinality issues:
 
