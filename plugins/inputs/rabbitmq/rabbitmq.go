@@ -510,6 +510,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 			err := r.requestJSON("/api/healthchecks/node/"+node.Name, &health)
 			if err != nil {
 				acc.AddError(err)
+				return
 			}
 
 			if health.Status == "ok" {
@@ -522,6 +523,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 			err = r.requestJSON("/api/nodes/"+node.Name+"/memory", &memory)
 			if err != nil {
 				acc.AddError(err)
+				return
 			}
 
 			if memory.Memory != nil {
