@@ -22,6 +22,7 @@ type Mysql struct {
 	PerfEventsStatementsDigestTextLimit int64    `toml:"perf_events_statements_digest_text_limit"`
 	PerfEventsStatementsLimit           int64    `toml:"perf_events_statements_limit"`
 	PerfEventsStatementsTimeLimit       int64    `toml:"perf_events_statements_time_limit"`
+	AggregateTableIOWaits               bool     `toml:"aggregate_table_io_waits"`
 	TableSchemaDatabases                []string `toml:"table_schema_databases"`
 	GatherProcessList                   bool     `toml:"gather_process_list"`
 	GatherUserStatistics                bool     `toml:"gather_user_statistics"`
@@ -318,14 +319,30 @@ const (
         SUM_TIMER_FETCH, SUM_TIMER_INSERT, SUM_TIMER_UPDATE, SUM_TIMER_DELETE
         FROM performance_schema.table_io_waits_summary_by_table
         WHERE OBJECT_SCHEMA NOT IN ('mysql', 'performance_schema')
-    `
+	`
+	perfTableIOWaitsAggregateQuery = `
+        SELECT
+            OBJECT_SCHEMA,
+            OBJECT_SCHEMA AS OBJECT_NAME,
+            SUM(COUNT_FETCH) AS COUNT_FETCH,
+            SUM(COUNT_INSERT) AS COUNT_INSERT,
+            SUM(COUNT_UPDATE) AS COUNT_UPDATE,
+            SUM(COUNT_DELETE) AS COUNT_DELETE,
+            SUM(SUM_TIMER_FETCH) AS SUM_TIMER_FETCH,
+            SUM(SUM_TIMER_INSERT) AS SUM_TIMER_INSERT,
+            SUM(SUM_TIMER_UPDATE) AS SUM_TIMER_UPDATE,
+            SUM(SUM_TIMER_DELETE) AS SUM_TIMER_DELETE
+        FROM performance_schema.table_io_waits_summary_by_table
+        WHERE OBJECT_SCHEMA NOT IN ('mysql', 'performance_schema')
+        GROUP BY OBJECT_SCHEMA
+	`
 	perfIndexIOWaitsQuery = `
         SELECT OBJECT_SCHEMA, OBJECT_NAME, ifnull(INDEX_NAME, 'NONE') as INDEX_NAME,
         COUNT_FETCH, COUNT_INSERT, COUNT_UPDATE, COUNT_DELETE,
         SUM_TIMER_FETCH, SUM_TIMER_INSERT, SUM_TIMER_UPDATE, SUM_TIMER_DELETE
         FROM performance_schema.table_io_waits_summary_by_index_usage
         WHERE OBJECT_SCHEMA NOT IN ('mysql', 'performance_schema')
-    `
+	`
 	perfTableLockWaitsQuery = `
         SELECT
             OBJECT_SCHEMA,
@@ -1087,7 +1104,11 @@ func getColSlice(l int) ([]interface{}, error) {
 // gatherPerfTableIOWaits can be used to get total count and time
 // of I/O wait event for each table and process
 func (m *Mysql) gatherPerfTableIOWaits(db *sql.DB, serv string, acc telegraf.Accumulator) error {
-	rows, err := db.Query(perfTableIOWaitsQuery)
+	queryStr := perfTableIOWaitsQuery
+	if m.AggregateTableIOWaits {
+		queryStr = perfTableIOWaitsAggregateQuery
+	}
+	rows, err := db.Query(queryStr)
 	if err != nil {
 		return err
 	}
