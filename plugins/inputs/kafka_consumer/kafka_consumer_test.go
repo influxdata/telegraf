@@ -7,6 +7,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -68,6 +69,7 @@ func TestInit(t *testing.T) {
 			name: "parses valid version string",
 			plugin: &KafkaConsumer{
 				Version: "1.0.0",
+				Log:     testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.Version, sarama.V1_0_0_0)
@@ -77,6 +79,7 @@ func TestInit(t *testing.T) {
 			name: "invalid version string",
 			plugin: &KafkaConsumer{
 				Version: "100",
+				Log:     testutil.Logger{},
 			},
 			initError: true,
 		},
@@ -84,6 +87,7 @@ func TestInit(t *testing.T) {
 			name: "custom client_id",
 			plugin: &KafkaConsumer{
 				ClientID: "custom",
+				Log:      testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.ClientID, "custom")
@@ -93,6 +97,7 @@ func TestInit(t *testing.T) {
 			name: "custom offset",
 			plugin: &KafkaConsumer{
 				Offset: "newest",
+				Log:    testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, plugin.config.Consumer.Offsets.Initial, sarama.OffsetNewest)
@@ -102,8 +107,53 @@ func TestInit(t *testing.T) {
 			name: "invalid offset",
 			plugin: &KafkaConsumer{
 				Offset: "middle",
+				Log:    testutil.Logger{},
 			},
 			initError: true,
+		},
+		{
+			name: "default tls without tls config",
+			plugin: &KafkaConsumer{
+				Log: testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.False(t, plugin.config.Net.TLS.Enable)
+			},
+		},
+		{
+			name: "default tls with a tls config",
+			plugin: &KafkaConsumer{
+				ClientConfig: tls.ClientConfig{
+					InsecureSkipVerify: true,
+				},
+				Log: testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.True(t, plugin.config.Net.TLS.Enable)
+			},
+		},
+		{
+			name: "disable tls",
+			plugin: &KafkaConsumer{
+				EnableTLS: func() *bool { v := false; return &v }(),
+				ClientConfig: tls.ClientConfig{
+					InsecureSkipVerify: true,
+				},
+				Log: testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.False(t, plugin.config.Net.TLS.Enable)
+			},
+		},
+		{
+			name: "enable tls",
+			plugin: &KafkaConsumer{
+				EnableTLS: func() *bool { v := true; return &v }(),
+				Log:       testutil.Logger{},
+			},
+			check: func(t *testing.T, plugin *KafkaConsumer) {
+				require.True(t, plugin.config.Net.TLS.Enable)
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -125,6 +175,7 @@ func TestStartStop(t *testing.T) {
 	cg := &FakeConsumerGroup{errors: make(chan error)}
 	plugin := &KafkaConsumer{
 		ConsumerCreator: &FakeCreator{ConsumerGroup: cg},
+		Log:             testutil.Logger{},
 	}
 	err := plugin.Init()
 	require.NoError(t, err)

@@ -34,9 +34,13 @@ and use the old zookeeper connection method.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional SASL Config
+  ## SASL authentication credentials.  These settings should typically be used
+  ## with TLS encryption enabled using the "enable_tls" option.
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
 
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"

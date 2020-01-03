@@ -96,6 +96,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

@@ -10,6 +10,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -33,15 +34,20 @@ const sampleConfig = `
   # version = ""
 
   ## Optional TLS Config
+  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Optional SASL Config
+  ## SASL authentication credentials.  These settings should typically be used
+  ## with TLS encryption enabled using the "enable_tls" option.
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
 
   ## Name of the consumer group.
   # consumer_group = "telegraf_metrics_consumers"
@@ -95,8 +101,12 @@ type KafkaConsumer struct {
 	Version                string   `toml:"version"`
 	SASLPassword           string   `toml:"sasl_password"`
 	SASLUsername           string   `toml:"sasl_username"`
+	SASLVersion            *int     `toml:"sasl_version"`
 
+	EnableTLS *bool `toml:"enable_tls"`
 	tls.ClientConfig
+
+	Log telegraf.Logger `toml:"-"`
 
 	ConsumerCreator ConsumerGroupCreator `toml:"-"`
 	consumer        ConsumerGroup
@@ -158,6 +168,10 @@ func (k *KafkaConsumer) Init() error {
 		config.Version = version
 	}
 
+	if k.EnableTLS != nil && *k.EnableTLS {
+		config.Net.TLS.Enable = true
+	}
+
 	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -165,13 +179,25 @@ func (k *KafkaConsumer) Init() error {
 
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Enable = true
+
+		// To maintain backwards compatibility, if the enable_tls option is not
+		// set TLS is enabled if a non-default TLS config is used.
+		if k.EnableTLS == nil {
+			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
+			config.Net.TLS.Enable = true
+		}
 	}
 
 	if k.SASLUsername != "" && k.SASLPassword != "" {
 		config.Net.SASL.User = k.SASLUsername
 		config.Net.SASL.Password = k.SASLPassword
 		config.Net.SASL.Enable = true
+
+		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
+		if err != nil {
+			return err
+		}
+		config.Net.SASL.Version = version
 	}
 
 	if k.ClientID != "" {
