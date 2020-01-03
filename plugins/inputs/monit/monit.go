@@ -60,7 +60,7 @@ type Service struct {
 	Block            Block   `xml:"block"`
 	Inode            Inode   `xml:"inode"`
 	Pid              int64   `xml:"pid"`
-	ParentPid        int64   `xml"ppid"`
+	ParentPid        int64   `xml:"ppid"`
 	Threads          int     `xml:"threads"`
 	Children         int     `xml:"children"`
 	Port             Port    `xml:"port"`
