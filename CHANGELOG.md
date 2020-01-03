@@ -6,7 +6,8 @@
 - [#6798](https://github.com/influxdata/telegraf/pull/6798): Add use_sudo option to ipmi_sensor input.
 - [#6764](https://github.com/influxdata/telegraf/pull/6764): Add ability to collect pod labels to kubernetes input.
 - [#6770](https://github.com/influxdata/telegraf/pull/6770): Expose unbound-control config file option.
-- [#6508](https://github.com/influxdata/telegraf/pull/6508):  Add support for new nginx plus api endpoints.
+- [#6508](https://github.com/influxdata/telegraf/pull/6508): Add support for new nginx plus api endpoints.
+- [#6342](https://github.com/influxdata/telegraf/pull/6342): Add kafka SASL version control to support Azure Event Hub.
 
 ## v1.13.1 [unreleased]
 
