@@ -177,7 +177,7 @@ func TestMonit3(t *testing.T) {
 	intMetrics := []string{
 		"status_code",
 		"monitoring_status_code",
-}
+	}
 
 	int64Metrics := []string{
 		"service_uptime",

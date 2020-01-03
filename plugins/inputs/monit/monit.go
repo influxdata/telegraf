@@ -24,13 +24,13 @@ type Status struct {
 }
 
 type Server struct {
-	ID      string `xml:"id"`
-	Version string `xml:"version"`
-	Uptime  int    `xml:"uptime"`
-	Poll    int    `xml:"poll"`
-	LocalHostname	string	`xml:"localhostname"`
-	StartDelay	int`xml:"startdelay"`
-	ControlFile	string	`xml:"controlfile"`
+	ID            string `xml:"id"`
+	Version       string `xml:"version"`
+	Uptime        int    `xml:"uptime"`
+	Poll          int    `xml:"poll"`
+	LocalHostname string `xml:"localhostname"`
+	StartDelay    int    `xml:"startdelay"`
+	ControlFile   string `xml:"controlfile"`
 }
 
 type Platform struct {
@@ -44,92 +44,92 @@ type Platform struct {
 }
 
 type Service struct {
-	Type             string `xml:"type,attr"`
-	Name             string `xml:"name"`
-	Status           int  `xml:"status"`
-	MonitoringStatus int  `xml:"monitor"`
-	MonitorMode		 int	`xml:"monitormode"`
-	PendingAction    int    `xml:"pendingaction"`
-	Uptime           int64  `xml:"uptime"`
-	Memory           Memory `xml:"memory"`
-	CPU              CPU    `xml:"cpu"`
-	System           System `xml:"system"`
-	Size			 int64	`xml:"size"`
-	Mode			 int	`xml:"mode"`
-	Program			 Program `xml:"program"`
-	Block			 Block		`xml:"block"`
-	Inode			 Inode		`xml:"inode"`
-	Pid			 int64		`xml:"pid"`
-	ParentPid		 int64		`xml"ppid"`
-	Threads			 int		`xml:"threads"`
-	Children		 int		`xml:"children"`
-	Port			 Port		`xml:"port"`
-	Link			 Link		`xml:"link"`
+	Type             string  `xml:"type,attr"`
+	Name             string  `xml:"name"`
+	Status           int     `xml:"status"`
+	MonitoringStatus int     `xml:"monitor"`
+	MonitorMode      int     `xml:"monitormode"`
+	PendingAction    int     `xml:"pendingaction"`
+	Uptime           int64   `xml:"uptime"`
+	Memory           Memory  `xml:"memory"`
+	CPU              CPU     `xml:"cpu"`
+	System           System  `xml:"system"`
+	Size             int64   `xml:"size"`
+	Mode             int     `xml:"mode"`
+	Program          Program `xml:"program"`
+	Block            Block   `xml:"block"`
+	Inode            Inode   `xml:"inode"`
+	Pid              int64   `xml:"pid"`
+	ParentPid        int64   `xml"ppid"`
+	Threads          int     `xml:"threads"`
+	Children         int     `xml:"children"`
+	Port             Port    `xml:"port"`
+	Link             Link    `xml:"link"`
 }
 
 type Link struct {
-	State	int			`xml:"state"`
-	Speed	int64		`xml:"speed"`
-	Duplex	int		`xml:"duplex"`
-	Download	Download	`xml:"download"`
-	Upload		Upload		`xml:"upload"`
+	State    int      `xml:"state"`
+	Speed    int64    `xml:"speed"`
+	Duplex   int      `xml:"duplex"`
+	Download Download `xml:"download"`
+	Upload   Upload   `xml:"upload"`
 }
 
 type Download struct {
 	Packets struct {
-		Now	int64	`xml:"now"`
-		Total	int64	`xml:"total"`
+		Now   int64 `xml:"now"`
+		Total int64 `xml:"total"`
 	} `xml:"packets"`
 	Bytes struct {
-		Now	int64	`xml:"now"`
-		Total	int64	`xml:"total"`
+		Now   int64 `xml:"now"`
+		Total int64 `xml:"total"`
 	} `xml:"bytes"`
 	Errors struct {
-		Now	int64	`xml:"now"`
-		Total	int64	`xml:"total"`
+		Now   int64 `xml:"now"`
+		Total int64 `xml:"total"`
 	} `xml:"errors"`
 }
 
 type Upload struct {
 	Packets struct {
-		Now	int64	`xml:"now"`
-		Total	int64	`xml:"total"`
+		Now   int64 `xml:"now"`
+		Total int64 `xml:"total"`
 	} `xml:"packets"`
 	Bytes struct {
-		Now	int64	`xml:"now"`
-		Total	int64	`xml:"total"`
+		Now   int64 `xml:"now"`
+		Total int64 `xml:"total"`
 	} `xml:"bytes"`
 	Errors struct {
-		Now	int64	`xml:"now"`
-		Total	int64	`xml:"total"`
+		Now   int64 `xml:"now"`
+		Total int64 `xml:"total"`
 	} `xml:"errors"`
 }
 
 type Port struct {
-	Hostname	string `xml:"hostname"`
-	PortNumber	int64	`xml:"portnumber"`
-	Request		string	`xml:"request"`
-	Protocol	string	`xml:"protocol"`
-	Type		string	`xml:"type"`
-	ResponseTime	float64	`xml:"responsetime"`
+	Hostname     string  `xml:"hostname"`
+	PortNumber   int64   `xml:"portnumber"`
+	Request      string  `xml:"request"`
+	Protocol     string  `xml:"protocol"`
+	Type         string  `xml:"type"`
+	ResponseTime float64 `xml:"responsetime"`
 }
 
-type Block struct{
-	Percent		float64	`xml:"percent"`
-	Usage		float64	`xml:"usage"`
-	Total		float64	`xml:"total"`
+type Block struct {
+	Percent float64 `xml:"percent"`
+	Usage   float64 `xml:"usage"`
+	Total   float64 `xml:"total"`
 }
 
-type Inode struct{
-	Percent		float64	`xml:"percent"`
-	Usage		float64	`xml:"usage"`
-	Total		float64	`xml:"total"`
+type Inode struct {
+	Percent float64 `xml:"percent"`
+	Usage   float64 `xml:"usage"`
+	Total   float64 `xml:"total"`
 }
 
-type Program struct{
-	Started		int64	`xml:"started"`
-	Status		int		`xml:"status"`
-	Output		string	`xml:"output"`
+type Program struct {
+	Started int64  `xml:"started"`
+	Status  int    `xml:"status"`
+	Output  string `xml:"output"`
 }
 
 type Memory struct {
@@ -169,8 +169,8 @@ type Monit struct {
 	Address           string
 	BasicAuthUsername string
 	BasicAuthPassword string
-	parser parsers.Parser
-	client *http.Client
+	parser            parsers.Parser
+	client            *http.Client
 	tls.ClientConfig
 	Timeout internal.Duration `toml:"timeout"`
 }
@@ -215,7 +215,7 @@ func (m *Monit) Init() error {
 	m.client = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
-			Proxy: http.ProxyFromEnvironment,
+			Proxy:           http.ProxyFromEnvironment,
 		},
 		Timeout: m.Timeout.Duration,
 	}
@@ -310,7 +310,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			fields["permissions"] = service.Mode
 			acc.AddFields("fifo", fields, tags)
 		} else if service.Type == "7" {
-			fields["last_started_time"] = service.Program.Started*1000
+			fields["last_started_time"] = service.Program.Started * 1000
 			fields["program_status"] = service.Program.Status
 			fields["output"] = service.Program.Output
 			acc.AddFields("program", fields, tags)
@@ -336,10 +336,10 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func linkMode(s Service) string{
-	if s.Link.Duplex == 1{
+func linkMode(s Service) string {
+	if s.Link.Duplex == 1 {
 		return "Duplex Mode"
-	}else{
+	} else {
 		return "Simplex Mode"
 	}
 }
