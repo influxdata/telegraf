@@ -6,14 +6,13 @@ package monit
 import (
 	"encoding/xml"
 	"fmt"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"net/http"
-
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/net/html/charset"
+	"net/http"
 )
 
 var pendingActions = []string{"ignore", "alert", "restart", "stop", "exec", "unmonitor", "start", "monitor"}
@@ -47,8 +46,8 @@ type Platform struct {
 type Service struct {
 	Type             string `xml:"type,attr"`
 	Name             string `xml:"name"`
-	Status           int64  `xml:"status"`
-	MonitoringStatus int64  `xml:"monitor"`
+	Status           int  `xml:"status"`
+	MonitoringStatus int  `xml:"monitor"`
 	MonitorMode		 int	`xml:"monitormode"`
 	PendingAction    int    `xml:"pendingaction"`
 	Uptime           int64  `xml:"uptime"`
@@ -64,6 +63,55 @@ type Service struct {
 	ParentPid		 int64		`xml"ppid"`
 	Threads			 int		`xml:"threads"`
 	Children		 int		`xml:"children"`
+	Port			 Port		`xml:"port"`
+	Link			 Link		`xml:"link"`
+}
+
+type Link struct {
+	State	int			`xml:"state"`
+	Speed	int64		`xml:"speed"`
+	Duplex	int		`xml:"duplex"`
+	Download	Download	`xml:"download"`
+	Upload		Upload		`xml:"upload"`
+}
+
+type Download struct {
+	Packets struct {
+		Now	int64	`xml:"now"`
+		Total	int64	`xml:"total"`
+	} `xml:"packets"`
+	Bytes struct {
+		Now	int64	`xml:"now"`
+		Total	int64	`xml:"total"`
+	} `xml:"bytes"`
+	Errors struct {
+		Now	int64	`xml:"now"`
+		Total	int64	`xml:"total"`
+	} `xml:"errors"`
+}
+
+type Upload struct {
+	Packets struct {
+		Now	int64	`xml:"now"`
+		Total	int64	`xml:"total"`
+	} `xml:"packets"`
+	Bytes struct {
+		Now	int64	`xml:"now"`
+		Total	int64	`xml:"total"`
+	} `xml:"bytes"`
+	Errors struct {
+		Now	int64	`xml:"now"`
+		Total	int64	`xml:"total"`
+	} `xml:"errors"`
+}
+
+type Port struct {
+	Hostname	string `xml:"hostname"`
+	PortNumber	int64	`xml:"portnumber"`
+	Request		string	`xml:"request"`
+	Protocol	string	`xml:"protocol"`
+	Type		string	`xml:"type"`
+	ResponseTime	float64	`xml:"responsetime"`
 }
 
 type Block struct{
@@ -197,16 +245,16 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("Cannot parse input with error: %v\n", err)
 	}
 
-	// Prepare tags
 	tags := map[string]string{"address": m.Address, "version": status.Server.Version, "hostname": status.Server.LocalHostname, "platform_name": status.Platform.Name}
 
 	for _, service := range status.Services {
-		// Prepare fields
 		fields := make(map[string]interface{})
 		fields["status_code"] = service.Status
 		fields["status"] = serviceStatus(service)
 		fields["monitoring_status_code"] = service.MonitoringStatus
-		fields["monitoring_mode"] = monitoringMode(service)
+		fields["monitoring_status"] = monitoringStatus(service)
+		fields["monitoring_mode_status"] = monitoringMode(service)
+		fields["monitoring_mode_code"] = service.MonitorMode
 		tags["service"] = service.Name
 		tags["service_type"] = service.Type
 		if service.Type == "0" {
@@ -219,17 +267,13 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			fields["inode_total"] = service.Inode.Total
 			acc.AddFields("filesystem", fields, tags)
 		} else if service.Type == "1" {
-			fields["monitoring_status"] = fileDirectoryMonitoringStatus(service)
-			fields["size"] = service.Size
 			fields["permissions"] = service.Mode
 			acc.AddFields("directory", fields, tags)
 		} else if service.Type == "2" {
-			fields["monitoring_status"] = fileDirectoryMonitoringStatus(service)
 			fields["size"] = service.Size
 			fields["permissions"] = service.Mode
 			acc.AddFields("file", fields, tags)
 		} else if service.Type == "3" {
-			fields["monitoring_status"] = monitoringStatus(service)
 			fields["cpu_percent"] = service.CPU.Percent
 			fields["cpu_percent_total"] = service.CPU.PercentTotal
 			fields["mem_kb"] = service.Memory.Kilobyte
@@ -242,8 +286,15 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			fields["threads"] = service.Threads
 			fields["children"] = service.Children
 			acc.AddFields("process", fields, tags)
+		} else if service.Type == "4" {
+			fields["hostname"] = service.Port.Hostname
+			fields["port_number"] = service.Port.PortNumber
+			fields["request"] = service.Port.Request
+			fields["response_time"] = service.Port.ResponseTime
+			fields["protocol"] = service.Port.Protocol
+			fields["type"] = service.Port.Type
+			acc.AddFields("remote_host", fields, tags)
 		} else if service.Type == "5" {
-			fields["monitoring_status"] = monitoringStatus(service)
 			fields["cpu_system"] = service.System.CPU.System
 			fields["cpu_user"] = service.System.CPU.User
 			fields["cpu_wait"] = service.System.CPU.Wait
@@ -255,16 +306,42 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			fields["swap_kb"] = service.System.Swap.Kilobyte
 			fields["swap_percent"] = service.System.Swap.Percent
 			acc.AddFields("system", fields, tags)
+		} else if service.Type == "6" {
+			fields["permissions"] = service.Mode
+			acc.AddFields("fifo", fields, tags)
 		} else if service.Type == "7" {
-			fields["last_started_time"] = service.Program.Started
-			fields["program_status"] = programMonitoringStatus(service)
+			fields["last_started_time"] = service.Program.Started*1000
+			fields["program_status"] = service.Program.Status
 			fields["output"] = service.Program.Output
 			acc.AddFields("program", fields, tags)
+		} else if service.Type == "8" {
+			fields["link_state"] = service.Link.State
+			fields["link_speed"] = service.Link.Speed
+			fields["link_mode"] = linkMode(service)
+			fields["download_packets_now"] = service.Link.Download.Packets.Now
+			fields["download_packets_total"] = service.Link.Download.Packets.Total
+			fields["download_bytes_now"] = service.Link.Download.Bytes.Now
+			fields["download_bytes_total"] = service.Link.Download.Bytes.Total
+			fields["download_errors_now"] = service.Link.Download.Errors.Now
+			fields["download_errors_total"] = service.Link.Download.Errors.Total
+			fields["upload_packets_now"] = service.Link.Upload.Packets.Now
+			fields["upload_packets_total"] = service.Link.Upload.Packets.Total
+			fields["upload_bytes_now"] = service.Link.Upload.Bytes.Now
+			fields["upload_bytes_total"] = service.Link.Upload.Bytes.Total
+			fields["upload_errors_now"] = service.Link.Upload.Errors.Now
+			fields["upload_errors_total"] = service.Link.Upload.Errors.Total
+			acc.AddFields("network", fields, tags)
 		}
 	}
-
-
 	return nil
+}
+
+func linkMode(s Service) string{
+	if s.Link.Duplex == 1{
+		return "Duplex Mode"
+	}else{
+		return "Simplex Mode"
+	}
 }
 
 func serviceStatus(s Service) string {
@@ -288,13 +365,11 @@ func serviceStatus(s Service) string {
 }
 
 func monitoringMode(s Service) string {
-	switch s.MonitoringStatus {
+	switch s.MonitorMode {
+	case 0:
+		return "Monitoring in Active mode"
 	case 1:
-		return "Active"
-	case 2:
-		return "Passive"
-	case 3:
-		return "Manual"
+		return "Monitoring in Passive mode"
 	}
 	return "Unknown Mode"
 }
@@ -303,30 +378,6 @@ func monitoringStatus(s Service) string {
 	switch s.MonitoringStatus {
 	case 1:
 		return "Running"
-	case 2:
-		return "Initializing"
-	case 4:
-		return "Waiting"
-	}
-	return "Not monitored"
-}
-
-func programMonitoringStatus(s Service) string {
-	switch s.MonitoringStatus {
-	case 1:
-		return "Status OK"
-	case 2:
-		return "Initializing"
-	case 4:
-		return "Waiting"
-	}
-	return "Not monitored"
-}
-
-func fileDirectoryMonitoringStatus(s Service) string {
-	switch s.MonitoringStatus {
-	case 1:
-		return "Accessible"
 	case 2:
 		return "Initializing"
 	case 4:
