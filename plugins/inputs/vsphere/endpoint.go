@@ -67,6 +67,7 @@ type resourceKind struct {
 	objects          objectMap
 	filters          filter.Filter
 	paths            []string
+	exdludePaths     []string
 	collectInstances bool
 	getObjects       func(context.Context, *Endpoint, *ResourceFilter) (objectMap, error)
 	include          []string
@@ -85,6 +86,8 @@ type metricEntry struct {
 }
 
 type objectMap map[string]objectRef
+
+type stringSet map[string]bool
 
 type objectRef struct {
 	name         string
@@ -573,7 +576,8 @@ func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (o
 	}
 	m := make(objectMap, len(resources))
 	for _, r := range resources {
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+		key := r.ExtensibleManagedObject.Reference().Value
+		m[key] = objectRef{
 			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, dcname: r.Name}
 	}
 	return m, nil
