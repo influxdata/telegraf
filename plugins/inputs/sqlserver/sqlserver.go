@@ -69,6 +69,11 @@ const sampleConfig = `
   ## - AzureDBResourceGovernance
   ## - SqlRequests
   ## - ServerProperties
+  ## - AvailabilityGroupsWSFC
+  ## - AvailabilityGroupsWSFCNode
+  ## - AvailabilityGroupsGrp
+  ## - AvailabilityGroupsReplica
+  ## - AvailabilityGroupsDB
   exclude_query = [ 'Schedulers' ]
 `
 
@@ -104,6 +109,11 @@ func initQueries(s *SQLServer) {
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
+		queries["AvailabilityGroupsWSFC"] = Query{Script: availabilityGroupsWSFC, ResultByRow: false}
+		queries["AvailabilityGroupsWSFCNode"] = Query{Script: availabilityGroupsWSFCNode, ResultByRow: false}
+		queries["AvailabilityGroupsGrp"] = Query{Script: availabilityGroupsGrp, ResultByRow: false}
+		queries["AvailabilityGroupsReplica"] = Query{Script: availabilityGroupsReplica, ResultByRow: false}
+		queries["AvailabilityGroupsDB"] = Query{Script: availabilityGroupsDB, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1420,6 +1430,123 @@ SELECT
 	 OPTION(MAXDOP 1)
 
 `
+
+// Windows Failover Cluster info
+const availabilityGroupsWSFC = `SET NOCOUNT ON;
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+IF SERVERPROPERTY('IsHadrEnabled') = 1
+BEGIN
+SELECT 
+	'ag_cluster_config' As [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	cluster_name,
+	quorum_type,
+	quorum_state
+FROM sys.dm_hadr_cluster;
+END`
+
+// Windows Failover Cluster nodes info
+const availabilityGroupsWSFCNode = `SET NOCOUNT ON;
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+IF SERVERPROPERTY('IsHadrEnabled') = 1
+BEGIN
+SELECT 
+	'ag_cluster_node_config' As [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	member_name AS member_name, 
+	member_type, 
+	member_state,
+	number_of_quorum_votes 
+FROM sys.dm_hadr_cluster_members
+END`
+
+// Availability group general info
+const availabilityGroupsGrp = `SET NOCOUNT ON;
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+IF SERVERPROPERTY('IsHadrEnabled') = 1
+BEGIN
+SELECT 
+	'ag_grp_config' As [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	g.name as ag_name, 
+	CASE 
+		WHEN @@SERVERNAME = rgs.primary_replica THEN 1
+		ELSE 0
+	END primary_replica,
+	COALESCE(rgs.primary_recovery_health, 99) AS [primary_recovery_health], 
+	rgs.synchronization_health
+FROM sys.dm_hadr_availability_group_states as rgs 
+JOIN sys.availability_groups AS g ON rgs.group_id = g.group_id
+END`
+
+// Availability group replica
+const availabilityGroupsReplica = `SET NOCOUNT ON;
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+IF SERVERPROPERTY('IsHadrEnabled') = 1
+BEGIN
+SELECT 
+	'ag_replica_config' As [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	g.name as ag_name, 
+	rs.is_local, 
+	[role],
+	COALESCE(rs.operational_state, 99) AS [operational_state], 
+	rs.connected_state, 
+	COALESCE(rs.recovery_health, 99) AS [recovery_health], 
+	rs.synchronization_health
+FROM sys.dm_hadr_availability_replica_states AS rs 
+JOIN sys.availability_replicas AS r ON rs.replica_id = r.replica_id 
+JOIN sys.availability_groups AS g ON g.group_id = r.group_id
+END`
+
+// Availability group db
+const availabilityGroupsDB = `SET NOCOUNT ON;
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+DECLARE @sql NVARCHAR(MAX);
+
+IF SERVERPROPERTY('IsHadrEnabled') = 1
+BEGIN
+SET @sql = '
+SELECT 
+	"ag_db_config" As [measurement]
+	,REPLACE(r.replica_server_name,"\",":") AS [sql_instance]
+	,g.name + ":" + DB_NAME(drs.database_id) AS [ag_database_name]
+	,drs.is_local'
+
+	IF CAST(LEFT(CAST(SERVERPROPERTY('productversion') as varchar), 2) AS INT) >= 12 -- SQL Server 2014+ 
+    SET @sql += ',drs.is_primary_replica' + CHAR(13);
+ELSE 
+	SET @sql += ',0 AS [is_primary_replica]' + CHAR(13);
+
+SET @sql += '
+	,drs.synchronization_health
+	,drs.synchronization_state
+	,COALESCE(drs.database_state, 99) AS [database_state]
+	,drs.is_suspended
+	,COALESCE(drs.suspend_reason, 99) AS [suspend_reason]
+	,COALESCE(drs.log_send_queue_size, 0) AS [log_send_queue_size_KB]
+	,COALESCE(drs.log_send_rate, 0) AS [log_send_rate]
+	,COALESCE(drs.redo_queue_size, 0) AS [redo_queue_size_KB]
+	,COALESCE(drs.redo_rate, 0) AS [redo_rate]' + CHAR(13);
+
+IF CAST(LEFT(CAST(SERVERPROPERTY('productversion') as varchar), 2) AS INT) >= 13 -- SQL Server 2016+ 
+    SET @sql += ',COALESCE(drs.secondary_lag_seconds, 0) AS [secondary_lag_seconds]' + CHAR(13);
+ELSE 
+	SET @sql += ',0 AS [secondary_lag_seconds]' + CHAR(13);
+
+SET @sql += '
+FROM sys.dm_hadr_database_replica_states AS drs 
+JOIN sys.availability_replicas AS r ON r.replica_id = drs.replica_id 
+JOIN sys.availability_groups AS g ON g.group_id = drs.group_id 
+ORDER BY g.name, drs.is_primary_replica DESC, drs.database_id';
+END
+
+EXEC(@SQL)`
 
 // Queries V1
 const sqlPerformanceMetrics string = `SET DEADLOCK_PRIORITY -10;
