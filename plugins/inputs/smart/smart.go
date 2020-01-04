@@ -44,6 +44,15 @@ var (
 	// 192 Power-Off_Retract_Count -O--C-   097   097   000    -    14716
 	attribute = regexp.MustCompile("^\\s*([0-9]+)\\s(\\S+)\\s+([-P][-O][-S][-R][-C][-K])\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9-]+)\\s+([-\\w]+)\\s+([\\w\\+\\.]+).*$")
 
+	// 	Error counter log:
+	// 	Errors Corrected by           Total   Correction     Gigabytes    Total
+	// 		ECC          rereads/    errors   algorithm      processed    uncorrected
+	// 	fast | delayed   rewrites  corrected  invocations   [10^9 bytes]  errors
+	// read:          0        0         0         0          0       4797.541           0
+	// write:         0        0         0         0          0       8932.303           0
+	// verify:        0        0         0         0          0          5.713           0
+	errorCounterLog = regexp.MustCompile(`^(read|write|verify):\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\d\.]+)\s+(\d+)\s*$`)
+
 	deviceFieldIds = map[string]string{
 		"1":   "read_error_rate",
 		"7":   "seek_error_rate",
@@ -112,13 +121,15 @@ var (
 )
 
 type Smart struct {
-	Path       string
-	Nocheck    string
-	Attributes bool
-	Excludes   []string
-	Devices    []string
-	UseSudo    bool
-	Timeout    internal.Duration
+	Path            string            `toml:"path"`
+	Nocheck         string            `toml:"nocheck"`
+	Attributes      bool              `toml:"attributes"`
+	ErrorCounterLog bool              `toml:"error_counter_log"`
+	Excludes        []string          `toml:"excludes"`
+	Devices         []string          `toml:"devices"`
+	UseSudo         bool              `toml:"use_sudo"`
+	Timeout         internal.Duration `toml:"timeout"`
+	Log             telegraf.Logger
 }
 
 var sampleConfig = `
@@ -142,6 +153,10 @@ var sampleConfig = `
   ## Gather all returned S.M.A.R.T. attribute metrics and the detailed
   ## information from each drive into the 'smart_attribute' measurement.
   # attributes = false
+
+  ## Gather all returned S.M.A.R.T. error counter log metrics
+  ## for each drive into the 'smart_error_counter_log' measurement.
+  # error_counter_log = false
 
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
@@ -232,7 +247,7 @@ func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
 	wg.Add(len(devices))
 
 	for _, device := range devices {
-		go gatherDisk(acc, m.Timeout, m.UseSudo, m.Attributes, m.Path, m.Nocheck, device, &wg)
+		go m.gatherDisk(acc, device, &wg)
 	}
 
 	wg.Wait()
@@ -249,18 +264,21 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
+func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
-	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nocheck, "--format=brief"}
+	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", m.Nocheck, "--format=brief"}
+	if m.ErrorCounterLog {
+		args = append(args, "--log", "error")
+	}
 	args = append(args, strings.Split(device, " ")...)
-	out, e := runCmd(timeout, usesudo, smartctl, args...)
+	out, e := runCmd(m.Timeout, m.UseSudo, m.Path, args...)
 	outStr := string(out)
 
 	// Ignore all exit statuses except if it is a command line parse error
 	exitStatus, er := exitStatus(e)
 	if er != nil {
-		acc.AddError(fmt.Errorf("failed to run command '%s %s': %s - %s", smartctl, strings.Join(args, " "), e, outStr))
+		acc.AddError(fmt.Errorf("failed to run command '%s %s': %s - %s", m.Path, strings.Join(args, " "), e, outStr))
 		return
 	}
 
@@ -308,7 +326,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 		tags := map[string]string{}
 		fields := make(map[string]interface{})
 
-		if collectAttributes {
+		if m.Attributes {
 			keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
 			for _, key := range keys {
 				if value, ok := deviceTags[key]; ok {
@@ -319,7 +337,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 
 		attr := attribute.FindStringSubmatch(line)
 		if len(attr) > 1 {
-			if collectAttributes {
+			if m.Attributes {
 				tags["id"] = attr[1]
 				tags["name"] = attr[2]
 				tags["flags"] = attr[3]
@@ -351,7 +369,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 				}
 			}
 		} else {
-			if collectAttributes {
+			if m.Attributes {
 				if matches := sasNvmeAttr.FindStringSubmatch(line); len(matches) > 2 {
 					if attr, ok := sasNvmeAttributes[matches[1]]; ok {
 						tags["name"] = attr.Name
@@ -371,6 +389,37 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 						acc.AddFields("smart_attribute", fields, tags)
 					}
 				}
+			}
+		}
+
+		if m.ErrorCounterLog {
+			ecl := errorCounterLog.FindStringSubmatch(line)
+			if len(ecl) == 9 {
+				eclTags := map[string]string{}
+				eclFields := make(map[string]interface{})
+
+				eclTags["page_name"] = ecl[1]
+
+				keys := [...]string{"device", "model", "serial_no", "wwn", "capacity", "enabled"}
+				for _, key := range keys {
+					if value, ok := deviceTags[key]; ok {
+						eclTags[key] = value
+					}
+				}
+
+				eclFields["errors_corrected_by_eccfast"] = ecl[2]
+				eclFields["errors_corrected_by_eccdelayed"] = ecl[3]
+				eclFields["errors_corrected_by_rereads_rewrites"] = ecl[4]
+				eclFields["total_errors_corrected"] = ecl[5]
+				eclFields["correction_algorithm_invocations"] = ecl[6]
+				gigabytes_processed, err := strconv.ParseFloat(ecl[7], 64)
+				if err != nil {
+					gigabytes_processed = 0
+				}
+				eclFields["gigabytes_processed"] = gigabytes_processed * 1000 * 1000 * 1000
+				eclFields["total_uncorrected_errors"] = ecl[8]
+
+				acc.AddFields("smart_error_counter_log", eclFields, eclTags)
 			}
 		}
 	}
