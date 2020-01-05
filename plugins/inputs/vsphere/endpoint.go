@@ -67,7 +67,7 @@ type resourceKind struct {
 	objects          objectMap
 	filters          filter.Filter
 	paths            []string
-	exdludePaths     []string
+	excludePaths     []string
 	collectInstances bool
 	getObjects       func(context.Context, *Endpoint, *ResourceFilter) (objectMap, error)
 	include          []string
@@ -135,6 +135,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
 			paths:            parent.DatacenterInclude,
+			excludePaths:     parent.DatacenterExclude,
 			simple:           isSimple(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
 			include:          parent.DatacenterMetricInclude,
 			collectInstances: parent.DatacenterInstances,
@@ -152,6 +153,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
 			paths:            parent.ClusterInclude,
+			excludePaths:     parent.ClusterExclude,
 			simple:           isSimple(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
 			include:          parent.ClusterMetricInclude,
 			collectInstances: parent.ClusterInstances,
@@ -169,6 +171,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.HostMetricInclude, parent.HostMetricExclude),
 			paths:            parent.HostInclude,
+			excludePaths:     parent.HostExclude,
 			simple:           isSimple(parent.HostMetricInclude, parent.HostMetricExclude),
 			include:          parent.HostMetricInclude,
 			collectInstances: parent.HostInstances,
@@ -186,6 +189,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.VMMetricInclude, parent.VMMetricExclude),
 			paths:            parent.VMInclude,
+			excludePaths:     parent.VMExclude,
 			simple:           isSimple(parent.VMMetricInclude, parent.VMMetricExclude),
 			include:          parent.VMMetricInclude,
 			collectInstances: parent.VMInstances,
@@ -202,6 +206,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			paths:            parent.DatastoreInclude,
+			excludePaths:     parent.DatastoreExclude,
 			simple:           isSimple(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			include:          parent.DatastoreMetricInclude,
 			collectInstances: parent.DatastoreInstances,
@@ -408,9 +413,11 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		// Need to do this for all resource types even if they are not enabled
 		if res.enabled || k != "vm" {
 			rf := ResourceFilter{
-				finder:  &Finder{client},
-				resType: res.vcName,
-				paths:   res.paths}
+				finder:       &Finder{client},
+				resType:      res.vcName,
+				paths:        res.paths,
+				excludePaths: res.excludePaths,
+			}
 
 			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 			defer cancel1()

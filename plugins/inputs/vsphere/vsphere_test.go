@@ -400,6 +400,36 @@ func TestFinder(t *testing.T) {
 	vm = []mo.VirtualMachine{}
 	require.NoError(t, rf.FindAll(ctx, &vm))
 	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/this won't match anything"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 8, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**/*VM0"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 4, len(vm))
 }
 
 func TestFolders(t *testing.T) {
