@@ -5,6 +5,10 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
+	"github.com/docker/docker/api/types"
+	docker "github.com/docker/docker/client"
+	"github.com/influxdata/telegraf"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -13,12 +17,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync/atomic"
-
-	"github.com/docker/docker/api/types"
-	docker "github.com/docker/docker/client"
-	"github.com/influxdata/telegraf"
-	"github.com/pkg/errors"
 
 	"io"
 	"net/http"
@@ -83,6 +81,7 @@ type logReader struct {
 	done                  chan bool
 	eofReceived           bool
 	currentOffset         int64
+	offsetLock            *sync.Mutex
 	lock                  *sync.Mutex
 }
 
@@ -506,8 +505,12 @@ func (dl *DockerCNTLogs) goGather(done <-chan bool, acc telegraf.Accumulator, lr
 					field = nil
 
 					//Saving offset
-					currentOffset := atomic.LoadInt64(&lr.currentOffset)
-					atomic.AddInt64(&lr.currentOffset, timeStamp.UTC().UnixNano()-currentOffset+1)
+					//currentOffset := atomic.LoadInt64(&lr.currentOffset)
+					//atomic.AddInt64(&lr.currentOffset, timeStamp.UTC().UnixNano()-currentOffset+1)
+					lr.offsetLock.Lock()
+					lr.currentOffset += timeStamp.UTC().UnixNano() - lr.currentOffset + 1
+					lr.offsetLock.Unlock()
+
 				}
 			}
 
@@ -669,6 +672,8 @@ func (dl *DockerCNTLogs) Start(acc telegraf.Accumulator) error {
 		}
 		getLogsSince := ""
 		getLogsSince, logReader.currentOffset = getOffset(path.Join(dl.OffsetStoragePath, logReader.contID))
+		//Init mutex
+		logReader.offsetLock = &sync.Mutex{}
 
 		if contStatus.State.Status == "removing" ||
 			contStatus.State.Status == "exited" || contStatus.State.Status == "dead" {
@@ -713,7 +718,7 @@ func (dl *DockerCNTLogs) Start(acc telegraf.Accumulator) error {
 		dl.logReader[container["id"].(string)] = &logReader
 	}
 
-	//Starting log streaming (only afeter full initialization of logger settings performed)
+	//Starting log streaming (only after full initialization of logger settings performed)
 	for _, logReader := range dl.logReader {
 		go dl.goGather(logReader.done, acc, logReader)
 	}
@@ -798,7 +803,13 @@ func (dl *DockerCNTLogs) flushOffset(done <-chan bool) {
 
 			for _, logReader := range dl.logReader {
 				filename := path.Join(dl.OffsetStoragePath, logReader.contID)
-				offset := []byte(strconv.FormatInt(atomic.LoadInt64(&logReader.currentOffset), 10))
+
+				//offset := []byte(strconv.FormatInt(atomic.LoadInt64(&logReader.currentOffset), 10))
+				logReader.offsetLock.Lock()
+				offsetInt := logReader.currentOffset
+				logReader.offsetLock.Unlock()
+				offset := []byte(strconv.FormatInt(offsetInt, 10))
+
 				err := ioutil.WriteFile(filename, offset, 0777)
 				if err != nil {
 					log.Printf("E! [inputs.docker_cnt_logs] Can't write logger offset to file '%s', reason: %v",
