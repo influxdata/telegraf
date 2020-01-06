@@ -50,8 +50,7 @@ func (f *Finder) FindAll(ctx context.Context, resType string, paths, excludePath
 			delete(objs, k)
 		}
 	}
-	objectContentToTypedArray(objs, dst)
-	return nil
+	return objectContentToTypedArray(objs, dst)
 }
 
 // Find returns the resources matching the specified path.
@@ -61,8 +60,7 @@ func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}
 	if err != nil {
 		return err
 	}
-	objectContentToTypedArray(objs, dst)
-	return nil
+	return objectContentToTypedArray(objs, dst)
 }
 
 func (f *Finder) find(ctx context.Context, resType, path string, objs map[string]types.ObjectContent) error {
@@ -116,6 +114,9 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			// Special case: The last token is a recursive wildcard, so we can grab everything
 			// recursively in a single call.
 			v2, err := m.CreateContainerView(ctx, root, []string{resType}, true)
+			if err != nil {
+				return err
+			}
 			defer v2.Destroy(ctx)
 			err = v2.Retrieve(ctx, []string{resType}, fields, &content)
 			if err != nil {
