@@ -25,9 +25,9 @@ type Finder struct {
 // ResourceFilter is a convenience class holding a finder and a set of paths. It is useful when you need a
 // self contained object capable of returning a certain set of resources.
 type ResourceFilter struct {
-	finder  *Finder
-	resType string
-	paths   []string
+	finder       *Finder
+	resType      string
+	paths        []string
 	excludePaths []string
 }
 
