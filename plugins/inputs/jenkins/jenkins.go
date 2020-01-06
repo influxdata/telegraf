@@ -22,6 +22,8 @@ type Jenkins struct {
 	URL      string
 	Username string
 	Password string
+	Source   string
+	Port     string
 	// HTTP Timeout specified as a string - 3s, 1m, 1h
 	ResponseTimeout internal.Duration
 
@@ -138,6 +140,22 @@ func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 func (j *Jenkins) initialize(client *http.Client) error {
 	var err error
 
+	// init jenkins tags
+	u, err := url.Parse(j.URL)
+	if err != nil {
+		return err
+	}
+	if u.Port() == "" {
+		if u.Scheme == "http" {
+			j.Port = "80"
+		} else if u.Scheme == "https" {
+			j.Port = "443"
+		}
+	} else {
+		j.Port = u.Port()
+	}
+	j.Source = u.Hostname()
+
 	// init job filter
 	j.jobFilter, err = filter.Compile(j.JobExclude)
 	if err != nil {
@@ -167,20 +185,9 @@ func (j *Jenkins) initialize(client *http.Client) error {
 	return j.client.init()
 }
 
-// Function to get source and port tags
-func (j *Jenkins) getInitialTags() (map[string]string, error) {
+func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
+
 	tags := map[string]string{}
-	u, err := url.Parse(j.URL)
-	if err != nil {
-		return tags, err
-	}
-	tags["source"] = u.Hostname()
-	tags["port"] = u.Port()
-	return tags, nil
-}
-
-func (j *Jenkins) gatherNodeData(tags map[string]string, n node, acc telegraf.Accumulator) error {
-
 	if n.DisplayName == "" {
 		return fmt.Errorf("error empty node name")
 	}
@@ -201,6 +208,9 @@ func (j *Jenkins) gatherNodeData(tags map[string]string, n node, acc telegraf.Ac
 	if n.Offline {
 		tags["status"] = "offline"
 	}
+
+	tags["source"] = j.Source
+	tags["port"] = j.Port
 
 	fields := make(map[string]interface{})
 	fields["num_executors"] = n.NumExecutors
@@ -234,15 +244,9 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
-	// Get source and port tags
-	tags, err := j.getInitialTags()
-	if err != nil {
-		acc.AddError(err)
-		return
-	}
 	// get node data
 	for _, node := range nodeResp.Computers {
-		err = j.gatherNodeData(tags, node, acc)
+		err = j.gatherNodeData(node, acc)
 		if err == nil {
 			continue
 		}
@@ -256,18 +260,12 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
-	// Get source and port tags
-	tags, err := j.getInitialTags()
-	if err != nil {
-		acc.AddError(err)
-		return
-	}
 	var wg sync.WaitGroup
 	for _, job := range js.Jobs {
 		wg.Add(1)
 		go func(name string, wg *sync.WaitGroup, acc telegraf.Accumulator) {
 			defer wg.Done()
-			if err := j.getJobDetail(tags, jobRequest{
+			if err := j.getJobDetail(jobRequest{
 				name:    name,
 				parents: []string{},
 				layer:   0,
@@ -291,7 +289,7 @@ func (j *Jenkins) doGet(tcp func() error) error {
 	return nil
 }
 
-func (j *Jenkins) getJobDetail(tags map[string]string, jr jobRequest, acc telegraf.Accumulator) error {
+func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	if j.MaxSubJobDepth > 0 && jr.layer == j.MaxSubJobDepth {
 		return nil
 	}
@@ -314,7 +312,7 @@ func (j *Jenkins) getJobDetail(tags map[string]string, jr jobRequest, acc telegr
 		// schedule tcp fetch for inner jobs
 		go func(ij innerJob, jr jobRequest, acc telegraf.Accumulator) {
 			defer wg.Done()
-			if err := j.getJobDetail(tags, jobRequest{
+			if err := j.getJobDetail(jobRequest{
 				name:    ij.Name,
 				parents: jr.combined(),
 				layer:   jr.layer + 1,
@@ -350,7 +348,7 @@ func (j *Jenkins) getJobDetail(tags map[string]string, jr jobRequest, acc telegr
 		return nil
 	}
 
-	gatherJobBuild(tags, jr, build, acc)
+	j.gatherJobBuild(jr, build, acc)
 	return nil
 }
 
@@ -448,10 +446,8 @@ func (jr jobRequest) parentsString() string {
 	return strings.Join(jr.parents, "/")
 }
 
-func gatherJobBuild(tags map[string]string, jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
-	tags["name"] = jr.name
-	tags["parents"] = jr.parentsString()
-	tags["result"] = b.Result
+func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
+	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result, "source": j.Source, "port": j.Port}
 	fields := make(map[string]interface{})
 	fields["duration"] = b.Duration
 	fields["result_code"] = mapResultCode(b.Result)
