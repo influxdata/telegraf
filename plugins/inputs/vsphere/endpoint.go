@@ -32,8 +32,6 @@ var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
 
 const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
 
-const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
-
 const maxSampleConst = 10 // Absolute maximim number of samples regardless of period
 
 const maxMetadataSamples = 100 // Number of resources to sample for metric metadata
@@ -86,8 +84,6 @@ type metricEntry struct {
 }
 
 type objectMap map[string]objectRef
-
-type stringSet map[string]bool
 
 type objectRef struct {
 	name         string
@@ -455,8 +451,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	dss := newObjects["datastore"]
 	l2d := make(map[string]string)
 	for _, ds := range dss {
-		url := ds.altID
-		m := isolateLUN.FindStringSubmatch(url)
+		lunId := ds.altID
+		m := isolateLUN.FindStringSubmatch(lunId)
 		if m != nil {
 			l2d[m[1]] = ds.name
 		}
@@ -744,15 +740,15 @@ func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (ob
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		url := ""
+		lunId := ""
 		if r.Info != nil {
 			info := r.Info.GetDatastoreInfo()
 			if info != nil {
-				url = info.Url
+				lunId = info.Url
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, altID: url}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, altID: lunId}
 	}
 	return m, nil
 }
@@ -1003,7 +999,7 @@ func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Dur
 		if roundedTs == lastBucket {
 			bi++
 			p := len(rValues) - 1
-			rValues[p] = ((bi-1)/bi)*float64(rValues[p]) + v/bi
+			rValues[p] = ((bi-1)/bi)*rValues[p] + v/bi
 		} else {
 			rValues = append(rValues, v)
 			roundedInfo := types.PerfSampleInfo{
