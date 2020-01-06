@@ -2,8 +2,10 @@ package diskio
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -28,6 +30,8 @@ type DiskIO struct {
 	infoCache    map[string]diskInfoCache
 	deviceFilter filter.Filter
 	initialized  bool
+
+	last map[string]map[string]interface{}
 }
 
 func (_ *DiskIO) Description() string {
@@ -81,7 +85,10 @@ func (s *DiskIO) init() error {
 			s.deviceFilter = filter
 		}
 	}
+
+	s.last = make(map[string]map[string]interface{})
 	s.initialized = true
+
 	return nil
 }
 
@@ -102,6 +109,8 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err.Error())
 	}
+
+	now := time.Now()
 
 	for _, io := range diskio {
 
@@ -148,8 +157,31 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"io_time":          io.IoTime,
 			"weighted_io_time": io.WeightedIO,
 			"iops_in_progress": io.IopsInProgress,
+			"merged_reads":     io.MergedReadCount,
+			"merged_writes":    io.MergedWriteCount,
+			"read_time_avg":    float32(0),
+			"write_time_avg":   float32(0),
 		}
-		acc.AddCounter("diskio", fields, tags)
+
+		_, ok := s.last[io.Name]
+		if ok {
+			last := s.last[io.Name]
+			fields["read_time_avg"] = calcTimeAvg(
+				fields["reads"].(uint64),
+				last["reads"].(uint64),
+				fields["read_time"].(uint64),
+				last["read_time"].(uint64),
+			)
+			fields["write_time_avg"] = calcTimeAvg(
+				fields["writes"].(uint64),
+				last["writes"].(uint64),
+				fields["write_time"].(uint64),
+				last["write_time"].(uint64),
+			)
+		}
+
+		acc.AddCounter("diskio", fields, tags, now)
+		s.last[io.Name] = fields
 	}
 
 	return nil
@@ -212,6 +244,25 @@ func (s *DiskIO) diskTags(devName string) map[string]string {
 	}
 
 	return tags
+}
+
+func calcTimeAvg(ops uint64, opsLast uint64, time uint64, timeLast uint64) float32 {
+	var opsDiff uint64
+	var timeDiff uint64
+	if ops > opsLast {
+		opsDiff = ops - opsLast
+	} else {
+		opsDiff = 1 + ops + (math.MaxUint64 - opsLast)
+	}
+	if time > timeLast {
+		timeDiff = time - timeLast
+	} else {
+		timeDiff = 1 + time + (math.MaxUint64 - timeLast)
+	}
+	if opsDiff == 0 || timeDiff == 0 {
+		return 0
+	}
+	return float32(timeDiff) / float32(opsDiff)
 }
 
 func init() {
