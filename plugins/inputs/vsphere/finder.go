@@ -46,7 +46,7 @@ func (f *Finder) FindAll(ctx context.Context, resType string, paths, excludePath
 				return err
 			}
 		}
-		for k := range excludes {
+		for k, _ := range excludes {
 			delete(objs, k)
 		}
 	}
