@@ -558,12 +558,12 @@ WHERE	(
 				'Full Scans/sec',
 				'Index Searches/sec',
 				'Page Splits/sec',
-				'Page Lookups/sec',
-				'Page Reads/sec',
-				'Page Writes/sec',
-				'Readahead Pages/sec',
-				'Lazy Writes/sec',
-				'Checkpoint Pages/sec',
+				'Page lookups/sec',
+				'Page reads/sec',
+				'Page writes/sec',
+				'Readahead pages/sec',
+				'Lazy writes/sec',
+				'Checkpoint pages/sec',
 				'Page life expectancy',
 				'Log File(s) Size (KB)',
 				'Log File(s) Used Size (KB)',
@@ -626,7 +626,7 @@ WHERE	(
 				'Redo Queue KB',
 				'Mirrored Write Transactions/sec',
 				'Group Commit Time',
-				'Group Commits/sec'
+				'Group Commits/Sec'
 			)
 		) OR (
 			object_name LIKE '%User Settable%'
