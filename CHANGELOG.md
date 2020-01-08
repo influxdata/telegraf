@@ -22,7 +22,7 @@
 - [#6800](https://github.com/influxdata/telegraf/issues/6800): Show platform not supported warning only on plugin creation.
 - [#6814](https://github.com/influxdata/telegraf/issues/6814): Fix rabbitmq cannot complete gather after request error.
 - [#6846](https://github.com/influxdata/telegraf/issues/6846): Fix /sbin/init --version executed on Telegraf startup.
-- [#6847](https://github.com/influxdata/telegraf/issues/6847): Use last path element as field key if path fully specified.
+- [#6847](https://github.com/influxdata/telegraf/issues/6847): Use last path element as field key if path fully specified in cisco_telemetry_gnmi input.
 
 ## v1.13 [2019-12-12]
 
