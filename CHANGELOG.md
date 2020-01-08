@@ -9,7 +9,7 @@
 - [#6508](https://github.com/influxdata/telegraf/pull/6508): Add support for new nginx plus api endpoints.
 - [#6342](https://github.com/influxdata/telegraf/pull/6342): Add kafka SASL version control to support Azure Event Hub.
 
-## v1.13.1 [unreleased]
+## v1.13.1 [2020-01-08]
 
 #### Bugfixes
 
