@@ -34,9 +34,11 @@ const metricLookback = 3 // Number of time periods to look back at for non-realt
 
 const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
 
-const maxSampleConst = 10 // Absolute maximim number of samples regardless of period
+const maxSampleConst = 10 // Absolute maximum number of samples regardless of period
 
 const maxMetadataSamples = 100 // Number of resources to sample for metric metadata
+
+const hwMarkTTL = time.Duration(4 * time.Hour)
 
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
@@ -112,7 +114,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 	e := Endpoint{
 		URL:               url,
 		Parent:            parent,
-		hwMarks:           NewTSCache(1 * time.Hour),
+		hwMarks:           NewTSCache(hwMarkTTL),
 		lun2ds:            make(map[string]string),
 		initialized:       false,
 		clientFactory:     NewClientFactory(ctx, url, parent),
