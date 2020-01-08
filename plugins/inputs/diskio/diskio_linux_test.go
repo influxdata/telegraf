@@ -3,8 +3,11 @@
 package diskio
 
 import (
-	"io/ioutil"
+	"bytes"
+	"fmt"
 	"os"
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,77 +21,91 @@ S:foo/bar/devlink
 S:foo/bar/devlink1
 `)
 
-// setupNullDisk sets up fake udev info as if /dev/null were a disk.
-func setupNullDisk(t *testing.T) func() error {
-	td, err := ioutil.TempDir("", ".telegraf.TestDiskInfo")
-	require.NoError(t, err)
-
-	origUdevPath := udevPath
-
-	cleanFunc := func() error {
-		udevPath = origUdevPath
-		return os.RemoveAll(td)
-	}
-
-	udevPath = td
-	err = ioutil.WriteFile(td+"/b1:3", nullDiskInfo, 0644) // 1:3 is the 'null' device
+// Using lsblk to grab a block device which as a LABEL value
+// Also retrieves the DiskInfo using udevadm info
+func GetSuitableBlockDevice() (string, map[string]string, error) {
+	var o bytes.Buffer
+	c := exec.Command("lsblk", "-n", "-o", "KNAME,MAJ:MIN,LABEL,FSTYPE")
+	c.Stdout = &o
+	err := c.Run()
 	if err != nil {
-		cleanFunc()
-		t.Fatal(err)
+		return "", nil, err
 	}
-
-	return cleanFunc
+	devices := strings.Split(o.String(), "\n")
+	for _, dev := range devices {
+		devinfo := strings.Fields(dev)
+		if len(devinfo) >= 3 {
+			// Fetching the data via udevadm
+			var b bytes.Buffer
+			o := exec.Command("udevadm", "info", "-q", "property", "-n", devinfo[0])
+			o.Stdout = &b
+			err := o.Run()
+			if err != nil {
+				return "", nil, err
+			}
+			// Breaking the result of udevadm into key/value pairs
+			di := make(map[string]string)
+			for _, line := range strings.Split(b.String(), "\n") {
+				info := strings.Split(line, "=")
+				if len(info) == 2 {
+					di[info[0]] = info[1]
+				}
+			}
+			return devinfo[0], di, nil
+		}
+	}
+	return "", nil, os.ErrNotExist
 }
 
 func TestDiskInfo(t *testing.T) {
-	clean := setupNullDisk(t)
-	defer clean()
+	devname, devinfo, err := GetSuitableBlockDevice()
+	assert.NoError(t, err)
 
+	// Test the code now
 	s := &DiskIO{}
-	di, err := s.diskInfo("null")
+	di, err := s.diskInfo(devname)
 	require.NoError(t, err)
-	assert.Equal(t, "myval1", di["MY_PARAM_1"])
-	assert.Equal(t, "myval2", di["MY_PARAM_2"])
-	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
+	assert.Equal(t, devinfo["ID_FS_LABEL"], di["ID_FS_LABEL"])
+	assert.Equal(t, devinfo["ID_PART_ENTRY_UUID"], di["ID_PART_ENTRY_UUID"])
 
 	// test that data is cached
-	err = clean()
-	require.NoError(t, err)
+	before := s.infoCache[devname].modifiedAt
 
-	di, err = s.diskInfo("null")
-	require.NoError(t, err)
-	assert.Equal(t, "myval1", di["MY_PARAM_1"])
-	assert.Equal(t, "myval2", di["MY_PARAM_2"])
-	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
+	// resetting cache
+	s.infoCache[devname] = diskInfoCache{}
 
-	// unfortunately we can't adjust mtime on /dev/null to test cache invalidation
+	// fetching disk info again should yield same modifiedAt timestamp
+	di, err = s.diskInfo(devname)
+	assert.NoError(t, err)
+	assert.Equal(t, before, s.infoCache[devname].modifiedAt, "Unexpected difference in modified timestamp")
 }
 
 // DiskIOStats.diskName isn't a linux specific function, but dependent
 // functions are a no-op on non-Linux.
 func TestDiskIOStats_diskName(t *testing.T) {
-	defer setupNullDisk(t)()
+	devname, devinfo, err := GetSuitableBlockDevice()
+	assert.NoError(t, err)
 
 	tests := []struct {
 		templates []string
 		expected  string
 	}{
-		{[]string{"$MY_PARAM_1"}, "myval1"},
-		{[]string{"${MY_PARAM_1}"}, "myval1"},
-		{[]string{"x$MY_PARAM_1"}, "xmyval1"},
-		{[]string{"x${MY_PARAM_1}x"}, "xmyval1x"},
-		{[]string{"$MISSING", "$MY_PARAM_1"}, "myval1"},
-		{[]string{"$MY_PARAM_1", "$MY_PARAM_2"}, "myval1"},
-		{[]string{"$MISSING"}, "null"},
-		{[]string{"$MY_PARAM_1/$MY_PARAM_2"}, "myval1/myval2"},
-		{[]string{"$MY_PARAM_2/$MISSING"}, "null"},
+		{[]string{"$ID_FS_LABEL"}, devinfo["ID_FS_LABEL"]},
+		{[]string{"${ID_FS_LABEL}"}, devinfo["ID_FS_LABEL"]},
+		{[]string{"x$ID_FS_LABEL"}, fmt.Sprintf("x%s", devinfo["ID_FS_LABEL"])},
+		{[]string{"x${ID_FS_LABEL}x"}, fmt.Sprintf("x%sx", devinfo["ID_FS_LABEL"])},
+		{[]string{"$MISSING", "$ID_FS_LABEL"}, devinfo["ID_FS_LABEL"]},
+		{[]string{"$ID_FS_LABEL", "$MY_PARAM_2"}, devinfo["ID_FS_LABEL"]},
+		{[]string{"$MISSING"}, devname},
+		{[]string{"$ID_BUS/$ID_FS_LABEL"}, fmt.Sprintf("%s/%s", devinfo["ID_BUS"], devinfo["ID_FS_LABEL"])},
+		{[]string{"$MY_PARAM_2/$MISSING"}, devname},
 	}
 
 	for _, tc := range tests {
 		s := DiskIO{
 			NameTemplates: tc.templates,
 		}
-		name, _ := s.diskName("null")
+		name, _ := s.diskName(devname)
 		assert.Equal(t, tc.expected, name, "Templates: %#v", tc.templates)
 	}
 }
@@ -96,11 +113,12 @@ func TestDiskIOStats_diskName(t *testing.T) {
 // DiskIOStats.diskTags isn't a linux specific function, but dependent
 // functions are a no-op on non-Linux.
 func TestDiskIOStats_diskTags(t *testing.T) {
-	defer setupNullDisk(t)()
+	devname, devinfo, err := GetSuitableBlockDevice()
+	assert.NoError(t, err)
 
 	s := &DiskIO{
-		DeviceTags: []string{"MY_PARAM_2"},
+		DeviceTags: []string{"ID_FS_LABEL"},
 	}
-	dt := s.diskTags("null")
-	assert.Equal(t, map[string]string{"MY_PARAM_2": "myval2"}, dt)
+	dt := s.diskTags(devname)
+	assert.Equal(t, map[string]string{"ID_FS_LABEL": devinfo["ID_FS_LABEL"]}, dt)
 }
