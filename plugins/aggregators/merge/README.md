@@ -14,7 +14,6 @@ be handled more efficiently by the output.
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = true
-  
 ```
 
 ### Example
