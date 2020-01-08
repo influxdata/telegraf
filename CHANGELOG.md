@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD024 -->
 # Changelog
 ## v1.13.1 [unreleased]
+## v1.13.1 [2020-01-08]
 
 #### Bugfixes
 
