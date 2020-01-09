@@ -16,8 +16,6 @@ type diskInfoCache struct {
 	values       map[string]string
 }
 
-var udevPath = "/run/udev/data"
-
 func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	var err error
 	var stat unix.Stat_t
@@ -37,9 +35,16 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		return ic.values, nil
 	}
 
-	major := unix.Major(uint64(stat.Rdev))
-	minor := unix.Minor(uint64(stat.Rdev))
-	udevDataPath := fmt.Sprintf("%s/b%d:%d", udevPath, major, minor)
+	var udevDataPath string
+	if ok && len(ic.udevDataPath) > 0 {
+		// We can reuse the udev data path from a "previous" entry.
+		// This allows us to also "poison" it during test scenarios
+		udevDataPath = ic.udevDataPath
+	} else {
+		major := unix.Major(uint64(stat.Rdev))
+		minor := unix.Minor(uint64(stat.Rdev))
+		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
+	}
 
 	di := map[string]string{}
 
