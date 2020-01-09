@@ -689,7 +689,7 @@ func (c *Config) LoadDirectory(path string) error {
 //   2. $HOME/.telegraf/telegraf.conf
 //   3. /etc/telegraf/telegraf.conf
 //
-func getDefaultConfigPath() (string, error) {
+func GetDefaultConfigPath() (string, error) {
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
 	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
@@ -716,9 +716,7 @@ func getDefaultConfigPath() (string, error) {
 func (c *Config) LoadConfig(path string) error {
 	var err error
 	if path == "" {
-		if path, err = getDefaultConfigPath(); err != nil {
-			return err
-		}
+		return fmt.Errorf("Empty config path")
 	}
 	data, err := loadConfig(path)
 	if err != nil {

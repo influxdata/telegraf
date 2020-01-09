@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/influxdata/tail/watch"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -26,6 +27,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"gopkg.in/tomb.v1"
 )
 
 // If you update these, update usage.go and usage_windows.go
@@ -40,6 +42,7 @@ var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for servi
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
+var fWatchConfig = flag.String("watch-config", "", "Monitoring config changes [notify, poll]")
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -93,6 +96,13 @@ func reloadLoop(
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
+		if *fWatchConfig != "" {
+			if _, err := os.Stat(*fConfig); err == nil {
+				go watchLocalConfig(signals)
+			} else {
+				log.Printf("W! Cannot watch config %s: %s", *fConfig, err)
+			}
+		}
 		go func() {
 			select {
 			case sig := <-signals:
@@ -111,6 +121,49 @@ func reloadLoop(
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
+	}
+}
+
+func watchLocalConfig(signals chan os.Signal) {
+	var mytomb tomb.Tomb
+	var watcher watch.FileWatcher
+	if *fWatchConfig == "poll" {
+		watcher = watch.NewPollingFileWatcher(*fConfig)
+	} else {
+		watcher = watch.NewInotifyFileWatcher(*fConfig)
+	}
+	for {
+		changes, err := watcher.ChangeEvents(&mytomb, 0)
+		if err != nil {
+			log.Printf("E! Error watching config: %s\n", err)
+			return
+		}
+		log.Println("I! Config watcher started")
+		select {
+		case <-changes.Modified:
+			log.Println("I! Config file modified")
+		case <-changes.Deleted:
+			// deleted can mean moved. wait a bit a check existence
+			<-time.After(time.Second)
+			if _, err := os.Stat(*fConfig); err == nil {
+				log.Println("I! Config file overwritten")
+			} else {
+				log.Println("W! Config file deleted")
+				if err := watcher.BlockUntilExists(&mytomb); err != nil {
+					log.Printf("E! Cannot watch for config: %s\n", err.Error())
+					return
+				}
+				log.Println("I! Config file appeared")
+			}
+		case <-changes.Truncated:
+			log.Println("I! Config file truncated")
+		case <-mytomb.Dying():
+			log.Println("I! Config watcher ended")
+			return
+		}
+		mytomb.Done()
+		signals <- syscall.SIGHUP
+		break
 	}
 }
 

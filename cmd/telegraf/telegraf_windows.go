@@ -3,6 +3,7 @@
 package main
 
 import (
+	"github.com/influxdata/telegraf/config"
 	"log"
 	"os"
 	"runtime"
@@ -56,16 +57,19 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
-	programFiles := os.Getenv("ProgramFiles")
-	if programFiles == "" { // Should never happen
-		programFiles = "C:\\Program Files"
+	if *fConfig == "" {
+		var err error
+		*fConfig, err = config.GetDefaultConfigPath()
+		if err != nil {
+			log.Fatal("E! " + err.Error())
+		}
 	}
 	svcConfig := &service.Config{
 		Name:        *fServiceName,
 		DisplayName: *fServiceDisplayName,
 		Description: "Collects data using a series of plugins and publishes it to " +
 			"another series of plugins.",
-		Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
+		Arguments: []string{"--config", *fConfig},
 	}
 
 	prg := &program{
@@ -81,9 +85,6 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	// Handle the --service flag here to prevent any issues with tooling that
 	// may not have an interactive session, e.g. installing from Ansible.
 	if *fService != "" {
-		if *fConfig != "" {
-			svcConfig.Arguments = []string{"--config", *fConfig}
-		}
 		if *fConfigDirectory != "" {
 			svcConfig.Arguments = append(svcConfig.Arguments, "--config-directory", *fConfigDirectory)
 		}

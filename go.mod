@@ -149,6 +149,7 @@ require (
 	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/olivere/elastic.v5 v5.0.70
+	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools v2.2.0+incompatible
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
@@ -156,5 +157,8 @@ require (
 	modernc.org/sqlite v1.7.4
 )
 
-// replaced due to https://github.com/satori/go.uuid/issues/73
-replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
+replace (
+	github.com/influxdata/tail => github.com/bonitoo-io/tail v1.0.1-0.20201208111917-9ddddda047d4
+	// replaced due to https://github.com/satori/go.uuid/issues/73
+	github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
+)
