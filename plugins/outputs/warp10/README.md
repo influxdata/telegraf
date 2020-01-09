@@ -1,30 +1,50 @@
-# README #
+# Warp10 Output Plugin
 
-Telegraph plugin to push metrics on Warp10
+The `warp10` output plugin writes metrics to [Warp 10][].
 
-### Telegraph output for Warp10 ###
+### Configuration
 
-Execute a post http on Warp10 at every flush time configured in telegraph in order to push the metrics collected
-
-### Config ###
-
-Add following instruction in the config file (Output part)
-
-```
+```toml
 [[outputs.warp10]]
-warpUrl = "http://localhost:4242"
-token = "token"
-prefix = "telegraf."
-timeout = "15s" 
+  # Prefix to add to the measurement.
+  prefix = "telegraf."
+
+  # URL of the Warp 10 server
+  warp_url = "http://localhost:8080"
+
+  # Write token to access your app on warp 10
+  token = "Token"
+
+  # Warp 10 query timeout
+  # timeout = "15s"
+
+  ## Print Warp 10 error body
+  # print_error_body = false
+
+  ## Max string error size
+  # max_string_error_size = 511
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
-To get more details on Warp 10 errors occuring when pushing data with Telegraf, you can optionaly set:
+### Output Format
 
-```
-printErrorBody = true   ## To print the full body of the HTTP Post instead of the request status
-maxStringErrorSize = 700  ## To update the maximal string size of the Warp 10 error body. By default it's set to 512.
-```
+Metrics are converted and sent using the [Geo Time Series][] (GTS) input format.
 
-### Values format
+The class name of the reading is produced by combining the value of the
+`prefix` option, the measurement name, and the field key.  A dot (`.`)
+character is used as the joining character.
 
-The Warp 10 output support natively number, float and boolean values. String are send as URL encoded values as well as all Influx objects.
+The GTS form provides support for the Telegraf integer, float, boolean, and
+string types directly.  Unsigned integer fields will be capped to the largest
+64-bit integer (2^63-1) in case of overflow.
+
+Timestamps are sent in microsecond precision.
+
+[Warp 10]: https://www.warp10.io
+[Geo Time Series]: https://www.warp10.io/content/03_Documentation/03_Interacting_with_Warp_10/03_Ingesting_data/02_GTS_input_format
