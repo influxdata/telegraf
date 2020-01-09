@@ -237,7 +237,7 @@ func init() {
 		"VirtualMachine": {"runtime.host", "config.guestId", "config.uuid", "runtime.powerState",
 			"summary.customValue", "guest.net", "guest.hostName", "customValue"},
 		"Datastore":              {"parent", "info", "customValue"},
-		"ClusterComputeResource": {"parent", "customValue" },
+		"ClusterComputeResource": {"parent", "customValue"},
 		"Datacenter":             {"parent", "customValue"},
 	}
 
