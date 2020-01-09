@@ -61,6 +61,25 @@ type AggregationData struct {
 	_time      time.Time
 }
 
+type ClamAggregation struct {
+	AggregationData
+}
+
+func (ca *ClamAggregation) emit(acc telegraf.Accumulator) {
+	fields := map[string]interface{}{}
+
+	if strings.Contains(ca._tags[constants.TagKeyAggregates], constants.FieldSum) {
+		fields[constants.FieldSum+constants.UtilityFieldModifier] = ca._sum
+	}
+
+	var histOut = ca._histogram.Centroids()
+	fields[constants.FieldCompression] = ca._histogram.Compression
+	// TODO: Create formatter to ensure consistent behaviour
+	fields[constants.FieldCentroids] = fmt.Sprint(histOut)
+
+	acc.AddFields(ca._basicName, fields, ca._tags, ca._time)
+}
+
 type CentroidAggregation struct {
 	AggregationData
 }
@@ -68,7 +87,6 @@ type CentroidAggregation struct {
 // TODO: add logic to support output format that is used by CLAM
 func (ca *CentroidAggregation) emit(acc telegraf.Accumulator) {
 	if strings.Contains(ca._tags[constants.TagKeyAggregates], constants.FieldSum) {
-		//fields[constants.FieldSum+constants.UtilityFieldModifier] = ca._sum
 
 		sumField := map[string]interface{}{}
 		sumField[constants.FieldSum] = ca._sum
@@ -77,7 +95,6 @@ func (ca *CentroidAggregation) emit(acc telegraf.Accumulator) {
 
 	centroidFields := map[string]interface{}{}
 	for num, centroid := range ca._histogram.Centroids() {
-		//var histOut = ca._histogram.Centroids()
 		centroidFields[constants.TagKeyWeight] = centroid.Weight
 		centroidFields[constants.TagKeyMean] = centroid.Mean
 

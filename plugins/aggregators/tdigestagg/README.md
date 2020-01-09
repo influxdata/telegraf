@@ -42,6 +42,13 @@ emitting the aggregations and the histogram every `period` seconds.
   ## Higher values increase size of data but also precision of calculated percentiles
   compression = 30.0
 
+  ## CLAM: Cluster Level Aggregator for Metrics
+  ## OSS Publication Pending - Insert link when available
+  ## This is an Apache Spark job that was the original consumer of the output of this plugin
+  ## The output format was considered too specialized for OSS Telegraf release but the functionality
+  ##	has been preserved so that it can be leveraged at users discretion.
+  using_clam = false
+
   ## One bucketing configuration is required to get any output
   [[aggregators.tdigestagg.bucketing]]
 	## List of tags that will not be considered for aggregation and not emitted.
@@ -93,7 +100,7 @@ emitting the aggregations and the histogram every `period` seconds.
   - Defines aggregation behavior
 
 ### Example Output:
-
+TODO: Update sample output to show using_clam=false (default) behavior
 ```
 Pretty printed for readability
 {
@@ -101,6 +108,7 @@ Pretty printed for readability
     "sum._utility": 1230.0,
     "centroids": "[{97.97979797979798 1} {97.97979797979798 1} {98 1} {98 1} {98 1} {98 1} {98 1} {98 1} {98.00990099009901 2} {98.01980198019803 2} {98.01980198019803 2} {98.01980198019803 2} {98.98989898989899 1} {98.98989898989899 2} {99 1} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99.00990099009901 2} {99.00990099009901 2} {99.00990099009901 2} {100 2} {100 2} {100 1} {100 1} {100 1} {100 1} {100 1} {100 1} {100 1}]",
     "compression": 30
+    "using_clam": true
   },
   "name": "cpu_usage_idle",
   "tags": {

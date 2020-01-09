@@ -49,6 +49,7 @@ type CacheKey struct {
 type TDigestAgg struct {
 	cache       map[CacheKey]*Aggregation
 	Compression float64                  `toml:"compression"`
+	UsingClam	bool					 `toml:"using_clam"`
 	Bucketing   []bucketing.BucketConfig `toml:"bucketing"`
 }
 
@@ -59,12 +60,14 @@ func NewTDigestAgg() *TDigestAgg {
 	return td
 }
 
+//TODO: Update sample output to show using_clam=false (default) behavior
 var sampleOutput = ` Pretty formatted for readability
 {
   "fields": {
     "sum._utility": 1230.0,
     "centroids": "[{97.97979797979798 1} {97.97979797979798 1} {98 1} {98 1} {98 1} {98 1} {98 1} {98 1} {98.00990099009901 2} {98.01980198019803 2} {98.01980198019803 2} {98.01980198019803 2} {98.98989898989899 1} {98.98989898989899 2} {99 1} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99 2} {99.00990099009901 2} {99.00990099009901 2} {99.00990099009901 2} {100 2} {100 2} {100 1} {100 1} {100 1} {100 1} {100 1} {100 1} {100 1}]",
     "compression": 30
+	"using_clam": true
   },
   "name": "cpu_usage_idle",
   "tags": {
@@ -80,8 +83,6 @@ var sampleOutput = ` Pretty formatted for readability
 }
 `
 
-var sampleTDigestJson = `[{97.97979797979798 1} {98 1} {98.00990099009901 2} {99 1} {100 1}]`
-
 var sampleConfig = `
   ## General Aggregator Arguments:
   ## The period on which to flush & clear the aggregator.
@@ -94,6 +95,13 @@ var sampleConfig = `
   ## This value corresponds to the number of centroids the histogram will use
   ## Higher values increase size of data but also precision of calculated percentiles
   compression = 30.0
+
+  ## CLAM: Cluster Level Aggregator for Metrics
+  ## OSS Publication Pending - Insert link when available
+  ## This is an Apache Spark job that was the original consumer of the output of this plugin
+  ## The output format was considered too specialized for OSS Telegraf release but the functionality
+  ##	has been preserved so that it can be leveraged at users discretion.
+  using_clam = false
 
   [[aggregators.tdigestagg.bucketing]]
 	## List of tags that will not be considered for aggregation and not emitted
@@ -148,7 +156,11 @@ func (agg *TDigestAgg) Add(input telegraf.Metric) {
 						// TODO: Evaluate - Local aggregations add late data into "current" config or drop it
 						aggregation = &LocalAggregation{aggregationData}
 					} else {
-						aggregation = &CentroidAggregation{aggregationData}
+						if agg.UsingClam {
+							aggregation = &ClamAggregation{aggregationData}
+						} else {
+							aggregation = &CentroidAggregation{aggregationData}
+						}
 					}
 
 					agg.cache[cacheKey] = &aggregation
