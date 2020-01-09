@@ -34,7 +34,7 @@ func (d *Date) Description() string {
 
 func (d *Date) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, point := range in {
-		tm := point.Time().Add(d.DateOffset.Duration)
+		tm := point.Time().UTC().Add(d.DateOffset.Duration)
 		point.AddTag(d.TagKey, tm.Format(d.DateFormat))
 	}
 

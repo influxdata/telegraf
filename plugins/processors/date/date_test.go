@@ -88,7 +88,7 @@ func TestDateOffset(t *testing.T) {
 		testutil.MustMetric(
 			"cpu",
 			map[string]string{
-				"hour": "15",
+				"hour": "23",
 			},
 			map[string]interface{}{
 				"time_idle": 42.0,
