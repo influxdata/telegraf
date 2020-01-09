@@ -19,6 +19,9 @@ A few example usecases include:
   ## Date format string, must be a representation of the Go "reference time"
   ## which is "Mon Jan 2 15:04:05 -0700 MST 2006".
   date_format = "Jan"
+
+  ## Offset duration added to the date string when writing the new tag.
+  # date_offset = "0s"
 ```
 
 ### Example

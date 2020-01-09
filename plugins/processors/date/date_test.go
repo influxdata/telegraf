@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,4 +66,37 @@ func TestOldDateTag(t *testing.T) {
 	m7 := MustMetric("foo", nil, nil, time.Date(1993, 05, 27, 0, 0, 0, 0, time.UTC))
 	customDateApply := dateFormatYear.Apply(m7)
 	assert.Equal(t, map[string]string{"year": "1993"}, customDateApply[0].Tags(), "should add tag 'year'")
+}
+
+func TestDateOffset(t *testing.T) {
+	plugin := &Date{
+		TagKey:     "hour",
+		DateFormat: "15",
+		DateOffset: internal.Duration{Duration: 2 * time.Hour},
+	}
+
+	metric := testutil.MustMetric(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"time_idle": 42.0,
+		},
+		time.Unix(1578603600, 0),
+	)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"hour": "15",
+			},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(1578603600, 0),
+		),
+	}
+
+	actual := plugin.Apply(metric)
+	testutil.RequireMetricsEqual(t, expected, actual)
 }
