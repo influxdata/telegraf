@@ -1,5 +1,11 @@
 ## v1.14 [unreleased]
 
+#### Release Notes
+
+- In the `sqlserver` input, the `sqlserver_azurestats` measurement has been
+  renamed to `sqlserver_azure_db_resource_stats` due to an issue where numeric
+  metrics were previously being reported incorrectly as strings.
+
 #### Features
 
 - [#6730](https://github.com/influxdata/telegraf/pull/6730): Add page_faults for mongodb wired tiger.
@@ -8,6 +14,14 @@
 - [#6770](https://github.com/influxdata/telegraf/pull/6770): Expose unbound-control config file option.
 - [#6508](https://github.com/influxdata/telegraf/pull/6508): Add support for new nginx plus api endpoints.
 - [#6342](https://github.com/influxdata/telegraf/pull/6342): Add kafka SASL version control to support Azure Event Hub.
+- [#6869](https://github.com/influxdata/telegraf/pull/6869): Add RBPEX IO statistics to DatabaseIO query in sqlserver input.
+- [#6869](https://github.com/influxdata/telegraf/pull/6869): Add space on disk for each file to DatabaseIO query in the sqlserver input.
+- [#6869](https://github.com/influxdata/telegraf/pull/6869): Calculate DB Name instead of GUID in physical_db_name in the sqlserver input.
+
+#### Bugfixes
+
+- [#6397](https://github.com/influxdata/telegraf/issues/6397): Fix conversion to floats in AzureDBResourceStats query in the sqlserver input.
+- [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
 
 ## v1.13.1 [2020-01-08]
 
