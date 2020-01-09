@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -327,14 +328,24 @@ func main() {
 	// switch for flags which just do something and exit immediately
 	switch {
 	case *fOutputList:
-		fmt.Println("Available Output Plugins:")
+		fmt.Println("Available Output Plugins: ")
+		names := make([]string, 0, len(outputs.Outputs))
 		for k := range outputs.Outputs {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		for _, k := range names {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fInputList:
 		fmt.Println("Available Input Plugins:")
+		names := make([]string, 0, len(inputs.Inputs))
 		for k := range inputs.Inputs {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		for _, k := range names {
 			fmt.Printf("  %s\n", k)
 		}
 		return

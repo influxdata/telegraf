@@ -29,7 +29,8 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ##   https://github.com/tidwall/gjson/tree/v1.3.0#path-syntax
   json_query = ""
 
-  ## Tag keys is an array of keys that should be added as tags.
+  ## Tag keys is an array of keys that should be added as tags.  Matching keys
+  ## are no longer saved as fields.
   tag_keys = [
     "my_tag_1",
     "my_tag_2"
