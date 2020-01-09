@@ -394,15 +394,6 @@ func (ssl *StreamAos) MsgReader(r io.Reader) {
 	}
 }
 
-func getFuncName(msg_name string) string {
-	result := "Get"
-	tokens := strings.Split(msg_name, "_")
-	for _, token := range tokens {
-		result += strings.Title(token)
-	}
-	return result
-}
-
 func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 	// Create new aos_streaming.AosMessage and deserialize protobuf
 	newMsg := new(aos_streaming.AosMessage)
@@ -602,18 +593,7 @@ func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 		propType := proto.GetProperties(myEventType)
 		eventTypeName := propType.Prop[0].OrigName
 
-		// Convert event name to method name to eliminate lengthy switch statement
-		// E.g., bgp_neighbor => GetBgpNeighbor
-		method := getFuncName(eventTypeName)
-		checkMethod := reflect.ValueOf(newEventData).MethodByName(method)
-		if !checkMethod.IsValid() {
-			log.Printf("W! Event Type - %s, not supported yet", eventTypeName)
-		} else {
-			myEventData := reflect.ValueOf(newEventData).MethodByName(method).Call([]reflect.Value{})
-			ssl.ExtractEventData(eventTypeName, tags, myEventData[0].Interface())
-		}
-
-		/*switch eventTypeName {
+		switch eventTypeName {
 		case "device_state":
 			myEventData := newEventData.GetDeviceState()
 			ssl.ExtractEventData(eventTypeName, tags, myEventData)
@@ -653,7 +633,7 @@ func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 
 		default:
 			log.Printf("W! Event Type - %s, not supported yet", eventTypeName)
-		}*/
+		}
 	}
 
 	if newAlertData != nil {
@@ -681,16 +661,7 @@ func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 		tags["severity"] = fmt.Sprintf("%v", newAlertData.Severity)
 		raise := *newAlertData.Raised
 
-		method := getFuncName(alertTypeName)
-		checkMethod := reflect.ValueOf(newAlertData).MethodByName(method)
-		if !checkMethod.IsValid() {
-			log.Printf("W! Alert Type - %s, not supported yet", alertTypeName)
-		} else {
-			myAlertData := reflect.ValueOf(newAlertData).MethodByName(method).Call([]reflect.Value{})
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData[0].Interface(), raise)
-		}
-
-		/*switch alertTypeName {
+		switch alertTypeName {
 		case "config_deviation_alert":
 			myAlertData := newAlertData.GetConfigDeviationAlert()
 			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
@@ -754,7 +725,7 @@ func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 
 		default:
 			log.Printf("W! Alert Type - %s, Not Supported Yet", alertTypeName)
-		}*/
+		}
 	}
 }
 
