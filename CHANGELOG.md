@@ -6,6 +6,10 @@
   renamed to `sqlserver_azure_db_resource_stats` due to an issue where numeric
   metrics were previously being reported incorrectly as strings.
 
+#### New Outputs
+
+- [warp10](/plugins/outputs/warp10/README.md) - Contributed by @aurrelhebert
+
 #### Features
 
 - [#6730](https://github.com/influxdata/telegraf/pull/6730): Add page_faults for mongodb wired tiger.
