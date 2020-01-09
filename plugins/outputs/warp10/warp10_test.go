@@ -3,11 +3,9 @@ package warp10
 import (
 	"fmt"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 type ErrorTest struct {
@@ -22,9 +20,8 @@ func TestWriteWarp10(t *testing.T) {
 		Token:   "WRITE",
 	}
 
-	var now = time.Now()
-	payload := w.GenWarp10Payload(testutil.MockMetrics(), now)
-	require.Exactly(t, fmt.Sprintf("%d// unit.testtest1.value{source=telegraf,tag1=value1} 1.000000\n", now.UnixNano()/1000), payload)
+	payload := w.GenWarp10Payload(testutil.MockMetrics())
+	require.Exactly(t, "1257894000000000// unit.testtest1.value{source=telegraf,tag1=value1} 1.000000\n", payload)
 }
 
 func TestHandleWarp10Error(t *testing.T) {
