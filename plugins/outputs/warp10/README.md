@@ -46,5 +46,5 @@ string types directly.  Unsigned integer fields will be capped to the largest
 
 Timestamps are sent in microsecond precision.
 
-[Warp 10]: https://www.warp10.io/content/01_About
+[Warp 10]: https://www.warp10.io
 [Geo Time Series]: https://www.warp10.io/content/03_Documentation/03_Interacting_with_Warp_10/03_Ingesting_data/02_GTS_input_format
