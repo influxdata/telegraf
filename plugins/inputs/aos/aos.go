@@ -207,6 +207,10 @@ func (ssl *StreamAos) ExtractProbeData(newProbeMessage interface{}, tags map[str
 			continue
 		}
 		fields[field_name] = temp.Interface()
+		if _, ok := temp.Interface().(string); !ok {
+			tmpString := fmt.Sprintf("%v", temp.Interface())
+			fields[field_name] = tmpString
+		}
 	}
 
 	ssl.Aos.Accumulator.AddFields(serie, fields, tags)
@@ -458,10 +462,12 @@ func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 	// ----------------------------------------------------------------
 	originName := newMsg.GetOriginName()
 	tags := ssl.GetTags(originName)
-	tags["blueprint"] = newMsg.GetBlueprintLabel()
-	tags["device_name"] = newMsg.GetOriginHostname()
-	tags["device"] = newMsg.GetOriginHostname()
-	tags["role"] = newMsg.GetOriginRole()
+	if ssl.IsSequencedStream {
+		tags["blueprint"] = newMsg.GetBlueprintLabel()
+		tags["device_name"] = newMsg.GetOriginHostname()
+		tags["device"] = newMsg.GetOriginHostname()
+		tags["role"] = newMsg.GetOriginRole()
+	}
 
 	if newPerfMonData != nil {
 		if ssl.IsSequencedStream {
