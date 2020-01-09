@@ -172,7 +172,7 @@ func makeTrapHandler(s *SnmpTrap) handler {
 			var trapOid string
 
 			if packet.GenericTrap >= 0 && packet.GenericTrap < 6 {
-				trapOid = "1.3.6.1.6.3.1.1.5." + strconv.Itoa(packet.GenericTrap+1)
+				trapOid = ".1.3.6.1.6.3.1.1.5." + strconv.Itoa(packet.GenericTrap+1)
 			} else if packet.GenericTrap == 6 {
 				trapOid = packet.Enterprise + ".0." + strconv.Itoa(packet.SpecificTrap)
 			}
