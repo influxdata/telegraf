@@ -44,6 +44,12 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 		major := unix.Major(uint64(stat.Rdev))
 		minor := unix.Minor(uint64(stat.Rdev))
 		udevDataPath = fmt.Sprintf("/run/udev/data/b%d:%d", major, minor)
+
+		f, err := os.Open(udevDataPath)
+		defer f.Close()
+		if err != nil {
+			udevDataPath = fmt.Sprintf("/dev/.udev/db/block:%s", devName)
+		}
 	}
 
 	di := map[string]string{}
