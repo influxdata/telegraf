@@ -102,7 +102,7 @@ func (w *Warp10) Connect() error {
 }
 
 // GenWarp10Payload compute Warp 10 metrics payload
-func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric, now time.Time) string {
+func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric) string {
 	collectString := make([]string, 0)
 	for _, mm := range metrics {
 
@@ -110,7 +110,7 @@ func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric, now time.Time) stri
 
 			metric := &MetricLine{
 				Metric:    fmt.Sprintf("%s%s", w.Prefix, mm.Name()+"."+field.Key),
-				Timestamp: now.UnixNano() / 1000,
+				Timestamp: mm.Time().UnixNano() / 1000,
 			}
 
 			metricValue, err := buildValue(field.Value)
@@ -133,10 +133,7 @@ func (w *Warp10) GenWarp10Payload(metrics []telegraf.Metric, now time.Time) stri
 
 // Write metrics to Warp10
 func (w *Warp10) Write(metrics []telegraf.Metric) error {
-
-	var now = time.Now()
-	payload := w.GenWarp10Payload(metrics, now)
-
+	payload := w.GenWarp10Payload(metrics)
 	if payload == "" {
 		return nil
 	}
@@ -185,17 +182,21 @@ func buildValue(v interface{}) (string, error) {
 	var retv string
 	switch p := v.(type) {
 	case int64:
-		retv = intToString(int64(p))
+		retv = intToString(p)
 	case string:
 		retv = fmt.Sprintf("'%s'", strings.Replace(p, "'", "\\'", -1))
 	case bool:
-		retv = boolToString(bool(p))
+		retv = boolToString(p)
 	case uint64:
-		retv = uIntToString(uint64(p))
+		if p <= uint64(math.MaxInt64) {
+			retv = strconv.FormatInt(int64(p), 10)
+		} else {
+			retv = strconv.FormatInt(math.MaxInt64, 10)
+		}
 	case float64:
 		retv = floatToString(float64(p))
 	default:
-		retv = "'" + strings.Replace(fmt.Sprintf("%s", p), "'", "\\'", -1) + "'"
+		return "", fmt.Errorf("unsupported type: %T", v)
 	}
 	return retv, nil
 }
