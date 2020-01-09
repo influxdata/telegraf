@@ -305,3 +305,7 @@
 [[constraint]]
   name = "github.com/safchain/ethtool"
   revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[constraint]]
+  name = "github.com/influxdata/tdigest"
+  verion = "v0.0.1"
