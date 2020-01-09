@@ -350,25 +350,30 @@ EXEC(@SQL)
 
 // Conditional check based on Azure SQL DB OR On-prem SQL Server
 // EngineEdition=5 is Azure SQL DB
-const sqlDatabaseIOV2 = `SET DEADLOCK_PRIORITY -10;
+const sqlDatabaseIOV2 = `
+SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') = 5
 BEGIN
 SELECT
 'sqlserver_database_io' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-DB_NAME([vfs].[database_id]) [database_name],
+DB_NAME([vfs].[database_id]) AS [database_name],
 vfs.io_stall_read_ms AS read_latency_ms,
 vfs.num_of_reads AS reads,
 vfs.num_of_bytes_read AS read_bytes,
 vfs.io_stall_write_ms AS write_latency_ms,
 vfs.num_of_writes AS writes,
 vfs.num_of_bytes_written AS write_bytes,
-b.name as logical_filename,
-b.physical_name as physical_filename,
-CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
+vfs.io_stall_queued_read_ms as rg_read_stall_ms,
+vfs.io_stall_queued_write_ms as rg_write_stall_ms,
+ISNULL(b.name ,'RBPEX') as logical_filename,
+ISNULL(b.physical_name, 'RBPEX') as physical_filename,
+CASE WHEN vfs.file_id = 2 THEN 'LOG'ELSE 'DATA' END AS file_type
+,ISNULL(size,0)/128 AS current_size_mb
+,ISNULL(FILEPROPERTY(b.name,'SpaceUsed')/128,0) as space_used_mb
 FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-inner join sys.database_files b on  b.file_id = vfs.file_id
+LEFT OUTER join sys.database_files b on  b.file_id = vfs.file_id
 END
 ELSE
 BEGIN
@@ -382,12 +387,17 @@ vfs.num_of_bytes_read AS read_bytes,
 vfs.io_stall_write_ms AS write_latency_ms,
 vfs.num_of_writes AS writes,
 vfs.num_of_bytes_written AS write_bytes,
-b.name as logical_filename,
-b.physical_name as physical_filename,
+vfs.io_stall_queued_read_ms as rg_read_stall_ms,
+vfs.io_stall_queued_write_ms as rg_write_stall_ms,
+ISNULL(b.name ,'RBPEX') as logical_filename,
+ISNULL(b.physical_name, 'RBPEX') as physical_filename,
 CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
+,ISNULL(size,0)/128 AS current_size_mb
+-- can't easily get space used without switching context to each DB for MI/On-prem making query expensive
+, -1 as space_used_mb
 FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
+LEFT OUTER join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
 END
 `
 
@@ -509,10 +519,32 @@ INSERT	INTO @PCounters
 SELECT	DISTINCT
 		RTrim(spi.object_name) object_name,
 		RTrim(spi.counter_name) counter_name,
-		RTrim(spi.instance_name) instance_name,
+                CASE WHEN (
+                             RTRIM(spi.object_name) LIKE '%:Databases'
+                             OR RTRIM(spi.object_name) LIKE '%:Database Replica'
+                             OR RTRIM(spi.object_name) LIKE '%:Catalog Metadata'
+                             OR RTRIM(spi.object_name) LIKE '%:Query Store'
+                             OR RTRIM(spi.object_name) LIKE '%:Columnstore'
+                             OR RTRIM(spi.object_name) LIKE '%:Advanced Analytics')
+                             AND SERVERPROPERTY ('EngineEdition') IN (5,8)
+                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
+                       THEN d.name
+ 			WHEN RTRIM(object_name) LIKE '%:Availability Replica'
+				AND SERVERPROPERTY ('EngineEdition') IN (5,8)
+				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
+			THEN d.name + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
+                       ELSE spi.instance_name
+                END AS instance_name,
 		CAST(spi.cntr_value AS BIGINT) AS cntr_value,
 		spi.cntr_type
 FROM	sys.dm_os_performance_counters AS spi
+LEFT JOIN sys.databases AS d
+ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
+   = CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
+                d.name = 'master' AND TRY_CONVERT(uniqueidentifier, d.physical_database_name) IS NOT NULL
+                THEN d.name
+                ELSE d.physical_database_name
+      END
 WHERE	(
 			counter_name IN (
 				'SQL Compilations/sec',
@@ -526,12 +558,12 @@ WHERE	(
 				'Full Scans/sec',
 				'Index Searches/sec',
 				'Page Splits/sec',
-				'Page Lookups/sec',
-				'Page Reads/sec',
-				'Page Writes/sec',
-				'Readahead Pages/sec',
-				'Lazy Writes/sec',
-				'Checkpoint Pages/sec',
+				'Page lookups/sec',
+				'Page reads/sec',
+				'Page writes/sec',
+				'Readahead pages/sec',
+				'Lazy writes/sec',
+				'Checkpoint pages/sec',
 				'Page life expectancy',
 				'Log File(s) Size (KB)',
 				'Log File(s) Used Size (KB)',
@@ -594,7 +626,7 @@ WHERE	(
 				'Redo Queue KB',
 				'Mirrored Write Transactions/sec',
 				'Group Commit Time',
-				'Group Commits/sec'
+				'Group Commits/Sec'
 			)
 		) OR (
 			object_name LIKE '%User Settable%'
@@ -658,8 +690,7 @@ FROM	@PCounters AS pc
 			AND pc.object_name = pc1.object_name
 			AND pc.instance_name = pc1.instance_name
 			AND pc1.counter_name LIKE '%base'
-WHERE	pc.counter_name NOT LIKE '% base'
-OPTION(RECOMPILE);
+WHERE	pc.counter_name NOT LIKE '% base';
 `
 
 // Conditional check based on Azure SQL DB v/s the rest aka (Azure SQL Managed instance OR On-prem SQL Server)
@@ -1280,27 +1311,28 @@ ELSE
 const sqlAzureDBResourceStats string = `SET DEADLOCK_PRIORITY -10;
 IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 BEGIN
-	SELECT TOP(1)
-		'sqlserver_azurestats' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		DB_NAME() as [database_name],
-		avg_cpu_percent,
-		avg_data_io_percent,
-		avg_log_write_percent,
-		avg_memory_usage_percent,
-		xtp_storage_percent,
-		max_worker_percent,
-		max_session_percent,
-		dtu_limit,
-		avg_login_rate_percent,
-		end_time,
-		avg_instance_memory_percent,
-		avg_instance_cpu_percent
-	FROM
-		sys.dm_db_resource_stats WITH (NOLOCK)
-	ORDER BY
-		end_time DESC
-END`
+        SELECT TOP(1)
+                'sqlserver_azure_db_resource_stats' AS [measurement],
+                REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+                DB_NAME() as [database_name],
+                cast(avg_cpu_percent as float) as avg_cpu_percent,
+                cast(avg_data_io_percent as float) as avg_data_io_percent,
+                cast(avg_log_write_percent as float) as avg_log_write_percent,
+                cast(avg_memory_usage_percent as float) as avg_memory_usage_percent,
+                cast(xtp_storage_percent as float) as xtp_storage_percent,
+                cast(max_worker_percent as float) as max_worker_percent,
+                cast(max_session_percent as float) as max_session_percent,
+                dtu_limit,
+                cast(avg_login_rate_percent as float) as avg_login_rate_percent  ,
+                end_time,
+                cast(avg_instance_memory_percent as float) as avg_instance_memory_percent ,
+                cast(avg_instance_cpu_percent as float) as avg_instance_cpu_percent
+        FROM
+                sys.dm_db_resource_stats WITH (NOLOCK)
+        ORDER BY
+                end_time DESC
+END
+`
 
 //Only executed if AzureDB Flag is set
 const sqlAzureDBResourceGovernance string = `
