@@ -74,7 +74,6 @@ Fields for Monit service type process:
   - mem_kb_total
   - mem_percent
   - mem_percent_total
-  - service_uptime
   - pid
   - parent_pid
   - threads

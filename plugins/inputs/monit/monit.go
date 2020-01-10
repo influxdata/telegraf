@@ -34,7 +34,7 @@ type Status struct {
 type Server struct {
 	ID            string `xml:"id"`
 	Version       string `xml:"version"`
-	Uptime        int    `xml:"uptime"`
+	Uptime        int64  `xml:"uptime"`
 	Poll          int    `xml:"poll"`
 	LocalHostname string `xml:"localhostname"`
 	StartDelay    int    `xml:"startdelay"`
@@ -58,7 +58,6 @@ type Service struct {
 	MonitoringStatus int     `xml:"monitor"`
 	MonitorMode      int     `xml:"monitormode"`
 	PendingAction    int     `xml:"pendingaction"`
-	Uptime           int64   `xml:"uptime"`
 	Memory           Memory  `xml:"memory"`
 	CPU              CPU     `xml:"cpu"`
 	System           System  `xml:"system"`
@@ -134,9 +133,8 @@ type Inode struct {
 }
 
 type Program struct {
-	Started int64  `xml:"started"`
-	Status  int    `xml:"status"`
-	Output  string `xml:"output"`
+	Started int64 `xml:"started"`
+	Status  int   `xml:"status"`
 }
 
 type Memory struct {
@@ -286,7 +284,6 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 				fields["mem_kb_total"] = service.Memory.KilobyteTotal
 				fields["mem_percent"] = service.Memory.Percent
 				fields["mem_percent_total"] = service.Memory.PercentTotal
-				fields["service_uptime"] = service.Uptime * 10000000
 				fields["pid"] = service.Pid
 				fields["parent_pid"] = service.ParentPid
 				fields["threads"] = service.Threads
