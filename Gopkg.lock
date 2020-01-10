@@ -100,7 +100,7 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "1:33f56caa9ab45fedc63d3d1d3e342d9f9d00726071f22c67d06b0cd26d49a55e"
+  digest = "0:"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
@@ -705,6 +705,14 @@
   ]
   pruneopts = ""
   revision = "c43482518d410361b6c383d7aebce33d0471d7bc"
+
+[[projects]]
+  digest = "1:888005f13fed39beaec1ebb6270cb483ab0c09a43f9e8ca706390e05eca7b4eb"
+  name = "github.com/influxdata/tdigest"
+  packages = ["."]
+  pruneopts = ""
+  revision = "3fbb3e34b87fe64262cbf10ac00562f36ae98235"
+  version = "v0.0.1"
 
 [[projects]]
   branch = "telegraf"
@@ -1772,6 +1780,7 @@
     "github.com/influxdata/go-syslog/octetcounting",
     "github.com/influxdata/go-syslog/rfc5424",
     "github.com/influxdata/tail",
+    "github.com/influxdata/tdigest",
     "github.com/influxdata/toml",
     "github.com/influxdata/toml/ast",
     "github.com/influxdata/wlog",
