@@ -22,11 +22,18 @@
 - [#6869](https://github.com/influxdata/telegraf/pull/6869): Add space on disk for each file to DatabaseIO query in the sqlserver input.
 - [#6869](https://github.com/influxdata/telegraf/pull/6869): Calculate DB Name instead of GUID in physical_db_name in the sqlserver input.
 - [#6733](https://github.com/influxdata/telegraf/pull/6733): Add latency stats to mongo input.
+- [#6844](https://github.com/influxdata/telegraf/pull/6844): Add source and port tags to jenkins_job metrics.
 
 #### Bugfixes
 
 - [#6397](https://github.com/influxdata/telegraf/issues/6397): Fix conversion to floats in AzureDBResourceStats query in the sqlserver input.
 - [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
+
+## v1.13.2 [unreleased]
+
+#### Bugfixes
+
+- [#2652](https://github.com/influxdata/telegraf/issues/2652): Warn without error when processes input is started on Windows.
 
 ## v1.13.1 [2020-01-08]
 
