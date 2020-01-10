@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!--Unsupported encoding type-->
+<?xml version="1.0" encoding="UTF-16"?>
 <monit>
     <server>
         <id>0ed39c522be4c3971541412c43141613</id>
@@ -24,19 +25,28 @@
         <memory>16432272</memory>
         <swap>16432268</swap>
     </platform>
-    <service type="7">
-        <name>monit-daemon-status</name>
+    <service type="0">
+        <name>test</name>
         <collected_sec>1572850498</collected_sec>
-        <collected_usec>710675</collected_usec>
+        <collected_usec>709694</collected_usec>
         <status>0</status>
         <status_hint>0</status_hint>
         <monitor>1</monitor>
         <monitormode>0</monitormode>
         <pendingaction>0</pendingaction>
-        <program>
-            <started>1572850498</started>
-            <status>0</status>
-            <output>Stats health check successful.</output>
-        </program>
+        <mode>555</mode>
+        <uid>0</uid>
+        <gid>0</gid>
+        <flags>4096</flags>
+        <block>
+            <percent>29.5</percent>
+            <usage>4424.0</usage>
+            <total>14990.0</total>
+        </block>
+        <inode>
+            <percent>0.8</percent>
+            <usage>59674</usage>
+            <total>7680000</total>
+        </inode>
     </service>
 </monit>

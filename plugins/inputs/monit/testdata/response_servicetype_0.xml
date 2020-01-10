@@ -24,22 +24,28 @@
         <memory>16432272</memory>
         <swap>16432268</swap>
     </platform>
-    <service type="4">
+    <service type="0">
         <name>test</name>
-        <collected_sec>1572862451</collected_sec>
-        <collected_usec>947671</collected_usec>
+        <collected_sec>1572850498</collected_sec>
+        <collected_usec>709694</collected_usec>
         <status>0</status>
         <status_hint>0</status_hint>
         <monitor>1</monitor>
-        <monitormode>1</monitormode>
+        <monitormode>0</monitormode>
         <pendingaction>0</pendingaction>
-        <port>
-            <hostname>192.168.1.10</hostname>
-            <portnumber>2812</portnumber>
-            <request></request>
-            <protocol>DEFAULT</protocol>
-            <type>TCP</type>
-            <responsetime>0.000145</responsetime>
-        </port>
+        <mode>555</mode>
+        <uid>0</uid>
+        <gid>0</gid>
+        <flags>4096</flags>
+        <block>
+            <percent>29.5</percent>
+            <usage>4424.0</usage>
+            <total>14990.0</total>
+        </block>
+        <inode>
+            <percent>0.8</percent>
+            <usage>59674</usage>
+            <total>7680000</total>
+        </inode>
     </service>
 </monit>

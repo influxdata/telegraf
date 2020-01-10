@@ -25,7 +25,7 @@
         <swap>16432268</swap>
     </platform>
     <service type="8">
-        <name>test1</name>
+        <name>test</name>
         <collected_sec>1572869770</collected_sec>
         <collected_usec>807562</collected_usec>
         <status>0</status>

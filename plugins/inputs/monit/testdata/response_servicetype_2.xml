@@ -24,34 +24,19 @@
         <memory>16432272</memory>
         <swap>16432268</swap>
     </platform>
-    <service type="5">
-        <name>system_localhost</name>
+    <service type="2">
+        <name>test</name>
         <collected_sec>1476628305</collected_sec>
-        <collected_usec>302682</collected_usec>
+        <collected_usec>302669</collected_usec>
         <status>0</status>
         <status_hint>0</status_hint>
         <monitor>1</monitor>
         <monitormode>0</monitormode>
         <pendingaction>0</pendingaction>
-        <system>
-            <load>
-                <avg01>0.00</avg01>
-                <avg05>0.00</avg05>
-                <avg15>0.00</avg15>
-            </load>
-            <cpu>
-                <user>0.0</user>
-                <system>0.1</system>
-                <wait>0.0</wait>
-            </cpu>
-            <memory>
-                <percent>1.5</percent>
-                <kilobyte>259668</kilobyte>
-            </memory>
-            <swap>
-                <percent>0.0</percent>
-                <kilobyte>0</kilobyte>
-            </swap>
-        </system>
+        <mode>644</mode>
+        <uid>1000</uid>
+        <gid>1000</gid>
+        <timestamp>1476518441</timestamp>
+        <size>1565</size>
     </service>
 </monit>

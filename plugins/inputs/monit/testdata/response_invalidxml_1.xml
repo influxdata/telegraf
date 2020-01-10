@@ -1,3 +1,4 @@
+<!--Missing element <block> closed-->
 <?xml version="1.0" encoding="UTF-8"?>
 <monit>
     <server>
@@ -24,28 +25,27 @@
         <memory>16432272</memory>
         <swap>16432268</swap>
     </platform>
-    <service type="3">
-        <name>consul</name>
-        <collected_sec>1476628305</collected_sec>
-        <collected_usec>302552</collected_usec>
+    <service type="0">
+        <name>test</name>
+        <collected_sec>1572850498</collected_sec>
+        <collected_usec>709694</collected_usec>
         <status>0</status>
         <status_hint>0</status_hint>
         <monitor>1</monitor>
         <monitormode>0</monitormode>
         <pendingaction>0</pendingaction>
-        <pid>5959</pid>
-        <ppid>1</ppid>
-        <uptime>109870</uptime>
-        <children>0</children>
-        <memory>
-            <percent>0.1</percent>
-            <percenttotal>0.1</percenttotal>
-            <kilobyte>22892</kilobyte>
-            <kilobytetotal>22892</kilobytetotal>
-        </memory>
-        <cpu>
-            <percent>0.0</percent>
-            <percenttotal>0.0</percenttotal>
-        </cpu>
+        <mode>555</mode>
+        <uid>0</uid>
+        <gid>0</gid>
+        <flags>4096</flags>
+        <block>
+            <percent>29.5</percent>
+            <usage>4424.0</usage>
+            <total>14990.0</total>
+        <inode>
+            <percent>0.8</percent>
+            <usage>59674</usage>
+            <total>7680000</total>
+        </inode>
     </service>
 </monit>
