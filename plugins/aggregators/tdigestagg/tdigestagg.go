@@ -49,7 +49,7 @@ type CacheKey struct {
 type TDigestAgg struct {
 	cache       map[CacheKey]*Aggregation
 	Compression float64                  `toml:"compression"`
-	UsingClam	bool					 `toml:"using_clam"`
+	UsingClam   bool                     `toml:"using_clam"`
 	Bucketing   []bucketing.BucketConfig `toml:"bucketing"`
 }
 

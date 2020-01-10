@@ -68,7 +68,7 @@ func TestClamSameTags(t *testing.T) {
 		constants.FieldCentroids:   fmt.Sprint(out),
 	}
 	expectedTags := map[string]string{
-		"foo": "bar",
+		"foo":                      "bar",
 		constants.TagKeyAggregates: constants.AggregationsTimer,
 		tagKeyAZ:                   valueSeattle,
 		constants.TagKeyBucketKey:  "m1_a_telegraf_sea1_bar",
@@ -508,7 +508,7 @@ func TestClamCpuCoreQuantile(t *testing.T) {
 				constants.TagKeyHost:    valueHost,
 				constants.TagKeyService: valueService,
 				constants.TagKeyRollup:  "gauge:*-core",
-				"core": strconv.Itoa(i),
+				"core":                  strconv.Itoa(i),
 			},
 			map[string]interface{}{
 				"used": float64(i),

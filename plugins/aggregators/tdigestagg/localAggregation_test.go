@@ -41,7 +41,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-
 var mLocal, _ = metric.New("m1",
 	map[string]string{
 		tagKeyAZ:                valueSeattle,
