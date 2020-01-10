@@ -1,3 +1,9 @@
+## v1.13.2 [unreleased]
+
+#### Bugfixes
+
+- [#2652](https://github.com/influxdata/telegraf/issues/2652): Warn without error when processes input is started on Windows.
+
 ## v1.13.1 [2020-01-08]
 
 #### Bugfixes
