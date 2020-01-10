@@ -1,3 +1,4 @@
+<!--Wrong status type-->
 <?xml version="1.0" encoding="UTF-8"?>
 <monit>
     <server>
@@ -25,10 +26,10 @@
         <swap>16432268</swap>
     </platform>
     <service type="0">
-        <name>rootfs</name>
+        <name>test</name>
         <collected_sec>1572850498</collected_sec>
         <collected_usec>709694</collected_usec>
-        <status>0</status>
+        <status>0.0</status>
         <status_hint>0</status_hint>
         <monitor>1</monitor>
         <monitormode>0</monitormode>

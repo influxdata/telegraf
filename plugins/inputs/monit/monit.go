@@ -1,6 +1,3 @@
-// Copyright 2020, Verizon
-// Licensed under the terms of the MIT License. See LICENSE file in project root for terms.
-
 package monit
 
 import (
@@ -10,9 +7,20 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/net/html/charset"
 	"net/http"
+)
+
+const (
+	fileSystem string = "0"
+	directory         = "1"
+	file              = "2"
+	process           = "3"
+	remoteHost        = "4"
+	system            = "5"
+	fifo              = "6"
+	program           = "7"
+	network           = "8"
 )
 
 var pendingActions = []string{"ignore", "alert", "restart", "stop", "exec", "unmonitor", "start", "monitor"}
@@ -106,12 +114,11 @@ type Upload struct {
 }
 
 type Port struct {
-	Hostname     string  `xml:"hostname"`
-	PortNumber   int64   `xml:"portnumber"`
-	Request      string  `xml:"request"`
-	Protocol     string  `xml:"protocol"`
-	Type         string  `xml:"type"`
-	ResponseTime float64 `xml:"responsetime"`
+	Hostname   string `xml:"hostname"`
+	PortNumber int64  `xml:"portnumber"`
+	Request    string `xml:"request"`
+	Protocol   string `xml:"protocol"`
+	Type       string `xml:"type"`
 }
 
 type Block struct {
@@ -166,11 +173,10 @@ type System struct {
 }
 
 type Monit struct {
-	Address           string
-	BasicAuthUsername string
-	BasicAuthPassword string
-	parser            parsers.Parser
-	client            *http.Client
+	Address  string `toml:"address"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
+	client   *http.Client
 	tls.ClientConfig
 	Timeout internal.Duration `toml:"timeout"`
 }
@@ -184,8 +190,8 @@ var sampleConfig = `
   address = "http://127.0.0.1:2812"
 
   ## Username and Password for Monit
-  basic_auth_username = ""
-  basic_auth_password = ""
+  username = ""
+  password = ""
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
@@ -200,10 +206,6 @@ var sampleConfig = `
 
 func (m *Monit) SampleConfig() string {
 	return sampleConfig
-}
-
-func (m *Monit) SetParser(parser parsers.Parser) {
-	m.parser = parser
 }
 
 func (m *Monit) Init() error {
@@ -228,8 +230,8 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	if len(m.BasicAuthUsername) > 0 || len(m.BasicAuthPassword) > 0 {
-		req.SetBasicAuth(m.BasicAuthUsername, m.BasicAuthPassword)
+	if len(m.Username) > 0 || len(m.Password) > 0 {
+		req.SetBasicAuth(m.Username, m.Password)
 	}
 
 	resp, err := m.client.Do(req)
@@ -238,100 +240,108 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 	}
 	defer resp.Body.Close()
 
-	var status Status
-	decoder := xml.NewDecoder(resp.Body)
-	decoder.CharsetReader = charset.NewReaderLabel
-	if err := decoder.Decode(&status); err != nil {
-		return fmt.Errorf("Cannot parse input with error: %v\n", err)
-	}
+	if resp.StatusCode == 200 {
 
-	tags := map[string]string{"address": m.Address, "version": status.Server.Version, "hostname": status.Server.LocalHostname, "platform_name": status.Platform.Name}
-
-	for _, service := range status.Services {
-		fields := make(map[string]interface{})
-		fields["status_code"] = service.Status
-		fields["status"] = serviceStatus(service)
-		fields["monitoring_status_code"] = service.MonitoringStatus
-		fields["monitoring_status"] = monitoringStatus(service)
-		fields["monitoring_mode_status"] = monitoringMode(service)
-		fields["monitoring_mode_code"] = service.MonitorMode
-		tags["service"] = service.Name
-		tags["service_type"] = service.Type
-		if service.Type == "0" {
-			fields["mode"] = service.Mode
-			fields["block_percent"] = service.Block.Percent
-			fields["block_usage"] = service.Block.Usage
-			fields["block_total"] = service.Block.Total
-			fields["inode_percent"] = service.Inode.Percent
-			fields["inode_usage"] = service.Inode.Usage
-			fields["inode_total"] = service.Inode.Total
-			acc.AddFields("filesystem", fields, tags)
-		} else if service.Type == "1" {
-			fields["permissions"] = service.Mode
-			acc.AddFields("directory", fields, tags)
-		} else if service.Type == "2" {
-			fields["size"] = service.Size
-			fields["permissions"] = service.Mode
-			acc.AddFields("file", fields, tags)
-		} else if service.Type == "3" {
-			fields["cpu_percent"] = service.CPU.Percent
-			fields["cpu_percent_total"] = service.CPU.PercentTotal
-			fields["mem_kb"] = service.Memory.Kilobyte
-			fields["mem_kb_total"] = service.Memory.KilobyteTotal
-			fields["mem_percent"] = service.Memory.Percent
-			fields["mem_percent_total"] = service.Memory.PercentTotal
-			fields["service_uptime"] = service.Uptime
-			fields["pid"] = service.Pid
-			fields["parent_pid"] = service.ParentPid
-			fields["threads"] = service.Threads
-			fields["children"] = service.Children
-			acc.AddFields("process", fields, tags)
-		} else if service.Type == "4" {
-			fields["hostname"] = service.Port.Hostname
-			fields["port_number"] = service.Port.PortNumber
-			fields["request"] = service.Port.Request
-			fields["response_time"] = service.Port.ResponseTime
-			fields["protocol"] = service.Port.Protocol
-			fields["type"] = service.Port.Type
-			acc.AddFields("remote_host", fields, tags)
-		} else if service.Type == "5" {
-			fields["cpu_system"] = service.System.CPU.System
-			fields["cpu_user"] = service.System.CPU.User
-			fields["cpu_wait"] = service.System.CPU.Wait
-			fields["cpu_load_avg_1m"] = service.System.Load.Avg01
-			fields["cpu_load_avg_5m"] = service.System.Load.Avg05
-			fields["cpu_load_avg_15m"] = service.System.Load.Avg15
-			fields["mem_kb"] = service.System.Memory.Kilobyte
-			fields["mem_percent"] = service.System.Memory.Percent
-			fields["swap_kb"] = service.System.Swap.Kilobyte
-			fields["swap_percent"] = service.System.Swap.Percent
-			acc.AddFields("system", fields, tags)
-		} else if service.Type == "6" {
-			fields["permissions"] = service.Mode
-			acc.AddFields("fifo", fields, tags)
-		} else if service.Type == "7" {
-			fields["last_started_time"] = service.Program.Started * 1000
-			fields["program_status"] = service.Program.Status
-			fields["output"] = service.Program.Output
-			acc.AddFields("program", fields, tags)
-		} else if service.Type == "8" {
-			fields["link_state"] = service.Link.State
-			fields["link_speed"] = service.Link.Speed
-			fields["link_mode"] = linkMode(service)
-			fields["download_packets_now"] = service.Link.Download.Packets.Now
-			fields["download_packets_total"] = service.Link.Download.Packets.Total
-			fields["download_bytes_now"] = service.Link.Download.Bytes.Now
-			fields["download_bytes_total"] = service.Link.Download.Bytes.Total
-			fields["download_errors_now"] = service.Link.Download.Errors.Now
-			fields["download_errors_total"] = service.Link.Download.Errors.Total
-			fields["upload_packets_now"] = service.Link.Upload.Packets.Now
-			fields["upload_packets_total"] = service.Link.Upload.Packets.Total
-			fields["upload_bytes_now"] = service.Link.Upload.Bytes.Now
-			fields["upload_bytes_total"] = service.Link.Upload.Bytes.Total
-			fields["upload_errors_now"] = service.Link.Upload.Errors.Now
-			fields["upload_errors_total"] = service.Link.Upload.Errors.Total
-			acc.AddFields("network", fields, tags)
+		var status Status
+		decoder := xml.NewDecoder(resp.Body)
+		decoder.CharsetReader = charset.NewReaderLabel
+		if err := decoder.Decode(&status); err != nil {
+			return fmt.Errorf("error parsing input: %v", err)
 		}
+
+		tags := map[string]string{"address": m.Address,
+			"version":       status.Server.Version,
+			"hostname":      status.Server.LocalHostname,
+			"platform_name": status.Platform.Name}
+
+		for _, service := range status.Services {
+			fields := make(map[string]interface{})
+			tags["status"] = serviceStatus(service)
+			fields["status_code"] = service.Status
+			tags["monitoring_status"] = monitoringStatus(service)
+			fields["monitoring_status_code"] = service.MonitoringStatus
+			tags["monitoring_mode"] = monitoringMode(service)
+			fields["monitoring_mode_code"] = service.MonitorMode
+			tags["service"] = service.Name
+			if service.Type == fileSystem {
+				fields["mode"] = service.Mode
+				fields["block_percent"] = service.Block.Percent
+				fields["block_usage"] = service.Block.Usage
+				fields["block_total"] = service.Block.Total
+				fields["inode_percent"] = service.Inode.Percent
+				fields["inode_usage"] = service.Inode.Usage
+				fields["inode_total"] = service.Inode.Total
+				acc.AddFields("monit_filesystem", fields, tags)
+			} else if service.Type == directory {
+				fields["permissions"] = service.Mode
+				acc.AddFields("monit_directory", fields, tags)
+			} else if service.Type == file {
+				fields["size"] = service.Size
+				fields["permissions"] = service.Mode
+				acc.AddFields("monit_file", fields, tags)
+			} else if service.Type == process {
+				fields["cpu_percent"] = service.CPU.Percent
+				fields["cpu_percent_total"] = service.CPU.PercentTotal
+				fields["mem_kb"] = service.Memory.Kilobyte
+				fields["mem_kb_total"] = service.Memory.KilobyteTotal
+				fields["mem_percent"] = service.Memory.Percent
+				fields["mem_percent_total"] = service.Memory.PercentTotal
+				fields["service_uptime"] = service.Uptime * 10000000
+				fields["pid"] = service.Pid
+				fields["parent_pid"] = service.ParentPid
+				fields["threads"] = service.Threads
+				fields["children"] = service.Children
+				acc.AddFields("monit_process", fields, tags)
+			} else if service.Type == remoteHost {
+				fields["remote_hostname"] = service.Port.Hostname
+				fields["port_number"] = service.Port.PortNumber
+				fields["request"] = service.Port.Request
+				fields["protocol"] = service.Port.Protocol
+				fields["type"] = service.Port.Type
+				acc.AddFields("monit_remote_host", fields, tags)
+			} else if service.Type == system {
+				fields["cpu_system"] = service.System.CPU.System
+				fields["cpu_user"] = service.System.CPU.User
+				fields["cpu_wait"] = service.System.CPU.Wait
+				fields["cpu_load_avg_1m"] = service.System.Load.Avg01
+				fields["cpu_load_avg_5m"] = service.System.Load.Avg05
+				fields["cpu_load_avg_15m"] = service.System.Load.Avg15
+				fields["mem_kb"] = service.System.Memory.Kilobyte
+				fields["mem_percent"] = service.System.Memory.Percent
+				fields["swap_kb"] = service.System.Swap.Kilobyte
+				fields["swap_percent"] = service.System.Swap.Percent
+				acc.AddFields("monit_system", fields, tags)
+			} else if service.Type == fifo {
+				fields["permissions"] = service.Mode
+				acc.AddFields("monit_fifo", fields, tags)
+			} else if service.Type == program {
+				fields["last_started_time"] = service.Program.Started * 10000000
+				fields["program_status"] = service.Program.Status
+				acc.AddFields("monit_program", fields, tags)
+			} else if service.Type == network {
+				fields["link_state"] = service.Link.State
+				fields["link_speed"] = service.Link.Speed
+				fields["link_mode"] = linkMode(service)
+				fields["download_packets_now"] = service.Link.Download.Packets.Now
+				fields["download_packets_total"] = service.Link.Download.Packets.Total
+				fields["download_bytes_now"] = service.Link.Download.Bytes.Now
+				fields["download_bytes_total"] = service.Link.Download.Bytes.Total
+				fields["download_errors_now"] = service.Link.Download.Errors.Now
+				fields["download_errors_total"] = service.Link.Download.Errors.Total
+				fields["upload_packets_now"] = service.Link.Upload.Packets.Now
+				fields["upload_packets_total"] = service.Link.Upload.Packets.Total
+				fields["upload_bytes_now"] = service.Link.Upload.Bytes.Now
+				fields["upload_bytes_total"] = service.Link.Upload.Bytes.Total
+				fields["upload_errors_now"] = service.Link.Upload.Errors.Now
+				fields["upload_errors_total"] = service.Link.Upload.Errors.Total
+				acc.AddFields("monit_network", fields, tags)
+			}
+		}
+	} else {
+		return fmt.Errorf("received status code %d (%s), expected 200",
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode))
+
 	}
 	return nil
 }
@@ -339,8 +349,10 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 func linkMode(s Service) string {
 	if s.Link.Duplex == 1 {
 		return "Duplex Mode"
-	} else {
+	} else if s.Link.Duplex == 0 {
 		return "Simplex Mode"
+	} else {
+		return "Unknown Mode"
 	}
 }
 
@@ -348,7 +360,12 @@ func serviceStatus(s Service) string {
 	var status string
 
 	if s.MonitoringStatus == 0 || s.MonitoringStatus == 2 {
-		status = monitoringStatus(s)
+		switch s.MonitoringStatus {
+		case 2:
+			return "Initializing"
+		default:
+			return "Not monitored"
+		}
 	} else if s.Status == 0 {
 		status = "Running"
 	} else {
@@ -367,23 +384,23 @@ func serviceStatus(s Service) string {
 func monitoringMode(s Service) string {
 	switch s.MonitorMode {
 	case 0:
-		return "Monitoring in Active mode"
+		return "Monitoring mode:  active"
 	case 1:
-		return "Monitoring in Passive mode"
+		return "Monitoring mode:  passive"
 	}
-	return "Unknown Mode"
+	return "Monitoring mode: unknown"
 }
 
 func monitoringStatus(s Service) string {
 	switch s.MonitoringStatus {
 	case 1:
-		return "Running"
+		return "Monitoring status:  Monitored"
 	case 2:
-		return "Initializing"
+		return "Monitoring status:  Initializing"
 	case 4:
-		return "Waiting"
+		return "Monitoring status:  Waiting"
 	}
-	return "Not monitored"
+	return "Monitoring status:  Not monitored"
 }
 
 func init() {

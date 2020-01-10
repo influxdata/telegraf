@@ -1,161 +1,535 @@
-// Copyright 2020, Verizon
-// Licensed under the terms of the MIT License. See LICENSE file in project root for terms.
-
 package monit
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMonit0(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		switch r.URL.Path {
-		case "/_status":
-			http.ServeFile(w, r, "status_response_0.xml")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Monit{
-		Address: ts.URL,
+func TestServiceType(t *testing.T) {
+	tests := []struct {
+		name     string
+		filename string
+		expected []telegraf.Metric
+	}{
+		{
+			name:     "check filesystem service type",
+			filename: "testdata/response_servicetype_0.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_filesystem",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"mode":                   555,
+						"block_percent":          29.5,
+						"block_usage":            4424.0,
+						"block_total":            14990.0,
+						"inode_percent":          0.8,
+						"inode_usage":            59674.0,
+						"inode_total":            7680000.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check directory service type",
+			filename: "testdata/response_servicetype_1.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_directory",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"permissions":            755,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check file service type",
+			filename: "testdata/response_servicetype_2.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_file",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"permissions":            644,
+						"size":                   1565,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check process service type",
+			filename: "testdata/response_servicetype_3.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_process",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"cpu_percent":            0.0,
+						"cpu_percent_total":      0.0,
+						"mem_kb":                 22892,
+						"mem_kb_total":           22892,
+						"mem_percent":            0.1,
+						"mem_percent_total":      0.1,
+						"service_uptime":         1098700000000,
+						"pid":                    5959,
+						"parent_pid":             1,
+						"threads":                31,
+						"children":               0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check remote host service type",
+			filename: "testdata/response_servicetype_4.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_remote_host",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"remote_hostname":        "192.168.1.10",
+						"port_number":            2812,
+						"request":                "",
+						"protocol":               "DEFAULT",
+						"type":                   "TCP",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check system service type",
+			filename: "testdata/response_servicetype_5.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_system",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"cpu_system":             0.1,
+						"cpu_user":               0.0,
+						"cpu_wait":               0.0,
+						"cpu_load_avg_1m":        0.00,
+						"cpu_load_avg_5m":        0.00,
+						"cpu_load_avg_15m":       0.00,
+						"mem_kb":                 259668,
+						"mem_percent":            1.5,
+						"swap_kb":                0.0,
+						"swap_percent":           0.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check fifo service type",
+			filename: "testdata/response_servicetype_6.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_fifo",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"permissions":            664,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check program service type",
+			filename: "testdata/response_servicetype_7.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_program",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"program_status":         0,
+						"last_started_time":      15728504980000000,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check network service type",
+			filename: "testdata/response_servicetype_8.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_network",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"link_speed":             1000000000,
+						"link_mode":              "Duplex Mode",
+						"link_state":             1,
+						"download_packets_now":   0,
+						"download_packets_total": 15243,
+						"download_bytes_now":     0,
+						"download_bytes_total":   5506778,
+						"download_errors_now":    0,
+						"download_errors_total":  0,
+						"upload_packets_now":     0,
+						"upload_packets_total":   8822,
+						"upload_bytes_now":       0,
+						"upload_bytes_total":     1287240,
+						"upload_errors_now":      0,
+						"upload_errors_total":    0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/_status":
+					http.ServeFile(w, r, tt.filename)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
 
-	var acc testutil.Accumulator
+			plugin := &Monit{
+				Address: ts.URL,
+			}
 
-	r.Init()
+			tt.expected[0].AddTag("address", ts.URL)
+			plugin.Init()
 
-	err := r.Gather(&acc)
-	require.NoError(t, err)
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
+			require.NoError(t, err)
 
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-		"mode",
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
+				testutil.IgnoreTime())
+		})
 	}
-
-	floatMetrics := []string{
-		"block_percent",
-		"block_usage",
-		"block_total",
-		"inode_percent",
-		"inode_usage",
-		"inode_total",
-	}
-
-	assert.True(t, acc.HasMeasurement("filesystem"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("filesystem", metric))
-
-	}
-
-	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatField("filesystem", metric))
-	}
-
 }
 
-func TestMonit1(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		switch r.URL.Path {
-		case "/_status":
-			http.ServeFile(w, r, "status_response_1.xml")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Monit{
-		Address: ts.URL,
+func TestMonitFailure(t *testing.T) {
+	tests := []struct {
+		name     string
+		filename string
+		expected []telegraf.Metric
+	}{
+		{
+			name:     "check monit failure status",
+			filename: "testdata/response_servicetype_8_failure.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_network",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Failure",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            8388608,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"link_speed":             -1,
+						"link_mode":              "Unknown Mode",
+						"link_state":             0,
+						"download_packets_now":   0,
+						"download_packets_total": 0,
+						"download_bytes_now":     0,
+						"download_bytes_total":   0,
+						"download_errors_now":    0,
+						"download_errors_total":  0,
+						"upload_packets_now":     0,
+						"upload_packets_total":   0,
+						"upload_bytes_now":       0,
+						"upload_bytes_total":     0,
+						"upload_errors_now":      0,
+						"upload_errors_total":    0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check passive mode",
+			filename: "testdata/response_servicetype_8_passivemode.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_network",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  passive",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   1,
+						"link_speed":             1000000000,
+						"link_mode":              "Duplex Mode",
+						"link_state":             1,
+						"download_packets_now":   0,
+						"download_packets_total": 15243,
+						"download_bytes_now":     0,
+						"download_bytes_total":   5506778,
+						"download_errors_now":    0,
+						"download_errors_total":  0,
+						"upload_packets_now":     0,
+						"upload_packets_total":   8822,
+						"upload_bytes_now":       0,
+						"upload_bytes_total":     1287240,
+						"upload_errors_now":      0,
+						"upload_errors_total":    0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check initializing status",
+			filename: "testdata/response_servicetype_8_initializingmode.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_network",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Initializing",
+						"monitoring_status": "Monitoring status:  Initializing",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 2,
+						"monitoring_mode_code":   0,
+						"link_speed":             1000000000,
+						"link_mode":              "Duplex Mode",
+						"link_state":             1,
+						"download_packets_now":   0,
+						"download_packets_total": 15243,
+						"download_bytes_now":     0,
+						"download_bytes_total":   5506778,
+						"download_errors_now":    0,
+						"download_errors_total":  0,
+						"upload_packets_now":     0,
+						"upload_packets_total":   8822,
+						"upload_bytes_now":       0,
+						"upload_bytes_total":     1287240,
+						"upload_errors_now":      0,
+						"upload_errors_total":    0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name:     "check pending action",
+			filename: "testdata/response_servicetype_8_pendingaction.xml",
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"monit_network",
+					map[string]string{
+						"version":           "5.17.1",
+						"hostname":          "localhost",
+						"platform_name":     "Linux",
+						"service":           "test",
+						"status":            "Running - unmonitor pending",
+						"monitoring_status": "Monitoring status:  Monitored",
+						"monitoring_mode":   "Monitoring mode:  active",
+					},
+					map[string]interface{}{
+						"status_code":            0,
+						"monitoring_status_code": 1,
+						"monitoring_mode_code":   0,
+						"link_speed":             1000000000,
+						"link_mode":              "Duplex Mode",
+						"link_state":             1,
+						"download_packets_now":   0,
+						"download_packets_total": 15243,
+						"download_bytes_now":     0,
+						"download_bytes_total":   5506778,
+						"download_errors_now":    0,
+						"download_errors_total":  0,
+						"upload_packets_now":     0,
+						"upload_packets_total":   8822,
+						"upload_bytes_now":       0,
+						"upload_bytes_total":     1287240,
+						"upload_errors_now":      0,
+						"upload_errors_total":    0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/_status":
+					http.ServeFile(w, r, tt.filename)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
 
-	var acc testutil.Accumulator
+			plugin := &Monit{
+				Address: ts.URL,
+			}
 
-	r.Init()
+			tt.expected[0].AddTag("address", ts.URL)
+			plugin.Init()
 
-	err := r.Gather(&acc)
-	require.NoError(t, err)
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
+			require.NoError(t, err)
 
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-		"permissions",
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
+				testutil.IgnoreTime())
+		})
 	}
-
-	assert.True(t, acc.HasMeasurement("directory"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("directory", metric))
-	}
-
 }
 
-func TestMonit2(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		switch r.URL.Path {
-		case "/_status":
-			http.ServeFile(w, r, "status_response_2.xml")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Monit{
-		Address: ts.URL,
+func checkAuth(r *http.Request, username, password string) bool {
+	user, pass, ok := r.BasicAuth()
+	if !ok {
+		return false
 	}
-
-	var acc testutil.Accumulator
-
-	r.Init()
-
-	err := r.Gather(&acc)
-	require.NoError(t, err)
-
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-		"permissions",
-	}
-
-	int64Metrics := []string{
-		"size",
-	}
-
-	assert.True(t, acc.HasMeasurement("file"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("file", metric))
-	}
-
-	for _, metric := range int64Metrics {
-		assert.True(t, acc.HasInt64Field("file", metric))
-	}
-
+	return user == username && pass == password
 }
 
-func TestMonit3(t *testing.T) {
+func TestInvalidUsernameorPassword(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		if !checkAuth(r, "testing", "testing") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
 		switch r.URL.Path {
 		case "/_status":
-			http.ServeFile(w, r, "status_response_3.xml")
+			http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 		default:
 			panic("Cannot handle request")
 		}
@@ -164,7 +538,9 @@ func TestMonit3(t *testing.T) {
 	defer ts.Close()
 
 	r := &Monit{
-		Address: ts.URL,
+		Address:  ts.URL,
+		Username: "test",
+		Password: "test",
 	}
 
 	var acc testutil.Accumulator
@@ -172,48 +548,22 @@ func TestMonit3(t *testing.T) {
 	r.Init()
 
 	err := r.Gather(&acc)
-	require.NoError(t, err)
 
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-	}
-
-	int64Metrics := []string{
-		"service_uptime",
-		"mem_kb",
-		"mem_kb_total",
-	}
-
-	floatMetrics := []string{
-		"cpu_percent",
-		"cpu_percent_total",
-		"mem_percent",
-		"mem_percent_total",
-	}
-
-	assert.True(t, acc.HasMeasurement("process"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("process", metric))
-	}
-
-	for _, metric := range int64Metrics {
-		assert.True(t, acc.HasInt64Field("process", metric))
-	}
-
-	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatField("process", metric))
-	}
-
+	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 
-func TestMonit4(t *testing.T) {
+func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
+		if !checkAuth(r, "testing", "testing") {
+			http.Error(w, "Unauthorized.", 401)
+			return
+		}
+
 		switch r.URL.Path {
 		case "/_status":
-			http.ServeFile(w, r, "status_response_4.xml")
+			http.ServeFile(w, r, "testdata/response_servicetype_0.xml")
 		default:
 			panic("Cannot handle request")
 		}
@@ -230,266 +580,53 @@ func TestMonit4(t *testing.T) {
 	r.Init()
 
 	err := r.Gather(&acc)
-	require.NoError(t, err)
 
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-	}
-
-	int64Metrics := []string{
-		"port_number",
-	}
-
-	float64Metrics := []string{
-		"response_time",
-	}
-
-	stringMetrics := []string{
-		"hostname",
-		"request",
-		"protocol",
-		"type",
-	}
-
-	assert.True(t, acc.HasMeasurement("remote_host"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("remote_host", metric))
-	}
-
-	for _, metric := range int64Metrics {
-		assert.True(t, acc.HasInt64Field("remote_host", metric))
-	}
-
-	for _, metric := range float64Metrics {
-		assert.True(t, acc.HasFloatField("remote_host", metric))
-	}
-
-	for _, metric := range stringMetrics {
-		assert.True(t, acc.HasField("remote_host", metric))
-	}
-
+	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 
-func TestMonit5(t *testing.T) {
+func TestInvalidXMLAndInvalidTypes(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		switch r.URL.Path {
-		case "/_status":
-
-			http.ServeFile(w, r, "status_response_5.xml")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Monit{
-		Address: ts.URL,
+	tests := []struct {
+		name     string
+		filename string
+	}{
+		{
+			name:     "check filesystem service type",
+			filename: "testdata/response_invalidxml_1.xml",
+		},
+		{
+			name:     "check filesystem service type",
+			filename: "testdata/response_invalidxml_2.xml",
+		},
+		{
+			name:     "check filesystem service type",
+			filename: "testdata/response_invalidxml_3.xml",
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/_status":
+					http.ServeFile(w, r, tt.filename)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer ts.Close()
 
-	var acc testutil.Accumulator
+			plugin := &Monit{
+				Address: ts.URL,
+			}
 
-	r.Init()
+			plugin.Init()
 
-	err := r.Gather(&acc)
-	require.NoError(t, err)
+			var acc testutil.Accumulator
+			err := plugin.Gather(&acc)
 
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
+			if assert.Error(t, err) {
+				assert.Contains(t, err.Error(), "error parsing input:")
+			}
+		})
 	}
-
-	int64Metrics := []string{
-		"mem_kb",
-	}
-
-	floatMetrics := []string{
-		"mem_percent",
-		"cpu_system",
-		"cpu_user",
-		"cpu_wait",
-		"cpu_load_avg_1m",
-		"cpu_load_avg_5m",
-		"cpu_load_avg_15m",
-		"swap_kb",
-		"swap_percent",
-	}
-
-	assert.True(t, acc.HasMeasurement("system"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("system", metric))
-	}
-
-	for _, metric := range int64Metrics {
-		assert.True(t, acc.HasInt64Field("system", metric))
-	}
-
-	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatField("system", metric))
-	}
-
-}
-
-func TestMonit6(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		switch r.URL.Path {
-		case "/_status":
-
-			http.ServeFile(w, r, "status_response_6.xml")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Monit{
-		Address: ts.URL,
-	}
-
-	var acc testutil.Accumulator
-
-	r.Init()
-
-	err := r.Gather(&acc)
-	require.NoError(t, err)
-
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-		"permissions",
-	}
-
-	assert.True(t, acc.HasMeasurement("fifo"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("fifo", metric))
-	}
-
-}
-
-func TestMonit7(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		switch r.URL.Path {
-		case "/_status":
-
-			http.ServeFile(w, r, "status_response_7.xml")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Monit{
-		Address: ts.URL,
-	}
-
-	var acc testutil.Accumulator
-
-	r.Init()
-
-	err := r.Gather(&acc)
-	require.NoError(t, err)
-
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-		"program_status",
-	}
-
-	int64Metrics := []string{
-		"last_started_time",
-	}
-
-	stringMetrics := []string{
-		"output",
-	}
-
-	assert.True(t, acc.HasMeasurement("program"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("program", metric))
-	}
-
-	for _, metric := range int64Metrics {
-		assert.True(t, acc.HasInt64Field("program", metric))
-	}
-
-	for _, metric := range stringMetrics {
-		assert.True(t, acc.HasField("program", metric))
-	}
-
-}
-
-func TestMonit8(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		switch r.URL.Path {
-		case "/_status":
-
-			http.ServeFile(w, r, "status_response_8.xml")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Monit{
-		Address: ts.URL,
-	}
-
-	var acc testutil.Accumulator
-
-	r.Init()
-
-	err := r.Gather(&acc)
-	require.NoError(t, err)
-
-	intMetrics := []string{
-		"status_code",
-		"monitoring_status_code",
-		"link_state",
-	}
-
-	int64Metrics := []string{
-		"link_speed",
-		"download_packets_now",
-		"download_packets_total",
-		"download_bytes_now",
-		"download_bytes_total",
-		"download_errors_now",
-		"download_errors_total",
-		"upload_packets_now",
-		"upload_packets_total",
-		"upload_bytes_now",
-		"upload_bytes_total",
-		"upload_errors_now",
-		"upload_errors_total",
-	}
-
-	stringMetrics := []string{
-		"link_mode",
-	}
-
-	assert.True(t, acc.HasMeasurement("network"))
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("network", metric))
-	}
-
-	for _, metric := range int64Metrics {
-		assert.True(t, acc.HasInt64Field("network", metric))
-	}
-
-	for _, metric := range stringMetrics {
-		assert.True(t, acc.HasField("network", metric))
-	}
-
 }
