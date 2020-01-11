@@ -23,6 +23,7 @@ At present this plugin requires the following APIs:
 # Read metrics about an OpenStack cloud
 # [[inputs.openstack]]
 #   ## This is the recommended interval to poll.
+#   interval = '30m'
 #   interval = '1m'
 #
 #   ## The identity endpoint to authenticate against and get the

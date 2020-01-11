@@ -1,4 +1,4 @@
-// openstack implements an OpenStack input plugin for Telegraf
+// Package openstack implements an OpenStack input plugin for Telegraf
 //
 // The OpenStack input plug is a simple two phase metric collector.  In the first
 // pass a set of gatherers are run against the API to cache collections of resources.
@@ -114,7 +114,7 @@ func (o *OpenStack) Description() string {
 // sampleConfig is a sample configuration file entry.
 var sampleConfig = `
   ## This is the recommended interval to poll.
-  interval = '60m'
+  interval = '30m'
 
   ## The identity endpoint to authenticate against and get the
   ## service catalog from
@@ -213,8 +213,12 @@ func (o *OpenStack) initialize() error {
 	if o.compute, err = openstack.NewComputeV2(provider, gophercloud.EndpointOpts{}); err != nil {
 		return fmt.Errorf("unable to create V2 compute client: %v", err)
 	}
-	if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
-		return fmt.Errorf("unable to create V2 block storage client: %v", err)
+
+	// The Cinder volume storage service is optional
+	if o.services.ContainsService(volumeV2Service) {
+		if o.volume, err = openstack.NewBlockStorageV2(provider, gophercloud.EndpointOpts{}); err != nil {
+			return fmt.Errorf("unable to create V2 volume client: %v", err)
+		}
 	}
 
 	// Initialize resource maps and slices
