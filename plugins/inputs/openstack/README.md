@@ -22,9 +22,8 @@ At present this plugin requires the following APIs:
 ```
 # Read metrics about an OpenStack cloud
 # [[inputs.openstack]]
-#   ## This is the recommended interval to poll.
+#   ## This is the recommended interval to poll so as not to overwhelm APIs
 #   interval = '30m'
-#   interval = '1m'
 #
 #   ## The identity endpoint to authenticate against and get the
 #   ## service catalog from
@@ -43,6 +42,11 @@ At present this plugin requires the following APIs:
 #   ## The user's password to authenticate with
 #   password = "Passw0rd"
 ```
+
+_NB:_ Note that the recommended polling interval is 30 minutes.  This can be
+reduced on smaller deployments with a handful of VMs, but will need to
+be increased on estates with 100s or 1000s of VMs as it can have a
+performance impact.
 
 ### Measurements & Fields
 

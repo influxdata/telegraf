@@ -10,6 +10,9 @@ package openstack
 
 import (
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
 	"github.com/gophercloud/gophercloud/openstack/blockstorage/extensions/schedulerstats"
@@ -22,8 +25,6 @@ import (
 	"github.com/gophercloud/gophercloud/openstack/identity/v3/services"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"log"
-	"strings"
 )
 
 const (
@@ -61,7 +62,7 @@ func (s serviceMap) ContainsService(t serviceType) bool {
 type projectMap map[string]projects.Project
 
 // hypervisorMap maps a hypervisor id a Hypervisor struct.
-type hypervisorMap map[int]hypervisors.Hypervisor
+type hypervisorMap map[string]hypervisors.Hypervisor
 
 // serverMap maps a server id to a Server struct.
 type serverMap map[string]servers.Server
@@ -140,18 +141,6 @@ func (o *OpenStack) SampleConfig() string {
 	return sampleConfig
 }
 
-// gather is a wrapper around library calls out to gophercloud that catches
-// and recovers from panics.  Evidently if things like volumes don't exist
-// then it will go down in flames.
-func gather(f func() error) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("recovered from crash: %v", r)
-		}
-	}()
-	return f()
-}
-
 // Gather gathers resources from the OpenStack API and accumulates metrics.  This
 // implements the Input interface.
 func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
@@ -172,8 +161,8 @@ func (o *OpenStack) Gather(acc telegraf.Accumulator) error {
 		"storage pools": o.gatherStoragePools,
 	}
 	for resources, gatherer := range gatherers {
-		if err := gather(gatherer); err != nil {
-			log.Println("W!", plugin, "failed to get", resources, ":", err)
+		if err := gatherer(); err != nil {
+			log.Println("W!", plugin, "failed to get", resources)
 		}
 	}
 
