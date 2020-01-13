@@ -10,11 +10,11 @@ type TemplateMetric struct {
 }
 
 func (m *TemplateMetric) Measurement() string {
-	panic("not implemented")
+	return m.Measurement()
 }
 
 func (m *TemplateMetric) Tag(key string) string {
-	panic("not implemented")
+	return m.Tag(key)
 }
 
 func (m *TemplateMetric) Field(key string) interface{} {

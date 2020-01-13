@@ -2,23 +2,30 @@ package template
 
 import (
 	"github.com/influxdata/telegraf"
+	"os"
+	"text/template"
 )
 
-type Replace struct {
-	Measurement string `toml:"measurement"`
+type TemplateProcessor struct {
 	Tag         string `toml:"tag"`
-	Field       string `toml:"field"`
-	Tempate     string `toml:"template"`
+	Template    string `toml:"template"`
 }
 
-type Template struct {
-	metric telegraf.Metric
-}
+func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	// create template
+	tmpl, err := template.New("test").Parse(r.Template)
+	if err != nil { panic(err) }
 
-func (r *Template) Apply(in ...telegraf.Metric) []telegraf.Metric {
-// for each metric in "in" array
+	// for each metric in "in" array
+	for _, metric := range in {
+		//newM := TemplateMetric{metric}
+
+		// supply TemplateMetric and Template from configuration to Template.Execute
+		err := tmpl.Execute(os.Stdout, metric)
+		if err != nil { panic(err) }
+	}
+
 // convert/wrap metric in TemplateMetric
-// supply TemplateMetric and Template from configuration to Template.Execute
 // convert TemplateMetric back to metric?
 	return in
 }
