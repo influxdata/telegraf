@@ -100,6 +100,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 			PagesQueuedForEviction:    0,
 			ServerEvictingPages:       0,
 			WorkerThreadEvictingPages: 0,
+			FaultsCnt:                 204,
 		},
 		tags,
 	)
@@ -116,6 +117,8 @@ func TestAddWiredTigerStats(t *testing.T) {
 	for key := range WiredTigerExtStats {
 		assert.True(t, acc.HasFloatField("mongodb", key) || acc.HasInt64Field("mongodb", key), key)
 	}
+
+	assert.True(t, acc.HasInt64Field("mongodb", "page_faults"))
 }
 
 func TestAddShardStats(t *testing.T) {
@@ -135,6 +138,29 @@ func TestAddShardStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range DefaultShardStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
+func TestAddLatencyStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			CommandOpsCnt:  73,
+			CommandLatency: 364,
+			ReadOpsCnt:     113,
+			ReadLatency:    201,
+			WriteOpsCnt:    7,
+			WriteLatency:   55,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key := range DefaultLatencyStats {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }

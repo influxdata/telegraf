@@ -81,7 +81,6 @@
   version = "v13.3.0"
 
 [[projects]]
-  branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
   packages = [
@@ -90,6 +89,7 @@
   ]
   pruneopts = ""
   revision = "d2df5d440eda5372f24fcac03839a64d6cb5f7e5"
+  version = "v0.4.2"
 
 [[projects]]
   digest = "1:45ec6eb579713a01991ad07f538fed3b576ee55f5ce9f248320152a9270d9258"
@@ -760,20 +760,12 @@
   revision = "c2b33e84"
 
 [[projects]]
-  branch = "master"
-  digest = "1:2c5ad58492804c40bdaf5d92039b0cde8b5becd2b7feeb37d7d1cc36a8aa8dbe"
-  name = "github.com/kardianos/osext"
-  packages = ["."]
-  pruneopts = ""
-  revision = "ae77be60afb1dcacde03767a8c37337fad28ac14"
-
-[[projects]]
-  branch = "master"
-  digest = "1:fed90fa725d3b1bac0a760de64426834dfef4546474cf182f2ec94285afa74a8"
+  digest = "1:b498ceccf0d2efa0af877b1dda20d3742ef9ff7475123e8e922016f0b737069b"
   name = "github.com/kardianos/service"
   packages = ["."]
   pruneopts = ""
-  revision = "615a14ed75099c9eaac6949e22ac2341bf9d3197"
+  revision = "56787a3ea05e9b262708192e7ce3b500aba73561"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:3e160bec100719bb664ce5192b42e82e66b290397da4c0845aed5ce3cfce60cb"
@@ -1103,15 +1095,14 @@
   revision = "c4fab1ac1bec58281ad0667dc3f0907a9476ac47"
 
 [[projects]]
-  digest = "1:7f569d906bdd20d906b606415b7d794f798f91a62fcfb6a4daa6d50690fb7a3f"
+  digest = "1:47081c00d00c1dfc9a530c2556e78be391a5c24db1043efe6d406af882a169a1"
   name = "github.com/satori/go.uuid"
   packages = ["."]
   pruneopts = ""
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
 
 [[projects]]
-  digest = "1:55dcddb2ba6ab25098ee6b96f176f39305f1fde7ea3d138e7e10bb64a5bf45be"
+  digest = "1:9024df427b3c8a80a0c4b34e535e5e1ae922c7174e3242b6c7f30ffb3b9f715e"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -1124,8 +1115,8 @@
     "process",
   ]
   pruneopts = ""
-  revision = "e4ec7b275ada47ca32799106c2dba142d96aaf93"
-  version = "v2.19.8"
+  revision = "fc7e5e7af6052e36e83e5539148015ed2c09d8f9"
+  version = "v2.19.11"
 
 [[projects]]
   branch = "master"

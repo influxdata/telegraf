@@ -52,10 +52,30 @@ type Histogram struct {
 	Sum     float64
 }
 
+func (h *Histogram) merge(b Bucket) {
+	for i := range h.Buckets {
+		if h.Buckets[i].Bound == b.Bound {
+			h.Buckets[i].Count = b.Count
+			return
+		}
+	}
+	h.Buckets = append(h.Buckets, b)
+}
+
 type Summary struct {
 	Quantiles []Quantile
 	Count     uint64
 	Sum       float64
+}
+
+func (s *Summary) merge(q Quantile) {
+	for i := range s.Quantiles {
+		if s.Quantiles[i].Quantile == q.Quantile {
+			s.Quantiles[i].Value = q.Value
+			return
+		}
+	}
+	s.Quantiles = append(s.Quantiles, q)
 }
 
 type MetricKey uint64
@@ -113,7 +133,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 			}
 		}
 
-		name, ok := SanitizeName(tag.Key)
+		name, ok := SanitizeLabelName(tag.Key)
 		if !ok {
 			continue
 		}
@@ -132,7 +152,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 			continue
 		}
 
-		name, ok := SanitizeName(field.Key)
+		name, ok := SanitizeLabelName(field.Key)
 		if !ok {
 			continue
 		}
@@ -161,7 +181,7 @@ func (c *Collection) Add(metric telegraf.Metric) {
 	labels := c.createLabels(metric)
 	for _, field := range metric.FieldList() {
 		metricName := MetricName(metric.Name(), field.Key, metric.Type())
-		metricName, ok := SanitizeName(metricName)
+		metricName, ok := SanitizeMetricName(metricName)
 		if !ok {
 			continue
 		}
@@ -210,7 +230,6 @@ func (c *Collection) Add(metric telegraf.Metric) {
 				Scaler: &Scaler{Value: value},
 			}
 
-			// what if already here
 			entry.Metrics[metricKey] = m
 		case telegraf.Histogram:
 			if m == nil {
@@ -236,7 +255,7 @@ func (c *Collection) Add(metric telegraf.Metric) {
 					continue
 				}
 
-				m.Histogram.Buckets = append(m.Histogram.Buckets, Bucket{
+				m.Histogram.merge(Bucket{
 					Bound: bound,
 					Count: count,
 				})
@@ -297,7 +316,7 @@ func (c *Collection) Add(metric telegraf.Metric) {
 					continue
 				}
 
-				m.Summary.Quantiles = append(m.Summary.Quantiles, Quantile{
+				m.Summary.merge(Quantile{
 					Quantile: quantile,
 					Value:    value,
 				})
