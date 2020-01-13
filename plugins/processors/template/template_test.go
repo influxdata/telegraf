@@ -23,7 +23,7 @@ func newMetric(name string, tags map[string]string, fields map[string]interface{
 }
 
 func TestTagTemplateConcatenate(t *testing.T){
-	tmp := TemplateProcessor{Tag: "topic", Template: "{{ index .Tags \"hostname\" }}"}
+	tmp := TemplateProcessor{Tag: "topic", Template: "{{ index .Tags \"hostname\" }}.{{ index .Tags \"level\" }}"}
 
 	m1 := newMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug"}, nil)
 	rescueStdout := os.Stdout

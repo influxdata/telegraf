@@ -2,8 +2,8 @@ package template
 
 import (
 	"github.com/influxdata/telegraf"
-	"os"
 	"text/template"
+	"strings"
 )
 
 type TemplateProcessor struct {
@@ -18,11 +18,14 @@ func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 	// for each metric in "in" array
 	for _, metric := range in {
+		var b strings.Builder
 		//newM := TemplateMetric{metric}
 
 		// supply TemplateMetric and Template from configuration to Template.Execute
-		err := tmpl.Execute(os.Stdout, metric)
+		err := tmpl.Execute(&b, metric)
 		if err != nil { panic(err) }
+
+		metric.AddTag(r.Tag, b.String())
 	}
 
 // convert/wrap metric in TemplateMetric
