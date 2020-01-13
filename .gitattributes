@@ -2,4 +2,3 @@ CHANGELOG.md merge=union
 README.md merge=union
 plugins/inputs/all/all.go merge=union
 plugins/outputs/all/all.go merge=union
-* -crlf
