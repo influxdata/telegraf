@@ -103,11 +103,13 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 				return nil, fmt.Errorf("failed to parse certificate PEM")
 			}
 
-			cert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return nil, err
+			if block.Type == "CERTIFICATE" {
+				cert, err := x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					return nil, err
+				}
+				certs = append(certs, cert)
 			}
-			certs = append(certs, cert)
 			if rest == nil || len(rest) == 0 {
 				break
 			}
