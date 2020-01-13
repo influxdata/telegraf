@@ -58,6 +58,7 @@ type ServerStatus struct {
 	Network            *NetworkStats          `bson:"network"`
 	Opcounters         *OpcountStats          `bson:"opcounters"`
 	OpcountersRepl     *OpcountStats          `bson:"opcountersRepl"`
+	OpLatencies        *OpLatenciesStats      `bson:"opLatencies"`
 	RecordStats        *DBRecordStats         `bson:"recordStats"`
 	Mem                *MemStats              `bson:"mem"`
 	Repl               *ReplStatus            `bson:"repl"`
@@ -252,7 +253,7 @@ type FlushStats struct {
 type ConnectionStats struct {
 	Current      int64 `bson:"current"`
 	Available    int64 `bson:"available"`
-	TotalCreated int64 `bson:"total_created"`
+	TotalCreated int64 `bson:"totalCreated"`
 }
 
 // DurTiming stores information related to journaling.
@@ -312,6 +313,19 @@ type OpcountStats struct {
 	Delete  int64 `bson:"delete"`
 	GetMore int64 `bson:"getmore"`
 	Command int64 `bson:"command"`
+}
+
+// OpLatenciesStats stores information related to operation latencies for the database as a whole
+type OpLatenciesStats struct {
+	Reads    *LatencyStats `bson:"reads"`
+	Writes   *LatencyStats `bson:"writes"`
+	Commands *LatencyStats `bson:"commands"`
+}
+
+// LatencyStats lists total latency in microseconds and count of operations, enabling you to obtain an average
+type LatencyStats struct {
+	Latency int64 `bson:"latency"`
+	Ops     int64 `bson:"ops"`
 }
 
 // MetricsStats stores information related to metrics
@@ -477,6 +491,8 @@ type StatLine struct {
 	IsMongos bool
 	Host     string
 
+	UptimeNanos int64
+
 	// The time at which this StatLine was generated.
 	Time time.Time
 
@@ -490,6 +506,14 @@ type StatLine struct {
 	Delete, DeleteCnt   int64
 	GetMore, GetMoreCnt int64
 	Command, CommandCnt int64
+
+	// OpLatency fields
+	WriteOpsCnt    int64
+	WriteLatency   int64
+	ReadOpsCnt     int64
+	ReadLatency    int64
+	CommandOpsCnt  int64
+	CommandLatency int64
 
 	// TTL fields
 	Passes, PassesCnt                     int64
@@ -659,6 +683,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		Faults:    -1,
 	}
 
+	returnVal.UptimeNanos = 1000 * 1000 * newStat.UptimeMillis
+
 	// set connection info
 	returnVal.CurrentC = newStat.Connections.Current
 	returnVal.AvailableC = newStat.Connections.Available
@@ -678,6 +704,21 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Delete, returnVal.DeleteCnt = diff(newStat.Opcounters.Delete, oldStat.Opcounters.Delete, sampleSecs)
 		returnVal.GetMore, returnVal.GetMoreCnt = diff(newStat.Opcounters.GetMore, oldStat.Opcounters.GetMore, sampleSecs)
 		returnVal.Command, returnVal.CommandCnt = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
+	}
+
+	if newStat.OpLatencies != nil {
+		if newStat.OpLatencies.Reads != nil {
+			returnVal.ReadOpsCnt = newStat.OpLatencies.Reads.Ops
+			returnVal.ReadLatency = newStat.OpLatencies.Reads.Latency
+		}
+		if newStat.OpLatencies.Writes != nil {
+			returnVal.WriteOpsCnt = newStat.OpLatencies.Writes.Ops
+			returnVal.WriteLatency = newStat.OpLatencies.Writes.Latency
+		}
+		if newStat.OpLatencies.Commands != nil {
+			returnVal.CommandOpsCnt = newStat.OpLatencies.Commands.Ops
+			returnVal.CommandLatency = newStat.OpLatencies.Commands.Latency
+		}
 	}
 
 	if newStat.Metrics != nil && oldStat.Metrics != nil {
@@ -983,21 +1024,23 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	}
 
 	// Set shard stats
-	newShardStats := *newMongo.ShardStats
-	returnVal.TotalInUse = newShardStats.TotalInUse
-	returnVal.TotalAvailable = newShardStats.TotalAvailable
-	returnVal.TotalCreated = newShardStats.TotalCreated
-	returnVal.TotalRefreshing = newShardStats.TotalRefreshing
-	returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
-	for host, stats := range newShardStats.Hosts {
-		shardStatLine := &ShardHostStatLine{
-			InUse:      stats.InUse,
-			Available:  stats.Available,
-			Created:    stats.Created,
-			Refreshing: stats.Refreshing,
-		}
+	if newMongo.ShardStats != nil {
+		newShardStats := *newMongo.ShardStats
+		returnVal.TotalInUse = newShardStats.TotalInUse
+		returnVal.TotalAvailable = newShardStats.TotalAvailable
+		returnVal.TotalCreated = newShardStats.TotalCreated
+		returnVal.TotalRefreshing = newShardStats.TotalRefreshing
+		returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
+		for host, stats := range newShardStats.Hosts {
+			shardStatLine := &ShardHostStatLine{
+				InUse:      stats.InUse,
+				Available:  stats.Available,
+				Created:    stats.Created,
+				Refreshing: stats.Refreshing,
+			}
 
-		returnVal.ShardHostStatsLines[host] = *shardStatLine
+			returnVal.ShardHostStatsLines[host] = *shardStatLine
+		}
 	}
 
 	return returnVal

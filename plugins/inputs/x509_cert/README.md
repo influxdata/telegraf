@@ -33,6 +33,12 @@ file or network connection.
     - province
     - locality
     - verification
+    - serial_number
+    - signature_algorithm
+    - public_key_algorithm
+    - issuer_common_name
+    - issuer_serial_number
+    - san
   - fields:
     - verification_code (int)
     - verification_error (string)

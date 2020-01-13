@@ -3,10 +3,12 @@ package ping
 import (
 	"context"
 	"errors"
+	"log"
 	"math"
 	"net"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -116,31 +118,29 @@ func (*Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	if p.Interface != "" && p.listenAddr != "" {
+	if p.Interface != "" && p.listenAddr == "" {
 		p.listenAddr = getAddr(p.Interface)
 	}
 
-	for _, ip := range p.Urls {
-		_, err := net.LookupHost(ip)
+	for _, host := range p.Urls {
+		_, err := net.LookupHost(host)
 		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"ip": ip})
+			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": host})
 			acc.AddError(err)
-			return nil
+			continue
 		}
 
-		if p.Method == "native" {
-			p.wg.Add(1)
-			go func(ip string) {
-				defer p.wg.Done()
-				p.pingToURLNative(ip, acc)
-			}(ip)
-		} else {
-			p.wg.Add(1)
-			go func(ip string) {
-				defer p.wg.Done()
-				p.pingToURL(ip, acc)
-			}(ip)
-		}
+		p.wg.Add(1)
+		go func(host string) {
+			defer p.wg.Done()
+
+			switch p.Method {
+			case "native":
+				p.pingToURLNative(host, acc)
+			default:
+				p.pingToURL(host, acc)
+			}
+		}(host)
 	}
 
 	p.wg.Wait()
@@ -204,7 +204,11 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 
 	host, err := net.ResolveIPAddr(network, destination)
 	if err != nil {
-		acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": destination})
+		acc.AddFields(
+			"ping",
+			map[string]interface{}{"result_code": 1},
+			map[string]string{"url": destination},
+		)
 		acc.AddError(err)
 		return
 	}
@@ -243,8 +247,29 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	wg := &sync.WaitGroup{}
 	c := ping.Client{}
 
-	var i int
-	for i = 0; i < p.Count; i++ {
+	var doErr error
+	var packetsSent int
+
+	type sentReq struct {
+		err  error
+		sent bool
+	}
+	sents := make(chan sentReq)
+
+	r.Add(1)
+	go func() {
+		for sent := range sents {
+			if sent.err != nil {
+				doErr = sent.err
+			}
+			if sent.sent {
+				packetsSent++
+			}
+		}
+		r.Done()
+	}()
+
+	for i := 0; i < p.Count; i++ {
 		select {
 		case <-ctx.Done():
 			goto finish
@@ -260,13 +285,18 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 					Src: net.ParseIP(p.listenAddr),
 					Seq: seq,
 				})
+
+				sent := sentReq{err: err, sent: true}
 				if err != nil {
-					acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": destination})
-					acc.AddError(err)
+					if strings.Contains(err.Error(), "not permitted") {
+						sent.sent = false
+					}
+					sents <- sent
 					return
 				}
 
 				resps <- resp
+				sents <- sent
 			}(i + 1)
 		}
 	}
@@ -274,13 +304,19 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 finish:
 	wg.Wait()
 	close(resps)
+	close(sents)
 
 	r.Wait()
-	tags, fields := onFin(i, rsps, destination)
+
+	if doErr != nil && strings.Contains(doErr.Error(), "not permitted") {
+		log.Printf("D! [inputs.ping] %s", doErr.Error())
+	}
+
+	tags, fields := onFin(packetsSent, rsps, doErr, destination)
 	acc.AddFields("ping", fields, tags)
 }
 
-func onFin(packetsSent int, resps []*ping.Response, destination string) (map[string]string, map[string]interface{}) {
+func onFin(packetsSent int, resps []*ping.Response, err error, destination string) (map[string]string, map[string]interface{}) {
 	packetsRcvd := len(resps)
 
 	tags := map[string]string{"url": destination}
@@ -291,10 +327,16 @@ func onFin(packetsSent int, resps []*ping.Response, destination string) (map[str
 	}
 
 	if packetsSent == 0 {
+		if err != nil {
+			fields["result_code"] = 2
+		}
 		return tags, fields
 	}
 
 	if packetsRcvd == 0 {
+		if err != nil {
+			fields["result_code"] = 1
+		}
 		fields["percent_packet_loss"] = float64(100)
 		return tags, fields
 	}

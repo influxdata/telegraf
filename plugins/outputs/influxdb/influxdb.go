@@ -57,8 +57,7 @@ type InfluxDB struct {
 	CreateHTTPClientF func(config *HTTPConfig) (Client, error)
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
 
-	serializer *influx.Serializer
-	Log        telegraf.Logger
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
@@ -143,11 +142,6 @@ func (i *InfluxDB) Connect() error {
 
 	if len(urls) == 0 {
 		urls = append(urls, defaultURL)
-	}
-
-	i.serializer = influx.NewSerializer()
-	if i.InfluxUintSupport {
-		i.serializer.SetFieldTypeSupport(influx.UintSupport)
 	}
 
 	for _, u := range urls {
@@ -237,7 +231,7 @@ func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
 		URL:            url,
 		MaxPayloadSize: int(i.UDPPayload.Size),
-		Serializer:     i.serializer,
+		Serializer:     i.newSerializer(),
 		Log:            i.Log,
 	}
 
@@ -271,7 +265,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		SkipDatabaseCreation: i.SkipDatabaseCreation,
 		RetentionPolicy:      i.RetentionPolicy,
 		Consistency:          i.WriteConsistency,
-		Serializer:           i.serializer,
+		Serializer:           i.newSerializer(),
 		Log:                  i.Log,
 	}
 
@@ -284,11 +278,20 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
 			i.Log.Warnf("When writing to [%s]: database %q creation failed: %v",
-				c.URL(), i.Database, err)
+				c.URL(), c.Database(), err)
 		}
 	}
 
 	return c, nil
+}
+
+func (i *InfluxDB) newSerializer() *influx.Serializer {
+	serializer := influx.NewSerializer()
+	if i.InfluxUintSupport {
+		serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
+
+	return serializer
 }
 
 func init() {

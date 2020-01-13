@@ -75,6 +75,7 @@ func NewConfig() *Config {
 			Interval:                   internal.Duration{Duration: 10 * time.Second},
 			RoundInterval:              true,
 			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
+			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
 		},
 
@@ -146,10 +147,13 @@ type AgentConfig struct {
 	// Quiet is the option for running in quiet mode
 	Quiet bool `toml:"quiet"`
 
-	// Log target - file, stderr, eventlog (Windows only). The empty string means to log to stderr.
+	// Log target controls the destination for logs and can be one of "file",
+	// "stderr" or, on Windows, "eventlog".  When set to "file", the output file
+	// is determined by the "logfile" setting.
 	LogTarget string `toml:"logtarget"`
 
-	// Log file name			.
+	// Name of the file to be logged to when using the "file" logtarget.  If set to
+	// the empty string then logs are written to stderr.
 	Logfile string `toml:"logfile"`
 
 	// The file will be rotated after the time interval specified.  When set
@@ -290,7 +294,13 @@ var agentConfig = `
   ## Log only error level messages.
   # quiet = false
 
-  ## Log file name, the empty string means to log to stderr.
+  ## Log target controls the destination for logs and can be one of "file",
+  ## "stderr" or, on Windows, "eventlog".  When set to "file", the output file
+  ## is determined by the "logfile" setting.
+  # logtarget = "file"
+
+  ## Name of the file to be logged to when using the "file" logtarget.  If set to
+  ## the empty string then logs are written to stderr.
   # logfile = ""
 
   ## The logfile will be rotated after the time interval specified.  When set
@@ -1942,6 +1952,18 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["splunkmetric_multimetric"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.SplunkmetricMultiMetric, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["wavefront_source_override"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1966,6 +1988,42 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["prometheus_export_timestamp"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.PrometheusExportTimestamp, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["prometheus_sort_metrics"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.PrometheusSortMetrics, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["prometheus_string_as_label"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.PrometheusStringAsLabel, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
@@ -1975,8 +2033,12 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
 	delete(tbl.Fields, "splunkmetric_hec_routing")
+	delete(tbl.Fields, "splunkmetric_multimetric")
 	delete(tbl.Fields, "wavefront_source_override")
 	delete(tbl.Fields, "wavefront_use_strict")
+	delete(tbl.Fields, "prometheus_export_timestamp")
+	delete(tbl.Fields, "prometheus_sort_metrics")
+	delete(tbl.Fields, "prometheus_string_as_label")
 	return serializers.NewSerializer(c)
 }
 
@@ -2016,6 +2078,19 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["flush_jitter"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+				oc.FlushJitter = new(time.Duration)
+				*oc.FlushJitter = dur
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -2049,6 +2124,7 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	}
 
 	delete(tbl.Fields, "flush_interval")
+	delete(tbl.Fields, "flush_jitter")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")

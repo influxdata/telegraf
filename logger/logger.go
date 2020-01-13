@@ -2,7 +2,6 @@ package logger
 
 import (
 	"errors"
-
 	"io"
 	"log"
 	"os"
@@ -112,7 +111,6 @@ func (t *telegrafLogCreator) CreateLogger(config LogConfig) (io.Writer, error) {
 				writer = defaultWriter
 			}
 		} else {
-			log.Print("E! Empty logfile, using stderr")
 			writer = defaultWriter
 		}
 	case LogTargetStderr, "":
