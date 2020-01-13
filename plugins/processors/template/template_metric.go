@@ -1,8 +1,8 @@
 package template
 
 import (
-	"time"
 	"github.com/influxdata/telegraf"
+	"time"
 )
 
 type TemplateMetric struct {

@@ -1,10 +1,10 @@
 package template
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
-	"os"
-	"io/ioutil"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -22,7 +22,7 @@ func newMetric(name string, tags map[string]string, fields map[string]interface{
 	return m
 }
 
-func TestTagTemplateConcatenate(t *testing.T){
+func TestTagTemplateConcatenate(t *testing.T) {
 	tmp := TemplateProcessor{Tag: "topic", Template: "{{ index .Tags \"hostname\" }}.{{ index .Tags \"level\" }}"}
 
 	m1 := newMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug"}, nil)
@@ -31,11 +31,10 @@ func TestTagTemplateConcatenate(t *testing.T){
 	os.Stdout = w
 	result := tmp.Apply(m1)
 
-  
 	w.Close()
 	out, _ := ioutil.ReadAll(r)
 	os.Stdout = rescueStdout
-  
+
 	t.Logf("Captured: %s", out) // prints: Captured: Hello, playground
 	resultTaglist := result[0].TagList()
 
@@ -43,10 +42,10 @@ func TestTagTemplateConcatenate(t *testing.T){
 }
 
 func contains(s []*telegraf.Tag, name string, value string) bool {
-    for _, a := range s {
-        if a.Key == name && a.Value == value {
-            return true
-        }
-    }
-    return false
+	for _, a := range s {
+		if a.Key == name && a.Value == value {
+			return true
+		}
+	}
+	return false
 }
