@@ -26,6 +26,7 @@
 - [#6869](https://github.com/influxdata/telegraf/pull/6869): Calculate DB Name instead of GUID in physical_db_name in the sqlserver input.
 - [#6733](https://github.com/influxdata/telegraf/pull/6733): Add latency stats to mongo input.
 - [#6844](https://github.com/influxdata/telegraf/pull/6844): Add source and port tags to jenkins_job metrics.
+- [#6886](https://github.com/influxdata/telegraf/pull/6886): Add date offset and timezone options to date processor.
 
 #### Bugfixes
 
