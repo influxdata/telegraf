@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"net/url"
@@ -901,7 +900,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 		e.log.Debugf("Submitting job for %s: %d objects", res.name, len(pqs))
 		submitChunkJob(ctx, te, job, pqs)
 	}
-	
+
 
 	// Wait for background collection to finish
 	te.Wait()
@@ -985,7 +984,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	return nil
 }
 
-func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Duration) ([]types.PerfSampleInfo, []float64) {
+func (e *Endpoint) alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Duration) ([]types.PerfSampleInfo, []float64) {
 	rInfo := make([]types.PerfSampleInfo, 0, len(info))
 	rValues := make([]float64, 0, len(values))
 	bi := 1.0
@@ -994,7 +993,7 @@ func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Dur
 		// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
 		// data coming back with missing values. Take care of that gracefully!
 		if idx >= len(values) {
-			log.Printf("D! [inputs.vsphere] len(SampleInfo)>len(Value) %d > %d", len(info), len(values))
+			e.log.Debugf("len(SampleInfo)>len(Value) %d > %d during alignment", len(info), len(values))
 			break
 		}
 		v := float64(values[idx])
@@ -1073,7 +1072,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs queryChunk, res *resour
 			e.populateTags(&objectRef, resourceType, res, t, &v)
 
 			nValues := 0
-			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval)
+			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
 
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
