@@ -8,12 +8,10 @@ import (
 	"log"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/network_flow"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/network_flow/sflow"
 )
@@ -25,7 +23,6 @@ type setReadBufferer interface {
 type packetListener struct {
 	net.PacketConn
 	*Listener
-	network_flow.Resolver
 }
 
 func (psl *packetListener) listen() {
@@ -49,9 +46,7 @@ func (psl *packetListener) process(buf []byte) {
 
 	}
 	for _, m := range metrics {
-		psl.Resolver.Resolve(m, func(resolvedM telegraf.Metric) {
-			psl.AddMetric(resolvedM)
-		})
+		psl.AddMetric(m)
 	}
 }
 
@@ -60,14 +55,6 @@ type Listener struct {
 	ServiceAddress string        `toml:"service_address"`
 	ReadBufferSize internal.Size `toml:"read_buffer_size"`
 
-	SNMPCommunity     string `toml:"snmp_community"`
-	SNMPIfaceResolve  bool   `toml:"snmp_iface_resolve"`
-	SNMPIfaceCacheTTL int    `toml:"snmp_iface_cache_ttl"`
-
-	DNSFQDNResolve        bool   `toml:"dns_fqdn_resolve"`
-	DNSFQDNCacheTTL       int    `toml:"dns_fqdn_cache_ttl"`
-	DNSMultiNameProcessor string `toml:"dns_multi_name_processor"`
-
 	MaxFlowsPerSample      uint32 `toml:"max_flows_per_sample"`
 	MaxCountersPerSample   uint32 `toml:"max_counters_per_sample"`
 	MaxSamplesPerPacket    uint32 `toml:"max_samples_per_packet"`
@@ -75,7 +62,6 @@ type Listener struct {
 	MaxFlowHeaderLength    uint32 `toml:"max_flow_header_length"`
 	MaxCounterHeaderLength uint32 `toml:"max_counter_header_length"`
 
-	nameResolver network_flow.Resolver
 	parsers.Parser
 	telegraf.Accumulator
 	io.Closer
@@ -99,24 +85,6 @@ func (sl *Listener) SampleConfig() string {
 	## For datagram sockets, once the buffer fills up, metrics will start dropping.
 	## Defaults to the OS default.
 	# read_buffer_size = "64KiB"
-
-	# Whether IP addresses should be resolved to host names
-	# dns_fqdn_resolve = true
-
-	# How long should resolved IP->Hostnames be cached (in seconds)
-	# dns_fqdn_cache_ttl = 3600
-	
-	# Optional processing instructions for transforming DNS resolve host names
-	# dns_multi_name_processor = "s/(.*)(?:-net[0-9])/$1"
-
-	# Whether Interface Indexes should be resolved to Interface Names via SNMP
-	# snmp_iface_resolve = true
-	
-	# SNMP Community string to use when resolving Interface Names
-	# snmp_community = "public"
-
-	# How long should resolved Iface Index->Iface Name be cached (in seconds)
-	# snmp_iface_cache_ttl = 3600
 	`
 }
 
@@ -150,14 +118,7 @@ func (sl *Listener) getSflowConfig() sflow.V5FormatOptions {
 
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (sl *Listener) Start(acc telegraf.Accumulator) error {
-	dnsToResolve := map[string]string{
-		"agent_address": "agent_host",
-		"src_ip":        "src_host",
-		"dst_ip":        "dst_host",
-	}
 	sl.Accumulator = acc
-	sl.nameResolver = network_flow.NewAsyncResolver(sl.DNSFQDNResolve, time.Duration(sl.DNSFQDNCacheTTL)*time.Second, sl.DNSMultiNameProcessor, sl.SNMPIfaceResolve, time.Duration(sl.SNMPIfaceCacheTTL)*time.Second, sl.SNMPCommunity, "sflow", dnsToResolve)
-	sl.nameResolver.Start()
 
 	parser, err := sflow.NewParser("sflow", make(map[string]string), sl.getSflowConfig())
 	if err != nil {
@@ -190,7 +151,6 @@ func (sl *Listener) Start(acc telegraf.Accumulator) error {
 	psl := &packetListener{
 		PacketConn: pc,
 		Listener:   sl,
-		Resolver:   sl.nameResolver,
 	}
 
 	sl.Closer = psl
@@ -205,7 +165,6 @@ func (sl *Listener) Stop() {
 		sl.Close()
 		sl.Closer = nil
 	}
-	sl.nameResolver.Stop()
 }
 
 // newListener constructs a new vanilla, unconfigured, listener and returns it

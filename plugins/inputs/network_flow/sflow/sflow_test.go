@@ -106,10 +106,6 @@ func NOTTest_stochasicPacketGeneration(t *testing.T) {
 	sl.MaxCountersPerSample = 10
 	sl.MaxFlowsPerSample = 10
 	sl.MaxSamplesPerPacket = 10
-	sl.SNMPIfaceResolve = true
-	sl.DNSFQDNResolve = true
-	sl.SNMPIfaceCacheTTL = 2
-	sl.DNSFQDNCacheTTL = 2
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
