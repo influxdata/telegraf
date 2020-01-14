@@ -6,6 +6,9 @@
   renamed to `sqlserver_azure_db_resource_stats` due to an issue where numeric
   metrics were previously being reported incorrectly as strings.
 
+- The `date` processor now uses the UTC timezone when creating its tag.  In
+  previous versions the local time was used.
+
 #### New Outputs
 
 - [warp10](/plugins/outputs/warp10/README.md) - Contributed by @aurrelhebert
