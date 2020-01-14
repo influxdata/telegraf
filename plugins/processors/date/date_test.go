@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func MustMetric(name string, tags map[string]string, fields map[string]interface{}, metricTime time.Time) telegraf.Metric {
@@ -27,6 +28,8 @@ func TestMonthTag(t *testing.T) {
 		TagKey:     "month",
 		DateFormat: "Jan",
 	}
+	err := dateFormatMonth.Init()
+	require.NoError(t, err)
 
 	currentTime := time.Now()
 	month := currentTime.Format("Jan")
@@ -45,6 +48,10 @@ func TestYearTag(t *testing.T) {
 		TagKey:     "year",
 		DateFormat: "2006",
 	}
+
+	err := dateFormatYear.Init()
+	require.NoError(t, err)
+
 	currentTime := time.Now()
 	year := currentTime.Format("2006")
 
@@ -63,6 +70,9 @@ func TestOldDateTag(t *testing.T) {
 		DateFormat: "2006",
 	}
 
+	err := dateFormatYear.Init()
+	require.NoError(t, err)
+
 	m7 := MustMetric("foo", nil, nil, time.Date(1993, 05, 27, 0, 0, 0, 0, time.UTC))
 	customDateApply := dateFormatYear.Apply(m7)
 	assert.Equal(t, map[string]string{"year": "1993"}, customDateApply[0].Tags(), "should add tag 'year'")
@@ -74,6 +84,9 @@ func TestDateOffset(t *testing.T) {
 		DateFormat: "15",
 		DateOffset: internal.Duration{Duration: 2 * time.Hour},
 	}
+
+	err := plugin.Init()
+	require.NoError(t, err)
 
 	metric := testutil.MustMetric(
 		"cpu",
