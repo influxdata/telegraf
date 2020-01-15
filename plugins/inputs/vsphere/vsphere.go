@@ -195,11 +195,6 @@ var sampleConfig = `
   # collect_concurrency = 1
   # discover_concurrency = 1
 
-  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
-  ## when true for large environments this may cause errors for time elapsed while collecting metrics
-  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
-  # force_discover_on_init = false
-
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
 
@@ -247,6 +242,11 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 	v.Log.Info("Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
+
+	// Check for deprecated settings
+	if !v.ForceDiscoverOnInit {
+		v.Log.Warn("The 'force_discover_on_init' configuration parameter has been deprecated. Setting it to 'false' has no effect")
+	}
 
 	// Create endpoints, one for each vCenter we're monitoring
 	v.endpoints = make([]*Endpoint, len(v.Vcenters))
@@ -344,7 +344,7 @@ func init() {
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
-			ForceDiscoverOnInit:     false,
+			ForceDiscoverOnInit:     true,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 60},
 		}

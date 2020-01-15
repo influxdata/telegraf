@@ -286,20 +286,8 @@ func (e *Endpoint) init(ctx context.Context) error {
 	}
 
 	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
-
-		// Run an initial discovery. If force_discovery_on_init isn't set, we kick it off as a
-		// goroutine without waiting for it. This will probably cause us to report an empty
-		// dataset on the first collection, but it solves the issue of the first collection timing out.
-		if e.Parent.ForceDiscoverOnInit {
-			e.Parent.Log.Debug("Running initial discovery and waiting for it to finish")
-			e.initalDiscovery(ctx)
-		} else {
-			// Otherwise, just run it in the background. We'll probably have an incomplete first metric
-			// collection this way.
-			go func() {
-				e.initalDiscovery(ctx)
-			}()
-		}
+		e.Parent.Log.Debug("Running initial discovery")
+		e.initalDiscovery(ctx)
 	}
 	e.initialized = true
 	return nil
