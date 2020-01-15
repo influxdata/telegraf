@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/api"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -28,7 +27,7 @@ type Consul struct {
 
 var sampleConfig = `
   ## Consul server address
-  # address = "localhost"
+  # address = "localhost:8500"
 
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
