@@ -12,7 +12,7 @@ func TestTagTemplateConcatenate(t *testing.T) {
 	now := time.Now()
 
 	// Create Template processor
-	tmp := TemplateProcessor{Tag: "topic", Template: "{{.Tag \"hostname\"}}.{{ .Tag \"level\" }}"}
+	tmp := TemplateProcessor{Tag: "topic", Template: `{{.Tag "hostname"}}.{{ .Tag "level" }}`}
 	// manually init
 	err := tmp.Init()
 
