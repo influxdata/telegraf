@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
@@ -19,6 +20,8 @@ var ValidTopicSuffixMethods = []string{
 	"measurement",
 	"tags",
 }
+
+var zeroTime = time.Unix(0, 0)
 
 type (
 	Kafka struct {
@@ -323,9 +326,13 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		}
 
 		m := &sarama.ProducerMessage{
-			Topic:     k.GetTopicName(metric),
-			Value:     sarama.ByteEncoder(buf),
-			Timestamp: metric.Time(),
+			Topic: k.GetTopicName(metric),
+			Value: sarama.ByteEncoder(buf),
+		}
+
+		// Negative timestamps are not allowed by the Kafka protocol.
+		if !metric.Time().Before(zeroTime) {
+			m.Timestamp = metric.Time()
 		}
 
 		key, err := k.routingKey(metric)
