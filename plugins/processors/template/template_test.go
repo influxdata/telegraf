@@ -1,8 +1,6 @@
 package template
 
 import (
-	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 
@@ -23,23 +21,24 @@ func newMetric(name string, tags map[string]string, fields map[string]interface{
 }
 
 func TestTagTemplateConcatenate(t *testing.T) {
-	tmp := TemplateProcessor{Tag: "topic", Template: "{{ index .Tags \"hostname\" }}.{{ index .Tags \"level\" }}"}
+	// Create Template processor
+	tmp := TemplateProcessor{Tag: "topic", Template: "{{.Tag \"hostname\"}}.{{ .Tag \"level\" }}"}
+	// manually init
+	err := tmp.Init()
 
-	tmp.Init()
+	if err != nil {
+		panic(err)
+	}
 
+	// test metric
 	m1 := newMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug"}, nil)
-	rescueStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+
+	// act
 	result := tmp.Apply(m1)
 
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = rescueStdout
-
-	t.Logf("Captured: %s", out) // prints: Captured: Hello, playground
+	// assert
 	resultTaglist := result[0].TagList()
-
+	
 	assert.True(t, contains(resultTaglist, "topic", "localhost.debug"))
 }
 

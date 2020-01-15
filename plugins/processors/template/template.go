@@ -25,10 +25,10 @@ func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// for each metric in "in" array
 	for _, metric := range in {
 		var b strings.Builder
-		//newM := TemplateMetric{metric}
+		newM := TemplateMetric{metric}
 
 		// supply TemplateMetric and Template from configuration to Template.Execute
-		err := r.tmpl.Execute(&b, metric)
+		err := r.tmpl.Execute(&b, &newM)
 		if err != nil {
 			panic(err)
 		}

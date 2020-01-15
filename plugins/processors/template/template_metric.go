@@ -14,7 +14,8 @@ func (m *TemplateMetric) Measurement() string {
 }
 
 func (m *TemplateMetric) Tag(key string) string {
-	return m.Tag(key)
+	tagString, _ := m.metric.GetTag(key)
+	return tagString
 }
 
 func (m *TemplateMetric) Field(key string) interface{} {
