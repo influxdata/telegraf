@@ -1,5 +1,18 @@
 ## v1.14 [unreleased]
 
+#### Release Notes
+
+- In the `sqlserver` input, the `sqlserver_azurestats` measurement has been
+  renamed to `sqlserver_azure_db_resource_stats` due to an issue where numeric
+  metrics were previously being reported incorrectly as strings.
+
+- The `date` processor now uses the UTC timezone when creating its tag.  In
+  previous versions the local time was used.
+
+#### New Outputs
+
+- [warp10](/plugins/outputs/warp10/README.md) - Contributed by @aurrelhebert
+
 #### Features
 
 - [#6730](https://github.com/influxdata/telegraf/pull/6730): Add page_faults for mongodb wired tiger.
@@ -8,8 +21,29 @@
 - [#6770](https://github.com/influxdata/telegraf/pull/6770): Expose unbound-control config file option.
 - [#6508](https://github.com/influxdata/telegraf/pull/6508): Add support for new nginx plus api endpoints.
 - [#6342](https://github.com/influxdata/telegraf/pull/6342): Add kafka SASL version control to support Azure Event Hub.
+- [#6869](https://github.com/influxdata/telegraf/pull/6869): Add RBPEX IO statistics to DatabaseIO query in sqlserver input.
+- [#6869](https://github.com/influxdata/telegraf/pull/6869): Add space on disk for each file to DatabaseIO query in the sqlserver input.
+- [#6869](https://github.com/influxdata/telegraf/pull/6869): Calculate DB Name instead of GUID in physical_db_name in the sqlserver input.
+- [#6733](https://github.com/influxdata/telegraf/pull/6733): Add latency stats to mongo input.
+- [#6844](https://github.com/influxdata/telegraf/pull/6844): Add source and port tags to jenkins_job metrics.
+- [#6886](https://github.com/influxdata/telegraf/pull/6886): Add date offset and timezone options to date processor.
 
-## v1.13.1 [unreleased]
+#### Bugfixes
+
+- [#6397](https://github.com/influxdata/telegraf/issues/6397): Fix conversion to floats in AzureDBResourceStats query in the sqlserver input.
+- [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
+
+## v1.13.2 [unreleased]
+
+#### Bugfixes
+
+- [#2652](https://github.com/influxdata/telegraf/issues/2652): Warn without error when processes input is started on Windows.
+- [#6890](https://github.com/influxdata/telegraf/issues/6890): Only parse certificate blocks in x509_cert input.
+- [#6883](https://github.com/influxdata/telegraf/issues/6883): Add custom attributes for all resource types in vsphere input.
+- [#6899](https://github.com/influxdata/telegraf/pull/6899): Fix URL agent address form with udp in snmp input.
+- [#6619](https://github.com/influxdata/telegraf/issues/6619): Change logic to allow recording of device fields when attributes is false.
+
+## v1.13.1 [2020-01-08]
 
 #### Bugfixes
 
@@ -20,6 +54,9 @@
 - [#6679](https://github.com/influxdata/telegraf/issues/6679): Encode query hash fields as hex strings in sqlserver input.
 - [#6345](https://github.com/influxdata/telegraf/issues/6345): Invalidate diskio cache if the metadata mtime has changed.
 - [#6800](https://github.com/influxdata/telegraf/issues/6800): Show platform not supported warning only on plugin creation.
+- [#6814](https://github.com/influxdata/telegraf/issues/6814): Fix rabbitmq cannot complete gather after request error.
+- [#6846](https://github.com/influxdata/telegraf/issues/6846): Fix /sbin/init --version executed on Telegraf startup.
+- [#6847](https://github.com/influxdata/telegraf/issues/6847): Use last path element as field key if path fully specified in cisco_telemetry_gnmi input.
 
 ## v1.13 [2019-12-12]
 

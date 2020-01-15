@@ -83,7 +83,7 @@ type metricEntry struct {
 	fields map[string]interface{}
 }
 
-type objectMap map[string]objectRef
+type objectMap map[string]*objectRef
 
 type objectRef struct {
 	name         string
@@ -99,7 +99,7 @@ type objectRef struct {
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
 	if pKind, ok := e.resourceKinds[res.parent]; ok {
 		if p, ok := pKind.objects[obj.parentRef.Value]; ok {
-			return &p, true
+			return p, true
 		}
 	}
 	return nil, false
@@ -290,20 +290,8 @@ func (e *Endpoint) init(ctx context.Context) error {
 	}
 
 	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
-
-		// Run an initial discovery. If force_discovery_on_init isn't set, we kick it off as a
-		// goroutine without waiting for it. This will probably cause us to report an empty
-		// dataset on the first collection, but it solves the issue of the first collection timing out.
-		if e.Parent.ForceDiscoverOnInit {
-			e.Parent.Log.Debug("Running initial discovery and waiting for it to finish")
-			e.initalDiscovery(ctx)
-		} else {
-			// Otherwise, just run it in the background. We'll probably have an incomplete first metric
-			// collection this way.
-			go func() {
-				e.initalDiscovery(ctx)
-			}()
-		}
+		e.Parent.Log.Debug("Running initial discovery")
+		e.initalDiscovery(ctx)
 	}
 	e.initialized = true
 	return nil
@@ -326,7 +314,7 @@ func (e *Endpoint) getMetricNameMap(ctx context.Context) (map[int32]string, erro
 	return names, nil
 }
 
-func (e *Endpoint) getMetadata(ctx context.Context, obj objectRef, sampling int32) (performance.MetricList, error) {
+func (e *Endpoint) getMetadata(ctx context.Context, obj *objectRef, sampling int32) (performance.MetricList, error) {
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return nil, err
@@ -524,7 +512,7 @@ func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res
 func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind, objects objectMap, metricNames map[int32]string) {
 	// We're only going to get metadata from maxMetadataSamples resources. If we have
 	// more resources than that, we pick maxMetadataSamples samples at random.
-	sampledObjects := make([]objectRef, len(objects))
+	sampledObjects := make([]*objectRef, len(objects))
 	i := 0
 	for _, obj := range objects {
 		sampledObjects[i] = obj
@@ -545,7 +533,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	instInfoMux := sync.Mutex{}
 	te := NewThrottledExecutor(e.Parent.DiscoverConcurrency)
 	for _, obj := range sampledObjects {
-		func(obj objectRef) {
+		func(obj *objectRef) {
 			te.Run(ctx, func() {
 				metrics, err := e.getMetadata(ctx, obj, res.sampling)
 				if err != nil {
@@ -589,9 +577,13 @@ func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (o
 	}
 	m := make(objectMap, len(resources))
 	for _, r := range resources {
-		key := r.ExtensibleManagedObject.Reference().Value
-		m[key] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, dcname: r.Name}
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Parent,
+			dcname:       r.Name,
+			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+		}
 	}
 	return m, nil
 }
@@ -632,8 +624,12 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 					cache[r.Parent.Value] = p
 				}
 			}
-			m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-				name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: p}
+			m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+				name:         r.Name,
+				ref:          r.ExtensibleManagedObject.Reference(),
+				parentRef:    p,
+				customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			}
 			return nil
 		}()
 		if err != nil {
@@ -652,8 +648,12 @@ func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectM
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Parent,
+			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+		}
 	}
 	return m, nil
 }
@@ -718,30 +718,13 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			guest = cleanGuestID(r.Config.GuestId)
 			uuid = r.Config.Uuid
 		}
-		cvs := make(map[string]string)
-		if e.customAttrEnabled {
-			for _, cv := range r.Summary.CustomValue {
-				val := cv.(*types.CustomFieldStringValue)
-				if val.Value == "" {
-					continue
-				}
-				key, ok := e.customFields[val.Key]
-				if !ok {
-					e.Parent.Log.Warnf("Metadata for custom field %d not found. Skipping", val.Key)
-					continue
-				}
-				if e.customAttrFilter.Match(key) {
-					cvs[key] = val.Value
-				}
-			}
-		}
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Runtime.Host,
 			guest:        guest,
 			altID:        uuid,
-			customValues: cvs,
+			customValues: e.loadCustomAttributes(&r.ManagedEntity),
 			lookup:       lookup,
 		}
 	}
@@ -765,10 +748,38 @@ func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (ob
 				lunId = info.Url
 			}
 		}
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, altID: lunId}
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+			name:         r.Name,
+			ref:          r.ExtensibleManagedObject.Reference(),
+			parentRef:    r.Parent,
+			altID:        lunId,
+			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+		}
 	}
 	return m, nil
+}
+
+func (e *Endpoint) loadCustomAttributes(entity *mo.ManagedEntity) map[string]string {
+	if !e.customAttrEnabled {
+		return map[string]string{}
+	}
+	cvs := make(map[string]string)
+	for _, v := range entity.CustomValue {
+		cv, ok := v.(*types.CustomFieldStringValue)
+		if !ok {
+			e.Parent.Log.Warnf("Metadata for custom field %d not of string type. Skipping", cv.Key)
+			continue
+		}
+		key, ok := e.customFields[cv.Key]
+		if !ok {
+			e.Parent.Log.Warnf("Metadata for custom field %d not found. Skipping", cv.Key)
+			continue
+		}
+		if e.customAttrFilter.Match(key) {
+			cvs[key] = cv.Value
+		}
+	}
+	return cvs
 }
 
 // Close shuts down an Endpoint and releases any resources associated with it.
@@ -1080,7 +1091,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				e.Parent.Log.Errorf("MOID %s not found in cache. Skipping", moid)
 				continue
 			}
-			e.populateTags(&objectRef, resourceType, res, t, &v)
+			e.populateTags(objectRef, resourceType, res, t, &v)
 
 			nValues := 0
 			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval)
