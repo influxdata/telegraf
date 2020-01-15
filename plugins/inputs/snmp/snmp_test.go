@@ -232,7 +232,7 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
-		Agents:    []string{"1.2.3.4:567", "1.2.3.4"},
+		Agents:    []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
 		Timeout:   internal.Duration{Duration: 3 * time.Second},
 		Retries:   4,
 		Version:   2,
@@ -254,6 +254,13 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	require.NoError(t, err)
 	gs = gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
+	assert.EqualValues(t, 161, gs.Port)
+	assert.Equal(t, "udp", gs.Transport)
+
+	gsc, err = s.getConnection(2)
+	require.NoError(t, err)
+	gs = gsc.(gosnmpWrapper)
+	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
 }
