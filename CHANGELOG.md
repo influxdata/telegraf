@@ -40,6 +40,7 @@
 - [#2652](https://github.com/influxdata/telegraf/issues/2652): Warn without error when processes input is started on Windows.
 - [#6890](https://github.com/influxdata/telegraf/issues/6890): Only parse certificate blocks in x509_cert input.
 - [#6883](https://github.com/influxdata/telegraf/issues/6883): Add custom attributes for all resource types in vsphere input.
+- [#6899](https://github.com/influxdata/telegraf/pull/6899): Fix URL agent address form with udp in snmp input.
 
 ## v1.13.1 [2020-01-08]
 
