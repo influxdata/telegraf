@@ -42,6 +42,7 @@
 - [#6883](https://github.com/influxdata/telegraf/issues/6883): Add custom attributes for all resource types in vsphere input.
 - [#6899](https://github.com/influxdata/telegraf/pull/6899): Fix URL agent address form with udp in snmp input.
 - [#6619](https://github.com/influxdata/telegraf/issues/6619): Change logic to allow recording of device fields when attributes is false.
+- [#6903](https://github.com/influxdata/telegraf/issues/6903): Do not add invalid timestamps to kafka messages.
 
 ## v1.13.1 [2020-01-08]
 
