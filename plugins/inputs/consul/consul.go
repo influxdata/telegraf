@@ -28,7 +28,7 @@ type Consul struct {
 
 var sampleConfig = `
   ## Consul server address
-  # address = "localhost"
+  # address = "localhost:8500"
 
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
