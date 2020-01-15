@@ -5,22 +5,12 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
+	"github.com/influxdata/telegraf/testutil"
 )
 
-func newMetric(name string, tags map[string]string, fields map[string]interface{}) telegraf.Metric {
-	if tags == nil {
-		tags = map[string]string{}
-	}
-	if fields == nil {
-		fields = map[string]interface{}{}
-	}
-	m, _ := metric.New(name, tags, fields, time.Now())
-	return m
-}
-
 func TestTagTemplateConcatenate(t *testing.T) {
+	now := time.Now()
+
 	// Create Template processor
 	tmp := TemplateProcessor{Tag: "topic", Template: "{{.Tag \"hostname\"}}.{{ .Tag \"level\" }}"}
 	// manually init
@@ -30,23 +20,13 @@ func TestTagTemplateConcatenate(t *testing.T) {
 		panic(err)
 	}
 
-	// test metric
-	m1 := newMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug"}, nil)
+	// create metric for testing
+	input := []telegraf.Metric{testutil.MustMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug"}, nil, now)}
 
 	// act
-	result := tmp.Apply(m1)
+	actual := tmp.Apply(input[0])
 
 	// assert
-	resultTaglist := result[0].TagList()
-	
-	assert.True(t, contains(resultTaglist, "topic", "localhost.debug"))
-}
-
-func contains(s []*telegraf.Tag, name string, value string) bool {
-	for _, a := range s {
-		if a.Key == name && a.Value == value {
-			return true
-		}
-	}
-	return false
+	expected := []telegraf.Metric{testutil.MustMetric("Tags", map[string]string{"hostname": "localhost", "level": "debug", "topic": "localhost.debug"}, nil, now)}
+	testutil.RequireMetricsEqual(t, expected, actual)
 }

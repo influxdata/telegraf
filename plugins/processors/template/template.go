@@ -35,9 +35,6 @@ func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 		metric.AddTag(r.Tag, b.String())
 	}
-
-	// convert/wrap metric in TemplateMetric
-	// convert TemplateMetric back to metric?
 	return in
 }
 
