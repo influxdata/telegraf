@@ -6,7 +6,7 @@ Ceph has introduced a Telegraf and Influx plugin in the 13.x Mimic release. The 
 
 *Admin Socket Stats*
 
-This gatherer works by scanning the configured SocketDir for OSD and MON socket files.  When it finds
+This gatherer works by scanning the configured SocketDir for OSD, MON, MDS and RGW socket files.  When it finds
 a MON socket, it runs **ceph --admin-daemon $file perfcounters_dump**. For OSDs it runs **ceph --admin-daemon $file perf dump**
 
 The resulting JSON is parsed and grouped into collections, based on top-level key.  Top-level keys are
@@ -62,6 +62,8 @@ the cluster.  The currently supported commands are:
   ## prefix of MON and OSD socket files, used to determine socket type
   mon_prefix = "ceph-mon"
   osd_prefix = "ceph-osd"
+  mds_prefix = "ceph-mds"
+  rgw_prefix = "ceph-client"
 
   ## suffix used to identify socket files
   socket_suffix = "asok"
@@ -95,7 +97,7 @@ All fields are collected under the **ceph** measurement and stored as float64s. 
 
 All admin measurements will have the following tags:
 
-- type: either 'osd' or 'mon' to indicate which type of node was queried
+- type: either 'osd', 'mon', 'mds' or 'rgw' to indicate which type of node was queried
 - id: a unique string identifier, parsed from the socket file name for the node
 - collection: the top-level key under which these fields were reported. Possible values are:
   - for MON nodes:
@@ -133,6 +135,37 @@ All admin measurements will have the following tags:
     - throttle-objecter_ops
     - throttle-osd_client_bytes
     - throttle-osd_client_messages
+  - for MDS nodes:
+    - AsyncMessenger::Worker-0
+    - AsyncMessenger::Worker-1
+    - AsyncMessenger::Worker-2
+    - finisher-PurgeQueue
+    - mds
+    - mds_cache
+    - mds_log
+    - mds_mem
+    - mds_server
+    - mds_sessions
+    - objecter
+    - purge_queue
+    - throttle-msgr_dispatch_throttler-mds
+    - throttle-objecter_bytes
+    - throttle-objecter_ops
+    - throttle-write_buf_throttle
+  - for RGW nodes:
+    - AsyncMessenger::Worker-0
+    - AsyncMessenger::Worker-1
+    - AsyncMessenger::Worker-2
+    - cct
+    - finisher-radosclient
+    - mempool
+    - objecter
+    - rgw
+    - simple-throttler
+    - throttle-msgr_dispatch_throttler-radosclient
+    - throttle-objecter_bytes
+    - throttle-objecter_ops
+    - throttle-rgw_async_rados_ops
 
 *Cluster Stats*
 
