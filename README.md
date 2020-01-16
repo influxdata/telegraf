@@ -50,17 +50,17 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.12 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.12 or newer, the Makefile requires GNU make.
 
 1. [Install Go](https://golang.org/doc/install) >=1.12 (1.13 recommended)
-2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
-3. Download Telegraf source:
+2. Clone the Telegraf repository:
    ```
-   go get -d github.com/influxdata/telegraf
+   cd ~/src
+   git clone https://github.com/influxdata/telegraf.git
    ```
-4. Run make from the source directory
+3. Run `make` from the source directory
    ```
-   cd "$HOME/go/src/github.com/influxdata/telegraf"
+   cd ~/src/telegraf
    make
    ```
 
