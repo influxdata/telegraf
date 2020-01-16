@@ -89,7 +89,6 @@
   revision = "7c3c4763a6ee6a4d624fe133135dc3a7c483111c"
 
 [[projects]]
-  branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
   packages = [
