@@ -2,7 +2,8 @@ version: "{build}"
 
 cache:
  - C:\gopath\pkg\mod -> go.sum
- - C:\Users\appveyor\AppData\Local\Temp\chocolatey\ -> appveyor.yml
+ - C:\ProgramData\chocolatey\bin -> appveyor.yml
+ - C:\ProgramData\chocolatey\lib -> appveyor.yml
 
 clone_folder: C:\gopath\src\github.com\influxdata\telegraf
 
