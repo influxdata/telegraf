@@ -27,6 +27,7 @@
 - [#6733](https://github.com/influxdata/telegraf/pull/6733): Add latency stats to mongo input.
 - [#6844](https://github.com/influxdata/telegraf/pull/6844): Add source and port tags to jenkins_job metrics.
 - [#6886](https://github.com/influxdata/telegraf/pull/6886): Add date offset and timezone options to date processor.
+- [#6859](https://github.com/influxdata/telegraf/pull/6859): Exclude resources by inventory path in vsphere input.
 
 #### Bugfixes
 
