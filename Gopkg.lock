@@ -81,6 +81,14 @@
   version = "v13.3.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:005d83d9daaea4e3fc7b2eedf28f68ebf87df7d331a874e5d7d14f643467e7d9"
+  name = "github.com/Mellanox/rdmamap"
+  packages = ["."]
+  pruneopts = ""
+  revision = "7c3c4763a6ee6a4d624fe133135dc3a7c483111c"
+
+[[projects]]
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
   packages = [
@@ -1197,7 +1205,10 @@
 [[projects]]
   digest = "1:026b6ceaabbacaa147e94a63579efc3d3c73e00c73b67fa5c43ab46191ed04eb"
   name = "github.com/vishvananda/netlink"
-  packages = ["nl"]
+  packages = [
+    ".",
+    "nl",
+  ]
   pruneopts = ""
   revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
 
@@ -1712,6 +1723,7 @@
     "github.com/Azure/azure-storage-queue-go/azqueue",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
+    "github.com/Mellanox/rdmamap",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",
     "github.com/Shopify/sarama",
     "github.com/StackExchange/wmi",
