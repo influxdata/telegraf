@@ -12,10 +12,12 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string `toml:"servers"`
-	QueryVersion int      `toml:"query_version"`
-	AzureDB      bool     `toml:"azuredb"`
-	ExcludeQuery []string `toml:"exclude_query"`
+	Servers       []string `toml:"servers"`
+	QueryVersion  int      `toml:"query_version"`
+	AzureDB       bool     `toml:"azuredb"`
+	ExcludeQuery  []string `toml:"exclude_query"`
+	queries       MapQuery
+	isInitialized bool
 }
 
 // Query struct
@@ -28,20 +30,16 @@ type Query struct {
 // MapQuery type
 type MapQuery map[string]Query
 
-var queries MapQuery
+const defaultServer = "Server=.;app name=telegraf;log=1;"
 
-// Initialized flag
-var isInitialized = false
-
-var defaultServer = "Server=.;app name=telegraf;log=1;"
-
-var sampleConfig = `
+const sampleConfig = `
   ## Specify instances to monitor with a list of connection strings.
   ## All connection parameters are optional.
   ## By default, the host is localhost, listening on default port, TCP 1433.
   ##   for Windows, the user is the currently running AD user (SSO).
   ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-  ##   parameters.
+  ##   parameters, in particular, tls connections can be created like so:
+  ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
   # servers = [
   #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
   # ]
@@ -70,6 +68,7 @@ var sampleConfig = `
   ## - AzureDBResourceStats
   ## - AzureDBResourceGovernance
   ## - SqlRequests
+  ## - ServerProperties
   exclude_query = [ 'Schedulers' ]
 `
 
@@ -88,8 +87,8 @@ type scanner interface {
 }
 
 func initQueries(s *SQLServer) {
-	queries = make(MapQuery)
-
+	s.queries = make(MapQuery)
+	queries := s.queries
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
 		queries["AzureDBResourceStats"] = Query{Script: sqlAzureDBResourceStats, ResultByRow: false}
@@ -123,12 +122,12 @@ func initQueries(s *SQLServer) {
 	}
 
 	// Set a flag so we know that queries have already been initialized
-	isInitialized = true
+	s.isInitialized = true
 }
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
-	if !isInitialized {
+	if !s.isInitialized {
 		initQueries(s)
 	}
 
@@ -139,7 +138,7 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	for _, serv := range s.Servers {
-		for _, query := range queries {
+		for _, query := range s.queries {
 			wg.Add(1)
 			go func(serv string, query Query) {
 				defer wg.Done()
@@ -433,8 +432,9 @@ IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
 			NULL AS available_storage_mb,  -- Can we find out storage?
 			NULL as uptime
 	FROM	 sys.databases d   
-			JOIN sys.database_service_objectives slo    
-			ON d.database_id = slo.database_id
+		-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
+		CROSS JOIN sys.database_service_objectives slo
+		WHERE d.name = DB_NAME() AND slo.database_id = DB_ID()
 
 ELSE
 BEGIN
@@ -591,11 +591,16 @@ WHERE	(
 				'Background Writer pages/sec',
 				'Percent Log Used',
 				'Log Send Queue KB',
-				'Redo Queue KB'
+				'Redo Queue KB',
+				'Mirrored Write Transactions/sec',
+				'Group Commit Time',
+				'Group Commits/sec'
 			)
 		) OR (
 			object_name LIKE '%User Settable%'
 			OR object_name LIKE '%SQL Errors%'
+		) OR (
+			object_name LIKE 'SQLServer:Batch Resp Statistics%'
 		) OR (
 			instance_name IN ('_Total')
 			AND counter_name IN (
@@ -1302,7 +1307,7 @@ const sqlAzureDBResourceGovernance string = `
 IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
   'sqlserver_db_resource_governance' AS [measurement],
-   @@servername AS [sql_instance],
+   REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
    DB_NAME() as [database_name],
    slo_name,
 	dtu_limit,
@@ -1341,7 +1346,7 @@ BEGIN
         IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
          SELECT
            'sqlserver_instance_resource_governance' AS [measurement],
-           @@SERVERNAME AS [sql_instance],
+           REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
            instance_cap_cpu,
            instance_max_log_rate,
            instance_max_worker_threads,
@@ -1364,7 +1369,7 @@ SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHE
 create index ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
 SELECT	
    'sqlserver_requests' AS [measurement],
-    @@servername AS [sql_instance],
+    REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
     DB_NAME() as [database_name],
 	r.session_id
 	, r.request_id
@@ -1403,8 +1408,8 @@ SELECT
 	, qt.objectid
 	, QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + '.' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
 	, DB_NAME(qt.dbid) stmt_db_name
-	, r.query_hash
-	, r.query_plan_hash
+	,CONVERT(varchar(20),[query_hash],1) as [query_hash]
+	,CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
 	FROM	sys.dm_exec_requests r
 		LEFT OUTER JOIN sys.dm_exec_sessions s ON (s.session_id = r.session_id)
 		OUTER APPLY sys.dm_exec_sql_text(sql_handle) AS qt

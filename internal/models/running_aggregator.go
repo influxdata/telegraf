@@ -24,10 +24,14 @@ type RunningAggregator struct {
 }
 
 func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConfig) *RunningAggregator {
+	tags := map[string]string{"aggregator": config.Name}
+	if config.Alias != "" {
+		tags["alias"] = config.Alias
+	}
+
 	logger := &Logger{
 		Name: logName("aggregators", config.Name, config.Alias),
-		Errs: selfstat.Register("aggregate", "errors",
-			map[string]string{"input": config.Name, "alias": config.Alias}),
+		Errs: selfstat.Register("aggregate", "errors", tags),
 	}
 
 	setLogIfExist(aggregator, logger)
@@ -38,22 +42,22 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 		MetricsPushed: selfstat.Register(
 			"aggregate",
 			"metrics_pushed",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		MetricsFiltered: selfstat.Register(
 			"aggregate",
 			"metrics_filtered",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		MetricsDropped: selfstat.Register(
 			"aggregate",
 			"metrics_dropped",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		PushTime: selfstat.Register(
 			"aggregate",
 			"push_time_ns",
-			map[string]string{"aggregator": config.Name, "alias": config.Alias},
+			tags,
 		),
 		log: logger,
 	}
@@ -144,7 +148,7 @@ func (r *RunningAggregator) Add(m telegraf.Metric) bool {
 	defer r.Unlock()
 
 	if m.Time().Before(r.periodStart.Add(-r.Config.Grace)) || m.Time().After(r.periodEnd.Add(r.Config.Delay)) {
-		r.log.Debugf("metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
+		r.log.Debugf("Metric is outside aggregation window; discarding. %s: m: %s e: %s g: %s",
 			m.Time(), r.periodStart, r.periodEnd, r.Config.Grace)
 		r.MetricsDropped.Incr(1)
 		return r.Config.DropOriginal

@@ -88,7 +88,7 @@
 
 [[constraint]]
   name = "github.com/kardianos/service"
-  branch = "master"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/kballard/go-shellquote"
@@ -100,11 +100,11 @@
 
 [[constraint]]
   name = "github.com/Microsoft/ApplicationInsights-Go"
-  branch = "master"
+  version = "0.4.2"
 
 [[constraint]]
   name = "github.com/miekg/dns"
-  version = "1.0.8"
+  version = "1.0.10"
 
 [[constraint]]
   name = "github.com/multiplay/go-ts3"
@@ -139,20 +139,20 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/satori/go.uuid"
-  version = "1.2.0"
+  name = "github.com/gofrs/uuid"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.12"
+  version = "2.19.7"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  version = "1.18.0"
+  version = "1.24.0"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
-  branch = "master"
+  version = "1.22.0"
 
 [[constraint]]
   name = "github.com/StackExchange/wmi"
@@ -201,10 +201,6 @@
   version = "3.0.5"
 
 [[constraint]]
-  name = "gopkg.in/ldap.v2"
-  version = "2.5.1"
-
-[[constraint]]
   name = "gopkg.in/mgo.v2"
   branch = "v2"
 
@@ -222,7 +218,7 @@
 
 [[constraint]]
   name = "github.com/mdlayher/apcupsd"
-  revision = "2fe55d9e1d0704d3c6f03f69a1fd9ebe2aef9df1"
+  revision = "eb3dd99a75fe58389e357b732691320dcf706b5f"
 
 [[constraint]]
   branch = "master"
@@ -234,7 +230,11 @@
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "10.12.0"
+  version = "^13.0.0"
+
+[[constraint]]
+  name = "github.com/Azure/azure-storage-queue-go"
+  version = "0.2.0"
 
 [[constraint]]
   branch = "master"
@@ -255,7 +255,7 @@
 
 [[constraint]]
   name = "github.com/karrick/godirwalk"
-  version = "1.7.5"
+  version = "1.10"
 
 [[override]]
   name = "github.com/harlow/kinesis-consumer"
@@ -296,3 +296,15 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  name = "gopkg.in/ldap.v3"
+  version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/safchain/ethtool"
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[override]]
+  name = "github.com/satori/go.uuid"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"

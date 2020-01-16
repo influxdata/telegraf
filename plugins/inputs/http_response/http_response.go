@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -33,6 +32,8 @@ type HTTPResponse struct {
 	ResponseStringMatch string
 	Interface           string
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
 	client              *http.Client
@@ -141,7 +142,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 
 	if h.FollowRedirects == false {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return ErrRedirectAttempted
+			return http.ErrUseLastResponse
 		}
 	}
 	return client, nil
@@ -242,7 +243,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
 		// Log error
-		log.Printf("D! Network error while polling %s: %s", u, err.Error())
+		h.Log.Debugf("Network error while polling %s: %s", u, err.Error())
 
 		// Get error details
 		netErr := setError(err, fields, tags)
@@ -254,16 +255,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 
 		// Any error not recognized by `set_error` is considered a "connection_failed"
 		setResult("connection_failed", fields, tags)
-
-		// If the error is a redirect we continue processing and log the HTTP code
-		urlError, isUrlError := err.(*url.Error)
-		if !h.FollowRedirects && isUrlError && urlError.Err == ErrRedirectAttempted {
-			err = nil
-		} else {
-			// If the error isn't a timeout or a redirect stop
-			// processing the request
-			return fields, tags, nil
-		}
+		return fields, tags, nil
 	}
 
 	if _, ok := fields["response_time"]; !ok {
@@ -280,7 +272,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("D! Failed to read body of HTTP Response : %s", err)
+		h.Log.Debugf("Failed to read body of HTTP Response : %s", err.Error())
 		setResult("body_read_error", fields, tags)
 		fields["content_length"] = len(bodyBytes)
 		if h.ResponseStringMatch != "" {
@@ -331,7 +323,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		if h.Address == "" {
 			h.URLs = []string{"http://localhost"}
 		} else {
-			log.Printf("W! [inputs.http_response] 'address' deprecated in telegraf 1.12, please use 'urls'")
+			h.Log.Warn("'address' deprecated in telegraf 1.12, please use 'urls'")
 			h.URLs = []string{h.Address}
 		}
 	}

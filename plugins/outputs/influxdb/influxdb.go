@@ -57,8 +57,7 @@ type InfluxDB struct {
 	CreateHTTPClientF func(config *HTTPConfig) (Client, error)
 	CreateUDPClientF  func(config *UDPConfig) (Client, error)
 
-	serializer *influx.Serializer
-	Log        telegraf.Logger
+	Log telegraf.Logger
 }
 
 var sampleConfig = `
@@ -145,11 +144,6 @@ func (i *InfluxDB) Connect() error {
 		urls = append(urls, defaultURL)
 	}
 
-	i.serializer = influx.NewSerializer()
-	if i.InfluxUintSupport {
-		i.serializer.SetFieldTypeSupport(influx.UintSupport)
-	}
-
 	for _, u := range urls {
 		parts, err := url.Parse(u)
 		if err != nil {
@@ -221,13 +215,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			if !i.SkipDatabaseCreation {
 				err := client.CreateDatabase(ctx, apiError.Database)
 				if err != nil {
-					i.Log.Errorf("when writing to [%s]: database %q not found and failed to recreate",
+					i.Log.Errorf("When writing to [%s]: database %q not found and failed to recreate",
 						client.URL(), apiError.Database)
 				}
 			}
 		}
 
-		i.Log.Errorf("when writing to [%s]: %v", client.URL(), err)
+		i.Log.Errorf("When writing to [%s]: %v", client.URL(), err)
 	}
 
 	return errors.New("could not write any address")
@@ -237,7 +231,7 @@ func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
 		URL:            url,
 		MaxPayloadSize: int(i.UDPPayload.Size),
-		Serializer:     i.serializer,
+		Serializer:     i.newSerializer(),
 		Log:            i.Log,
 	}
 
@@ -271,7 +265,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		SkipDatabaseCreation: i.SkipDatabaseCreation,
 		RetentionPolicy:      i.RetentionPolicy,
 		Consistency:          i.WriteConsistency,
-		Serializer:           i.serializer,
+		Serializer:           i.newSerializer(),
 		Log:                  i.Log,
 	}
 
@@ -283,12 +277,21 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	if !i.SkipDatabaseCreation {
 		err = c.CreateDatabase(ctx, c.Database())
 		if err != nil {
-			i.Log.Warnf("when writing to [%s]: database %q creation failed: %v",
-				c.URL(), i.Database, err)
+			i.Log.Warnf("When writing to [%s]: database %q creation failed: %v",
+				c.URL(), c.Database(), err)
 		}
 	}
 
 	return c, nil
+}
+
+func (i *InfluxDB) newSerializer() *influx.Serializer {
+	serializer := influx.NewSerializer()
+	if i.InfluxUintSupport {
+		serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
+
+	return serializer
 }
 
 func init() {

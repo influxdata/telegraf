@@ -21,6 +21,7 @@ const (
 func newTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
 	in := make(chan *sarama.ConsumerMessage, 1000)
 	k := Kafka{
+		Log:             testutil.Logger{},
 		ConsumerGroup:   "test",
 		Topics:          []string{"telegraf"},
 		ZookeeperPeers:  []string{"localhost:2181"},

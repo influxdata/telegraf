@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -255,6 +256,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			}
 
 			if c.config.ExcludeDatabaseTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
 				metric.RemoveTag(c.config.DatabaseTag)
 			}
 
@@ -265,7 +269,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			if !c.config.SkipDatabaseCreation && !c.createdDatabases[db] {
 				err := c.CreateDatabase(ctx, db)
 				if err != nil {
-					c.log.Warnf("when writing to [%s]: database %q creation failed: %v",
+					c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
 						c.config.URL, db, err)
 				}
 			}
@@ -285,7 +289,12 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 		return err
 	}
 
-	reader := influx.NewReader(metrics, c.config.Serializer)
+	reader, err := c.requestBodyReader(metrics)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
 	req, err := c.makeWriteRequest(url, reader)
 	if err != nil {
 		return err
@@ -331,7 +340,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// discarded for being older than the retention policy.  Usually this not
 	// a cause for concern and we don't want to retry.
 	if strings.Contains(desc, errStringPointsBeyondRP) {
-		c.log.Warnf("when writing to [%s]: received error %v",
+		c.log.Warnf("When writing to [%s]: received error %v",
 			c.URL(), desc)
 		return nil
 	}
@@ -340,7 +349,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// correctable at this point and so the point is dropped instead of
 	// retrying.
 	if strings.Contains(desc, errStringPartialWrite) {
-		c.log.Errorf("when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -348,7 +357,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegr
 	// This error indicates a bug in either Telegraf line protocol
 	// serialization, retries would not be successful.
 	if strings.Contains(desc, errStringUnableToParse) {
-		c.log.Errorf("when writing to [%s]: received error %v; discarding points",
+		c.log.Errorf("When writing to [%s]: received error %v; discarding points",
 			c.URL(), desc)
 		return nil
 	}
@@ -383,12 +392,6 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 
 func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
 	var err error
-	if c.config.ContentEncoding == "gzip" {
-		body, err = internal.CompressWithGzip(body)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
@@ -403,6 +406,23 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 	}
 
 	return req, nil
+}
+
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// side of the connection in case of error
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser, error) {
+	reader := influx.NewReader(metrics, c.config.Serializer)
+
+	if c.config.ContentEncoding == "gzip" {
+		rc, err := internal.CompressWithGzip(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		return rc, nil
+	}
+
+	return ioutil.NopCloser(reader), nil
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {

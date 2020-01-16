@@ -5,11 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/ldap.v2"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"gopkg.in/ldap.v3"
 )
 
 type Openldap struct {

@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/Shopify/sarama"
+	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	uuid "github.com/satori/go.uuid"
 )
 
 var ValidTopicSuffixMethods = []string{
@@ -49,6 +49,8 @@ type (
 		SASLUsername string `toml:"sasl_username"`
 		// SASL Password
 		SASLPassword string `toml:"sasl_password"`
+
+		Log telegraf.Logger `toml:"-"`
 
 		tlsConfig tls.Config
 		producer  sarama.SyncProducer
@@ -292,20 +294,23 @@ func (k *Kafka) Description() string {
 	return "Configuration for the Kafka server to send metrics to"
 }
 
-func (k *Kafka) routingKey(metric telegraf.Metric) string {
+func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 	if k.RoutingTag != "" {
 		key, ok := metric.GetTag(k.RoutingTag)
 		if ok {
-			return key
+			return key, nil
 		}
 	}
 
 	if k.RoutingKey == "random" {
-		u := uuid.NewV4()
-		return u.String()
+		u, err := uuid.NewV4()
+		if err != nil {
+			return "", err
+		}
+		return u.String(), nil
 	}
 
-	return k.RoutingKey
+	return k.RoutingKey, nil
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
@@ -313,15 +318,21 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.kafka] Could not serialize metric: %v", err)
+			k.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
 		m := &sarama.ProducerMessage{
-			Topic: k.GetTopicName(metric),
-			Value: sarama.ByteEncoder(buf),
+			Topic:     k.GetTopicName(metric),
+			Value:     sarama.ByteEncoder(buf),
+			Timestamp: metric.Time(),
 		}
-		key := k.routingKey(metric)
+
+		key, err := k.routingKey(metric)
+		if err != nil {
+			return fmt.Errorf("could not generate routing key: %v", err)
+		}
+
 		if key != "" {
 			m.Key = sarama.StringEncoder(key)
 		}
@@ -334,7 +345,11 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		if errs, ok := err.(sarama.ProducerErrors); ok {
 			for _, prodErr := range errs {
 				if prodErr.Err == sarama.ErrMessageSizeTooLarge {
-					log.Printf("E! Error writing to output [kafka]: Message too large, consider increasing `max_message_bytes`; dropping batch")
+					k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping batch")
+					return nil
+				}
+				if prodErr.Err == sarama.ErrInvalidTimestamp {
+					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
 				return prodErr

@@ -45,6 +45,7 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
+	csvReader.TrimLeadingSpace = p.TrimSpace
 	return csvReader, nil
 }
 
@@ -235,7 +236,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		case "":
 			return time.Time{}, fmt.Errorf("timestamp format must be specified")
 		default:
-			metricTime, err := internal.ParseTimestamp(recordFields[timestampColumn], timestampFormat)
+			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], "UTC")
 			if err != nil {
 				return time.Time{}, err
 			}

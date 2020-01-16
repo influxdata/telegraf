@@ -176,10 +176,12 @@ func (h *HTTP) write(reqBody []byte) error {
 
 	var err error
 	if h.ContentEncoding == "gzip" {
-		reqBodyBuffer, err = internal.CompressWithGzip(reqBodyBuffer)
+		rc, err := internal.CompressWithGzip(reqBodyBuffer)
 		if err != nil {
 			return err
 		}
+		defer rc.Close()
+		reqBodyBuffer = rc
 	}
 
 	req, err := http.NewRequest(h.Method, h.URL, reqBodyBuffer)

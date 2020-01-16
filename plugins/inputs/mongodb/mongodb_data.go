@@ -38,6 +38,7 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 }
 
 var DefaultStats = map[string]string{
+	"uptime_ns":                 "UptimeNanos",
 	"inserts":                   "InsertCnt",
 	"inserts_per_sec":           "Insert",
 	"queries":                   "QueryCnt",
@@ -101,7 +102,6 @@ var DefaultReplStats = map[string]string{
 	"member_status":         "NodeType",
 	"state":                 "NodeState",
 	"repl_lag":              "ReplLag",
-	"repl_oplog_window_sec": "OplogTimeDiff",
 }
 
 var DefaultClusterStats = map[string]string{
@@ -229,7 +229,13 @@ func (d *MongodbData) AddDefaultStats() {
 	d.addStat(statLine, DefaultStats)
 	if d.StatLine.NodeType != "" {
 		d.addStat(statLine, DefaultReplStats)
+		d.Tags["node_type"] = d.StatLine.NodeType
 	}
+
+	if d.StatLine.OplogStats != nil {
+		d.add("repl_oplog_window_sec", d.StatLine.OplogStats.TimeDiff)
+	}
+
 	d.addStat(statLine, DefaultClusterStats)
 	d.addStat(statLine, DefaultShardStats)
 	if d.StatLine.StorageEngine == "mmapv1" || d.StatLine.StorageEngine == "rocksdb" {
