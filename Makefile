@@ -32,7 +32,7 @@ all:
 
 .PHONY: deps
 deps:
-	dep ensure -vendor-only
+	go mod download
 
 .PHONY: telegraf
 telegraf:
@@ -83,8 +83,18 @@ vet:
 		exit 1; \
 	fi
 
+.PHONY: tidy
+tidy:
+	go mod verify
+	go mod tidy
+	@if ! git diff --quiet go.mod go.sum; then \
+		echo "please run go mod tidy and check in changes"; \
+		exit 1; \
+	fi
+
 .PHONY: check
 check: fmtcheck vet
+	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
 test-all: fmtcheck vet
