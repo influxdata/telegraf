@@ -3,13 +3,16 @@ module github.com/influxdata/telegraf
 go 1.13
 
 require (
-	cloud.google.com/go v0.27.0
+	cloud.google.com/go v0.37.4
 	code.cloudfoundry.org/clock v1.0.0
 	collectd.org v0.3.0
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0
+	git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999 // indirect
 	github.com/Azure/azure-pipeline-go v0.1.8
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
 	github.com/Azure/go-autorest v13.3.0+incompatible
+	github.com/Azure/go-autorest/autorest v0.9.3
+	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/Microsoft/ApplicationInsights-Go v0.4.2
 	github.com/Microsoft/go-winio v0.4.9
 	github.com/Shopify/sarama v1.24.1
@@ -17,7 +20,7 @@ require (
 	github.com/aerospike/aerospike-client-go v1.27.0
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
-	github.com/apache/thrift v0.0.0-20180717161949-f2867c24984a
+	github.com/apache/thrift v0.12.0
 	github.com/aws/aws-sdk-go v1.19.41
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 	github.com/caio/go-tdigest v2.3.0+incompatible
@@ -26,7 +29,7 @@ require (
 	github.com/couchbase/go-couchbase v0.0.0-20180501122049-16db1f1fe037
 	github.com/couchbase/gomemcached v0.0.0-20180502221210-0da75df14530
 	github.com/couchbase/goutils v0.0.0-20180530154633-e865a1461c8a
-	github.com/davecgh/go-spew v1.1.0
+	github.com/davecgh/go-spew v1.1.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20190707035753-2be1aa521ff4
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/dimchansky/utfbom v1.1.0
@@ -36,7 +39,7 @@ require (
 	github.com/docker/go-units v0.3.3
 	github.com/docker/libnetwork v0.8.0-dev.2.0.20181012153825-d7b61745d166
 	github.com/eapache/go-resiliency v1.1.0
-	github.com/eapache/go-xerial-snappy v0.0.0-20180703130627-040cc1a32f57
+	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21
 	github.com/eapache/queue v1.1.0
 	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/ericchiang/k8s v1.2.0
@@ -49,11 +52,12 @@ require (
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid v2.1.0+incompatible
-	github.com/gogo/protobuf v1.1.1
+	github.com/gogo/protobuf v1.2.0
 	github.com/golang/mock v1.3.1-0.20190508161146-9fa652df1129
-	github.com/golang/protobuf v1.1.0
-	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
-	github.com/google/go-cmp v0.2.0
+	github.com/golang/protobuf v1.2.0
+	github.com/golang/snappy v0.0.1
+	github.com/google/go-cmp v0.3.0
+	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c
 	github.com/googleapis/gax-go v2.0.0+incompatible
@@ -66,6 +70,7 @@ require (
 	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hashicorp/serf v0.8.1
+	github.com/influxdata/go-syslog/v2 v2.0.1
 	github.com/influxdata/tail v1.0.1-0.20180327235535-c43482518d41
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
 	github.com/influxdata/wlog v0.0.0-20160411224016-7c63b0a71ef8
@@ -97,26 +102,26 @@ require (
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492
 	github.com/opentracing/opentracing-go v1.0.2
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
-	github.com/pierrec/lz4 v2.0.3+incompatible
+	github.com/pierrec/lz4 v2.2.6+incompatible
 	github.com/pkg/errors v0.8.0
 	github.com/pmezard/go-difflib v1.0.0
-	github.com/prometheus/client_golang v0.9.2
-	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910
-	github.com/prometheus/common v0.0.0-20180518154759-7600349dcfe1
-	github.com/prometheus/procfs v0.0.0-20180705121852-ae68e2d4c00f
-	github.com/rcrowley/go-metrics v0.0.0-20180503174638-e2704e165165
+	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
+	github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f
+	github.com/prometheus/common v0.2.0
+	github.com/prometheus/procfs v0.0.0-20190117184657-bf6a532e95b1
+	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/safchain/ethtool v0.0.0-20190326074333-42ed695e3de8
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
-	github.com/sirupsen/logrus v1.0.5
+	github.com/sirupsen/logrus v1.2.0
 	github.com/soniah/gosnmp v1.22.0
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
 	github.com/stretchr/objx v0.1.1
-	github.com/stretchr/testify v1.2.2
+	github.com/stretchr/testify v1.3.0
 	github.com/tidwall/gjson v1.3.0
-	github.com/tidwall/match v1.0.0
+	github.com/tidwall/match v1.0.1
 	github.com/tidwall/pretty v1.0.0
 	github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc
@@ -126,18 +131,18 @@ require (
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4
-	go.opencensus.io v0.17.0
-	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
-	golang.org/x/net v0.0.0-20180719180050-a680a1efc54d
-	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
-	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f
+	go.opencensus.io v0.20.1
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
+	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
+	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa
-	golang.org/x/text v0.3.0
-	google.golang.org/api v0.0.0-20180916000451-19ff8768a5c0
-	google.golang.org/appengine v1.1.0
-	google.golang.org/genproto v0.0.0-20180718234121-fedd2861243f
-	google.golang.org/grpc v1.13.0
-	gopkg.in/asn1-ber.v1 v1.0.0-20170511165959-379148ca0225
+	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2
+	google.golang.org/api v0.3.1
+	google.golang.org/appengine v1.4.0
+	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
+	google.golang.org/grpc v1.19.0
+	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d
 	gopkg.in/fatih/pool.v2 v2.0.0
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/inf.v0 v0.9.1
@@ -149,5 +154,5 @@ require (
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
-	gopkg.in/yaml.v2 v2.2.1
+	gopkg.in/yaml.v2 v2.2.2
 )
