@@ -50,15 +50,9 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid v2.1.0+incompatible
 	github.com/gogo/protobuf v1.1.1
-	github.com/golang/crypto v0.0.0-20191011191535-87dc89f01550
 	github.com/golang/mock v1.3.1-0.20190508161146-9fa652df1129
-	github.com/golang/net v0.0.0-20180719180050-a680a1efc54d
-	github.com/golang/oauth2 v0.0.0-20180821212333-d2e6202438be
 	github.com/golang/protobuf v1.1.0
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
-	github.com/golang/sync v0.0.0-20181108010431-42b317875d0f
-	github.com/golang/sys v0.0.0-20190804053845-51ab0e2deafa
-	github.com/golang/text v0.3.0
 	github.com/google/go-cmp v0.2.0
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v0.0.0-20161128191214-064e2069ce9c
@@ -133,6 +127,12 @@ require (
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4
 	go.opencensus.io v0.17.0
+	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
+	golang.org/x/net v0.0.0-20180719180050-a680a1efc54d
+	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
+	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f
+	golang.org/x/sys v0.0.0-20190804053845-51ab0e2deafa
+	golang.org/x/text v0.3.0
 	google.golang.org/api v0.0.0-20180916000451-19ff8768a5c0
 	google.golang.org/appengine v1.1.0
 	google.golang.org/genproto v0.0.0-20180718234121-fedd2861243f
@@ -151,15 +151,3 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
 	gopkg.in/yaml.v2 v2.2.1
 )
-
-replace golang.org/x/crypto 87dc89f01550277dc22b74ffcf4cd89fa2f40f4c => github.com/golang/crypto v0.0.0-20191011191535-87dc89f01550
-
-replace golang.org/x/net a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1 => github.com/golang/net v0.0.0-20180719180050-a680a1efc54d
-
-replace golang.org/x/oauth2 d2e6202438beef2727060aa7cabdd924d92ebfd9 => github.com/golang/oauth2 v0.0.0-20180821212333-d2e6202438be
-
-replace golang.org/x/sync 42b317875d0fa942474b76e1b46a6060d720ae6e => github.com/golang/sync v0.0.0-20181108010431-42b317875d0f
-
-replace golang.org/x/sys 51ab0e2deafac1f46c46ad59cf0921be2f180c3d => github.com/golang/sys v0.0.0-20190804053845-51ab0e2deafa
-
-replace golang.org/x/text v0.3.0 => github.com/golang/text v0.3.0
