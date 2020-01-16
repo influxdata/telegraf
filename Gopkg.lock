@@ -1218,7 +1218,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:6af52ce6dae9a912aa3113f247a63cd82599760ddc328a6721c3ef0426d31ca2"
+  digest = "1:923f7933e0fa29491d895be855627554c08f16272b64b4a079d0127d18403f4c"
   name = "github.com/vmware/govmomi"
   packages = [
     ".",
@@ -1226,11 +1226,13 @@
     "list",
     "nfc",
     "object",
+    "ovf",
     "performance",
     "property",
     "session",
     "simulator",
     "simulator/esx",
+    "simulator/internal",
     "simulator/vpx",
     "task",
     "view",
@@ -1242,10 +1244,12 @@
     "vim25/soap",
     "vim25/types",
     "vim25/xml",
+    "vsan/methods",
+    "vsan/types",
   ]
   pruneopts = ""
-  revision = "3617f28d167d448f93f282a867870f109516d2a5"
-  version = "v0.19.0"
+  revision = "a0fef816799db3e430bb7a5ac951e7835fe4d56b"
+  version = "v0.21.0"
 
 [[projects]]
   digest = "1:4cb7eb45ed9a5129bc77c726328c130abcbaae566c1fe4d82693fae86c8c621d"
@@ -1825,6 +1829,8 @@
     "github.com/vmware/govmomi/vim25/mo",
     "github.com/vmware/govmomi/vim25/soap",
     "github.com/vmware/govmomi/vim25/types",
+    "github.com/vmware/govmomi/vsan/methods",
+    "github.com/vmware/govmomi/vsan/types",
     "github.com/wavefronthq/wavefront-sdk-go/senders",
     "github.com/wvanbergen/kafka/consumergroup",
     "golang.org/x/net/context",

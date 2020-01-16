@@ -38,6 +38,10 @@ type VSphere struct {
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
+	VSANMetricInclude       []string `toml:"vsan_metric_include"`
+	VSANMetricExclude       []string `toml:"vsan_metric_exclude"`
+	VSANMetricSkipVerify    bool     `toml:"vsan_metric_skip_verify"`
+	VSANClusterInclude      []string `toml:"vsan_cluster_include"`
 	Separator               string
 	CustomAttributeInclude  []string
 	CustomAttributeExclude  []string
@@ -179,7 +183,14 @@ var sampleConfig = `
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default for Datastores only
 
+  ## VSAN
+  vsan_metric_include = [] ## if omitted or empty, all metrics are collected
+  vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
+  ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
+  vsan_metric_skip_verify = false ## false by default.
+
   ## Plugin Settings  
+
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
@@ -334,6 +345,10 @@ func init() {
 			DatastoreMetricInclude:  nil,
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
+			VSANMetricInclude:       nil,
+			VSANMetricExclude:       nil,
+			VSANMetricSkipVerify:    false,
+			VSANClusterInclude:      []string{"/*/host/**"},
 			Separator:               "_",
 			CustomAttributeInclude:  []string{},
 			CustomAttributeExclude:  []string{"*"},
