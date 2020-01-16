@@ -25,34 +25,54 @@ type Finder struct {
 // ResourceFilter is a convenience class holding a finder and a set of paths. It is useful when you need a
 // self contained object capable of returning a certain set of resources.
 type ResourceFilter struct {
-	finder  *Finder
-	resType string
-	paths   []string
+	finder       *Finder
+	resType      string
+	paths        []string
+	excludePaths []string
 }
 
 // FindAll returns the union of resources found given the supplied resource type and paths.
-func (f *Finder) FindAll(ctx context.Context, resType string, paths []string, dst interface{}) error {
+func (f *Finder) FindAll(ctx context.Context, resType string, paths, excludePaths []string, dst interface{}) error {
+	objs := make(map[string]types.ObjectContent)
 	for _, p := range paths {
-		if err := f.Find(ctx, resType, p, dst); err != nil {
+		if err := f.find(ctx, resType, p, objs); err != nil {
 			return err
 		}
 	}
-	return nil
+	if len(excludePaths) > 0 {
+		excludes := make(map[string]types.ObjectContent)
+		for _, p := range excludePaths {
+			if err := f.find(ctx, resType, p, excludes); err != nil {
+				return err
+			}
+		}
+		for k := range excludes {
+			delete(objs, k)
+		}
+	}
+	return objectContentToTypedArray(objs, dst)
 }
 
 // Find returns the resources matching the specified path.
 func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}) error {
+	objs := make(map[string]types.ObjectContent)
+	err := f.find(ctx, resType, path, objs)
+	if err != nil {
+		return err
+	}
+	return objectContentToTypedArray(objs, dst)
+}
+
+func (f *Finder) find(ctx context.Context, resType, path string, objs map[string]types.ObjectContent) error {
 	p := strings.Split(path, "/")
 	flt := make([]property.Filter, len(p)-1)
 	for i := 1; i < len(p); i++ {
 		flt[i-1] = property.Filter{"name": p[i]}
 	}
-	objs := make(map[string]types.ObjectContent)
 	err := f.descend(ctx, f.client.Client.ServiceContent.RootFolder, resType, flt, 0, objs)
 	if err != nil {
 		return err
 	}
-	objectContentToTypedArray(objs, dst)
 	f.client.log.Debugf("Find(%s, %s) returned %d objects", resType, path, len(objs))
 	return nil
 }
@@ -94,6 +114,9 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			// Special case: The last token is a recursive wildcard, so we can grab everything
 			// recursively in a single call.
 			v2, err := m.CreateContainerView(ctx, root, []string{resType}, true)
+			if err != nil {
+				return err
+			}
 			defer v2.Destroy(ctx)
 			err = v2.Retrieve(ctx, []string{resType}, fields, &content)
 			if err != nil {
@@ -204,7 +227,7 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 // FindAll finds all resources matching the paths that were specified upon creation of
 // the ResourceFilter.
 func (r *ResourceFilter) FindAll(ctx context.Context, dst interface{}) error {
-	return r.finder.FindAll(ctx, r.resType, r.paths, dst)
+	return r.finder.FindAll(ctx, r.resType, r.paths, r.excludePaths, dst)
 }
 
 func matchName(f property.Filter, props []types.DynamicProperty) bool {

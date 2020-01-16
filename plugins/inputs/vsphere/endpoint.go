@@ -32,8 +32,6 @@ var isIPv6 = regexp.MustCompile("^(?:[A-Fa-f0-9]{0,4}:){1,7}[A-Fa-f0-9]{1,4}$")
 
 const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
 
-const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
-
 const maxSampleConst = 10 // Absolute maximim number of samples regardless of period
 
 const maxMetadataSamples = 100 // Number of resources to sample for metric metadata
@@ -67,6 +65,7 @@ type resourceKind struct {
 	objects          objectMap
 	filters          filter.Filter
 	paths            []string
+	excludePaths     []string
 	collectInstances bool
 	getObjects       func(context.Context, *Endpoint, *ResourceFilter) (objectMap, error)
 	include          []string
@@ -132,6 +131,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
 			paths:            parent.DatacenterInclude,
+			excludePaths:     parent.DatacenterExclude,
 			simple:           isSimple(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
 			include:          parent.DatacenterMetricInclude,
 			collectInstances: parent.DatacenterInstances,
@@ -149,6 +149,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
 			paths:            parent.ClusterInclude,
+			excludePaths:     parent.ClusterExclude,
 			simple:           isSimple(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
 			include:          parent.ClusterMetricInclude,
 			collectInstances: parent.ClusterInstances,
@@ -166,6 +167,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.HostMetricInclude, parent.HostMetricExclude),
 			paths:            parent.HostInclude,
+			excludePaths:     parent.HostExclude,
 			simple:           isSimple(parent.HostMetricInclude, parent.HostMetricExclude),
 			include:          parent.HostMetricInclude,
 			collectInstances: parent.HostInstances,
@@ -183,6 +185,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.VMMetricInclude, parent.VMMetricExclude),
 			paths:            parent.VMInclude,
+			excludePaths:     parent.VMExclude,
 			simple:           isSimple(parent.VMMetricInclude, parent.VMMetricExclude),
 			include:          parent.VMMetricInclude,
 			collectInstances: parent.VMInstances,
@@ -199,6 +202,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			paths:            parent.DatastoreInclude,
+			excludePaths:     parent.DatastoreExclude,
 			simple:           isSimple(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			include:          parent.DatastoreMetricInclude,
 			collectInstances: parent.DatastoreInstances,
@@ -329,32 +333,36 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 	path := make([]string, 0)
 	returnVal := ""
 	here := r
-	for {
-		if name, ok := cache[here.Reference().String()]; ok {
-			// Populate cache for the entire chain of objects leading here.
-			returnVal = name
-			break
-		}
-		path = append(path, here.Reference().String())
-		o := object.NewCommon(client.Client.Client, r)
-		var result mo.ManagedEntity
-		ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-		defer cancel1()
-		err := o.Properties(ctx1, here, []string{"parent", "name"}, &result)
-		if err != nil {
-			e.Parent.Log.Warnf("Error while resolving parent. Assuming no parent exists. Error: %s", err.Error())
-			break
-		}
-		if result.Reference().Type == "Datacenter" {
-			// Populate cache for the entire chain of objects leading here.
-			returnVal = result.Name
-			break
-		}
-		if result.Parent == nil {
-			e.Parent.Log.Debugf("No parent found for %s (ascending from %s)", here.Reference(), r.Reference())
-			break
-		}
-		here = result.Parent.Reference()
+	done := false
+	for !done {
+		done = func() bool {
+			if name, ok := cache[here.Reference().String()]; ok {
+				// Populate cache for the entire chain of objects leading here.
+				returnVal = name
+				return true
+			}
+			path = append(path, here.Reference().String())
+			o := object.NewCommon(client.Client.Client, r)
+			var result mo.ManagedEntity
+			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			defer cancel1()
+			err := o.Properties(ctx1, here, []string{"parent", "name"}, &result)
+			if err != nil {
+				e.Parent.Log.Warnf("Error while resolving parent. Assuming no parent exists. Error: %s", err.Error())
+				return true
+			}
+			if result.Reference().Type == "Datacenter" {
+				// Populate cache for the entire chain of objects leading here.
+				returnVal = result.Name
+				return true
+			}
+			if result.Parent == nil {
+				e.Parent.Log.Debugf("No parent found for %s (ascending from %s)", here.Reference(), r.Reference())
+				return true
+			}
+			here = result.Parent.Reference()
+			return false
+		}()
 	}
 	for _, s := range path {
 		cache[s] = returnVal
@@ -389,43 +397,51 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	// Populate resource objects, and endpoint instance info.
 	newObjects := make(map[string]objectMap)
 	for k, res := range e.resourceKinds {
-		e.Parent.Log.Debugf("Discovering resources for %s", res.name)
-		// Need to do this for all resource types even if they are not enabled
-		if res.enabled || k != "vm" {
-			rf := ResourceFilter{
-				finder:  &Finder{client},
-				resType: res.vcName,
-				paths:   res.paths}
+		err := func() error {
+			e.Parent.Log.Debugf("Discovering resources for %s", res.name)
+			// Need to do this for all resource types even if they are not enabled
+			if res.enabled || k != "vm" {
+				rf := ResourceFilter{
+					finder:       &Finder{client},
+					resType:      res.vcName,
+					paths:        res.paths,
+					excludePaths: res.excludePaths,
+				}
 
-			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-			defer cancel1()
-			objects, err := res.getObjects(ctx1, e, &rf)
-			if err != nil {
-				return err
-			}
+				ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				defer cancel1()
+				objects, err := res.getObjects(ctx1, e, &rf)
+				if err != nil {
+					return err
+				}
 
-			// Fill in datacenter names where available (no need to do it for Datacenters)
-			if res.name != "Datacenter" {
-				for k, obj := range objects {
-					if obj.parentRef != nil {
-						obj.dcname = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
-						objects[k] = obj
+				// Fill in datacenter names where available (no need to do it for Datacenters)
+				if res.name != "Datacenter" {
+					for k, obj := range objects {
+						if obj.parentRef != nil {
+							obj.dcname = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
+							objects[k] = obj
+						}
 					}
 				}
-			}
 
-			// No need to collect metric metadata if resource type is not enabled
-			if res.enabled {
-				if res.simple {
-					e.simpleMetadataSelect(ctx, client, res)
-				} else {
-					e.complexMetadataSelect(ctx, res, objects, metricNames)
+				// No need to collect metric metadata if resource type is not enabled
+				if res.enabled {
+					if res.simple {
+						e.simpleMetadataSelect(ctx, client, res)
+					} else {
+						e.complexMetadataSelect(ctx, res, objects, metricNames)
+					}
 				}
-			}
-			newObjects[k] = objects
+				newObjects[k] = objects
 
-			SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
-			numRes += int64(len(objects))
+				SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
+				numRes += int64(len(objects))
+			}
+			return nil
+		}()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -433,8 +449,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	dss := newObjects["datastore"]
 	l2d := make(map[string]string)
 	for _, ds := range dss {
-		url := ds.altID
-		m := isolateLUN.FindStringSubmatch(url)
+		lunId := ds.altID
+		m := isolateLUN.FindStringSubmatch(lunId)
 		if m != nil {
 			l2d[m[1]] = ds.name
 		}
@@ -583,39 +599,47 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 	cache := make(map[string]*types.ManagedObjectReference)
 	m := make(objectMap, len(resources))
 	for _, r := range resources {
-		// We're not interested in the immediate parent (a folder), but the data center.
-		p, ok := cache[r.Parent.Value]
-		if !ok {
-			ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-			defer cancel2()
-			client, err := e.clientFactory.GetClient(ctx2)
-			if err != nil {
-				return nil, err
+		// Wrap in a function to make defer work correctly.
+		err := func() error {
+			// We're not interested in the immediate parent (a folder), but the data center.
+			p, ok := cache[r.Parent.Value]
+			if !ok {
+				ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				defer cancel2()
+				client, err := e.clientFactory.GetClient(ctx2)
+				if err != nil {
+					return err
+				}
+				o := object.NewFolder(client.Client.Client, *r.Parent)
+				var folder mo.Folder
+				ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+				defer cancel3()
+				err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
+				if err != nil {
+					e.Parent.Log.Warnf("Error while getting folder parent: %s", err.Error())
+					p = nil
+				} else {
+					pp := folder.Parent.Reference()
+					p = &pp
+					cache[r.Parent.Value] = p
+				}
 			}
-			o := object.NewFolder(client.Client.Client, *r.Parent)
-			var folder mo.Folder
-			ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-			defer cancel3()
-			err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
-			if err != nil {
-				e.Parent.Log.Warnf("Error while getting folder parent: %s", err.Error())
-				p = nil
-			} else {
-				pp := folder.Parent.Reference()
-				p = &pp
-				cache[r.Parent.Value] = p
+			m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+				name:         r.Name,
+				ref:          r.ExtensibleManagedObject.Reference(),
+				parentRef:    p,
+				customValues: e.loadCustomAttributes(&r.ManagedEntity),
 			}
-		}
-		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:         r.Name,
-			ref:          r.ExtensibleManagedObject.Reference(),
-			parentRef:    p,
-			customValues: e.loadCustomAttributes(&r.ManagedEntity),
+			return nil
+		}()
+		if err != nil {
+			return nil, err
 		}
 	}
 	return m, nil
 }
 
+//noinspection GoUnusedParameter
 func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := filter.FindAll(ctx, &resources)
@@ -717,18 +741,18 @@ func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (ob
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		url := ""
+		lunId := ""
 		if r.Info != nil {
 			info := r.Info.GetDatastoreInfo()
 			if info != nil {
-				url = info.Url
+				lunId = info.Url
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Parent,
-			altID:        url,
+			altID:        lunId,
 			customValues: e.loadCustomAttributes(&r.ManagedEntity),
 		}
 	}
@@ -814,7 +838,7 @@ func submitChunkJob(ctx context.Context, te *ThrottledExecutor, job func([]types
 	})
 }
 
-func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, acc telegraf.Accumulator, job func([]types.PerfQuerySpec)) {
+func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, job func([]types.PerfQuerySpec)) {
 	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	maxMetrics := e.Parent.MaxQueryMetrics
 	if maxMetrics < 1 {
@@ -831,7 +855,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 	metrics := 0
 	total := 0
 	nRes := 0
-	for _, object := range res.objects {
+	for _, resource := range res.objects {
 		mr := len(res.metrics)
 		for mr > 0 {
 			mc := mr
@@ -841,14 +865,14 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			}
 			fm := len(res.metrics) - mr
 			pq := types.PerfQuerySpec{
-				Entity:     object.ref,
+				Entity:     resource.ref,
 				MaxSample:  maxSampleConst,
 				MetricId:   res.metrics[fm : fm+mc],
 				IntervalId: res.sampling,
 				Format:     "normal",
 			}
 
-			start, ok := e.hwMarks.Get(object.ref.Value)
+			start, ok := e.hwMarks.Get(resource.ref.Value)
 			if !ok {
 				// Look back 3 sampling periods by default
 				start = latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
@@ -917,7 +941,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	// Estimate the interval at which we're invoked. Use local time (not server time)
 	// since this is about how we got invoked locally.
 	localNow := time.Now()
-	estInterval := time.Duration(time.Minute)
+	estInterval := time.Minute
 	if !res.lastColl.IsZero() {
 		s := time.Duration(res.sampling) * time.Second
 		rawInterval := localNow.Sub(res.lastColl)
@@ -957,13 +981,14 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	latestSample := time.Time{}
 
 	// Divide workload into chunks and process them concurrently
-	e.chunkify(ctx, res, now, latest, acc,
+	e.chunkify(ctx, res, now, latest,
 		func(chunk []types.PerfQuerySpec) {
-			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, now, estInterval)
-			e.Parent.Log.Debugf("CollectChunk for %s returned %d metrics", resourceType, n)
+			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, estInterval)
 			if err != nil {
 				acc.AddError(errors.New("while collecting " + res.name + ": " + err.Error()))
+				return
 			}
+			e.Parent.Log.Debugf("CollectChunk for %s returned %d metrics", resourceType, n)
 			atomic.AddInt64(&count, int64(n))
 			tsMux.Lock()
 			defer tsMux.Unlock()
@@ -1004,7 +1029,7 @@ func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Dur
 		if roundedTs == lastBucket {
 			bi++
 			p := len(rValues) - 1
-			rValues[p] = ((bi-1)/bi)*float64(rValues[p]) + v/bi
+			rValues[p] = ((bi-1)/bi)*rValues[p] + v/bi
 		} else {
 			rValues = append(rValues, v)
 			roundedInfo := types.PerfSampleInfo{
@@ -1019,7 +1044,7 @@ func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Dur
 	return rInfo, rValues
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, res *resourceKind, acc telegraf.Accumulator, now time.Time, interval time.Duration) (int, time.Time, error) {
+func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, res *resourceKind, acc telegraf.Accumulator, interval time.Duration) (int, time.Time, error) {
 	e.Parent.Log.Debugf("Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0
@@ -1100,7 +1125,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				}
 				v := alignedValues[idx]
 				if info.UnitInfo.GetElementDescription().Key == "percent" {
-					bucket.fields[fn] = float64(v) / 100.0
+					bucket.fields[fn] = v / 100.0
 				} else {
 					if e.Parent.UseIntSamples {
 						bucket.fields[fn] = int64(round(v))

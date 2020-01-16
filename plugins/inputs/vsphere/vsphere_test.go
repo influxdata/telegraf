@@ -377,10 +377,59 @@ func TestFinder(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
+	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, []string{}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
 
+	rf := ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/DC0/vm/DC0_H0_VM0"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 3, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/this won't match anything"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 8, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**/*VM0"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 4, len(vm))
 }
 
 func TestFolders(t *testing.T) {
