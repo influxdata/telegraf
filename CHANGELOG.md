@@ -9,6 +9,10 @@
 - The `date` processor now uses the UTC timezone when creating its tag.  In
   previous versions the local time was used.
 
+#### New Inputs
+
+- [infiniband](/plugins/inputs/infiniband/README.md) - Contributed by @willfurnell
+
 #### New Outputs
 
 - [warp10](/plugins/outputs/warp10/README.md) - Contributed by @aurrelhebert
