@@ -394,6 +394,15 @@ func (ssl *StreamAos) MsgReader(r io.Reader) {
 	}
 }
 
+func getFuncName(msg_name string) string {
+	result := "Get"
+	tokens := strings.Split(msg_name, "_")
+	for _, token := range tokens {
+		result += strings.Title(token)
+	}
+	return result
+}
+
 func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 	// Create new aos_streaming.AosMessage and deserialize protobuf
 	newMsg := new(aos_streaming.AosMessage)
@@ -593,46 +602,15 @@ func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 		propType := proto.GetProperties(myEventType)
 		eventTypeName := propType.Prop[0].OrigName
 
-		switch eventTypeName {
-		case "device_state":
-			myEventData := newEventData.GetDeviceState()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "streaming":
-			myEventData := newEventData.GetStreaming()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "cable_peer":
-			myEventData := newEventData.GetCablePeer()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "bgp_neighbor":
-			myEventData := newEventData.GetBgpNeighbor()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "link_status":
-			myEventData := newEventData.GetLinkStatus()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "traffic":
-			myEventData := newEventData.GetTraffic()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "mac_state":
-			myEventData := newEventData.GetMacState()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "arp_state":
-			myEventData := newEventData.GetArpState()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "lag_state":
-			myEventData := newEventData.GetLagState()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "mlag_state":
-			myEventData := newEventData.GetMlagState()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "extensible_event":
-			myEventData := newEventData.GetExtensibleEvent()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-		case "route_state":
-			myEventData := newEventData.GetRouteState()
-			ssl.ExtractEventData(eventTypeName, tags, myEventData)
-
-		default:
+		// Convert event name to method name to eliminate lengthy switch statement
+		// E.g., bgp_neighbor => GetBgpNeighbor
+		method := getFuncName(eventTypeName)
+		checkMethod := reflect.ValueOf(newEventData).MethodByName(method)
+		if !checkMethod.IsValid() {
 			log.Printf("W! Event Type - %s, not supported yet", eventTypeName)
+		} else {
+			myEventData := reflect.ValueOf(newEventData).MethodByName(method).Call([]reflect.Value{})
+			ssl.ExtractEventData(eventTypeName, tags, myEventData[0].Interface())
 		}
 	}
 
@@ -661,70 +639,13 @@ func (ssl *StreamAos) handleTelemetry(msgBuf []byte) {
 		tags["severity"] = fmt.Sprintf("%v", newAlertData.Severity)
 		raise := *newAlertData.Raised
 
-		switch alertTypeName {
-		case "config_deviation_alert":
-			myAlertData := newAlertData.GetConfigDeviationAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "streaming_alert":
-			myAlertData := newAlertData.GetStreamingAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "cable_peer_mismatch_alert":
-			myAlertData := newAlertData.GetCablePeerMismatchAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "bgp_neighbor_mismatch_alert":
-			myAlertData := newAlertData.GetBgpNeighborMismatchAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "interface_link_status_mismatch_alert":
-			myAlertData := newAlertData.GetInterfaceLinkStatusMismatchAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "hostname_alert":
-			myAlertData := newAlertData.GetHostnameAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "route_alert":
-			myAlertData := newAlertData.GetRouteAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "liveness_alert":
-			myAlertData := newAlertData.GetLivenessAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "deployment_alert":
-			myAlertData := newAlertData.GetDeploymentAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "blueprint_rendering_alert":
-			myAlertData := newAlertData.GetBlueprintRenderingAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "counters_alert":
-			myAlertData := newAlertData.GetCountersAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "mac_alert":
-			myAlertData := newAlertData.GetMacAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "arp_alert":
-			myAlertData := newAlertData.GetArpAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "headroom_alert":
-			myAlertData := newAlertData.GetHeadroomAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "lag_alert":
-			myAlertData := newAlertData.GetLagAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "mlag_alert":
-			myAlertData := newAlertData.GetMlagAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "probe_alert":
-			myAlertData := newAlertData.GetProbeAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "config_mismatch_alert":
-			myAlertData := newAlertData.GetConfigMismatchAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "extensible_alert":
-			myAlertData := newAlertData.GetExtensibleAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-		case "test_alert":
-			myAlertData := newAlertData.GetTestAlert()
-			ssl.ExtractAlertData(alertTypeName, tags, myAlertData, raise)
-
-		default:
-			log.Printf("W! Alert Type - %s, Not Supported Yet", alertTypeName)
+		method := getFuncName(alertTypeName)
+		checkMethod := reflect.ValueOf(newAlertData).MethodByName(method)
+		if !checkMethod.IsValid() {
+			log.Printf("W! Alert Type - %s, not supported yet", alertTypeName)
+		} else {
+			myAlertData := reflect.ValueOf(newAlertData).MethodByName(method).Call([]reflect.Value{})
+			ssl.ExtractAlertData(alertTypeName, tags, myAlertData[0].Interface(), raise)
 		}
 	}
 }
