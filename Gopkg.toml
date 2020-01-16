@@ -88,7 +88,7 @@
 
 [[constraint]]
   name = "github.com/kardianos/service"
-  branch = "master"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/kballard/go-shellquote"
@@ -100,7 +100,7 @@
 
 [[constraint]]
   name = "github.com/Microsoft/ApplicationInsights-Go"
-  branch = "master"
+  version = "0.4.2"
 
 [[constraint]]
   name = "github.com/miekg/dns"
@@ -144,12 +144,11 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.12"
+  version = "2.19.7"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  revision = "b12709e6ca29240128c89fe0b30b6a76be42b457"
-  source = "https://github.com/influxdata/sarama.git"
+  version = "1.24.0"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
@@ -231,7 +230,7 @@
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "10.12.0"
+  version = "^13.0.0"
 
 [[constraint]]
   name = "github.com/Azure/azure-storage-queue-go"
@@ -305,3 +304,11 @@
 [[constraint]]
   name = "gopkg.in/ldap.v3"
   version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/safchain/ethtool"
+  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+
+[[override]]
+  name = "github.com/satori/go.uuid"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"

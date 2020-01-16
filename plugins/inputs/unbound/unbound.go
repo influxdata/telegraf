@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ConfigFile string) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
@@ -26,6 +26,7 @@ type Unbound struct {
 	UseSudo     bool
 	Server      string
 	ThreadAsTag bool
+	ConfigFile  string
 
 	filter filter.Filter
 	run    runner
@@ -44,6 +45,9 @@ var sampleConfig = `
 
   ## The default location of the unbound-control binary can be overridden with:
   # binary = "/usr/sbin/unbound-control"
+
+  ## The default location of the unbound config file can be overridden with:
+  # config_file = "/etc/unbound/unbound.conf"
 
   ## The default timeout of 1s can be overriden with:
   # timeout = "1s"
@@ -67,7 +71,7 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error) {
+func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ConfigFile string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {
@@ -94,6 +98,10 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 		}
 
 		cmdArgs = append([]string{"-s", server}, cmdArgs...)
+	}
+
+	if ConfigFile != "" {
+		cmdArgs = append([]string{"-c", ConfigFile}, cmdArgs...)
 	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
@@ -125,7 +133,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag)
+	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag, s.ConfigFile)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
@@ -207,6 +215,7 @@ func init() {
 			UseSudo:     false,
 			Server:      "",
 			ThreadAsTag: false,
+			ConfigFile:  "",
 		}
 	})
 }

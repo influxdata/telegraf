@@ -111,7 +111,7 @@ func (ac *accumulator) AddError(err error) {
 		return
 	}
 	NErrors.Incr(1)
-	log.Printf("D! [%s] Error in plugin: %v", ac.maker.LogName(), err)
+	log.Printf("E! [%s] Error in plugin: %v", ac.maker.LogName(), err)
 }
 
 func (ac *accumulator) SetPrecision(precision time.Duration) {

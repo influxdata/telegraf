@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -19,6 +21,8 @@ var ValidTopicSuffixMethods = []string{
 	"measurement",
 	"tags",
 }
+
+var zeroTime = time.Unix(0, 0)
 
 type (
 	Kafka struct {
@@ -43,12 +47,14 @@ type (
 		// TLS certificate authority
 		CA string
 
+		EnableTLS *bool `toml:"enable_tls"`
 		tlsint.ClientConfig
 
-		// SASL Username
 		SASLUsername string `toml:"sasl_username"`
-		// SASL Password
 		SASLPassword string `toml:"sasl_password"`
+		SASLVersion  *int   `toml:"sasl_version"`
+
+		Log telegraf.Logger `toml:"-"`
 
 		tlsConfig tls.Config
 		producer  sarama.SyncProducer
@@ -168,6 +174,7 @@ var sampleConfig = `
   # max_message_bytes = 1000000
 
   ## Optional TLS Config
+  # enable_tls = true
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
@@ -177,6 +184,9 @@ var sampleConfig = `
   ## Optional SASL Config
   # sasl_username = "kafka"
   # sasl_password = "secret"
+
+  ## SASL protocol version.  When connecting to Azure EventHub set to 0.
+  # sasl_version = 1
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -256,6 +266,10 @@ func (k *Kafka) Connect() error {
 		k.TLSKey = k.Key
 	}
 
+	if k.EnableTLS != nil && *k.EnableTLS {
+		config.Net.TLS.Enable = true
+	}
+
 	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
@@ -263,13 +277,25 @@ func (k *Kafka) Connect() error {
 
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
-		config.Net.TLS.Enable = true
+
+		// To maintain backwards compatibility, if the enable_tls option is not
+		// set TLS is enabled if a non-default TLS config is used.
+		if k.EnableTLS == nil {
+			k.Log.Warnf("Use of deprecated configuration: enable_tls should be set when using TLS")
+			config.Net.TLS.Enable = true
+		}
 	}
 
 	if k.SASLUsername != "" && k.SASLPassword != "" {
 		config.Net.SASL.User = k.SASLUsername
 		config.Net.SASL.Password = k.SASLPassword
 		config.Net.SASL.Enable = true
+
+		version, err := kafka.SASLVersion(config.Version, k.SASLVersion)
+		if err != nil {
+			return err
+		}
+		config.Net.SASL.Version = version
 	}
 
 	producer, err := sarama.NewSyncProducer(k.Brokers, config)
@@ -316,13 +342,18 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
-			log.Printf("D! [outputs.kafka] Could not serialize metric: %v", err)
+			k.Log.Debugf("Could not serialize metric: %v", err)
 			continue
 		}
 
 		m := &sarama.ProducerMessage{
 			Topic: k.GetTopicName(metric),
 			Value: sarama.ByteEncoder(buf),
+		}
+
+		// Negative timestamps are not allowed by the Kafka protocol.
+		if !metric.Time().Before(zeroTime) {
+			m.Timestamp = metric.Time()
 		}
 
 		key, err := k.routingKey(metric)
@@ -342,7 +373,11 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		if errs, ok := err.(sarama.ProducerErrors); ok {
 			for _, prodErr := range errs {
 				if prodErr.Err == sarama.ErrMessageSizeTooLarge {
-					log.Printf("E! Error writing to output [kafka]: Message too large, consider increasing `max_message_bytes`; dropping batch")
+					k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping batch")
+					return nil
+				}
+				if prodErr.Err == sarama.ErrInvalidTimestamp {
+					k.Log.Error("The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; dropping batch")
 					return nil
 				}
 				return prodErr

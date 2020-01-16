@@ -118,31 +118,29 @@ func (*Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	if p.Interface != "" && p.listenAddr != "" {
+	if p.Interface != "" && p.listenAddr == "" {
 		p.listenAddr = getAddr(p.Interface)
 	}
 
-	for _, ip := range p.Urls {
-		_, err := net.LookupHost(ip)
+	for _, host := range p.Urls {
+		_, err := net.LookupHost(host)
 		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"ip": ip})
+			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": host})
 			acc.AddError(err)
-			return nil
+			continue
 		}
 
-		if p.Method == "native" {
-			p.wg.Add(1)
-			go func(ip string) {
-				defer p.wg.Done()
-				p.pingToURLNative(ip, acc)
-			}(ip)
-		} else {
-			p.wg.Add(1)
-			go func(ip string) {
-				defer p.wg.Done()
-				p.pingToURL(ip, acc)
-			}(ip)
-		}
+		p.wg.Add(1)
+		go func(host string) {
+			defer p.wg.Done()
+
+			switch p.Method {
+			case "native":
+				p.pingToURLNative(host, acc)
+			default:
+				p.pingToURL(host, acc)
+			}
+		}(host)
 	}
 
 	p.wg.Wait()

@@ -29,6 +29,16 @@ There are many ways to contribute:
 - Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
 
+## Minimum Requirements
+
+Telegraf shares the same [minimum requirements][] as Go:
+- Linux kernel version 2.6.23 or later
+- Windows 7 or later
+- FreeBSD 11.2 or later
+- MacOS 10.11 El Capitan or later
+
+[minimum requirements]: https://github.com/golang/go/wiki/MinimumRequirements#minimum-requirements
+
 ## Installation:
 
 You can download the binaries directly from the [downloads](https://www.influxdata.com/downloads) page
@@ -142,7 +152,7 @@ For documentation on the latest development code see the [documentation index][d
 * [apache](./plugins/inputs/apache)
 * [apcupsd](./plugins/inputs/apcupsd)
 * [aurora](./plugins/inputs/aurora)
-* [aws cloudwatch](./plugins/inputs/cloudwatch)
+* [aws cloudwatch](./plugins/inputs/cloudwatch) (Amazon Cloudwatch)
 * [azure_storage_queue](./plugins/inputs/azure_storage_queue)
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
@@ -171,8 +181,9 @@ For documentation on the latest development code see the [documentation index][d
 * [docker](./plugins/inputs/docker)
 * [docker_log](./plugins/inputs/docker_log)
 * [dovecot](./plugins/inputs/dovecot)
-* [ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
+* [aws ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
 * [elasticsearch](./plugins/inputs/elasticsearch)
+* [ethtool](./plugins/inputs/ethtool)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
@@ -205,7 +216,7 @@ For documentation on the latest development code see the [documentation index][d
 * [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
 * [kafka_consumer](./plugins/inputs/kafka_consumer)
 * [kapacitor](./plugins/inputs/kapacitor)
-* [kinesis](./plugins/inputs/kinesis_consumer)
+* [aws kinesis](./plugins/inputs/kinesis_consumer) (Amazon Kinesis)
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kibana](./plugins/inputs/kibana)
@@ -271,6 +282,7 @@ For documentation on the latest development code see the [documentation index][d
 * [smart](./plugins/inputs/smart)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [snmp](./plugins/inputs/snmp)
+* [snmp_trap](./plugins/inputs/snmp_trap)
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
@@ -278,8 +290,10 @@ For documentation on the latest development code see the [documentation index][d
 * [statsd](./plugins/inputs/statsd)
 * [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
+* [synproxy](./plugins/inputs/synproxy)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
+* [systemd_units](./plugins/inputs/systemd_units)
 * [system](./plugins/inputs/system)
 * [tail](./plugins/inputs/tail)
 * [temp](./plugins/inputs/temp)
@@ -290,7 +304,7 @@ For documentation on the latest development code see the [documentation index][d
 * [twemproxy](./plugins/inputs/twemproxy)
 * [udp_listener](./plugins/inputs/socket_listener)
 * [unbound](./plugins/inputs/unbound)
-* [uswgi](./plugins/inputs/uswgi)
+* [uwsgi](./plugins/inputs/uwsgi)
 * [varnish](./plugins/inputs/varnish)
 * [vsphere](./plugins/inputs/vsphere) VMware vSphere
 * [webhooks](./plugins/inputs/webhooks)
@@ -395,4 +409,5 @@ For documentation on the latest development code see the [documentation index][d
 * [syslog](./plugins/outputs/syslog)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
+* [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)
