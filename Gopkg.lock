@@ -111,7 +111,7 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "0:"
+  digest = "1:33f56caa9ab45fedc63d3d1d3e342d9f9d00726071f22c67d06b0cd26d49a55e"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
