@@ -64,6 +64,17 @@
   version = "0.2.0"
 
 [[projects]]
+  digest = "1:d1af3bea9bc33186e5c102a4eabbf986208be93938711b66dcf586e46974913e"
+  name = "github.com/Azure/go-amqp"
+  packages = [
+    ".",
+    "internal/testconn",
+  ]
+  pruneopts = ""
+  revision = "4607cd6ce8cba6e725049bef605795e798a91302"
+  version = "v0.12.7"
+
+[[projects]]
   digest = "1:e4a02906493a47ee87ef61aeea130ce6624da07349a6dc62494a4e72b550ca8e"
   name = "github.com/Azure/go-autorest"
   packages = [
@@ -100,7 +111,7 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "1:33f56caa9ab45fedc63d3d1d3e342d9f9d00726071f22c67d06b0cd26d49a55e"
+  digest = "0:"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
@@ -1710,6 +1721,7 @@
     "collectd.org/api",
     "collectd.org/network",
     "github.com/Azure/azure-storage-queue-go/azqueue",
+    "github.com/Azure/go-amqp",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",

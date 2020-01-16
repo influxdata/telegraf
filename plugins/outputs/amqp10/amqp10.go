@@ -9,11 +9,11 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/Azure/go-amqp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/Azure/go-amqp"
 )
 
 type AMQP10 struct {

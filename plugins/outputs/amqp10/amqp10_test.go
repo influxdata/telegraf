@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"github.com/influxdata/telegraf/internal"
 )
 
 func TestConnectAndWrite(t *testing.T) {
@@ -21,9 +21,9 @@ func TestConnectAndWrite(t *testing.T) {
 		Brokers:    brokers,
 		Topic:      "Test",
 		serializer: s,
-		Username: "admin",
-		Password: "admin",
-		Timeout: internal.Duration{Duration: time.Second * 5},
+		Username:   "admin",
+		Password:   "admin",
+		Timeout:    internal.Duration{Duration: time.Second * 5},
 	}
 
 	// Verify that we can connect to the AMQP1.0 broker
