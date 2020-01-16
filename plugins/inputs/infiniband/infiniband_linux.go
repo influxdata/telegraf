@@ -16,7 +16,7 @@ func (s *Infiniband) Gather(acc telegraf.Accumulator) error {
 	rdmaDevices := rdmamap.GetRdmaDeviceList()
 
 	if len(rdmaDevices) == 0 {
-		return fmt.Errorf("No InfiniBand devices found on this system! Check /sys/class/infiniband/ exists")
+		return fmt.Errorf("no InfiniBand devices found in /sys/class/infiniband/")
 	}
 
 	for _, dev := range rdmaDevices {

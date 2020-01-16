@@ -9,13 +9,17 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+func (e *Infiniband) Init() error {
+	e.Log.Warn("Current platform is not supported")
+	return nil
+}
+
 func (e *Infiniband) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
 func init() {
 	inputs.Add("infiniband", func() telegraf.Input {
-		log.Print("W! [inputs.infiniband] Current platform is not supported")
 		return &Infiniband{}
 	})
 }

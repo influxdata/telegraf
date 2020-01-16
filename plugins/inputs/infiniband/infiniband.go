@@ -6,9 +6,7 @@ type Infiniband struct {
 }
 
 // Sample configuration for plugin
-var InfinibandConfig = `
-  ## no config required
-`
+var InfinibandConfig = ``
 
 func (s *Infiniband) SampleConfig() string {
 	return InfinibandConfig
