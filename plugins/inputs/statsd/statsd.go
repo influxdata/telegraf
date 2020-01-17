@@ -124,6 +124,10 @@ type Statsd struct {
 	TotalConnections   selfstat.Stat
 	TCPPacketsRecv     selfstat.Stat
 	TCPBytesRecv       selfstat.Stat
+	UDPPacketsRecv     selfstat.Stat
+	UDPPacketsDrop     selfstat.Stat
+	UDPBytesRecv       selfstat.Stat
+	ParseTimeNS        selfstat.Stat
 
 	Log telegraf.Logger
 
@@ -329,6 +333,10 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.TotalConnections = selfstat.Register("statsd", "tcp_total_connections", tags)
 	s.TCPPacketsRecv = selfstat.Register("statsd", "tcp_packets_received", tags)
 	s.TCPBytesRecv = selfstat.Register("statsd", "tcp_bytes_received", tags)
+	s.UDPPacketsRecv = selfstat.Register("statsd", "udp_packets_received", tags)
+	s.UDPPacketsDrop = selfstat.Register("statsd", "udp_packets_dropped", tags)
+	s.UDPBytesRecv = selfstat.Register("statsd", "udp_bytes_received", tags)
+	s.ParseTimeNS = selfstat.Register("statsd", "parse_time_ns", tags)
 
 	s.in = make(chan input, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
@@ -461,6 +469,8 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 				}
 				return err
 			}
+			s.UDPPacketsRecv.Incr(1)
+			s.UDPBytesRecv.Incr(int64(1))
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
 			b.Write(buf[:n])
@@ -470,6 +480,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 				Time:   time.Now(),
 				Addr:   addr.IP.String()}:
 			default:
+				s.UDPPacketsDrop.Incr(1)
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
 					s.Log.Errorf("Statsd message queue full. "+
@@ -490,6 +501,7 @@ func (s *Statsd) parser() error {
 		case <-s.done:
 			return nil
 		case in := <-s.in:
+			start := time.Now()
 			lines := strings.Split(in.Buffer.String(), "\n")
 			s.bufPool.Put(in.Buffer)
 			for _, line := range lines {
@@ -502,6 +514,8 @@ func (s *Statsd) parser() error {
 					s.parseStatsdLine(line)
 				}
 			}
+			elapsed := time.Since(start)
+			s.ParseTimeNS.Set(elapsed.Nanoseconds())
 		}
 	}
 }
