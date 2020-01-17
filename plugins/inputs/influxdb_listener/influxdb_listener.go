@@ -62,18 +62,18 @@ type InfluxDBListener struct {
 	acc     telegraf.Accumulator
 	pool    *pool
 
-	BytesRecv       selfstat.Stat
-	RequestsServed  selfstat.Stat
-	WritesServed    selfstat.Stat
-	QueriesServed   selfstat.Stat
-	PingsServed     selfstat.Stat
-	RequestsRecv    selfstat.Stat
-	WritesRecv      selfstat.Stat
-	QueriesRecv     selfstat.Stat
-	PingsRecv       selfstat.Stat
-	NotFoundsServed selfstat.Stat
-	BuffersCreated  selfstat.Stat
-	AuthFailures    selfstat.Stat
+	bytesRecv       selfstat.Stat
+	requestsServed  selfstat.Stat
+	writesServed    selfstat.Stat
+	queriesServed   selfstat.Stat
+	pingsServed     selfstat.Stat
+	requestsRecv    selfstat.Stat
+	writesRecv      selfstat.Stat
+	queriesRecv     selfstat.Stat
+	pingsRecv       selfstat.Stat
+	notFoundsServed selfstat.Stat
+	buffersCreated  selfstat.Stat
+	authFailures    selfstat.Stat
 
 	Log telegraf.Logger
 
@@ -129,18 +129,18 @@ func (h *InfluxDBListener) Description() string {
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
-	h.BuffersCreated.Set(h.pool.ncreated())
+	h.buffersCreated.Set(h.pool.ncreated())
 	return nil
 }
 
 func (h *InfluxDBListener) routes() {
-	h.mux.HandleFunc("/write", h.handleStats(h.WritesRecv, h.WritesServed,
+	h.mux.HandleFunc("/write", h.handleStats(h.writesRecv, h.writesServed,
 		h.handleAuth(h.handleWrite())))
-	h.mux.HandleFunc("/query", h.handleStats(h.QueriesRecv, h.QueriesServed,
+	h.mux.HandleFunc("/query", h.handleStats(h.queriesRecv, h.queriesServed,
 		h.handleAuth(h.handleQuery())))
-	h.mux.HandleFunc("/ping", h.handleStats(h.PingsRecv, h.PingsServed,
+	h.mux.HandleFunc("/ping", h.handleStats(h.pingsRecv, h.pingsServed,
 		h.handlePing()))
-	h.mux.HandleFunc("/", h.handlePostStat(h.NotFoundsServed,
+	h.mux.HandleFunc("/", h.handlePostStat(h.notFoundsServed,
 		h.handleAuth(http.NotFound)))
 }
 
@@ -148,18 +148,18 @@ func (h *InfluxDBListener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
 	}
-	h.BytesRecv = selfstat.Register("influxdb_listener", "bytes_received", tags)
-	h.RequestsServed = selfstat.Register("influxdb_listener", "requests_served", tags)
-	h.WritesServed = selfstat.Register("influxdb_listener", "writes_served", tags)
-	h.QueriesServed = selfstat.Register("influxdb_listener", "queries_served", tags)
-	h.PingsServed = selfstat.Register("influxdb_listener", "pings_served", tags)
-	h.RequestsRecv = selfstat.Register("influxdb_listener", "requests_received", tags)
-	h.WritesRecv = selfstat.Register("influxdb_listener", "writes_received", tags)
-	h.QueriesRecv = selfstat.Register("influxdb_listener", "queries_received", tags)
-	h.PingsRecv = selfstat.Register("influxdb_listener", "pings_received", tags)
-	h.NotFoundsServed = selfstat.Register("influxdb_listener", "not_founds_served", tags)
-	h.BuffersCreated = selfstat.Register("influxdb_listener", "buffers_created", tags)
-	h.AuthFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
+	h.bytesRecv = selfstat.Register("influxdb_listener", "bytes_received", tags)
+	h.requestsServed = selfstat.Register("influxdb_listener", "requests_served", tags)
+	h.writesServed = selfstat.Register("influxdb_listener", "writes_served", tags)
+	h.queriesServed = selfstat.Register("influxdb_listener", "queries_served", tags)
+	h.pingsServed = selfstat.Register("influxdb_listener", "pings_served", tags)
+	h.requestsRecv = selfstat.Register("influxdb_listener", "requests_received", tags)
+	h.writesRecv = selfstat.Register("influxdb_listener", "writes_received", tags)
+	h.queriesRecv = selfstat.Register("influxdb_listener", "queries_received", tags)
+	h.pingsRecv = selfstat.Register("influxdb_listener", "pings_received", tags)
+	h.notFoundsServed = selfstat.Register("influxdb_listener", "not_founds_served", tags)
+	h.buffersCreated = selfstat.Register("influxdb_listener", "buffers_created", tags)
+	h.authFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
 	h.longLines = selfstat.Register("influxdb_listener", "long_lines", tags)
 	h.routes()
 
@@ -239,9 +239,9 @@ func (h *InfluxDBListener) Stop() {
 }
 
 func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	h.RequestsRecv.Incr(1)
+	h.requestsRecv.Incr(1)
 	h.mux.ServeHTTP(res, req)
-	h.RequestsServed.Incr(1)
+	h.requestsServed.Incr(1)
 }
 
 func (h *InfluxDBListener) handleStats(pre selfstat.Stat, post selfstat.Stat, f http.HandlerFunc) http.HandlerFunc {
@@ -324,7 +324,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				badRequest(res, err.Error())
 				return
 			}
-			h.BytesRecv.Incr(int64(n))
+			h.bytesRecv.Incr(int64(n))
 
 			if err == io.EOF {
 				if return400 {
@@ -468,7 +468,7 @@ func (h *InfluxDBListener) handleAuth(f http.HandlerFunc) http.HandlerFunc {
 				subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
 				subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
 
-				h.AuthFailures.Incr(1)
+				h.authFailures.Incr(1)
 				http.Error(res, "Unauthorized", http.StatusUnauthorized)
 				return
 			}

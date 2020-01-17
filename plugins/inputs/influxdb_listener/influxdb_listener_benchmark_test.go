@@ -19,7 +19,7 @@ func newListener() *InfluxDBListener {
 	listener := &InfluxDBListener{
 		TimeFunc:  time.Now,
 		acc:       &testutil.NopAccumulator{},
-		BytesRecv: selfstat.Register("influxdb_listener", "bytes_received", map[string]string{}),
+		bytesRecv: selfstat.Register("influxdb_listener", "bytes_received", map[string]string{}),
 		handler:   influx.NewMetricHandler(),
 		pool:      NewPool(200, DEFAULT_MAX_LINE_SIZE),
 		MaxLineSize: internal.Size{
