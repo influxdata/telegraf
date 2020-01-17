@@ -78,6 +78,8 @@ type InfluxDBListener struct {
 	Log telegraf.Logger
 
 	longLines selfstat.Stat
+
+	mux        http.ServeMux
 }
 
 const sampleConfig = `
@@ -131,6 +133,17 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
+func (h *InfluxDBListener) routes() {
+	h.mux.HandleFunc("/write", h.handleStats(h.WritesRecv, h.WritesServed,
+		h.handleAuth(h.handleWrite())))
+	h.mux.HandleFunc("/query", h.handleStats(h.QueriesRecv, h.QueriesServed,
+		h.handleAuth(h.handleQuery())))
+	h.mux.HandleFunc("/ping", h.handleStats(h.PingsRecv, h.PingsServed,
+		h.handlePing()))
+	h.mux.HandleFunc("/", h.handlePostStat(h.NotFoundsServed,
+		h.handleAuth(http.NotFound)))
+}
+
 func (h *InfluxDBListener) Init() error {
 	tags := map[string]string{
 		"address": h.ServiceAddress,
@@ -148,6 +161,7 @@ func (h *InfluxDBListener) Init() error {
 	h.BuffersCreated = selfstat.Register("influxdb_listener", "buffers_created", tags)
 	h.AuthFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
 	h.longLines = selfstat.Register("influxdb_listener", "long_lines", tags)
+	h.routes()
 
 	if h.MaxBodySize.Size == 0 {
 		h.MaxBodySize.Size = DEFAULT_MAX_BODY_SIZE
@@ -226,26 +240,38 @@ func (h *InfluxDBListener) Stop() {
 
 func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	h.RequestsRecv.Incr(1)
-	defer h.RequestsServed.Incr(1)
-	switch req.URL.Path {
-	case "/write":
-		h.WritesRecv.Incr(1)
-		defer h.WritesServed.Incr(1)
-		h.AuthenticateIfSet(h.serveWrite, res, req)
-	case "/query":
-		h.QueriesRecv.Incr(1)
-		defer h.QueriesServed.Incr(1)
+	h.mux.ServeHTTP(res, req)
+	h.RequestsServed.Incr(1)
+}
+
+func (h *InfluxDBListener) handleStats(pre selfstat.Stat, post selfstat.Stat, f http.HandlerFunc) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		pre.Incr(1)
+		f(res, req)
+		post.Incr(1)
+	}
+}
+
+func (h *InfluxDBListener) handlePostStat(post selfstat.Stat, f http.HandlerFunc) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		f(res, req)
+		post.Incr(1)
+	}
+}
+
+func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query
-		h.AuthenticateIfSet(func(res http.ResponseWriter, req *http.Request) {
-			res.Header().Set("Content-Type", "application/json")
-			res.Header().Set("X-Influxdb-Version", "1.0")
-			res.WriteHeader(http.StatusOK)
-			res.Write([]byte("{\"results\":[]}"))
-		}, res, req)
-	case "/ping":
-		h.PingsRecv.Incr(1)
-		defer h.PingsServed.Incr(1)
+		res.Header().Set("Content-Type", "application/json")
+		res.Header().Set("X-Influxdb-Version", "1.0")
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte("{\"results\":[]}"))
+	}
+}
+
+func (h *InfluxDBListener) handlePing() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
 		verbose := req.URL.Query().Get("verbose")
 
 		// respond to ping requests
@@ -256,124 +282,122 @@ func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request)
 		} else {
 			res.WriteHeader(http.StatusNoContent)
 		}
-	default:
-		defer h.NotFoundsServed.Incr(1)
-		// Don't know how to respond to calls to other endpoints
-		h.AuthenticateIfSet(http.NotFound, res, req)
 	}
 }
 
-func (h *InfluxDBListener) serveWrite(res http.ResponseWriter, req *http.Request) {
-	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > h.MaxBodySize.Size {
-		tooLarge(res)
-		return
-	}
-	now := h.TimeFunc()
-
-	precision := req.URL.Query().Get("precision")
-	db := req.URL.Query().Get("db")
-
-	// Handle gzip request bodies
-	body := req.Body
-	if req.Header.Get("Content-Encoding") == "gzip" {
-		var err error
-		body, err = gzip.NewReader(req.Body)
-		if err != nil {
-			h.Log.Debug(err.Error())
-			badRequest(res, err.Error())
+func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		// Check that the content length is not too large for us to handle.
+		if req.ContentLength > h.MaxBodySize.Size {
+			tooLarge(res)
 			return
 		}
-		defer body.Close()
-	}
-	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
+		now := h.TimeFunc()
 
-	var return400 bool
-	var hangingBytes bool
-	buf := h.pool.get()
-	defer h.pool.put(buf)
-	bufStart := 0
-	for {
-		n, err := io.ReadFull(body, buf[bufStart:])
-		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-			h.Log.Debug(err.Error())
-			// problem reading the request body
-			badRequest(res, err.Error())
-			return
-		}
-		h.BytesRecv.Incr(int64(n))
+		precision := req.URL.Query().Get("precision")
+		db := req.URL.Query().Get("db")
 
-		if err == io.EOF {
-			if return400 {
-				badRequest(res, "")
-			} else {
-				res.WriteHeader(http.StatusNoContent)
+		// Handle gzip request bodies
+		body := req.Body
+		if req.Header.Get("Content-Encoding") == "gzip" {
+			var err error
+			body, err = gzip.NewReader(req.Body)
+			if err != nil {
+				h.Log.Debug(err.Error())
+				badRequest(res, err.Error())
+				return
 			}
-			return
+			defer body.Close()
 		}
+		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
 
-		if hangingBytes {
-			i := bytes.IndexByte(buf, '\n')
-			if i == -1 {
-				// still didn't find a newline, keep scanning
+		var return400 bool
+		var hangingBytes bool
+		buf := h.pool.get()
+		defer h.pool.put(buf)
+		bufStart := 0
+		for {
+			n, err := io.ReadFull(body, buf[bufStart:])
+			if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+				h.Log.Debug(err.Error())
+				// problem reading the request body
+				badRequest(res, err.Error())
+				return
+			}
+			h.BytesRecv.Incr(int64(n))
+
+			if err == io.EOF {
+				if return400 {
+					badRequest(res, "")
+				} else {
+					res.WriteHeader(http.StatusNoContent)
+				}
+				return
+			}
+
+			if hangingBytes {
+				i := bytes.IndexByte(buf, '\n')
+				if i == -1 {
+					// still didn't find a newline, keep scanning
+					continue
+				}
+				// rotate the bit remaining after the first newline to the front of the buffer
+				i++ // start copying after the newline
+				bufStart = len(buf) - i
+				if bufStart > 0 {
+					copy(buf, buf[i:])
+				}
+				hangingBytes = false
 				continue
 			}
-			// rotate the bit remaining after the first newline to the front of the buffer
+
+			if err == io.ErrUnexpectedEOF {
+				// finished reading the request body
+				err = h.parse(buf[:n+bufStart], now, precision, db)
+				if err != nil {
+					h.Log.Debugf("%s: %s", err.Error(), bufStart+n)
+					if strings.HasPrefix(err.Error(), "partial write:") {
+						partialWrite(res, err.Error())
+						return
+					}
+					return400 = true
+				}
+				if return400 {
+					if err != nil {
+						badRequest(res, err.Error())
+					} else {
+						badRequest(res, "")
+					}
+				} else {
+					res.WriteHeader(http.StatusNoContent)
+				}
+				return
+			}
+
+			// if we got down here it means that we filled our buffer, and there
+			// are still bytes remaining to be read. So we will parse up until the
+			// final newline, then push the rest of the bytes into the next buffer.
+			i := bytes.LastIndexByte(buf, '\n')
+			if i == -1 {
+				h.longLines.Incr(1)
+				// drop any line longer than the max buffer size
+				h.Log.Debugf("Influxdb_listener received a single line longer than the maximum of %d bytes",
+					len(buf))
+				hangingBytes = true
+				return400 = true
+				bufStart = 0
+				continue
+			}
+			if err := h.parse(buf[:i+1], now, precision, db); err != nil {
+				h.Log.Debug(err.Error())
+				return400 = true
+			}
+			// rotate the bit remaining after the last newline to the front of the buffer
 			i++ // start copying after the newline
 			bufStart = len(buf) - i
 			if bufStart > 0 {
 				copy(buf, buf[i:])
 			}
-			hangingBytes = false
-			continue
-		}
-
-		if err == io.ErrUnexpectedEOF {
-			// finished reading the request body
-			err = h.parse(buf[:n+bufStart], now, precision, db)
-			if err != nil {
-				h.Log.Debugf("%s: %s", err.Error(), bufStart+n)
-				if strings.HasPrefix(err.Error(), "partial write:") {
-					partialWrite(res, err.Error())
-					return
-				}
-				return400 = true
-			}
-			if return400 {
-				if err != nil {
-					badRequest(res, err.Error())
-				} else {
-					badRequest(res, "")
-				}
-			} else {
-				res.WriteHeader(http.StatusNoContent)
-			}
-			return
-		}
-
-		// if we got down here it means that we filled our buffer, and there
-		// are still bytes remaining to be read. So we will parse up until the
-		// final newline, then push the rest of the bytes into the next buffer.
-		i := bytes.LastIndexByte(buf, '\n')
-		if i == -1 {
-			h.longLines.Incr(1)
-			// drop any line longer than the max buffer size
-			h.Log.Debugf("Influxdb_listener received a single line longer than the maximum of %d bytes",
-				len(buf))
-			hangingBytes = true
-			return400 = true
-			bufStart = 0
-			continue
-		}
-		if err := h.parse(buf[:i+1], now, precision, db); err != nil {
-			h.Log.Debug(err.Error())
-			return400 = true
-		}
-		// rotate the bit remaining after the last newline to the front of the buffer
-		i++ // start copying after the newline
-		bufStart = len(buf) - i
-		if bufStart > 0 {
-			copy(buf, buf[i:])
 		}
 	}
 }
@@ -434,20 +458,23 @@ func partialWrite(res http.ResponseWriter, errString string) {
 	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
 }
 
-func (h *InfluxDBListener) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
-	if h.BasicUsername != "" && h.BasicPassword != "" {
-		reqUsername, reqPassword, ok := req.BasicAuth()
-		if !ok ||
-			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
-			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
+func (h *InfluxDBListener) handleAuth(f http.HandlerFunc) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		res.Header().Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
 
-			h.AuthFailures.Incr(1)
-			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
-			return
+		if h.BasicUsername != "" && h.BasicPassword != "" {
+			reqUsername, reqPassword, ok := req.BasicAuth()
+			if !ok ||
+				subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
+				subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
+
+				h.AuthFailures.Incr(1)
+				http.Error(res, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 		}
-		handler(res, req)
-	} else {
-		handler(res, req)
+
+		f(res, req)
 	}
 }
 

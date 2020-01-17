@@ -81,7 +81,7 @@ func BenchmarkInfluxDBListener_serveWrite(b *testing.B) {
 				if err != nil {
 					b.Error(err)
 				}
-				listener.serveWrite(res, req)
+				listener.handleWrite()(res, req)
 				if res.Code != http.StatusNoContent {
 					b.Errorf("unexpected status %d", res.Code)
 				}
