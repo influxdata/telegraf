@@ -470,7 +470,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 				return err
 			}
 			s.UDPPacketsRecv.Incr(1)
-			s.UDPBytesRecv.Incr(int64(1))
+			s.UDPBytesRecv.Incr(int64(n))
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
 			b.Write(buf[:n])
