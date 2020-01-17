@@ -616,7 +616,7 @@ func TestEventOverTCP(t *testing.T) {
 	event_id := "1234"
 	event := &aos_streaming.Event{
 		Id:   &event_id,
-		Data: &aos_streaming.Event_Streaming{streaming_event},
+		Data: &aos_streaming.Event_Streaming{Streaming: streaming_event},
 	}
 
 	// aos message
@@ -633,7 +633,7 @@ func TestEventOverTCP(t *testing.T) {
 		OriginHostname: &origin_hostname,
 		BlueprintLabel: &origin_label,
 		OriginRole:     &origin_role,
-		Data:           &aos_streaming.AosMessage_Event{event},
+		Data:           &aos_streaming.AosMessage_Event{Event: event},
 	}
 
 	data, err := proto.Marshal(aos_message)
@@ -724,7 +724,7 @@ func CreatePerfmonMsg(seq_num uint64, delta_seconds uint64) []byte {
 
 	// perfmon
 	perfmon := &aos_streaming.PerfMon{
-		Data: &aos_streaming.PerfMon_InterfaceCounters{interface_counters},
+		Data: &aos_streaming.PerfMon_InterfaceCounters{InterfaceCounters: interface_counters},
 	}
 
 	// aos message
@@ -741,7 +741,7 @@ func CreatePerfmonMsg(seq_num uint64, delta_seconds uint64) []byte {
 		OriginHostname: &origin_hostname,
 		BlueprintLabel: &blueprint_label,
 		OriginRole:     &origin_role,
-		Data:           &aos_streaming.AosMessage_PerfMon{perfmon},
+		Data:           &aos_streaming.AosMessage_PerfMon{PerfMon: perfmon},
 	}
 
 	data, err := proto.Marshal(aos_message)
