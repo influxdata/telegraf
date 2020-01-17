@@ -6,6 +6,8 @@ services:
       volumes:
         - ./telegraf.conf:/telegraf.conf
         - ../../../../telegraf:/telegraf
+      ports:
+        - '7777:7777'
       entrypoint:
         - /telegraf
         - --config
