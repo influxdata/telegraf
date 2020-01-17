@@ -122,8 +122,8 @@ type Statsd struct {
 	MaxConnections     selfstat.Stat
 	CurrentConnections selfstat.Stat
 	TotalConnections   selfstat.Stat
-	PacketsRecv        selfstat.Stat
-	BytesRecv          selfstat.Stat
+	TCPPacketsRecv     selfstat.Stat
+	TCPBytesRecv       selfstat.Stat
 
 	Log telegraf.Logger
 
@@ -327,8 +327,8 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	s.MaxConnections.Set(int64(s.MaxTCPConnections))
 	s.CurrentConnections = selfstat.Register("statsd", "tcp_current_connections", tags)
 	s.TotalConnections = selfstat.Register("statsd", "tcp_total_connections", tags)
-	s.PacketsRecv = selfstat.Register("statsd", "tcp_packets_received", tags)
-	s.BytesRecv = selfstat.Register("statsd", "tcp_bytes_received", tags)
+	s.TCPPacketsRecv = selfstat.Register("statsd", "tcp_packets_received", tags)
+	s.TCPBytesRecv = selfstat.Register("statsd", "tcp_bytes_received", tags)
 
 	s.in = make(chan input, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
@@ -834,8 +834,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			if n == 0 {
 				continue
 			}
-			s.BytesRecv.Incr(int64(n))
-			s.PacketsRecv.Incr(1)
+			s.TCPBytesRecv.Incr(int64(n))
+			s.TCPPacketsRecv.Incr(1)
 
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
