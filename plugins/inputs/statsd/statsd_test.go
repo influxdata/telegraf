@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	testMsg = "test.tcp.msg:100|c"
-	producerThreads=10
-
+	testMsg         = "test.tcp.msg:100|c"
+	producerThreads = 10
 )
 
 func NewTestStatsd() *Statsd {
@@ -149,7 +148,7 @@ func BenchmarkUDP(b *testing.B) {
 		wg.Wait()
 
 		// wait for 250,000 metrics to get added to accumulator
-		for len(listener.in)>0 {
+		for len(listener.in) > 0 {
 			fmt.Printf("Left in buffer: %v \n", len(listener.in))
 			time.Sleep(time.Millisecond)
 		}
@@ -170,7 +169,7 @@ func BenchmarkUDPWithMultipleGoroutines(b *testing.B) {
 		Protocol:               "udp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
-		MaxParserThreads: 10,
+		MaxParserThreads:       10,
 	}
 	acc := &testutil.Accumulator{Discard: true}
 
@@ -193,13 +192,12 @@ func BenchmarkUDPWithMultipleGoroutines(b *testing.B) {
 		}
 		wg.Wait()
 		// wait for 250,000 metrics to get added to accumulator
-		for len(listener.in)>0 {
+		for len(listener.in) > 0 {
 			time.Sleep(time.Millisecond)
 		}
 		listener.Stop()
 	}
 }
-
 
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkTCP(b *testing.B) {
@@ -231,7 +229,7 @@ func BenchmarkTCP(b *testing.B) {
 		}
 		wg.Wait()
 		// wait for 250,000 metrics to get added to accumulator
-		for len(listener.in)>0 {
+		for len(listener.in) > 0 {
 			time.Sleep(time.Millisecond)
 		}
 		listener.Stop()
@@ -246,7 +244,7 @@ func BenchmarkTCPWithMultipleGoroutines(b *testing.B) {
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
 		MaxTCPConnections:      250,
-		MaxParserThreads: 		10,
+		MaxParserThreads:       10,
 	}
 	acc := &testutil.Accumulator{Discard: true}
 
@@ -269,13 +267,12 @@ func BenchmarkTCPWithMultipleGoroutines(b *testing.B) {
 		}
 		wg.Wait()
 		// wait for 250,000 metrics to get added to accumulator
-		for len(listener.in)>0 {
+		for len(listener.in) > 0 {
 			time.Sleep(time.Millisecond)
 		}
 		listener.Stop()
 	}
 }
-
 
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
@@ -1786,7 +1783,7 @@ func TestTCPWithMultipleGoroutines(t *testing.T) {
 		ServiceAddress:         "localhost:0",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
-		MaxParserThreads: 		3,
+		MaxParserThreads:       3,
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, statsd.Start(&acc))
@@ -1879,7 +1876,7 @@ func TestUdpMultipleParserGoroutines(t *testing.T) {
 		Protocol:               "udp",
 		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
-		MaxParserThreads: 3,
+		MaxParserThreads:       3,
 	}
 	var acc testutil.Accumulator
 	require.NoError(t, statsd.Start(&acc))
