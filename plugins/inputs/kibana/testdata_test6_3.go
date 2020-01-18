@@ -197,5 +197,3 @@ var kibanaStatusExpected6_3 = map[string]interface{}{
 	"concurrent_connections": int64(10),
 	"requests_per_sec":       float64(0.4),
 }
-
-

@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -55,9 +55,9 @@ type responseTimes struct {
 }
 
 type process struct {
-	Mem mem `json:"mem"`
-	Memory memory `json:"memory"`
-	UptimeInMillis int64 `json:"uptime_in_millis"`
+	Mem            mem    `json:"mem"`
+	Memory         memory `json:"memory"`
+	UptimeInMillis int64  `json:"uptime_in_millis"`
 }
 
 type requests struct {
@@ -75,17 +75,20 @@ type memory struct {
 
 type heap struct {
 	TotalInBytes int64 `json:"total_in_bytes"`
-	UsedInBytes int64 `json:"used_in_bytes"`
+	UsedInBytes  int64 `json:"used_in_bytes"`
 }
 
 const sampleConfig = `
   ## specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]
+
   ## Timeout for HTTP requests
   timeout = "5s"
+
   ## HTTP Basic Auth credentials
   # username = "username"
   # password = "pa$$word"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -201,10 +204,10 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 	fields["response_time_max_ms"] = kibanaStatus.Metrics.ResponseTimes.MaxInMillis
 	fields["requests_per_sec"] = float64(kibanaStatus.Metrics.Requests.Total) / float64(kibanaStatus.Metrics.CollectionIntervalInMilles) * 1000
 
-        Version, err := strconv.ParseFloat(strings.Join(strings.Split(kibanaStatus.Version.Number,".")[:2],"."), 64)
-        if err != nil {
-                return err
-        }
+	Version, err := strconv.ParseFloat(strings.Join(strings.Split(kibanaStatus.Version.Number, ".")[:2], "."), 64)
+	if err != nil {
+		return err
+	}
 
 	if Version >= 6.5 {
 		fields["uptime_ms"] = kibanaStatus.Metrics.Process.UptimeInMillis
@@ -216,7 +219,7 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
 
 	}
-	
+
 	acc.AddFields("kibana", fields, tags)
 
 	return nil

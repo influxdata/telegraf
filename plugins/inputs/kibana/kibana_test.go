@@ -19,13 +19,14 @@ func defaultTags6_3() map[string]string {
 }
 
 func defaultTags6_5() map[string]string {
-        return map[string]string{
-                "name":    "my-kibana",
-                "source":  "example.com:5601",
-                "version": "6.5.4",
-                "status":  "green",
-        }
+	return map[string]string{
+		"name":    "my-kibana",
+		"source":  "example.com:5601",
+		"version": "6.5.4",
+		"status":  "green",
+	}
 }
+
 type transportMock struct {
 	statusCode int
 	body       string
@@ -50,13 +51,13 @@ func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
 }
 
 func checkKibanaStatusResult(version string, t *testing.T, acc *testutil.Accumulator) {
-        if version == "6.3.2" {
-                tags := defaultTags6_3()
-                acc.AssertContainsTaggedFields(t, "kibana", kibanaStatusExpected6_3, tags)
-        } else {
-                tags := defaultTags6_5()
-                acc.AssertContainsTaggedFields(t, "kibana", kibanaStatusExpected6_5, tags)
-        }
+	if version == "6.3.2" {
+		tags := defaultTags6_3()
+		acc.AssertContainsTaggedFields(t, "kibana", kibanaStatusExpected6_3, tags)
+	} else {
+		tags := defaultTags6_5()
+		acc.AssertContainsTaggedFields(t, "kibana", kibanaStatusExpected6_5, tags)
+	}
 }
 
 func TestGather(t *testing.T) {
@@ -70,15 +71,14 @@ func TestGather(t *testing.T) {
 	}
 	checkKibanaStatusResult(defaultTags6_3()["version"], t, &acc1)
 
-
 	//Unit test for Kibana version >= 6.5
-        ks.client.Transport = newTransportMock(http.StatusOK, kibanaStatusResponse6_5)
-        var acc testutil.Accumulator
-        if err := acc.GatherError(ks.Gather); err != nil {
-               t.Fatal(err)
-        }
-        checkKibanaStatusResult(defaultTags6_5()["version"], t, &acc)
-	
+	ks.client.Transport = newTransportMock(http.StatusOK, kibanaStatusResponse6_5)
+	var acc2 testutil.Accumulator
+	if err := acc2.GatherError(ks.Gather); err != nil {
+		t.Fatal(err)
+	}
+	checkKibanaStatusResult(defaultTags6_5()["version"], t, &acc2)
+
 }
 
 func newKibanahWithClient() *Kibana {
