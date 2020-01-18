@@ -129,6 +129,8 @@ type Statsd struct {
 
 	// A pool of byte slices to handle parsing
 	bufPool sync.Pool
+
+	MaxParserThreads int `toml:"max_parser_threads"`
 }
 
 type input struct {
@@ -390,12 +392,19 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		}()
 	}
 
-	// Start the line parser
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-		s.parser()
-	}()
+	//Defaulting to one
+	if s.MaxParserThreads < 1 {
+		s.MaxParserThreads = 1
+	}
+
+	for i := 1; i <= s.MaxParserThreads; i++ {
+		// Start the line parser
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			s.parser()
+		}()
+	}
 	s.Log.Infof("Started the statsd service on %q", s.ServiceAddress)
 	return nil
 }

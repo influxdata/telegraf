@@ -68,6 +68,11 @@
   ## Maximum socket buffer size in bytes, once the buffer fills up, metrics
   ## will start dropping.  Defaults to the OS default.
   # read_buffer_size = 65535
+  
+  ## Number of goroutines to be spun up to parse incoming messages. Raising
+  ## this limit will increase throughput of metric processing but also increase
+  ## CPU utilization. Default 1.
+  # max_parser_threads = 1
 ```
 
 ### Description
