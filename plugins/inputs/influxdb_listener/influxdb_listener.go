@@ -68,9 +68,6 @@ type InfluxDBListener struct {
 	queriesServed   selfstat.Stat
 	pingsServed     selfstat.Stat
 	requestsRecv    selfstat.Stat
-	writesRecv      selfstat.Stat
-	queriesRecv     selfstat.Stat
-	pingsRecv       selfstat.Stat
 	notFoundsServed selfstat.Stat
 	buffersCreated  selfstat.Stat
 	authFailures    selfstat.Stat
@@ -134,14 +131,10 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 }
 
 func (h *InfluxDBListener) routes() {
-	h.mux.HandleFunc("/write", h.handleStats(h.writesRecv, h.writesServed,
-		h.handleAuth(h.handleWrite())))
-	h.mux.HandleFunc("/query", h.handleStats(h.queriesRecv, h.queriesServed,
-		h.handleAuth(h.handleQuery())))
-	h.mux.HandleFunc("/ping", h.handleStats(h.pingsRecv, h.pingsServed,
-		h.handlePing()))
-	h.mux.HandleFunc("/", h.handlePostStat(h.notFoundsServed,
-		h.handleAuth(http.NotFound)))
+	h.mux.HandleFunc("/write", h.handleAuth(h.handleWrite()))
+	h.mux.HandleFunc("/query", h.handleAuth(h.handleQuery()))
+	h.mux.HandleFunc("/ping", h.handlePing())
+	h.mux.HandleFunc("/", h.handleAuth(h.handleDefault()))
 }
 
 func (h *InfluxDBListener) Init() error {
@@ -154,9 +147,6 @@ func (h *InfluxDBListener) Init() error {
 	h.queriesServed = selfstat.Register("influxdb_listener", "queries_served", tags)
 	h.pingsServed = selfstat.Register("influxdb_listener", "pings_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_listener", "requests_received", tags)
-	h.writesRecv = selfstat.Register("influxdb_listener", "writes_received", tags)
-	h.queriesRecv = selfstat.Register("influxdb_listener", "queries_received", tags)
-	h.pingsRecv = selfstat.Register("influxdb_listener", "pings_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_listener", "not_founds_served", tags)
 	h.buffersCreated = selfstat.Register("influxdb_listener", "buffers_created", tags)
 	h.authFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
@@ -261,6 +251,7 @@ func (h *InfluxDBListener) handlePostStat(post selfstat.Stat, f http.HandlerFunc
 
 func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
+		defer h.queriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query
 		res.Header().Set("Content-Type", "application/json")
@@ -272,6 +263,7 @@ func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
 
 func (h *InfluxDBListener) handlePing() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
+		defer h.pingsServed.Incr(1)
 		verbose := req.URL.Query().Get("verbose")
 
 		// respond to ping requests
@@ -285,8 +277,16 @@ func (h *InfluxDBListener) handlePing() http.HandlerFunc {
 	}
 }
 
+func (h *InfluxDBListener) handleDefault() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		defer h.notFoundsServed.Incr(1)
+		http.NotFound(res, req)
+	}
+}
+
 func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
+		defer h.writesServed.Incr(1)
 		// Check that the content length is not too large for us to handle.
 		if req.ContentLength > h.MaxBodySize.Size {
 			tooLarge(res)
