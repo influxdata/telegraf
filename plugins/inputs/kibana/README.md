@@ -42,7 +42,7 @@ with following rules:
 
 - kibana
   - status_code: integer (1, 2, 3, 0)
-  - heap_max_bytes: integer
+  - heap_max_bytes/heap_total_bytes: integer
   - heap_used_bytes: integer
   - uptime_ms: integer
   - response_time_avg_ms: float
@@ -52,12 +52,16 @@ with following rules:
 
 ### Tags
 
-- status (Kibana health: green, yellow, red)
 - name (Kibana reported name)
-- uuid (Kibana reported UUID)
-- version (Kibana version)
 - source (Kibana server hostname or IP)
+- status (Kibana health: green, yellow, red)
+- version (Kibana version)
 
 ### Example Output
+```
+Kibana Version < 6.5
+kibana,host=myhost,name=my-kibana,source=localhost:5601,status=green,version=6.3.2 concurrent_connections=0i,heap_max_bytes=136478720i,heap_used_bytes=119231088i,requests_per_sec=1,response_time_avg_ms=59i,response_time_max_ms=300i,status_code=1i,uptime_ms=2187428019i 1534864502000000000
 
-kibana,host=myhost,name=my-kibana,source=localhost:5601,version=6.3.2 concurrent_connections=0i,heap_max_bytes=136478720i,heap_used_bytes=119231088i,response_time_avg_ms=0i,response_time_max_ms=0i,status="green",status_code=1i,uptime_ms=2187428019i 1534864502000000000
+Kibana Version > 6.5
+kibana,host=myhost,name=my-kibana,source=localhost:5601,status=green,version=6.5.4 concurrent_connections=8i,heap_total_bytes=447778816i,heap_used_bytes=380603352i,requests_per_sec=1,response_time_avg_ms=57.6,response_time_max_ms=220i,status_code=1i,uptime_ms=6717489805i 1534864502000000000
+```
