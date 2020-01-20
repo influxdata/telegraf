@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.37.4
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
+	github.com/Azure/azure-event-hubs-go/v3 v3.1.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
 	github.com/Azure/go-autorest/autorest v0.9.3
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
@@ -86,7 +87,6 @@ require (
 	github.com/mdlayher/apcupsd v0.0.0-20190314144147-eb3dd99a75fe
 	github.com/miekg/dns v1.0.14
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
-	github.com/mitchellh/mapstructure v0.0.0-20180715050151-f15292f7a699 // indirect
 	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/nats-io/nats-server/v2 v2.1.4
@@ -127,9 +127,9 @@ require (
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	gonum.org/v1/gonum v0.6.2 // indirect
-	google.golang.org/api v0.3.1
-	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
-	google.golang.org/grpc v1.19.0
+	google.golang.org/api v0.5.0
+	google.golang.org/genproto v0.0.0-20190522204451-c2c4e71fbf69
+	google.golang.org/grpc v1.21.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
@@ -143,3 +143,5 @@ require (
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
 replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
+
+replace github.com/devigned/tab => github.com/R290/tab v0.1.2
