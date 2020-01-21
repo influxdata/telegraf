@@ -21,7 +21,6 @@ func newListener() *InfluxDBListener {
 		acc:       &testutil.NopAccumulator{},
 		bytesRecv: selfstat.Register("influxdb_listener", "bytes_received", map[string]string{}),
 		handler:   influx.NewMetricHandler(),
-		pool:      NewPool(200, DEFAULT_MAX_LINE_SIZE),
 		MaxLineSize: internal.Size{
 			Size: DEFAULT_MAX_LINE_SIZE,
 		},

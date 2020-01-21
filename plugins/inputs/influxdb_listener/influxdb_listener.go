@@ -60,7 +60,7 @@ type InfluxDBListener struct {
 	handler *influx.MetricHandler
 	parser  *influx.Parser
 	acc     telegraf.Accumulator
-	pool    *pool
+	spool    sync.Pool
 
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
@@ -125,7 +125,6 @@ func (h *InfluxDBListener) Description() string {
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
-	h.buffersCreated.Set(h.pool.ncreated())
 	return nil
 }
 
@@ -175,7 +174,9 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	defer h.mu.Unlock()
 
 	h.acc = acc
-	h.pool = NewPool(200, int(h.MaxLineSize.Size))
+	h.spool.New = func() interface{} {
+		return make([]byte, h.MaxLineSize.Size)
+	}
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
 	if err != nil {
@@ -297,8 +298,8 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 		var return400 bool
 		var hangingBytes bool
-		buf := h.pool.get()
-		defer h.pool.put(buf)
+		buf := h.spool.Get().([]byte)
+		defer h.spool.Put(buf)
 		bufStart := 0
 		for {
 			n, err := io.ReadFull(body, buf[bufStart:])
