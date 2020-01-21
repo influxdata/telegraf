@@ -32,6 +32,7 @@
 - [#6844](https://github.com/influxdata/telegraf/pull/6844): Add source and port tags to jenkins_job metrics.
 - [#6886](https://github.com/influxdata/telegraf/pull/6886): Add date offset and timezone options to date processor.
 - [#6859](https://github.com/influxdata/telegraf/pull/6859): Exclude resources by inventory path in vsphere input.
+- [#6700](https://github.com/influxdata/telegraf/pull/6700): Allow a user defined field to be used as the graylog short_message.
 
 #### Bugfixes
 
