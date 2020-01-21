@@ -71,12 +71,11 @@ type InfluxDBListener struct {
 	notFoundsServed selfstat.Stat
 	buffersCreated  selfstat.Stat
 	authFailures    selfstat.Stat
+	longLines       selfstat.Stat
 
 	Log telegraf.Logger
 
-	longLines selfstat.Stat
-
-	mux        http.ServeMux
+	mux http.ServeMux
 }
 
 const sampleConfig = `
@@ -232,21 +231,6 @@ func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request)
 	h.requestsRecv.Incr(1)
 	h.mux.ServeHTTP(res, req)
 	h.requestsServed.Incr(1)
-}
-
-func (h *InfluxDBListener) handleStats(pre selfstat.Stat, post selfstat.Stat, f http.HandlerFunc) http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
-		pre.Incr(1)
-		f(res, req)
-		post.Incr(1)
-	}
-}
-
-func (h *InfluxDBListener) handlePostStat(post selfstat.Stat, f http.HandlerFunc) http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
-		f(res, req)
-		post.Incr(1)
-	}
 }
 
 func (h *InfluxDBListener) handleQuery() http.HandlerFunc {
