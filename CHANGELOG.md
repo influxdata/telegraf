@@ -48,6 +48,7 @@
 - [#6899](https://github.com/influxdata/telegraf/pull/6899): Fix URL agent address form with udp in snmp input.
 - [#6619](https://github.com/influxdata/telegraf/issues/6619): Change logic to allow recording of device fields when attributes is false.
 - [#6903](https://github.com/influxdata/telegraf/issues/6903): Do not add invalid timestamps to kafka messages.
+- [#6906](https://github.com/influxdata/telegraf/issues/6906): Fix json_strict option and set default of true.
 
 ## v1.13.1 [2020-01-08]
 
