@@ -174,9 +174,36 @@ type Monit struct {
 	Address  string `toml:"address"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	client   *http.Client
+	client   HTTPClient
 	tls.ClientConfig
 	Timeout internal.Duration `toml:"timeout"`
+}
+
+type HTTPClient interface {
+	MakeRequest(req *http.Request) (*http.Response, error)
+
+	SetHTTPClient(client *http.Client)
+	HTTPClient() *http.Client
+}
+
+type Messagebody struct {
+	Metrics []string `json:"metrics"`
+}
+
+type RealHTTPClient struct {
+	client *http.Client
+}
+
+func (c *RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+	return c.client.Do(req)
+}
+
+func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
+	c.client = client
+}
+
+func (c *RealHTTPClient) HTTPClient() *http.Client {
+	return c.client
 }
 
 func (m *Monit) Description() string {
@@ -212,13 +239,14 @@ func (m *Monit) Init() error {
 		return err
 	}
 
-	m.client = &http.Client{
+	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
 		Timeout: m.Timeout.Duration,
 	}
+	m.client.SetHTTPClient(client)
 	return nil
 }
 
@@ -232,7 +260,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 		req.SetBasicAuth(m.Username, m.Password)
 	}
 
-	resp, err := m.client.Do(req)
+	resp, err := m.client.MakeRequest(req)
 	if err != nil {
 		return err
 	}
@@ -247,15 +275,18 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("error parsing input: %v", err)
 		}
 
-		tags := map[string]string{"address": m.Address,
+		tags := map[string]string{
 			"version":       status.Server.Version,
-			"hostname":      status.Server.LocalHostname,
-			"platform_name": status.Platform.Name}
+			"source":        status.Server.LocalHostname,
+			"platform_name": status.Platform.Name,
+		}
 
 		for _, service := range status.Services {
 			fields := make(map[string]interface{})
 			tags["status"] = serviceStatus(service)
 			fields["status_code"] = service.Status
+			tags["pending_action"] = pendingAction(service)
+			fields["pending_action_code"] = service.PendingAction
 			tags["monitoring_status"] = monitoringStatus(service)
 			fields["monitoring_status_code"] = service.MonitoringStatus
 			tags["monitoring_mode"] = monitoringMode(service)
@@ -271,11 +302,11 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 				fields["inode_total"] = service.Inode.Total
 				acc.AddFields("monit_filesystem", fields, tags)
 			} else if service.Type == directory {
-				fields["permissions"] = service.Mode
+				fields["mode"] = service.Mode
 				acc.AddFields("monit_directory", fields, tags)
 			} else if service.Type == file {
 				fields["size"] = service.Size
-				fields["permissions"] = service.Mode
+				fields["mode"] = service.Mode
 				acc.AddFields("monit_file", fields, tags)
 			} else if service.Type == process {
 				fields["cpu_percent"] = service.CPU.Percent
@@ -309,10 +340,10 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 				fields["swap_percent"] = service.System.Swap.Percent
 				acc.AddFields("monit_system", fields, tags)
 			} else if service.Type == fifo {
-				fields["permissions"] = service.Mode
+				fields["mode"] = service.Mode
 				acc.AddFields("monit_fifo", fields, tags)
 			} else if service.Type == program {
-				fields["last_started_time"] = service.Program.Started * 10000000
+				fields["program_started"] = service.Program.Started * 10000000
 				fields["program_status"] = service.Program.Status
 				acc.AddFields("monit_program", fields, tags)
 			} else if service.Type == network {
@@ -345,63 +376,59 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 
 func linkMode(s Service) string {
 	if s.Link.Duplex == 1 {
-		return "Duplex Mode"
+		return "duplex"
 	} else if s.Link.Duplex == 0 {
-		return "Simplex Mode"
+		return "simplex"
 	} else {
-		return "Unknown Mode"
+		return "unknown"
 	}
 }
 
 func serviceStatus(s Service) string {
-	var status string
-
-	if s.MonitoringStatus == 0 || s.MonitoringStatus == 2 {
-		switch s.MonitoringStatus {
-		case 2:
-			return "Initializing"
-		default:
-			return "Not monitored"
-		}
-	} else if s.Status == 0 {
-		status = "Running"
+	if s.Status == 0 {
+		return "running"
 	} else {
-		status = "Failure"
+		return "failure"
 	}
+}
 
+func pendingAction(s Service) string {
 	if s.PendingAction > 0 {
 		if s.PendingAction >= len(pendingActions) {
-			return fmt.Sprintf("%s - pending", status)
+			return "unknown"
 		}
-		status = fmt.Sprintf("%s - %s pending", status, pendingActions[s.PendingAction])
+		return pendingActions[s.PendingAction-1]
+	} else {
+		return "none"
 	}
-	return status
 }
 
 func monitoringMode(s Service) string {
 	switch s.MonitorMode {
 	case 0:
-		return "Monitoring mode:  active"
+		return "active"
 	case 1:
-		return "Monitoring mode:  passive"
+		return "passive"
 	}
-	return "Monitoring mode: unknown"
+	return "unknown"
 }
 
 func monitoringStatus(s Service) string {
 	switch s.MonitoringStatus {
 	case 1:
-		return "Monitoring status:  Monitored"
+		return "monitored"
 	case 2:
-		return "Monitoring status:  Initializing"
+		return "initializing"
 	case 4:
-		return "Monitoring status:  Waiting"
+		return "waiting"
 	}
-	return "Monitoring status:  Not monitored"
+	return "not_monitored"
 }
 
 func init() {
 	inputs.Add("monit", func() telegraf.Input {
-		return &Monit{}
+		return &Monit{
+			client: &RealHTTPClient{},
+		}
 	})
 }

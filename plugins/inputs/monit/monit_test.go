@@ -1,6 +1,7 @@
 package monit
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +12,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type MockHTTPClient struct {
+	networkError string
+}
+
+func (c *MockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
+	return nil, errors.New(c.networkError)
+}
+
+func (c *MockHTTPClient) SetHTTPClient(client *http.Client) {
+}
+
+func (c *MockHTTPClient) HTTPClient() *http.Client {
+	return nil
+}
 
 func TestServiceType(t *testing.T) {
 	tests := []struct {
@@ -26,17 +42,19 @@ func TestServiceType(t *testing.T) {
 					"monit_filesystem",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"mode":                   555,
 						"block_percent":          29.5,
 						"block_usage":            4424.0,
@@ -57,18 +75,20 @@ func TestServiceType(t *testing.T) {
 					"monit_directory",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
-						"permissions":            755,
+						"pending_action_code":    0,
+						"mode":                   755,
 					},
 					time.Unix(0, 0),
 				),
@@ -82,18 +102,20 @@ func TestServiceType(t *testing.T) {
 					"monit_file",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
-						"permissions":            644,
+						"pending_action_code":    0,
+						"mode":                   644,
 						"size":                   1565,
 					},
 					time.Unix(0, 0),
@@ -108,17 +130,19 @@ func TestServiceType(t *testing.T) {
 					"monit_process",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"cpu_percent":            0.0,
 						"cpu_percent_total":      0.0,
 						"mem_kb":                 22892,
@@ -142,17 +166,19 @@ func TestServiceType(t *testing.T) {
 					"monit_remote_host",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"remote_hostname":        "192.168.1.10",
 						"port_number":            2812,
 						"request":                "",
@@ -171,17 +197,19 @@ func TestServiceType(t *testing.T) {
 					"monit_system",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"cpu_system":             0.1,
 						"cpu_user":               0.0,
 						"cpu_wait":               0.0,
@@ -205,18 +233,20 @@ func TestServiceType(t *testing.T) {
 					"monit_fifo",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
-						"permissions":            664,
+						"pending_action_code":    0,
+						"mode":                   664,
 					},
 					time.Unix(0, 0),
 				),
@@ -230,19 +260,21 @@ func TestServiceType(t *testing.T) {
 					"monit_program",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"program_status":         0,
-						"last_started_time":      int64(15728504980000000),
+						"program_started":        int64(15728504980000000),
 					},
 					time.Unix(0, 0),
 				),
@@ -256,19 +288,21 @@ func TestServiceType(t *testing.T) {
 					"monit_network",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"link_speed":             1000000000,
-						"link_mode":              "Duplex Mode",
+						"link_mode":              "duplex",
 						"link_state":             1,
 						"download_packets_now":   0,
 						"download_packets_total": 15243,
@@ -302,9 +336,9 @@ func TestServiceType(t *testing.T) {
 
 			plugin := &Monit{
 				Address: ts.URL,
+				client:  &RealHTTPClient{},
 			}
 
-			tt.expected[0].AddTag("address", ts.URL)
 			plugin.Init()
 
 			var acc testutil.Accumulator
@@ -331,19 +365,21 @@ func TestMonitFailure(t *testing.T) {
 					"monit_network",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Failure",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "failure",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            8388608,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"link_speed":             -1,
-						"link_mode":              "Unknown Mode",
+						"link_mode":              "unknown",
 						"link_state":             0,
 						"download_packets_now":   0,
 						"download_packets_total": 0,
@@ -370,19 +406,21 @@ func TestMonitFailure(t *testing.T) {
 					"monit_network",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  passive",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "passive",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   1,
+						"pending_action_code":    0,
 						"link_speed":             1000000000,
-						"link_mode":              "Duplex Mode",
+						"link_mode":              "duplex",
 						"link_state":             1,
 						"download_packets_now":   0,
 						"download_packets_total": 15243,
@@ -409,19 +447,21 @@ func TestMonitFailure(t *testing.T) {
 					"monit_network",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Initializing",
-						"monitoring_status": "Monitoring status:  Initializing",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "initializing",
+						"monitoring_mode":   "active",
+						"pending_action":    "none",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 2,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    0,
 						"link_speed":             1000000000,
-						"link_mode":              "Duplex Mode",
+						"link_mode":              "duplex",
 						"link_state":             1,
 						"download_packets_now":   0,
 						"download_packets_total": 15243,
@@ -448,19 +488,21 @@ func TestMonitFailure(t *testing.T) {
 					"monit_network",
 					map[string]string{
 						"version":           "5.17.1",
-						"hostname":          "localhost",
+						"source":            "localhost",
 						"platform_name":     "Linux",
 						"service":           "test",
-						"status":            "Running - unmonitor pending",
-						"monitoring_status": "Monitoring status:  Monitored",
-						"monitoring_mode":   "Monitoring mode:  active",
+						"status":            "running",
+						"monitoring_status": "monitored",
+						"monitoring_mode":   "active",
+						"pending_action":    "exec",
 					},
 					map[string]interface{}{
 						"status_code":            0,
 						"monitoring_status_code": 1,
 						"monitoring_mode_code":   0,
+						"pending_action_code":    5,
 						"link_speed":             1000000000,
-						"link_mode":              "Duplex Mode",
+						"link_mode":              "duplex",
 						"link_state":             1,
 						"download_packets_now":   0,
 						"download_packets_total": 15243,
@@ -494,9 +536,9 @@ func TestMonitFailure(t *testing.T) {
 
 			plugin := &Monit{
 				Address: ts.URL,
+				client:  &RealHTTPClient{},
 			}
 
-			tt.expected[0].AddTag("address", ts.URL)
 			plugin.Init()
 
 			var acc testutil.Accumulator
@@ -515,6 +557,49 @@ func checkAuth(r *http.Request, username, password string) bool {
 		return false
 	}
 	return user == username && pass == password
+}
+
+func TestAllowHosts(t *testing.T) {
+
+	networkError := "Get http://127.0.0.1:2812/_status?format=xml: " +
+		"read tcp 192.168.10.2:55610->127.0.0.1:2812: " +
+		"read: connection reset by peer"
+	r := &Monit{
+		Address:  "http://127.0.0.1:2812",
+		Username: "test",
+		Password: "test",
+		client:   &MockHTTPClient{networkError},
+	}
+
+	var acc testutil.Accumulator
+
+	r.Init()
+
+	err := r.Gather(&acc)
+
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "read: connection reset by peer")
+	}
+}
+
+func TestConnection(t *testing.T) {
+
+	r := &Monit{
+		Address:  "http://127.0.0.1:2812",
+		Username: "test",
+		Password: "test",
+		client:   &RealHTTPClient{},
+	}
+
+	var acc testutil.Accumulator
+
+	r.Init()
+
+	err := r.Gather(&acc)
+
+	if assert.Error(t, err) {
+		assert.Contains(t, err.Error(), "connect: connection refused")
+	}
 }
 
 func TestInvalidUsernameorPassword(t *testing.T) {
@@ -540,6 +625,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 		Address:  ts.URL,
 		Username: "test",
 		Password: "test",
+		client:   &RealHTTPClient{},
 	}
 
 	var acc testutil.Accumulator
@@ -572,6 +658,7 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	r := &Monit{
 		Address: ts.URL,
+		client:  &RealHTTPClient{},
 	}
 
 	var acc testutil.Accumulator
@@ -616,6 +703,7 @@ func TestInvalidXMLAndInvalidTypes(t *testing.T) {
 
 			plugin := &Monit{
 				Address: ts.URL,
+				client:  &RealHTTPClient{},
 			}
 
 			plugin.Init()
