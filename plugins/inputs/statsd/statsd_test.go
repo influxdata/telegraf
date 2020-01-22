@@ -143,7 +143,7 @@ func BenchmarkUDP(b *testing.B) {
 		var wg sync.WaitGroup
 		for i := 1; i <= producerThreads; i++ {
 			wg.Add(1)
-			go sendRequests(conn, testMsg, &wg)
+			go sendRequests(conn, &wg)
 		}
 		wg.Wait()
 
@@ -156,46 +156,10 @@ func BenchmarkUDP(b *testing.B) {
 	}
 }
 
-func sendRequests(conn net.Conn, test string, wg *sync.WaitGroup) {
+func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for i := 0; i < 25000; i++ {
 		fmt.Fprintf(conn, testMsg)
-	}
-}
-
-func BenchmarkUDPWithMultipleGoroutines(b *testing.B) {
-	listener := Statsd{
-		Log:                    testutil.Logger{},
-		Protocol:               "udp",
-		ServiceAddress:         "localhost:8125",
-		AllowedPendingMessages: 250000,
-		MaxParserThreads:       10,
-	}
-	acc := &testutil.Accumulator{Discard: true}
-
-	// send multiple messages to socket
-	for n := 0; n < b.N; n++ {
-		err := listener.Start(acc)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(time.Millisecond * 250)
-		conn, err := net.Dial("udp", "127.0.0.1:8125")
-		if err != nil {
-			panic(err)
-		}
-		var wg sync.WaitGroup
-		for i := 1; i <= producerThreads; i++ {
-			wg.Add(1)
-			go sendRequests(conn, testMsg, &wg)
-		}
-		wg.Wait()
-		// wait for 250,000 metrics to get added to accumulator
-		for len(listener.in) > 0 {
-			time.Sleep(time.Millisecond)
-		}
-		listener.Stop()
 	}
 }
 
@@ -225,45 +189,7 @@ func BenchmarkTCP(b *testing.B) {
 		var wg sync.WaitGroup
 		for i := 1; i <= producerThreads; i++ {
 			wg.Add(1)
-			go sendRequests(conn, testMsg, &wg)
-		}
-		wg.Wait()
-		// wait for 250,000 metrics to get added to accumulator
-		for len(listener.in) > 0 {
-			time.Sleep(time.Millisecond)
-		}
-		listener.Stop()
-	}
-}
-
-// benchmark how long it takes to accept & process 100,000 metrics:
-func BenchmarkTCPWithMultipleGoroutines(b *testing.B) {
-	listener := Statsd{
-		Log:                    testutil.Logger{},
-		Protocol:               "tcp",
-		ServiceAddress:         "localhost:8125",
-		AllowedPendingMessages: 250000,
-		MaxTCPConnections:      250,
-		MaxParserThreads:       10,
-	}
-	acc := &testutil.Accumulator{Discard: true}
-
-	// send multiple messages to socket
-	for n := 0; n < b.N; n++ {
-		err := listener.Start(acc)
-		if err != nil {
-			panic(err)
-		}
-
-		time.Sleep(time.Millisecond * 250)
-		conn, err := net.Dial("tcp", "127.0.0.1:8125")
-		if err != nil {
-			panic(err)
-		}
-		var wg sync.WaitGroup
-		for i := 1; i <= producerThreads; i++ {
-			wg.Add(1)
-			go sendRequests(conn, testMsg, &wg)
+			go sendRequests(conn, &wg)
 		}
 		wg.Wait()
 		// wait for 250,000 metrics to get added to accumulator
