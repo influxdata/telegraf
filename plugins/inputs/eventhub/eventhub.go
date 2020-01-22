@@ -1,12 +1,8 @@
 package eventhub
 
-// TODO: move duplicate receiver code to function
-// TODO: investigate why waitgroup inhibits exiting telegraf
-// TODO: (optional) move receiveroptions to function and combine with 'move duplicate receiver code to function'
-// TODO: (optional) change tracking mux to semaphore?
-// TODO: (optional) handler to seperate onMessage function for readability (add requirements to EventHub struct)?
+// TODO: investigate why waitgroup inhibits exiting telegraf, is it even needed?
 // TODO: (optional) Test authentication with AAD TokenProvider environment variables?
-// TODO: (optional) Event Processor Host, only appicable for multiple Telegraf instances?
+// TODO: (optional) Event Processor Host, only applicable for multiple Telegraf instances?
 
 import (
 	"context"
@@ -59,8 +55,8 @@ type MessageTracker struct {
 // SampleConfig is provided here
 func (*EventHub) SampleConfig() string {
 	return `
-  ## The default behavior is to create a new Event Hub client from enviroment variables.
-  ## This requires one of the following sets of enviroment variables to be set:
+  ## The default behavior is to create a new Event Hub client from environment variables.
+  ## This requires one of the following sets of environment variables to be set:
   ##
   ## 1) Expected Environment Variables:
   ##    - "EVENTHUB_NAMESPACE"
@@ -74,7 +70,7 @@ func (*EventHub) SampleConfig() string {
   ##    - "EVENTHUB_KEY_VALUE"
 
   ## Uncommenting the option below will create an Event Hub client based solely on the connection string.
-  ## This can either be the associated envirnoment variable or hardcoded directly.
+  ## This can either be the associated environment variable or hardcoded directly.
   # connection_string = "$EVENTHUB_CONNECTION_STRING"
 
   ## Set persistence directory to a valid folder to use a file persister instead of an in-memory persister
@@ -240,6 +236,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 			_, err = e.hub.Receive(ctx, partitionID, handler, receiveOpts...)
 
 			if err != nil {
+				log.Printf("E! [inputs.eventhub] error creating receiver for partition %v", partitionID)
 				return err
 			}
 		}

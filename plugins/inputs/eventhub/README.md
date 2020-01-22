@@ -6,8 +6,8 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
 
 ```toml
 [[inputs.eventhub]]
-  ## The default behavior is to create a new Event Hub client from enviroment variables.
-  ## This requires one of the following sets of enviroment variables to be set:
+  ## The default behavior is to create a new Event Hub client from environment variables.
+  ## This requires one of the following sets of environment variables to be set:
   ##
   ## 1) Expected Environment Variables:
   ##    - "EVENTHUB_NAMESPACE"
@@ -21,7 +21,7 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   ##    - "EVENTHUB_KEY_VALUE"
 
   ## Uncommenting the option below will create an Event Hub client based solely on the connection string.
-  ## This can either be the associated envirnoment variable or hardcoded directly.
+  ## This can either be the associated environment variable or hard coded directly.
   # connection_string = "$EVENTHUB_CONNECTION_STRING"
 
   ## Set persistence directory to a valid folder to use a file persister instead of an in-memory persister
