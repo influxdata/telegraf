@@ -236,6 +236,7 @@ For documentation on the latest development code see the [documentation index][d
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
+* [monit](./plugins/inputs/monit)
 * [mqtt_consumer](./plugins/inputs/mqtt_consumer)
 * [multifile](./plugins/inputs/multifile)
 * [mysql](./plugins/inputs/mysql)

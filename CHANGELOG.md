@@ -12,6 +12,7 @@
 #### New Inputs
 
 - [infiniband](/plugins/inputs/infiniband/README.md) - Contributed by @willfurnell
+- [monit](/plugins/inputs/monit/README.md) - Contributed by @SirishaGopigiri
 
 #### New Outputs
 
