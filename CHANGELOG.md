@@ -35,6 +35,7 @@
 - [#6859](https://github.com/influxdata/telegraf/pull/6859): Exclude resources by inventory path in vsphere input.
 - [#6700](https://github.com/influxdata/telegraf/pull/6700): Allow a user defined field to be used as the graylog short_message.
 - [#6917](https://github.com/influxdata/telegraf/pull/6917): Add server_name override for x509_cert plugin.
+- [#6921](https://github.com/influxdata/telegraf/pull/6921): Add udp internal metrics for the statsd input.
 
 #### Bugfixes
 
