@@ -36,7 +36,7 @@ mapped to the output.
     - field1 (type, unit)
     - field2 (float, percent)
 
-- measurement2
++ measurement2
   - tags:
     - tag3
   - fields:

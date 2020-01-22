@@ -3,12 +3,13 @@ package monit
 import (
 	"encoding/xml"
 	"fmt"
+	"net/http"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/net/html/charset"
-	"net/http"
 )
 
 const (
@@ -211,12 +212,12 @@ func (m *Monit) Description() string {
 }
 
 var sampleConfig = `
-  ## Monit
+  ## Monit HTTPD address
   address = "http://127.0.0.1:2812"
 
   ## Username and Password for Monit
-  username = ""
-  password = ""
+  # username = ""
+  # password = ""
 
   ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
