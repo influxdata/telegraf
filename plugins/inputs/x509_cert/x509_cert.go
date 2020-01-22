@@ -30,14 +30,17 @@ const sampleConfig = `
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+	## Pass a different name into the TLS request (Server Name Indication)
+	# server_name = "myhost.example.org"
 `
 const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Sources []string          `toml:"sources"`
-	Timeout internal.Duration `toml:"timeout"`
-	tlsCfg  *tls.Config
+	Sources    []string          `toml:"sources"`
+	Timeout    internal.Duration `toml:"timeout"`
+	ServerName string            `toml:"server_name"`
+	tlsCfg     *tls.Config
 	_tls.ClientConfig
 }
 
@@ -78,7 +81,12 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		defer ipConn.Close()
 
-		c.tlsCfg.ServerName = u.Hostname()
+		if c.ServerName == "" {
+			c.tlsCfg.ServerName = u.Hostname()
+		} else {
+			c.tlsCfg.ServerName = c.ServerName
+		}
+
 		c.tlsCfg.InsecureSkipVerify = true
 		conn := tls.Client(ipConn, c.tlsCfg)
 		defer conn.Close()
@@ -203,7 +211,11 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 				Intermediates: x509.NewCertPool(),
 			}
 			if i == 0 {
-				opts.DNSName = u.Hostname()
+				if c.ServerName == "" {
+					opts.DNSName = u.Hostname()
+				} else {
+					opts.DNSName = c.ServerName
+				}
 				for j, cert := range certs {
 					if j != 0 {
 						opts.Intermediates.AddCert(cert)

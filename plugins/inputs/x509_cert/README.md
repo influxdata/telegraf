@@ -19,6 +19,8 @@ file or network connection.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+  ## Pass a different name into the TLS request (Server Name Indication)
+  # server_name = "myhost.example.org"
 ```
 
 
