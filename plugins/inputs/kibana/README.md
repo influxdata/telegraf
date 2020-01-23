@@ -42,7 +42,8 @@ with following rules:
 
 - kibana
   - status_code: integer (1, 2, 3, 0)
-  - heap_max_bytes/heap_total_bytes: integer
+  - heap_total_bytes: integer
+  - heap_max_bytes: integer
   - heap_used_bytes: integer
   - uptime_ms: integer
   - response_time_avg_ms: float

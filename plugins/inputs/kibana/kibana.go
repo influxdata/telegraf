@@ -81,11 +81,14 @@ type heap struct {
 const sampleConfig = `
   ## specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]
+
   ## Timeout for HTTP requests
   timeout = "5s"
+
   ## HTTP Basic Auth credentials
   # username = "username"
   # password = "pa$$word"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
