@@ -211,12 +211,14 @@ func TestStateTag(t *testing.T) {
 			Query:         0,
 			NodeType:      "PRI",
 			NodeState:     "PRIMARY",
+			ReplSetName:   "rs1",
 		},
 		tags,
 	)
 
 	stateTags := make(map[string]string)
 	stateTags["node_type"] = "PRI"
+	stateTags["rs_name"] = "rs1"
 
 	var acc testutil.Accumulator
 

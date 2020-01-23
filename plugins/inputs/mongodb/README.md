@@ -56,6 +56,7 @@ by running Telegraf with the `--debug` argument.
   - tags:
     - hostname
     - node_type
+    - rs_name
   - fields:
     - active_reads (integer)
     - active_writes (integer)
