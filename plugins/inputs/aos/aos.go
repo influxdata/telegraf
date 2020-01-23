@@ -228,7 +228,7 @@ func (ssl *StreamAos) CreateBpsMetrics(fields map[string]interface{}) {
 	fields["tx_multicast_pps"] = fields["tx_multicast_packets"].(uint64) / delta_seconds
 	fields["tx_error_pps"] = fields["tx_error_packets"].(uint64) / delta_seconds
 	fields["tx_discard_pps"] = fields["tx_discard_packets"].(uint64) / delta_seconds
-	fields["rx_bps"] = fields["tx_bytes"].(uint64) * 8 / delta_seconds
+	fields["rx_bps"] = fields["rx_bytes"].(uint64) * 8 / delta_seconds
 	fields["rx_unicast_pps"] = fields["rx_unicast_packets"].(uint64) / delta_seconds
 	fields["rx_broadcast_pps"] = fields["rx_broadcast_packets"].(uint64) / delta_seconds
 	fields["rx_multicast_pps"] = fields["rx_multicast_packets"].(uint64) / delta_seconds
