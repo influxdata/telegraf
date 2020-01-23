@@ -53,6 +53,7 @@
 - [#6619](https://github.com/influxdata/telegraf/issues/6619): Change logic to allow recording of device fields when attributes is false.
 - [#6903](https://github.com/influxdata/telegraf/issues/6903): Do not add invalid timestamps to kafka messages.
 - [#6906](https://github.com/influxdata/telegraf/issues/6906): Fix json_strict option and set default of true.
+- [#5744](https://github.com/influxdata/telegraf/issues/5744): Fix kibana input with Kibana versions greater than 6.4.
 
 ## v1.13.1 [2020-01-08]
 
