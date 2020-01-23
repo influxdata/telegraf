@@ -79,7 +79,7 @@ type heap struct {
 }
 
 const sampleConfig = `
-  ## specify a list of one or more Kibana servers
+  ## Specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]
 
   ## Timeout for HTTP requests
