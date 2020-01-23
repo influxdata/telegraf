@@ -81,14 +81,11 @@ type heap struct {
 const sampleConfig = `
   ## specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]
-
   ## Timeout for HTTP requests
   timeout = "5s"
-
   ## HTTP Basic Auth credentials
   # username = "username"
   # password = "pa$$word"
-
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -204,18 +201,26 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 	fields["response_time_max_ms"] = kibanaStatus.Metrics.ResponseTimes.MaxInMillis
 	fields["requests_per_sec"] = float64(kibanaStatus.Metrics.Requests.Total) / float64(kibanaStatus.Metrics.CollectionIntervalInMilles) * 1000
 
-	Version, err := strconv.ParseFloat(strings.Join(strings.Split(kibanaStatus.Version.Number, ".")[:2], "."), 64)
+	versionArray := strings.Split(kibanaStatus.Version.Number, ".")
+	arrayElement := 1
+
+	if len(versionArray) > 1 {
+		arrayElement = 2
+	}
+	versionNumber, err := strconv.ParseFloat(strings.Join(versionArray[:arrayElement], "."), 64)
 	if err != nil {
 		return err
 	}
 
-	if Version >= 6.5 {
+	if versionNumber >= 6.4 {
 		fields["uptime_ms"] = kibanaStatus.Metrics.Process.UptimeInMillis
+		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
 		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.UsedInBytes
 	} else {
 		fields["uptime_ms"] = kibanaStatus.Metrics.UptimeInMillis
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
+		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
 		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
 
 	}
