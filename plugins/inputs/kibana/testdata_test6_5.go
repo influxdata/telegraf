@@ -217,7 +217,7 @@ const kibanaStatusResponse6_5 = `
 var kibanaStatusExpected6_5 = map[string]interface{}{
 	"status_code":            1,
 	"heap_total_bytes":       int64(149954560),
-	"heap_max_bytes":       int64(149954560),
+	"heap_max_bytes":         int64(149954560),
 	"heap_used_bytes":        int64(126274392),
 	"uptime_ms":              int64(2173595336),
 	"response_time_avg_ms":   float64(12.5),

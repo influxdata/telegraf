@@ -215,6 +215,8 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 		return err
 	}
 
+	// Same value will be assigned to both the metrics [heap_max_bytes and heap_total_bytes ]
+	// Which keeps the code backward compatible
 	if versionNumber >= 6.4 {
 		fields["uptime_ms"] = kibanaStatus.Metrics.Process.UptimeInMillis
 		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
