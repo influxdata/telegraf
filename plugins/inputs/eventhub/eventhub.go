@@ -1,6 +1,6 @@
 package eventhub
 
-// TODO: investigate why waitgroup inhibits exiting telegraf, is it even needed?
+// TODO: check if strict partition checking is still needed with V3
 // TODO: (optional) Test authentication with AAD TokenProvider environment variables?
 // TODO: (optional) Event Processor Host, only applicable for multiple Telegraf instances?
 
@@ -16,6 +16,11 @@ import (
 
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
 	"github.com/Azure/azure-event-hubs-go/v3/persist"
+)
+
+const (
+	defaultMaxUndeliveredMessages = 1000
+	defaultUserAgent = "telegraf"
 )
 
 // EventHub is the top level struct for this plugin
@@ -43,7 +48,7 @@ type EventHub struct {
 	// Metrics tracking
 	acc     telegraf.TrackingAccumulator
 	tracker MessageTracker
-	// wg      sync.WaitGroup
+	wg      sync.WaitGroup
 }
 
 // MessageTracker is a struct with a lock and list of tracked messages
@@ -125,12 +130,15 @@ func (*EventHub) Gather(telegraf.Accumulator) error {
 	return nil
 }
 
-// Start the EventHub ServiceInput
-func (e *EventHub) Start(acc telegraf.Accumulator) error {
+// Init the EventHub ServiceInput
+func (e *EventHub) Init() (err error) {
+	if e.MaxUndeliveredMessages == 0 {
+		e.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
+	}
 
 	// Set hub options
 	hubOpts := []eventhub.HubOption{}
-
+	
 	if e.PersistenceDir != "" {
 		persister, err := persist.NewFilePersister(e.PersistenceDir)
 
@@ -144,31 +152,32 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	if e.UserAgent != "" {
 		hubOpts = append(hubOpts, eventhub.HubWithUserAgent(e.UserAgent))
 	} else {
-		hubOpts = append(hubOpts, eventhub.HubWithUserAgent("telegraf"))
+		hubOpts = append(hubOpts, eventhub.HubWithUserAgent(defaultUserAgent))
 	}
 
 	// Create event hub connection
-	var err error
 	if e.ConnectionString != "" {
 		e.hub, err = eventhub.NewHubFromConnectionString(e.ConnectionString, hubOpts...)
 	} else {
 		e.hub, err = eventhub.NewHubFromEnvironment(hubOpts...)
 	}
 
-	if err != nil {
-		return err
-	}
+	return err
+}
+
+// Start the EventHub ServiceInput
+func (e *EventHub) Start(acc telegraf.Accumulator) error {
 
 	// Init metric tracking
 	e.acc = acc.WithTracking(e.MaxUndeliveredMessages)
-	e.tracker = MessageTracker{messages: make(map[telegraf.TrackingID][]telegraf.Metric)}
-
-	// Start tracking
-	// e.wg.Add(1)
-	go e.startTracking()
+	e.tracker = MessageTracker{messages: make(map[telegraf.TrackingID][]telegraf.Metric, e.MaxUndeliveredMessages)}
 
 	var ctx context.Context
 	ctx, e.cancel = context.WithCancel(context.Background())
+
+	// Start tracking
+	e.wg.Add(1)
+	go e.startTracking(ctx)
 
 	// Get runtime information
 	runtimeinfo, err := e.hub.GetRuntimeInformation(ctx)
@@ -177,55 +186,11 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// Handler function to handle event hub events
-	handler := func(c context.Context, event *eventhub.Event) error {
+	// Configure receiver options
+	receiveOpts, err := e.configureReceiver()
 
-		metrics, err := e.parser.Parse(event.Data)
-
-		if err != nil {
-			log.Printf("E! [inputs.eventhub] %s", err)
-			return err
-		}
-
-		log.Printf("D! [inputs.eventhub] %d metrics found after parsing", len(metrics))
-
-		id := e.acc.AddTrackingMetricGroup(metrics)
-
-		e.tracker.mux.Lock()
-		e.tracker.messages[id] = metrics
-		e.tracker.mux.Unlock()
-
-		return nil
-	}
-
-	// Set receiver options
-	receiveOpts := []eventhub.ReceiveOption{}
-
-	if e.ConsumerGroup != "" {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithConsumerGroup(e.ConsumerGroup))
-	}
-
-	if e.FromTimestamp != "" {
-		ts, err := time.Parse(time.RFC3339, e.FromTimestamp)
-
-		if err != nil {
-			return err
-		}
-
-		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(ts))
-
-	} else if e.StartingOffset != "" {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithStartingOffset(e.StartingOffset))
-	} else if e.Latest {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithLatestOffset())
-	}
-
-	if e.PrefetchCount != 0 {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithPrefetchCount(e.PrefetchCount))
-	}
-
-	if e.Epoch != 0 {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithEpoch(e.Epoch))
+	if err != nil {
+		return err
 	}
 
 	if len(e.PartitionIDs) == 0 {
@@ -233,7 +198,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 
 		for _, partitionID := range runtimeinfo.PartitionIDs {
 
-			_, err = e.hub.Receive(ctx, partitionID, handler, receiveOpts...)
+			_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 
 			if err != nil {
 				log.Printf("E! [inputs.eventhub] error creating receiver for partition %v", partitionID)
@@ -256,7 +221,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 
 			// Check if partition exists on event hub
 			if _, ok := idlist[partitionID]; ok {
-				_, err = e.hub.Receive(ctx, partitionID, handler, receiveOpts...)
+				_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 
 				if err != nil {
 					log.Printf("E! [inputs.eventhub] error creating receiver for partition %v", partitionID)
@@ -271,29 +236,87 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// startTracking monitors the message tracker and delivery info
-func (e *EventHub) startTracking() {
-	// defer e.wg.Done()
+func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, err error) {
+	
+	if e.ConsumerGroup != "" {
+		receiveOpts = append(receiveOpts, eventhub.ReceiveWithConsumerGroup(e.ConsumerGroup))
+	}
 
-	for DeliveryInfo := range e.acc.Delivered() {
+	if e.FromTimestamp != "" {
+		ts, err := time.Parse(time.RFC3339, e.FromTimestamp)
 
-		log.Printf("D! [inputs.eventhub] tracking:: ID: %v - delivered: %v", DeliveryInfo.ID(), DeliveryInfo.Delivered())
-		log.Printf("D! [inputs.eventhub] tracking:: message queue length: %d", len(e.tracker.messages))
+		if err != nil {
+			log.Printf("E! [inputs.eventhub] error in parsing timestamp: %s", err)
+			return receiveOpts, err
+		} 
+		
+		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(ts))
+		
+	} else if e.StartingOffset != "" {
+		receiveOpts = append(receiveOpts, eventhub.ReceiveWithStartingOffset(e.StartingOffset))
+	} else if e.Latest {
+		receiveOpts = append(receiveOpts, eventhub.ReceiveWithLatestOffset())
+	}
 
-		if DeliveryInfo.Delivered() {
-			e.tracker.mux.Lock()
-			delete(e.tracker.messages, DeliveryInfo.ID())
-			e.tracker.mux.Unlock()
+	if e.PrefetchCount != 0 {
+		receiveOpts = append(receiveOpts, eventhub.ReceiveWithPrefetchCount(e.PrefetchCount))
+	}
 
-			log.Printf("D! [inputs.eventhub] tracking:: deleted ID %d from tracked message queue", DeliveryInfo.ID())
-		} else {
-			log.Printf("E! [inputs.eventhub] tracking:: undelivered message ID %d, retrying", DeliveryInfo.ID())
+	if e.Epoch != 0 {
+		receiveOpts = append(receiveOpts, eventhub.ReceiveWithEpoch(e.Epoch))
+	}
+	
+	return receiveOpts, err
+}
 
-			e.tracker.mux.Lock()
-			id := e.acc.AddTrackingMetricGroup(e.tracker.messages[DeliveryInfo.ID()])
-			e.tracker.messages[id] = e.tracker.messages[DeliveryInfo.ID()]
-			delete(e.tracker.messages, DeliveryInfo.ID())
-			e.tracker.mux.Unlock()
+func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err error){
+	
+	metrics, err := e.parser.Parse(event.Data)
+
+	if err != nil {
+		log.Printf("E! [inputs.eventhub] error %s", err)
+		return err
+	}
+
+	log.Printf("D! [inputs.eventhub] %d metrics found after parsing", len(metrics))
+
+	id := e.acc.AddTrackingMetricGroup(metrics)
+
+	e.tracker.mux.Lock()
+	e.tracker.messages[id] = metrics
+	e.tracker.mux.Unlock()
+
+	return nil
+}
+
+func (e *EventHub) startTracking(ctx context.Context) {
+	defer e.wg.Done()
+	for {
+		select {
+		case <-ctx.Done():
+			if len(e.tracker.messages) == 0 { // everything has been delivered
+				return
+			}			
+		case DeliveryInfo := <- e.acc.Delivered():
+			log.Printf("D! [inputs.eventhub] tracking:: ID %v delivered: %v", DeliveryInfo.ID(), DeliveryInfo.Delivered())
+
+			if DeliveryInfo.Delivered() {
+				e.tracker.mux.Lock()
+				delete(e.tracker.messages, DeliveryInfo.ID())
+				e.tracker.mux.Unlock()
+
+				log.Printf("D! [inputs.eventhub] tracking:: deleted ID %d from tracked message queue", DeliveryInfo.ID())
+			} else {
+				log.Printf("E! [inputs.eventhub] tracking:: undelivered message ID %d, retrying", DeliveryInfo.ID())
+
+				e.tracker.mux.Lock()
+				id := e.acc.AddTrackingMetricGroup(e.tracker.messages[DeliveryInfo.ID()])
+				e.tracker.messages[id] = e.tracker.messages[DeliveryInfo.ID()]
+				delete(e.tracker.messages, DeliveryInfo.ID())
+				e.tracker.mux.Unlock()
+			}
+
+			log.Printf("D! [inputs.eventhub] tracking:: message queue length: %d", len(e.tracker.messages))
 		}
 	}
 }
@@ -301,11 +324,12 @@ func (e *EventHub) startTracking() {
 // Stop the EventHub ServiceInput
 func (e *EventHub) Stop() {
 	e.cancel()
-	// e.wg.Wait()
 	err := e.hub.Close(context.Background())
 
+	e.wg.Wait()
+
 	if err != nil {
-		log.Printf("E! [inputs.eventhub] error closing Azure EventHub connection: %s", err)
+		log.Printf("E! [inputs.eventhub] error in closing event hub connection: %s", err)
 	}
 
 	log.Printf("D! [inputs.eventhub] event hub connection closed")
@@ -313,8 +337,6 @@ func (e *EventHub) Stop() {
 
 func init() {
 	inputs.Add("eventhub", func() telegraf.Input {
-		return &EventHub{
-			MaxUndeliveredMessages: 1000, // default value
-		}
+		return &EventHub{}
 	})
 }
