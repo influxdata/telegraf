@@ -20,7 +20,7 @@ import (
 
 const (
 	defaultMaxUndeliveredMessages = 1000
-	defaultUserAgent = "telegraf"
+	defaultUserAgent              = "telegraf"
 )
 
 // EventHub is the top level struct for this plugin
@@ -138,7 +138,7 @@ func (e *EventHub) Init() (err error) {
 
 	// Set hub options
 	hubOpts := []eventhub.HubOption{}
-	
+
 	if e.PersistenceDir != "" {
 		persister, err := persist.NewFilePersister(e.PersistenceDir)
 
@@ -237,7 +237,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 }
 
 func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, err error) {
-	
+
 	if e.ConsumerGroup != "" {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithConsumerGroup(e.ConsumerGroup))
 	}
@@ -248,10 +248,10 @@ func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, er
 		if err != nil {
 			log.Printf("E! [inputs.eventhub] error in parsing timestamp: %s", err)
 			return receiveOpts, err
-		} 
-		
+		}
+
 		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(ts))
-		
+
 	} else if e.StartingOffset != "" {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithStartingOffset(e.StartingOffset))
 	} else if e.Latest {
@@ -265,12 +265,12 @@ func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, er
 	if e.Epoch != 0 {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithEpoch(e.Epoch))
 	}
-	
+
 	return receiveOpts, err
 }
 
-func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err error){
-	
+func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err error) {
+
 	metrics, err := e.parser.Parse(event.Data)
 
 	if err != nil {
@@ -296,8 +296,8 @@ func (e *EventHub) startTracking(ctx context.Context) {
 		case <-ctx.Done():
 			if len(e.tracker.messages) == 0 { // everything has been delivered
 				return
-			}			
-		case DeliveryInfo := <- e.acc.Delivered():
+			}
+		case DeliveryInfo := <-e.acc.Delivered():
 			log.Printf("D! [inputs.eventhub] tracking:: ID %v delivered: %v", DeliveryInfo.ID(), DeliveryInfo.Delivered())
 
 			if DeliveryInfo.Delivered() {
