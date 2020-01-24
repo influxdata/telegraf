@@ -57,6 +57,14 @@ services:
     ports:
       - "15672:15672"
       - "5672:5672"
+  rabbitmq-amqp10:
+    image: rabbitmq:3.6
+    ports:
+      - "5673:5672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+    command: bash -c "rabbitmq-plugins enable --offline rabbitmq_amqp1_0 && ./docker-entrypoint.sh rabbitmq-server"
   redis:
     image: redis:alpine
     ports:
