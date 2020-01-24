@@ -48,11 +48,10 @@ var (
 func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
 	lower, err := versionLowerThan(e.apiVersion, "5.5")
 	if err != nil {
-		e.Parent.Log.Errorf("[vSAN] Fail to get vCenter version: %v", err)
+		return fmt.Errorf("[vSAN] Fail to get vCenter version: %v", err)
 	}
 	if lower {
-		e.Parent.Log.Infof("[vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
-		return nil
+		return fmt.Errorf("[vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 	}
 	vsanPerfMetricsName = strings.Join([]string{"vsphere", "vsan", "performance"}, e.Parent.Separator)
 	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "vsan", "summary"}, e.Parent.Separator)
@@ -84,7 +83,7 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectR
 	// Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(vimClient, clusterRef.ref)
 	if !e.vsanEnabled(ctx, cluster) {
-		e.Parent.Log.Errorf("[vSAN] Fail to identify vSAN for cluster %s. Skipping", clusterRef.name)
+		acc.AddError(fmt.Errorf("[vSAN] Fail to identify vSAN for cluster %s. Skipping", clusterRef.name))
 		return
 	}
 	// Do collection
@@ -250,7 +249,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 
 		if err != nil {
 			if err.Error() == "ServerFaultCode: NotFound" {
-				e.Parent.Log.Errorf("[vSAN] Is vSAN performance service enbaled for %s? Skipping ...", clusterRef.name)
+				e.Parent.Log.Errorf("[vSAN] Is vSAN performance service enabled for %s? Skipping ...", clusterRef.name)
 				break
 			}
 			e.Parent.Log.Errorf("[vSAN] Error querying performance data for %s: %s: %s.", clusterRef.name, entityRefId, err)
@@ -262,45 +261,57 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		count := 0
 		for _, em := range resp.Returnval {
 			vals := strings.Split(em.EntityRefId, ":")
-			entityName, uuid := vals[0], vals[1]
+			var entityName, uuid string
+			if len(vals) == 1 {
+				entityName, uuid = vals[0], ""
+			} else {
+				entityName, uuid = vals[0], vals[1]
+			}
 
 			buckets := make(map[string]metricEntry)
 			tags := populateCMMDSTags(tags, entityName, uuid, cmmds)
-			var timeStamps []string
+			var timeStamps []time.Time
 			// 1. Construct a timestamp list from sample info
+			formattedEntityName := strings.ReplaceAll(entityName, "-", "")
 			for _, t := range strings.Split(em.SampleInfo, ",") {
 				tsParts := strings.Split(t, " ")
 				if len(tsParts) >= 2 {
 					// The return time string is in UTC time
-					timeStamps = append(timeStamps, fmt.Sprintf("%sT%sZ", tsParts[0], tsParts[1]))
+					utcTimeStamp := fmt.Sprintf("%sT%sZ", tsParts[0], tsParts[1])
+					ts, ok := time.Parse(time.RFC3339, utcTimeStamp)
+					if ok != nil {
+						e.Parent.Log.Errorf("[vSAN] Fail to parse a timestamp: %s. Skipping", utcTimeStamp)
+						timeStamps = append(timeStamps, time.Time{})
+						continue
+					}
+					timeStamps = append(timeStamps, ts)
 				}
 			}
 			// 2. Iterate on each measurement
 			for _, counter := range em.Value {
-				metricLabel := counter.MetricId.Label
+				metricLabel := internal.SnakeCase(counter.MetricId.Label)
 				// 3. Iterate on each data point.
 				for i, values := range strings.Split(counter.Values, ",") {
-					ts, ok := time.Parse(time.RFC3339, timeStamps[i])
-					if ok != nil {
-						e.Parent.Log.Errorf("[vSAN] Fail to parse a timestamp: %s. Skipping", timeStamps[i])
+					ts := timeStamps[i]
+					if ts == (time.Time{}) {
 						continue
 					}
 					// Organize the metrics into a bucket per measurement.
 					bKey := em.EntityRefId + " " + strconv.FormatInt(ts.UnixNano(), 10)
 					bucket, found := buckets[bKey]
 					if !found {
-						mn := vsanPerfMetricsName + e.Parent.Separator + entityName
+						mn := vsanPerfMetricsName + e.Parent.Separator + formattedEntityName
 						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: tags}
 						buckets[bKey] = bucket
 					}
 					if v, err := strconv.ParseFloat(values, 32); err == nil {
-						bucket.fields[internal.SnakeCase(metricLabel)] = v
+						bucket.fields[metricLabel] = v
 					}
 				}
 			}
 			if len(timeStamps) > 0 {
-				lastSample, err := time.Parse(time.RFC3339, timeStamps[len(timeStamps)-1])
-				if err == nil && lastSample.After(latest) {
+				lastSample := timeStamps[len(timeStamps)-1]
+				if lastSample != (time.Time{}) && lastSample.After(latest) {
 					latest = lastSample
 				}
 			}
@@ -371,29 +382,32 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 		return nil
 	}
 	hostRefValue := hosts[0].Reference().Value
-	vsanSystemEx := types.ManagedObjectReference{
-		Type:  "VsanSystemEx",
-		Value: fmt.Sprintf("vsanSystemEx-%s", strings.Split(hostRefValue, "-")[1]),
-	}
+	hostRefValueParts := strings.Split(hostRefValue, "-")
+	if len(hostRefValueParts) == 2 {
+		vsanSystemEx := types.ManagedObjectReference{
+			Type:  "VsanSystemEx",
+			Value: fmt.Sprintf("vsanSystemEx-%s", strings.Split(hostRefValue, "-")[1]),
+		}
 
-	includeSummary := true
-	request := vsantypes.VsanQuerySyncingVsanObjects{
-		This:           vsanSystemEx,
-		Uuids:          []string{}, // We only need summary information.
-		Start:          0,
-		IncludeSummary: &includeSummary,
-	}
+		includeSummary := true
+		request := vsantypes.VsanQuerySyncingVsanObjects{
+			This:           vsanSystemEx,
+			Uuids:          []string{}, // We only need summary information.
+			Start:          0,
+			IncludeSummary: &includeSummary,
+		}
 
-	resp, err := vsanmethods.VsanQuerySyncingVsanObjects(ctx, vsanClient, &request)
-	if err != nil {
-		return err
+		resp, err := vsanmethods.VsanQuerySyncingVsanObjects(ctx, vsanClient, &request)
+		if err != nil {
+			return err
+		}
+		fields := make(map[string]interface{})
+		fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
+		fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
+		fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
+		tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
+		acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	}
-	fields := make(map[string]interface{})
-	fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
-	fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
-	fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
-	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
-	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
 }
 
@@ -430,18 +444,18 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 			if host, ok := cmmds[e.Owner]; ok {
 				newTags["hostname"] = host.Content.Hostname
 			}
-			newTags["deviceName"] = e.Content.DevName
+			newTags["devicename"] = e.Content.DevName
 			if int(e.Content.IsSsd) == 0 {
-				newTags["ssdUuid"] = e.Content.SsdUuid
+				newTags["ssduuid"] = e.Content.SsdUuid
 			}
 		}
 	} else if strings.Contains(entityName, "host-memory-") {
 		memInfo := strings.Split(uuid, "|")
 		if strings.Contains(entityName, "-slab") && len(memInfo) > 1 {
-			newTags["slabName"] = memInfo[1]
+			newTags["slabname"] = memInfo[1]
 		}
 		if strings.Contains(entityName, "-heap") && len(memInfo) > 1 {
-			newTags["heapName"] = memInfo[1]
+			newTags["heapname"] = memInfo[1]
 		}
 		if e, ok := cmmds[memInfo[0]]; ok {
 			newTags["hostname"] = e.Content.Hostname
@@ -453,7 +467,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 	} else if strings.Contains(entityName, "vnic-net") {
 		nicInfo := strings.Split(uuid, "|")
 		if len(nicInfo) > 2 {
-			newTags["stackName"] = nicInfo[1]
+			newTags["stackname"] = nicInfo[1]
 			newTags["vnic"] = nicInfo[2]
 		}
 		if e, ok := cmmds[nicInfo[0]]; ok {
@@ -470,7 +484,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 	} else if strings.Contains(entityName, "world-cpu") {
 		cpuInfo := strings.Split(uuid, "|")
 		if len(cpuInfo) > 1 {
-			newTags["worldName"] = cpuInfo[1]
+			newTags["worldname"] = cpuInfo[1]
 		}
 		if e, ok := cmmds[cpuInfo[0]]; ok {
 			newTags["hostname"] = e.Content.Hostname
