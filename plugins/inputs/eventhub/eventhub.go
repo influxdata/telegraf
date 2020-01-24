@@ -1,6 +1,5 @@
 package eventhub
 
-// TODO: check if strict partition checking is still needed with V3
 // TODO: (optional) Test authentication with AAD TokenProvider environment variables?
 // TODO: (optional) Event Processor Host, only applicable for multiple Telegraf instances?
 
@@ -201,34 +200,20 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 			_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 
 			if err != nil {
-				log.Printf("E! [inputs.eventhub] error creating receiver for partition %v", partitionID)
+				log.Printf("E! [inputs.eventhub] error creating receiver for partition \"%s\"", partitionID)
 				return err
 			}
 		}
 	} else {
 		// Custom behavior: receive from a subset of partitions
-		// Explicit check for valid partition selection, built in error handling is unreliable
 
-		// Create map of valid partitions
-		idlist := make(map[string]bool)
-
-		for _, partitionID := range runtimeinfo.PartitionIDs {
-			idlist[partitionID] = false
-		}
-
-		// Loop over selected partitions
 		for _, partitionID := range e.PartitionIDs {
 
-			// Check if partition exists on event hub
-			if _, ok := idlist[partitionID]; ok {
-				_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
+			_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
 
-				if err != nil {
-					log.Printf("E! [inputs.eventhub] error creating receiver for partition %v", partitionID)
-					return err
-				}
-			} else {
-				log.Printf("E! [inputs.eventhub] selected partition with ID \"%s\" not found on event hub", partitionID)
+			if err != nil {
+				log.Printf("E! [inputs.eventhub] error creating receiver for partition \"%s\"", partitionID)
+				return err
 			}
 		}
 	}
@@ -298,7 +283,7 @@ func (e *EventHub) startTracking(ctx context.Context) {
 				return
 			}
 		case DeliveryInfo := <-e.acc.Delivered():
-			log.Printf("D! [inputs.eventhub] tracking:: ID %v delivered: %v", DeliveryInfo.ID(), DeliveryInfo.Delivered())
+			log.Printf("D! [inputs.eventhub] tracking:: ID %d delivered: %t", DeliveryInfo.ID(), DeliveryInfo.Delivered())
 
 			if DeliveryInfo.Delivered() {
 				e.tracker.mux.Lock()
