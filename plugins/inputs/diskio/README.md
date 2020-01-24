@@ -64,6 +64,8 @@ docker run --privileged -v /:/hostfs:ro -v /run/udev:/run/udev:ro -e HOST_PROC=/
     - io_time (integer, counter, milliseconds)
     - weighted_io_time (integer, counter, milliseconds)
     - iops_in_progress (integer, gauge)
+    - merged_reads (integer, counter)
+    - merged_writes (integer, counter)
 
 On linux these values correspond to the values in
 [`/proc/diskstats`](https://www.kernel.org/doc/Documentation/ABI/testing/procfs-diskstats)
@@ -105,6 +107,13 @@ This value counts the number of I/O requests that have been issued to
 the device driver but have not yet completed.  It does not include I/O
 requests that are in the queue but not yet issued to the device driver.
 
+#### `merged_reads` & `merged_writes`:
+
+Reads and writes which are adjacent to each other may be merged for
+efficiency.  Thus two 4K reads may become one 8K read before it is
+ultimately handed to the disk, and so it will be counted (and queued)
+as only one I/O. These fields lets you know how often this was done.
+
 ### Sample Queries:
 
 #### Calculate percent IO utilization per disk and host:
@@ -121,11 +130,8 @@ SELECT non_negative_derivative(last("weighted_io_time",1ms)) from "diskio" WHERE
 ### Example Output:
 
 ```
-diskio,name=sda weighted_io_time=8411917i,read_time=7446444i,write_time=971489i,io_time=866197i,write_bytes=5397686272i,iops_in_progress=0i,reads=2970519i,writes=361139i,read_bytes=119528903168i 1502467254359000000
-diskio,name=sda1 reads=2149i,read_bytes=10753536i,write_bytes=20697088i,write_time=346i,weighted_io_time=505i,writes=2110i,read_time=161i,io_time=208i,iops_in_progress=0i 1502467254359000000
-diskio,name=sda2 reads=2968279i,writes=359029i,write_bytes=5376989184i,iops_in_progress=0i,weighted_io_time=8411250i,read_bytes=119517334528i,read_time=7446249i,write_time=971143i,io_time=866010i 1502467254359000000
-diskio,name=sdb writes=99391856i,write_time=466700894i,io_time=630259874i,weighted_io_time=4245949844i,reads=2750773828i,read_bytes=80667939499008i,write_bytes=6329347096576i,read_time=3783042534i,iops_in_progress=2i 1502467254359000000
-diskio,name=centos/root read_time=7472461i,write_time=950014i,iops_in_progress=0i,weighted_io_time=8424447i,writes=298543i,read_bytes=119510105088i,io_time=837421i,reads=2971769i,write_bytes=5192795648i 1502467254359000000
-diskio,name=centos/var_log reads=1065i,writes=69711i,read_time=1083i,write_time=35376i,read_bytes=6828032i,write_bytes=184193536i,io_time=29699i,iops_in_progress=0i,weighted_io_time=36460i 1502467254359000000
-diskio,name=postgresql/pgsql write_time=478267417i,io_time=631098730i,iops_in_progress=2i,weighted_io_time=4263637564i,reads=2750777151i,writes=110044361i,read_bytes=80667939288064i,write_bytes=6329347096576i,read_time=3784499336i 1502467254359000000
+diskio,name=sda1 merged_reads=0i,reads=2353i,writes=10i,write_bytes=2117632i,write_time=49i,io_time=1271i,weighted_io_time=1350i,read_bytes=31350272i,read_time=1303i,iops_in_progress=0i,merged_writes=0i 1578326400000000000
+diskio,name=centos/var_log reads=1063077i,writes=591025i,read_bytes=139325491712i,write_bytes=144233131520i,read_time=650221i,write_time=24368817i,io_time=852490i,weighted_io_time=25037394i,iops_in_progress=1i,merged_reads=0i,merged_writes=0i 1578326400000000000
+diskio,name=sda write_time=49i,io_time=1317i,weighted_io_time=1404i,reads=2495i,read_time=1357i,write_bytes=2117632i,iops_in_progress=0i,merged_reads=0i,merged_writes=0i,writes=10i,read_bytes=38956544i 1578326400000000000
+
 ```
