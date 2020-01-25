@@ -14,6 +14,9 @@ The filestat plugin gathers metrics about file existence, size, and other stats.
 
   ## If true, read the entire file and calculate an md5 checksum.
   md5 = false
+
+  ## If true, don't log an error if the file is missing.
+  NoLogFileMissing = false
 ```
 
 ### Measurements & Fields:

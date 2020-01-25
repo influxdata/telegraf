@@ -25,11 +25,15 @@ const sampleConfig = `
 
   ## If true, read the entire file and calculate an md5 checksum.
   md5 = false
+  
+  ## If true, don't log an error if the file is missing.
+  NoLogFileMissing = false
 `
 
 type FileStat struct {
-	Md5   bool
-	Files []string
+	Md5              bool
+	NoLogFileMissing bool
+	Files            []string
 
 	Log telegraf.Logger
 
@@ -88,8 +92,10 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if fileInfo == nil {
-				f.Log.Errorf("Unable to get info for file %q, possible permissions issue",
-					fileName)
+				if f.NoLogFileMissing == false {
+					f.Log.Errorf("Unable to get info for file %q, possible permissions issue",
+						fileName)
+				}
 			} else {
 				fields["size_bytes"] = fileInfo.Size()
 				fields["modification_time"] = fileInfo.ModTime().UnixNano()
