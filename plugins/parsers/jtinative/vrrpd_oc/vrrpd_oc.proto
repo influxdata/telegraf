@@ -1,0 +1,166 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional interfaces_vrrp jnpr_interfaces_vrrp_ext = 71;
+}
+
+message interfaces_vrrp {
+   message interface_list {
+      optional string name = 51 [(telemetry_options).is_key = true];
+      optional subinterfaces_type subinterfaces = 151;
+      message subinterfaces_type {
+         message subinterface_list {
+            optional uint32 index = 51 [(telemetry_options).is_key = true];
+            optional ipv4_type ipv4 = 151;
+            message ipv4_type {
+               optional addresses_type addresses = 151;
+               message addresses_type {
+                  message address_list {
+                     optional string ip = 51 [(telemetry_options).is_key = true];
+                     optional vrrp_type vrrp = 151;
+                     message vrrp_type {
+                        message vrrp_group_list {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 virtual_router_id = 62;
+                              repeated string virtual_address = 63;
+                              optional uint32 priority = 64;
+                              optional bool preempt = 65;
+                              optional uint32 preempt_delay = 66;
+                              optional bool accept_mode = 67;
+                              optional uint32 advertisement_interval = 68;
+                              optional uint32 current_priority = 69;
+                           }
+                           optional interface_tracking_type interface_tracking = 152;
+                           message interface_tracking_type {
+                              optional state_type state = 151;
+                              message state_type {
+                                 optional string track_interface = 70;
+                                 optional uint32 priority_decrement = 71;
+                              }
+                           }
+                        }
+                        repeated vrrp_group_list vrrp_group = 151;
+                     }
+                  }
+                  repeated address_list address = 151;
+               }
+            }
+            optional ipv6_type ipv6 = 152;
+            message ipv6_type {
+               optional addresses_type addresses = 151;
+               message addresses_type {
+                  message address_list {
+                     optional string ip = 51 [(telemetry_options).is_key = true];
+                     optional vrrp_type vrrp = 151;
+                     message vrrp_type {
+                        message vrrp_group_list {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 virtual_router_id = 80;
+                              repeated string virtual_address = 81;
+                              optional uint32 priority = 82;
+                              optional bool preempt = 83;
+                              optional uint32 preempt_delay = 84;
+                              optional bool accept_mode = 85;
+                              optional uint32 advertisement_interval = 86;
+                              optional uint32 current_priority = 87;
+                              optional string virtual_link_local = 88;
+                           }
+                           optional interface_tracking_type interface_tracking = 152;
+                           message interface_tracking_type {
+                              optional state_type state = 151;
+                              message state_type {
+                                 optional string track_interface = 89;
+                                 optional uint32 priority_decrement = 90;
+                              }
+                           }
+                        }
+                        repeated vrrp_group_list vrrp_group = 151;
+                     }
+                  }
+                  repeated address_list address = 151;
+               }
+            }
+         }
+         repeated subinterface_list subinterface = 151;
+      }
+      optional routed_vlan_type routed_vlan = 152;
+      message routed_vlan_type {
+         optional ipv4_type ipv4 = 151;
+         message ipv4_type {
+            optional addresses_type addresses = 151;
+            message addresses_type {
+               message address_list {
+                  optional string ip = 51 [(telemetry_options).is_key = true];
+                  optional vrrp_type vrrp = 151;
+                  message vrrp_type {
+                     message vrrp_group_list {
+                        optional state_type state = 151;
+                        message state_type {
+                           optional uint32 virtual_router_id = 62;
+                           repeated string virtual_address = 63;
+                           optional uint32 priority = 64;
+                           optional bool preempt = 65;
+                           optional uint32 preempt_delay = 66;
+                           optional bool accept_mode = 67;
+                           optional uint32 advertisement_interval = 68;
+                           optional uint32 current_priority = 69;
+                        }
+                        optional interface_tracking_type interface_tracking = 152;
+                        message interface_tracking_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional string track_interface = 70;
+                              optional uint32 priority_decrement = 71;
+                           }
+                        }
+                     }
+                     repeated vrrp_group_list vrrp_group = 151;
+                  }
+               }
+               repeated address_list address = 151;
+            }
+         }
+         optional ipv6_type ipv6 = 152;
+         message ipv6_type {
+            optional addresses_type addresses = 151;
+            message addresses_type {
+               message address_list {
+                  optional string ip = 51 [(telemetry_options).is_key = true];
+                  optional vrrp_type vrrp = 151;
+                  message vrrp_type {
+                     message vrrp_group_list {
+                        optional state_type state = 151;
+                        message state_type {
+                           optional uint32 virtual_router_id = 80;
+                           repeated string virtual_address = 81;
+                           optional uint32 priority = 82;
+                           optional bool preempt = 83;
+                           optional uint32 preempt_delay = 84;
+                           optional bool accept_mode = 85;
+                           optional uint32 advertisement_interval = 86;
+                           optional uint32 current_priority = 87;
+                           optional string virtual_link_local = 88;
+                        }
+                        optional interface_tracking_type interface_tracking = 152;
+                        message interface_tracking_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional string track_interface = 89;
+                              optional uint32 priority_decrement = 90;
+                           }
+                        }
+                     }
+                     repeated vrrp_group_list vrrp_group = 151;
+                  }
+               }
+               repeated address_list address = 151;
+            }
+         }
+      }
+   }
+   repeated interface_list interface = 151;
+}

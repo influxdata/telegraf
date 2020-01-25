@@ -1,0 +1,80 @@
+//
+// Copyrights (c) 2015, 2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Nitin Kumar, 2015
+//
+// This file defines the messages in Protocol Buffers used by
+// the LSP statistics sensor. The top-level message is LspStats.
+//
+// Version 1.0
+//
+
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+//
+// This occupies branch 5 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional LspStats jnpr_lsp_statistics_ext = 5;
+}
+
+//
+// Top-level message
+//
+message LspStats {
+    // List of LSP statistics records
+    repeated LspStatsRecord lsp_stats_records = 1;
+}
+
+//
+// LSP statistics record
+//
+message LspStatsRecord {
+    // Name of the LSP
+    required string      name                 = 1  [(telemetry_options).is_key = true];
+
+    // Instance Identifier for cases when RPD creates multiple instances
+    required uint32 instance_identifier       = 2  [(telemetry_options).is_key = true];
+
+    // Name of the counter. This is useful when an LSP has multiple counters.
+    // When an LSP is resignalled, it is possible that a new counter is
+    // created in the hardware.
+    required string      counter_name         = 3  [(telemetry_options).is_key = true];
+
+    // The total number of packets
+    optional uint64      packets              = 4  [(telemetry_options).is_counter = true];
+
+    // The total number of bytes
+    optional uint64      bytes                = 5  [(telemetry_options).is_counter = true];
+
+    // Packet rate computed over the most recent 3 second interval
+    optional uint64      packet_rate          = 6;
+
+    // Byte rate computed over the most recent 3 second interval
+    optional uint64      byte_rate            = 7;
+}
+

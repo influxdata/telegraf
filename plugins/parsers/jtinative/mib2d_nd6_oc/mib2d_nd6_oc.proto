@@ -1,0 +1,34 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional nd6_information_mib_nd6 jnpr_nd6_information_mib_nd6_ext = 54;
+}
+
+message nd6_information_mib_nd6 {
+   optional ipv6_type ipv6 = 151;
+   message ipv6_type {
+      optional neighbors_type neighbors = 151;
+      message neighbors_type {
+         message neighbor_list {
+            optional string ip = 51 [(telemetry_options).is_key = true];
+            optional state_type state = 151;
+            message state_type {
+               optional string ip = 51;
+               optional string link_layer_address = 52;
+               optional string origin = 53;
+               optional string is_router = 54;
+               optional string neighbor_state = 55;
+               optional uint32 table_id = 61;
+               optional bool is_secure = 62;
+               optional uint32 expiry = 64;
+               optional bool is_publish = 63;
+               optional string interface_name = 65;
+               optional uint32 logical_router_id = 66;
+            }
+         }
+         repeated neighbor_list neighbor = 151;
+      }
+   }
+}

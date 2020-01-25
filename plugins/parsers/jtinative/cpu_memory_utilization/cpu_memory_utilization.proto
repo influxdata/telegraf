@@ -1,0 +1,93 @@
+
+// Copyrights (c)  2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Chandresh Bhise, Rajesh Pillai, March 2016
+//
+// This defines the gpb message format used by the cpu memory utilization sensor.
+// The top level message is CpuMemoryUtilization
+// Included here are the stats for,
+// - Overall CPU memory utilization
+// - Per Application based CPU memory utilization
+//
+//
+// Version 1.0
+//
+
+syntax = "proto2"; 
+import "telemetry_top.proto";
+
+//
+// This sensor occupies branch 1 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional CpuMemoryUtilization cpu_memory_util_ext   = 1;
+}
+
+//
+// The top level message is CpuMemoryUtilization
+//
+message CpuMemoryUtilization {
+    repeated CpuMemoryUtilizationSummary  utilization    = 1;    
+}
+
+
+// This array gives the CPU  memory utilization on per partition basis
+// and also the per application memory utilization for each partition
+message CpuMemoryUtilizationSummary {
+    // Name of the partition.
+    optional string name                                                = 1;
+
+    // The total size of the partition in bytes
+    optional uint64 size                                                = 2;
+
+    // The amount of memory currently allocated from the partition in bytes
+    optional uint64 bytes_allocated                                     = 3;
+
+    // The amount of memory that is currently allocated, expressed
+    // as percentage of the total (0--100).
+    optional int32 utilization                                          = 4;
+    
+    // Per application based memory utilization for this memory partition
+    repeated CpuMemoryUtilizationPerApplication application_utilization = 5;
+
+}
+
+// This describes per Application specific CPU memory utilization
+message CpuMemoryUtilizationPerApplication  {
+    // Application name
+    optional string    name                   = 1;
+
+    // Number of bytes allocated
+    optional uint64 bytes_allocated           = 2;
+
+    //  Number of allocations
+    optional uint64 allocations               = 3;
+
+    //  Number of frees
+    optional uint64  frees                    = 4;
+
+    // Number of allocations failed
+    optional uint64 allocations_failed        = 5;
+}

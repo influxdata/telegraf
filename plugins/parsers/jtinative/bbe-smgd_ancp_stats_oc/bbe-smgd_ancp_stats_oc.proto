@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_ancp_stats jnpr_junos_ancp_stats_ext = 34;
+}
+
+message junos_ancp_stats {
+   optional system_type system = 151;
+   message system_type {
+      optional subscriber_management_type subscriber_management = 151;
+      message subscriber_management_type {
+         optional access_network_type access_network = 151;
+         message access_network_type {
+            optional ancp_type ancp = 151;
+            message ancp_type {
+               optional adapter_type adapter = 151;
+               message adapter_type {
+                  optional uint32 mapped_dynamic_subscriber_count = 51;
+               }
+            }
+         }
+      }
+   }
+}

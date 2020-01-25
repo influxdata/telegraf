@@ -1,0 +1,507 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional bgp_rib_bgp_rib jnpr_bgp_rib_bgp_rib_ext = 63;
+}
+
+message bgp_rib_bgp_rib {
+   optional afi_safis_type afi_safis = 151;
+   message afi_safis_type {
+      message afi_safi_list {
+         optional string afi_safi_name = 52 [(telemetry_options).is_key = true];
+         optional ipv4_unicast_type ipv4_unicast = 151;
+         message ipv4_unicast_type {
+            optional loc_rib_type loc_rib = 151;
+            message loc_rib_type {
+               optional uint64 num_routes = 51;
+               optional routes_type routes = 151;
+               message routes_type {
+                  message route_list {
+                     optional string prefix = 51;
+                     optional attributes_type attributes = 152;
+                     message attributes_type {
+                        optional string origin = 51;
+                        optional string as_path = 52;
+                        optional string as4_path = 53;
+                        optional string next_hop = 54;
+                        optional uint32 med = 55;
+                        optional uint32 local_pref = 56;
+                        optional bool atomic_aggr = 57;
+                        optional aggregator_type aggregator = 151;
+                        message aggregator_type {
+                           optional uint32 as = 58;
+                           optional uint32 as4 = 59;
+                           optional string address = 60;
+                        }
+                        repeated string community = 152;
+                     }
+                     optional ext_attributes_type ext_attributes = 151;
+                     message ext_attributes_type {
+                        optional string originator_id = 51;
+                        repeated string cluster_list = 52;
+                        repeated string ext_community = 53;
+                        optional uint64 aigp = 54;
+                        optional uint32 path_id = 55;
+                        message unknown_attribute_list {
+                           optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                           optional uint32 attr_len = 58;
+                           optional string attr_value = 59;
+                        }
+                        repeated unknown_attribute_list unknown_attribute = 151;
+                     }
+                     optional string last_modified_date = 61;
+                     optional string last_update_received = 62;
+                     optional bool valid_route = 63;
+                     optional string invalid_reason = 64;
+                     optional bool best_path = 65;
+                  }
+                  repeated route_list route = 151;
+               }
+            }
+            optional neighbors_type neighbors = 152;
+            message neighbors_type {
+               message neighbor_list {
+                  optional string neighbor_address = 52 [(telemetry_options).is_key = true];
+                  optional adj_rib_in_pre_type adj_rib_in_pre = 151;
+                  message adj_rib_in_pre_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+                  optional adj_rib_in_post_type adj_rib_in_post = 152;
+                  message adj_rib_in_post_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+                  optional adj_rib_out_pre_type adj_rib_out_pre = 153;
+                  message adj_rib_out_pre_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+                  optional adj_rib_out_post_type adj_rib_out_post = 154;
+                  message adj_rib_out_post_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+               }
+               repeated neighbor_list neighbor = 151;
+            }
+         }
+         optional ipv6_unicast_type ipv6_unicast = 153;
+         message ipv6_unicast_type {
+            optional loc_rib_type loc_rib = 151;
+            message loc_rib_type {
+               optional uint64 num_routes = 51;
+               optional routes_type routes = 151;
+               message routes_type {
+                  message route_list {
+                     optional string prefix = 51;
+                     optional attributes_type attributes = 152;
+                     message attributes_type {
+                        optional string origin = 51;
+                        optional string as_path = 52;
+                        optional string as4_path = 53;
+                        optional string next_hop = 54;
+                        optional uint32 med = 55;
+                        optional uint32 local_pref = 56;
+                        optional bool atomic_aggr = 57;
+                        optional aggregator_type aggregator = 151;
+                        message aggregator_type {
+                           optional uint32 as = 58;
+                           optional uint32 as4 = 59;
+                           optional string address = 60;
+                        }
+                        repeated string community = 152;
+                     }
+                     optional ext_attributes_type ext_attributes = 151;
+                     message ext_attributes_type {
+                        optional string originator_id = 51;
+                        repeated string cluster_list = 52;
+                        repeated string ext_community = 53;
+                        optional uint64 aigp = 54;
+                        optional uint32 path_id = 55;
+                        message unknown_attribute_list {
+                           optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                           optional uint32 attr_len = 58;
+                           optional string attr_value = 59;
+                        }
+                        repeated unknown_attribute_list unknown_attribute = 151;
+                     }
+                     optional string last_modified_date = 61;
+                     optional string last_update_received = 62;
+                     optional bool valid_route = 63;
+                     optional string invalid_reason = 64;
+                     optional bool best_path = 65;
+                  }
+                  repeated route_list route = 151;
+               }
+            }
+            optional neighbors_type neighbors = 152;
+            message neighbors_type {
+               message neighbor_list {
+                  optional string neighbor_address = 52 [(telemetry_options).is_key = true];
+                  optional adj_rib_in_pre_type adj_rib_in_pre = 151;
+                  message adj_rib_in_pre_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+                  optional adj_rib_in_post_type adj_rib_in_post = 152;
+                  message adj_rib_in_post_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+                  optional adj_rib_out_pre_type adj_rib_out_pre = 153;
+                  message adj_rib_out_pre_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+                  optional adj_rib_out_post_type adj_rib_out_post = 154;
+                  message adj_rib_out_post_type {
+                     optional uint64 num_routes = 51;
+                     optional routes_type routes = 151;
+                     message routes_type {
+                        message route_list {
+                           optional string prefix = 51;
+                           optional attributes_type attributes = 152;
+                           message attributes_type {
+                              optional string origin = 51;
+                              optional string as_path = 52;
+                              optional string as4_path = 53;
+                              optional string next_hop = 54;
+                              optional uint32 med = 55;
+                              optional uint32 local_pref = 56;
+                              optional bool atomic_aggr = 57;
+                              optional aggregator_type aggregator = 151;
+                              message aggregator_type {
+                                 optional uint32 as = 58;
+                                 optional uint32 as4 = 59;
+                                 optional string address = 60;
+                              }
+                              repeated string community = 152;
+                           }
+                           optional ext_attributes_type ext_attributes = 151;
+                           message ext_attributes_type {
+                              optional string originator_id = 51;
+                              repeated string cluster_list = 52;
+                              repeated string ext_community = 53;
+                              optional uint64 aigp = 54;
+                              optional uint32 path_id = 55;
+                              message unknown_attribute_list {
+                                 optional uint32 attr_type = 57 [(telemetry_options).is_key = true];
+                                 optional uint32 attr_len = 58;
+                                 optional string attr_value = 59;
+                              }
+                              repeated unknown_attribute_list unknown_attribute = 151;
+                           }
+                           optional string last_modified_date = 61;
+                           optional string last_update_received = 62;
+                           optional bool valid_route = 63;
+                           optional string invalid_reason = 64;
+                           optional bool best_path = 65;
+                        }
+                        repeated route_list route = 151;
+                     }
+                  }
+               }
+               repeated neighbor_list neighbor = 152;
+            }
+         }
+      }
+      repeated afi_safi_list afi_safi = 151;
+   }
+}

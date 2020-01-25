@@ -1,0 +1,310 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional network_instances_te jnpr_network_instances_te_ext = 69;
+}
+
+message network_instances_te {
+   message network_instance_list {
+      optional string instance_name = 51 [(telemetry_options).is_key = true];
+      optional mpls_type mpls = 151;
+      message mpls_type {
+         optional te_global_attributes_type te_global_attributes = 151;
+         message te_global_attributes_type {
+            optional srlgs_type srlgs = 151;
+            message srlgs_type {
+               message srlg_list {
+                  optional string name = 52 [(telemetry_options).is_key = true];
+                  optional state_type state = 151;
+                  message state_type {
+                     optional string name = 51;
+                     optional uint32 value = 52;
+                     optional uint32 cost = 53;
+                     optional string flooding_type = 54;
+                  }
+               }
+               repeated srlg_list srlg = 151;
+            }
+            optional mpls_admin_groups_type mpls_admin_groups = 152;
+            message mpls_admin_groups_type {
+               message admin_group_list {
+                  optional string admin_group_name = 52 [(telemetry_options).is_key = true];
+                  optional state_type state = 151;
+                  message state_type {
+                     optional string admin_group_name = 51;
+                     optional uint32 bit_position = 52;
+                  }
+               }
+               repeated admin_group_list admin_group = 151;
+            }
+            optional te_lsp_timers_type te_lsp_timers = 153;
+            message te_lsp_timers_type {
+               optional state_type state = 151;
+               message state_type {
+                  optional uint32 install_delay = 51;
+                  optional uint32 cleanup_delay = 52;
+                  optional uint32 reoptimize_timer = 53;
+               }
+            }
+         }
+         optional te_interface_attributes_type te_interface_attributes = 152;
+         message te_interface_attributes_type {
+            message interface_list {
+               optional string interface_id = 52 [(telemetry_options).is_key = true];
+               optional state_type state = 151;
+               message state_type {
+                  optional string interface_id = 51;
+                  repeated string srlg_membership = 52;
+                  repeated string admin_group = 53;
+               }
+               optional interface_ref_type interface_ref = 152;
+               message interface_ref_type {
+                  optional state_type state = 151;
+                  message state_type {
+                     optional string interface = 51;
+                     optional uint32 subinterface = 52;
+                  }
+               }
+               optional igp_flooding_bandwidth_type igp_flooding_bandwidth = 153;
+               message igp_flooding_bandwidth_type {
+                  optional state_type state = 151;
+                  message state_type {
+                     optional string threshold_type = 51;
+                     optional uint32 delta_percentage = 52;
+                  }
+               }
+               optional bandwidth_measurement_type bandwidth_measurement = 154;
+               message bandwidth_measurement_type {
+                  optional state_type state = 151;
+                  message state_type {
+                     optional uint64 last_calculated_sr_utilisation = 51;
+                     optional uint64 last_sample_measured_sr_util = 52;
+                  }
+               }
+            }
+            repeated interface_list interface = 151;
+         }
+         optional lsps_type lsps = 153;
+         message lsps_type {
+            optional constrained_path_type constrained_path = 151;
+            message constrained_path_type {
+               optional named_explicit_paths_type named_explicit_paths = 151;
+               message named_explicit_paths_type {
+                  message named_explicit_path_list {
+                     optional string name = 51 [(telemetry_options).is_key = true];
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string name = 51;
+                     }
+                     optional explicit_route_objects_type explicit_route_objects = 152;
+                     message explicit_route_objects_type {
+                        message explicit_route_object_list {
+                           optional uint32 index = 51 [(telemetry_options).is_key = true];
+                           optional state_type state = 151;
+                           message state_type {
+                              optional string address = 51;
+                              optional string hop_type = 52;
+                              optional uint32 index = 53;
+                           }
+                        }
+                        repeated explicit_route_object_list explicit_route_object = 151;
+                     }
+                  }
+                  repeated named_explicit_path_list named_explicit_path = 151;
+               }
+               optional tunnels_type tunnels = 152;
+               message tunnels_type {
+                  message tunnel_list {
+                     optional string name = 51 [(telemetry_options).is_key = true];
+                     optional string source = 52;
+                     optional state_type state = 53;
+                     message state_type {
+                        optional string name = 54;
+                        optional string type = 55;
+                        optional string signaling_protocol = 56;
+                        optional string description = 57;
+                        optional string admin_status = 58;
+                        optional uint32 preference = 59;
+                        optional string metric_type = 60;
+                        optional int32 metric = 61;
+                        optional string protection_style_requested = 63;
+                        optional uint32 reoptimize_timer = 64;
+                        optional string source = 65;
+                        optional bool soft_preemption = 66;
+                        optional uint32 setup_priority = 67;
+                        optional uint32 hold_priority = 68;
+                        optional string oper_status = 69;
+                        optional counters_type counters = 151;
+                        message counters_type {
+                           optional uint64 path_changes = 51;
+                           optional uint64 state_changes = 52;
+                           optional string online_time = 53;
+                           optional string current_path_time = 54;
+                           optional string next_reoptimization_time = 55;
+                           optional string last_transition_time = 56;
+                        }
+                        optional uint32 inherited_metric = 62;
+                     }
+                     optional bandwidth_type bandwidth = 152;
+                     message bandwidth_type {
+                        optional state_type state = 151;
+                        message state_type {
+                           optional string specification_type = 51;
+                           optional uint64 set_bandwidth = 52;
+                           optional uint64 signaled_bandwidth = 53;
+                        }
+                        optional auto_bandwidth_type auto_bandwidth = 152;
+                        message auto_bandwidth_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional bool enabled = 51;
+                              optional uint64 min_bw = 52;
+                              optional uint64 max_bw = 53;
+                              optional uint32 adjust_interval = 54;
+                              optional uint32 adjust_threshold = 55;
+                              optional uint64 max_average_bw = 61;
+                           }
+                           optional overflow_type overflow = 152;
+                           message overflow_type {
+                              optional state_type state = 151;
+                              message state_type {
+                                 optional bool enabled = 51;
+                                 optional uint32 trigger_event_count = 52;
+                              }
+                           }
+                           optional underflow_type underflow = 153;
+                           message underflow_type {
+                              optional state_type state = 151;
+                              message state_type {
+                                 optional bool enabled = 51;
+                                 optional uint32 trigger_event_count = 52;
+                              }
+                           }
+                        }
+                     }
+                     optional p2p_tunnel_attributes_type p2p_tunnel_attributes = 153;
+                     message p2p_tunnel_attributes_type {
+                        optional state_type state = 151;
+                        message state_type {
+                           optional string destination = 51;
+                        }
+                        optional p2p_primary_path_type p2p_primary_path = 152;
+                        message p2p_primary_path_type {
+                           message p2p_primary_path_list {
+                              optional string name = 51 [(telemetry_options).is_key = true];
+                              optional state_type state = 151;
+                              message state_type {
+                                 optional string name = 51;
+                                 optional bool use_cspf = 52;
+                                 optional string cspf_tiebreaker = 53;
+                                 optional string explicit_path_name = 56;
+                                 optional uint32 preference = 61;
+                                 optional uint32 setup_priority = 62;
+                                 optional uint32 hold_priority = 63;
+                                 optional uint32 retry_timer = 64;
+                                 optional string notify_status = 81;
+                                 optional string cspf_status = 54;
+                                 optional uint64 cspf_metric = 55;
+                                 repeated uint32 associated_rsvp_sessions = 59;
+                              }
+                              optional admin_groups_type admin_groups = 152;
+                              message admin_groups_type {
+                                 optional state_type state = 151;
+                                 message state_type {
+                                    repeated string exclude_group = 51;
+                                    repeated string include_all_group = 52;
+                                    repeated string include_any_group = 53;
+                                 }
+                              }
+                              message lsp_instances_list {
+                                 optional uint32 local_index = 51;
+                                 optional uint32 lsp_id = 52;
+                                 optional string subcode = 53;
+                                 optional state_type state = 151;
+                                 message state_type {
+                                    optional uint32 local_index = 51;
+                                    optional string notify_status = 52;
+                                    optional int32 metric = 53;
+                                    optional uint64 bandwidth = 54;
+                                    optional uint64 max_avg_bandwidth = 55;
+                                    optional string reason = 56;
+                                 }
+                              }
+                              repeated lsp_instances_list lsp_instances = 153;
+                           }
+                           repeated p2p_primary_path_list p2p_primary_path = 151;
+                        }
+                        optional p2p_secondary_paths_type p2p_secondary_paths = 153;
+                        message p2p_secondary_paths_type {
+                           message p2p_secondary_path_list {
+                              optional string name = 52 [(telemetry_options).is_key = true];
+                              optional state_type state = 151;
+                              message state_type {
+                                 optional string name = 51;
+                                 optional bool use_cspf = 52;
+                                 optional string cspf_tiebreaker = 53;
+                                 optional string explicit_path_name = 54;
+                                 optional uint32 preference = 55;
+                                 optional uint32 setup_priority = 56;
+                                 optional uint32 hold_priority = 57;
+                                 optional uint32 retry_timer = 58;
+                                 repeated uint32 associated_rsvp_sessions = 59;
+                              }
+                              optional admin_groups_type admin_groups = 152;
+                              message admin_groups_type {
+                                 optional state_type state = 151;
+                                 message state_type {
+                                    repeated string exclude_group = 51;
+                                    repeated string include_all_group = 52;
+                                    repeated string include_any_group = 53;
+                                 }
+                              }
+                           }
+                           repeated p2p_secondary_path_list p2p_secondary_path = 151;
+                        }
+                     }
+                  }
+                  repeated tunnel_list tunnel = 151;
+               }
+               optional container_tunnels_type container_tunnels = 153;
+               message container_tunnels_type {
+                  message container_tunnel_list {
+                     optional string name = 51 [(telemetry_options).is_key = true];
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string name = 51;
+                        optional string oper_state = 52;
+                        optional string normalization_status = 53;
+                        optional uint32 member_count = 54;
+                        optional uint32 minimum_lsp_count = 55;
+                        optional uint32 maximum_lsp_count = 56;
+                        optional uint32 normalize_timer = 57;
+                        optional uint32 normalize_threshold = 58;
+                        optional uint64 aggregate_bandwidth = 59;
+                        optional uint64 sampled_aggregate_bandwidth = 60;
+                        optional uint64 max_signaling_bandwidth = 61;
+                        optional uint64 min_signaling_bandwidth = 62;
+                        optional uint64 splitting_bandwidth = 63;
+                        optional uint64 merging_bandwidth = 64;
+                        optional uint64 time_to_normalize = 65;
+                        optional bool incremental_normalization = 66;
+                        optional bool failover_normalization = 67;
+                        optional string reason = 68;
+                        optional sampling_type sampling = 151;
+                        message sampling_type {
+                           optional uint32 sampling_outlier_cutoff = 51;
+                           optional string sampling_mode = 52;
+                           optional uint32 sampling_percentile = 53;
+                        }
+                     }
+                  }
+                  repeated container_tunnel_list container_tunnel = 151;
+               }
+            }
+         }
+      }
+   }
+   repeated network_instance_list network_instance = 151;
+}

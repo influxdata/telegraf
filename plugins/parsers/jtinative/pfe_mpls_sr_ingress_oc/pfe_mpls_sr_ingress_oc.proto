@@ -1,0 +1,22 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional mpls_pfe_mpls_se_ingress jnpr_mpls_pfe_mpls_se_ingress_ext = 76;
+}
+
+message mpls_pfe_mpls_se_ingress {
+   optional signaling_protocols_type signaling_protocols = 151;
+   message signaling_protocols_type {
+      optional segment_routing_type segment_routing = 151;
+      message segment_routing_type {
+         optional interfaces_type interfaces = 151;
+         message interfaces_type {
+            message interface_list {
+            }
+            repeated interface_list interface = 151;
+         }
+      }
+   }
+}

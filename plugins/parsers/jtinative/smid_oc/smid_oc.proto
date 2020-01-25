@@ -1,0 +1,127 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_smi jnpr_junos_smi_ext = 70;
+}
+
+message junos_smi {
+   optional system_type system = 151;
+   message system_type {
+      optional subscriber_management_type subscriber_management = 151;
+      message subscriber_management_type {
+         optional infra_type infra = 151;
+         message infra_type {
+            optional sdb_type sdb = 151;
+            message sdb_type {
+               optional statistics_type statistics = 151;
+               message statistics_type {
+                  optional state_type state = 151;
+                  message state_type {
+                     optional uint32 init_state_count = 51;
+                     optional uint32 configured_state_count = 52;
+                     optional uint32 active_state_count = 53;
+                     optional uint32 terminating_state_count = 54;
+                     optional uint32 terminated_state_count = 55;
+                     optional uint32 total_state_count = 56;
+                  }
+                  optional client_type_type client_type = 152;
+                  message client_type_type {
+                     optional uint32 dhcp_client_count = 61;
+                     optional uint32 vlan_client_count = 62;
+                     optional uint32 ppp_client_count = 63;
+                     optional uint32 pppoe_client_count = 64;
+                     optional uint32 l2tp_client_count = 65;
+                     optional uint32 static_client_count = 66;
+                     optional uint32 vpls_pw_client_count = 67;
+                     optional uint32 mlppp_client_count = 68;
+                     optional uint32 essm_client_count = 69;
+                     optional uint32 total_client_count = 70;
+                  }
+               }
+            }
+            optional resource_monitor_type resource_monitor = 152;
+            message resource_monitor_type {
+               optional chassis_type chassis = 151;
+               message chassis_type {
+                  optional uint32 configured_subscriber_limit = 131;
+                  optional uint32 current_subscriber_count = 132;
+                  optional uint32 subscriber_limit_exceeded = 201;
+                  optional uint32 subscriber_limit_nominal = 202;
+               }
+               optional fpcs_type fpcs = 152;
+               message fpcs_type {
+                  message fpc_list {
+                     optional uint32 slot = 51 [(telemetry_options).is_key = true];
+                     optional statistics_type statistics = 151;
+                     message statistics_type {
+                        optional uint32 heap_memory_used = 81;
+                        optional uint32 client_session_denied_count = 82;
+                        optional uint32 service_session_denied_count = 83;
+                        optional uint32 rtt_throttled_sub_count_client = 84;
+                        optional uint32 rtt_throttled_sub_count_service = 85;
+                        optional uint32 configured_subscriber_limit = 131;
+                        optional uint32 current_subscriber_count = 132;
+                        optional uint32 mem_heap_exceeded = 91;
+                        optional uint32 mem_heap_nominal = 92;
+                        optional uint32 subscriber_limit_exceeded = 201;
+                        optional uint32 subscriber_limit_nominal = 202;
+                        optional pfes_type pfes = 151;
+                        message pfes_type {
+                           message pfe_list {
+                              optional uint32 pfe_no = 51 [(telemetry_options).is_key = true];
+                              optional uint32 filter_memory_used = 101;
+                              optional uint32 ifl_memory_used = 102;
+                              optional uint32 expansion_memory_used = 103;
+                              optional uint32 nh_memory_free = 104;
+                              optional uint32 fw_memory_free = 105;
+                              optional uint32 mem_ifl_exceeded = 111;
+                              optional uint32 mem_ifl_nominal = 112;
+                              optional uint32 mem_expansion_exceeded = 113;
+                              optional uint32 mem_expansion_nominal = 114;
+                              optional sched_blocks_type sched_blocks = 151;
+                              message sched_blocks_type {
+                                 message sched_block_list {
+                                    optional uint32 sblock_no = 51 [(telemetry_options).is_key = true];
+                                    optional uint32 queues_max = 121;
+                                    optional uint32 queues_allocated = 122;
+                                    optional uint32 cos_utilization_exceeded = 141;
+                                    optional uint32 cos_utilization_nominal = 142;
+                                 }
+                                 repeated sched_block_list sched_block = 151;
+                              }
+                           }
+                           repeated pfe_list pfe = 151;
+                        }
+                     }
+                     optional pics_type pics = 152;
+                     message pics_type {
+                        message pic_list {
+                           optional uint32 pic_no = 51 [(telemetry_options).is_key = true];
+                           optional uint32 configured_subscriber_limit = 131;
+                           optional uint32 current_subscriber_count = 132;
+                           optional uint32 subscriber_limit_exceeded = 201;
+                           optional uint32 subscriber_limit_nominal = 202;
+                           optional ports_type ports = 151;
+                           message ports_type {
+                              message port_list {
+                                 optional uint32 port_no = 51 [(telemetry_options).is_key = true];
+                                 optional uint32 configured_subscriber_limit = 131;
+                                 optional uint32 current_subscriber_count = 132;
+                                 optional uint32 subscriber_limit_exceeded = 201;
+                                 optional uint32 subscriber_limit_nominal = 202;
+                              }
+                              repeated port_list port = 151;
+                           }
+                        }
+                        repeated pic_list pic = 151;
+                     }
+                  }
+                  repeated fpc_list fpc = 151;
+               }
+            }
+         }
+      }
+   }
+}

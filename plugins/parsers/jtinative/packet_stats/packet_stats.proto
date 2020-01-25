@@ -1,0 +1,87 @@
+//
+// This defines the gpb message format used by the packet stats sensort
+//
+// The top level messages is PacketStats
+//
+// Copyrights (c)  2015, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+//
+// Nitin Kumar, Jan 2015
+//
+// This file defines the messages in Protocol Buffers format used by
+// the packet statistics sensor. The top level message is PacketStatistics
+//
+// Version 1.0
+//
+syntax = "proto2";
+import "telemetry_top.proto";
+
+//
+// This occupies branch 8 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional PacketStatistics jnpr_packet_statistics_ext        = 8;
+}
+
+message PacketStatistics {
+    // List of stats aggregated across all forwarding engines
+    repeated PacketStatsClass                      packet_stats = 1;
+
+    // List of stats per forwarding engine
+    repeated PacketStatsPacketForwardingEngine packet_stats_pfe = 2;
+}
+
+message PacketStatsPacketForwardingEngine {
+    // A string of the form pfe-X/Y that identifies a PFE in the system
+    required string pfe_identifier              = 1;
+
+    // Array of all counters that are available
+    repeated PacketStatsClass packet_stats      = 2;
+}
+
+message PacketStatsClass {
+    // Broad category that defines this class of counters
+    required string name                  = 1;
+
+    // Packet/Byte counters for the above category
+    required PacketStatsCounter counter        = 2;
+}
+
+message PacketStatsCounter {
+    // Counter64: This is a counter representing the total number of packets
+    // that were dropped for a given error.
+    required uint64 packet_count = 1;
+
+    // Counter64: This is a counter representing the total number of
+    // bytes that were dropped for a given error.
+    optional uint64 byte_count   = 2;
+
+    // Rate: This value represents the rate of packets dropped
+    // due to a given error, expressed in packets per second.
+    // On most platforms, this rate is computed over a 1 second interval.
+    optional uint64 packet_rate  = 3;
+
+    // Rate: This value represents the total number of
+    // bits per second that were dropped for a given error.
+    optional uint64 bit_rate    = 4;
+}

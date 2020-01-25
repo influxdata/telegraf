@@ -1,0 +1,158 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional interfaces_mib jnpr_interfaces_mib_ext = 55;
+}
+
+message interfaces_mib {
+   message interface_list {
+      optional string name = 51 [(telemetry_options).is_key = true];
+      optional state_type state = 151;
+      message state_type {
+         optional string type = 52;
+         optional uint32 mtu = 53;
+         optional string name = 51;
+         optional string description = 54;
+         optional bool enabled = 55;
+         optional uint32 ifindex = 61;
+         optional string admin_status = 62;
+         optional string oper_status = 63;
+         optional uint32 last_change = 64;
+      }
+      optional subinterfaces_type subinterfaces = 152;
+      message subinterfaces_type {
+         message subinterface_list {
+            optional uint32 index = 51 [(telemetry_options).is_key = true];
+            optional state_type state = 151;
+            message state_type {
+               optional uint32 index = 51;
+               optional string name = 52;
+               optional string description = 53;
+               optional bool enabled = 54;
+               optional uint32 ifindex = 55;
+               optional string admin_status = 56;
+               optional string oper_status = 57;
+               optional uint32 last_change = 58;
+            }
+            optional ipv4_type ipv4 = 152;
+            message ipv4_type {
+               optional addresses_type addresses = 151;
+               message addresses_type {
+                  message address_list {
+                     optional string ip = 51 [(telemetry_options).is_key = true];
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string ip = 51;
+                        optional uint32 prefix_length = 52;
+                        optional string origin = 53;
+                     }
+                  }
+                  repeated address_list address = 151;
+               }
+               optional neighbors_type neighbors = 152;
+               message neighbors_type {
+                  message neighbor_list {
+                     optional string ip = 51 [(telemetry_options).is_key = true];
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string ip = 51;
+                        optional string link_layer_address = 52;
+                        optional string origin = 53;
+                        optional string host_name = 54;
+                        optional uint32 table_id = 55;
+                        optional string neighbor_state = 56;
+                        optional uint32 expiry = 57;
+                        optional bool is_publish = 58;
+                        optional string interface_name = 59;
+                        optional uint32 logical_router_id = 60;
+                     }
+                  }
+                  repeated neighbor_list neighbor = 151;
+               }
+               optional unnumbered_type unnumbered = 153;
+               message unnumbered_type {
+                  optional state_type state = 151;
+                  message state_type {
+                     optional bool enabled = 51;
+                  }
+                  optional interface_ref_type interface_ref = 152;
+                  message interface_ref_type {
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string interface = 51;
+                        optional uint32 subinterface = 52;
+                     }
+                  }
+               }
+               optional state_type state = 154;
+               message state_type {
+                  optional bool enabled = 51;
+                  optional uint32 mtu = 52;
+               }
+            }
+            optional ipv6_type ipv6 = 153;
+            message ipv6_type {
+               optional addresses_type addresses = 151;
+               message addresses_type {
+                  message address_list {
+                     optional string ip = 51 [(telemetry_options).is_key = true];
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string ip = 51;
+                        optional uint32 prefix_length = 52;
+                        optional string origin = 53;
+                        optional string status = 54;
+                     }
+                  }
+                  repeated address_list address = 151;
+               }
+               optional neighbors_type neighbors = 152;
+               message neighbors_type {
+                  message neighbor_list {
+                     optional string ip = 51 [(telemetry_options).is_key = true];
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string ip = 51;
+                        optional string link_layer_address = 52;
+                        optional string origin = 53;
+                        optional string is_router = 54;
+                        optional string neighbor_state = 55;
+                        optional uint32 table_id = 56;
+                        optional bool is_secure = 57;
+                        optional uint32 expiry = 59;
+                        optional bool is_publish = 58;
+                        optional string interface_name = 60;
+                        optional uint32 logical_router_id = 61;
+                     }
+                  }
+                  repeated neighbor_list neighbor = 151;
+               }
+               optional unnumbered_type unnumbered = 153;
+               message unnumbered_type {
+                  optional state_type state = 151;
+                  message state_type {
+                     optional bool enabled = 51;
+                  }
+                  optional interface_ref_type interface_ref = 152;
+                  message interface_ref_type {
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string interface = 51;
+                        optional uint32 subinterface = 52;
+                     }
+                  }
+               }
+               optional state_type state = 154;
+               message state_type {
+                  optional bool enabled = 51;
+                  optional uint32 mtu = 52;
+               }
+            }
+         }
+         repeated subinterface_list subinterface = 151;
+      }
+   }
+   repeated interface_list interface = 151;
+}

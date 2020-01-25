@@ -1,0 +1,226 @@
+//
+// Copyrights (c) 2015, 2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Nitin Kumar, Jan 2015
+//
+// This file defines the messages in Protocol Buffers format used by
+// the port sensor. The-top level messages is Port.
+//
+// Version 1.1
+//
+
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+//
+// This occupies branch 3 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional Port jnpr_interface_ext               = 3;
+}
+
+//
+// Top-level message
+//
+message Port {
+    repeated InterfaceInfos interface_stats        = 1;
+}
+            
+//
+// Interface information
+//
+message InterfaceInfos {
+    // Interface name, e.g., xe-0/0/0
+    required string if_name                        = 1 [(telemetry_options).is_key = true];
+
+    // Time when interface is created
+    optional uint64 init_time                      = 2;
+
+    // Global Index
+    optional uint32 snmp_if_index                  = 3;
+
+    // Name of parent for AE interface, if applicable
+    optional string parent_ae_name                 = 4;
+
+    // Egress queue information
+    repeated QueueStats egress_queue_info          = 5;
+
+    // Ingress queue information
+    repeated QueueStats ingress_queue_info         = 6;
+
+    // Inbound traffic statistics
+    optional InterfaceStats ingress_stats          = 7;
+
+    // Outbound traffic statistics
+    optional InterfaceStats egress_stats           = 8;
+
+    // Inbound traffic errors
+    optional IngressInterfaceErrors ingress_errors = 9;
+
+    // Interface administration status
+    optional string if_administration_status       = 10;
+
+    // Interface operational status
+    optional string if_operational_status          = 11;
+
+    // Interface description
+    optional string if_description                 = 12;
+
+    // Counter: number of carrier transitions on this interface
+    optional uint64 if_transitions                 = 13 [(telemetry_options).is_counter = true];
+
+    // This corresponds to the ifLastChange object in the standard interface MIB
+    optional uint32 ifLastChange                   = 14;
+
+    // This corresponds to the ifHighSpeed object in the standard interface MIB
+    optional uint32 ifHighSpeed                    = 15;
+
+    // Outbound traffic errors
+    optional EgressInterfaceErrors egress_errors   = 16;
+}
+
+//
+// Interface queue statistics
+//
+message QueueStats {
+    // Queue number
+    optional uint32 queue_number                  = 1 [(telemetry_options).is_key = true];   
+
+    // The total number of packets that have been added to this queue
+    optional uint64 packets                       = 2 [(telemetry_options).is_counter = true];
+
+    // The total number of bytes that have been added to this queue
+    optional uint64 bytes                         = 3 [(telemetry_options).is_counter = true];
+
+    // The total number of tail dropped packets
+    optional uint64 tail_drop_packets             = 4 [(telemetry_options).is_counter = true];
+
+    // The total number of rate-limited packets
+    optional uint64 rl_drop_packets               = 5 [(telemetry_options).is_counter = true];
+
+    // The total number of rate-limited bytes
+    optional uint64 rl_drop_bytes                 = 6 [(telemetry_options).is_counter = true];
+
+    // The total number of red-dropped packets
+    optional uint64 red_drop_packets              = 7 [(telemetry_options).is_counter = true];
+
+    // The total number of red-dropped bytes
+    optional uint64 red_drop_bytes                = 8 [(telemetry_options).is_counter = true];
+
+    // Average queue depth, in packets
+    optional uint64 avg_buffer_occupancy          = 9 [(telemetry_options).is_gauge = true];
+
+    // Current queue depth, in packets
+    optional uint64 cur_buffer_occupancy          = 10 [(telemetry_options).is_gauge = true];
+
+    // The max measured queue depth, in packets, across all measurements since boot
+    optional uint64 peak_buffer_occupancy         = 11 [(telemetry_options).is_gauge = true];
+
+    // Allocated buffer size
+    optional uint64 allocated_buffer_size         = 12 [(telemetry_options).is_gauge = true];
+}
+
+//
+// Interface statistics
+//
+message InterfaceStats {
+    // The total number of packets sent/received by this interface
+    optional uint64 if_pkts                       = 1 [(telemetry_options).is_counter = true];
+
+    // The total number of bytes sent/received by this interface
+    optional uint64 if_octets                     = 2 [(telemetry_options).is_counter = true];
+
+    // The rate at which packets are sent/received by this interface (in packets/sec)
+    optional uint64 if_1sec_pkts                  = 3 [(telemetry_options).is_gauge = true];
+
+    // The rate at which bytes are sent/received by this interface
+    optional uint64 if_1sec_octets                = 4 [(telemetry_options).is_gauge = true];
+
+    // Total number of unicast packets sent/received by this interface
+    optional uint64 if_uc_pkts                    = 5 [(telemetry_options).is_counter = true];
+
+    // Total number of multicast packets sent/received by this interface
+    optional uint64 if_mc_pkts                    = 6 [(telemetry_options).is_counter = true];
+
+    // Total number of broadcast packets sent/received by this interface
+    optional uint64 if_bc_pkts                    = 7 [(telemetry_options).is_counter = true];
+
+    // Counter: total no of error packets sent/rcvd by this interface
+    optional uint64 if_error                      = 8 [(telemetry_options).is_counter = true];
+
+    // Counter: total no of PAUSE packets sent/rcvd by this interface
+    optional uint64 if_pause_pkts                 = 9 [(telemetry_options).is_counter = true];
+
+    // Counter: total no of UNKNOWN proto packets sent/rcvd by this interface
+    optional uint64 if_unknown_proto_pkts         = 10 [(telemetry_options).is_counter = true];
+}
+
+//
+// Inbound traffic error statistics
+//
+message IngressInterfaceErrors {
+    // The number of packets that contained errors
+    optional uint64 if_errors                  = 1 [(telemetry_options).is_counter = true];
+
+    // The number of packets dropped by the input queue of the I/O Manager ASIC
+    optional uint64 if_in_qdrops                  = 2 [(telemetry_options).is_counter = true];
+
+    // The number of packets which were misaligned
+    optional uint64 if_in_frame_errors            = 3 [(telemetry_options).is_counter = true];
+
+    // The number of non-error packets which were chosen to be discarded
+    optional uint64 if_discards                = 4 [(telemetry_options).is_counter = true];
+
+    // The number of runt packets
+    optional uint64 if_in_runts                   = 5 [(telemetry_options).is_counter = true];
+
+    // The number of packets that fail Layer 3 sanity checks of the header
+    optional uint64 if_in_l3_incompletes          = 6 [(telemetry_options).is_counter = true];
+
+    // The number of packets for which the software could not find a valid logical interface
+    optional uint64 if_in_l2chan_errors           = 7 [(telemetry_options).is_counter = true];
+
+    // The number of malform or short packets
+    optional uint64 if_in_l2_mismatch_timeouts    = 8 [(telemetry_options).is_counter = true];
+
+    // The number of FIFO errors
+    optional uint64 if_in_fifo_errors             = 9 [(telemetry_options).is_counter = true];
+
+    // The number of resource errors
+    optional uint64 if_in_resource_errors         = 10 [(telemetry_options).is_counter = true];
+}
+
+//
+// Outbound traffic error statistics
+//
+message EgressInterfaceErrors {
+    // The number of packets that contained errors
+    optional uint64 if_errors                        = 1 [(telemetry_options).is_counter = true];
+
+    // The number of non-error packets which were chosen to be discarded
+    optional uint64 if_discards                      = 2 [(telemetry_options).is_counter = true];
+}
+

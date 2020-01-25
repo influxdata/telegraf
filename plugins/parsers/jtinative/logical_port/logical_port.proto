@@ -1,0 +1,198 @@
+// Copyright (c) 2015, 2016 Juniper Networks, Inc.
+// All rights reserved.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
+
+//
+// Version 1.1
+//
+
+//
+// Nitin Kumar, 2015-05-29
+//
+// This file defines the messages in Protocol Buffers used by
+// the interface sensor. The top-level message is LogicalPort.
+//
+
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+//
+// This occupies branch 7 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional LogicalPort jnprLogicalInterfaceExt = 7;
+}
+
+
+//
+// Top-level message
+//
+message LogicalPort {
+    repeated LogicalInterfaceInfo interface_info = 1;
+}
+
+
+//
+// Logical Interaface information
+//
+message LogicalInterfaceInfo {
+    // Logical interface name (e.g. xe-0/0/0.0)
+    required string if_name                      = 1 [(telemetry_options).is_key = true];
+
+    // Time reset
+    required uint64 init_time                    = 2 [(telemetry_options).is_timestamp = true];
+
+    // Global Index
+    optional uint32 snmp_if_index                = 3 [(telemetry_options).is_key = true];
+
+    // Name of the aggregate bundle
+    optional string parent_ae_name               = 4 [(telemetry_options).is_key = true];
+
+    // Inbound traffic statistics
+    optional IngressInterfaceStats ingress_stats = 5;
+
+    // Outbound traffic statistics
+    optional EgressInterfaceStats egress_stats   = 6;
+
+    // Link state UP\DOWN etc.
+    optional OperationalState op_state           = 7; 
+
+    // administrative status, i.e.. enabled/disabled
+    optional string administractive_status = 8;
+
+    // Description of the interface
+    optional string description = 9;
+
+    // This corresponds to the ifLastChange object in the standard interface MIB
+   optional uint32 last_change = 10;
+
+   // This corresponds to the ifHighSpeed object in the standard interface MIB
+   optional uint32 high_speed = 11; 
+
+    // Ingress queue information
+    repeated logicalInterfaceQueueStats ingress_queue_info  = 12;
+
+    // Egress queue information
+    repeated logicalInterfaceQueueStats egress_queue_info  = 13; 
+
+}
+
+
+//
+//  Interface inbound/Ingress traffic statistics
+//
+message IngressInterfaceStats {
+    // Count of packets
+    required uint64 if_packets                     = 1 [(telemetry_options).is_counter = true];
+
+    // Count of bytes
+    required uint64 if_octets                      = 2 [(telemetry_options).is_counter = true]; 
+
+    // Count of unicast packets
+    optional uint64 if_ucast_packets               = 3 [(telemetry_options).is_counter = true];
+
+    // Count of multicast packets
+    optional uint64 if_mcast_packets               = 4 [(telemetry_options).is_counter = true];
+
+    repeated ForwardingClassAccounting if_fc_stats = 5;
+}
+
+
+//
+//  Interface outbound/Egress traffic statistics
+//
+message EgressInterfaceStats {
+    // Count of packets
+    required uint64 if_packets                     = 1 [(telemetry_options).is_counter = true];
+
+    // Count of bytes
+    required uint64 if_octets                      = 2 [(telemetry_options).is_counter = true];
+
+    // Count of unicast packets
+    optional uint64 if_ucast_packets               = 3 [(telemetry_options).is_counter = true];
+
+    // Count of multicast packets
+    optional uint64 if_mcast_packets               = 4 [(telemetry_options).is_counter = true];
+}
+
+
+//
+//  Interface operational State details
+//
+message OperationalState {
+    // If the link is up/down
+    optional string operational_status = 1;
+}
+
+
+//
+//  Interface forwarding class accounting
+//
+message ForwardingClassAccounting {
+    // Interface protocol
+    optional string if_family  = 1 [(telemetry_options).is_key = true];
+
+    // Forwarding class number
+    optional uint32 fc_number  = 2 [(telemetry_options).is_key = true];
+
+    // Count of packets
+    optional uint64 if_packets = 3 [(telemetry_options).is_counter = true];
+
+    // Count of bytes
+    optional uint64 if_octets  = 4 [(telemetry_options).is_counter = true];
+}
+
+//
+// Interface queue statistics
+//
+message logicalInterfaceQueueStats {
+    // Queue number
+    optional uint32 queue_number                  = 1 [(telemetry_options).is_key = true];   
+
+    // The total number of packets that have been added to this queue
+    optional uint64 packets                       = 2 [(telemetry_options).is_counter = true];
+
+    // The total number of bytes that have been added to this queue
+    optional uint64 bytes                         = 3 [(telemetry_options).is_counter = true];
+
+    // The total number of tail dropped packets
+    optional uint64 tail_drop_packets             = 4 [(telemetry_options).is_counter = true];
+
+    // The total number of rate-limited packets
+    optional uint64 rate_limit_drop_packets       = 5 [(telemetry_options).is_counter = true];
+
+    // The total number of rate-limited bytes
+    optional uint64 rate_limit_drop_bytes         = 6 [(telemetry_options).is_counter = true];
+
+    // The total number of red-dropped packets
+    optional uint64 red_drop_packets              = 7 [(telemetry_options).is_counter = true];
+
+    // The total number of red-dropped bytes
+    optional uint64 red_drop_bytes                = 8 [(telemetry_options).is_counter = true];
+
+    // Average queue depth, in packets
+    optional uint64 average_buffer_occupancy      = 9 [(telemetry_options).is_gauge = true];
+
+    // Current queue depth, in packets
+    optional uint64 current_buffer_occupancy      = 10 [(telemetry_options).is_gauge = true];
+
+    // The max measured queue depth, in packets, across all measurements since boot
+    optional uint64 peak_buffer_occupancy         = 11 [(telemetry_options).is_gauge = true];
+
+    // Allocated buffer size
+    optional uint64 allocated_buffer_size         = 12 [(telemetry_options).is_gauge = true];
+}
+

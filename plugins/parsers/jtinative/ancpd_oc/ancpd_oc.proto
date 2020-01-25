@@ -1,0 +1,33 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_ancp jnpr_junos_ancp_ext = 32;
+}
+
+message junos_ancp {
+   optional system_type system = 151;
+   message system_type {
+      optional subscriber_management_type subscriber_management = 151;
+      message subscriber_management_type {
+         optional access_network_type access_network = 151;
+         message access_network_type {
+            optional ancp_type ancp = 151;
+            message ancp_type {
+               optional protocol_type protocol = 151;
+               message protocol_type {
+                  optional uint32 configured_neighbor_count = 51;
+                  optional uint32 establishing_neighbor_count = 52;
+                  optional uint32 established_neighbor_count = 53;
+                  optional uint32 not_established_neighbor_count = 54;
+                  optional uint32 total_neighbor_count = 55;
+                  optional uint32 mapped_static_subscriber_count = 56;
+                  optional uint64 port_up_count = 57;
+                  optional uint64 port_down_count = 58;
+               }
+            }
+         }
+      }
+   }
+}

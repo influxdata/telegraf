@@ -1,0 +1,177 @@
+// Copyright (c) 2015, 2016 Juniper Networks, Inc.
+// All rights reserved.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
+
+//
+// Version 1.1
+//
+
+//
+// Shibu Piriyath 2017-09-11
+//
+// This file defines the messages in Protocol Buffers used by
+// the IPSec sensor. The top-level message is IPsecVPN.
+//
+
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+//
+// This occupies branch 77  from JuniperNetworksSensors
+
+extend JuniperNetworksSensors {
+    optional IPsecVPN jnprIPsecVPNExt = 77;
+}
+
+//
+// Top-level message
+//
+
+message IPsecVPN {
+    repeated IPsecGlobalInfo    ipsec_global_info = 1;
+    repeated IPsecPerSvcsetInfo ipsec_svcset_info = 2;
+    repeated IPsecPerTunnelInfo ipsec_tunnel_info = 3;
+}
+
+message IPsecGlobalInfo {
+
+    // RE-Pconn Connect Retry
+    optional uint64 re_pconn_connect         = 1;
+
+    // RE-Pconn Status
+    optional uint64 pconn_status             = 2;
+
+    // Request Enq Succ
+    optional uint64 sa_trigger_enq_success   = 3;
+
+    // Request Enq Fail
+    optional uint64 sa_trigger_enq_fail      = 4;
+
+    // Retry Enq Succ
+    optional uint64 sa_trigger_retry_success = 5;
+
+    // Retry Enq Fail
+    optional uint64 sa_trigger_retry_fail    = 6;
+
+    // Trigger Send Succ
+    optional uint64 sa_trigger_sent          = 7;
+
+    // Trigger Send Fail
+    optional uint64 sa_trigger_fail          = 8;
+
+    // Trigger Alloc
+    optional uint64 sa_trigger_alloc         = 9;
+
+    // Alloc Fail
+    optional uint64 sa_trigger_alloc_fail    = 10;
+
+    // Trigger Free
+    optional uint64 sa_trigger_free          = 11;
+
+    // Outstanding Trig Msg in Queue
+    optional uint64 sa_trig_enq_count        = 12;
+}
+
+
+message IPsecPerSvcsetInfo {
+
+    // Service Set ID
+    required uint64 svcset_id                = 1;
+
+    // Rule Lookup Fail
+    optional uint64 rule_lookup_failed       = 2;
+
+    // SA Lookup Fail
+    optional uint64 sa_lookup_failed         = 3;
+
+    // Pre Frags
+    optional uint64 exceeds_tunnel_mtu       = 4;
+
+    // Clear Pkts Recvd for encap
+    optional uint64 clear_pkt_received       = 5;
+
+    // ESP Pkts Recvd
+    optional uint64 esp_pkt_received         = 6;
+
+    // Encap Pkts From Crypto
+    optional uint64 encap_callback           = 7;
+
+    // Decap Pkts From Crypto
+    optional uint64 decap_callback           = 8;
+}
+
+message IPsecPerTunnelInfo {
+
+    // Tunnel IDs on PIC
+    required uint64 tunnel_id                = 1;
+
+    // Seq Num Zero
+    optional uint64 esp_rplzero              = 2;
+
+    // Bad Pad
+    optional uint64 ipsec_bad_headers        = 3;
+
+    // ESP Tail Err
+    optional uint64 esp_bad_trailers         = 4;
+
+    // Next Proto Err
+    optional uint64 decap_nxt_proto_err      = 5;
+
+    // Inner Len Err
+    optional uint64 decap_inner_len_err      = 6;
+
+    // Outer Hdr Err
+    optional uint64 decap_hdr_err            = 7;
+
+    // Inner Saddr Err
+    optional uint64 decap_inner_saddr_err    = 8;
+
+    // Inner Daddr Err
+    optional uint64 decap_inner_daddr_err    = 9;
+
+    // Sn Alloc Fail
+    optional uint64 decap_sn_alloc_fail      = 10;
+
+    // Sn Ext Fail
+    optional uint64 decap_sn_ext_fail        = 11;
+
+    // Auth Fail
+    optional uint64 esp_auth_failed          = 12;
+
+    // Reinject Fail
+    optional uint64 decap_reinject_fail      = 13;
+
+    // Session Transient Drop
+    optional uint64 decap_sn_transient_drop  = 14;
+
+    // Replay Before Win
+    optional uint64 esp_rplbeforewindow      = 15;
+
+    // Replayed Pkts
+    optional uint64 esp_rplduplicate         = 16;
+
+    // Encrypted Bytes
+    optional uint64 esp_protected_bytes_sent = 17;
+
+    // Decrypted Bytes
+    optional uint64 esp_protected_bytes_recvd= 18;
+
+    // Encrypted Packets
+    optional uint64 encrypts                 = 19;
+
+    // Decrypted Packets
+    optional uint64 decrypts                 = 20;
+}

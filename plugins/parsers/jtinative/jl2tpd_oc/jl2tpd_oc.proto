@@ -1,0 +1,37 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_l2tp jnpr_junos_l2tp_ext = 44;
+}
+
+message junos_l2tp {
+   optional system_type system = 151;
+   message system_type {
+      optional subscriber_management_type subscriber_management = 151;
+      message subscriber_management_type {
+         optional client_protocols_type client_protocols = 151;
+         message client_protocols_type {
+            optional l2tp_type l2tp = 151;
+            message l2tp_type {
+               optional summary_type summary = 151;
+               message summary_type {
+                  optional uint32 l2tp_stats_total_tunnels = 51;
+                  optional uint32 l2tp_stats_total_sessions = 52;
+                  optional uint32 l2tp_stats_control_rx_packets = 53;
+                  optional uint32 l2tp_stats_control_rx_bytes = 54;
+                  optional uint32 l2tp_stats_control_tx_packets = 55;
+                  optional uint32 l2tp_stats_control_tx_bytes = 56;
+                  optional uint32 l2tp_era_type_icrq_inflight_count = 57;
+                  optional uint32 l2tp_era_type_icrq_reported_successes = 58;
+                  optional uint32 l2tp_era_type_icrq_reported_failures = 59;
+                  optional uint32 l2tp_era_type_sccrq_inflight_count = 60;
+                  optional uint32 l2tp_era_type_sccrq_reported_successes = 61;
+                  optional uint32 l2tp_era_type_sccrq_reported_failures = 62;
+               }
+            }
+         }
+      }
+   }
+}

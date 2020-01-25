@@ -1,0 +1,219 @@
+//                                                                              
+// Copyrights (c)  2016, Juniper Networks, Inc.                                 
+// All rights reserved. 
+//
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Manikandan Poornachary, Mar 2016
+//
+// Inline Jflow service creates/updates flow, construct flow records
+// either in v9 or v10 format, and exports to collector.
+// This service maintains set of counters which are FPC Slot level,
+// NPU level and family level. This file provides a template for the
+// GBP stream format of these counters.
+//
+// Version 1.0
+//
+    
+
+import "telemetry_top.proto";
+
+//
+// This occupies branch 9 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional InlineJflow inline_jflow_stats_ext                 = 9;
+}
+
+message InlineJflow {
+
+    // Version of exported flow records (v10 or v9)
+    optional string ipv4_flows_export_format                    = 2;
+    optional string ipv6_flows_export_format                    = 3;
+    optional string vpls_flows_export_format                    = 4;
+    optional string mpls_flows_export_format                    = 5;
+
+    // Total number of IPv4/IPv6/MPLS routes  
+    optional uint32 ipv4_route_record_cnt                       = 6;
+    optional uint32 ipv6_route_record_cnt                       = 7;
+    optional uint32 mpls_route_record_cnt                       = 8;
+
+    // Total number of Autonomous System information
+    optional uint32 autonomous_system_record_cnt                = 9;
+
+    // Maximum number of flows supported. 
+    optional uint64 ipv4_max_flows_count                        = 10;
+    optional uint64 ipv6_max_flows_count                        = 11;
+    optional uint64 vpls_max_flows_count                        = 12;
+    optional uint64 mpls_max_flows_count                        = 13;
+
+    // Total number of heap memory allocation failure
+    optional uint32 memory_alloc_fail_cnt                       = 14 [(telemetry_options).is_counter = true];
+
+    // Value of Configured Observation Domain ID 
+    optional uint32 ipv4_configured_observation_domain_id       = 15;
+    optional uint32 ipv6_configured_observation_domain_id       = 16;
+    optional uint32 vpls_configured_observation_domain_id       = 17;
+    optional uint32 mpls_configured_observation_domain_id       = 18;
+
+    // Timestamp of last clear command
+    optional uint32 last_clear_timestamp                        = 19;
+
+    // Status of ipv6_extended_attrib knob
+    optional bool ipv6_extended_attribute                       = 20;
+
+    // Status of flex_flow_sizing knob
+    optional bool flexible_flow_sizing                          = 21;
+
+    // Status of use_extended_flow_memory knob
+    optional bool use_extended_flow_memory                      = 22;
+
+    // Version of Bridge exported flow records (v10 or v9)
+    optional string bridge_flows_export_format                  = 23;
+
+    // Maximum number of flows supported for Bridge.
+    optional uint64 bridge_max_flows_count                      = 24;
+
+    // Value of Configured Observation Domain ID for Bridge
+    optional uint32 bridge_configured_observation_domain_id     = 25;
+
+    // NPU level statistics
+    repeated InlineJflowNpuStats npu_stats                      = 50;
+}
+
+message InlineJflowNpuStats {
+   
+    // All NPUs in the system are globally identified
+    // <fpcslot><luinst><pfeinst> 
+    //   8         4         4    bits
+    required uint32 npu_identifier                              = 1;
+
+    // IPv4 NPU Stats
+    // Total number of IPv4 packets and bytes sampled
+    optional uint64 ipv4_flow_packets                           = 51 [(telemetry_options).is_counter = true];
+    optional uint64 ipv4_flow_bytes                             = 52 [(telemetry_options).is_counter = true];
+
+    // Total number of IPv4 flows created
+    optional uint64 ipv4_total_flows                            = 53 [(telemetry_options).is_counter = true];
+
+    // Total number of IPv4 flows that are active currently
+    optional uint64 ipv4_active_flows                           = 54 [(telemetry_options).is_counter = true];
+
+    // Total number of IPv4 flows exported to collector
+    optional uint64 ipv4_flows_exported                         = 55 [(telemetry_options).is_counter = true];
+
+    // Total number of IPv4 flow packets exported to collector
+    optional uint64 ipv4_packets_exported                       = 56 [(telemetry_options).is_counter = true];
+
+    // Total number of IPv4 flows exported due to idle time out
+    optional uint64 ipv4_flows_inactive_timed_out               = 57 [(telemetry_options).is_counter = true];
+
+    // Total number of IPv4 flows exported due to active time out
+    optional uint64 ipv4_flows_active_timed_out                 = 58 [(telemetry_options).is_counter = true];
+
+    // Total number of IPv4 flow creation failure (flow insert faiure)
+    optional uint64 ipv4_flow_create_failure                    = 59 [(telemetry_options).is_counter = true];
+
+    // Total number of route, autonomous system lookup failure
+    optional uint64 ipv4_route_lookup_failure                   = 60 [(telemetry_options).is_counter = true];
+    optional uint64 ipv4_autonomous_system_lookup_failure       = 61 [(telemetry_options).is_counter = true];
+
+    // Total number of exporting flow record to collector failed
+    optional uint64 ipv4_flow_packet_export_failure             = 62 [(telemetry_options).is_counter = true];
+
+    // IPv4 flow table utlization in percentage
+    optional float  ipv4_flow_table_utilization                 = 63 [(telemetry_options).is_gauge = true];
+
+    // Absolute number of flow inserted
+    optional uint64 ipv4_flow_insert_count                      = 64 [(telemetry_options).is_counter = true];
+
+    // IPv6 NPU Stats
+    optional uint64 ipv6_flow_packets                           = 101 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_flow_bytes                             = 102 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_total_flows                            = 103 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_active_flows                           = 104 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_flows_exported                         = 105 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_packets_exported                       = 106 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_flows_inactive_timed_out               = 107 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_flows_active_timed_out                 = 108 [(telemetry_options).is_counter = true];
+
+    optional uint64 ipv6_flow_create_failure                    = 109 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_route_lookup_failure                   = 110 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_autonomous_system_lookup_failure       = 111 [(telemetry_options).is_counter = true];
+    optional uint64 ipv6_flow_packet_export_failure             = 112 [(telemetry_options).is_counter = true];
+
+    optional float  ipv6_flow_table_utilization                 = 113 [(telemetry_options).is_gauge = true];
+    optional uint64 ipv6_flow_insert_count                      = 114 [(telemetry_options).is_counter = true];
+
+    // VPLS NPU Stats
+    optional uint64 vpls_flow_packets                           = 151 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_flow_bytes                             = 152 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_total_flows                            = 153 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_active_flows                           = 154 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_flows_exported                         = 155 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_packets_exported                       = 156 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_flows_inactive_timed_out               = 157 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_flows_active_timed_out                 = 158 [(telemetry_options).is_counter = true];
+
+    optional uint64 vpls_flow_create_failure                    = 159 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_route_lookup_failure                   = 160 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_autonomous_system_lookup_failure       = 161 [(telemetry_options).is_counter = true];
+    optional uint64 vpls_flow_packet_export_failure             = 162 [(telemetry_options).is_counter = true];
+
+    optional float  vpls_flow_table_utilization                 = 163 [(telemetry_options).is_gauge = true];
+    optional uint64 vpls_flow_insert_count                      = 164 [(telemetry_options).is_counter = true];
+
+    // MPLS NPU Stats
+    optional uint64 mpls_flow_packets                           = 201 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_flow_bytes                             = 202 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_total_flows                            = 203 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_active_flows                           = 204 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_flows_exported                         = 205 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_packets_exported                       = 206 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_flows_inactive_timed_out               = 207 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_flows_active_timed_out                 = 208 [(telemetry_options).is_counter = true];
+
+    optional uint64 mpls_flow_create_failure                    = 209 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_route_lookup_failure                   = 210 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_autonomous_system_lookup_failure       = 211 [(telemetry_options).is_counter = true];
+    optional uint64 mpls_flow_packet_export_failure             = 212 [(telemetry_options).is_counter = true];
+
+    optional float  mpls_flow_table_utilization                 = 213 [(telemetry_options).is_gauge = true];
+    optional uint64 mpls_flow_insert_count                      = 214 [(telemetry_options).is_counter = true];
+
+    // BRIDGE NPU Stats
+    optional uint64 bridge_flow_packets                         = 251 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_flow_bytes                           = 252 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_total_flows                          = 253 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_active_flows                         = 254 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_flows_exported                       = 255 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_packets_exported                     = 256 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_flows_inactive_timed_out             = 257 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_flows_active_timed_out               = 258 [(telemetry_options).is_counter = true];
+
+    optional uint64 bridge_flow_create_failure                  = 259 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_route_lookup_failure                 = 260 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_autonomous_system_lookup_failure     = 261 [(telemetry_options).is_counter = true];
+    optional uint64 bridge_flow_packet_export_failure           = 262 [(telemetry_options).is_counter = true];
+
+    optional float  bridge_flow_table_utilization               = 263 [(telemetry_options).is_gauge = true];
+    optional uint64 bridge_flow_insert_count                    = 264 [(telemetry_options).is_counter = true];
+
+}
+

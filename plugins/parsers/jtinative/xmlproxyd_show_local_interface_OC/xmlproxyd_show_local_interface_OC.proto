@@ -1,0 +1,69 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional interfaces_local_interface jnpr_interfaces_local_interface_ext = 61;
+}
+
+message interfaces_local_interface {
+   message interface_list {
+      optional string name = 51 [(telemetry_options).is_key = true];
+      optional state_type state = 151;
+      message state_type {
+         optional counters_type counters = 151;
+         message counters_type {
+            optional uint64 in_octets = 51;
+            optional uint64 in_pkts = 61;
+            optional uint64 in_discards = 52;
+            optional uint64 in_errors = 53;
+            optional uint64 in_drops = 71;
+            optional uint64 in_frame_errors = 72;
+            optional uint64 in_runts = 73;
+            optional uint64 in_giants = 74;
+            optional uint64 in_resource_errors = 75;
+            optional uint64 out_octets = 54;
+            optional uint64 out_pkts = 81;
+            optional uint64 out_discards = 55;
+            optional uint64 out_errors = 56;
+            optional uint64 out_drops = 91;
+            optional uint64 carrier_transitions = 92;
+            optional uint64 mtu_errors = 93;
+            optional uint64 out_resource_errors = 94;
+            optional string last_clear = 57;
+         }
+      }
+      optional subinterfaces_type subinterfaces = 152;
+      message subinterfaces_type {
+         message subinterface_list {
+            optional uint32 index = 51 [(telemetry_options).is_key = true];
+            optional state_type state = 151;
+            message state_type {
+               optional counters_type counters = 151;
+               message counters_type {
+                  optional uint64 in_octets = 51;
+                  optional uint64 in_pkts = 61;
+                  optional uint64 in_discards = 52;
+                  optional uint64 in_errors = 53;
+                  optional uint64 in_drops = 71;
+                  optional uint64 in_frame_errors = 72;
+                  optional uint64 in_runts = 73;
+                  optional uint64 in_giants = 74;
+                  optional uint64 in_resource_errors = 75;
+                  optional uint64 out_octets = 54;
+                  optional uint64 out_pkts = 81;
+                  optional uint64 out_discards = 55;
+                  optional uint64 out_errors = 56;
+                  optional uint64 out_drops = 91;
+                  optional uint64 carrier_transitions = 92;
+                  optional uint64 mtu_errors = 93;
+                  optional uint64 out_resource_errors = 94;
+                  optional string last_clear = 57;
+               }
+            }
+         }
+         repeated subinterface_list subinterface = 151;
+      }
+   }
+   repeated interface_list interface = 151;
+}

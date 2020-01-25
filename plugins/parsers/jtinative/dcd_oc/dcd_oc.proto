@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional interfaces_interface jnpr_interfaces_interface_ext = 41;
+}
+
+message interfaces_interface {
+   message interface_list {
+      optional string name = 51 [(telemetry_options).is_key = true];
+      optional aggregation_type aggregation = 151;
+      message aggregation_type {
+         optional state_type state = 151;
+         message state_type {
+            optional string lag_type = 51;
+            optional uint32 min_links = 52;
+            optional uint32 lag_speed = 53;
+            repeated string member = 54;
+         }
+      }
+   }
+   repeated interface_list interface = 151;
+}

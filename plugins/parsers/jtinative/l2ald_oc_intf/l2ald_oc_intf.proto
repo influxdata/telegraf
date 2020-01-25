@@ -1,0 +1,41 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional interfaces_l2al_interface jnpr_interfaces_l2al_interface_ext = 49;
+}
+
+message interfaces_l2al_interface {
+   message interface_list {
+      optional string name = 51 [(telemetry_options).is_key = true];
+      optional subinterfaces_type subinterfaces = 151;
+      message subinterfaces_type {
+         message subinterface_list {
+            optional uint32 index = 51 [(telemetry_options).is_key = true];
+            optional vlan_type vlan = 151;
+            message vlan_type {
+               optional state_type state = 152;
+               message state_type {
+                  optional uint32 vlan_id = 51;
+               }
+            }
+         }
+         repeated subinterface_list subinterface = 151;
+      }
+      optional ethernet_type ethernet = 152;
+      message ethernet_type {
+         optional switched_vlan_type switched_vlan = 151;
+         message switched_vlan_type {
+            optional state_type state = 151;
+            message state_type {
+               optional string interface_mode = 51;
+               optional uint32 native_vlan = 52;
+               optional uint32 access_vlan = 53;
+               repeated string trunk_vlans = 54;
+            }
+         }
+      }
+   }
+   repeated interface_list interface = 151;
+}

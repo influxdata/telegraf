@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional mpls_pfe_mpls_sr_egress jnpr_mpls_pfe_mpls_sr_egress_ext = 77;
+}
+
+message mpls_pfe_mpls_sr_egress {
+   optional signaling_protocols_type signaling_protocols = 151;
+   message signaling_protocols_type {
+      optional segment_routing_type segment_routing = 151;
+      message segment_routing_type {
+         optional interfaces_type interfaces = 151;
+         message interfaces_type {
+            message interface_list {
+               optional state_type state = 151;
+               message state_type {
+               }
+            }
+            repeated interface_list interface = 151;
+         }
+      }
+   }
+}

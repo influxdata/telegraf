@@ -1,0 +1,101 @@
+//  
+// Copyrights (c)  2016, Juniper Networks, Inc.
+// All rights reserved.
+//
+
+//
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+
+//
+// Chandresh Bhise, Rajesh Pillai, 2016
+//
+// This defines the gpb message format used by the npu memory utilization sensor
+//  
+// The top level message is NetworkProcessorMemoryUtilization
+// The message gives the Memory utilization summary for each NPU memory and 
+// per application based NPU memory utilization 
+// 
+//
+// Version 1.0
+//
+
+syntax = "proto2";
+import "telemetry_top.proto";
+    
+//  
+// This occupies branch 11 from JuniperNetworksSensors
+//
+extend JuniperNetworksSensors {
+    optional NetworkProcessorMemoryUtilization npu_memory_ext    = 11;
+}
+
+// Top level message NetworkProcessorMemoryUtilization
+message NetworkProcessorMemoryUtilization {
+    repeated NpuMemory memory_stats       = 1;
+}
+
+// Message that describes the memory utilization for each Network Processor
+message NpuMemory {
+    // Globally unique identifier for an NPU. This is of the form
+    // "FPCX:NPUY", where X is the slot number of the line card and Y
+    // is the index of the NPU on the linecard
+    required string identifier             = 1;
+
+    // NPU memory utilization statistics for different NPU memory types
+    repeated NpuMemorySummary summary      = 2;
+
+    // NPU memory utilization statistics for different NPU memory partitions
+    repeated NpuMemoryPartition partition  = 3;
+}
+
+// Summary of NPU memory utilization for each type of memory 
+message NpuMemorySummary {
+   // Name of the partition. 
+    optional string resource_name          = 1;
+
+    // Maximum memory size in bytes
+    optional uint64 size                   = 2;
+
+    // How much memory is used up
+    optional uint64 allocated              = 3;
+
+    // Utilization in percent
+    optional int32 utilization             = 4;
+}
+
+// A set of detailed stats for NPU memory partition
+message NpuMemoryPartition{
+    // NPU memory Partition name 
+    optional  string  name                 = 1;
+
+   // Name of the Application for which npu memory is allocated 
+    optional string  application_name      = 2 ;
+   
+   // Number of bytes allocated for the application
+    optional  uint32 bytes_allocated       = 3; 
+
+   // number of allocations for the application
+    optional  uint32 allocation_count      = 4;
+      
+    // number of frees for the application
+    optional uint32  free_count            = 5;
+} 
+
+
+

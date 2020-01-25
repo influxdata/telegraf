@@ -1,0 +1,34 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional debug_rsmon_debug jnpr_debug_rsmon_debug_ext = 36;
+}
+
+message debug_rsmon_debug {
+   optional system_type system = 151;
+   message system_type {
+      optional subscriber_management_type subscriber_management = 151;
+      message subscriber_management_type {
+         optional infra_type infra = 151;
+         message infra_type {
+            optional resource_monitor_type resource_monitor = 151;
+            message resource_monitor_type {
+               optional fpcs_type fpcs = 151;
+               message fpcs_type {
+                  message fpc_list {
+                     optional uint32 slot = 61 [(telemetry_options).is_key = true];
+                     optional statistics_type statistics = 151;
+                     message statistics_type {
+                        optional uint32 average_rtt = 61;
+                        optional uint32 current_rtt = 62;
+                     }
+                  }
+                  repeated fpc_list fpc = 151;
+               }
+            }
+         }
+      }
+   }
+}

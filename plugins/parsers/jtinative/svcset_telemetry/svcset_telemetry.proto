@@ -1,0 +1,133 @@
+// Copyright (c) 2016, 2017 Juniper Networks, Inc.
+// All rights reserved.
+//
+//Licensed under the Apache License, Version 2.0 (the "License");
+//you may not use this file except in compliance with the License.
+//You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//Unless required by applicable law or agreed to in writing, software
+//distributed under the License is distributed on an "AS IS" BASIS,
+//WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//See the License for the specific language governing permissions and
+//limitations under the License.
+
+
+//
+// Version 1.1
+//
+
+//
+// Shibu Piriyath 2017-09-11
+//
+// This file defines the messages in Protocol Buffers used by
+// the service-set sensor. The top-level message is ServicesInfra.
+//
+
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+//
+// This occupies branch 78  from JuniperNetworksSensors
+
+extend JuniperNetworksSensors {
+    optional ServicesInfra jnprScvsInfraExt = 78;
+}
+
+//
+// Top-level message
+//
+//
+
+message ServicesInfra {
+    repeated PluginsInfo  svcs_plugins_info      = 1 ;
+    repeated CpuUsageInfo svcset_cpu_info        = 2;
+    repeated MemUsageInfo svcset_mem_info        = 3;
+    repeated ServicesInfo svcset_svc_info        = 4;
+    repeated PktDropInfo  svcset_pktdrop_info    = 5;
+}
+
+///=========================
+message PluginsInfo {
+    optional uint64 sp_num_plugins               = 1;
+    optional string sp_name                      = 2;
+    optional uint64 sp_pid                       = 3;
+    optional uint64 sp_data_evh                  = 4;
+    optional uint64 sp_control_evh               = 5;
+    optional uint64 sp_class                     = 6;
+    optional uint64 sp_provider_id               = 7;
+    optional uint64 sp_app_id                    = 8;
+    optional uint64 sp_plugin_flags              = 9;
+    optional uint64 sp_tcp_support_flags         = 10;
+    optional uint64 sp_ev_class_base             = 11;
+    optional uint64 sp_plugin_mask               = 12;
+    repeated string sp_ev_class_name             = 13;
+}
+
+//--------------------------
+message CpuUsageInfo {
+    optional uint64 svcset_id                    = 1;
+    optional uint64 svcset_id_present            = 2;
+    optional uint64 external_svc_set_id          = 3;
+    optional uint64 svc_type                     = 4;
+    optional uint64 svc_set_type                 = 5;
+    optional string svc_set_name                 = 6;
+
+    optional uint64 cpu_utilization              = 7;
+    optional uint64 cpu_zone                     = 8;
+    optional float  cpu_load                     = 9;
+    optional string cpu_user                     = 10;
+}
+
+//--------------------------
+message MemUsageInfo {
+    optional uint64 svcset_id                    = 1;
+    optional uint64 svcset_id_present            = 2;
+    optional uint64 external_svc_set_id          = 3;
+    optional uint64 svc_type                     = 4;
+    optional uint64 svc_set_type                 = 5;
+    optional string svc_set_name                 = 6;
+
+    optional float  mem_percent_used             = 7;
+    optional uint64 mem_bytes_used               = 8;
+    optional uint64 mem_zone                     = 9;
+    optional uint64 policy_bytes_used            = 10;
+    optional uint64 policy_bytes_used_percent    = 11;
+}
+
+//--------------------------
+message ServicesInfo {
+    optional uint64 svcset_id                 = 1;
+    optional uint64 svcset_id_present         = 2;
+    optional uint64 external_svc_set_id       = 3;
+    optional uint64 svc_type                  = 4;
+    optional uint64 svc_set_type              = 5;
+    optional string svc_set_name              = 6;
+    optional uint64 internal_svc_set_id       = 7;
+
+    optional uint64 active_svc_set_count      = 8;
+    optional uint64 total_svc_set_count       = 9;
+    optional uint64 mem_bytes_used            = 10;
+    optional uint64 mem_bytes_used_percent    = 11;
+}
+//--------------------------
+message PktDropInfo {
+    optional uint64 svcset_id                 = 1;
+    optional uint64 svcset_id_present         = 2;
+    optional uint64 external_svc_set_id       = 3;
+    optional uint64 svc_type                  = 4;
+    optional uint64 svc_set_type              = 5;
+    optional string svc_set_name              = 6;
+
+    optional uint64 memlimit_drops            = 7;
+    optional uint64 cpulimit_drops            = 8;
+    optional uint64 flowlimit_drops           = 9;
+    optional uint64 ptclcopy_drops            = 10;
+    optional uint64 ingress_drop_flows        = 11;
+    optional uint64 egress_drop_flows         = 12;
+    optional uint64 drop_exceed_ingress_limit = 13;
+    optional uint64 drop_exceed_egress_limit  = 14;
+}
+

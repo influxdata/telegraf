@@ -1,0 +1,141 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional junos_authentication jnpr_junos_authentication_ext = 33;
+}
+
+message junos_authentication {
+   optional system_type system = 151;
+   message system_type {
+      optional subscriber_management_type subscriber_management = 151;
+      message subscriber_management_type {
+         optional aaa_type aaa = 151;
+         message aaa_type {
+            optional authentication_statistics_type authentication_statistics = 152;
+            message authentication_statistics_type {
+               optional uint64 req_received = 51;
+               optional uint64 req_accepted = 52;
+               optional uint64 req_rejected = 53;
+               optional uint64 req_challenge = 54;
+               optional uint64 req_timeout = 55;
+               optional uint64 pre_authen_req_received = 56;
+               optional uint64 pre_authen_req_accepted = 57;
+               optional uint64 pre_authen_req_rejected = 58;
+               optional uint64 pre_authen_req_challenge = 59;
+               optional uint64 pre_authen_req_timeout = 60;
+               optional uint64 re_authen_req_received = 61;
+               optional uint64 re_authen_req_accepted = 62;
+               optional uint64 re_authen_req_rejected = 63;
+               optional uint64 re_authen_req_internal_errors = 64;
+               optional uint64 re_authen_req_challenge = 65;
+               optional uint64 re_authen_req_timeout = 66;
+            }
+            optional accounting_statistics_type accounting_statistics = 153;
+            message accounting_statistics_type {
+               optional uint64 acct_req_received = 51;
+               optional uint64 acct_req_timeout = 52;
+               optional uint64 acct_resp_failure = 53;
+               optional uint64 acct_resp_success = 54;
+               optional uint64 acct_req_start = 55;
+               optional uint64 acct_req_interim = 56;
+               optional uint64 acct_req_stop = 57;
+               optional uint64 acct_resp_total = 58;
+               optional uint64 acct_resp_start = 59;
+               optional uint64 acct_resp_interim = 60;
+               optional uint64 acct_resp_stop = 61;
+            }
+            optional dynamic_request_statistics_type dynamic_request_statistics = 154;
+            message dynamic_request_statistics_type {
+               optional uint64 dynamic_req_received = 51;
+               optional uint64 dynamic_req_success = 52;
+               optional uint64 dynamic_req_error = 53;
+               optional uint64 dynamic_req_silently_drop = 54;
+            }
+            optional radius_servers_type radius_servers = 155;
+            message radius_servers_type {
+               message radius_server_list {
+                  optional string server_address = 52 [(telemetry_options).is_key = true];
+                  optional statistics_type statistics = 151;
+                  message statistics_type {
+                     optional uint64 server_last_rtt = 51;
+                     optional uint64 auth_access_requests = 52;
+                     optional uint64 auth_rollover_requests = 53;
+                     optional uint64 auth_retransmissions = 54;
+                     optional uint64 auth_access_accepts = 55;
+                     optional uint64 auth_access_rejects = 56;
+                     optional uint64 auth_access_challenges = 57;
+                     optional uint64 auth_malformed_responses = 58;
+                     optional uint64 auth_bad_authenticators = 59;
+                     optional uint64 auth_req_pending = 60;
+                     optional uint64 auth_request_timeouts = 61;
+                     optional uint64 auth_unknown_responses = 62;
+                     optional uint64 auth_packets_dropped = 63;
+                     optional uint64 preauth_access_requests = 64;
+                     optional uint64 preauth_rollover_requests = 65;
+                     optional uint64 preauth_retransmissions = 66;
+                     optional uint64 preauth_access_accepts = 67;
+                     optional uint64 preauth_access_rejects = 68;
+                     optional uint64 preauth_access_challenges = 69;
+                     optional uint64 preauth_malformed_responses = 70;
+                     optional uint64 preauth_bad_authenticators = 71;
+                     optional uint64 preauth_req_pending = 72;
+                     optional uint64 preauth_request_timeouts = 73;
+                     optional uint64 preauth_unknown_responses = 74;
+                     optional uint64 preauth_packets_dropped = 75;
+                     optional uint64 acct_start_requests = 76;
+                     optional uint64 acct_interim_requests = 77;
+                     optional uint64 acct_stop_requests = 78;
+                     optional uint64 acct_rollover_requests = 79;
+                     optional uint64 acct_retransmissions = 80;
+                     optional uint64 acct_start_responses = 81;
+                     optional uint64 acct_interim_responses = 82;
+                     optional uint64 acct_stop_responses = 83;
+                     optional uint64 acct_malformed_responses = 84;
+                     optional uint64 acct_bad_authenticators = 85;
+                     optional uint64 acct_req_pending = 86;
+                     optional uint64 acct_request_timeouts = 87;
+                     optional uint64 acct_unknown_responses = 88;
+                     optional uint64 acct_packets_dropped = 89;
+                  }
+                  optional response_time_type response_time = 152;
+                  message response_time_type {
+                     optional uint64 one_minute_minimum_response_time = 51;
+                     optional uint64 one_minute_average_response_time = 52;
+                     optional uint64 one_minute_maximum_response_time = 53;
+                     optional uint64 one_minute_messages_sent = 54;
+                     optional uint64 one_minute_messages_received = 55;
+                     optional uint64 one_minute_messages_no_response = 56;
+                  }
+               }
+               repeated radius_server_list radius_server = 151;
+            }
+            optional address_assignment_statistics_type address_assignment_statistics = 156;
+            message address_assignment_statistics_type {
+               optional logical_system_routing_instances_type logical_system_routing_instances = 151;
+               message logical_system_routing_instances_type {
+                  message logical_system_routing_instance_list {
+                     optional string name = 51 [(telemetry_options).is_key = true];
+                     optional pools_type pools = 151;
+                     message pools_type {
+                        message pool_list {
+                           optional string pool_name = 51 [(telemetry_options).is_key = true];
+                           optional uint64 out_of_memory = 52;
+                           optional uint64 out_of_address = 53;
+                           optional uint64 address_total = 54;
+                           optional uint64 address_in_use = 55;
+                           optional uint64 address_usage_percent = 56;
+                           optional string linked_pool_name = 57;
+                           optional string linked_pool_head = 58;
+                        }
+                        repeated pool_list pool = 151;
+                     }
+                  }
+                  repeated logical_system_routing_instance_list logical_system_routing_instance = 151;
+               }
+            }
+         }
+      }
+   }
+}

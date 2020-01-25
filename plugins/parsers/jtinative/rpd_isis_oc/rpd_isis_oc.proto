@@ -1,0 +1,1085 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional network_instances_isis jnpr_network_instances_isis_ext = 65;
+}
+
+message network_instances_isis {
+   message network_instance_list {
+      optional string instance_name = 51 [(telemetry_options).is_key = true];
+      optional protocols_type protocols = 151;
+      message protocols_type {
+         optional protocol_type protocol = 151;
+         message protocol_type {
+            optional isis_type isis = 151;
+            message isis_type {
+               optional levels_type levels = 151;
+               message levels_type {
+                  message level_list {
+                     optional uint32 level_number = 51 [(telemetry_options).is_key = true];
+                     optional link_state_database_type link_state_database = 151;
+                     message link_state_database_type {
+                        message lsp_list {
+                           optional string lsp_id = 51 [(telemetry_options).is_key = true];
+                           optional state_type state = 151;
+                           message state_type {
+                              optional string lsp_id = 51;
+                              optional uint32 maximum_area_addresses = 52;
+                              optional uint32 version = 53;
+                              optional uint32 version2 = 54;
+                              optional uint32 id_length = 55;
+                              optional string pdu_type = 56;
+                              optional uint32 remaining_lifetime = 57;
+                              optional uint32 sequence_number = 58;
+                              optional uint32 checksum = 59;
+                              optional uint32 pdu_length = 60;
+                              repeated string flags = 62;
+                              optional uint32 is_type = 63;
+                              optional uint64 lsp_install_time = 61;
+                           }
+                           optional tlvs_type tlvs = 152;
+                           message tlvs_type {
+                              message tlv_list {
+                                 optional string type = 51 [(telemetry_options).is_key = true];
+                                 optional state_type state = 151;
+                                 message state_type {
+                                    optional string type = 51;
+                                 }
+                                 optional area_address_type area_address = 152;
+                                 message area_address_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       repeated string address = 51;
+                                    }
+                                 }
+                                 optional lsp_buffer_size_type lsp_buffer_size = 158;
+                                 message lsp_buffer_size_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       optional uint32 size = 51;
+                                    }
+                                 }
+                                 optional nlpid_type nlpid = 153;
+                                 message nlpid_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       repeated string nlpid = 51;
+                                    }
+                                 }
+                                 optional hostname_type hostname = 154;
+                                 message hostname_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       optional string hname = 51;
+                                    }
+                                 }
+                                 optional ipv4_interface_addresses_type ipv4_interface_addresses = 156;
+                                 message ipv4_interface_addresses_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       repeated string address = 51;
+                                    }
+                                 }
+                                 optional ipv6_interface_addresses_type ipv6_interface_addresses = 157;
+                                 message ipv6_interface_addresses_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       repeated string address = 51;
+                                    }
+                                 }
+                                 optional ipv4_te_router_id_type ipv4_te_router_id = 155;
+                                 message ipv4_te_router_id_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       optional string te_router_id = 51;
+                                    }
+                                 }
+                                 optional ipv4_srlgs_type ipv4_srlgs = 167;
+                                 message ipv4_srlgs_type {
+                                    message ipv4_srlg_list {
+                                       optional uint32 instance_number = 51 [(telemetry_options).is_key = true];
+                                       optional state_type state = 151;
+                                       message state_type {
+                                          optional uint32 instance_number = 51;
+                                          optional string system_id = 52;
+                                          optional uint32 psn_number = 53;
+                                          repeated string flags = 57;
+                                          optional string ipv4_interface_address = 54;
+                                          optional string ipv4_neighbor_address = 55;
+                                          repeated uint32 srlg_value = 56;
+                                       }
+                                    }
+                                    repeated ipv4_srlg_list ipv4_srlg = 151;
+                                 }
+                                 optional purge_oi_type purge_oi = 170;
+                                 message purge_oi_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       optional uint32 system_id_count = 51;
+                                       optional string source_system_id = 52;
+                                       optional string received_system_id = 53;
+                                    }
+                                 }
+                                 optional router_capabilities_type router_capabilities = 163;
+                                 message router_capabilities_type {
+                                    message capability_list {
+                                       optional uint32 instance_number = 51 [(telemetry_options).is_key = true];
+                                       optional state_type state = 151;
+                                       message state_type {
+                                          optional uint32 instance_number = 51;
+                                          optional string router_id = 52;
+                                          repeated string flags = 53;
+                                       }
+                                       optional subtlvs_type subtlvs = 152;
+                                       message subtlvs_type {
+                                          message subtlv_list {
+                                             optional string type = 51 [(telemetry_options).is_key = true];
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional string type = 51;
+                                             }
+                                             optional segment_routing_algorithms_type segment_routing_algorithms = 152;
+                                             message segment_routing_algorithms_type {
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   repeated string algorithm = 51;
+                                                }
+                                             }
+                                             optional segment_routing_capability_type segment_routing_capability = 153;
+                                             message segment_routing_capability_type {
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   repeated string flags = 51;
+                                                }
+                                                optional srgb_descriptors_type srgb_descriptors = 152;
+                                                message srgb_descriptors_type {
+                                                   message srgb_descriptor_list {
+                                                      optional uint32 range = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 range = 51;
+                                                         optional string label = 52;
+                                                      }
+                                                   }
+                                                   repeated srgb_descriptor_list srgb_descriptor = 151;
+                                                }
+                                             }
+                                          }
+                                          repeated subtlv_list subtlv = 151;
+                                       }
+                                       optional undefined_subtlvs_type undefined_subtlvs = 153;
+                                       message undefined_subtlvs_type {
+                                          message undefined_subtlv_list {
+                                             optional uint32 type = 51 [(telemetry_options).is_key = true];
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 type = 51;
+                                                optional uint32 length = 52;
+                                                optional string value = 53;
+                                             }
+                                          }
+                                          repeated undefined_subtlv_list undefined_subtlv = 151;
+                                       }
+                                    }
+                                    repeated capability_list capability = 151;
+                                 }
+                                 optional is_reachability_type is_reachability = 166;
+                                 message is_reachability_type {
+                                    optional neighbors_type neighbors = 151;
+                                    message neighbors_type {
+                                       message neighbor_list {
+                                          optional string system_id = 51 [(telemetry_options).is_key = true];
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional string system_id = 51;
+                                          }
+                                          optional default_metric_type default_metric = 152;
+                                          message default_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional string flags = 51;
+                                                optional uint32 metric = 52;
+                                             }
+                                          }
+                                          optional delay_metric_type delay_metric = 153;
+                                          message delay_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                          optional expense_metric_type expense_metric = 155;
+                                          message expense_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                          optional error_metric_type error_metric = 154;
+                                          message error_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                       }
+                                       repeated neighbor_list neighbor = 151;
+                                    }
+                                 }
+                                 optional ipv4_internal_reachability_type ipv4_internal_reachability = 168;
+                                 message ipv4_internal_reachability_type {
+                                    optional prefixes_type prefixes = 151;
+                                    message prefixes_type {
+                                       message prefix_list {
+                                          optional string prefix = 51 [(telemetry_options).is_key = true];
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional bool up_down = 52;
+                                             optional string prefix = 51;
+                                          }
+                                          optional default_metric_type default_metric = 152;
+                                          message default_metric_type {
+                                             optional state_type state = 51;
+                                             message state_type {
+                                                optional string flags = 51;
+                                                optional uint32 metric = 52;
+                                             }
+                                          }
+                                          optional delay_metric_type delay_metric = 153;
+                                          message delay_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                          optional expense_metric_type expense_metric = 155;
+                                          message expense_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                          optional error_metric_type error_metric = 154;
+                                          message error_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                       }
+                                       repeated prefix_list prefix = 151;
+                                    }
+                                 }
+                                 optional ipv4_external_reachability_type ipv4_external_reachability = 169;
+                                 message ipv4_external_reachability_type {
+                                    optional prefixes_type prefixes = 151;
+                                    message prefixes_type {
+                                       message prefix_list {
+                                          optional string prefix = 51 [(telemetry_options).is_key = true];
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional bool up_down = 52;
+                                             optional string prefix = 51;
+                                          }
+                                          optional default_metric_type default_metric = 152;
+                                          message default_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional string flags = 51;
+                                                optional uint32 metric = 52;
+                                             }
+                                          }
+                                          optional delay_metric_type delay_metric = 153;
+                                          message delay_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                          optional expense_metric_type expense_metric = 155;
+                                          message expense_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                          optional error_metric_type error_metric = 154;
+                                          message error_metric_type {
+                                             optional state_type state = 151;
+                                             message state_type {
+                                                optional uint32 metric = 51;
+                                                repeated string flags = 52;
+                                             }
+                                          }
+                                       }
+                                       repeated prefix_list prefix = 151;
+                                    }
+                                 }
+                                 optional authentication_type authentication = 172;
+                                 message authentication_type {
+                                    optional state_type state = 151;
+                                    message state_type {
+                                       optional string crypto_type = 51;
+                                       optional string authentication_key = 52;
+                                    }
+                                 }
+                                 optional extended_is_reachability_type extended_is_reachability = 161;
+                                 message extended_is_reachability_type {
+                                    optional neighbors_type neighbors = 151;
+                                    message neighbors_type {
+                                       message neighbor_list {
+                                          optional string system_id = 51 [(telemetry_options).is_key = true];
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional string system_id = 51;
+                                             optional uint32 metric = 52;
+                                          }
+                                          optional subtlvs_type subtlvs = 152;
+                                          message subtlvs_type {
+                                             message subtlv_list {
+                                                optional string type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional string type = 51;
+                                                }
+                                                optional admin_group_type admin_group = 160;
+                                                message admin_group_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated uint32 admin_group = 51;
+                                                   }
+                                                }
+                                                optional link_id_type link_id = 154;
+                                                message link_id_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional uint32 local = 51;
+                                                      optional uint32 remote = 52;
+                                                   }
+                                                }
+                                                optional ipv4_interface_address_type ipv4_interface_address = 152;
+                                                message ipv4_interface_address_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated string address = 51;
+                                                   }
+                                                }
+                                                optional ipv4_neighbor_address_type ipv4_neighbor_address = 153;
+                                                message ipv4_neighbor_address_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated string address = 51;
+                                                   }
+                                                }
+                                                optional max_link_bandwidth_type max_link_bandwidth = 155;
+                                                message max_link_bandwidth_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional string bandwidth = 51;
+                                                   }
+                                                }
+                                                optional max_reservable_link_bandwidth_type max_reservable_link_bandwidth = 156;
+                                                message max_reservable_link_bandwidth_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional string bandwidth = 51;
+                                                   }
+                                                }
+                                                optional unreserved_bandwidth_type unreserved_bandwidth = 157;
+                                                message unreserved_bandwidth_type {
+                                                   message setup_priority_list {
+                                                      optional uint32 priority = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 priority = 51;
+                                                         optional string bandwidth = 52;
+                                                      }
+                                                   }
+                                                   repeated setup_priority_list setup_priority = 151;
+                                                }
+                                                optional te_default_metric_type te_default_metric = 158;
+                                                message te_default_metric_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional uint32 metric = 51;
+                                                   }
+                                                }
+                                                optional bandwidth_constraints_type bandwidth_constraints = 159;
+                                                message bandwidth_constraints_type {
+                                                   message bandwidth_constraint_list {
+                                                      optional uint32 model_id = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 model_id = 51;
+                                                      }
+                                                      optional constraints_type constraints = 152;
+                                                      message constraints_type {
+                                                         message constraint_list {
+                                                            optional uint32 constraint_id = 51 [(telemetry_options).is_key = true];
+                                                            optional state_type state = 151;
+                                                            message state_type {
+                                                               optional uint32 constraint_id = 51;
+                                                               optional string bandwidth = 52;
+                                                            }
+                                                         }
+                                                         repeated constraint_list constraint = 151;
+                                                      }
+                                                   }
+                                                   repeated bandwidth_constraint_list bandwidth_constraint = 151;
+                                                }
+                                                optional adjacency_sids_type adjacency_sids = 161;
+                                                message adjacency_sids_type {
+                                                   optional adj_sid_type adj_sid = 151;
+                                                   message adj_sid_type {
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 52;
+                                                         optional uint32 weight = 53;
+                                                      }
+                                                   }
+                                                }
+                                                optional lan_adjacency_sids_type lan_adjacency_sids = 162;
+                                                message lan_adjacency_sids_type {
+                                                   optional lan_adj_sid_type lan_adj_sid = 151;
+                                                   message lan_adj_sid_type {
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 52;
+                                                         optional uint32 weight = 53;
+                                                         optional string neighbor_id = 54;
+                                                      }
+                                                   }
+                                                }
+                                             }
+                                             repeated subtlv_list subtlv = 151;
+                                          }
+                                          optional undefined_subtlvs_type undefined_subtlvs = 153;
+                                          message undefined_subtlvs_type {
+                                             message undefined_subtlv_list {
+                                                optional uint32 type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional uint32 type = 51;
+                                                   optional uint32 length = 52;
+                                                   optional string value = 53;
+                                                }
+                                             }
+                                             repeated undefined_subtlv_list undefined_subtlv = 151;
+                                          }
+                                       }
+                                       repeated neighbor_list neighbor = 151;
+                                    }
+                                 }
+                                 optional extended_ipv4_reachability_type extended_ipv4_reachability = 159;
+                                 message extended_ipv4_reachability_type {
+                                    optional prefixes_type prefixes = 151;
+                                    message prefixes_type {
+                                       message prefix_list {
+                                          optional string prefix = 51 [(telemetry_options).is_key = true];
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional bool up_down = 51;
+                                             optional bool s_bit = 52;
+                                             optional string prefix = 54;
+                                             optional uint32 metric = 53;
+                                          }
+                                          optional subtlvs_type subtlvs = 152;
+                                          message subtlvs_type {
+                                             message subtlv_list {
+                                                optional string type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional string type = 51;
+                                                }
+                                                optional tag_type tag = 152;
+                                                message tag_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated uint32 tag32 = 51;
+                                                   }
+                                                }
+                                                optional prefix_sids_type prefix_sids = 153;
+                                                message prefix_sids_type {
+                                                   message prefix_sid_list {
+                                                      optional uint32 value = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 53;
+                                                         optional uint32 algorithm = 52;
+                                                      }
+                                                   }
+                                                   repeated prefix_sid_list prefix_sid = 151;
+                                                }
+                                             }
+                                             repeated subtlv_list subtlv = 151;
+                                          }
+                                          optional undefined_subtlvs_type undefined_subtlvs = 153;
+                                          message undefined_subtlvs_type {
+                                             message undefined_subtlv_list {
+                                                optional uint32 type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional uint32 type = 51;
+                                                   optional uint32 length = 52;
+                                                   optional string value = 53;
+                                                }
+                                             }
+                                             repeated undefined_subtlv_list undefined_subtlv = 151;
+                                          }
+                                       }
+                                       repeated prefix_list prefix = 151;
+                                    }
+                                 }
+                                 optional ipv6_reachability_type ipv6_reachability = 160;
+                                 message ipv6_reachability_type {
+                                    optional prefixes_type prefixes = 151;
+                                    message prefixes_type {
+                                       message prefix_list {
+                                          optional string prefix = 51 [(telemetry_options).is_key = true];
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional bool up_down = 52;
+                                             optional bool x_bit = 53;
+                                             optional bool s_bit = 54;
+                                             optional string prefix = 51;
+                                             optional uint32 metric = 55;
+                                          }
+                                          optional subtlvs_type subtlvs = 152;
+                                          message subtlvs_type {
+                                             message subtlv_list {
+                                                optional string type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional string type = 51;
+                                                }
+                                                optional tag_type tag = 152;
+                                                message tag_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated uint32 tag32 = 51;
+                                                   }
+                                                }
+                                                optional prefix_sids_type prefix_sids = 153;
+                                                message prefix_sids_type {
+                                                   message prefix_sid_list {
+                                                      optional uint32 value = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 53;
+                                                         optional uint32 algorithm = 52;
+                                                      }
+                                                   }
+                                                   repeated prefix_sid_list prefix_sid = 151;
+                                                }
+                                             }
+                                             repeated subtlv_list subtlv = 151;
+                                          }
+                                          optional undefined_subtlvs_type undefined_subtlvs = 153;
+                                          message undefined_subtlvs_type {
+                                             message undefined_subtlv_list {
+                                                optional uint32 type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional uint32 type = 51;
+                                                   optional uint32 length = 52;
+                                                   optional string value = 53;
+                                                }
+                                             }
+                                             repeated undefined_subtlv_list undefined_subtlv = 151;
+                                          }
+                                       }
+                                       repeated prefix_list prefix = 151;
+                                    }
+                                 }
+                                 optional multi_topology_type multi_topology = 164;
+                                 message multi_topology_type {
+                                    optional topologies_type topologies = 151;
+                                    message topologies_type {
+                                       message topology_list {
+                                          optional uint32 mt_id = 51 [(telemetry_options).is_key = true];
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional uint32 mt_id = 51;
+                                             optional string attributes = 52;
+                                          }
+                                       }
+                                       repeated topology_list topology = 151;
+                                    }
+                                 }
+                                 optional mt_isn_type mt_isn = 162;
+                                 message mt_isn_type {
+                                    optional neighbors_type neighbors = 151;
+                                    message neighbors_type {
+                                       message neighbor_list {
+                                          optional uint32 mt_id = 51;
+                                          optional string system_id = 52;
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional uint32 mt_id = 51;
+                                             optional string system_id = 52;
+                                             optional uint32 metric = 53;
+                                          }
+                                          optional subtlvs_type subtlvs = 152;
+                                          message subtlvs_type {
+                                             message subtlv_list {
+                                                optional string type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional string type = 51;
+                                                }
+                                                optional admin_group_type admin_group = 160;
+                                                message admin_group_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated uint32 admin_group = 51;
+                                                   }
+                                                }
+                                                optional link_id_type link_id = 154;
+                                                message link_id_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional uint32 local = 51;
+                                                      optional uint32 remote = 52;
+                                                   }
+                                                }
+                                                optional ipv4_interface_address_type ipv4_interface_address = 152;
+                                                message ipv4_interface_address_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated string address = 51;
+                                                   }
+                                                }
+                                                optional ipv4_neighbor_address_type ipv4_neighbor_address = 153;
+                                                message ipv4_neighbor_address_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated string address = 51;
+                                                   }
+                                                }
+                                                optional max_link_bandwidth_type max_link_bandwidth = 155;
+                                                message max_link_bandwidth_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional string bandwidth = 51;
+                                                   }
+                                                }
+                                                optional max_reservable_link_bandwidth_type max_reservable_link_bandwidth = 156;
+                                                message max_reservable_link_bandwidth_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional string bandwidth = 51;
+                                                   }
+                                                }
+                                                optional unreserved_bandwidth_type unreserved_bandwidth = 157;
+                                                message unreserved_bandwidth_type {
+                                                   message setup_priority_list {
+                                                      optional uint32 priority = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 priority = 51;
+                                                         optional string bandwidth = 52;
+                                                      }
+                                                   }
+                                                   repeated setup_priority_list setup_priority = 51;
+                                                }
+                                                optional te_default_metric_type te_default_metric = 158;
+                                                message te_default_metric_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      optional uint32 metric = 51;
+                                                   }
+                                                }
+                                                optional bandwidth_constraints_type bandwidth_constraints = 159;
+                                                message bandwidth_constraints_type {
+                                                   message bandwidth_constraint_list {
+                                                      optional uint32 model_id = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 model_id = 51;
+                                                      }
+                                                      optional constraints_type constraints = 152;
+                                                      message constraints_type {
+                                                         message constraint_list {
+                                                            optional uint32 constraint_id = 51 [(telemetry_options).is_key = true];
+                                                            optional state_type state = 151;
+                                                            message state_type {
+                                                               optional uint32 constraint_id = 51;
+                                                               optional string bandwidth = 52;
+                                                            }
+                                                         }
+                                                         repeated constraint_list constraint = 151;
+                                                      }
+                                                   }
+                                                   repeated bandwidth_constraint_list bandwidth_constraint = 151;
+                                                }
+                                                optional adjacency_sids_type adjacency_sids = 161;
+                                                message adjacency_sids_type {
+                                                   optional adj_sid_type adj_sid = 151;
+                                                   message adj_sid_type {
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 52;
+                                                         optional uint32 weight = 53;
+                                                      }
+                                                   }
+                                                }
+                                                optional lan_adjacency_sids_type lan_adjacency_sids = 162;
+                                                message lan_adjacency_sids_type {
+                                                   optional lan_adj_sid_type lan_adj_sid = 151;
+                                                   message lan_adj_sid_type {
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 52;
+                                                         optional uint32 weight = 53;
+                                                         optional string neighbor_id = 54;
+                                                      }
+                                                   }
+                                                }
+                                             }
+                                             repeated subtlv_list subtlv = 151;
+                                          }
+                                          optional undefined_subtlvs_type undefined_subtlvs = 153;
+                                          message undefined_subtlvs_type {
+                                             message undefined_subtlv_list {
+                                                optional uint32 type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional uint32 type = 51;
+                                                   optional uint32 length = 52;
+                                                   optional string value = 53;
+                                                }
+                                             }
+                                             repeated undefined_subtlv_list undefined_subtlv = 151;
+                                          }
+                                       }
+                                       repeated neighbor_list neighbor = 151;
+                                    }
+                                 }
+                                 optional mt_ipv4_reachability_type mt_ipv4_reachability = 171;
+                                 message mt_ipv4_reachability_type {
+                                    optional prefixes_type prefixes = 151;
+                                    message prefixes_type {
+                                       message prefix_list {
+                                          optional uint32 mt_id = 52;
+                                          optional string prefix = 51;
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional bool up_down = 53;
+                                             optional bool s_bit = 54;
+                                             optional string prefix = 51;
+                                             optional uint32 metric = 55;
+                                             optional uint32 mt_id = 52;
+                                          }
+                                          optional subtlvs_type subtlvs = 152;
+                                          message subtlvs_type {
+                                             message subtlv_list {
+                                                optional string type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional string type = 51;
+                                                }
+                                                optional tag_type tag = 152;
+                                                message tag_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated uint32 tag32 = 51;
+                                                   }
+                                                }
+                                                optional prefix_sids_type prefix_sids = 153;
+                                                message prefix_sids_type {
+                                                   message prefix_sid_list {
+                                                      optional uint32 value = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 53;
+                                                         optional uint32 algorithm = 52;
+                                                      }
+                                                   }
+                                                   repeated prefix_sid_list prefix_sid = 151;
+                                                }
+                                             }
+                                             repeated subtlv_list subtlv = 151;
+                                          }
+                                       }
+                                       repeated prefix_list prefix = 151;
+                                    }
+                                 }
+                                 optional mt_ipv6_reachability_type mt_ipv6_reachability = 165;
+                                 message mt_ipv6_reachability_type {
+                                    optional prefixes_type prefixes = 151;
+                                    message prefixes_type {
+                                       message prefix_list {
+                                          optional string prefix = 51;
+                                          optional uint32 mt_id = 52;
+                                          optional state_type state = 151;
+                                          message state_type {
+                                             optional bool up_down = 52;
+                                             optional bool x_bit = 53;
+                                             optional bool s_bit = 54;
+                                             optional string prefix = 51;
+                                             optional uint32 metric = 55;
+                                             optional uint32 mt_id = 56;
+                                          }
+                                          optional subtlvs_type subtlvs = 152;
+                                          message subtlvs_type {
+                                             message subtlv_list {
+                                                optional string type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional string type = 51;
+                                                }
+                                                optional tag_type tag = 152;
+                                                message tag_type {
+                                                   optional state_type state = 151;
+                                                   message state_type {
+                                                      repeated uint32 tag32 = 51;
+                                                   }
+                                                }
+                                                optional prefix_sids_type prefix_sids = 153;
+                                                message prefix_sids_type {
+                                                   message prefix_sid_list {
+                                                      optional uint32 value = 51 [(telemetry_options).is_key = true];
+                                                      optional state_type state = 151;
+                                                      message state_type {
+                                                         optional uint32 value = 51;
+                                                         repeated string flags = 53;
+                                                         optional uint32 algorithm = 52;
+                                                      }
+                                                   }
+                                                   repeated prefix_sid_list prefix_sid = 151;
+                                                }
+                                             }
+                                             repeated subtlv_list subtlv = 151;
+                                          }
+                                          optional undefined_subtlvs_type undefined_subtlvs = 153;
+                                          message undefined_subtlvs_type {
+                                             message undefined_subtlv_list {
+                                                optional uint32 type = 51 [(telemetry_options).is_key = true];
+                                                optional state_type state = 151;
+                                                message state_type {
+                                                   optional uint32 type = 51;
+                                                   optional uint32 length = 52;
+                                                   optional string value = 53;
+                                                }
+                                             }
+                                             repeated undefined_subtlv_list undefined_subtlv = 151;
+                                          }
+                                       }
+                                       repeated prefix_list prefix = 151;
+                                    }
+                                 }
+                              }
+                              repeated tlv_list tlv = 151;
+                           }
+                           optional undefined_tlvs_type undefined_tlvs = 153;
+                           message undefined_tlvs_type {
+                              message undefined_tlv_list {
+                                 optional uint32 type = 51 [(telemetry_options).is_key = true];
+                                 optional state_type state = 151;
+                                 message state_type {
+                                    optional uint32 type = 51;
+                                    optional uint32 length = 52;
+                                    optional string value = 53;
+                                 }
+                              }
+                              repeated undefined_tlv_list undefined_tlv = 151;
+                           }
+                        }
+                        repeated lsp_list lsp = 151;
+                     }
+                     optional state_type state = 152;
+                     message state_type {
+                        optional uint32 level_number = 51;
+                     }
+                     optional system_level_counters_type system_level_counters = 153;
+                     message system_level_counters_type {
+                        optional state_type state = 151;
+                        message state_type {
+                           optional uint32 corrupted_lsps = 51;
+                           optional uint32 database_overloads = 52;
+                           optional uint32 manual_address_drop_from_areas = 53;
+                           optional uint32 exceed_max_seq_nums = 54;
+                           optional uint32 seq_num_skips = 55;
+                           optional uint32 own_lsp_purges = 56;
+                           optional uint32 id_len_mismatch = 57;
+                           optional uint32 part_changes = 58;
+                           optional uint32 max_area_address_mismatches = 59;
+                           optional uint32 auth_fails = 60;
+                           optional uint32 spf_runs = 61;
+                           optional uint32 auth_type_fails = 62;
+                           optional uint32 lsp_errors = 63;
+                        }
+                     }
+                  }
+                  repeated level_list level = 151;
+               }
+               optional interfaces_type interfaces = 152;
+               message interfaces_type {
+                  message interface_list {
+                     optional string interface_id = 51 [(telemetry_options).is_key = true];
+                     optional state_type state = 151;
+                     message state_type {
+                        optional string interface_id = 51;
+                     }
+                     optional circuit_counters_type circuit_counters = 152;
+                     message circuit_counters_type {
+                        optional state_type state = 151;
+                        message state_type {
+                           optional uint32 adj_changes = 51;
+                           optional uint32 init_fails = 52;
+                           optional uint32 rejected_adj = 53;
+                           optional uint32 id_field_len_mismatches = 54;
+                           optional uint32 max_area_address_mismatches = 55;
+                           optional uint32 auth_type_fails = 56;
+                           optional uint32 auth_fails = 57;
+                           optional uint32 lan_dis_changes = 58;
+                           optional uint32 adj_number = 59;
+                        }
+                     }
+                     optional packet_counters_type packet_counters = 153;
+                     message packet_counters_type {
+                        optional lsp_type lsp = 151;
+                        message lsp_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 received = 51;
+                              optional uint32 processed = 53;
+                              optional uint32 dropped = 52;
+                              optional uint32 sent = 54;
+                              optional uint32 retransmit = 55;
+                           }
+                        }
+                        optional iih_type iih = 152;
+                        message iih_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 received = 51;
+                              optional uint32 processed = 53;
+                              optional uint32 dropped = 52;
+                              optional uint32 sent = 54;
+                              optional uint32 retransmit = 55;
+                           }
+                        }
+                        optional ish_type ish = 155;
+                        message ish_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 received = 51;
+                              optional uint32 processed = 53;
+                              optional uint32 dropped = 52;
+                              optional uint32 sent = 54;
+                              optional uint32 retransmit = 55;
+                           }
+                        }
+                        optional esh_type esh = 156;
+                        message esh_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 received = 51;
+                              optional uint32 processed = 53;
+                              optional uint32 dropped = 52;
+                              optional uint32 sent = 54;
+                              optional uint32 retransmit = 55;
+                           }
+                        }
+                        optional psnp_type psnp = 153;
+                        message psnp_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 received = 51;
+                              optional uint32 processed = 53;
+                              optional uint32 dropped = 52;
+                              optional uint32 sent = 54;
+                              optional uint32 retransmit = 55;
+                           }
+                        }
+                        optional csnp_type csnp = 154;
+                        message csnp_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 received = 51;
+                              optional uint32 processed = 53;
+                              optional uint32 dropped = 52;
+                              optional uint32 sent = 54;
+                              optional uint32 retransmit = 55;
+                           }
+                        }
+                        optional unknown_type unknown = 157;
+                        message unknown_type {
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 received = 51;
+                              optional uint32 processed = 53;
+                              optional uint32 dropped = 52;
+                              optional uint32 sent = 54;
+                              optional uint32 retransmit = 55;
+                           }
+                        }
+                     }
+                     optional levels_type levels = 154;
+                     message levels_type {
+                        message level_list {
+                           optional uint32 level_number = 52 [(telemetry_options).is_key = true];
+                           optional state_type state = 151;
+                           message state_type {
+                              optional uint32 level_number = 51;
+                           }
+                           optional adjacencies_type adjacencies = 152;
+                           message adjacencies_type {
+                              message adjacency_list {
+                                 optional string system_id = 51 [(telemetry_options).is_key = true];
+                                 optional state_type state = 151;
+                                 message state_type {
+                                    optional string system_id = 51;
+                                    optional string neighbor_snpa = 52;
+                                    optional uint32 local_extended_circuit_id = 53;
+                                    optional uint32 neighbor_extended_circuit_id = 54;
+                                    optional uint32 priority = 55;
+                                    optional string dis_system_id = 56;
+                                    optional string neighbor_circuit_type = 57;
+                                    optional string adjacency_type = 58;
+                                    optional string adjacency_state = 59;
+                                    optional uint32 remaining_hold_time = 66;
+                                    optional uint32 up_time = 60;
+                                    optional bool multi_topology = 61;
+                                    repeated string topology = 62;
+                                    optional bool restart_support = 63;
+                                    optional bool restart_suppress = 64;
+                                    optional bool restart_status = 65;
+                                    repeated string area_address = 67;
+                                    repeated string nlpid = 68;
+                                    repeated string ipv4_neighbor_address = 69;
+                                    repeated string ipv6_neighbor_address = 70;
+                                 }
+                              }
+                              repeated adjacency_list adjacency = 151;
+                           }
+                        }
+                        repeated level_list level = 151;
+                     }
+                  }
+                  repeated interface_list interface = 151;
+               }
+            }
+         }
+      }
+   }
+   repeated network_instance_list network_instance = 151;
+}

@@ -1,0 +1,39 @@
+syntax = "proto2";
+
+import "telemetry_top.proto";
+
+extend JuniperNetworksSensors {
+   optional telemetry_system jnpr_telemetry_system_ext = 31;
+}
+
+message telemetry_system {
+   optional subscriptions_type subscriptions = 151;
+   message subscriptions_type {
+      optional dynamic_type dynamic = 151;
+      message dynamic_type {
+         message subscription_list {
+            optional uint64 subscription_id = 51 [(telemetry_options).is_key = true];
+            optional state_type state = 151;
+            message state_type {
+               optional uint64 subscription_id = 51;
+               optional uint64 sample_interval = 52;
+               optional uint64 heartbeat_interval = 53;
+               optional bool suppress_redundant = 54;
+            }
+            optional sensor_paths_type sensor_paths = 152;
+            message sensor_paths_type {
+               message sensor_path_list {
+                  optional string path = 51 [(telemetry_options).is_key = true];
+                  optional state_type state = 151;
+                  message state_type {
+                     optional string path = 51;
+                     optional string exclude_filter = 52;
+                  }
+               }
+               repeated sensor_path_list sensor_path = 151;
+            }
+         }
+         repeated subscription_list subscription = 151;
+      }
+   }
+}
