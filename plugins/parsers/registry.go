@@ -151,7 +151,7 @@ type Config struct {
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
 	XMLCombineNodes bool	`toml:"xml_combine_nodes"`
-	XMLTagNode bool			`toml:"xml_tag_node"`
+	XMLTagNode bool			`toml:"xml_node_to_tag"`
 	XMLQuery string			`toml:"xml_query"`
 }
 
