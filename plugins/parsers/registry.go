@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xml"
+	"github.com/M0rdecay/telegraf/plugins/parsers/xml"
 )
 
 type ParserFunc func() (Parser, error)
