@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
+	"github.com/influxdata/telegraf/plugins/parsers/xml"
 )
 
 type ParserFunc func() (Parser, error)
@@ -148,6 +149,10 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
+
+	XMLCombineNodes bool	`toml:"xml_combine_nodes"`
+	XMLTagNode bool			`toml:"xml_tag_node"`
+	XMLQuery string			`toml:"xml_query"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -225,8 +230,14 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewFormUrlencodedParser(
 			config.MetricName,
 			config.DefaultTags,
-			config.FormUrlencodedTagKeys,
-		)
+			config.FormUrlencodedTagKeys)
+	case "xml":
+		parser, err = NewXMLParser(
+			config.XMLCombineNodes,
+			config.XMLTagNode,
+			config.XMLQuery,
+			config.DefaultTags,
+			config.TagKeys)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -391,4 +402,14 @@ func NewFormUrlencodedParser(
 		DefaultTags: defaultTags,
 		TagKeys:     tagKeys,
 	}, nil
+}
+
+func NewXMLParser(
+	xmlCombineNodes	bool,
+	xmlTagNode		bool,
+	xmlQuery		string,
+	defaultTags 	map[string]string,
+	tagKeys 		[]string
+) (Parser, error) {
+	return xml.NewXMLParser(xmlCombineNodes, xmlTagNode, xmlQuery, defaultTags, tagKeys), nil
 }
