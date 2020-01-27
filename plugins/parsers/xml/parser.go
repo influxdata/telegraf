@@ -24,7 +24,11 @@ type XMLParser struct {
 	DefaultTags  map[string]string
 }
 
-func (p *XMLParser) NewXMLParser(xmlCombineNodes bool, xmlTagNode bool, xmlQuery string, defaultTags map[string]string, tagKeys []string) {
+func (p *XMLParser) NewXMLParser(xmlCombineNodes bool,
+	xmlTagNode bool,
+	xmlQuery string,
+	defaultTags map[string]string,
+	tagKeys []string) {
 	p.DefaultTags = xmlCombineNodes
 	p.TagNode = xmlTagNode
 	p.DefaultTags = defaultTags
