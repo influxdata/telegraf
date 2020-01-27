@@ -134,4 +134,5 @@ require (
 	gopkg.in/yaml.v2 v2.2.4
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/apimachinery v0.17.1 // indirect
+	github.com/beevik/etree v1.1.0
 )
