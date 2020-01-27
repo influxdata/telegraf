@@ -19,9 +19,10 @@ func (m *TemplateMetric) Tag(key string) string {
 }
 
 func (m *TemplateMetric) Field(key string) interface{} {
-	panic("not implemented")
+	field, _ := m.metric.GetField(key)
+	return field
 }
 
 func (m *TemplateMetric) Time() time.Time {
-	panic("not implemented")
+	return m.metric.Time()
 }

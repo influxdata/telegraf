@@ -19,7 +19,8 @@ const sampleConfig = `
   #   ## Tag to create
   #   tag = "topic"
   #   ## Template to create tag
-  #   template = "{{.Tag \"hostname\"}}.{{ .Tag \"level\" }}"
+  # Note: Single quotes (') are used, so the double quotes (") don't need escaping (\")
+  #   template = '{{.Tag "hostname"}}.{{ .Tag "level" }}'
 `
 
 func (r *TemplateProcessor) SampleConfig() string {
