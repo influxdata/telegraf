@@ -46,8 +46,8 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	xmlDocument.ReadFromBytes(b)
 	timestamp := time.Now()
 	metrics := make([]telegraf.Metric, 0)
-	xmlTags := make(map[string]string)
-	xmlFields := make(map[string]interface{})
+	xmlTags := make(map[string]string, 0)
+	xmlFields := make(map[string]interface{}, 0)
 
 	root := xmlDocument.FindElements(p.Query)
 	if len := len(root); len > 0 {
