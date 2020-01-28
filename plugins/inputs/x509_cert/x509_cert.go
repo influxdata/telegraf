@@ -17,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	_tls "github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -204,9 +205,38 @@ func getTags(cert *x509.Certificate, location string) map[string]string {
 	return tags
 }
 
+// copied from plugins/inputs/file/file.go
+func (c *X509Cert) refreshFilePaths() error {
+	var allFiles []string
+
+	for _, source := range c.Sources {
+    if strings.HasPrefix(source, "/") {
+		  g, err := globpath.Compile(source)
+		  if err != nil {
+		    return fmt.Errorf("could not compile glob %v: %v", source, err)
+		  }
+		  files := g.Match()
+		  if len(files) <= 0 {
+	      return fmt.Errorf("could not find file: %v", source)
+		  }
+		  allFiles = append(allFiles, files...)
+    } else {
+		  allFiles = append(allFiles, source)
+    }
+	}
+
+	c.Sources = allFiles
+	return nil
+}
+
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
+
+  err := c.refreshFilePaths()
+  if err != nil {
+    return err
+  }
 
 	for _, location := range c.Sources {
 		u, err := c.locationToURL(location)
