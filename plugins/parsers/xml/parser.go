@@ -54,11 +54,11 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 		for _, e := range root {
 
 			tags, fields := ParseXmlNode(e)
-			if p.nodeTag == true {
+			if p.TagNode == true {
 				tags["node_name"] = e.Tag
 			}
 
-			if p.combineNodes == false {
+			if p.CombineNodes == false {
 				metric, err := metric.New("xml", tags, fields, timestamp)
 				if err != nil {
 					return nil, err
