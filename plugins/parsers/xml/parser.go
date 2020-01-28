@@ -42,12 +42,12 @@ func (p *XMLParser) NewXMLParser(xmlCombineNodes bool,
 }
 
 func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
+	timestamp := time.Now()
 	xmlDocument := etree.NewDocument()
 	xmlDocument.ReadFromBytes(b)
-	timestamp := time.Now()
 	metrics := make([]telegraf.Metric, 0)
-	xmlTags := make(map[string]string, 0)
-	xmlFields := make(map[string]interface{}, 0)
+	xmlTags := make(map[string]string)
+	xmlFields := make(map[string]interface{})
 
 	root := xmlDocument.FindElements(p.Query)
 	if len := len(root); len > 0 {
@@ -65,8 +65,8 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 				}
 				metrics = append(metrics, metric)
 			} else {
-				xmlTags = append(xmlTags, tags)
-				xmlFields = append(xmlFields, fields)
+				xmlTags = mergeTwoTagMaps(xmlTags, tags)
+				xmlFields = mergeTwoFieldMaps(xmlFields, fields)
 			}
 
 		}
@@ -94,13 +94,13 @@ func (p *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, fields map[string]interface{}) {
-	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	tags = make(map[string]string)
+	fields = make(map[string]interface{})
 
 	nodeText := trimEmptyChars(node.Text())
 	if nodeText != "" {
 		//toTag := isFieldATagCandidate(node.Tag)
-		if isFieldATagCandidate(node.Tag) {
+		if p.isFieldATagCandidate(node.Tag) {
 			tags[node.Tag] = node.Text()
 		} else {
 			fields[node.Tag] = identifyFieldType(node.Text())
@@ -112,7 +112,7 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 		for _, e := range attrs {
 			attrText := trimEmptyChars(e.Value)
 			if attrText != "" {
-				if p.isFieldATagCandidate(node.Tag) {
+				if p.isFieldATagCandidate(e.Key) {
 					tags[e.Key] = e.Value
 				} else {
 					fields[e.Key] = identifyFieldType(e.Value)
@@ -120,6 +120,7 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 			}
 		}
 	}
+	return tags, fields
 }
 
 func (p *XMLParser) isFieldATagCandidate(str string) bool {
@@ -131,16 +132,35 @@ func (p *XMLParser) isFieldATagCandidate(str string) bool {
 	return false
 }
 
-func identifyFieldType(value string) interface{} {
-	matched, err := regexp.Match(intExpr, value)
-	if matched {
-		i, err := strconv.ParseInt(value, 10, 64)
-		return i
+func mergeTwoFieldMaps(parent map[string]interface{}, child map[string]interface{}) map[string]interface{} {
+	for key, value := range child {
+		parent[key] = value
 	}
-	matched, err := regexp.Match(floatExpr, value)
-	if matched {
+	return parent
+}
+
+func mergeTwoTagMaps(parent map[string]string, child map[string]string) map[string]string {
+	for key, value := range child {
+		parent[key] = value
+	}
+	return parent
+}
+
+func identifyFieldType(value string) interface{} {
+	temp := []byte(value)
+	matched, err := regexp.Match(intExpr, temp)
+	if matched && err == nil {
+		i, err := strconv.ParseInt(value, 10, 64)
+		if err == nil {
+			return i
+		}
+	}
+	matched, err = regexp.Match(floatExpr, temp)
+	if matched && err == nil {
 		f, err := strconv.ParseFloat(value, 64)
-		return f
+		if err == nil {
+			return f
+		}
 	}
 	return value
 }
