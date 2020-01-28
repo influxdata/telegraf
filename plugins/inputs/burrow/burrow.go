@@ -3,6 +3,7 @@ package burrow
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -218,11 +219,21 @@ func (b *burrow) createClient() (*http.Client, error) {
 		return nil, err
 	}
 
+	var transport http.Transport
+	timeout := time.Duration(b.ResponseTimeout)
+	transport.DialContext = (&net.Dialer{
+		Timeout: timeout,
+		DualStack: true,
+	}).DialContext
+	transport.TLSClientConfig = tlsCfg
+	transport.MaxIdleConnsPerHost = b.ConcurrentConnections / 2
+	transport.MaxConnsPerHost = b.ConcurrentConnections
+	transport.ResponseHeaderTimeout = timeout
+	transport.IdleConnTimeout = 90*time.Second
+
 	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: time.Duration(b.ResponseTimeout),
+		Transport: &transport,
+		Timeout: timeout,
 	}
 
 	return client, nil
