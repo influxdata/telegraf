@@ -29,7 +29,7 @@ func (p *XMLParser) NewXMLParser(xmlCombineNodes bool,
 	xmlQuery string,
 	defaultTags map[string]string,
 	tagKeys []string) {
-	p.DefaultTags = xmlCombineNodes
+	p.CombineNodes = xmlCombineNodes
 	p.TagNode = xmlTagNode
 	p.DefaultTags = defaultTags
 	p.TagKeys = tagKeys
