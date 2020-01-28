@@ -53,7 +53,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	if len := len(root); len > 0 {
 		for _, e := range root {
 
-			tags, fields := ParseXmlNode(e)
+			tags, fields := p.ParseXmlNode(e)
 			if p.TagNode == true {
 				tags["node_name"] = e.Tag
 			}
@@ -112,7 +112,7 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 		for _, e := range attrs {
 			attrText := trimEmptyChars(e.Value)
 			if attrText != "" {
-				if isFieldATagCandidate(node.Tag) {
+				if p.isFieldATagCandidate(node.Tag) {
 					tags[e.Key] = e.Value
 				} else {
 					fields[e.Key] = identifyFieldType(e.Value)
