@@ -70,7 +70,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 			}
 
 		}
-		if p.combineNodes == true {
+		if p.CombineNodes == true {
 			metric, err := metric.New("xml", xmlTags, xmlFields, timestamp)
 			if err != nil {
 				return nil, err
@@ -81,7 +81,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func (v *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(s))
 	if err != nil {
 		return nil, err
