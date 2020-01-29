@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -54,6 +54,8 @@ type CiscoTelemetryGNMI struct {
 	acc     telegraf.Accumulator
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
+
+	Log telegraf.Logger
 }
 
 // Subscription for a GNMI client
@@ -101,21 +103,27 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	// Invert explicit alias list and prefill subscription names
 	c.aliases = make(map[string]string, len(c.Subscriptions)+len(c.Aliases))
 	for _, subscription := range c.Subscriptions {
+		var gnmiLongPath, gnmiShortPath *gnmi.Path
+
 		// Build the subscription path without keys
-		gnmiPath, err := parsePath(subscription.Origin, subscription.Path, "")
-		if err != nil {
+		if gnmiLongPath, err = parsePath(subscription.Origin, subscription.Path, ""); err != nil {
+			return err
+		}
+		if gnmiShortPath, err = parsePath("", subscription.Path, ""); err != nil {
 			return err
 		}
 
-		path, _ := c.handlePath(gnmiPath, nil, "")
+		longPath, _ := c.handlePath(gnmiLongPath, nil, "")
+		shortPath, _ := c.handlePath(gnmiShortPath, nil, "")
 		name := subscription.Name
 
 		// If the user didn't provide a measurement name, use last path element
 		if len(name) == 0 {
-			name = path[strings.LastIndexByte(path, '/')+1:]
+			name = path.Base(shortPath)
 		}
 		if len(name) > 0 {
-			c.aliases[path] = name
+			c.aliases[longPath] = name
+			c.aliases[shortPath] = name
 		}
 	}
 	for alias, path := range c.Aliases {
@@ -211,8 +219,8 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, 
 		return fmt.Errorf("failed to send subscription request: %v", err)
 	}
 
-	log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s established", address)
-	defer log.Printf("D! [inputs.cisco_telemetry_gnmi]: Connection to GNMI device %s closed", address)
+	c.Log.Debugf("Connection to GNMI device %s established", address)
+	defer c.Log.Debugf("Connection to GNMI device %s closed", address)
 	for ctx.Err() == nil {
 		var reply *gnmi.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
@@ -267,16 +275,31 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 			if alias, ok := c.aliases[aliasPath]; ok {
 				name = alias
 			} else {
-				log.Printf("D! [inputs.cisco_telemetry_gnmi]: No measurement alias for GNMI path: %s", name)
+				c.Log.Debugf("No measurement alias for GNMI path: %s", name)
 			}
 		}
 
 		// Group metrics
-		for key, val := range fields {
-			if len(aliasPath) > 0 {
+		for k, v := range fields {
+			key := k
+			if len(aliasPath) < len(key) {
+				// This may not be an exact prefix, due to naming style
+				// conversion on the key.
 				key = key[len(aliasPath)+1:]
+			} else {
+				// Otherwise use the last path element as the field key.
+				key = path.Base(key)
+
+				// If there are no elements skip the item; this would be an
+				// invalid message.
+				key = strings.TrimLeft(key, "/.")
+				if key == "" {
+					c.Log.Errorf("invalid empty path: %q", k)
+					continue
+				}
 			}
-			grouper.Add(name, tags, timestamp, key, val)
+
+			grouper.Add(name, tags, timestamp, key, v)
 		}
 
 		lastAliasPath = aliasPath
@@ -294,6 +317,12 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 
 	var value interface{}
 	var jsondata []byte
+
+	// Make sure a value is actually set
+	if update.Val == nil || update.Val.Value == nil {
+		c.Log.Infof("Discarded empty or legacy type value with path: %q", path)
+		return aliasPath, nil
+	}
 
 	switch val := update.Val.Value.(type) {
 	case *gnmi.TypedValue_AsciiVal:
@@ -346,8 +375,10 @@ func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string,
 
 	// Parse generic keys from prefix
 	for _, elem := range path.Elem {
-		builder.WriteRune('/')
-		builder.WriteString(elem.Name)
+		if len(elem.Name) > 0 {
+			builder.WriteRune('/')
+			builder.WriteString(elem.Name)
+		}
 		name := builder.String()
 
 		if _, exists := c.aliases[name]; exists {

@@ -11,6 +11,8 @@ Implemented functions are:
 - trim_prefix
 - trim_suffix
 - replace
+- left
+- base64decode
 
 Please note that in this implementation these are processed in the order that they appear above.
 
@@ -62,6 +64,15 @@ If you'd like to apply multiple processings to the same `tag_key` or `field_key`
   #   measurement = "*"
   #   old = ":"
   #   new = "_"
+
+  ## Trims strings based on width
+  # [[processors.strings.left]]
+  #   field = "message"
+  #   width = 10
+
+  ## Decode a base64 encoded utf-8 string
+  # [[processors.strings.base64decode]]
+  #   field = "message"
 ```
 
 #### Trim, TrimLeft, TrimRight

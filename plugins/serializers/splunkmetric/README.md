@@ -27,6 +27,36 @@ In the above snippet, the following keys are dimensions:
 * dc
 * user
 
+## Using Multimetric output
+
+Starting with Splunk Enterprise and Splunk Cloud 8.0, you can now send multiple metric values in one payload. This means, for example, that
+you can send all of your CPU stats in one JSON struct, an example event looks like:
+
+```javascript
+{
+  "time": 1572469920,
+  "event": "metric",
+  "host": "mono.local",
+  "fields": {
+    "_config_hecRouting": false,
+    "_config_multiMetric": true,
+    "class": "osx",
+    "cpu": "cpu0",
+    "metric_name:telegraf.cpu.usage_guest": 0,
+    "metric_name:telegraf.cpu.usage_guest_nice": 0,
+    "metric_name:telegraf.cpu.usage_idle": 65.1,
+    "metric_name:telegraf.cpu.usage_iowait": 0,
+    "metric_name:telegraf.cpu.usage_irq": 0,
+    "metric_name:telegraf.cpu.usage_nice": 0,
+    "metric_name:telegraf.cpu.usage_softirq": 0,
+    "metric_name:telegraf.cpu.usage_steal": 0,
+    "metric_name:telegraf.cpu.usage_system": 10.2,
+    "metric_name:telegraf.cpu.usage_user": 24.7,
+  }
+}
+```
+In order to enable this mode, there's a new option `splunkmetric_multimetric` that you set in the appropriate output module you plan on using.
+
 ## Using with the HTTP output
 
 To send this data to a Splunk HEC, you can use the HTTP output, there are some custom headers that you need to add
@@ -61,6 +91,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
    data_format = "splunkmetric"
     ## Provides time, index, source overrides for the HEC
    splunkmetric_hec_routing = true
+   # splunkmentric_multimetric = true
 
    ## Additional HTTP headers
     [outputs.http.headers]
@@ -118,7 +149,6 @@ disabled = false
 INDEXED_EXTRACTIONS = json
 KV_MODE = none
 TIMESTAMP_FIELDS = time
-TIME_FORMAT = %s.%3N
 ```
 
 An example configuration of a file based output is:
@@ -134,5 +164,6 @@ An example configuration of a file based output is:
    ## more about them here:
    ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
    data_format = "splunkmetric"
-   hec_routing = false
+   splunkmetric_hec_routing = false
+   splunkmetric_multimetric = true
 ```

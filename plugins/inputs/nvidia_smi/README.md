@@ -53,6 +53,22 @@ The below query could be used to alert on the average temperature of the your GP
 SELECT mean("temperature_gpu") FROM "nvidia_smi" WHERE time > now() - 5m GROUP BY time(1m), "index", "name", "host"
 ```
 
+### Troubleshooting
+
+Check the full output by running `nvidia-smi` binary manually.
+
+Linux:
+```
+sudo -u telegraf -- /usr/bin/nvidia-smi -q -x
+```
+
+Windows:
+```
+"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe" -q -x
+```
+
+Please include the output of this command if opening an GitHub issue.
+
 ### Example Output
 ```
 nvidia_smi,compute_mode=Default,host=8218cf,index=0,name=GeForce\ GTX\ 1070,pstate=P2,uuid=GPU-823bc202-6279-6f2c-d729-868a30f14d96 fan_speed=100i,memory_free=7563i,memory_total=8112i,memory_used=549i,temperature_gpu=53i,utilization_gpu=100i,utilization_memory=90i 1523991122000000000

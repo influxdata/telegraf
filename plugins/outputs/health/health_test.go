@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var pki = testutil.NewPKI("../../../testutil/pki")
+
 func TestHealth(t *testing.T) {
 	type Options struct {
 		Compares []*health.Compares `toml:"compares"`
@@ -105,7 +107,11 @@ func TestHealth(t *testing.T) {
 			output.Compares = tt.options.Compares
 			output.Contains = tt.options.Contains
 
-			err := output.Connect()
+			err := output.Init()
+			require.NoError(t, err)
+
+			err = output.Connect()
+			require.NoError(t, err)
 
 			err = output.Write(tt.metrics)
 			require.NoError(t, err)
@@ -118,6 +124,80 @@ func TestHealth(t *testing.T) {
 			require.NoError(t, err)
 
 			err = output.Close()
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestInitServiceAddress(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *health.Health
+		err    bool
+		origin string
+	}{
+		{
+			name: "port without scheme is not allowed",
+			plugin: &health.Health{
+				ServiceAddress: ":8080",
+			},
+			err: true,
+		},
+		{
+			name: "path without scheme is not allowed",
+			plugin: &health.Health{
+				ServiceAddress: "/tmp/telegraf",
+			},
+			err: true,
+		},
+		{
+			name: "tcp with port maps to http",
+			plugin: &health.Health{
+				ServiceAddress: "tcp://:8080",
+			},
+		},
+		{
+			name: "tcp with tlsconf maps to https",
+			plugin: &health.Health{
+				ServiceAddress: "tcp://:8080",
+				ServerConfig:   *pki.TLSServerConfig(),
+			},
+		},
+		{
+			name: "tcp4 is allowed",
+			plugin: &health.Health{
+				ServiceAddress: "tcp4://:8080",
+			},
+		},
+		{
+			name: "tcp6 is allowed",
+			plugin: &health.Health{
+				ServiceAddress: "tcp6://:8080",
+			},
+		},
+		{
+			name: "http scheme",
+			plugin: &health.Health{
+				ServiceAddress: "http://:8080",
+			},
+		},
+		{
+			name: "https scheme",
+			plugin: &health.Health{
+				ServiceAddress: "https://:8080",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := health.NewHealth()
+			output.ServiceAddress = tt.plugin.ServiceAddress
+
+			err := output.Init()
+			if tt.err {
+				require.Error(t, err)
+				return
+			}
 			require.NoError(t, err)
 		})
 	}

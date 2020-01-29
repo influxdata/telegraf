@@ -18,10 +18,11 @@ import (
 
 // GitHub - plugin main structure
 type GitHub struct {
-	Repositories []string          `toml:"repositories"`
-	AccessToken  string            `toml:"access_token"`
-	HTTPTimeout  internal.Duration `toml:"http_timeout"`
-	githubClient *github.Client
+	Repositories      []string          `toml:"repositories"`
+	AccessToken       string            `toml:"access_token"`
+	EnterpriseBaseURL string            `toml:"enterprise_base_url"`
+	HTTPTimeout       internal.Duration `toml:"http_timeout"`
+	githubClient      *github.Client
 
 	obfusticatedToken string
 
@@ -32,10 +33,16 @@ type GitHub struct {
 
 const sampleConfig = `
   ## List of repositories to monitor.
-  repositories = ["influxdata/telegraf"]
+  repositories = [
+	  "influxdata/telegraf",
+	  "influxdata/influxdb"
+  ]
 
   ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
   # access_token = ""
+
+  ## Github API enterprise url. Github Enterprise accounts must specify their base url.
+  # enterprise_base_url = ""
 
   ## Timeout for HTTP requests.
   # http_timeout = "5s"
@@ -71,9 +78,16 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 
 		g.obfusticatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
 
-		return github.NewClient(oauthClient), nil
+		return g.newGithubClient(oauthClient)
 	}
 
+	return g.newGithubClient(httpClient)
+}
+
+func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
+	if g.EnterpriseBaseURL != "" {
+		return github.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
+	}
 	return github.NewClient(httpClient), nil
 }
 
@@ -168,6 +182,9 @@ func getTags(repositoryInfo *github.Repository) map[string]string {
 func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 	return map[string]interface{}{
 		"stars":       repositoryInfo.GetStargazersCount(),
+		"subscribers": repositoryInfo.GetSubscribersCount(),
+		"watchers":    repositoryInfo.GetWatchersCount(),
+		"networks":    repositoryInfo.GetNetworkCount(),
 		"forks":       repositoryInfo.GetForksCount(),
 		"open_issues": repositoryInfo.GetOpenIssuesCount(),
 		"size":        repositoryInfo.GetSize(),

@@ -34,6 +34,7 @@ type MongoStatus struct {
 	ReplSetStatus *ReplSetStatus
 	ClusterStatus *ClusterStatus
 	DbStats       *DbStats
+	ColStats      *ColStats
 	ShardStats    *ShardStats
 	OplogStats    *OplogStats
 }
@@ -57,6 +58,7 @@ type ServerStatus struct {
 	Network            *NetworkStats          `bson:"network"`
 	Opcounters         *OpcountStats          `bson:"opcounters"`
 	OpcountersRepl     *OpcountStats          `bson:"opcountersRepl"`
+	OpLatencies        *OpLatenciesStats      `bson:"opLatencies"`
 	RecordStats        *DBRecordStats         `bson:"recordStats"`
 	Mem                *MemStats              `bson:"mem"`
 	Repl               *ReplStatus            `bson:"repl"`
@@ -90,6 +92,26 @@ type DbStatsData struct {
 	IndexSize   int64       `bson:"indexSize"`
 	Ok          int64       `bson:"ok"`
 	GleStats    interface{} `bson:"gleStats"`
+}
+
+type ColStats struct {
+	Collections []Collection
+}
+
+type Collection struct {
+	Name         string
+	DbName       string
+	ColStatsData *ColStatsData
+}
+
+type ColStatsData struct {
+	Collection     string  `bson:"ns"`
+	Count          int64   `bson:"count"`
+	Size           int64   `bson:"size"`
+	AvgObjSize     float64 `bson:"avgObjSize"`
+	StorageSize    int64   `bson:"storageSize"`
+	TotalIndexSize int64   `bson:"totalIndexSize"`
+	Ok             int64   `bson:"ok"`
 }
 
 // ClusterStatus stores information related to the whole cluster
@@ -231,7 +253,7 @@ type FlushStats struct {
 type ConnectionStats struct {
 	Current      int64 `bson:"current"`
 	Available    int64 `bson:"available"`
-	TotalCreated int64 `bson:"total_created"`
+	TotalCreated int64 `bson:"totalCreated"`
 }
 
 // DurTiming stores information related to journaling.
@@ -291,6 +313,19 @@ type OpcountStats struct {
 	Delete  int64 `bson:"delete"`
 	GetMore int64 `bson:"getmore"`
 	Command int64 `bson:"command"`
+}
+
+// OpLatenciesStats stores information related to operation latencies for the database as a whole
+type OpLatenciesStats struct {
+	Reads    *LatencyStats `bson:"reads"`
+	Writes   *LatencyStats `bson:"writes"`
+	Commands *LatencyStats `bson:"commands"`
+}
+
+// LatencyStats lists total latency in microseconds and count of operations, enabling you to obtain an average
+type LatencyStats struct {
+	Latency int64 `bson:"latency"`
+	Ops     int64 `bson:"ops"`
 }
 
 // MetricsStats stores information related to metrics
@@ -456,6 +491,8 @@ type StatLine struct {
 	IsMongos bool
 	Host     string
 
+	UptimeNanos int64
+
 	// The time at which this StatLine was generated.
 	Time time.Time
 
@@ -469,6 +506,14 @@ type StatLine struct {
 	Delete, DeleteCnt   int64
 	GetMore, GetMoreCnt int64
 	Command, CommandCnt int64
+
+	// OpLatency fields
+	WriteOpsCnt    int64
+	WriteLatency   int64
+	ReadOpsCnt     int64
+	ReadLatency    int64
+	CommandOpsCnt  int64
+	CommandLatency int64
 
 	// TTL fields
 	Passes, PassesCnt                     int64
@@ -520,7 +565,7 @@ type StatLine struct {
 	GetMoreR, GetMoreRCnt                int64
 	CommandR, CommandRCnt                int64
 	ReplLag                              int64
-	OplogTimeDiff                        int64
+	OplogStats                           *OplogStats
 	Flushes, FlushesCnt                  int64
 	FlushesTotalTime                     int64
 	Mapped, Virtual, Resident, NonMapped int64
@@ -541,6 +586,9 @@ type StatLine struct {
 	// DB stats field
 	DbStatsLines []DbStatLine
 
+	// Col Stats field
+	ColStatsLines []ColStatLine
+
 	// Shard stats
 	TotalInUse, TotalAvailable, TotalCreated, TotalRefreshing int64
 
@@ -559,6 +607,16 @@ type DbStatLine struct {
 	Indexes     int64
 	IndexSize   int64
 	Ok          int64
+}
+type ColStatLine struct {
+	Name           string
+	DbName         string
+	Count          int64
+	Size           int64
+	AvgObjSize     float64
+	StorageSize    int64
+	TotalIndexSize int64
+	Ok             int64
 }
 
 type ShardHostStatLine struct {
@@ -625,6 +683,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		Faults:    -1,
 	}
 
+	returnVal.UptimeNanos = 1000 * 1000 * newStat.UptimeMillis
+
 	// set connection info
 	returnVal.CurrentC = newStat.Connections.Current
 	returnVal.AvailableC = newStat.Connections.Available
@@ -644,6 +704,21 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Delete, returnVal.DeleteCnt = diff(newStat.Opcounters.Delete, oldStat.Opcounters.Delete, sampleSecs)
 		returnVal.GetMore, returnVal.GetMoreCnt = diff(newStat.Opcounters.GetMore, oldStat.Opcounters.GetMore, sampleSecs)
 		returnVal.Command, returnVal.CommandCnt = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
+	}
+
+	if newStat.OpLatencies != nil {
+		if newStat.OpLatencies.Reads != nil {
+			returnVal.ReadOpsCnt = newStat.OpLatencies.Reads.Ops
+			returnVal.ReadLatency = newStat.OpLatencies.Reads.Latency
+		}
+		if newStat.OpLatencies.Writes != nil {
+			returnVal.WriteOpsCnt = newStat.OpLatencies.Writes.Ops
+			returnVal.WriteLatency = newStat.OpLatencies.Writes.Latency
+		}
+		if newStat.OpLatencies.Commands != nil {
+			returnVal.CommandOpsCnt = newStat.OpLatencies.Commands.Ops
+			returnVal.CommandLatency = newStat.OpLatencies.Commands.Latency
+		}
 	}
 
 	if newStat.Metrics != nil && oldStat.Metrics != nil {
@@ -856,84 +931,116 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.NumConnections = newStat.Connections.Current
 	}
 
-	newReplStat := *newMongo.ReplSetStatus
+	if newMongo.ReplSetStatus != nil {
+		newReplStat := *newMongo.ReplSetStatus
 
-	if newReplStat.Members != nil {
-		myName := newStat.Repl.Me
-		// Find the master and myself
-		master := ReplSetMember{}
-		me := ReplSetMember{}
-		for _, member := range newReplStat.Members {
-			if member.Name == myName {
-				// Store my state string
-				returnVal.NodeState = member.StateStr
-				if member.State == 1 {
-					// I'm the master
-					returnVal.ReplLag = 0
-					break
-				} else {
-					// I'm secondary
-					me = member
+		if newReplStat.Members != nil {
+			myName := newStat.Repl.Me
+			// Find the master and myself
+			master := ReplSetMember{}
+			me := ReplSetMember{}
+			for _, member := range newReplStat.Members {
+				if member.Name == myName {
+					// Store my state string
+					returnVal.NodeState = member.StateStr
+					if member.State == 1 {
+						// I'm the master
+						returnVal.ReplLag = 0
+						break
+					} else {
+						// I'm secondary
+						me = member
+					}
+				} else if member.State == 1 {
+					// Master found
+					master = member
 				}
-			} else if member.State == 1 {
-				// Master found
-				master = member
 			}
-		}
 
-		if me.State == 2 {
-			// OptimeDate.Unix() type is int64
-			lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
-			if lag < 0 {
-				returnVal.ReplLag = 0
-			} else {
-				returnVal.ReplLag = lag
+			if me.State == 2 {
+				// OptimeDate.Unix() type is int64
+				lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
+				if lag < 0 {
+					returnVal.ReplLag = 0
+				} else {
+					returnVal.ReplLag = lag
+				}
 			}
 		}
 	}
 
-	newClusterStat := *newMongo.ClusterStatus
-	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
-	returnVal.OplogTimeDiff = newMongo.OplogStats.TimeDiff
+	if newMongo.ClusterStatus != nil {
+		newClusterStat := *newMongo.ClusterStatus
+		returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+	}
 
-	newDbStats := *newMongo.DbStats
-	for _, db := range newDbStats.Dbs {
-		dbStatsData := db.DbStatsData
-		// mongos doesn't have the db key, so setting the db name
-		if dbStatsData.Db == "" {
-			dbStatsData.Db = db.Name
+	if newMongo.OplogStats != nil {
+		returnVal.OplogStats = newMongo.OplogStats
+	}
+
+	if newMongo.DbStats != nil {
+		newDbStats := *newMongo.DbStats
+		for _, db := range newDbStats.Dbs {
+			dbStatsData := db.DbStatsData
+			// mongos doesn't have the db key, so setting the db name
+			if dbStatsData.Db == "" {
+				dbStatsData.Db = db.Name
+			}
+			dbStatLine := &DbStatLine{
+				Name:        dbStatsData.Db,
+				Collections: dbStatsData.Collections,
+				Objects:     dbStatsData.Objects,
+				AvgObjSize:  dbStatsData.AvgObjSize,
+				DataSize:    dbStatsData.DataSize,
+				StorageSize: dbStatsData.StorageSize,
+				NumExtents:  dbStatsData.NumExtents,
+				Indexes:     dbStatsData.Indexes,
+				IndexSize:   dbStatsData.IndexSize,
+				Ok:          dbStatsData.Ok,
+			}
+			returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 		}
-		dbStatLine := &DbStatLine{
-			Name:        dbStatsData.Db,
-			Collections: dbStatsData.Collections,
-			Objects:     dbStatsData.Objects,
-			AvgObjSize:  dbStatsData.AvgObjSize,
-			DataSize:    dbStatsData.DataSize,
-			StorageSize: dbStatsData.StorageSize,
-			NumExtents:  dbStatsData.NumExtents,
-			Indexes:     dbStatsData.Indexes,
-			IndexSize:   dbStatsData.IndexSize,
-			Ok:          dbStatsData.Ok,
+	}
+
+	if newMongo.ColStats != nil {
+		for _, col := range newMongo.ColStats.Collections {
+			colStatsData := col.ColStatsData
+			// mongos doesn't have the db key, so setting the db name
+			if colStatsData.Collection == "" {
+				colStatsData.Collection = col.Name
+			}
+			colStatLine := &ColStatLine{
+				Name:           colStatsData.Collection,
+				DbName:         col.DbName,
+				Count:          colStatsData.Count,
+				Size:           colStatsData.Size,
+				AvgObjSize:     colStatsData.AvgObjSize,
+				StorageSize:    colStatsData.StorageSize,
+				TotalIndexSize: colStatsData.TotalIndexSize,
+				Ok:             colStatsData.Ok,
+			}
+			returnVal.ColStatsLines = append(returnVal.ColStatsLines, *colStatLine)
 		}
-		returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 	}
 
 	// Set shard stats
-	newShardStats := *newMongo.ShardStats
-	returnVal.TotalInUse = newShardStats.TotalInUse
-	returnVal.TotalAvailable = newShardStats.TotalAvailable
-	returnVal.TotalCreated = newShardStats.TotalCreated
-	returnVal.TotalRefreshing = newShardStats.TotalRefreshing
-	returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
-	for host, stats := range newShardStats.Hosts {
-		shardStatLine := &ShardHostStatLine{
-			InUse:      stats.InUse,
-			Available:  stats.Available,
-			Created:    stats.Created,
-			Refreshing: stats.Refreshing,
-		}
+	if newMongo.ShardStats != nil {
+		newShardStats := *newMongo.ShardStats
+		returnVal.TotalInUse = newShardStats.TotalInUse
+		returnVal.TotalAvailable = newShardStats.TotalAvailable
+		returnVal.TotalCreated = newShardStats.TotalCreated
+		returnVal.TotalRefreshing = newShardStats.TotalRefreshing
+		returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
+		for host, stats := range newShardStats.Hosts {
+			shardStatLine := &ShardHostStatLine{
+				InUse:      stats.InUse,
+				Available:  stats.Available,
+				Created:    stats.Created,
+				Refreshing: stats.Refreshing,
+			}
 
-		returnVal.ShardHostStatsLines[host] = *shardStatLine
+			returnVal.ShardHostStatsLines[host] = *shardStatLine
+		}
 	}
 
 	return returnVal

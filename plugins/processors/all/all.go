@@ -1,6 +1,7 @@
 package all
 
 import (
+	_ "github.com/influxdata/telegraf/plugins/processors/clone"
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
 	_ "github.com/influxdata/telegraf/plugins/processors/date"
 	_ "github.com/influxdata/telegraf/plugins/processors/enum"
@@ -11,6 +12,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/regex"
 	_ "github.com/influxdata/telegraf/plugins/processors/rename"
 	_ "github.com/influxdata/telegraf/plugins/processors/strings"
+	_ "github.com/influxdata/telegraf/plugins/processors/tag_limit"
 	_ "github.com/influxdata/telegraf/plugins/processors/topk"
 	_ "github.com/influxdata/telegraf/plugins/processors/unpivot"
 )

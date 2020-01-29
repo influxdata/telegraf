@@ -49,6 +49,9 @@ var sampleConfig = `
   # docker_label_include = []
   # docker_label_exclude = []
 
+  ## Set the source tag for the metrics to the container ID hostname, eg first 12 chars
+  source_tag = false
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -68,6 +71,8 @@ const (
 
 var (
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
+	// ensure *DockerLogs implements telegaf.ServiceInput
+	_ telegraf.ServiceInput = (*DockerLogs)(nil)
 )
 
 type DockerLogs struct {
@@ -80,6 +85,7 @@ type DockerLogs struct {
 	ContainerExclude      []string          `toml:"container_name_exclude"`
 	ContainerStateInclude []string          `toml:"container_state_include"`
 	ContainerStateExclude []string          `toml:"container_state_exclude"`
+	IncludeSourceTag      bool              `toml:"source_tag"`
 
 	tlsint.ClientConfig
 
@@ -197,6 +203,7 @@ func (d *DockerLogs) matchedContainerName(names []string) string {
 
 func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
+	acc.SetPrecision(time.Nanosecond)
 
 	ctx, cancel := context.WithTimeout(ctx, d.Timeout.Duration)
 	defer cancel()
@@ -225,7 +232,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			defer d.removeFromContainerList(container.ID)
 
 			err = d.tailContainerLogs(ctx, acc, container, containerName)
-			if err != nil {
+			if err != nil && err != context.Canceled {
 				acc.AddError(err)
 			}
 		}(container)
@@ -254,6 +261,10 @@ func (d *DockerLogs) tailContainerLogs(
 		"container_name":    containerName,
 		"container_image":   imageName,
 		"container_version": imageVersion,
+	}
+
+	if d.IncludeSourceTag {
+		tags["source"] = hostnameFromID(container.ID)
 	}
 
 	// Add matching container labels as tags
@@ -380,6 +391,12 @@ func tailMultiplexed(
 	return err
 }
 
+// Start is a noop which is required for a *DockerLogs to implement
+// the telegraf.ServiceInput interface
+func (d *DockerLogs) Start(telegraf.Accumulator) error {
+	return nil
+}
+
 func (d *DockerLogs) Stop() {
 	d.cancelTails()
 	d.wg.Wait()
@@ -426,4 +443,11 @@ func init() {
 			containerList: make(map[string]context.CancelFunc),
 		}
 	})
+}
+
+func hostnameFromID(id string) string {
+	if len(id) > 12 {
+		return id[0:12]
+	}
+	return id
 }
