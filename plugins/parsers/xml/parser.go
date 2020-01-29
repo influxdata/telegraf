@@ -1,6 +1,7 @@
 package xml
 
 import (
+	"errors"
 	"regexp"
 	"strconv"
 	"strings"
@@ -12,8 +13,9 @@ import (
 )
 
 var (
-	intExpr   string = "^\\d+$"
-	floatExpr string = "^\\d+\\.+\\d+$"
+	intExpr     string = "^\\d+$"
+	floatExpr   string = "^\\d+\\.+\\d+$"
+	ErrNoMetric        = errors.New("no metric in line")
 )
 
 type XMLParser struct {
