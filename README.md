@@ -235,6 +235,7 @@ For documentation on the latest development code see the [documentation index][d
 * [mem](./plugins/inputs/mem)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
+* [modbus](./plugins/inputs/modbus)
 * [mongodb](./plugins/inputs/mongodb)
 * [monit](./plugins/inputs/monit)
 * [mqtt_consumer](./plugins/inputs/mqtt_consumer)
