@@ -210,19 +210,19 @@ func (c *X509Cert) refreshFilePaths() error {
 	var allFiles []string
 
 	for _, source := range c.Sources {
-    if strings.HasPrefix(source, "/") {
-		  g, err := globpath.Compile(source)
-		  if err != nil {
-		    return fmt.Errorf("could not compile glob %v: %v", source, err)
-		  }
-		  files := g.Match()
-		  if len(files) <= 0 {
-	      return fmt.Errorf("could not find file: %v", source)
-		  }
-		  allFiles = append(allFiles, files...)
-    } else {
-		  allFiles = append(allFiles, source)
-    }
+		if strings.HasPrefix(source, "/") {
+			g, err := globpath.Compile(source)
+			if err != nil {
+				return fmt.Errorf("could not compile glob %v: %v", source, err)
+			}
+			files := g.Match()
+			if len(files) <= 0 {
+				return fmt.Errorf("could not find file: %v", source)
+			}
+			allFiles = append(allFiles, files...)
+		} else {
+			allFiles = append(allFiles, source)
+		}
 	}
 
 	c.Sources = allFiles
@@ -233,10 +233,10 @@ func (c *X509Cert) refreshFilePaths() error {
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
-  err := c.refreshFilePaths()
-  if err != nil {
-    return err
-  }
+	err := c.refreshFilePaths()
+	if err != nil {
+		return err
+	}
 
 	for _, location := range c.Sources {
 		u, err := c.locationToURL(location)
