@@ -9,8 +9,8 @@ file or network connection.
 ```toml
 # Reads metrics from a SSL certificate
 [[inputs.x509_cert]]
-  ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443"]
+  ## List certificate sources, support wildcard expands for files
+  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443", "/etc/mycerts/*.mydomain.org.pem"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
