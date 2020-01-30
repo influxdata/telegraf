@@ -32,7 +32,7 @@ func TestTagTemplateConcatenate(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
-func MetricMissingTagsIsNotLost(t *testing.T) {
+func TestMetricMissingTagsIsNotLost(t *testing.T) {
 	now := time.Now()
 
 	// Create Template processor
@@ -54,4 +54,27 @@ func MetricMissingTagsIsNotLost(t *testing.T) {
 	// assert
 	// make sure no metrics are lost when a template process fails
 	assert.Equal(t, 2, len(actual), "Number of metrics input should equal number of metrics output")
+}
+
+func TestTagAndFieldConcatenate(t *testing.T) {
+	now := time.Now()
+
+	// Create Template processor
+	tmp := TemplateProcessor{Tag: "LocalTemp", Template: `{{.Tag "location"}} is {{ .Field "temperature" }}`}
+	// manually init
+	err := tmp.Init()
+
+	if err != nil {
+		panic(err)
+	}
+
+	// create metric for testing
+	m1 := testutil.MustMetric("weather", map[string]string{"location": "us-midwest"}, map[string]interface{}{"temperature": "too warm"}, now)
+
+	// act
+	actual := tmp.Apply(m1)
+
+	// assert
+	expected := []telegraf.Metric{testutil.MustMetric("weather", map[string]string{"location": "us-midwest", "LocalTemp": "us-midwest is too warm"}, map[string]interface{}{"temperature": "too warm"}, now)}
+	testutil.RequireMetricsEqual(t, expected, actual)
 }
