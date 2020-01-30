@@ -84,7 +84,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
-	metrics, err := p.Parse([]byte(s))
+	metrics, err := p.Parse([]byte(line))
 	if err != nil {
 		return nil, err
 	}
