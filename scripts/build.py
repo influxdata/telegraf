@@ -161,8 +161,8 @@ def go_get(branch, update=False, no_uncommitted=False):
     if local_changes() and no_uncommitted:
         logging.error("There are uncommitted changes in the current directory.")
         return False
-    logging.info("Retrieving dependencies with `dep`...")
-    run("dep ensure -v -vendor-only")
+    logging.info("Retrieving dependencies...")
+    run("go mod download")
     return True
 
 def run_tests(race, parallel, timeout, no_vet):

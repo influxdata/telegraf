@@ -142,6 +142,29 @@ func TestAddShardStats(t *testing.T) {
 	}
 }
 
+func TestAddLatencyStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			CommandOpsCnt:  73,
+			CommandLatency: 364,
+			ReadOpsCnt:     113,
+			ReadLatency:    201,
+			WriteOpsCnt:    7,
+			WriteLatency:   55,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key := range DefaultLatencyStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
 func TestAddShardHostStats(t *testing.T) {
 	expectedHosts := []string{"hostA", "hostB"}
 	hostStatLines := map[string]ShardHostStatLine{}
@@ -188,12 +211,14 @@ func TestStateTag(t *testing.T) {
 			Query:         0,
 			NodeType:      "PRI",
 			NodeState:     "PRIMARY",
+			ReplSetName:   "rs1",
 		},
 		tags,
 	)
 
 	stateTags := make(map[string]string)
 	stateTags["node_type"] = "PRI"
+	stateTags["rs_name"] = "rs1"
 
 	var acc testutil.Accumulator
 
