@@ -409,7 +409,7 @@ func NewXMLParser(
 	xmlTagNode		bool,
 	xmlQuery		string,
 	defaultTags 	map[string]string,
-	tagKeys 		[]string
+	tagKeys 		[]string,
 ) (Parser, error) {
 	return xml.NewXMLParser(xmlCombineNodes, xmlTagNode, xmlQuery, defaultTags, tagKeys), nil
 }

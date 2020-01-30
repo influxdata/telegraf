@@ -26,21 +26,25 @@ type XMLParser struct {
 	DefaultTags  map[string]string
 }
 
-func (p *XMLParser) NewXMLParser(xmlCombineNodes bool,
+func NewXMLParser(xmlCombineNodes bool,
 	xmlTagNode bool,
 	xmlQuery string,
 	defaultTags map[string]string,
-	tagKeys []string) {
-	p.CombineNodes = xmlCombineNodes
-	p.TagNode = xmlTagNode
-	p.DefaultTags = defaultTags
-	p.TagKeys = tagKeys
+	tagKeys []string) *XMLParser {
 
 	if xmlQuery == "" {
-		p.Query = "//"
+		xmlQuery = "//"
 	} else {
-		p.Query = xmlQuery
+		xmlQuery = xmlQuery
 	}
+
+    return &XMLParser{
+        TagKeys: tagKeys,  
+        CombineNodes: xmlCombineNodes,
+        TagNode: xmlTagNode,
+        Query: xmlQuery,
+        DefaultTags: defaultTags,
+    }
 }
 
 func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
@@ -84,7 +88,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
-	metrics, err := p.Parse([]byte(s))
+	metrics, err := p.Parse([]byte(line))
 	if err != nil {
 		return nil, err
 	}
