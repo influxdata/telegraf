@@ -18,8 +18,8 @@ var (
 )
 
 func newTrackingID() telegraf.TrackingID {
-	atomic.AddUint64(&lastID, 1)
-	return telegraf.TrackingID(lastID)
+	id := atomic.AddUint64(&lastID, 1)
+	return telegraf.TrackingID(id)
 }
 
 // Metric defines a single point measurement

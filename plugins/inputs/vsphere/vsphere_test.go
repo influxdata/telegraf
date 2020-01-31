@@ -5,9 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"regexp"
-	"sort"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 	"unsafe"
@@ -228,36 +225,6 @@ func TestParseConfig(t *testing.T) {
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
-}
-
-func TestThrottledExecutor(t *testing.T) {
-	max := int64(0)
-	ngr := int64(0)
-	n := 10000
-	var mux sync.Mutex
-	results := make([]int, 0, n)
-	te := NewThrottledExecutor(5)
-	for i := 0; i < n; i++ {
-		func(i int) {
-			te.Run(context.Background(), func() {
-				atomic.AddInt64(&ngr, 1)
-				mux.Lock()
-				defer mux.Unlock()
-				results = append(results, i*2)
-				if ngr > max {
-					max = ngr
-				}
-				time.Sleep(100 * time.Microsecond)
-				atomic.AddInt64(&ngr, -1)
-			})
-		}(i)
-	}
-	te.Wait()
-	sort.Ints(results)
-	for i := 0; i < n; i++ {
-		require.Equal(t, results[i], i*2, "Some jobs didn't run")
-	}
-	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
 }
 
 func TestMaxQuery(t *testing.T) {
