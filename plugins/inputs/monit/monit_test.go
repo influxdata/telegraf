@@ -13,19 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type MockHTTPClient struct {
-	networkError string
+type transportMock struct {
 }
 
-func (c *MockHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
-	return nil, errors.New(c.networkError)
-}
-
-func (c *MockHTTPClient) SetHTTPClient(client *http.Client) {
-}
-
-func (c *MockHTTPClient) HTTPClient() *http.Client {
-	return nil
+func (t *transportMock) RoundTrip(r *http.Request) (*http.Response, error) {
+	errorString := "Get http://127.0.0.1:2812/_status?format=xml: " +
+		"read tcp 192.168.10.2:55610->127.0.0.1:2812: " +
+		"read: connection reset by peer"
+	return nil, errors.New(errorString)
 }
 
 func TestServiceType(t *testing.T) {
@@ -336,7 +331,6 @@ func TestServiceType(t *testing.T) {
 
 			plugin := &Monit{
 				Address: ts.URL,
-				client:  &RealHTTPClient{},
 			}
 
 			plugin.Init()
@@ -536,7 +530,6 @@ func TestMonitFailure(t *testing.T) {
 
 			plugin := &Monit{
 				Address: ts.URL,
-				client:  &RealHTTPClient{},
 			}
 
 			plugin.Init()
@@ -561,19 +554,15 @@ func checkAuth(r *http.Request, username, password string) bool {
 
 func TestAllowHosts(t *testing.T) {
 
-	networkError := "Get http://127.0.0.1:2812/_status?format=xml: " +
-		"read tcp 192.168.10.2:55610->127.0.0.1:2812: " +
-		"read: connection reset by peer"
 	r := &Monit{
 		Address:  "http://127.0.0.1:2812",
 		Username: "test",
 		Password: "test",
-		client:   &MockHTTPClient{networkError},
 	}
 
 	var acc testutil.Accumulator
 
-	r.Init()
+	r.client.Transport = &transportMock{}
 
 	err := r.Gather(&acc)
 
@@ -588,7 +577,6 @@ func TestConnection(t *testing.T) {
 		Address:  "http://127.0.0.1:2812",
 		Username: "test",
 		Password: "test",
-		client:   &RealHTTPClient{},
 	}
 
 	var acc testutil.Accumulator
@@ -625,7 +613,6 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 		Address:  ts.URL,
 		Username: "test",
 		Password: "test",
-		client:   &RealHTTPClient{},
 	}
 
 	var acc testutil.Accumulator
@@ -658,7 +645,6 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
 	r := &Monit{
 		Address: ts.URL,
-		client:  &RealHTTPClient{},
 	}
 
 	var acc testutil.Accumulator
@@ -703,7 +689,6 @@ func TestInvalidXMLAndInvalidTypes(t *testing.T) {
 
 			plugin := &Monit{
 				Address: ts.URL,
-				client:  &RealHTTPClient{},
 			}
 
 			plugin.Init()
