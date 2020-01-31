@@ -175,36 +175,13 @@ type Monit struct {
 	Address  string `toml:"address"`
 	Username string `toml:"username"`
 	Password string `toml:"password"`
-	client   HTTPClient
+	client   http.Client
 	tls.ClientConfig
 	Timeout internal.Duration `toml:"timeout"`
 }
 
-type HTTPClient interface {
-	MakeRequest(req *http.Request) (*http.Response, error)
-
-	SetHTTPClient(client *http.Client)
-	HTTPClient() *http.Client
-}
-
 type Messagebody struct {
 	Metrics []string `json:"metrics"`
-}
-
-type RealHTTPClient struct {
-	client *http.Client
-}
-
-func (c *RealHTTPClient) MakeRequest(req *http.Request) (*http.Response, error) {
-	return c.client.Do(req)
-}
-
-func (c *RealHTTPClient) SetHTTPClient(client *http.Client) {
-	c.client = client
-}
-
-func (c *RealHTTPClient) HTTPClient() *http.Client {
-	return c.client
 }
 
 func (m *Monit) Description() string {
@@ -240,14 +217,13 @@ func (m *Monit) Init() error {
 		return err
 	}
 
-	client := &http.Client{
+	m.client = http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
 		Timeout: m.Timeout.Duration,
 	}
-	m.client.SetHTTPClient(client)
 	return nil
 }
 
@@ -261,7 +237,7 @@ func (m *Monit) Gather(acc telegraf.Accumulator) error {
 		req.SetBasicAuth(m.Username, m.Password)
 	}
 
-	resp, err := m.client.MakeRequest(req)
+	resp, err := m.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -428,8 +404,6 @@ func monitoringStatus(s Service) string {
 
 func init() {
 	inputs.Add("monit", func() telegraf.Input {
-		return &Monit{
-			client: &RealHTTPClient{},
-		}
+		return &Monit{}
 	})
 }
