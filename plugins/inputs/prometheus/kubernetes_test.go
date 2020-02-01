@@ -10,6 +10,7 @@ import (
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 )
 
+
 func TestScrapeURLNoAnnotations(t *testing.T) {
 	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}}
 	p.GetMetadata().Annotations = map[string]string{}
@@ -95,8 +96,32 @@ func TestDeletePods(t *testing.T) {
 	assert.Equal(t, 0, len(prom.kubernetesPods))
 }
 
+func TestAddPodOnlyonSameNode(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
+
+	p := pod()
+	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
+	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	if podOnNode(p, "ip-10-1-2-3.acme.com") {
+		registerPod(p, prom)
+	}
+	assert.Equal(t, 1, len(prom.kubernetesPods))
+}
+
+func TestDoNotAddPodIfNotonSameNode(t *testing.T) {
+	prom := &Prometheus{Log: testutil.Logger{}}
+
+	p := pod()
+	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
+	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	if podOnNode(p, "ip-10-4-5-6.acme.com") {
+		registerPod(p, prom)
+	}
+	assert.Equal(t, 0, len(prom.kubernetesPods))
+}
+
 func pod() *v1.Pod {
-	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}, Status: &v1.PodStatus{}}
+	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}, Status: &v1.PodStatus{}, Spec: &v1.PodSpec{}}
 	p.Status.PodIP = str("127.0.0.1")
 	p.Metadata.Name = str("myPod")
 	p.Metadata.Namespace = str("default")

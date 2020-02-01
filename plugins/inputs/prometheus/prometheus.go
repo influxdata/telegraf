@@ -29,6 +29,9 @@ type Prometheus struct {
 	// Location of kubernetes config file
 	KubeConfig string
 
+	//
+	KubernetesNode  string         `toml:"kubernetes_node"`
+
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
 	BearerTokenString string `toml:"bearer_token_string"`
@@ -90,6 +93,7 @@ var sampleConfig = `
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
+  # kubernetes_node = ""
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"

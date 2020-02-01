@@ -103,7 +103,7 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 
 			// If the pod is not "ready", there will be no ip associated with it.
 			if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] != "true" ||
-				!podReady(pod.Status.GetContainerStatuses()) {
+				!podReady(pod.Status.GetContainerStatuses()) || !podOnNode(pod, p.KubernetesNode) {
 				continue
 			}
 
@@ -131,6 +131,17 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 		if !cs.GetReady() {
 			return false
 		}
+	}
+	return true
+}
+
+// if kubernetes_node config value is set then check if the pod being watched is on the node
+func podOnNode(pod *corev1.Pod, nodename string) bool {
+	if len(nodename) > 0 {
+		if *pod.Spec.NodeName == nodename {
+			return true
+		}
+		return false
 	}
 	return true
 }
