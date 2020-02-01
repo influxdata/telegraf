@@ -30,7 +30,7 @@ type Prometheus struct {
 	KubeConfig string
 
 	//
-	KubernetesNode  string         `toml:"kubernetes_node"`
+	KubernetesNode string `toml:"kubernetes_node"`
 
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`

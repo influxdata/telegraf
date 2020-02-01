@@ -10,7 +10,6 @@ import (
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 )
 
-
 func TestScrapeURLNoAnnotations(t *testing.T) {
 	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}}
 	p.GetMetadata().Annotations = map[string]string{}
