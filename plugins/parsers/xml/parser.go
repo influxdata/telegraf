@@ -2,7 +2,6 @@ package xml
 
 import (
 	"errors"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -38,7 +37,7 @@ func NewXMLParser(xmlCombineNodes bool,
 		xmlQuery = xmlQuery
 	}
 
-    return &XMLParser{
+    	return &XMLParser{
         TagKeys: tagKeys,  
         CombineNodes: xmlCombineNodes,
         TagNode: xmlTagNode,
@@ -105,7 +104,6 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 
 	nodeText := trimEmptyChars(node.Text())
 	if nodeText != "" {
-		//toTag := isFieldATagCandidate(node.Tag)
 		if p.isFieldATagCandidate(node.Tag) {
 			tags[node.Tag] = node.Text()
 		} else {
@@ -153,18 +151,17 @@ func mergeTwoTagMaps(parent map[string]string, child map[string]string) map[stri
 }
 
 func identifyFieldType(value string) interface{} {
-	temp := []byte(value)
-	
-	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
-	return i
-	} esle if f, err := strconv.ParseFloat(value, 64); err == nil {
-	return f
-	} else if b, err := strconv.ParseBool(value); err == nil {
-	return b
-	} esle {
-	return value
-	}
+        if i, err := strconv.ParseInt(value, 10, 64); err == nil {
+                return i
+        } else if f, err := strconv.ParseFloat(value, 64); err == nil {
+                return f
+        } else if b, err := strconv.ParseBool(value); err == nil {
+                return b
+        } else {
+                return value
+        }
 }
+
 
 func trimEmptyChars(s string) string {
 	text := strings.Trim(s, "\n")
