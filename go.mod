@@ -136,5 +136,3 @@ require (
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/apimachinery v0.17.1 // indirect
 )
-
-replace github.com/influxdata/telegraf/plugins/parsers/xml => /home/yegor.sobolev/telegraf/plugins/parsers/xml
