@@ -154,21 +154,16 @@ func mergeTwoTagMaps(parent map[string]string, child map[string]string) map[stri
 
 func identifyFieldType(value string) interface{} {
 	temp := []byte(value)
-	matched, err := regexp.Match(intExpr, temp)
-	if matched && err == nil {
-		i, err := strconv.ParseInt(value, 10, 64)
-		if err == nil {
-			return i
-		}
-	}
-	matched, err = regexp.Match(floatExpr, temp)
-	if matched && err == nil {
-		f, err := strconv.ParseFloat(value, 64)
-		if err == nil {
-			return f
-		}
-	}
+	
+	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
+	return i
+	} esle if f, err := strconv.ParseFloat(value, 64); err == nil {
+	return f
+	} else if b, err := strconv.ParseBool(value); err == nil {
+	return b
+	} esle {
 	return value
+	}
 }
 
 func trimEmptyChars(s string) string {
