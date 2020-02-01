@@ -2,7 +2,7 @@ package avro
 
 import (
 	"time"
-
+	"encoding/binary"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
@@ -11,20 +11,40 @@ import (
     "github.com/linkedin/goavro"
 )
 
+
 type Parser struct {
+	Measurement 	  string
+	Tags 			  []string
+	Fields 			  []string
+	Timestamp 		  string
 	DefaultTags       map[string]string
 	TimeFunc          func() time.Time
 }
 
+
+
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	codec, err := goavro.NewCodec(`
-        {"namespace": "com.example.plant", "type": "record", "name": "Value", "fields": [{"name": "value", "type": "long"}]}`)
-    
+
+	fmt.Println(p.Measurement)
+	fmt.Println(p.Tags)
+	fmt.Println(p.Fields)
+	fmt.Println(p.Timestamp)
+
+	schemaRegistry := NewSchemaRegistry("http:localhost:8081")
+	
+	schemaId := int(binary.BigEndian.Uint32(buf[1:5]))
+	fmt.Println(schemaId)
+
+	schema, err := schemaRegistry.getSchema(schemaId)
+	if err != nil {
+        fmt.Println(err)
+    }
+	fmt.Println(schema)
+
+	codec, err := goavro.NewCodec(schema)
     if err != nil {
         fmt.Println(err)
     }
-
-	fmt.Println(buf)
 
     // Convert binary Avro data back to native Go form
     native, _, err := codec.NativeFromBinary(buf[5:])
@@ -33,14 +53,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
     }
 
     fmt.Println(native)
-
-    // Convert native Go form to textual Avro data
-    textual, err := codec.TextualFromNative(nil, native)
-    if err != nil {
-        fmt.Println(err)
-    }
-
-    fmt.Println(textual)
 
 	return p.createMeasures(0)
 }
