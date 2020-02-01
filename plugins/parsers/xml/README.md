@@ -10,13 +10,17 @@ This plugin using [etree package](https://github.com/beevik/etree)
   files = [ "data.xml" ]
 
   data_format = "xml"
-  ##  xml_query parameter using XPath query for limits the list of analyzed nodes. Default - "//"
+  ##  xml_query parameter using XPath query for limits the list of 
+  ##  analyzed nodes. Default - "//"
   xml_query = "//Node/"
-    ##  xml_merge_nodes determines whether all extracted keys will be merged into one metric. Default - false
+  ##  xml_merge_nodes determines whether all extracted keys will be 
+  ## merged into one metric. Default - false
   xml_merge_nodes = true
-    ##  if xml_node_to_tag equals "true", the name of the node is recorded in the tags with the key "node_name". Default - false
+  ##  if xml_node_to_tag equals "true", the name of the node is recorded 
+  ##  in the tags with the key "node_name". Default - false
   xml_node_to_tag = true
-  ## Tag keys is an array of keys that should be added as tags.  Matching keys are no longer saved as fields.
+  ## Tag keys is an array of keys that should be added as tags.
+  ## Matching keys are no longer saved as fields.
   tag_keys = [
     "my_tag_1",
     "my_tag_2"
