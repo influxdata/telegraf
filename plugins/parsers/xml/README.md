@@ -38,13 +38,13 @@ For example, if your XML looks like this:
 </VHost>
 ```
 and **xml_merge_nodes = true**, you will get this metric:
-```diff
-+ xml ConnectionsCurrent=0i,ConnectionsTotal=0i
+```
+xml ConnectionsCurrent=0i,ConnectionsTotal=0i
 ```
 therwise, each node will be written in a separate row
-```diff
-+ xml ConnectionsCurrent=0i
-+ xml ConnectionsTotal=0i
+```
+xml ConnectionsCurrent=0i
+xml ConnectionsTotal=0i
 ```
 
 Setting a parameter to false can be useful if your data is combined in one node and declared in its attributes:
