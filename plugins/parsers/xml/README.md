@@ -29,7 +29,7 @@ This plugin using [etree package](https://github.com/beevik/etree)
 
 #### xml_merge_nodes
 
-This determines whether all extracted keys will be merged into one metric.
+This determines whether all extracted keys will be merged into one metric.  
 For example, if your XML looks like this:
 ```xml
 <VHost>
@@ -41,13 +41,13 @@ and **xml_merge_nodes = true**, you will get this metric:
 ```
 xml ConnectionsCurrent=0i,ConnectionsTotal=0i
 ```
-therwise, each node will be written in a separate row
+therwise, each node will be written in a separate row:
 ```
 xml ConnectionsCurrent=0i
 xml ConnectionsTotal=0i
 ```
 
-Setting a parameter to false can be useful if your data is combined in one node and declared in its attributes:
+Setting a parameter to false can be useful, if your data is combined in one node and declared in its attributes:
 ```xml
 <VHost>
   <Host_1 Name="Host" ConnectionsCurrent="0" ConnectionsTotal="0" />
@@ -61,7 +61,7 @@ xml Name="Server",ConnectionsCurrent=0i,ConnectionsTotal=0i
 ```
 
 #### xml_node_to_tag
-This parameter determines whether the node name will be added to the tags.
+This parameter determines whether the node name will be added to the tags.  
 For a previous input example, if **xml_node_to_tag=true**:
 ```
 xml,node_name=Host_1 Name="Host",ConnectionsCurrent=0i,ConnectionsTotal=0i
@@ -70,6 +70,6 @@ xml,node_name=Host_2 Name="Server",ConnectionsCurrent=0i,ConnectionsTotal=0i
 
 ### Metrics
 
-If the node or attribute value contains only *\s*, *\t*, *\r* or *\n* characters, it will be discarded.
-Each value sequentially passes conversion attempts to Int64, Float64 and Boolean using **strconv**. 
+If the node or attribute value contains only *\s*, *\t*, *\r* or *\n* characters, it will be discarded.  
+Each value sequentially passes conversion attempts to Int64, Float64 and Boolean using **strconv**.  
 If the conversion was successful, the result of the conversion is written in the field, otherwise a string is returned.
