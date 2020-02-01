@@ -55,17 +55,17 @@ Setting a parameter to false can be useful if your data is combined in one node 
 </VHost>
 ```
 Output with **xml_merge_nodes = false**:
-```diff
-+ xml Name="Host",ConnectionsCurrent=0i,ConnectionsTotal=0i
-+ xml Name="Server",ConnectionsCurrent=0i,ConnectionsTotal=0i
+```
+xml Name="Host",ConnectionsCurrent=0i,ConnectionsTotal=0i
+xml Name="Server",ConnectionsCurrent=0i,ConnectionsTotal=0i
 ```
 
 #### xml_node_to_tag
 This parameter determines whether the node name will be added to the tags.
 For a previous input example, if **xml_node_to_tag=true**:
-```diff
-+ xml,node_name=Host_1 Name="Host",ConnectionsCurrent=0i,ConnectionsTotal=0i
-+ xml,node_name=Host_2 Name="Server",ConnectionsCurrent=0i,ConnectionsTotal=0i
+```
+xml,node_name=Host_1 Name="Host",ConnectionsCurrent=0i,ConnectionsTotal=0i
+xml,node_name=Host_2 Name="Server",ConnectionsCurrent=0i,ConnectionsTotal=0i
 ```
 
 ### Metrics
