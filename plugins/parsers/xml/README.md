@@ -1,6 +1,6 @@
 # XML
 
-The `xml` data format parses data in [XML] format.
+The `xml` data format parses data in XML format.
 This plugin using [etree package](https://github.com/beevik/etree)
 
 ### Configuration
