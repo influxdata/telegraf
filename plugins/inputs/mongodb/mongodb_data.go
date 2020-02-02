@@ -38,6 +38,7 @@ func NewMongodbData(statLine *StatLine, tags map[string]string) *MongodbData {
 }
 
 var DefaultStats = map[string]string{
+	"uptime_ns":                 "UptimeNanos",
 	"inserts":                   "InsertCnt",
 	"inserts_per_sec":           "Insert",
 	"queries":                   "QueryCnt",
@@ -83,6 +84,15 @@ var DefaultStats = map[string]string{
 	"connections_current":       "CurrentC",
 	"connections_available":     "AvailableC",
 	"connections_total_created": "TotalCreatedC",
+}
+
+var DefaultLatencyStats = map[string]string{
+	"latency_writes_count":   "WriteOpsCnt",
+	"latency_writes":         "WriteLatency",
+	"latency_reads_count":    "ReadOpsCnt",
+	"latency_reads":          "ReadLatency",
+	"latency_commands_count": "CommandOpsCnt",
+	"latency_commands":       "CommandLatency",
 }
 
 var DefaultReplStats = map[string]string{
@@ -228,6 +238,15 @@ func (d *MongodbData) AddDefaultStats() {
 	d.addStat(statLine, DefaultStats)
 	if d.StatLine.NodeType != "" {
 		d.addStat(statLine, DefaultReplStats)
+		d.Tags["node_type"] = d.StatLine.NodeType
+	}
+
+	if d.StatLine.ReadLatency > 0 {
+		d.addStat(statLine, DefaultLatencyStats)
+	}
+
+	if d.StatLine.ReplSetName != "" {
+		d.Tags["rs_name"] = d.StatLine.ReplSetName
 	}
 
 	if d.StatLine.OplogStats != nil {
@@ -246,6 +265,7 @@ func (d *MongodbData) AddDefaultStats() {
 			d.add(key, floatVal)
 		}
 		d.addStat(statLine, WiredTigerExtStats)
+		d.add("page_faults", d.StatLine.FaultsCnt)
 	}
 }
 

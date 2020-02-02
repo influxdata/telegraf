@@ -12,7 +12,7 @@ report those stats already using StatsD protocol if needed.
 # Gather health check statuses from services registered in Consul
 [[inputs.consul]]
   ## Consul server address
-  # address = "localhost"
+  # address = "localhost:8500"
 
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"

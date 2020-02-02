@@ -119,7 +119,14 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 		if !scnr.Scan() {
 			break
 		}
-		metrics, err := ssl.Parse(scnr.Bytes())
+
+		body, err := ssl.decoder.Decode(scnr.Bytes())
+		if err != nil {
+			ssl.Log.Errorf("Unable to decode incoming line: %s", err.Error())
+			continue
+		}
+
+		metrics, err := ssl.Parse(body)
 		if err != nil {
 			ssl.Log.Errorf("Unable to parse incoming line: %s", err.Error())
 			// TODO rate limit
@@ -155,7 +162,12 @@ func (psl *packetSocketListener) listen() {
 			break
 		}
 
-		metrics, err := psl.Parse(buf[:n])
+		body, err := psl.decoder.Decode(buf[:n])
+		if err != nil {
+			psl.Log.Errorf("Unable to decode incoming packet: %s", err.Error())
+		}
+
+		metrics, err := psl.Parse(body)
 		if err != nil {
 			psl.Log.Errorf("Unable to parse incoming packet: %s", err.Error())
 			// TODO rate limit
@@ -174,6 +186,7 @@ type SocketListener struct {
 	ReadTimeout     *internal.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
 	SocketMode      string             `toml:"socket_mode"`
+	ContentEncoding string             `toml:"content_encoding"`
 	tlsint.ServerConfig
 
 	wg sync.WaitGroup
@@ -183,6 +196,7 @@ type SocketListener struct {
 	parsers.Parser
 	telegraf.Accumulator
 	io.Closer
+	decoder internal.ContentDecoder
 }
 
 func (sl *SocketListener) Description() string {
@@ -244,6 +258,10 @@ func (sl *SocketListener) SampleConfig() string {
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 `
 }
 
@@ -264,6 +282,12 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	protocol := spl[0]
 	addr := spl[1]
+
+	var err error
+	sl.decoder, err = internal.NewContentDecoder(sl.ContentEncoding)
+	if err != nil {
+		return err
+	}
 
 	if protocol == "unix" || protocol == "unixpacket" || protocol == "unixgram" {
 		// no good way of testing for "file does not exist".

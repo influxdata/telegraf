@@ -35,6 +35,9 @@ const sampleConfig = `
   ## Only count regular files. Defaults to true.
   regular_only = true
 
+  ## Follow all symlinks while walking the directory tree. Defaults to false.
+  follow_symlinks = false
+
   ## Only count files that are at least this size. If size is
   ## a negative number, only count files that are smaller than the
   ## absolute value of size. Acceptable units are B, KiB, MiB, KB, ...
@@ -48,17 +51,18 @@ const sampleConfig = `
 `
 
 type FileCount struct {
-	Directory   string // deprecated in 1.9
-	Directories []string
-	Name        string
-	Recursive   bool
-	RegularOnly bool
-	Size        internal.Size
-	MTime       internal.Duration `toml:"mtime"`
-	fileFilters []fileFilterFunc
-	globPaths   []globpath.GlobPath
-	Fs          fileSystem
-	Log         telegraf.Logger
+	Directory      string // deprecated in 1.9
+	Directories    []string
+	Name           string
+	Recursive      bool
+	RegularOnly    bool
+	FollowSymlinks bool
+	Size           internal.Size
+	MTime          internal.Duration `toml:"mtime"`
+	fileFilters    []fileFilterFunc
+	globPaths      []globpath.GlobPath
+	Fs             fileSystem
+	Log            telegraf.Logger
 }
 
 func (_ *FileCount) Description() string {
@@ -208,6 +212,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		Callback:             walkFn,
 		PostChildrenCallback: postChildrenFn,
 		Unsorted:             true,
+		FollowSymbolicLinks:  fc.FollowSymlinks,
 		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
 			if os.IsPermission(errors.Cause(err)) {
 				fc.Log.Debug(err)
@@ -292,15 +297,16 @@ func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
 
 func NewFileCount() *FileCount {
 	return &FileCount{
-		Directory:   "",
-		Directories: []string{},
-		Name:        "*",
-		Recursive:   true,
-		RegularOnly: true,
-		Size:        internal.Size{Size: 0},
-		MTime:       internal.Duration{Duration: 0},
-		fileFilters: nil,
-		Fs:          osFS{},
+		Directory:      "",
+		Directories:    []string{},
+		Name:           "*",
+		Recursive:      true,
+		RegularOnly:    true,
+		FollowSymlinks: false,
+		Size:           internal.Size{Size: 0},
+		MTime:          internal.Duration{Duration: 0},
+		fileFilters:    nil,
+		Fs:             osFS{},
 	}
 }
 
