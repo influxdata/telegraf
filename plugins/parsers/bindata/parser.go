@@ -16,7 +16,6 @@ import (
 
 const timeKey = "time"
 const timezone = "UTC"
-const defaultProtocol = "raw"
 
 // Field is ...
 type Field struct {
