@@ -18,20 +18,21 @@ The binary data (record) configuration is shown below, where record's fields are
   ...
 
   data_format = "bindata"
-  bindata_protocol = "raw"
   bindata_endiannes = "be"
   bindata_time_format = "unix"
+  bindata_string_encoding = "UTF-8"
   bindata_fields = [
-    {name="version",type="uint16",offset=0,size=2},
-    {name="time",type="int32",offset=2,size=4},
-    {name="location_latitude",type="float64",offset=6,size=8},
-    {name="location_longitude",type="float64",offset=14,size=8},
-    {name="location_altitude",type="float32",offset=22,size=4},
-    {name="orientation_heading",type="float32",offset=26,size=4},
-    {name="orientation_elevation",type="float32",offset=30,size=4},
-    {name="orientation_bank",type="float32",offset=34,size=4},
-    {name="speed_ground",type="float32",offset=38,size=4},
-    {name="speed_air",type="float32",offset=42,size=4},
+    {name="version",type="uint16"},
+    {name="time",type="int32"},
+    {name="location_latitude",type="float64"},
+    {name="location_longitude",type="float64"},
+    {name="location_altitude",type="float32"},
+    {name="orientation_heading",type="float32"},
+    {name="orientation_elevation",type="float32"},
+    {name="orientation_bank",type="float32"},
+    {name="speed_ground",type="float32"},
+    {name="speed_air",type="float32"},
+    {name="status",type="string",size=7},
   ]
 ```
 
