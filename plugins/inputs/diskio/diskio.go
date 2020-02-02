@@ -148,6 +148,8 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"io_time":          io.IoTime,
 			"weighted_io_time": io.WeightedIO,
 			"iops_in_progress": io.IopsInProgress,
+			"merged_reads":     io.MergedReadCount,
+			"merged_writes":    io.MergedWriteCount,
 		}
 		acc.AddCounter("diskio", fields, tags)
 	}

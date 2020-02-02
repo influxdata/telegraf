@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/soniah/gosnmp"
@@ -82,45 +83,20 @@ var tsc = &testSNMPConnection{
 }
 
 func TestSampleConfig(t *testing.T) {
-	conf := struct {
-		Inputs struct {
-			Snmp []*Snmp
-		}
-	}{}
-	err := toml.Unmarshal([]byte("[[inputs.snmp]]\n"+(*Snmp)(nil).SampleConfig()), &conf)
-	assert.NoError(t, err)
+	conf := inputs.Inputs["snmp"]()
+	err := toml.Unmarshal([]byte(conf.SampleConfig()), conf)
+	require.NoError(t, err)
 
-	s := Snmp{
-		Agents:         []string{"127.0.0.1:161"},
+	expected := &Snmp{
+		Agents:         []string{"udp://127.0.0.1:161"},
 		Timeout:        internal.Duration{Duration: 5 * time.Second},
 		Version:        2,
 		Community:      "public",
 		MaxRepetitions: 10,
 		Retries:        3,
-
-		Name: "system",
-		Fields: []Field{
-			{Name: "hostname", Oid: ".1.0.0.1.1"},
-			{Name: "uptime", Oid: ".1.0.0.1.2"},
-			{Name: "load", Oid: ".1.0.0.1.3"},
-			{Oid: "HOST-RESOURCES-MIB::hrMemorySize"},
-		},
-		Tables: []Table{
-			{
-				Name:        "remote_servers",
-				InheritTags: []string{"hostname"},
-				Fields: []Field{
-					{Name: "server", Oid: ".1.0.0.0.1.0", IsTag: true},
-					{Name: "connections", Oid: ".1.0.0.0.1.1"},
-					{Name: "latency", Oid: ".1.0.0.0.1.2"},
-				},
-			},
-			{
-				Oid: "HOST-RESOURCES-MIB::hrNetworkTable",
-			},
-		},
+		Name:           "snmp",
 	}
-	assert.Equal(t, &s, conf.Inputs.Snmp[0])
+	require.Equal(t, expected, conf)
 }
 
 func TestFieldInit(t *testing.T) {
@@ -256,7 +232,7 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
-		Agents:    []string{"1.2.3.4:567", "1.2.3.4"},
+		Agents:    []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
 		Timeout:   internal.Duration{Duration: 3 * time.Second},
 		Retries:   4,
 		Version:   2,
@@ -278,6 +254,13 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	require.NoError(t, err)
 	gs = gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
+	assert.EqualValues(t, 161, gs.Port)
+	assert.Equal(t, "udp", gs.Transport)
+
+	gsc, err = s.getConnection(2)
+	require.NoError(t, err)
+	gs = gsc.(gosnmpWrapper)
+	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
 }

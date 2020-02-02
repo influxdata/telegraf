@@ -1411,7 +1411,9 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 }
 
 func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
-	c := &parsers.Config{}
+	c := &parsers.Config{
+		JSONStrict: true,
+	}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1508,6 +1510,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				c.JSONTimezone = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_strict"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.JSONStrict, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -1808,6 +1822,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "json_time_format")
 	delete(tbl.Fields, "json_time_key")
 	delete(tbl.Fields, "json_timezone")
+	delete(tbl.Fields, "json_strict")
 	delete(tbl.Fields, "data_type")
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")

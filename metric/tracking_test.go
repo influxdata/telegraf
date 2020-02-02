@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -28,6 +29,43 @@ type deliveries struct {
 
 func (d *deliveries) onDelivery(info telegraf.DeliveryInfo) {
 	d.Info[info.ID()] = info
+}
+
+func TestNewTrackingID(t *testing.T) {
+	var wg sync.WaitGroup
+	var a [100000]telegraf.TrackingID
+	var b [100000]telegraf.TrackingID
+
+	wg.Add(2)
+	go func() {
+		for i := 0; i < len(a); i++ {
+			a[i] = newTrackingID()
+		}
+		wg.Done()
+	}()
+	go func() {
+		for i := 0; i < len(b); i++ {
+			b[i] = newTrackingID()
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+
+	// Find any duplicate TrackingIDs in arrays a and b. Arrays must be sorted in increasing order.
+	for i, j := 0, 0; i < len(a) && j < len(b); {
+		if a[i] == b[j] {
+			t.Errorf("Duplicate TrackingID: a[%d]==%d and b[%d]==%d.", i, a[i], j, b[j])
+			break
+		}
+		if a[i] > b[j] {
+			j++
+			continue
+		}
+		if a[i] < b[j] {
+			i++
+			continue
+		}
+	}
 }
 
 func TestTracking(t *testing.T) {

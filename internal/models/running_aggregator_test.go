@@ -1,7 +1,6 @@
 package models
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -246,7 +245,7 @@ type TestAggregator struct {
 func (t *TestAggregator) Description() string  { return "" }
 func (t *TestAggregator) SampleConfig() string { return "" }
 func (t *TestAggregator) Reset() {
-	atomic.StoreInt64(&t.sum, 0)
+	t.sum = 0
 }
 
 func (t *TestAggregator) Push(acc telegraf.Accumulator) {
@@ -259,7 +258,7 @@ func (t *TestAggregator) Push(acc telegraf.Accumulator) {
 func (t *TestAggregator) Add(in telegraf.Metric) {
 	for _, v := range in.Fields() {
 		if vi, ok := v.(int64); ok {
-			atomic.AddInt64(&t.sum, vi)
+			t.sum += vi
 		}
 	}
 }
