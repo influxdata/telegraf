@@ -28,11 +28,11 @@ type (
 	Kafka struct {
 		Brokers          []string
 		Topic            string
-		ClientID         string        `toml:"client_id"`
-		TopicSuffix      TopicSuffix   `toml:"topic_suffix"`
-		CustomRouting    CustomRouting `toml:"custom_routing"`
-		RoutingTag       string        `toml:"routing_tag"`
-		RoutingKey       string        `toml:"routing_key"`
+		ClientID         string          `toml:"client_id"`
+		TopicSuffix      TopicSuffix     `toml:"topic_suffix"`
+		CustomRouting    []CustomRouting `toml:"custom_routing"`
+		RoutingTag       string          `toml:"routing_tag"`
+		RoutingKey       string          `toml:"routing_key"`
 		CompressionCodec int
 		RequiredAcks     int
 		MaxRetry         int
@@ -240,39 +240,49 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 		default:
 			topicName = k.Topic
 		}
-	} else if k.CustomRouting.Method != "" {
-		switch k.CustomRouting.Method {
-		// This logic handles routing based on measurement name
-		case "measurement":
-			switch k.CustomRouting.MatchType {
-			case "substring":
-				for _, v := range k.CustomRouting.MatchValue {
-					if strings.Contains(metric.Name(), v) {
-						topicName = k.CustomRouting.Topic
+	} else if len(k.CustomRouting) != 0 {
+		for _, rule := range k.CustomRouting {
+			switch rule.Method {
+			// This logic handles routing based on measurement name
+			case "measurement":
+				switch rule.MatchType {
+				case "substring":
+					for _, v := range rule.MatchValue {
+						if strings.Contains(metric.Name(), v) {
+							topicName = rule.Topic
+						}
+					}
+				case "full_match":
+					for _, v := range rule.MatchValue {
+						if metric.Name() == v {
+							topicName = rule.Topic
+						}
 					}
 				}
-			case "full_match":
-				for _, v := range k.CustomRouting.MatchValue {
-					if metric.Name() == v {
-						topicName = k.CustomRouting.Topic
+
+			// This logic should handle routing based on tags
+			case "tags":
+				switch rule.MatchType {
+				case "substring":
+					for _, v := range rule.MatchValue {
+						if strings.Contains(metric.Name(), v) {
+							topicName = rule.Topic
+						}
+					}
+				case "full_match":
+					for _, v := range rule.MatchValue {
+						if topicName == v {
+							topicName = rule.Topic
+						}
 					}
 				}
 			}
-		// This logic should handle routing based on tags
-		// case "tags":
-		// 	switch k.CustomRouting.MatchType {
-		// 	case "substring":
-		// 		if strings.Contains(metric.Name(), k.CustomRouting.MatchValue) {
-		// 			topicName = k.CustomRouting.Topic
-		// 		}
-		// 	case "full_match":
-		// 		if topicName == k.CustomRouting.MatchValue {
-		// 			topicName = k.CustomRouting.Topic
-		// 		}
-		// }
-		default:
+		}
+
+		if topicName == "" {
 			topicName = k.Topic
 		}
+
 	} else {
 		topicName = k.Topic
 	}
