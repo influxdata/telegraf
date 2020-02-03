@@ -28,10 +28,11 @@ type (
 	Kafka struct {
 		Brokers          []string
 		Topic            string
-		ClientID         string      `toml:"client_id"`
-		TopicSuffix      TopicSuffix `toml:"topic_suffix"`
-		RoutingTag       string      `toml:"routing_tag"`
-		RoutingKey       string      `toml:"routing_key"`
+		ClientID         string        `toml:"client_id"`
+		TopicSuffix      TopicSuffix   `toml:"topic_suffix"`
+		CustomRouting    CustomRouting `toml:"custom_routing"`
+		RoutingTag       string        `toml:"routing_tag"`
+		RoutingKey       string        `toml:"routing_key"`
 		CompressionCodec int
 		RequiredAcks     int
 		MaxRetry         int
@@ -65,6 +66,13 @@ type (
 		Method    string   `toml:"method"`
 		Keys      []string `toml:"keys"`
 		Separator string   `toml:"separator"`
+	}
+	CustomRouting struct {
+		Method       string   `toml:"method"`
+		MatchType    string   `toml:"match_type"`
+		MatchValue   []string `toml:"match_value"`
+		Topic        string   `toml:"topic"`
+		RoutingArray map[string]bool
 	}
 )
 
@@ -257,12 +265,16 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 		case "measurement":
 			switch k.CustomRouting.MatchType {
 			case "substring":
-				if strings.Contains(metric.Name(), k.CustomRouting.MatchValue) {
-					topicName = k.CustomRouting.Topic
+				for _, v := range k.CustomRouting.MatchValue {
+					if strings.Contains(metric.Name(), v) {
+						topicName = k.CustomRouting.Topic
+					}
 				}
 			case "full_match":
-				if topicName == k.CustomRouting.MatchValue {
-					topicName = k.CustomRouting.Topic
+				for _, v := range k.CustomRouting.MatchValue {
+					if metric.Name() == v {
+						topicName = k.CustomRouting.Topic
+					}
 				}
 			}
 		// This logic should handle routing based on tags
