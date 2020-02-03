@@ -153,7 +153,7 @@ func TestParkedProcess(t *testing.T) {
 				"zombies":  0,
 			},
 			time.Unix(0, 0),
-			telegraf.Untyped,
+			telegraf.Gauge,
 		),
 	}
 	actual := acc.GetTelegrafMetrics()

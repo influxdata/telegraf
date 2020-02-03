@@ -16,6 +16,7 @@ func TestAddNonReplStats(t *testing.T) {
 		&StatLine{
 			StorageEngine:    "",
 			Time:             time.Now(),
+			UptimeNanos:      0,
 			Insert:           0,
 			Query:            0,
 			Update:           0,
@@ -99,6 +100,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 			PagesQueuedForEviction:    0,
 			ServerEvictingPages:       0,
 			WorkerThreadEvictingPages: 0,
+			FaultsCnt:                 204,
 		},
 		tags,
 	)
@@ -115,6 +117,8 @@ func TestAddWiredTigerStats(t *testing.T) {
 	for key := range WiredTigerExtStats {
 		assert.True(t, acc.HasFloatField("mongodb", key) || acc.HasInt64Field("mongodb", key), key)
 	}
+
+	assert.True(t, acc.HasInt64Field("mongodb", "page_faults"))
 }
 
 func TestAddShardStats(t *testing.T) {
@@ -134,6 +138,29 @@ func TestAddShardStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range DefaultShardStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
+func TestAddLatencyStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			CommandOpsCnt:  73,
+			CommandLatency: 364,
+			ReadOpsCnt:     113,
+			ReadLatency:    201,
+			WriteOpsCnt:    7,
+			WriteLatency:   55,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key := range DefaultLatencyStats {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
@@ -184,11 +211,14 @@ func TestStateTag(t *testing.T) {
 			Query:         0,
 			NodeType:      "PRI",
 			NodeState:     "PRIMARY",
+			ReplSetName:   "rs1",
 		},
 		tags,
 	)
 
 	stateTags := make(map[string]string)
+	stateTags["node_type"] = "PRI"
+	stateTags["rs_name"] = "rs1"
 
 	var acc testutil.Accumulator
 
@@ -235,6 +265,7 @@ func TestStateTag(t *testing.T) {
 		"resident_megabytes":        int64(0),
 		"updates":                   int64(0),
 		"updates_per_sec":           int64(0),
+		"uptime_ns":                 int64(0),
 		"vsize_megabytes":           int64(0),
 		"ttl_deletes":               int64(0),
 		"ttl_deletes_per_sec":       int64(0),
