@@ -222,26 +222,7 @@ func ValidateTopicSuffixMethod(method string) error {
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 	var topicName string
-	// configuration before change
-	// switch k.TopicSuffix.Method {
-	// case "measurement":
-	// 	topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
-	// case "tags":
-	// 	var topicNameComponents []string
-	// 	topicNameComponents = append(topicNameComponents, k.Topic)
-	// 	for _, tag := range k.TopicSuffix.Keys {
-	// 		tagValue := metric.Tags()[tag]
-	// 		if tagValue != "" {
-	// 			topicNameComponents = append(topicNameComponents, tagValue)
-	// 		}
-	// 	}
-	// 	topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
-	// default:
-	// 	topicName = k.Topic
-	// }
-	// return topicName
 
-	// My previous configuration
 	if k.TopicSuffix.Method != "" {
 		switch k.TopicSuffix.Method {
 		case "measurement":
