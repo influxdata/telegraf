@@ -60,7 +60,7 @@ type InfluxDBListener struct {
 	handler *influx.MetricHandler
 	parser  *influx.Parser
 	acc     telegraf.Accumulator
-	spool    sync.Pool
+	spool   sync.Pool
 
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
