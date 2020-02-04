@@ -52,7 +52,7 @@ all metrics or adding a tag to all metrics that pass through.
 ### Aggregator
 Aggregator plugins, on the other hand, are a bit more complicated. Aggregators
 are typically for emitting new _aggregate_ metrics, such as a running mean,
-minimum, maximum, quantiles, or standard deviation. For this reason, all _aggregator_
+minimum, maximum, or standard deviation. For this reason, all _aggregator_
 plugins are configured with a `period`. The `period` is the size of the window
 of metrics that each _aggregate_ represents. In other words, the emitted
 _aggregate_ metric will be the aggregated value of the past `period` seconds.
