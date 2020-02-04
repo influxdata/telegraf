@@ -68,11 +68,10 @@ type (
 		Separator string   `toml:"separator"`
 	}
 	CustomRouting struct {
-		Method       string   `toml:"method"`
-		MatchType    string   `toml:"match_type"`
-		MatchValue   []string `toml:"match_value"`
-		Topic        string   `toml:"topic"`
-		RoutingArray map[string]bool
+		Method     string   `toml:"method"`
+		MatchType  string   `toml:"match_type"`
+		MatchValue []string `toml:"match_value"`
+		Topic      string   `toml:"topic"`
 	}
 )
 
@@ -241,6 +240,8 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 			topicName = k.Topic
 		}
 	} else if len(k.CustomRouting) != 0 {
+		//This label is used to break out of rule evaluation after finding a matching rule.
+	ruleEvaluation:
 		for _, rule := range k.CustomRouting {
 			switch rule.Method {
 			// This logic handles routing based on measurement name
@@ -250,16 +251,19 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 					for _, v := range rule.MatchValue {
 						if strings.Contains(metric.Name(), v) {
 							topicName = rule.Topic
+							break ruleEvaluation
 						}
 					}
 				case "full_match":
 					for _, v := range rule.MatchValue {
 						if metric.Name() == v {
 							topicName = rule.Topic
+							break ruleEvaluation
 						}
 					}
 				}
 
+			// TODO: route on tags here.
 			// This logic should handle routing based on tags
 			case "tags":
 				switch rule.MatchType {
@@ -267,23 +271,23 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 					for _, v := range rule.MatchValue {
 						if strings.Contains(metric.Name(), v) {
 							topicName = rule.Topic
+							break ruleEvaluation
 						}
 					}
 				case "full_match":
 					for _, v := range rule.MatchValue {
 						if topicName == v {
 							topicName = rule.Topic
+							break ruleEvaluation
 						}
 					}
 				}
 			}
 		}
 
-		if topicName == "" {
-			topicName = k.Topic
-		}
+	}
 
-	} else {
+	if topicName == "" {
 		topicName = k.Topic
 	}
 

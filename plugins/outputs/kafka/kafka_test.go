@@ -16,6 +16,11 @@ type topicSuffixTestpair struct {
 	expectedTopic string
 }
 
+type RoutingTestPair struct {
+	routingRule   CustomRouting
+	expectedTopic string
+}
+
 func TestConnectAndWrite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -79,6 +84,39 @@ func TestTopicSuffixes(t *testing.T) {
 		k := &Kafka{
 			Topic:       topic,
 			TopicSuffix: topicSuffix,
+		}
+
+		topic := k.GetTopicName(metric)
+		require.Equal(t, expectedTopic, topic)
+	}
+}
+func TestKafkaRouting(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	topic := "Test"
+	metric := testutil.TestMetric(1)
+	metric.SetName("test_measurement_1")
+
+	var testcases = []RoutingTestPair{
+		// This ensures empty separator is okay
+		{CustomRouting{Method: "measurement", MatchType: "full_match", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_1"},
+			"measurement_topic_1"},
+		{CustomRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "measurement_topic_2"},
+			"measurement_topic_2"},
+		// This ensures backward compatibility
+		{CustomRouting{},
+			"Test"},
+	}
+
+	for _, testcase := range testcases {
+		customRouting := testcase.routingRule
+		expectedTopic := testcase.expectedTopic
+
+		k := &Kafka{
+			Topic:         topic,
+			CustomRouting: []CustomRouting{customRouting},
 		}
 
 		topic := k.GetTopicName(metric)
