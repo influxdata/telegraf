@@ -100,7 +100,7 @@ require (
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
 	github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f
 	github.com/prometheus/common v0.2.0
-	github.com/safchain/ethtool v0.0.0-20190326074333-42ed695e3de8
+	github.com/safchain/ethtool v0.0.0-20200128171343-ef7e7c9c2763
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/shirou/gopsutil v2.19.11+incompatible
