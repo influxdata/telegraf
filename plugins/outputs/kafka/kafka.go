@@ -137,12 +137,18 @@ var sampleConfig = `
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
-  # TODO: Explain the configuration here
   ## Send measurements whose measurement names contain foo, to the bar topic.
   # [outputs.kafka.custom_routing]
   #		method = "measurement"
   #		matchtype = "substring"
   #		matchvalue = "foo"
+  #		topic = "bar"
+
+  ## Send measurements whose measurement names is an exact match to match value to the bar topic.
+  # [outputs.kafka.custom_routing]
+  #		method = "measurement"
+  #		matchtype = "exact_match"
+  #		matchvalue = "test_foo"
   #		topic = "bar"
 
   ## Telegraf tag to use as a routing key
@@ -254,29 +260,9 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 							break ruleEvaluation
 						}
 					}
-				case "full_match":
+				case "exact_match":
 					for _, v := range rule.MatchValue {
 						if metric.Name() == v {
-							topicName = rule.Topic
-							break ruleEvaluation
-						}
-					}
-				}
-
-			// TODO: route on tags here.
-			// This logic should handle routing based on tags
-			case "tags":
-				switch rule.MatchType {
-				case "substring":
-					for _, v := range rule.MatchValue {
-						if strings.Contains(metric.Name(), v) {
-							topicName = rule.Topic
-							break ruleEvaluation
-						}
-					}
-				case "full_match":
-					for _, v := range rule.MatchValue {
-						if topicName == v {
 							topicName = rule.Topic
 							break ruleEvaluation
 						}
@@ -459,7 +445,6 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	// TODO: build a map of values containing measurement names, from the config, to route based off of here
 
 	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {

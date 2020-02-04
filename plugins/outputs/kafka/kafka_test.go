@@ -101,7 +101,7 @@ func TestKafkaRouting(t *testing.T) {
 
 	var testcases = []RoutingTestPair{
 		// This ensures empty separator is okay
-		{CustomRouting{Method: "measurement", MatchType: "full_match", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_1"},
+		{CustomRouting{Method: "measurement", MatchType: "exact_match", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_1"},
 			"measurement_topic_1"},
 		{CustomRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "measurement_topic_2"},
 			"measurement_topic_2"},

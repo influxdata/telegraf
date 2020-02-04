@@ -46,6 +46,20 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
+  ## Send measurements whose measurement name contains foo to the bar topic.
+  # [outputs.kafka.custom_routing]
+  #		method = "measurement"
+  #		matchtype = "substring"
+  #		matchvalue = ["foo"]
+  #		topic = "bar"
+
+  ## Send measurements whose measurement names is an exact match to match value to the configured topic.
+  # [outputs.kafka.custom_routing]
+  #		method = "measurement"
+  #		matchtype = "exact_match"
+  #		matchvalue = ["foobar"]
+  #		topic = "foobar_topic"
+
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
