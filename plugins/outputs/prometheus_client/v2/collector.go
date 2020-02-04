@@ -65,6 +65,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.Lock()
 	defer c.Unlock()
 
+	// Expire metrics, doing this on Collect ensure metrics are removed even if no
+	// new metrics are added to the output.
+	if c.expireDuration != 0 {
+		c.coll.Expire(time.Now(), c.expireDuration)
+	}
+
 	for _, family := range c.coll.GetProto() {
 		for _, metric := range family.Metric {
 			ch <- &Metric{family: family, metric: metric}
@@ -80,8 +86,11 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 		c.coll.Add(metric)
 	}
 
+	// Expire metrics, doing this on Add ensure metrics are removed even if no
+	// one is querying the data.
 	if c.expireDuration != 0 {
 		c.coll.Expire(time.Now(), c.expireDuration)
 	}
+
 	return nil
 }
