@@ -111,6 +111,42 @@ func appendErr(errs, err error) error {
 	return fmt.Errorf("%s; %s", errs.Error(), err.Error())
 }
 
+func (p *Parser) StartParse(input []byte) {
+	p.machine.SetData(input)
+}
+
+func (p *Parser) NextMetric() (telegraf.Metric, error) {
+	for {
+		err := p.machine.Next()
+		if err == EOF {
+			return nil, err
+		}
+
+		if err != nil {
+			return nil, &ParseError{
+				Offset:     p.machine.Position(),
+				LineOffset: p.machine.LineOffset(),
+				LineNumber: p.machine.LineNumber(),
+				Column:     p.machine.Column(),
+				msg:        err.Error(),
+				buf:        string(p.machine.data),
+			}
+		}
+
+		metric, err := p.handler.Metric()
+		if err != nil {
+			return nil, err
+		}
+
+		if metric == nil {
+			continue
+		}
+
+		p.applyDefaultTagsSingle(metric)
+		return metric, nil
+	}
+}
+
 // EagerParse continues parsing the input for metrics despite encountering an error.
 func (p *Parser) EagerParse(input []byte) ([]telegraf.Metric, error) {
 	p.Lock()
@@ -178,10 +214,14 @@ func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
 	}
 
 	for _, m := range metrics {
-		for k, v := range p.DefaultTags {
-			if !m.HasTag(k) {
-				m.AddTag(k, v)
-			}
+		p.applyDefaultTagsSingle(m)
+	}
+}
+
+func (p *Parser) applyDefaultTagsSingle(metric telegraf.Metric) {
+	for k, v := range p.DefaultTags {
+		if !metric.HasTag(k) {
+			metric.AddTag(k, v)
 		}
 	}
 }

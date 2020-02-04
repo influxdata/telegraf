@@ -849,3 +849,46 @@ func TestParserErrorString(t *testing.T) {
 		})
 	}
 }
+
+func TestNextMetric(t *testing.T) {
+	for _, tt := range ptests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := NewMetricHandler()
+			handler.SetTimeFunc(DefaultTime)
+			if tt.timeFunc != nil {
+				handler.SetTimeFunc(tt.timeFunc)
+			}
+			if tt.precision > 0 {
+				handler.SetTimePrecision(tt.precision)
+			}
+			parser := NewParser(handler)
+
+			parser.StartParse(tt.input)
+
+			var metric telegraf.Metric
+			var err error
+			var metrics []telegraf.Metric
+			for {
+				metric, err = parser.NextMetric()
+				if err == EOF {
+					err = nil
+					break
+				}
+				if err != nil {
+					break
+				}
+				metrics = append(metrics, metric)
+			}
+
+			require.Equal(t, tt.err, err)
+
+			require.Equal(t, len(tt.metrics), len(metrics))
+			for i, expected := range tt.metrics {
+				require.Equal(t, expected.Name(), metrics[i].Name())
+				require.Equal(t, expected.Tags(), metrics[i].Tags())
+				require.Equal(t, expected.Fields(), metrics[i].Fields())
+				require.Equal(t, expected.Time(), metrics[i].Time())
+			}
+		})
+	}
+}
