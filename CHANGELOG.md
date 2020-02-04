@@ -52,6 +52,7 @@
 - [#5744](https://github.com/influxdata/telegraf/issues/5744): Fix kibana input with Kibana versions greater than 6.4.
 - [#6960](https://github.com/influxdata/telegraf/issues/6960): Fix duplicate TrackingIDs can be returned in queue consumer plugins.
 - [#6913](https://github.com/influxdata/telegraf/issues/6913): Support up to 4096 stats in the ethtool input.
+- [#6973](https://github.com/influxdata/telegraf/issues/6973): Expire metrics on query in addition to on add.
 
 ## v1.13.2 [2020-01-21]
 
