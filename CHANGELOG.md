@@ -45,6 +45,13 @@
 - [#6397](https://github.com/influxdata/telegraf/issues/6397): Fix conversion to floats in AzureDBResourceStats query in the sqlserver input.
 - [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
 
+## v1.13.3 [unreleased]
+
+#### Bugfixes
+
+- [#5744](https://github.com/influxdata/telegraf/issues/5744): Fix kibana input with Kibana versions greater than 6.4.
+- [#6960](https://github.com/influxdata/telegraf/issues/6960): Fix duplicate TrackingIDs can be returned in queue consumer plugins.
+
 ## v1.13.2 [2020-01-21]
 
 #### Bugfixes
@@ -56,7 +63,6 @@
 - [#6619](https://github.com/influxdata/telegraf/issues/6619): Change logic to allow recording of device fields when attributes is false.
 - [#6903](https://github.com/influxdata/telegraf/issues/6903): Do not add invalid timestamps to kafka messages.
 - [#6906](https://github.com/influxdata/telegraf/issues/6906): Fix json_strict option and set default of true.
-- [#5744](https://github.com/influxdata/telegraf/issues/5744): Fix kibana input with Kibana versions greater than 6.4.
 
 ## v1.13.1 [2020-01-08]
 
