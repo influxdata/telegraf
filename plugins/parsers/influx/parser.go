@@ -3,6 +3,7 @@ package influx
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 
@@ -17,6 +18,7 @@ var (
 	ErrNoMetric = errors.New("no metric in line")
 )
 
+// ParseError indicates a error in the parsing of the text.
 type ParseError struct {
 	Offset     int
 	LineOffset int
@@ -38,6 +40,8 @@ func (e *ParseError) Error() string {
 	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.msg, e.LineNumber, e.Column, buffer)
 }
 
+// Parser is an InfluxDB Line Protocol parser that implements the
+// parsers.Parser interface.
 type Parser struct {
 	DefaultTags map[string]string
 
@@ -60,6 +64,10 @@ func NewSeriesParser(handler *MetricHandler) *Parser {
 		machine: NewSeriesMachine(handler),
 		handler: handler,
 	}
+}
+
+func (h *Parser) SetTimeFunc(f TimeFunc) {
+	h.handler.SetTimeFunc(f)
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
@@ -103,94 +111,6 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	return metrics, nil
 }
 
-func appendErr(errs, err error) error {
-	if errs == nil {
-		return err
-	}
-
-	return fmt.Errorf("%s; %s", errs.Error(), err.Error())
-}
-
-func (p *Parser) StartParse(input []byte) {
-	p.machine.SetData(input)
-}
-
-func (p *Parser) NextMetric() (telegraf.Metric, error) {
-	for {
-		err := p.machine.Next()
-		if err == EOF {
-			return nil, err
-		}
-
-		if err != nil {
-			return nil, &ParseError{
-				Offset:     p.machine.Position(),
-				LineOffset: p.machine.LineOffset(),
-				LineNumber: p.machine.LineNumber(),
-				Column:     p.machine.Column(),
-				msg:        err.Error(),
-				buf:        string(p.machine.data),
-			}
-		}
-
-		metric, err := p.handler.Metric()
-		if err != nil {
-			return nil, err
-		}
-
-		if metric == nil {
-			continue
-		}
-
-		p.applyDefaultTagsSingle(metric)
-		return metric, nil
-	}
-}
-
-// EagerParse continues parsing the input for metrics despite encountering an error.
-func (p *Parser) EagerParse(input []byte) ([]telegraf.Metric, error) {
-	p.Lock()
-	defer p.Unlock()
-	metrics := make([]telegraf.Metric, 0)
-	p.machine.SetData(input)
-
-	var retErr error
-
-	for {
-		err := p.machine.Next()
-		if err == EOF {
-			break
-		}
-
-		if err != nil {
-			retErr = appendErr(retErr, &ParseError{
-				Offset:     p.machine.Position(),
-				LineOffset: p.machine.LineOffset(),
-				LineNumber: p.machine.LineNumber(),
-				Column:     p.machine.Column(),
-				msg:        err.Error(),
-				buf:        string(input),
-			})
-			continue
-		}
-
-		metric, err := p.handler.Metric()
-		if err != nil {
-			retErr = appendErr(retErr, err)
-			continue
-		}
-
-		if metric == nil {
-			continue
-		}
-
-		metrics = append(metrics, metric)
-	}
-
-	p.applyDefaultTags(metrics)
-	return metrics, retErr
-}
-
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
@@ -224,4 +144,81 @@ func (p *Parser) applyDefaultTagsSingle(metric telegraf.Metric) {
 			metric.AddTag(k, v)
 		}
 	}
+}
+
+// StreamParser is an InfluxDB Line Protocol parser.  It is not safe for
+// concurrent use in multiple goroutines.
+type StreamParser struct {
+	machine *streamMachine
+	handler *MetricHandler
+}
+
+func NewStreamParser(r io.Reader) *StreamParser {
+	handler := NewMetricHandler()
+	return &StreamParser{
+		machine: NewStreamMachine(r, handler),
+		handler: handler,
+	}
+}
+
+// SetTimeFunc changes the function used to determine the time of metrics
+// without a timestamp.  The default TimeFunc is time.Now.  Useful mostly for
+// testing, or perhaps if you want all metrics to have the same timestamp.
+func (h *StreamParser) SetTimeFunc(f TimeFunc) {
+	h.handler.SetTimeFunc(f)
+}
+
+// Next parses the next item from the stream.  You can repeat calls to this
+// function until it returns EOF.
+func (p *StreamParser) Next() (telegraf.Metric, error) {
+	err := p.machine.Next()
+	if err == EOF {
+		return nil, EOF
+	}
+
+	if err != nil {
+		p.handler.Reset()
+		return nil, &ParseError{
+			Offset:     p.machine.Position(),
+			LineOffset: p.machine.LineOffset(),
+			LineNumber: p.machine.LineNumber(),
+			Column:     p.machine.Column(),
+			msg:        err.Error(),
+			buf:        p.machine.LineText(),
+		}
+	}
+
+	metric, err := p.handler.Metric()
+	if err != nil {
+		p.handler.Reset()
+		return nil, err
+	}
+
+	return metric, nil
+}
+
+// Position returns the current byte offset into the data.
+func (p *StreamParser) Position() int {
+	return p.machine.Position()
+}
+
+// LineOffset returns the byte offset of the current line.
+func (p *StreamParser) LineOffset() int {
+	return p.machine.LineOffset()
+}
+
+// LineNumber returns the current line number.  Lines are counted based on the
+// regular expression `\r?\n`.
+func (p *StreamParser) LineNumber() int {
+	return p.machine.LineNumber()
+}
+
+// Column returns the current column.
+func (p *StreamParser) Column() int {
+	return p.machine.Column()
+}
+
+// LineText returns the text of the current line that has been parsed so far.
+func (p *StreamParser) LineText() string {
+	return p.machine.LineText()
 }

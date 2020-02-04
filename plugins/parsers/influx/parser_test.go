@@ -1,6 +1,7 @@
 package influx
 
 import (
+	"bytes"
 	"strconv"
 	"strings"
 	"testing"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,12 +25,11 @@ var DefaultTime = func() time.Time {
 }
 
 var ptests = []struct {
-	name      string
-	input     []byte
-	timeFunc  func() time.Time
-	precision time.Duration
-	metrics   []telegraf.Metric
-	err       error
+	name     string
+	input    []byte
+	timeFunc func() time.Time
+	metrics  []telegraf.Metric
+	err      error
 }{
 	{
 		name:  "minimal",
@@ -495,7 +496,7 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "no timestamp full precision",
+		name:  "no timestamp",
 		input: []byte("cpu value=42"),
 		timeFunc: func() time.Time {
 			return time.Unix(42, 123456789)
@@ -509,27 +510,6 @@ var ptests = []struct {
 						"value": 42.0,
 					},
 					time.Unix(42, 123456789),
-				),
-			),
-		},
-		err: nil,
-	},
-	{
-		name:  "no timestamp partial precision",
-		input: []byte("cpu value=42"),
-		timeFunc: func() time.Time {
-			return time.Unix(42, 123456789)
-		},
-		precision: 1 * time.Millisecond,
-		metrics: []telegraf.Metric{
-			Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"value": 42.0,
-					},
-					time.Unix(42, 123000000),
 				),
 			),
 		},
@@ -651,62 +631,13 @@ func TestParser(t *testing.T) {
 	for _, tt := range ptests {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := NewMetricHandler()
-			handler.SetTimeFunc(DefaultTime)
-			if tt.timeFunc != nil {
-				handler.SetTimeFunc(tt.timeFunc)
-			}
-			if tt.precision > 0 {
-				handler.SetTimePrecision(tt.precision)
-			}
 			parser := NewParser(handler)
+			parser.SetTimeFunc(DefaultTime)
+			if tt.timeFunc != nil {
+				parser.SetTimeFunc(tt.timeFunc)
+			}
 
 			metrics, err := parser.Parse(tt.input)
-			require.Equal(t, tt.err, err)
-
-			require.Equal(t, len(tt.metrics), len(metrics))
-			for i, expected := range tt.metrics {
-				require.Equal(t, expected.Name(), metrics[i].Name())
-				require.Equal(t, expected.Tags(), metrics[i].Tags())
-				require.Equal(t, expected.Fields(), metrics[i].Fields())
-				require.Equal(t, expected.Time(), metrics[i].Time())
-			}
-		})
-	}
-}
-
-func TestEagerParser(t *testing.T) {
-	partialInput := []byte(`cpu,host=a value1=1
-cpu,host=b value1=1,value2=+Inf,value3=3
-cpu,host=c value1=1`)
-
-	metrics, err := NewParser(NewMetricHandler()).EagerParse(partialInput)
-
-	require.Equal(t,
-		&ParseError{
-			Offset:     47,
-			LineOffset: 20,
-			LineNumber: 2,
-			Column:     28,
-			msg:        "expected field",
-			buf:        "cpu,host=a value1=1\ncpu,host=b value1=1,value2=+Inf,value3=3\ncpu,host=c value1=1",
-		},
-		err)
-	require.Equal(t, 2, len(metrics))
-
-	// Ensure old behavior still works
-	for _, tt := range ptests {
-		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			handler.SetTimeFunc(DefaultTime)
-			if tt.timeFunc != nil {
-				handler.SetTimeFunc(tt.timeFunc)
-			}
-			if tt.precision > 0 {
-				handler.SetTimePrecision(tt.precision)
-			}
-			parser := NewParser(handler)
-
-			metrics, err := parser.EagerParse(tt.input)
 			require.Equal(t, tt.err, err)
 
 			require.Equal(t, len(tt.metrics), len(metrics))
@@ -734,14 +665,41 @@ func BenchmarkParser(b *testing.B) {
 	}
 }
 
+func TestStreamParser(t *testing.T) {
+	for _, tt := range ptests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := bytes.NewBuffer(tt.input)
+			parser := NewStreamParser(r)
+			parser.SetTimeFunc(DefaultTime)
+			if tt.timeFunc != nil {
+				parser.SetTimeFunc(tt.timeFunc)
+			}
+
+			var i int
+			for {
+				m, err := parser.Next()
+				if err != nil {
+					if err == EOF {
+						break
+					}
+					require.Equal(t, tt.err, err)
+					break
+				}
+
+				testutil.RequireMetricEqual(t, tt.metrics[i], m)
+				i++
+			}
+		})
+	}
+}
+
 func TestSeriesParser(t *testing.T) {
 	var tests = []struct {
-		name      string
-		input     []byte
-		timeFunc  func() time.Time
-		precision time.Duration
-		metrics   []telegraf.Metric
-		err       error
+		name     string
+		input    []byte
+		timeFunc func() time.Time
+		metrics  []telegraf.Metric
+		err      error
 	}{
 		{
 			name:    "empty",
@@ -795,14 +753,10 @@ func TestSeriesParser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := NewMetricHandler()
-			handler.SetTimeFunc(DefaultTime)
-			if tt.timeFunc != nil {
-				handler.SetTimeFunc(tt.timeFunc)
-			}
-			if tt.precision > 0 {
-				handler.SetTimePrecision(tt.precision)
-			}
 			parser := NewSeriesParser(handler)
+			if tt.timeFunc != nil {
+				parser.SetTimeFunc(tt.timeFunc)
+			}
 
 			metrics, err := parser.Parse(tt.input)
 			require.Equal(t, tt.err, err)
@@ -850,45 +804,41 @@ func TestParserErrorString(t *testing.T) {
 	}
 }
 
-func TestNextMetric(t *testing.T) {
+func TestStreamParserErrorString(t *testing.T) {
+	var ptests = []struct {
+		name      string
+		input     []byte
+		errString string
+	}{
+		{
+			name:      "multiple line error",
+			input:     []byte("cpu value=42\ncpu value=invalid\ncpu value=42"),
+			errString: `metric parse error: expected field at 2:11: "cpu value="`,
+		},
+		{
+			name:      "handler error",
+			input:     []byte("cpu value=9223372036854775808i\ncpu value=42"),
+			errString: `metric parse error: value out of range at 1:31: "cpu value=9223372036854775808i"`,
+		},
+		{
+			name:      "buffer too long",
+			input:     []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
+			errString: "metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+		},
+	}
+
 	for _, tt := range ptests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := NewMetricHandler()
-			handler.SetTimeFunc(DefaultTime)
-			if tt.timeFunc != nil {
-				handler.SetTimeFunc(tt.timeFunc)
-			}
-			if tt.precision > 0 {
-				handler.SetTimePrecision(tt.precision)
-			}
-			parser := NewParser(handler)
+			parser := NewStreamParser(bytes.NewBuffer(tt.input))
 
-			parser.StartParse(tt.input)
-
-			var metric telegraf.Metric
 			var err error
-			var metrics []telegraf.Metric
 			for {
-				metric, err = parser.NextMetric()
-				if err == EOF {
-					err = nil
-					break
-				}
+				_, err = parser.Next()
 				if err != nil {
 					break
 				}
-				metrics = append(metrics, metric)
 			}
-
-			require.Equal(t, tt.err, err)
-
-			require.Equal(t, len(tt.metrics), len(metrics))
-			for i, expected := range tt.metrics {
-				require.Equal(t, expected.Name(), metrics[i].Name())
-				require.Equal(t, expected.Tags(), metrics[i].Tags())
-				require.Equal(t, expected.Fields(), metrics[i].Fields())
-				require.Equal(t, expected.Time(), metrics[i].Time())
-			}
+			require.Equal(t, tt.errString, err.Error())
 		})
 	}
 }

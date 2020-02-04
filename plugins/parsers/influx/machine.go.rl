@@ -2,6 +2,7 @@ package influx
 
 import (
 	"errors"
+	"io"
 )
 
 var (
@@ -70,8 +71,8 @@ action goto_align {
 	fgoto align;
 }
 
-action found_metric {
-	foundMetric = true
+action begin_metric {
+	beginMetric = true
 }
 
 action name {
@@ -161,8 +162,13 @@ action incr_newline {
 }
 
 action eol {
+	finishMetric = true
 	fnext align;
 	fbreak;
+}
+
+action finish_metric {
+	finishMetric = true
 }
 
 ws =
@@ -273,7 +279,7 @@ line_without_term =
 main :=
 	(line_with_term*
 	(line_with_term | line_without_term?)
-    ) >found_metric
+    ) >begin_metric %eof(finish_metric)
 	;
 
 # The discard_line machine discards the current line.  Useful for recovering
@@ -299,7 +305,7 @@ align :=
 # Series is a machine for matching measurement+tagset
 series :=
 	(measurement >err(name_error) tagset eol_break?)
-	>found_metric
+	>begin_metric
 	;
 }%%
 
@@ -384,7 +390,9 @@ func (m *machine) Next() error {
 
 	var err error
 	var key []byte
-	foundMetric := false
+	beginMetric := false
+	finishMetric := false
+	_ = finishMetric
 
 	%% write exec;
 
@@ -405,7 +413,7 @@ func (m *machine) Next() error {
 	//
 	// Otherwise we have successfully parsed a metric line, so if we are at
 	// the EOF we will report it the next call.
-	if !foundMetric && m.p == m.pe && m.pe == m.eof {
+	if !beginMetric && m.p == m.pe && m.pe == m.eof {
 		return EOF
 	}
 
@@ -435,5 +443,140 @@ func (m *machine) Column() int {
 }
 
 func (m *machine) text() []byte {
+	return m.data[m.pb:m.p]
+}
+
+type streamMachine struct {
+	reader     io.Reader
+	data       []byte
+	cs         int
+	p, pe, eof int
+	pb         int
+	lineno     int
+	sol        int
+	handler    Handler
+	initState  int
+}
+
+func NewStreamMachine(r io.Reader, handler Handler) *streamMachine {
+	m := &streamMachine{
+		handler: handler,
+		initState: LineProtocol_en_align,
+	}
+
+	m.reader = r
+	m.data = make([]byte, 5)
+	m.p = 0
+	m.pb = 0
+	m.lineno = 1
+	m.sol = 0
+	m.pe = 0
+	m.eof = -1
+
+	%% access m.;
+	%% variable p m.p;
+	%% variable cs m.cs;
+	%% variable pe m.pe;
+	%% variable eof m.eof;
+	%% variable data m.data;
+	%% write init;
+
+	m.cs = m.initState
+	return m
+}
+
+func (m *streamMachine) Next() error {
+	// Check if we are already at EOF, this should only happen if called again
+	// after already returning EOF.
+	if m.p == m.pe && m.pe == m.eof {
+		return EOF
+	}
+
+	copy(m.data, m.data[m.p:])
+	m.pe = m.pe - m.p
+	m.sol = m.sol - m.p
+	m.pb = 0
+	m.p = 0
+	m.eof = -1
+
+	var key []byte
+	beginMetric := false
+	finishMetric := false
+
+	for {
+		// Expand the buffer if it is full
+		if m.pe == len(m.data) {
+			expanded := make([]byte, 2 * len(m.data))
+			copy(expanded, m.data)
+			m.data = expanded
+		}
+
+		n, err := m.reader.Read(m.data[m.pe:])
+		if n == 0 && err == io.EOF {
+			m.eof = m.pe
+		} else if err != nil && err != io.EOF {
+			return err
+		}
+
+		m.pe += n
+
+		err = nil
+		%% write exec;
+		if err != nil {
+			return err
+		}
+
+		// This would indicate an error in the machine that was reported with a
+		// more specific error.  We return a generic error but this should
+		// possibly be a panic.
+		if m.cs == %%{ write error; }%% {
+			m.cs = LineProtocol_en_discard_line
+			return ErrParse
+		}
+
+		// If we haven't found a metric line yet and we reached the EOF, report it
+		// now.  This happens when the data ends with a comment or whitespace.
+		if !beginMetric && m.p == m.pe && m.pe == m.eof {
+			return EOF
+		}
+
+		// If we have successfully parsed a full metric line break out
+		if finishMetric {
+			break
+		}
+
+	}
+
+	return nil
+}
+
+// Position returns the current byte offset into the data.
+func (m *streamMachine) Position() int {
+	return m.p
+}
+
+// LineOffset returns the byte offset of the current line.
+func (m *streamMachine) LineOffset() int {
+	return m.sol
+}
+
+// LineNumber returns the current line number.  Lines are counted based on the
+// regular expression `\r?\n`.
+func (m *streamMachine) LineNumber() int {
+	return m.lineno
+}
+
+// Column returns the current column.
+func (m *streamMachine) Column() int {
+	lineOffset := m.p - m.sol
+	return lineOffset + 1
+}
+
+// LineText returns the text of the current line that has been parsed so far.
+func (m *streamMachine) LineText() string {
+	return string(m.data[0:m.p])
+}
+
+func (m *streamMachine) text() []byte {
 	return m.data[m.pb:m.p]
 }

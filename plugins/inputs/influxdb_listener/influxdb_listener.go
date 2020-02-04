@@ -391,7 +391,6 @@ func (h *InfluxDBListener) parse(b []byte, t time.Time, precision, db string) er
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	h.handler.SetTimePrecision(getPrecisionMultiplier(precision))
 	h.handler.SetTimeFunc(func() time.Time { return t })
 	metrics, err := h.parser.EagerParse(b)
 

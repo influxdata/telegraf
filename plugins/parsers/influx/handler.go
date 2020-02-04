@@ -10,26 +10,22 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+type TimeFunc func() time.Time
+
+// MetricHandler implements the Handler interface and produces telegraf.Metric.
 type MetricHandler struct {
-	builder   *metric.Builder
-	err       error
-	precision time.Duration
+	builder *metric.Builder
+	err     error
 }
 
 func NewMetricHandler() *MetricHandler {
 	return &MetricHandler{
-		builder:   metric.NewBuilder(),
-		precision: time.Nanosecond,
+		builder: metric.NewBuilder(),
 	}
 }
 
-func (h *MetricHandler) SetTimeFunc(f metric.TimeFunc) {
-	h.builder.TimeFunc = f
-}
-
-func (h *MetricHandler) SetTimePrecision(precision time.Duration) {
-	h.builder.TimePrecision = precision
-	h.precision = precision
+func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
+	h.builder.TimeFunc = metric.TimeFunc(f)
 }
 
 func (h *MetricHandler) Metric() (telegraf.Metric, error) {
@@ -107,14 +103,13 @@ func (h *MetricHandler) AddBool(key []byte, value []byte) error {
 }
 
 func (h *MetricHandler) SetTimestamp(tm []byte) error {
-	v, err := parseIntBytes(tm, 10, 64)
+	ns, err := parseIntBytes(tm, 10, 64)
 	if err != nil {
 		if numerr, ok := err.(*strconv.NumError); ok {
 			return numerr.Err
 		}
 		return err
 	}
-	ns := v * int64(h.precision)
 	h.builder.SetTime(time.Unix(0, ns))
 	return nil
 }
