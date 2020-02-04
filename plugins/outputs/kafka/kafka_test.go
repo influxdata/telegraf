@@ -16,7 +16,7 @@ type topicSuffixTestpair struct {
 	expectedTopic string
 }
 
-type RoutingTestPair struct {
+type CustomRoutingTestPair struct {
 	routingRule   CustomRouting
 	expectedTopic string
 }
@@ -90,7 +90,7 @@ func TestTopicSuffixes(t *testing.T) {
 		require.Equal(t, expectedTopic, topic)
 	}
 }
-func TestKafkaRouting(t *testing.T) {
+func TestKafkaCustomRouting(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -99,7 +99,7 @@ func TestKafkaRouting(t *testing.T) {
 	metric := testutil.TestMetric(1)
 	metric.SetName("test_measurement_1")
 
-	var testcases = []RoutingTestPair{
+	var testcases = []CustomRoutingTestPair{
 		// This ensures empty separator is okay
 		{CustomRouting{Method: "measurement", MatchType: "exact_match", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_1"},
 			"measurement_topic_1"},

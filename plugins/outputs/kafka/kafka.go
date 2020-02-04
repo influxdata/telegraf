@@ -445,7 +445,6 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-
 	sarama.Logger = &DebugLogger{}
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
