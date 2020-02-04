@@ -227,7 +227,6 @@ func ValidateTopicSuffixMethod(method string) error {
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 	var topicName string
-
 	if k.TopicSuffix.Method != "" {
 		switch k.TopicSuffix.Method {
 		case "measurement":
