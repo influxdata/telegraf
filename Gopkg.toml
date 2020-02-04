@@ -303,7 +303,7 @@
 
 [[constraint]]
   name = "github.com/safchain/ethtool"
-  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+  branch = "master"
 
 [[override]]
   name = "github.com/satori/go.uuid"

@@ -1080,11 +1080,12 @@
   revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
 
 [[projects]]
-  digest = "1:a18bd4e530f3f36fe91a5d1fd57d492f25287546e613f892d21c2b76b848517d"
+  branch = "master"
+  digest = "1:d9be8e928ce32259bd677e21a1105251a0e5130f238121e702230551f3a533e7"
   name = "github.com/safchain/ethtool"
   packages = ["."]
   pruneopts = ""
-  revision = "42ed695e3de80b9d695f280295fd7994639f209d"
+  revision = "ef7e7c9c27639f149a3c4bfae07a9c0fc3a1691a"
 
 [[projects]]
   branch = "master"
