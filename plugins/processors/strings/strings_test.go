@@ -79,6 +79,21 @@ func TestFieldConversions(t *testing.T) {
 			},
 		},
 		{
+			name: "Should change existing field to titlecase",
+			plugin: &Strings{
+				Titlecase: []converter{
+					{
+						Field: "request",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				fv, ok := actual.GetField("request")
+				require.True(t, ok)
+				require.Equal(t, "/Mixed/CASE/PaTH/?From=-1D&To=Now", fv)
+			},
+		},
+		{
 			name: "Should add new lowercase field",
 			plugin: &Strings{
 				Lowercase: []converter{
@@ -331,6 +346,7 @@ func TestFieldKeyConversions(t *testing.T) {
 				// Tag/field key multiple executions occur in the following order: (initOnce)
 				//   Lowercase
 				//   Uppercase
+				//   Titlecase
 				//   Trim
 				//   TrimLeft
 				//   TrimRight
@@ -595,6 +611,30 @@ func TestTagConversions(t *testing.T) {
 				require.Equal(t, "MIXEDCASE_HOSTNAME", tv)
 			},
 		},
+		{
+			name: "Should add new titlecase tag",
+			plugin: &Strings{
+				Titlecase: []converter{
+					{
+						Tag:  "s-computername",
+						Dest: "s-computername_titlecase",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				tv, ok := actual.GetTag("verb")
+				require.True(t, ok)
+				require.Equal(t, "GET", tv)
+
+				tv, ok = actual.GetTag("s-computername")
+				require.True(t, ok)
+				require.Equal(t, "MIXEDCASE_hostname", tv)
+
+				tv, ok = actual.GetTag("s-computername_titlecase")
+				require.True(t, ok)
+				require.Equal(t, "MIXEDCASE_hostname", tv)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -736,6 +776,11 @@ func TestMultipleConversions(t *testing.T) {
 				Tag: "verb",
 			},
 		},
+		Titlecase: []converter{
+			{
+				Field: "status",
+			},
+		},
 		Replace: []converter{
 			{
 				Tag: "foo",
@@ -763,6 +808,7 @@ func TestMultipleConversions(t *testing.T) {
 			"cs-host":       "AAAbbb",
 			"ignore_number": int64(200),
 			"ignore_bool":   true,
+			"status":        "green",
 		},
 		time.Now(),
 	)
@@ -775,6 +821,7 @@ func TestMultipleConversions(t *testing.T) {
 		"ignore_bool":       true,
 		"cs-host":           "AAAbbb",
 		"cs-host_lowercase": "aaabbb",
+		"status":            "Green",
 	}
 	expectedTags := map[string]string{
 		"verb":           "GET",
