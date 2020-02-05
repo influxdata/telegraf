@@ -130,13 +130,21 @@ var sampleConfig = `
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
-  ## Telegraf tag to use as a routing key
-  ##  ie, if this tag exists, its value will be used as the routing key
+  ## The routing tag specifies a tagkey on the metric whose value is used as
+  ## the message key.  The message key is used to determine which partition to
+  ## send the message to.  This tag is prefered over the routing_key option.
   routing_tag = "host"
 
-  ## Static routing key.  Used when no routing_tag is set or as a fallback
-  ## when the tag specified in routing tag is not found.  If set to "random",
-  ## a random value will be generated for each message.
+  ## The routing key is set as the message key and used to determine which
+  ## partition to send the message to.  This value is only used when no
+  ## routing_tag is set or as a fallback when the tag specified in routing tag
+  ## is not found.
+  ##
+  ## If set to "random", a random value will be generated for each message.
+  ##
+  ## When unset, no message key is added and each message is routed to a random
+  ## partition.
+  ##
   ##   ex: routing_key = "random"
   ##       routing_key = "telegraf"
   # routing_key = ""
