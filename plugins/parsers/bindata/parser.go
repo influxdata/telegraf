@@ -26,10 +26,11 @@ type Field struct {
 
 // BinData is ...
 type BinData struct {
-	MetricName string
-	TimeFormat string
-	Endiannes  string
-	Fields     []Field
+	MetricName     string
+	TimeFormat     string
+	Endiannes      string
+	Fields         []Field
+	StringEncoding string
 	// TagKeys    []string
 	DefaultTags map[string]string
 }
@@ -124,6 +125,9 @@ var fieldTypes = map[string]reflect.Type{
 }
 
 func (binData *BinData) validate() error {
+	if binData.StringEncoding == "" {
+		binData.StringEncoding = "utf-8"
+	}
 	for i := 0; i < len(binData.Fields); i++ {
 		fieldType, ok := fieldTypes[strings.ToLower(binData.Fields[i].Type)]
 		if !ok {
