@@ -46,14 +46,16 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
-  ## Send measurements whose measurement name contains a substring match to a match value to the bar topic.
+  ## Send measurements whose measurement name contains a substring match to a value in match_values to the bar topic.
+  ## Please note that if a topic suffix rule is configured, it will only be applied if a routing rule does not match. 
+  ## If a routing rule matches, any configured topic suffix rule will not be applied.
   # [outputs.kafka.topic_routing]
   #		method = "measurement"
   #		match_type = "substring"
   #		match_values = ["foo", "fo"]
   #		topic = "bar"
 
-  ## Send measurements whose measurement name is an exact match to a match value to the bar topic.
+  ## Send measurements whose measurement name is an exact match to a value in match_values to the bar topic.
   # [outputs.kafka.topic_routing]
   #		method = "measurement"
   #		match_type = "exact"
