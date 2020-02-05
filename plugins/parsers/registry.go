@@ -151,10 +151,10 @@ type Config struct {
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
 	// BinData configuration
-	BinDataProtocol   string          `toml:"bindata_protocol"`
-	BinDataTimeFormat string          `toml:"bindata_time_format"`
-	BinDataEndiannes  string          `toml:"bindata_endiannes"`
-	BinDataFields     []bindata.Field `toml:"bindata_fields"`
+	BinDataTimeFormat     string          `toml:"bindata_time_format"`
+	BinDataEndiannes      string          `toml:"bindata_endiannes"`
+	BinDataStringEncoding string          `toml:"bindata_string_encoding"`
+	BinDataFields         []bindata.Field `toml:"bindata_fields"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -165,9 +165,9 @@ func NewParser(config *Config) (Parser, error) {
 	case "bindata":
 		parser, err = NewBinDataParser(
 			config.MetricName,
-			config.BinDataProtocol,
 			config.BinDataTimeFormat,
 			config.BinDataEndiannes,
+			config.BinDataStringEncoding,
 			config.BinDataFields,
 			config.DefaultTags,
 		)
@@ -344,19 +344,19 @@ func NewGraphiteParser(
 
 func NewBinDataParser(
 	metricName string,
-	protocol string,
 	timeFormat string,
 	endiannes string,
+	stringEncoding string,
 	fields []bindata.Field,
 	defaultTags map[string]string,
 ) (Parser, error) {
 	return &bindata.BinData{
-		MetricName:  metricName,
-		Protocol:    protocol,
-		TimeFormat:  timeFormat,
-		Endiannes:   endiannes,
-		Fields:      fields,
-		DefaultTags: defaultTags,
+		MetricName:     metricName,
+		TimeFormat:     timeFormat,
+		Endiannes:      endiannes,
+		StringEncoding: stringEncoding,
+		Fields:         fields,
+		DefaultTags:    defaultTags,
 	}, nil
 }
 
