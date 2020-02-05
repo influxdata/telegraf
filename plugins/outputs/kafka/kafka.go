@@ -26,17 +26,17 @@ var zeroTime = time.Unix(0, 0)
 
 type (
 	Kafka struct {
-		Brokers          []string
-		Topic            string
-		ClientID         string         `toml:"client_id"`
-		TopicSuffix      TopicSuffix    `toml:"topic_suffix"`
-		TopicRouting     []TopicRouting `toml:"topic_routing"`
-		RoutingTag       string         `toml:"routing_tag"`
-		RoutingKey       string         `toml:"routing_key"`
-		CompressionCodec int
-		RequiredAcks     int
-		MaxRetry         int
-		MaxMessageBytes  int `toml:"max_message_bytes"`
+		Brokers           []string
+		Topic             string
+		ClientID          string         `toml:"client_id"`
+		TopicSuffix       TopicSuffix    `toml:"topic_suffix"`
+		TopicRoutingRules []TopicRouting `toml:"topic_routing"`
+		RoutingTag        string         `toml:"routing_tag"`
+		RoutingKey        string         `toml:"routing_key"`
+		CompressionCodec  int
+		RequiredAcks      int
+		MaxRetry          int
+		MaxMessageBytes   int `toml:"max_message_bytes"`
 
 		Version string `toml:"version"`
 
@@ -69,7 +69,7 @@ type (
 	}
 	TopicRouting struct {
 		Method     string   `toml:"method"`
-		match_type string   `toml:"match_type"`
+		MatchType  string   `toml:"match_type"`
 		MatchValue []string `toml:"match_value"`
 		Topic      string   `toml:"topic"`
 	}
@@ -137,18 +137,18 @@ var sampleConfig = `
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
-  ## Send measurements whose measurement names contain foo, to the bar topic.
+  ## Send measurements whose measurement name contains a substring match to a value in match_values to the bar topic.
   # [outputs.kafka.topic_routing]
   #		method = "measurement"
   #		match_type = "substring"
-  #		matchvalue = "foo"
+  #		match_values = ["foo", "fo"]
   #		topic = "bar"
 
-  ## Send measurements whose measurement names is an exact match to match value to the bar topic.
+  ## Send measurements whose measurement name is an exact match to a value in match_values to the bar topic.
   # [outputs.kafka.topic_routing]
   #		method = "measurement"
   #		match_type = "exact"
-  #		matchvalue = "test_foo"
+  #		match_values = ["test_foo", "foo_test"]
   #		topic = "bar"
 
   ## Telegraf tag to use as a routing key
@@ -244,27 +244,31 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 		default:
 			topicName = k.Topic
 		}
-	} else if len(k.TopicRouting) != 0 {
-		//This label is used to break out of rule evaluation after finding a matching rule.
+	} else if len(k.TopicRoutingRules) != 0 {
+
+		measurementName := metric.Name()
+	//This label is used to break out of rule evaluation after finding a matching rule.
 	ruleEvaluation:
-		for _, rule := range k.TopicRouting {
+		for _, rule := range k.TopicRoutingRules {
 			switch rule.Method {
 			case "measurement":
-				switch rule.match_type {
+				switch rule.MatchType {
 				case "substring":
 					for _, v := range rule.MatchValue {
-						if strings.Contains(metric.Name(), v) {
+						if strings.Contains(measurementName, v) {
 							topicName = rule.Topic
 							break ruleEvaluation
 						}
 					}
 				case "exact":
 					for _, v := range rule.MatchValue {
-						if metric.Name() == v {
+						if measurementName == v {
 							topicName = rule.Topic
 							break ruleEvaluation
 						}
 					}
+				default:
+					topicName = k.Topic
 				}
 			}
 		}
