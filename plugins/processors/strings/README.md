@@ -5,6 +5,7 @@ The `strings` plugin maps certain go string functions onto measurement, tag, and
 Implemented functions are:
 - lowercase
 - uppercase
+- titlecase
 - trim
 - trim_left
 - trim_right
@@ -34,6 +35,10 @@ If you'd like to apply multiple processings to the same `tag_key` or `field_key`
   ## Convert a tag value to uppercase
   # [[processors.strings.uppercase]]
   #   tag = "method"
+
+  ## Convert a field value to titlecase
+  # [[processors.strings.titlecase]]
+  #   field = "status"
 
   ## Trim leading and trailing whitespace using the default cutset
   # [[processors.strings.trim]]
