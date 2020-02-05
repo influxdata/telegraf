@@ -5,8 +5,6 @@ import (
 	"math"
 	"net"
 
-	"github.com/influxdata/telegraf/plugins/parsers/network_flow/protodb"
-
 	"github.com/influxdata/telegraf/plugins/parsers/network_flow/decoder"
 )
 
@@ -280,23 +278,12 @@ func ipv6Header(options V5FormatOptions) decoder.Directive {
 	)
 }
 
-func portNumToServiceName(protocol string) func(uint16) string {
-	return func(p uint16) string {
-		if n, ok := protodb.GetServByPort(protocol, int(p)); ok {
-			return n
-		}
-		return fmt.Sprintf("%d", p)
-	}
-}
-
 func tcpHeader(options V5FormatOptions) decoder.Directive {
 	return decoder.Seq(
 		decoder.U16().
-			Do(decoder.AsT("src_port")).
-			Do(decoder.U16ToStr(portNumToServiceName("tcp")).AsT("src_port_name")),
+			Do(decoder.AsT("src_port")),
 		decoder.U16().
-			Do(decoder.AsT("dst_port")).
-			Do(decoder.U16ToStr(portNumToServiceName("tcp")).AsT("dst_port_name")),
+			Do(decoder.AsT("dst_port")),
 		decoder.U32(), //"sequence"),
 		decoder.U32(), //"ack_number"),
 		decoder.Bytes(2).
@@ -310,11 +297,9 @@ func tcpHeader(options V5FormatOptions) decoder.Directive {
 func udpHeader(options V5FormatOptions) decoder.Directive {
 	return decoder.Seq(
 		decoder.U16().
-			Do(decoder.AsT("src_port")).
-			Do(decoder.U16ToStr(portNumToServiceName("udp")).AsT("src_port_name")),
+			Do(decoder.AsT("src_port")),
 		decoder.U16().
-			Do(decoder.AsT("dst_port")).
-			Do(decoder.U16ToStr(portNumToServiceName("udp")).AsT("dst_port_name")),
+			Do(decoder.AsT("dst_port")),
 		decoder.U16().Do(decoder.AsF("udp_length")),
 	)
 }
