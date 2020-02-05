@@ -16,6 +16,7 @@ import (
 
 const timeKey = "time"
 const timezone = "UTC"
+const stringEncoding = "UTF-8"
 
 // Field is ...
 type Field struct {
@@ -29,8 +30,8 @@ type BinData struct {
 	MetricName     string
 	TimeFormat     string
 	Endiannes      string
-	Fields         []Field
 	StringEncoding string
+	Fields         []Field
 	// TagKeys    []string
 	DefaultTags map[string]string
 }
@@ -126,8 +127,13 @@ var fieldTypes = map[string]reflect.Type{
 
 func (binData *BinData) validate() error {
 	if binData.StringEncoding == "" {
-		binData.StringEncoding = "utf-8"
+		binData.StringEncoding = stringEncoding
 	}
+	binData.StringEncoding = strings.ToUpper(binData.StringEncoding)
+	if binData.StringEncoding != stringEncoding {
+		return fmt.Errorf(`invalid string encoding %s`, binData.StringEncoding)
+	}
+
 	for i := 0; i < len(binData.Fields); i++ {
 		fieldType, ok := fieldTypes[strings.ToLower(binData.Fields[i].Type)]
 		if !ok {

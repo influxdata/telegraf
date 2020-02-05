@@ -52,23 +52,6 @@ var fields = []Field{
 	Field{Name: "time", Type: "int32"},
 }
 
-var fieldsWithSizes = []Field{
-	Field{Name: "fieldBool0", Type: "bool", Size: 0},
-	Field{Name: "fieldBool1", Type: "bool", Size: 1},
-	Field{Name: "fieldUint8", Type: "uint8", Size: 2},
-	Field{Name: "fieldInt8", Type: "int8", Size: 3},
-	Field{Name: "fieldUint16", Type: "uint16", Size: 4},
-	Field{Name: "fieldInt16", Type: "int16", Size: 5},
-	Field{Name: "fieldUint32", Type: "uint32", Size: 6},
-	Field{Name: "fieldInt32", Type: "int32", Size: 7},
-	Field{Name: "fieldUint64", Type: "uint64", Size: 8},
-	Field{Name: "fieldInt64", Type: "int64", Size: 9},
-	Field{Name: "fieldFloat32", Type: "float32", Size: 10},
-	Field{Name: "fieldFloat64", Type: "float64", Size: 11},
-	Field{Name: "fieldString", Type: "string", Size: 20},
-	Field{Name: "time", Type: "int32", Size: 21},
-}
-
 var withOmittedFields = []Field{
 	Field{Type: "padding", Size: 1},
 	Field{Name: "fieldBool1", Type: "bool"},
@@ -140,23 +123,35 @@ func TestLittleEndian(t *testing.T) {
 	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
-func TestFieldsWithSize(t *testing.T) {
+func TestDefaultStringEncoding(t *testing.T) {
 
-	var withSize = BinData{
-		MetricName: "with_size",
-		Endiannes:  "be",
-		TimeFormat: "unix",
-		Fields:     fieldsWithSizes,
+	var defaultStringEncoding = BinData{
+		MetricName:     "default_string_encoding",
+		Endiannes:      "be",
+		TimeFormat:     "unix",
+		StringEncoding: "utf-8",
+		Fields:         fields,
 	}
 
-	metrics, err := withSize.Parse(binaryDataBigEndian)
+	metrics, err := defaultStringEncoding.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, withSize.MetricName, metrics[0].Name())
-	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
-	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
+func TestInvalidStringEncoding(t *testing.T) {
+
+	var invalidStringEncoding = BinData{
+		MetricName:     "invalid_string_encoding",
+		Endiannes:      "be",
+		TimeFormat:     "unix",
+		StringEncoding: "utf-16",
+		Fields:         fields,
+	}
+
+	metrics, err := invalidStringEncoding.Parse(binaryDataBigEndian)
+	require.Error(t, err)
+	assert.Len(t, metrics, 0)
+}
 func TestWithOmittedFields(t *testing.T) {
 
 	var withFieldsOmitted = BinData{
