@@ -107,10 +107,10 @@ func TestKafkaTopicRouting(t *testing.T) {
 			TopicRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "measurement_topic_2"}},
 			"measurement_topic_2"},
 		{[]TopicRouting{
-			TopicRouting{Method: "measurement", MatchType: "exact", MatchValue: []string{"failed_match"}, Topic: "measurement_topic_2"}},
+			TopicRouting{Method: "measurement", MatchType: "exact", MatchValue: []string{"failed_exact_match"}, Topic: "measurement_topic_2"}},
 			"FallbackTopic"},
 		{[]TopicRouting{
-			TopicRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"failed_match"}, Topic: "measurement_topic_2"}},
+			TopicRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"failed_substring_match"}, Topic: "measurement_topic_2"}},
 			"FallbackTopic"},
 		{[]TopicRouting{
 			TopicRouting{Method: "measurement", MatchType: "exact", MatchValue: []string{"failed_exact_match"}, Topic: "measurement_topic_1"},
