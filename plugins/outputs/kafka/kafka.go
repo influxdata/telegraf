@@ -242,7 +242,6 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 	measurementName := metric.Name()
 	if len(k.TopicRoutingRules) != 0 {
 		//This label is used to break out of rule evaluation after finding a matching rule.
-	ruleEvaluation:
 		for _, rule := range k.TopicRoutingRules {
 			switch rule.Method {
 			case "measurement":
@@ -250,19 +249,16 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 				case "substring":
 					for _, v := range rule.MatchValue {
 						if strings.Contains(measurementName, v) {
-							topicName = rule.Topic
-							break ruleEvaluation
+							return rule.Topic
+
 						}
 					}
 				case "exact":
 					for _, v := range rule.MatchValue {
 						if measurementName == v {
-							topicName = rule.Topic
-							break ruleEvaluation
+							return rule.Topic
 						}
 					}
-				default:
-					topicName = k.Topic
 				}
 			}
 		}
