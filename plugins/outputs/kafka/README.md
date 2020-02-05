@@ -46,6 +46,24 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
+  ## Send measurements whose measurement name contains a substring match to a value in match_values to the bar topic.
+  ## Please note that if a topic suffix rule is configured, it will only be applied if a routing rule does not match. 
+  ## If a routing rule matches, any configured topic suffix rule will not be applied.
+  # [outputs.kafka.topic_routing]
+  #		method = "measurement"
+  #		match_type = "substring"
+  #		match_values = ["foo", "fo"]
+  #		topic = "bar"
+
+  ## Send measurements whose measurement name is an exact match to a value in match_values to the bar topic.
+  # [outputs.kafka.topic_routing]
+  #		method = "measurement"
+  #		match_type = "exact"
+  #		match_values = ["test_foo", "foo_test"]
+  #		topic = "bar"
+
+  ## Telegraf tag to use as a routing key
+  ##  ie, if this tag exists, its value will be used as the routing key
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
   ## send the message to.  This tag is prefered over the routing_key option.

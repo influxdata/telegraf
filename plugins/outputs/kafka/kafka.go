@@ -26,16 +26,17 @@ var zeroTime = time.Unix(0, 0)
 
 type (
 	Kafka struct {
-		Brokers          []string
-		Topic            string
-		ClientID         string      `toml:"client_id"`
-		TopicSuffix      TopicSuffix `toml:"topic_suffix"`
-		RoutingTag       string      `toml:"routing_tag"`
-		RoutingKey       string      `toml:"routing_key"`
-		CompressionCodec int
-		RequiredAcks     int
-		MaxRetry         int
-		MaxMessageBytes  int `toml:"max_message_bytes"`
+		Brokers           []string
+		Topic             string
+		ClientID          string         `toml:"client_id"`
+		TopicSuffix       TopicSuffix    `toml:"topic_suffix"`
+		TopicRoutingRules []TopicRouting `toml:"topic_routing"`
+		RoutingTag        string         `toml:"routing_tag"`
+		RoutingKey        string         `toml:"routing_key"`
+		CompressionCodec  int
+		RequiredAcks      int
+		MaxRetry          int
+		MaxMessageBytes   int `toml:"max_message_bytes"`
 
 		Version string `toml:"version"`
 
@@ -65,6 +66,12 @@ type (
 		Method    string   `toml:"method"`
 		Keys      []string `toml:"keys"`
 		Separator string   `toml:"separator"`
+	}
+	TopicRouting struct {
+		Method     string   `toml:"method"`
+		MatchType  string   `toml:"match_type"`
+		MatchValue []string `toml:"match_value"`
+		Topic      string   `toml:"topic"`
 	}
 )
 
@@ -130,6 +137,24 @@ var sampleConfig = `
   #   keys = ["foo", "bar"]
   #   separator = "_"
 
+  ## Send measurements whose measurement name contains a substring match to a value in match_values to the bar topic.
+  ## Please note that if a topic suffix rule is configured, it will be applied if a routing rule does not match. 
+  ## If a routing rule does match, any configured topic suffix rule will not be applied.
+  # [outputs.kafka.topic_routing]
+  #		method = "measurement"
+  #		match_type = "substring"
+  #		match_values = ["foo", "fo"]
+  #		topic = "bar"
+
+  ## Send measurements whose measurement name is an exact match to a value in match_values to the bar topic.
+  # [outputs.kafka.topic_routing]
+  #		method = "measurement"
+  #		match_type = "exact"
+  #		match_values = ["test_foo", "foo_test"]
+  #		topic = "bar"
+
+  ## Telegraf tag to use as a routing key
+  ##  ie, if this tag exists, its value will be used as the routing key
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
   ## send the message to.  This tag is prefered over the routing_key option.
@@ -214,22 +239,57 @@ func ValidateTopicSuffixMethod(method string) error {
 
 func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 	var topicName string
-	switch k.TopicSuffix.Method {
-	case "measurement":
-		topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
-	case "tags":
-		var topicNameComponents []string
-		topicNameComponents = append(topicNameComponents, k.Topic)
-		for _, tag := range k.TopicSuffix.Keys {
-			tagValue := metric.Tags()[tag]
-			if tagValue != "" {
-				topicNameComponents = append(topicNameComponents, tagValue)
+	measurementName := metric.Name()
+	if len(k.TopicRoutingRules) != 0 {
+		//This label is used to break out of rule evaluation after finding a matching rule.
+	ruleEvaluation:
+		for _, rule := range k.TopicRoutingRules {
+			switch rule.Method {
+			case "measurement":
+				switch rule.MatchType {
+				case "substring":
+					for _, v := range rule.MatchValue {
+						if strings.Contains(measurementName, v) {
+							topicName = rule.Topic
+							break ruleEvaluation
+						}
+					}
+				case "exact":
+					for _, v := range rule.MatchValue {
+						if measurementName == v {
+							topicName = rule.Topic
+							break ruleEvaluation
+						}
+					}
+				default:
+					topicName = k.Topic
+				}
 			}
 		}
-		topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
-	default:
+
+	}
+
+	if k.TopicSuffix.Method != "" && topicName == "" {
+		switch k.TopicSuffix.Method {
+		case "measurement":
+			topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
+		case "tags":
+			var topicNameComponents []string
+			topicNameComponents = append(topicNameComponents, k.Topic)
+			for _, tag := range k.TopicSuffix.Keys {
+				tagValue := metric.Tags()[tag]
+				if tagValue != "" {
+					topicNameComponents = append(topicNameComponents, tagValue)
+				}
+			}
+			topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
+		default:
+			topicName = k.Topic
+		}
+	} else if topicName == "" {
 		topicName = k.Topic
 	}
+
 	return topicName
 }
 

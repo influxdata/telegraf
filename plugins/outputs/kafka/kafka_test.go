@@ -16,6 +16,11 @@ type topicSuffixTestpair struct {
 	expectedTopic string
 }
 
+type TopicRoutingTestPair struct {
+	routingRules  []TopicRouting
+	expectedTopic string
+}
+
 func TestConnectAndWrite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -79,6 +84,54 @@ func TestTopicSuffixes(t *testing.T) {
 		k := &Kafka{
 			Topic:       topic,
 			TopicSuffix: topicSuffix,
+		}
+
+		topic := k.GetTopicName(metric)
+		require.Equal(t, expectedTopic, topic)
+	}
+}
+func TestKafkaTopicRouting(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	topic := "FallbackTopic"
+	metric := testutil.TestMetric(1)
+	metric.SetName("test_measurement_1")
+
+	var testcases = []TopicRoutingTestPair{
+		{[]TopicRouting{
+			TopicRouting{Method: "measurement", MatchType: "exact", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_1"}},
+			"measurement_topic_1"},
+		{[]TopicRouting{
+			TopicRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "measurement_topic_2"}},
+			"measurement_topic_2"},
+		{[]TopicRouting{
+			TopicRouting{Method: "measurement", MatchType: "exact", MatchValue: []string{"failed_exact_match"}, Topic: "measurement_topic_2"}},
+			"FallbackTopic"},
+		{[]TopicRouting{
+			TopicRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"failed_substring_match"}, Topic: "measurement_topic_2"}},
+			"FallbackTopic"},
+		{[]TopicRouting{
+			TopicRouting{Method: "measurement", MatchType: "exact", MatchValue: []string{"failed_exact_match"}, Topic: "measurement_topic_1"},
+			TopicRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "second_rule_match_success"}},
+			"second_rule_match_success"},
+		{[]TopicRouting{
+			TopicRouting{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "first_rule_match_success"},
+			TopicRouting{Method: "measurement", MatchType: "exact", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_2"}},
+			"first_rule_match_success"},
+		// This ensures backward compatibility
+		{[]TopicRouting{},
+			"FallbackTopic"},
+	}
+
+	for _, testcase := range testcases {
+		TopicRouting := testcase.routingRules
+		expectedTopic := testcase.expectedTopic
+
+		k := &Kafka{
+			Topic:             topic,
+			TopicRoutingRules: TopicRouting,
 		}
 
 		topic := k.GetTopicName(metric)
