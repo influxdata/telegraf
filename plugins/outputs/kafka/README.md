@@ -47,16 +47,16 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   #   separator = "_"
 
   ## Send measurements whose measurement name contains foo to the bar topic.
-  # [outputs.kafka.custom_routing]
+  # [outputs.kafka.topic_routing]
   #		method = "measurement"
-  #		matchtype = "substring"
+  #		match_type = "substring"
   #		matchvalue = ["foo"]
   #		topic = "bar"
 
   ## Send measurements whose measurement names is an exact match to match value to the configured topic.
-  # [outputs.kafka.custom_routing]
+  # [outputs.kafka.topic_routing]
   #		method = "measurement"
-  #		matchtype = "exact_match"
+  #		match_type = "exact"
   #		matchvalue = ["foobar"]
   #		topic = "foobar_topic"
 

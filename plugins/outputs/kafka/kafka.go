@@ -28,11 +28,11 @@ type (
 	Kafka struct {
 		Brokers          []string
 		Topic            string
-		ClientID         string          `toml:"client_id"`
-		TopicSuffix      TopicSuffix     `toml:"topic_suffix"`
-		CustomRouting    []CustomRouting `toml:"custom_routing"`
-		RoutingTag       string          `toml:"routing_tag"`
-		RoutingKey       string          `toml:"routing_key"`
+		ClientID         string         `toml:"client_id"`
+		TopicSuffix      TopicSuffix    `toml:"topic_suffix"`
+		TopicRouting     []TopicRouting `toml:"topic_routing"`
+		RoutingTag       string         `toml:"routing_tag"`
+		RoutingKey       string         `toml:"routing_key"`
 		CompressionCodec int
 		RequiredAcks     int
 		MaxRetry         int
@@ -67,9 +67,9 @@ type (
 		Keys      []string `toml:"keys"`
 		Separator string   `toml:"separator"`
 	}
-	CustomRouting struct {
+	TopicRouting struct {
 		Method     string   `toml:"method"`
-		MatchType  string   `toml:"match_type"`
+		match_type string   `toml:"match_type"`
 		MatchValue []string `toml:"match_value"`
 		Topic      string   `toml:"topic"`
 	}
@@ -138,16 +138,16 @@ var sampleConfig = `
   #   separator = "_"
 
   ## Send measurements whose measurement names contain foo, to the bar topic.
-  # [outputs.kafka.custom_routing]
+  # [outputs.kafka.topic_routing]
   #		method = "measurement"
-  #		matchtype = "substring"
+  #		match_type = "substring"
   #		matchvalue = "foo"
   #		topic = "bar"
 
   ## Send measurements whose measurement names is an exact match to match value to the bar topic.
-  # [outputs.kafka.custom_routing]
+  # [outputs.kafka.topic_routing]
   #		method = "measurement"
-  #		matchtype = "exact_match"
+  #		match_type = "exact"
   #		matchvalue = "test_foo"
   #		topic = "bar"
 
@@ -244,14 +244,13 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 		default:
 			topicName = k.Topic
 		}
-	} else if len(k.CustomRouting) != 0 {
+	} else if len(k.TopicRouting) != 0 {
 		//This label is used to break out of rule evaluation after finding a matching rule.
 	ruleEvaluation:
-		for _, rule := range k.CustomRouting {
+		for _, rule := range k.TopicRouting {
 			switch rule.Method {
-			// This logic handles routing based on measurement name
 			case "measurement":
-				switch rule.MatchType {
+				switch rule.match_type {
 				case "substring":
 					for _, v := range rule.MatchValue {
 						if strings.Contains(metric.Name(), v) {
@@ -259,7 +258,7 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 							break ruleEvaluation
 						}
 					}
-				case "exact_match":
+				case "exact":
 					for _, v := range rule.MatchValue {
 						if metric.Name() == v {
 							topicName = rule.Topic
