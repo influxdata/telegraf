@@ -62,8 +62,6 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   #		match_values = ["test_foo", "foo_test"]
   #		topic = "bar"
 
-  ## Telegraf tag to use as a routing key
-  ##  ie, if this tag exists, its value will be used as the routing key
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
   ## send the message to.  This tag is prefered over the routing_key option.
