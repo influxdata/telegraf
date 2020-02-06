@@ -352,20 +352,21 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Processor Plugins
 
-* [clone](./plugins/processors/clone)
-* [converter](./plugins/processors/converter)
-* [date](./plugins/processors/date)
-* [enum](./plugins/processors/enum)
-* [override](./plugins/processors/override)
-* [parser](./plugins/processors/parser)
-* [pivot](./plugins/processors/pivot)
-* [printer](./plugins/processors/printer)
-* [regex](./plugins/processors/regex)
-* [rename](./plugins/processors/rename)
-* [strings](./plugins/processors/strings)
-* [tag_limit](./plugins/processors/tag_limit)
-* [topk](./plugins/processors/topk)
-* [unpivot](./plugins/processors/unpivot)
+* [clone](/plugins/processors/clone)
+* [converter](/plugins/processors/converter)
+* [date](/plugins/processors/date)
+* [enum](/plugins/processors/enum)
+* [override](/plugins/processors/override)
+* [parser](/plugins/processors/parser)
+* [pivot](/plugins/processors/pivot)
+* [printer](/plugins/processors/printer)
+* [regex](/plugins/processors/regex)
+* [rename](/plugins/processors/rename)
+* [strings](/plugins/processors/strings)
+* [tag_limit](/plugins/processors/tag_limit)
+* [template](/plugins/processors/template)
+* [topk](/plugins/processors/topk)
+* [unpivot](/plugins/processors/unpivot)
 
 ## Aggregator Plugins
 

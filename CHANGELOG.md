@@ -15,6 +15,10 @@
 - [modbus](/plugins/inputs/modbus/README.md) - Contributed by @garciaolais
 - [monit](/plugins/inputs/monit/README.md) - Contributed by @SirishaGopigiri
 
+#### New Processors
+
+- [template](/plugins/processors/template/README.md) - Contributed by @RobMalvern
+
 #### New Outputs
 
 - [warp10](/plugins/outputs/warp10/README.md) - Contributed by @aurrelhebert

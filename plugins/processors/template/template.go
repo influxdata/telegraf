@@ -1,26 +1,28 @@
 package template
 
 import (
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"strings"
 	"text/template"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type TemplateProcessor struct {
-	Tag      string `toml:"tag"`
-	Template string `toml:"template"`
+	Tag      string          `toml:"tag"`
+	Template string          `toml:"template"`
+	Log      telegraf.Logger `toml:"-"`
 	tmpl     *template.Template
 }
 
 const sampleConfig = `
-  ## Concatenate two tags to create a new tag
-  # [[processors.template]]
-  #   ## Tag to create
-  #   tag = "topic"
-  #   ## Template to create tag
-  # Note: Single quotes (') are used, so the double quotes (") don't need escaping (\")
-  #   template = '{{.Tag "hostname"}}.{{ .Tag "level" }}'
+  ## Tag to set with the output of the template.
+  tag = "topic"
+
+  ## Go template used to create the tag value.  In order to ease TOML
+  ## escaping requirements, you may wish to use single quotes around the
+  ## template string.
+  template = '{{ .Tag "hostname" }}.{{ .Tag "level" }}'
 `
 
 func (r *TemplateProcessor) SampleConfig() string {
@@ -40,7 +42,8 @@ func (r *TemplateProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		// supply TemplateMetric and Template from configuration to Template.Execute
 		err := r.tmpl.Execute(&b, &newM)
 		if err != nil {
-			panic(err)
+			r.Log.Errorf("failed to execute template: %v", err)
+			continue
 		}
 
 		metric.AddTag(r.Tag, b.String())
@@ -57,7 +60,7 @@ func (r *TemplateProcessor) Init() error {
 }
 
 func init() {
-	processors.Add("printer", func() telegraf.Processor {
+	processors.Add("template", func() telegraf.Processor {
 		return &TemplateProcessor{}
 	})
 }
