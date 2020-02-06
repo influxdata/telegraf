@@ -48,7 +48,7 @@ func (c *client) init() error {
 		}
 	}
 	// first api fetch
-	if err := c.doGet(context.Background(), jobPath, new(jobResponse)); err != nil {
+	if err := c.doGet(context.Background(), jsonSuffix, new(jobResponse)); err != nil {
 		return err
 	}
 	return nil
@@ -132,21 +132,18 @@ func createGetRequest(url string, username, password string, sessionCookie *http
 	return req, nil
 }
 
-func (c *client) getJobs(ctx context.Context, jr *jobRequest) (js *jobResponse, err error) {
-	js = new(jobResponse)
-	url := jobPath
-	if jr != nil {
-		url = jr.URL()
-	}
+func (c *client) getJobs(ctx context.Context) (js *jobsResponse, err error) {
+	js = new(jobsResponse)
+	url := jsonSuffix
 	err = c.doGet(ctx, url, js)
 	return js, err
 }
 
-func (c *client) getBuild(ctx context.Context, jr jobRequest, number int64) (b *buildResponse, err error) {
-	b = new(buildResponse)
-	url := jr.buildURL(number)
-	err = c.doGet(ctx, url, b)
-	return b, err
+func (c *client) getJob(ctx context.Context, jr *jobRequest) (js *jobResponse, err error) {
+	js = new(jobResponse)
+	url := jr.url()
+	err = c.doGet(ctx, url, js)
+	return js, err
 }
 
 func (c *client) getAllNodes(ctx context.Context) (nodeResp *nodeResponse, err error) {

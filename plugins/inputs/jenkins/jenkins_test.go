@@ -59,8 +59,8 @@ func TestResultCode(t *testing.T) {
 }
 
 type mockHandler struct {
-	// responseMap is the path to repsonse interface
-	// we will ouput the serialized response in json when serving http
+	// responseMap is the path to response interface
+	// we will output the serialized response in json when serving http
 	// example '/computer/api/json': *gojenkins.
 	responseMap map[string]interface{}
 }
@@ -349,7 +349,7 @@ func TestGatherJobs(t *testing.T) {
 			name: "empty job",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{},
+					"/api/json": &jobsResponse{},
 				},
 			},
 		},
@@ -357,7 +357,7 @@ func TestGatherJobs(t *testing.T) {
 			name: "bad inner jobs",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{
+					"/api/json": &jobsResponse{
 						Jobs: []innerJob{
 							{Name: "job1"},
 						},
@@ -370,49 +370,33 @@ func TestGatherJobs(t *testing.T) {
 			name: "jobs has no build",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{
-						Jobs: []innerJob{
-							{Name: "job1"},
-						},
-					},
-					"/job/job1/api/json": &jobResponse{},
-				},
-			},
-		},
-		{
-			name: "bad build info",
-			input: mockHandler{
-				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{
+					"/api/json": &jobsResponse{
 						Jobs: []innerJob{
 							{Name: "job1"},
 						},
 					},
 					"/job/job1/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 1,
-						},
+						Name: "job1",
 					},
 				},
 			},
-			wantErr: true,
 		},
 		{
 			name: "ignore building job",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{
+					"/api/json": &jobsResponse{
 						Jobs: []innerJob{
 							{Name: "job1"},
 						},
 					},
 					"/job/job1/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 1,
+						Builds: []jobBuild{
+							{
+								Number: 1,
+								Building: true,
+							},
 						},
-					},
-					"/job/job1/1/api/json": &buildResponse{
-						Building: true,
 					},
 				},
 			},
@@ -421,19 +405,42 @@ func TestGatherJobs(t *testing.T) {
 			name: "ignore old build",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{
+					"/api/json": &jobsResponse{
 						Jobs: []innerJob{
 							{Name: "job1"},
 						},
 					},
 					"/job/job1/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 2,
+						Builds: []jobBuild{
+							{
+								Number: 3,
+								Building: false,
+								Result:    "SUCCESS",
+								Duration:  500,
+								Timestamp: 100,
+							},
+							{
+								Number: 4,
+								Building: false,
+								Result:    "SUCCESS",
+								Duration:  25558,
+								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+							},
 						},
 					},
-					"/job/job1/2/api/json": &buildResponse{
-						Building:  false,
-						Timestamp: 100,
+				},
+			},
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"name":   "job1",
+							"result": "SUCCESS",
+						},
+						Fields: map[string]interface{}{
+							"duration":    int64(25558),
+							"result_code": 0,
+						},
 					},
 				},
 			},
@@ -442,33 +449,33 @@ func TestGatherJobs(t *testing.T) {
 			name: "gather metrics",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{
+					"/api/json": &jobsResponse{
 						Jobs: []innerJob{
 							{Name: "job1"},
 							{Name: "job2"},
 						},
 					},
 					"/job/job1/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 3,
+						Builds: []jobBuild{
+							{
+								Number: 3,
+								Building: false,
+								Result:    "SUCCESS",
+								Duration:  25558,
+								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+							},
 						},
 					},
 					"/job/job2/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 1,
+						Builds: []jobBuild{
+							{
+								Number: 1,
+								Building:  false,
+								Result:    "FAILURE",
+								Duration:  1558,
+								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+							},
 						},
-					},
-					"/job/job1/3/api/json": &buildResponse{
-						Building:  false,
-						Result:    "SUCCESS",
-						Duration:  25558,
-						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
-					},
-					"/job/job2/1/api/json": &buildResponse{
-						Building:  false,
-						Result:    "FAILURE",
-						Duration:  1558,
-						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 				},
 			},
@@ -501,13 +508,14 @@ func TestGatherJobs(t *testing.T) {
 			name: "gather sub jobs, jobs filter",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
-					"/api/json": &jobResponse{
+					"/api/json": &jobsResponse{
 						Jobs: []innerJob{
 							{Name: "apps"},
 							{Name: "ignore-1"},
 						},
 					},
 					"/job/apps/api/json": &jobResponse{
+						Name: "apps",
 						Jobs: []innerJob{
 							{Name: "k8s-cloud"},
 							{Name: "chronograf"},
@@ -521,8 +529,14 @@ func TestGatherJobs(t *testing.T) {
 						},
 					},
 					"/job/apps/job/chronograf/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 1,
+						Builds: []jobBuild{
+							{
+								Number: 1,
+								Building:  false,
+								Result:    "FAILURE",
+								Duration:  1558,
+								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+							},
 						},
 					},
 					"/job/apps/job/k8s-cloud/api/json": &jobResponse{
@@ -533,32 +547,26 @@ func TestGatherJobs(t *testing.T) {
 						},
 					},
 					"/job/apps/job/k8s-cloud/job/PR-100/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 1,
+						Builds: []jobBuild{
+							{
+								Number: 1,
+								Building:  false,
+								Result:    "SUCCESS",
+								Duration:  91558,
+								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+							},
 						},
 					},
 					"/job/apps/job/k8s-cloud/job/PR-101/api/json": &jobResponse{
-						LastBuild: jobBuild{
-							Number: 4,
+						Builds: []jobBuild{
+							{
+								Number: 4,
+								Building:  false,
+								Result:    "SUCCESS",
+								Duration:  76558,
+								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+							},
 						},
-					},
-					"/job/apps/job/chronograf/1/api/json": &buildResponse{
-						Building:  false,
-						Result:    "FAILURE",
-						Duration:  1558,
-						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
-					},
-					"/job/apps/job/k8s-cloud/job/PR-101/4/api/json": &buildResponse{
-						Building:  false,
-						Result:    "SUCCESS",
-						Duration:  76558,
-						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
-					},
-					"/job/apps/job/k8s-cloud/job/PR-100/1/api/json": &buildResponse{
-						Building:  false,
-						Result:    "SUCCESS",
-						Duration:  91558,
-						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
 				},
 			},

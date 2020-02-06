@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,8 +40,6 @@ type Jenkins struct {
 
 	NodeExclude []string `toml:"node_exclude"`
 	nodeFilter  filter.Filter
-
-	semaphore chan struct{}
 }
 
 const sampleConfig = `
@@ -136,7 +133,7 @@ func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 	}, nil
 }
 
-// seperate the client as dependency to use httptest Client for mocking
+// separate the client as dependency to use httptest Client for mocking
 func (j *Jenkins) initialize(client *http.Client) error {
 	var err error
 
@@ -177,8 +174,6 @@ func (j *Jenkins) initialize(client *http.Client) error {
 	if j.MaxSubJobPerLayer <= 0 {
 		j.MaxSubJobPerLayer = 10
 	}
-
-	j.semaphore = make(chan struct{}, j.MaxConnections)
 
 	j.client = newClient(client, j.URL, j.Username, j.Password, j.MaxConnections)
 
@@ -255,7 +250,7 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 }
 
 func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
-	js, err := j.client.getJobs(context.Background(), nil)
+	js, err := j.client.getJobs(context.Background())
 	if err != nil {
 		acc.AddError(err)
 		return
@@ -277,28 +272,17 @@ func (j *Jenkins) gatherJobs(acc telegraf.Accumulator) {
 	wg.Wait()
 }
 
-// wrap the tcp request with doGet
-// block tcp request if buffered channel is full
-func (j *Jenkins) doGet(tcp func() error) error {
-	j.semaphore <- struct{}{}
-	if err := tcp(); err != nil {
-		<-j.semaphore
-		return err
-	}
-	<-j.semaphore
-	return nil
-}
-
 func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	if j.MaxSubJobDepth > 0 && jr.layer == j.MaxSubJobDepth {
 		return nil
 	}
+
 	// filter out excluded job.
 	if j.jobFilter != nil && j.jobFilter.Match(jr.hierarchyName()) {
 		return nil
 	}
 
-	js, err := j.client.getJobs(context.Background(), &jr)
+	js, err := j.client.getJob(context.Background(), &jr)
 	if err != nil {
 		return err
 	}
@@ -323,32 +307,28 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
-	// collect build info
-	number := js.LastBuild.Number
-	if number < 1 {
-		// no build info
-		return nil
-	}
-	build, err := j.client.getBuild(context.Background(), jr, number)
-	if err != nil {
-		return err
-	}
+	for _, build := range js.Builds {
+		wg.Add(1)
+		go func(b jobBuild) {
+			defer wg.Done()
+			if b.Building {
+				j.Log.Debugf("Ignore running build on %s, build %v", jr.name, b.Number)
+				return
+			}
 
-	if build.Building {
-		j.Log.Debugf("Ignore running build on %s, build %v", jr.name, number)
-		return nil
+			// If the build is before the cutoff, skip recording its metrics
+			cutoff := time.Now().Add(-1 * j.MaxBuildAge.Duration)
+		
+			if b.GetTimestamp().Before(cutoff) {
+				j.Log.Debugf("The following build is too old to record: %s, build %v", jr.name, b.Number)
+				return
+			}
+
+			j.gatherJobBuild(jr, &b, acc)
+		}(build)
 	}
+	wg.Wait()
 
-	// stop if build is too old
-	// Higher up in gatherJobs
-	cutoff := time.Now().Add(-1 * j.MaxBuildAge.Duration)
-
-	// Here we just test
-	if build.GetTimestamp().Before(cutoff) {
-		return nil
-	}
-
-	j.gatherJobBuild(jr, build, acc)
 	return nil
 }
 
@@ -387,37 +367,37 @@ type swapSpaceMonitor struct {
 	MemoryTotal     float64 `json:"totalPhysicalMemory"`
 }
 
-type jobResponse struct {
-	LastBuild jobBuild   `json:"lastBuild"`
-	Jobs      []innerJob `json:"jobs"`
-	Name      string     `json:"name"`
-}
-
 type innerJob struct {
 	Name  string `json:"name"`
 	URL   string `json:"url"`
 	Color string `json:"color"`
 }
 
-type jobBuild struct {
-	Number int64
-	URL    string
+type jobsResponse struct {
+	Jobs      []innerJob `json:"jobs"`
 }
 
-type buildResponse struct {
+type jobBuild struct {
 	Building  bool   `json:"building"`
 	Duration  int64  `json:"duration"`
 	Result    string `json:"result"`
 	Timestamp int64  `json:"timestamp"`
+	Number    int64  `json:"number"`
 }
 
-func (b *buildResponse) GetTimestamp() time.Time {
+type jobResponse struct {
+	Builds    []jobBuild `json:"builds"`
+	Jobs      []innerJob `json:"jobs"`
+	Name      string     `json:"name"`
+}
+
+func (b *jobBuild) GetTimestamp() time.Time {
 	return time.Unix(0, int64(b.Timestamp)*int64(time.Millisecond))
 }
 
 const (
+	jsonSuffix = "/api/json"
 	nodePath = "/computer/api/json"
-	jobPath  = "/api/json"
 )
 
 type jobRequest struct {
@@ -430,12 +410,8 @@ func (jr jobRequest) combined() []string {
 	return append(jr.parents, jr.name)
 }
 
-func (jr jobRequest) URL() string {
-	return "/job/" + strings.Join(jr.combined(), "/job/") + jobPath
-}
-
-func (jr jobRequest) buildURL(number int64) string {
-	return "/job/" + strings.Join(jr.combined(), "/job/") + "/" + strconv.Itoa(int(number)) + jobPath
+func (jr jobRequest) url() string {
+	return "/job/" + strings.Join(jr.combined(), "/job/") + jsonSuffix + "?depth=1&tree=jobs[name,jobs],name,builds[building,duration,result,timestamp,number]"
 }
 
 func (jr jobRequest) hierarchyName() string {
@@ -446,7 +422,7 @@ func (jr jobRequest) parentsString() string {
 	return strings.Join(jr.parents, "/")
 }
 
-func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
+func (j *Jenkins) gatherJobBuild(jr jobRequest, b *jobBuild, acc telegraf.Accumulator) {
 	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result, "source": j.Source, "port": j.Port}
 	fields := make(map[string]interface{})
 	fields["duration"] = b.Duration
