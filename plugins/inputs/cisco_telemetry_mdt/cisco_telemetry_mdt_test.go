@@ -7,20 +7,20 @@ import (
 	"net"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )
 
 func TestHandleTelemetryTwoSimple(t *testing.T) {
 	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"alias": "type:model/some/path"}}
 	acc := &testutil.Accumulator{}
-	c.Start(acc)
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
 
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
@@ -81,7 +81,7 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 	data, _ := proto.Marshal(telemetry)
 
 	c.handleTelemetry(data)
-	assert.Empty(t, acc.Errors)
+	require.Empty(t, acc.Errors)
 
 	tags := map[string]string{"path": "type:model/some/path", "name": "str", "uint64": "1234", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"bool": true}
@@ -95,7 +95,9 @@ func TestHandleTelemetryTwoSimple(t *testing.T) {
 func TestHandleTelemetrySingleNested(t *testing.T) {
 	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "dummy", Aliases: map[string]string{"nested": "type:model/nested/path"}}
 	acc := &testutil.Accumulator{}
-	c.Start(acc)
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
 
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
@@ -150,7 +152,7 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 	data, _ := proto.Marshal(telemetry)
 
 	c.handleTelemetry(data)
-	assert.Empty(t, acc.Errors)
+	require.Empty(t, acc.Errors)
 
 	tags := map[string]string{"path": "type:model/nested/path", "level": "3", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"nested/value/foo": "bar"}
@@ -160,7 +162,9 @@ func TestHandleTelemetrySingleNested(t *testing.T) {
 func TestHandleEmbeddedTags(t *testing.T) {
 	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"extra": "type:model/extra"}, EmbeddedTags: []string{"type:model/extra/list/name"}}
 	acc := &testutil.Accumulator{}
-	c.Start(acc)
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
 
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
@@ -217,7 +221,7 @@ func TestHandleEmbeddedTags(t *testing.T) {
 	data, _ := proto.Marshal(telemetry)
 
 	c.handleTelemetry(data)
-	assert.Empty(t, acc.Errors)
+	require.Empty(t, acc.Errors)
 
 	tags1 := map[string]string{"path": "type:model/extra", "foo": "bar", "source": "hostname", "subscription": "subscription", "list/name": "entry1"}
 	fields1 := map[string]interface{}{"list/test": "foo"}
@@ -230,7 +234,9 @@ func TestHandleEmbeddedTags(t *testing.T) {
 func TestHandleNXAPI(t *testing.T) {
 	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"nxapi": "show nxapi"}}
 	acc := &testutil.Accumulator{}
-	c.Start(acc)
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
 
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
@@ -303,7 +309,7 @@ func TestHandleNXAPI(t *testing.T) {
 	data, _ := proto.Marshal(telemetry)
 
 	c.handleTelemetry(data)
-	assert.Empty(t, acc.Errors)
+	require.Empty(t, acc.Errors)
 
 	tags1 := map[string]string{"path": "show nxapi", "foo": "bar", "TABLE_nxapi": "i1", "source": "hostname", "subscription": "subscription"}
 	fields1 := map[string]interface{}{"value": "foo"}
@@ -316,7 +322,9 @@ func TestHandleNXAPI(t *testing.T) {
 func TestHandleNXDME(t *testing.T) {
 	c := &CiscoTelemetryMDT{Transport: "dummy", Aliases: map[string]string{"dme": "sys/dme"}}
 	acc := &testutil.Accumulator{}
-	c.Start(acc)
+	err := c.Start(acc)
+	// error is expected since we are passing in dummy transport
+	require.Error(t, err)
 
 	telemetry := &telemetry.Telemetry{
 		MsgTimestamp: 1543236572000,
@@ -377,7 +385,7 @@ func TestHandleNXDME(t *testing.T) {
 	data, _ := proto.Marshal(telemetry)
 
 	c.handleTelemetry(data)
-	assert.Empty(t, acc.Errors)
+	require.Empty(t, acc.Errors)
 
 	tags1 := map[string]string{"path": "sys/dme", "foo": "bar", "fooEntity": "some-rn", "source": "hostname", "subscription": "subscription"}
 	fields1 := map[string]interface{}{"value": "foo"}
@@ -385,9 +393,10 @@ func TestHandleNXDME(t *testing.T) {
 }
 
 func TestTCPDialoutOverflow(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:57000"}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:0"}
 	acc := &testutil.Accumulator{}
-	assert.Nil(t, c.Start(acc))
+	err := c.Start(acc)
+	require.NoError(t, err)
 
 	hdr := struct {
 		MsgType       uint16
@@ -397,14 +406,16 @@ func TestTCPDialoutOverflow(t *testing.T) {
 		MsgLen        uint32
 	}{MsgLen: uint32(1000000000)}
 
-	conn, _ := net.Dial("tcp", "127.0.0.1:57000")
+	addr := c.Address()
+	conn, err := net.Dial(addr.Network(), addr.String())
+	require.NoError(t, err)
 	binary.Write(conn, binary.BigEndian, hdr)
 	conn.Read([]byte{0})
 	conn.Close()
 
 	c.Stop()
 
-	assert.Contains(t, acc.Errors, errors.New("dialout packet too long: 1000000000"))
+	require.Contains(t, acc.Errors, errors.New("dialout packet too long: 1000000000"))
 }
 
 func mockTelemetryMessage() *telemetry.Telemetry {
@@ -441,10 +452,11 @@ func mockTelemetryMessage() *telemetry.Telemetry {
 }
 
 func TestTCPDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:57000", Aliases: map[string]string{
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "tcp", ServiceAddress: "127.0.0.1:0", Aliases: map[string]string{
 		"some": "type:model/some/path", "parallel": "type:model/parallel/path", "other": "type:model/other/path"}}
 	acc := &testutil.Accumulator{}
-	assert.Nil(t, c.Start(acc))
+	err := c.Start(acc)
+	require.NoError(t, err)
 
 	telemetry := mockTelemetryMessage()
 
@@ -456,14 +468,18 @@ func TestTCPDialoutMultiple(t *testing.T) {
 		MsgLen        uint32
 	}{}
 
-	conn, _ := net.Dial("tcp", "127.0.0.1:57000")
+	addr := c.Address()
+	conn, err := net.Dial(addr.Network(), addr.String())
+	require.NoError(t, err)
 
 	data, _ := proto.Marshal(telemetry)
 	hdr.MsgLen = uint32(len(data))
 	binary.Write(conn, binary.BigEndian, hdr)
 	conn.Write(data)
 
-	conn2, _ := net.Dial("tcp", "127.0.0.1:57000")
+	conn2, err := net.Dial(addr.Network(), addr.String())
+	require.NoError(t, err)
+
 	telemetry.EncodingPath = "type:model/parallel/path"
 	data, _ = proto.Marshal(telemetry)
 	hdr.MsgLen = uint32(len(data))
@@ -484,7 +500,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 	conn.Close()
 
 	// We use the invalid dialout flags to let the server close the connection
-	assert.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
+	require.Equal(t, acc.Errors, []error{errors.New("invalid dialout flags: 257"), errors.New("invalid dialout flags: 257")})
 
 	tags := map[string]string{"path": "type:model/some/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
@@ -500,11 +516,13 @@ func TestTCPDialoutMultiple(t *testing.T) {
 }
 
 func TestGRPCDialoutError(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:57001"}
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0"}
 	acc := &testutil.Accumulator{}
-	assert.Nil(t, c.Start(acc))
+	err := c.Start(acc)
+	require.NoError(t, err)
 
-	conn, _ := grpc.Dial("127.0.0.1:57001", grpc.WithInsecure())
+	addr := c.Address()
+	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure())
 	client := dialout.NewGRPCMdtDialoutClient(conn)
 	stream, _ := client.MdtDialout(context.Background())
 
@@ -515,17 +533,19 @@ func TestGRPCDialoutError(t *testing.T) {
 	stream.Recv()
 	c.Stop()
 
-	assert.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
+	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: foobar")})
 }
 
 func TestGRPCDialoutMultiple(t *testing.T) {
-	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:57001", Aliases: map[string]string{
+	c := &CiscoTelemetryMDT{Log: testutil.Logger{}, Transport: "grpc", ServiceAddress: "127.0.0.1:0", Aliases: map[string]string{
 		"some": "type:model/some/path", "parallel": "type:model/parallel/path", "other": "type:model/other/path"}}
 	acc := &testutil.Accumulator{}
-	assert.Nil(t, c.Start(acc))
+	err := c.Start(acc)
+	require.NoError(t, err)
 	telemetry := mockTelemetryMessage()
 
-	conn, _ := grpc.Dial("127.0.0.1:57001", grpc.WithInsecure(), grpc.WithBlock())
+	addr := c.Address()
+	conn, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
 	client := dialout.NewGRPCMdtDialoutClient(conn)
 	stream, _ := client.MdtDialout(context.TODO())
 
@@ -533,7 +553,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	args := &dialout.MdtDialoutArgs{Data: data, ReqId: 456}
 	stream.Send(args)
 
-	conn2, _ := grpc.Dial("127.0.0.1:57001", grpc.WithInsecure(), grpc.WithBlock())
+	conn2, _ := grpc.Dial(addr.String(), grpc.WithInsecure(), grpc.WithBlock())
 	client2 := dialout.NewGRPCMdtDialoutClient(conn2)
 	stream2, _ := client2.MdtDialout(context.TODO())
 
@@ -555,7 +575,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 	c.Stop()
 	conn.Close()
 
-	assert.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
+	require.Equal(t, acc.Errors, []error{errors.New("GRPC dialout error: testclose"), errors.New("GRPC dialout error: testclose")})
 
 	tags := map[string]string{"path": "type:model/some/path", "name": "str", "source": "hostname", "subscription": "subscription"}
 	fields := map[string]interface{}{"value": int64(-1)}
