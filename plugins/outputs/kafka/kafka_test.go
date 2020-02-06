@@ -101,24 +101,24 @@ func TestKafkaTopicRouting(t *testing.T) {
 
 	var testcases = []TopicRoutingTestPair{
 		{[]TopicRouting{
-			{Method: "measurement", MatchType: "exact", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_1"}},
+			{Method: "measurement", MatchType: "exact", MatchValues: []string{"test_measurement_1"}, Topic: "measurement_topic_1"}},
 			"measurement_topic_1"},
 		{[]TopicRouting{
-			{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "measurement_topic_2"}},
+			{Method: "measurement", MatchType: "substring", MatchValues: []string{"measurement_1"}, Topic: "measurement_topic_2"}},
 			"measurement_topic_2"},
 		{[]TopicRouting{
-			{Method: "measurement", MatchType: "exact", MatchValue: []string{"failed_exact_match"}, Topic: "measurement_topic_2"}},
+			{Method: "measurement", MatchType: "exact", MatchValues: []string{"failed_exact_match"}, Topic: "measurement_topic_2"}},
 			"FallbackTopic"},
 		{[]TopicRouting{
-			{Method: "measurement", MatchType: "substring", MatchValue: []string{"failed_substring_match"}, Topic: "measurement_topic_2"}},
+			{Method: "measurement", MatchType: "substring", MatchValues: []string{"failed_substring_match"}, Topic: "measurement_topic_2"}},
 			"FallbackTopic"},
 		{[]TopicRouting{
-			{Method: "measurement", MatchType: "exact", MatchValue: []string{"failed_exact_match"}, Topic: "measurement_topic_1"},
-			{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "second_rule_match_success"}},
+			{Method: "measurement", MatchType: "exact", MatchValues: []string{"failed_exact_match"}, Topic: "measurement_topic_1"},
+			{Method: "measurement", MatchType: "substring", MatchValues: []string{"measurement_1"}, Topic: "second_rule_match_success"}},
 			"second_rule_match_success"},
 		{[]TopicRouting{
-			{Method: "measurement", MatchType: "substring", MatchValue: []string{"measurement_1"}, Topic: "first_rule_match_success"},
-			{Method: "measurement", MatchType: "exact", MatchValue: []string{"test_measurement_1"}, Topic: "measurement_topic_2"}},
+			{Method: "measurement", MatchType: "substring", MatchValues: []string{"measurement_1"}, Topic: "first_rule_match_success"},
+			{Method: "measurement", MatchType: "exact", MatchValues: []string{"test_measurement_1"}, Topic: "measurement_topic_2"}},
 			"first_rule_match_success"},
 		// This ensures backward compatibility
 		{[]TopicRouting{},

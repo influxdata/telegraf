@@ -68,10 +68,10 @@ type (
 		Separator string   `toml:"separator"`
 	}
 	TopicRouting struct {
-		Method     string   `toml:"method"`
-		MatchType  string   `toml:"match_type"`
-		MatchValue []string `toml:"match_value"`
-		Topic      string   `toml:"topic"`
+		Method      string   `toml:"method"`
+		MatchType   string   `toml:"match_type"`
+		MatchValues []string `toml:"match_values"`
+		Topic       string   `toml:"topic"`
 	}
 )
 
@@ -244,14 +244,14 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 			case "measurement":
 				switch rule.MatchType {
 				case "substring":
-					for _, v := range rule.MatchValue {
+					for _, v := range rule.MatchValues {
 						if strings.Contains(measurementName, v) {
 							return rule.Topic
 
 						}
 					}
 				case "exact":
-					for _, v := range rule.MatchValue {
+					for _, v := range rule.MatchValues {
 						if measurementName == v {
 							return rule.Topic
 						}
