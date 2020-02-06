@@ -318,7 +318,7 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 
 			// If the build is before the cutoff, skip recording its metrics
 			cutoff := time.Now().Add(-1 * j.MaxBuildAge.Duration)
-		
+
 			if b.GetTimestamp().Before(cutoff) {
 				j.Log.Debugf("The following build is too old to record: %s, build %v", jr.name, b.Number)
 				return
@@ -374,7 +374,7 @@ type innerJob struct {
 }
 
 type jobsResponse struct {
-	Jobs      []innerJob `json:"jobs"`
+	Jobs []innerJob `json:"jobs"`
 }
 
 type jobBuild struct {
@@ -386,9 +386,9 @@ type jobBuild struct {
 }
 
 type jobResponse struct {
-	Builds    []jobBuild `json:"builds"`
-	Jobs      []innerJob `json:"jobs"`
-	Name      string     `json:"name"`
+	Builds []jobBuild `json:"builds"`
+	Jobs   []innerJob `json:"jobs"`
+	Name   string     `json:"name"`
 }
 
 func (b *jobBuild) GetTimestamp() time.Time {
@@ -397,7 +397,7 @@ func (b *jobBuild) GetTimestamp() time.Time {
 
 const (
 	jsonSuffix = "/api/json"
-	nodePath = "/computer/api/json"
+	nodePath   = "/computer/api/json"
 )
 
 type jobRequest struct {

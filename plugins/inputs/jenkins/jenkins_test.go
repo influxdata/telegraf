@@ -393,7 +393,7 @@ func TestGatherJobs(t *testing.T) {
 					"/job/job1/api/json": &jobResponse{
 						Builds: []jobBuild{
 							{
-								Number: 1,
+								Number:   1,
 								Building: true,
 							},
 						},
@@ -413,15 +413,15 @@ func TestGatherJobs(t *testing.T) {
 					"/job/job1/api/json": &jobResponse{
 						Builds: []jobBuild{
 							{
-								Number: 3,
-								Building: false,
+								Number:    3,
+								Building:  false,
 								Result:    "SUCCESS",
 								Duration:  500,
 								Timestamp: 100,
 							},
 							{
-								Number: 4,
-								Building: false,
+								Number:    4,
+								Building:  false,
 								Result:    "SUCCESS",
 								Duration:  25558,
 								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
@@ -458,8 +458,8 @@ func TestGatherJobs(t *testing.T) {
 					"/job/job1/api/json": &jobResponse{
 						Builds: []jobBuild{
 							{
-								Number: 3,
-								Building: false,
+								Number:    3,
+								Building:  false,
 								Result:    "SUCCESS",
 								Duration:  25558,
 								Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
@@ -469,7 +469,7 @@ func TestGatherJobs(t *testing.T) {
 					"/job/job2/api/json": &jobResponse{
 						Builds: []jobBuild{
 							{
-								Number: 1,
+								Number:    1,
 								Building:  false,
 								Result:    "FAILURE",
 								Duration:  1558,
@@ -531,7 +531,7 @@ func TestGatherJobs(t *testing.T) {
 					"/job/apps/job/chronograf/api/json": &jobResponse{
 						Builds: []jobBuild{
 							{
-								Number: 1,
+								Number:    1,
 								Building:  false,
 								Result:    "FAILURE",
 								Duration:  1558,
@@ -549,7 +549,7 @@ func TestGatherJobs(t *testing.T) {
 					"/job/apps/job/k8s-cloud/job/PR-100/api/json": &jobResponse{
 						Builds: []jobBuild{
 							{
-								Number: 1,
+								Number:    1,
 								Building:  false,
 								Result:    "SUCCESS",
 								Duration:  91558,
@@ -560,7 +560,7 @@ func TestGatherJobs(t *testing.T) {
 					"/job/apps/job/k8s-cloud/job/PR-101/api/json": &jobResponse{
 						Builds: []jobBuild{
 							{
-								Number: 4,
+								Number:    4,
 								Building:  false,
 								Result:    "SUCCESS",
 								Duration:  76558,
