@@ -152,7 +152,7 @@ var sampleConfig = `
   #		match_type = "exact"
   #		match_values = ["test_foo", "foo_test"]
   #		topic = "bar"
-ß
+
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
   ## send the message to.  This tag is prefered over the routing_key option.
