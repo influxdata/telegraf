@@ -41,7 +41,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Suffix equals to "_" + measurement's "foo" and "bar"
   ##   tag values, separated by "_". If there is no such tags,
   ##   their values treated as empty strings.
-  # [outputs.kafka.topic_suffix]
+  # [[outputs.kafka.topic_suffix]]
   #   method = "tags"
   #   keys = ["foo", "bar"]
   #   separator = "_"
@@ -49,7 +49,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Send measurements whose measurement name contains a substring match to a value in match_values to the bar topic.
   ## Please note that if a topic suffix rule is configured, it will only be applied if a routing rule does not match. 
   ## If a routing rule matches, any configured topic suffix rule will not be applied.
-  # [outputs.kafka.topic_routing]
+  # [[outputs.kafka.topic_routing]]
   #		method = "measurement"
   #		match_type = "substring"
   #		match_values = ["foo", "fo"]

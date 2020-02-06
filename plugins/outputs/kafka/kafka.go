@@ -140,14 +140,14 @@ var sampleConfig = `
   ## Send measurements whose measurement name contains a substring match to a value in match_values to the bar topic.
   ## Please note that if a topic suffix rule is configured, it will be applied if a routing rule does not match. 
   ## If a routing rule does match, any configured topic suffix rule will not be applied.
-  # [outputs.kafka.topic_routing]
+  # [[outputs.kafka.topic_routing]]
   #		method = "measurement"
   #		match_type = "substring"
   #		match_values = ["foo", "fo"]
   #		topic = "bar"
 
   ## Send measurements whose measurement name is an exact match to a value in match_values to the bar topic.
-  # [outputs.kafka.topic_routing]
+  # [[outputs.kafka.topic_routing]]
   #		method = "measurement"
   #		match_type = "exact"
   #		match_values = ["test_foo", "foo_test"]
