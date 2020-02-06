@@ -152,9 +152,7 @@ var sampleConfig = `
   #		match_type = "exact"
   #		match_values = ["test_foo", "foo_test"]
   #		topic = "bar"
-
-  ## Telegraf tag to use as a routing key
-  ##  ie, if this tag exists, its value will be used as the routing key
+ß
   ## The routing tag specifies a tagkey on the metric whose value is used as
   ## the message key.  The message key is used to determine which partition to
   ## send the message to.  This tag is prefered over the routing_key option.
@@ -265,24 +263,20 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 
 	}
 
-	if k.TopicSuffix.Method != "" && topicName == "" {
-		switch k.TopicSuffix.Method {
-		case "measurement":
-			topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
-		case "tags":
-			var topicNameComponents []string
-			topicNameComponents = append(topicNameComponents, k.Topic)
-			for _, tag := range k.TopicSuffix.Keys {
-				tagValue := metric.Tags()[tag]
-				if tagValue != "" {
-					topicNameComponents = append(topicNameComponents, tagValue)
-				}
+	switch k.TopicSuffix.Method {
+	case "measurement":
+		topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
+	case "tags":
+		var topicNameComponents []string
+		topicNameComponents = append(topicNameComponents, k.Topic)
+		for _, tag := range k.TopicSuffix.Keys {
+			tagValue := metric.Tags()[tag]
+			if tagValue != "" {
+				topicNameComponents = append(topicNameComponents, tagValue)
 			}
-			topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
-		default:
-			topicName = k.Topic
 		}
-	} else if topicName == "" {
+		topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
+	default:
 		topicName = k.Topic
 	}
 

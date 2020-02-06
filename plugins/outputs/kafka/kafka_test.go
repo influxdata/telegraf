@@ -126,12 +126,12 @@ func TestKafkaTopicRouting(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		TopicRouting := testcase.routingRules
+		RoutingRules := testcase.routingRules
 		expectedTopic := testcase.expectedTopic
 
 		k := &Kafka{
 			Topic:             topic,
-			TopicRoutingRules: TopicRouting,
+			TopicRoutingRules: RoutingRules,
 		}
 
 		topic := k.GetTopicName(metric)
