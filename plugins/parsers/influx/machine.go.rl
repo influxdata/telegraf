@@ -465,7 +465,7 @@ func NewStreamMachine(r io.Reader, handler Handler) *streamMachine {
 	}
 
 	m.reader = r
-	m.data = make([]byte, 5)
+	m.data = make([]byte, 1024)
 	m.p = 0
 	m.pb = 0
 	m.lineno = 1
