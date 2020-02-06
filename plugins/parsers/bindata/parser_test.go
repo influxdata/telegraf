@@ -52,7 +52,7 @@ var fields = []Field{
 	Field{Name: "time", Type: "int32"},
 }
 
-var withOmittedFields = []Field{
+var fieldsWithPadding = []Field{
 	Field{Type: "padding", Size: 1},
 	Field{Name: "fieldBool1", Type: "bool"},
 	Field{Name: "fieldUint8", Type: "uint8"},
@@ -152,19 +152,19 @@ func TestInvalidStringEncoding(t *testing.T) {
 	require.Error(t, err)
 	assert.Len(t, metrics, 0)
 }
-func TestWithOmittedFields(t *testing.T) {
+func TestWithPadding(t *testing.T) {
 
-	var withFieldsOmitted = BinData{
-		MetricName: "with_omitted_fields",
+	var withPadding = BinData{
+		MetricName: "with_padding",
 		Endiannes:  "be",
 		TimeFormat: "unix",
-		Fields:     withOmittedFields,
+		Fields:     fieldsWithPadding,
 	}
 
-	metrics, err := withFieldsOmitted.Parse(binaryDataBigEndian)
+	metrics, err := withPadding.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, withFieldsOmitted.MetricName, metrics[0].Name())
+	require.Equal(t, withPadding.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResultWithOmittedFields, metrics[0].Fields())
 }
