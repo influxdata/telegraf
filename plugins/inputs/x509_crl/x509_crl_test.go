@@ -118,8 +118,6 @@ func TestWhenSourceIsFile(test *testing.T) {
 	}
 }
 
-
-
 func TestTags(test *testing.T) {
 	crlFile := givenCRLFile(test, 0640, ValidCRL)
 	defer os.Remove(crlFile.Name())
@@ -136,14 +134,13 @@ func TestTags(test *testing.T) {
 	assert.True(test, acc.HasMeasurement(x509CrlMeasurement))
 	thenTagIsPresentAndEquals(test, acc, "source", crlFile.Name())
 	thenTagIsPresentAndEquals(test, acc, "issuer", "1.2.840.113549.1.9.1=#0c136578616d706c65406578616d706c652e636f6d,2.5.4.41=#130641432056504e,CN=ac,O=Alsace Reseau Neutre,L=Strasbourg,ST=Alsace,C=FR")
-    thenTagIsPresentAndEquals(test, acc, "version", "0")
+	thenTagIsPresentAndEquals(test, acc, "version", "0")
 }
 
 func TestStrings(test *testing.T) {
 
 	crlFile := givenCRLFile(test, 0640, ValidCRL)
 	defer os.Remove(crlFile.Name())
-
 
 	x509crl := &X509CRL{
 		Sources: []string{crlFile.Name()},

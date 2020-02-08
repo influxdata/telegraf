@@ -27,7 +27,7 @@ const description = "Reads metrics from PEM encoded X509 CRL files"
 
 // X509CRL holds the configuration of the plugin.
 type X509CRL struct {
-	Sources    []string          `toml:"sources"`
+	Sources []string `toml:"sources"`
 }
 
 // Description returns description of the plugin.
@@ -87,18 +87,18 @@ func (configuration *X509CRL) getCRL(crlURL *url.URL) ([]*pkix.CertificateList, 
 
 func getFields(crl *pkix.CertificateList) map[string]interface{} {
 	return map[string]interface{}{
-		"start_date":  crl.TBSCertList.ThisUpdate.Unix(),
-		"end_date":    crl.TBSCertList.NextUpdate.Unix(),
-		"has_expired": crl.HasExpired(time.Now()),
+		"start_date":           crl.TBSCertList.ThisUpdate.Unix(),
+		"end_date":             crl.TBSCertList.NextUpdate.Unix(),
+		"has_expired":          crl.HasExpired(time.Now()),
 		"revoked_certificates": fmt.Sprintf("%d", len(crl.TBSCertList.RevokedCertificates)),
 	}
 }
 
 func getTags(crl *pkix.CertificateList, location string) map[string]string {
 	return map[string]string{
-		"source":              location,
-		"issuer":              crl.TBSCertList.Issuer.String(),
-		"version":             strconv.Itoa(crl.TBSCertList.Version),
+		"source":  location,
+		"issuer":  crl.TBSCertList.Issuer.String(),
+		"version": strconv.Itoa(crl.TBSCertList.Version),
 	}
 }
 
