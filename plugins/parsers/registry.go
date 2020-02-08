@@ -163,7 +163,7 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "bindata":
-		parser, err = NewBinDataParser(
+		parser, err = newBinDataParser(
 			config.MetricName,
 			config.BinDataTimeFormat,
 			config.BinDataEndiannes,
@@ -342,7 +342,7 @@ func NewGraphiteParser(
 	return graphite.NewGraphiteParser(separator, templates, defaultTags)
 }
 
-func NewBinDataParser(
+func newBinDataParser(
 	metricName string,
 	timeFormat string,
 	endiannes string,
@@ -350,14 +350,14 @@ func NewBinDataParser(
 	fields []bindata.Field,
 	defaultTags map[string]string,
 ) (Parser, error) {
-	return &bindata.BinData{
-		MetricName:     metricName,
-		TimeFormat:     timeFormat,
-		Endiannes:      endiannes,
-		StringEncoding: stringEncoding,
-		Fields:         fields,
-		DefaultTags:    defaultTags,
-	}, nil
+	return bindata.NewBinDataParser(
+		metricName,
+		timeFormat,
+		endiannes,
+		stringEncoding,
+		fields,
+		defaultTags,
+	)
 }
 
 func NewValueParser(

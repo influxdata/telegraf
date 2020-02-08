@@ -101,6 +101,13 @@ var fieldsWithStringUTF8 = []Field{
 	Field{Name: "time", Type: "int32"},
 }
 
+var defaultTags = map[string]string{
+	"tag0": "value0",
+	"tag1": "value1",
+	"tag2": "value2",
+	"tag3": "value3",
+}
+
 var binaryDataBigEndian = []byte{
 	0x00,
 	0x01,
@@ -162,124 +169,160 @@ var binaryDataStringUTF8 = []byte{
 }
 
 var binaryDataBigEndianTimeXs = []byte{
-	0x00,
 	0x00, 0x00, 0x01, 0x6D, 0xD9, 0xE7, 0x0B, 0x17,
 }
 
 func TestBigEndian(t *testing.T) {
 
-	var bigEndian = BinData{
-		MetricName: "big_endian",
-		Endiannes:  "be",
-		TimeFormat: "unix",
-		Fields:     fields,
-	}
+	var parser, err = NewBinDataParser(
+		"big_endian",
+		"unix",
+		"be",
+		"utf-8",
+		fields,
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err := bigEndian.Parse(binaryDataBigEndian)
+	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, bigEndian.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
 func TestLittleEndian(t *testing.T) {
 
-	var littleEndian = BinData{
-		MetricName: "little_endian",
-		Endiannes:  "le",
-		TimeFormat: "unix",
-		Fields:     fields,
-	}
+	var parser, err = NewBinDataParser(
+		"little_endian",
+		"unix",
+		"le",
+		"utf-8",
+		fields,
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err := littleEndian.Parse(binaryDataLittleEndian)
+	metrics, err := parser.Parse(binaryDataLittleEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, littleEndian.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
+func TestInvalidEndianness(t *testing.T) {
+
+	var parser, err = NewBinDataParser(
+		"invalid_endiannes",
+		"unix",
+		"FOO",
+		"utf-8",
+		nil,
+		nil,
+	)
+
+	assert.Nil(t, parser)
+	require.Error(t, err)
+}
+
 func TestStringEncoding(t *testing.T) {
 
-	var defaultStringEncoding = BinData{
-		MetricName:     "default_string_encoding",
-		Endiannes:      "be",
-		TimeFormat:     "unix",
-		StringEncoding: "utf-8",
-		Fields:         fields,
-	}
+	var parser, err = NewBinDataParser(
+		"default_string_encoding",
+		"unix",
+		"be",
+		"utf-8",
+		fields,
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err := defaultStringEncoding.Parse(binaryDataBigEndian)
+	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
 }
 
 func TestInvalidStringEncoding(t *testing.T) {
 
-	var invalidStringEncoding = BinData{
-		MetricName:     "invalid_string_encoding",
-		Endiannes:      "be",
-		TimeFormat:     "unix",
-		StringEncoding: "utf-16",
-		Fields:         fields,
-	}
+	var parser, err = NewBinDataParser(
+		"invalid_string_encoding",
+		"unix",
+		"be",
+		"utf-16",
+		nil,
+		nil,
+	)
 
-	metrics, err := invalidStringEncoding.Parse(binaryDataBigEndian)
+	assert.Nil(t, parser)
 	require.Error(t, err)
-	assert.Len(t, metrics, 0)
 }
 
 func TestStringUTF8(t *testing.T) {
 
-	var utf8 = BinData{
-		MetricName:     "utf8",
-		Endiannes:      "le",
-		TimeFormat:     "unix",
-		StringEncoding: "utf-8",
-		Fields:         fieldsWithStringUTF8,
-	}
+	var parser, err = NewBinDataParser(
+		"string_utf8",
+		"unix",
+		"le",
+		"utf-8",
+		fieldsWithStringUTF8,
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err := utf8.Parse(binaryDataStringUTF8)
+	metrics, err := parser.Parse(binaryDataStringUTF8)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, utf8.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResultStringUTF8, metrics[0].Fields())
 }
 
 func TestPadding(t *testing.T) {
 
-	var withPadding = BinData{
-		MetricName: "padding",
-		Endiannes:  "be",
-		TimeFormat: "unix",
-		Fields:     fieldsWithPadding,
-	}
+	var parser, err = NewBinDataParser(
+		"padding",
+		"unix",
+		"be",
+		"utf-8",
+		fieldsWithPadding,
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err := withPadding.Parse(binaryDataBigEndian)
+	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, withPadding.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
 	assert.Equal(t, expectedParseResultWithPadding, metrics[0].Fields())
 }
 
 func TestTimeAddedByParser(t *testing.T) {
 
-	var noTimeHere = BinData{
-		MetricName: "no_time_here",
-		Endiannes:  "be",
-		TimeFormat: "unix",
-		Fields: []Field{
+	var parser, err = NewBinDataParser(
+		"no_time",
+		"unix",
+		"be",
+		"utf-8",
+		[]Field{
 			Field{Name: "fieldBool0", Type: "bool", Size: 1},
 		},
-	}
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err := noTimeHere.Parse(binaryDataBigEndian)
+	metrics, err := parser.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, noTimeHere.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.True(t, int64(0x5DA86C4C) < metrics[0].Time().Unix())
 	assert.Equal(t, map[string]interface{}{
 		"fieldBool0": false,
@@ -288,90 +331,109 @@ func TestTimeAddedByParser(t *testing.T) {
 
 func TestInvalidFieldType(t *testing.T) {
 
-	var invalidType = BinData{
-		MetricName: "invalid_field_type",
-		Endiannes:  "be",
-		TimeFormat: "unix",
-		Fields: []Field{
-			Field{Name: "fieldBool0", Type: "boo", Size: 1},
+	var parser, err = NewBinDataParser(
+		"no_time",
+		"unix",
+		"be",
+		"utf-8",
+		[]Field{
+			Field{Name: "fieldBool0", Type: "FOO", Size: 1},
 		},
-	}
-
-	metrics, err := invalidType.Parse(binaryDataBigEndian)
+		nil,
+	)
+	assert.Nil(t, parser)
 	require.Error(t, err)
-	assert.Len(t, metrics, 0)
 }
 
 func TestTimeXs(t *testing.T) {
 
-	var timeFormatUnixMs = BinData{
-		MetricName: "time_format_unix_ms",
-		Endiannes:  "be",
-		TimeFormat: "unix_ms",
-		Fields: []Field{
-			Field{Name: "fieldBool0", Type: "bool", Size: 1},
+	var parser, err = NewBinDataParser(
+		"time_unix_ms",
+		"unix_ms",
+		"be",
+		"utf-8",
+		[]Field{
 			Field{Name: "time", Type: "int64", Size: 8},
 		},
-	}
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err := timeFormatUnixMs.Parse(binaryDataBigEndianTimeXs)
+	metrics, err := parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, timeFormatUnixMs.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000000)
-	assert.Equal(t, map[string]interface{}{
-		"fieldBool0": false,
-	}, metrics[0].Fields())
 
-	var timeFormatUnixUs = BinData{
-		MetricName: "time_format_unix_us",
-		Endiannes:  "be",
-		TimeFormat: "unix_us",
-		Fields: []Field{
-			Field{Name: "fieldBool0", Type: "bool", Size: 1},
+	parser, err = NewBinDataParser(
+		"time_unix_us",
+		"unix_us",
+		"be",
+		"utf-8",
+		[]Field{
 			Field{Name: "time", Type: "int64", Size: 8},
 		},
-	}
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err = timeFormatUnixUs.Parse(binaryDataBigEndianTimeXs)
+	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, timeFormatUnixUs.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano()/1000)
-	assert.Equal(t, map[string]interface{}{
-		"fieldBool0": false,
-	}, metrics[0].Fields())
 
-	var timeFromatUnixNs = BinData{
-		MetricName: "time_format_unix_ns",
-		Endiannes:  "be",
-		TimeFormat: "unix_ns",
-		Fields: []Field{
-			Field{Name: "fieldBool0", Type: "bool", Size: 1},
+	parser, err = NewBinDataParser(
+		"time_unix_ns",
+		"unix_ns",
+		"be",
+		"utf-8",
+		[]Field{
 			Field{Name: "time", Type: "int64", Size: 8},
 		},
-	}
+		nil,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
 
-	metrics, err = timeFromatUnixNs.Parse(binaryDataBigEndianTimeXs)
+	metrics, err = parser.Parse(binaryDataBigEndianTimeXs)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	require.Equal(t, timeFromatUnixNs.MetricName, metrics[0].Name())
+	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, int64(0x0000016DD9E70B17), metrics[0].Time().UnixNano())
-	assert.Equal(t, map[string]interface{}{
-		"fieldBool0": false,
-	}, metrics[0].Fields())
 
-	var timeFormatInvalid = BinData{
-		MetricName: "time_format_invalid",
-		Endiannes:  "be",
-		TimeFormat: "foo",
-		Fields: []Field{
-			Field{Name: "fieldBool0", Type: "bool", Size: 1},
+	parser, err = NewBinDataParser(
+		"time_invalid_format",
+		"FOO",
+		"be",
+		"utf-8",
+		[]Field{
 			Field{Name: "time", Type: "int64", Size: 8},
 		},
-	}
-
-	metrics, err = timeFormatInvalid.Parse(binaryDataBigEndianTimeXs)
+		nil,
+	)
+	assert.Nil(t, parser)
 	require.Error(t, err)
-	assert.Len(t, metrics, 0)
+}
+
+func TestDefaultTags(t *testing.T) {
+
+	parser, err := NewBinDataParser(
+		"default_tags",
+		"unix",
+		"be",
+		"utf-8",
+		fields,
+		defaultTags,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
+
+	metrics, err := parser.Parse(binaryDataBigEndian)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, parser.MetricName, metrics[0].Name())
+	assert.Equal(t, defaultTags, metrics[0].Tags())
 }
