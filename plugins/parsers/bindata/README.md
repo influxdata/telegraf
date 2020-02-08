@@ -32,7 +32,7 @@ The "BinData" parser translates binary records consisting of multiple fields int
   ## Fields are described by:
   ## - name
   ## - type
-  ## - size - obligatory for fields with type "string" and "padding"
+  ## - size - obligatory for fields with type "string" and "padding",
   ## ignored in numeric and bool fields
   bindata_fields = [
     {name="Version",type="uint16"},

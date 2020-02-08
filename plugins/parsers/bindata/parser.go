@@ -16,7 +16,7 @@ import (
 
 const timeKey = "time"
 const timezone = "UTC"
-const stringEncoding = "UTF-8"
+const defaultStringEncoding = "UTF-8"
 
 // Field is ...
 type Field struct {
@@ -30,24 +30,78 @@ type BinData struct {
 	MetricName     string
 	TimeFormat     string
 	Endiannes      string
+	byteOrder      binary.ByteOrder
 	StringEncoding string
 	Fields         []Field
 	DefaultTags    map[string]string
 }
 
+func NewBinDataParser(
+	metricName string,
+	timeFormat string,
+	endiannes string,
+	stringEncoding string,
+	fields []Field,
+	defaultTags map[string]string,
+) (*BinData, error) {
+
+	// Time format
+	switch timeFormat {
+	case "unix", "unix_ms", "unix_us", "unix_ns":
+	default:
+		return nil, fmt.Errorf("invalid time format %s", timeFormat)
+	}
+
+	// Endiannes
+	var byteOrder binary.ByteOrder
+	endiannes = strings.ToLower(endiannes)
+	if endiannes == "" || endiannes == "be" {
+		byteOrder = binary.BigEndian
+	} else if endiannes == "le" {
+		byteOrder = binary.LittleEndian
+	} else {
+		return nil, fmt.Errorf("invalid bindata_endiannes %s", endiannes)
+	}
+
+	// String encoding
+	if stringEncoding == "" {
+		stringEncoding = defaultStringEncoding
+	}
+	stringEncoding = strings.ToUpper(stringEncoding)
+	if stringEncoding != defaultStringEncoding {
+		return nil, fmt.Errorf(`invalid string encoding %s`, stringEncoding)
+	}
+
+	// Fields' sizes
+	for i := 0; i < len(fields); i++ {
+		fieldType, ok := fieldTypes[strings.ToLower(fields[i].Type)]
+		if !ok {
+			return nil, fmt.Errorf(`invalid field type %s`, fields[i].Type)
+		}
+		// Overwrite non-string and non-padding field size
+		if fieldType.Name() != "string" && fields[i].Type != "padding" {
+			fields[i].Size = uint(fieldType.Size())
+		}
+	}
+
+	return &BinData{
+		MetricName:     metricName,
+		TimeFormat:     timeFormat,
+		Endiannes:      endiannes,
+		byteOrder:      byteOrder,
+		StringEncoding: stringEncoding,
+		Fields:         fields,
+		DefaultTags:    defaultTags,
+	}, nil
+}
+
+// SetDefaultTags is ...
+func (binData *BinData) SetDefaultTags(tags map[string]string) {
+	binData.DefaultTags = tags
+}
+
 // Parse is ...
 func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
-
-	endiannes, err := binData.getEndiannes()
-	if err != nil {
-		return nil, err
-	}
-
-	// Validate
-	err = binData.validate()
-	if err != nil {
-		return nil, err
-	}
 
 	fields := make(map[string]interface{})
 	reader := io.NewSectionReader(bytes.NewReader(data), 0, int64(len(data)))
@@ -72,7 +126,7 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 			default:
 				fieldValue := reflect.New(fieldType)
 				byteReader := bytes.NewReader(fieldBuffer)
-				binary.Read(byteReader, endiannes, fieldValue.Interface())
+				binary.Read(byteReader, binData.byteOrder, fieldValue.Interface())
 				fields[field.Name] = fieldValue.Elem().Interface()
 			}
 		}
@@ -98,11 +152,6 @@ func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
 	return nil, fmt.Errorf("BinData.ParseLine() not supported")
 }
 
-// SetDefaultTags is ...
-func (binData *BinData) SetDefaultTags(tags map[string]string) {
-	binData.DefaultTags = tags
-}
-
 var fieldTypes = map[string]reflect.Type{
 	"bool":    reflect.TypeOf((*bool)(nil)).Elem(),
 	"uint8":   reflect.TypeOf((*uint8)(nil)).Elem(),
@@ -117,41 +166,6 @@ var fieldTypes = map[string]reflect.Type{
 	"float64": reflect.TypeOf((*float64)(nil)).Elem(),
 	"string":  reflect.TypeOf((*string)(nil)).Elem(),
 	"padding": reflect.TypeOf((*[]byte)(nil)).Elem(),
-}
-
-func (binData *BinData) validate() error {
-	if binData.StringEncoding == "" {
-		binData.StringEncoding = stringEncoding
-	}
-	binData.StringEncoding = strings.ToUpper(binData.StringEncoding)
-	if binData.StringEncoding != stringEncoding {
-		return fmt.Errorf(`invalid string encoding %s`, binData.StringEncoding)
-	}
-
-	for i := 0; i < len(binData.Fields); i++ {
-		fieldType, ok := fieldTypes[strings.ToLower(binData.Fields[i].Type)]
-		if !ok {
-			return fmt.Errorf(`invalid field type %s`, binData.Fields[i].Type)
-		}
-		// Overwrite non-string and non-padding field size
-		if fieldType.Name() != "string" && binData.Fields[i].Type != "padding" {
-			binData.Fields[i].Size = uint(fieldType.Size())
-		}
-	}
-	return nil
-}
-
-func (binData *BinData) getEndiannes() (binary.ByteOrder, error) {
-	var endiannes binary.ByteOrder
-	cfgEndiannes := strings.ToLower(binData.Endiannes)
-	if cfgEndiannes == "" || cfgEndiannes == "be" {
-		endiannes = binary.BigEndian
-	} else if cfgEndiannes == "le" {
-		endiannes = binary.LittleEndian
-	} else {
-		return nil, fmt.Errorf("invalid bindata_endiannes %s", cfgEndiannes)
-	}
-	return endiannes, nil
 }
 
 func (binData *BinData) getTime(fields map[string]interface{}) (time.Time, error) {
