@@ -132,9 +132,9 @@ func TestTags(test *testing.T) {
 	require.NoError(test, err)
 
 	assert.True(test, acc.HasMeasurement(x509CrlMeasurement))
-	thenTagIsPresentAndEquals(test, acc, "source", crlFile.Name())
-	thenTagIsPresentAndEquals(test, acc, "issuer", "1.2.840.113549.1.9.1=#0c136578616d706c65406578616d706c652e636f6d,2.5.4.41=#130641432056504e,CN=ac,O=Alsace Reseau Neutre,L=Strasbourg,ST=Alsace,C=FR")
-	thenTagIsPresentAndEquals(test, acc, "version", "0")
+	thenTagIsPresentAndEquals(test, &acc, "source", crlFile.Name())
+	thenTagIsPresentAndEquals(test, &acc, "issuer", "1.2.840.113549.1.9.1=#0c136578616d706c65406578616d706c652e636f6d,2.5.4.41=#130641432056504e,CN=ac,O=Alsace Reseau Neutre,L=Strasbourg,ST=Alsace,C=FR")
+	thenTagIsPresentAndEquals(test, &acc, "version", "0")
 }
 
 func TestStrings(test *testing.T) {
@@ -197,7 +197,7 @@ func givenCRLFile(test *testing.T, fileMode os.FileMode, fileContent string) *os
 }
 
 // Then
-func thenTagIsPresentAndEquals(test *testing.T, acc testutil.Accumulator, tag string, expected string) {
+func thenTagIsPresentAndEquals(test *testing.T, acc *testutil.Accumulator, tag string, expected string) {
 	assert.True(test, acc.HasTag(x509CrlMeasurement, tag), fmt.Sprintf("Tag %s not present", tag))
 	assert.Equal(test, expected, acc.TagValue(x509CrlMeasurement, tag), fmt.Sprintf("Invalid tag '%s'", tag))
 }
