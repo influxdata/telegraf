@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"hash/fnv"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -441,6 +442,7 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 				}
 
 				if len(buckets) == 0 {
+					log.Println("W! prometheus histogram requires a bucket label")
 					continue
 				}
 
@@ -459,6 +461,7 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 				}
 
 				if len(quantiles) == 0 {
+					log.Println("W! prometheus summary requires a quantile label")
 					continue
 				}
 
