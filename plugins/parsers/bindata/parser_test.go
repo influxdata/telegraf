@@ -35,7 +35,7 @@ var expectedParseResultWithPadding = map[string]interface{}{
 	"fieldString":  "@ABCDEFGHIJKLMNOPQRS",
 }
 
-var expectedParseResultWithUTF8 = map[string]interface{}{
+var expectedParseResultStringUTF8 = map[string]interface{}{
 	"fieldBool0":   false,
 	"fieldBool1":   true,
 	"fieldUint8":   uint64(2),
@@ -84,7 +84,7 @@ var fieldsWithPadding = []Field{
 	Field{Name: "time", Type: "int32"},
 }
 
-var fieldsWithUTF8 = []Field{
+var fieldsWithStringUTF8 = []Field{
 	Field{Name: "fieldBool0", Type: "bool"},
 	Field{Name: "fieldBool1", Type: "bool"},
 	Field{Name: "fieldUint8", Type: "uint8"},
@@ -139,7 +139,7 @@ var binaryDataLittleEndian = []byte{
 	0x4C, 0x6C, 0xA8, 0x5D,
 }
 
-var binaryDataBigEndianUTF8 = []byte{
+var binaryDataStringUTF8 = []byte{
 	0x00,
 	0x01,
 	0x02,
@@ -200,7 +200,7 @@ func TestLittleEndian(t *testing.T) {
 	assert.Equal(t, expectedParseResult, metrics[0].Fields())
 }
 
-func TestDefaultStringEncoding(t *testing.T) {
+func TestStringEncoding(t *testing.T) {
 
 	var defaultStringEncoding = BinData{
 		MetricName:     "default_string_encoding",
@@ -213,24 +213,6 @@ func TestDefaultStringEncoding(t *testing.T) {
 	metrics, err := defaultStringEncoding.Parse(binaryDataBigEndian)
 	require.NoError(t, err)
 	assert.Len(t, metrics, 1)
-}
-
-func TestUTF8(t *testing.T) {
-
-	var utf8 = BinData{
-		MetricName:     "utf8",
-		Endiannes:      "le",
-		TimeFormat:     "unix",
-		StringEncoding: "utf-8",
-		Fields:         fieldsWithUTF8,
-	}
-
-	metrics, err := utf8.Parse(binaryDataBigEndianUTF8)
-	require.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	require.Equal(t, utf8.MetricName, metrics[0].Name())
-	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
-	assert.Equal(t, expectedParseResultWithUTF8, metrics[0].Fields())
 }
 
 func TestInvalidStringEncoding(t *testing.T) {
@@ -247,10 +229,29 @@ func TestInvalidStringEncoding(t *testing.T) {
 	require.Error(t, err)
 	assert.Len(t, metrics, 0)
 }
-func TestWithPadding(t *testing.T) {
+
+func TestStringUTF8(t *testing.T) {
+
+	var utf8 = BinData{
+		MetricName:     "utf8",
+		Endiannes:      "le",
+		TimeFormat:     "unix",
+		StringEncoding: "utf-8",
+		Fields:         fieldsWithStringUTF8,
+	}
+
+	metrics, err := utf8.Parse(binaryDataStringUTF8)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, utf8.MetricName, metrics[0].Name())
+	assert.Equal(t, int64(0x5DA86C4C), metrics[0].Time().Unix())
+	assert.Equal(t, expectedParseResultStringUTF8, metrics[0].Fields())
+}
+
+func TestPadding(t *testing.T) {
 
 	var withPadding = BinData{
-		MetricName: "with_padding",
+		MetricName: "padding",
 		Endiannes:  "be",
 		TimeFormat: "unix",
 		Fields:     fieldsWithPadding,
@@ -285,10 +286,10 @@ func TestTimeAddedByParser(t *testing.T) {
 	}, metrics[0].Fields())
 }
 
-func TestInvalidType(t *testing.T) {
+func TestInvalidFieldType(t *testing.T) {
 
 	var invalidType = BinData{
-		MetricName: "invalid_type",
+		MetricName: "invalid_field_type",
 		Endiannes:  "be",
 		TimeFormat: "unix",
 		Fields: []Field{
@@ -323,7 +324,7 @@ func TestTimeXs(t *testing.T) {
 	}, metrics[0].Fields())
 
 	var timeFormatUnixUs = BinData{
-		MetricName: "time_format_unix_ms",
+		MetricName: "time_format_unix_us",
 		Endiannes:  "be",
 		TimeFormat: "unix_us",
 		Fields: []Field{
