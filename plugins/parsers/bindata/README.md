@@ -7,8 +7,6 @@ Binary Parser similar to the existing Value Parser with a possibility of parsing
 
 Implement a Binary Parser able to parse binary data (records) containing multiple fields.
 
-At the end the Binary Parser will also support other binary data encoding protocols such as Protobuf or CBOR.
-
 The binary data (record) configuration is shown below, where record's fields are specified by name, type, offset and optional size. Also common parameters such as endianess, binary protocol and time field format are specified:
 
 ```toml

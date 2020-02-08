@@ -32,8 +32,7 @@ type BinData struct {
 	Endiannes      string
 	StringEncoding string
 	Fields         []Field
-	// TagKeys    []string
-	DefaultTags map[string]string
+	DefaultTags    map[string]string
 }
 
 // Parse is ...
@@ -85,28 +84,23 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	metric, err := metric.New(binData.MetricName, nil, fields, metricTime)
+	metric, err := metric.New(binData.MetricName, binData.DefaultTags,
+		fields, metricTime)
 	if err != nil {
 		return nil, err
 	}
-
-	// metricTags := make(map[string]string)
-	// for _, tagKey := range binData.BinData.TagKeys {
-	// 	metricTags[tagKey] = ""
-	// }
 
 	return []telegraf.Metric{metric}, err
 }
 
 // ParseLine is ...
 func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
-	fmt.Println("BinData.ParseLine() not supported")
-	return nil, nil
+	return nil, fmt.Errorf("BinData.ParseLine() not supported")
 }
 
 // SetDefaultTags is ...
 func (binData *BinData) SetDefaultTags(tags map[string]string) {
-	fmt.Println("BinData.SetDefaultTags() not supported")
+	binData.DefaultTags = tags
 }
 
 var fieldTypes = map[string]reflect.Type{
@@ -139,7 +133,7 @@ func (binData *BinData) validate() error {
 		if !ok {
 			return fmt.Errorf(`invalid field type %s`, binData.Fields[i].Type)
 		}
-		// Overwrite non-string field size
+		// Overwrite non-string and non-padding field size
 		if fieldType.Name() != "string" && binData.Fields[i].Type != "padding" {
 			binData.Fields[i].Size = uint(fieldType.Size())
 		}
