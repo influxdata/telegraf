@@ -154,6 +154,7 @@ func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
 	return nil, fmt.Errorf("BinData.ParseLine() not supported")
 }
 
+// Supported field types
 var fieldTypes = map[string]reflect.Type{
 	"bool":    reflect.TypeOf((*bool)(nil)).Elem(),
 	"uint8":   reflect.TypeOf((*uint8)(nil)).Elem(),

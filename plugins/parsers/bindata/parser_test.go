@@ -101,6 +101,13 @@ var fieldsWithStringUTF8 = []Field{
 	Field{Name: "time", Type: "int32"},
 }
 
+var defaultTags = map[string]string{
+	"tag0": "value0",
+	"tag1": "value1",
+	"tag2": "value2",
+	"tag3": "value3",
+}
+
 var binaryDataBigEndian = []byte{
 	0x00,
 	0x01,
@@ -409,4 +416,24 @@ func TestTimeXs(t *testing.T) {
 	)
 	assert.Nil(t, parser)
 	require.Error(t, err)
+}
+
+func TestDefaultTags(t *testing.T) {
+
+	parser, err := NewBinDataParser(
+		"default_tags",
+		"unix",
+		"be",
+		"utf-8",
+		fields,
+		defaultTags,
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, parser)
+
+	metrics, err := parser.Parse(binaryDataBigEndian)
+	require.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	require.Equal(t, parser.MetricName, metrics[0].Name())
+	assert.Equal(t, defaultTags, metrics[0].Tags())
 }
