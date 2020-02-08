@@ -18,14 +18,14 @@ const timeKey = "time"
 const timezone = "UTC"
 const defaultStringEncoding = "UTF-8"
 
-// Field is ...
+// Field is a binary data field descriptor
 type Field struct {
 	Name string
 	Type string
 	Size uint
 }
 
-// BinData is ...
+// BinData is a binary data parser
 type BinData struct {
 	MetricName     string
 	TimeFormat     string
@@ -36,6 +36,7 @@ type BinData struct {
 	DefaultTags    map[string]string
 }
 
+// NewBinDataParser is BinData factory
 func NewBinDataParser(
 	metricName string,
 	timeFormat string,
@@ -55,11 +56,12 @@ func NewBinDataParser(
 	// Endiannes
 	var byteOrder binary.ByteOrder
 	endiannes = strings.ToLower(endiannes)
-	if endiannes == "" || endiannes == "be" {
+	switch endiannes {
+	case "", "be":
 		byteOrder = binary.BigEndian
-	} else if endiannes == "le" {
+	case "le":
 		byteOrder = binary.LittleEndian
-	} else {
+	default:
 		return nil, fmt.Errorf("invalid bindata_endiannes %s", endiannes)
 	}
 
@@ -95,12 +97,12 @@ func NewBinDataParser(
 	}, nil
 }
 
-// SetDefaultTags is ...
+// SetDefaultTags implements Parser.SetDefaultTags()
 func (binData *BinData) SetDefaultTags(tags map[string]string) {
 	binData.DefaultTags = tags
 }
 
-// Parse is ...
+// Parse implements Parser.Parse()
 func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 
 	fields := make(map[string]interface{})
@@ -147,7 +149,7 @@ func (binData *BinData) Parse(data []byte) ([]telegraf.Metric, error) {
 	return []telegraf.Metric{metric}, err
 }
 
-// ParseLine is ...
+// ParseLine implements Parser.ParseLine()
 func (binData *BinData) ParseLine(line string) (telegraf.Metric, error) {
 	return nil, fmt.Errorf("BinData.ParseLine() not supported")
 }
