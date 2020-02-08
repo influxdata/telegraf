@@ -30,10 +30,9 @@ The "BinData" parser translates binary records consisting of multiple fields int
 
   ## Binary data descriptor
   ## Fields are described by:
-  ## - name
-  ## - type
-  ## - size - obligatory for fields with type "string" and "padding",
-  ## ignored in numeric and bool fields
+  ## - name - field name, use Golang naming conventions
+  ## - type - field type, use Golang type names
+  ## - size - size in bytes, obligatory for fields with type "string" and "padding", ignored in numeric and bool fields
   bindata_fields = [
     {name="Version",type="uint16"},
     {name="Time",type="int32"},
