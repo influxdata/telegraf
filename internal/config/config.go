@@ -1837,6 +1837,22 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["avro_timestamp_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.AVROTimestampFormat = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["avro_schema_registry"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.AVROSchemaRegistry = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1883,6 +1899,8 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "avro_tags")
 	delete(tbl.Fields, "avro_fields")
 	delete(tbl.Fields, "avro_timestamp")
+	delete(tbl.Fields, "avro_timestamp_format")
+	delete(tbl.Fields, "avro_schema_registry")
 
 	return c, nil
 }
