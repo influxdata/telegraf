@@ -154,13 +154,7 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("device name is empty")
 	}
 
-	err := connect(m)
-	if err != nil {
-		m.isConnected = false
-		return err
-	}
-
-	err = m.InitRegister(m.DiscreteInputs, cDiscreteInputs)
+	err := m.InitRegister(m.DiscreteInputs, cDiscreteInputs)
 	if err != nil {
 		return err
 	}
