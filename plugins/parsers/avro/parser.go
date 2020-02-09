@@ -1,101 +1,125 @@
 package avro
 
 import (
+	"fmt"
 	"time"
 	"encoding/binary"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-
-	"fmt"
-
     "github.com/linkedin/goavro"
+    "github.com/jeremywohl/flatten"
 )
 
-
 type Parser struct {
+	SchemaRegistry    string
 	Measurement 	  string
 	Tags 			  []string
 	Fields 			  []string
 	Timestamp 		  string
+	TimestampFormat   string
 	DefaultTags       map[string]string
 	TimeFunc          func() time.Time
 }
 
-
-
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-
-	fmt.Println(p.Measurement)
-	fmt.Println(p.Tags)
-	fmt.Println(p.Fields)
-	fmt.Println(p.Timestamp)
-
-	schemaRegistry := NewSchemaRegistry("http:localhost:8081")
+	schemaRegistry := NewSchemaRegistry(p.SchemaRegistry)
 	
 	schemaId := int(binary.BigEndian.Uint32(buf[1:5]))
-	fmt.Println(schemaId)
-
+	
 	schema, err := schemaRegistry.getSchema(schemaId)
 	if err != nil {
-        fmt.Println(err)
+        return nil, err
     }
-	fmt.Println(schema)
-
+	
 	codec, err := goavro.NewCodec(schema)
     if err != nil {
-        fmt.Println(err)
+        return nil, err
     }
 
-    // Convert binary Avro data back to native Go form
     native, _, err := codec.NativeFromBinary(buf[5:])
     if err != nil {
-        fmt.Println(err)
+        return nil, err
     }
 
-    fmt.Println(native)
+    flat, err := flatten.Flatten(native.(map[string]interface{}), "", flatten.UnderscoreStyle)
+	if err != nil {
+        return nil, err
+    }
 
-	return p.createMeasures(0)
-}
+    m, err := p.createMetric(flat)
+	if err != nil {
+		return nil, err
+	}
+
+	return []telegraf.Metric{m}, nil
+} 
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	return p.createMeasure(0)
+	metrics, err := p.Parse([]byte(line))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(metrics) != 1 {
+		return nil, fmt.Errorf("Line contains multiple metrics")
+	}
+
+	return metrics[0], nil
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
 
-func (p *Parser) createMeasure(value int) (telegraf.Metric, error) {
-	recordFields := make(map[string]interface{})
+func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
+	if (timestamp == nil) {
+		return p.TimeFunc(), nil
+	}
+
+	if (p.TimestampFormat == "") {
+		return p.TimeFunc(), fmt.Errorf("Must specify timestamp format")
+	}
+
+	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
+	if err != nil {
+		return p.TimeFunc(), err
+	}
+
+	return metricTime, nil
+}
+
+func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, error) {
+	metricTime, err := p.parseTimestamp(flat[p.Timestamp])
+	if err != nil {
+		return nil, err
+	}
+
+	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
 	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}
 
-	tags["tagName"] = "tagValue"
+	for _, tag := range p.Tags{
+        tags[tag] = fmt.Sprintf("%v", flat[tag])
+    }
 
-	recordFields["value"] = value
+    for _, field := range p.Fields{
+    	fields[field] = flat[field]      
+    }
 
-	measurementName := "measurementName"
+    measurementValue, ok := flat[p.Measurement]
+    if !ok {
+    	measurementValue = p.Measurement
+    }
+    measurement  := fmt.Sprintf("%v", measurementValue)
 
-	metricTime := p.TimeFunc()
-
-	m, err := metric.New(measurementName, tags, recordFields, metricTime)
+	m, err := metric.New(measurement, tags, fields, metricTime)
 	if err != nil {
 		return nil, err
 	}
+
 	return m, nil
-}
-
-func (p *Parser) createMeasures(value int) ([]telegraf.Metric, error) {
-	metrics := make([]telegraf.Metric, 0)
-
-	m, err := p.createMeasure(value)
-	if err != nil {
-		return metrics, err
-	}
-	metrics = append(metrics, m)
-	
-	return metrics, nil
 }

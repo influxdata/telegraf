@@ -13,8 +13,8 @@ type SchemaRegistry struct {
 }
 
 const (
-	schemaByID       = "http://localhost:8081/schemas/ids/%d"
-	timeout = 2 * time.Second
+	schemaByID  = "%s/schemas/ids/%d"
+	timeout     = 2 * time.Second
 )
 
 func NewSchemaRegistry(url string) *SchemaRegistry {
@@ -31,18 +31,14 @@ func (sr *SchemaRegistry) getSchema(id int) (string, error) {
     	return value, nil
     }
 
-	resp, err := http.Get(fmt.Sprintf(schemaByID, id))
+	resp, err := http.Get(fmt.Sprintf(schemaByID, sr.url, id))
 	if nil != err {
 		return "", err
 	}
 
-	fmt.Println(resp.Body)
-
 	var schema map[string]interface{}
 
 	json.NewDecoder(resp.Body).Decode(&schema)
-
-	fmt.Println(schema)
 
 	sr.cache[id] = schema["schema"].(string)
 
