@@ -40,7 +40,6 @@ type Modbus struct {
 type register struct {
 	Type           string
 	RegistersRange []registerRange
-	ReadValue      func(uint16, uint16) ([]byte, error)
 	Fields         []fieldContainer
 }
 
@@ -224,21 +223,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 		}
 	}
 
-	var fn func(uint16, uint16) ([]byte, error)
-
-	if name == cDiscreteInputs {
-		fn = m.client.ReadDiscreteInputs
-	} else if name == cCoils {
-		fn = m.client.ReadCoils
-	} else if name == cInputRegisters {
-		fn = m.client.ReadInputRegisters
-	} else if name == cHoldingRegisters {
-		fn = m.client.ReadHoldingRegisters
-	} else {
-		return fmt.Errorf("not Valid function")
-	}
-
-	m.registers = append(m.registers, register{name, registersRange, fn, fields})
+	m.registers = append(m.registers, register{name, registersRange, fields})
 
 	return nil
 }
