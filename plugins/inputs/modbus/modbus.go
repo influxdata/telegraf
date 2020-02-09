@@ -48,7 +48,7 @@ type fieldContainer struct {
 	Name      string   `toml:"name"`
 	ByteOrder string   `toml:"byte_order"`
 	DataType  string   `toml:"data_type"`
-	Scale     float32  `toml:"scale"`
+	Scale     float64  `toml:"scale"`
 	Address   []uint16 `toml:"address"`
 	value     interface{}
 }
@@ -306,6 +306,31 @@ func connect(m *Modbus) error {
 	}
 }
 
+func disconnect(m *Modbus) error {
+	u, err := url.Parse(m.Controller)
+	if err != nil {
+		return err
+	}
+
+	switch u.Scheme {
+	case "tcp":
+		m.tcpHandler.Close()
+		return nil
+	case "file":
+		if m.TransmissionMode == "RTU" {
+			m.rtuHandler.Close()
+			return nil
+		} else if m.TransmissionMode == "ASCII" {
+			m.asciiHandler.Close()
+			return nil
+		} else {
+			return fmt.Errorf("invalid protocol '%s' - '%s' ", u.Scheme, m.TransmissionMode)
+		}
+	default:
+		return fmt.Errorf("invalid controller")
+	}
+}
+
 func validateFieldContainers(t []fieldContainer, n string) error {
 	nameEncountered := map[string]bool{}
 	for _, item := range t {
@@ -379,13 +404,27 @@ func removeDuplicates(elements []uint16) []uint16 {
 	return result
 }
 
+func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) {
+	if rt == cDiscreteInputs {
+		return m.client.ReadDiscreteInputs(uint16(rr.address), uint16(rr.length))
+	} else if rt == cCoils {
+		return m.client.ReadCoils(uint16(rr.address), uint16(rr.length))
+	} else if rt == cInputRegisters {
+		return m.client.ReadInputRegisters(uint16(rr.address), uint16(rr.length))
+	} else if rt == cHoldingRegisters {
+		return m.client.ReadHoldingRegisters(uint16(rr.address), uint16(rr.length))
+	} else {
+		return []byte{}, fmt.Errorf("not Valid function")
+	}
+}
+
 func (m *Modbus) getFields() error {
 	for _, register := range m.registers {
 		rawValues := make(map[uint16][]byte)
 		bitRawValues := make(map[uint16]uint16)
 		for _, rr := range register.RegistersRange {
 			address := rr.address
-			readValues, err := register.ReadValue(uint16(rr.address), uint16(rr.length))
+			readValues, err := readRegisterValues(m, register.Type, rr)
 			if err != nil {
 				return err
 			}
@@ -530,23 +569,23 @@ func format32(f string, r uint32) interface{} {
 	}
 }
 
-func scale16toFloat32(s float32, v uint16) float32 {
-	return float32(v) * s
+func scale16toFloat32(s float64, v uint16) float64 {
+	return float64(v) * s
 }
 
-func scale32toFloat32(s float32, v uint32) float32 {
-	return float32(v) * s
+func scale32toFloat32(s float64, v uint32) float64 {
+	return float64(float64(v) * float64(s))
 }
 
-func scaleInt16(s float32, v int16) int16 {
-	return int16(float32(v) * s)
+func scaleInt16(s float64, v int16) int16 {
+	return int16(float64(v) * s)
 }
 
-func scaleUint16(s float32, v uint16) uint16 {
-	return uint16(float32(v) * s)
+func scaleUint16(s float64, v uint16) uint16 {
+	return uint16(float64(v) * s)
 }
 
-func scaleUint32(s float32, v uint32) uint32 {
+func scaleUint32(s float64, v uint32) uint32 {
 	return uint32(float64(v) * float64(s))
 }
 
@@ -562,6 +601,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 	err := m.getFields()
 	if err != nil {
+		disconnect(m)
 		m.isConnected = false
 		return err
 	}
