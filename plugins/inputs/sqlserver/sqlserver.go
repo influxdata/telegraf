@@ -1277,7 +1277,7 @@ ELSE
 
 // Only executed if AzureDB flag is set
 const sqlAzureDBResourceStats string = `SET DEADLOCK_PRIORITY -10;
-IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+IF SERVERPROPERTY('EngineEdition') IN ( 5 , 8 )  -- Is this Azure SQL DB or Managed Instance?
 BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
