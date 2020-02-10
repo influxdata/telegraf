@@ -55,7 +55,7 @@
 
 #### Bugfixes
 
-- [#6997](https://github.com/influxdata/telegraf/issues/6997): Parse NaN values from summary types in prometheus input.
+- [#6988](https://github.com/influxdata/telegraf/issues/6988): Parse NaN values from summary types in prometheus input.
 
 ## v1.13.3 [2020-02-04]
 
