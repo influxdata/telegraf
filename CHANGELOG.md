@@ -50,6 +50,12 @@
 - [#6397](https://github.com/influxdata/telegraf/issues/6397): Fix conversion to floats in AzureDBResourceStats query in the sqlserver input.
 - [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
 
+## v1.13.4 [unreleased]
+
+#### Bugfixes
+
+- [#6997](https://github.com/influxdata/telegraf/issues/6997): Parse NaN values from summary types in prometheus input.
+
 ## v1.13.3 [2020-02-04]
 
 #### Bugfixes
