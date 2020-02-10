@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-
 	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -115,14 +114,13 @@ func makeQuantilesV2(m *dto.Metric, tags map[string]string, metricName string, m
 	for _, q := range m.GetSummary().Quantile {
 		newTags := tags
 		fields = make(map[string]interface{})
-		if !math.IsNaN(q.GetValue()) {
-			newTags["quantile"] = fmt.Sprint(q.GetQuantile())
-			fields[metricName] = float64(q.GetValue())
 
-			quantileMetric, err := metric.New("prometheus", newTags, fields, t, valueType(metricType))
-			if err == nil {
-				metrics = append(metrics, quantileMetric)
-			}
+		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
+		fields[metricName] = float64(q.GetValue())
+
+		quantileMetric, err := metric.New("prometheus", newTags, fields, t, valueType(metricType))
+		if err == nil {
+			metrics = append(metrics, quantileMetric)
 		}
 	}
 	return metrics
