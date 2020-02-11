@@ -89,6 +89,7 @@ require (
 	github.com/nats-io/gnatsd v1.2.0
 	github.com/nats-io/go-nats v1.5.0
 	github.com/nats-io/nuid v1.0.0 // indirect
+	github.com/newrelic/newrelic-telemetry-sdk-go v0.2.0
 	github.com/nsqio/go-nsq v1.0.7
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
