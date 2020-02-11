@@ -125,7 +125,7 @@ func TestHoldingRegisters(t *testing.T) {
 		quantity  uint16
 		byteOrder string
 		dataType  string
-		scale     float32
+		scale     float64
 		write     []byte
 		read      interface{}
 	}{
@@ -137,7 +137,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "FLOAT32",
 			scale:     0.1,
 			write:     []byte{0x08, 0x98},
-			read:      float32(220),
+			read:      float64(220),
 		},
 		{
 			name:      "register0_register1_ab_float32",
@@ -147,7 +147,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "FLOAT32",
 			scale:     0.001,
 			write:     []byte{0x00, 0x00, 0x03, 0xE8},
-			read:      float32(1),
+			read:      float64(1),
 		},
 		{
 			name:      "register1_register2_abcd_float32",
@@ -157,7 +157,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "FLOAT32",
 			scale:     0.1,
 			write:     []byte{0x00, 0x00, 0x08, 0x98},
-			read:      float32(220),
+			read:      float64(220),
 		},
 		{
 			name:      "register3_register4_abcd_float32",
@@ -167,7 +167,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "FLOAT32",
 			scale:     0.1,
 			write:     []byte{0x00, 0x00, 0x08, 0x98},
-			read:      float32(220),
+			read:      float64(220),
 		},
 		{
 			name:      "register7_ab_float32",
@@ -177,7 +177,7 @@ func TestHoldingRegisters(t *testing.T) {
 			dataType:  "FLOAT32",
 			scale:     0.1,
 			write:     []byte{0x01, 0xF4},
-			read:      float32(50),
+			read:      float64(50),
 		},
 		{
 			name:      "register10_ab_uint16",
