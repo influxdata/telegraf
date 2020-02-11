@@ -383,31 +383,33 @@ func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Clie
 	}
 	hostRefValue := hosts[0].Reference().Value
 	hostRefValueParts := strings.Split(hostRefValue, "-")
-	if len(hostRefValueParts) == 2 {
-		vsanSystemEx := types.ManagedObjectReference{
-			Type:  "VsanSystemEx",
-			Value: fmt.Sprintf("vsanSystemEx-%s", strings.Split(hostRefValue, "-")[1]),
-		}
-
-		includeSummary := true
-		request := vsantypes.VsanQuerySyncingVsanObjects{
-			This:           vsanSystemEx,
-			Uuids:          []string{}, // We only need summary information.
-			Start:          0,
-			IncludeSummary: &includeSummary,
-		}
-
-		resp, err := vsanmethods.VsanQuerySyncingVsanObjects(ctx, vsanClient, &request)
-		if err != nil {
-			return err
-		}
-		fields := make(map[string]interface{})
-		fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
-		fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
-		fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
-		tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
-		acc.AddFields(vsanSummaryMetricsName, fields, tags)
+	if len(hostRefValueParts) != 2 {
+		e.Parent.Log.Errorf("[vSAN] Host reference value does not match expected pattern:  host-<num>. Actual Value %s", hostRefValue)
+		return err
 	}
+	vsanSystemEx := types.ManagedObjectReference{
+		Type:  "VsanSystemEx",
+		Value: fmt.Sprintf("vsanSystemEx-%s", strings.Split(hostRefValue, "-")[1]),
+	}
+
+	includeSummary := true
+	request := vsantypes.VsanQuerySyncingVsanObjects{
+		This:           vsanSystemEx,
+		Uuids:          []string{}, // We only need summary information.
+		Start:          0,
+		IncludeSummary: &includeSummary,
+	}
+
+	resp, err := vsanmethods.VsanQuerySyncingVsanObjects(ctx, vsanClient, &request)
+	if err != nil {
+		return err
+	}
+	fields := make(map[string]interface{})
+	fields["total_bytes_to_sync"] = resp.Returnval.TotalBytesToSync
+	fields["total_objects_to_sync"] = resp.Returnval.TotalObjectsToSync
+	fields["total_recovery_eta"] = resp.Returnval.TotalRecoveryETA
+	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
+	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
 }
 
