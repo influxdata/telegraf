@@ -19,12 +19,13 @@ via the REST API.
   address = "192.168.59.1"
 
   # Interval to refresh content from the AOS server (in sec).
+  # This is no longer needed as of AOS 3.2.
   # refresh_interval = 30
 
   # Streaming Type Can be "perfmon", "alerts" or "events".
   streaming_type = [ "perfmon", "alerts" ]
 
-  # Define parameters to join the AOS Server using the REST API.
+  # Define parameters to configure the AOS Server using the REST API.
   aos_server = "192.168.59.250"
   aos_port = 443
   aos_login = "admin"
@@ -128,6 +129,9 @@ When using AOS in sequenced mode, each streamed message will include a sequence 
 * message_loss_perfmon
 * message_loss_alert
 * message_loss_event
+
+## Metric Buffer Limit Recommendations
+Receiving a high rate of telemetry messages can cause metric buffer drops if the metric_buffer_limit is too low. Testing with both Prometheus and InfluxDB as output the plugin, we've found that setting the metric_buffer_limit to 35000 eliminates buffer drops with an input stream of 2000 perfmon messages/sec.
 
 ## Support 
 This plugin supports AOS up to version 3.2.0.
