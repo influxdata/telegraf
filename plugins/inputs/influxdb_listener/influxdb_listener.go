@@ -1,16 +1,14 @@
 package influxdb_listener
 
 import (
-	"bytes"
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -27,14 +25,7 @@ const (
 	// if the request body is over this size, we will return an HTTP 413 error.
 	// 500 MB
 	DEFAULT_MAX_BODY_SIZE = 500 * 1024 * 1024
-
-	// MAX_LINE_SIZE is the maximum size, in bytes, that can be allocated for
-	// a single InfluxDB point.
-	// 64 KB
-	DEFAULT_MAX_LINE_SIZE = 64 * 1024
 )
-
-type TimeFunc func() time.Time
 
 type InfluxDBListener struct {
 	ServiceAddress string `toml:"service_address"`
@@ -45,22 +36,18 @@ type InfluxDBListener struct {
 	ReadTimeout   internal.Duration `toml:"read_timeout"`
 	WriteTimeout  internal.Duration `toml:"write_timeout"`
 	MaxBodySize   internal.Size     `toml:"max_body_size"`
-	MaxLineSize   internal.Size     `toml:"max_line_size"`
 	BasicUsername string            `toml:"basic_username"`
 	BasicPassword string            `toml:"basic_password"`
 	DatabaseTag   string            `toml:"database_tag"`
 
-	TimeFunc
+	TimeFunc influx.TimeFunc
 
 	mu sync.Mutex
 	wg sync.WaitGroup
 
 	listener net.Listener
 
-	handler *influx.MetricHandler
-	parser  *influx.Parser
-	acc     telegraf.Accumulator
-	spool   sync.Pool
+	acc telegraf.Accumulator
 
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
@@ -71,7 +58,6 @@ type InfluxDBListener struct {
 	notFoundsServed selfstat.Stat
 	buffersCreated  selfstat.Stat
 	authFailures    selfstat.Stat
-	longLines       selfstat.Stat
 
 	Log telegraf.Logger
 
@@ -91,10 +77,6 @@ const sampleConfig = `
   ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
   max_body_size = "500MiB"
 
-  ## Maximum line size allowed to be sent in bytes.
-  ## 0 means to use the default of 65536 bytes (64 kibibytes)
-  max_line_size = "64KiB"
-  
 
   ## Optional tag name used to store the database. 
   ## If the write has a database in the query string then it will be kept in this tag name.
@@ -148,14 +130,10 @@ func (h *InfluxDBListener) Init() error {
 	h.notFoundsServed = selfstat.Register("influxdb_listener", "not_founds_served", tags)
 	h.buffersCreated = selfstat.Register("influxdb_listener", "buffers_created", tags)
 	h.authFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
-	h.longLines = selfstat.Register("influxdb_listener", "long_lines", tags)
 	h.routes()
 
 	if h.MaxBodySize.Size == 0 {
 		h.MaxBodySize.Size = DEFAULT_MAX_BODY_SIZE
-	}
-	if h.MaxLineSize.Size == 0 {
-		h.MaxLineSize.Size = DEFAULT_MAX_LINE_SIZE
 	}
 
 	if h.ReadTimeout.Duration < time.Second {
@@ -174,9 +152,6 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	defer h.mu.Unlock()
 
 	h.acc = acc
-	h.spool.New = func() interface{} {
-		return make([]byte, h.MaxLineSize.Size)
-	}
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
 	if err != nil {
@@ -202,9 +177,6 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	}
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
-
-	h.handler = influx.NewMetricHandler()
-	h.parser = influx.NewParser(h.handler)
 
 	h.wg.Add(1)
 	go func() {
@@ -277,9 +249,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			tooLarge(res)
 			return
 		}
-		now := h.TimeFunc()
 
-		precision := req.URL.Query().Get("precision")
 		db := req.URL.Query().Get("db")
 
 		// Handle gzip request bodies
@@ -296,123 +266,53 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		}
 		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
 
-		var return400 bool
-		var hangingBytes bool
-		buf := h.spool.Get().([]byte)
-		defer h.spool.Put(buf)
-		bufStart := 0
-		for {
-			n, err := io.ReadFull(body, buf[bufStart:])
-			if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		parser := influx.NewStreamParser(body)
+		parser.SetTimeFunc(h.TimeFunc)
+
+		var err error
+		precisionStr := req.URL.Query().Get("precision")
+		if precisionStr != "" {
+			var precision time.Duration
+			precision, err = getPrecisionMultiplier(precisionStr)
+			if err != nil {
 				h.Log.Debug(err.Error())
-				// problem reading the request body
 				badRequest(res, err.Error())
-				return
 			}
-			h.bytesRecv.Incr(int64(n))
+			parser.SetTimePrecision(precision)
+		}
 
-			if err == io.EOF {
-				if return400 {
-					badRequest(res, "")
-				} else {
-					res.WriteHeader(http.StatusNoContent)
-				}
-				return
-			}
+		var m telegraf.Metric
+		var partial bool
+		for {
+			m, err = parser.Next()
+			h.bytesRecv.Incr(int64(parser.Position())) //todo incr by position difference
 
-			if hangingBytes {
-				i := bytes.IndexByte(buf, '\n')
-				if i == -1 {
-					// still didn't find a newline, keep scanning
-					continue
-				}
-				// rotate the bit remaining after the first newline to the front of the buffer
-				i++ // start copying after the newline
-				bufStart = len(buf) - i
-				if bufStart > 0 {
-					copy(buf, buf[i:])
-				}
-				hangingBytes = false
+			//continue parsing metrics even if some are malformed
+			if _, ok := err.(*influx.ParseError); ok {
+				//todo save error for X-Influxdb-Error header
+				partial = true
 				continue
+			} else if err != nil {
+				break
 			}
 
-			if err == io.ErrUnexpectedEOF {
-				// finished reading the request body
-				err = h.parse(buf[:n+bufStart], now, precision, db)
-				if err != nil {
-					h.Log.Debugf("%s: %s", err.Error(), bufStart+n)
-					if strings.HasPrefix(err.Error(), "partial write:") {
-						partialWrite(res, err.Error())
-						return
-					}
-					return400 = true
-				}
-				if return400 {
-					if err != nil {
-						badRequest(res, err.Error())
-					} else {
-						badRequest(res, "")
-					}
-				} else {
-					res.WriteHeader(http.StatusNoContent)
-				}
-				return
+			if h.DatabaseTag != "" && db != "" {
+				m.AddTag(h.DatabaseTag, db)
 			}
-
-			// if we got down here it means that we filled our buffer, and there
-			// are still bytes remaining to be read. So we will parse up until the
-			// final newline, then push the rest of the bytes into the next buffer.
-			i := bytes.LastIndexByte(buf, '\n')
-			if i == -1 {
-				h.longLines.Incr(1)
-				// drop any line longer than the max buffer size
-				h.Log.Debugf("Influxdb_listener received a single line longer than the maximum of %d bytes",
-					len(buf))
-				hangingBytes = true
-				return400 = true
-				bufStart = 0
-				continue
-			}
-			if err := h.parse(buf[:i+1], now, precision, db); err != nil {
-				h.Log.Debug(err.Error())
-				return400 = true
-			}
-			// rotate the bit remaining after the last newline to the front of the buffer
-			i++ // start copying after the newline
-			bufStart = len(buf) - i
-			if bufStart > 0 {
-				copy(buf, buf[i:])
-			}
+			h.acc.AddMetric(m)
+		}
+		if err.Error() != "EOF" {
+			h.Log.Debug(err.Error())
+			// problem reading the request body
+			badRequest(res, err.Error())
+			return
+		}
+		if partial {
+			res.WriteHeader(http.StatusBadRequest)
+		} else {
+			res.WriteHeader(http.StatusNoContent)
 		}
 	}
-}
-
-func (h *InfluxDBListener) parse(b []byte, t time.Time, precision, db string) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	h.handler.SetTimeFunc(func() time.Time { return t })
-	metrics, err := h.parser.EagerParse(b)
-
-	for _, m := range metrics {
-		// Do we need to keep the database name in the query string.
-		// If a tag has been supplied to put the db in and we actually got a db query,
-		// then we write it in. This overwrites the database tag if one was sent.
-		// This makes it behave like the influx endpoint.
-		if h.DatabaseTag != "" && db != "" {
-			m.AddTag(h.DatabaseTag, db)
-		}
-		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
-	}
-
-	if err != nil {
-		if len(metrics) > 0 {
-			return fmt.Errorf("partial write: unable to parse: %s", err.Error())
-		}
-		return fmt.Errorf("unable to parse: %s", err.Error())
-	}
-
-	return nil
 }
 
 func tooLarge(res http.ResponseWriter) {
@@ -462,7 +362,7 @@ func (h *InfluxDBListener) handleAuth(f http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func getPrecisionMultiplier(precision string) time.Duration {
+func getPrecisionMultiplier(precision string) (time.Duration, error) {
 	d := time.Nanosecond
 	switch precision {
 	case "u":
@@ -475,8 +375,10 @@ func getPrecisionMultiplier(precision string) time.Duration {
 		d = time.Minute
 	case "h":
 		d = time.Hour
+	default:
+		return d, errors.New("unknown precision")
 	}
-	return d
+	return d, nil
 }
 
 func init() {

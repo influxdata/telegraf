@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -166,6 +167,10 @@ func NewStreamParser(r io.Reader) *StreamParser {
 // testing, or perhaps if you want all metrics to have the same timestamp.
 func (h *StreamParser) SetTimeFunc(f TimeFunc) {
 	h.handler.SetTimeFunc(f)
+}
+
+func (h *StreamParser) SetTimePrecision(u time.Duration) {
+	h.handler.SetTimePrecision(u)
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this

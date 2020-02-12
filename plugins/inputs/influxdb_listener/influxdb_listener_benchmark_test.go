@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -20,15 +19,11 @@ func newListener() *InfluxDBListener {
 		TimeFunc:  time.Now,
 		acc:       &testutil.NopAccumulator{},
 		bytesRecv: selfstat.Register("influxdb_listener", "bytes_received", map[string]string{}),
-		handler:   influx.NewMetricHandler(),
-		MaxLineSize: internal.Size{
-			Size: DEFAULT_MAX_LINE_SIZE,
-		},
+		writesServed: selfstat.Register("influxdb_listener", "writes_served", map[string]string{}),
 		MaxBodySize: internal.Size{
 			Size: DEFAULT_MAX_BODY_SIZE,
 		},
 	}
-	listener.parser = influx.NewParser(listener.handler)
 	return listener
 }
 
