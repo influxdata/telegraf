@@ -13,7 +13,6 @@ import (
 // NewRelic nr structure
 type NewRelic struct {
 	harvestor   *telemetry.Harvester
-	AccountID   string `toml:"account_id"`
 	InsightsKey string `toml:"insights_key"`
 	EventPrefix string `toml:"event_prefix"`
 }
@@ -55,6 +54,7 @@ func (nr *NewRelic) Close() error {
 // Write takes in group of points to be written to the Output
 func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
+		// create tag map
 		tags := make(map[string]interface{})
 		for k, v := range metric.Tags() {
 			tags[k] = v
@@ -82,6 +82,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 			default:
 				return fmt.Errorf("Undefined field type: %T", v)
 			}
+
 			nr.harvestor.RecordMetric(telemetry.Gauge{
 				Timestamp:  metric.Time(),
 				Value:      mvalue,
