@@ -23,6 +23,9 @@ Program output on standard error is mirrored to the telegraf log.
   ##   "SIGUSR2" : Send a USR2 signal. Not available on Windows.
   signal = "none"
 
+  ## Delay before the process is restarted after an unexpected termination
+  restart_delay = "10s"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

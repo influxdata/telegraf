@@ -29,6 +29,9 @@ const sampleConfig = `
   ##   "SIGHUP" : Send a HUP signal. Not available on Windows.
   signal = "none"
 
+  ## Delay before the process is restarted after an unexpected termination
+  restart_delay = "10s"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -37,8 +40,9 @@ const sampleConfig = `
 `
 
 type Execd struct {
-	Command []string
-	Signal  string
+	Command      []string
+	Signal       string
+	RestartDelay internal.Duration
 
 	acc    telegraf.Accumulator
 	cmd    *exec.Cmd
@@ -101,11 +105,17 @@ func (e *Execd) cmdLoop(ctx context.Context) {
 			internal.WaitTimeout(e.cmd, 0)
 			return
 		case err := <-done:
-			log.Printf("E! [inputs.execd] Process terminated: %s", err)
+			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)
 		}
 
-		log.Printf("E! [inputs.execd] Restarting in one second...")
-		<-time.After(1 * time.Second)
+		log.Printf("E! [inputs.execd] Restarting in %s...", e.RestartDelay.Duration)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(e.RestartDelay.Duration):
+			// Continue the loop and restart the process
+		}
 	}
 }
 
@@ -192,7 +202,8 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 func init() {
 	inputs.Add("execd", func() telegraf.Input {
 		return &Execd{
-			Signal: "none",
+			Signal:       "none",
+			RestartDelay: internal.Duration{Duration: 10 * time.Second},
 		}
 	})
 }
