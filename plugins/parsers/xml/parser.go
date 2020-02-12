@@ -12,8 +12,6 @@ import (
 )
 
 var (
-	intExpr     string = "^\\d+$"
-	floatExpr   string = "^\\d+\\.+\\d+$"
 	ErrNoMetric        = errors.New("no metric in line")
 )
 
@@ -43,7 +41,7 @@ func NewXMLParser(xmlCombineNodes bool,
         TagNode: xmlTagNode,
         Query: xmlQuery,
         DefaultTags: defaultTags,
-    }
+	}
 }
 
 func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
