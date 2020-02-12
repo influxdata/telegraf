@@ -158,7 +158,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 		}
 
 		for _, metric := range metrics {
-			e.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+			e.acc.AddMetric(metric)
 		}
 	}
 
