@@ -2,6 +2,7 @@ package execd
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -38,11 +40,12 @@ type Execd struct {
 	Command []string
 	Signal  string
 
-	acc     telegraf.Accumulator
-	cmd     *exec.Cmd
-	parser  parsers.Parser
-	stdin   io.WriteCloser
-	stopped bool
+	acc    telegraf.Accumulator
+	cmd    *exec.Cmd
+	parser parsers.Parser
+	stdin  io.WriteCloser
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 func (e *Execd) SampleConfig() string {
@@ -61,23 +64,48 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
 
 	if len(e.Command) == 0 {
-	} else {
-		go e.cmdRun()
 		return fmt.Errorf("E! [inputs.execd] FATAL no command specified")
 	}
+
+	e.wg.Add(1)
+
+	var ctx context.Context
+	ctx, e.cancel = context.WithCancel(context.Background())
+
+	go func() {
+		e.cmdLoop(ctx)
+		e.wg.Done()
+	}()
 
 	return nil
 }
 
 func (e *Execd) Stop() {
-	e.stopped = true
+	e.cancel()
+	e.wg.Wait()
+}
 
-	if e.cmd == nil || e.cmd.Process == nil {
-		return
-	}
+func (e *Execd) cmdLoop(ctx context.Context) {
+	for {
+		// Use a buffered channel to ensure goroutine below can exit
+		// if `ctx.Done` is selected and nothing reads on `done` anymore
+		done := make(chan error, 1)
+		go func() {
+			done <- e.cmdRun()
+		}()
 
-	if err := e.cmd.Process.Kill(); err != nil {
-		log.Printf("E! [inputs.execd] FATAL error killing process: %s", err)
+		select {
+		case <-ctx.Done():
+			// Immediately exit process but with a graceful shutdown
+			// period before killing
+			internal.WaitTimeout(e.cmd, 0)
+			return
+		case err := <-done:
+			log.Printf("E! [inputs.execd] Process terminated: %s", err)
+		}
+
+		log.Printf("E! [inputs.execd] Restarting in one second...")
+		<-time.After(1 * time.Second)
 	}
 }
 
@@ -127,20 +155,7 @@ func (e *Execd) cmdRun() error {
 	}()
 
 	wg.Wait()
-	e.cmd.Wait()
-
-	if e.stopped {
-		return nil
-	}
-
-	log.Printf("E! [inputs.execd] %s terminated. Restart in one second...", e.Command)
-
-	go func() {
-		<-time.After(time.Second)
-		e.cmdRun()
-	}()
-
-	return nil
+	return e.cmd.Wait()
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
