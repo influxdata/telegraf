@@ -10,7 +10,7 @@ Program output on standard error is mirrored to the telegraf log.
 
 ```toml
   ## Program to run as daemon
-  command = "telegraf-smartctl"
+  command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.
 
@@ -47,7 +47,7 @@ done
 
 ```toml
 [[inputs.execd]]
-  command = "plugins/inputs/execd/examples/count.sh"
+  command = ["plugins/inputs/execd/examples/count.sh"]
   signal = "STDIN"
 ```
 
@@ -81,7 +81,7 @@ func main() {
 
 ```toml
 [[inputs.execd]]
-  command = "plugins/inputs/execd/examples/count.go.exe"
+  command = ["plugins/inputs/execd/examples/count.go.exe"]
   signal = "SIGHUP"
 ```
 
@@ -103,6 +103,6 @@ end
 
 ```toml
 [[inputs.execd]]
-  command = "plugins/inputs/execd/examples/count.rb"
+  command = ["plugins/inputs/execd/examples/count.rb"]
   signal = "none"
 ```

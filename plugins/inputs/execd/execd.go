@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kballard/go-shellquote"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -18,7 +16,7 @@ import (
 
 const sampleConfig = `
   ## Program to run as daemon
-  command = "telegraf-smartctl"
+  command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.
 
@@ -37,11 +35,10 @@ const sampleConfig = `
 `
 
 type Execd struct {
-	Command string
+	Command []string
 	Signal  string
 
 	acc     telegraf.Accumulator
-	args    []string
 	cmd     *exec.Cmd
 	parser  parsers.Parser
 	stdin   io.WriteCloser
@@ -63,13 +60,11 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
 
-	args, err := shellquote.Split(e.Command)
-	if err != nil || len(args) == 0 {
-		return fmt.Errorf("unable to parse command: %s", err)
+	if len(e.Command) == 0 {
+		return fmt.Errorf("E! [input.execd] FATAL no command specified")
+	} else {
+		go e.cmdRun()
 	}
-
-	e.args = args
-	go e.cmdRun()
 
 	return nil
 }
@@ -89,10 +84,10 @@ func (e *Execd) Stop() {
 func (e *Execd) cmdRun() error {
 	var wg sync.WaitGroup
 
-	if len(e.args) > 1 {
-		e.cmd = exec.Command(e.args[0], e.args[1:]...)
+	if len(e.Command) > 1 {
+		e.cmd = exec.Command(e.Command[0], e.Command[1:]...)
 	} else {
-		e.cmd = exec.Command(e.args[0])
+		e.cmd = exec.Command(e.Command[0])
 	}
 
 	stdin, err := e.cmd.StdinPipe()
