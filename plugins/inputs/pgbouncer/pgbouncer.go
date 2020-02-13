@@ -2,6 +2,7 @@ package pgbouncer
 
 import (
 	"bytes"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -70,10 +71,16 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 		for col, val := range columnMap {
 			_, ignore := ignoredColumns[col]
 			if !ignore {
-				fields[col] = *val
+				// these values are returned by pgbouncer as strings, which we need to convert.
+				fields[col], _ = strconv.ParseUint((*val).(string), 10, 64)
 			}
 		}
 		acc.AddFields("pgbouncer", fields, tags)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return err
 	}
 
 	query = `SHOW POOLS`
