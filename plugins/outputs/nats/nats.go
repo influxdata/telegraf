@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	nats_client "github.com/nats-io/go-nats"
+	nats_client "github.com/nats-io/nats.go"
 )
 
 type NATS struct {

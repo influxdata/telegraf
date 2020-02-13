@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	nats "github.com/nats-io/go-nats"
+	nats "github.com/nats-io/nats.go"
 )
 
 var (
