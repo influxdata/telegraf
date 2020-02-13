@@ -57,6 +57,7 @@
 #### Bugfixes
 
 - [#6988](https://github.com/influxdata/telegraf/issues/6988): Parse NaN values from summary types in prometheus input.
+- [#6820](https://github.com/influxdata/telegraf/issues/6820): Fix pgbouncer input when used with newer pgbouncer versions.
 
 ## v1.13.3 [2020-02-04]
 
