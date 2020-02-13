@@ -98,7 +98,10 @@
 
 #### Release Notes
 
-- Official packages built with Go 1.13.5.
+- Official packages built with Go 1.13.5.  This affects the minimum supported
+  version on several platforms, most notably requiring Windows 7 (2008 R2) or
+  later.  For details, check the release notes for Go
+  [ports](https://golang.org/doc/go1.13#ports).
 - The `prometheus` input and `prometheus_client` output have a new mapping to
   and from Telegraf metrics, which can be enabled by setting `metric_version = 2`.
   The original mapping is deprecated.  When both plugins have the same setting,
