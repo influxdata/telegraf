@@ -42,6 +42,7 @@ var (
 		Type:  "VsanSpaceReportSystem",
 		Value: "vsan-cluster-space-report-system",
 	}
+	hyphenReplacer = strings.NewReplacer("-", "")
 )
 
 // collectVsan is the entry point for vsan metrics collection
@@ -272,7 +273,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			tags := populateCMMDSTags(tags, entityName, uuid, cmmds)
 			var timeStamps []time.Time
 			// 1. Construct a timestamp list from sample info
-			formattedEntityName := strings.ReplaceAll(entityName, "-", "")
+			formattedEntityName := hyphenReplacer.Replace(entityName)
 			for _, t := range strings.Split(em.SampleInfo, ",") {
 				tsParts := strings.Split(t, " ")
 				if len(tsParts) >= 2 {
