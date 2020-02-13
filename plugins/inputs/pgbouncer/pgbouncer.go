@@ -70,9 +70,22 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 		fields := make(map[string]interface{})
 		for col, val := range columnMap {
 			_, ignore := ignoredColumns[col]
-			if !ignore {
-				// these values are returned by pgbouncer as strings, which we need to convert.
-				fields[col], _ = strconv.ParseUint((*val).(string), 10, 64)
+			if ignore {
+				continue
+			}
+
+			switch v := (*val).(type) {
+			case int64:
+				// Integer fields are returned in pgbouncer 1.5 through 1.9
+				fields[col] = v
+			case string:
+				// Integer fields are returned in pgbouncer 1.12
+				integer, err := strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					return err
+				}
+
+				fields[col] = integer
 			}
 		}
 		acc.AddFields("pgbouncer", fields, tags)
