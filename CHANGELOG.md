@@ -44,6 +44,7 @@
 - [#6914](https://github.com/influxdata/telegraf/pull/6914): Add replica set tag to mongodb input.
 - [#6935](https://github.com/influxdata/telegraf/pull/6935): Add counters for merged reads and writes to diskio input.
 - [#6982](https://github.com/influxdata/telegraf/pull/6982): Add support for titlecase transformation to strings processor.
+- [#6993](https://github.com/influxdata/telegraf/pull/6993): Add support for MDB database information to openldap input.
 
 #### Bugfixes
 
