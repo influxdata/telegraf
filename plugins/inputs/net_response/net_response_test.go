@@ -274,9 +274,9 @@ func TestTCPMultiLineResponseError(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_code": uint64(4),
-			"result_type": "string_mismatch",
-			"string_found": false,
+			"result_code":   uint64(4),
+			"result_type":   "string_mismatch",
+			"string_found":  false,
 			"response_time": 1.0,
 		},
 		map[string]string{
