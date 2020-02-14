@@ -106,19 +106,19 @@ func TestGatherNodeData(t *testing.T) {
 				},
 			},
 			wantErr: true,
-                        output: &testutil.Accumulator{
-                                Metrics: []*testutil.Metric{
-                                        {
-                                                Tags: map[string]string{
-                                                        "source": "127.0.0.1",
-                                                },
-                                                Fields: map[string]interface{}{
-                                                        "busy_executors":  0,
-                                                        "total_executors": 0,
-                                                },
-                                        },
-                                },
-                        },
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"source": "127.0.0.1",
+						},
+						Fields: map[string]interface{}{
+							"busy_executors":  0,
+							"total_executors": 0,
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "empty monitor data",

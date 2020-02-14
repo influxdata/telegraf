@@ -253,7 +253,7 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 	fields["total_executors"] = nodeResp.TotalExecutors
 
 	acc.AddFields(measurementJenkins, fields, tags)
-	
+
 	// get node data
 	for _, node := range nodeResp.Computers {
 		err = j.gatherNodeData(node, acc)
