@@ -90,8 +90,9 @@ const sampleConfig = `
 
 // measurement
 const (
-	measurementNode = "jenkins_node"
-	measurementJob  = "jenkins_job"
+	measurementJenkins = "jenkins"
+	measurementNode    = "jenkins_node"
+	measurementJob     = "jenkins_job"
 )
 
 // SampleConfig implements telegraf.Input interface
@@ -244,6 +245,15 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
+
+	// get total and busy executors
+	tags := map[string]string{"source": j.Source, "port": j.Port}
+	fields := make(map[string]interface{})
+	fields["busy_executors"] = nodeResp.BusyExecutors
+	fields["total_executors"] = nodeResp.TotalExecutors
+
+	acc.AddFields(measurementJenkins, fields, tags)
+
 	// get node data
 	for _, node := range nodeResp.Computers {
 		err = j.gatherNodeData(node, acc)
@@ -353,7 +363,9 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 }
 
 type nodeResponse struct {
-	Computers []node `json:"computer"`
+	Computers      []node `json:"computer"`
+	BusyExecutors  int    `json:"busyExecutors"`
+	TotalExecutors int    `json:"totalExecutors"`
 }
 
 type node struct {

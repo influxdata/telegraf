@@ -106,6 +106,19 @@ func TestGatherNodeData(t *testing.T) {
 				},
 			},
 			wantErr: true,
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"source": "127.0.0.1",
+						},
+						Fields: map[string]interface{}{
+							"busy_executors":  0,
+							"total_executors": 0,
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "empty monitor data",
@@ -130,9 +143,24 @@ func TestGatherNodeData(t *testing.T) {
 				responseMap: map[string]interface{}{
 					"/api/json": struct{}{},
 					"/computer/api/json": nodeResponse{
+						BusyExecutors:  4,
+						TotalExecutors: 8,
 						Computers: []node{
 							{DisplayName: "ignore-1"},
 							{DisplayName: "ignore-2"},
+						},
+					},
+				},
+			},
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"source": "127.0.0.1",
+						},
+						Fields: map[string]interface{}{
+							"busy_executors":  4,
+							"total_executors": 8,
 						},
 					},
 				},
@@ -144,6 +172,8 @@ func TestGatherNodeData(t *testing.T) {
 				responseMap: map[string]interface{}{
 					"/api/json": struct{}{},
 					"/computer/api/json": nodeResponse{
+						BusyExecutors:  4,
+						TotalExecutors: 8,
 						Computers: []node{
 							{
 								DisplayName: "master",
@@ -177,6 +207,15 @@ func TestGatherNodeData(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Tags: map[string]string{
+							"source": "127.0.0.1",
+						},
+						Fields: map[string]interface{}{
+							"busy_executors":  4,
+							"total_executors": 8,
+						},
+					},
+					{
+						Tags: map[string]string{
 							"node_name": "master",
 							"arch":      "linux",
 							"status":    "online",
@@ -203,6 +242,8 @@ func TestGatherNodeData(t *testing.T) {
 				responseMap: map[string]interface{}{
 					"/api/json": struct{}{},
 					"/computer/api/json": nodeResponse{
+						BusyExecutors:  4,
+						TotalExecutors: 8,
 						Computers: []node{
 							{
 								DisplayName:  "slave",
@@ -216,6 +257,15 @@ func TestGatherNodeData(t *testing.T) {
 			},
 			output: &testutil.Accumulator{
 				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"source": "127.0.0.1",
+						},
+						Fields: map[string]interface{}{
+							"busy_executors":  4,
+							"total_executors": 8,
+						},
+					},
 					{
 						Tags: map[string]string{
 							"node_name": "slave",
@@ -252,16 +302,18 @@ func TestGatherNodeData(t *testing.T) {
 				t.Fatalf("%s: expected err, got nil", test.name)
 			}
 			if test.output == nil && len(acc.Metrics) > 0 {
-				t.Fatalf("%s: collected extra data", test.name)
+				t.Fatalf("%s: collected extra data %s", test.name, acc.Metrics)
 			} else if test.output != nil && len(test.output.Metrics) > 0 {
-				for k, m := range test.output.Metrics[0].Tags {
-					if acc.Metrics[0].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", test.name, k, m, acc.Metrics[0].Tags[k])
+				for i := 0; i < len(test.output.Metrics); i++ {
+					for k, m := range test.output.Metrics[i].Tags {
+						if acc.Metrics[i].Tags[k] != m {
+							t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", test.name, k, m, acc.Metrics[0].Tags[k])
+						}
 					}
-				}
-				for k, m := range test.output.Metrics[0].Fields {
-					if acc.Metrics[0].Fields[k] != m {
-						t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[0].Fields[k], acc.Metrics[0].Fields[k])
+					for k, m := range test.output.Metrics[i].Fields {
+						if acc.Metrics[i].Fields[k] != m {
+							t.Fatalf("%s: field %s metrics unmatch Expected %v(%T), got %v(%T)\n", test.name, k, m, m, acc.Metrics[0].Fields[k], acc.Metrics[0].Fields[k])
+						}
 					}
 				}
 			}
