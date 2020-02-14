@@ -806,24 +806,38 @@ func TestParserErrorString(t *testing.T) {
 
 func TestStreamParserErrorString(t *testing.T) {
 	var ptests = []struct {
-		name      string
-		input     []byte
-		errString string
+		name  string
+		input []byte
+		errs  []string
 	}{
 		{
-			name:      "multiple line error",
-			input:     []byte("cpu value=42\ncpu value=invalid\ncpu value=42"),
-			errString: `metric parse error: expected field at 2:11: "cpu value="`,
+			name:  "multiple line error",
+			input: []byte("cpu value=42\ncpu value=invalid\ncpu value=42"),
+			errs: []string{
+				`metric parse error: expected field at 2:11: "cpu value="`,
+			},
 		},
 		{
-			name:      "handler error",
-			input:     []byte("cpu value=9223372036854775808i\ncpu value=42"),
-			errString: `metric parse error: value out of range at 1:31: "cpu value=9223372036854775808i"`,
+			name:  "handler error",
+			input: []byte("cpu value=9223372036854775808i\ncpu value=42"),
+			errs: []string{
+				`metric parse error: value out of range at 1:31: "cpu value=9223372036854775808i"`,
+			},
 		},
 		{
-			name:      "buffer too long",
-			input:     []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
-			errString: "metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+			name:  "buffer too long",
+			input: []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
+			errs: []string{
+				"metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+			},
+		},
+		{
+			name:  "multiple errors",
+			input: []byte("foo value=1asdf2.0\nfoo value=2.0\nfoo value=3asdf2.0\nfoo value=4.0"),
+			errs: []string{
+				`metric parse error: expected field at 1:12: "foo value=1"`,
+				`metric parse error: expected field at 3:12: "foo value=3"`,
+			},
 		},
 	}
 
@@ -831,14 +845,22 @@ func TestStreamParserErrorString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := NewStreamParser(bytes.NewBuffer(tt.input))
 
-			var err error
-			for {
-				_, err = parser.Next()
-				if err != nil {
+			var errs []error
+			for i := 0; i < 20; i++ {
+				_, err := parser.Next()
+				if err == EOF {
 					break
 				}
+
+				if err != nil {
+					errs = append(errs, err)
+				}
 			}
-			require.Equal(t, tt.errString, err.Error())
+
+			require.Equal(t, len(tt.errs), len(errs))
+			for i, err := range errs {
+				require.Equal(t, tt.errs[i], err.Error())
+			}
 		})
 	}
 }

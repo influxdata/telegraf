@@ -175,7 +175,7 @@ ws =
 	[\t\v\f ];
 
 newline =
-	'\r'? '\n' %to(incr_newline);
+	'\r'? '\n' >incr_newline;
 
 non_zero_digit =
 	[1-9];
