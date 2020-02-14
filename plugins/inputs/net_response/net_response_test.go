@@ -203,7 +203,7 @@ func TestTCPMultiLineResponseOK1(t *testing.T) {
 	var acc testutil.Accumulator
 
 	// Init plugin
-	sendString := internal.RandomString(100)
+	sendString := internal.RandomString(900) // this + the prior responses is under 1024 bytes.
 	c := NetResponse{
 		Address:     "127.0.0.1:2004",
 		Send:        sendString,
