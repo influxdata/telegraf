@@ -54,6 +54,14 @@ This plugin does not require a plugin on jenkins and it makes use of Jenkins API
 
 - jenkins_node
   - tags:
+    - source
+    - port
+  - fields:
+    - busy_executors
+    - total_executors
+
++ jenkins_node
+  - tags:
     - arch
     - disk_path
     - temp_path
