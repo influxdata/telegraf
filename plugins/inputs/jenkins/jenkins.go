@@ -247,15 +247,13 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 	}
 
 	// get total and busy executors
-	if nodeResp.TotalExecutors != 0 {
-		tags := map[string]string{"source": j.Source, "port": j.Port}
-		fields := make(map[string]interface{})
-		fields["busy_executors"] = nodeResp.BusyExecutors
-		fields["total_executors"] = nodeResp.TotalExecutors
+	tags := map[string]string{"source": j.Source, "port": j.Port}
+	fields := make(map[string]interface{})
+	fields["busy_executors"] = nodeResp.BusyExecutors
+	fields["total_executors"] = nodeResp.TotalExecutors
 
-		acc.AddFields(measurementJenkins, fields, tags)
-	}
-
+	acc.AddFields(measurementJenkins, fields, tags)
+	
 	// get node data
 	for _, node := range nodeResp.Computers {
 		err = j.gatherNodeData(node, acc)

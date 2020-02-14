@@ -106,6 +106,19 @@ func TestGatherNodeData(t *testing.T) {
 				},
 			},
 			wantErr: true,
+                        output: &testutil.Accumulator{
+                                Metrics: []*testutil.Metric{
+                                        {
+                                                Tags: map[string]string{
+                                                        "source": "127.0.0.1",
+                                                },
+                                                Fields: map[string]interface{}{
+                                                        "busy_executors":  0,
+                                                        "total_executors": 0,
+                                                },
+                                        },
+                                },
+                        },
 		},
 		{
 			name: "empty monitor data",
@@ -289,7 +302,7 @@ func TestGatherNodeData(t *testing.T) {
 				t.Fatalf("%s: expected err, got nil", test.name)
 			}
 			if test.output == nil && len(acc.Metrics) > 0 {
-				t.Fatalf("%s: collected extra data", test.name)
+				t.Fatalf("%s: collected extra data %s", test.name, acc.Metrics)
 			} else if test.output != nil && len(test.output.Metrics) > 0 {
 				for i := 0; i < len(test.output.Metrics); i++ {
 					for k, m := range test.output.Metrics[i].Tags {
