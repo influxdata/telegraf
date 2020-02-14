@@ -1,10 +1,10 @@
 package net_response
 
 import (
-	"bufio"
 	"errors"
+	"io"
+	"io/ioutil"
 	"net"
-	"net/textproto"
 	"regexp"
 	"time"
 
@@ -22,6 +22,8 @@ const (
 	ReadFailed                  = 3
 	StringMismatch              = 4
 )
+
+const connectionReadBufferSize int64 = 1024
 
 // NetResponse struct
 type NetResponse struct {
@@ -105,10 +107,9 @@ func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]int
 		// Set read timeout
 		conn.SetReadDeadline(time.Now().Add(n.ReadTimeout.Duration))
 		// Prepare reader
-		reader := bufio.NewReader(conn)
-		tp := textproto.NewReader(reader)
+		reader := io.LimitReader(conn, connectionReadBufferSize)
 		// Read
-		data, err := tp.ReadLine()
+		buf, err := ioutil.ReadAll(reader)
 		// Stop timer
 		responseTime = time.Since(start).Seconds()
 		// Handle error
@@ -117,7 +118,7 @@ func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]int
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
-			find := RegEx.FindString(string(data))
+			find := RegEx.FindString(string(buf))
 			if find != "" {
 				setResult(Success, fields, tags, n.Expect)
 			} else {
@@ -156,7 +157,7 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	// Set read timeout
 	conn.SetReadDeadline(time.Now().Add(n.ReadTimeout.Duration))
 	// Read
-	buf := make([]byte, 1024)
+	buf := make([]byte, connectionReadBufferSize)
 	_, _, err = conn.ReadFromUDP(buf)
 	// Stop timer
 	responseTime := time.Since(start).Seconds()

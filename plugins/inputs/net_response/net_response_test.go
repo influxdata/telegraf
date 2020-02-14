@@ -198,6 +198,98 @@ func TestTCPOK2(t *testing.T) {
 	wg.Wait()
 }
 
+func TestTCPMultiLineResponseOK1(t *testing.T) {
+	var wg sync.WaitGroup
+	var acc testutil.Accumulator
+
+	// Init plugin
+	sendString := internal.RandomString(100)
+	c := NetResponse{
+		Address:     "127.0.0.1:2004",
+		Send:        sendString,
+		Expect:      sendString,
+		ReadTimeout: internal.Duration{Duration: time.Second * 3},
+		Timeout:     internal.Duration{Duration: time.Second},
+		Protocol:    "tcp",
+	}
+	// Start TCP server
+	wg.Add(1)
+	go MultiLineTCPServer(t, &wg)
+	wg.Wait()
+	// Connect
+	wg.Add(1)
+	err1 := c.Gather(&acc)
+	wg.Wait()
+	// Override response time
+	for _, p := range acc.Metrics {
+		p.Fields["response_time"] = 1.0
+	}
+	require.NoError(t, err1)
+	acc.AssertContainsTaggedFields(t,
+		"net_response",
+		map[string]interface{}{
+			"result_code":   uint64(0),
+			"result_type":   "success",
+			"string_found":  true,
+			"response_time": 1.0,
+		},
+		map[string]string{
+			"result":   "success",
+			"server":   "127.0.0.1",
+			"port":     "2004",
+			"protocol": "tcp",
+		},
+	)
+	// Waiting TCPserver
+	wg.Wait()
+}
+
+func TestTCPMultiLineResponseError(t *testing.T) {
+	var wg sync.WaitGroup
+	var acc testutil.Accumulator
+
+	// Init plugin
+	sendString := internal.RandomString(1025) // a string that's too large to receive
+	c := NetResponse{
+		Address:     "127.0.0.1:2004",
+		Send:        sendString,
+		Expect:      sendString,
+		ReadTimeout: internal.Duration{Duration: time.Second * 3},
+		Timeout:     internal.Duration{Duration: time.Second},
+		Protocol:    "tcp",
+	}
+	// Start TCP server
+	wg.Add(1)
+	go MultiLineTCPServer(t, &wg)
+	wg.Wait()
+	// Connect
+	wg.Add(1)
+	err1 := c.Gather(&acc)
+	wg.Wait()
+	// Override response time
+	for _, p := range acc.Metrics {
+		p.Fields["response_time"] = 1.0
+	}
+	require.NoError(t, err1)
+	acc.AssertContainsTaggedFields(t,
+		"net_response",
+		map[string]interface{}{
+			"result_code": uint64(4),
+			"result_type": "string_mismatch",
+			"string_found": false,
+			"response_time": 1.0,
+		},
+		map[string]string{
+			"result":   "string_mismatch",
+			"server":   "127.0.0.1",
+			"port":     "2004",
+			"protocol": "tcp",
+		},
+	)
+	// Waiting TCPserver
+	wg.Wait()
+}
+
 func TestUDPError(t *testing.T) {
 	var acc testutil.Accumulator
 	// Init plugin
@@ -295,6 +387,22 @@ func TCPServer(t *testing.T, wg *sync.WaitGroup) {
 	buf := make([]byte, 1024)
 	conn.Read(buf)
 	conn.Write(buf)
+	conn.CloseWrite()
+	tcpServer.Close()
+	wg.Done()
+}
+
+func MultiLineTCPServer(t *testing.T, wg *sync.WaitGroup) {
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:2004")
+	tcpServer, _ := net.ListenTCP("tcp", tcpAddr)
+	wg.Done()
+	conn, _ := tcpServer.AcceptTCP()
+	buf := make([]byte, 1024)
+	conn.Read(buf)
+	conn.Write([]byte("1 Header Response\r\n"))
+	conn.Write([]byte("2nd line with more data\r\n"))
+	conn.Write(buf)
+	conn.Write([]byte("final line\r\n"))
 	conn.CloseWrite()
 	tcpServer.Close()
 	wg.Done()
