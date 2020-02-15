@@ -74,15 +74,26 @@ func NewBinDataParser(
 		return nil, fmt.Errorf(`invalid string encoding %s`, stringEncoding)
 	}
 
-	// Fields' sizes
+	// Field types, names and sizes
 	for i := 0; i < len(fields); i++ {
-		fieldType, ok := fieldTypes[strings.ToLower(fields[i].Type)]
+		fieldType, ok := fieldTypes[fields[i].Type]
 		if !ok {
 			return nil, fmt.Errorf(`invalid field type %s`, fields[i].Type)
 		}
-		// Overwrite non-string and non-padding field size
-		if fieldType.Name() != "string" && fields[i].Type != "padding" {
-			fields[i].Size = uint(fieldType.Size())
+
+		if fields[i].Type != "padding" {
+			// Check for duplicate field names
+			fieldName := fields[i].Name
+			for j := i + 1; j < len(fields); j++ {
+				if fieldName == fields[j].Name {
+					return nil, fmt.Errorf(`duplicate field name %s`, fieldName)
+				}
+			}
+
+			// Overwrite non-string and non-padding field size
+			if fieldType.Name() != "string" {
+				fields[i].Size = uint(fieldType.Size())
+			}
 		}
 	}
 

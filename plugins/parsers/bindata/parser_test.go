@@ -101,6 +101,22 @@ var fieldsWithStringUTF8 = []Field{
 	Field{Name: "time", Type: "int32"},
 }
 
+var fieldsWithDuplicateNames = []Field{
+	Field{Name: "fieldFoo", Type: "bool"},
+	Field{Name: "fieldBool1", Type: "bool"},
+	Field{Name: "fieldUint8", Type: "uint8"},
+	Field{Name: "fieldInt8", Type: "int8"},
+	Field{Name: "fieldUint16", Type: "uint16"},
+	Field{Name: "fieldInt16", Type: "int16"},
+	Field{Name: "fieldUint32", Type: "uint32"},
+	Field{Name: "fieldInt32", Type: "int32"},
+	Field{Name: "fieldUint64", Type: "uint64"},
+	Field{Name: "fieldInt64", Type: "int64"},
+	Field{Name: "fieldFloat32", Type: "float32"},
+	Field{Name: "fieldFloat64", Type: "float64"},
+	Field{Name: "fieldFoo", Type: "string", Size: 48},
+	Field{Name: "time", Type: "int32"},
+}
 var defaultTags = map[string]string{
 	"tag0": "value0",
 	"tag1": "value1",
@@ -436,4 +452,19 @@ func TestDefaultTags(t *testing.T) {
 	assert.Len(t, metrics, 1)
 	require.Equal(t, parser.MetricName, metrics[0].Name())
 	assert.Equal(t, defaultTags, metrics[0].Tags())
+}
+
+func TestDuplicateNames(t *testing.T) {
+
+	var parser, err = NewBinDataParser(
+		"duplicate_names",
+		"unix",
+		"be",
+		"utf-8",
+		fieldsWithDuplicateNames,
+		nil,
+	)
+
+	assert.Nil(t, parser)
+	require.Error(t, err)
 }
