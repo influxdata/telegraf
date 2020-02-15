@@ -1464,14 +1464,6 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["bindata_protocol"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				c.BinDataProtocol = str.Value
-			}
-		}
-	}
-
 	if node, ok := tbl.Fields["bindata_endiannes"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1488,15 +1480,21 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["bindata_string_encoding"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.BinDataStringEncoding = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["bindata_fields"]; ok {
 		if bindataFields, ok := node.([]*ast.Table); ok {
 			for _, bindataField := range bindataFields {
 				var field bindata.Field
-				fmt.Printf("D! FIELD ------\n")
 				for _, prop := range bindataField.Fields {
 					if kv, ok := prop.(*ast.KeyValue); ok {
 						if str, ok := kv.Value.(*ast.String); ok {
-							fmt.Printf("D! %s %s\n", kv.Key, str.Value)
 							switch kv.Key {
 							case "name":
 								field.Name = str.Value
@@ -1507,10 +1505,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 						} else if integer, ok := kv.Value.(*ast.Integer); ok {
 							v, err := strconv.ParseUint(integer.Value, 10, 32)
 							if err == nil {
-								fmt.Printf("D! %s %d\n", kv.Key, v)
 								switch kv.Key {
-								case "offset":
-									field.Offset = uint(v)
 								case "size":
 									field.Size = uint(v)
 								default:

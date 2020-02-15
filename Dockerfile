@@ -22,7 +22,7 @@ WORKDIR /go/src/github.com/influxdata/telegraf
 COPY . /go/src/github.com/influxdata/telegraf
 
 # Build the Go app
-RUN go get -u github.com/golang/dep/cmd/dep
+RUN GO111MODULE=off go get -u github.com/golang/dep/cmd/dep
 RUN go get ./...
 RUN make
 
