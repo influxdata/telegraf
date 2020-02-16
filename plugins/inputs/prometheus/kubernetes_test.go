@@ -149,7 +149,7 @@ func TestPodSelector(t *testing.T) {
 		{
 			expected:      nil,
 			labelselector: "key1",
-			fieldselector: "spec.nonsense=blahblah",
+			fieldselector: "somefield",
 			testtype:      false,
 		},
 	}
@@ -169,7 +169,7 @@ func TestPodSelector(t *testing.T) {
 			output, err := podSelector(prom)
 
 			if output != nil {
-				t.Errorf("Expected nil got %v", output)
+				t.Errorf("Expected nil got %v", output[0])
 			}
 			if err == nil {
 				t.Errorf("Expected error got no error")
