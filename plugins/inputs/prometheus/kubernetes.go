@@ -15,6 +15,8 @@ import (
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
 	"github.com/ghodss/yaml"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/fields"
 )
 
 type payload struct {
@@ -82,8 +84,20 @@ func (p *Prometheus) start(ctx context.Context) error {
 // pod, causing errors in the logs. This is only true if the pod going offline is not
 // directed to do so by K8s.
 func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
+
+	selectors, err := podSelector(p)
+
+	if err != nil {
+		return err
+	}
+
+	//filter := k8s.QueryParam("fieldSelector", "spec.nodeName="+p.KubernetesNode)
+	//l := new(k8s.LabelSelector)
+	//l.Eq("blah", "booyah")
+	//options = append(options, filter)
+	//options = append(options, k8s.QueryParam("labelSelector", "app=api"))
 	pod := &corev1.Pod{}
-	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{})
+	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{}, selectors...)
 	if err != nil {
 		return err
 	}
@@ -103,7 +117,7 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 
 			// If the pod is not "ready", there will be no ip associated with it.
 			if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] != "true" ||
-				!podReady(pod.Status.GetContainerStatuses()) || !podOnNode(pod, p.KubernetesNode) {
+				!podReady(pod.Status.GetContainerStatuses()) {
 				continue
 			}
 
@@ -135,16 +149,42 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 	return true
 }
 
-// if kubernetes_node config value is set then check if the pod being watched is on the node
-func podOnNode(pod *corev1.Pod, nodename string) bool {
-	if len(nodename) > 0 {
-		if *pod.Spec.NodeName == nodename {
-			return true
+
+func podSelector(p *Prometheus) ([]k8s.Option, error) {
+	options := []k8s.Option{}
+
+	var err error
+
+	if len(p.KubernetesLabelSelector) > 0 {
+		_, err1 := labels.Parse(p.KubernetesLabelSelector);
+		if  err1 != nil {
+			return nil, fmt.Errorf("Label Selector %s validation fail. Skipping it. Error %v", p.KubernetesLabelSelector, err)
 		}
-		return false
+		options = append(options, k8s.QueryParam("labelSelector", p.KubernetesLabelSelector))
 	}
-	return true
+
+	if len(p.KubernetesFieldSelector) > 0 {
+		_, err2 := fields.ParseSelector(p.KubernetesFieldSelector);
+		if  err2 != nil {
+			return nil, fmt.Errorf("Provided Field Selector %s does not pass validation. Skipping it. Error %v", p.KubernetesFieldSelector, err)
+		}
+		options = append(options, k8s.QueryParam("fieldSelector", p.KubernetesFieldSelector))
+	}
+
+	return options, nil
+
 }
+
+// if kubernetes_node config value is set then check if the pod being watched is on the node
+//func podOnNode(pod *corev1.Pod, nodename string) bool {
+//	if len(nodename) > 0 {
+//		if *pod.Spec.NodeName == nodename {
+//			return true
+//		}
+//		return false
+//	}
+//	return true
+//}
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
 	if p.kubernetesPods == nil {

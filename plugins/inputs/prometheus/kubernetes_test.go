@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"github.com/ericchiang/k8s"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -95,28 +96,87 @@ func TestDeletePods(t *testing.T) {
 	assert.Equal(t, 0, len(prom.kubernetesPods))
 }
 
-func TestAddPodOnlyonSameNode(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+//func TestAddPodOnlyonSameNode(t *testing.T) {
+//	prom := &Prometheus{Log: testutil.Logger{}}
+//
+//	p := pod()
+//	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
+//	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+//	if podOnNode(p, "ip-10-1-2-3.acme.com") {
+//		registerPod(p, prom)
+//	}
+//	assert.Equal(t, 1, len(prom.kubernetesPods))
+//}
+//
+//func TestDoNotAddPodIfNotonSameNode(t *testing.T) {
+//	prom := &Prometheus{Log: testutil.Logger{}}
+//
+//	p := pod()
+//	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
+//	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+//	if podOnNode(p, "ip-10-4-5-6.acme.com") {
+//		registerPod(p, prom)
+//	}
+//	assert.Equal(t, 0, len(prom.kubernetesPods))
+//}
 
-	p := pod()
-	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
-	if podOnNode(p, "ip-10-1-2-3.acme.com") {
-		registerPod(p, prom)
+
+func TestPodSelector(t *testing.T) {
+
+	cases := []struct {
+		expected []k8s.Option
+		labelselector string
+		fieldselector string
+		testtype      bool
+	} {
+		{
+			expected: []k8s.Option{
+				k8s.QueryParam("labelSelector", "key1=val1,key2=val2,key3"),
+				k8s.QueryParam("fieldSelector", "spec.nodeName=ip-1-2-3-4.acme.com"),
+			},
+			labelselector: "key1=val1,key2=val2,key3",
+			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
+			testtype:  true,
+		},
+		{
+			expected: []k8s.Option{
+				k8s.QueryParam("labelSelector", "key1"),
+				k8s.QueryParam("fieldSelector", "spec.nodeName=ip-1-2-3-4.acme.com"),
+			},
+			labelselector: "key1",
+			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
+			testtype: true,
+		},
+		{
+			expected: nil,
+			labelselector: "key1",
+			fieldselector: "spec.nonsense=blahblah",
+			testtype: false,
+		},
 	}
-	assert.Equal(t, 1, len(prom.kubernetesPods))
-}
 
-func TestDoNotAddPodIfNotonSameNode(t *testing.T) {
-	prom := &Prometheus{Log: testutil.Logger{}}
+	for _, c := range cases {
+		prom := &Prometheus{
+			Log: testutil.Logger{},
+			KubernetesLabelSelector: c.labelselector,
+			KubernetesFieldSelector: c.fieldselector,
+		}
+		if c.testtype {
+			output, err := podSelector(prom)
+			if err != nil {
+				t.Errorf("Expected is %v got %v\n", c.expected, output )
+			}
+		} else {
+			output, err := podSelector(prom)
 
-	p := pod()
-	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
-	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
-	if podOnNode(p, "ip-10-4-5-6.acme.com") {
-		registerPod(p, prom)
+			if output != nil {
+				t.Errorf("Expected nil got %v", output)
+			}
+			if err == nil {
+				t.Errorf("Expected error got no error")
+			}
+		}
 	}
-	assert.Equal(t, 0, len(prom.kubernetesPods))
 }
 
 func pod() *v1.Pod {

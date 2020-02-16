@@ -30,7 +30,10 @@ type Prometheus struct {
 	KubeConfig string
 
 	//
-	KubernetesNode string `toml:"kubernetes_node"`
+	KubernetesLabelSelector string `toml:"kubernetes_label_selector"`
+
+	//
+	KubernetesFieldSelector string `toml:"kubernetes_field_selector"`
 
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
@@ -373,7 +376,7 @@ func (p *Prometheus) Stop() {
 }
 
 func init() {
-	inputs.Add("prometheus", func() telegraf.Input {
+	Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
 			kubernetesPods:  map[string]URLAndAddress{},
