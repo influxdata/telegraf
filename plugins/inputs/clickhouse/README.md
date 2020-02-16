@@ -6,11 +6,61 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
 ```ini
 # Read metrics from one or many ClickHouse servers
 [[inputs.clickhouse]]
-  timeout         = 5 # seconds
+  ## HTTP(s) timeout while getting metrics values in seconds
+  ## The timeout includes connection time, any redirects, and reading the response body.
+  ##   example: timeout = 1
+  # timeout = 5 # seconds
+
+  ## List of servers for metrics scraping
+  ## metrics scrape via HTTP(s) clickhouse interface
+  ## https://clickhouse.tech/docs/en/interfaces/http/
+  ##    example: servers = ["http://default:@127.0.0.1:8123","https://user:password@custom-server.mdb.yandexclud.net"]
   servers         = ["http://username:password@127.0.0.1:8123"]
-  auto_discovery  = true # If a setting is "true" plugin tries to connect to all servers in the cluster (system.clusters)
-  cluster_include = []
-  cluster_exclude = ["test_shard_localhost"]
+
+  ## If "auto_discovery"" is "true" plugin tries to connect to all servers available in the cluster
+  ## with using same "user:password" described in "servers"" parameter
+  ## and get this server hostname list from "system.clusters" table
+  ## see
+  ## - https://clickhouse.tech/docs/en/operations/system_tables/#system-clusters
+  ## - https://clickhouse.tech/docs/en/operations/server_settings/settings/#server_settings_remote_servers
+  ## - https://clickhouse.tech/docs/en/operations/table_engines/distributed/
+  ## - https://clickhouse.tech/docs/en/operations/table_engines/replication/#creating-replicated-tables
+  ##    example: auto_discovery = false
+  # auto_discovery = true
+
+  ## Filter cluster names in "system.clusters" when "auto_discovery" is "true"
+  ## when this filter present then "WHERE cluster IN (...)" filter will apply
+  ## please use only full cluster names here, regexp and glob filters is not allowed
+  ## for "/etc/clickhouse-server/config.d/remote.xml"
+  ## <yandex>
+  ##  <remote_servers>
+  ##    <my-own-cluster>
+  ##        <shard>
+  ##          <replica><host>clickhouse-ru-1.local</host><port>9000</port></replica>
+  ##          <replica><host>clickhouse-ru-2.local</host><port>9000</port></replica>
+  ##        </shard>
+  ##        <shard>
+  ##          <replica><host>clickhouse-eu-1.local</host><port>9000</port></replica>
+  ##          <replica><host>clickhouse-eu-2.local</host><port>9000</port></replica>
+  ##        </shard>
+  ##    </my-onw-cluster>
+  ##  </remote_servers>
+  ##
+  ## </yandex>
+  ## 
+  ## example: cluster_include = ["my-own-cluster"]
+  # cluster_include = []
+
+  ## Filter cluster names in "system.clusters" when "auto_discovery" is "true"
+  ## when this filter present then "WHERE cluster IN (...)" filter will apply
+  ## if "cluster_include" not empty, this parameter will ignored
+  ##    example: cluster_exclude = ["my-internal-not-discovered-cluster"]
+  # cluster_exclude = []
+
+  ## Parameter which controls whether a client verifies the server's certificate chain and host name.
+  ## If http_tls_insecure_skip_verify is true, TLS accepts any certificate
+  ## presented by the server and any host name in that certificate.
+  # http_tls_insecure_skip_verify = true
 ```
 
 ### Metrics:
@@ -20,7 +70,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - all rows from system.events
+    - all rows from system.events, all metrics is COUNTER type, look https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-events
 
 - clickhouse_metrics
   - tags:
@@ -28,7 +78,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - all rows from system.metrics
+    - all rows from system.metrics, all metrics is GAUGE type, look https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-metrics
 
 - clickhouse_asynchronous_metrics
   - tags:
@@ -36,7 +86,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - all rows from system.asynchronous_metrics
+    - all rows from system.asynchronous_metrics, all metrics is GAUGE type, look https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-asynchronous_metrics
 
 - clickhouse_tables
   - tags:
