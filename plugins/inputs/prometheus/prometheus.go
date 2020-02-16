@@ -376,7 +376,7 @@ func (p *Prometheus) Stop() {
 }
 
 func init() {
-	Add("prometheus", func() telegraf.Input {
+	inputs.Add("prometheus", func() telegraf.Input {
 		return &Prometheus{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
 			kubernetesPods:  map[string]URLAndAddress{},
