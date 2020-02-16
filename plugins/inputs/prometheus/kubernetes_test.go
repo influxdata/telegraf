@@ -120,15 +120,14 @@ func TestDeletePods(t *testing.T) {
 //	assert.Equal(t, 0, len(prom.kubernetesPods))
 //}
 
-
 func TestPodSelector(t *testing.T) {
 
 	cases := []struct {
-		expected []k8s.Option
+		expected      []k8s.Option
 		labelselector string
 		fieldselector string
 		testtype      bool
-	} {
+	}{
 		{
 			expected: []k8s.Option{
 				k8s.QueryParam("labelSelector", "key1=val1,key2=val2,key3"),
@@ -136,7 +135,7 @@ func TestPodSelector(t *testing.T) {
 			},
 			labelselector: "key1=val1,key2=val2,key3",
 			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
-			testtype:  true,
+			testtype:      true,
 		},
 		{
 			expected: []k8s.Option{
@@ -145,26 +144,26 @@ func TestPodSelector(t *testing.T) {
 			},
 			labelselector: "key1",
 			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
-			testtype: true,
+			testtype:      true,
 		},
 		{
-			expected: nil,
+			expected:      nil,
 			labelselector: "key1",
 			fieldselector: "spec.nonsense=blahblah",
-			testtype: false,
+			testtype:      false,
 		},
 	}
 
 	for _, c := range cases {
 		prom := &Prometheus{
-			Log: testutil.Logger{},
+			Log:                     testutil.Logger{},
 			KubernetesLabelSelector: c.labelselector,
 			KubernetesFieldSelector: c.fieldselector,
 		}
 		if c.testtype {
 			output, err := podSelector(prom)
 			if err != nil {
-				t.Errorf("Expected is %v got %v\n", c.expected, output )
+				t.Errorf("Expected is %v got %v\n", c.expected, output)
 			}
 		} else {
 			output, err := podSelector(prom)

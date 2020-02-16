@@ -15,8 +15,8 @@ import (
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
 	"github.com/ghodss/yaml"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 type payload struct {
@@ -149,23 +149,22 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 	return true
 }
 
-
 func podSelector(p *Prometheus) ([]k8s.Option, error) {
 	options := []k8s.Option{}
 
 	var err error
 
 	if len(p.KubernetesLabelSelector) > 0 {
-		_, err1 := labels.Parse(p.KubernetesLabelSelector);
-		if  err1 != nil {
+		_, err1 := labels.Parse(p.KubernetesLabelSelector)
+		if err1 != nil {
 			return nil, fmt.Errorf("Label Selector %s validation fail. Skipping it. Error %v", p.KubernetesLabelSelector, err)
 		}
 		options = append(options, k8s.QueryParam("labelSelector", p.KubernetesLabelSelector))
 	}
 
 	if len(p.KubernetesFieldSelector) > 0 {
-		_, err2 := fields.ParseSelector(p.KubernetesFieldSelector);
-		if  err2 != nil {
+		_, err2 := fields.ParseSelector(p.KubernetesFieldSelector)
+		if err2 != nil {
 			return nil, fmt.Errorf("Provided Field Selector %s does not pass validation. Skipping it. Error %v", p.KubernetesFieldSelector, err)
 		}
 		options = append(options, k8s.QueryParam("fieldSelector", p.KubernetesFieldSelector))
