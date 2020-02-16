@@ -18,11 +18,12 @@ import (
 type Graphite struct {
 	GraphiteTagSupport bool
 	// URL is only for backwards compatibility
-	Servers  []string
-	Prefix   string
-	Template string
-	Timeout  int
-	conns    []net.Conn
+	Servers   []string
+	Prefix    string
+	Template  string
+	Templates []string
+	Timeout   int
+	conns     []net.Conn
 	tlsint.ClientConfig
 }
 
@@ -134,7 +135,7 @@ func checkEOF(conn net.Conn) {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.Templates)
 	if err != nil {
 		return err
 	}
