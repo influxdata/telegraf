@@ -3,14 +3,13 @@ package x509_crl
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
 )
 
 // Make sure X509CRL implements telegraf.Input
@@ -137,6 +136,29 @@ func TestTags(test *testing.T) {
 	thenTagIsPresentAndEquals(test, &acc, "version", "0")
 }
 
+func TestFields(test *testing.T) {
+	crlFile := givenCRLFile(test, 0640, ValidCRL)
+	defer os.Remove(crlFile.Name())
+
+	x509crl := &X509CRL{
+		Sources: []string{crlFile.Name()},
+	}
+	_ = x509crl.Init()
+
+	acc := testutil.Accumulator{}
+	err := x509crl.Gather(&acc)
+	require.NoError(test, err)
+
+	assert.True(test, acc.HasMeasurement(x509CrlMeasurement))
+	thenFieldIsPresentAndEquals(test, &acc, "start_date", 1580917523000)
+	thenFieldIsPresentAndEquals(test, &acc, "end_date", 1583509523000)
+	thenFieldIsPresentAndEquals(test, &acc, "revoked_certificates", 0)
+
+	effective, _ := acc.BoolField(x509CrlMeasurement, "has_expired")
+	assert.True(test, acc.HasField(x509CrlMeasurement, "has_expired"), fmt.Sprintf("Field %s not present", "has_expired"))
+	assert.Equal(test, false, effective, fmt.Sprintf("Invalid field '%s'", "has_expired"))
+}
+
 func TestStrings(test *testing.T) {
 
 	crlFile := givenCRLFile(test, 0640, ValidCRL)
@@ -200,4 +222,10 @@ func givenCRLFile(test *testing.T, fileMode os.FileMode, fileContent string) *os
 func thenTagIsPresentAndEquals(test *testing.T, acc *testutil.Accumulator, tag string, expected string) {
 	assert.True(test, acc.HasTag(x509CrlMeasurement, tag), fmt.Sprintf("Tag %s not present", tag))
 	assert.Equal(test, expected, acc.TagValue(x509CrlMeasurement, tag), fmt.Sprintf("Invalid tag '%s'", tag))
+}
+
+func thenFieldIsPresentAndEquals(test *testing.T, acc *testutil.Accumulator, field string, expected int64) {
+	effective, _ := acc.Int64Field(x509CrlMeasurement, field)
+	assert.True(test, acc.HasField(x509CrlMeasurement, field), fmt.Sprintf("Field %s not present", field))
+	assert.Equal(test, expected, effective, fmt.Sprintf("Invalid field '%s'", field))
 }

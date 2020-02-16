@@ -7,14 +7,13 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const x509CrlMeasurement = "x509_crl"
@@ -87,10 +86,10 @@ func (configuration *X509CRL) getCRL(crlURL *url.URL) ([]*pkix.CertificateList, 
 
 func getFields(crl *pkix.CertificateList) map[string]interface{} {
 	return map[string]interface{}{
-		"start_date":           crl.TBSCertList.ThisUpdate.Unix(),
-		"end_date":             crl.TBSCertList.NextUpdate.Unix(),
+		"start_date":           crl.TBSCertList.ThisUpdate.Unix() * 1000, // EPOCH in ms
+		"end_date":             crl.TBSCertList.NextUpdate.Unix() * 1000, // EPOCH in ms
 		"has_expired":          crl.HasExpired(time.Now()),
-		"revoked_certificates": fmt.Sprintf("%d", len(crl.TBSCertList.RevokedCertificates)),
+		"revoked_certificates": len(crl.TBSCertList.RevokedCertificates),
 	}
 }
 
