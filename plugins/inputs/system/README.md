@@ -10,7 +10,7 @@ Number of CPUs is obtained from the /proc/cpuinfo file.
 ```toml
 # Read metrics about system load & uptime
 [[inputs.system]]
-  # no configuration
+  # fielddrop = ["uptime_format"]
 ```
 #### Permissions:
 
