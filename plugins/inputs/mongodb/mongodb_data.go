@@ -245,6 +245,10 @@ func (d *MongodbData) AddDefaultStats() {
 		d.addStat(statLine, DefaultLatencyStats)
 	}
 
+	if d.StatLine.ReplSetName != "" {
+		d.Tags["rs_name"] = d.StatLine.ReplSetName
+	}
+
 	if d.StatLine.OplogStats != nil {
 		d.add("repl_oplog_window_sec", d.StatLine.OplogStats.TimeDiff)
 	}

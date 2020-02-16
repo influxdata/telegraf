@@ -12,6 +12,12 @@
 #### New Inputs
 
 - [infiniband](/plugins/inputs/infiniband/README.md) - Contributed by @willfurnell
+- [modbus](/plugins/inputs/modbus/README.md) - Contributed by @garciaolais
+- [monit](/plugins/inputs/monit/README.md) - Contributed by @SirishaGopigiri
+
+#### New Processors
+
+- [template](/plugins/processors/template/README.md) - Contributed by @RobMalvern
 
 #### New Outputs
 
@@ -32,13 +38,38 @@
 - [#6844](https://github.com/influxdata/telegraf/pull/6844): Add source and port tags to jenkins_job metrics.
 - [#6886](https://github.com/influxdata/telegraf/pull/6886): Add date offset and timezone options to date processor.
 - [#6859](https://github.com/influxdata/telegraf/pull/6859): Exclude resources by inventory path in vsphere input.
+- [#6700](https://github.com/influxdata/telegraf/pull/6700): Allow a user defined field to be used as the graylog short_message.
+- [#6917](https://github.com/influxdata/telegraf/pull/6917): Add server_name override for x509_cert plugin.
+- [#6921](https://github.com/influxdata/telegraf/pull/6921): Add udp internal metrics for the statsd input.
+- [#6914](https://github.com/influxdata/telegraf/pull/6914): Add replica set tag to mongodb input.
+- [#6935](https://github.com/influxdata/telegraf/pull/6935): Add counters for merged reads and writes to diskio input.
+- [#6982](https://github.com/influxdata/telegraf/pull/6982): Add support for titlecase transformation to strings processor.
+- [#6993](https://github.com/influxdata/telegraf/pull/6993): Add support for MDB database information to openldap input.
+- [#6957](https://github.com/influxdata/telegraf/pull/6957): Add new fields for Jenkins total and busy executors.
 
 #### Bugfixes
 
 - [#6397](https://github.com/influxdata/telegraf/issues/6397): Fix conversion to floats in AzureDBResourceStats query in the sqlserver input.
 - [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
+- [#7005](https://github.com/influxdata/telegraf/pull/7005): Search for chronyc only when chrony input plugin is enabled.
 
-## v1.13.2 [unreleased]
+## v1.13.4 [unreleased]
+
+#### Bugfixes
+
+- [#6988](https://github.com/influxdata/telegraf/issues/6988): Parse NaN values from summary types in prometheus input.
+- [#6820](https://github.com/influxdata/telegraf/issues/6820): Fix pgbouncer input when used with newer pgbouncer versions.
+
+## v1.13.3 [2020-02-04]
+
+#### Bugfixes
+
+- [#5744](https://github.com/influxdata/telegraf/issues/5744): Fix kibana input with Kibana versions greater than 6.4.
+- [#6960](https://github.com/influxdata/telegraf/issues/6960): Fix duplicate TrackingIDs can be returned in queue consumer plugins.
+- [#6913](https://github.com/influxdata/telegraf/issues/6913): Support up to 4096 stats in the ethtool input.
+- [#6973](https://github.com/influxdata/telegraf/issues/6973): Expire metrics on query in addition to on add.
+
+## v1.13.2 [2020-01-21]
 
 #### Bugfixes
 
@@ -48,6 +79,7 @@
 - [#6899](https://github.com/influxdata/telegraf/pull/6899): Fix URL agent address form with udp in snmp input.
 - [#6619](https://github.com/influxdata/telegraf/issues/6619): Change logic to allow recording of device fields when attributes is false.
 - [#6903](https://github.com/influxdata/telegraf/issues/6903): Do not add invalid timestamps to kafka messages.
+- [#6906](https://github.com/influxdata/telegraf/issues/6906): Fix json_strict option and set default of true.
 
 ## v1.13.1 [2020-01-08]
 
@@ -68,7 +100,10 @@
 
 #### Release Notes
 
-- Official packages built with Go 1.13.5.
+- Official packages built with Go 1.13.5.  This affects the minimum supported
+  version on several platforms, most notably requiring Windows 7 (2008 R2) or
+  later.  For details, check the release notes for Go
+  [ports](https://golang.org/doc/go1.13#ports).
 - The `prometheus` input and `prometheus_client` output have a new mapping to
   and from Telegraf metrics, which can be enabled by setting `metric_version = 2`.
   The original mapping is deprecated.  When both plugins have the same setting,
