@@ -29,10 +29,10 @@ type Prometheus struct {
 	// Location of kubernetes config file
 	KubeConfig string
 
-	//
+	// Label Selector/s for Kubernetes
 	KubernetesLabelSelector string `toml:"kubernetes_label_selector"`
 
-	//
+	// Field Selector/s for Kubernetes
 	KubernetesFieldSelector string `toml:"kubernetes_field_selector"`
 
 	// Bearer Token authorization file path

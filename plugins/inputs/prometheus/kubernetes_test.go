@@ -96,30 +96,6 @@ func TestDeletePods(t *testing.T) {
 	assert.Equal(t, 0, len(prom.kubernetesPods))
 }
 
-//func TestAddPodOnlyonSameNode(t *testing.T) {
-//	prom := &Prometheus{Log: testutil.Logger{}}
-//
-//	p := pod()
-//	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
-//	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
-//	if podOnNode(p, "ip-10-1-2-3.acme.com") {
-//		registerPod(p, prom)
-//	}
-//	assert.Equal(t, 1, len(prom.kubernetesPods))
-//}
-//
-//func TestDoNotAddPodIfNotonSameNode(t *testing.T) {
-//	prom := &Prometheus{Log: testutil.Logger{}}
-//
-//	p := pod()
-//	p.Spec.NodeName = str("ip-10-1-2-3.acme.com")
-//	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
-//	if podOnNode(p, "ip-10-4-5-6.acme.com") {
-//		registerPod(p, prom)
-//	}
-//	assert.Equal(t, 0, len(prom.kubernetesPods))
-//}
-
 func TestPodSelector(t *testing.T) {
 
 	cases := []struct {

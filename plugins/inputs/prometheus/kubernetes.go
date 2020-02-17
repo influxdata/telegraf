@@ -91,11 +91,6 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 		return err
 	}
 
-	//filter := k8s.QueryParam("fieldSelector", "spec.nodeName="+p.KubernetesNode)
-	//l := new(k8s.LabelSelector)
-	//l.Eq("blah", "booyah")
-	//options = append(options, filter)
-	//options = append(options, k8s.QueryParam("labelSelector", "app=api"))
 	pod := &corev1.Pod{}
 	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{}, selectors...)
 	if err != nil {
@@ -173,17 +168,6 @@ func podSelector(p *Prometheus) ([]k8s.Option, error) {
 	return options, nil
 
 }
-
-// if kubernetes_node config value is set then check if the pod being watched is on the node
-//func podOnNode(pod *corev1.Pod, nodename string) bool {
-//	if len(nodename) > 0 {
-//		if *pod.Spec.NodeName == nodename {
-//			return true
-//		}
-//		return false
-//	}
-//	return true
-//}
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
 	if p.kubernetesPods == nil {
