@@ -216,6 +216,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
+	createdAt, err := proc.CreateTime()
+	if err == nil {
+		fields[prefix+"created_at"] = createdAt
+	}
+
 	cpu_time, err := proc.Times()
 	if err == nil {
 		fields[prefix+"cpu_time_user"] = cpu_time.User
