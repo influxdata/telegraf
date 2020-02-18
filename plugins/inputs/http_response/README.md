@@ -77,7 +77,7 @@ This tag is used to expose network and plugin errors. HTTP errors are considered
 --------------------------|-------------------------|-----------|
 |success                  | 0                       |The HTTP request completed, even if the HTTP code represents an error|
 |response_string_mismatch | 1                       |The option `response_string_match` was used, and the body of the response didn't match the regex. HTTP errors with content in their body (like 4xx, 5xx) will trigger this error|
-|body_read_error          | 2                       |The option `response_string_match` was used, but the plugin wans't able to read the body of the response. Responses with empty bodies (like 3xx, HEAD, etc) will trigger this error|
+|body_read_error          | 2                       |The option `response_string_match` was used, but the plugin wasn't able to read the body of the response. Responses with empty bodies (like 3xx, HEAD, etc) will trigger this error|
 |connection_failed        | 3                       |Catch all for any network error not specifically handled by the plugin|
 |timeout                  | 4                       |The plugin timed out while awaiting the HTTP connection to complete|
 |dns_error                | 5                       |There was a DNS error while attempting to connect to the host|
