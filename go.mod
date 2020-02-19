@@ -132,6 +132,7 @@ require (
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tidwall/gjson v1.6.0
 	github.com/tinylib/msgp v1.1.5
+	github.com/vapourismo/knx-go v0.0.0-20200210191241-732b17427284
 	github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e // indirect
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
 	github.com/vjeantet/grok v1.0.1
