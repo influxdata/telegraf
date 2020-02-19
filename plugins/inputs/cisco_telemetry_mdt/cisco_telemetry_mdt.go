@@ -76,7 +76,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
 	for _, tag := range c.EmbeddedTags {
-		dir := path.Dir(tag)
+		dir := strings.Replace(path.Dir(tag), "-", "_", -1)
 		if _, hasKey := c.extraTags[dir]; !hasKey {
 			c.extraTags[dir] = make(map[string]struct{})
 		}
@@ -400,7 +400,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		name = prefix + "/" + name
 	}
 
-	extraTags := c.extraTags[path+"/"+name]
+	extraTags := c.extraTags[strings.Replace(path, "-", "_", -1)+"/"+name]
 
 	if value := decodeValue(field); value != nil {
 		// Do alias lookup, to shorten measurement names
@@ -423,7 +423,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	if len(extraTags) > 0 {
 		for _, subfield := range field.Fields {
 			if _, isExtraTag := extraTags[subfield.Name]; isExtraTag {
-				tags[name+"/"+subfield.Name] = decodeTag(subfield)
+				tags[name+"/"+strings.Replace(subfield.Name, "-", "_", -1)] = decodeTag(subfield)
 			}
 		}
 	}
