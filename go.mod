@@ -103,8 +103,7 @@ require (
 	github.com/safchain/ethtool v0.0.0-20200128171343-ef7e7c9c2763
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
-	github.com/shirou/gopsutil v2.19.11+incompatible
-	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
+	github.com/shirou/gopsutil v2.20.1+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/sirupsen/logrus v1.2.0
 	github.com/soniah/gosnmp v1.22.0
@@ -121,9 +120,9 @@ require (
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
-	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
-	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
+	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4
 	gonum.org/v1/gonum v0.6.2 // indirect
 	google.golang.org/api v0.3.1
 	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
