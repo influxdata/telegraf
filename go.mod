@@ -6,9 +6,11 @@ require (
 	cloud.google.com/go v0.37.4
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
-	github.com/Azure/azure-event-hubs-go/v3 v3.1.0
+	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
+	github.com/Azure/azure-sdk-for-go v39.2.0+incompatible // indirect
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
-	github.com/Azure/go-autorest/autorest v0.9.3
+	github.com/Azure/go-amqp v0.12.7 // indirect
+	github.com/Azure/go-autorest/autorest v0.9.6
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee
 	github.com/Microsoft/ApplicationInsights-Go v0.4.2
@@ -74,6 +76,7 @@ require (
 	github.com/jackc/fake v0.0.0-20150926172116-812a484cc733 // indirect
 	github.com/jackc/pgx v3.6.0+incompatible
 	github.com/jcmturner/gofork v1.0.0 // indirect
+	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kardianos/service v1.0.0
 	github.com/karrick/godirwalk v1.12.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -98,7 +101,7 @@ require (
 	github.com/opentracing-contrib/go-observer v0.0.0-20170622124052-a52f23424492 // indirect
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
 	github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f
 	github.com/prometheus/common v0.2.0
@@ -122,6 +125,7 @@ require (
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
+	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6 // indirect
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4

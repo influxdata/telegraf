@@ -20,6 +20,7 @@ import (
 const (
 	defaultMaxUndeliveredMessages = 1000
 	defaultUserAgent              = "telegraf"
+	defaultSystemPropertiesPrefix = "SystemProperties."
 )
 
 // EventHub is the top level struct for this plugin
@@ -36,6 +37,7 @@ type EventHub struct {
 	UserAgent              string   `toml:"user_agent"`
 	PartitionIDs           []string `toml:"partition_ids"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
+	SystemPropertiesPrefix string   `toml:"system_properties_prefix"`
 
 	// Azure
 	hub    *eventhub.Hub
@@ -106,6 +108,9 @@ func (*EventHub) SampleConfig() string {
   ## Max undelivered messages
   # max_undelivered_messages = 1000
 
+  ## Prefix to use for the system properties of Event Hub and IoT Hub messages
+  # system_properties_prefix = "SystemProperties."
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -133,6 +138,10 @@ func (*EventHub) Gather(telegraf.Accumulator) error {
 func (e *EventHub) Init() (err error) {
 	if e.MaxUndeliveredMessages == 0 {
 		e.MaxUndeliveredMessages = defaultMaxUndeliveredMessages
+	}
+
+	if e.SystemPropertiesPrefix == "" {
+		e.SystemPropertiesPrefix = defaultSystemPropertiesPrefix
 	}
 
 	// Set hub options
@@ -264,6 +273,34 @@ func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err er
 	}
 
 	log.Printf("D! [inputs.eventhub] %d metrics found after parsing", len(metrics))
+
+	for i := range metrics {
+		metrics[i].AddField(e.SystemPropertiesPrefix+"SequenceNumber", *event.SystemProperties.SequenceNumber)
+		metrics[i].AddField(e.SystemPropertiesPrefix+"EnqueuedTime", (*event.SystemProperties.EnqueuedTime).UnixNano()/int64(time.Millisecond))
+		metrics[i].AddField(e.SystemPropertiesPrefix+"Offset", *event.SystemProperties.Offset)
+
+		if event.SystemProperties.PartitionID != nil {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"PartitionID", *event.SystemProperties.PartitionID)
+		}
+		if event.SystemProperties.PartitionKey != nil {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"PartitionKey", *event.SystemProperties.PartitionKey)
+		}
+		if event.SystemProperties.IoTHubDeviceConnectionID != nil {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubDeviceConnectionID", *event.SystemProperties.IoTHubDeviceConnectionID)
+		}
+		if event.SystemProperties.IoTHubAuthGenerationID != nil {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubAuthGenerationID", *event.SystemProperties.IoTHubAuthGenerationID)
+		}
+		if event.SystemProperties.IoTHubConnectionAuthMethod != nil {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubConnectionAuthMethod", *event.SystemProperties.IoTHubConnectionAuthMethod)
+		}
+		if event.SystemProperties.IoTHubConnectionModuleID != nil {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubConnectionModuleID", *event.SystemProperties.IoTHubConnectionModuleID)
+		}
+		if event.SystemProperties.IoTHubEnqueuedTime != nil {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubEnqueuedTime", (*event.SystemProperties.IoTHubEnqueuedTime).UnixNano()/int64(time.Millisecond))
+		}
+	}
 
 	id := e.acc.AddTrackingMetricGroup(metrics)
 
