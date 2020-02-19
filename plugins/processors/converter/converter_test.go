@@ -439,6 +439,82 @@ func TestConverter(t *testing.T) {
 	}
 }
 
+func TestMeasurement(t *testing.T) {
+	tests := []struct {
+		name      string
+		converter *Converter
+		input     telegraf.Metric
+		expected  []telegraf.Metric
+	}{
+		{
+			name: "measurement from tag",
+			converter: &Converter{
+				Tags: &Conversion{
+					Measurement: []string{"filepath"},
+				},
+			},
+			input: testutil.MustMetric(
+				"file",
+				map[string]string{
+					"filepath": "/var/log/syslog",
+				},
+				map[string]interface{}{
+					"msg": "howdy",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"/var/log/syslog",
+					map[string]string{},
+					map[string]interface{}{
+						"msg": "howdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "measurement from field",
+			converter: &Converter{
+				Fields: &Conversion{
+					Measurement: []string{"topic"},
+				},
+			},
+			input: testutil.MustMetric(
+				"file",
+				map[string]string{},
+				map[string]interface{}{
+					"v":     1,
+					"topic": "telegraf",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"telegraf",
+					map[string]string{},
+					map[string]interface{}{
+						"v": 1,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.converter.Log = testutil.Logger{}
+			err := tt.converter.Init()
+			require.NoError(t, err)
+
+			actual := tt.converter.Apply(tt.input)
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
+}
+
 func TestEmptyConfigInitError(t *testing.T) {
 	converter := &Converter{
 		Log: testutil.Logger{},

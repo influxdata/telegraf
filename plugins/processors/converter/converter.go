@@ -17,6 +17,7 @@ var sampleConfig = `
   ## select the keys to convert.  The array may contain globs.
   ##   <target-type> = [<tag-key>...]
   [processors.converter.tags]
+    measurement = []
     string = []
     integer = []
     unsigned = []
@@ -29,6 +30,7 @@ var sampleConfig = `
   ## select the keys to convert.  The array may contain globs.
   ##   <target-type> = [<field-key>...]
   [processors.converter.fields]
+    measurement = []
     tag = []
     string = []
     integer = []
@@ -38,12 +40,13 @@ var sampleConfig = `
 `
 
 type Conversion struct {
-	Tag      []string `toml:"tag"`
-	String   []string `toml:"string"`
-	Integer  []string `toml:"integer"`
-	Unsigned []string `toml:"unsigned"`
-	Boolean  []string `toml:"boolean"`
-	Float    []string `toml:"float"`
+	Measurement []string `toml:"measurement"`
+	Tag         []string `toml:"tag"`
+	String      []string `toml:"string"`
+	Integer     []string `toml:"integer"`
+	Unsigned    []string `toml:"unsigned"`
+	Boolean     []string `toml:"boolean"`
+	Float       []string `toml:"float"`
 }
 
 type Converter struct {
@@ -56,12 +59,13 @@ type Converter struct {
 }
 
 type ConversionFilter struct {
-	Tag      filter.Filter
-	String   filter.Filter
-	Integer  filter.Filter
-	Unsigned filter.Filter
-	Boolean  filter.Filter
-	Float    filter.Filter
+	Measurement filter.Filter
+	Tag         filter.Filter
+	String      filter.Filter
+	Integer     filter.Filter
+	Unsigned    filter.Filter
+	Boolean     filter.Filter
+	Float       filter.Filter
 }
 
 func (p *Converter) SampleConfig() string {
@@ -111,6 +115,11 @@ func compileFilter(conv *Conversion) (*ConversionFilter, error) {
 
 	var err error
 	cf := &ConversionFilter{}
+	cf.Measurement, err = filter.Compile(conv.Measurement)
+	if err != nil {
+		return nil, err
+	}
+
 	cf.Tag, err = filter.Compile(conv.Tag)
 	if err != nil {
 		return nil, err
@@ -144,13 +153,19 @@ func compileFilter(conv *Conversion) (*ConversionFilter, error) {
 	return cf, nil
 }
 
-// convertTags converts tags into fields
+// convertTags converts tags into measurements or fields.
 func (p *Converter) convertTags(metric telegraf.Metric) {
 	if p.tagConversions == nil {
 		return
 	}
 
 	for key, value := range metric.Tags() {
+		if p.tagConversions.Measurement != nil && p.tagConversions.Measurement.Match(key) {
+			metric.RemoveTag(key)
+			metric.SetName(value)
+			continue
+		}
+
 		if p.tagConversions.String != nil && p.tagConversions.String.Match(key) {
 			metric.RemoveTag(key)
 			metric.AddField(key, value)
@@ -210,13 +225,26 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 	}
 }
 
-// convertFields converts fields into tags or other field types
+// convertFields converts fields into measurements, tags, or other field types.
 func (p *Converter) convertFields(metric telegraf.Metric) {
 	if p.fieldConversions == nil {
 		return
 	}
 
 	for key, value := range metric.Fields() {
+		if p.fieldConversions.Measurement != nil && p.fieldConversions.Measurement.Match(key) {
+			v, ok := toString(value)
+			if !ok {
+				metric.RemoveField(key)
+				p.Log.Errorf("error converting to measurement [%T]: %v", value, value)
+				continue
+			}
+
+			metric.RemoveField(key)
+			metric.SetName(v)
+			continue
+		}
+
 		if p.fieldConversions.Tag != nil && p.fieldConversions.Tag.Match(key) {
 			v, ok := toString(value)
 			if !ok {
