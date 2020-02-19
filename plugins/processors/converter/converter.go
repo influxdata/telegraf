@@ -51,7 +51,6 @@ type Converter struct {
 	Fields *Conversion     `toml:"fields"`
 	Log    telegraf.Logger `toml:"-"`
 
-	initialized      bool
 	tagConversions   *ConversionFilter
 	fieldConversions *ConversionFilter
 }
@@ -73,15 +72,11 @@ func (p *Converter) Description() string {
 	return "Convert values to another metric value type"
 }
 
-func (p *Converter) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	if !p.initialized {
-		err := p.compile()
-		if err != nil {
-			p.Log.Errorf("Initialization error: %v", err)
-			return metrics
-		}
-	}
+func (p *Converter) Init() error {
+	return p.compile()
+}
 
+func (p *Converter) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range metrics {
 		p.convertTags(metric)
 		p.convertFields(metric)
@@ -106,7 +101,6 @@ func (p *Converter) compile() error {
 
 	p.tagConversions = tf
 	p.fieldConversions = ff
-	p.initialized = true
 	return nil
 }
 
