@@ -2,7 +2,6 @@ package converter
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"strconv"
 
@@ -48,8 +47,9 @@ type Conversion struct {
 }
 
 type Converter struct {
-	Tags   *Conversion `toml:"tags"`
-	Fields *Conversion `toml:"fields"`
+	Tags   *Conversion     `toml:"tags"`
+	Fields *Conversion     `toml:"fields"`
+	Log    telegraf.Logger `toml:"-"`
 
 	initialized      bool
 	tagConversions   *ConversionFilter
@@ -77,7 +77,7 @@ func (p *Converter) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	if !p.initialized {
 		err := p.compile()
 		if err != nil {
-			logPrintf("initialization error: %v\n", err)
+			p.Log.Errorf("Initialization error: %v", err)
 			return metrics
 		}
 	}
@@ -167,7 +167,7 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 			v, ok := toInteger(value)
 			if !ok {
 				metric.RemoveTag(key)
-				logPrintf("error converting to integer [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to integer [%T]: %v", value, value)
 				continue
 			}
 
@@ -179,7 +179,7 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 			v, ok := toUnsigned(value)
 			if !ok {
 				metric.RemoveTag(key)
-				logPrintf("error converting to unsigned [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to unsigned [%T]: %v", value, value)
 				continue
 			}
 
@@ -192,7 +192,7 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 			v, ok := toBool(value)
 			if !ok {
 				metric.RemoveTag(key)
-				logPrintf("error converting to boolean [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to boolean [%T]: %v", value, value)
 				continue
 			}
 
@@ -205,7 +205,7 @@ func (p *Converter) convertTags(metric telegraf.Metric) {
 			v, ok := toFloat(value)
 			if !ok {
 				metric.RemoveTag(key)
-				logPrintf("error converting to float [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to float [%T]: %v", value, value)
 				continue
 			}
 
@@ -227,7 +227,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			v, ok := toString(value)
 			if !ok {
 				metric.RemoveField(key)
-				logPrintf("error converting to tag [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to tag [%T]: %v", value, value)
 				continue
 			}
 
@@ -240,7 +240,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			v, ok := toFloat(value)
 			if !ok {
 				metric.RemoveField(key)
-				logPrintf("error converting to float [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to float [%T]: %v", value, value)
 				continue
 			}
 
@@ -253,7 +253,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			v, ok := toInteger(value)
 			if !ok {
 				metric.RemoveField(key)
-				logPrintf("error converting to integer [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to integer [%T]: %v", value, value)
 				continue
 			}
 
@@ -266,7 +266,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			v, ok := toUnsigned(value)
 			if !ok {
 				metric.RemoveField(key)
-				logPrintf("error converting to unsigned [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to unsigned [%T]: %v", value, value)
 				continue
 			}
 
@@ -279,7 +279,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			v, ok := toBool(value)
 			if !ok {
 				metric.RemoveField(key)
-				logPrintf("error converting to bool [%T]: %v\n", value, value)
+				p.Log.Errorf("error converting to bool [%T]: %v", value, value)
 				continue
 			}
 
@@ -292,7 +292,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 			v, ok := toString(value)
 			if !ok {
 				metric.RemoveField(key)
-				logPrintf("error converting to string [%T]: %v\n", value, value)
+				p.Log.Errorf("Error converting to string [%T]: %v", value, value)
 				continue
 			}
 
@@ -443,10 +443,6 @@ func Round(x float64) float64 {
 		return t + math.Copysign(1, x)
 	}
 	return t
-}
-
-func logPrintf(format string, v ...interface{}) {
-	log.Printf("D! [processors.converter] "+format, v...)
 }
 
 func init() {

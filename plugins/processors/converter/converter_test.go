@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -479,6 +480,7 @@ func TestConverter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.converter.Log = testutil.Logger{}
 			metrics := tt.converter.Apply(tt.input)
 
 			require.Equal(t, 1, len(metrics))
