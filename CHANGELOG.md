@@ -47,6 +47,7 @@
 - [#6993](https://github.com/influxdata/telegraf/pull/6993): Add support for MDB database information to openldap input.
 - [#6957](https://github.com/influxdata/telegraf/pull/6957): Add new fields for Jenkins total and busy executors.
 - [#7035](https://github.com/influxdata/telegraf/pull/7035): Fix dash to underscore replacement when handling embedded tags in Cisco MDT.
+- [#7039](https://github.com/influxdata/telegraf/pull/7039): Add process created_at time to procstat input.
 
 #### Bugfixes
 
