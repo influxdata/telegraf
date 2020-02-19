@@ -2,12 +2,14 @@ package prometheus
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,6 +148,69 @@ func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
 	assert.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_count"))
 	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
 
+}
+
+func TestSummaryMayContainNaN(t *testing.T) {
+	const data = `# HELP go_gc_duration_seconds A summary of the GC invocation durations.
+# TYPE go_gc_duration_seconds summary
+go_gc_duration_seconds{quantile="0"} NaN
+go_gc_duration_seconds{quantile="1"} NaN
+go_gc_duration_seconds_sum 42.0
+go_gc_duration_seconds_count 42
+`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, data)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		URLs:          []string{ts.URL},
+		URLTag:        "",
+		MetricVersion: 2,
+	}
+
+	var acc testutil.Accumulator
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"quantile": "0",
+			},
+			map[string]interface{}{
+				"go_gc_duration_seconds": math.NaN(),
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{
+				"quantile": "1",
+			},
+			map[string]interface{}{
+				"go_gc_duration_seconds": math.NaN(),
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+		testutil.MustMetric(
+			"prometheus",
+			map[string]string{},
+			map[string]interface{}{
+				"go_gc_duration_seconds_sum":   42.0,
+				"go_gc_duration_seconds_count": 42.0,
+			},
+			time.Unix(0, 0),
+			telegraf.Summary,
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {

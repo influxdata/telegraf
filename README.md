@@ -50,17 +50,17 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.12 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.12 or newer, the Makefile requires GNU make.
 
 1. [Install Go](https://golang.org/doc/install) >=1.12 (1.13 recommended)
-2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
-3. Download Telegraf source:
+2. Clone the Telegraf repository:
    ```
-   go get -d github.com/influxdata/telegraf
+   cd ~/src
+   git clone https://github.com/influxdata/telegraf.git
    ```
-4. Run make from the source directory
+3. Run `make` from the source directory
    ```
-   cd "$HOME/go/src/github.com/influxdata/telegraf"
+   cd ~/src/telegraf
    make
    ```
 
@@ -114,7 +114,7 @@ telegraf config > telegraf.conf
 #### Generate config with only cpu input & influxdb output plugins defined:
 
 ```
-telegraf --input-filter cpu --output-filter influxdb config
+telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
 ```
 
 #### Run a single telegraf collection, outputing metrics to stdout:
@@ -202,6 +202,7 @@ For documentation on the latest development code see the [documentation index][d
 * [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
 * [icinga2](./plugins/inputs/icinga2)
+* [infiniband](./plugins/inputs/infiniband)
 * [influxdb](./plugins/inputs/influxdb)
 * [influxdb_listener](./plugins/inputs/influxdb_listener)
 * [internal](./plugins/inputs/internal)
@@ -234,7 +235,9 @@ For documentation on the latest development code see the [documentation index][d
 * [mem](./plugins/inputs/mem)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
+* [modbus](./plugins/inputs/modbus)
 * [mongodb](./plugins/inputs/mongodb)
+* [monit](./plugins/inputs/monit)
 * [mqtt_consumer](./plugins/inputs/mqtt_consumer)
 * [multifile](./plugins/inputs/multifile)
 * [mysql](./plugins/inputs/mysql)
@@ -349,20 +352,21 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Processor Plugins
 
-* [clone](./plugins/processors/clone)
-* [converter](./plugins/processors/converter)
-* [date](./plugins/processors/date)
-* [enum](./plugins/processors/enum)
-* [override](./plugins/processors/override)
-* [parser](./plugins/processors/parser)
-* [pivot](./plugins/processors/pivot)
-* [printer](./plugins/processors/printer)
-* [regex](./plugins/processors/regex)
-* [rename](./plugins/processors/rename)
-* [strings](./plugins/processors/strings)
-* [tag_limit](./plugins/processors/tag_limit)
-* [topk](./plugins/processors/topk)
-* [unpivot](./plugins/processors/unpivot)
+* [clone](/plugins/processors/clone)
+* [converter](/plugins/processors/converter)
+* [date](/plugins/processors/date)
+* [enum](/plugins/processors/enum)
+* [override](/plugins/processors/override)
+* [parser](/plugins/processors/parser)
+* [pivot](/plugins/processors/pivot)
+* [printer](/plugins/processors/printer)
+* [regex](/plugins/processors/regex)
+* [rename](/plugins/processors/rename)
+* [strings](/plugins/processors/strings)
+* [tag_limit](/plugins/processors/tag_limit)
+* [template](/plugins/processors/template)
+* [topk](/plugins/processors/topk)
+* [unpivot](/plugins/processors/unpivot)
 
 ## Aggregator Plugins
 
@@ -409,4 +413,5 @@ For documentation on the latest development code see the [documentation index][d
 * [syslog](./plugins/outputs/syslog)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
+* [warp10](./plugins/outputs/warp10)
 * [wavefront](./plugins/outputs/wavefront)

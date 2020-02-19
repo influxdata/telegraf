@@ -31,6 +31,7 @@ vm_metric_exclude = [ "*" ]
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
   # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
+  # vm_exclude = [] # Inventory paths to exclude
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -73,6 +74,7 @@ vm_metric_exclude = [ "*" ]
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
+  # host_exclude [] # Inventory paths to exclude
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -130,18 +132,21 @@ vm_metric_exclude = [ "*" ]
 
   ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # cluster_exclude = [] # Inventory paths to exclude
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
   ## Datastores
   # cluster_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # cluster_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default
 
   ## Datacenters
   # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # datacenter_exclude = [] # Inventory paths to exclude
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default
