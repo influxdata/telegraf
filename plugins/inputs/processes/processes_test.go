@@ -122,6 +122,9 @@ func TestFromProcFilesWithSpaceInCmd(t *testing.T) {
 // However, we have had reports of this process state on Ubuntu
 // Bionic w/ Linux 4.15 (#6270)
 func TestParkedProcess(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Parked process test only relevant on linux")
+	}
 	procstat := `88 (watchdog/13) P 2 0 0 0 -1 69238848 0 0 0 0 0 0 0 0 20 0 1 0 20 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 1 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 `
 	plugin := &Processes{
