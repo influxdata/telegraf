@@ -216,9 +216,9 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
-	createdAt, err := proc.CreateTime()
+	createdAt, err := proc.CreateTime() //Returns epoch in ms
 	if err == nil {
-		fields[prefix+"created_at"] = createdAt
+		fields[prefix+"created_at"] = createdAt * 1000000 //Convert ms to ns
 	}
 
 	cpu_time, err := proc.Times()

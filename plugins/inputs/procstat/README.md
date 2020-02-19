@@ -87,7 +87,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
   - fields:
     - child_major_faults (int)
     - child_minor_faults (int)
-    - created_at (int)
+    - created_at (int) [epoch in nanoseconds]
     - cpu_time (int)
     - cpu_time_guest (float)
     - cpu_time_guest_nice (float)
@@ -165,6 +165,6 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
 ### Example Output:
 
 ```
-procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582010090000000000
-procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root memory_stack=0i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2146.96,cpu_time_system=540.08,cpu_time_soft_irq=0,cpu_time_steal=0,memory_rss=128167936i,memory_locked=0i,voluntary_context_switches=897976i,minor_faults=1605455i,major_faults=8052i,created_at=1580107536000i,memory_vms=1434849280i,memory_data=0i,memory_usage=1.534598469734192,cpu_time_iowait=0,memory_swap=0i,cpu_time_guest_nice=0,pid=32025i,num_threads=18i,involuntary_context_switches=129758i,cpu_time_idle=0,cpu_time_nice=0,cpu_time_irq=0,cpu_time_guest=0 1582010090000000000
+procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582089700000000000
+procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,cpu_time_idle=0,cpu_time_irq=0,cpu_time_guest=0,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,cpu_time_steal=0,cpu_time_guest_nice=0,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_nice=0,cpu_time_iowait=0,cpu_time_soft_irq=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
 ```
