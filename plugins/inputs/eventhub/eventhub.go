@@ -76,7 +76,7 @@ func (*EventHub) SampleConfig() string {
   ##    - "EVENTHUB_KEY_VALUE"
 
   ## Uncommenting the option below will create an Event Hub client based solely on the connection string.
-  ## This can either be the associated environment variable or hardcoded directly.
+  ## This can either be the associated environment variable or hard coded directly.
   # connection_string = "$EVENTHUB_CONNECTION_STRING"
 
   ## Set persistence directory to a valid folder to use a file persister instead of an in-memory persister

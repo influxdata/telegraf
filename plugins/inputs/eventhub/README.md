@@ -32,6 +32,7 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
 
   ## By default the event hub receives all messages present on the broker.
   ## Alternative modes can be set below. The timestamp should be in RFC3339 format.
+  ## The 3 options below only apply if no valid persister is read from memory or file (e.g. first run).
   # from_timestamp = ""
   # starting_offset = ""
   # latest = true
@@ -44,13 +45,16 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
 
   ## Change to set a custom user agent, "telegraf" is used by default
   # user_agent = "telegraf"
-
-  ## To consume from a specific partition, set the partition_ids option.
+  
+  ## To consume from a specific partition, set the partition_ids option. 
   ## An empty array will result in receiving from all partitions.
   # partition_ids = ["0","1"]
 
   ## Max undelivered messages
   # max_undelivered_messages = 1000
+
+  ## Prefix to use for the system properties of Event Hub and IoT Hub messages
+  # system_properties_prefix = "SystemProperties."
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
