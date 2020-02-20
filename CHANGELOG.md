@@ -48,6 +48,7 @@
 - [#6957](https://github.com/influxdata/telegraf/pull/6957): Add new fields for Jenkins total and busy executors.
 - [#7035](https://github.com/influxdata/telegraf/pull/7035): Fix dash to underscore replacement when handling embedded tags in Cisco MDT.
 - [#7039](https://github.com/influxdata/telegraf/pull/7039): Add process created_at time to procstat input.
+- [#7022](https://github.com/influxdata/telegraf/pull/7022): Add support for credentials file to nats_consumer and nats output.
 
 #### Bugfixes
 
