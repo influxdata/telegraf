@@ -791,6 +791,11 @@ func TestParserErrorString(t *testing.T) {
 			input:     []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
 			errString: "metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
 		},
+		{
+			name:      "multiple line error",
+			input:     []byte("cpu value=42\ncpu value=invalid\ncpu value=42\ncpu value=invalid"),
+			errString: `metric parse error: expected field at 2:11: "cpu value=invalid"`,
+		},
 	}
 
 	for _, tt := range ptests {

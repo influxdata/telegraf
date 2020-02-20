@@ -16,12 +16,12 @@ import (
 // newListener is the minimal InfluxDBListener construction to serve writes.
 func newListener() *InfluxDBListener {
 	listener := &InfluxDBListener{
-		TimeFunc:     time.Now,
+		timeFunc:     time.Now,
 		acc:          &testutil.NopAccumulator{},
 		bytesRecv:    selfstat.Register("influxdb_listener", "bytes_received", map[string]string{}),
 		writesServed: selfstat.Register("influxdb_listener", "writes_served", map[string]string{}),
 		MaxBodySize: internal.Size{
-			Size: DEFAULT_MAX_BODY_SIZE,
+			Size: defaultMaxBodySize,
 		},
 	}
 	return listener

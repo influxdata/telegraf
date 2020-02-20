@@ -2,10 +2,9 @@ package influxdb_listener
 
 import (
 	"compress/gzip"
-	"crypto/subtle"
+	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -21,16 +20,14 @@ import (
 )
 
 const (
-	// DEFAULT_MAX_BODY_SIZE is the default maximum request body size, in bytes.
+	// defaultMaxBodySize is the default maximum request body size, in bytes.
 	// if the request body is over this size, we will return an HTTP 413 error.
-	// 500 MB
-	DEFAULT_MAX_BODY_SIZE = 500 * 1024 * 1024
+	defaultMaxBodySize = 32 * 1024 * 1024
 )
 
 type InfluxDBListener struct {
 	ServiceAddress string `toml:"service_address"`
-	// Port gets pulled out of ServiceAddress
-	Port int
+	port           int
 	tlsint.ServerConfig
 
 	ReadTimeout   internal.Duration `toml:"read_timeout"`
@@ -40,12 +37,12 @@ type InfluxDBListener struct {
 	BasicPassword string            `toml:"basic_password"`
 	DatabaseTag   string            `toml:"database_tag"`
 
-	TimeFunc influx.TimeFunc
+	timeFunc influx.TimeFunc
 
-	mu sync.Mutex
 	wg sync.WaitGroup
 
 	listener net.Listener
+	server   http.Server
 
 	acc telegraf.Accumulator
 
@@ -59,7 +56,7 @@ type InfluxDBListener struct {
 	buffersCreated  selfstat.Stat
 	authFailures    selfstat.Stat
 
-	Log telegraf.Logger
+	log telegraf.Logger
 
 	mux http.ServeMux
 }
@@ -74,9 +71,8 @@ const sampleConfig = `
   write_timeout = "10s"
 
   ## Maximum allowed HTTP request body size in bytes.
-  ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
-  max_body_size = "500MiB"
-
+  ## 0 means to use the default of 32MiB.
+  max_body_size = "32MiB"
 
   ## Optional tag name used to store the database. 
   ## If the write has a database in the query string then it will be kept in this tag name.
@@ -111,10 +107,16 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 }
 
 func (h *InfluxDBListener) routes() {
-	h.mux.HandleFunc("/write", h.handleAuth(h.handleWrite()))
-	h.mux.HandleFunc("/query", h.handleAuth(h.handleQuery()))
-	h.mux.HandleFunc("/ping", h.handlePing())
-	h.mux.HandleFunc("/", h.handleAuth(h.handleDefault()))
+	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
+		func(_ http.ResponseWriter) {
+			h.authFailures.Incr(1)
+		},
+	)
+
+	h.mux.Handle("/write", authHandler(h.handleWrite()))
+	h.mux.Handle("/query", authHandler(h.handleQuery()))
+	h.mux.Handle("/ping", h.handlePing())
+	h.mux.Handle("/", authHandler(h.handleDefault()))
 }
 
 func (h *InfluxDBListener) Init() error {
@@ -133,7 +135,7 @@ func (h *InfluxDBListener) Init() error {
 	h.routes()
 
 	if h.MaxBodySize.Size == 0 {
-		h.MaxBodySize.Size = DEFAULT_MAX_BODY_SIZE
+		h.MaxBodySize.Size = defaultMaxBodySize
 	}
 
 	if h.ReadTimeout.Duration < time.Second {
@@ -148,9 +150,6 @@ func (h *InfluxDBListener) Init() error {
 
 // Start starts the InfluxDB listener service.
 func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	h.acc = acc
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
@@ -158,7 +157,7 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	server := &http.Server{
+	h.server = http.Server{
 		Addr:         h.ServiceAddress,
 		Handler:      h,
 		ReadTimeout:  h.ReadTimeout.Duration,
@@ -169,35 +168,37 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	var listener net.Listener
 	if tlsConf != nil {
 		listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
+		if err != nil {
+			return err
+		}
 	} else {
 		listener, err = net.Listen("tcp", h.ServiceAddress)
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	h.listener = listener
-	h.Port = listener.Addr().(*net.TCPAddr).Port
+	h.port = listener.Addr().(*net.TCPAddr).Port
 
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		server.Serve(h.listener)
+		h.server.Serve(h.listener)
 	}()
 
-	h.Log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
+	h.log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
 
 	return nil
 }
 
 // Stop cleans up all resources
 func (h *InfluxDBListener) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	h.listener.Close()
+	deadline := time.Now().Add(10 * time.Second)
+	ctx, _ := context.WithDeadline(context.Background(), deadline)
+	h.server.Shutdown(ctx)
 	h.wg.Wait()
 
-	h.Log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
+	h.log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
 }
 
 func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -252,45 +253,50 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 		db := req.URL.Query().Get("db")
 
-		// Handle gzip request bodies
 		body := req.Body
+		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
+		// Handle gzip request bodies
 		if req.Header.Get("Content-Encoding") == "gzip" {
 			var err error
 			body, err = gzip.NewReader(req.Body)
 			if err != nil {
-				h.Log.Debug(err.Error())
+				h.log.Debugf("Error decompressing request body: %v", err.Error())
 				badRequest(res, err.Error())
 				return
 			}
 			defer body.Close()
 		}
-		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
 
 		parser := influx.NewStreamParser(body)
-		parser.SetTimeFunc(h.TimeFunc)
+		parser.SetTimeFunc(h.timeFunc)
 
 		var err error
 		precisionStr := req.URL.Query().Get("precision")
 		if precisionStr != "" {
 			var precision time.Duration
-			precision, err = getPrecisionMultiplier(precisionStr)
-			if err != nil {
-				h.Log.Debug(err.Error())
-				badRequest(res, err.Error())
-			}
+			precision = getPrecisionMultiplier(precisionStr)
 			parser.SetTimePrecision(precision)
 		}
 
 		var m telegraf.Metric
-		var partial bool
+		var parseErrorCount int
+		var lastPos int
+		lastPos = 0
+		var firstParseErrorStr string
 		for {
 			m, err = parser.Next()
-			h.bytesRecv.Incr(int64(parser.Position())) //todo incr by position difference
+			pos := parser.Position()
+			h.bytesRecv.Incr(int64(pos - lastPos))
+			lastPos = pos
 
 			//continue parsing metrics even if some are malformed
-			if _, ok := err.(*influx.ParseError); ok {
-				//todo save error for X-Influxdb-Error header
-				partial = true
+			if parseErr, ok := err.(*influx.ParseError); ok {
+				parseErrorCount += 1
+				errStr := parseErr.Error()
+				if firstParseErrorStr == "" {
+					firstParseErrorStr = errStr
+				} else {
+				}
 				continue
 			} else if err != nil {
 				break
@@ -301,14 +307,22 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			}
 			h.acc.AddMetric(m)
 		}
-		if err.Error() != "EOF" {
-			h.Log.Debug(err.Error())
-			// problem reading the request body
+		if err != influx.EOF {
+			h.log.Debugf("Error parsing the request body: %v", err.Error())
 			badRequest(res, err.Error())
 			return
 		}
-		if partial {
-			res.WriteHeader(http.StatusBadRequest)
+		if parseErrorCount > 0 {
+			var partialErrorString string
+			switch parseErrorCount {
+			case 1:
+				partialErrorString = fmt.Sprintf("%s", firstParseErrorStr)
+			case 2:
+				partialErrorString = fmt.Sprintf("%s (and 1 other parse error)", firstParseErrorStr)
+			default:
+				partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
+			}
+			partialWrite(res, partialErrorString)
 		} else {
 			res.WriteHeader(http.StatusNoContent)
 		}
@@ -342,28 +356,10 @@ func partialWrite(res http.ResponseWriter, errString string) {
 	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
 }
 
-func (h *InfluxDBListener) handleAuth(f http.HandlerFunc) http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Set("WWW-Authenticate", "Basic realm=\"Restricted\"")
-
-		if h.BasicUsername != "" && h.BasicPassword != "" {
-			reqUsername, reqPassword, ok := req.BasicAuth()
-			if !ok ||
-				subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
-				subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
-
-				h.authFailures.Incr(1)
-				http.Error(res, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-		}
-
-		f(res, req)
-	}
-}
-
-func getPrecisionMultiplier(precision string) (time.Duration, error) {
-	d := time.Nanosecond
+func getPrecisionMultiplier(precision string) time.Duration {
+	// Influxdb defaults silently to nanoseconds if precision isn't
+	// one of the following:
+	var d time.Duration
 	switch precision {
 	case "u":
 		d = time.Microsecond
@@ -376,9 +372,9 @@ func getPrecisionMultiplier(precision string) (time.Duration, error) {
 	case "h":
 		d = time.Hour
 	default:
-		return d, errors.New("unknown precision")
+		d = time.Nanosecond
 	}
-	return d, nil
+	return d
 }
 
 func init() {
@@ -386,13 +382,13 @@ func init() {
 	inputs.Add("http_listener", func() telegraf.Input {
 		return &InfluxDBListener{
 			ServiceAddress: ":8186",
-			TimeFunc:       time.Now,
+			timeFunc:       time.Now,
 		}
 	})
 	inputs.Add("influxdb_listener", func() telegraf.Input {
 		return &InfluxDBListener{
 			ServiceAddress: ":8186",
-			TimeFunc:       time.Now,
+			timeFunc:       time.Now,
 		}
 	})
 }
