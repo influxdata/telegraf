@@ -194,7 +194,8 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 // Stop cleans up all resources
 func (h *InfluxDBListener) Stop() {
 	deadline := time.Now().Add(10 * time.Second)
-	ctx, _ := context.WithDeadline(context.Background(), deadline)
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel() // go vet requires us to call cancel even though we're waiting for the deadline
 	h.server.Shutdown(ctx)
 	h.wg.Wait()
 
