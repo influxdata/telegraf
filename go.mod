@@ -86,9 +86,8 @@ require (
 	github.com/mitchellh/mapstructure v0.0.0-20180715050151-f15292f7a699 // indirect
 	github.com/multiplay/go-ts3 v1.0.0
 	github.com/naoina/go-stringutil v0.1.0 // indirect
-	github.com/nats-io/gnatsd v1.2.0
-	github.com/nats-io/go-nats v1.5.0
-	github.com/nats-io/nuid v1.0.0 // indirect
+	github.com/nats-io/nats-server/v2 v2.1.4
+	github.com/nats-io/nats.go v1.9.1
 	github.com/nsqio/go-nsq v1.0.7
 	github.com/openconfig/gnmi v0.0.0-20180912164834-33a1865c3029
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
