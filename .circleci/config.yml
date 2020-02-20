@@ -12,7 +12,14 @@ defaults:
   go-1_13: &go-1_13
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.13.5'
-
+  mac: &mac
+    macos:
+      xcode: 11.3.1
+    working_directory: '~/go/src/github.com/influxdata/telegraf'
+    environment:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      GOFLAGS: -p=8
+  
 version: 2
 jobs:
   deps:
@@ -32,6 +39,30 @@ jobs:
           root: '/go'
           paths:
             - '*'
+  macdeps:
+    <<: [ *mac ]
+    steps:
+      - checkout
+      - restore_cache:
+          key: mac-go-mod-v1-{{ checksum "go.sum" }}
+      - run: 'brew install go@1.13'
+      - run: 'make deps'
+      - run: 'make tidy'
+      - save_cache:
+          name: 'go module cache'
+          key: mac-go-mod-v1-{{ checksum "go.sum" }}
+          paths:
+            - '~/go/pkg/mod'
+            - '/usr/local/Cellar/go'
+            - '/usr/local/bin/go'
+            - '/usr/local/bin/gofmt'
+      - persist_to_workspace:
+          root: '/'
+          paths:
+            - 'usr/local/bin/go'
+            - 'usr/local/Cellar/go'
+            - 'usr/local/bin/gofmt'
+            - 'Users/distiller/go'
 
   test-go-1.12:
     <<: [ *defaults, *go-1_12 ]
@@ -65,7 +96,15 @@ jobs:
       - run: 'GOARCH=386 make'
       - run: 'GOARCH=386 make check'
       - run: 'GOARCH=386 make test'
-
+  test-go-1.13-darwin:
+    <<: [ *mac ]
+    steps:
+      - attach_workspace:
+          at: '/'
+      - run: 'make'
+      - run: 'make check'
+      - run: 'make test'
+  
   package:
     <<: [ *defaults, *go-1_13 ]
     steps:
@@ -98,6 +137,10 @@ workflows:
   version: 2
   check:
     jobs:
+      - 'macdeps':
+          filters:
+            tags:
+              only: /.*/
       - 'deps':
           filters:
             tags:
@@ -125,6 +168,12 @@ workflows:
             - 'deps'
           filters:
             tags:
+              only: /.*/
+      - 'test-go-1.13-darwin':
+          requires:
+            - 'macdeps'
+          filters:
+            tags: # only runs on tags if you specify this filter
               only: /.*/
       - 'package':
           requires:
