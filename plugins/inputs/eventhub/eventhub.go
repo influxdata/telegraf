@@ -38,6 +38,8 @@ type EventHub struct {
 	PartitionIDs           []string `toml:"partition_ids"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
 	SystemPropertiesPrefix string   `toml:"system_properties_prefix"`
+	EnqTimeTs              bool     `toml:"enq_time_ts"`
+	IotHubEnqTimeTs        bool     `toml:"iot_hub_enq_time_ts"`
 
 	// Azure
 	hub    *eventhub.Hub
@@ -110,6 +112,12 @@ func (*EventHub) SampleConfig() string {
 
   ## Prefix to use for the system properties of Event Hub and IoT Hub messages
   # system_properties_prefix = "SystemProperties."
+
+  ## Set either option below to true to use a system property as timestamp.
+  ## You have the choice between EnqueuedTime and IoTHubEnqueuedTime.
+  ## It is recommended to use this setting when the data itself has no timestamp.
+  # enq_time_ts = true
+  # iot_hub_enq_time_ts = true
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -276,29 +284,39 @@ func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err er
 
 	for i := range metrics {
 		metrics[i].AddField(e.SystemPropertiesPrefix+"SequenceNumber", *event.SystemProperties.SequenceNumber)
-		metrics[i].AddField(e.SystemPropertiesPrefix+"EnqueuedTime", (*event.SystemProperties.EnqueuedTime).UnixNano()/int64(time.Millisecond))
+
+		if e.EnqTimeTs {
+			metrics[i].SetTime(*event.SystemProperties.EnqueuedTime)
+		} else {
+			metrics[i].AddField(e.SystemPropertiesPrefix+"EnqueuedTime", (*event.SystemProperties.EnqueuedTime).UnixNano()/int64(time.Millisecond))
+		}
+
 		metrics[i].AddField(e.SystemPropertiesPrefix+"Offset", *event.SystemProperties.Offset)
 
 		if event.SystemProperties.PartitionID != nil {
-			metrics[i].AddField(e.SystemPropertiesPrefix+"PartitionID", *event.SystemProperties.PartitionID)
+			metrics[i].AddTag(e.SystemPropertiesPrefix+"PartitionID", string(*event.SystemProperties.PartitionID))
 		}
 		if event.SystemProperties.PartitionKey != nil {
-			metrics[i].AddField(e.SystemPropertiesPrefix+"PartitionKey", *event.SystemProperties.PartitionKey)
+			metrics[i].AddTag(e.SystemPropertiesPrefix+"PartitionKey", *event.SystemProperties.PartitionKey)
 		}
 		if event.SystemProperties.IoTHubDeviceConnectionID != nil {
-			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubDeviceConnectionID", *event.SystemProperties.IoTHubDeviceConnectionID)
+			metrics[i].AddTag(e.SystemPropertiesPrefix+"IoTHubDeviceConnectionID", *event.SystemProperties.IoTHubDeviceConnectionID)
 		}
 		if event.SystemProperties.IoTHubAuthGenerationID != nil {
-			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubAuthGenerationID", *event.SystemProperties.IoTHubAuthGenerationID)
+			metrics[i].AddTag(e.SystemPropertiesPrefix+"IoTHubAuthGenerationID", *event.SystemProperties.IoTHubAuthGenerationID)
 		}
 		if event.SystemProperties.IoTHubConnectionAuthMethod != nil {
-			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubConnectionAuthMethod", *event.SystemProperties.IoTHubConnectionAuthMethod)
+			metrics[i].AddTag(e.SystemPropertiesPrefix+"IoTHubConnectionAuthMethod", *event.SystemProperties.IoTHubConnectionAuthMethod)
 		}
 		if event.SystemProperties.IoTHubConnectionModuleID != nil {
-			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubConnectionModuleID", *event.SystemProperties.IoTHubConnectionModuleID)
+			metrics[i].AddTag(e.SystemPropertiesPrefix+"IoTHubConnectionModuleID", *event.SystemProperties.IoTHubConnectionModuleID)
 		}
 		if event.SystemProperties.IoTHubEnqueuedTime != nil {
-			metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubEnqueuedTime", (*event.SystemProperties.IoTHubEnqueuedTime).UnixNano()/int64(time.Millisecond))
+			if e.IotHubEnqTimeTs {
+				metrics[i].SetTime(*event.SystemProperties.IoTHubEnqueuedTime)
+			} else {
+				metrics[i].AddField(e.SystemPropertiesPrefix+"IoTHubEnqueuedTime", (*event.SystemProperties.IoTHubEnqueuedTime).UnixNano()/int64(time.Millisecond))
+			}
 		}
 	}
 

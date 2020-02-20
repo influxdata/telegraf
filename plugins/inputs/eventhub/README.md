@@ -56,6 +56,12 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   ## Prefix to use for the system properties of Event Hub and IoT Hub messages
   # system_properties_prefix = "SystemProperties."
 
+  ## Set either option below to true to use a system property as timestamp.
+  ## You have the choice between EnqueuedTime and IoTHubEnqueuedTime.
+  ## It is recommended to use this setting when the data itself has no timestamp.
+  # enq_time_ts = true
+  # iot_hub_enq_time_ts = true
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
