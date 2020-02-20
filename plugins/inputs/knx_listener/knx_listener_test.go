@@ -57,7 +57,7 @@ func TestRegularReceives_DPT1(t *testing.T) {
 	})
 
 	// Give the accumulator some time to collect the data
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	// Stop the listener
 	listener.Stop()
@@ -132,7 +132,7 @@ func TestRegularReceives_DPT5(t *testing.T) {
 	})
 
 	// Give the accumulator some time to collect the data
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	// Stop the listener
 	listener.Stop()
@@ -213,7 +213,7 @@ func TestRegularReceives_DPT9(t *testing.T) {
 	})
 
 	// Give the accumulator some time to collect the data
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
 	// Stop the listener
 	listener.Stop()

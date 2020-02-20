@@ -30,15 +30,15 @@ func GetKNXInterface(mode string, address string) (client KNXInterface, err erro
 		c, e := NewDummyInterface()
 		client, err = &c, e
 
-		data := generate_data()
-		go send_regularly(&c, 1000.0*time.Millisecond, data)
+		data := generateData()
+		go sendRegularly(&c, 1000.0*time.Millisecond, data)
 	default:
 		client, err = nil, fmt.Errorf("invalid interface type: %s", mode)
 	}
-	return
+	return client, err
 }
 
-func send_regularly(di *KNXDummyInterface, period time.Duration, data []knx.GroupEvent) {
+func sendRegularly(di *KNXDummyInterface, period time.Duration, data []knx.GroupEvent) {
 	idx := 0
 	for range time.Tick(period) {
 		di.Send(data[idx])
@@ -46,11 +46,14 @@ func send_regularly(di *KNXDummyInterface, period time.Duration, data []knx.Grou
 	}
 }
 
-func generate_event(a string, d dpt.DatapointValue) knx.GroupEvent {
+func generateEvent(a string, d dpt.DatapointValue) knx.GroupEvent {
 	parts := strings.Split(a, "/")
 	addr := make([]uint8, 3)
 	for i, p := range parts {
-		x, _ := strconv.Atoi(p)
+		x, err := strconv.Atoi(p)
+		if err != nil {
+			return knx.GroupEvent{}
+		}
 		addr[i] = uint8(x)
 	}
 
@@ -61,60 +64,60 @@ func generate_event(a string, d dpt.DatapointValue) knx.GroupEvent {
 	}
 }
 
-func generate_data() []knx.GroupEvent {
+func generateData() []knx.GroupEvent {
 	data := make([]knx.GroupEvent, 0)
 
 	// DPT 1.xxx
 	d_1001 := dpt.DPT_1001(true)
-	data = append(data, generate_event("1/0/1", &d_1001))
+	data = append(data, generateEvent("1/0/1", &d_1001))
 	d_1002 := dpt.DPT_1002(false)
-	data = append(data, generate_event("1/0/2", &d_1002))
+	data = append(data, generateEvent("1/0/2", &d_1002))
 	d_1003 := dpt.DPT_1003(true)
-	data = append(data, generate_event("1/0/3", &d_1003))
+	data = append(data, generateEvent("1/0/3", &d_1003))
 	d_1009 := dpt.DPT_1009(false)
-	data = append(data, generate_event("1/0/9", &d_1009))
+	data = append(data, generateEvent("1/0/9", &d_1009))
 	d_1010 := dpt.DPT_1010(true)
-	data = append(data, generate_event("1/1/0", &d_1010))
+	data = append(data, generateEvent("1/1/0", &d_1010))
 
 	// DPT 5.xxx
 	d_5001 := dpt.DPT_5001(33.33)
-	data = append(data, generate_event("5/0/1", &d_5001))
+	data = append(data, generateEvent("5/0/1", &d_5001))
 	d_5003 := dpt.DPT_5003(120.1)
-	data = append(data, generate_event("5/0/3", &d_5003))
+	data = append(data, generateEvent("5/0/3", &d_5003))
 	d_5004 := dpt.DPT_5004(25)
-	data = append(data, generate_event("5/0/4", &d_5004))
+	data = append(data, generateEvent("5/0/4", &d_5004))
 
 	// DPT 9.xxx
 	d_9001 := dpt.DPT_9001(18.56)
-	data = append(data, generate_event("9/0/1", &d_9001))
+	data = append(data, generateEvent("9/0/1", &d_9001))
 	d_9004 := dpt.DPT_9004(243.9)
-	data = append(data, generate_event("9/0/4", &d_9004))
+	data = append(data, generateEvent("9/0/4", &d_9004))
 	d_9005 := dpt.DPT_9005(12.01)
-	data = append(data, generate_event("9/0/5", &d_9005))
+	data = append(data, generateEvent("9/0/5", &d_9005))
 	d_9007 := dpt.DPT_9007(59.32)
-	data = append(data, generate_event("9/0/7", &d_9007))
+	data = append(data, generateEvent("9/0/7", &d_9007))
 
 	// DPT 12.xxx
 	d_12001 := dpt.DPT_12001(1234567)
-	data = append(data, generate_event("12/0/1", &d_12001))
+	data = append(data, generateEvent("12/0/1", &d_12001))
 
 	// DPT 13.xxx
 	d_13001 := dpt.DPT_13001(13001)
-	data = append(data, generate_event("13/0/1", &d_13001))
+	data = append(data, generateEvent("13/0/1", &d_13001))
 	d_13002 := dpt.DPT_13002(13002)
-	data = append(data, generate_event("13/0/2", &d_13002))
+	data = append(data, generateEvent("13/0/2", &d_13002))
 	d_13010 := dpt.DPT_13010(130010)
-	data = append(data, generate_event("13/1/0", &d_13010))
+	data = append(data, generateEvent("13/1/0", &d_13010))
 	d_13011 := dpt.DPT_13011(130011)
-	data = append(data, generate_event("13/1/1", &d_13011))
+	data = append(data, generateEvent("13/1/1", &d_13011))
 	d_13012 := dpt.DPT_13012(130012)
-	data = append(data, generate_event("13/1/2", &d_13012))
+	data = append(data, generateEvent("13/1/2", &d_13012))
 	d_13013 := dpt.DPT_13013(130013)
-	data = append(data, generate_event("13/1/3", &d_13013))
+	data = append(data, generateEvent("13/1/3", &d_13013))
 	d_13014 := dpt.DPT_13014(130014)
-	data = append(data, generate_event("13/1/4", &d_13014))
+	data = append(data, generateEvent("13/1/4", &d_13014))
 	d_13015 := dpt.DPT_13015(130015)
-	data = append(data, generate_event("13/1/5", &d_13015))
+	data = append(data, generateEvent("13/1/5", &d_13015))
 
 	return data
 }
@@ -166,40 +169,20 @@ func GetDatapointType(name string) (d dpt.DatapointValue, err error) {
 	default:
 		d, err = nil, fmt.Errorf("unknown data-point type: %s", name)
 	}
-	return
+	return d, err
 }
 
 func GetBasicDatapointValue(d dpt.DatapointValue) (v interface{}, err error) {
 	vi := reflect.Indirect(reflect.ValueOf(d))
 	switch vi.Kind() {
 	case reflect.Bool:
-		v, err = vi.Bool(), nil
-	case reflect.Int:
-		fallthrough
-	case reflect.Int8:
-		fallthrough
-	case reflect.Int16:
-		fallthrough
-	case reflect.Int32:
-		fallthrough
-	case reflect.Int64:
-		v, err = vi.Int(), nil
-	case reflect.Uint:
-		fallthrough
-	case reflect.Uint8:
-		fallthrough
-	case reflect.Uint16:
-		fallthrough
-	case reflect.Uint32:
-		fallthrough
-	case reflect.Uint64:
-		v, err = vi.Uint(), nil
-	case reflect.Float32:
-		fallthrough
-	case reflect.Float64:
-		v, err = vi.Float(), nil
-	default:
-		v, err = nil, fmt.Errorf("cannot convert type: %v", vi.Kind())
+		return vi.Bool(), nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return vi.Int(), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return vi.Uint(), nil
+	case reflect.Float32, reflect.Float64:
+		return vi.Float(), nil
 	}
-	return
+	return nil, fmt.Errorf("cannot convert type: %v", vi.Kind())
 }
