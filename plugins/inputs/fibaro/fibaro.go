@@ -97,6 +97,7 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
@@ -107,8 +108,6 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 			http.StatusText(http.StatusOK))
 		return err
 	}
-
-	defer resp.Body.Close()
 
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(&dataStruct)

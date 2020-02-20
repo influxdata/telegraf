@@ -51,8 +51,6 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 	assert.Equal(t, 0, len(acc.Metrics), "There should not be any points")
 	if err := consumer.Start(&acc); err != nil {
 		t.Fatal(err.Error())
-	} else {
-		defer consumer.Stop()
 	}
 
 	waitForPoint(&acc, t)

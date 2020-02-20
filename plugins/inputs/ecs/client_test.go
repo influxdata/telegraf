@@ -107,7 +107,8 @@ func TestEcsClient_Task(t *testing.T) {
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(rc),
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -123,11 +124,24 @@ func TestEcsClient_Task(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed resp",
+			name: "malformed 500 resp",
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						StatusCode: http.StatusInternalServerError,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+					}, nil
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "malformed 200 resp",
+			client: mockDo{
+				do: func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
@@ -164,7 +178,8 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(rc),
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(rc),
 					}, nil
 				},
 			},
@@ -181,15 +196,29 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "malformed resp",
+			name: "malformed 200 resp",
 			client: mockDo{
 				do: func(req *http.Request) (*http.Response, error) {
 					return &http.Response{
-						Body: ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+						StatusCode: http.StatusOK,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
 					}, nil
 				},
 			},
 			want:    map[string]types.StatsJSON{},
+			wantErr: true,
+		},
+		{
+			name: "malformed 500 resp",
+			client: mockDo{
+				do: func(req *http.Request) (*http.Response, error) {
+					return &http.Response{
+						StatusCode: http.StatusInternalServerError,
+						Body:       ioutil.NopCloser(bytes.NewReader([]byte("foo"))),
+					}, nil
+				},
+			},
+			want:    nil,
 			wantErr: true,
 		},
 	}

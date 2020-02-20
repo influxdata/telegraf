@@ -181,6 +181,7 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("Unable to connect to haproxy server '%s': %s", addr, err)
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
 		return fmt.Errorf("Unable to get valid stat result from '%s', http response code : %d", addr, res.StatusCode)

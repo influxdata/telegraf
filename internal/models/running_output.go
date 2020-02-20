@@ -210,6 +210,7 @@ func (ro *RunningOutput) WriteBatch() error {
 	return nil
 }
 
+// Close closes the output
 func (r *RunningOutput) Close() {
 	err := r.Output.Close()
 	if err != nil {
