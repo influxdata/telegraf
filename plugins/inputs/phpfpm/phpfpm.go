@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -95,7 +96,12 @@ func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	for _, serv := range g.Urls {
+	urls, err := expandUrls(g.Urls)
+	if err != nil {
+		return err
+	}
+
+	for _, serv := range urls {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
@@ -153,15 +159,10 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 			statusPath = "status"
 		}
 	} else {
-		socketAddr := strings.Split(addr, ":")
-		if len(socketAddr) >= 2 {
-			socketPath = socketAddr[0]
-			statusPath = socketAddr[1]
-		} else {
-			socketPath = socketAddr[0]
+		socketPath, statusPath = unixSocketPaths(addr)
+		if statusPath == "" {
 			statusPath = "status"
 		}
-
 		if _, err := os.Stat(socketPath); os.IsNotExist(err) {
 			return fmt.Errorf("Socket doesn't exist  '%s': %s", socketPath, err)
 		}
@@ -275,6 +276,68 @@ func importMetric(r io.Reader, acc telegraf.Accumulator, addr string) (poolStat,
 	}
 
 	return stats, nil
+}
+
+func expandUrls(urls []string) ([]string, error) {
+	addrs := make([]string, 0, len(urls))
+	for _, url := range urls {
+		if isNetworkURL(url) {
+			addrs = append(addrs, url)
+			continue
+		}
+		paths, err := globUnixSocket(url)
+		if err != nil {
+			return nil, err
+		}
+		addrs = append(addrs, paths...)
+	}
+	return addrs, nil
+}
+
+func globUnixSocket(url string) ([]string, error) {
+	pattern, status := unixSocketPaths(url)
+	paths, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	addrs := make([]string, 0, len(paths))
+
+	if len(paths) == 0 {
+		_, err := os.Stat(pattern)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("Socket doesn't exist  '%s': %s", pattern, err)
+		}
+		return nil, err
+	}
+
+	for _, path := range paths {
+		if status != "" {
+			status = fmt.Sprintf(":%s", status)
+		}
+		addrs = append(addrs, fmt.Sprintf("%s%s", path, status))
+	}
+
+	return addrs, nil
+}
+
+func unixSocketPaths(addr string) (string, string) {
+	var socketPath, statusPath string
+
+	socketAddr := strings.Split(addr, ":")
+	if len(socketAddr) >= 2 {
+		socketPath = socketAddr[0]
+		statusPath = socketAddr[1]
+	} else {
+		socketPath = socketAddr[0]
+		statusPath = ""
+	}
+
+	return socketPath, statusPath
+}
+
+func isNetworkURL(addr string) bool {
+	return strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") || strings.HasPrefix(addr, "fcgi://") || strings.HasPrefix(addr, "cgi://")
 }
 
 func init() {
