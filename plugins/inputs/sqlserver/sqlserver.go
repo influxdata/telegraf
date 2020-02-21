@@ -632,7 +632,7 @@ WHERE	(
 			object_name LIKE '%User Settable%'
 			OR object_name LIKE '%SQL Errors%'
 		) OR (
-			object_name LIKE 'SQLServer:Batch Resp Statistics%'
+			object_name LIKE '%Batch Resp Statistics%'
 		) OR (
 			instance_name IN ('_Total')
 			AND counter_name IN (
