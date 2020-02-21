@@ -24,12 +24,9 @@ parts:
       - etc
       - bin
 
-  go:
-    source-tag: go1.13
-
   dep:
-    after: [go]
     plugin: nil
+    build-snaps: [go]
     override-build: |
       cd ..
       export GOPATH=$(pwd)/go
@@ -46,6 +43,7 @@ parts:
     after: [dep]
     build-attributes: [no-patchelf]
     plugin: nil
+    build-snaps: [go]
     override-build: |
       cd ..
       export GOPATH=$(pwd)/go
