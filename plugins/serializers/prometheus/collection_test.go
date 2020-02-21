@@ -379,6 +379,37 @@ func TestCollectionExpire(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "expire based on add time",
+			now:  time.Unix(20, 0),
+			age:  10 * time.Second,
+			input: []Input{
+				{
+					metric: testutil.MustMetric(
+						"cpu",
+						map[string]string{},
+						map[string]interface{}{
+							"time_idle": 42.0,
+						},
+						time.Unix(0, 0),
+					),
+					addtime: time.Unix(15, 0),
+				},
+			},
+			expected: []*dto.MetricFamily{
+				{
+					Name: proto.String("cpu_time_idle"),
+					Help: proto.String(helpString),
+					Type: dto.MetricType_UNTYPED.Enum(),
+					Metric: []*dto.Metric{
+						{
+							Label:   []*dto.LabelPair{},
+							Untyped: &dto.Untyped{Value: proto.Float64(42.0)},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
