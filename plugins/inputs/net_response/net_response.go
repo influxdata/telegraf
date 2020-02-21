@@ -223,9 +223,6 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	} else {
 		return errors.New("Bad protocol")
 	}
-	for key, value := range returnTags {
-		tags[key] = value
-	}
 	// Merge the tags
 	for k, v := range returnTags {
 		tags[k] = v

@@ -47,6 +47,8 @@
 - [#6993](https://github.com/influxdata/telegraf/pull/6993): Add support for MDB database information to openldap input.
 - [#6957](https://github.com/influxdata/telegraf/pull/6957): Add new fields for Jenkins total and busy executors.
 - [#7035](https://github.com/influxdata/telegraf/pull/7035): Fix dash to underscore replacement when handling embedded tags in Cisco MDT.
+- [#7039](https://github.com/influxdata/telegraf/pull/7039): Add process created_at time to procstat input.
+- [#7022](https://github.com/influxdata/telegraf/pull/7022): Add support for credentials file to nats_consumer and nats output.
 
 #### Bugfixes
 
@@ -60,6 +62,7 @@
 
 - [#6988](https://github.com/influxdata/telegraf/issues/6988): Parse NaN values from summary types in prometheus input.
 - [#6820](https://github.com/influxdata/telegraf/issues/6820): Fix pgbouncer input when used with newer pgbouncer versions.
+- [#6913](https://github.com/influxdata/telegraf/issues/6913): Support up to 8192 stats in the ethtool input.
 
 ## v1.13.3 [2020-02-04]
 
