@@ -31,6 +31,10 @@ func (p *CollectdParser) SetParseOpts(popts *network.ParseOpts) {
 	p.popts = *popts
 }
 
+func (p *CollectdParser) Name() string {
+	return "CollectdParser"
+}
+
 func NewCollectdParser(
 	authFile string,
 	securityLevel string,

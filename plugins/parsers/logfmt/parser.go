@@ -31,6 +31,10 @@ func NewParser(metricName string, defaultTags map[string]string) *Parser {
 	}
 }
 
+func (p *Parser) Name() string {
+	return "logfmt.Parser - " + p.MetricName
+}
+
 // Parse converts a slice of bytes in logfmt format to metrics.
 func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	reader := bytes.NewReader(b)

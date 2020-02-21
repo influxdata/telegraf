@@ -28,6 +28,10 @@ type GraphiteParser struct {
 	templateEngine *templating.Engine
 }
 
+func (p *GraphiteParser) Name() string {
+	return "GraphiteParser"
+}
+
 func (p *GraphiteParser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }

@@ -67,6 +67,10 @@ func New(config *Config) (*Parser, error) {
 	}, nil
 }
 
+func (p *Parser) Name() string {
+	return "JSON parser - " + p.metricName
+}
+
 func (p *Parser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
 	results := make([]telegraf.Metric, 0)
 

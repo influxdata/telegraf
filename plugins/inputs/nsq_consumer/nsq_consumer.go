@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	nsq "github.com/nsqio/go-nsq"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -107,7 +108,7 @@ func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
 	n.consumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 		metrics, err := n.parser.Parse(message.Body)
 		if err != nil {
-			acc.AddError(err)
+			acc.AddError(errors.Wrapf(err, "%s parser error", n.parser.Name()))
 			// Remove the message from the queue
 			message.Finish()
 			return nil

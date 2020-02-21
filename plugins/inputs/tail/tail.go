@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -190,20 +191,21 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 		// As a temporary solution call Parse only when getting the first
 		// line from the file.
 		if firstLine {
-			return parser.Parse([]byte(line))
-		} else {
-			m, err := parser.ParseLine(line)
-			if err != nil {
-				return nil, err
-			}
-
-			if m != nil {
-				return []telegraf.Metric{m}, nil
-			}
-			return []telegraf.Metric{}, nil
+			metrics, err := parser.Parse([]byte(line))
+			return metrics, errors.Wrapf(err, "%s parser error", parser.Name())
 		}
+		m, err := parser.ParseLine(line)
+		if err != nil {
+			return nil, errors.Wrapf(err, "%s parser error", parser.Name())
+		}
+
+		if m != nil {
+			return []telegraf.Metric{m}, nil
+		}
+		return []telegraf.Metric{}, nil
 	default:
-		return parser.Parse([]byte(line))
+		metrics, err := parser.Parse([]byte(line))
+		return metrics, errors.Wrapf(err, "%s parser error", parser.Name())
 	}
 }
 

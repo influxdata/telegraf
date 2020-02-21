@@ -2,17 +2,17 @@ package mqtt_consumer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/eclipse/paho.mqtt.golang"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -276,7 +276,7 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "%s parser error", m.parser.Name())
 	}
 
 	if m.topicTag != "" {

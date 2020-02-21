@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/selfstat"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -377,7 +378,7 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision, db string) error 
 	h.handler.SetTimeFunc(func() time.Time { return t })
 	metrics, err := h.parser.Parse(b)
 	if err != nil {
-		return fmt.Errorf("unable to parse: %s", err.Error())
+		return errors.Wrapf(err, "unable to parse: %s parser error", h.parser.Name())
 	}
 
 	for _, m := range metrics {

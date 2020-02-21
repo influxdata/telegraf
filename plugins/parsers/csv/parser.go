@@ -31,6 +31,10 @@ type Parser struct {
 	TimeFunc          func() time.Time
 }
 
+func (p *Parser) Name() string {
+	return "CSV parser - " + p.MetricName
+}
+
 func (p *Parser) SetTimeFunc(fn metric.TimeFunc) {
 	p.TimeFunc = fn
 }

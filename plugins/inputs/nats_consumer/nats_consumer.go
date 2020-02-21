@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/nats-io/nats.go"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -234,7 +235,7 @@ func (n *natsConsumer) receiver(ctx context.Context) {
 			case msg := <-n.in:
 				metrics, err := n.parser.Parse(msg.Data)
 				if err != nil {
-					n.Log.Errorf("Subject: %s, error: %s", msg.Subject, err.Error())
+					n.Log.Error(errors.Wrapf(err, "Subject: %s, error: %s parser error", msg.Subject, n.parser.Name()))
 					<-sem
 					continue
 				}

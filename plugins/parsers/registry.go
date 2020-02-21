@@ -37,6 +37,9 @@ type ParserFuncInput interface {
 
 // Parser is an interface defining functions that a parser plugin must satisfy.
 type Parser interface {
+	// Name is a name identifying the type of parser and optionally the metric it's configured for
+	Name() string
+
 	// Parse takes a byte buffer separated by newlines
 	// ie, `cpu.usage.idle 90\ncpu.usage.busy 10`
 	// and parses it into telegraf metrics

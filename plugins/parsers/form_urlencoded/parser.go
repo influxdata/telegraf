@@ -24,6 +24,10 @@ type Parser struct {
 	AllowedKeys []string
 }
 
+func (p *Parser) Name() string {
+	return "form_urlencoded parser - " + p.MetricName
+}
+
 // Parse converts a slice of bytes in "application/x-www-form-urlencoded" format into metrics
 func (p Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	buf = bytes.TrimSpace(buf)

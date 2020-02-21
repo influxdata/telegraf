@@ -78,6 +78,10 @@ type NagiosParser struct {
 	DefaultTags map[string]string
 }
 
+func (p *NagiosParser) Name() string {
+	return "NagiosParser - " + p.MetricName
+}
+
 // Got from Alignak
 // https://github.com/Alignak-monitoring/alignak/blob/develop/alignak/misc/perfdata.py
 var (

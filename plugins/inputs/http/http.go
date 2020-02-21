@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/pkg/errors"
 )
 
 type HTTP struct {
@@ -204,7 +205,7 @@ func (h *HTTP) gatherURL(
 
 	metrics, err := h.parser.Parse(b)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "%s parser error", h.parser.Name())
 	}
 
 	for _, metric := range metrics {

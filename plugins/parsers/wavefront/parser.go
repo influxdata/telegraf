@@ -68,6 +68,10 @@ func NewPointParser(parent *WavefrontParser) *PointParser {
 	return &PointParser{Elements: elements, parent: parent}
 }
 
+func (p *WavefrontParser) Name() string {
+	return "WavefrontParser"
+}
+
 func (p *WavefrontParser) ParseLine(line string) (telegraf.Metric, error) {
 	buf := []byte(line)
 

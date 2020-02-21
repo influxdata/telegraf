@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/pkg/errors"
 )
 
 const sampleConfig = `
@@ -392,7 +393,7 @@ func (h *ConsumerGroupHandler) Handle(session sarama.ConsumerGroupSession, msg *
 	metrics, err := h.parser.Parse(msg.Value)
 	if err != nil {
 		h.release()
-		return err
+		return errors.Wrapf(err, "%s parser error", h.parser.Name())
 	}
 
 	if len(h.TopicTag) > 0 {

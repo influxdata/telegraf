@@ -46,6 +46,10 @@ type Parser struct {
 	handler *MetricHandler
 }
 
+func (p *Parser) Name() string {
+	return "Influx Parser"
+}
+
 // NewParser returns a Parser than accepts line protocol
 func NewParser(handler *MetricHandler) *Parser {
 	return &Parser{

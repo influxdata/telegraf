@@ -2,7 +2,6 @@ package amqp_consumer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -14,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 )
 
@@ -500,7 +500,7 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	metrics, err := a.parser.Parse(body)
 	if err != nil {
 		onError()
-		return err
+		return errors.Wrapf(err, "%s parser error", a.parser.Name())
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)

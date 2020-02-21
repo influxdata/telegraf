@@ -126,6 +126,10 @@ type Parser struct {
 	tsModder *tsModder
 }
 
+func (p *Parser) Name() string {
+	return "grok parser"
+}
+
 // Compile is a bound method to Parser which will process the options for our parser
 func (p *Parser) Compile() error {
 	p.typeMap = make(map[string]map[string]string)

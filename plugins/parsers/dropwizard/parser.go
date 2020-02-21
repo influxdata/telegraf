@@ -65,6 +65,10 @@ func NewParser() *parser {
 	return parser
 }
 
+func (p *parser) Name() string {
+	return "Dropwizard parser"
+}
+
 // Parse parses the input bytes to an array of metrics
 func (p *parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 

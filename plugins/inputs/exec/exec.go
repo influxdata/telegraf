@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/kballard/go-shellquote"
+	"github.com/pkg/errors"
 )
 
 const sampleConfig = `
@@ -153,7 +154,7 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 
 	metrics, err := e.parser.Parse(out)
 	if err != nil {
-		acc.AddError(err)
+		acc.AddError(errors.Wrapf(err, "%s parser error", e.parser.Name()))
 		return
 	}
 

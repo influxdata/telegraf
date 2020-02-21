@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/pkg/errors"
 )
 
 type File struct {
@@ -96,8 +97,8 @@ func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}
-	return f.parser.Parse(fileContents)
-
+	metric, err := f.parser.Parse(fileContents)
+	return metric, errors.Wrapf(err, "%s parser error", f.parser.Name())
 }
 
 func init() {

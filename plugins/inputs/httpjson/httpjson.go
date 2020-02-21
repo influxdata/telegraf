@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -193,7 +194,7 @@ func (h *HttpJson) gatherServer(
 
 	metrics, err := parser.Parse([]byte(resp))
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "%s parser error", parser.Name())
 	}
 
 	for _, metric := range metrics {

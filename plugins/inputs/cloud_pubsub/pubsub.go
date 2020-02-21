@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 )
@@ -188,7 +189,7 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	metrics, err := ps.parser.Parse(data)
 	if err != nil {
 		msg.Ack()
-		return err
+		return errors.Wrapf(err, "%s parser error", ps.parser.Name())
 	}
 
 	if len(metrics) == 0 {

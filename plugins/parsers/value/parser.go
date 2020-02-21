@@ -17,6 +17,10 @@ type ValueParser struct {
 	DefaultTags map[string]string
 }
 
+func (v *ValueParser) Name() string {
+	return "ValueParser - " + v.MetricName
+}
+
 func (v *ValueParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	vStr := string(bytes.TrimSpace(bytes.Trim(buf, "\x00")))
 

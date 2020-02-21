@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	consumer "github.com/harlow/kinesis-consumer"
 	"github.com/harlow/kinesis-consumer/checkpoint/ddb"
+	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
@@ -241,7 +242,7 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
 	metrics, err := k.parser.Parse(r.Data)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "%s parser error", k.parser.Name())
 	}
 
 	k.recordsTex.Lock()
