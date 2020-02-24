@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/selfstat"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
@@ -254,6 +256,28 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, expected, m)
+}
+
+func TestMetricErrorCounters(t *testing.T) {
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "Test",
+	})
+
+	ri.Log().Error("Oh no")
+
+	require.Equal(t, int64(1), GlobalGatherErrors.Get())
+	// find the new input error register.
+	for _, r := range selfstat.Metrics() {
+		if r.Name() == "internal_gather" {
+			errCount, ok := r.GetField("errors")
+			if !ok {
+				t.Fatal("Expected error field")
+			}
+			require.Equal(t, int64(1), errCount)
+			return
+		}
+	}
+	t.Error("Didn't find gather error field")
 }
 
 type testInput struct{}
