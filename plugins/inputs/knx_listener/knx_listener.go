@@ -1,6 +1,7 @@
 package knx_listener
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/vapourismo/knx-go/knx/dpt"
@@ -75,9 +76,9 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 		log.Printf("D! [inputs.KNXListener] group-address mapping for measurement \"%s\"", m.Name)
 		for _, ga := range m.Addresses {
 			log.Printf("D! [inputs.KNXListener]     %v --> %s", ga, m.Dpt)
-			d, err := GetDatapointType(m.Dpt)
-			if err != nil {
-				return err
+			d, ok := dpt.Produce(m.Dpt)
+			if !ok {
+				return fmt.Errorf("cannot create datapoint-type %v for address %v!", m.Dpt, ga)
 			}
 			kl.gaTargetMap[ga] = addressTarget{m.Name, d}
 		}
