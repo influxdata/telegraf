@@ -83,7 +83,7 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 	defer c.Unlock()
 
 	for _, metric := range metrics {
-		c.coll.Add(metric)
+		c.coll.Add(metric, time.Now())
 	}
 
 	// Expire metrics, doing this on Add ensure metrics are removed even if no

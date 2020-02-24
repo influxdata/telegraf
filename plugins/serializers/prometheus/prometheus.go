@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/prometheus/common/expfmt"
@@ -53,7 +54,7 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	coll := NewCollection(s.config)
 	for _, metric := range metrics {
-		coll.Add(metric)
+		coll.Add(metric, time.Now())
 	}
 
 	var buf bytes.Buffer
