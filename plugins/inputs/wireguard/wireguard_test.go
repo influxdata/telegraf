@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/mdlayher/wireguardctrl/wgtypes"
 	"github.com/stretchr/testify/assert"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 func TestWireguard_gatherDeviceMetrics(t *testing.T) {

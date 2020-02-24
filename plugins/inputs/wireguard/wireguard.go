@@ -6,8 +6,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/mdlayher/wireguardctrl"
-	"github.com/mdlayher/wireguardctrl/wgtypes"
+	"golang.zx2c4.com/wireguard/wgctrl"
+	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
 const (
@@ -28,7 +28,7 @@ var (
 type Wireguard struct {
 	Devices []string `toml:"devices"`
 
-	client *wireguardctrl.Client
+	client *wgctrl.Client
 }
 
 func (wg *Wireguard) Description() string {
@@ -46,7 +46,7 @@ func (wg *Wireguard) SampleConfig() string {
 func (wg *Wireguard) Init() error {
 	var err error
 
-	wg.client, err = wireguardctrl.New()
+	wg.client, err = wgctrl.New()
 
 	return err
 }
