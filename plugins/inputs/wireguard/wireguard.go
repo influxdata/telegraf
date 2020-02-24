@@ -112,15 +112,15 @@ func (wg *Wireguard) gatherDeviceMetrics(acc telegraf.Accumulator, device *wgtyp
 
 func (wg *Wireguard) gatherDevicePeerMetrics(acc telegraf.Accumulator, device *wgtypes.Device, peer wgtypes.Peer) {
 	fields := map[string]interface{}{
-		"persistent_keepalive_interval": int64(peer.PersistentKeepaliveInterval.Seconds()),
-		"protocol_version":              peer.ProtocolVersion,
-		"allowed_ips":                   len(peer.AllowedIPs),
+		"persistent_keepalive_interval_ns": peer.PersistentKeepaliveInterval.Nanoseconds(),
+		"protocol_version":                 peer.ProtocolVersion,
+		"allowed_ips":                      len(peer.AllowedIPs),
 	}
 
 	gauges := map[string]interface{}{
-		"last_handshake_time": peer.LastHandshakeTime.Unix(),
-		"rx_bytes":            peer.ReceiveBytes,
-		"tx_bytes":            peer.TransmitBytes,
+		"last_handshake_time_ns": peer.LastHandshakeTime.UnixNano(),
+		"rx_bytes":               peer.ReceiveBytes,
+		"tx_bytes":               peer.TransmitBytes,
 	}
 
 	tags := map[string]string{

@@ -61,14 +61,14 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 	}
 
 	expectFields := map[string]interface{}{
-		"persistent_keepalive_interval": int64(60),
-		"protocol_version":              0,
-		"allowed_ips":                   2,
+		"persistent_keepalive_interval_ns": int64(60000000000),
+		"protocol_version":                 0,
+		"allowed_ips":                      2,
 	}
 	expectGauges := map[string]interface{}{
-		"last_handshake_time": int64(100),
-		"rx_bytes":            int64(40),
-		"tx_bytes":            int64(60),
+		"last_handshake_time_ns": int64(100000000000),
+		"rx_bytes":               int64(40),
+		"tx_bytes":               int64(60),
 	}
 	expectTags := map[string]string{
 		"device":     "wg0",
