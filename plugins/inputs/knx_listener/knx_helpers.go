@@ -122,56 +122,6 @@ func generateData() []knx.GroupEvent {
 	return data
 }
 
-func GetDatapointType(name string) (d dpt.DatapointValue, err error) {
-	switch name {
-	case "1.001":
-		d, err = new(dpt.DPT_1001), nil
-	case "1.002":
-		d, err = new(dpt.DPT_1002), nil
-	case "1.003":
-		d, err = new(dpt.DPT_1003), nil
-	case "1.009":
-		d, err = new(dpt.DPT_1009), nil
-	case "1.010":
-		d, err = new(dpt.DPT_1010), nil
-	case "5.001":
-		d, err = new(dpt.DPT_5001), nil
-	case "5.003":
-		d, err = new(dpt.DPT_5003), nil
-	case "5.004":
-		d, err = new(dpt.DPT_5004), nil
-	case "9.001":
-		d, err = new(dpt.DPT_9001), nil
-	case "9.004":
-		d, err = new(dpt.DPT_9004), nil
-	case "9.005":
-		d, err = new(dpt.DPT_9005), nil
-	case "9.007":
-		d, err = new(dpt.DPT_9007), nil
-	case "12.001":
-		d, err = new(dpt.DPT_12001), nil
-	case "13.001":
-		d, err = new(dpt.DPT_13001), nil
-	case "13.002":
-		d, err = new(dpt.DPT_13002), nil
-	case "13.010":
-		d, err = new(dpt.DPT_13010), nil
-	case "13.011":
-		d, err = new(dpt.DPT_13011), nil
-	case "13.012":
-		d, err = new(dpt.DPT_13012), nil
-	case "13.013":
-		d, err = new(dpt.DPT_13013), nil
-	case "13.014":
-		d, err = new(dpt.DPT_13014), nil
-	case "13.015":
-		d, err = new(dpt.DPT_13015), nil
-	default:
-		d, err = nil, fmt.Errorf("unknown data-point type: %s", name)
-	}
-	return d, err
-}
-
 func GetBasicDatapointValue(d dpt.DatapointValue) (v interface{}, err error) {
 	vi := reflect.Indirect(reflect.ValueOf(d))
 	switch vi.Kind() {
