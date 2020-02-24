@@ -64,7 +64,7 @@ type groupedByCountFields struct {
 }
 
 // NewHistogramAggregator creates new histogram aggregator
-func NewHistogramAggregator() telegraf.Aggregator {
+func NewHistogramAggregator() *HistogramAggregator {
 	h := &HistogramAggregator{
 		Cumulative: true,
 	}
