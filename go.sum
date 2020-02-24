@@ -678,6 +678,8 @@ github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqri
 github.com/vaughan0/go-ini v0.0.0-20130923145212-a98ad7ee00ec/go.mod h1:owBmyHYMLkxyrugmfwE/DLJyW8Ro9mkphwuVErQ0iUw=
 github.com/vapourismo/knx-go v0.0.0-20200210191241-732b17427284 h1:/RV1KLZe2skdtlKjFdwmUnAj+HKPRaa4jy+BVvImrZQ=
 github.com/vapourismo/knx-go v0.0.0-20200210191241-732b17427284/go.mod h1:7+aWBsUJCo9OQRCgTypRmIQW9KKKcPMjtrdnYIBsS70=
+github.com/vapourismo/knx-go v0.0.0-20200220204125-dd963bbc67db h1:LTho2q4w9Fbrs/DbOM/sW8O7dsHjdRjAlCRyEBzTBDE=
+github.com/vapourismo/knx-go v0.0.0-20200220204125-dd963bbc67db/go.mod h1:7+aWBsUJCo9OQRCgTypRmIQW9KKKcPMjtrdnYIBsS70=
 github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e h1:f1yevOHP+Suqk0rVc13fIkzcLULJbyQcXDba2klljD0=
 github.com/vishvananda/netlink v0.0.0-20171020171820-b2de5d10e38e/go.mod h1:+SR5DhBJrl6ZM7CoCKvpw5BKroDKQ+PJqOg65H/2ktk=
 github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc h1:R83G5ikgLMxrBvLh22JhdfI8K6YXEPHx5P03Uu3DRs4=
