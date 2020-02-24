@@ -30,10 +30,10 @@ reports gauge metrics for Wireguard interface device(s) and its peers.
     - `device` (associated interface device name, e.g. `wg0`)
     - `public_key` (peer public key, e.g. `NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE=`)
   - fields:
-    - `persistent_keepalive_interval` (int, keepalive interval in seconds; 0 if unset)
+    - `persistent_keepalive_interval_ns` (int, keepalive interval in nanoseconds; 0 if unset)
     - `protocol_version` (int, Wireguard protocol version number)
     - `allowed_ips` (int, number of allowed IPs for this peer)
-    - `last_handshake_time` (int, Unix timestamp of the last handshake for this peer)
+    - `last_handshake_time_ns` (int, Unix timestamp of the last handshake for this peer in nanoseconds)
     - `rx_bytes` (int, number of bytes received from this peer)
     - `tx_bytes` (int, number of bytes transmitted to this peer)
 
@@ -66,8 +66,8 @@ those printed by this command.
 ### Example Output
 
 ```
-wireguard_device,host=WGVPN,name=tun0,type=linux_kernel firewall_mark=0i,listen_port=51820i 1567976672000000000
-wireguard_device,host=WGVPN,name=tun0,type=linux_kernel peers=1i 1567976672000000000
-wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= allowed_ips=1i,persistent_keepalive_interval=0i,protocol_version=1i 1567976672000000000
-wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= last_handshake_time=1567905087i,rx_bytes=261415128i,tx_bytes=334031704i 1567976672000000000
+wireguard_device,host=WGVPN,name=wg0,type=linux_kernel firewall_mark=51820i,listen_port=58216i 1582513589000000000
+wireguard_device,host=WGVPN,name=wg0,type=linux_kernel peers=1i 1582513589000000000
+wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= allowed_ips=2i,persistent_keepalive_interval_ns=60000000000i,protocol_version=1i 1582513589000000000
+wireguard_peer,device=wg0,host=WGVPN,public_key=NZTRIrv/ClTcQoNAnChEot+WL7OH7uEGQmx8oAN9rWE= last_handshake_time_ns=1582513584530013376i,rx_bytes=6484i,tx_bytes=13540i 1582513589000000000
 ```
