@@ -57,7 +57,7 @@
 - [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
 - [#7005](https://github.com/influxdata/telegraf/pull/7005): Search for chronyc only when chrony input plugin is enabled.
 
-## v1.13.4 [unreleased]
+## v1.13.4 [2020-02-25]
 
 #### Release Notes
 
