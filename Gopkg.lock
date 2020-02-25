@@ -1697,6 +1697,7 @@
     "github.com/shirou/gopsutil/process",
     "github.com/signalfx/golib/datapoint",
     "github.com/signalfx/golib/datapoint/dpsink",
+    "github.com/signalfx/golib/errors",
     "github.com/signalfx/golib/event",
     "github.com/signalfx/golib/sfxclient",
     "github.com/soniah/gosnmp",

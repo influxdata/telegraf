@@ -2,6 +2,7 @@ package signalfx
 
 import (
 	"context"
+	"github.com/signalfx/golib/errors"
 	"log"
 
 	"sync"
@@ -162,7 +163,7 @@ outer:
 			buf = append(buf, dp)
 			if len(buf) >= s.BatchSize {
 				if err := s.client.AddDatapoints(s.ctx, buf); err != nil {
-					log.Println("E! Output [signalfx] ", err)
+					log.Println("E! Output [signalfx] ", errors.Details(err))
 				}
 				buf = buf[:0]
 			}
@@ -172,7 +173,7 @@ outer:
 	}
 	if len(buf) > 0 {
 		if err := s.client.AddDatapoints(s.ctx, buf); err != nil {
-			log.Println("E! Output [signalfx] ", err)
+			log.Println("E! Output [signalfx] ", errors.Details(err))
 		}
 	}
 }
@@ -199,7 +200,7 @@ outer:
 			buf = append(buf, e)
 			if len(buf) >= s.BatchSize {
 				if err := s.client.AddEvents(s.ctx, buf); err != nil {
-					log.Println("E! Output [signalfx] ", err)
+					log.Println("E! Output [signalfx] ", errors.Details(err))
 				}
 				buf = buf[:0]
 			}
@@ -209,7 +210,7 @@ outer:
 	}
 	if len(buf) > 0 {
 		if err := s.client.AddEvents(s.ctx, buf); err != nil {
-			log.Println("E! Output [signalfx] ", err)
+			log.Println("E! Output [signalfx] ", errors.Details(err))
 		}
 	}
 }
