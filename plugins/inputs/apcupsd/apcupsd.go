@@ -63,6 +63,7 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 			"serial":   status.SerialNumber,
 			"ups_name": status.UPSName,
 			"status":   status.Status,
+			"model":    status.Model,
 		}
 
 		flags, err := strconv.ParseUint(strings.Fields(status.StatusFlags)[0], 0, 64)
@@ -71,16 +72,21 @@ func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 		}
 
 		fields := map[string]interface{}{
-			"status_flags":           flags,
-			"input_voltage":          status.LineVoltage,
-			"load_percent":           status.LoadPercent,
-			"battery_charge_percent": status.BatteryChargePercent,
-			"time_left_ns":           status.TimeLeft.Nanoseconds(),
-			"output_voltage":         status.OutputVoltage,
-			"internal_temp":          status.InternalTemp,
-			"battery_voltage":        status.BatteryVoltage,
-			"input_frequency":        status.LineFrequency,
-			"time_on_battery_ns":     status.TimeOnBattery.Nanoseconds(),
+			"status_flags":            flags,
+			"input_voltage":           status.LineVoltage,
+			"load_percent":            status.LoadPercent,
+			"battery_charge_percent":  status.BatteryChargePercent,
+			"time_left_ns":            status.TimeLeft.Nanoseconds(),
+			"output_voltage":          status.OutputVoltage,
+			"internal_temp":           status.InternalTemp,
+			"battery_voltage":         status.BatteryVoltage,
+			"input_frequency":         status.LineFrequency,
+			"time_on_battery_ns":      status.TimeOnBattery.Nanoseconds(),
+			"nominal_input_voltage":   status.NominalInputVoltage,
+			"nominal_battery_voltage": status.NominalBatteryVoltage,
+			"nominal_power":           status.NominalPower,
+			"firmware":                status.Firmware,
+			"battery_date":            status.BatteryDate,
 		}
 
 		acc.AddFields("apcupsd", fields, tags)
