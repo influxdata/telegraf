@@ -59,6 +59,10 @@
 
 ## v1.13.4 [unreleased]
 
+#### Release Notes
+
+- Official packages now built with Go 1.13.8.
+
 #### Bugfixes
 
 - [#6988](https://github.com/influxdata/telegraf/issues/6988): Parse NaN values from summary types in prometheus input.
