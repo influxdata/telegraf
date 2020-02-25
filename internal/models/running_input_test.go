@@ -260,24 +260,31 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 
 func TestMetricErrorCounters(t *testing.T) {
 	ri := NewRunningInput(&testInput{}, &InputConfig{
-		Name: "Test",
+		Name: "TestMetricErrorCounters",
 	})
+
+	getGatherErrors := func() int64 {
+		for _, r := range selfstat.Metrics() {
+			tag, hasTag := r.GetTag("input")
+			if r.Name() == "internal_gather" && hasTag && tag == "TestMetricErrorCounters" {
+				errCount, ok := r.GetField("errors")
+				if !ok {
+					t.Fatal("Expected error field")
+				}
+				return errCount.(int64)
+			}
+		}
+		return 0
+	}
+
+	before := getGatherErrors()
 
 	ri.Log().Error("Oh no")
 
-	require.Equal(t, int64(1), GlobalGatherErrors.Get())
-	// find the new input error register.
-	for _, r := range selfstat.Metrics() {
-		if r.Name() == "internal_gather" {
-			errCount, ok := r.GetField("errors")
-			if !ok {
-				t.Fatal("Expected error field")
-			}
-			require.Equal(t, int64(1), errCount)
-			return
-		}
-	}
-	t.Error("Didn't find gather error field")
+	after := getGatherErrors()
+
+	require.Greater(t, after, before)
+	require.GreaterOrEqual(t, int64(1), GlobalGatherErrors.Get())
 }
 
 type testInput struct{}
