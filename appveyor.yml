@@ -8,7 +8,7 @@ cache:
 clone_folder: C:\gopath\src\github.com\influxdata\telegraf
 
 environment:
-  GOVERSION: 1.13.5
+  GOVERSION: 1.13.8
   GOPATH: C:\gopath
 
 platform: x64
