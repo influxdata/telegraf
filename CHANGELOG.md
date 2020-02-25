@@ -71,6 +71,7 @@
 - [#7060](https://github.com/influxdata/telegraf/issues/7060): Fix perf counters collection on named instances in sqlserver input.
 - [#6926](https://github.com/influxdata/telegraf/issues/6926): Use add time for prometheus expiration calculation.
 - [#7057](https://github.com/influxdata/telegraf/issues/7057): Fix inconsistency with input error counting in internal input.
+- [#7063](https://github.com/influxdata/telegraf/pull/7063): Use the same timestamp per call if no time is provided in prometheus input.
 
 ## v1.13.3 [2020-02-04]
 
