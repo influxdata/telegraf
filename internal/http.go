@@ -6,9 +6,6 @@ import (
 	"net/http"
 )
 
-// ErrorFunc is a callback for writing an error response.
-type ErrorFunc func(rw http.ResponseWriter, code int)
-
 type BasicAuthErrorFunc func(rw http.ResponseWriter)
 
 // AuthHandler returns a http handler that requires HTTP basic auth
@@ -34,7 +31,7 @@ type basicAuthHandler struct {
 }
 
 func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if h.username != "" && h.password != "" {
+	if h.username != "" || h.password != "" {
 		reqUsername, reqPassword, ok := req.BasicAuth()
 		if !ok ||
 			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.username)) != 1 ||
@@ -49,6 +46,9 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 
 	h.next.ServeHTTP(rw, req)
 }
+
+// ErrorFunc is a callback for writing an error response.
+type ErrorFunc func(rw http.ResponseWriter, code int)
 
 // IPRangeHandler returns a http handler that requires the remote address to be
 // in the specified network.

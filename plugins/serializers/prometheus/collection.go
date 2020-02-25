@@ -1,7 +1,6 @@
 package prometheus
 
 import (
-	"fmt"
 	"hash/fnv"
 	"sort"
 	"strconv"
@@ -329,11 +328,9 @@ func (c *Collection) Add(metric telegraf.Metric) {
 }
 
 func (c *Collection) Expire(now time.Time, age time.Duration) {
-	fmt.Println(0, now, age)
 	expireTime := now.Add(-age)
 	for _, entry := range c.Entries {
 		for key, metric := range entry.Metrics {
-			fmt.Println(1, metric.Time, expireTime)
 			if metric.Time.Before(expireTime) {
 				delete(entry.Metrics, key)
 				if len(entry.Metrics) == 0 {

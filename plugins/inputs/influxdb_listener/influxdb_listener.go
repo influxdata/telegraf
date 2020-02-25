@@ -259,7 +259,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		// Handle gzip request bodies
 		if req.Header.Get("Content-Encoding") == "gzip" {
 			var err error
-			body, err = gzip.NewReader(req.Body)
+			body, err = gzip.NewReader(body)
 			if err != nil {
 				h.log.Debugf("Error decompressing request body: %v", err.Error())
 				badRequest(res, err.Error())
@@ -281,8 +281,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 		var m telegraf.Metric
 		var parseErrorCount int
-		var lastPos int
-		lastPos = 0
+		var lastPos int = 0
 		var firstParseErrorStr string
 		for {
 			m, err = parser.Next()
@@ -296,7 +295,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				errStr := parseErr.Error()
 				if firstParseErrorStr == "" {
 					firstParseErrorStr = errStr
-				} else {
 				}
 				continue
 			} else if err != nil {
