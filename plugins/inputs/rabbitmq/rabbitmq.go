@@ -587,12 +587,12 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 			"rabbitmq_queue",
 			map[string]interface{}{
 				// common information
-				"consumers":                    queue.Consumers,
-				"consumer_utilisation":         queue.ConsumerUtilisation,
-				"idle_since":                   queue.IdleSince,
-				"slave_nodes_len":              len(queue.SlaveNodes),
-				"synchronised_slave_nodes_len": len(queue.SynchronisedSlaveNodes),
-				"memory":                       queue.Memory,
+				"consumers":                queue.Consumers,
+				"consumer_utilisation":     queue.ConsumerUtilisation,
+				"idle_since":               queue.IdleSince,
+				"slave_nodes":              len(queue.SlaveNodes),
+				"synchronised_slave_nodes": len(queue.SynchronisedSlaveNodes),
+				"memory":                   queue.Memory,
 				// messages information
 				"message_bytes":             queue.MessageBytes,
 				"message_bytes_ready":       queue.MessageBytesReady,
