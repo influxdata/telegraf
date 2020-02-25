@@ -193,6 +193,10 @@ func (tm *testMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
 }
 
+func (tm *testMetricMaker) Log() telegraf.Logger {
+	return models.NewLogger("test", "test", "")
+}
+
 type testOutput struct {
 	// if true, mock a write failure
 	failWrite bool

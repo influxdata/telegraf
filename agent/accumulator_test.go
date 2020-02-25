@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,7 +60,6 @@ func TestAccAddError(t *testing.T) {
 	a.AddError(fmt.Errorf("baz"))
 
 	errs := bytes.Split(errBuf.Bytes(), []byte{'\n'})
-	assert.EqualValues(t, int64(3), NErrors.Get())
 	require.Len(t, errs, 4) // 4 because of trailing newline
 	assert.Contains(t, string(errs[0]), "TestPlugin")
 	assert.Contains(t, string(errs[0]), "foo")
@@ -153,4 +153,8 @@ func (tm *TestMetricMaker) LogName() string {
 
 func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
+}
+
+func (tm *TestMetricMaker) Log() telegraf.Logger {
+	return models.NewLogger("TestPlugin", "test", "")
 }

@@ -196,6 +196,7 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		}
 	}
 
+	hasErrors := false
 	for _, input := range a.Config.Inputs {
 		select {
 		case <-ctx.Done():
@@ -215,15 +216,18 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 			nulAcc.SetPrecision(a.Precision())
 			if err := input.Input.Gather(nulAcc); err != nil {
 				acc.AddError(err)
+				hasErrors = true
 			}
 
 			time.Sleep(500 * time.Millisecond)
 			if err := input.Input.Gather(acc); err != nil {
 				acc.AddError(err)
+				hasErrors = true
 			}
 		default:
 			if err := input.Input.Gather(acc); err != nil {
 				acc.AddError(err)
+				hasErrors = true
 			}
 		}
 	}
@@ -235,7 +239,7 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		a.stopServiceInputs()
 	}
 
-	if NErrors.Get() > 0 {
+	if hasErrors {
 		return fmt.Errorf("One or more input plugins had an error")
 	}
 	return nil
