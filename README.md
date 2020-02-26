@@ -309,6 +309,7 @@ For documentation on the latest development code see the [documentation index][d
 * [unbound](./plugins/inputs/unbound)
 * [uwsgi](./plugins/inputs/uwsgi)
 * [varnish](./plugins/inputs/varnish)
+* [vespa](./plugins/inputs/vespa)
 * [vsphere](./plugins/inputs/vsphere) VMware vSphere
 * [webhooks](./plugins/inputs/webhooks)
   * [filestack](./plugins/inputs/webhooks/filestack)
