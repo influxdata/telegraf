@@ -98,6 +98,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"messages_redeliver":        33,
 		"messages_redeliver_rate":   2.5,
 		"idle_since":                "2015-11-01 8:22:14",
+		"slave_nodes":               1,
+		"synchronised_slave_nodes":  1,
 	}
 	compareMetrics(t, queuesMetrics, acc, "rabbitmq_queue")
 

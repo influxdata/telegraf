@@ -121,17 +121,19 @@ type QueueTotals struct {
 
 // Queue ...
 type Queue struct {
-	QueueTotals         // just to not repeat the same code
-	MessageStats        `json:"message_stats"`
-	Memory              int64
-	Consumers           int64
-	ConsumerUtilisation float64 `json:"consumer_utilisation"`
-	Name                string
-	Node                string
-	Vhost               string
-	Durable             bool
-	AutoDelete          bool   `json:"auto_delete"`
-	IdleSince           string `json:"idle_since"`
+	QueueTotals            // just to not repeat the same code
+	MessageStats           `json:"message_stats"`
+	Memory                 int64
+	Consumers              int64
+	ConsumerUtilisation    float64 `json:"consumer_utilisation"`
+	Name                   string
+	Node                   string
+	Vhost                  string
+	Durable                bool
+	AutoDelete             bool     `json:"auto_delete"`
+	IdleSince              string   `json:"idle_since"`
+	SlaveNodes             []string `json:"slave_nodes"`
+	SynchronisedSlaveNodes []string `json:"synchronised_slave_nodes"`
 }
 
 // Node ...
@@ -585,10 +587,12 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 			"rabbitmq_queue",
 			map[string]interface{}{
 				// common information
-				"consumers":            queue.Consumers,
-				"consumer_utilisation": queue.ConsumerUtilisation,
-				"idle_since":           queue.IdleSince,
-				"memory":               queue.Memory,
+				"consumers":                queue.Consumers,
+				"consumer_utilisation":     queue.ConsumerUtilisation,
+				"idle_since":               queue.IdleSince,
+				"slave_nodes":              len(queue.SlaveNodes),
+				"synchronised_slave_nodes": len(queue.SynchronisedSlaveNodes),
+				"memory":                   queue.Memory,
 				// messages information
 				"message_bytes":             queue.MessageBytes,
 				"message_bytes_ready":       queue.MessageBytesReady,
