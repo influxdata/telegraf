@@ -49,6 +49,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/uuid v2.1.0+incompatible
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
+	github.com/golang/geo v0.0.0-20190916061304-5b978397cfec
 	github.com/golang/mock v1.3.1-0.20190508161146-9fa652df1129 // indirect
 	github.com/golang/protobuf v1.3.2
 	github.com/google/go-cmp v0.3.0
