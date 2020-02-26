@@ -50,6 +50,7 @@
 - [#7039](https://github.com/influxdata/telegraf/pull/7039): Add process created_at time to procstat input.
 - [#7022](https://github.com/influxdata/telegraf/pull/7022): Add support for credentials file to nats_consumer and nats output.
 - [#7065](https://github.com/influxdata/telegraf/pull/7065): Add additional tags and fields to apcupsd.
+- [#7084](https://github.com/influxdata/telegraf/pull/7084): Add RabbitMQ slave_nodes and synchronized_slave_nodes metrics.
 
 #### Bugfixes
 
