@@ -8,10 +8,10 @@ import (
 )
 
 type Geo struct {
-	LatField      string `toml:"lat_field"`
-	LonField      string `toml:"lon_field"`
-	TagKey        string `toml:"tag_key"`
-	CellLevel     int    `toml:"cell_level"`
+	LatField  string `toml:"lat_field"`
+	LonField  string `toml:"lon_field"`
+	TagKey    string `toml:"tag_key"`
+	CellLevel int    `toml:"cell_level"`
 }
 
 var SampleConfig = `
