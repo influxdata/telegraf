@@ -15,7 +15,7 @@ type Geo struct {
 }
 
 var SampleConfig = `
-  ## The name of the lat and lon fields holding WGS-84 coordinates in degrees
+  ## The name of the lat and lon fields containing WGS-84 latitude and longitude in decimal degrees
   lat_field = "lat"
   lon_field = "lon"
 
