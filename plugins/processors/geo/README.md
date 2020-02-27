@@ -1,14 +1,14 @@
 # Geo Processor Plugin
 
-Use the `geo` processor to add tag with S2 cell ID token of specified [`cell level`][cell levels].
-
+Use the `geo` processor to add tag with S2 cell ID token of specified [cell level][cell levels].
 The tag is used in `experimental/geo` Flux package functions.
+The `lat` and `lon` fields values should be WGS-84 coordinates in degrees.
 
 ### Configuration
 
 ```toml
 [[processors.geo]]
-  ## The name of the lat and lon fields
+  ## The name of the lat and lon fields holding WGS-84 coordinates in degrees
   lat_field = "lat"
   lon_field = "lon"
 
