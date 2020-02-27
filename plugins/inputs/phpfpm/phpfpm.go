@@ -298,7 +298,7 @@ func globUnixSocket(url string) ([]string, error) {
 	pattern, status := unixSocketPaths(url)
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "couldn't read the file path pattern %q", pattern)
 	}
 
 	addrs := make([]string, 0, len(paths))
