@@ -5,24 +5,39 @@ import (
 	"reflect"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/selfstat"
 )
 
 // Logger defines a logging structure for plugins.
 type Logger struct {
-	Errs selfstat.Stat
-	Name string // Name is the plugin name, will be printed in the `[]`.
+	OnErrs []func()
+	Name   string // Name is the plugin name, will be printed in the `[]`.
+}
+
+// NewLogger creates a new logger instance
+func NewLogger(pluginType, name, alias string) *Logger {
+	return &Logger{
+		Name: logName(pluginType, name, alias),
+	}
+}
+
+// OnErr defines a callback that triggers only when errors are about to be written to the log
+func (l *Logger) OnErr(f func()) {
+	l.OnErrs = append(l.OnErrs, f)
 }
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.Errs.Incr(1)
+	for _, f := range l.OnErrs {
+		f()
+	}
 	log.Printf("E! ["+l.Name+"] "+format, args...)
 }
 
 // Error logs an error message, patterned after log.Print.
 func (l *Logger) Error(args ...interface{}) {
-	l.Errs.Incr(1)
+	for _, f := range l.OnErrs {
+		f()
+	}
 	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
 }
 
