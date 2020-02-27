@@ -17,9 +17,6 @@ The `lat` and `lon` fields values should be WGS-84 coordinates in degrees.
 
   ## Cell level (see https://s2geometry.io/resources/s2cell_statistics.html)
   cell_level = 11
-
-  ## Log mismatches
-  log_mismatches = false
 ```
 
 ### Example
