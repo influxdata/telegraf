@@ -8,16 +8,15 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -297,11 +296,11 @@ func expandUrls(urls []string) ([]string, error) {
 
 func globUnixSocket(url string) ([]string, error) {
 	pattern, status := unixSocketPaths(url)
-	paths, err := filepath.Glob(pattern)
+	glob, err := globpath.Compile(pattern)
 	if err != nil {
-		return nil, errors.Wrapf(err, "couldn't read the file path pattern %q", pattern)
+		return nil, fmt.Errorf("couldn not compile glob %q: %v", pattern, err)
 	}
-
+	paths := glob.Match()
 	addrs := make([]string, 0, len(paths))
 
 	if len(paths) == 0 {
