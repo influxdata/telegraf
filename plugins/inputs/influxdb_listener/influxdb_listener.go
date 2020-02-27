@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -38,8 +37,6 @@ type InfluxDBListener struct {
 	DatabaseTag   string            `toml:"database_tag"`
 
 	timeFunc influx.TimeFunc
-
-	wg sync.WaitGroup
 
 	listener net.Listener
 	server   http.Server
@@ -180,10 +177,11 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	h.listener = listener
 	h.port = listener.Addr().(*net.TCPAddr).Port
 
-	h.wg.Add(1)
 	go func() {
-		defer h.wg.Done()
-		h.server.Serve(h.listener)
+		err = h.server.Serve(h.listener)
+		if err != http.ErrServerClosed {
+			h.log.Infof("Error serving HTTP on %s", h.ServiceAddress)
+		}
 	}()
 
 	h.log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
@@ -193,11 +191,10 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 
 // Stop cleans up all resources
 func (h *InfluxDBListener) Stop() {
-	deadline := time.Now().Add(10 * time.Second)
-	ctx, cancel := context.WithDeadline(context.Background(), deadline)
-	defer cancel() // go vet requires us to call cancel even though we're waiting for the deadline
-	h.server.Shutdown(ctx)
-	h.wg.Wait()
+	err := h.server.Shutdown(context.Background())
+	if err != nil {
+		h.log.Infof("Error shutting down HTTP server: %v", err.Error())
+	}
 
 	h.log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
 }
@@ -271,7 +268,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		parser := influx.NewStreamParser(body)
 		parser.SetTimeFunc(h.timeFunc)
 
-		var err error
 		precisionStr := req.URL.Query().Get("precision")
 		if precisionStr != "" {
 			var precision time.Duration
@@ -280,16 +276,25 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		}
 
 		var m telegraf.Metric
+		var err error
 		var parseErrorCount int
 		var lastPos int = 0
 		var firstParseErrorStr string
 		for {
+			select {
+			case <-req.Context().Done():
+				// Shutting down before parsing is finished.
+				res.WriteHeader(http.StatusServiceUnavailable)
+				return
+			default:
+			}
+
 			m, err = parser.Next()
 			pos := parser.Position()
 			h.bytesRecv.Incr(int64(pos - lastPos))
 			lastPos = pos
 
-			//continue parsing metrics even if some are malformed
+			// Continue parsing metrics even if some are malformed
 			if parseErr, ok := err.(*influx.ParseError); ok {
 				parseErrorCount += 1
 				errStr := parseErr.Error()
@@ -298,13 +303,17 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				}
 				continue
 			} else if err != nil {
+				// Either we're exiting cleanly (err ==
+				// influx.EOF) or there's an unexpected error
 				break
 			}
 
 			if h.DatabaseTag != "" && db != "" {
 				m.AddTag(h.DatabaseTag, db)
 			}
+
 			h.acc.AddMetric(m)
+
 		}
 		if err != influx.EOF {
 			h.log.Debugf("Error parsing the request body: %v", err.Error())
@@ -322,9 +331,11 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
 			}
 			partialWrite(res, partialErrorString)
-		} else {
-			res.WriteHeader(http.StatusNoContent)
+			return
 		}
+
+		// http request success
+		res.WriteHeader(http.StatusNoContent)
 	}
 }
 
