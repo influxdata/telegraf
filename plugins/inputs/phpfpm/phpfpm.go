@@ -298,7 +298,7 @@ func globUnixSocket(url string) ([]string, error) {
 	pattern, status := unixSocketPaths(url)
 	glob, err := globpath.Compile(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("couldn not compile glob %q: %v", pattern, err)
+		return nil, fmt.Errorf("could not compile glob %q: %v", pattern, err)
 	}
 	paths := glob.Match()
 	addrs := make([]string, 0, len(paths))
