@@ -19,6 +19,8 @@ Get phpfpm stats using either HTTP status page or fpm socket.
   ##       "/var/run/php5-fpm.sock"
   ##      or using a custom fpm status path:
   ##       "/var/run/php5-fpm.sock:fpm-custom-status-path"
+  ##      glob patterns are also supported:
+  ##       "/var/run/php*.sock"
   ##
   ##   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
   ##       "fcgi://10.0.0.12:9000/status"
