@@ -299,18 +299,13 @@ func globUnixSocket(url string) ([]string, error) {
 	}
 	paths := glob.Match()
 	if len(paths) == 0 {
-		return nil, nil
-	}
-
-	// globpath.Match() returns the given argument when it's a static path,
-	// i.e., not a glob pattern. In that case, ensure it exists.
-	if len(paths) == 1 && paths[0] == pattern {
 		if _, err := os.Stat(paths[0]); err != nil {
 			if os.IsNotExist(err) {
 				return nil, fmt.Errorf("Socket doesn't exist  '%s': %s", pattern, err)
 			}
 			return nil, err
 		}
+		return nil, nil
 	}
 
 	addrs := make([]string, 0, len(paths))
