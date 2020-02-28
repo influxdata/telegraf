@@ -163,9 +163,6 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		if statusPath == "" {
 			statusPath = "status"
 		}
-		if _, err := os.Stat(socketPath); os.IsNotExist(err) {
-			return fmt.Errorf("Socket doesn't exist  '%s': %s", socketPath, err)
-		}
 		fcgi, err = newFcgiClient("unix", socketPath)
 	}
 
@@ -301,15 +298,22 @@ func globUnixSocket(url string) ([]string, error) {
 		return nil, fmt.Errorf("could not compile glob %q: %v", pattern, err)
 	}
 	paths := glob.Match()
-	addrs := make([]string, 0, len(paths))
-
 	if len(paths) == 0 {
-		_, err := os.Stat(pattern)
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("Socket doesn't exist  '%s': %s", pattern, err)
-		}
-		return nil, err
+		return nil, nil
 	}
+
+	// globpath.Match() returns the given argument when it's a static path,
+	// i.e., not a glob pattern. In that case, ensure it exists.
+	if len(paths) == 1 && paths[0] == pattern {
+		if _, err := os.Stat(paths[0]); err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("Socket doesn't exist  '%s': %s", pattern, err)
+			}
+			return nil, err
+		}
+	}
+
+	addrs := make([]string, 0, len(paths))
 
 	for _, path := range paths {
 		if status != "" {
