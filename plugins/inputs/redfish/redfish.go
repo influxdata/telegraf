@@ -1,3 +1,6 @@
+// Copyright 2020, Verizon
+//Licensed under the terms of the MIT License. SEE LICENSE file in project root for terms.
+
 package redfish
 
 import (
