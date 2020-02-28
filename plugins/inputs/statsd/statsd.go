@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"sort"
 	"strconv"
@@ -250,7 +251,24 @@ func (_ *Statsd) SampleConfig() string {
 func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
+
+	// Gather all stats types in parallel.
+	var wg sync.WaitGroup
+	wg.Add(4)
+	c := len(s.timings) + len(s.gauges) + len(s.counters) + len(s.sets)
 	now := time.Now()
+	go s.gatherTimings(acc, now, &wg)
+	go s.gatherGauges(acc, now, &wg)
+	go s.gatherCounters(acc, now, &wg)
+	go s.gatherSets(acc, now, &wg)
+	wg.Wait()
+	log.Printf("D! [inputs.statsd] collected %d metrics in %s\n", c, time.Since(now))
+
+	return nil
+}
+
+func (s *Statsd) gatherTimings(acc telegraf.Accumulator, now time.Time, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	for _, m := range s.timings {
 		// Defining a template to parse field names for timers allows us to split
@@ -276,23 +294,56 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
+
+	c := len(s.timings)
 	if s.DeleteTimings {
-		s.timings = make(map[string]cachedtimings)
+		// Delete instead of reinitialise which is optimised by the compiler.
+		// https://github.com/golang/go/commit/aee71dd70b3779c66950ce6a952deca13d48e55e
+		for k := range s.timings {
+			delete(s.timings, k)
+		}
 	}
+	log.Printf("D! [inputs.statsd] collected %d timings in %s\n", c, time.Since(now))
+}
+
+func (s *Statsd) gatherGauges(acc telegraf.Accumulator, now time.Time, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	for _, m := range s.gauges {
 		acc.AddGauge(m.name, m.fields, m.tags, now)
 	}
+
+	c := len(s.gauges)
 	if s.DeleteGauges {
-		s.gauges = make(map[string]cachedgauge)
+		// Delete instead of reinitialise which is optimised by the compiler.
+		// https://github.com/golang/go/commit/aee71dd70b3779c66950ce6a952deca13d48e55e
+		for k := range s.gauges {
+			delete(s.gauges, k)
+		}
 	}
+	log.Printf("D! [inputs.statsd] collected %d gauges in %s\n", c, time.Since(now))
+}
+
+func (s *Statsd) gatherCounters(acc telegraf.Accumulator, now time.Time, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	for _, m := range s.counters {
 		acc.AddCounter(m.name, m.fields, m.tags, now)
 	}
+
+	c := len(s.counters)
 	if s.DeleteCounters {
-		s.counters = make(map[string]cachedcounter)
+		// Delete instead of reinitialise which is optimised by the compiler.
+		// https://github.com/golang/go/commit/aee71dd70b3779c66950ce6a952deca13d48e55e
+		for k := range s.counters {
+			delete(s.counters, k)
+		}
 	}
+	log.Printf("D! [inputs.statsd] collected %d counters in %s\n", c, time.Since(now))
+}
+
+func (s *Statsd) gatherSets(acc telegraf.Accumulator, now time.Time, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	for _, m := range s.sets {
 		fields := make(map[string]interface{})
@@ -301,10 +352,16 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddFields(m.name, fields, m.tags, now)
 	}
+
+	c := len(s.sets)
 	if s.DeleteSets {
-		s.sets = make(map[string]cachedset)
+		// Delete instead of reinitialise which is optimised by the compiler.
+		// https://github.com/golang/go/commit/aee71dd70b3779c66950ce6a952deca13d48e55e
+		for k := range s.sets {
+			delete(s.sets, k)
+		}
 	}
-	return nil
+	log.Printf("D! [inputs.statsd] collected %d sets in %s\n", c, time.Since(now))
 }
 
 func (s *Statsd) Start(ac telegraf.Accumulator) error {
@@ -323,7 +380,7 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 
 	s.Lock()
 	defer s.Unlock()
-	//
+
 	tags := map[string]string{
 		"address": s.ServiceAddress,
 	}

@@ -51,9 +51,9 @@ func (a *Agent) Run(ctx context.Context) error {
 		return err
 	}
 
-	inputC := make(chan telegraf.Metric, 100)
-	procC := make(chan telegraf.Metric, 100)
-	outputC := make(chan telegraf.Metric, 100)
+	inputC := make(chan telegraf.Metric, a.Config.Agent.MetricBatchSize)
+	procC := make(chan telegraf.Metric, a.Config.Agent.MetricBatchSize)
+	outputC := make(chan telegraf.Metric, a.Config.Agent.MetricBatchSize)
 
 	startTime := time.Now()
 
