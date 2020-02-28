@@ -15,8 +15,12 @@ type RPiGPIO struct {
 
 func (s *RPiGPIO) SampleConfig() string {
 	return `
-  ## Map data fields to pin numbers
-  pins = {"motion_sensor"=1, "button"=2, "light_sensor"=3}
+  ## Provide a data field name to gpio pin numbers
+  ## Numbers correspond to the GPIO number, not the physical pin number
+  [inputs.rpi_gpio.pins]
+  button = 2
+  motion_sensor = 3
+  light_sensor = 4
 	`
 }
 
@@ -39,13 +43,14 @@ func (s *RPiGPIO) Gather(acc telegraf.Accumulator) error {
 		pin := rpio.Pin(pin_num)
 		pin.Input()
 		val := pin.Read()
-		s.Log.Debugf("%s=%d", field, val)
-		fields[field] = val
+		s.Log.Debugf("%s=%v (%T)", field, val, val)
+		fields[field] = int(val)
 	}
 	s.Log.Debugf("Closing GPIO connections")
 	rpio.Close()
 
-	acc.AddFields("GPIO", fields, tags)
+	s.Log.Debugf("Fields: %s", fields)
+	acc.AddFields("gpio", fields, tags)
 	return nil
 }
 
