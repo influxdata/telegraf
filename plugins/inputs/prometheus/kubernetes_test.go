@@ -102,7 +102,6 @@ func TestPodSelector(t *testing.T) {
 		expected      []k8s.Option
 		labelselector string
 		fieldselector string
-		testtype      bool
 	}{
 		{
 			expected: []k8s.Option{
@@ -111,7 +110,6 @@ func TestPodSelector(t *testing.T) {
 			},
 			labelselector: "key1=val1,key2=val2,key3",
 			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
-			testtype:      true,
 		},
 		{
 			expected: []k8s.Option{
@@ -120,13 +118,14 @@ func TestPodSelector(t *testing.T) {
 			},
 			labelselector: "key1",
 			fieldselector: "spec.nodeName=ip-1-2-3-4.acme.com",
-			testtype:      true,
 		},
 		{
-			expected:      nil,
+			expected: []k8s.Option{
+				k8s.QueryParam("labelSelector", "key1"),
+				k8s.QueryParam("fieldSelector", "somefield"),
+			},
 			labelselector: "key1",
 			fieldselector: "somefield",
-			testtype:      false,
 		},
 	}
 
@@ -136,21 +135,10 @@ func TestPodSelector(t *testing.T) {
 			KubernetesLabelSelector: c.labelselector,
 			KubernetesFieldSelector: c.fieldselector,
 		}
-		if c.testtype {
-			output, err := podSelector(prom)
-			if err != nil {
-				t.Errorf("Expected is %v got %v\n", c.expected, output)
-			}
-		} else {
-			output, err := podSelector(prom)
 
-			if output != nil {
-				t.Errorf("Expected nil got %v", output[0])
-			}
-			if err == nil {
-				t.Errorf("Expected error got no error")
-			}
-		}
+		output := podSelector(prom)
+
+		assert.Equal(t, len(output), len(c.expected))
 	}
 }
 

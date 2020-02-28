@@ -15,8 +15,6 @@ import (
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
 	"github.com/ghodss/yaml"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 type payload struct {
@@ -85,11 +83,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 // directed to do so by K8s.
 func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 
-	selectors, err := podSelector(p)
-
-	if err != nil {
-		return err
-	}
+	selectors := podSelector(p)
 
 	pod := &corev1.Pod{}
 	watcher, err := client.Watch(ctx, p.PodNamespace, &corev1.Pod{}, selectors...)
@@ -144,28 +138,18 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 	return true
 }
 
-func podSelector(p *Prometheus) ([]k8s.Option, error) {
+func podSelector(p *Prometheus) []k8s.Option {
 	options := []k8s.Option{}
 
-	var err error
-
 	if len(p.KubernetesLabelSelector) > 0 {
-		_, err1 := labels.Parse(p.KubernetesLabelSelector)
-		if err1 != nil {
-			return nil, fmt.Errorf("Label Selector %s validation fail. Skipping it. Error %v", p.KubernetesLabelSelector, err)
-		}
 		options = append(options, k8s.QueryParam("labelSelector", p.KubernetesLabelSelector))
 	}
 
 	if len(p.KubernetesFieldSelector) > 0 {
-		_, err2 := fields.ParseSelector(p.KubernetesFieldSelector)
-		if err2 != nil {
-			return nil, fmt.Errorf("Provided Field Selector %s does not pass validation. Skipping it. Error %v", p.KubernetesFieldSelector, err)
-		}
 		options = append(options, k8s.QueryParam("fieldSelector", p.KubernetesFieldSelector))
 	}
 
-	return options, nil
+	return options
 
 }
 
