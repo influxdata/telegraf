@@ -72,7 +72,7 @@ action goto_align {
 }
 
 action begin_metric {
-	beginMetric = true
+	m.beginMetric = true
 }
 
 action name {
@@ -85,11 +85,11 @@ action name {
 }
 
 action tagkey {
-	key = m.text()
+	m.key = m.text()
 }
 
 action tagvalue {
-	err = m.handler.AddTag(key, m.text())
+	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -98,11 +98,11 @@ action tagvalue {
 }
 
 action fieldkey {
-	key = m.text()
+	m.key = m.text()
 }
 
 action integer {
-	err = m.handler.AddInt(key, m.text())
+	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -111,7 +111,7 @@ action integer {
 }
 
 action unsigned {
-	err = m.handler.AddUint(key, m.text())
+	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -120,7 +120,7 @@ action unsigned {
 }
 
 action float {
-	err = m.handler.AddFloat(key, m.text())
+	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -129,7 +129,7 @@ action float {
 }
 
 action bool {
-	err = m.handler.AddBool(key, m.text())
+	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -138,7 +138,7 @@ action bool {
 }
 
 action string {
-	err = m.handler.AddString(key, m.text())
+	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -162,13 +162,13 @@ action incr_newline {
 }
 
 action eol {
-	finishMetric = true
+	m.finishMetric = true
 	fnext align;
 	fbreak;
 }
 
 action finish_metric {
-	finishMetric = true
+	m.finishMetric = true
 }
 
 ws =
@@ -323,14 +323,17 @@ type Handler interface {
 }
 
 type machine struct {
-	data       []byte
-	cs         int
-	p, pe, eof int
-	pb         int
-	lineno     int
-	sol        int
-	handler    Handler
-	initState  int
+	data         []byte
+	cs           int
+	p, pe, eof   int
+	pb           int
+	lineno       int
+	sol          int
+	handler      Handler
+	initState    int
+	key          []byte
+	beginMetric  bool
+	finishMetric bool
 }
 
 func NewMachine(handler Handler) *machine {
@@ -374,6 +377,9 @@ func (m *machine) SetData(data []byte) {
 	m.sol = 0
 	m.pe = len(data)
 	m.eof = len(data)
+	m.key = nil
+	m.beginMetric = false
+	m.finishMetric = false
 
 	%% write init;
 	m.cs = m.initState
@@ -388,12 +394,15 @@ func (m *machine) Next() error {
 		return EOF
 	}
 
-	var err error
-	var key []byte
-	beginMetric := false
-	finishMetric := false
-	_ = finishMetric
+	m.key = nil
+	m.beginMetric = false
+	m.finishMetric = false
 
+	return m.exec()
+}
+
+func (m *machine) exec() error {
+	var err error
 	%% write exec;
 
 	if err != nil {
@@ -413,7 +422,7 @@ func (m *machine) Next() error {
 	//
 	// Otherwise we have successfully parsed a metric line, so if we are at
 	// the EOF we will report it the next call.
-	if !beginMetric && m.p == m.pe && m.pe == m.eof {
+	if !m.beginMetric && m.p == m.pe && m.pe == m.eof {
 		return EOF
 	}
 
@@ -447,101 +456,64 @@ func (m *machine) text() []byte {
 }
 
 type streamMachine struct {
-	reader     io.Reader
-	data       []byte
-	cs         int
-	p, pe, eof int
-	pb         int
-	lineno     int
-	sol        int
-	handler    Handler
-	initState  int
+	machine *machine
+	reader  io.Reader
 }
 
 func NewStreamMachine(r io.Reader, handler Handler) *streamMachine {
 	m := &streamMachine{
-		handler: handler,
-		initState: LineProtocol_en_align,
+		machine: NewMachine(handler),
+		reader: r,
 	}
 
-	m.reader = r
-	m.data = make([]byte, 1024)
-	m.p = 0
-	m.pb = 0
-	m.lineno = 1
-	m.sol = 0
-	m.pe = 0
-	m.eof = -1
-
-	%% access m.;
-	%% variable p m.p;
-	%% variable cs m.cs;
-	%% variable pe m.pe;
-	%% variable eof m.eof;
-	%% variable data m.data;
-	%% write init;
-
-	m.cs = m.initState
+	m.machine.SetData(make([]byte, 1024))
+	m.machine.pe = 0
+	m.machine.eof = -1
 	return m
 }
 
 func (m *streamMachine) Next() error {
 	// Check if we are already at EOF, this should only happen if called again
 	// after already returning EOF.
-	if m.p == m.pe && m.pe == m.eof {
+	if m.machine.p == m.machine.pe && m.machine.pe == m.machine.eof {
 		return EOF
 	}
 
-	copy(m.data, m.data[m.p:])
-	m.pe = m.pe - m.p
-	m.sol = m.sol - m.p
-	m.pb = 0
-	m.p = 0
-	m.eof = -1
+	copy(m.machine.data, m.machine.data[m.machine.p:])
+	m.machine.pe = m.machine.pe - m.machine.p
+	m.machine.sol = m.machine.sol - m.machine.p
+	m.machine.pb = 0
+	m.machine.p = 0
+	m.machine.eof = -1
 
-	var key []byte
-	beginMetric := false
-	finishMetric := false
+	m.machine.key = nil
+	m.machine.beginMetric = false
+	m.machine.finishMetric = false
 
 	for {
 		// Expand the buffer if it is full
-		if m.pe == len(m.data) {
-			expanded := make([]byte, 2 * len(m.data))
-			copy(expanded, m.data)
-			m.data = expanded
+		if m.machine.pe == len(m.machine.data) {
+			expanded := make([]byte, 2 * len(m.machine.data))
+			copy(expanded, m.machine.data)
+			m.machine.data = expanded
 		}
 
-		n, err := m.reader.Read(m.data[m.pe:])
+		n, err := m.reader.Read(m.machine.data[m.machine.pe:])
 		if n == 0 && err == io.EOF {
-			m.eof = m.pe
+			m.machine.eof = m.machine.pe
 		} else if err != nil && err != io.EOF {
 			return err
 		}
 
-		m.pe += n
+		m.machine.pe += n
 
-		err = nil
-		%% write exec;
+		err = m.machine.exec()
 		if err != nil {
 			return err
 		}
 
-		// This would indicate an error in the machine that was reported with a
-		// more specific error.  We return a generic error but this should
-		// possibly be a panic.
-		if m.cs == %%{ write error; }%% {
-			m.cs = LineProtocol_en_discard_line
-			return ErrParse
-		}
-
-		// If we haven't found a metric line yet and we reached the EOF, report it
-		// now.  This happens when the data ends with a comment or whitespace.
-		if !beginMetric && m.p == m.pe && m.pe == m.eof {
-			return EOF
-		}
-
 		// If we have successfully parsed a full metric line break out
-		if finishMetric {
+		if m.machine.finishMetric {
 			break
 		}
 
@@ -552,31 +524,26 @@ func (m *streamMachine) Next() error {
 
 // Position returns the current byte offset into the data.
 func (m *streamMachine) Position() int {
-	return m.p
+	return m.machine.Position()
 }
 
 // LineOffset returns the byte offset of the current line.
 func (m *streamMachine) LineOffset() int {
-	return m.sol
+	return m.machine.LineOffset()
 }
 
 // LineNumber returns the current line number.  Lines are counted based on the
 // regular expression `\r?\n`.
 func (m *streamMachine) LineNumber() int {
-	return m.lineno
+	return m.machine.LineNumber()
 }
 
 // Column returns the current column.
 func (m *streamMachine) Column() int {
-	lineOffset := m.p - m.sol
-	return lineOffset + 1
+	return m.machine.Column()
 }
 
 // LineText returns the text of the current line that has been parsed so far.
 func (m *streamMachine) LineText() string {
-	return string(m.data[0:m.p])
-}
-
-func (m *streamMachine) text() []byte {
-	return m.data[m.pb:m.p]
+	return string(m.machine.data[0:m.machine.p])
 }
