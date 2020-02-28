@@ -32,6 +32,7 @@ type InfluxDBListener struct {
 	ReadTimeout   internal.Duration `toml:"read_timeout"`
 	WriteTimeout  internal.Duration `toml:"write_timeout"`
 	MaxBodySize   internal.Size     `toml:"max_body_size"`
+	MaxLineSize   internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
 	BasicUsername string            `toml:"basic_username"`
 	BasicPassword string            `toml:"basic_password"`
 	DatabaseTag   string            `toml:"database_tag"`
@@ -53,7 +54,7 @@ type InfluxDBListener struct {
 	buffersCreated  selfstat.Stat
 	authFailures    selfstat.Stat
 
-	log telegraf.Logger
+	Log telegraf.Logger `toml:"-"`
 
 	mux http.ServeMux
 }
@@ -96,7 +97,7 @@ func (h *InfluxDBListener) SampleConfig() string {
 }
 
 func (h *InfluxDBListener) Description() string {
-	return "InfluxDB listener"
+	return "Accept metrics over InfluxDB 1.x HTTP API"
 }
 
 func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
@@ -133,6 +134,10 @@ func (h *InfluxDBListener) Init() error {
 
 	if h.MaxBodySize.Size == 0 {
 		h.MaxBodySize.Size = defaultMaxBodySize
+	}
+
+	if h.MaxLineSize.Size != 0 {
+		h.Log.Warnf("Use of deprecated configuration: 'max_line_size'; parser now handles lines of unlimited length and option is ignored")
 	}
 
 	if h.ReadTimeout.Duration < time.Second {
@@ -180,11 +185,11 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 	go func() {
 		err = h.server.Serve(h.listener)
 		if err != http.ErrServerClosed {
-			h.log.Infof("Error serving HTTP on %s", h.ServiceAddress)
+			h.Log.Infof("Error serving HTTP on %s", h.ServiceAddress)
 		}
 	}()
 
-	h.log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
+	h.Log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
 
 	return nil
 }
@@ -193,10 +198,8 @@ func (h *InfluxDBListener) Start(acc telegraf.Accumulator) error {
 func (h *InfluxDBListener) Stop() {
 	err := h.server.Shutdown(context.Background())
 	if err != nil {
-		h.log.Infof("Error shutting down HTTP server: %v", err.Error())
+		h.Log.Infof("Error shutting down HTTP server: %v", err.Error())
 	}
-
-	h.log.Infof("Stopped HTTP listener service on %s", h.ServiceAddress)
 }
 
 func (h *InfluxDBListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -258,7 +261,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			var err error
 			body, err = gzip.NewReader(body)
 			if err != nil {
-				h.log.Debugf("Error decompressing request body: %v", err.Error())
+				h.Log.Debugf("Error decompressing request body: %v", err.Error())
 				badRequest(res, err.Error())
 				return
 			}
@@ -316,7 +319,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 		}
 		if err != influx.EOF {
-			h.log.Debugf("Error parsing the request body: %v", err.Error())
+			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			badRequest(res, err.Error())
 			return
 		}

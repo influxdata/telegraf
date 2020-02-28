@@ -48,7 +48,7 @@ var (
 
 func newTestListener() *InfluxDBListener {
 	listener := &InfluxDBListener{
-		log:            testutil.Logger{},
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		timeFunc:       time.Now,
 	}
@@ -64,7 +64,7 @@ func newTestAuthListener() *InfluxDBListener {
 
 func newTestSecureListener() *InfluxDBListener {
 	listener := &InfluxDBListener{
-		log:            testutil.Logger{},
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		ServerConfig:   *pki.TLSServerConfig(),
 		timeFunc:       time.Now,
@@ -256,7 +256,7 @@ func TestPartialWrite(t *testing.T) {
 
 func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	listener := &InfluxDBListener{
-		log:            testutil.Logger{},
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		timeFunc:       time.Now,
 	}
@@ -275,7 +275,7 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 
 func TestWriteVerySmallMaxBody(t *testing.T) {
 	listener := &InfluxDBListener{
-		log:            testutil.Logger{},
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		MaxBodySize:    internal.Size{Size: 4096},
 		timeFunc:       time.Now,
@@ -294,7 +294,7 @@ func TestWriteVerySmallMaxBody(t *testing.T) {
 
 func TestWriteLargeLine(t *testing.T) {
 	listener := &InfluxDBListener{
-		log:            testutil.Logger{},
+		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 		timeFunc: func() time.Time {
 			return time.Unix(123456789, 0)
