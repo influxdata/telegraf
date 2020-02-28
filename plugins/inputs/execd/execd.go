@@ -21,12 +21,13 @@ const sampleConfig = `
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.
-
   ## Valid values are:
   ##   "none"   : Do not signal anything.
   ##              The process must output metrics by itself.
-  ##   "STDIN"  : Send a newline on STDIN.
-  ##   "SIGHUP" : Send a HUP signal. Not available on Windows.
+  ##   "STDIN"   : Send a newline on STDIN.
+  ##   "SIGHUP"  : Send a HUP signal. Not available on Windows.
+  ##   "SIGUSR1" : Send a USR1 signal. Not available on Windows.
+  ##   "SIGUSR2" : Send a USR2 signal. Not available on Windows.
   signal = "none"
 
   ## Delay before the process is restarted after an unexpected termination
@@ -100,9 +101,10 @@ func (e *Execd) cmdLoop(ctx context.Context) {
 
 		select {
 		case <-ctx.Done():
+			e.stdin.Close()
 			// Immediately exit process but with a graceful shutdown
 			// period before killing
-			internal.WaitTimeout(e.cmd, 0)
+			internal.WaitTimeout(e.cmd, 200*time.Millisecond)
 			return
 		case err := <-done:
 			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)

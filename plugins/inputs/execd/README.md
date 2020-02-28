@@ -1,6 +1,7 @@
 # Execd Input Plugin
 
-The `execd` plugin runs an external program as a daemon. The programs must output metrics in any one of the accepted [Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md) on its standard output.
+The `execd` plugin runs an external program as a daemon. The programs must output metrics in any one of the accepted 
+[Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md) on its standard output.
 
 The `signal` can be configured to send a signal the running daemon on each collection interval.
 
@@ -9,11 +10,11 @@ Program output on standard error is mirrored to the telegraf log.
 ### Configuration:
 
 ```toml
+[[inputs.execd]]
   ## Program to run as daemon
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.
-
   ## Valid values are:
   ##   "none"    : Do not signal anything.
   ##              The process must output metrics by itself.
