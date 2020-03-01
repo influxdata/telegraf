@@ -63,10 +63,11 @@ func NewRunningOutput(
 		tags["alias"] = config.Alias
 	}
 
-	logger := &Logger{
-		Name: logName("outputs", config.Name, config.Alias),
-		Errs: selfstat.Register("write", "errors", tags),
-	}
+	writeErrorsRegister := selfstat.Register("write", "errors", tags)
+	logger := NewLogger("outputs", config.Name, config.Alias)
+	logger.OnErr(func() {
+		writeErrorsRegister.Incr(1)
+	})
 	setLogIfExist(output, logger)
 
 	if config.MetricBufferLimit > 0 {
@@ -210,6 +211,7 @@ func (ro *RunningOutput) WriteBatch() error {
 	return nil
 }
 
+// Close closes the output
 func (r *RunningOutput) Close() {
 	err := r.Output.Close()
 	if err != nil {
@@ -238,4 +240,8 @@ func (r *RunningOutput) write(metrics []telegraf.Metric) error {
 func (r *RunningOutput) LogBufferStatus() {
 	nBuffer := r.buffer.Len()
 	r.log.Debugf("Buffer fullness: %d / %d metrics", nBuffer, r.MetricBufferLimit)
+}
+
+func (r *RunningOutput) Log() telegraf.Logger {
+	return r.log
 }

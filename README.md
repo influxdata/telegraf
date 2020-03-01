@@ -114,7 +114,7 @@ telegraf config > telegraf.conf
 #### Generate config with only cpu input & influxdb output plugins defined:
 
 ```
-telegraf --input-filter cpu --output-filter influxdb config
+telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
 ```
 
 #### Run a single telegraf collection, outputing metrics to stdout:
@@ -185,6 +185,7 @@ For documentation on the latest development code see the [documentation index][d
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [ethtool](./plugins/inputs/ethtool)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
+* [execd](./plugins/inputs/execd)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
 * [file](./plugins/inputs/file)
@@ -352,20 +353,21 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Processor Plugins
 
-* [clone](./plugins/processors/clone)
-* [converter](./plugins/processors/converter)
-* [date](./plugins/processors/date)
-* [enum](./plugins/processors/enum)
-* [override](./plugins/processors/override)
-* [parser](./plugins/processors/parser)
-* [pivot](./plugins/processors/pivot)
-* [printer](./plugins/processors/printer)
-* [regex](./plugins/processors/regex)
-* [rename](./plugins/processors/rename)
-* [strings](./plugins/processors/strings)
-* [tag_limit](./plugins/processors/tag_limit)
-* [topk](./plugins/processors/topk)
-* [unpivot](./plugins/processors/unpivot)
+* [clone](/plugins/processors/clone)
+* [converter](/plugins/processors/converter)
+* [date](/plugins/processors/date)
+* [enum](/plugins/processors/enum)
+* [override](/plugins/processors/override)
+* [parser](/plugins/processors/parser)
+* [pivot](/plugins/processors/pivot)
+* [printer](/plugins/processors/printer)
+* [regex](/plugins/processors/regex)
+* [rename](/plugins/processors/rename)
+* [strings](/plugins/processors/strings)
+* [tag_limit](/plugins/processors/tag_limit)
+* [template](/plugins/processors/template)
+* [topk](/plugins/processors/topk)
+* [unpivot](/plugins/processors/unpivot)
 
 ## Aggregator Plugins
 

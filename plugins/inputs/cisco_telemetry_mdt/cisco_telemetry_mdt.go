@@ -12,18 +12,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/metric"
-
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	internaltls "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
-	// Register GRPC gzip decoder to support compressed telemetry
+	"google.golang.org/grpc/credentials" // Register GRPC gzip decoder to support compressed telemetry
 	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/peer"
 )
@@ -79,7 +76,7 @@ func (c *CiscoTelemetryMDT) Start(acc telegraf.Accumulator) error {
 	// Fill extra tags
 	c.extraTags = make(map[string]map[string]struct{})
 	for _, tag := range c.EmbeddedTags {
-		dir := path.Dir(tag)
+		dir := strings.Replace(path.Dir(tag), "-", "_", -1)
 		if _, hasKey := c.extraTags[dir]; !hasKey {
 			c.extraTags[dir] = make(map[string]struct{})
 		}
@@ -403,7 +400,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		name = prefix + "/" + name
 	}
 
-	extraTags := c.extraTags[path+"/"+name]
+	extraTags := c.extraTags[strings.Replace(path, "-", "_", -1)+"/"+name]
 
 	if value := decodeValue(field); value != nil {
 		// Do alias lookup, to shorten measurement names
@@ -426,7 +423,7 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 	if len(extraTags) > 0 {
 		for _, subfield := range field.Fields {
 			if _, isExtraTag := extraTags[subfield.Name]; isExtraTag {
-				tags[name+"/"+subfield.Name] = decodeTag(subfield)
+				tags[name+"/"+strings.Replace(subfield.Name, "-", "_", -1)] = decodeTag(subfield)
 			}
 		}
 	}
@@ -494,6 +491,10 @@ func (c *CiscoTelemetryMDT) parseContentField(grouper *metric.SeriesGrouper, fie
 		}
 	}
 	delete(tags, prefix)
+}
+
+func (c *CiscoTelemetryMDT) Address() net.Addr {
+	return c.listener.Addr()
 }
 
 // Stop listener and cleanup
