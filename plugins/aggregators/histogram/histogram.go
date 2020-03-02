@@ -180,34 +180,26 @@ func (h *HistogramAggregator) groupFieldsByBuckets(
 	tags map[string]string,
 	counts []int64,
 ) {
-	if h.Cumulative {
-		count := int64(0)
-		for index, bucket := range h.getBuckets(name, field) {
-			count += counts[index]
+	sum := int64(0)
+	buckets := h.getBuckets(name, field) // note that len(buckets) + 1 == len(counts)
 
-			tags[bucketRightTag] = strconv.FormatFloat(bucket, 'f', -1, 64)
-			h.groupField(metricsWithGroupedFields, name, field, count, copyTags(tags))
-		}
+	for index, count := range counts {
+		if !h.Cumulative {
+			sum = 0 // reset sum -> don't store cumulative counts
 
-		count += counts[len(counts)-1]
-		tags[bucketRightTag] = bucketPosInf
-
-		h.groupField(metricsWithGroupedFields, name, field, count, tags)
-	} else {
-		buckets := h.getBuckets(name, field)
-		for index, count := range counts {
 			tags[bucketLeftTag] = bucketNegInf
 			if index > 0 {
 				tags[bucketLeftTag] = strconv.FormatFloat(buckets[index-1], 'f', -1, 64)
 			}
-
-			tags[bucketRightTag] = bucketPosInf
-			if index < len(buckets) {
-				tags[bucketRightTag] = strconv.FormatFloat(buckets[index], 'f', -1, 64)
-			}
-
-			h.groupField(metricsWithGroupedFields, name, field, count, copyTags(tags))
 		}
+
+		tags[bucketRightTag] = bucketPosInf
+		if index < len(buckets) {
+			tags[bucketRightTag] = strconv.FormatFloat(buckets[index], 'f', -1, 64)
+		}
+
+		sum += count
+		h.groupField(metricsWithGroupedFields, name, field, sum, copyTags(tags))
 	}
 }
 
