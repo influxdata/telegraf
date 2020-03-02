@@ -4,8 +4,9 @@ Collect metrics from the GPIO pins on a RaspberryPi
 
 This plugin using the [go-rpio](https://github.com/stianeikeland/go-rpio) library to read values from the GPIO pins.
 
-### Configuration
+## Configuration
 
+### Example
 ```
 # Reads binary values from the GPIO pins of a RaspberryPi
 [[inputs.rpi_gpio]]
@@ -17,6 +18,10 @@ This plugin using the [go-rpio](https://github.com/stianeikeland/go-rpio) librar
   motion_sensor = 3
   light_sensor = 4
   ```
+
+You must to create a named field for each pin you want to read data from. The pin number corresponds to the GPIO number as indicated on the image below.
+
+![RaspberryPi GPIO](GPIO.png)
 
 ## Measurements & Fields
 
