@@ -13,6 +13,34 @@ type RPiGPIO struct {
 	Log  telegraf.Logger `toml:"-"`
 }
 
+type GPIO interface {
+	Open() error
+	Close() error
+	ReadPin(pin_num int) int
+}
+
+type RPIO struct {
+}
+
+func (s *RPIO) Open() error {
+	return rpio.Open()
+}
+
+func (s *RPIO) Close() error {
+	return rpio.Close()
+}
+
+func (s *RPIO) ReadPin(pin_num int) int {
+	pin := rpio.Pin(pin_num)
+	pin.Input()
+	val := pin.Read()
+	return int(val)
+}
+
+var (
+	gpio GPIO = &RPIO{}
+)
+
 func (s *RPiGPIO) SampleConfig() string {
 	return `
   ## Provide a data field name to gpio pin numbers
@@ -34,20 +62,18 @@ func (s *RPiGPIO) Gather(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 
 	s.Log.Debugf("Opening GPIO connections")
-	err := rpio.Open()
+	err := gpio.Open()
 	if err != nil {
 		return fmt.Errorf("error opening GPIO connection: %s", err)
 	}
+	defer gpio.Close()
+
 	for field, pin_num := range s.Pins {
 		s.Log.Debugf("Reading %s from pin %d", field, pin_num)
-		pin := rpio.Pin(pin_num)
-		pin.Input()
-		val := pin.Read()
+		val := gpio.ReadPin(pin_num)
 		s.Log.Debugf("%s=%v (%T)", field, val, val)
-		fields[field] = int(val)
+		fields[field] = val
 	}
-	s.Log.Debugf("Closing GPIO connections")
-	rpio.Close()
 
 	s.Log.Debugf("Fields: %s", fields)
 	acc.AddFields("gpio", fields, tags)
