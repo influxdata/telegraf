@@ -1,41 +1,41 @@
 package avro
 
 import (
-	"time"
+	"encoding/json"
 	"fmt"
 	"log"
-	"encoding/json"
 	"net/http"
+	"time"
 )
 
 type SchemaRegistry struct {
-	url		string
-	cache 	map[int]string
+	url   string
+	cache map[int]string
 }
 
 const (
-	schemaByID  = "%s/schemas/ids/%d"
-	timeout     = 2 * time.Second
+	schemaByID = "%s/schemas/ids/%d"
+	timeout    = 2 * time.Second
 )
 
 func NewSchemaRegistry(url string) *SchemaRegistry {
-    return &SchemaRegistry{
-    	url: url, 
-    	cache: make(map[int]string),
-    }
+	return &SchemaRegistry{
+		url:   url,
+		cache: make(map[int]string),
+	}
 }
 
 func (sr *SchemaRegistry) getSchema(id int) (string, error) {
 	value, ok := sr.cache[id]
-    if ok {
-    	return value, nil
-    }
+	if ok {
+		return value, nil
+	}
 
-    log.Printf("I! SchemaRegistry: cache miss!")
+	log.Printf("I! SchemaRegistry: cache miss!")
 
 	resp, err := http.Get(fmt.Sprintf(schemaByID, sr.url, id))
 	if nil != err {
-   		log.Printf("E! SchemaRegistry: %s", err)
+		log.Printf("E! SchemaRegistry: %s", err)
 		return "", err
 	}
 

@@ -2,10 +2,10 @@ package avro
 
 import (
 	"fmt"
-	"testing"
-	"time"
 	"net/http"
 	"net/http/httptest"
+	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -25,13 +25,13 @@ func TestBasicAvroMessage(t *testing.T) {
 	defer ts.Close()
 
 	p := Parser{
-		SchemaRegistry:    ts.URL,
-		Measurement:	   "measurement",
-		Tags:			   []string{"tag"},
-		Fields:			   []string{"field"},
-		Timestamp:		   "timestamp",	
-		TimestampFormat:   "unix",	
-		TimeFunc:          DefaultTime,
+		SchemaRegistry:  ts.URL,
+		Measurement:     "measurement",
+		Tags:            []string{"tag"},
+		Fields:          []string{"field"},
+		Timestamp:       "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
 	}
 
 	msg := []byte{0x00, 0x00, 0x00, 0x00, 0x17, 0x20, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x6d, 0x65, 0x61, 0x73, 0x75, 0x72, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x10, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x74, 0x61, 0x67, 0x26, 0xf0, 0xb6, 0x97, 0xd4, 0xb0, 0x5b}
