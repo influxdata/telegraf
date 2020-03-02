@@ -141,16 +141,14 @@ func (p *Prometheus) Init() error {
 	if len(p.KubernetesLabelSelector) > 0 {
 		_, err := labels.Parse(p.KubernetesLabelSelector)
 		if err != nil {
-			p.Log.Errorf("label selector validation failed %q: %v", p.KubernetesLabelSelector, err)
-			return err
+			return fmt.Errorf("label selector validation failed %q: %v", p.KubernetesLabelSelector, err)
 		}
 	}
 
 	if len(p.KubernetesFieldSelector) > 0 {
 		_, err := fields.ParseSelector(p.KubernetesFieldSelector)
 		if err != nil {
-			p.Log.Errorf("field selector validation failed %s: %v", p.KubernetesFieldSelector, err)
-			return err
+			return fmt.Errorf("field selector validation failed %s: %v", p.KubernetesFieldSelector, err)
 		}
 	}
 
