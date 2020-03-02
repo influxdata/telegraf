@@ -13,7 +13,11 @@ func TestGeo(t *testing.T) {
 	plugin := &Geo{
 		LatField:  "lat",
 		LonField:  "lon",
-		TagKey:    "_ci",
+		TagKey:    "s2cellID",
+		CellLevel: 11,
+	}
+
+	pluginMostlyDefault := &Geo{
 		CellLevel: 11,
 	}
 
@@ -34,7 +38,7 @@ func TestGeo(t *testing.T) {
 		testutil.MustMetric(
 			"mta",
 			map[string]string{
-				"_ci": "89e8ed4",
+				"s2cellID": "89e8ed4",
 			},
 			map[string]interface{}{
 				"lat": 40.878738,
@@ -45,5 +49,7 @@ func TestGeo(t *testing.T) {
 	}
 
 	actual := plugin.Apply(metric)
+	testutil.RequireMetricsEqual(t, expected, actual)
+	actual = pluginMostlyDefault.Apply(metric)
 	testutil.RequireMetricsEqual(t, expected, actual)
 }

@@ -20,7 +20,7 @@ var SampleConfig = `
   lon_field = "lon"
 
   ## New tag to create
-  tag_key = "_ci"
+  tag_key = "s2cellID"
 
   ## Cell level (see https://s2geometry.io/resources/s2cell_statistics.html)
   cell_level = 9
@@ -65,11 +65,11 @@ func (g *Geo) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func init() {
-	processors.Add("geo", func() telegraf.Processor {
+	processors.Add("s2geo", func() telegraf.Processor {
 		return &Geo{
 			LatField:  "lat",
 			LonField:  "lon",
-			TagKey:    "_ci",
+			TagKey:    "s2cellID",
 			CellLevel: 9,
 		}
 	})
