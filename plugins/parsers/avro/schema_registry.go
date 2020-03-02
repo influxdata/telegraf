@@ -3,6 +3,7 @@ package avro
 import (
 	"time"
 	"fmt"
+	"log"
 	"encoding/json"
 	"net/http"
 )
@@ -25,22 +26,36 @@ func NewSchemaRegistry(url string) *SchemaRegistry {
 }
 
 func (sr *SchemaRegistry) getSchema(id int) (string, error) {
-
 	value, ok := sr.cache[id]
     if ok {
     	return value, nil
     }
 
+    log.Printf("I! SchemaRegistry: cache miss!")
+
 	resp, err := http.Get(fmt.Sprintf(schemaByID, sr.url, id))
 	if nil != err {
+   		log.Printf("E! SchemaRegistry: %s", err)
 		return "", err
 	}
 
-	var schema map[string]interface{}
+	var jsonResponse map[string]interface{}
 
-	json.NewDecoder(resp.Body).Decode(&schema)
+	json.NewDecoder(resp.Body).Decode(&jsonResponse)
 
-	sr.cache[id] = schema["schema"].(string)
+	schema, ok := jsonResponse["schema"]
+	if !ok {
+		log.Printf("E! SchemaRegistry: malformed response!")
+		return "", fmt.Errorf("Malformed respose from schema registry!")
+	}
 
-	return schema["schema"].(string), nil
+	schemaValue, ok := schema.(string)
+	if !ok {
+		log.Printf("E! SchemaRegistry: schema %s is not a string", schema)
+		return "", fmt.Errorf("Malformed respose from schema registry!")
+	}
+
+	sr.cache[id] = schemaValue
+
+	return schemaValue, nil
 }

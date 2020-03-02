@@ -3,6 +3,7 @@ package avro
 import (
 	"fmt"
 	"time"
+	"log"
 	"encoding/binary"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -26,29 +27,36 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	schemaRegistry := NewSchemaRegistry(p.SchemaRegistry)
 	
 	schemaId := int(binary.BigEndian.Uint32(buf[1:5]))
-	
+	fmt.Println(schemaId)
+
 	schema, err := schemaRegistry.getSchema(schemaId)
+	fmt.Println(schema)
 	if err != nil {
+		log.Printf("E! AvroParser: %s", err)
         return nil, err
     }
 	
 	codec, err := goavro.NewCodec(schema)
     if err != nil {
+		log.Printf("E! AvroParser: %s", err)
         return nil, err
     }
 
     native, _, err := codec.NativeFromBinary(buf[5:])
     if err != nil {
+		log.Printf("E! AvroParser: %s", err)
         return nil, err
     }
 
     flat, err := flatten.Flatten(native.(map[string]interface{}), "", flatten.UnderscoreStyle)
 	if err != nil {
+		log.Printf("E! AvroParser: %s", err)
         return nil, err
     }
 
     m, err := p.createMetric(flat)
 	if err != nil {
+		log.Printf("E! AvroParser: %s", err)
 		return nil, err
 	}
 
@@ -58,10 +66,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line))
 	if err != nil {
+		log.Printf("E! AvroParser: %s", err)
 		return nil, err
 	}
 
 	if len(metrics) != 1 {
+		log.Printf("E! AvroParser: %s", err)
 		return nil, fmt.Errorf("Line contains multiple metrics")
 	}
 
@@ -83,6 +93,7 @@ func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
 
 	metricTime, err := internal.ParseTimestamp(p.TimestampFormat, timestamp, "UTC")
 	if err != nil {
+		log.Printf("E! AvroParser: %s", err)
 		return p.TimeFunc(), err
 	}
 
@@ -92,6 +103,7 @@ func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
 func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, error) {
 	metricTime, err := p.parseTimestamp(flat[p.Timestamp])
 	if err != nil {
+		log.Printf("E! AvroParser: %s", err)
 		return nil, err
 	}
 
@@ -110,14 +122,9 @@ func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, err
     	fields[field] = flat[field]      
     }
 
-    measurementValue, ok := flat[p.Measurement]
-    if !ok {
-    	measurementValue = p.Measurement
-    }
-    measurement  := fmt.Sprintf("%v", measurementValue)
-
-	m, err := metric.New(measurement, tags, fields, metricTime)
+	m, err := metric.New(p.Measurement, tags, fields, metricTime)
 	if err != nil {
+		log.Printf("E! AvroParser: %s", err)
 		return nil, err
 	}
 
