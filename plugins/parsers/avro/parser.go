@@ -27,10 +27,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	schemaRegistry := NewSchemaRegistry(p.SchemaRegistry)
 	
 	schemaId := int(binary.BigEndian.Uint32(buf[1:5]))
-	fmt.Println(schemaId)
 
 	schema, err := schemaRegistry.getSchema(schemaId)
-	fmt.Println(schema)
+
 	if err != nil {
 		log.Printf("E! AvroParser: %s", err)
         return nil, err
