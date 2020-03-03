@@ -1701,56 +1701,6 @@ func TestTCP(t *testing.T) {
 	)
 }
 
-//This should be functionally identical to TCP
-func TestTCPWithMultipleGoroutines(t *testing.T) {
-	statsd := Statsd{
-		Log:                    testutil.Logger{},
-		Protocol:               "tcp",
-		ServiceAddress:         "localhost:0",
-		AllowedPendingMessages: 10000,
-		MaxTCPConnections:      2,
-		MaxParserThreads:       3,
-	}
-	var acc testutil.Accumulator
-	require.NoError(t, statsd.Start(&acc))
-	defer statsd.Stop()
-
-	addr := statsd.TCPlistener.Addr().String()
-
-	conn, err := net.Dial("tcp", addr)
-	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
-	require.NoError(t, err)
-	err = conn.Close()
-	require.NoError(t, err)
-
-	for {
-		err = statsd.Gather(&acc)
-		require.NoError(t, err)
-
-		if len(acc.Metrics) > 0 {
-			break
-		}
-	}
-
-	testutil.RequireMetricsEqual(t,
-		[]telegraf.Metric{
-			testutil.MustMetric(
-				"cpu_time_idle",
-				map[string]string{
-					"metric_type": "counter",
-				},
-				map[string]interface{}{
-					"value": 42,
-				},
-				time.Now(),
-				telegraf.Counter,
-			),
-		},
-		acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(),
-	)
-}
-
 func TestUdp(t *testing.T) {
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
@@ -1796,48 +1746,3 @@ func TestUdp(t *testing.T) {
 	)
 }
 
-func TestUdpMultipleParserGoroutines(t *testing.T) {
-	statsd := Statsd{
-		Log:                    testutil.Logger{},
-		Protocol:               "udp",
-		ServiceAddress:         "localhost:8125",
-		AllowedPendingMessages: 250000,
-		MaxParserThreads:       3,
-	}
-	var acc testutil.Accumulator
-	require.NoError(t, statsd.Start(&acc))
-	defer statsd.Stop()
-
-	conn, err := net.Dial("udp", "127.0.0.1:8125")
-	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
-	require.NoError(t, err)
-	err = conn.Close()
-	require.NoError(t, err)
-
-	for {
-		err = statsd.Gather(&acc)
-		require.NoError(t, err)
-
-		if len(acc.Metrics) > 0 {
-			break
-		}
-	}
-
-	testutil.RequireMetricsEqual(t,
-		[]telegraf.Metric{
-			testutil.MustMetric(
-				"cpu_time_idle",
-				map[string]string{
-					"metric_type": "counter",
-				},
-				map[string]interface{}{
-					"value": 42,
-				},
-				time.Now(),
-				telegraf.Counter,
-			),
-		},
-		acc.GetTelegrafMetrics(),
-		testutil.IgnoreTime(),
-	)
-}
