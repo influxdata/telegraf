@@ -244,7 +244,9 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		verbose := req.URL.Query().Get("verbose")
 
 		// respond to ping requests
+		res.Header().Set("X-Influxdb-Version", "1.0")
 		if verbose != "" && verbose != "0" && verbose != "false" {
+			res.Header().Set("Content-Type", "application/json")
 			res.WriteHeader(http.StatusOK)
 			b, _ := json.Marshal(map[string]string{"version": "1.0"}) // based on header set above
 			res.Write(b)
