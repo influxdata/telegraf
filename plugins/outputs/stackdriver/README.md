@@ -1,4 +1,4 @@
-# Stackdriver Output Plugin
+# Stackdriver Google Cloud Monitoring Output Plugin
 
 This plugin writes to the [Google Cloud Monitoring API][stackdriver] (formerly
 Stackdriver) and requires [authentication][] with Google Cloud using either a

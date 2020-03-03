@@ -1,4 +1,4 @@
-# Stackdriver Input Plugin
+# Stackdriver Google Cloud Monitoring Input Plugin
 
 Query data from Google Cloud Monitoring (formerly Stackdriver) using the
 [Cloud Monitoring API v3][stackdriver].
