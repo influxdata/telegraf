@@ -25,6 +25,7 @@ type Process interface {
 	Times() (*cpu.TimesStat, error)
 	RlimitUsage(bool) ([]process.RlimitStat, error)
 	Username() (string, error)
+	CreateTime() (int64, error)
 }
 
 type PIDFinder interface {

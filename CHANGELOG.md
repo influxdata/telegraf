@@ -14,6 +14,7 @@
 - [infiniband](/plugins/inputs/infiniband/README.md) - Contributed by @willfurnell
 - [modbus](/plugins/inputs/modbus/README.md) - Contributed by @garciaolais
 - [monit](/plugins/inputs/monit/README.md) - Contributed by @SirishaGopigiri
+- [execd](/plugins/inputs/execd/README.md) - Contributed by @jgraichen
 
 #### New Processors
 
@@ -46,6 +47,14 @@
 - [#6982](https://github.com/influxdata/telegraf/pull/6982): Add support for titlecase transformation to strings processor.
 - [#6993](https://github.com/influxdata/telegraf/pull/6993): Add support for MDB database information to openldap input.
 - [#6957](https://github.com/influxdata/telegraf/pull/6957): Add new fields for Jenkins total and busy executors.
+- [#7035](https://github.com/influxdata/telegraf/pull/7035): Fix dash to underscore replacement when handling embedded tags in Cisco MDT.
+- [#7039](https://github.com/influxdata/telegraf/pull/7039): Add process created_at time to procstat input.
+- [#7022](https://github.com/influxdata/telegraf/pull/7022): Add support for credentials file to nats_consumer and nats output.
+- [#7065](https://github.com/influxdata/telegraf/pull/7065): Add additional tags and fields to apcupsd.
+- [#7084](https://github.com/influxdata/telegraf/pull/7084): Add RabbitMQ slave_nodes and synchronized_slave_nodes metrics.
+- [#7089](https://github.com/influxdata/telegraf/pull/7089): Allow globs in FPM unix socket paths.
+- [#7071](https://github.com/influxdata/telegraf/pull/7071): Add non-cumulative histogram to histogram aggregator.
+- [#6969](https://github.com/influxdata/telegraf/pull/6969): Add label and field selectors to prometheus input k8s discovery.
 
 #### Bugfixes
 
@@ -53,12 +62,21 @@
 - [#6867](https://github.com/influxdata/telegraf/issues/6867): Fix case sensitive collation in sqlserver input.
 - [#7005](https://github.com/influxdata/telegraf/pull/7005): Search for chronyc only when chrony input plugin is enabled.
 
-## v1.13.4 [unreleased]
+## v1.13.4 [2020-02-25]
+
+#### Release Notes
+
+- Official packages now built with Go 1.13.8.
 
 #### Bugfixes
 
 - [#6988](https://github.com/influxdata/telegraf/issues/6988): Parse NaN values from summary types in prometheus input.
 - [#6820](https://github.com/influxdata/telegraf/issues/6820): Fix pgbouncer input when used with newer pgbouncer versions.
+- [#6913](https://github.com/influxdata/telegraf/issues/6913): Support up to 8192 stats in the ethtool input.
+- [#7060](https://github.com/influxdata/telegraf/issues/7060): Fix perf counters collection on named instances in sqlserver input.
+- [#6926](https://github.com/influxdata/telegraf/issues/6926): Use add time for prometheus expiration calculation.
+- [#7057](https://github.com/influxdata/telegraf/issues/7057): Fix inconsistency with input error counting in internal input.
+- [#7063](https://github.com/influxdata/telegraf/pull/7063): Use the same timestamp per call if no time is provided in prometheus input.
 
 ## v1.13.3 [2020-02-04]
 

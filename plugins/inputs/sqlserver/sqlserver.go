@@ -632,7 +632,7 @@ WHERE	(
 			object_name LIKE '%User Settable%'
 			OR object_name LIKE '%SQL Errors%'
 		) OR (
-			object_name LIKE 'SQLServer:Batch Resp Statistics%'
+			object_name LIKE '%Batch Resp Statistics%'
 		) OR (
 			instance_name IN ('_Total')
 			AND counter_name IN (
@@ -2302,7 +2302,7 @@ SELECT DISTINCT RTrim(spi.object_name) object_name
 , spi.cntr_value
 , spi.cntr_type
 FROM sys.dm_os_performance_counters spi
-WHERE spi.object_name NOT LIKE 'SQLServer:Backup Device%'
+WHERE spi.object_name NOT LIKE '%Backup Device%'
 	AND NOT EXISTS (SELECT 1 FROM sys.databases WHERE Name = spi.instance_name);
 
 WAITFOR DELAY '00:00:01';
@@ -2324,7 +2324,7 @@ SELECT DISTINCT RTrim(spi.object_name) object_name
 , spi.cntr_value
 , spi.cntr_type
 FROM sys.dm_os_performance_counters spi
-WHERE spi.object_name NOT LIKE 'SQLServer:Backup Device%'
+WHERE spi.object_name NOT LIKE '%Backup Device%'
 	AND NOT EXISTS (SELECT 1 FROM sys.databases WHERE Name = spi.instance_name);
 
 SELECT
@@ -2360,7 +2360,7 @@ INNER JOIN #PCounters pc On cc.object_name = pc.object_name
         And cc.cntr_type = pc.cntr_type
 LEFT JOIN #CCounters cbc On cc.object_name = cbc.object_name
         And (Case When cc.counter_name Like '%(ms)' Then Replace(cc.counter_name, ' (ms)',' Base')
-                  When cc.object_name = 'SQLServer:FileTable' Then Replace(cc.counter_name, 'Avg ','') + ' base'
+                  When cc.object_name like '%FileTable' Then Replace(cc.counter_name, 'Avg ','') + ' base'
                   When cc.counter_name = 'Worktables From Cache Ratio' Then 'Worktables From Cache Base'
                   When cc.counter_name = 'Avg. Length of Batched Writes' Then 'Avg. Length of Batched Writes BS'
                   Else cc.counter_name + ' base'
@@ -2371,7 +2371,7 @@ LEFT JOIN #CCounters cbc On cc.object_name = cbc.object_name
 LEFT JOIN #PCounters pbc On pc.object_name = pbc.object_name
         And pc.instance_name = pbc.instance_name
         And (Case When pc.counter_name Like '%(ms)' Then Replace(pc.counter_name, ' (ms)',' Base')
-                  When pc.object_name = 'SQLServer:FileTable' Then Replace(pc.counter_name, 'Avg ','') + ' base'
+                  When pc.object_name like '%FileTable' Then Replace(pc.counter_name, 'Avg ','') + ' base'
                   When pc.counter_name = 'Worktables From Cache Ratio' Then 'Worktables From Cache Base'
                   When pc.counter_name = 'Avg. Length of Batched Writes' Then 'Avg. Length of Batched Writes BS'
                   Else pc.counter_name + ' base'
