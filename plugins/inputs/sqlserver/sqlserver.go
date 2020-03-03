@@ -387,7 +387,7 @@ BEGIN
 WITH SourceData AS (
 	SELECT 
 		 DB_NAME(vfs.[database_id]) AS [database_name]	--
-		,IIF(
+		,IIF(	--Tag value cannot end with '\'
 			RIGHT(vs.[volume_mount_point],1) = '\'
 			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
 			,vs.[volume_mount_point]
@@ -746,7 +746,7 @@ SELECT	'sqlserver_performance' AS [measurement],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
-		CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value) / (pc1.cntr_value) * 100 ELSE pc.cntr_value END AS float(10)) AS [value]
+		CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS float(10)) AS [value]
 FROM	@PCounters AS pc
 		LEFT OUTER JOIN @PCounters AS pc1
 			ON (
