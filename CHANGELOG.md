@@ -54,6 +54,7 @@
 - [#7084](https://github.com/influxdata/telegraf/pull/7084): Add RabbitMQ slave_nodes and synchronized_slave_nodes metrics.
 - [#7089](https://github.com/influxdata/telegraf/pull/7089): Allow globs in FPM unix socket paths.
 - [#7071](https://github.com/influxdata/telegraf/pull/7071): Add non-cumulative histogram to histogram aggregator.
+- [#6969](https://github.com/influxdata/telegraf/pull/6969): Add label and field selectors to prometheus input k8s discovery.
 
 #### Bugfixes
 
