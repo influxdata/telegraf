@@ -36,6 +36,11 @@ in Prometheus format.
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
+  # label selector to target pods which have the label
+  # kubernetes_label_selector = "env=dev,app=nginx"
+  # field selector to target pods
+  # eg. To scrape pods on a specific node
+  # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
