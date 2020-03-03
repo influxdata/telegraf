@@ -6,12 +6,12 @@ defaults:
       GOFLAGS: -p=8
   go-1_12: &go-1_12
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.12.14'
+      - image: 'quay.io/influxdb/telegraf-ci:1.12.17'
         environment:
           GO111MODULE: 'on'
   go-1_13: &go-1_13
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.13.5'
+      - image: 'quay.io/influxdb/telegraf-ci:1.13.8'
   mac: &mac
     macos:
       xcode: 11.3.1
@@ -19,7 +19,7 @@ defaults:
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=8
-  
+
 version: 2
 jobs:
   deps:
@@ -104,7 +104,7 @@ jobs:
       - run: 'make'
       - run: 'make check'
       - run: 'make test'
-  
+
   package:
     <<: [ *defaults, *go-1_13 ]
     steps:

@@ -173,7 +173,9 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
     - messages_ready (int, count)
     - messages_redeliver (int, count)
     - messages_redeliver_rate (float, messages per second)
-    - messages_unack (integer, count)
+    - messages_unack (int, count)
+    - slave_nodes (int, count)
+    - synchronised_slave_nodes (int, count)
 
 + rabbitmq_exchange
   - tags:
