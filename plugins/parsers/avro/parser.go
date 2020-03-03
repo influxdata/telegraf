@@ -122,6 +122,7 @@ func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, err
 	}
 
 	m, err := metric.New(p.Measurement, tags, fields, metricTime)
+	fmt.Printf(m)
 	if err != nil {
 		log.Printf("E! AvroParser: %s", err)
 		return nil, err
