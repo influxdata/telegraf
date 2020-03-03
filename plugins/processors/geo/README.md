@@ -13,7 +13,7 @@ The `lat` and `lon` fields values should contain WGS-84 coordinates in decimal d
   lon_field = "lon"
 
   ## New tag to create
-  tag_key = "s2cellID"
+  tag_key = "s2_cell_id"
 
   ## Cell level (see https://s2geometry.io/resources/s2cell_statistics.html)
   cell_level = 11
@@ -23,7 +23,7 @@ The `lat` and `lon` fields values should contain WGS-84 coordinates in decimal d
 
 ```diff
 - mta,area=llir,id=GO505_20_2704,status=1 lat=40.878738,lon=-72.517572 1560540094
-+ mta,area=llir,id=GO505_20_2704,status=1,s2cellID=89e8ed4 lat=40.878738,lon=-72.517572 1560540094
++ mta,area=llir,id=GO505_20_2704,status=1,s2_cell_id=89e8ed4 lat=40.878738,lon=-72.517572 1560540094
 ```
 
 [cell levels]: https://s2geometry.io/resources/s2cell_statistics.html

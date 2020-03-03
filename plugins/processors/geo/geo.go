@@ -20,7 +20,7 @@ var SampleConfig = `
   lon_field = "lon"
 
   ## New tag to create
-  tag_key = "s2cellID"
+  tag_key = "s2_cell_id"
 
   ## Cell level (see https://s2geometry.io/resources/s2cell_statistics.html)
   cell_level = 9
@@ -69,7 +69,7 @@ func init() {
 		return &Geo{
 			LatField:  "lat",
 			LonField:  "lon",
-			TagKey:    "s2cellID",
+			TagKey:    "s2_cell_id",
 			CellLevel: 9,
 		}
 	})

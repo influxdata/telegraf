@@ -13,7 +13,7 @@ func TestGeo(t *testing.T) {
 	plugin := &Geo{
 		LatField:  "lat",
 		LonField:  "lon",
-		TagKey:    "s2cellID",
+		TagKey:    "s2_cell_id",
 		CellLevel: 11,
 	}
 
@@ -38,7 +38,7 @@ func TestGeo(t *testing.T) {
 		testutil.MustMetric(
 			"mta",
 			map[string]string{
-				"s2cellID": "89e8ed4",
+				"s2_cell_id": "89e8ed4",
 			},
 			map[string]interface{}{
 				"lat": 40.878738,
