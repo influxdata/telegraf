@@ -2,9 +2,15 @@ version: '3'
 
 services:
   clickhouse:
-    image: yandex/clickhouse-server
+    image: yandex/clickhouse-server:latest
+    volumes:
+      - ./plugins/inputs/clickhouse/dev/dhparam.pem:/etc/clickhouse-server/dhparam.pem
+      - ./testutil/pki/serverkey.pem:/etc/clickhouse-server/server.key
+      - ./testutil/pki/serverert.pem:/etc/clickhouse-server/server.crt
+      - ./tls_settings.xml:/etc/clickhouse-server/config.d/00-tls_settings.xml
     restart: always
     ports:
-      - 127.0.0.1:8123:8123
-      - 127.0.0.1:9000:9000
-      - 127.0.0.1:9009:9009
+      - 8123:8123
+      - 8443:8443
+      - 9000:9000
+      - 9009:9009

@@ -6,15 +6,15 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
 ```ini
 # Read metrics from one or many ClickHouse servers
 [[inputs.clickhouse]]
-  ## HTTP(s) timeout while getting metrics values in seconds
+  ## HTTP(s) timeout while getting metrics values 
   ## The timeout includes connection time, any redirects, and reading the response body.
-  ##   example: timeout = 1
-  # timeout = 5 # seconds
+  ##   example: timeout = 1s
+  # timeout = 5s # seconds
 
   ## List of servers for metrics scraping
   ## metrics scrape via HTTP(s) clickhouse interface
   ## https://clickhouse.tech/docs/en/interfaces/http/
-  ##    example: servers = ["http://default:@127.0.0.1:8123","https://user:password@custom-server.mdb.yandexclud.net"]
+  ##    example: servers = ["http://default:@127.0.0.1:8123","https://user1:password2@custom-server.mdb.yandexcloud.net"]
   servers         = ["http://username:password@127.0.0.1:8123"]
 
   ## If "auto_discovery"" is "true" plugin tries to connect to all servers available in the cluster
@@ -52,15 +52,20 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
   # cluster_include = []
 
   ## Filter cluster names in "system.clusters" when "auto_discovery" is "true"
-  ## when this filter present then "WHERE cluster IN (...)" filter will apply
-  ## if "cluster_include" not empty, this parameter will ignored
+  ## when this filter present then "WHERE cluster NOT IN (...)" filter will apply
   ##    example: cluster_exclude = ["my-internal-not-discovered-cluster"]
   # cluster_exclude = []
 
-  ## Parameter which controls whether a client verifies the server's certificate chain and host name.
-  ## If http_tls_insecure_skip_verify is true, TLS accepts any certificate
+  ## Parameter which controls whether a TLS client verifies the server's certificate chain and host name.
+  ## If insecure_skip_verify is true, plugin accepts any TLS certificate
   ## presented by the server and any host name in that certificate.
-  # http_tls_insecure_skip_verify = true
+  ## "true" value is not recommended for production environments.
+  # insecure_skip_verify = false
+
+  ## Optional TLS Config, when you use self-signed certificate chain
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 ```
 
 ### Metrics:
