@@ -93,12 +93,16 @@ tidy:
 	fi
 
 .PHONY: check
-check: fmtcheck vet
+check: fmtcheck vet check-deps
 	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
 test-all: fmtcheck vet
 	go test ./...
+
+.PHONY: check-deps
+check-deps:
+	./scripts/check-deps.sh
 
 .PHONY: package
 package:
