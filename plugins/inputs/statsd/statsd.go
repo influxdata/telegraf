@@ -32,7 +32,7 @@ const (
 	defaultAllowPendingMessage = 10000
 	MaxTCPConnections          = 250
 
-	parserGoRoutines 		   = 5
+	parserGoRoutines = 5
 )
 
 // Statsd allows the importing of statsd and dogstatsd data.
