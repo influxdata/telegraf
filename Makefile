@@ -93,7 +93,7 @@ tidy:
 	fi
 
 .PHONY: check
-check: fmtcheck vet check-deps
+check: fmtcheck vet
 	@$(MAKE) --no-print-directory tidy
 
 .PHONY: test-all
