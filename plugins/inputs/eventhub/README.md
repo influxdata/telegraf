@@ -75,3 +75,11 @@ The main focus for development of this plugin is Azure IoT hub:
 1. Create an Azure IoT Hub by following any of the guides provided here: https://docs.microsoft.com/en-us/azure/iot-hub/
 2. Create a device, for example a [simulated Raspberry Pi](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-raspberry-pi-web-simulator-get-started)
 3. The connection string needed for the plugin is located under *Shared access policies*, both the *iothubowner* and *service* policies should work
+
+## Untested features:
+
+- Authentication with [AAD TokenProvider environment variables](https://github.com/Azure/azure-event-hubs-go#aad-tokenprovider-environment-variables)
+
+## Not implemented:
+- The custom set of application properties mentioned [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-messages-construct)
+- [Event Processor Host](https://github.com/Azure/azure-event-hubs-go#event-processor-host) (should only be needed when using multiple Telegraf instances consuming the same partition)

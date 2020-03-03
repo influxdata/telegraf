@@ -1,8 +1,5 @@
 package eventhub
 
-// TODO: (optional) Test authentication with AAD TokenProvider environment variables?
-// TODO: (optional) Event Processor Host, only applicable for multiple Telegraf instances?
-
 import (
 	"context"
 	"log"
@@ -10,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
@@ -19,7 +17,6 @@ import (
 
 const (
 	defaultMaxUndeliveredMessages = 1000
-	defaultUserAgent              = "telegraf"
 	defaultSystemPropertiesPrefix = "SystemProperties."
 )
 
@@ -157,7 +154,6 @@ func (e *EventHub) Init() (err error) {
 
 	if e.PersistenceDir != "" {
 		persister, err := persist.NewFilePersister(e.PersistenceDir)
-
 		if err != nil {
 			return err
 		}
@@ -168,7 +164,7 @@ func (e *EventHub) Init() (err error) {
 	if e.UserAgent != "" {
 		hubOpts = append(hubOpts, eventhub.HubWithUserAgent(e.UserAgent))
 	} else {
-		hubOpts = append(hubOpts, eventhub.HubWithUserAgent(defaultUserAgent))
+		hubOpts = append(hubOpts, eventhub.HubWithUserAgent(internal.ProductToken()))
 	}
 
 	// Create event hub connection
@@ -193,41 +189,38 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 
 	// Start tracking
 	e.wg.Add(1)
-	go e.startTracking(ctx)
-
-	// Get runtime information
-	runtimeinfo, err := e.hub.GetRuntimeInformation(ctx)
-
-	if err != nil {
-		return err
-	}
+	go func() {
+		defer e.wg.Done()
+		e.startTracking(ctx)
+	}()
 
 	// Configure receiver options
 	receiveOpts, err := e.configureReceiver()
-
 	if err != nil {
 		return err
 	}
 
-	if len(e.PartitionIDs) == 0 {
-		// Default behavior: receive from all partitions
+	if len(e.PartitionIDs) == 0 { // Default behavior: receive from all partitions
+
+		// Get runtime information
+		runtimeinfo, err := e.hub.GetRuntimeInformation(ctx)
+		if err != nil {
+			return err
+		}
 
 		for _, partitionID := range runtimeinfo.PartitionIDs {
 
 			_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
-
 			if err != nil {
 				log.Printf("E! [inputs.eventhub] error creating receiver for partition \"%s\"", partitionID)
 				return err
 			}
 		}
-	} else {
-		// Custom behavior: receive from a subset of partitions
+	} else { // Custom behavior: receive from a subset of partitions
 
 		for _, partitionID := range e.PartitionIDs {
 
 			_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
-
 			if err != nil {
 				log.Printf("E! [inputs.eventhub] error creating receiver for partition \"%s\"", partitionID)
 				return err
@@ -246,7 +239,6 @@ func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, er
 
 	if e.FromTimestamp != "" {
 		ts, err := time.Parse(time.RFC3339, e.FromTimestamp)
-
 		if err != nil {
 			log.Printf("E! [inputs.eventhub] error in parsing timestamp: %s", err)
 			return receiveOpts, err
@@ -274,7 +266,6 @@ func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, er
 func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err error) {
 
 	metrics, err := e.parser.Parse(event.Data)
-
 	if err != nil {
 		log.Printf("E! [inputs.eventhub] error %s", err)
 		return err
@@ -330,7 +321,6 @@ func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err er
 }
 
 func (e *EventHub) startTracking(ctx context.Context) {
-	defer e.wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
@@ -367,7 +357,6 @@ func (e *EventHub) Stop() {
 	err := e.hub.Close(context.Background())
 
 	e.wg.Wait()
-
 	if err != nil {
 		log.Printf("E! [inputs.eventhub] error in closing event hub connection: %s", err)
 	}
