@@ -366,12 +366,12 @@ SELECT
 	,vfs.num_of_bytes_written AS write_bytes
 	,vfs.io_stall_queued_read_ms as rg_read_stall_ms
 	,vfs.io_stall_queued_write_ms as rg_write_stall_ms
-	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] * 1.0 / [num_of_reads]) END AS [read_latency_ms_per_read]
-	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] * 1.0 / [num_of_writes]) END AS [write_latency_ms_per_read]
-	,CASE WHEN [io_stall] = 0 THEN 0 ELSE ([io_stall] * 1.0 / ([num_of_reads] + [num_of_writes]) ) END AS [overall_latency_ms_per_transfer]
-	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] * 1.0 / [num_of_reads]) END AS [avg_bytes_per_read]
-	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] * 1.0 / [num_of_writes]) END AS [avg_bytes_per_write]
-	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) * 1.0 / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_per_transfer]
+	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END AS [read_latency_ms_per_read]
+	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END AS [write_latency_ms_per_read]
+	,CASE WHEN [io_stall] = 0 THEN 0 ELSE ([io_stall] / ([num_of_reads] + [num_of_writes]) ) END AS [overall_latency_ms_per_transfer]
+	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] / [num_of_reads]) END AS [avg_bytes_per_read]
+	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] / [num_of_writes]) END AS [avg_bytes_per_write]
+	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_per_transfer]
 	,ISNULL(b.name ,'RBPEX') as logical_filename
 	,ISNULL(b.physical_name, 'RBPEX') as physical_filename
 	,CASE WHEN vfs.file_id = 2 THEN 'LOG'ELSE 'DATA' END AS file_type
@@ -422,12 +422,12 @@ SELECT
 	,[io_stall_write_ms] AS [write_latency_ms]
 	,[num_of_writes] AS [writes]
 	,[num_of_bytes_written] AS [write_bytes]
-	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] * 1.0 / [num_of_reads]) END AS [read_latency_ms_per_read]
-	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] * 1.0 / [num_of_writes]) END AS [write_latency_ms_per_read]
-	,CASE WHEN [io_stall_total_ms] = 0 THEN 0 ELSE ([io_stall_total_ms] * 1.0 / ([num_of_reads] + [num_of_writes]) ) END AS [overall_latency_ms_per_transfer]
-	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] * 1.0 / [num_of_reads]) END AS [avg_bytes_per_read]
-	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] * 1.0 / [num_of_writes]) END AS [avg_bytes_per_write]
-	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) * 1.0 / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_per_transfer]
+	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END AS [read_latency_ms_per_read]
+	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END AS [write_latency_ms_per_read]
+	,CASE WHEN [io_stall_total_ms] = 0 THEN 0 ELSE ([io_stall_total_ms] / ([num_of_reads] + [num_of_writes]) ) END AS [overall_latency_ms_per_transfer]
+	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] / [num_of_reads]) END AS [avg_bytes_per_read]
+	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] / [num_of_writes]) END AS [avg_bytes_per_write]
+	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_per_transfer]
 FROM SourceData
 UNION ALL
 SELECT 
@@ -444,12 +444,12 @@ SELECT
 	,[io_stall_write_ms] AS [write_latency_ms]
 	,[num_of_writes] AS [writes]
 	,[num_of_bytes_written] AS [write_bytes]
-	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] * 1.0 / [num_of_reads]) END AS [read_latency_ms_per_read]
-	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] * 1.0 / [num_of_writes]) END AS [write_latency_ms_per_read]
-	,CASE WHEN [io_stall_total_ms] = 0 THEN 0 ELSE ([io_stall_total_ms] * 1.0 / ([num_of_reads] + [num_of_writes]) ) END AS [overall_latency_ms_per_transfer]
-	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] * 1.0 / [num_of_reads]) END AS [avg_bytes_per_read]
-	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] * 1.0 / [num_of_writes]) END AS [avg_bytes_per_write]
-	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE ( ([num_of_bytes_read] + [num_of_bytes_written]) * 1.0 / ([num_of_reads] + [num_of_writes]) ) END AS [avg_bytes_per_transfer]
+	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END AS [read_latency_ms_per_read]
+	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END AS [write_latency_ms_per_read]
+	,CASE WHEN [io_stall_total_ms] = 0 THEN 0 ELSE ([io_stall_total_ms] / ([num_of_reads] + [num_of_writes]) ) END AS [overall_latency_ms_per_transfer]
+	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] / [num_of_reads]) END AS [avg_bytes_per_read]
+	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] / [num_of_writes]) END AS [avg_bytes_per_write]
+	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE ( ([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes]) ) END AS [avg_bytes_per_transfer]
 FROM (
 	SELECT 
 		 [volume_mount_point]
@@ -746,7 +746,7 @@ SELECT	'sqlserver_performance' AS [measurement],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
-		CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS float(10)) AS [value]
+		CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value) / (pc1.cntr_value) * 100 ELSE pc.cntr_value END AS float(10)) AS [value]
 FROM	@PCounters AS pc
 		LEFT OUTER JOIN @PCounters AS pc1
 			ON (
