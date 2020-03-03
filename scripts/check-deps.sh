@@ -23,7 +23,7 @@ for target in ${targets}; do
 		go list -deps -f '{{with .Module}}{{.Path}}{{end}}' ./cmd/telegraf/ >> "${tmpdir}/golist"
 done
 
-for dep in $(sort -u "${tmpdir}/golist"); do
+for dep in $(LC_ALL=C sort -u "${tmpdir}/golist"); do
 	case "${dep}" in
 		# ignore ourselves
 		github.com/influxdata/telegraf) continue;;
