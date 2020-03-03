@@ -11,6 +11,7 @@ import (
 type RPiGPIO struct {
 	Pins map[string]int  `toml:pins`
 	Log  telegraf.Logger `toml:"-"`
+	gpio GPIO
 }
 
 type GPIO interface {
@@ -37,10 +38,6 @@ func (s *RPIO) ReadPin(pin_num int) int {
 	return int(val)
 }
 
-var (
-	gpio GPIO = &RPIO{}
-)
-
 func (s *RPiGPIO) SampleConfig() string {
 	return `
   ## Provide a data field name to gpio pin numbers
@@ -62,15 +59,15 @@ func (s *RPiGPIO) Gather(acc telegraf.Accumulator) error {
 	tags := make(map[string]string)
 
 	s.Log.Debugf("Opening GPIO connections")
-	err := gpio.Open()
+	err := s.gpio.Open()
 	if err != nil {
 		return fmt.Errorf("error opening GPIO connection: %s", err)
 	}
-	defer gpio.Close()
+	defer s.gpio.Close()
 
 	for field, pin_num := range s.Pins {
 		s.Log.Debugf("Reading %s from pin %d", field, pin_num)
-		val := gpio.ReadPin(pin_num)
+		val := s.gpio.ReadPin(pin_num)
 		s.Log.Debugf("%s=%v (%T)", field, val, val)
 		fields[field] = val
 	}
@@ -81,5 +78,5 @@ func (s *RPiGPIO) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("rpi_gpio", func() telegraf.Input { return &RPiGPIO{} })
+	inputs.Add("rpi_gpio", func() telegraf.Input { return &RPiGPIO{gpio: &RPIO{}} })
 }

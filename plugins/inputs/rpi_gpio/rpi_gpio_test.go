@@ -35,16 +35,15 @@ func TestGather(t *testing.T) {
 			"gpio3": 3,
 		},
 		Log: testutil.Logger{},
-	}
-
-	// Replace the gpio interface with a mock implementation
-	gpio = &MockGPIO{
-		// Provide mock data readings for this test
-		// GPIO02 will read LOW (0)
-		// GPIO03 will read HIGH (1)
-		MockData: map[int]int{
-			2: 0,
-			3: 1,
+		// Replace the gpio interface with a mock implementation
+		gpio: &MockGPIO{
+			// Provide mock data readings for this test
+			// GPIO02 will read LOW (0)
+			// GPIO03 will read HIGH (1)
+			MockData: map[int]int{
+				2: 0,
+				3: 1,
+			},
 		},
 	}
 
