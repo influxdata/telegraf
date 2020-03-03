@@ -10,56 +10,53 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-type TimeFunc func() time.Time
-
 // MetricHandler implements the Handler interface and produces telegraf.Metric.
 type MetricHandler struct {
-	builder  *metric.Builder
-	err      error
-	timeUnit time.Duration
+	err           error
+	timePrecision time.Duration
+	timeFunc      TimeFunc
+	metric        telegraf.Metric
 }
 
 func NewMetricHandler() *MetricHandler {
 	return &MetricHandler{
-		builder:  metric.NewBuilder(),
-		timeUnit: time.Nanosecond,
+		timePrecision: time.Nanosecond,
+		timeFunc:      time.Now,
 	}
 }
 
-func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
-	h.builder.TimeFunc = metric.TimeFunc(f)
-}
-
 func (h *MetricHandler) SetTimePrecision(p time.Duration) {
-	// When a timestamp is provided in the metric, precsision is
-	// overloaded to hold the unit of measurement of the timestamp.
-	//
-	// MetricHandler.SetTimestamp() needs this later
-	h.timeUnit = p
-
+	h.timePrecision = p
 	// When the timestamp is omitted from the metric, the timestamp
 	// comes from the server clock, truncated to the nearest unit of
 	// measurement provided in precision.
 	//
-	// metric.Builder does the timestamp truncation
-	h.builder.TimePrecision = p
+	// When a timestamp is provided in the metric, precsision is
+	// overloaded to hold the unit of measurement of the timestamp.
+}
+
+func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
+	h.timeFunc = f
 }
 
 func (h *MetricHandler) Metric() (telegraf.Metric, error) {
-	m, err := h.builder.Metric()
-	h.builder.Reset()
-	return m, err
+	if h.metric.Time().IsZero() {
+		h.metric.SetTime(h.timeFunc().Truncate(h.timePrecision))
+	}
+	return h.metric, nil
 }
 
 func (h *MetricHandler) SetMeasurement(name []byte) error {
-	h.builder.SetName(nameUnescape(name))
-	return nil
+	var err error
+	h.metric, err = metric.New(nameUnescape(name),
+		nil, nil, time.Time{})
+	return err
 }
 
 func (h *MetricHandler) AddTag(key []byte, value []byte) error {
 	tk := unescape(key)
 	tv := unescape(value)
-	h.builder.AddTag(tk, tv)
+	h.metric.AddTag(tk, tv)
 	return nil
 }
 
@@ -72,7 +69,7 @@ func (h *MetricHandler) AddInt(key []byte, value []byte) error {
 		}
 		return err
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
 	return nil
 }
 
@@ -85,7 +82,7 @@ func (h *MetricHandler) AddUint(key []byte, value []byte) error {
 		}
 		return err
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
 	return nil
 }
 
@@ -98,14 +95,14 @@ func (h *MetricHandler) AddFloat(key []byte, value []byte) error {
 		}
 		return err
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
 	return nil
 }
 
 func (h *MetricHandler) AddString(key []byte, value []byte) error {
 	fk := unescape(key)
 	fv := stringFieldUnescape(value)
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
 	return nil
 }
 
@@ -115,7 +112,7 @@ func (h *MetricHandler) AddBool(key []byte, value []byte) error {
 	if err != nil {
 		return errors.New("unparseable bool")
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
 	return nil
 }
 
@@ -127,11 +124,9 @@ func (h *MetricHandler) SetTimestamp(tm []byte) error {
 		}
 		return err
 	}
-	ns := v * int64(h.timeUnit)
-	h.builder.SetTime(time.Unix(0, ns))
-	return nil
-}
 
-func (h *MetricHandler) Reset() {
-	h.builder.Reset()
+	//time precision is overloaded to mean time unit here
+	ns := v * int64(h.timePrecision)
+	h.metric.SetTime(time.Unix(0, ns))
+	return nil
 }

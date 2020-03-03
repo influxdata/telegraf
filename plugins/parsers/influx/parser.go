@@ -19,6 +19,8 @@ var (
 	ErrNoMetric = errors.New("no metric in line")
 )
 
+type TimeFunc func() time.Time
+
 // ParseError indicates a error in the parsing of the text.
 type ParseError struct {
 	Offset     int
@@ -84,7 +86,6 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		}
 
 		if err != nil {
-			p.handler.Reset()
 			return nil, &ParseError{
 				Offset:     p.machine.Position(),
 				LineOffset: p.machine.LineOffset(),
@@ -97,7 +98,6 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 
 		metric, err := p.handler.Metric()
 		if err != nil {
-			p.handler.Reset()
 			return nil, err
 		}
 
@@ -182,7 +182,6 @@ func (p *StreamParser) Next() (telegraf.Metric, error) {
 	}
 
 	if err != nil {
-		p.handler.Reset()
 		return nil, &ParseError{
 			Offset:     p.machine.Position(),
 			LineOffset: p.machine.LineOffset(),
@@ -195,7 +194,6 @@ func (p *StreamParser) Next() (telegraf.Metric, error) {
 
 	metric, err := p.handler.Metric()
 	if err != nil {
-		p.handler.Reset()
 		return nil, err
 	}
 

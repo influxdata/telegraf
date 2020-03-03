@@ -273,8 +273,7 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 		precisionStr := req.URL.Query().Get("precision")
 		if precisionStr != "" {
-			var precision time.Duration
-			precision = getPrecisionMultiplier(precisionStr)
+			precision := getPrecisionMultiplier(precisionStr)
 			parser.SetTimePrecision(precision)
 		}
 
@@ -314,6 +313,8 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 			if h.DatabaseTag != "" && db != "" {
 				m.AddTag(h.DatabaseTag, db)
 			}
+
+			m.Time()
 
 			h.acc.AddMetric(m)
 
