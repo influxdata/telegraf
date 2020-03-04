@@ -10,7 +10,6 @@ import (
 
 type SchemaRegistry struct {
 	url   string
-	cache map[int]string
 }
 
 const (
@@ -19,19 +18,10 @@ const (
 )
 
 func NewSchemaRegistry(url string) *SchemaRegistry {
-	return &SchemaRegistry{
-		url:   url,
-		cache: make(map[int]string),
-	}
+	return &SchemaRegistry{url: url}
 }
 
 func (sr *SchemaRegistry) getSchema(id int) (string, error) {
-	value, ok := sr.cache[id]
-	if ok {
-		return value, nil
-	}
-
-	log.Printf("I! SchemaRegistry: cache miss!")
 
 	resp, err := http.Get(fmt.Sprintf(schemaByID, sr.url, id))
 	if nil != err {
@@ -54,8 +44,6 @@ func (sr *SchemaRegistry) getSchema(id int) (string, error) {
 		log.Printf("E! SchemaRegistry: schema %s is not a string", schema)
 		return "", fmt.Errorf("Malformed respose from schema registry!")
 	}
-
-	sr.cache[id] = schemaValue
 
 	return schemaValue, nil
 }

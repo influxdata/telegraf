@@ -36,6 +36,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	codec, err := goavro.NewCodec(schema)
+
 	if err != nil {
 		log.Printf("E! AvroParser: %s", err)
 		return nil, err
@@ -114,19 +115,32 @@ func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, err
 	}
 
 	for _, tag := range p.Tags {
-		tags[tag] = fmt.Sprintf("%v", flat[tag])
+		if value, ok := flat[tag]; ok {
+			tags[tag] = fmt.Sprintf("%v", value)
+		} else {
+			log.Printf("I! AvroParser: tag %s null", tag)
+		}
 	}
 
 	for _, field := range p.Fields {
-		fields[field] = flat[field]
+		if value, ok := flat[field]; ok {
+			fields[field] = value
+		} else {
+			log.Printf("I! AvroParser: field %s null", field)
+		}
 	}
 
-	m, err := metric.New(p.Measurement, tags, fields, metricTime)
-	fmt.Printf(m)
-	if err != nil {
-		log.Printf("E! AvroParser: %s", err)
-		return nil, err
-	}
+	if len(fields) == 0 {
+		log.Printf("I! AvroParser: number of fields is 0, skipping metric")
+		return nil, fmt.Errorf("Number of fields is 0, unable to create metric!")
+	} else {
+		m, err := metric.New(p.Measurement, tags, fields, metricTime)
 
-	return m, nil
+		if err != nil {
+			log.Printf("E! AvroParser: %s", err)
+			return nil, err
+		}
+
+		return m, nil
+	}
 }
