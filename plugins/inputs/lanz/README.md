@@ -21,8 +21,8 @@ You will need to configure LANZ and enable streaming LANZ data.
 ```toml
 [[inputs.lanz]]
   servers = [
-    "tcp://switch1.example.com:50001",
-    "tcp://switch2.example.com:50001",
+    "tcp://switch1.int.example.com:50001",
+    "tcp://switch2.int.example.com:50001",
   ]
 ```
 
@@ -77,4 +77,11 @@ SELECT max("buffer_size") AS "max_buffer_size" FROM "global_buffer_usage_record"
 ```
 
 ### Example output
+```
+lanz_global_buffer_usage_record,entry_type=2,host=telegraf.int.example.com,port=50001,source=switch01.int.example.com timestamp=158334105824919i,buffer_size=505i,duration=0i 1583341058300643815
+lanz_congestion_record,entry_type=2,host=telegraf.int.example.com,intf_name=Ethernet36,port=50001,port_id=61,source=switch01.int.example.com,switch_id=0,traffic_class=1 time_of_max_qlen=0i,tx_latency=564480i,q_drop_count=0i,timestamp=158334105824919i,queue_size=225i 1583341058300636045
+lanz_global_buffer_usage_record,entry_type=2,host=telegraf.int.example.com,port=50001,source=switch01.int.example.com timestamp=158334105824919i,buffer_size=589i,duration=0i 1583341058300457464
+lanz_congestion_record,entry_type=1,host=telegraf.int.example.com,intf_name=Ethernet36,port=50001,port_id=61,source=switch01.int.example.com,switch_id=0,traffic_class=1 q_drop_count=0i,timestamp=158334105824919i,queue_size=232i,time_of_max_qlen=0i,tx_latency=584640i 1583341058300450302
+```
+
 
