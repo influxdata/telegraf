@@ -3,6 +3,7 @@ package decoder
 import (
 	"fmt"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf/metric"
@@ -10,7 +11,7 @@ import (
 
 func location(skip int) string {
 	_, file, line, _ := runtime.Caller(skip)
-	return fmt.Sprintf("%s:%d", file, line)
+	return file + ":" + strconv.FormatInt(int64(line), 10)
 }
 
 // U32 answers a directive for 32bit Unsigned Integers

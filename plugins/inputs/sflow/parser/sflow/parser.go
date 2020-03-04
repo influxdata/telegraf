@@ -2,7 +2,6 @@ package sflow
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/sflow/parser/decoder"
@@ -16,11 +15,10 @@ type Parser struct {
 
 // NewParser creates a new SFlow Parser
 func NewParser(metricName string, sflowConfig V5FormatOptions) (*Parser, error) {
-	if metricName == "" {
-		return nil, fmt.Errorf("metric name cannot be empty")
-	}
-	result := &Parser{metricName: metricName, sflowFormat: V5Format(sflowConfig)}
-	return result, nil
+	return &Parser{
+		metricName:  metricName,
+		sflowFormat: V5Format(sflowConfig),
+	}, nil
 }
 
 func (sfp *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {

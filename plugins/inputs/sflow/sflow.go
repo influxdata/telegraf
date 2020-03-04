@@ -15,6 +15,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/sflow/parser/sflow"
 )
 
+const (
+)
+
 type setReadBufferer interface {
 	SetReadBuffer(bytes int) error
 }
