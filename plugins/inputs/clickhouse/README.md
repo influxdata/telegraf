@@ -8,7 +8,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
 [[inputs.clickhouse]]
   ## Username for authorization on ClickHouse server
   ## example: user = "default"
-  user = "default"
+  username = "default"
 
   ## Password for authorization on ClickHouse server
   ## example: password = "super_secret"
