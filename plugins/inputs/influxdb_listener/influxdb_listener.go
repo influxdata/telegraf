@@ -314,8 +314,6 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				m.AddTag(h.DatabaseTag, db)
 			}
 
-			m.Time()
-
 			h.acc.AddMetric(m)
 
 		}
