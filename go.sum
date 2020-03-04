@@ -33,6 +33,8 @@ github.com/Azure/go-autorest/logger v0.1.0/go.mod h1:oExouG+K6PryycPJfVSxi/koC6L
 github.com/Azure/go-autorest/tracing v0.5.0 h1:TRn4WjSnkcSy5AEG3pnbtFSwNtwzjr4VYyQflFE619k=
 github.com/Azure/go-autorest/tracing v0.5.0/go.mod h1:r/s2XiOKccPW3HrqB+W0TQzfbtp2fGCgRFtBroKn4Dk=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/DamRCorba/huawei_telemetry_sensors v0.0.0-20200303204802-9d9cdfdbfa02 h1:R8+JwJmklg2CqgsQHZ5XrpEfr6YiMyZnzPrf2a5gMKU=
+github.com/DamRCorba/huawei_telemetry_sensors v0.0.0-20200303204802-9d9cdfdbfa02/go.mod h1:FypdOrAOb/b+KeAt/4ZWKkODmz339S6TLpqVN2oo8C4=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee h1:atI/FFjXh6hIVlPE1Jup9m8N4B9q/OSbMUe2EBahs+w=
 github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee/go.mod h1:jDA6v0TUYrFEIAE5uGJ29LQOeONIgMdP4Rkqb8HUnPM=
