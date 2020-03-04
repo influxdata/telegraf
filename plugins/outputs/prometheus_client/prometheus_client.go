@@ -156,7 +156,7 @@ func (p *PrometheusClient) Init() error {
 		ipRange = append(ipRange, ipNet)
 	}
 
-	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, onAuthError)
+	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
 	rangeHandler := internal.IPRangeHandler(ipRange, onError)
 	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
 
@@ -219,9 +219,7 @@ func (p *PrometheusClient) Connect() error {
 	return nil
 }
 
-func onAuthError(rw http.ResponseWriter, code int) {
-	rw.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-	http.Error(rw, http.StatusText(code), code)
+func onAuthError(_ http.ResponseWriter) {
 }
 
 func onError(rw http.ResponseWriter, code int) {

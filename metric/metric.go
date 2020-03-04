@@ -50,13 +50,15 @@ func New(
 		sort.Slice(m.tags, func(i, j int) bool { return m.tags[i].Key < m.tags[j].Key })
 	}
 
-	m.fields = make([]*telegraf.Field, 0, len(fields))
-	for k, v := range fields {
-		v := convertField(v)
-		if v == nil {
-			continue
+	if len(fields) > 0 {
+		m.fields = make([]*telegraf.Field, 0, len(fields))
+		for k, v := range fields {
+			v := convertField(v)
+			if v == nil {
+				continue
+			}
+			m.AddField(k, v)
 		}
-		m.AddField(k, v)
 	}
 
 	return m, nil

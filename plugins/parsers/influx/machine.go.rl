@@ -2,6 +2,7 @@ package influx
 
 import (
 	"errors"
+	"io"
 )
 
 var (
@@ -70,8 +71,8 @@ action goto_align {
 	fgoto align;
 }
 
-action found_metric {
-	foundMetric = true
+action begin_metric {
+	m.beginMetric = true
 }
 
 action name {
@@ -84,11 +85,11 @@ action name {
 }
 
 action tagkey {
-	key = m.text()
+	m.key = m.text()
 }
 
 action tagvalue {
-	err = m.handler.AddTag(key, m.text())
+	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -97,11 +98,11 @@ action tagvalue {
 }
 
 action fieldkey {
-	key = m.text()
+	m.key = m.text()
 }
 
 action integer {
-	err = m.handler.AddInt(key, m.text())
+	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -110,7 +111,7 @@ action integer {
 }
 
 action unsigned {
-	err = m.handler.AddUint(key, m.text())
+	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -119,7 +120,7 @@ action unsigned {
 }
 
 action float {
-	err = m.handler.AddFloat(key, m.text())
+	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -128,7 +129,7 @@ action float {
 }
 
 action bool {
-	err = m.handler.AddBool(key, m.text())
+	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -137,7 +138,7 @@ action bool {
 }
 
 action string {
-	err = m.handler.AddString(key, m.text())
+	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
 		fhold;
 		fnext discard_line;
@@ -161,15 +162,20 @@ action incr_newline {
 }
 
 action eol {
+	m.finishMetric = true
 	fnext align;
 	fbreak;
+}
+
+action finish_metric {
+	m.finishMetric = true
 }
 
 ws =
 	[\t\v\f ];
 
 newline =
-	'\r'? '\n' %to(incr_newline);
+	'\r'? '\n' >incr_newline;
 
 non_zero_digit =
 	[1-9];
@@ -273,7 +279,7 @@ line_without_term =
 main :=
 	(line_with_term*
 	(line_with_term | line_without_term?)
-    ) >found_metric
+    ) >begin_metric %eof(finish_metric)
 	;
 
 # The discard_line machine discards the current line.  Useful for recovering
@@ -299,7 +305,7 @@ align :=
 # Series is a machine for matching measurement+tagset
 series :=
 	(measurement >err(name_error) tagset eol_break?)
-	>found_metric
+	>begin_metric
 	;
 }%%
 
@@ -317,14 +323,17 @@ type Handler interface {
 }
 
 type machine struct {
-	data       []byte
-	cs         int
-	p, pe, eof int
-	pb         int
-	lineno     int
-	sol        int
-	handler    Handler
-	initState  int
+	data         []byte
+	cs           int
+	p, pe, eof   int
+	pb           int
+	lineno       int
+	sol          int
+	handler      Handler
+	initState    int
+	key          []byte
+	beginMetric  bool
+	finishMetric bool
 }
 
 func NewMachine(handler Handler) *machine {
@@ -368,6 +377,9 @@ func (m *machine) SetData(data []byte) {
 	m.sol = 0
 	m.pe = len(data)
 	m.eof = len(data)
+	m.key = nil
+	m.beginMetric = false
+	m.finishMetric = false
 
 	%% write init;
 	m.cs = m.initState
@@ -382,10 +394,15 @@ func (m *machine) Next() error {
 		return EOF
 	}
 
-	var err error
-	var key []byte
-	foundMetric := false
+	m.key = nil
+	m.beginMetric = false
+	m.finishMetric = false
 
+	return m.exec()
+}
+
+func (m *machine) exec() error {
+	var err error
 	%% write exec;
 
 	if err != nil {
@@ -405,7 +422,7 @@ func (m *machine) Next() error {
 	//
 	// Otherwise we have successfully parsed a metric line, so if we are at
 	// the EOF we will report it the next call.
-	if !foundMetric && m.p == m.pe && m.pe == m.eof {
+	if !m.beginMetric && m.p == m.pe && m.pe == m.eof {
 		return EOF
 	}
 
@@ -436,4 +453,97 @@ func (m *machine) Column() int {
 
 func (m *machine) text() []byte {
 	return m.data[m.pb:m.p]
+}
+
+type streamMachine struct {
+	machine *machine
+	reader  io.Reader
+}
+
+func NewStreamMachine(r io.Reader, handler Handler) *streamMachine {
+	m := &streamMachine{
+		machine: NewMachine(handler),
+		reader: r,
+	}
+
+	m.machine.SetData(make([]byte, 1024))
+	m.machine.pe = 0
+	m.machine.eof = -1
+	return m
+}
+
+func (m *streamMachine) Next() error {
+	// Check if we are already at EOF, this should only happen if called again
+	// after already returning EOF.
+	if m.machine.p == m.machine.pe && m.machine.pe == m.machine.eof {
+		return EOF
+	}
+
+	copy(m.machine.data, m.machine.data[m.machine.p:])
+	m.machine.pe = m.machine.pe - m.machine.p
+	m.machine.sol = m.machine.sol - m.machine.p
+	m.machine.pb = 0
+	m.machine.p = 0
+	m.machine.eof = -1
+
+	m.machine.key = nil
+	m.machine.beginMetric = false
+	m.machine.finishMetric = false
+
+	for {
+		// Expand the buffer if it is full
+		if m.machine.pe == len(m.machine.data) {
+			expanded := make([]byte, 2 * len(m.machine.data))
+			copy(expanded, m.machine.data)
+			m.machine.data = expanded
+		}
+
+		n, err := m.reader.Read(m.machine.data[m.machine.pe:])
+		if n == 0 && err == io.EOF {
+			m.machine.eof = m.machine.pe
+		} else if err != nil && err != io.EOF {
+			return err
+		}
+
+		m.machine.pe += n
+
+		err = m.machine.exec()
+		if err != nil {
+			return err
+		}
+
+		// If we have successfully parsed a full metric line break out
+		if m.machine.finishMetric {
+			break
+		}
+
+	}
+
+	return nil
+}
+
+// Position returns the current byte offset into the data.
+func (m *streamMachine) Position() int {
+	return m.machine.Position()
+}
+
+// LineOffset returns the byte offset of the current line.
+func (m *streamMachine) LineOffset() int {
+	return m.machine.LineOffset()
+}
+
+// LineNumber returns the current line number.  Lines are counted based on the
+// regular expression `\r?\n`.
+func (m *streamMachine) LineNumber() int {
+	return m.machine.LineNumber()
+}
+
+// Column returns the current column.
+func (m *streamMachine) Column() int {
+	return m.machine.Column()
+}
+
+// LineText returns the text of the current line that has been parsed so far.
+func (m *streamMachine) LineText() string {
+	return string(m.machine.data[0:m.machine.p])
 }
