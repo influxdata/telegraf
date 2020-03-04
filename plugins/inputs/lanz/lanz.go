@@ -15,8 +15,8 @@ import (
 var sampleConfig = `
   ## URL to Arista LANZ endpoint
     # servers = [
-	#   "tcp://127.0.0.1:50001"
-	# ]
+    #   "tcp://127.0.0.1:50001"
+    # ]
 `
 
 func init() {
@@ -26,8 +26,9 @@ func init() {
 }
 
 type Lanz struct {
-	Servers []string
-	Clients map[string]*LanzClient
+	Servers []string `toml:"servers"`
+	clients []lanz.Client
+	wg      sync.WaitGroup
 }
 
 func NewLanz() *Lanz {
@@ -53,58 +54,46 @@ func (l *Lanz) Start(acc telegraf.Accumulator) error {
 	}
 
 	for _, server := range l.Servers {
-		c := NewLanzClient()
-		c.Server = server
-		c.Start(acc)
+		deviceUrl, err := url.Parse(server)
+		if err != nil {
+			return err
+		}
+		client := lanz.New(
+			lanz.WithAddr(deviceUrl.Host),
+			lanz.WithBackoff(1*time.Second),
+			lanz.WithTimeout(10*time.Second),
+		)
+		l.clients = append(l.clients, client)
+
+		in := make(chan *pb.LanzRecord)
+		go func() {
+			client.Run(in)
+		}()
+		l.wg.Add(1)
+		go func() {
+			l.wg.Done()
+			receive(acc, in, deviceUrl)
+		}()
 	}
 	return nil
 }
 
 func (l *Lanz) Stop() {
-	for _, client := range l.Clients {
+	for _, client := range l.clients {
 		client.Stop()
 	}
+	l.wg.Wait()
 }
 
-type LanzClient struct {
-	Server string
-	in     chan *pb.LanzRecord
-	done   chan bool
-	acc    telegraf.Accumulator
-	client *lanz.Client
-	sync.Mutex
-}
-
-func NewLanzClient() *LanzClient {
-	return &LanzClient{}
-}
-
-func (c *LanzClient) Start(acc telegraf.Accumulator) error {
-	c.acc = acc
-	deviceUrl, err := url.Parse(c.Server)
-	if err != nil {
-		return err
-	}
-	client := lanz.New(lanz.WithAddr(deviceUrl.Host), lanz.WithBackoff(1*time.Second), lanz.WithTimeout(10*time.Second))
-	c.client = &client
-	c.in = make(chan *pb.LanzRecord)
-	c.done = make(chan bool)
-	go func() {
-		client.Run(c.in)
-		c.done <- true
-	}()
-	go c.receiver(deviceUrl)
-	return nil
-}
-
-func (c *LanzClient) receiver(deviceUrl *url.URL) {
+func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceUrl *url.URL) {
 
 	for {
 
 		select {
-		case <-c.done:
-			return
-		case msg := <-c.in:
+		case msg, ok := <-in:
+			if !ok {
+				return
+			}
 			cr := msg.GetCongestionRecord()
 			if cr != nil {
 				vals := map[string]interface{}{
@@ -124,7 +113,7 @@ func (c *LanzClient) receiver(deviceUrl *url.URL) {
 					"source":                deviceUrl.Hostname(),
 					"port":                  deviceUrl.Port(),
 				}
-				c.acc.AddFields("lanz_congestion_record", vals, tags)
+				acc.AddFields("lanz_congestion_record", vals, tags)
 			}
 
 			gbur := msg.GetGlobalBufferUsageRecord()
@@ -139,14 +128,8 @@ func (c *LanzClient) receiver(deviceUrl *url.URL) {
 					"source":     deviceUrl.Hostname(),
 					"port":       deviceUrl.Port(),
 				}
-				c.acc.AddFields("lanz_global_buffer_usage_record", vals, tags)
+				acc.AddFields("lanz_global_buffer_usage_record", vals, tags)
 			}
 		}
 	}
-}
-
-func (c *LanzClient) Stop() {
-	c.Lock()
-	defer c.Unlock()
-	close(c.done)
 }

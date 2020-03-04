@@ -46,34 +46,25 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	l := NewLanz()
-	l.Clients = make(map[string]*LanzClient)
 
-	c1 := NewLanzClient()
-	c1.Server = "tcp://switch01.int.example.com:50001"
-	c1.in = make(chan *pb.LanzRecord)
-	c1.done = make(chan bool)
-	c1.acc = &acc
-	l.Clients[c1.Server] = c1
+	l.Servers = append(l.Servers, "tcp://switch01.int.example.com:50001")
+	l.Servers = append(l.Servers, "tcp://switch02.int.example.com:50001")
 
-	c2 := NewLanzClient()
-	c2.Server = "tcp://switch02.int.example.com:50001"
-	c2.in = make(chan *pb.LanzRecord)
-	c2.done = make(chan bool)
-	c2.acc = &acc
-	l.Clients[c2.Server] = c2
+	in1 := make(chan *pb.LanzRecord)
+	in2 := make(chan *pb.LanzRecord)
 
-	u1, _ := url.Parse(c1.Server)
+	deviceUrl1, err := url.Parse(l.Servers[0])
+	if err != nil {
+		t.Fail()
+	}
+	deviceUrl2, err := url.Parse(l.Servers[1])
+	if err != nil {
+		t.Fail()
+	}
+	go receive(&acc, in1, deviceUrl1)
+	go receive(&acc, in2, deviceUrl2)
 
-	c1.Lock()
-	defer c1.Unlock()
-	go c1.receiver(u1)
-
-	u2, _ := url.Parse(c2.Server)
-	c2.Lock()
-	defer c2.Unlock()
-	go c2.receiver(u2)
-
-	c1.in <- testProtoBufCongestionRecord1
+	in1 <- testProtoBufCongestionRecord1
 	acc.Wait(1)
 
 	vals1 := map[string]interface{}{
@@ -97,7 +88,7 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals1, tags1)
 
 	acc.ClearMetrics()
-	c2.in <- testProtoBufCongestionRecord2
+	in2 <- testProtoBufCongestionRecord2
 	acc.Wait(1)
 
 	vals2 := map[string]interface{}{
@@ -120,8 +111,5 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsFields(t, "lanz_congestion_record", vals2)
 	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals2, tags2)
-
-	c1.done <- true
-	c2.done <- true
 
 }
