@@ -19,7 +19,7 @@ func TestHandleTelemetryHuawei(t *testing.T) {
 	grouper := HuaweiTelemetryDecoder(packet)
 
 	for _, metric := range grouper.Metrics() {
-		h.AddMetric(metric)
+		acc.AddMetric(metric)
 	}
 	require.Empty(t, acc.Errors)
 
