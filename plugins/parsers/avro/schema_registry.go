@@ -9,7 +9,7 @@ import (
 )
 
 type SchemaRegistry struct {
-	url   string
+	url string
 }
 
 const (

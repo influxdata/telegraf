@@ -1,22 +1,22 @@
 package avro
 
 import (
-    "fmt"
-    "net/http"
-    "net/http/httptest"
-    "testing"
-    "time"
-    "strings"
-    "github.com/stretchr/testify/require"
+	"fmt"
+	"github.com/stretchr/testify/require"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
 )
 
 var DefaultTime = func() time.Time {
-    return time.Unix(3600, 0)
+	return time.Unix(3600, 0)
 }
 
 func TestBasicAvroMessage(t *testing.T) {
 
-    schema := `
+	schema := `
         {
             "type":"record",
             "name":"Value",
@@ -42,36 +42,36 @@ func TestBasicAvroMessage(t *testing.T) {
         }
     `
 
-    schema = strings.ReplaceAll(schema, "\"", "\\\"")
-    schema = strings.ReplaceAll(schema, "\n", "\\n")
-    schema = fmt.Sprintf("{\"schema\": \"%s\"}", schema)
+	schema = strings.ReplaceAll(schema, "\"", "\\\"")
+	schema = strings.ReplaceAll(schema, "\n", "\\n")
+	schema = fmt.Sprintf("{\"schema\": \"%s\"}", schema)
 
-    ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Add("Content-Type", "application/json")
-        w.Write([]byte(schema))
-    }))
-    defer ts.Close()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(schema))
+	}))
+	defer ts.Close()
 
-    p := Parser{
-        SchemaRegistry:  ts.URL,
-        Measurement:     "measurement",
-        Tags:            []string{"tag"},
-        Fields:          []string{"field"},
-        Timestamp:       "timestamp",
-        TimestampFormat: "unix",
-        TimeFunc:        DefaultTime,
-    }
+	p := Parser{
+		SchemaRegistry:  ts.URL,
+		Measurement:     "measurement",
+		Tags:            []string{"tag"},
+		Fields:          []string{"field"},
+		Timestamp:       "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+	}
 
-    msg := []byte{0x00, 0x00, 0x00, 0x00, 0x17, 0x20, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x6d, 0x65, 0x61, 0x73, 0x75, 0x72, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x10, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x74, 0x61, 0x67, 0x26, 0xf0, 0xb6, 0x97, 0xd4, 0xb0, 0x5b}
+	msg := []byte{0x00, 0x00, 0x00, 0x00, 0x17, 0x20, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x6d, 0x65, 0x61, 0x73, 0x75, 0x72, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x10, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x74, 0x61, 0x67, 0x26, 0xf0, 0xb6, 0x97, 0xd4, 0xb0, 0x5b}
 
-    _, err := p.Parse(msg)
+	_, err := p.Parse(msg)
 
-    require.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestKafkaDemoAvroMessage(t *testing.T) {
 
-    schema := `
+	schema := `
         {
             "type":"record",
             "name":"KsqlDataSourceSchema",
@@ -137,29 +137,29 @@ func TestKafkaDemoAvroMessage(t *testing.T) {
         }
     `
 
-    schema = strings.ReplaceAll(schema, "\"", "\\\"")
-    schema = strings.ReplaceAll(schema, "\n", "\\n")
-    schema = fmt.Sprintf("{\"schema\": \"%s\"}", schema)
+	schema = strings.ReplaceAll(schema, "\"", "\\\"")
+	schema = strings.ReplaceAll(schema, "\n", "\\n")
+	schema = fmt.Sprintf("{\"schema\": \"%s\"}", schema)
 
-    ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Add("Content-Type", "application/json")
-        w.Write([]byte(schema))
-    }))
-    defer ts.Close()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(schema))
+	}))
+	defer ts.Close()
 
-    p := Parser{
-        SchemaRegistry:  ts.URL,
-        Measurement:     "rating",
-        Tags:            []string{"user_id_int", "route_id_int", "channel_string"},
-        Fields:          []string{"stars_int", "message_int"},
-        Timestamp:       "rating_time_long",
-        TimestampFormat: "unix_ms",
-        TimeFunc:        DefaultTime,
-    }
+	p := Parser{
+		SchemaRegistry:  ts.URL,
+		Measurement:     "rating",
+		Tags:            []string{"user_id_int", "route_id_int", "channel_string"},
+		Fields:          []string{"stars_int", "message_int"},
+		Timestamp:       "rating_time_long",
+		TimestampFormat: "unix_ms",
+		TimeFunc:        DefaultTime,
+	}
 
-    msg := []byte{0, 0, 0, 0, 1, 2, 144, 16, 2, 14, 2, 4, 2, 244, 42, 2, 226, 196, 231, 151, 148, 92, 2, 6, 105, 111, 115, 2, 104, 119, 104, 121, 32, 105, 115, 32, 105, 116, 32, 115, 111, 32, 100, 105, 102, 102, 105, 99, 117, 108, 116, 32, 116, 111, 32, 107, 101, 101, 112, 32, 116, 104, 101, 32, 98, 97, 116, 104, 114, 111, 111, 109, 115, 32, 99, 108, 101, 97, 110, 32, 63}
+	msg := []byte{0, 0, 0, 0, 1, 2, 144, 16, 2, 14, 2, 4, 2, 244, 42, 2, 226, 196, 231, 151, 148, 92, 2, 6, 105, 111, 115, 2, 104, 119, 104, 121, 32, 105, 115, 32, 105, 116, 32, 115, 111, 32, 100, 105, 102, 102, 105, 99, 117, 108, 116, 32, 116, 111, 32, 107, 101, 101, 112, 32, 116, 104, 101, 32, 98, 97, 116, 104, 114, 111, 111, 109, 115, 32, 99, 108, 101, 97, 110, 32, 63}
 
-    _, err := p.Parse(msg)
+	_, err := p.Parse(msg)
 
-    require.NoError(t, err)
+	require.NoError(t, err)
 }
