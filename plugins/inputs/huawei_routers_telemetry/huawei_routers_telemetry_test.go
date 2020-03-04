@@ -1,7 +1,6 @@
 package huawei_routers_telemetry
 
 import (
-	"fmt"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"testing"
