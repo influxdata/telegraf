@@ -24,7 +24,7 @@ var defaultTimeout = 5 * time.Second
 var sampleConfig = `
   ## Username for authorization on ClickHouse server
   ## example: user = "default""
-  user = "default"
+  username = "default"
 
   ## Password for authorization on ClickHouse server
   ## example: password = "super_secret"
@@ -108,7 +108,7 @@ func init() {
 
 // ClickHouse Telegraf Input Plugin
 type ClickHouse struct {
-	User           string            `toml:"user"`
+	Username       string            `toml:"username"`
 	Password       string            `toml:"password"`
 	Servers        []string          `toml:"servers"`
 	AutoDiscovery  bool              `toml:"auto_discovery"`
@@ -320,8 +320,8 @@ func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error
 	q.Set("query", query+" FORMAT JSON")
 	url.RawQuery = q.Encode()
 	req, _ := http.NewRequest("GET", url.String(), nil)
-	if ch.User != "" {
-		req.Header.Add("X-ClickHouse-User", ch.User)
+	if ch.Username != "" {
+		req.Header.Add("X-ClickHouse-User", ch.Username)
 	}
 	if ch.Password != "" {
 		req.Header.Add("X-ClickHouse-Key", ch.Password)
