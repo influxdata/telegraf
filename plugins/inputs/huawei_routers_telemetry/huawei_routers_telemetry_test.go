@@ -1,6 +1,7 @@
 package huawei_routers_telemetry
 
 import (
+	"fmt"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -18,6 +19,11 @@ func TestHandleTelemetryHuawei(t *testing.T) {
 
 	grouper := HuaweiTelemetryDecoder(packet)
 	acc.AddMetric(grouper.Metrics()[0])
+
+	cosa, valida := acc.Get("huawei-devm:devm/cpuInfos/cpuInfo")
+	if valida == true {
+		fmt.Println(cosa)
+	}
 
 	require.Empty(t, acc.Errors)
 
