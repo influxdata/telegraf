@@ -400,6 +400,10 @@ BEGIN
 			,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
 			,mf.[type_desc] AS [file_type]
 			,vs.[volume_mount_point]
+			,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
+				,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+				,vs.[volume_mount_point]
+			) AS [volume_mount_point]
 			,vfs.[io_stall_read_ms] AS [read_latency_ms]
 			,vfs.[num_of_reads] AS [reads]
 			,vfs.[num_of_bytes_read] AS [read_bytes]
@@ -448,7 +452,10 @@ BEGIN
 			,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
 			,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
 			,mf.[type_desc] AS [file_type]
-			,vs.[volume_mount_point]
+			,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
+				,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+				,vs.[volume_mount_point]
+			) AS [volume_mount_point]
 			,vfs.[io_stall_read_ms] AS [read_latency_ms]
 			,vfs.[num_of_reads] AS [reads]
 			,vfs.[num_of_bytes_read] AS [read_bytes]
