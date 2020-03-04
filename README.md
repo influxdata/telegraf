@@ -202,6 +202,7 @@ For documentation on the latest development code see the [documentation index][d
 * [http_listener_v2](./plugins/inputs/http_listener_v2)
 * [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
+* [huawei_routers_telemetry](./plugins/inputs/huawei_routers_telemetry) (Supports Huawei UDP telemetry VRP V8R10)
 * [icinga2](./plugins/inputs/icinga2)
 * [infiniband](./plugins/inputs/infiniband)
 * [influxdb](./plugins/inputs/influxdb)

@@ -56,6 +56,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_response"
 	_ "github.com/influxdata/telegraf/plugins/inputs/httpjson"
+	_ "github.com/influxdata/telegraf/plugins/inputs/huawei_routers_telemetry"
 	_ "github.com/influxdata/telegraf/plugins/inputs/icinga2"
 	_ "github.com/influxdata/telegraf/plugins/inputs/infiniband"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
