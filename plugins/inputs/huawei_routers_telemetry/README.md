@@ -30,11 +30,11 @@ telemetry
   destination-group TelemetryTest
 ```
 
-# plugin configuration
+# Plugin Configuration
 
 ```
 [[inputs.huawei_routers_telemetry]]
-  service_address = "udp://:8080"
+  service_port = "8080"
 ```
 
 # Influx Data Stored.
