@@ -12,8 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/parsers/network_flow/sflow"
+	"github.com/influxdata/telegraf/plugins/inputs/sflow/parser/sflow"
 )
 
 type setReadBufferer interface {
@@ -62,7 +61,7 @@ type Listener struct {
 	MaxFlowHeaderLength    uint32 `toml:"max_flow_header_length"`
 	MaxCounterHeaderLength uint32 `toml:"max_counter_header_length"`
 
-	parsers.Parser
+	*sflow.Parser
 	telegraf.Accumulator
 	io.Closer
 }
@@ -79,7 +78,7 @@ func (sl *Listener) SampleConfig() string {
 	# service_address = "udp://:6343"
 	# service_address = "udp4://:6343"
 	# service_address = "udp6://:6343"
-    
+
 	## Maximum socket buffer size (in bytes when no unit specified).
 	## For stream sockets, once the buffer fills up, the sender will start backing up.
 	## For datagram sockets, once the buffer fills up, metrics will start dropping.
@@ -120,7 +119,7 @@ func (sl *Listener) getSflowConfig() sflow.V5FormatOptions {
 func (sl *Listener) Start(acc telegraf.Accumulator) error {
 	sl.Accumulator = acc
 
-	parser, err := sflow.NewParser("sflow", make(map[string]string), sl.getSflowConfig())
+	parser, err := sflow.NewParser("sflow", sl.getSflowConfig())
 	if err != nil {
 		return err
 	}
@@ -169,7 +168,7 @@ func (sl *Listener) Stop() {
 
 // newListener constructs a new vanilla, unconfigured, listener and returns it
 func newListener() *Listener {
-	p, _ := sflow.NewParser("sflow", make(map[string]string), sflow.NewDefaultV5FormatOptions())
+	p, _ := sflow.NewParser("sflow", sflow.NewDefaultV5FormatOptions())
 	return &Listener{Parser: p}
 }
 
@@ -189,5 +188,7 @@ func newUDPListener(network string, address string) (net.PacketConn, error) {
 
 // init registers this SFflow input plug in with the Telegraf framework
 func init() {
-	inputs.Add("sflow", func() telegraf.Input { return newListener() })
+	inputs.Add("sflow", func() telegraf.Input {
+		return newListener()
+	})
 }

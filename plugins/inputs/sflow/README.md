@@ -7,9 +7,9 @@ Currently only Flow Samples of Ethernet / IPv4 & IPv4 TCP & UDP headers are turn
 # Configuration
 The following configuration options are availabe:
 
-| Name | Description 
+| Name | Description
 |---|---|
-| service_address| URL to listen on expressed as UDP (IPv4 or 6) OP address and port number 
+| service_address| URL to listen on expressed as UDP (IPv4 or 6) OP address and port number
 | | Example: ```service_address = "udp://:6343"```
 | read_buffer_size | Maximum socket buffer size (in bytes when no unit specified). Once the buffer fills up, metrics will start dropping. Defaults to the OS default.
 ||Example = ```read_buffer_size"64KiB"``` |
@@ -24,7 +24,7 @@ This is a sample configuration for the plugin.
 	# service_address = "udp://:6343"
 	# service_address = "udp4://:6343"
 	# service_address = "udp6://:6343"
-    
+
 	## Maximum socket buffer size (in bytes when no unit specified).
 	## For stream sockets, once the buffer fills up, the sender will start backing up.
 	## For datagram sockets, once the buffer fills up, metrics will start dropping.

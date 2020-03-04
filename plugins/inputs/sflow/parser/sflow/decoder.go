@@ -5,7 +5,7 @@ import (
 	"math"
 	"net"
 
-	"github.com/influxdata/telegraf/plugins/parsers/network_flow/decoder"
+	"github.com/influxdata/telegraf/plugins/inputs/sflow/parser/decoder"
 )
 
 const (
