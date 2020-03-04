@@ -19,7 +19,7 @@ func TestHandleTelemetryHuawei(t *testing.T) {
 	}
 	require.Empty(t, acc.Errors)
 
-	tags := map[string]string{"path": "huawei-devm:devm/cpuInfos/cpuInfo", "position": "8", "source": "HuaweiTest1", "subscription": "ProbandoTelemetriaSubscripcion"}
-	fields := map[string]interface{}{"entIndex": 17301505, "interval": 8, "ovloadThreshold": 90, "systemCpuUsage": 14, "unovloadThreshold": 75}
+	tags := map[string]string{"path": "huawei-devm:devm/cpuInfos/cpuInfo", "position": "9", "source": "HuaweiTest1", "subscription": "ProbandoTelemetriaSubscripcion"}
+	fields := map[string]interface{}{"entIndex": 17367041, "interval": 8, "ovloadThreshold": 90, "systemCpuUsage": 10, "unovloadThreshold": 75}
 	acc.AssertContainsTaggedFields(t, "systemCpuUsage", fields, tags)
 }
