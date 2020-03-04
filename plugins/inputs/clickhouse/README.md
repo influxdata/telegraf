@@ -1,22 +1,22 @@
-# Telegraf Input Plugin: ClickHouse
+# ClickHouse Input Plugin
 
-This plugin gathers the statistic data from [ClickHouse](https://github.com/ClickHouse/ClickHouse)  server.
+This plugin gathers the statistic data from [ClickHouse](https://github.com/ClickHouse/ClickHouse) server.
 
 ### Configuration
-```ini
+```toml
 # Read metrics from one or many ClickHouse servers
 [[inputs.clickhouse]]
   ## Username for authorization on ClickHouse server
   ## example: user = "default"
   user = "default"
-    
+
   ## Password for authorization on ClickHouse server
   ## example: password = "super_secret"
 
-  ## HTTP(s) timeout while getting metrics values 
+  ## HTTP(s) timeout while getting metrics values
   ## The timeout includes connection time, any redirects, and reading the response body.
   ##   example: timeout = 1s
-  # timeout = 5s 
+  # timeout = 5s
 
   ## List of servers for metrics scraping
   ## metrics scrape via HTTP(s) clickhouse interface
@@ -54,7 +54,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
   ##  </remote_servers>
   ##
   ## </yandex>
-  ## 
+  ##
   ## example: cluster_include = ["my-own-cluster"]
   # cluster_include = []
 
@@ -71,22 +71,23 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
   # insecure_skip_verify = false
 ```
 
-### Metrics:
+### Metrics
+
 - clickhouse_events
   - tags:
     - hostname (ClickHouse server hostname)
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - all rows from system.events, all metrics is COUNTER type, look https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-events
+    - all rows from [system.events][]
 
-- clickhouse_metrics
++ clickhouse_metrics
   - tags:
     - hostname (ClickHouse server hostname)
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - all rows from system.metrics, all metrics is GAUGE type, look https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-metrics
+    - all rows from [system.metrics][]
 
 - clickhouse_asynchronous_metrics
   - tags:
@@ -94,9 +95,9 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - all rows from system.asynchronous_metrics, all metrics is GAUGE type, look https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-asynchronous_metrics
+    - all rows from [system.asynchronous_metrics][]
 
-- clickhouse_tables
++ clickhouse_tables
   - tags:
     - hostname (ClickHouse server hostname)
     - table
@@ -117,3 +118,7 @@ clickhouse_metrics,cluster=test_cluster_two_shards_localhost,host=kshvakov,hostn
 clickhouse_tables,cluster=test_cluster_two_shards_localhost,database=system,host=kshvakov,hostname=localhost,shard_num=1,table=trace_log bytes=754i,parts=1i,rows=1i 1569421000000000000
 clickhouse_tables,cluster=test_cluster_two_shards_localhost,database=default,host=kshvakov,hostname=localhost,shard_num=1,table=example bytes=326i,parts=2i,rows=2i 1569421000000000000
 ```
+
+[system.events]: https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-events
+[system.metrics]: https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-metrics
+[system.asynchronous_metrics]: https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-asynchronous_metrics

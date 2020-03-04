@@ -25,14 +25,14 @@ var sampleConfig = `
   ## Username for authorization on ClickHouse server
   ## example: user = "default""
   user = "default"
-    
+
   ## Password for authorization on ClickHouse server
   ## example: password = "super_secret"
 
-  ## HTTP(s) timeout while getting metrics values 
+  ## HTTP(s) timeout while getting metrics values
   ## The timeout includes connection time, any redirects, and reading the response body.
   ##   example: timeout = 1s
-  # timeout = 5s 
+  # timeout = 5s
 
   ## List of servers for metrics scraping
   ## metrics scrape via HTTP(s) clickhouse interface
@@ -70,7 +70,7 @@ var sampleConfig = `
   ##  </remote_servers>
   ##
   ## </yandex>
-  ## 
+  ##
   ## example: cluster_include = ["my-own-cluster"]
   # cluster_include = []
 
