@@ -11,10 +11,11 @@
 
 #### New Inputs
 
+- [clickhouse](/plugins/inputs/clickhouse/README.md) - Contributed by @kshvakov
+- [execd](/plugins/inputs/execd/README.md) - Contributed by @jgraichen
 - [infiniband](/plugins/inputs/infiniband/README.md) - Contributed by @willfurnell
 - [modbus](/plugins/inputs/modbus/README.md) - Contributed by @garciaolais
 - [monit](/plugins/inputs/monit/README.md) - Contributed by @SirishaGopigiri
-- [execd](/plugins/inputs/execd/README.md) - Contributed by @jgraichen
 
 #### New Processors
 
