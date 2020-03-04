@@ -224,6 +224,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kibana](./plugins/inputs/kibana)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [kube_inventory](./plugins/inputs/kube_inventory)
+* [lanz](./plugins/inputs/lanz)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
 * [logparser](./plugins/inputs/logparser)
@@ -299,29 +300,6 @@ For documentation on the latest development code see the [documentation index][d
 * [sysstat](./plugins/inputs/sysstat)
 * [systemd_units](./plugins/inputs/systemd_units)
 * [system](./plugins/inputs/system)
-    * cpu
-    * mem
-    * net
-    * netstat
-    * disk
-    * diskio
-    * swap
-    * processes
-    * kernel (/proc/stat)
-    * kernel (/proc/vmstat)
-    * linux_sysctl_fs (/proc/sys/fs)
-
-Telegraf can also collect metrics via the following service plugins:
-
-* [http_listener](./plugins/inputs/http_listener)
-* [kafka_consumer](./plugins/inputs/kafka_consumer)
-* [lanz](./plugins/inputs/lanz)
-* [mqtt_consumer](./plugins/inputs/mqtt_consumer)
-* [nats_consumer](./plugins/inputs/nats_consumer)
-* [nsq_consumer](./plugins/inputs/nsq_consumer)
-* [logparser](./plugins/inputs/logparser)
-* [statsd](./plugins/inputs/statsd)
-* [socket_listener](./plugins/inputs/socket_listener)
 * [tail](./plugins/inputs/tail)
 * [temp](./plugins/inputs/temp)
 * [tcp_listener](./plugins/inputs/socket_listener)
