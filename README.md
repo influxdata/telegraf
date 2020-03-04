@@ -315,7 +315,7 @@ Telegraf can also collect metrics via the following service plugins:
 
 * [http_listener](./plugins/inputs/http_listener)
 * [kafka_consumer](./plugins/inputs/kafka_consumer)
-* [lanz_consumer](./plugins/inputs/lanz_consumer)
+* [lanz](./plugins/inputs/lanz)
 * [mqtt_consumer](./plugins/inputs/mqtt_consumer)
 * [nats_consumer](./plugins/inputs/nats_consumer)
 * [nsq_consumer](./plugins/inputs/nsq_consumer)

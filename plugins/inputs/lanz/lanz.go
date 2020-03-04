@@ -1,4 +1,4 @@
-package lanz_consumer
+package lanz
 
 import (
 	"net/url"
@@ -13,42 +13,40 @@ import (
 )
 
 var sampleConfig = `
-  	## URL to Arista LANZ endpoint
-  	# servers = "tcp://localhost:50001"
-  	servers = [
-		"tcp://switch02.int.example.com:50001",
-		"tcp://switch02.int.example.com:50001"
-	]
+  ## URL to Arista LANZ endpoint
+    # servers = [
+	#   "tcp://127.0.0.1:50001"
+	# ]
 `
 
 func init() {
-	inputs.Add("lanz_consumer", func() telegraf.Input {
-		return NewLanzConsumer()
+	inputs.Add("lanz", func() telegraf.Input {
+		return NewLanz()
 	})
 }
 
-type LanzConsumer struct {
+type Lanz struct {
 	Servers []string
 	Clients map[string]*LanzClient
 }
 
-func NewLanzConsumer() *LanzConsumer {
-	return &LanzConsumer{}
+func NewLanz() *Lanz {
+	return &Lanz{}
 }
 
-func (l *LanzConsumer) SampleConfig() string {
+func (l *Lanz) SampleConfig() string {
 	return sampleConfig
 }
 
-func (l *LanzConsumer) Description() string {
+func (l *Lanz) Description() string {
 	return "Read metrics off Arista LANZ, via socket"
 }
 
-func (l *LanzConsumer) Gather(acc telegraf.Accumulator) error {
+func (l *Lanz) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (l *LanzConsumer) Start(acc telegraf.Accumulator) error {
+func (l *Lanz) Start(acc telegraf.Accumulator) error {
 
 	if len(l.Servers) == 0 {
 		l.Servers = append(l.Servers, "tcp://127.0.0.1:50001")
@@ -62,7 +60,7 @@ func (l *LanzConsumer) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (l *LanzConsumer) Stop() {
+func (l *Lanz) Stop() {
 	for _, client := range l.Clients {
 		client.Stop()
 	}
@@ -123,10 +121,10 @@ func (c *LanzClient) receiver(deviceUrl *url.URL) {
 					"entry_type":            strconv.FormatInt(int64(cr.GetEntryType()), 10),
 					"traffic_class":         strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
 					"fabric_peer_intf_name": cr.GetFabricPeerIntfName(),
-					"hostname":              deviceUrl.Hostname(),
+					"source":                deviceUrl.Hostname(),
 					"port":                  deviceUrl.Port(),
 				}
-				c.acc.AddFields("congestion_record", vals, tags)
+				c.acc.AddFields("lanz_congestion_record", vals, tags)
 			}
 
 			gbur := msg.GetGlobalBufferUsageRecord()
@@ -138,10 +136,10 @@ func (c *LanzClient) receiver(deviceUrl *url.URL) {
 				}
 				tags := map[string]string{
 					"entry_type": strconv.FormatInt(int64(gbur.GetEntryType()), 10),
-					"hostname":   deviceUrl.Hostname(),
+					"source":     deviceUrl.Hostname(),
 					"port":       deviceUrl.Port(),
 				}
-				c.acc.AddFields("global_buffer_usage_record", vals, tags)
+				c.acc.AddFields("lanz_global_buffer_usage_record", vals, tags)
 			}
 		}
 	}

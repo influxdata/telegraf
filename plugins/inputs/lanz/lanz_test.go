@@ -1,4 +1,4 @@
-package lanz_consumer
+package lanz
 
 import (
 	"net/url"
@@ -41,11 +41,11 @@ var testProtoBufCongestionRecord2 = &pb.LanzRecord{
 	},
 }
 
-func TestLanzConsumerGeneratesMetrics(t *testing.T) {
+func TestLanzGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	l := NewLanzConsumer()
+	l := NewLanz()
 	l.Clients = make(map[string]*LanzClient)
 
 	c1 := NewLanzClient()
@@ -90,11 +90,11 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 		"entry_type":            strconv.FormatInt(int64(1), 10),
 		"traffic_class":         strconv.FormatInt(int64(1), 10),
 		"fabric_peer_intf_name": "FabricPeerIntfName1",
-		"hostname":              "switch01.int.example.com",
+		"source":                "switch01.int.example.com",
 		"port":                  "50001",
 	}
 
-	acc.AssertContainsTaggedFields(t, "congestion_record", vals1, tags1)
+	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals1, tags1)
 
 	acc.ClearMetrics()
 	c2.in <- testProtoBufCongestionRecord2
@@ -114,12 +114,12 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 		"entry_type":            strconv.FormatInt(int64(2), 10),
 		"traffic_class":         strconv.FormatInt(int64(2), 10),
 		"fabric_peer_intf_name": "FabricPeerIntfName2",
-		"hostname":              "switch02.int.example.com",
+		"source":                "switch02.int.example.com",
 		"port":                  "50001",
 	}
 
-	acc.AssertContainsFields(t, "congestion_record", vals2)
-	acc.AssertContainsTaggedFields(t, "congestion_record", vals2, tags2)
+	acc.AssertContainsFields(t, "lanz_congestion_record", vals2)
+	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals2, tags2)
 
 	c1.done <- true
 	c2.done <- true
