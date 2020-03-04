@@ -368,15 +368,17 @@ SELECT
 	,vfs.io_stall_queued_write_ms as rg_write_stall_ms
 	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END AS [avg_latency_ms_per_read]
 	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END AS [avg_latency_ms_per_write]
-	,CASE WHEN [io_stall] = 0 THEN 0 ELSE ([io_stall] / ([num_of_reads] + [num_of_writes]) ) END AS [avg_latency_ms_total]
+	,CASE WHEN [io_stall] = 0 THEN 0 ELSE ([io_stall] / ([num_of_reads] + [num_of_writes]) ) END AS [avg_latency_ms_per_transfer]
 	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] / [num_of_reads]) END AS [avg_bytes_per_read]
 	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] / [num_of_writes]) END AS [avg_bytes_per_write]
-	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_total]
+	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_per_transfer]
 	,ISNULL(b.name ,'RBPEX') as logical_filename
 	,ISNULL(b.physical_name, 'RBPEX') as physical_filename
 	,CASE WHEN vfs.file_id = 2 THEN 'LOG'ELSE 'DATA' END AS file_type
 	,ISNULL(size,0)/128 AS current_size_mb
 	,ISNULL(FILEPROPERTY(b.name,'SpaceUsed')/128,0) as space_used_mb
+	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
+	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
 FROM [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 LEFT OUTER join sys.database_files b 
 	ON b.file_id = vfs.file_id
@@ -384,86 +386,100 @@ END
 ELSE
 
 BEGIN
-WITH SourceData AS (
-	SELECT 
-		 DB_NAME(vfs.[database_id]) AS [database_name]	--
-		,IIF(	--Tag value cannot end with '\'
-			RIGHT(vs.[volume_mount_point],1) = '\'
-			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+	IF CAST(SERVERPROPERTY('productversion') AS nvarchar) LIKE '11%' 
+	--SQL Server 2012 (11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]
+	BEGIN
+		SELECT
+			'sqlserver_database_io' AS [measurement]
+			,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+			,DB_NAME(vfs.[database_id]) AS [database_name]
+			,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
+			,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
+			,mf.[type_desc] AS [file_type]
 			,vs.[volume_mount_point]
-		) AS [volume_mount_point]
-		,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,mf.[type_desc] AS [file_type]
-		,vfs.[num_of_reads]
-		,vfs.[num_of_bytes_read]
-		,vfs.[io_stall_read_ms]
-		,vfs.[num_of_writes]
-		,vfs.[num_of_bytes_written]
-		,vfs.[io_stall_write_ms]
-		,vfs.[io_stall] AS [io_stall_total_ms]
-	FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-	INNER JOIN sys.master_files AS mf WITH (NOLOCK)
-		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
-	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs 
-)
-
-SELECT
-	'sqlserver_database_io' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,[database_name]
-	,[physical_filename]
-	,[logical_filename]
-	,[file_type]
-	,[volume_mount_point]
-    ,[io_stall_read_ms] AS [read_latency_ms]
-    ,[num_of_reads] AS [reads]
-	,[num_of_bytes_read] AS [read_bytes]
-	,[io_stall_write_ms] AS [write_latency_ms]
-	,[num_of_writes] AS [writes]
-	,[num_of_bytes_written] AS [write_bytes]
-	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END AS [avg_latency_ms_per_read]
-	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END AS [avg_latency_ms_per_write]
-	,CASE WHEN [io_stall_total_ms] = 0 THEN 0 ELSE ([io_stall_total_ms] / ([num_of_reads] + [num_of_writes]) ) END AS [avg_latency_ms_total]
-	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] / [num_of_reads]) END AS [avg_bytes_per_read]
-	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] / [num_of_writes]) END AS [avg_bytes_per_write]
-	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_total]
-FROM SourceData
-UNION ALL
-SELECT 
-	'sqlserver_database_io' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-	,'All Databases' AS [database_name]
-	,'All Files' AS [physical_filename]
-	,'All Files' AS [logical_filename]
-	,'All Files' AS [file_type]
-	,[volume_mount_point]
-	,[io_stall_read_ms] AS [read_latency_ms]
-    ,[num_of_reads] AS [reads]
-	,[num_of_bytes_read] AS [read_bytes]
-	,[io_stall_write_ms] AS [write_latency_ms]
-	,[num_of_writes] AS [writes]
-	,[num_of_bytes_written] AS [write_bytes]
-	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END AS [avg_latency_ms_per_read]
-	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END AS [avg_latency_ms_per_write]
-	,CASE WHEN [io_stall_total_ms] = 0 THEN 0 ELSE ([io_stall_total_ms] / ([num_of_reads] + [num_of_writes]) ) END AS [avg_latency_ms_total]
-	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] / [num_of_reads]) END AS [avg_bytes_per_read]
-	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] / [num_of_writes]) END AS [avg_bytes_per_write]
-	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE ( ([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes]) ) END AS [avg_bytes_total]
-FROM (
-	SELECT 
-		 [volume_mount_point]
-		,SUM([num_of_reads]) AS [num_of_reads]
-		,SUM([num_of_bytes_read]) AS [num_of_bytes_read]
-		,SUM([io_stall_read_ms]) AS [io_stall_read_ms]
-		,SUM([num_of_writes]) AS [num_of_writes]
-		,SUM([num_of_bytes_written]) AS [num_of_bytes_written]
-		,SUM([io_stall_write_ms]) AS [io_stall_write_ms]
-		,SUM([io_stall_total_ms]) AS [io_stall_total_ms]
-	FROM SourceData
-	GROUP BY
-		volume_mount_point
-) AS AggrDiskData
+			,vfs.[io_stall_read_ms] AS [read_latency_ms]
+			,vfs.[num_of_reads] AS [reads]
+			,vfs.[num_of_bytes_read] AS [read_bytes]
+			,vfs.[io_stall_write_ms] AS [write_latency_ms]
+			,vfs.[num_of_writes] AS [writes]
+			,vfs.[num_of_bytes_written] AS [write_bytes]
+			,CASE WHEN vfs.[io_stall_read_ms] = 0 
+				THEN 0 
+				ELSE vfs.[io_stall_read_ms] / vfs.[num_of_reads]
+			END AS [avg_latency_ms_per_read]
+			,CASE WHEN vfs.[io_stall_write_ms] = 0 
+				THEN 0 
+				ELSE vfs.[io_stall_write_ms] / vfs.[num_of_writes]
+			END AS [avg_latency_ms_per_write]
+			,CASE WHEN vfs.[io_stall] = 0 
+				THEN 0 
+				ELSE vfs.[io_stall] / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
+			END AS [avg_latency_ms_per_transfer]
+			,CASE WHEN vfs.[num_of_reads] = 0 
+				THEN 0 
+				ELSE vfs.[num_of_bytes_read] / vfs.[num_of_reads]
+			END AS [avg_bytes_per_read]
+			,CASE WHEN vfs.[num_of_writes] = 0 
+				THEN 0 
+				ELSE vfs.[num_of_bytes_written] / vfs.[num_of_writes] 
+			END AS [avg_bytes_per_write]
+			,CASE WHEN (vfs.[num_of_reads] = 0 AND vfs.[num_of_writes] = 0) 
+				THEN 0 
+				ELSE (vfs.[num_of_bytes_read] + vfs.[num_of_bytes_written]) / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
+			END AS [avg_bytes_per_transfer]
+		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+		INNER JOIN sys.master_files AS mf WITH (NOLOCK)
+			ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
+		CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs 
+	END 
+	ELSE 
+	--SQL Server version AFTER 2012 have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]
+	BEGIN 
+		SELECT
+			'sqlserver_database_io' AS [measurement]
+			,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+			,DB_NAME(vfs.[database_id]) AS [database_name]
+			,COALESCE(mf.[physical_name],'RBPEX') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
+			,COALESCE(mf.[name],'RBPEX') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
+			,mf.[type_desc] AS [file_type]
+			,vs.[volume_mount_point]
+			,vfs.[io_stall_read_ms] AS [read_latency_ms]
+			,vfs.[num_of_reads] AS [reads]
+			,vfs.[num_of_bytes_read] AS [read_bytes]
+			,vfs.[io_stall_write_ms] AS [write_latency_ms]
+			,vfs.[num_of_writes] AS [writes]
+			,vfs.[num_of_bytes_written] AS [write_bytes]
+			,CASE WHEN vfs.[io_stall_read_ms] = 0 
+				THEN 0 
+				ELSE vfs.[io_stall_read_ms] / vfs.[num_of_reads]
+			END AS [avg_latency_ms_per_read]
+			,CASE WHEN vfs.[io_stall_write_ms] = 0 
+				THEN 0 
+				ELSE vfs.[io_stall_write_ms] / vfs.[num_of_writes]
+			END AS [avg_latency_ms_per_write]
+			,CASE WHEN vfs.[io_stall] = 0 
+				THEN 0 
+				ELSE vfs.[io_stall] / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
+			END AS [avg_latency_ms_per_transfer]
+			,CASE WHEN vfs.[num_of_reads] = 0 
+				THEN 0 
+				ELSE vfs.[num_of_bytes_read] / vfs.[num_of_reads]
+			END AS [avg_bytes_per_read]
+			,CASE WHEN vfs.[num_of_writes] = 0 
+				THEN 0 
+				ELSE vfs.[num_of_bytes_written] / vfs.[num_of_writes] 
+			END AS [avg_bytes_per_write]
+			,CASE WHEN (vfs.[num_of_reads] = 0 AND vfs.[num_of_writes] = 0) 
+				THEN 0 
+				ELSE (vfs.[num_of_bytes_read] + vfs.[num_of_bytes_written]) / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
+			END AS [avg_bytes_per_transfer]
+			,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
+			,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+		INNER JOIN sys.master_files AS mf WITH (NOLOCK)
+			ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
+		CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs 
+	END
 END
 `
 
