@@ -19,7 +19,7 @@ func TestClusterIncludeExcludeFilter(t *testing.T) {
 
 		ch.ClusterExclude = []string{"test_cluster"}
 		ch.ClusterInclude = []string{"cluster"}
-		assert.Equal(t, "WHERE cluster IN ('cluster') AND cluster NOT IN ('test_cluster')", ch.clusterIncludeExcludeFilter())
+		assert.Equal(t, "WHERE cluster IN ('cluster') OR cluster NOT IN ('test_cluster')", ch.clusterIncludeExcludeFilter())
 
 		ch.ClusterExclude = []string{}
 		ch.ClusterInclude = []string{"cluster1", "cluster2"}

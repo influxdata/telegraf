@@ -4,10 +4,10 @@ services:
   clickhouse:
     image: yandex/clickhouse-server:latest
     volumes:
-      - ./plugins/inputs/clickhouse/dev/dhparam.pem:/etc/clickhouse-server/dhparam.pem
-      - ./testutil/pki/serverkey.pem:/etc/clickhouse-server/server.key
-      - ./testutil/pki/serverert.pem:/etc/clickhouse-server/server.crt
+      - ./dhparam.pem:/etc/clickhouse-server/dhparam.pem
       - ./tls_settings.xml:/etc/clickhouse-server/config.d/00-tls_settings.xml
+      - ../../../../testutil/pki/serverkey.pem:/etc/clickhouse-server/server.key
+      - ../../../../testutil/pki/servercert.pem:/etc/clickhouse-server/server.crt
     restart: always
     ports:
       - 8123:8123

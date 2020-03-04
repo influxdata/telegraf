@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -21,19 +22,26 @@ import (
 var defaultTimeout = 5 * time.Second
 
 var sampleConfig = `
+  ## Username for authorization on ClickHouse server
+  ## example: user = "default""
+  user = "default"
+    
+  ## Password for authorization on ClickHouse server
+  ## example: password = "super_secret"
+
   ## HTTP(s) timeout while getting metrics values 
   ## The timeout includes connection time, any redirects, and reading the response body.
   ##   example: timeout = 1s
-  # timeout = 5s # seconds
+  # timeout = 5s 
 
   ## List of servers for metrics scraping
   ## metrics scrape via HTTP(s) clickhouse interface
   ## https://clickhouse.tech/docs/en/interfaces/http/
-  ##    example: servers = ["http://default:@127.0.0.1:8123","https://user:password@custom-server.mdb.yandexclud.net"]
-  servers         = ["http://username:password@127.0.0.1:8123"]
+  ##    example: servers = ["http://127.0.0.1:8123","https://custom-server.mdb.yandexcloud.net"]
+  servers         = ["http://127.0.0.1:8123"]
 
   ## If "auto_discovery"" is "true" plugin tries to connect to all servers available in the cluster
-  ## with using same "user:password" described in "servers"" parameter
+  ## with using same "user:password" described in "user" and "password" parameters
   ## and get this server hostname list from "system.clusters" table
   ## see
   ## - https://clickhouse.tech/docs/en/operations/system_tables/#system-clusters
@@ -71,17 +79,12 @@ var sampleConfig = `
   ##    example: cluster_exclude = ["my-internal-not-discovered-cluster"]
   # cluster_exclude = []
 
-  ## Parameter which controls whether a TLS client verifies the server's certificate chain and host name.
-  ## If insecure_skip_verify is true, plugin accepts any TLS certificate
-  ## presented by the server and any host name in that certificate.
-  ## "true" value is not recommended for production environments.
-  # insecure_skip_verify = false
-
-  ## Optional TLS Config, when you use self-signed certificate chain
+  ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
-
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 type connect struct {
@@ -105,6 +108,8 @@ func init() {
 
 // ClickHouse Telegraf Input Plugin
 type ClickHouse struct {
+	User           string            `toml:"user"`
+	Password       string            `toml:"password"`
 	Servers        []string          `toml:"servers"`
 	AutoDiscovery  bool              `toml:"auto_discovery"`
 	ClusterInclude []string          `toml:"cluster_include"`
@@ -176,7 +181,6 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 					c.url = &url.URL{
 						Scheme: u.Scheme,
 						Host:   net.JoinHostPort(c.Hostname, u.Port()),
-						User:   u.User,
 					}
 					connects = append(connects, c)
 				}
@@ -226,7 +230,7 @@ func (ch *ClickHouse) clusterIncludeExcludeFilter() string {
 		excludeFilter = makeFilter("NOT IN", ch.ClusterExclude)
 	}
 	if includeFilter != "" && excludeFilter != "" {
-		return "WHERE " + includeFilter + " AND " + excludeFilter
+		return "WHERE " + includeFilter + " OR " + excludeFilter
 	}
 	if includeFilter == "" && excludeFilter != "" {
 		return "WHERE " + excludeFilter
@@ -308,20 +312,27 @@ type clickhouseError struct {
 }
 
 func (e *clickhouseError) Error() string {
-	return fmt.Sprintf("ClickHouse server returned an error code: %d\n%s", e.StatusCode, e.body)
+	return fmt.Sprintf("received error code %d: %s", e.StatusCode, e.body)
 }
 
 func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error {
 	q := url.Query()
 	q.Set("query", query+" FORMAT JSON")
 	url.RawQuery = q.Encode()
-	resp, err := ch.client.Get(url.String())
+	req, _ := http.NewRequest("GET", url.String(), nil)
+	if ch.User != "" {
+		req.Header.Add("X-ClickHouse-User", ch.User)
+	}
+	if ch.Password != "" {
+		req.Header.Add("X-ClickHouse-Key", ch.Password)
+	}
+	resp, err := ch.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		body, _ := ioutil.ReadAll(resp.Body)
+		body, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 200))
 		return &clickhouseError{
 			StatusCode: resp.StatusCode,
 			body:       body,
