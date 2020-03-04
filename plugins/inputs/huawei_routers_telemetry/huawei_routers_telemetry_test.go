@@ -20,14 +20,9 @@ func TestHandleTelemetryHuawei(t *testing.T) {
 	grouper := HuaweiTelemetryDecoder(packet)
 	acc.AddMetric(grouper.Metrics()[0])
 
-	cosa, valida := acc.Get("huawei-devm:devm/cpuInfos/cpuInfo")
-	if valida == true {
-		fmt.Println(cosa)
-	}
-
 	require.Empty(t, acc.Errors)
 
 	tags := map[string]string{"path": "huawei-devm:devm/cpuInfos/cpuInfo", "position": "\"9\"", "source": "HuaweiTest1", "subscription": "ProbandoTelemetriaSubscripcion"}
 	fields := map[string]interface{}{"entIndex": uint32(17367041), "interval": uint32(8), "ovloadThreshold": uint32(90), "systemCpuUsage": uint32(10), "unovloadThreshold": uint32(75)}
-	acc.AssertContainsTaggedFields(t, "huawei-devm:devm/cpuInfos/cpuInfo", fields, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "huawei-devm:devm/cpuInfos/cpuInfo", fields, tags)
 }
