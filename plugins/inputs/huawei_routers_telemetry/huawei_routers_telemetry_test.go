@@ -21,5 +21,5 @@ func TestHandleTelemetryHuawei(t *testing.T) {
 
 	tags := map[string]string{"path": "huawei-devm:devm/cpuInfos/cpuInfo", "position": "8", "source": "HuaweiTest1", "subscription": "ProbandoTelemetriaSubscripcion"}
 	fields := map[string]interface{}{"entIndex": 17301505, "interval": 8, "ovloadThreshold": 90, "systemCpuUsage": 14, "unovloadThreshold": 75}
-	acc.AssertContainsTaggedFields(t, "alias", fields, tags)
+	acc.AssertContainsTaggedFields(t, "systemCpuUsage", fields, tags)
 }
