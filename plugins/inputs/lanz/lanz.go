@@ -86,50 +86,52 @@ func (l *Lanz) Stop() {
 }
 
 func receive(acc telegraf.Accumulator, in <-chan *pb.LanzRecord, deviceUrl *url.URL) {
-
 	for {
-
 		select {
 		case msg, ok := <-in:
 			if !ok {
 				return
 			}
-			cr := msg.GetCongestionRecord()
-			if cr != nil {
-				vals := map[string]interface{}{
-					"timestamp":        int64(cr.GetTimestamp()),
-					"queue_size":       int64(cr.GetQueueSize()),
-					"time_of_max_qlen": int64(cr.GetTimeOfMaxQLen()),
-					"tx_latency":       int64(cr.GetTxLatency()),
-					"q_drop_count":     int64(cr.GetQDropCount()),
-				}
-				tags := map[string]string{
-					"intf_name":             cr.GetIntfName(),
-					"switch_id":             strconv.FormatInt(int64(cr.GetSwitchId()), 10),
-					"port_id":               strconv.FormatInt(int64(cr.GetPortId()), 10),
-					"entry_type":            strconv.FormatInt(int64(cr.GetEntryType()), 10),
-					"traffic_class":         strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
-					"fabric_peer_intf_name": cr.GetFabricPeerIntfName(),
-					"source":                deviceUrl.Hostname(),
-					"port":                  deviceUrl.Port(),
-				}
-				acc.AddFields("lanz_congestion_record", vals, tags)
-			}
-
-			gbur := msg.GetGlobalBufferUsageRecord()
-			if gbur != nil {
-				vals := map[string]interface{}{
-					"timestamp":   int64(gbur.GetTimestamp()),
-					"buffer_size": int64(gbur.GetBufferSize()),
-					"duration":    int64(gbur.GetDuration()),
-				}
-				tags := map[string]string{
-					"entry_type": strconv.FormatInt(int64(gbur.GetEntryType()), 10),
-					"source":     deviceUrl.Hostname(),
-					"port":       deviceUrl.Port(),
-				}
-				acc.AddFields("lanz_global_buffer_usage_record", vals, tags)
-			}
+			msgToAccumulator(acc, msg, deviceUrl)
 		}
+	}
+}
+
+func msgToAccumulator(acc telegraf.Accumulator, msg *pb.LanzRecord, deviceUrl *url.URL) {
+	cr := msg.GetCongestionRecord()
+	if cr != nil {
+		vals := map[string]interface{}{
+			"timestamp":        int64(cr.GetTimestamp()),
+			"queue_size":       int64(cr.GetQueueSize()),
+			"time_of_max_qlen": int64(cr.GetTimeOfMaxQLen()),
+			"tx_latency":       int64(cr.GetTxLatency()),
+			"q_drop_count":     int64(cr.GetQDropCount()),
+		}
+		tags := map[string]string{
+			"intf_name":             cr.GetIntfName(),
+			"switch_id":             strconv.FormatInt(int64(cr.GetSwitchId()), 10),
+			"port_id":               strconv.FormatInt(int64(cr.GetPortId()), 10),
+			"entry_type":            strconv.FormatInt(int64(cr.GetEntryType()), 10),
+			"traffic_class":         strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
+			"fabric_peer_intf_name": cr.GetFabricPeerIntfName(),
+			"source":                deviceUrl.Hostname(),
+			"port":                  deviceUrl.Port(),
+		}
+		acc.AddFields("lanz_congestion_record", vals, tags)
+	}
+
+	gbur := msg.GetGlobalBufferUsageRecord()
+	if gbur != nil {
+		vals := map[string]interface{}{
+			"timestamp":   int64(gbur.GetTimestamp()),
+			"buffer_size": int64(gbur.GetBufferSize()),
+			"duration":    int64(gbur.GetDuration()),
+		}
+		tags := map[string]string{
+			"entry_type": strconv.FormatInt(int64(gbur.GetEntryType()), 10),
+			"source":     deviceUrl.Hostname(),
+			"port":       deviceUrl.Port(),
+		}
+		acc.AddFields("lanz_global_buffer_usage_record", vals, tags)
 	}
 }

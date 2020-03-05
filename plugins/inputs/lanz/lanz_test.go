@@ -41,6 +41,15 @@ var testProtoBufCongestionRecord2 = &pb.LanzRecord{
 	},
 }
 
+var testProtoBufGlobalBufferUsageRecord = &pb.LanzRecord{
+	GlobalBufferUsageRecord: &pb.GlobalBufferUsageRecord{
+		EntryType:  pb.GlobalBufferUsageRecord_EntryType.Enum(1),
+		Timestamp:  proto.Uint64(100000000000000),
+		BufferSize: proto.Uint32(1),
+		Duration:   proto.Uint32(10),
+	},
+}
+
 func TestLanzGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
@@ -49,10 +58,6 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 
 	l.Servers = append(l.Servers, "tcp://switch01.int.example.com:50001")
 	l.Servers = append(l.Servers, "tcp://switch02.int.example.com:50001")
-
-	in1 := make(chan *pb.LanzRecord)
-	in2 := make(chan *pb.LanzRecord)
-
 	deviceUrl1, err := url.Parse(l.Servers[0])
 	if err != nil {
 		t.Fail()
@@ -61,10 +66,8 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-	go receive(&acc, in1, deviceUrl1)
-	go receive(&acc, in2, deviceUrl2)
 
-	in1 <- testProtoBufCongestionRecord1
+	msgToAccumulator(&acc, testProtoBufCongestionRecord1, deviceUrl1)
 	acc.Wait(1)
 
 	vals1 := map[string]interface{}{
@@ -85,10 +88,11 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 		"port":                  "50001",
 	}
 
+	acc.AssertContainsFields(t, "lanz_congestion_record", vals1)
 	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals1, tags1)
 
 	acc.ClearMetrics()
-	in2 <- testProtoBufCongestionRecord2
+	msgToAccumulator(&acc, testProtoBufCongestionRecord2, deviceUrl2)
 	acc.Wait(1)
 
 	vals2 := map[string]interface{}{
@@ -111,5 +115,23 @@ func TestLanzGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsFields(t, "lanz_congestion_record", vals2)
 	acc.AssertContainsTaggedFields(t, "lanz_congestion_record", vals2, tags2)
+
+	acc.ClearMetrics()
+	msgToAccumulator(&acc, testProtoBufGlobalBufferUsageRecord, deviceUrl1)
+	acc.Wait(1)
+
+	gburVals1 := map[string]interface{}{
+		"timestamp":   int64(100000000000000),
+		"buffer_size": int64(1),
+		"duration":    int64(10),
+	}
+	gburTags1 := map[string]string{
+		"entry_type": strconv.FormatInt(int64(1), 10),
+		"source":     "switch01.int.example.com",
+		"port":       "50001",
+	}
+
+	acc.AssertContainsFields(t, "lanz_global_buffer_usage_record", gburVals1)
+	acc.AssertContainsTaggedFields(t, "lanz_global_buffer_usage_record", gburVals1, gburTags1)
 
 }
