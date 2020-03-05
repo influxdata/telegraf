@@ -2,6 +2,7 @@ package eventhub
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -179,7 +180,6 @@ func (e *EventHub) Init() (err error) {
 
 // Start the EventHub ServiceInput
 func (e *EventHub) Start(acc telegraf.Accumulator) error {
-
 	// Init metric tracking
 	e.acc = acc.WithTracking(e.MaxUndeliveredMessages)
 	e.tracker = MessageTracker{messages: make(map[telegraf.TrackingID][]telegraf.Metric, e.MaxUndeliveredMessages)}
@@ -200,38 +200,29 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	if len(e.PartitionIDs) == 0 { // Default behavior: receive from all partitions
+	partitions := e.PartitionIDs
 
-		// Get runtime information
+	if len(e.PartitionIDs) == 0 {
 		runtimeinfo, err := e.hub.GetRuntimeInformation(ctx)
 		if err != nil {
 			return err
 		}
 
-		for _, partitionID := range runtimeinfo.PartitionIDs {
+		partitions = runtimeinfo.PartitionIDs
+	}
 
-			_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
-			if err != nil {
-				log.Printf("E! [inputs.eventhub] error creating receiver for partition \"%s\"", partitionID)
-				return err
-			}
-		}
-	} else { // Custom behavior: receive from a subset of partitions
-
-		for _, partitionID := range e.PartitionIDs {
-
-			_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
-			if err != nil {
-				log.Printf("E! [inputs.eventhub] error creating receiver for partition \"%s\"", partitionID)
-				return err
-			}
+	for _, partitionID := range partitions {
+		_, err = e.hub.Receive(ctx, partitionID, e.onMessage, receiveOpts...)
+		if err != nil {
+			return fmt.Errorf("creating receiver for partition %q: %v", partitionID, err)
 		}
 	}
 
 	return nil
 }
 
-func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, err error) {
+func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
+	receiveOpts := []eventhub.ReceiveOption{}
 
 	if e.ConsumerGroup != "" {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithConsumerGroup(e.ConsumerGroup))
@@ -240,8 +231,7 @@ func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, er
 	if e.FromTimestamp != "" {
 		ts, err := time.Parse(time.RFC3339, e.FromTimestamp)
 		if err != nil {
-			log.Printf("E! [inputs.eventhub] error in parsing timestamp: %s", err)
-			return receiveOpts, err
+			return nil, err
 		}
 
 		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(ts))
@@ -260,18 +250,14 @@ func (e *EventHub) configureReceiver() (receiveOpts []eventhub.ReceiveOption, er
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithEpoch(e.Epoch))
 	}
 
-	return receiveOpts, err
+	return receiveOpts, nil
 }
 
 func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err error) {
-
 	metrics, err := e.parser.Parse(event.Data)
 	if err != nil {
-		log.Printf("E! [inputs.eventhub] error %s", err)
 		return err
 	}
-
-	log.Printf("D! [inputs.eventhub] %d metrics found after parsing", len(metrics))
 
 	for i := range metrics {
 		metrics[i].AddField(e.SystemPropertiesPrefix+"SequenceNumber", *event.SystemProperties.SequenceNumber)
@@ -328,25 +314,17 @@ func (e *EventHub) startTracking(ctx context.Context) {
 				return
 			}
 		case DeliveryInfo := <-e.acc.Delivered():
-			log.Printf("D! [inputs.eventhub] tracking:: ID %d delivered: %t", DeliveryInfo.ID(), DeliveryInfo.Delivered())
-
 			if DeliveryInfo.Delivered() {
 				e.tracker.mux.Lock()
 				delete(e.tracker.messages, DeliveryInfo.ID())
 				e.tracker.mux.Unlock()
-
-				log.Printf("D! [inputs.eventhub] tracking:: deleted ID %d from tracked message queue", DeliveryInfo.ID())
 			} else {
-				log.Printf("E! [inputs.eventhub] tracking:: undelivered message ID %d, retrying", DeliveryInfo.ID())
-
 				e.tracker.mux.Lock()
 				id := e.acc.AddTrackingMetricGroup(e.tracker.messages[DeliveryInfo.ID()])
 				e.tracker.messages[id] = e.tracker.messages[DeliveryInfo.ID()]
 				delete(e.tracker.messages, DeliveryInfo.ID())
 				e.tracker.mux.Unlock()
 			}
-
-			log.Printf("D! [inputs.eventhub] tracking:: message queue length: %d", len(e.tracker.messages))
 		}
 	}
 }
@@ -355,13 +333,12 @@ func (e *EventHub) startTracking(ctx context.Context) {
 func (e *EventHub) Stop() {
 	e.cancel()
 	err := e.hub.Close(context.Background())
-
-	e.wg.Wait()
 	if err != nil {
 		log.Printf("E! [inputs.eventhub] error in closing event hub connection: %s", err)
 	}
 
-	log.Printf("D! [inputs.eventhub] event hub connection closed")
+	e.wg.Wait()
+
 }
 
 func init() {
