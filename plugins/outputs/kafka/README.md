@@ -10,6 +10,13 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Kafka topic for producer messages
   topic = "telegraf"
 
+  ## The value of this tag will be used as the topic.  If not set the 'topic'
+  ## option is used.
+  # topic_tag = ""
+
+  ## If true, the 'topic_tag' will be removed from to the metric.
+  # exclude_topic_tag = false
+
   ## Optional Client id
   # client_id = "Telegraf"
 
