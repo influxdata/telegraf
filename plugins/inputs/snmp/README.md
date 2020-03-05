@@ -111,7 +111,7 @@ option operate similar to the `snmpget` utility.
 
     ## Apply one of the following conversions to the variable value:
     ##   float(X) Convert the input value into a float and divides by the
-    ##            Xth power of 10. Efficively just moves the decimal left
+    ##            Xth power of 10. Effectively just moves the decimal left
     ##            X places. For example a value of `123` with `float(2)`
     ##            will result in `1.23`.
     ##   float:   Convert the value into a float with no adjustment. Same
