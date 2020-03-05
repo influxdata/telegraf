@@ -1,0 +1,14 @@
+language: shell
+os: linux
+
+services:
+  - docker
+
+branches:
+  only:
+    - avro
+
+script:
+  - echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t ${DOCKER_USERNAME}/telegraf:${TRAVIS_COMMIT} .
+  - docker push ${DOCKER_USERNAME}/telegraf:${TRAVIS_COMMIT}
