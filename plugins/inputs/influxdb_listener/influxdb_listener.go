@@ -29,13 +29,14 @@ type InfluxDBListener struct {
 	port           int
 	tlsint.ServerConfig
 
-	ReadTimeout   internal.Duration `toml:"read_timeout"`
-	WriteTimeout  internal.Duration `toml:"write_timeout"`
-	MaxBodySize   internal.Size     `toml:"max_body_size"`
-	MaxLineSize   internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
-	BasicUsername string            `toml:"basic_username"`
-	BasicPassword string            `toml:"basic_password"`
-	DatabaseTag   string            `toml:"database_tag"`
+	ReadTimeout    internal.Duration `toml:"read_timeout"`
+	WriteTimeout   internal.Duration `toml:"write_timeout"`
+	MaxBodySize    internal.Size     `toml:"max_body_size"`
+	MaxLineSize    internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
+	BasicUsername  string            `toml:"basic_username"`
+	BasicPassword  string            `toml:"basic_password"`
+	DatabaseTag    string            `toml:"database_tag"`
+	HTTPHeaderTags map[string]string `toml:"http_header_tags"`
 
 	timeFunc influx.TimeFunc
 
@@ -90,6 +91,10 @@ const sampleConfig = `
   ## You probably want to make sure you have TLS configured above for this.
   # basic_username = "foobar"
   # basic_password = "barfoo"
+  ## Optional setting to map http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  #http_header_tags = {"SOME_HTTP_HEADER" = "MEASUREMENT_TAG_NAME"}
 `
 
 func (h *InfluxDBListener) SampleConfig() string {
@@ -312,6 +317,13 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 
 			if h.DatabaseTag != "" && db != "" {
 				m.AddTag(h.DatabaseTag, db)
+			}
+
+			for headerName, measurementName := range h.HTTPHeaderTags {
+				headerValues, foundHeader := req.Header[headerName]
+				if foundHeader && len(headerValues) > 0 {
+					m.AddTag(measurementName, headerValues[0])
+				}
 			}
 
 			h.acc.AddMetric(m)
