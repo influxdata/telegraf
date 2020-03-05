@@ -12,9 +12,9 @@ import (
 
 // NewRelic nr structure
 type NewRelic struct {
-	harvestor   *telemetry.Harvester
-	InsightsKey string `toml:"insights_key"`
-	EventPrefix string `toml:"event_prefix"`
+	harvestor    *telemetry.Harvester
+	InsightsKey  string `toml:"insights_key"`
+	MetricPrefix string `toml:"metric_prefix"`
 }
 
 // Description returns a one-sentence description on the Output
@@ -27,8 +27,8 @@ func (nr *NewRelic) SampleConfig() string {
 	return `
 	## New Relic Insights API key (required)
 	insights_key = "insights api key"
-	#event_prefix if defined, prefix's metrics name for easy identification (optional)
-	# event_prefix = "Telegraf_"
+	#metric_prefix if defined, prefix's metrics name for easy identification (optional)
+	# metric_prefix = "Telegraf_"
 `
 }
 
@@ -62,8 +62,8 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 		for k, v := range metric.Fields() {
 			var mvalue float64
 			var mname string
-			if nr.EventPrefix != "" {
-				mname = nr.EventPrefix + "." + metric.Name() + "." + k
+			if nr.MetricPrefix != "" {
+				mname = nr.MetricPrefix + "." + metric.Name() + "." + k
 			} else {
 				mname = metric.Name() + "." + k
 			}

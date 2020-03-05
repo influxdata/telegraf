@@ -11,8 +11,8 @@ import (
 
 func TestBasic(t *testing.T) {
 	nr := &NewRelic{
-		EventPrefix: "Test",
-		InsightsKey: "12345",
+		MetricPrefix: "Test",
+		InsightsKey:  "12345",
 	}
 
 	err := nr.Connect()
@@ -24,9 +24,9 @@ func TestBasic(t *testing.T) {
 
 func TestNewRelic_Write(t *testing.T) {
 	type fields struct {
-		harvestor   *telemetry.Harvester
-		InsightsKey string
-		EventPrefix string
+		harvestor    *telemetry.Harvester
+		InsightsKey  string
+		MetricPrefix string
 	}
 	type args struct {
 		metrics []telegraf.Metric
@@ -41,8 +41,8 @@ func TestNewRelic_Write(t *testing.T) {
 		{
 			name: "Test: Basic mock metric write",
 			fields: fields{
-				InsightsKey: "insightskey",
-				EventPrefix: "test1",
+				InsightsKey:  "insightskey",
+				MetricPrefix: "test1",
 			},
 			metrics: testutil.MockMetrics(),
 			wantErr: false,
@@ -51,9 +51,9 @@ func TestNewRelic_Write(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			nr := &NewRelic{
-				harvestor:   tt.fields.harvestor,
-				InsightsKey: tt.fields.InsightsKey,
-				EventPrefix: tt.fields.EventPrefix,
+				harvestor:    tt.fields.harvestor,
+				InsightsKey:  tt.fields.InsightsKey,
+				MetricPrefix: tt.fields.MetricPrefix,
 			}
 			if err := nr.Write(tt.metrics); (err != nil) != tt.wantErr {
 				t.Errorf("NewRelic.Write() error = %v, wantErr %v", err, tt.wantErr)
@@ -72,15 +72,15 @@ func TestNewRelic_Connect(t *testing.T) {
 		{
 			name: "Test: No Insights key",
 			newrelic: &NewRelic{
-				EventPrefix: "prefix",
+				MetricPrefix: "prefix",
 			},
 			wantErr: true,
 		},
 		{
 			name: "Test: Insights key",
 			newrelic: &NewRelic{
-				InsightsKey: "12312133",
-				EventPrefix: "prefix",
+				InsightsKey:  "12312133",
+				MetricPrefix: "prefix",
 			},
 			wantErr: false,
 		},
@@ -88,9 +88,9 @@ func TestNewRelic_Connect(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			nr := &NewRelic{
-				harvestor:   tt.newrelic.harvestor,
-				InsightsKey: tt.newrelic.InsightsKey,
-				EventPrefix: tt.newrelic.EventPrefix,
+				harvestor:    tt.newrelic.harvestor,
+				InsightsKey:  tt.newrelic.InsightsKey,
+				MetricPrefix: tt.newrelic.MetricPrefix,
 			}
 			if err := nr.Connect(); (err != nil) != tt.wantErr {
 				t.Errorf("NewRelic.Connect() error = %v, wantErr %v", err, tt.wantErr)
