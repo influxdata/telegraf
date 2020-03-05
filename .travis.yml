@@ -10,5 +10,5 @@ branches:
 
 script:
   - echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin
-  - docker build -t ${DOCKER_USERNAME}/telegraf:${TRAVIS_COMMIT} .
-  - docker push ${DOCKER_USERNAME}/telegraf:${TRAVIS_COMMIT}
+  - docker build -t ${DOCKER_USERNAME}/telegraf:${TRAVIS_COMMIT:0:8} .
+  - docker push ${DOCKER_USERNAME}/telegraf:${TRAVIS_COMMIT:0:8}
