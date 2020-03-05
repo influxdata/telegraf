@@ -14,9 +14,9 @@ import (
 
 var sampleConfig = `
   ## URL to Arista LANZ endpoint
-    # servers = [
-    #   "tcp://127.0.0.1:50001"
-    # ]
+  servers = [
+    "tcp://127.0.0.1:50001"
+  ]
 `
 
 func init() {
