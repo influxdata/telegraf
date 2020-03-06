@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -200,6 +201,11 @@ func (s *Salesforce) login() error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		body, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 200))
+		return fmt.Errorf("%s returned HTTP status %s: %q", loginEndpoint, resp.Status, body)
+	}
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
