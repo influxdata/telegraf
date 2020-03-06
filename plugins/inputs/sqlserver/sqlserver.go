@@ -379,67 +379,42 @@ END
 ELSE
 
 BEGIN
-	DECLARE @SqlStatement AS nvarchar(max);
+DECLARE @SqlStatement AS nvarchar(max);
 
-	IF CAST(SERVERPROPERTY('productversion') AS nvarchar) LIKE '11%' 
-	--SQL Server 2012 (11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]
-	BEGIN
-		SET @SqlStatement = '
-		SELECT
-			''sqlserver_database_io'' AS [measurement]
-			,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-			,DB_NAME(vfs.[database_id]) AS [database_name]
-			,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-			,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
-			,mf.[type_desc] AS [file_type]
+	SET @SqlStatement = N'
+	SELECT
+		''sqlserver_database_io'' AS [measurement]
+		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+		,DB_NAME(vfs.[database_id]) AS [database_name]
+		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
+		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
+		,mf.[type_desc] AS [file_type]
+		,vs.[volume_mount_point]
+		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
+			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
 			,vs.[volume_mount_point]
-			,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
-				,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-				,vs.[volume_mount_point]
-			) AS [volume_mount_point]
-			,vfs.[io_stall_read_ms] AS [read_latency_ms]
-			,vfs.[num_of_reads] AS [reads]
-			,vfs.[num_of_bytes_read] AS [read_bytes]
-			,vfs.[io_stall_write_ms] AS [write_latency_ms]
-			,vfs.[num_of_writes] AS [writes]
-			,vfs.[num_of_bytes_written] AS [write_bytes]
-		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-		INNER JOIN sys.master_files AS mf WITH (NOLOCK)
-			ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
-		CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs
+		) AS [volume_mount_point]
+		,vfs.[io_stall_read_ms] AS [read_latency_ms]
+		,vfs.[num_of_reads] AS [reads]
+		,vfs.[num_of_bytes_read] AS [read_bytes]
+		,vfs.[io_stall_write_ms] AS [write_latency_ms]
+		,vfs.[num_of_writes] AS [writes]
+		,vfs.[num_of_bytes_written] AS [write_bytes]
 		'
-		EXEC sp_executesql @SqlStatement
-	END 
-	ELSE 
-	--SQL Server version AFTER 2012 have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]
-	BEGIN 
-		SET @SqlStatement = '
-		SELECT
-			''sqlserver_database_io'' AS [measurement]
-			,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-			,DB_NAME(vfs.[database_id]) AS [database_name]
-			,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-			,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
-			,mf.[type_desc] AS [file_type]
-			,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
-				,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-				,vs.[volume_mount_point]
-			) AS [volume_mount_point]
-			,vfs.[io_stall_read_ms] AS [read_latency_ms]
-			,vfs.[num_of_reads] AS [reads]
-			,vfs.[num_of_bytes_read] AS [read_bytes]
-			,vfs.[io_stall_write_ms] AS [write_latency_ms]
-			,vfs.[num_of_writes] AS [writes]
-			,vfs.[num_of_bytes_written] AS [write_bytes]
-			,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
-			,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
-		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-		INNER JOIN sys.master_files AS mf WITH (NOLOCK)
-			ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
-		CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs
-		'
-		EXEC sp_executesql @SqlStatement
-	END
+		+ 
+		CASE
+			WHEN CAST(SERVERPROPERTY('ProductMajorVersion') AS int) <= 11
+				/*SQL Server 2012 (ver 11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]*/
+				THEN ''
+				ELSE N',vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
+		END 
+		+
+	N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+	INNER JOIN sys.master_files AS mf WITH (NOLOCK)
+		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
+	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs
+	'
+	EXEC sp_executesql @SqlStatement
 
 END
 `
