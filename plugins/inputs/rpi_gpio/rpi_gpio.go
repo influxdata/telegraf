@@ -9,7 +9,7 @@ import (
 )
 
 type RPiGPIO struct {
-	Pins map[string]int  `toml:pins`
+	Pins map[string]int  `toml:"pins"`
 	Log  telegraf.Logger `toml:"-"`
 	gpio GPIO
 }
