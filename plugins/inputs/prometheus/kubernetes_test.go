@@ -131,7 +131,7 @@ func TestPodSelector(t *testing.T) {
 
 	for _, c := range cases {
 		prom := &Prometheus{
-			Log:                     testutil.Logger{},
+			Log: testutil.Logger{},
 			KubernetesLabelSelector: c.labelselector,
 			KubernetesFieldSelector: c.fieldselector,
 		}

@@ -151,18 +151,17 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
-	if len(ro.Config.NameOverride) > 0  {
+	if len(ro.Config.NameOverride) > 0 {
 		metric.SetName(ro.Config.NameOverride)
 	}
 
-	if len(ro.Config.NamePrefix) > 0  {
+	if len(ro.Config.NamePrefix) > 0 {
 		metric.AddPrefix(ro.Config.NamePrefix)
 	}
 
-	if len(ro.Config.NameSuffix) > 0  {
+	if len(ro.Config.NameSuffix) > 0 {
 		metric.AddSuffix(ro.Config.NameSuffix)
 	}
-
 
 	dropped := ro.buffer.Add(metric)
 	atomic.AddInt64(&ro.droppedMetrics, int64(dropped))
