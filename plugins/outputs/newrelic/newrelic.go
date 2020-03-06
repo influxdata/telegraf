@@ -7,12 +7,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 )
 
 // NewRelic nr structure
 type NewRelic struct {
 	harvestor    *telemetry.Harvester
+	dc           *cumulative.DeltaCalculator
 	InsightsKey  string `toml:"insights_key"`
 	MetricPrefix string `toml:"metric_prefix"`
 }
@@ -42,12 +44,15 @@ func (nr *NewRelic) Connect() error {
 	if err != nil {
 		return fmt.Errorf("unable to connect to newrelic %v", err)
 	}
+
+	nr.dc = cumulative.NewDeltaCalculator()
 	return nil
 }
 
 // Close any connections to the Output
 func (nr *NewRelic) Close() error {
 	nr.harvestor = nil
+	nr.dc = nil
 	return nil
 }
 
@@ -83,11 +88,18 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 				return fmt.Errorf("Undefined field type: %T", v)
 			}
 
-			nr.harvestor.RecordMetric(telemetry.Gauge{
-				Timestamp:  metric.Time(),
-				Value:      mvalue,
-				Name:       mname,
-				Attributes: tags})
+			switch metric.Type() {
+			case telegraf.Counter:
+				if counter, ok := nr.dc.CountMetric(mname, tags, mvalue, metric.Time()); ok {
+					nr.harvestor.RecordMetric(counter)
+				}
+			default:
+				nr.harvestor.RecordMetric(telemetry.Gauge{
+					Timestamp:  metric.Time(),
+					Value:      mvalue,
+					Name:       mname,
+					Attributes: tags})
+			}
 		}
 	}
 	// By default, the Harvester sends metrics and spans to the New Relic
