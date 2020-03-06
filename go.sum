@@ -34,7 +34,6 @@ github.com/Azure/go-autorest/tracing v0.5.0 h1:TRn4WjSnkcSy5AEG3pnbtFSwNtwzjr4VY
 github.com/Azure/go-autorest/tracing v0.5.0/go.mod h1:r/s2XiOKccPW3HrqB+W0TQzfbtp2fGCgRFtBroKn4Dk=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
-github.com/M0rdecay/telegraf v0.10.1 h1:8Ntl081vFHoCjiVZEU7rfQ6PKrlRRksui0PEBaCjTUw=
 github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee h1:atI/FFjXh6hIVlPE1Jup9m8N4B9q/OSbMUe2EBahs+w=
 github.com/Mellanox/rdmamap v0.0.0-20191106181932-7c3c4763a6ee/go.mod h1:jDA6v0TUYrFEIAE5uGJ29LQOeONIgMdP4Rkqb8HUnPM=
 github.com/Microsoft/ApplicationInsights-Go v0.4.2 h1:HIZoGXMiKNwAtMAgCSSX35j9mP+DjGF9ezfBvxMDLLg=
@@ -66,8 +65,6 @@ github.com/armon/go-metrics v0.3.0 h1:B7AQgHi8QSEi4uHu7Sbsga+IJDU+CENgjxoo81vDUq
 github.com/armon/go-metrics v0.3.0/go.mod h1:zXjbSimjXTd7vOpY8B0/2LpvNvDoXBuplAD+gJD3GYs=
 github.com/aws/aws-sdk-go v1.19.41 h1:veutzvQP/lOmYmtX26S9mTFJLO6sp7/UsxFcCjglu4A=
 github.com/aws/aws-sdk-go v1.19.41/go.mod h1:KmX6BPdI08NWTb3/sm4ZGu5ShLoqVDhKgpiN924inxo=
-github.com/beevik/etree v1.1.0 h1:T0xke/WvNtMoCqgzPhkX2r4rjY3GDZFi+FjpRZY2Jbs=
-github.com/beevik/etree v1.1.0/go.mod h1:r8Aw8JqVegEf0w2fDnATrX9VpkMcyFeM0FhwO62wh+A=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/bitly/go-hostpool v0.1.0 h1:XKmsF6k5el6xHG3WPJ8U0Ku/ye7njX7W81Ng7O2ioR0=

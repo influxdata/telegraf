@@ -1810,41 +1810,6 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
-	//for XML parser
-	if node, ok := tbl.Fields["xml_merge_nodes"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.Boolean); ok {
-				//for config with no quotes
-				val, err := strconv.ParseBool(str.Value)
-				c.XMLCombineNodes = val
-				if err != nil {
-					return nil, fmt.Errorf("E! parsing to bool: %v", err)
-				}
-			}
-		}
-	}
-	
-	if node, ok := tbl.Fields["xml_node_to_tag"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.Boolean); ok {
-				//for config with no quotes
-				val, err := strconv.ParseBool(str.Value)
-				c.XMLTagNode = val
-				if err != nil {
-					return nil, fmt.Errorf("E! parsing to bool: %v", err)
-				}
-			}
-		}
-	}
-	
-	if node, ok := tbl.Fields["xml_query"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				c.XMLQuery = str.Value
-			}
-		}
-	}
-	
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1888,10 +1853,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
-	delete(tbl.Fields, "xml_merge_nodes") //XML!
-	delete(tbl.Fields, "xml_node_to_tag")
-	delete(tbl.Fields, "xml_query")
-	
+
 	return c, nil
 }
 

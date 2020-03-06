@@ -149,10 +149,6 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
-
-	XMLCombineNodes bool	`toml:"xml_merge_nodes"`
-	XMLTagNode bool			`toml:"xml_node_to_tag"`
-	XMLQuery string			`toml:"xml_query"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -231,13 +227,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.MetricName,
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys)
-	case "xml":
-		parser, err = NewXMLParser(
-			config.XMLCombineNodes,
-			config.XMLTagNode,
-			config.XMLQuery,
-			config.DefaultTags,
-			config.TagKeys)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -402,14 +391,4 @@ func NewFormUrlencodedParser(
 		DefaultTags: defaultTags,
 		TagKeys:     tagKeys,
 	}, nil
-}
-
-func NewXMLParser(
-	xmlCombineNodes	bool,
-	xmlTagNode		bool,
-	xmlQuery		string,
-	defaultTags 	map[string]string,
-	tagKeys 		[]string,
-) (Parser, error) {
-	return xml.NewXMLParser(xmlCombineNodes, xmlTagNode, xmlQuery, defaultTags, tagKeys), nil
 }
