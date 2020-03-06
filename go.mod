@@ -62,7 +62,6 @@ require (
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/google/martian v2.1.0+incompatible
 	github.com/gorilla/mux v1.6.2
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
