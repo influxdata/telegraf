@@ -2167,9 +2167,9 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")
-        delete(tbl.Fields, "name_override")
-        delete(tbl.Fields, "name_suffix")
-        delete(tbl.Fields, "name_prefix")
+	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "name_suffix")
+	delete(tbl.Fields, "name_prefix")
 
 	return oc, nil
 }
