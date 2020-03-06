@@ -10,7 +10,7 @@ It fetches its data from the [limits endpoint](https://developer.salesforce.com/
 [[inputs.salesforce]]
   username = "your_username"
   password = "your_password"
-  ## (Optional) security tokjen
+  ## (Optional) security token
   security_token = "your_security_token"
   ## (Optional) environment type (sandbox or production)
   ## default is: production
