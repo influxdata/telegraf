@@ -226,7 +226,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.MetricName,
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
-                )
+		)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}

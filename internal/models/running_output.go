@@ -27,7 +27,7 @@ type OutputConfig struct {
 	FlushJitter       *time.Duration
 	MetricBufferLimit int
 	MetricBatchSize   int
-        NameOverride      string
+	NameOverride      string
 }
 
 // RunningOutput contains the output configuration
@@ -149,9 +149,18 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
-        if ro.Config.NameOverride != "" {
+        if len(ro.Config.NameOverride) > 0  {
                 metric.SetName(ro.Config.NameOverride)
         }
+
+        if len(ro.Config.NamePrefix) > 0  {
+                metric.AddPrefix(ro.Config.NamePrefix)
+        }
+
+        if len(ro.Config.NameSuffix) > 0  {
+                metric.AddSuffix(ro.Config.NameSuffix)
+        }
+
 
 	dropped := ro.buffer.Add(metric)
 	atomic.AddInt64(&ro.droppedMetrics, int64(dropped))
