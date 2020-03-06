@@ -5,6 +5,8 @@ package azure_iothub
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	iothub "github.com/amenzhinsky/iothub/iotdevice"
@@ -15,7 +17,7 @@ import (
 )
 
 type Iothub struct {
-	Client              iothub.Client
+	Client              iothub.ModuleClient
 	UseGateway          bool   `toml:"use_gateway"`
 	ConnectionString    string `toml:"connection_string"`
 	HubName             string `toml:"hub_name"`
@@ -27,35 +29,29 @@ type Iothub struct {
 }
 
 func (i *Iothub) Description() string {
-	return "output plugin for Azure IoT Hub."
+	return "Output plugin for Azure IoT Hub Edge Module"
 }
 
 func (i *Iothub) SampleConfig() string {
 	return `
-	## One of the following sets required for config:
+	## One of the following sets required for configuration:
 	#  
 	#  # 1.
 	#  connection_string = ""
+	#  use_gateway = true
 	#
 	#  # 2.
 	#  hub_name = ""
 	#  device_id = ""
-	#  shared_access_key = ""
-	#  
-	#  # 3.
-	#  hub_name = ""
-	#  shared_access_key = ""
-	#  shared_access_key_name = ""
-	#
-	## Optional:
 	#  module_id = ""
-	#  use_gateway = false
+	#  shared_access_key = ""
+	#  use_gateway = true
 `
 }
 
 func (i *Iothub) hasConnectionString() bool {
 
-	if len(i.ConnectionString) > 0 {
+	if len(strings.TrimSpace(i.ConnectionString)) > 0 {
 		return true
 	}
 
@@ -64,7 +60,7 @@ func (i *Iothub) hasConnectionString() bool {
 
 func (i *Iothub) hasHubName() bool {
 
-	if len(i.HubName) > 0 {
+	if len(strings.TrimSpace(i.HubName)) > 0 {
 		return true
 	}
 
@@ -73,7 +69,7 @@ func (i *Iothub) hasHubName() bool {
 
 func (i *Iothub) hasSharedAccessKey() bool {
 
-	if len(i.SharedAccessKey) > 0 {
+	if len(strings.TrimSpace(i.SharedAccessKey)) > 0 {
 		return true
 	}
 
@@ -82,7 +78,7 @@ func (i *Iothub) hasSharedAccessKey() bool {
 
 func (i *Iothub) hasSharedAccessKeyName() bool {
 
-	if len(i.SharedAccessKeyName) > 0 {
+	if len(strings.TrimSpace(i.SharedAccessKeyName)) > 0 {
 		return true
 	}
 
@@ -91,7 +87,7 @@ func (i *Iothub) hasSharedAccessKeyName() bool {
 
 func (i *Iothub) hasDeviceID() bool {
 
-	if len(i.DeviceID) > 0 {
+	if len(strings.TrimSpace(i.DeviceID)) > 0 {
 		return true
 	}
 
@@ -100,7 +96,7 @@ func (i *Iothub) hasDeviceID() bool {
 
 func (i *Iothub) hasModuleID() bool {
 
-	if len(i.ModuleID) > 0 {
+	if len(strings.TrimSpace(i.ModuleID)) > 0 {
 		return true
 	}
 
@@ -148,7 +144,7 @@ func (i *Iothub) validateConfiguration() error {
 	}
 
 	// return
-	if valid {
+	if valid == true {
 		return nil
 	} else {
 		return fmt.Errorf("invalid plugin configuration")
@@ -159,6 +155,9 @@ func (i *Iothub) validateConfiguration() error {
 func (i *Iothub) Init() error {
 	// check for a valid configuration
 	err := i.validateConfiguration()
+	if err != nil {
+		return err
+	}
 
 	// if there's no explict connection string given
 	if !i.hasConnectionString() {
@@ -167,9 +166,17 @@ func (i *Iothub) Init() error {
 	}
 
 	// create a new client from connection string
-	c, err := iothub.NewFromConnectionString(
-		iotmqtt.New(), i.ConnectionString,
+
+	gwhn := os.Getenv("IOTEDGE_GATEWAYHOSTNAME")
+	mgid := os.Getenv("IOTEDGE_MODULEGENERATIONID")
+	wluri := os.Getenv("IOTEDGE_WORKLOADURI")
+
+	c, err := iothub.NewModuleFromConnectionString(
+		iotmqtt.NewModuleTransport(), i.ConnectionString, gwhn, mgid, wluri, true,
 	)
+	if err != nil {
+		return err
+	}
 
 	// set IoT Hub client
 	i.Client = *c
