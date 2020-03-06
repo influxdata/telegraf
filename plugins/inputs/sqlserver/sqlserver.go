@@ -365,16 +365,9 @@ SELECT
 	,vfs.num_of_writes AS writes
 	,vfs.num_of_bytes_written AS write_bytes
 	,vfs.io_stall_queued_read_ms as rg_read_stall_ms
-	,vfs.io_stall_queued_write_ms as rg_write_stall_ms
-	,CASE WHEN [io_stall_read_ms] = 0 THEN 0 ELSE ([io_stall_read_ms] / [num_of_reads]) END AS [avg_latency_ms_per_read]
-	,CASE WHEN [io_stall_write_ms] = 0 THEN 0 ELSE ([io_stall_write_ms] / [num_of_writes]) END AS [avg_latency_ms_per_write]
-	,CASE WHEN [io_stall] = 0 THEN 0 ELSE ([io_stall] / ([num_of_reads] + [num_of_writes]) ) END AS [avg_latency_ms_per_transfer]
-	,CASE WHEN [num_of_reads] = 0 THEN 0 ELSE ([num_of_bytes_read] / [num_of_reads]) END AS [avg_bytes_per_read]
-	,CASE WHEN [num_of_writes] = 0 THEN 0 ELSE ([num_of_bytes_written] / [num_of_writes]) END AS [avg_bytes_per_write]
-	,CASE WHEN ([num_of_reads] = 0 AND [num_of_writes] = 0) THEN 0 ELSE (([num_of_bytes_read] + [num_of_bytes_written]) / ([num_of_reads] + [num_of_writes])) END AS [avg_bytes_per_transfer]
 	,ISNULL(b.name ,'RBPEX') as logical_filename
 	,ISNULL(b.physical_name, 'RBPEX') as physical_filename
-	,CASE WHEN vfs.file_id = 2 THEN 'LOG'ELSE 'DATA' END AS file_type
+	,CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
 	,ISNULL(size,0)/128 AS current_size_mb
 	,ISNULL(FILEPROPERTY(b.name,'SpaceUsed')/128,0) as space_used_mb
 	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
@@ -410,30 +403,6 @@ BEGIN
 			,vfs.[io_stall_write_ms] AS [write_latency_ms]
 			,vfs.[num_of_writes] AS [writes]
 			,vfs.[num_of_bytes_written] AS [write_bytes]
-			,CASE WHEN vfs.[io_stall_read_ms] = 0 
-				THEN 0 
-				ELSE vfs.[io_stall_read_ms] / vfs.[num_of_reads]
-			END AS [avg_latency_ms_per_read]
-			,CASE WHEN vfs.[io_stall_write_ms] = 0 
-				THEN 0 
-				ELSE vfs.[io_stall_write_ms] / vfs.[num_of_writes]
-			END AS [avg_latency_ms_per_write]
-			,CASE WHEN vfs.[io_stall] = 0 
-				THEN 0 
-				ELSE vfs.[io_stall] / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
-			END AS [avg_latency_ms_per_transfer]
-			,CASE WHEN vfs.[num_of_reads] = 0 
-				THEN 0 
-				ELSE vfs.[num_of_bytes_read] / vfs.[num_of_reads]
-			END AS [avg_bytes_per_read]
-			,CASE WHEN vfs.[num_of_writes] = 0 
-				THEN 0 
-				ELSE vfs.[num_of_bytes_written] / vfs.[num_of_writes] 
-			END AS [avg_bytes_per_write]
-			,CASE WHEN (vfs.[num_of_reads] = 0 AND vfs.[num_of_writes] = 0) 
-				THEN 0 
-				ELSE (vfs.[num_of_bytes_read] + vfs.[num_of_bytes_written]) / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
-			END AS [avg_bytes_per_transfer]
 		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 		INNER JOIN sys.master_files AS mf WITH (NOLOCK)
 			ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
@@ -462,30 +431,6 @@ BEGIN
 			,vfs.[io_stall_write_ms] AS [write_latency_ms]
 			,vfs.[num_of_writes] AS [writes]
 			,vfs.[num_of_bytes_written] AS [write_bytes]
-			,CASE WHEN vfs.[io_stall_read_ms] = 0 
-				THEN 0 
-				ELSE vfs.[io_stall_read_ms] / vfs.[num_of_reads]
-			END AS [avg_latency_ms_per_read]
-			,CASE WHEN vfs.[io_stall_write_ms] = 0 
-				THEN 0 
-				ELSE vfs.[io_stall_write_ms] / vfs.[num_of_writes]
-			END AS [avg_latency_ms_per_write]
-			,CASE WHEN vfs.[io_stall] = 0 
-				THEN 0 
-				ELSE vfs.[io_stall] / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
-			END AS [avg_latency_ms_per_transfer]
-			,CASE WHEN vfs.[num_of_reads] = 0 
-				THEN 0 
-				ELSE vfs.[num_of_bytes_read] / vfs.[num_of_reads]
-			END AS [avg_bytes_per_read]
-			,CASE WHEN vfs.[num_of_writes] = 0 
-				THEN 0 
-				ELSE vfs.[num_of_bytes_written] / vfs.[num_of_writes] 
-			END AS [avg_bytes_per_write]
-			,CASE WHEN (vfs.[num_of_reads] = 0 AND vfs.[num_of_writes] = 0) 
-				THEN 0 
-				ELSE (vfs.[num_of_bytes_read] + vfs.[num_of_bytes_written]) / (vfs.[num_of_reads] + vfs.[num_of_writes]) 
-			END AS [avg_bytes_per_transfer]
 			,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
 			,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
 		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
