@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
-	"github.com/influxdata/telegraf/plugins/parsers/xml"
 )
 
 type ParserFunc func() (Parser, error)
@@ -226,7 +225,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewFormUrlencodedParser(
 			config.MetricName,
 			config.DefaultTags,
-			config.FormUrlencodedTagKeys)
+			config.FormUrlencodedTagKeys,
+		)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
