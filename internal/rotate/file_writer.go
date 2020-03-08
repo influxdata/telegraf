@@ -120,6 +120,7 @@ func (w *FileWriter) openCurrent() (err error) {
 	// With time.now() as a reference we'd never rotate the file.
 	if fileInfo, err := w.current.Stat(); err == nil {
 		w.expireTime = fileInfo.ModTime().Add(w.interval)
+		w.bytesWritten = fileInfo.Size()
 	}
 	return nil
 }

@@ -59,6 +59,23 @@ func TestFileWriter_SizeRotation(t *testing.T) {
 	assert.Equal(t, 2, len(files))
 }
 
+func TestFileWriter_ReopenSizeRotation(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "RotationSize")
+	require.NoError(t, err)
+	maxSize := int64(12)
+	filePath := filepath.Join(tempDir, "test.log")
+	err = ioutil.WriteFile(filePath, []byte("Hello World"), 0644)
+	assert.NoError(t, err)
+	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), 0, maxSize, -1)
+	require.NoError(t, err)
+	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+
+	_, err = writer.Write([]byte("Hello World Again"))
+	require.NoError(t, err)
+	files, _ := ioutil.ReadDir(tempDir)
+	assert.Equal(t, 2, len(files))
+}
+
 func TestFileWriter_DeleteArchives(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "RotationDeleteArchives")
 	require.NoError(t, err)
