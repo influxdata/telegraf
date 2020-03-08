@@ -122,6 +122,10 @@ func (w *FileWriter) openCurrent() (err error) {
 		w.expireTime = fileInfo.ModTime().Add(w.interval)
 		w.bytesWritten = fileInfo.Size()
 	}
+
+	if err = w.rotateIfNeeded(); err != nil {
+		return err
+	}
 	return nil
 }
 
