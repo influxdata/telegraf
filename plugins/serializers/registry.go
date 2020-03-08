@@ -66,9 +66,9 @@ type Config struct {
 
 	// Template for converting telegraf metrics into Graphite
 	// only supports Graphite
-	Template  string   `toml:"template"`
+	Template string `toml:"template"`
 
-	// Same Template, but multiple
+	// Templates same Template, but multiple
 	Templates []string `toml:"templates"`
 
 	// Timestamp units to use for JSON formatted output
