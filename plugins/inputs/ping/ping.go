@@ -123,13 +123,6 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, host := range p.Urls {
-		_, err := net.LookupHost(host)
-		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": host})
-			acc.AddError(err)
-			continue
-		}
-
 		p.wg.Add(1)
 		go func(host string) {
 			defer p.wg.Done()
@@ -194,23 +187,35 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 	return string(out), err
 }
 
+func ResolveIP(ctx context.Context, network string, destination string) (*net.IPAddr, error) {
+	success := make(chan *net.IPAddr)
+	error := make(chan error)
+
+	go func() {
+		addrs, err := net.ResolveIPAddr(network, destination)
+		if err == nil {
+			success <- addrs
+		} else {
+			error <- err
+		}
+	}()
+
+	select {
+	case addrs := <-success:
+		return addrs, nil
+	case err := <-error:
+		return nil, err
+	case <-ctx.Done():
+		return nil, errors.New("ResolveIp timeout")
+	}
+}
+
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	ctx := context.Background()
 
 	network := "ip4"
 	if p.IPv6 {
 		network = "ip6"
-	}
-
-	host, err := net.ResolveIPAddr(network, destination)
-	if err != nil {
-		acc.AddFields(
-			"ping",
-			map[string]interface{}{"result_code": 1},
-			map[string]string{"url": destination},
-		)
-		acc.AddError(err)
-		return
 	}
 
 	interval := p.PingInterval
@@ -230,6 +235,17 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Deadline)*time.Second)
 		defer cancel()
+	}
+
+	host, err := ResolveIP(ctx, network, destination)
+	if err != nil {
+		acc.AddFields(
+			"ping",
+			map[string]interface{}{"result_code": 1},
+			map[string]string{"url": destination},
+		)
+		acc.AddError(err)
+		return
 	}
 
 	resps := make(chan *ping.Response)
