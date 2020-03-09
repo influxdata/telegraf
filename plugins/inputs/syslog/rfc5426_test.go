@@ -18,11 +18,6 @@ import (
 func getTestCasesForRFC5426() []testCasePacket {
 	testCases := []testCasePacket{
 		{
-			name: "empty",
-			data: []byte(""),
-			werr: true,
-		},
-		{
 			name: "complete",
 			data: []byte("<1>1 - - - - - - A"),
 			wantBestEffort: testutil.MustMetric(

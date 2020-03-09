@@ -165,6 +165,7 @@ For documentation on the latest development code see the [documentation index][d
 * [chrony](./plugins/inputs/chrony)
 * [cisco_telemetry_gnmi](./plugins/inputs/cisco_telemetry_gnmi)
 * [cisco_telemetry_mdt](./plugins/inputs/cisco_telemetry_mdt)
+* [clickhouse](./plugins/inputs/clickhouse)
 * [cloud_pubsub](./plugins/inputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cloud_pubsub_push](./plugins/inputs/cloud_pubsub_push) Google Cloud Pub/Sub push endpoint
 * [conntrack](./plugins/inputs/conntrack)
@@ -185,6 +186,7 @@ For documentation on the latest development code see the [documentation index][d
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [ethtool](./plugins/inputs/ethtool)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
+* [execd](./plugins/inputs/execd)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
 * [file](./plugins/inputs/file)
@@ -289,7 +291,7 @@ For documentation on the latest development code see the [documentation index][d
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
-* [stackdriver](./plugins/inputs/stackdriver)
+* [stackdriver](./plugins/inputs/stackdriver) (Google Cloud Monitoring)
 * [statsd](./plugins/inputs/statsd)
 * [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
@@ -409,7 +411,7 @@ For documentation on the latest development code see the [documentation index][d
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
 * [socket_writer](./plugins/outputs/socket_writer)
-* [stackdriver](./plugins/outputs/stackdriver)
+* [stackdriver](./plugins/outputs/stackdriver) (Google Cloud Monitoring)
 * [syslog](./plugins/outputs/syslog)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)

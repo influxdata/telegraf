@@ -12,7 +12,7 @@ On non-zero exit stderr will be logged at error level.
 
 ```toml
 [[outputs.exec]]
-  ## Command to injest metrics via stdin.
+  ## Command to ingest metrics via stdin.
   command = ["tee", "-a", "/dev/null"]
 
   ## Timeout for command to complete.
