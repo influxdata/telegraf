@@ -389,7 +389,6 @@ DECLARE @SqlStatement AS nvarchar(max);
 		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
 		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
 		,mf.[type_desc] AS [file_type]
-		,vs.[volume_mount_point]
 		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
 			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
 			,vs.[volume_mount_point]
