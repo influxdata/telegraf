@@ -16,6 +16,7 @@
 - [infiniband](/plugins/inputs/infiniband/README.md) - Contributed by @willfurnell
 - [modbus](/plugins/inputs/modbus/README.md) - Contributed by @garciaolais
 - [monit](/plugins/inputs/monit/README.md) - Contributed by @SirishaGopigiri
+- [wireguard](/plugins/inputs/wireguard/README.md) - Contributed by @LINKIWI
 
 #### New Processors
 

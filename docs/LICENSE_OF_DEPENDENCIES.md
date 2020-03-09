@@ -125,6 +125,7 @@ following works:
 - github.com/wvanbergen/kafka [MIT License](https://github.com/wvanbergen/kafka/blob/master/LICENSE)
 - github.com/wvanbergen/kazoo-go [MIT License](https://github.com/wvanbergen/kazoo-go/blob/master/MIT-LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)
+- golang.zx2c4.com/wireguard/wgctrl [MIT License](https://github.com/WireGuard/wgctrl-go/blob/master/LICENSE.md)
 - go.opencensus.io [Apache License 2.0](https://github.com/census-instrumentation/opencensus-go/blob/master/LICENSE)
 - golang.org/x/crypto [BSD 3-Clause Clear License](https://github.com/golang/crypto/blob/master/LICENSE)
 - golang.org/x/net [BSD 3-Clause Clear License](https://github.com/golang/net/blob/master/LICENSE)
