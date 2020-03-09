@@ -6,48 +6,17 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
-
-func Metric(v telegraf.Metric, err error) telegraf.Metric {
-	if err != nil {
-		panic(err)
-	}
-	return v
-}
 
 func TestConverter(t *testing.T) {
 	tests := []struct {
 		name      string
 		converter *Converter
 		input     telegraf.Metric
-		expected  telegraf.Metric
+		expected  []telegraf.Metric
 	}{
-		{
-			name:      "empty",
-			converter: &Converter{},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"value": 42.0,
-					},
-					time.Unix(0, 0),
-				),
-			),
-			expected: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"value": 42.0,
-					},
-					time.Unix(0, 0),
-				),
-			),
-		},
 		{
 			name: "from tag",
 			converter: &Converter{
@@ -60,23 +29,21 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"tag"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{
-						"float":  "42",
-						"int":    "42",
-						"uint":   "42",
-						"bool":   "true",
-						"string": "howdy",
-						"tag":    "tag",
-					},
-					map[string]interface{}{},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"float":  "42",
+					"int":    "42",
+					"uint":   "42",
+					"bool":   "true",
+					"string": "howdy",
+					"tag":    "tag",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"tag": "tag",
@@ -90,7 +57,7 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "from tag unconvertible",
@@ -102,27 +69,25 @@ func TestConverter(t *testing.T) {
 					Float:    []string{"float"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{
-						"float": "a",
-						"int":   "b",
-						"uint":  "c",
-						"bool":  "maybe",
-					},
-					map[string]interface{}{},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{
+					"float": "a",
+					"int":   "b",
+					"uint":  "c",
+					"bool":  "maybe",
+				},
+				map[string]interface{}{},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "from string field",
@@ -136,29 +101,27 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"a":  "howdy",
-						"b":  "42",
-						"b1": "42.2",
-						"b2": "42.5",
-						"b3": "0x2A",
-						"c":  "42",
-						"c1": "42.2",
-						"c2": "42.5",
-						"c3": "0x2A",
-						"d":  "true",
-						"e":  "42.0",
-						"f":  "foo",
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":  "howdy",
+					"b":  "42",
+					"b1": "42.2",
+					"b2": "42.5",
+					"b3": "0x2A",
+					"c":  "42",
+					"c1": "42.2",
+					"c2": "42.5",
+					"c3": "0x2A",
+					"d":  "true",
+					"e":  "42.0",
+					"f":  "foo",
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"f": "foo",
@@ -178,7 +141,7 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "from string field unconvertible",
@@ -190,27 +153,25 @@ func TestConverter(t *testing.T) {
 					Float:    []string{"d"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"a": "a",
-						"b": "b",
-						"c": "c",
-						"d": "d",
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a": "a",
+					"b": "b",
+					"c": "c",
+					"d": "d",
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "from integer field",
@@ -224,24 +185,22 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"a":             int64(42),
-						"b":             int64(42),
-						"c":             int64(42),
-						"d":             int64(42),
-						"e":             int64(42),
-						"f":             int64(42),
-						"negative_uint": int64(-42),
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":             int64(42),
+					"b":             int64(42),
+					"c":             int64(42),
+					"d":             int64(42),
+					"e":             int64(42),
+					"f":             int64(42),
+					"negative_uint": int64(-42),
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"f": "42",
@@ -256,7 +215,7 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "from unsigned field",
@@ -270,24 +229,22 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"a":            uint64(42),
-						"b":            uint64(42),
-						"c":            uint64(42),
-						"d":            uint64(42),
-						"e":            uint64(42),
-						"f":            uint64(42),
-						"overflow_int": uint64(math.MaxUint64),
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":            uint64(42),
+					"b":            uint64(42),
+					"c":            uint64(42),
+					"d":            uint64(42),
+					"e":            uint64(42),
+					"f":            uint64(42),
+					"overflow_int": uint64(math.MaxUint64),
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"f": "42",
@@ -302,7 +259,7 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "out of range for unsigned",
@@ -311,19 +268,17 @@ func TestConverter(t *testing.T) {
 					Unsigned: []string{"a", "b"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"a": int64(-42),
-						"b": math.MaxFloat64,
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a": int64(-42),
+					"b": math.MaxFloat64,
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -332,7 +287,7 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "boolean field",
@@ -346,29 +301,27 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f", "ff"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"a":  true,
-						"b":  true,
-						"c":  true,
-						"d":  true,
-						"e":  true,
-						"f":  true,
-						"af": false,
-						"bf": false,
-						"cf": false,
-						"df": false,
-						"ef": false,
-						"ff": false,
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":  true,
+					"b":  true,
+					"c":  true,
+					"d":  true,
+					"e":  true,
+					"f":  true,
+					"af": false,
+					"bf": false,
+					"cf": false,
+					"df": false,
+					"ef": false,
+					"ff": false,
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"f":  "true",
@@ -388,7 +341,7 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "from float field",
@@ -402,28 +355,26 @@ func TestConverter(t *testing.T) {
 					Tag:      []string{"f"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"a":              42.0,
-						"b":              42.0,
-						"c":              42.0,
-						"d":              42.0,
-						"e":              42.0,
-						"f":              42.0,
-						"too_large_int":  math.MaxFloat64,
-						"too_large_uint": math.MaxFloat64,
-						"too_small_int":  -math.MaxFloat64,
-						"too_small_uint": -math.MaxFloat64,
-						"negative_uint":  -42.0,
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"a":              42.0,
+					"b":              42.0,
+					"c":              42.0,
+					"d":              42.0,
+					"e":              42.0,
+					"f":              42.0,
+					"too_large_int":  math.MaxFloat64,
+					"too_large_uint": math.MaxFloat64,
+					"too_small_int":  -math.MaxFloat64,
+					"too_small_uint": -math.MaxFloat64,
+					"negative_uint":  -42.0,
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"f": "42",
@@ -442,7 +393,7 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 		{
 			name: "globbing",
@@ -451,20 +402,18 @@ func TestConverter(t *testing.T) {
 					Integer: []string{"int_*"},
 				},
 			},
-			input: Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{
-						"int_a":   "1",
-						"int_b":   "2",
-						"float_a": 1.0,
-					},
-					time.Unix(0, 0),
-				),
+			input: testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"int_a":   "1",
+					"int_b":   "2",
+					"float_a": 1.0,
+				},
+				time.Unix(0, 0),
 			),
-			expected: Metric(
-				metric.New(
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -474,18 +423,102 @@ func TestConverter(t *testing.T) {
 					},
 					time.Unix(0, 0),
 				),
-			),
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metrics := tt.converter.Apply(tt.input)
+			tt.converter.Log = testutil.Logger{}
 
-			require.Equal(t, 1, len(metrics))
-			require.Equal(t, tt.expected.Name(), metrics[0].Name())
-			require.Equal(t, tt.expected.Tags(), metrics[0].Tags())
-			require.Equal(t, tt.expected.Fields(), metrics[0].Fields())
-			require.Equal(t, tt.expected.Time(), metrics[0].Time())
+			err := tt.converter.Init()
+			require.NoError(t, err)
+			actual := tt.converter.Apply(tt.input)
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
 		})
 	}
+}
+
+func TestMeasurement(t *testing.T) {
+	tests := []struct {
+		name      string
+		converter *Converter
+		input     telegraf.Metric
+		expected  []telegraf.Metric
+	}{
+		{
+			name: "measurement from tag",
+			converter: &Converter{
+				Tags: &Conversion{
+					Measurement: []string{"filepath"},
+				},
+			},
+			input: testutil.MustMetric(
+				"file",
+				map[string]string{
+					"filepath": "/var/log/syslog",
+				},
+				map[string]interface{}{
+					"msg": "howdy",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"/var/log/syslog",
+					map[string]string{},
+					map[string]interface{}{
+						"msg": "howdy",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "measurement from field",
+			converter: &Converter{
+				Fields: &Conversion{
+					Measurement: []string{"topic"},
+				},
+			},
+			input: testutil.MustMetric(
+				"file",
+				map[string]string{},
+				map[string]interface{}{
+					"v":     1,
+					"topic": "telegraf",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"telegraf",
+					map[string]string{},
+					map[string]interface{}{
+						"v": 1,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.converter.Log = testutil.Logger{}
+			err := tt.converter.Init()
+			require.NoError(t, err)
+
+			actual := tt.converter.Apply(tt.input)
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
+}
+
+func TestEmptyConfigInitError(t *testing.T) {
+	converter := &Converter{
+		Log: testutil.Logger{},
+	}
+	err := converter.Init()
+	require.Error(t, err)
 }
