@@ -87,6 +87,7 @@ jobs:
           at: '/go'
       - run: 'make'
       - run: 'make check'
+      - run: 'make check-deps'
       - run: 'make test'
   test-go-1.13-386:
     <<: [ *defaults, *go-1_13 ]

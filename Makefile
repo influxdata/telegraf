@@ -100,6 +100,10 @@ check: fmtcheck vet
 test-all: fmtcheck vet
 	go test ./...
 
+.PHONY: check-deps
+check-deps:
+	./scripts/check-deps.sh
+
 .PHONY: package
 package:
 	./scripts/build.py --package --platform=all --arch=all

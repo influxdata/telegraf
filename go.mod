@@ -136,3 +136,6 @@ require (
 	gotest.tools v2.2.0+incompatible // indirect
 	k8s.io/apimachinery v0.17.1
 )
+
+// replaced due to https://github.com/satori/go.uuid/issues/73
+replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
