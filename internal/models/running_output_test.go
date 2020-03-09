@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -410,6 +412,50 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 	// Verify that they are in order
 	expected := []telegraf.Metric{next5[0], first5[4], first5[3], first5[2], first5[1], first5[0]}
 	assert.Equal(t, expected, m.Metrics())
+}
+
+func TestInternalMetrics(t *testing.T) {
+	_ = NewRunningOutput(
+		"test_internal",
+		&mockOutput{},
+		&OutputConfig{
+			Filter: Filter{},
+			Name:   "test_name",
+			Alias:  "test_alias",
+		},
+		5,
+		10)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"internal_write",
+			map[string]string{
+				"output": "test_name",
+				"alias":  "test_alias",
+			},
+			map[string]interface{}{
+				"buffer_limit":     10,
+				"buffer_size":      0,
+				"errors":           0,
+				"metrics_added":    0,
+				"metrics_dropped":  0,
+				"metrics_filtered": 0,
+				"metrics_written":  0,
+				"write_time_ns":    0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	var actual []telegraf.Metric
+	for _, m := range selfstat.Metrics() {
+		output, _ := m.GetTag("output")
+		if m.Name() == "internal_write" && output == "test_name" {
+			actual = append(actual, m)
+		}
+	}
+
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
 type mockOutput struct {
