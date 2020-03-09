@@ -56,6 +56,8 @@
 - [#7089](https://github.com/influxdata/telegraf/pull/7089): Allow globs in FPM unix socket paths.
 - [#7071](https://github.com/influxdata/telegraf/pull/7071): Add non-cumulative histogram to histogram aggregator.
 - [#6969](https://github.com/influxdata/telegraf/pull/6969): Add label and field selectors to prometheus input k8s discovery.
+- [#7049](https://github.com/influxdata/telegraf/pull/7049): Add support for converting tag or field to measurement in converter processor.
+
 
 #### Bugfixes
 
