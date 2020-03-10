@@ -26,16 +26,18 @@ var zeroTime = time.Unix(0, 0)
 
 type (
 	Kafka struct {
-		Brokers          []string
-		Topic            string
+		Brokers          []string    `toml:"brokers"`
+		Topic            string      `toml:"topic"`
+		TopicTag         string      `toml:"topic_tag"`
+		ExcludeTopicTag  bool        `toml:"exclude_topic_tag"`
 		ClientID         string      `toml:"client_id"`
 		TopicSuffix      TopicSuffix `toml:"topic_suffix"`
 		RoutingTag       string      `toml:"routing_tag"`
 		RoutingKey       string      `toml:"routing_key"`
-		CompressionCodec int
-		RequiredAcks     int
-		MaxRetry         int
-		MaxMessageBytes  int `toml:"max_message_bytes"`
+		CompressionCodec int         `toml:"compression_codec"`
+		RequiredAcks     int         `toml:"required_acks"`
+		MaxRetry         int         `toml:"max_retry"`
+		MaxMessageBytes  int         `toml:"max_message_bytes"`
 
 		Version string `toml:"version"`
 
@@ -57,7 +59,9 @@ type (
 		Log telegraf.Logger `toml:"-"`
 
 		tlsConfig tls.Config
-		producer  sarama.SyncProducer
+
+		producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
+		producer     sarama.SyncProducer
 
 		serializer serializers.Serializer
 	}
@@ -93,6 +97,13 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+
+  ## The value of this tag will be used as the topic.  If not set the 'topic'
+  ## option is used.
+  # topic_tag = ""
+
+  ## If true, the 'topic_tag' will be removed from to the metric.
+  # exclude_topic_tag = false
 
   ## Optional Client id
   # client_id = "Telegraf"
@@ -212,14 +223,29 @@ func ValidateTopicSuffixMethod(method string) error {
 	return fmt.Errorf("Unknown topic suffix method provided: %s", method)
 }
 
-func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
+func (k *Kafka) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
+	topic := k.Topic
+	if k.TopicTag != "" {
+		if t, ok := metric.GetTag(k.TopicTag); ok {
+			topic = t
+
+			// If excluding the topic tag, a copy is required to avoid modifying
+			// the metric buffer.
+			if k.ExcludeTopicTag {
+				metric = metric.Copy()
+				metric.Accept()
+				metric.RemoveTag(k.TopicTag)
+			}
+		}
+	}
+
 	var topicName string
 	switch k.TopicSuffix.Method {
 	case "measurement":
-		topicName = k.Topic + k.TopicSuffix.Separator + metric.Name()
+		topicName = topic + k.TopicSuffix.Separator + metric.Name()
 	case "tags":
 		var topicNameComponents []string
-		topicNameComponents = append(topicNameComponents, k.Topic)
+		topicNameComponents = append(topicNameComponents, topic)
 		for _, tag := range k.TopicSuffix.Keys {
 			tagValue := metric.Tags()[tag]
 			if tagValue != "" {
@@ -228,9 +254,9 @@ func (k *Kafka) GetTopicName(metric telegraf.Metric) string {
 		}
 		topicName = strings.Join(topicNameComponents, k.TopicSuffix.Separator)
 	default:
-		topicName = k.Topic
+		topicName = topic
 	}
-	return topicName
+	return metric, topicName
 }
 
 func (k *Kafka) SetSerializer(serializer serializers.Serializer) {
@@ -306,7 +332,7 @@ func (k *Kafka) Connect() error {
 		config.Net.SASL.Version = version
 	}
 
-	producer, err := sarama.NewSyncProducer(k.Brokers, config)
+	producer, err := k.producerFunc(k.Brokers, config)
 	if err != nil {
 		return err
 	}
@@ -348,6 +374,8 @@ func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
+		metric, topic := k.GetTopicName(metric)
+
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
 			k.Log.Debugf("Could not serialize metric: %v", err)
@@ -355,7 +383,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		}
 
 		m := &sarama.ProducerMessage{
-			Topic: k.GetTopicName(metric),
+			Topic: topic,
 			Value: sarama.ByteEncoder(buf),
 		}
 
@@ -403,6 +431,7 @@ func init() {
 		return &Kafka{
 			MaxRetry:     3,
 			RequiredAcks: -1,
+			producerFunc: sarama.NewSyncProducer,
 		}
 	})
 }
