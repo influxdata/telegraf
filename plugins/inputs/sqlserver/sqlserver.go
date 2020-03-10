@@ -352,53 +352,74 @@ EXEC(@SQL)
 // EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10;
+DECLARE @SqlStatement AS nvarchar(max);
 IF SERVERPROPERTY('EngineEdition') = 5
 BEGIN
-SELECT
-'sqlserver_database_io' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-DB_NAME([vfs].[database_id]) AS [database_name],
-vfs.io_stall_read_ms AS read_latency_ms,
-vfs.num_of_reads AS reads,
-vfs.num_of_bytes_read AS read_bytes,
-vfs.io_stall_write_ms AS write_latency_ms,
-vfs.num_of_writes AS writes,
-vfs.num_of_bytes_written AS write_bytes,
-vfs.io_stall_queued_read_ms as rg_read_stall_ms,
-vfs.io_stall_queued_write_ms as rg_write_stall_ms,
-ISNULL(b.name ,'RBPEX') as logical_filename,
-ISNULL(b.physical_name, 'RBPEX') as physical_filename,
-CASE WHEN vfs.file_id = 2 THEN 'LOG'ELSE 'DATA' END AS file_type
-,ISNULL(size,0)/128 AS current_size_mb
-,ISNULL(FILEPROPERTY(b.name,'SpaceUsed')/128,0) as space_used_mb
-FROM
-[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-LEFT OUTER join sys.database_files b on  b.file_id = vfs.file_id
+	SET @SqlStatement = '
+	SELECT
+		 ''sqlserver_database_io'' As [measurement]
+		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+		,DB_NAME([vfs].[database_id]) AS [database_name]
+		,vfs.io_stall_read_ms AS read_latency_ms
+		,vfs.num_of_reads AS reads
+		,vfs.num_of_bytes_read AS read_bytes
+		,vfs.io_stall_write_ms AS write_latency_ms
+		,vfs.num_of_writes AS writes
+		,vfs.num_of_bytes_written AS write_bytes
+		,vfs.io_stall_queued_read_ms as rg_read_stall_ms
+		,ISNULL(b.name ,''RBPEX'') as logical_filename
+		,ISNULL(b.physical_name, ''RBPEX'') as physical_filename
+		,CASE WHEN vfs.file_id = 2 THEN ''LOG'' ELSE ''DATA'' END AS file_type
+		,ISNULL(size,0)/128 AS current_size_mb
+		,ISNULL(FILEPROPERTY(b.name,''SpaceUsed'')/128,0) as space_used_mb
+		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
+		,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+	FROM [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+	LEFT OUTER join sys.database_files b 
+		ON b.file_id = vfs.file_id
+	'
+	EXEC sp_executesql @SqlStatement
+
 END
 ELSE
 BEGIN
-SELECT
-'sqlserver_database_io' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-DB_NAME([vfs].[database_id]) [database_name],
-vfs.io_stall_read_ms AS read_latency_ms,
-vfs.num_of_reads AS reads,
-vfs.num_of_bytes_read AS read_bytes,
-vfs.io_stall_write_ms AS write_latency_ms,
-vfs.num_of_writes AS writes,
-vfs.num_of_bytes_written AS write_bytes,
-vfs.io_stall_queued_read_ms as rg_read_stall_ms,
-vfs.io_stall_queued_write_ms as rg_write_stall_ms,
-ISNULL(b.name ,'RBPEX') as logical_filename,
-ISNULL(b.physical_name, 'RBPEX') as physical_filename,
-CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
-,ISNULL(size,0)/128 AS current_size_mb
--- can't easily get space used without switching context to each DB for MI/On-prem making query expensive
-, -1 as space_used_mb
-FROM
-[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-LEFT OUTER join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
+
+	SET @SqlStatement = N'
+	SELECT
+		''sqlserver_database_io'' AS [measurement]
+		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+		,DB_NAME(vfs.[database_id]) AS [database_name]
+		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
+		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
+		,mf.[type_desc] AS [file_type]
+		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
+			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+			,vs.[volume_mount_point]
+		) AS [volume_mount_point]
+		,vfs.[io_stall_read_ms] AS [read_latency_ms]
+		,vfs.[num_of_reads] AS [reads]
+		,vfs.[num_of_bytes_read] AS [read_bytes]
+		,vfs.[io_stall_write_ms] AS [write_latency_ms]
+		,vfs.[num_of_writes] AS [writes]
+		,vfs.[num_of_bytes_written] AS [write_bytes]
+		'
+		+ 
+		CASE
+			WHEN LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) = '11'
+				/*SQL Server 2012 (ver 11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]*/
+				THEN ''
+				ELSE N',vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
+		END 
+		+
+	N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+	INNER JOIN sys.master_files AS mf WITH (NOLOCK)
+		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
+	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs
+	'
+	EXEC sp_executesql @SqlStatement
+
 END
+
 `
 
 // Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
