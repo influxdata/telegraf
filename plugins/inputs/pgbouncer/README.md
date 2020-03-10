@@ -12,10 +12,10 @@ More information about the meaning of these metrics can be found in the
 ```toml
 [[inputs.pgbouncer]]
   ## specify address via a url matching:
-  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
+  ##   postgres://[pqgotest[:password]]@host:port[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost port=5432 user=pqotest password=... sslmode=... dbname=app_production
   ##
   ## All connection parameters are optional.
   ##
@@ -30,7 +30,7 @@ Specify address via a postgresql connection string:
 
 Or via an url matching:
 
-  `postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]`
+  `postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]`
 
 All connection parameters are optional.
 
