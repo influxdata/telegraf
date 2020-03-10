@@ -59,6 +59,7 @@
 - [#6969](https://github.com/influxdata/telegraf/pull/6969): Add label and field selectors to prometheus input k8s discovery.
 - [#7049](https://github.com/influxdata/telegraf/pull/7049): Add support for converting tag or field to measurement in converter processor.
 - [#7103](https://github.com/influxdata/telegraf/pull/7103): Add volume_mount_point to DatabaseIO query in sqlserver input.
+- [#7142](https://github.com/influxdata/telegraf/pull/7142): Add topic tag options to kafka output.
 
 #### Bugfixes
 
