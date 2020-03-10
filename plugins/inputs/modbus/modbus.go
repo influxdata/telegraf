@@ -468,27 +468,26 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 	switch t.DataType {
 	case "UINT16":
 		e16 := convertEndianness16(t.ByteOrder, bytes)
-		f16 := format16(t.DataType, e16).(uint16)
-		return scaleUint16(t.Scale, f16)
+		return scaleUint16(t.Scale, e16)
 	case "INT16":
 		e16 := convertEndianness16(t.ByteOrder, bytes)
-		f16 := format16(t.DataType, e16).(int16)
+		f16 := int16(e16)
 		return scaleInt16(t.Scale, f16)
 	case "UINT32":
 		e32 := convertEndianness32(t.ByteOrder, bytes)
-		f32 := format32(t.DataType, e32).(uint32)
-		return scaleUint32(t.Scale, f32)
+		return scaleUint32(t.Scale, e32)
 	case "INT32":
 		e32 := convertEndianness32(t.ByteOrder, bytes)
-		return format32(t.DataType, e32)
+		f32 := int32(e32)
+		return scaleInt32(t.Scale, f32)
 	case "FLOAT32-IEEE":
 		e32 := convertEndianness32(t.ByteOrder, bytes)
-		return format32(t.DataType, e32)
+		f32 := math.Float32frombits(e32)
+		return scaleFloat32(t.Scale, f32)
 	case "FLOAT32":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
-			f16 := format16(t.DataType, e16).(uint16)
-			return scale16toFloat32(t.Scale, f16)
+			return scale16toFloat32(t.Scale, e16)
 		} else {
 			e32 := convertEndianness32(t.ByteOrder, bytes)
 			return scale32toFloat32(t.Scale, e32)
@@ -566,6 +565,14 @@ func scaleUint16(s float64, v uint16) uint16 {
 
 func scaleUint32(s float64, v uint32) uint32 {
 	return uint32(float64(v) * float64(s))
+}
+
+func scaleInt32(s float64, v int32) int32 {
+	return int32(float64(v) * float64(s))
+}
+
+func scaleFloat32(s float64, v float32) float32 {
+	return float32(float64(v) * s)
 }
 
 // Gather implements the telegraf plugin interface method for data accumulation
