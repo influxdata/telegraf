@@ -24,7 +24,7 @@ type DiagnosticsMessageSubscriber interface {
 
 type ApplicationInsights struct {
 	InstrumentationKey      string
-	EndpointUrl             string
+	EndpointURL             string
 	Timeout                 internal.Duration
 	EnableDiagnosticLogging bool
 	ContextTagSources       map[string]string
@@ -80,7 +80,7 @@ func (a *ApplicationInsights) Connect() error {
 	}
 
 	if a.transmitter == nil {
-		a.transmitter = NewTransmitter(a.InstrumentationKey, a.EndpointUrl)
+		a.transmitter = NewTransmitter(a.InstrumentationKey, a.EndpointURL)
 	}
 
 	if a.EnableDiagnosticLogging && a.diagMsgSubscriber != nil {

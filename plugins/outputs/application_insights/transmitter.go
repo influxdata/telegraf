@@ -8,15 +8,14 @@ type Transmitter struct {
 	client appinsights.TelemetryClient
 }
 
-func NewTransmitter(ikey string, EndpointUrl string) *Transmitter {
-
-	if len(EndpointUrl) == 0 {
+func NewTransmitter(ikey string, endpointURL string) *Transmitter {
+	if len(endpointURL) == 0 {
 		return &Transmitter{client: appinsights.NewTelemetryClient(ikey)}
+	} else {
+		telemetryConfig := appinsights.NewTelemetryConfiguration(ikey)
+		telemetryConfig.EndpointUrl = endpointURL
+		return &Transmitter{client: appinsights.NewTelemetryClientFromConfig(telemetryConfig)}
 	}
-
-	telemetryConfig := appinsights.NewTelemetryConfiguration(ikey)
-	telemetryConfig.EndpointUrl = EndpointUrl
-	return &Transmitter{client: appinsights.NewTelemetryClientFromConfig(telemetryConfig)}
 }
 
 func (t *Transmitter) Track(telemetry appinsights.Telemetry) {
