@@ -31,23 +31,25 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL                  string   // url deprecated in 0.1.9; use urls
-	URLs                 []string `toml:"urls"`
-	Username             string
-	Password             string
-	Database             string
-	DatabaseTag          string `toml:"database_tag"`
-	ExcludeDatabaseTag   bool   `toml:"exclude_database_tag"`
-	UserAgent            string
-	RetentionPolicy      string
-	WriteConsistency     string
-	Timeout              internal.Duration
-	UDPPayload           internal.Size     `toml:"udp_payload"`
-	HTTPProxy            string            `toml:"http_proxy"`
-	HTTPHeaders          map[string]string `toml:"http_headers"`
-	ContentEncoding      string            `toml:"content_encoding"`
-	SkipDatabaseCreation bool              `toml:"skip_database_creation"`
-	InfluxUintSupport    bool              `toml:"influx_uint_support"`
+	URL                       string            // url deprecated in 0.1.9; use urls
+	URLs                      []string          `toml:"urls"`
+	Username                  string            `toml:"username"`
+	Password                  string            `toml:"password"`
+	Database                  string            `toml:"database"`
+	DatabaseTag               string            `toml:"database_tag"`
+	ExcludeDatabaseTag        bool              `toml:"exclude_database_tag"`
+	RetentionPolicy           string            `toml:"retention_policy"`
+	RetentionPolicyTag        string            `toml:"retention_policy_tag"`
+	ExcludeRetentionPolicyTag bool              `toml:"exclude_retention_policy_tag"`
+	UserAgent                 string            `toml:"user_agent"`
+	WriteConsistency          string            `toml:"write_consistency"`
+	Timeout                   internal.Duration `toml:"timeout"`
+	UDPPayload                internal.Size     `toml:"udp_payload"`
+	HTTPProxy                 string            `toml:"http_proxy"`
+	HTTPHeaders               map[string]string `toml:"http_headers"`
+	ContentEncoding           string            `toml:"content_encoding"`
+	SkipDatabaseCreation      bool              `toml:"skip_database_creation"`
+	InfluxUintSupport         bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
 	Precision string // precision deprecated in 1.0; value is ignored
@@ -88,6 +90,13 @@ var sampleConfig = `
   ## Name of existing retention policy to write to.  Empty string writes to
   ## the default retention policy.  Only takes effect when using HTTP.
   # retention_policy = ""
+
+  ## The value of this tag will be used to determine the retention policy.  If this
+  ## tag is not set the 'retention_policy' option is used as the default.
+  # retention_policy_tag = ""
+
+  ## If true, the 'retention_policy_tag' will not be removed from the metric.
+  # exclude_retention_policy_tag = false
 
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
   ## Only takes effect when using HTTP.
@@ -250,23 +259,25 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 	}
 
 	config := &HTTPConfig{
-		URL:                  url,
-		Timeout:              i.Timeout.Duration,
-		TLSConfig:            tlsConfig,
-		UserAgent:            i.UserAgent,
-		Username:             i.Username,
-		Password:             i.Password,
-		Proxy:                proxy,
-		ContentEncoding:      i.ContentEncoding,
-		Headers:              i.HTTPHeaders,
-		Database:             i.Database,
-		DatabaseTag:          i.DatabaseTag,
-		ExcludeDatabaseTag:   i.ExcludeDatabaseTag,
-		SkipDatabaseCreation: i.SkipDatabaseCreation,
-		RetentionPolicy:      i.RetentionPolicy,
-		Consistency:          i.WriteConsistency,
-		Serializer:           i.newSerializer(),
-		Log:                  i.Log,
+		URL:                       url,
+		Timeout:                   i.Timeout.Duration,
+		TLSConfig:                 tlsConfig,
+		UserAgent:                 i.UserAgent,
+		Username:                  i.Username,
+		Password:                  i.Password,
+		Proxy:                     proxy,
+		ContentEncoding:           i.ContentEncoding,
+		Headers:                   i.HTTPHeaders,
+		Database:                  i.Database,
+		DatabaseTag:               i.DatabaseTag,
+		ExcludeDatabaseTag:        i.ExcludeDatabaseTag,
+		SkipDatabaseCreation:      i.SkipDatabaseCreation,
+		RetentionPolicy:           i.RetentionPolicy,
+		RetentionPolicyTag:        i.RetentionPolicyTag,
+		ExcludeRetentionPolicyTag: i.ExcludeRetentionPolicyTag,
+		Consistency:               i.WriteConsistency,
+		Serializer:                i.newSerializer(),
+		Log:                       i.Log,
 	}
 
 	c, err := i.CreateHTTPClientF(config)
