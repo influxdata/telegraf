@@ -1853,6 +1853,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
+	delete(tbl.Fields, "sflow_snmp_community")
 
 	return c, nil
 }

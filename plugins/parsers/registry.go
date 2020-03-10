@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/network_flow/sflow"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
@@ -227,6 +228,9 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.FormUrlencodedTagKeys,
 		)
+	case "sflow":
+		sflowConfig := sflow.NewDefaultV5FormatOptions()
+		parser, err = sflow.NewParser(config.MetricName, config.DefaultTags, sflowConfig)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -316,6 +320,11 @@ func NewNagiosParser() (Parser, error) {
 func NewInfluxParser() (Parser, error) {
 	handler := influx.NewMetricHandler()
 	return influx.NewParser(handler), nil
+}
+
+func NewSFlowParser(metricName string, defaultTags map[string]string) (Parser, error) {
+	sflowConfig := sflow.NewDefaultV5FormatOptions()
+	return sflow.NewParser(metricName, defaultTags, sflowConfig)
 }
 
 func NewGraphiteParser(
