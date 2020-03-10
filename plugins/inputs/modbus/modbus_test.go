@@ -240,6 +240,16 @@ func TestHoldingRegisters(t *testing.T) {
 			read:      int16(-12885),
 		},
 		{
+			name:      "register50_register51_abcd_int32_scaled",
+			address:   []uint16{50, 51},
+			quantity:  2,
+			byteOrder: "ABCD",
+			dataType:  "INT32",
+			scale:     10,
+			write:     []byte{0x00, 0x00, 0xAB, 0xCD},
+			read:      int32(439810),
+		},
+		{
 			name:      "register50_register51_abcd_int32",
 			address:   []uint16{50, 51},
 			quantity:  2,
@@ -328,6 +338,16 @@ func TestHoldingRegisters(t *testing.T) {
 			scale:     1,
 			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
 			read:      float32(-3.3360025e-13),
+		},
+		{
+			name:      "register130_register131_abcd_float32_ieee_scaled",
+			address:   []uint16{130, 131},
+			quantity:  2,
+			byteOrder: "ABCD",
+			dataType:  "FLOAT32-IEEE",
+			scale:     10,
+			write:     []byte{0xAA, 0xBB, 0xCC, 0xDD},
+			read:      float32(-3.3360025e-12),
 		},
 	}
 
