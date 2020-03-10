@@ -733,3 +733,200 @@ func TestHTTP_WriteDatabaseTagWorksOnRetry(t *testing.T) {
 	err = client.Write(ctx, metrics)
 	require.NoError(t, err)
 }
+
+func TestDBRPTags(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		config      influxdb.HTTPConfig
+		metrics     []telegraf.Metric
+		handlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
+		url         string
+	}{
+		{
+			name: "defaults",
+			config: influxdb.HTTPConfig{
+				URL:      u,
+				Database: "telegraf",
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"database": "foo",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, r.FormValue("rp"), "")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+		{
+			name: "static retention policy",
+			config: influxdb.HTTPConfig{
+				URL:             u,
+				Database:        "telegraf",
+				RetentionPolicy: "foo",
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, r.FormValue("rp"), "foo")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+		{
+			name: "retention policy tag",
+			config: influxdb.HTTPConfig{
+				URL:                  u,
+				SkipDatabaseCreation: true,
+				Database:             "telegraf",
+				RetentionPolicyTag:   "rp",
+				Log:                  testutil.Logger{},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"rp": "foo",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, r.FormValue("rp"), "foo")
+				body, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Contains(t, string(body), "cpu,rp=foo value=42")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+		{
+			name: "retention policy tag fallback to static rp",
+			config: influxdb.HTTPConfig{
+				URL:                  u,
+				SkipDatabaseCreation: true,
+				Database:             "telegraf",
+				RetentionPolicy:      "foo",
+				RetentionPolicyTag:   "rp",
+				Log:                  testutil.Logger{},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, r.FormValue("rp"), "foo")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+		{
+			name: "retention policy tag fallback to unset rp",
+			config: influxdb.HTTPConfig{
+				URL:                  u,
+				SkipDatabaseCreation: true,
+				Database:             "telegraf",
+				RetentionPolicyTag:   "rp",
+				Log:                  testutil.Logger{},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, r.FormValue("rp"), "")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+		{
+			name: "exclude retention policy tag",
+			config: influxdb.HTTPConfig{
+				URL:                       u,
+				SkipDatabaseCreation:      true,
+				Database:                  "telegraf",
+				RetentionPolicyTag:        "rp",
+				ExcludeRetentionPolicyTag: true,
+				Log:                       testutil.Logger{},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"rp": "foo",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, r.FormValue("rp"), "foo")
+				body, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Contains(t, string(body), "cpu value=42")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/write":
+					tt.handlerFunc(t, w, r)
+					return
+				default:
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+			})
+
+			client, err := influxdb.NewHTTPClient(tt.config)
+			require.NoError(t, err)
+
+			ctx := context.Background()
+			err = client.Write(ctx, tt.metrics)
+			require.NoError(t, err)
+		})
+	}
+}

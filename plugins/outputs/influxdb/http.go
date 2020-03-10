@@ -83,21 +83,23 @@ func (r WriteResponse) Error() string {
 }
 
 type HTTPConfig struct {
-	URL                  *url.URL
-	UserAgent            string
-	Timeout              time.Duration
-	Username             string
-	Password             string
-	TLSConfig            *tls.Config
-	Proxy                *url.URL
-	Headers              map[string]string
-	ContentEncoding      string
-	Database             string
-	DatabaseTag          string
-	ExcludeDatabaseTag   bool
-	RetentionPolicy      string
-	Consistency          string
-	SkipDatabaseCreation bool
+	URL                       *url.URL
+	UserAgent                 string
+	Timeout                   time.Duration
+	Username                  string
+	Password                  string
+	TLSConfig                 *tls.Config
+	Proxy                     *url.URL
+	Headers                   map[string]string
+	ContentEncoding           string
+	Database                  string
+	DatabaseTag               string
+	ExcludeDatabaseTag        bool
+	RetentionPolicy           string
+	RetentionPolicyTag        string
+	ExcludeRetentionPolicyTag bool
+	Consistency               string
+	SkipDatabaseCreation      bool
 
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
@@ -236,55 +238,66 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 }
 
+type dbrp struct {
+	Database        string
+	RetentionPolicy string
+}
+
 // Write sends the metrics to InfluxDB
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
-	batches := make(map[string][]telegraf.Metric)
-	if c.config.DatabaseTag == "" {
-		err := c.writeBatch(ctx, c.config.Database, metrics)
+	// If these options are not used, we can skip in plugin batching and send
+	// the full batch in a single request.
+	if c.config.DatabaseTag == "" && c.config.RetentionPolicyTag == "" {
+		return c.writeBatch(ctx, c.config.Database, c.config.RetentionPolicy, metrics)
+	}
+
+	batches := make(map[dbrp][]telegraf.Metric)
+	for _, metric := range metrics {
+		db, ok := metric.GetTag(c.config.DatabaseTag)
+		if !ok {
+			db = c.config.Database
+		}
+
+		rp, ok := metric.GetTag(c.config.RetentionPolicyTag)
+		if !ok {
+			rp = c.config.RetentionPolicy
+		}
+
+		dbrp := dbrp{
+			Database:        db,
+			RetentionPolicy: rp,
+		}
+
+		if c.config.ExcludeDatabaseTag || c.config.ExcludeRetentionPolicyTag {
+			// Avoid modifying the metric in case we need to retry the request.
+			metric = metric.Copy()
+			metric.Accept()
+			metric.RemoveTag(c.config.DatabaseTag)
+			metric.RemoveTag(c.config.RetentionPolicyTag)
+		}
+
+		batches[dbrp] = append(batches[dbrp], metric)
+	}
+
+	for dbrp, batch := range batches {
+		if !c.config.SkipDatabaseCreation && !c.createdDatabases[dbrp.Database] {
+			err := c.CreateDatabase(ctx, dbrp.Database)
+			if err != nil {
+				c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
+					c.config.URL, dbrp.Database, err)
+			}
+		}
+
+		err := c.writeBatch(ctx, dbrp.Database, dbrp.RetentionPolicy, batch)
 		if err != nil {
 			return err
-		}
-	} else {
-		for _, metric := range metrics {
-			db, ok := metric.GetTag(c.config.DatabaseTag)
-			if !ok {
-				db = c.config.Database
-			}
-
-			if _, ok := batches[db]; !ok {
-				batches[db] = make([]telegraf.Metric, 0)
-			}
-
-			if c.config.ExcludeDatabaseTag {
-				// Avoid modifying the metric in case we need to retry the request.
-				metric = metric.Copy()
-				metric.Accept()
-				metric.RemoveTag(c.config.DatabaseTag)
-			}
-
-			batches[db] = append(batches[db], metric)
-		}
-
-		for db, batch := range batches {
-			if !c.config.SkipDatabaseCreation && !c.createdDatabases[db] {
-				err := c.CreateDatabase(ctx, db)
-				if err != nil {
-					c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
-						c.config.URL, db, err)
-				}
-			}
-
-			err := c.writeBatch(ctx, db, batch)
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
 }
 
-func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(c.config.URL, db, c.config.RetentionPolicy, c.config.Consistency)
+func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
+	url, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
 		return err
 	}
