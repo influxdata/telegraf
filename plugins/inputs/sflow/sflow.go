@@ -1,13 +1,13 @@
-// Package sflow contains a Telegraf input plugin that listens for SFLow V5 network flow sample monitoring packets, parses them to extract flow
-// samples which it turns into Metrics for output
 package sflow
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"log"
 	"net"
+	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -15,168 +15,155 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/sflow/parser/sflow"
 )
 
+const sampleConfig = `
+  ## URL to listen on
+  # service_address = "udp://:6343"
+  # service_address = "udp4://:6343"
+  # service_address = "udp6://:6343"
+
+  ## Maximum socket buffer size (in bytes when no unit specified).
+  ## For stream sockets, once the buffer fills up, the sender will start backing up.
+  ## For datagram sockets, once the buffer fills up, metrics will start dropping.
+  ## Defaults to the OS default.
+  # read_buffer_size = "64KiB"
+`
+
 const (
+	maxPacketSize = 64 * 1024
 )
 
-type setReadBufferer interface {
-	SetReadBuffer(bytes int) error
-}
+type SFlow struct {
+	ServiceAddress         string        `toml:"service_address"`
+	ReadBufferSize         internal.Size `toml:"read_buffer_size"`
+	MaxFlowsPerSample      uint32        `toml:"max_flows_per_sample"`
+	MaxCountersPerSample   uint32        `toml:"max_counters_per_sample"`
+	MaxSamplesPerPacket    uint32        `toml:"max_samples_per_packet"`
+	MaxSampleLength        uint32        `toml:"max_sample_length"`
+	MaxFlowHeaderLength    uint32        `toml:"max_flow_header_length"`
+	MaxCounterHeaderLength uint32        `toml:"max_counter_header_length"`
 
-type packetListener struct {
-	net.PacketConn
-	*Listener
-}
+	Log telegraf.Logger `toml:"-"`
 
-func (psl *packetListener) listen() {
-	buf := make([]byte, 64*1024) // 64kb - maximum size of IP packet
-	for {
-		n, _, err := psl.ReadFrom(buf)
-		if err != nil {
-			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				psl.AddError(err)
-			}
-			break
-		}
-		psl.process(buf[:n])
-	}
-}
-
-func (psl *packetListener) process(buf []byte) {
-	metrics, err := psl.Parse(buf)
-	if err != nil {
-		psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
-
-	}
-	for _, m := range metrics {
-		psl.AddMetric(m)
-	}
-}
-
-// Listener configuration structure
-type Listener struct {
-	ServiceAddress string        `toml:"service_address"`
-	ReadBufferSize internal.Size `toml:"read_buffer_size"`
-
-	MaxFlowsPerSample      uint32 `toml:"max_flows_per_sample"`
-	MaxCountersPerSample   uint32 `toml:"max_counters_per_sample"`
-	MaxSamplesPerPacket    uint32 `toml:"max_samples_per_packet"`
-	MaxSampleLength        uint32 `toml:"max_sample_length"`
-	MaxFlowHeaderLength    uint32 `toml:"max_flow_header_length"`
-	MaxCounterHeaderLength uint32 `toml:"max_counter_header_length"`
-
-	*sflow.Parser
-	telegraf.Accumulator
-	io.Closer
+	addr   net.Addr
+	parser *sflow.Parser
+	closer io.Closer
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 // Description answers a description of this input plugin
-func (sl *Listener) Description() string {
+func (s *SFlow) Description() string {
 	return "SFlow V5 Protocol Listener"
 }
 
 // SampleConfig answers a sample configuration
-func (sl *Listener) SampleConfig() string {
-	return `
-	## URL to listen on
-	# service_address = "udp://:6343"
-	# service_address = "udp4://:6343"
-	# service_address = "udp6://:6343"
-
-	## Maximum socket buffer size (in bytes when no unit specified).
-	## For stream sockets, once the buffer fills up, the sender will start backing up.
-	## For datagram sockets, once the buffer fills up, metrics will start dropping.
-	## Defaults to the OS default.
-	# read_buffer_size = "64KiB"
-	`
+func (s *SFlow) SampleConfig() string {
+	return sampleConfig
 }
 
-// Gather is a NOP for sFlow as it receives, asynchronously, sFlow network packets
-func (sl *Listener) Gather(_ telegraf.Accumulator) error {
+func (s *SFlow) Init() error {
+	var err error
+	s.parser, err = sflow.NewParser("sflow", s.getSflowConfig())
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (sl *Listener) getSflowConfig() sflow.V5FormatOptions {
+func (s *SFlow) getSflowConfig() sflow.V5FormatOptions {
 	sflowConfig := sflow.NewDefaultV5FormatOptions()
-	if sl.MaxFlowsPerSample > 0 {
-		sflowConfig.MaxFlowsPerSample = sl.MaxFlowsPerSample
+	if s.MaxFlowsPerSample > 0 {
+		sflowConfig.MaxFlowsPerSample = s.MaxFlowsPerSample
 	}
-	if sl.MaxCountersPerSample > 0 {
-		sflowConfig.MaxCountersPerSample = sl.MaxCountersPerSample
+	if s.MaxCountersPerSample > 0 {
+		sflowConfig.MaxCountersPerSample = s.MaxCountersPerSample
 	}
-	if sl.MaxSamplesPerPacket > 0 {
-		sflowConfig.MaxSamplesPerPacket = sl.MaxSamplesPerPacket
+	if s.MaxSamplesPerPacket > 0 {
+		sflowConfig.MaxSamplesPerPacket = s.MaxSamplesPerPacket
 	}
-	if sl.MaxSampleLength > 0 {
-		sflowConfig.MaxSampleLength = sl.MaxSampleLength
+	if s.MaxSampleLength > 0 {
+		sflowConfig.MaxSampleLength = s.MaxSampleLength
 	}
-	if sl.MaxFlowHeaderLength > 0 {
-		sflowConfig.MaxFlowHeaderLength = sl.MaxFlowHeaderLength
+	if s.MaxFlowHeaderLength > 0 {
+		sflowConfig.MaxFlowHeaderLength = s.MaxFlowHeaderLength
 	}
-	if sl.MaxCounterHeaderLength > 0 {
-		sflowConfig.MaxCounterHeaderLength = sl.MaxCounterHeaderLength
+	if s.MaxCounterHeaderLength > 0 {
+		sflowConfig.MaxCounterHeaderLength = s.MaxCounterHeaderLength
 	}
 	return sflowConfig
 }
 
 // Start starts this sFlow listener listening on the configured network for sFlow packets
-func (sl *Listener) Start(acc telegraf.Accumulator) error {
-	sl.Accumulator = acc
-
-	parser, err := sflow.NewParser("sflow", sl.getSflowConfig())
+func (s *SFlow) Start(acc telegraf.Accumulator) error {
+	u, err := url.Parse(s.ServiceAddress)
 	if err != nil {
 		return err
 	}
-	sl.Parser = parser
 
-	spl := strings.SplitN(sl.ServiceAddress, "://", 2)
-	if len(spl) != 2 {
-		return fmt.Errorf("invalid service address: %s", sl.ServiceAddress)
-	}
-
-	protocol := spl[0]
-	addr := spl[1]
-
-	pc, err := newUDPListener(protocol, addr)
+	conn, err := listenUDP(u.Scheme, u.Host)
 	if err != nil {
 		return err
 	}
-	if sl.ReadBufferSize.Size > 0 {
-		if srb, ok := pc.(setReadBufferer); ok {
-			srb.SetReadBuffer(int(sl.ReadBufferSize.Size))
-		} else {
-			log.Printf("W! Unable to set read buffer on a %s socket", protocol)
-		}
+	s.closer = conn
+	s.addr = conn.LocalAddr()
+
+	if s.ReadBufferSize.Size > 0 {
+		conn.SetReadBuffer(int(s.ReadBufferSize.Size))
 	}
 
-	log.Printf("I! [inputs.sflow] Listening on %s://%s", protocol, pc.LocalAddr())
+	s.Log.Infof("Listening on %s://%s", s.addr.Network(), s.addr.String())
 
-	psl := &packetListener{
-		PacketConn: pc,
-		Listener:   sl,
-	}
-
-	sl.Closer = psl
-	go psl.listen()
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		s.read(acc, conn)
+	}()
 
 	return nil
 }
 
-// Stop this Listener
-func (sl *Listener) Stop() {
-	if sl.Closer != nil {
-		sl.Close()
-		sl.Closer = nil
+// Gather is a NOOP for sFlow as it receives, asynchronously, sFlow network packets
+func (s *SFlow) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
+func (s *SFlow) Stop() {
+	if s.closer != nil {
+		s.closer.Close()
+	}
+	s.wg.Wait()
+}
+
+func (s *SFlow) Address() net.Addr {
+	return s.addr
+}
+
+func (s *SFlow) read(acc telegraf.Accumulator, conn net.PacketConn) {
+	buf := make([]byte, maxPacketSize)
+	for {
+		n, _, err := conn.ReadFrom(buf)
+		if err != nil {
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				acc.AddError(err)
+			}
+			break
+		}
+		s.process(acc, buf[:n])
 	}
 }
 
-// newListener constructs a new vanilla, unconfigured, listener and returns it
-func newListener() *Listener {
-	p, _ := sflow.NewParser("sflow", sflow.NewDefaultV5FormatOptions())
-	return &Listener{Parser: p}
+func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
+	metrics, err := s.parser.Parse(buf)
+	if err != nil {
+		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
+	}
+	for _, m := range metrics {
+		acc.AddMetric(m)
+	}
 }
 
-// newUDPListener answers a net.PacketConn for the expected UDP network and address passed in
-func newUDPListener(network string, address string) (net.PacketConn, error) {
+func listenUDP(network string, address string) (*net.UDPConn, error) {
 	switch network {
 	case "udp", "udp4", "udp6":
 		addr, err := net.ResolveUDPAddr(network, address)
@@ -189,9 +176,9 @@ func newUDPListener(network string, address string) (net.PacketConn, error) {
 	}
 }
 
-// init registers this SFflow input plug in with the Telegraf framework
+// init registers this SFlow input plug in with the Telegraf framework
 func init() {
 	inputs.Add("sflow", func() telegraf.Input {
-		return newListener()
+		return &SFlow{}
 	})
 }
