@@ -116,7 +116,7 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 			if (metric.Type() == telegraf.Histogram || metric.Type() == telegraf.Summary) && (field.Key != "sum" && field.Key != "count") {
 				metricName = prometheus_client.Sanitize(metric.Name())
 			} else {
-				metricName = getSanitizedMetricName(metric.Name(), field.Key)
+				metricName = getSanitizedMetricName(metric.Name(), prometheus_client.Sanitize(field.Key))
 			}
 			labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 			copy(labels, commonLabels)
