@@ -755,7 +755,7 @@ func (aos *Aos) Start(acc telegraf.Accumulator) error {
 		} else {
 			major, _ := strconv.Atoi(aos.api.AosVersion.Major)
 			minor, _ := strconv.Atoi(aos.api.AosVersion.Minor)
-			if major > 3 || (major == 3 && minor == 2) {
+			if major > 3 || (major == 3 && minor >= 2) {
 				aos.IsSequencedStream = true
 				log.Printf("I! AOS Version: %v supports sequenced messaging", aos.api.AosVersion.Version)
 			} else {
