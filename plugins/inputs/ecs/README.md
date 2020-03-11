@@ -1,8 +1,8 @@
 # Amazon ECS Input Plugin
 
-Amazon ECS, Fargate compatible, input plugin which uses the [Amazon ECS v2 metadata and
-stats API][task-metadata-endpoint-v2] endpoints to gather stats on running
-containers in a Task.
+Amazon ECS, Fargate compatible, input plugin which uses the Amazon ECS metadata and
+stats [v2][task-metadata-endpoint-v2] or [v3][task-metadata-endpoint-v3] API endpoints
+to gather stats on running containers in a Task.
 
 The telegraf container must be run in the same Task as the workload it is
 inspecting.
@@ -14,13 +14,86 @@ formats.
 The amazon-ecs-agent (though it _is_ a container running on the host) is not
 present in the metadata/stats endpoints.
 
-### Configuration
+### Configuration (v2 Endpoint)
 
 ```toml
 # Read metrics about ECS containers
 [[inputs.ecs]]
-  ## ECS metadata url
+  ## ECS metadata url. Auto-set if empty.
   # endpoint_url = "http://169.254.170.2"
+
+  ## ECS metadata version (2, 3)
+  ## Ignored if endpoint_url is empty and auto-set according to the
+  ## detected metadata availability.
+  # metadata_version = 2
+
+  ## Containers to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all containers
+  # container_name_include = []
+  # container_name_exclude = []
+
+  ## Container states to include and exclude. Globs accepted.
+  ## When empty only containers in the "RUNNING" state will be captured.
+  ## Possible values are "NONE", "PULLED", "CREATED", "RUNNING",
+  ## "RESOURCES_PROVISIONED", "STOPPED".
+  # container_status_include = []
+  # container_status_exclude = []
+
+  ## ecs labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  ecs_label_include = [ "com.amazonaws.ecs.*" ]
+  ecs_label_exclude = []
+
+  ## Timeout for queries.
+  # timeout = "5s"
+```
+
+### Configuration (v3 Endpoint)
+
+```toml
+# Read metrics about ECS containers
+[[inputs.ecs]]
+  ## ECS metadata url. Auto-set if empty.
+  endpoint_url = "${ECS_CONTAINER_METADATA_URI}"
+
+  ## ECS metadata version (2, 3)
+  ## Ignored if endpoint_url is empty and auto-set according to the
+  ## detected metadata availability.
+  metadata_version = 3
+
+  ## Containers to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all containers
+  # container_name_include = []
+  # container_name_exclude = []
+
+  ## Container states to include and exclude. Globs accepted.
+  ## When empty only containers in the "RUNNING" state will be captured.
+  ## Possible values are "NONE", "PULLED", "CREATED", "RUNNING",
+  ## "RESOURCES_PROVISIONED", "STOPPED".
+  # container_status_include = []
+  # container_status_exclude = []
+
+  ## ecs labels to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all labels as tags
+  ecs_label_include = [ "com.amazonaws.ecs.*" ]
+  ecs_label_exclude = []
+
+  ## Timeout for queries.
+  # timeout = "5s"
+```
+
+### Configuration (auto-detect)
+
+```toml
+# Read metrics about ECS containers
+[[inputs.ecs]]
+  ## ECS metadata url. Auto-set if empty.
+  endpoint_url = ""
+
+  ## ECS metadata version (2, 3)
+  ## Ignored if endpoint_url is empty and auto-set according to the
+  ## detected metadata availability.
+  # metadata_version = 2
 
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
@@ -210,3 +283,4 @@ ecs_container_meta,cluster=test,com.amazonaws.ecs.cluster=test,com.amazonaws.ecs
 
 [docker-input]: /plugins/inputs/docker/README.md
 [task-metadata-endpoint-v2]: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v2.html
+[task-metadata-endpoint-v3] https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html

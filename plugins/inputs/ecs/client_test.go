@@ -238,3 +238,13 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 		})
 	}
 }
+
+func TestGetMetadataPath(t *testing.T) {
+	assert.Equal(t, "/v2/metadata", getMetadataPath(2))
+	assert.Equal(t, "/task", getMetadataPath(3))
+}
+
+func TestGetMetaStatsPath(t *testing.T) {
+	assert.Equal(t, "/v2/stats", getMetaStatsPath(2))
+	assert.Equal(t, "/task/stats", getMetaStatsPath(3))
+}

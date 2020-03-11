@@ -12,8 +12,13 @@ import (
 )
 
 var (
-	ecsMetadataPath, _  = url.Parse("/v2/metadata")
-	ecsMetaStatsPath, _ = url.Parse("/v2/stats")
+	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v2.html
+	ecsMetadataPath  = "/v2/metadata"
+	ecsMetaStatsPath = "/v2/stats"
+
+	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html
+	ecsMetadataPathV3  = "/task"
+	ecsMetaStatsPathV3 = "/task/stats"
 )
 
 // Client is the ECS client contract
@@ -27,19 +32,26 @@ type httpClient interface {
 }
 
 // NewClient constructs an ECS client with the passed configuration params
-func NewClient(timeout time.Duration) (*EcsClient, error) {
+func NewClient(timeout time.Duration, version int) (*EcsClient, error) {
+	if version != 2 && version != 3 {
+		const msg = "expected metadata version 2 or 3, got %d"
+		return nil, fmt.Errorf(msg, version)
+	}
+
 	c := &http.Client{
 		Timeout: timeout,
 	}
 
 	return &EcsClient{
-		client: c,
+		client:  c,
+		version: version,
 	}, nil
 }
 
 // EcsClient contains ECS connection config
 type EcsClient struct {
 	client   httpClient
+	version  int
 	BaseURL  *url.URL
 	taskURL  string
 	statsURL string
@@ -48,7 +60,8 @@ type EcsClient struct {
 // Task calls the ECS metadata endpoint and returns a populated Task
 func (c *EcsClient) Task() (*Task, error) {
 	if c.taskURL == "" {
-		c.taskURL = c.BaseURL.ResolveReference(ecsMetadataPath).String()
+		path := getMetadataPath(c.version)
+		c.taskURL = c.BaseURL.String() + path
 	}
 
 	req, _ := http.NewRequest("GET", c.taskURL, nil)
@@ -72,10 +85,18 @@ func (c *EcsClient) Task() (*Task, error) {
 	return task, nil
 }
 
+func getMetadataPath(version int) string {
+	if version == 3 {
+		return ecsMetadataPathV3
+	}
+	return ecsMetadataPath
+}
+
 // ContainerStats calls the ECS stats endpoint and returns a populated container stats map
 func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 	if c.statsURL == "" {
-		c.statsURL = c.BaseURL.ResolveReference(ecsMetaStatsPath).String()
+		path := getMetaStatsPath(c.version)
+		c.statsURL = c.BaseURL.String() + path
 	}
 
 	req, _ := http.NewRequest("GET", c.statsURL, nil)
@@ -98,6 +119,13 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 	}
 
 	return statsMap, nil
+}
+
+func getMetaStatsPath(version int) string {
+	if version == 3 {
+		return ecsMetaStatsPathV3
+	}
+	return ecsMetaStatsPath
 }
 
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.

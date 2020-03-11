@@ -1,9 +1,12 @@
 package ecs
 
 import (
+	"os"
+	"testing"
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/stretchr/testify/assert"
 )
 
 // codified golden objects for tests
@@ -764,4 +767,76 @@ var validMeta = Task{
 	},
 	PullStartedAt: metaPullStart,
 	PullStoppedAt: metaPullStop,
+}
+
+func TestInitEndpoint(t *testing.T) {
+	tests := []struct {
+		name   string
+		given  Ecs
+		exp    Ecs
+		preF   func()
+		afterF func()
+	}{
+		{
+			name: "defaults are preserved",
+			given: Ecs{
+				EndpointURL:     v2Endpoint,
+				MetadataVersion: 2,
+			},
+			exp: Ecs{
+				EndpointURL:     v2Endpoint,
+				MetadataVersion: 2,
+			},
+		},
+		{
+			name: "overrides version to 2 if not explicitly set to 3",
+			given: Ecs{
+				EndpointURL: v2Endpoint,
+			},
+			exp: Ecs{
+				EndpointURL:     v2Endpoint,
+				MetadataVersion: 2,
+			},
+		},
+		{
+			name: "EndpointURL not set. No ECS_CONTAINER_METADATA_URI.",
+			given: Ecs{
+				EndpointURL: "",
+			},
+			exp: Ecs{
+				EndpointURL:     v2Endpoint,
+				MetadataVersion: 2,
+			},
+		},
+		{
+			name: "EndpointURL not set. ECS_CONTAINER_METADATA_URI is set",
+			preF: func() {
+				os.Setenv("ECS_CONTAINER_METADATA_URI", "v3-endpoint.local")
+			},
+			afterF: func() {
+				os.Unsetenv("ECS_CONTAINER_METADATA_URI")
+			},
+			given: Ecs{
+				EndpointURL: "",
+			},
+			exp: Ecs{
+				EndpointURL:     "v3-endpoint.local",
+				MetadataVersion: 3,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.preF != nil {
+				tt.preF()
+			}
+			if tt.afterF != nil {
+				defer tt.afterF()
+			}
+
+			act := tt.given
+			initEndpoint(&act)
+			assert.Equal(t, tt.exp, act)
+		})
+	}
 }
