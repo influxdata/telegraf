@@ -1,6 +1,7 @@
 package sflow
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -12,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/sflow/parser/sflow"
+	"github.com/influxdata/telegraf/plugins/inputs/sflow/parser/decoder"
 )
 
 const sampleConfig = `
@@ -44,11 +45,12 @@ type SFlow struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	addr   net.Addr
-	parser *sflow.Parser
-	closer io.Closer
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	addr        net.Addr
+	decoder     *decoder.DecodeContext
+	decoderOpts decoder.Directive
+	closer      io.Closer
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
 }
 
 // Description answers a description of this input plugin
@@ -62,17 +64,13 @@ func (s *SFlow) SampleConfig() string {
 }
 
 func (s *SFlow) Init() error {
-	var err error
-	s.parser, err = sflow.NewParser("sflow", s.getSflowConfig())
-	if err != nil {
-		return err
-	}
-
+	s.decoder = decoder.NewDecodeContext(false)
+	s.decoderOpts = V5Format(s.getSflowConfig())
 	return nil
 }
 
-func (s *SFlow) getSflowConfig() sflow.V5FormatOptions {
-	sflowConfig := sflow.NewDefaultV5FormatOptions()
+func (s *SFlow) getSflowConfig() V5FormatOptions {
+	sflowConfig := NewDefaultV5FormatOptions()
 	if s.MaxFlowsPerSample > 0 {
 		sflowConfig.MaxFlowsPerSample = s.MaxFlowsPerSample
 	}
@@ -154,11 +152,11 @@ func (s *SFlow) read(acc telegraf.Accumulator, conn net.PacketConn) {
 }
 
 func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
-	metrics, err := s.parser.Parse(buf)
-	if err != nil {
+	if err := s.decoder.Decode(s.decoderOpts, bytes.NewBuffer(buf)); err != nil {
 		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 	}
-	for _, m := range metrics {
+
+	for _, m := range s.decoder.GetMetrics() {
 		acc.AddMetric(m)
 	}
 }
@@ -172,7 +170,7 @@ func listenUDP(network string, address string) (*net.UDPConn, error) {
 		}
 		return net.ListenUDP(network, addr)
 	default:
-		return nil, fmt.Errorf("unsupported network type %s", network)
+		return nil, fmt.Errorf("unsupported network type: %s", network)
 	}
 }
 
