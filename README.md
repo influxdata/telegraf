@@ -225,6 +225,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kibana](./plugins/inputs/kibana)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [kube_inventory](./plugins/inputs/kube_inventory)
+* [lanz](./plugins/inputs/lanz)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
 * [logparser](./plugins/inputs/logparser)
