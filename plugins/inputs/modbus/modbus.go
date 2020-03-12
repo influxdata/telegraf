@@ -108,7 +108,7 @@ const sampleConfig = `
    { name = "start",          address = [0]},
    { name = "stop",           address = [1]},
    { name = "reset",          address = [2]},
-   { name = "emergency_stop",  address = [3]},
+   { name = "emergency_stop", address = [3]},
  ]
  coils = [
    { name = "motor1_run",     address = [0]},
@@ -139,7 +139,7 @@ const sampleConfig = `
  input_registers = [
    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale=1.0,     address = [3,4]},
+   { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
  ]
 `
 
