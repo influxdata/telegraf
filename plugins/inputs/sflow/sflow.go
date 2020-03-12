@@ -34,14 +34,12 @@ const (
 )
 
 type SFlow struct {
-	ServiceAddress         string        `toml:"service_address"`
-	ReadBufferSize         internal.Size `toml:"read_buffer_size"`
-	MaxFlowsPerSample      uint32        `toml:"max_flows_per_sample"`
-	MaxCountersPerSample   uint32        `toml:"max_counters_per_sample"`
-	MaxSamplesPerPacket    uint32        `toml:"max_samples_per_packet"`
-	MaxSampleLength        uint32        `toml:"max_sample_length"`
-	MaxFlowHeaderLength    uint32        `toml:"max_flow_header_length"`
-	MaxCounterHeaderLength uint32        `toml:"max_counter_header_length"`
+	ServiceAddress      string        `toml:"service_address"`
+	ReadBufferSize      internal.Size `toml:"read_buffer_size"`
+	MaxFlowsPerSample   uint32        `toml:"max_flows_per_sample"`
+	MaxSamplesPerPacket uint32        `toml:"max_samples_per_packet"`
+	MaxSampleLength     uint32        `toml:"max_sample_length"`
+	MaxFlowHeaderLength uint32        `toml:"max_flow_header_length"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -74,9 +72,6 @@ func (s *SFlow) getSflowConfig() V5FormatOptions {
 	if s.MaxFlowsPerSample > 0 {
 		sflowConfig.MaxFlowsPerSample = s.MaxFlowsPerSample
 	}
-	if s.MaxCountersPerSample > 0 {
-		sflowConfig.MaxCountersPerSample = s.MaxCountersPerSample
-	}
 	if s.MaxSamplesPerPacket > 0 {
 		sflowConfig.MaxSamplesPerPacket = s.MaxSamplesPerPacket
 	}
@@ -85,9 +80,6 @@ func (s *SFlow) getSflowConfig() V5FormatOptions {
 	}
 	if s.MaxFlowHeaderLength > 0 {
 		sflowConfig.MaxFlowHeaderLength = s.MaxFlowHeaderLength
-	}
-	if s.MaxCounterHeaderLength > 0 {
-		sflowConfig.MaxCounterHeaderLength = s.MaxCounterHeaderLength
 	}
 	return sflowConfig
 }

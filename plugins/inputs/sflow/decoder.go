@@ -49,17 +49,20 @@ var ipvMap = map[uint32]string{
 
 // V5FormatOptions captures configuration for controlling the processing of an SFlow V5 packet.
 type V5FormatOptions struct {
-	MaxFlowsPerSample      uint32
-	MaxCountersPerSample   uint32
-	MaxSamplesPerPacket    uint32
-	MaxFlowHeaderLength    uint32
-	MaxCounterHeaderLength uint32
-	MaxSampleLength        uint32
+	MaxFlowsPerSample   uint32
+	MaxSamplesPerPacket uint32
+	MaxFlowHeaderLength uint32
+	MaxSampleLength     uint32
 }
 
 // NewDefaultV5FormatOptions answers a new V5FormatOptions with default values initialised
 func NewDefaultV5FormatOptions() V5FormatOptions {
-	return V5FormatOptions{math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32, math.MaxUint32}
+	return V5FormatOptions{
+		MaxFlowsPerSample:   math.MaxUint32,
+		MaxSamplesPerPacket: math.MaxUint32,
+		MaxFlowHeaderLength: math.MaxUint32,
+		MaxSampleLength:     math.MaxUint32,
+	}
 }
 
 // V5Format answers and decoder.Directive capable of decoding sFlow v5 packets in accordance
