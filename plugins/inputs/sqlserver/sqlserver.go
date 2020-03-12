@@ -388,9 +388,8 @@ BEGIN
 		''sqlserver_database_io'' AS [measurement]
 		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 		,DB_NAME(vfs.[database_id]) AS [database_name]
-		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,mf.[type_desc] AS [file_type]
+		,mf.[physical_name] AS [physical_filename]
+		,mf.[name] AS [logical_filename]
 		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
 			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
 			,vs.[volume_mount_point]
