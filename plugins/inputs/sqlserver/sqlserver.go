@@ -366,7 +366,7 @@ BEGIN
 		,vfs.[io_stall_write_ms] AS [write_latency_ms]
 		,vfs.[num_of_writes] AS [writes]
 		,vfs.[num_of_bytes_written] AS [write_bytes]
-		,ISNULL(b.[name] ,''RBPEX'') as [logical_filename]
+		,ISNULL(b.[name] ,''RBPEX'') as [logical_filename]  --RPBEX = Resilient Buffer Pool Extension
 		,ISNULL(b.[physical_name], ''RBPEX'') as [physical_filename]
 		,CASE WHEN vfs.[file_id] = 2 THEN ''LOG'' ELSE ''DATA'' END AS [file_type]
 		,ISNULL(size,0)/128 AS [current_size_mb]
