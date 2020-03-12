@@ -63,25 +63,22 @@ func (s *SFlow) SampleConfig() string {
 
 func (s *SFlow) Init() error {
 	s.decoder = decoder.NewDecodeContext(false)
-	s.decoderOpts = V5Format(s.getSflowConfig())
-	return nil
-}
 
-func (s *SFlow) getSflowConfig() V5FormatOptions {
-	sflowConfig := NewDefaultV5FormatOptions()
+	config := NewDefaultV5FormatOptions()
 	if s.MaxFlowsPerSample > 0 {
-		sflowConfig.MaxFlowsPerSample = s.MaxFlowsPerSample
+		config.MaxFlowsPerSample = s.MaxFlowsPerSample
 	}
 	if s.MaxSamplesPerPacket > 0 {
-		sflowConfig.MaxSamplesPerPacket = s.MaxSamplesPerPacket
+		config.MaxSamplesPerPacket = s.MaxSamplesPerPacket
 	}
 	if s.MaxSampleLength > 0 {
-		sflowConfig.MaxSampleLength = s.MaxSampleLength
+		config.MaxSampleLength = s.MaxSampleLength
 	}
 	if s.MaxFlowHeaderLength > 0 {
-		sflowConfig.MaxFlowHeaderLength = s.MaxFlowHeaderLength
+		config.MaxFlowHeaderLength = s.MaxFlowHeaderLength
 	}
-	return sflowConfig
+	s.decoderOpts = V5Format(config)
+	return nil
 }
 
 // Start starts this sFlow listener listening on the configured network for sFlow packets
