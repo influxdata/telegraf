@@ -357,22 +357,22 @@ IF SERVERPROPERTY('EngineEdition') = 5
 BEGIN
 	SET @SqlStatement = '
 	SELECT
-		 ''sqlserver_database_io'' As [measurement]
+		''sqlserver_database_io'' As [measurement]
 		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-		,DB_NAME([vfs].[database_id]) AS [database_name]
-		,vfs.io_stall_read_ms AS read_latency_ms
-		,vfs.num_of_reads AS reads
-		,vfs.num_of_bytes_read AS read_bytes
-		,vfs.io_stall_write_ms AS write_latency_ms
-		,vfs.num_of_writes AS writes
-		,vfs.num_of_bytes_written AS write_bytes
-		,ISNULL(b.name ,''RBPEX'') as logical_filename
-		,ISNULL(b.physical_name, ''RBPEX'') as physical_filename
-		,CASE WHEN vfs.file_id = 2 THEN ''LOG'' ELSE ''DATA'' END AS file_type
-		,ISNULL(size,0)/128 AS current_size_mb
-		,ISNULL(FILEPROPERTY(b.name,''SpaceUsed'')/128,0) as space_used_mb
-		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
-		,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+		,DB_NAME(vfs.[database_id]) AS [database_name]
+		,vfs.[io_stall_read_ms] AS [read_latency_ms]
+		,vfs.[num_of_reads] AS [reads]
+		,vfs.[num_of_bytes_read] AS [read_bytes]
+		,vfs.[io_stall_write_ms] AS [write_latency_ms]
+		,vfs.[num_of_writes] AS [writes]
+		,vfs.[num_of_bytes_written] AS [write_bytes]
+		,ISNULL(b.[name] ,''RBPEX'') as [logical_filename]
+		,ISNULL(b.[physical_name], ''RBPEX'') as [physical_filename]
+		,CASE WHEN vfs.[file_id] = 2 THEN ''LOG'' ELSE ''DATA'' END AS [file_type]
+		,ISNULL(size,0)/128 AS [current_size_mb]
+		,ISNULL(FILEPROPERTY(b.[name],''SpaceUsed'')/128,0) as [space_used_mb]
+		,vfs.[io_stall_queued_read_ms] AS [rg_read_stall_ms]
+		,vfs.[io_stall_queued_write_ms] AS [rg_write_stall_ms]
 	FROM [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 	LEFT OUTER join sys.database_files b 
 		ON b.file_id = vfs.file_id
