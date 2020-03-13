@@ -47,7 +47,7 @@ For more details on the metrics see https://github.com/aristanetworks/goarista/b
     - tx_latency       (integer)
     - q_drop_count     (integer)
 
-- lanz_global_buffer_usage_record
++ lanz_global_buffer_usage_record
   - tags:
     - entry_type
     - source
