@@ -53,14 +53,24 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   ## Max undelivered messages
   # max_undelivered_messages = 1000
 
-  ## Prefix to use for the system properties of Event Hub and IoT Hub messages
-  # system_properties_prefix = "SystemProperties."
-
   ## Set either option below to true to use a system property as timestamp.
   ## You have the choice between EnqueuedTime and IoTHubEnqueuedTime.
   ## It is recommended to use this setting when the data itself has no timestamp.
-  # enq_time_ts = true
-  # iot_hub_enq_time_ts = true
+  # enqueued_time_as_ts = true
+  # iot_hub_enqueued_time_as_ts = true
+
+  ## Tag or field name to use for metadata
+  ## By default all metadata is disabled
+  # sequence_number_field = "SequenceNumber"
+  # enqueued_time_field = "EnqueuedTime"
+  # offset_field = "Offset"
+  # partition_id_tag = "PartitionID"
+  # partition_key_tag = "PartitionKey"
+  # iot_hub_device_connection_id_tag = "IoTHubDeviceConnectionID"
+  # iot_hub_auth_generation_id_tag = "IoTHubAuthGenerationID"
+  # iot_hub_connection_auth_method_tag = "IoTHubConnectionAuthMethod"
+  # iot_hub_connection_module_id_tag = "IoTHubConnectionModuleID"
+  # iot_hub_enqueued_time_field = "IoTHubEnqueuedTime"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
