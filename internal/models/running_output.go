@@ -28,9 +28,9 @@ type OutputConfig struct {
 	MetricBufferLimit int
 	MetricBatchSize   int
 
-	NameOverride      string
-	NamePrefix        string
-	NameSuffix        string
+	NameOverride string
+	NamePrefix   string
+	NameSuffix   string
 }
 
 // RunningOutput contains the output configuration
