@@ -2138,11 +2138,38 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["name_override"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				oc.NameOverride = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_suffix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				oc.NameSuffix = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["name_prefix"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				oc.NamePrefix = str.Value
+			}
+		}
+	}
+
 	delete(tbl.Fields, "flush_interval")
 	delete(tbl.Fields, "flush_jitter")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")
+	delete(tbl.Fields, "name_override")
+	delete(tbl.Fields, "name_suffix")
+	delete(tbl.Fields, "name_prefix")
 
 	return oc, nil
 }

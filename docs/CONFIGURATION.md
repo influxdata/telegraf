@@ -269,6 +269,9 @@ Parameters that can be used with any output plugin:
 - **metric_buffer_limit**: The maximum number of unsent metrics to buffer.
   Use this setting to override the agent `metric_buffer_limit` on a per plugin
   basis.
+- **name_override**: Override the original name of the measurement.
+- **name_prefix**: Specifies a prefix to attach to the measurement name.
+- **name_suffix**: Specifies a suffix to attach to the measurement name.
 
 The [metric filtering][] parameters can be used to limit what metrics are
 emitted from the output plugin.

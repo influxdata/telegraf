@@ -218,6 +218,60 @@ func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 	assert.Len(t, m.Metrics()[0].Tags(), 1)
 }
 
+// Test that measurement name overriding correctly
+func TestRunningOutput_NameOverride(t *testing.T) {
+	conf := &OutputConfig{
+		NameOverride: "new_metric_name",
+	}
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Equal(t, "new_metric_name", m.Metrics()[0].Name())
+}
+
+// Test that measurement name prefix is added correctly
+func TestRunningOutput_NamePrefix(t *testing.T) {
+	conf := &OutputConfig{
+		NamePrefix: "prefix_",
+	}
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Equal(t, "prefix_metric1", m.Metrics()[0].Name())
+}
+
+// Test that measurement name suffix is added correctly
+func TestRunningOutput_NameSuffix(t *testing.T) {
+	conf := &OutputConfig{
+		NameSuffix: "_suffix",
+	}
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Equal(t, "metric1_suffix", m.Metrics()[0].Name())
+}
+
 // Test that we can write metrics with simple default setup.
 func TestRunningOutputDefault(t *testing.T) {
 	conf := &OutputConfig{
