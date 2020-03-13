@@ -23,19 +23,19 @@ const (
 // EventHub is the top level struct for this plugin
 type EventHub struct {
 	// Configuration
-	ConnectionString       string   `toml:"connection_string"`
-	PersistenceDir         string   `toml:"persistence_dir"`
-	ConsumerGroup          string   `toml:"consumer_group"`
-	FromTimestamp          string   `toml:"from_timestamp"`
-	StartingOffset         string   `toml:"starting_offset"`
-	Latest                 bool     `toml:"latest"`
-	PrefetchCount          uint32   `toml:"prefetch_count"`
-	Epoch                  int64    `toml:"epoch"`
-	UserAgent              string   `toml:"user_agent"`
-	PartitionIDs           []string `toml:"partition_ids"`
-	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
-	EnqueuedTimeAsTs       bool     `toml:"enqueued_time_as_ts"`
-	IotHubEnqueuedTimeAsTs bool     `toml:"iot_hub_enqueued_time_as_ts"`
+	ConnectionString       string    `toml:"connection_string"`
+	PersistenceDir         string    `toml:"persistence_dir"`
+	ConsumerGroup          string    `toml:"consumer_group"`
+	FromTimestamp          time.Time `toml:"from_timestamp"`
+	StartingOffset         string    `toml:"starting_offset"`
+	Latest                 bool      `toml:"latest"`
+	PrefetchCount          uint32    `toml:"prefetch_count"`
+	Epoch                  int64     `toml:"epoch"`
+	UserAgent              string    `toml:"user_agent"`
+	PartitionIDs           []string  `toml:"partition_ids"`
+	MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
+	EnqueuedTimeAsTs       bool      `toml:"enqueued_time_as_ts"`
+	IotHubEnqueuedTimeAsTs bool      `toml:"iot_hub_enqueued_time_as_ts"`
 
 	// Metadata
 	ApplicationPropertyFields     []string `toml:"application_property_fields"`
@@ -97,10 +97,10 @@ func (*EventHub) SampleConfig() string {
   ## Change the default consumer group
   # consumer_group = ""
 
-  ## By default the event hub receives all messages present on the broker.
-  ## Alternative modes can be set below. The timestamp should be in RFC3339 format.
+  ## By default the event hub receives all messages present on the broker, alternative modes can be set below. 
+  ## The timestamp should be in https://github.com/toml-lang/toml#offset-date-time format (RFC 3339).
   ## The 3 options below only apply if no valid persister is read from memory or file (e.g. first run).
-  # from_timestamp = ""
+  # from_timestamp =
   # starting_offset = ""
   # latest = true
 
@@ -251,14 +251,8 @@ func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithConsumerGroup(e.ConsumerGroup))
 	}
 
-	if e.FromTimestamp != "" {
-		ts, err := time.Parse(time.RFC3339, e.FromTimestamp)
-		if err != nil {
-			return nil, err
-		}
-
-		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(ts))
-
+	if !e.FromTimestamp.IsZero() {
+		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(e.FromTimestamp))
 	} else if e.StartingOffset != "" {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithStartingOffset(e.StartingOffset))
 	} else if e.Latest {

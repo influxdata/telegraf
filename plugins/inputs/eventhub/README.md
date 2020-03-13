@@ -30,10 +30,10 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   ## Change the default consumer group
   # consumer_group = ""
 
-  ## By default the event hub receives all messages present on the broker.
-  ## Alternative modes can be set below. The timestamp should be in RFC3339 format.
+  ## By default the event hub receives all messages present on the broker, alternative modes can be set below. 
+  ## The timestamp should be in https://github.com/toml-lang/toml#offset-date-time format (RFC 3339).
   ## The 3 options below only apply if no valid persister is read from memory or file (e.g. first run).
-  # from_timestamp = ""
+  # from_timestamp =
   # starting_offset = ""
   # latest = true
 
