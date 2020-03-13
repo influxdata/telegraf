@@ -59,6 +59,11 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   # enqueued_time_as_ts = true
   # iot_hub_enqueued_time_as_ts = true
 
+  ## Tags or fields to create from keys present in the application property bag.
+  ## These could for example be set by message enrichments in Azure IoT Hub.
+  application_property_tags = []
+  application_property_fields = []
+
   ## Tag or field name to use for metadata
   ## By default all metadata is disabled
   # sequence_number_field = "SequenceNumber"
@@ -91,5 +96,4 @@ The main focus for development of this plugin is Azure IoT hub:
 - Authentication with [AAD TokenProvider environment variables](https://github.com/Azure/azure-event-hubs-go#aad-tokenprovider-environment-variables)
 
 ## Not implemented:
-- The custom set of application properties mentioned [here](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-messages-construct)
 - [Event Processor Host](https://github.com/Azure/azure-event-hubs-go#event-processor-host) (should only be needed when using multiple Telegraf instances consuming the same partition)

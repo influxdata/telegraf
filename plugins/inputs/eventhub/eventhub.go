@@ -38,16 +38,18 @@ type EventHub struct {
 	IotHubEnqueuedTimeAsTs bool     `toml:"iot_hub_enqueued_time_as_ts"`
 
 	// Metadata
-	SequenceNumberField           string `toml:"sequence_number_field"`
-	EnqueuedTimeField             string `toml:"enqueued_time_field"`
-	OffsetField                   string `toml:"offset_field"`
-	PartitionIDTag                string `toml:"partition_id_tag"`
-	PartitionKeyTag               string `toml:"partition_key_tag"`
-	IoTHubDeviceConnectionIDTag   string `toml:"iot_hub_device_connection_id_tag"`
-	IoTHubAuthGenerationIDTag     string `toml:"iot_hub_auth_generation_id_tag"`
-	IoTHubConnectionAuthMethodTag string `toml:"iot_hub_connection_auth_method_tag"`
-	IoTHubConnectionModuleIDTag   string `toml:"iot_hub_connection_module_id_tag"`
-	IoTHubEnqueuedTimeField       string `toml:"iot_hub_enqueued_time_field"`
+	ApplicationPropertyFields     []string `toml:"application_property_fields"`
+	ApplicationPropertyTags       []string `toml:"application_property_tags"`
+	SequenceNumberField           string   `toml:"sequence_number_field"`
+	EnqueuedTimeField             string   `toml:"enqueued_time_field"`
+	OffsetField                   string   `toml:"offset_field"`
+	PartitionIDTag                string   `toml:"partition_id_tag"`
+	PartitionKeyTag               string   `toml:"partition_key_tag"`
+	IoTHubDeviceConnectionIDTag   string   `toml:"iot_hub_device_connection_id_tag"`
+	IoTHubAuthGenerationIDTag     string   `toml:"iot_hub_auth_generation_id_tag"`
+	IoTHubConnectionAuthMethodTag string   `toml:"iot_hub_connection_auth_method_tag"`
+	IoTHubConnectionModuleIDTag   string   `toml:"iot_hub_connection_module_id_tag"`
+	IoTHubEnqueuedTimeField       string   `toml:"iot_hub_enqueued_time_field"`
 
 	// Azure
 	hub    *eventhub.Hub
@@ -123,6 +125,11 @@ func (*EventHub) SampleConfig() string {
   ## It is recommended to use this setting when the data itself has no timestamp.
   # enqueued_time_as_ts = true
   # iot_hub_enqueued_time_as_ts = true
+
+  ## Tags or fields to create from keys present in the application property bag.
+  ## These could for example be set by message enrichments in Azure IoT Hub.
+  application_property_tags = []
+  application_property_fields = []
 
   ## Tag or field name to use for metadata
   ## By default all metadata is disabled
@@ -276,6 +283,18 @@ func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err er
 	}
 
 	for i := range metrics {
+		for _, field := range e.ApplicationPropertyFields {
+			if val, ok := event.Get(field); ok {
+				metrics[i].AddField(field, val)
+			}
+		}
+
+		for _, tag := range e.ApplicationPropertyTags {
+			if val, ok := event.Get(tag); ok {
+				metrics[i].AddTag(tag, fmt.Sprintf("%v", val))
+			}
+		}
+
 		if e.SequenceNumberField != "" {
 			metrics[i].AddField(e.SequenceNumberField, *event.SystemProperties.SequenceNumber)
 		}
