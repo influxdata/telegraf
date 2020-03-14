@@ -18,6 +18,8 @@ require (
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/apache/thrift v0.12.0
+	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
+	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
 	github.com/armon/go-metrics v0.3.0 // indirect
 	github.com/aws/aws-sdk-go v1.19.41
 	github.com/bitly/go-hostpool v0.1.0 // indirect
