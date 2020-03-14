@@ -13,8 +13,5 @@ time while maintain proper precision when value gets changed rapidly
 [[processors.dedup]]
   ## Maximum time to suppress output
   dedup_interval = "600s"
-
-  ## Maximum time to keep cached metric without update
-  evict_interval = "1h"
 ```
 

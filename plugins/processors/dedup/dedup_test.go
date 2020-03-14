@@ -22,7 +22,7 @@ func createMetric(name string, value int64) telegraf.Metric {
 func createProcessor() Dedup {
 	return Dedup{
 		DedupInterval: internal.Duration{Duration: 2 * time.Second},
-		EvictInterval: internal.Duration{Duration: 3 * time.Second},
+		FlushTime:     time.Now(),
 		Cache:         make(map[uint64]telegraf.Metric),
 	}
 }
@@ -43,14 +43,6 @@ func assertCacheRefresh(t *testing.T, proc *Dedup, item telegraf.Metric) {
 	assert.Equal(t, value, item.Fields()["value"])
 	// cached metric has proper timestamp
 	assert.Equal(t, cached.Time(), item.Time())
-}
-
-func assertCacheMiss(t *testing.T, proc *Dedup, item telegraf.Metric) {
-	id := item.HashID()
-	if len(proc.Cache) != 0 {
-		_, present := proc.Cache[id]
-		assert.False(t, present)
-	}
 }
 
 func assertCacheHit(t *testing.T, proc *Dedup, item telegraf.Metric) {
@@ -85,7 +77,7 @@ func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.
 }
 
 func assertMetricSuppressed(t *testing.T, target []telegraf.Metric, source telegraf.Metric) {
-	// target is not empty
+	// target is empty
 	assert.Equal(t, 0, len(target))
 }
 
@@ -102,6 +94,7 @@ func TestSuppressRepeatedValue(t *testing.T) {
 	deduplicate := createProcessor()
 	source := createMetric("m1", 1)
 	target := deduplicate.Apply(source)
+	// wait less than deduplication interval
 	time.Sleep(1 * time.Second)
 	source = createMetric("m1", 1)
 	target = deduplicate.Apply(source)
@@ -114,6 +107,7 @@ func TestPassUpdatedValue(t *testing.T) {
 	deduplicate := createProcessor()
 	source := createMetric("m1", 1)
 	target := deduplicate.Apply(source)
+	// wait less than deduplication interval
 	time.Sleep(1 * time.Second)
 	source = createMetric("m1", 2)
 	target = deduplicate.Apply(source)
@@ -126,6 +120,7 @@ func TestPassAfterCacheExpire(t *testing.T) {
 	deduplicate := createProcessor()
 	source := createMetric("m1", 1)
 	target := deduplicate.Apply(source)
+	// wait more than deduplication interval
 	time.Sleep(3 * time.Second)
 	source = createMetric("m1", 1)
 	target = deduplicate.Apply(source)
@@ -138,9 +133,11 @@ func TestCacheRetainsMetrics(t *testing.T) {
 	deduplicate := createProcessor()
 	source := createMetric("m1", 1)
 	deduplicate.Apply(source)
+	// wait less than deduplication interval
 	time.Sleep(1 * time.Second)
 	source = createMetric("m1", 1)
 	deduplicate.Apply(source)
+	// wait same as deduplication interval
 	time.Sleep(2 * time.Second)
 	source = createMetric("m1", 1)
 	deduplicate.Apply(source)
@@ -152,14 +149,9 @@ func TestCacheShrink(t *testing.T) {
 	deduplicate := createProcessor()
 	src1 := createMetric("m1", 1)
 	deduplicate.Apply(src1)
-	src2 := createMetric("m2", 1)
-	deduplicate.Apply(src2)
-	time.Sleep(2 * time.Second)
-	src1 = createMetric("m1", 1)
-	deduplicate.Apply(src1)
+	// wait same as deduplication interval
 	time.Sleep(2 * time.Second)
 	deduplicate.cleanup()
 
-	assertCacheRefresh(t, &deduplicate, src1)
-	assertCacheMiss(t, &deduplicate, src2)
+	assert.Equal(t, 0, len(deduplicate.Cache))
 }
