@@ -122,14 +122,14 @@ require (
 	github.com/wvanbergen/kafka v0.0.0-20171203153745-e2edea948ddf
 	github.com/wvanbergen/kazoo-go v0.0.0-20180202103751-f72d8611297a // indirect
 	github.com/yuin/gopher-lua v0.0.0-20180630135845-46796da1b0b4 // indirect
-	golang.org/x/net v0.0.0-20191004110552-13f9640d40b9
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	gonum.org/v1/gonum v0.6.2 // indirect
-	google.golang.org/api v0.5.0
-	google.golang.org/genproto v0.0.0-20190522204451-c2c4e71fbf69
-	google.golang.org/grpc v1.21.0
+	google.golang.org/api v0.3.1
+	google.golang.org/genproto v0.0.0-20190404172233-64821d5d2107
+	google.golang.org/grpc v1.19.0
 	gopkg.in/fatih/pool.v2 v2.0.0 // indirect
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
@@ -143,6 +143,3 @@ require (
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
 replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
-
-// Set the Azure Event Hub log abstraction to the Telegraf format:
-replace github.com/devigned/tab => github.com/R290/tab v0.1.2
