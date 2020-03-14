@@ -296,6 +296,7 @@ For documentation on the latest development code see the [documentation index][d
 * [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
 * [synproxy](./plugins/inputs/synproxy)
+* [syncthing](./plugins/inputs/syncthing)
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
 * [systemd_units](./plugins/inputs/systemd_units)
