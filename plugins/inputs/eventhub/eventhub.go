@@ -411,12 +411,11 @@ func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, erro
 
 // Stop the EventHub ServiceInput
 func (e *EventHub) Stop() {
-	e.cancel()
 	err := e.hub.Close(context.Background())
 	if err != nil {
 		e.Log.Errorf("Error closing Event Hub connection: %v", err)
 	}
-
+	e.cancel()
 	e.wg.Wait()
 }
 
