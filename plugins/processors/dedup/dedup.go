@@ -75,10 +75,10 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 					// if same value then drop it. Otherwise save it in cache
 					if m.Fields()[field.Key] == field.Value {
 						metrics = remove(metrics, idx)
-						continue
 					} else {
 						d.save(metric)
 					}
+					continue
 				}
 			} else {
 				d.save(metric)
