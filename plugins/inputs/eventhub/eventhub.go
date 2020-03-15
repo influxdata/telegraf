@@ -3,7 +3,6 @@ package eventhub
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -91,7 +90,7 @@ func (*EventHub) SampleConfig() string {
   ## Change the default consumer group
   # consumer_group = ""
 
-  ## By default the event hub receives all messages present on the broker, alternative modes can be set below. 
+  ## By default the event hub receives all messages present on the broker, alternative modes can be set below.
   ## The timestamp should be in https://github.com/toml-lang/toml#offset-date-time format (RFC 3339).
   ## The 3 options below only apply if no valid persister is read from memory or file (e.g. first run).
   # from_timestamp =
@@ -106,8 +105,8 @@ func (*EventHub) SampleConfig() string {
 
   ## Change to set a custom user agent, "telegraf" is used by default
   # user_agent = "telegraf"
-  
-  ## To consume from a specific partition, set the partition_ids option. 
+
+  ## To consume from a specific partition, set the partition_ids option.
   ## An empty array will result in receiving from all partitions.
   # partition_ids = ["0","1"]
 
@@ -415,7 +414,7 @@ func (e *EventHub) Stop() {
 	e.cancel()
 	err := e.hub.Close(context.Background())
 	if err != nil {
-		log.Printf("E! [inputs.eventhub] error in closing event hub connection: %s", err)
+		e.Log.Errorf("Error closing Event Hub connection: %v", err)
 	}
 
 	e.wg.Wait()
