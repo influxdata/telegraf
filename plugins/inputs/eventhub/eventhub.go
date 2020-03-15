@@ -28,7 +28,6 @@ type EventHub struct {
 	PersistenceDir         string    `toml:"persistence_dir"`
 	ConsumerGroup          string    `toml:"consumer_group"`
 	FromTimestamp          time.Time `toml:"from_timestamp"`
-	StartingOffset         string    `toml:"starting_offset"`
 	Latest                 bool      `toml:"latest"`
 	PrefetchCount          uint32    `toml:"prefetch_count"`
 	Epoch                  int64     `toml:"epoch"`
@@ -94,7 +93,6 @@ func (*EventHub) SampleConfig() string {
   ## The timestamp should be in https://github.com/toml-lang/toml#offset-date-time format (RFC 3339).
   ## The 3 options below only apply if no valid persister is read from memory or file (e.g. first run).
   # from_timestamp =
-  # starting_offset = ""
   # latest = true
 
   ## Set a custom prefetch count for the receiver(s)
@@ -244,8 +242,6 @@ func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
 
 	if !e.FromTimestamp.IsZero() {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveFromTimestamp(e.FromTimestamp))
-	} else if e.StartingOffset != "" {
-		receiveOpts = append(receiveOpts, eventhub.ReceiveWithStartingOffset(e.StartingOffset))
 	} else if e.Latest {
 		receiveOpts = append(receiveOpts, eventhub.ReceiveWithLatestOffset())
 	}

@@ -34,7 +34,6 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   ## The timestamp should be in https://github.com/toml-lang/toml#offset-date-time format (RFC 3339).
   ## The 3 options below only apply if no valid persister is read from memory or file (e.g. first run).
   # from_timestamp =
-  # starting_offset = ""
   # latest = true
 
   ## Set a custom prefetch count for the receiver(s)
