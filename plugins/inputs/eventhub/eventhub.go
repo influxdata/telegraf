@@ -7,18 +7,20 @@ import (
 	"sync"
 	"time"
 
+	eventhub "github.com/Azure/azure-event-hubs-go/v3"
+	"github.com/Azure/azure-event-hubs-go/v3/persist"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
-	eventhub "github.com/Azure/azure-event-hubs-go/v3"
-	"github.com/Azure/azure-event-hubs-go/v3/persist"
 )
 
 const (
 	defaultMaxUndeliveredMessages = 1000
 )
+
+type empty struct{}
+type semaphore chan empty
 
 // EventHub is the top level struct for this plugin
 type EventHub struct {
@@ -51,23 +53,15 @@ type EventHub struct {
 	IoTHubConnectionModuleIDTag   string   `toml:"iot_hub_connection_module_id_tag"`
 	IoTHubEnqueuedTimeField       string   `toml:"iot_hub_enqueued_time_field"`
 
+	Log telegraf.Logger `toml:"-"`
+
 	// Azure
 	hub    *eventhub.Hub
 	cancel context.CancelFunc
+	wg     sync.WaitGroup
 
-	// Influx
 	parser parsers.Parser
-
-	// Metrics tracking
-	acc     telegraf.TrackingAccumulator
-	tracker MessageTracker
-	wg      sync.WaitGroup
-}
-
-// MessageTracker is a struct with a lock and list of tracked messages
-type MessageTracker struct {
-	messages map[telegraf.TrackingID][]telegraf.Metric
-	mux      sync.Mutex
+	in     chan []telegraf.Metric
 }
 
 // SampleConfig is provided here
@@ -203,9 +197,7 @@ func (e *EventHub) Init() (err error) {
 
 // Start the EventHub ServiceInput
 func (e *EventHub) Start(acc telegraf.Accumulator) error {
-	// Init metric tracking
-	e.acc = acc.WithTracking(e.MaxUndeliveredMessages)
-	e.tracker = MessageTracker{messages: make(map[telegraf.TrackingID][]telegraf.Metric, e.MaxUndeliveredMessages)}
+	e.in = make(chan []telegraf.Metric)
 
 	var ctx context.Context
 	ctx, e.cancel = context.WithCancel(context.Background())
@@ -214,7 +206,7 @@ func (e *EventHub) Start(acc telegraf.Accumulator) error {
 	e.wg.Add(1)
 	go func() {
 		defer e.wg.Done()
-		e.startTracking(ctx)
+		e.startTracking(ctx, acc)
 	}()
 
 	// Configure receiver options
@@ -270,10 +262,95 @@ func (e *EventHub) configureReceiver() ([]eventhub.ReceiveOption, error) {
 	return receiveOpts, nil
 }
 
-func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err error) {
-	metrics, err := e.parser.Parse(event.Data)
+// OnMessage handles an Event.  When this function returns without error the
+// Event is immediately accepted and the offset is updated.  If an error is
+// returned the Event is marked for redelivery.
+func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) error {
+	metrics, err := e.createMetrics(event)
 	if err != nil {
 		return err
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case e.in <- metrics:
+		return nil
+	}
+}
+
+// OnDelivery returns true if a new slot has opened up in the TrackingAccumulator.
+func (e *EventHub) onDelivery(
+	acc telegraf.TrackingAccumulator,
+	groups map[telegraf.TrackingID][]telegraf.Metric,
+	track telegraf.DeliveryInfo,
+) bool {
+	if track.Delivered() {
+		delete(groups, track.ID())
+		return true
+	}
+
+	// The metric was already accepted when onMessage completed, so we can't
+	// fallback on redelivery from Event Hub.  Add a new copy of the metric for
+	// reprocessing.
+	metrics, ok := groups[track.ID()]
+	delete(groups, track.ID())
+	if !ok {
+		// The metrics should always be found, this message indicates a programming error.
+		e.Log.Errorf("Could not find delievery: %d", track.ID())
+		return true
+	}
+
+	backup := deepCopyMetrics(metrics)
+	id := acc.AddTrackingMetricGroup(metrics)
+	groups[id] = backup
+	return false
+}
+
+func (e *EventHub) startTracking(ctx context.Context, ac telegraf.Accumulator) {
+	acc := ac.WithTracking(e.MaxUndeliveredMessages)
+	sem := make(semaphore, e.MaxUndeliveredMessages)
+	groups := make(map[telegraf.TrackingID][]telegraf.Metric, e.MaxUndeliveredMessages)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case track := <-acc.Delivered():
+			if e.onDelivery(acc, groups, track) {
+				<-sem
+			}
+		case sem <- empty{}:
+			select {
+			case <-ctx.Done():
+				return
+			case track := <-acc.Delivered():
+				if e.onDelivery(acc, groups, track) {
+					<-sem
+					<-sem
+				}
+			case metrics := <-e.in:
+				backup := deepCopyMetrics(metrics)
+				id := acc.AddTrackingMetricGroup(metrics)
+				groups[id] = backup
+			}
+		}
+	}
+}
+
+func deepCopyMetrics(in []telegraf.Metric) []telegraf.Metric {
+	metrics := make([]telegraf.Metric, 0, len(in))
+	for _, m := range in {
+		metrics = append(metrics, m.Copy())
+	}
+	return metrics
+}
+
+// CreateMetrics returns the Metrics from the Event.
+func (e *EventHub) createMetrics(event *eventhub.Event) ([]telegraf.Metric, error) {
+	metrics, err := e.parser.Parse(event.Data)
+	if err != nil {
+		return nil, err
 	}
 
 	for i := range metrics {
@@ -330,36 +407,7 @@ func (e *EventHub) onMessage(ctx context.Context, event *eventhub.Event) (err er
 		}
 	}
 
-	id := e.acc.AddTrackingMetricGroup(metrics)
-
-	e.tracker.mux.Lock()
-	e.tracker.messages[id] = metrics
-	e.tracker.mux.Unlock()
-
-	return nil
-}
-
-func (e *EventHub) startTracking(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			if len(e.tracker.messages) == 0 { // everything has been delivered
-				return
-			}
-		case DeliveryInfo := <-e.acc.Delivered():
-			if DeliveryInfo.Delivered() {
-				e.tracker.mux.Lock()
-				delete(e.tracker.messages, DeliveryInfo.ID())
-				e.tracker.mux.Unlock()
-			} else {
-				e.tracker.mux.Lock()
-				id := e.acc.AddTrackingMetricGroup(e.tracker.messages[DeliveryInfo.ID()])
-				e.tracker.messages[id] = e.tracker.messages[DeliveryInfo.ID()]
-				delete(e.tracker.messages, DeliveryInfo.ID())
-				e.tracker.mux.Unlock()
-			}
-		}
-	}
+	return metrics, nil
 }
 
 // Stop the EventHub ServiceInput
@@ -371,7 +419,6 @@ func (e *EventHub) Stop() {
 	}
 
 	e.wg.Wait()
-
 }
 
 func init() {
