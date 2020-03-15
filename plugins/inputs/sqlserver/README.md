@@ -70,6 +70,11 @@ GO
   ## - AzureDBResourceGovernance
   ## - SqlRequests
   ## - ServerProperties
+  ## - AvailabilityGroupsWSFC
+  ## - AvailabilityGroupsWSFCNode
+  ## - AvailabilityGroupsGrp
+  ## - AvailabilityGroupsReplica
+  ## - AvailabilityGroupsDB
   exclude_query = [ 'Schedulers' , 'SqlRequests']
 ```
 
@@ -132,6 +137,27 @@ The new (version 2) metrics provide:
   - Stats from sys.dm_db_wait_stats
   - Resource governance stats from sys.dm_user_db_resource_governance
   - Stats from sys.dm_db_resource_stats
+- *Availability groups*
+  - Windows Cluster stats from `sys.dm_hadr_cluster` and `sys.dm_hadr_cluster_members` including:
+    - cluster_name
+    - quorum_type
+    - quorum_state
+    - member_name
+    - member_type
+    - number_of_quorum_votes
+  - Availability Group stats from `dm_hadr_availability_group_states`, `sys.dm_hadr_availability_replica_states` and `sys.dm_hadr_database_replica_states` including:
+    - ag_name
+    - sql_instance (= replica server name)
+    - synchronization_health (99 = N/A)
+    - synchronization_state
+    - connected_state
+    - recovery_health (99 = N/A)
+    - database_state
+    - operational_state (99 = N/A)
+    - suspended_state / suspend_reason
+    - log_send_queue_size / log_send_queue_size_KB
+    - redo_queue_size / redo_rate
+    - secondary_lag_seconds
 
 The following metrics can be used directly, with no delta calculations:
  - SQLServer:Buffer Manager\Buffer cache hit ratio
@@ -174,3 +200,7 @@ Version 2 queries have the following tags:
 - database_name:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
 
 [cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality
+- `sql_instance`: Physical host and instance name (hostname:instance). If you are concerned by an availability group scenario, sql_instance is equivalent to AG replica name
+- `database_name`:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
+- `ag_name`: Availability group name
+- `ag_database_name`: Database name that is part of an availability group (agname:database)

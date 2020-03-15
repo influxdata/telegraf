@@ -26,6 +26,11 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	queries["VolumeSpace"] = Query{Script: mockVolumeSpace, ResultByRow: false}
 	queries["MemoryClerk"] = Query{Script: mockMemoryClerk, ResultByRow: false}
 	queries["PerformanceMetrics"] = Query{Script: mockPerformanceMetrics, ResultByRow: false}
+	queries["AvailabilityGroupsWSFC"] = Query{Script: mockAvailabilityGroupsWSFC, ResultByRow: false}
+	queries["AvailabilityGroupsWSFCNode"] = Query{Script: mockAvailabilityGroupsWSFCNode, ResultByRow: false}
+	queries["AvailabilityGroupsGrp"] = Query{Script: mockAvailabilityGroupsGrp, ResultByRow: false}
+	queries["AvailabilityGroupsReplica"] = Query{Script: mockAvailabilityGroupsReplica, ResultByRow: false}
+	queries["AvailabilityGroupsDB"] = Query{Script: mockAvailabilityGroupsDB, ResultByRow: false}
 
 	var headers, mock, row []string
 	var tags = make(map[string]string)
@@ -1293,3 +1298,21 @@ Transaction validation failures/sec | MSSQLSERVER | XTP Transactions;WIN8-DEV;Pe
 Transactions aborted by user/sec | MSSQLSERVER | XTP Transactions;WIN8-DEV;Performance counters;0
 Transactions aborted/sec | MSSQLSERVER | XTP Transactions;WIN8-DEV;Performance counters;0
 Transactions created/sec | MSSQLSERVER | XTP Transactions;WIN8-DEV;Performance counters;0`
+
+const mockAvailabilityGroupsWSFC = `measurement;sql_instance;member_name;member_type;member_state;number_of_quorum_votes
+ag_cluster_config;WIN8-DEV:WIMS00;WIN8-DEV;0;1;1
+ag_cluster_config;WIN8-DEV:WIMS00;WIN8-DEV;0;1;1
+ag_cluster_config;WIN8-DEV:WIMS00;File Share Witness (2);2;1;1`
+
+const mockAvailabilityGroupsWSFCNode = `measurement;sql_instance;cluster_name;quorum_type;quorum_state
+ag_cluster_node_config;WIN8-DEV:WIMS00;WIN8-DEV;2;1`
+
+const mockAvailabilityGroupsGrp = `measurement;sql_instance;ag_name;primary_replica;primary_recovery_health;synchronization_health
+ag_config;WIN8-DEV:WIMS00;AG-WIMS00;0;99;2`
+
+const mockAvailabilityGroupsReplica = `measurement;sql_instance;ag_name;is_local;role;operational_state;connected_state;recovery_health;synchronization_health
+ag_config_replica;WIN8-DEV:WIMS00;AG-WIMS00;1;2;2;1;1;2`
+
+const mockAvailabilityGroupsDB = `measurement;sql_instance;ag_database_name;database_name;is_local;is_primary_replica;synchronization_health;synchronization_state;database_state;is_suspended;suspend_reason;log_send_queue_size_KB;log_send_rate;redo_queue_size_KB;redo_rate;secondary_lag_seconds
+ag_config_replica_db;WIN8-DEV:WIMS00;AG-WIMS00:WAREHOUSE_CENTRAL;1;1;2;2;0;0;99;0;0;0;0;0
+ag_config_replica_db;WIN8-DEV:WIMS00;AG-WIMS00:WAREHOUSE_CENTRAL;0;0;2;2;99;0;99;0;0;50;46240;0`
