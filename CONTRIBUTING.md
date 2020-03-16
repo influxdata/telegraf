@@ -30,9 +30,9 @@ and the accumulator can be found in the GoDoc:
 
 **Adding a dependency:**
 
-Telegraf uses go modules. Assuming you can already build the project, run this in the telegraf directory:
+Telegraf uses Go modules. Assuming you can already build the project, run this in the telegraf directory:
 
-1. `go get -u github.com/[dependency]/[new-package]`
+1. `go get github.com/[dependency]/[new-package]`
 
 **Unit Tests:**
 
