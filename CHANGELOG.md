@@ -13,6 +13,7 @@
 
 - [clickhouse](/plugins/inputs/clickhouse/README.md) - Contributed by @kshvakov
 - [execd](/plugins/inputs/execd/README.md) - Contributed by @jgraichen
+- [eventhub_consumer](/plugins/inputs/eventhub_consumer/README.md) - Contributed by @R290
 - [infiniband](/plugins/inputs/infiniband/README.md) - Contributed by @willfurnell
 - [lanz](/plugins/inputs/lanz/README.md): Contributed by @timhughes
 - [modbus](/plugins/inputs/modbus/README.md) - Contributed by @garciaolais

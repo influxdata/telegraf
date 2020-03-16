@@ -1,8 +1,16 @@
-# Azure Event Hubs input plugin
+# Event Hub Consumer Input Plugin
 
-This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub. The implementation is in essence a wrapper for [Microsoft Azure Event Hubs Client for Golang](https://github.com/Azure/azure-event-hubs-go).
+This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
 
-## Configuration
+### IoT Hub Setup
+
+The main focus for development of this plugin is Azure IoT hub:
+
+1. Create an Azure IoT Hub by following any of the guides provided here: https://docs.microsoft.com/en-us/azure/iot-hub/
+2. Create a device, for example a [simulated Raspberry Pi](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-raspberry-pi-web-simulator-get-started)
+3. The connection string needed for the plugin is located under *Shared access policies*, both the *iothubowner* and *service* policies should work
+
+### Configuration
 
 ```toml
 [[inputs.eventhub_consumer]]
@@ -30,7 +38,7 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   ## Change the default consumer group
   # consumer_group = ""
 
-  ## By default the event hub receives all messages present on the broker, alternative modes can be set below. 
+  ## By default the event hub receives all messages present on the broker, alternative modes can be set below.
   ## The timestamp should be in https://github.com/toml-lang/toml#offset-date-time format (RFC 3339).
   ## The 3 options below only apply if no valid persister is read from memory or file (e.g. first run).
   # from_timestamp =
@@ -44,8 +52,8 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
 
   ## Change to set a custom user agent, "telegraf" is used by default
   # user_agent = "telegraf"
-  
-  ## To consume from a specific partition, set the partition_ids option. 
+
+  ## To consume from a specific partition, set the partition_ids option.
   ## An empty array will result in receiving from all partitions.
   # partition_ids = ["0","1"]
 
@@ -82,17 +90,7 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 ```
-## Testing
 
-The main focus for development of this plugin is Azure IoT hub:
-
-1. Create an Azure IoT Hub by following any of the guides provided here: https://docs.microsoft.com/en-us/azure/iot-hub/
-2. Create a device, for example a [simulated Raspberry Pi](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-raspberry-pi-web-simulator-get-started)
-3. The connection string needed for the plugin is located under *Shared access policies*, both the *iothubowner* and *service* policies should work
-
-## Untested features:
+### Additional Environment
 
 - Authentication with [AAD TokenProvider environment variables](https://github.com/Azure/azure-event-hubs-go#aad-tokenprovider-environment-variables)
-
-## Not implemented:
-- [Event Processor Host](https://github.com/Azure/azure-event-hubs-go#event-processor-host) (should only be needed when using multiple Telegraf instances consuming the same partition)
