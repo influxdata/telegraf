@@ -51,6 +51,15 @@ and creates metrics using one of the supported [input data formats][].
   ## publishing.
   # persistent_session = false
 
+  ## Omit retained messages.
+  ## If this value is set to true, retained messages are not sent to the output
+  ## plug-ins. This prevents duplicate messages from being saved when Telegraf is
+  ## restarted. However, this also prevents the last state from being received when
+  ## Telegraf is first started. This only affects messages that were sent by the
+  ## broker as retained messages. Messages received during an active subscription
+  ## are still processed as usual, regardless if the retained flag is set or not.
+  # omit_retained = false
+
   ## If unset, a random client ID will be generated.
   # client_id = ""
 
