@@ -40,6 +40,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/ecs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ethtool"
+	_ "github.com/influxdata/telegraf/plugins/inputs/eventhub"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
 	_ "github.com/influxdata/telegraf/plugins/inputs/execd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fail2ban"
