@@ -5,7 +5,7 @@ This plugin provides a consumer for use with Azure Event Hubs and Azure IoT Hub.
 ## Configuration
 
 ```toml
-[[inputs.eventhub]]
+[[inputs.eventhub_consumer]]
   ## The default behavior is to create a new Event Hub client from environment variables.
   ## This requires one of the following sets of environment variables to be set:
   ##

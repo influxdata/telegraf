@@ -416,7 +416,7 @@ func (e *EventHub) Stop() {
 }
 
 func init() {
-	inputs.Add("eventhub", func() telegraf.Input {
+	inputs.Add("eventhub_consumer", func() telegraf.Input {
 		return &EventHub{}
 	})
 }
