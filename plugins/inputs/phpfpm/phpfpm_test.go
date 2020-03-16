@@ -280,7 +280,8 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone': Get http://aninvalidone: dial tcp: lookup aninvalidone`)
+	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone'`)
+	assert.Contains(t, err.Error(), `lookup aninvalidone`)
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testing.T) {
