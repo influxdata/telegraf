@@ -54,8 +54,7 @@ func HuaweiTelemetryDecoder(body []byte) *metric.SeriesGrouper {
 			dataTime = msg.MsgTimestamp
 		}
 		timestamp := time.Unix(int64(dataTime/1000), int64(dataTime%1000)*1000000)
-		sensorType := strings.Split(msg.GetSensorPath(), ":")[0]
-		sensorMsg := huawei_sensorPath.GetMessageType(sensorType)
+		sensorMsg := huawei_sensorPath.GetMessageType(msg.GetSensorPath())
 		err = proto.Unmarshal(gpbkv.Content, sensorMsg)
 		if err != nil {
 			fmt.Println("Sensor Error", err)
