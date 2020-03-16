@@ -30,29 +30,23 @@ and the accumulator can be found in the GoDoc:
 
 **Adding a dependency:**
 
-Assuming you can already build the project, run these in the telegraf directory:
+Telegraf uses Go modules. Assuming you can already build the project, run this in the telegraf directory:
 
-1. `dep ensure -vendor-only`
-2. `dep ensure -add github.com/[dependency]/[new-package]`
+1. `go get github.com/[dependency]/[new-package]`
 
 **Unit Tests:**
 
 Before opening a pull request you should run the linter checks and
 the short tests.
 
-**Run static analysis:**
-
 ```
 make check
-```
-
-**Run short tests:**
-
-```
 make test
 ```
 
 **Execute integration tests:**
+
+(Optional)
 
 Running the integration tests requires several docker containers to be
 running.  You can start the containers with:
