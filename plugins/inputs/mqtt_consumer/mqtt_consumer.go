@@ -57,6 +57,7 @@ type MQTTConsumer struct {
 	MetricBuffer int
 
 	PersistentSession bool
+	OmitRetained      bool
 	ClientID          string `toml:"client_id"`
 	tls.ClientConfig
 
@@ -119,6 +120,15 @@ var sampleConfig = `
   ## also set the qos option to 1 or 2 and don't forget to also set the QoS when
   ## publishing.
   # persistent_session = false
+
+  ## Omit retained messages.
+  ## If this value is set to true, retained messages are not sent to the output
+  ## plug-ins. This prevents duplicate messages from being saved when Telegraf is
+  ## restarted. However, this also prevents the last state from being received when
+  ## Telegraf is first started. This only affects messages that were sent by the
+  ## broker as retained messages. Messages received during an active subscription
+  ## are still processed as usual, regardless if the retained flag is set or not.
+  # omit_retained = false
 
   ## If unset, a random client ID will be generated.
   # client_id = ""
@@ -274,6 +284,10 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 }
 
 func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Message) error {
+	if msg.Retained() && m.OmitRetained {
+		return nil
+	}
+
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
 		return err
