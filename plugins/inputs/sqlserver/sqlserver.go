@@ -533,13 +533,45 @@ FROM	(
 `
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
-const sqlServerSchedulersV2 string = `SET DEADLOCK_PRIORITY -10;
-SELECT  'sqlserver_schedulers' AS [measurement],
-                REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-                DB_NAME() as [database_name],
-  cast(scheduler_id as varchar(4)) as scheduler_id, cast(cpu_id as varchar(4)) as cpu_id,is_online,is_idle,preemptive_switches_count,context_switches_count,current_tasks_count,runnable_tasks_count,current_workers_count
-  , active_workers_count,work_queue_count, pending_disk_io_count,load_factor,yield_count, total_cpu_usage_ms, total_scheduler_delay_ms
-from sys.dm_os_schedulers
+const sqlServerSchedulersV2 string = `
+
+
+
+
+SET DEADLOCK_PRIORITY - 10;
+DECLARE @SqlStatement AS nvarchar(max);
+SET @SqlStatement = N'
+SELECT 
+	 ''sqlserver_schedulers'' AS [measurement]
+	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
+	,DB_NAME() AS [database_name]
+	,cast(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
+	,cast(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
+	,s.[is_online]
+	,s.[is_idle]
+	,s.[preemptive_switches_count]
+	,s.[context_switches_count]
+	,s.[current_tasks_count]
+	,s.[runnable_tasks_count]
+	,s.[current_workers_count]
+	,s.[active_workers_count]
+	,s.[work_queue_count]
+	,s.[pending_disk_io_count]
+	,s.[load_factor]
+	,s.[yield_count]
+	'
+	+ 
+	CASE
+		WHEN CAST(LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) AS int) >= 13
+			/*Only from SQL Server 2016+ (ver 13.x) [total_cpu_usage_ms] and [total_scheduler_delay_ms]*/
+			THEN N',s.[total_cpu_usage_ms], s.[total_scheduler_delay_ms]'
+			ELSE ''
+	END 
+	+
+N'
+FROM sys.dm_os_schedulers AS s
+'
+EXEC sp_executesql @SqlStatement
 `
 
 const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
