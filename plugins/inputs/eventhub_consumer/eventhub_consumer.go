@@ -81,7 +81,7 @@ func (*EventHub) SampleConfig() string {
 
   ## Uncommenting the option below will create an Event Hub client based solely on the connection string.
   ## This can either be the associated environment variable or hard coded directly.
-  # connection_string = "$EVENTHUB_CONNECTION_STRING"
+  # connection_string = ""
 
   ## Set persistence directory to a valid folder to use a file persister instead of an in-memory persister
   # persistence_dir = ""
@@ -119,8 +119,8 @@ func (*EventHub) SampleConfig() string {
 
   ## Tags or fields to create from keys present in the application property bag.
   ## These could for example be set by message enrichments in Azure IoT Hub.
-  application_property_tags = []
-  application_property_fields = []
+  # application_property_tags = []
+  # application_property_fields = []
 
   ## Tag or field name to use for metadata
   ## By default all metadata is disabled
