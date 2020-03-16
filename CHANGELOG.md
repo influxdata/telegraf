@@ -64,6 +64,7 @@
 - [#7103](https://github.com/influxdata/telegraf/pull/7103): Add volume_mount_point to DatabaseIO query in sqlserver input.
 - [#7142](https://github.com/influxdata/telegraf/pull/7142): Add topic tag options to kafka output.
 - [#7141](https://github.com/influxdata/telegraf/pull/7141): Add support for setting InfluxDB retention policy using tag.
+- [#7163](https://github.com/influxdata/telegraf/pull/7163): Add Database IO Tempdb per Azure DB to sqlserver input.
 
 #### Bugfixes
 
@@ -75,6 +76,7 @@
 - [#7133](https://github.com/influxdata/telegraf/issues/7133): Fix log rotation to use actual file size instead of bytes written.
 - [#7103](https://github.com/influxdata/telegraf/pull/7103): Fix several issues with DatabaseIO query in sqlserver input.
 - [#7119](https://github.com/influxdata/telegraf/pull/7119): Fix internal metrics for output split into multiple lines.
+- [#7021](https://github.com/influxdata/telegraf/pull/7021):Fix schedulers query compatibility with pre SQL-2016.
 
 ## v1.13.4 [2020-02-25]
 
