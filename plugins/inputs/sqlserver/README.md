@@ -54,8 +54,7 @@ GO
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
   # azuredb = true
 
-  ## If you would like to exclude some of the metrics queries, list them here
-  ## Possible choices:
+  ## Possible queries:
   ## - PerformanceCounters
   ## - WaitStatsCategorized
   ## - DatabaseIO
@@ -70,6 +69,10 @@ GO
   ## - AzureDBResourceGovernance
   ## - SqlRequests
   ## - ServerProperties
+  ## A list of queries to include. If not specified, all the above listed queries are used.
+  # include_query = []
+
+  ## A list of queries to explicitly ignore.
   exclude_query = [ 'Schedulers' , 'SqlRequests']
 ```
 

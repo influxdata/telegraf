@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -15,6 +16,7 @@ type SQLServer struct {
 	Servers       []string `toml:"servers"`
 	QueryVersion  int      `toml:"query_version"`
 	AzureDB       bool     `toml:"azuredb"`
+	IncludeQuery  []string `toml:"include_query"`
 	ExcludeQuery  []string `toml:"exclude_query"`
 	queries       MapQuery
 	isInitialized bool
@@ -52,8 +54,7 @@ const sampleConfig = `
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
   # azuredb = false
 
-  ## If you would like to exclude some of the metrics queries, list them here
-  ## Possible choices:
+  ## Possible queries:
   ## - PerformanceCounters
   ## - WaitStatsCategorized
   ## - DatabaseIO
@@ -69,7 +70,11 @@ const sampleConfig = `
   ## - AzureDBResourceGovernance
   ## - SqlRequests
   ## - ServerProperties
-  exclude_query = [ 'Schedulers' ]
+  ## A list of queries to include. If not specified, all the above listed queries are used.
+  # include_query = []
+
+  ## A list of queries to explicitly ignore.
+  exclude_query = [ 'Schedulers' , 'SqlRequests']
 `
 
 // SampleConfig return the sample configuration
@@ -86,7 +91,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(s *SQLServer) {
+func initQueries(s *SQLServer) error {
 	s.queries = make(MapQuery)
 	queries := s.queries
 	// If this is an AzureDB instance, grab some extra metrics
@@ -117,18 +122,29 @@ func initQueries(s *SQLServer) {
 		queries["PerformanceMetrics"] = Query{Script: sqlPerformanceMetrics, ResultByRow: false}
 	}
 
-	for _, query := range s.ExcludeQuery {
-		delete(queries, query)
+	filterQueries, err := filter.NewIncludeExcludeFilter(s.IncludeQuery, s.ExcludeQuery)
+	if err != nil {
+		return err
+	}
+
+	for query := range queries {
+		if !filterQueries.Match(query) {
+			delete(queries, query)
+		}
 	}
 
 	// Set a flag so we know that queries have already been initialized
 	s.isInitialized = true
+	return nil
 }
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	if !s.isInitialized {
-		initQueries(s)
+		if err := initQueries(s); err != nil {
+			acc.AddError(err)
+			return err
+		}
 	}
 
 	if len(s.Servers) == 0 {
