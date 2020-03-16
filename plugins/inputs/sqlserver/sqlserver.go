@@ -359,24 +359,40 @@ BEGIN
 	SELECT
 		 ''sqlserver_database_io'' As [measurement]
 		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-		,DB_NAME([vfs].[database_id]) AS [database_name]
+		,DB_NAME() as database_name
+		,vfs.database_id   -- /*needed as tempdb is different for each Azure SQL DB as grouping has to be by logical server + db_name + database_id*/
+		,vfs.file_id
 		,vfs.io_stall_read_ms AS read_latency_ms
 		,vfs.num_of_reads AS reads
 		,vfs.num_of_bytes_read AS read_bytes
 		,vfs.io_stall_write_ms AS write_latency_ms
 		,vfs.num_of_writes AS writes
 		,vfs.num_of_bytes_written AS write_bytes
-		,vfs.io_stall_queued_read_ms as rg_read_stall_ms
-		,ISNULL(b.name ,''RBPEX'') as logical_filename
-		,ISNULL(b.physical_name, ''RBPEX'') as physical_filename
+		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
+                ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+		 ,CASE
+                        WHEN (vfs.database_id = 0) THEN ''RBPEX''
+                        ELSE b.logical_filename
+                  END as logical_filename
+                 ,CASE
+                        WHEN (vfs.database_id = 0) THEN ''RBPEX''
+                        ELSE b.physical_filename
+                  END as physical_filename
 		,CASE WHEN vfs.file_id = 2 THEN ''LOG'' ELSE ''DATA'' END AS file_type
 		,ISNULL(size,0)/128 AS current_size_mb
-		,ISNULL(FILEPROPERTY(b.name,''SpaceUsed'')/128,0) as space_used_mb
-		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
-		,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+		,ISNULL(FILEPROPERTY(b.logical_filename,''SpaceUsed'')/128,0) as space_used_mb
 	FROM [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-	LEFT OUTER join sys.database_files b 
-		ON b.file_id = vfs.file_id
+	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
+        LEFT OUTER join
+        (
+             SELECT DB_ID() as database_id, file_id, logical_filename=name COLLATE SQL_Latin1_General_CP1_CI_AS
+                , physical_filename = physical_name COLLATE SQL_Latin1_General_CP1_CI_AS, size from  sys.database_files
+                where type <> 2
+             UNION ALL
+             SELECT 2 as database_id, file_id, logical_filename = name , physical_filename = physical_name, size
+                from  tempdb.sys.database_files
+         ) b ON b.database_id = vfs.database_id and b.file_id = vfs.file_id
+          where vfs.database_id IN (DB_ID(),0,2)
 	'
 	EXEC sp_executesql @SqlStatement
 
@@ -390,7 +406,7 @@ BEGIN
 		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 		,DB_NAME(vfs.[database_id]) AS [database_name]
 		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension
+		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
 		,mf.[type_desc] AS [file_type]
 		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
 			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
@@ -536,135 +552,150 @@ DECLARE @PCounters TABLE
 	cntr_type INT,
 	Primary Key(object_name, counter_name, instance_name)
 );
-INSERT	INTO @PCounters
-SELECT	DISTINCT
+
+DECLARE @SQL NVARCHAR(MAX)
+SET @SQL = N'SELECT	DISTINCT
 		RTrim(spi.object_name) object_name,
-		RTrim(spi.counter_name) counter_name,
-                CASE WHEN (
-                             RTRIM(spi.object_name) LIKE '%:Databases'
-                             OR RTRIM(spi.object_name) LIKE '%:Database Replica'
-                             OR RTRIM(spi.object_name) LIKE '%:Catalog Metadata'
-                             OR RTRIM(spi.object_name) LIKE '%:Query Store'
-                             OR RTRIM(spi.object_name) LIKE '%:Columnstore'
-                             OR RTRIM(spi.object_name) LIKE '%:Advanced Analytics')
-                             AND SERVERPROPERTY ('EngineEdition') IN (5,8)
-                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
+		RTrim(spi.counter_name) counter_name,'
+		+
+		CASE
+		WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
+		THEN N'CASE WHEN (
+                             RTRIM(spi.object_name) LIKE ''%:Databases''
+                             OR RTRIM(spi.object_name) LIKE ''%:Database Replica''
+                             OR RTRIM(spi.object_name) LIKE ''%:Catalog Metadata''
+                             OR RTRIM(spi.object_name) LIKE ''%:Query Store''
+                             OR RTRIM(spi.object_name) LIKE ''%:Columnstore''
+                             OR RTRIM(spi.object_name) LIKE ''%:Advanced Analytics'')
+                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name) 
+							 IS NOT NULL -- for cloud only
                        THEN d.name
- 			WHEN RTRIM(object_name) LIKE '%:Availability Replica'
-				AND SERVERPROPERTY ('EngineEdition') IN (5,8)
+ 			WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
 				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
 			THEN d.name + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
                        ELSE spi.instance_name
-                END AS instance_name,
-		CAST(spi.cntr_value AS BIGINT) AS cntr_value,
+                END AS instance_name,'
+		ELSE 'spi.instance_name as instance_name, '
+		END
+		+
+		'CAST(spi.cntr_value AS BIGINT) AS cntr_value,
 		spi.cntr_type
-FROM	sys.dm_os_performance_counters AS spi
-LEFT JOIN sys.databases AS d
-ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
-   = CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
-                d.name = 'master' AND TRY_CONVERT(uniqueidentifier, d.physical_database_name) IS NOT NULL
+		FROM	sys.dm_os_performance_counters AS spi '
++
+CASE 
+	WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
+	THEN CAST(N'LEFT JOIN sys.databases AS d
+	ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
+	= CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
+                d.name = ''master'' AND TRY_CONVERT(uniqueidentifier, d.physical_database_name) IS NOT NULL
                 THEN d.name
                 ELSE d.physical_database_name
-      END
-WHERE	(
+	END	' as NVARCHAR(MAX))
+	ELSE N' '
+END
+
+SET @SQL = @SQL + CAST(N' WHERE	(
 			counter_name IN (
-				'SQL Compilations/sec',
-				'SQL Re-Compilations/sec',
-				'User Connections',
-				'Batch Requests/sec',
-				'Logouts/sec',
-				'Logins/sec',
-				'Processes blocked',
-				'Latch Waits/sec',
-				'Full Scans/sec',
-				'Index Searches/sec',
-				'Page Splits/sec',
-				'Page lookups/sec',
-				'Page reads/sec',
-				'Page writes/sec',
-				'Readahead pages/sec',
-				'Lazy writes/sec',
-				'Checkpoint pages/sec',
-				'Page life expectancy',
-				'Log File(s) Size (KB)',
-				'Log File(s) Used Size (KB)',
-				'Data File(s) Size (KB)',
-				'Transactions/sec',
-				'Write Transactions/sec',
-				'Active Temp Tables',
-				'Temp Tables Creation Rate',
-				'Temp Tables For Destruction',
-				'Free Space in tempdb (KB)',
-				'Version Store Size (KB)',
-				'Memory Grants Pending',
-				'Memory Grants Outstanding',
-				'Free list stalls/sec',
-				'Buffer cache hit ratio',
-				'Buffer cache hit ratio base',
-				'Backup/Restore Throughput/sec',
-				'Total Server Memory (KB)',
-				'Target Server Memory (KB)',
-				'Log Flushes/sec',
-				'Log Flush Wait Time',
-				'Memory broker clerk size',
-				'Log Bytes Flushed/sec',
-				'Bytes Sent to Replica/sec',
-				'Log Send Queue',
-				'Bytes Sent to Transport/sec',
-				'Sends to Replica/sec',
-				'Bytes Sent to Transport/sec',
-				'Sends to Transport/sec',
-				'Bytes Received from Replica/sec',
-				'Receives from Replica/sec',
-				'Flow Control Time (ms/sec)',
-				'Flow Control/sec',
-				'Resent Messages/sec',
-				'Redone Bytes/sec',
-				'XTP Memory Used (KB)',
-				'Transaction Delay',
-				'Log Bytes Received/sec',
-				'Log Apply Pending Queue',
-				'Redone Bytes/sec',
-				'Recovery Queue',
-				'Log Apply Ready Queue',
-				'CPU usage %',
-				'CPU usage % base',
-				'Queued requests',
-				'Requests completed/sec',
-				'Blocked tasks',
-				'Active memory grant amount (KB)',
-				'Disk Read Bytes/sec',
-				'Disk Read IO Throttled/sec',
-				'Disk Read IO/sec',
-				'Disk Write Bytes/sec',
-				'Disk Write IO Throttled/sec',
-				'Disk Write IO/sec',
-				'Used memory (KB)',
-				'Forwarded Records/sec',
-				'Background Writer pages/sec',
-				'Percent Log Used',
-				'Log Send Queue KB',
-				'Redo Queue KB',
-				'Mirrored Write Transactions/sec',
-				'Group Commit Time',
-				'Group Commits/Sec'
+				''SQL Compilations/sec'',
+				''SQL Re-Compilations/sec'',
+				''User Connections'',
+				''Batch Requests/sec'',
+				''Logouts/sec'',
+				''Logins/sec'',
+				''Processes blocked'',
+				''Latch Waits/sec'',
+				''Full Scans/sec'',
+				''Index Searches/sec'',
+				''Page Splits/sec'',
+				''Page lookups/sec'',
+				''Page reads/sec'',
+				''Page writes/sec'',
+				''Readahead pages/sec'',
+				''Lazy writes/sec'',
+				''Checkpoint pages/sec'',
+				''Page life expectancy'',
+				''Log File(s) Size (KB)'',
+				''Log File(s) Used Size (KB)'',
+				''Data File(s) Size (KB)'',
+				''Transactions/sec'',
+				''Write Transactions/sec'',
+				''Active Temp Tables'',
+				''Temp Tables Creation Rate'',
+				''Temp Tables For Destruction'',
+				''Free Space in tempdb (KB)'',
+				''Version Store Size (KB)'',
+				''Memory Grants Pending'',
+				''Memory Grants Outstanding'',
+				''Free list stalls/sec'',
+				''Buffer cache hit ratio'',
+				''Buffer cache hit ratio base'',
+				''Backup/Restore Throughput/sec'',
+				''Total Server Memory (KB)'',
+				''Target Server Memory (KB)'',
+				''Log Flushes/sec'',
+				''Log Flush Wait Time'',
+				''Memory broker clerk size'',
+				''Log Bytes Flushed/sec'',
+				''Bytes Sent to Replica/sec'',
+				''Log Send Queue'',
+				''Bytes Sent to Transport/sec'',
+				''Sends to Replica/sec'',
+				''Bytes Sent to Transport/sec'',
+				''Sends to Transport/sec'',
+				''Bytes Received from Replica/sec'',
+				''Receives from Replica/sec'',
+				''Flow Control Time (ms/sec)'',
+				''Flow Control/sec'',
+				''Resent Messages/sec'',
+				''Redone Bytes/sec'',
+				''XTP Memory Used (KB)'',
+				''Transaction Delay'',
+				''Log Bytes Received/sec'',
+				''Log Apply Pending Queue'',
+				''Redone Bytes/sec'',
+				''Recovery Queue'',
+				''Log Apply Ready Queue'',
+				''CPU usage %'',
+				''CPU usage % base'',
+				''Queued requests'',
+				''Requests completed/sec'',
+				''Blocked tasks'',
+				''Active memory grant amount (KB)'',
+				''Disk Read Bytes/sec'',
+				''Disk Read IO Throttled/sec'',
+				''Disk Read IO/sec'',
+				''Disk Write Bytes/sec'',
+				''Disk Write IO Throttled/sec'',
+				''Disk Write IO/sec'',
+				''Used memory (KB)'',
+				''Forwarded Records/sec'',
+				''Background Writer pages/sec'',
+				''Percent Log Used'',
+				''Log Send Queue KB'',
+				''Redo Queue KB'',
+				''Mirrored Write Transactions/sec'',
+				''Group Commit Time'',
+				''Group Commits/Sec''
 			)
 		) OR (
-			object_name LIKE '%User Settable%'
-			OR object_name LIKE '%SQL Errors%'
+			object_name LIKE ''%User Settable%''
+			OR object_name LIKE ''%SQL Errors%''
 		) OR (
-			object_name LIKE '%Batch Resp Statistics%'
+			object_name LIKE ''%Batch Resp Statistics%''
 		) OR (
-			instance_name IN ('_Total')
+			instance_name IN (''_Total'')
 			AND counter_name IN (
-				'Lock Timeouts/sec',
-				'Number of Deadlocks/sec',
-				'Lock Waits/sec',
-				'Latch Waits/sec'
+				''Lock Timeouts/sec'',
+				''Number of Deadlocks/sec'',
+				''Lock Waits/sec'',
+				''Latch Waits/sec''
 			)
 		)
+' as NVARCHAR(MAX))
+INSERT	INTO @PCounters
+EXEC (@SQL)
 
-DECLARE @SQL NVARCHAR(MAX)
+
 SET  @SQL = REPLACE('SELECT
 "SQLServer:Workload Group Stats" AS object,
 counter,
