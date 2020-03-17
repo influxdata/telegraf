@@ -66,6 +66,7 @@
 - [#7141](https://github.com/influxdata/telegraf/pull/7141): Add support for setting InfluxDB retention policy using tag.
 - [#7163](https://github.com/influxdata/telegraf/pull/7163): Add Database IO Tempdb per Azure DB to sqlserver input.
 - [#7150](https://github.com/influxdata/telegraf/pull/7150): Add option for explicitly including queries in sqlserver input.
+- [#7173](https://github.com/influxdata/telegraf/pull/7173): Add support for GNMI DecimalVal type to cisco_telemetry_gnmi.
 
 #### Bugfixes
 
