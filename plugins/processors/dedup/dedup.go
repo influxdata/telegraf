@@ -82,15 +82,15 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		// For each filed compare value with the cached one
-		same := true
+		changed := false
 		for _, f := range metric.FieldList() {
 			if value, ok := m.GetField(f.Key); ok && value != f.Value {
-				same = false
+				changed = true
 				continue
 			}
 		}
 		// If any field value has changed then refresh the cache
-		if !same {
+		if changed {
 			d.save(metric, id)
 			continue
 		}
