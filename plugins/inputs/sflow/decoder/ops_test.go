@@ -11,7 +11,7 @@ import (
 )
 
 func Test_U64AsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsF("out")
 	in := uint64(5)
@@ -21,7 +21,7 @@ func Test_U64AsF(t *testing.T) {
 }
 
 func Test_U32AsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsF("out")
 	in := uint32(5)
@@ -31,7 +31,7 @@ func Test_U32AsF(t *testing.T) {
 }
 
 func Test_U16PtrAsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsF("out")
 	in := uint16(5)
@@ -41,7 +41,7 @@ func Test_U16PtrAsF(t *testing.T) {
 }
 
 func Test_U16AsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsF("out")
 	in := uint16(5)
@@ -51,7 +51,7 @@ func Test_U16AsF(t *testing.T) {
 }
 
 func Test_U8AsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsF("out")
 	in := uint8(5)
@@ -61,7 +61,7 @@ func Test_U8AsF(t *testing.T) {
 }
 
 func Test_U8PtrAsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsF("out")
 	in := uint8(5)
@@ -71,7 +71,7 @@ func Test_U8PtrAsF(t *testing.T) {
 }
 
 func Test_U32AsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsT("out")
 	in := uint32(5)
@@ -81,7 +81,7 @@ func Test_U32AsT(t *testing.T) {
 }
 
 func Test_U32PtrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsT("out")
 	in := uint32(5)
@@ -91,7 +91,7 @@ func Test_U32PtrAsT(t *testing.T) {
 }
 
 func Test_U16AsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsT("out")
 	in := uint16(5)
@@ -101,7 +101,7 @@ func Test_U16AsT(t *testing.T) {
 }
 
 func Test_U16PtrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsT("out")
 	in := uint16(5)
@@ -111,7 +111,7 @@ func Test_U16PtrAsT(t *testing.T) {
 }
 
 func Test_U8AsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsT("out")
 	in := uint8(5)
@@ -121,7 +121,7 @@ func Test_U8AsT(t *testing.T) {
 }
 
 func Test_U8PtrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsT("out")
 	in := uint8(5)
@@ -131,7 +131,7 @@ func Test_U8PtrAsT(t *testing.T) {
 }
 
 func Test_U32ToU32AsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := U32ToU32(func(i uint32) uint32 { return i * 2 })
 	ddo2 := ddo.AsF("out")
@@ -143,7 +143,7 @@ func Test_U32ToU32AsF(t *testing.T) {
 }
 
 func Test_U16ToU16AsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := U16ToU16(func(i uint16) uint16 { return i * 2 })
 	ddo2 := ddo.AsF("out")
@@ -155,7 +155,7 @@ func Test_U16ToU16AsF(t *testing.T) {
 }
 
 func Test_U32ToStrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := U32ToStr(func(i uint32) string { return fmt.Sprintf("%d", i*2) })
 	ddo2 := ddo.AsT("out")
@@ -167,7 +167,7 @@ func Test_U32ToStrAsT(t *testing.T) {
 }
 
 func Test_U16ToStrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := U16ToStr(func(i uint16) string { return fmt.Sprintf("%d", i*2) })
 	ddo2 := ddo.AsT("out")
@@ -179,7 +179,7 @@ func Test_U16ToStrAsT(t *testing.T) {
 }
 
 func Test_MapU32ToStrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	myMap := map[uint32]string{5: "five"}
 	ddo := MapU32ToStr(myMap)
@@ -192,7 +192,7 @@ func Test_MapU32ToStrAsT(t *testing.T) {
 }
 
 func Test_MapU16ToStrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	myMap := map[uint16]string{5: "five"}
 	ddo := MapU16ToStr(myMap)
@@ -214,7 +214,7 @@ func Test_DecDir_ToU32(t *testing.T) {
 	var buffer bytes.Buffer
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &value))
 
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(dd, &buffer))
 
 	x, _ := u.(*valueDirective)
@@ -228,7 +228,7 @@ func Test_DecDir_ToU32(t *testing.T) {
 }
 
 func Test_BytesToStrAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	f := func(b []byte) string { return fmt.Sprintf("%d:%d", b[0], b[1]) }
 	ddo := BytesToStr(2, f)
@@ -241,7 +241,7 @@ func Test_BytesToStrAsT(t *testing.T) {
 }
 
 func Test_BytesToAsT(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	f := func(b []byte) interface{} { return fmt.Sprintf("%d:%d", b[0], b[1]) }
 	ddo := BytesTo(2, f)
@@ -254,7 +254,7 @@ func Test_BytesToAsT(t *testing.T) {
 }
 
 func Test_BytesToU32AsF(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	f := func(b []byte) uint32 { return uint32(b[0] * b[1]) }
 	ddo := BytesToU32(2, f)
@@ -267,21 +267,21 @@ func Test_BytesToU32AsF(t *testing.T) {
 }
 
 func Test_U32require(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ddo := U32Assert(func(in uint32) bool { return false }, "bad")
 	in := uint32(5)
 	require.Error(t, ddo.process(dc, &in))
 }
 
 func Test_U16require(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ddo := U16Assert(func(in uint16) bool { return false }, "bad")
 	in := uint16(5)
 	require.Error(t, ddo.process(dc, &in))
 }
 
 func Test_Set(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ptr := new(uint32)
 	ddo := Set(ptr)
 	in := uint32(5)
@@ -290,7 +290,7 @@ func Test_Set(t *testing.T) {
 }
 
 func Test_U16Set(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ptr := new(uint16)
 	ddo := Set(ptr)
 	in := uint16(5)
@@ -299,7 +299,7 @@ func Test_U16Set(t *testing.T) {
 }
 
 func Test_U16PtrSet(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ptr := new(uint16)
 	ddo := Set(ptr)
 	in := uint16(5)
@@ -308,7 +308,7 @@ func Test_U16PtrSet(t *testing.T) {
 }
 
 func Test_U32toU32Set(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ptr := new(uint32)
 	ddo := U32ToU32(func(in uint32) uint32 { return in * 2 }).Set(ptr).prev()
 	in := uint32(5)
@@ -317,7 +317,7 @@ func Test_U32toU32Set(t *testing.T) {
 }
 
 func Test_U32toU32toString(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ptr := new(string)
 	ddo := U32ToU32(func(in uint32) uint32 { return in * 2 }).ToString(func(in uint32) string { return fmt.Sprintf("%d", in*2) }).Set(ptr).prev().prev()
 	in := uint32(2)
@@ -326,7 +326,7 @@ func Test_U32toU32toString(t *testing.T) {
 }
 
 func Test_U32toU32toStringBreakIf(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	ptr := new(string)
 	ddo := U32ToU32(func(in uint32) uint32 { return in * 2 }).ToString(func(in uint32) string { return fmt.Sprintf("%d", in*2) }).BreakIf("8").Set(ptr).prev().prev().prev()
 	in := uint32(2)
@@ -372,7 +372,7 @@ func Test_nop(t *testing.T) {
 }
 
 func Test_AsTimestamp(t *testing.T) {
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	dc.openMetric("")
 	ddo := AsTimestamp()
 	now := time.Now()

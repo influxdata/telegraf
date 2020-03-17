@@ -21,10 +21,9 @@ type DirectiveOp interface {
 }
 
 type baseDOp struct {
-	p   DirectiveOp
-	do  DirectiveOp
-	n   DirectiveOp
-	loc string
+	p  DirectiveOp
+	do DirectiveOp
+	n  DirectiveOp
 }
 
 func (op *baseDOp) prev() DirectiveOp {
@@ -32,21 +31,21 @@ func (op *baseDOp) prev() DirectiveOp {
 }
 
 func (op *baseDOp) AsF(name string) DirectiveOp {
-	result := &AsFDOp{baseDOp: baseDOp{p: op.do, loc: location(2)}, name: name}
+	result := &AsFDOp{baseDOp: baseDOp{p: op.do}, name: name}
 	result.do = result
 	op.n = result
 	return result
 }
 
 func (op *baseDOp) AsT(name string) DirectiveOp {
-	result := &AsTDOp{baseDOp: baseDOp{p: op.do, loc: location(2)}, name: name}
+	result := &AsTDOp{baseDOp: baseDOp{p: op.do}, name: name}
 	result.do = result
 	op.n = result
 	return result
 }
 
 func (op *baseDOp) Set(ptr interface{}) *SetDOp {
-	result := &SetDOp{baseDOp: baseDOp{p: op.do, loc: location(2)}, ptr: ptr}
+	result := &SetDOp{baseDOp: baseDOp{p: op.do}, ptr: ptr}
 	result.do = result
 	op.n = result
 	return result
@@ -64,7 +63,6 @@ func (op *U32ToU32DOp) process(dc *DecodeContext, upstreamValue interface{}) err
 	case *uint32:
 		if dc != nil {
 			out = op.fn(*v)
-			dc.tracef("%s U32ToU32 %d=>%d\n", op.loc, *v, out)
 		}
 	default:
 		return fmt.Errorf("cannot process %T", v)
@@ -78,7 +76,7 @@ func (op *U32ToU32DOp) process(dc *DecodeContext, upstreamValue interface{}) err
 
 // ToString answers a U32ToStr decode operation that will transform this output of thie U32ToU32 into a string
 func (op *U32ToU32DOp) ToString(fn func(uint32) string) *U32ToStrDOp {
-	result := &U32ToStrDOp{baseDOp: baseDOp{p: op, loc: location(2)}, fn: fn}
+	result := &U32ToStrDOp{baseDOp: baseDOp{p: op}, fn: fn}
 	result.do = result
 	op.n = result
 	return result
@@ -98,46 +96,38 @@ func (op *AsFDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 	switch v := upstreamValue.(type) {
 	case *uint64:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
 			m.AddField(op.name, *v)
 		}
 	case *uint32:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
 			m.AddField(op.name, *v)
 		}
 	case uint32:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
 			m.AddField(op.name, v)
 		}
 	case *uint16:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
 			m.AddField(op.name, *v)
 		}
 	case uint16:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
 			m.AddField(op.name, v)
 		}
 	case *uint8:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, *v)
 			m.AddField(op.name, *v)
 		}
 	case uint8:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%d\n", op.loc, op.name, v)
 			m.AddField(op.name, v)
 		}
 	case string:
 		if dc != nil {
-			dc.tracef("%s AsF %s=%s\n", op.loc, op.name, v)
 			m.AddField(op.name, v)
 		}
 	default:
-		return fmt.Errorf("%s AsF cannot process %T", op.loc, v)
+		return fmt.Errorf("AsF cannot process %T", v)
 	}
 	return nil
 }
@@ -155,7 +145,6 @@ func (op *AsTimestampDOp) process(dc *DecodeContext, upstreamValue interface{}) 
 	switch v := upstreamValue.(type) {
 	case *uint32:
 		if dc != nil {
-			dc.tracef("%s AsTimestamp %d\n", op.loc, *v)
 			m.SetTime(time.Unix(int64(*v), 0))
 			dc.timeHasBeenSet = true
 		}
@@ -180,38 +169,31 @@ func (op *AsTDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 	switch v := upstreamValue.(type) {
 	case *uint32:
 		if dc != nil {
-			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, *v)
 			m.AddTag(op.name, fmt.Sprintf("%d", *v))
 		}
 	case uint32:
 		if dc != nil {
-			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, v)
 			m.AddTag(op.name, fmt.Sprintf("%d", v))
 		}
 	case *uint16:
 		if dc != nil {
-			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, *v)
 			m.AddTag(op.name, fmt.Sprintf("%d", *v))
 		}
 	case uint16:
 		if dc != nil {
-			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, v)
 			m.AddTag(op.name, fmt.Sprintf("%d", v))
 		}
 	case *uint8:
 		if dc != nil {
-			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, *v)
 			m.AddTag(op.name, fmt.Sprintf("%d", *v))
 		}
 	case uint8:
 		if dc != nil {
-			dc.tracef("%s AsT %s=%d\n", op.loc, op.name, v)
 			m.AddTag(op.name, fmt.Sprintf("%d", v))
 		}
 	case string:
 		if dc != nil {
 			if !op.skipEmpty || v != "" {
-				dc.tracef("%s AsT %s=%s\n", op.loc, op.name, v)
 				m.AddTag(op.name, v)
 			}
 		}
@@ -299,12 +281,10 @@ func (op *U32ToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) err
 	switch v := upstreamValue.(type) {
 	case uint32:
 		if dc != nil && op.n != nil {
-			dc.tracef("%s U32ToStrDOp executed %d\n", op.loc, v)
 			op.n.process(dc, (op.fn(v)))
 		}
 	case *uint32:
 		if dc != nil && op.n != nil {
-			dc.tracef("%s U32ToStrDOp executed %d\n", op.loc, *v)
 			return op.n.process(dc, (op.fn(*v)))
 		}
 	default:
@@ -316,7 +296,7 @@ func (op *U32ToStrDOp) process(dc *DecodeContext, upstreamValue interface{}) err
 // BreakIf answers a BreakIf operation that will break the current decode operation chain, without an error, if the value processed
 // is the supplied value
 func (op *U32ToStrDOp) BreakIf(value string) *BreakIfDOp {
-	result := &BreakIfDOp{baseDOp: baseDOp{p: op, loc: location(2)}, value: value}
+	result := &BreakIfDOp{baseDOp: baseDOp{p: op}, value: value}
 	result.do = result
 	op.n = result
 	return result
@@ -351,10 +331,7 @@ func (op *BreakIfDOp) process(dc *DecodeContext, upstreamValue interface{}) erro
 	case string:
 		if dc != nil {
 			if v != op.value {
-				dc.tracef("%s no break", op.loc)
 				op.n.process(dc, v)
-			} else {
-				dc.tracef("%s break", op.loc)
 			}
 		}
 	default:
@@ -375,7 +352,6 @@ func (op *U16ToU16DOp) process(dc *DecodeContext, upstreamValue interface{}) err
 	switch v := upstreamValue.(type) {
 	case *uint16:
 		if dc != nil {
-			dc.tracef("%s U16ToU16 executed %d\n", op.loc, *v)
 			out = op.fn(*v)
 		}
 	default:
@@ -426,7 +402,6 @@ func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 		ptr, ok := op.ptr.(*uint32)
 		if ok {
 			if dc != nil {
-				dc.tracef("%s set %v = %d\n", op.loc, ptr, *v)
 				*ptr = *v
 			}
 		} else {
@@ -436,7 +411,6 @@ func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 		ptr, ok := op.ptr.(*uint32)
 		if ok {
 			if dc != nil {
-				dc.tracef("%s set %v = %d\n", op.loc, ptr, v)
 				*ptr = v
 			}
 		} else {
@@ -446,7 +420,6 @@ func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 		ptr, ok := op.ptr.(*uint16)
 		if ok {
 			if dc != nil {
-				dc.tracef("%s set %v = %d\n", op.loc, ptr, *v)
 				*ptr = *v
 			}
 		} else {
@@ -456,7 +429,6 @@ func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 		ptr, ok := op.ptr.(*uint16)
 		if ok {
 			if dc != nil {
-				dc.tracef("%s set %v = %d\n", op.loc, ptr, v)
 				*ptr = v
 			}
 		} else {
@@ -466,7 +438,6 @@ func (op *SetDOp) process(dc *DecodeContext, upstreamValue interface{}) error {
 		ptr, ok := op.ptr.(*string)
 		if ok {
 			if dc != nil {
-				dc.tracef("%s set %v = %s\n", op.loc, ptr, v)
 				*ptr = v
 			}
 		} else {

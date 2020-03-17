@@ -62,7 +62,7 @@ func (s *SFlow) SampleConfig() string {
 }
 
 func (s *SFlow) Init() error {
-	s.decoder = decoder.NewDecodeContext(false)
+	s.decoder = decoder.NewDecodeContext()
 
 	config := NewDefaultV5FormatOptions()
 	if s.MaxFlowsPerSample > 0 {

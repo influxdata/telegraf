@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -66,8 +65,6 @@ type valueDirective struct {
 	ops              []DirectiveOp
 	err              error
 
-	location string
-
 	resetFn func(interface{})
 
 	iterOption IterOption
@@ -89,8 +86,6 @@ func valueToString(in interface{}) string {
 }
 
 func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
-	dc.tracef("%s execute\n", dd.location)
-
 	if dd.reference == nil && !dd.noDecode {
 		if e := binary.Read(buffer, binary.BigEndian, dd.value); e != nil {
 			return e
@@ -99,19 +94,18 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 
 	// Switch downstream?
 	if dd.cases != nil && len(dd.cases) > 0 {
-		for i, c := range dd.cases {
+		for _, c := range dd.cases {
 			if c.Equals(dd.value) {
-				dc.tracef("%s selected case %d %s\n", dd.location, i, valueToString(dd.value))
 				return c.Execute(buffer, dc)
 			}
 		}
 		switch v := dd.value.(type) {
 		case *uint32:
-			return fmt.Errorf("(%T).Switch,unmatched case %d - created at %s", v, *v, dd.location)
+			return fmt.Errorf("(%T).Switch,unmatched case %d", v, *v)
 		case *uint16:
-			return fmt.Errorf("(%T).Switch,unmatched case %d - created at %s", v, *v, dd.location)
+			return fmt.Errorf("(%T).Switch,unmatched case %d", v, *v)
 		default:
-			return fmt.Errorf("(%T).Switch,unmatched case %v - created at %s", dd.value, dd.value, dd.location)
+			return fmt.Errorf("(%T).Switch,unmatched case %v", dd.value, dd.value)
 		}
 	}
 
@@ -124,7 +118,6 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 			if dd.iterOption.EOFTerminateIter && buffer.Len() == 0 {
 				return nil
 			}
-			dc.tracef("%s iteration %+v\n", dd.location, id)
 			if e := dd.iter.Execute(buffer, dc); e != nil {
 				return e
 			}
@@ -133,9 +126,8 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 		switch v := dd.value.(type) {
 		case *uint32:
 			if *v > dd.maxIterations {
-				return fmt.Errorf("iter at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxIterations)
+				return fmt.Errorf("iter exceeds configured max - value %d, limit %d", *v, dd.maxIterations)
 			}
-			dc.tracef("%s iteration starting i < %d\n", dd.location, *v)
 			for i := uint32(0); i < *v; i++ {
 				if e := fn(i); e != nil {
 					return e
@@ -143,9 +135,8 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 			}
 		case *uint16:
 			if *v > uint16(dd.maxIterations) {
-				return fmt.Errorf("iter at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxIterations)
+				return fmt.Errorf("iter exceeds configured max - value %d, limit %d", *v, dd.maxIterations)
 			}
-			dc.tracef("%s iteration starting i < %d\n", dd.location, *v)
 			for i := uint16(0); i < *v; i++ {
 				if e := fn(i); e != nil {
 					return e
@@ -153,7 +144,7 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 			}
 		default:
 			// Can't actually get here if .Iter method check types (and it does)
-			return fmt.Errorf("(%T).Iter, cannot iterator over this type at %s", dd.value, dd.location)
+			return fmt.Errorf("(%T).Iter, cannot iterator over this type", dd.value)
 		}
 	}
 
@@ -162,22 +153,19 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 		switch v := dd.value.(type) {
 		case *uint32:
 			if *v > dd.maxEncapsulation {
-				return fmt.Errorf("encap at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxEncapsulation)
+				return fmt.Errorf("encap exceeds configured max - value %d, limit %d", *v, dd.maxEncapsulation)
 			}
-			dc.tracef("%s encapsulated %d\n", dd.location, int(*v))
 			return dd.encapsulated.Execute(bytes.NewBuffer(buffer.Next(int(*v))), dc)
 		case *uint16:
 			if *v > uint16(dd.maxEncapsulation) {
-				return fmt.Errorf("encap at %s exceeds configured max - value %d, limit %d", dd.location, *v, dd.maxEncapsulation)
+				return fmt.Errorf("encap exceeds configured max - value %d, limit %d", *v, dd.maxEncapsulation)
 			}
-			dc.tracef("%s encapsulated %d from ptr %v\n", dd.location, int(*v), v)
 			return dd.encapsulated.Execute(bytes.NewBuffer(buffer.Next(int(*v))), dc)
 		}
 	}
 
 	// Perform the attached operations
-	for i, op := range dd.ops {
-		dc.tracef("%s do(%d)\n", dd.location, i)
+	for _, op := range dd.ops {
 		if err := op.process(dc, dd.value); err != nil {
 			return err
 		}
@@ -190,16 +178,16 @@ func (dd *valueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error
 // alrady been configured in a manner inconsistent with another configuration change
 func (dd *valueDirective) panickIfNotBlackCanvas(change string, checkDOs bool) {
 	if dd.cases != nil {
-		panic(fmt.Sprintf("already have switch cases assigned, cannot assign %s @ %s", change, dd.location))
+		panic(fmt.Sprintf("already have switch cases assigned, cannot assign %s", change))
 	}
 	if dd.iter != nil {
-		panic(fmt.Sprintf("already have iter assigned, cannot assign %s @ %s", change, dd.location))
+		panic(fmt.Sprintf("already have iter assigned, cannot assign %s", change))
 	}
 	if dd.encapsulated != nil {
-		panic(fmt.Sprintf("already have encap assigned, cannot assign %s @ %s", change, dd.location))
+		panic(fmt.Sprintf("already have encap assigned, cannot assign %s @", change))
 	}
 	if checkDOs && dd.ops != nil && len(dd.ops) > 0 {
-		panic(fmt.Sprintf("already have do assigned, cannot assign %s @ %s", change, dd.location))
+		panic(fmt.Sprintf("already have do assigned, cannot assign %s", change))
 	}
 }
 
@@ -326,22 +314,18 @@ func (dd *caseValueDirective) Equals(value interface{}) bool {
 		if ok {
 			return ourV == *ov
 		}
-		log.Printf("D! value not a *uint32 but %T\n", value)
 	case uint16:
 		ov, ok := value.(*uint16)
 		if ok {
 			return ourV == *ov
 		}
-		log.Printf("D! value not a *uint16 but %T\n", value)
 	case byte:
 		ov, ok := value.([]byte)
 		if ok {
 			if len(ov) == 1 {
 				return ourV == ov[0]
 			}
-			log.Printf("D! value not a [1]byte but %T\n", value)
 		}
-		log.Printf("D! value not a [1]byte but %T\n", value)
 	}
 	return false
 }
@@ -360,8 +344,7 @@ func (di *sequenceDirective) Reset() {
 }
 
 func (di *sequenceDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
-	for i, innerDD := range di.decoders {
-		dc.tracef("%s seq %d\n", di.location, i)
+	for _, innerDD := range di.decoders {
 		if err := innerDD.Execute(buffer, dc); err != nil {
 			return err
 		}
@@ -380,7 +363,6 @@ func (di *openMetric) Reset() {
 }
 
 func (di *openMetric) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
-	dc.tracef("%s open metric\n", di.location)
 	dc.openMetric(di.name)
 	return nil
 }
@@ -395,7 +377,6 @@ func (di *closeMetric) Reset() {
 }
 
 func (di *closeMetric) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
-	dc.tracef("%s close metric\n", di.location)
 	dc.closeMetric()
 	return nil
 }
@@ -411,13 +392,6 @@ type DecodeContext struct {
 	preMetric telegraf.Metric
 	current   telegraf.Metric
 	nano      int
-	trace     bool
-}
-
-func (dc *DecodeContext) tracef(fmt string, v ...interface{}) {
-	if dc.trace {
-		log.Printf(fmt, v...)
-	}
 }
 
 func (dc *DecodeContext) openMetric(name string) {

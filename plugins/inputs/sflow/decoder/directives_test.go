@@ -315,7 +315,7 @@ func Test_OpenMetric(t *testing.T) {
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it1Val))
 	it2Val := uint32(3)
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it2Val))
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(dd, &buffer))
 	require.Equal(t, 2, len(dc.GetMetrics()))
 }
@@ -335,7 +335,7 @@ func Test_AsF(t *testing.T) {
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it1Val))
 	it2Val := uint32(3)
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it2Val))
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(dd, &buffer))
 	require.Equal(t, 2, len(dc.GetMetrics()))
 	m := dc.GetMetrics()
@@ -358,7 +358,7 @@ func Test_AsT(t *testing.T) {
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it1Val))
 	it2Val := uint32(3)
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it2Val))
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(dd, &buffer))
 	require.Equal(t, 2, len(dc.GetMetrics()))
 	m := dc.GetMetrics()
@@ -401,7 +401,7 @@ func Test_preMetricNesting(t *testing.T) {
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it1Val))
 	it2Val := uint32(3)
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &it2Val))
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(dd, &buffer))
 	require.Equal(t, 2, len(dc.GetMetrics()))
 	m := dc.GetMetrics()
@@ -525,7 +525,7 @@ func Test_ToU32(t *testing.T) {
 	var buffer bytes.Buffer
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &value))
 
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(dd, &buffer))
 
 	// require original value decoded
@@ -588,7 +588,7 @@ func Test_U32BasicSwitch(t *testing.T) {
 	value := uint32(0)
 	var buffer bytes.Buffer
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &value))
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(s, &buffer))
 }
 
@@ -597,7 +597,7 @@ func Test_U32BasicSwitchDefault(t *testing.T) {
 	value := uint32(2)
 	var buffer bytes.Buffer
 	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &value))
-	dc := NewDecodeContext(false)
+	dc := NewDecodeContext()
 	require.NoError(t, dc.Decode(s, &buffer))
 }
 
