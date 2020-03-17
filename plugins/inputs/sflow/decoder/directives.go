@@ -333,7 +333,6 @@ func (dd *caseValueDirective) Equals(value interface{}) bool {
 // sequenceDirective is a decode directive that is a simple sequentially executed list of other decode directives
 type sequenceDirective struct {
 	decoders []Directive
-	location string
 }
 
 func (di *sequenceDirective) Reset() {
@@ -354,8 +353,7 @@ func (di *sequenceDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) er
 
 // openMetric a decode directive that opens the recording of new fields and tags
 type openMetric struct {
-	location string
-	name     string
+	name string
 }
 
 func (di *openMetric) Reset() {
@@ -369,7 +367,6 @@ func (di *openMetric) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
 
 // closeMetric a decode directive that closes the current open metric
 type closeMetric struct {
-	location string
 }
 
 func (di *closeMetric) Reset() {

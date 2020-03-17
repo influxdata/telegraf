@@ -39,7 +39,6 @@ type SFlow struct {
 	Log telegraf.Logger `toml:"-"`
 
 	addr        net.Addr
-	decoder     *decoder.DecodeContext
 	decoderOpts decoder.Directive
 	closer      io.Closer
 	cancel      context.CancelFunc
@@ -57,7 +56,6 @@ func (s *SFlow) SampleConfig() string {
 }
 
 func (s *SFlow) Init() error {
-	s.decoder = decoder.NewDecodeContext()
 
 	config := NewDefaultV5FormatOptions()
 	s.decoderOpts = V5Format(config)
@@ -124,11 +122,12 @@ func (s *SFlow) read(acc telegraf.Accumulator, conn net.PacketConn) {
 }
 
 func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
-	if err := s.decoder.Decode(s.decoderOpts, bytes.NewBuffer(buf)); err != nil {
+	decoder := decoder.NewDecodeContext()
+	if err := decoder.Decode(s.decoderOpts, bytes.NewBuffer(buf)); err != nil {
 		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 	}
 
-	metrics := s.decoder.GetMetrics()
+	metrics := decoder.GetMetrics()
 	for _, m := range metrics {
 		acc.AddMetric(m)
 	}
