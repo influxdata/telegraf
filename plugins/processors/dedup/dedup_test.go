@@ -1,89 +1,84 @@
 package dedup
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 )
 
-func createMetric(name string, value int64) telegraf.Metric {
+func createMetric(name string, value int64, when time.Time) telegraf.Metric {
 	m, _ := metric.New(name,
 		map[string]string{"tag": "tag_value"},
 		map[string]interface{}{"value": value},
-		time.Now(),
+		when,
 	)
 	return m
-}
-
-func createProcessor() Dedup {
-	return Dedup{
-		DedupInterval: internal.Duration{Duration: 2 * time.Second},
-		FlushTime:     time.Now(),
-		Cache:         make(map[uint64]telegraf.Metric),
-	}
 }
 
 func assertCacheRefresh(t *testing.T, proc *Dedup, item telegraf.Metric) {
 	id := item.HashID()
 	name := item.Name()
 	// cache is not empty
-	assert.NotEqual(t, 0, len(proc.Cache))
+	require.NotEqual(t, 0, len(proc.Cache))
 	// cache has metric with proper id
-	cached, present := proc.Cache[id]
-	assert.True(t, present)
+	cache, present := proc.Cache[id]
+	require.True(t, present)
 	// cache has metric with proper name
-	assert.Equal(t, name, cached.Name())
+	require.Equal(t, name, cache.Name())
 	// cached metric has proper field
-	value, present := cached.Fields()["value"]
-	assert.True(t, present)
-	assert.Equal(t, value, item.Fields()["value"])
+	cValue, present := cache.GetField("value")
+	require.True(t, present)
+	iValue, _ := item.GetField("value")
+	require.Equal(t, cValue, iValue)
 	// cached metric has proper timestamp
-	assert.Equal(t, cached.Time(), item.Time())
+	require.Equal(t, cache.Time(), item.Time())
 }
 
 func assertCacheHit(t *testing.T, proc *Dedup, item telegraf.Metric) {
 	id := item.HashID()
 	name := item.Name()
 	// cache is not empty
-	assert.NotEqual(t, 0, len(proc.Cache))
+	require.NotEqual(t, 0, len(proc.Cache))
 	// cache has metric with proper id
-	cached, present := proc.Cache[id]
-	assert.True(t, present)
+	cache, present := proc.Cache[id]
+	require.True(t, present)
 	// cache has metric with proper name
-	assert.Equal(t, name, cached.Name())
+	require.Equal(t, name, cache.Name())
 	// cached metric has proper field
-	value, present := cached.Fields()["value"]
-	assert.True(t, present)
-	assert.Equal(t, value, item.Fields()["value"])
+	cValue, present := cache.GetField("value")
+	require.True(t, present)
+	iValue, _ := item.GetField("value")
+	require.Equal(t, cValue, iValue)
 	// cached metric did NOT change timestamp
-	assert.NotEqual(t, cached.Time(), item.Time())
+	require.NotEqual(t, cache.Time(), item.Time())
 }
 
 func assertMetricPassed(t *testing.T, target []telegraf.Metric, source telegraf.Metric) {
 	// target is not empty
-	assert.NotEqual(t, 0, len(target))
+	require.NotEqual(t, 0, len(target))
 	// target has metric with proper name
-	assert.Equal(t, "m1", target[0].Name())
+	require.Equal(t, "m1", target[0].Name())
 	// target metric has proper field
-	value, present := target[0].Fields()["value"]
-	assert.True(t, present)
-	assert.Equal(t, value, source.Fields()["value"])
+	tValue, present := target[0].GetField("value")
+	require.True(t, present)
+	sValue, present := source.GetField("value")
+	require.Equal(t, tValue, sValue)
 	// target metric has proper timestamp
-	assert.Equal(t, target[0].Time(), source.Time())
+	require.Equal(t, target[0].Time(), source.Time())
 }
 
 func assertMetricSuppressed(t *testing.T, target []telegraf.Metric, source telegraf.Metric) {
 	// target is empty
-	assert.Equal(t, 0, len(target))
+	require.Equal(t, 0, len(target))
 }
 
 func TestProcRetainsMetric(t *testing.T) {
-	deduplicate := createProcessor()
-	source := createMetric("m1", 1)
+	deduplicate := *NewDedup()
+	source := createMetric("m1", 1, time.Now())
 	target := deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
@@ -91,12 +86,11 @@ func TestProcRetainsMetric(t *testing.T) {
 }
 
 func TestSuppressRepeatedValue(t *testing.T) {
-	deduplicate := createProcessor()
-	source := createMetric("m1", 1)
+	deduplicate := *NewDedup()
+	// Create metric in the past
+	source := createMetric("m1", 1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
-	// wait less than deduplication interval
-	time.Sleep(1 * time.Second)
-	source = createMetric("m1", 1)
+	source = createMetric("m1", 1, time.Now())
 	target = deduplicate.Apply(source)
 
 	assertCacheHit(t, &deduplicate, source)
@@ -104,12 +98,11 @@ func TestSuppressRepeatedValue(t *testing.T) {
 }
 
 func TestPassUpdatedValue(t *testing.T) {
-	deduplicate := createProcessor()
-	source := createMetric("m1", 1)
+	deduplicate := *NewDedup()
+	// Create metric in the past
+	source := createMetric("m1", 1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
-	// wait less than deduplication interval
-	time.Sleep(1 * time.Second)
-	source = createMetric("m1", 2)
+	source = createMetric("m1", 2, time.Now())
 	target = deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
@@ -117,12 +110,11 @@ func TestPassUpdatedValue(t *testing.T) {
 }
 
 func TestPassAfterCacheExpire(t *testing.T) {
-	deduplicate := createProcessor()
-	source := createMetric("m1", 1)
+	deduplicate := *NewDedup()
+	// Create metric in the past
+	source := createMetric("m1", 1, time.Now().Add(-1*time.Hour))
 	target := deduplicate.Apply(source)
-	// wait more than deduplication interval
-	time.Sleep(3 * time.Second)
-	source = createMetric("m1", 1)
+	source = createMetric("m1", 1, time.Now())
 	target = deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
@@ -130,28 +122,27 @@ func TestPassAfterCacheExpire(t *testing.T) {
 }
 
 func TestCacheRetainsMetrics(t *testing.T) {
-	deduplicate := createProcessor()
-	source := createMetric("m1", 1)
+	deduplicate := *NewDedup()
+	// Create metric in the past 3sec
+	source := createMetric("m1", 1, time.Now().Add(-3*time.Hour))
 	deduplicate.Apply(source)
-	// wait less than deduplication interval
-	time.Sleep(1 * time.Second)
-	source = createMetric("m1", 1)
+	// Create metric in the past 2sec
+	source = createMetric("m1", 1, time.Now().Add(-2*time.Hour))
 	deduplicate.Apply(source)
-	// wait same as deduplication interval
-	time.Sleep(2 * time.Second)
-	source = createMetric("m1", 1)
+	source = createMetric("m1", 1, time.Now())
 	deduplicate.Apply(source)
 
 	assertCacheRefresh(t, &deduplicate, source)
 }
 
 func TestCacheShrink(t *testing.T) {
-	deduplicate := createProcessor()
-	src1 := createMetric("m1", 1)
-	deduplicate.Apply(src1)
-	// wait same as deduplication interval
-	time.Sleep(2 * time.Second)
-	deduplicate.cleanup()
+	deduplicate := &Dedup{
+		DedupInterval: internal.Duration{Duration: 10 * time.Minute},
+		FlushTime:     time.Now().Add(-2 * time.Hour),
+		Cache:         make(map[uint64]telegraf.Metric),
+	}
+	source := createMetric("m1", 1, time.Now().Add(-1*time.Hour))
+	deduplicate.Apply(source)
 
-	assert.Equal(t, 0, len(deduplicate.Cache))
+	require.Equal(t, 0, len(deduplicate.Cache))
 }

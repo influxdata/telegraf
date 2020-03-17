@@ -43,6 +43,7 @@ func remove(slice []telegraf.Metric, i int) []telegraf.Metric {
 
 // Remove expired items from cache
 func (d *Dedup) cleanup() {
+	// No need to cleanup cache too often. Lets save some CPU
 	if time.Since(d.FlushTime) < d.DedupInterval.Duration {
 		return
 	}
@@ -57,8 +58,7 @@ func (d *Dedup) cleanup() {
 }
 
 // Save item to cache
-func (d *Dedup) save(metric telegraf.Metric) {
-	id := metric.HashID()
+func (d *Dedup) save(metric telegraf.Metric, id uint64) {
 	d.Cache[id] = metric.Copy()
 	d.Cache[id].Accept()
 }
@@ -67,25 +67,36 @@ func (d *Dedup) save(metric telegraf.Metric) {
 func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for idx, metric := range metrics {
 		id := metric.HashID()
-		// check if metric is already in cache. Otherwise save it in cache
-		if m, ok := d.Cache[id]; ok {
-			// if cache is not expired then check values. Otherwise save it in cache
-			if time.Since(m.Time()) < d.DedupInterval.Duration {
-				for _, field := range metric.FieldList() {
-					// if same value then drop it. Otherwise save it in cache
-					if m.Fields()[field.Key] == field.Value {
-						metrics = remove(metrics, idx)
-					} else {
-						d.save(metric)
-					}
-					continue
-				}
-			} else {
-				d.save(metric)
-			}
-		} else {
-			d.save(metric)
+		m, ok := d.Cache[id]
+
+		// If not in cache then just save it
+		if !ok {
+			d.save(metric, id)
+			continue
 		}
+
+		// If cache item has expired then refresh it
+		if time.Since(m.Time()) >= d.DedupInterval.Duration {
+			d.save(metric, id)
+			continue
+		}
+
+		// For each filed compare value with the cached one
+		same := false
+		for _, f := range metric.FieldList() {
+			if value, ok := m.GetField(f.Key); ok && value == f.Value {
+				same = true
+				continue
+			}
+		}
+		// If any field value has changed then refresh the cache
+		if !same {
+			d.save(metric, id)
+			continue
+		}
+
+		// In any other case remove metric from the output
+		metrics = remove(metrics, idx)
 	}
 	d.cleanup()
 	return metrics
