@@ -19,6 +19,14 @@ func createMetric(name string, value int64, when time.Time) telegraf.Metric {
 	return m
 }
 
+func createDedup(initTime time.Time) Dedup {
+	return Dedup{
+		DedupInterval: internal.Duration{Duration: 10 * time.Minute},
+		FlushTime:     initTime,
+		Cache:         make(map[uint64]telegraf.Metric),
+	}
+}
+
 func assertCacheRefresh(t *testing.T, proc *Dedup, item telegraf.Metric) {
 	id := item.HashID()
 	name := item.Name()
@@ -77,7 +85,7 @@ func assertMetricSuppressed(t *testing.T, target []telegraf.Metric, source teleg
 }
 
 func TestProcRetainsMetric(t *testing.T) {
-	deduplicate := *NewDedup()
+	deduplicate := createDedup(time.Now())
 	source := createMetric("m1", 1, time.Now())
 	target := deduplicate.Apply(source)
 
@@ -86,7 +94,7 @@ func TestProcRetainsMetric(t *testing.T) {
 }
 
 func TestSuppressRepeatedValue(t *testing.T) {
-	deduplicate := *NewDedup()
+	deduplicate := createDedup(time.Now())
 	// Create metric in the past
 	source := createMetric("m1", 1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
@@ -98,7 +106,7 @@ func TestSuppressRepeatedValue(t *testing.T) {
 }
 
 func TestPassUpdatedValue(t *testing.T) {
-	deduplicate := *NewDedup()
+	deduplicate := createDedup(time.Now())
 	// Create metric in the past
 	source := createMetric("m1", 1, time.Now().Add(-1*time.Second))
 	target := deduplicate.Apply(source)
@@ -110,7 +118,7 @@ func TestPassUpdatedValue(t *testing.T) {
 }
 
 func TestPassAfterCacheExpire(t *testing.T) {
-	deduplicate := *NewDedup()
+	deduplicate := createDedup(time.Now())
 	// Create metric in the past
 	source := createMetric("m1", 1, time.Now().Add(-1*time.Hour))
 	target := deduplicate.Apply(source)
@@ -122,7 +130,7 @@ func TestPassAfterCacheExpire(t *testing.T) {
 }
 
 func TestCacheRetainsMetrics(t *testing.T) {
-	deduplicate := *NewDedup()
+	deduplicate := createDedup(time.Now())
 	// Create metric in the past 3sec
 	source := createMetric("m1", 1, time.Now().Add(-3*time.Hour))
 	deduplicate.Apply(source)
@@ -136,11 +144,9 @@ func TestCacheRetainsMetrics(t *testing.T) {
 }
 
 func TestCacheShrink(t *testing.T) {
-	deduplicate := &Dedup{
-		DedupInterval: internal.Duration{Duration: 10 * time.Minute},
-		FlushTime:     time.Now().Add(-2 * time.Hour),
-		Cache:         make(map[uint64]telegraf.Metric),
-	}
+	// Time offset is more than 2 * DedupInterval
+	deduplicate := createDedup(time.Now().Add(-2 * time.Hour))
+	// Time offset is more than 1 * DedupInterval
 	source := createMetric("m1", 1, time.Now().Add(-1*time.Hour))
 	deduplicate.Apply(source)
 

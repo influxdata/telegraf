@@ -19,14 +19,6 @@ type Dedup struct {
 	Cache         map[uint64]telegraf.Metric
 }
 
-func NewDedup() *Dedup {
-	return &Dedup{
-		DedupInterval: internal.Duration{Duration: 10 * time.Minute},
-		FlushTime:     time.Now(),
-		Cache:         make(map[uint64]telegraf.Metric),
-	}
-}
-
 func (d *Dedup) SampleConfig() string {
 	return sampleConfig
 }
@@ -104,6 +96,10 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 func init() {
 	processors.Add("dedup", func() telegraf.Processor {
-		return NewDedup()
+		return &Dedup{
+			DedupInterval: internal.Duration{Duration: 10 * time.Minute},
+			FlushTime:     time.Now(),
+			Cache:         make(map[uint64]telegraf.Metric),
+		}
 	})
 }
