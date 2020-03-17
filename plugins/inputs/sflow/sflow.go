@@ -145,7 +145,8 @@ func (s *SFlow) process(acc telegraf.Accumulator, buf []byte) {
 		acc.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 	}
 
-	for _, m := range s.decoder.GetMetrics() {
+	metrics := s.decoder.GetMetrics()
+	for _, m := range metrics {
 		acc.AddMetric(m)
 	}
 }

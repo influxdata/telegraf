@@ -225,7 +225,7 @@ func ethHeader(options V5FormatOptions) decoder.Directive {
 		decoder.U16Value(etype).Switch(
 			decoder.Case(uint16(0x0800), ipv4Header(options)),
 			decoder.Case(uint16(0x86DD), ipv6Header(options)),
-			decoder.DefaultCase(nil), // TODO
+			decoder.DefaultCase(nil),
 		),
 		decoder.CloseMetric(),
 	)
@@ -250,8 +250,7 @@ func ipv4Header(options V5FormatOptions) decoder.Directive {
 		decoder.U16(),
 		decoder.Bytes(4).Do(decoder.BytesToStr(4, bytesToIPStr).AsT("src_ip")),
 		decoder.Bytes(4).Do(decoder.BytesToStr(4, bytesToIPStr).AsT("dst_ip")),
-		// TODO consider IHL and Options
-		decoder.Ref(proto).Switch(
+		decoder.Ref(proto).Switch( // Does not consider IHL and Options
 			decoder.Case(ipProtocolTCP, tcpHeader(options)),
 			decoder.Case(ipProtocolUDP, udpHeader(options)),
 			decoder.DefaultCase(nil),
@@ -265,10 +264,9 @@ func ipv6Header(options V5FormatOptions) decoder.Directive {
 	nextHeader := new(uint16)
 	return decoder.Seq(
 		decoder.U32().
-			//func(v uint32) (string, uint32) { return "IPversion", (v & 0xF000) >> 28 },
 			Do(decoder.U32ToU32(func(in uint32) uint32 { return (in & 0xFC00000) >> 22 }).AsF("ip_dscp")).
 			Do(decoder.U32ToU32(func(in uint32) uint32 { return (in & 0x300000) >> 20 }).AsF("ip_ecn")),
-		decoder.U16(), //"paylloadLength"),
+		decoder.U16(),
 		decoder.U16().
 			Do(decoder.U16ToU16(func(in uint16) uint16 { return (in & 0xFF00) >> 8 }).Set(nextHeader)),
 		decoder.Bytes(16).Do(decoder.BytesToStr(16, bytesToIPStr).AsT("src_ip")),

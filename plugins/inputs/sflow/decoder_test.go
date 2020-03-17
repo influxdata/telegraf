@@ -94,6 +94,32 @@ func TestIPv4SW(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
+func BenchmarkDecode(b *testing.B) {
+	packet, err := hex.DecodeString("0000000500000001c0a80102000000100000f3d40bfa047f0000000200000001000000d00001210a000001fe000004000484240000000000000001fe00000200000000020000000100000090000000010000010b0000000400000080000c2936d3d694c691aa97600800450000f9f19040004011b4f5c0a80913c0a8090a00a1ba0500e5641f3081da02010104066d6f746f6770a281cc02047b46462e0201000201003081bd3012060d2b06010201190501010281dc710201003013060d2b06010201190501010281e66802025acc3012060d2b0601020119050101000003e9000000100000000900000000000000090000000000000001000000d00000e3cc000002100000400048eb740000000000000002100000020000000002000000010000009000000001000000970000000400000080000c2936d3d6fcecda44008f81000009080045000081186440003f119098c0a80815c0a8090a9a690202006d23083c33303e4170722031312030393a33333a3031206b6e6f64653120736e6d70645b313039385d3a20436f6e6e656374696f6e2066726f6d205544503a205b3139322e3136382e392e31305d3a34393233362d000003e90000001000000009000000000000000900000000")
+	require.NoError(b, err)
+
+	dc := decoder.NewDecodeContext(false)
+	err = dc.Decode(V5Format(NewDefaultV5FormatOptions()), bytes.NewBuffer(packet))
+	require.NoError(b, err)
+
+	format := V5Format(NewDefaultV5FormatOptions())
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		err := dc.Decode(format, bytes.NewBuffer(packet))
+		if err != nil {
+			panic(err)
+		}
+
+		_ = dc.GetMetrics()
+	}
+}
+
+func BenchmarkFormat(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		_ = V5Format(NewDefaultV5FormatOptions())
+	}
+}
+
 func TestExpandFlow(t *testing.T) {
 	packet, err := hex.DecodeString("00000005000000010a00015000000000000f58998ae119780000000300000003000000c4000b62a90000000000100c840000040024fb7e1e0000000000000000001017840000000000100c8400000001000000010000009000000001000005bc0000000400000080001b17000130001201f58d44810023710800450205a6305440007e06ee92ac100016d94d52f505997e701fa1e17aff62574a50100200355f000000ffff00000b004175746f72697a7a6174610400008040ffff000400008040050031303030320500313030302004000000000868a200000000000000000860a200000000000000000003000000c40003cecf000000000010170400004000a168ac1c000000000000000000101784000000000010170400000001000000010000009000000001000005f200000004000000800024e8324338d4ae52aa0b54810020060800450005dc5420400080061397c0a8060cc0a806080050efcfbb25bad9a21c839a501000fff54000008a55f70975a0ff88b05735597ae274bd81fcba17e6e9206b8ea0fb07d05fc27dad06cfe3fdba5d2fc4d057b0add711e596cbe5e9b4bbe8be59cd77537b7a89f7414a628b736d00000003000000c0000c547a0000000000100c04000004005bc3c3b50000000000000000001017840000000000100c0400000001000000010000008c000000010000007e000000040000007a001b17000130001201f58d448100237108004500006824ea4000ff32c326d94d5105501018f02e88d003000001dd39b1d025d1c68689583b2ab21522d5b5a959642243804f6d51e63323091cc04544285433eb3f6b29e1046a6a2fa7806319d62041d8fa4bd25b7cd85b8db54202054a077ac11de84acbe37a550004")
 	require.NoError(t, err)
@@ -684,4 +710,181 @@ func TestFlowExpandCounter(t *testing.T) {
 	expected := []telegraf.Metric{}
 	actual := dc.GetMetrics()
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
+}
+
+func TestUDPHeader(t *testing.T) {
+	options := NewDefaultV5FormatOptions()
+	octets := bytes.NewBuffer([]byte{
+		0x00, 0x01, // src_port
+		0x00, 0x02, // dst_port
+		0x00, 0x03, // udp_length
+	})
+
+	directive := decoder.Seq(
+		decoder.OpenMetric("sflow"),
+		udpHeader(options),
+		decoder.CloseMetric(),
+	)
+	dc := decoder.NewDecodeContext(false)
+	err := directive.Execute(octets, dc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sflow",
+			map[string]string{
+				"src_port": "1",
+				"dst_port": "2",
+			},
+			map[string]interface{}{
+				"udp_length": uint64(3),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, dc.GetMetrics(), testutil.IgnoreTime())
+}
+
+func BenchmarkUDPHeader(b *testing.B) {
+	options := NewDefaultV5FormatOptions()
+	octets := bytes.NewBuffer([]byte{
+		0x00, 0x01, // src_port
+		0x00, 0x02, // dst_port
+		0x00, 0x03, // udp_length
+	})
+
+	directive := decoder.Seq(
+		decoder.OpenMetric("sflow"),
+		udpHeader(options),
+		decoder.CloseMetric(),
+	)
+	dc := decoder.NewDecodeContext(false)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_ = directive.Execute(octets, dc)
+	}
+}
+
+func TestIPv4Header(t *testing.T) {
+	octets := bytes.NewBuffer(
+		[]byte{
+			0x45,       // version + IHL
+			0x00,       // ip_dscp + ip_ecn
+			0x00, 0x00, // total length
+			0x00, 0x00, // identification
+			0x00, 0x00, // flags + frag offset
+			0x00,       // ttl
+			0x11,       // protocol; 0x11 = udp
+			0x00, 0x00, // header checksum
+			0x7f, 0x00, 0x00, 0x01, // src ip
+			0x7f, 0x00, 0x00, 0x02, // dst ip
+			0x00, 0x01, // src_port
+			0x00, 0x02, // dst_port
+			0x00, 0x03, // udp_length
+		},
+	)
+	dc := decoder.NewDecodeContext(false)
+
+	options := NewDefaultV5FormatOptions()
+	directive := decoder.Seq(
+		decoder.OpenMetric("sflow"),
+		ipv4Header(options),
+		decoder.CloseMetric(),
+	)
+
+	err := directive.Execute(octets, dc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sflow",
+			map[string]string{
+				"src_ip":   "127.0.0.1",
+				"dst_ip":   "127.0.0.2",
+				"ip_dscp":  "0",
+				"ip_ecn":   "0",
+				"src_port": "1",
+				"dst_port": "2",
+			},
+			map[string]interface{}{
+				"ip_flags":           uint64(0),
+				"ip_fragment_offset": uint64(0),
+				"ip_total_length":    uint64(0),
+				"ip_ttl":             uint64(0),
+				"udp_length":         uint64(3),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, dc.GetMetrics(), testutil.IgnoreTime())
+}
+
+func TestUnknownProtocol(t *testing.T) {
+	octets := bytes.NewBuffer(
+		[]byte{
+			0x45,       // version + IHL
+			0x00,       // ip_dscp + ip_ecn
+			0x00, 0x00, // total length
+			0x00, 0x00, // identification
+			0x00, 0x00, // flags + frag offset
+			0x00,       // ttl
+			0x99,       // protocol
+			0x00, 0x00, // header checksum
+			0x7f, 0x00, 0x00, 0x01, // src ip
+			0x7f, 0x00, 0x00, 0x02, // dst ip
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+			0x00,
+		},
+	)
+	dc := decoder.NewDecodeContext(false)
+
+	options := NewDefaultV5FormatOptions()
+	directive := decoder.Seq(
+		decoder.OpenMetric("sflow"),
+		ipv4Header(options),
+		decoder.CloseMetric(),
+	)
+
+	err := directive.Execute(octets, dc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sflow",
+			map[string]string{
+				"src_ip":  "127.0.0.1",
+				"dst_ip":  "127.0.0.2",
+				"ip_dscp": "0",
+				"ip_ecn":  "0",
+			},
+			map[string]interface{}{
+				"ip_flags":           uint64(0),
+				"ip_fragment_offset": uint64(0),
+				"ip_total_length":    uint64(0),
+				"ip_ttl":             uint64(0),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, dc.GetMetrics(), testutil.IgnoreTime())
 }
