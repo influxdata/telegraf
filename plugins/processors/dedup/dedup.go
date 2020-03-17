@@ -82,10 +82,10 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		// For each filed compare value with the cached one
-		same := false
+		same := true
 		for _, f := range metric.FieldList() {
-			if value, ok := m.GetField(f.Key); ok && value == f.Value {
-				same = true
+			if value, ok := m.GetField(f.Key); ok && value != f.Value {
+				same = false
 				continue
 			}
 		}
