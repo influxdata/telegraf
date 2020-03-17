@@ -477,7 +477,7 @@ func TestWriteEmpty(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
-func TestQueryAndPing(t *testing.T) {
+func TestQuery(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
@@ -490,12 +490,38 @@ func TestQueryAndPing(t *testing.T) {
 		createURL(listener, "http", "/query", "db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22"), "", nil)
 	require.NoError(t, err)
 	require.EqualValues(t, 200, resp.StatusCode)
+}
+
+func TestPing(t *testing.T) {
+	listener := newTestListener()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
 
 	// post ping to listener
-	resp, err = http.Post(createURL(listener, "http", "/ping", ""), "", nil)
+	resp, err := http.Post(createURL(listener, "http", "/ping", ""), "", nil)
 	require.NoError(t, err)
+	require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
+	require.Len(t, resp.Header["Content-Type"], 0)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
+}
+
+func TestPingVerbose(t *testing.T) {
+	listener := newTestListener()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post ping to listener
+	resp, err := http.Post(createURL(listener, "http", "/ping", "verbose=1"), "", nil)
+	require.NoError(t, err)
+	require.Equal(t, "1.0", resp.Header["X-Influxdb-Version"][0])
+	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+	resp.Body.Close()
+	require.EqualValues(t, 200, resp.StatusCode)
 }
 
 func TestWriteWithPrecision(t *testing.T) {
