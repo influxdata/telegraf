@@ -17,16 +17,15 @@ import (
 )
 
 const sampleConfig = `
-  ## URL to listen on
-  # service_address = "udp://:6343"
-  # service_address = "udp4://:6343"
-  # service_address = "udp6://:6343"
+  ## Address to listen for sFlow packets.
+  ##   example: service_address = "udp://:6343"
+  ##            service_address = "udp4://:6343"
+  ##            service_address = "udp6://:6343"
+  service_address = "udp://:6343"
 
-  ## Maximum socket buffer size (in bytes when no unit specified).
-  ## For stream sockets, once the buffer fills up, the sender will start backing up.
-  ## For datagram sockets, once the buffer fills up, metrics will start dropping.
-  ## Defaults to the OS default.
-  # read_buffer_size = "64KiB"
+  ## Set the size of the operating system's receive buffer.
+  ##   example: read_buffer_size = "64KiB"
+  # read_buffer_size = ""
 `
 
 const (
@@ -34,12 +33,8 @@ const (
 )
 
 type SFlow struct {
-	ServiceAddress      string        `toml:"service_address"`
-	ReadBufferSize      internal.Size `toml:"read_buffer_size"`
-	MaxFlowsPerSample   uint32        `toml:"max_flows_per_sample"`
-	MaxSamplesPerPacket uint32        `toml:"max_samples_per_packet"`
-	MaxSampleLength     uint32        `toml:"max_sample_length"`
-	MaxFlowHeaderLength uint32        `toml:"max_flow_header_length"`
+	ServiceAddress string        `toml:"service_address"`
+	ReadBufferSize internal.Size `toml:"read_buffer_size"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -65,18 +60,6 @@ func (s *SFlow) Init() error {
 	s.decoder = decoder.NewDecodeContext()
 
 	config := NewDefaultV5FormatOptions()
-	if s.MaxFlowsPerSample > 0 {
-		config.MaxFlowsPerSample = s.MaxFlowsPerSample
-	}
-	if s.MaxSamplesPerPacket > 0 {
-		config.MaxSamplesPerPacket = s.MaxSamplesPerPacket
-	}
-	if s.MaxSampleLength > 0 {
-		config.MaxSampleLength = s.MaxSampleLength
-	}
-	if s.MaxFlowHeaderLength > 0 {
-		config.MaxFlowHeaderLength = s.MaxFlowHeaderLength
-	}
 	s.decoderOpts = V5Format(config)
 	return nil
 }

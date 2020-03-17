@@ -4,7 +4,7 @@ The `example` plugin gathers metrics about example things.  This description
 explains at a high level what the plugin does and provides links to where
 additional information can be found.
 
-Telegraf minimum version: Telegraf x.x  
+Telegraf minimum version: Telegraf x.x
 Plugin minimum tested version: x.x
 
 ### Configuration
