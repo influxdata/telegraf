@@ -6,7 +6,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/jeremywohl/flatten"
 	"github.com/linkedin/goavro"
 	"log"
 	"time"
@@ -48,13 +47,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	flat, err := flatten.Flatten(native.(map[string]interface{}), "", flatten.UnderscoreStyle)
-	if err != nil {
-		log.Printf("E! AvroParser: %s", err)
-		return nil, err
-	}
-
-	m, err := p.createMetric(flat)
+	m, err := p.createMetric(native)
 	if err != nil {
 		log.Printf("E! AvroParser: %s", err)
 		return nil, err
@@ -100,8 +93,13 @@ func (p *Parser) parseTimestamp(timestamp interface{}) (time.Time, error) {
 	return metricTime, nil
 }
 
-func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, error) {
-	metricTime, err := p.parseTimestamp(flat[p.Timestamp])
+func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
+	deep, ok := native.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("Cannot cast native to map[string]interface{}!")
+	}
+
+	metricTime, err := p.parseTimestamp(flatten(deep[p.Timestamp]))
 	if err != nil {
 		log.Printf("E! AvroParser: %s", err)
 		return nil, err
@@ -115,16 +113,16 @@ func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, err
 	}
 
 	for _, tag := range p.Tags {
-		if value, ok := flat[tag]; ok {
-			tags[tag] = fmt.Sprintf("%v", value)
+		if value, ok := deep[tag]; ok {
+			tags[tag] = fmt.Sprintf("%v", flatten(value))
 		} else {
 			log.Printf("I! AvroParser: tag %s null", tag)
 		}
 	}
 
 	for _, field := range p.Fields {
-		if value, ok := flat[field]; ok {
-			fields[field] = value
+		if value, ok := deep[field]; ok {
+			fields[field] = flatten(value)
 		} else {
 			log.Printf("I! AvroParser: field %s null", field)
 		}
@@ -143,4 +141,13 @@ func (p *Parser) createMetric(flat map[string]interface{}) (telegraf.Metric, err
 
 		return m, nil
 	}
+}
+
+func flatten(deep interface{}) interface{} {
+	if m, ok := deep.(map[string]interface{}); ok {
+		for _, value := range m {
+			return flatten(value)
+		}
+	}
+	return deep
 }
