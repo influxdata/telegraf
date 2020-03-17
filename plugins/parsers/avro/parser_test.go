@@ -64,9 +64,13 @@ func TestBasicAvroMessage(t *testing.T) {
 
 	msg := []byte{0x00, 0x00, 0x00, 0x00, 0x17, 0x20, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x6d, 0x65, 0x61, 0x73, 0x75, 0x72, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x10, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x74, 0x61, 0x67, 0x26, 0xf0, 0xb6, 0x97, 0xd4, 0xb0, 0x5b}
 
-	_, err := p.Parse(msg)
+    msgString := "[measurement map[tag:test_tag] map[field:19] 1925572734688112640]"
+
+	m, err := p.Parse(msg)
 
 	require.NoError(t, err)
+
+    require.Equal(t, fmt.Sprintf("%v", m), msgString, "The message should be decoded correctly.")
 }
 
 func TestKafkaDemoAvroMessage(t *testing.T) {
@@ -150,16 +154,20 @@ func TestKafkaDemoAvroMessage(t *testing.T) {
 	p := Parser{
 		SchemaRegistry:  ts.URL,
 		Measurement:     "rating",
-		Tags:            []string{"user_id_int", "route_id_int", "channel_string"},
-		Fields:          []string{"stars_int", "message_int"},
-		Timestamp:       "rating_time_long",
+		Tags:            []string{"user_id", "route_id", "channel"},
+		Fields:          []string{"stars", "message"},
+		Timestamp:       "rating_time",
 		TimestampFormat: "unix_ms",
 		TimeFunc:        DefaultTime,
 	}
 
 	msg := []byte{0, 0, 0, 0, 1, 2, 144, 16, 2, 14, 2, 4, 2, 244, 42, 2, 226, 196, 231, 151, 148, 92, 2, 6, 105, 111, 115, 2, 104, 119, 104, 121, 32, 105, 115, 32, 105, 116, 32, 115, 111, 32, 100, 105, 102, 102, 105, 99, 117, 108, 116, 32, 116, 111, 32, 107, 101, 101, 112, 32, 116, 104, 101, 32, 98, 97, 116, 104, 114, 111, 111, 109, 115, 32, 99, 108, 101, 97, 110, 32, 63}
 
-	_, err := p.Parse(msg)
-
+    msgString := "[rating map[channel:ios route_id:2746 user_id:7] map[message:why is it so difficult to keep the bathrooms clean ? stars:2] 1583257284913000000]"
+	
+    m, err := p.Parse(msg)
+    
 	require.NoError(t, err)
+
+    require.Equal(t, fmt.Sprintf("%v", m), msgString, "The message should be decoded correctly.")
 }
