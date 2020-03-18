@@ -1,11 +1,6 @@
 # Dedup Processor Plugin
 
-If a metric sends the same value over successive intervals, suppress sending
-the same value to the TSD until this many seconds have elapsed.  This helps
-graphs over narrow time ranges still see timeseries with suppressed datapoints.
-
-This feature can be used to reduce traffic when metric's value does not change over
-time while maintain proper precision when value gets changed rapidly
+Filter metrics whose field values are exact repetitions of the previous values.
 
 ### Configuration
 
@@ -15,3 +10,15 @@ time while maintain proper precision when value gets changed rapidly
   dedup_interval = "600s"
 ```
 
+### Example
+
+```diff
+- cpu,cpu=cpu0 time_idle=42i,time_guest=1i
+- cpu,cpu=cpu0 time_idle=42i,time_guest=2i
+- cpu,cpu=cpu0 time_idle=42i,time_guest=2i
+- cpu,cpu=cpu0 time_idle=44i,time_guest=2i
+- cpu,cpu=cpu0 time_idle=44i,time_guest=2i
++ cpu,cpu=cpu0 time_idle=42i,time_guest=1i
++ cpu,cpu=cpu0 time_idle=42i,time_guest=2i
++ cpu,cpu=cpu0 time_idle=44i,time_guest=2i
+```

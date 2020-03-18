@@ -360,6 +360,7 @@ For documentation on the latest development code see the [documentation index][d
 * [clone](/plugins/processors/clone)
 * [converter](/plugins/processors/converter)
 * [date](/plugins/processors/date)
+* [dedup](/plugins/processors/dedup)
 * [enum](/plugins/processors/enum)
 * [override](/plugins/processors/override)
 * [parser](/plugins/processors/parser)
