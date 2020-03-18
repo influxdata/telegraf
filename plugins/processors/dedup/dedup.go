@@ -24,7 +24,7 @@ func (d *Dedup) SampleConfig() string {
 }
 
 func (d *Dedup) Description() string {
-	return "Drop metrics with repeating field values"
+	return "Filter metrics with repeating field values"
 }
 
 // Remove single item from slice
