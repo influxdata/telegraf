@@ -18,7 +18,7 @@ require (
 	github.com/Shopify/sarama v1.24.1
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
 	github.com/aerospike/aerospike-client-go v1.27.0
-	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
+	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/apache/thrift v0.12.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
@@ -101,15 +101,15 @@ require (
 	github.com/opentracing/opentracing-go v1.0.2 // indirect
 	github.com/openzipkin/zipkin-go-opentracing v0.3.4
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v0.9.3-0.20190127221311-3c4408c8b829
-	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
-	github.com/prometheus/common v0.2.0
+	github.com/prometheus/client_golang v1.5.1
+	github.com/prometheus/client_model v0.2.0
+	github.com/prometheus/common v0.9.1
 	github.com/safchain/ethtool v0.0.0-20200218184317-f459e2d13664
 	github.com/samuel/go-zookeeper v0.0.0-20180130194729-c4fab1ac1bec // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/shirou/gopsutil v2.20.2+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
-	github.com/sirupsen/logrus v1.2.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/soniah/gosnmp v1.22.0
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
 	github.com/stretchr/testify v1.4.0
@@ -142,7 +142,7 @@ require (
 	gopkg.in/ldap.v3 v3.1.0
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/olivere/elastic.v5 v5.0.70
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.5
 	gotest.tools v2.2.0+incompatible // indirect
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	k8s.io/apimachinery v0.17.1 // indirect
