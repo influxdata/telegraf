@@ -138,7 +138,7 @@ require (
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/yaml.v2 v2.2.4
 	gotest.tools v2.2.0+incompatible // indirect
-	k8s.io/apimachinery v0.17.1
+	k8s.io/apimachinery v0.17.1 // indirect
 )
 
 // replaced due to https://github.com/satori/go.uuid/issues/73

@@ -15,8 +15,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3,*/*;q=0.1`
@@ -136,20 +134,6 @@ func (p *Prometheus) Description() string {
 func (p *Prometheus) Init() error {
 	if p.MetricVersion != 2 {
 		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
-	}
-
-	if len(p.KubernetesLabelSelector) > 0 {
-		_, err := labels.Parse(p.KubernetesLabelSelector)
-		if err != nil {
-			return fmt.Errorf("label selector validation failed %q: %v", p.KubernetesLabelSelector, err)
-		}
-	}
-
-	if len(p.KubernetesFieldSelector) > 0 {
-		_, err := fields.ParseSelector(p.KubernetesFieldSelector)
-		if err != nil {
-			return fmt.Errorf("field selector validation failed %s: %v", p.KubernetesFieldSelector, err)
-		}
 	}
 
 	return nil
