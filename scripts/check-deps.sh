@@ -36,6 +36,10 @@ for dep in $(LC_ALL=C sort -u "${tmpdir}/golist"); do
 			dep=github.com/Azure/go-autorest;;
 		github.com/Azure/go-autorest/*)
 			continue;;
+
+		# single license for all sub modules
+		cloud.google.com/go/*)
+			continue;;
 	esac
 
 	# Remove single and double digit version from path; these are generally not
