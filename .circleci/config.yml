@@ -70,7 +70,6 @@ jobs:
       - attach_workspace:
           at: '/go'
       - run: 'make'
-      - run: 'make check'
       - run: 'make test'
   test-go-1.12-386:
     <<: [ *defaults, *go-1_12 ]
@@ -78,7 +77,6 @@ jobs:
       - attach_workspace:
           at: '/go'
       - run: 'GOARCH=386 make'
-      - run: 'GOARCH=386 make check'
       - run: 'GOARCH=386 make test'
   test-go-1.13:
     <<: [ *defaults, *go-1_13 ]
