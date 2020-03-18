@@ -286,6 +286,7 @@ For documentation on the latest development code see the [documentation index][d
 * [riak](./plugins/inputs/riak)
 * [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
+* [sflow](./plugins/inputs/sflow)
 * [smart](./plugins/inputs/smart)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [snmp](./plugins/inputs/snmp)
