@@ -822,6 +822,91 @@ func TestIPv4Header(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, dc.GetMetrics(), testutil.IgnoreTime())
 }
 
+// Using the same Directive instance, prior paths through the parse tree should
+// not affect the latest parse.
+func TestIPv4HeaderSwitch(t *testing.T) {
+	options := NewDefaultV5FormatOptions()
+	directive := decoder.Seq(
+		decoder.OpenMetric("sflow"),
+		ipv4Header(options),
+		decoder.CloseMetric(),
+	)
+
+	octets := bytes.NewBuffer(
+		[]byte{
+			0x45,       // version + IHL
+			0x00,       // ip_dscp + ip_ecn
+			0x00, 0x00, // total length
+			0x00, 0x00, // identification
+			0x00, 0x00, // flags + frag offset
+			0x00,       // ttl
+			0x11,       // protocol; 0x11 = udp
+			0x00, 0x00, // header checksum
+			0x7f, 0x00, 0x00, 0x01, // src ip
+			0x7f, 0x00, 0x00, 0x02, // dst ip
+			0x00, 0x01, // src_port
+			0x00, 0x02, // dst_port
+			0x00, 0x03, // udp_length
+		},
+	)
+	dc := decoder.NewDecodeContext()
+	err := directive.Execute(octets, dc)
+	require.NoError(t, err)
+
+	octets = bytes.NewBuffer(
+		[]byte{
+			0x45,       // version + IHL
+			0x00,       // ip_dscp + ip_ecn
+			0x00, 0x00, // total length
+			0x00, 0x00, // identification
+			0x00, 0x00, // flags + frag offset
+			0x00,       // ttl
+			0x06,       // protocol; 0x06 = tcp
+			0x00, 0x00, // header checksum
+			0x7f, 0x00, 0x00, 0x01, // src ip
+			0x7f, 0x00, 0x00, 0x02, // dst ip
+			0x00, 0x01, // src_port
+			0x00, 0x02, // dst_port
+			0x00, 0x00, 0x00, 0x00, // sequence
+			0x00, 0x00, 0x00, 0x00, // ack_number
+			0x00, 0x00, // tcp_header_length
+			0x00, 0x00, // tcp_window_size
+			0x00, 0x00, // checksum
+			0x00, 0x00, // tcp_urgent_pointer
+		},
+	)
+	dc = decoder.NewDecodeContext()
+	err = directive.Execute(octets, dc)
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"sflow",
+			map[string]string{
+				"src_ip":   "127.0.0.1",
+				"dst_ip":   "127.0.0.2",
+				"ip_dscp":  "0",
+				"ip_ecn":   "0",
+				"src_port": "1",
+				"dst_port": "2",
+			},
+			map[string]interface{}{
+				"ip_flags":           uint64(0),
+				"ip_fragment_offset": uint64(0),
+				"ip_total_length":    uint64(0),
+				"ip_ttl":             uint64(0),
+				"tcp_header_length":  uint64(0),
+				"tcp_window_size":    uint64(0),
+				"tcp_urgent_pointer": uint64(0),
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	// check that udp fields are not set on the tcp metric
+	testutil.RequireMetricsEqual(t, expected, dc.GetMetrics(), testutil.IgnoreTime())
+}
+
 func TestUnknownProtocol(t *testing.T) {
 	octets := bytes.NewBuffer(
 		[]byte{

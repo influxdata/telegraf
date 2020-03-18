@@ -16,10 +16,6 @@ type Directive interface {
 	// Execute performs the function of the decode directive. If DecodeContext is nil then the
 	// ask is to check that a subsequent execution (with non nill DecodeContext) is expted to work.
 	Execute(*bytes.Buffer, *DecodeContext) error
-
-	// Reset the internal state of the decode director to the initial state prior to any decoding.
-	// This allows decode directives to be reused and ensure there is no residual state carried over
-	Reset()
 }
 
 type IterOption struct {
@@ -64,8 +60,6 @@ type valueDirective struct {
 	maxEncapsulation uint32
 	ops              []DirectiveOp
 	err              error
-
-	resetFn func(interface{})
 
 	iterOption IterOption
 }
@@ -255,21 +249,6 @@ func (dd *valueDirective) Ref(ref *interface{}) ValueDirective {
 	return dd
 }
 
-func (dd *valueDirective) Reset() {
-	if dd.resetFn != nil {
-		dd.resetFn(dd.value)
-	}
-	for _, c := range dd.cases {
-		c.Reset()
-	}
-	if dd.iter != nil {
-		dd.iter.Reset()
-	}
-	if dd.encapsulated != nil {
-		dd.encapsulated.Reset()
-	}
-}
-
 // errorDirective a decode directive that reports an error
 type errorDirective struct {
 	Directive
@@ -289,12 +268,6 @@ type caseValueDirective struct {
 	caseValue interface{}
 	isDefault bool
 	equalsDd  Directive
-}
-
-func (dd *caseValueDirective) Reset() {
-	if dd.equalsDd != nil {
-		dd.equalsDd.Reset()
-	}
 }
 
 func (dd *caseValueDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
@@ -335,13 +308,6 @@ type sequenceDirective struct {
 	decoders []Directive
 }
 
-func (di *sequenceDirective) Reset() {
-	for _, d := range di.decoders {
-		d.Reset()
-	}
-
-}
-
 func (di *sequenceDirective) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
 	for _, innerDD := range di.decoders {
 		if err := innerDD.Execute(buffer, dc); err != nil {
@@ -356,10 +322,6 @@ type openMetric struct {
 	name string
 }
 
-func (di *openMetric) Reset() {
-	// NOP
-}
-
 func (di *openMetric) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
 	dc.openMetric(di.name)
 	return nil
@@ -367,10 +329,6 @@ func (di *openMetric) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
 
 // closeMetric a decode directive that closes the current open metric
 type closeMetric struct {
-}
-
-func (di *closeMetric) Reset() {
-	// NOP
 }
 
 func (di *closeMetric) Execute(buffer *bytes.Buffer, dc *DecodeContext) error {
@@ -441,8 +399,4 @@ func (nd *notifyDirective) Execute(_ *bytes.Buffer, dc *DecodeContext) error {
 		nd.fn()
 	}
 	return nil
-}
-
-func (nd *notifyDirective) Reset() {
-	// NOP
 }

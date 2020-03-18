@@ -9,38 +9,17 @@ import (
 
 // U32 answers a directive for 32bit Unsigned Integers
 func U32() ValueDirective {
-	return &valueDirective{value: new(uint32), resetFn: func(in interface{}) {
-		ui32Ptr, ok := in.(*uint32)
-		if !ok {
-			// Can't be tested
-			panic("must be an *uint32")
-		}
-		(*ui32Ptr) = 0
-	}}
+	return &valueDirective{value: new(uint32)}
 }
 
 // U64 answers a directive for 64bit Unsigned Integers
 func U64() ValueDirective {
-	return &valueDirective{value: new(uint64), resetFn: func(in interface{}) {
-		ui64Ptr, ok := in.(*uint64)
-		if !ok {
-			// Can't be tested
-			panic("must be an *uint64")
-		}
-		(*ui64Ptr) = 0
-	}}
+	return &valueDirective{value: new(uint64)}
 }
 
 // U8 answers a directive for 8bit Unsigned Integers
 func U8() ValueDirective {
-	return &valueDirective{value: new(uint8), resetFn: func(in interface{}) {
-		ui8Ptr, ok := in.(*uint8)
-		if !ok {
-			// Can't be tested
-			panic("must be an *uint8")
-		}
-		(*ui8Ptr) = 0
-	}}
+	return &valueDirective{value: new(uint8)}
 }
 
 // U16 answers a directive for 32bit Unsigned Integers
@@ -55,16 +34,7 @@ func U16Value(value *uint16) ValueDirective {
 
 // Bytes answers a value directive that will decode the specified number (len) of bytes from the packet
 func Bytes(len int) ValueDirective {
-	return &valueDirective{value: make([]byte, len), resetFn: func(in interface{}) {
-		b, ok := in.([]byte)
-		if !ok {
-			// Can't be tested
-			panic("must be an []bytes")
-		}
-		for i := range b {
-			b[i] = 0x0
-		}
-	}}
+	return &valueDirective{value: make([]byte, len)}
 }
 
 // Case answers a directive to be used within a Switch clause of a U32 directive

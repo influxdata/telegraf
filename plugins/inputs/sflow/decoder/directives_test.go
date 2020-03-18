@@ -72,7 +72,6 @@ func Test_basicSeq(t *testing.T) {
 }
 
 func Test_basicSeqOf(t *testing.T) {
-
 	// SeqOf with no members compiles and executed but buffer is left untouched
 	dd := SeqOf([]Directive{})
 	value := uint32(1001)
@@ -96,7 +95,6 @@ func Test_basicSeqOf(t *testing.T) {
 }
 
 func Test_errorInSeq(t *testing.T) {
-
 	// Seq with no members compiles and executed but buffer is left untouched
 	dd := Seq(U32(), ErrorDirective())
 	value := uint32(1001)
@@ -106,7 +104,6 @@ func Test_errorInSeq(t *testing.T) {
 }
 
 func Test_basicU32Switch(t *testing.T) {
-
 	c1 := U32()
 	c2 := U32()
 	dd := U32().Switch(
@@ -137,54 +134,7 @@ func Test_basicU32Switch(t *testing.T) {
 	// then other way around
 }
 
-func Test_basicU16Switch(t *testing.T) {
-
-	c1 := U32()
-	c2 := U32()
-	dd := U16().Switch(
-		Case(uint16(1), c1),
-		Case(uint16(2), c2),
-	)
-
-	swValue := uint16(3)
-	cValue := uint32(1)
-	var buffer bytes.Buffer
-	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &swValue))
-	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &cValue))
-	require.Error(t, Execute(dd, &buffer)) // should error as no path
-
-	swValue = uint16(1)
-	buffer.Reset()
-	dd.Reset()
-
-	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &swValue))
-	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &cValue))
-	require.NoError(t, Execute(dd, &buffer))
-	x, _ := c1.(*valueDirective)
-	y, _ := c2.(*valueDirective)
-	value0 := uint32(0)
-	require.Equal(t, &cValue, x.value)
-	require.Equal(t, &value0, y.value)
-
-	swValue = uint16(2)
-	buffer.Reset()
-	dd.Reset()
-
-	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &swValue))
-	require.NoError(t, binary.Write(&buffer, binary.BigEndian, &cValue))
-	require.NoError(t, Execute(dd, &buffer))
-	x, _ = c1.(*valueDirective)
-	xUI32, _ := x.value.(*uint32)
-	y, _ = c2.(*valueDirective)
-	yUI32, _ := y.value.(*uint32)
-
-	require.Equal(t, cValue, *yUI32)
-	require.Equal(t, value0, *xUI32)
-
-}
-
 func Test_basicBinSwitch(t *testing.T) {
-
 	c1 := U32()
 	c2 := U32()
 	dd := Bytes(1).Switch(
@@ -232,12 +182,6 @@ func Test_basicIter(t *testing.T) {
 	y, _ := innerDD.(*valueDirective)
 	// we can't test it1Val as it gets overwritten!
 	require.Equal(t, &it2Val, y.value)
-
-	// check reset passes down
-	dd.Reset()
-	zero := uint32(0)
-	require.Equal(t, &zero, x.value)
-	require.Equal(t, &zero, y.value)
 }
 
 func Test_IterLimit(t *testing.T) {
@@ -444,13 +388,6 @@ func Test_BasicEncapsulated(t *testing.T) {
 	require.Equal(t, &envelopeValue, x.value)
 	y, _ := innerDD.(*valueDirective)
 	require.Equal(t, &encap1Value, y.value)
-
-	// check Reset works
-	dd.Reset()
-	zero := uint32(0)
-	require.Equal(t, &zero, x.value)
-	require.Equal(t, &zero, y.value)
-
 }
 
 func Test_EncapsulationLimit(t *testing.T) {
@@ -486,7 +423,6 @@ func Test_cantEncapulatedBytes(t *testing.T) {
 }
 
 func Test_BasicRef(t *testing.T) {
-
 	var x interface{}
 	dd1 := U32().Ref(&x)
 	dd2 := Ref(x)
@@ -630,11 +566,6 @@ func Test_Bytes(t *testing.T) {
 	require.Equal(t, 0, buffer.Len())
 	x, _ := dd.(*valueDirective)
 	require.Equal(t, value, x.value)
-
-	// test reset
-	dd.Reset()
-	zeroBytes := []byte{0x00, 0x0, 0x00, 0x00}
-	require.Equal(t, zeroBytes, x.value)
 }
 
 func Test_nilRefAnfWongTypeRef(t *testing.T) {
