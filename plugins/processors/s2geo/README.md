@@ -7,16 +7,17 @@ The `lat` and `lon` fields values should contain WGS-84 coordinates in decimal d
 ### Configuration
 
 ```toml
-[[processors.geo]]
-  ## The name of the lat and lon fields containing WGS-84 latitude and longitude in decimal degrees
-  lat_field = "lat"
-  lon_field = "lon"
+[[processors.s2geo]]
+  ## The name of the lat and lon fields containing WGS-84 latitude and
+  ## longitude in decimal degrees.
+  # lat_field = "lat"
+  # lon_field = "lon"
 
   ## New tag to create
-  tag_key = "s2_cell_id"
+  # tag_key = "s2_cell_id"
 
   ## Cell level (see https://s2geometry.io/resources/s2cell_statistics.html)
-  cell_level = 11
+  # cell_level = 9
 ```
 
 ### Example

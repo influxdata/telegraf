@@ -25,7 +25,7 @@
 
 - [dedup](/plugins/processors/dedup/README.md) - Contributed by @igomura
 - [template](/plugins/processors/template/README.md) - Contributed by @RobMalvern
-- [s2_geo](/plugins/processors/s2_geo/README.md) - Contributed by @alespour
+- [s2geo](/plugins/processors/s2geo/README.md) - Contributed by @alespour
 
 #### New Outputs
 

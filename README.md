@@ -369,7 +369,7 @@ For documentation on the latest development code see the [documentation index][d
 * [printer](/plugins/processors/printer)
 * [regex](/plugins/processors/regex)
 * [rename](/plugins/processors/rename)
-* [s2_geo](/plugins/processors/s2_geo)
+* [s2geo](/plugins/processors/s2geo)
 * [strings](/plugins/processors/strings)
 * [tag_limit](/plugins/processors/tag_limit)
 * [template](/plugins/processors/template)
