@@ -87,18 +87,18 @@ var DefaultStats = map[string]string{
 }
 
 var DefaultCommandsStats = map[string]string{
-	"delete_command_total":         "DeleteCommandTotal",
-	"delete_command_failed":        "DeleteCommandFailed",
-	"find_command_total":           "FindCommandTotal",
-	"find_command_failed":          "FindCommandFailed",
-	"findAndModify_command_total":  "FindAndModifyCommandTotal",
-	"findAndModify_command_failed": "FindAndModifyCommandFailed",
-	"getMore_command_total":        "GetMoreCommandTotal",
-	"getMore_command_failed":       "GetMoreCommandFailed",
-	"insert_command_total":         "InsertCommandTotal",
-	"insert_command_failed":        "InsertCommandFailed",
-	"update_command_total":         "UpdateCommandTotal",
-	"update_command_failed":        "UpdateCommandFailed",
+	"delete_command_total":           "DeleteCommandTotal",
+	"delete_command_failed":          "DeleteCommandFailed",
+	"find_command_total":             "FindCommandTotal",
+	"find_command_failed":            "FindCommandFailed",
+	"find_and_modify_command_total":  "FindAndModifyCommandTotal",
+	"find_and_modify_command_failed": "FindAndModifyCommandFailed",
+	"get_more_command_total":         "GetMoreCommandTotal",
+	"get_more_command_failed":        "GetMoreCommandFailed",
+	"insert_command_total":           "InsertCommandTotal",
+	"insert_command_failed":          "InsertCommandFailed",
+	"update_command_total":           "UpdateCommandTotal",
+	"update_command_failed":          "UpdateCommandFailed",
 }
 
 var DefaultLatencyStats = map[string]string{
