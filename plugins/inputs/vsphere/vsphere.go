@@ -75,6 +75,8 @@ var sampleConfig = `
 
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
+  # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
+  # vm_exclude = [] # Inventory paths to exclude
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -116,6 +118,8 @@ var sampleConfig = `
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
+  # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
+  # host_exclude [] # Inventory paths to exclude
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -164,27 +168,35 @@ var sampleConfig = `
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
-  ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+    ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
   # ip_addresses = ["ipv6", "ipv4" ]
+
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
+
   ## Clusters
+  # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # cluster_exclude = [] # Inventory paths to exclude
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
   ## Datastores
+  # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default for Datastores only
+  # datastore_instances = false ## false by default
 
   ## Datacenters
+  # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # datacenter_exclude = [] # Inventory paths to exclude
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
-  # datacenter_instances = false ## false by default for Datastores only
+  # datacenter_instances = false ## false by default
 
-  ## Plugin Settings  
+  ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
@@ -219,8 +231,11 @@ var sampleConfig = `
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
   ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
   ## to select the attributes you want to include.
+  ## By default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
   # custom_attribute_include = []
-  # custom_attribute_exclude = ["*"] 
+  # custom_attribute_exclude = ["*"]
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"

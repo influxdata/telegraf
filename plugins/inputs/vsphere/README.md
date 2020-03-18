@@ -8,7 +8,7 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * Datastores
 
 ## Supported versions of vSphere
-This plugin supports vSphere version 5.5 through 6.7. 
+This plugin supports vSphere version 5.5 through 6.7.
 
 ## Configuration
 
@@ -125,7 +125,7 @@ vm_metric_exclude = [ "*" ]
   ]
     ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
   # ip_addresses = ["ipv6", "ipv4" ]
-  
+
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
@@ -138,8 +138,8 @@ vm_metric_exclude = [ "*" ]
   # cluster_instances = false ## false by default
 
   ## Datastores
-  # cluster_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
-  # cluster_exclude = [] # Inventory paths to exclude
+  # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default
@@ -167,11 +167,6 @@ vm_metric_exclude = [ "*" ]
   # collect_concurrency = 1
   # discover_concurrency = 1
 
-  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
-  ## when true for large environments this may cause errors for time elapsed while collecting metrics
-  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
-  # force_discover_on_init = false
-
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
 
@@ -185,17 +180,17 @@ vm_metric_exclude = [ "*" ]
   ## the plugin. Setting this flag to "false" will send values as floats to
   ## preserve the full precision when averaging takes place.
   # use_int_samples = true
-  
+
   ## Custom attributes from vCenter can be very useful for queries in order to slice the
   ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
   ## by default, since they can add a considerable amount of tags to the resulting metrics. To
   ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
-  ## to select the attributes you want to include. 
-  # by default, since they can add a considerable amount of tags to the resulting metrics. To
-  # enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
-  # to select the attributes you want to include. 
+  ## to select the attributes you want to include.
+  ## By default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
   # custom_attribute_include = []
-  # custom_attribute_exclude = ["*"] # Default is to exclude everything
+  # custom_attribute_exclude = ["*"]
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -264,7 +259,7 @@ to a file system. A vSphere inventory has a structure similar to this:
 #### Using Inventory Paths
 Using familiar UNIX-style paths, one could select e.g. VM2 with the path ```/DC0/vm/VM2```.
 
-Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that. 
+Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that.
 
 Another possibility is to select objects using a partial name, such as ```/DC0/vm/Folder1/hadoop*``` yielding all vms in Folder1 with a name starting with "hadoop".
 
