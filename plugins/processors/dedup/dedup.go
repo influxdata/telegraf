@@ -24,7 +24,7 @@ func (d *Dedup) SampleConfig() string {
 }
 
 func (d *Dedup) Description() string {
-	return "Deduplicate repetitive metrics"
+	return "Drop metrics with repeating field values"
 }
 
 // Remove single item from slice
@@ -73,7 +73,7 @@ func (d *Dedup) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			continue
 		}
 
-		// For each filed compare value with the cached one
+		// For each field compare value with the cached one
 		changed := false
 		for _, f := range metric.FieldList() {
 			if value, ok := m.GetField(f.Key); ok && value != f.Value {

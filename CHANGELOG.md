@@ -22,6 +22,7 @@
 
 #### New Processors
 
+- [dedup](/plugins/processors/dedup/README.md) - Contributed by @igomura
 - [template](/plugins/processors/template/README.md) - Contributed by @RobMalvern
 - [s2_geo](/plugins/processors/s2_geo/README.md) - Contributed by @alespour
 
