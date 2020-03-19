@@ -86,6 +86,21 @@ var DefaultStats = map[string]string{
 	"connections_total_created": "TotalCreatedC",
 }
 
+var DefaultCommandsStats = map[string]string{
+	"delete_command_total":           "DeleteCommandTotal",
+	"delete_command_failed":          "DeleteCommandFailed",
+	"find_command_total":             "FindCommandTotal",
+	"find_command_failed":            "FindCommandFailed",
+	"find_and_modify_command_total":  "FindAndModifyCommandTotal",
+	"find_and_modify_command_failed": "FindAndModifyCommandFailed",
+	"get_more_command_total":         "GetMoreCommandTotal",
+	"get_more_command_failed":        "GetMoreCommandFailed",
+	"insert_command_total":           "InsertCommandTotal",
+	"insert_command_failed":          "InsertCommandFailed",
+	"update_command_total":           "UpdateCommandTotal",
+	"update_command_failed":          "UpdateCommandFailed",
+}
+
 var DefaultLatencyStats = map[string]string{
 	"latency_writes_count":   "WriteOpsCnt",
 	"latency_writes":         "WriteLatency",
@@ -253,8 +268,10 @@ func (d *MongodbData) AddDefaultStats() {
 		d.add("repl_oplog_window_sec", d.StatLine.OplogStats.TimeDiff)
 	}
 
+	d.addStat(statLine, DefaultCommandsStats)
 	d.addStat(statLine, DefaultClusterStats)
 	d.addStat(statLine, DefaultShardStats)
+
 	if d.StatLine.StorageEngine == "mmapv1" || d.StatLine.StorageEngine == "rocksdb" {
 		d.addStat(statLine, MmapStats)
 	} else if d.StatLine.StorageEngine == "wiredTiger" {
