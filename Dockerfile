@@ -4,6 +4,7 @@ ENV GOLANG_VERSION 1.14
 ENV PATH /usr/local/go/bin:$PATH
 ENV GOROOT /usr/local/go
 ENV GOPATH /go
+ENV GOFLAGS -p=8
 ENV PATH /go/bin:$PATH
 
 RUN apt-get update \
@@ -20,5 +21,7 @@ WORKDIR /go
 ADD . /app/
 WORKDIR /app/
 
-RUN make \
-    && make install
+CMD ["sleep ", "10000000"]
+
+# RUN make \
+#     && make install
