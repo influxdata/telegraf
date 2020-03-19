@@ -21,7 +21,5 @@ WORKDIR /go
 ADD . /app/
 WORKDIR /app/
 
-CMD ["sleep ", "10000000"]
-
-# RUN make \
-#     && make install
+RUN make \
+    && make install
