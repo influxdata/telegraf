@@ -129,28 +129,31 @@ type NginxSTSResponse struct {
 		Handled  uint64 `json:"handled"`
 		Requests uint64 `json:"requests"`
 	} `json:"connections"`
-	StreamServerZones   map[string]Server      `json:"streamServerZones"`
-	StreamUpstreamZones map[string][]Upstream  `json:"streamUpstreamZones"`
+	Hostname            string                       `json:"hostName"`
+	SharedZones         map[string]SharedZone        `json:"sharedZones"`
+	StreamFilterZones   map[string]map[string]Server `json:"streamFilterZones"`
+	StreamServerZones   map[string]Server            `json:"streamServerZones"`
+	StreamUpstreamZones map[string][]Upstream        `json:"streamUpstreamZones"`
+}
+
+type SharedZone struct {
+	MaxSize  uint64 `json:"maxSize"`
+	UsedSize uint64 `json:"usedSize"`
+	UsedNode uint64 `json:"usedNode"`
 }
 
 type Server struct {
-	ConnectCounter uint64 `json:"connectCounter"`
-	InBytes        uint64 `json:"inBytes"`
-	OutBytes       uint64 `json:"outBytes"`
-	Responses      struct {
-		OneXx       uint64 `json:"1xx"`
-		TwoXx       uint64 `json:"2xx"`
-		ThreeXx     uint64 `json:"3xx"`
-		FourXx      uint64 `json:"4xx"`
-		FiveXx      uint64 `json:"5xx"`
-		Miss        uint64 `json:"miss"`
-		Bypass      uint64 `json:"bypass"`
-		Expired     uint64 `json:"expired"`
-		Stale       uint64 `json:"stale"`
-		Updating    uint64 `json:"updating"`
-		Revalidated uint64 `json:"revalidated"`
-		Hit         uint64 `json:"hit"`
-		Scarce      uint64 `json:"scarce"`
+	ConnectCounter     uint64 `json:"connectCounter"`
+	InBytes            uint64 `json:"inBytes"`
+	OutBytes           uint64 `json:"outBytes"`
+	SessionMsecCounter uint64 `json:"sessionMsecCounter"`
+	SessionMsec        uint64 `json:"sessionMsec"`
+	Responses          struct {
+		OneXx   uint64 `json:"1xx"`
+		TwoXx   uint64 `json:"2xx"`
+		ThreeXx uint64 `json:"3xx"`
+		FourXx  uint64 `json:"4xx"`
+		FiveXx  uint64 `json:"5xx"`
 	} `json:"responses"`
 }
 
@@ -166,12 +169,19 @@ type Upstream struct {
 		FourXx  uint64 `json:"4xx"`
 		FiveXx  uint64 `json:"5xx"`
 	} `json:"responses"`
-	SessionMsec  uint64 `json:"sessionMsec"`
-	Weight       uint64 `json:"weight"`
-	MaxFails     uint64 `json:"maxFails"`
-	FailTimeout  uint64 `json:"failTimeout"`
-	Backup       bool   `json:"backup"`
-	Down         bool   `json:"down"`
+	SessionMsecCounter    uint64 `json:"sessionMsecCounter"`
+	SessionMsec           uint64 `json:"sessionMsec"`
+	USessionMsecCounter   uint64 `json:"uSessionMsecCounter"`
+	USessionMsec          uint64 `json:"uSessionMsec"`
+	UConnectMsecCounter   uint64 `json:"uConnectMsecCounter"`
+	UConnectMsec          uint64 `json:"uConnectMsec"`
+	UFirstByteMsecCounter uint64 `json:"uFirstByteMsecCounter"`
+	UFirstByteMsec        uint64 `json:"uFirstByteMsec"`
+	Weight                uint64 `json:"weight"`
+	MaxFails              uint64 `json:"maxFails"`
+	FailTimeout           uint64 `json:"failTimeout"`
+	Backup                bool   `json:"backup"`
+	Down                  bool   `json:"down"`
 }
 
 func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
@@ -199,9 +209,11 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 		zoneTags["zone"] = zoneName
 
 		acc.AddFields("nginx_sts_server", map[string]interface{}{
-		    "connects":        zone.ConnectCounter,
-			"in_bytes":        zone.InBytes,
-			"out_bytes":       zone.OutBytes,
+			"connects":             zone.ConnectCounter,
+			"in_bytes":             zone.InBytes,
+			"out_bytes":            zone.OutBytes,
+			"session_msec_counter": zone.SessionMsecCounter,
+			"session_msec":         zone.SessionMsec,
 
 			"response_1xx_count": zone.Responses.OneXx,
 			"response_2xx_count": zone.Responses.TwoXx,
@@ -209,6 +221,29 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 			"response_4xx_count": zone.Responses.FourXx,
 			"response_5xx_count": zone.Responses.FiveXx,
 		}, zoneTags)
+	}
+
+	for filterName, filters := range status.StreamFilterZones {
+		for filterKey, upstream := range filters {
+			filterTags := map[string]string{}
+			for k, v := range tags {
+				filterTags[k] = v
+			}
+			filterTags["filter_key"] = filterKey
+			filterTags["filter_name"] = filterName
+
+			acc.AddFields("nginx_sts_filter", map[string]interface{}{
+				"connects":  upstream.ConnectCounter,
+				"in_bytes":  upstream.InBytes,
+				"out_bytes": upstream.OutBytes,
+
+				"response_1xx_count": upstream.Responses.OneXx,
+				"response_2xx_count": upstream.Responses.TwoXx,
+				"response_3xx_count": upstream.Responses.ThreeXx,
+				"response_4xx_count": upstream.Responses.FourXx,
+				"response_5xx_count": upstream.Responses.FiveXx,
+			}, filterTags)
+		}
 	}
 
 	for upstreamName, upstreams := range status.StreamUpstreamZones {
@@ -220,10 +255,17 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 			upstreamServerTags["upstream"] = upstreamName
 			upstreamServerTags["upstream_address"] = upstream.Server
 			acc.AddFields("nginx_sts_upstream", map[string]interface{}{
-				"connects":           upstream.ConnectCounter,
-				"session_time":       upstream.SessionMsec,
-				"in_bytes":           upstream.InBytes,
-				"out_bytes":          upstream.OutBytes,
+				"connects":                      upstream.ConnectCounter,
+				"session_msec":                  upstream.SessionMsec,
+				"session_msec_counter":          upstream.SessionMsecCounter,
+				"upstream_session_msec":         upstream.USessionMsec,
+				"upstream_session_msec_counter": upstream.USessionMsecCounter,
+				"upstream_connect_msec":         upstream.UConnectMsec,
+				"upstream_connect_msec_counter": upstream.UConnectMsecCounter,
+				"first_byte_msec":               upstream.UFirstByteMsec,
+				"first_byte_msec_counter":       upstream.UFirstByteMsecCounter,
+				"in_bytes":                      upstream.InBytes,
+				"out_bytes":                     upstream.OutBytes,
 
 				"response_1xx_count": upstream.Responses.OneXx,
 				"response_2xx_count": upstream.Responses.TwoXx,
