@@ -1,9 +1,10 @@
 package byteconvert
 
 import (
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"strings"
 )
 
 const sampleConfig = `
@@ -17,12 +18,10 @@ const sampleConfig = `
   format = "mb"
 `
 
-
 type byteConvert struct {
-	FieldSrc     string            `toml:"field_src"`
-	FieldName     string            `toml:"field_name"`
-	Format string            `toml:"format"`
-
+	FieldSrc  string `toml:"field_src"`
+	FieldName string `toml:"field_name"`
+	Format    string `toml:"format"`
 }
 
 func (d *byteConvert) SampleConfig() string {
@@ -65,14 +64,14 @@ func toFloat64(v interface{}) float64 {
 	return 0
 }
 
-func (d *byteConvert) convert(bytes float64) float64{
+func (d *byteConvert) convert(bytes float64) float64 {
 	switch strings.ToLower(d.Format) {
 	case "kb":
-		return bytes/1024
+		return bytes / 1024
 	case "mb":
-		return bytes/1024/1024
+		return bytes / 1024 / 1024
 	case "gb":
-		return bytes/1024/1024
+		return bytes / 1024 / 1024 / 1024
 	}
 	return 0
 }
