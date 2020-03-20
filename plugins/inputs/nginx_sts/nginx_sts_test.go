@@ -125,10 +125,10 @@ const sampleStatusResponse = `
                 "uConnectMsec": 130,
                 "uFirstByteMsecCounter": 34,
                 "uFirstByteMsec": 129,
-                "weight": 32,
-                "maxFails": 33,
-                "failTimeout": 34,
-                "backup": false,
+                "weight": 36,
+                "maxFails": 37,
+                "failTimeout": 38,
+                "backup": true,
                 "down": false
             },
             {
@@ -151,11 +151,11 @@ const sampleStatusResponse = `
                 "uConnectMsec": 130,
                 "uFirstByteMsecCounter": 34,
                 "uFirstByteMsec": 129,
-                "weight": 32,
-                "maxFails": 33,
-                "failTimeout": 34,
-                "backup": false,
-                "down": false
+                "weight": 41,
+                "maxFails": 42,
+                "failTimeout": 43,
+                "backup": true,
+                "down": true
             }
         ]
     }
@@ -247,8 +247,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 		t,
 		"nginx_sts_filter",
 		map[string]interface{}{
-			"requests":             uint64(60),
-			"request_time":         uint64(69),
+			"connects":             uint64(60),
 			"in_bytes":             uint64(2570),
 			"out_bytes":            uint64(53597),
 			"session_msec_counter": uint64(12),
@@ -271,9 +270,11 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 		t,
 		"nginx_sts_server",
 		map[string]interface{}{
-			"connects":  uint64(505),
-			"in_bytes":  uint64(171388),
-			"out_bytes": uint64(1273382),
+			"connects":             uint64(505),
+			"in_bytes":             uint64(171388),
+			"out_bytes":            uint64(1273382),
+			"session_msec_counter": uint64(12),
+			"session_msec":         uint64(15),
 
 			"response_1xx_count": uint64(101),
 			"response_2xx_count": uint64(201),

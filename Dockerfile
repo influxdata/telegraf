@@ -16,8 +16,6 @@ RUN apt-get update \
     && curl -sSL https://storage.googleapis.com/golang/go$GOLANG_VERSION.linux-amd64.tar.gz | tar -v -C /usr/local -xz \
 	&& mkdir -p /go/src /go/bin && chmod -R 777 /go
 
-WORKDIR /go
-
 ADD . /app/
 WORKDIR /app/
 

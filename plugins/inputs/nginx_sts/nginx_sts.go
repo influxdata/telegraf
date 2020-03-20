@@ -233,9 +233,11 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 			filterTags["filter_name"] = filterName
 
 			acc.AddFields("nginx_sts_filter", map[string]interface{}{
-				"connects":  upstream.ConnectCounter,
-				"in_bytes":  upstream.InBytes,
-				"out_bytes": upstream.OutBytes,
+				"connects":             upstream.ConnectCounter,
+				"in_bytes":             upstream.InBytes,
+				"out_bytes":            upstream.OutBytes,
+				"session_msec_counter": upstream.SessionMsecCounter,
+				"session_msec":         upstream.SessionMsec,
 
 				"response_1xx_count": upstream.Responses.OneXx,
 				"response_2xx_count": upstream.Responses.TwoXx,
@@ -255,17 +257,17 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 			upstreamServerTags["upstream"] = upstreamName
 			upstreamServerTags["upstream_address"] = upstream.Server
 			acc.AddFields("nginx_sts_upstream", map[string]interface{}{
-				"connects":                      upstream.ConnectCounter,
-				"session_msec":                  upstream.SessionMsec,
-				"session_msec_counter":          upstream.SessionMsecCounter,
-				"upstream_session_msec":         upstream.USessionMsec,
-				"upstream_session_msec_counter": upstream.USessionMsecCounter,
-				"upstream_connect_msec":         upstream.UConnectMsec,
-				"upstream_connect_msec_counter": upstream.UConnectMsecCounter,
-				"first_byte_msec":               upstream.UFirstByteMsec,
-				"first_byte_msec_counter":       upstream.UFirstByteMsecCounter,
-				"in_bytes":                      upstream.InBytes,
-				"out_bytes":                     upstream.OutBytes,
+				"connects":                        upstream.ConnectCounter,
+				"session_msec":                    upstream.SessionMsec,
+				"session_msec_counter":            upstream.SessionMsecCounter,
+				"upstream_session_msec":           upstream.USessionMsec,
+				"upstream_session_msec_counter":   upstream.USessionMsecCounter,
+				"upstream_connect_msec":           upstream.UConnectMsec,
+				"upstream_connect_msec_counter":   upstream.UConnectMsecCounter,
+				"upstream_firstbyte_msec":         upstream.UFirstByteMsec,
+				"upstream_firstbyte_msec_counter": upstream.UFirstByteMsecCounter,
+				"in_bytes":                        upstream.InBytes,
+				"out_bytes":                       upstream.OutBytes,
 
 				"response_1xx_count": upstream.Responses.OneXx,
 				"response_2xx_count": upstream.Responses.TwoXx,
