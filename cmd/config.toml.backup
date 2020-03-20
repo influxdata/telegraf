@@ -1,0 +1,93 @@
+[global_tags]
+  # dc = "us-east-1" # will tag all metrics with dc=us-east-1
+  # rack = "1a"
+  ## Environment variables can be used as tags, and throughout the config file
+  # user = "$USER"
+customer_id = "mdanzinger"
+service = "multiplay_billing"
+
+[agent]
+  interval = "10s"
+  round_interval = true 
+  metric_batch_size = 1000
+  metric_buffer_limit = 10000
+  collection_jitter = "0s"
+  flush_interval = "30s"
+  flush_jitter = "0s"
+  precision = ""
+  hostname = ""
+  omit_hostname = false
+
+
+ [[outputs.file]] 
+  files = ["stdout", "/tmp/metrics.out"]
+  data_format = "ubazzar"
+  fieldpass = ["quantity"]
+
+# Egress
+ [[inputs.net]]
+  interfaces = ["lo0"]
+  fieldpass = ["bytes_sent"]
+
+[[aggregators.basicstats]]
+   period = "300s"
+   drop_original = true
+   stats = ["non_negative_diff", "diff"]
+   fieldpass = ["bytes_sent"]
+   namepass = ["net"]
+   [aggregators.basicstats.tags]
+     unit_of_measure = "net-eu-west-mb-egress"
+
+ [[processors.byteconvert]]
+  field_src = "bytes_sent_diff"
+  field_name = "quantity"
+  format = "mb"
+  namepass = ["net"]
+
+
+
+ ##Ingress
+ [[inputs.net]]
+  interfaces = ["lo0"]
+  fieldpass = ["bytes_recv"]
+
+ [[aggregators.basicstats]]
+   period = "300s"
+   drop_original = true 
+   stats = ["diff"]
+   fieldpass = ["bytes_recv"]
+   namepass = ["net"]
+   [aggregators.basicstats.tags]
+     unit_of_measure = "net-eu-west-mb-ingress"
+
+
+ [[processors.byteconvert]]
+  field_src = "bytes_recv_diff"
+  field_name = "quantity"
+  format = "mb"
+  namepass = ["net"]
+
+
+
+
+### CPU ###
+[[inputs.system]]
+fieldpass = ["n_cpus"]
+interval = "300s"
+[inputs.system.tags]
+     unit_of_measure = "vcpu-eu-west"
+[[processors.rename]]
+  [[processors.rename.replace]]
+   field = "n_cpus"
+  dest = "quantity"
+
+
+
+[[inputs.internal]]
+interval = "10s"
+ [[outputs.file]] 
+  files = ["/tmp/t-metrics.out"]
+  data_format = "json"
+  namepass = ["internal*"]
+
+

@@ -2,6 +2,7 @@ package serializers
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/plugins/serializers/ubazzar"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -117,6 +118,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
+	case "ubazzar":
+		serializer, err = NewUBazzarSerializer(config.TimestampUnits)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -152,6 +155,10 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
+}
+
+func NewUBazzarSerializer(timestampUnits time.Duration) (Serializer, error) {
+	return ubazzar.NewSerializer(timestampUnits)
 }
 
 func NewCarbon2Serializer() (Serializer, error) {

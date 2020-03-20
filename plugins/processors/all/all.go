@@ -18,4 +18,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/template"
 	_ "github.com/influxdata/telegraf/plugins/processors/topk"
 	_ "github.com/influxdata/telegraf/plugins/processors/unpivot"
+	_ "github.com/influxdata/telegraf/plugins/processors/sum"
+	_ "github.com/influxdata/telegraf/plugins/processors/byteconvert"
 )

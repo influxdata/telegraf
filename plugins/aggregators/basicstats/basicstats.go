@@ -2,6 +2,7 @@ package basicstats
 
 import (
 	"math"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -34,9 +35,10 @@ func NewBasicStats() *BasicStats {
 }
 
 type aggregate struct {
-	fields map[string]basicstats
-	name   string
-	tags   map[string]string
+	fields    map[string]basicstats
+	name      string
+	tags      map[string]string
+	startTime time.Time
 }
 
 type basicstats struct {
@@ -75,9 +77,10 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 	if _, ok := b.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
 		a := aggregate{
-			name:   in.Name(),
-			tags:   in.Tags(),
-			fields: make(map[string]basicstats),
+			name:      in.Name(),
+			tags:      in.Tags(),
+			fields:    make(map[string]basicstats),
+			startTime: in.Time(),
 		}
 		for _, field := range in.FieldList() {
 			if fv, ok := convert(field.Value); ok {
@@ -148,6 +151,7 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range b.cache {
 		fields := map[string]interface{}{}
+		fields["start_time"] = aggregate.startTime.Format(time.RFC3339)
 		for k, v := range aggregate.fields {
 
 			if b.statsConfig.count {
