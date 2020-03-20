@@ -65,24 +65,3 @@ service = "multiplay_billing"
   format = "mb"
   namepass = ["net"]
 
-
-
-
-### CPU ###
-[[inputs.system]]
-fieldpass = ["n_cpus"]
-[[inputs.system.tags]]
-     unit_of_measure = "vcpu-eu-west"
-[[processors.rename]]
-  [[processors.rename.replace]]
-   field = "n_cpus"
-   dest = "quantity"
-
-
-[[inputs.internal]]
-interval = "60s"
- [[outputs.file]] 
-  files = ["/tmp/t-metrics.out"]
-  data_format = "json"
-  namepass = ["internal*"]
-
