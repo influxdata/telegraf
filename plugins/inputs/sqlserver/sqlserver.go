@@ -35,46 +35,53 @@ type MapQuery map[string]Query
 const defaultServer = "Server=.;app name=telegraf;log=1;"
 
 const sampleConfig = `
-  ## Specify instances to monitor with a list of connection strings.
-  ## All connection parameters are optional.
-  ## By default, the host is localhost, listening on default port, TCP 1433.
-  ##   for Windows, the user is the currently running AD user (SSO).
-  ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-  ##   parameters, in particular, tls connections can be created like so:
-  ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
-  # servers = [
-  #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
-  # ]
+## Specify instances to monitor with a list of connection strings.
+## All connection parameters are optional.
+## By default, the host is localhost, listening on default port, TCP 1433.
+##   for Windows, the user is the currently running AD user (SSO).
+##   See https://github.com/denisenkom/go-mssqldb for detailed connection
+##   parameters, in particular, tls connections can be created like so:
+##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
+# servers = [
+#  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
+# ]
 
-  ## Optional parameter, setting this to 2 will use a new version
-  ## of the collection queries that break compatibility with the original
-  ## dashboards.
-  query_version = 2
+## Optional parameter, setting this to 2 will use a new version
+## of the collection queries that break compatibility with the original
+## dashboards.
+## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
+query_version = 2
 
-  ## If you are using AzureDB, setting this to true will gather resource utilization metrics
-  # azuredb = false
+## If you are using AzureDB, setting this to true will gather resource utilization metrics
+# azuredb = false
 
-  ## Possible queries:
-  ## - PerformanceCounters
-  ## - WaitStatsCategorized
-  ## - DatabaseIO
-  ## - DatabaseProperties
-  ## - CPUHistory
-  ## - DatabaseSize
-  ## - DatabaseStats
-  ## - MemoryClerk
-  ## - VolumeSpace
-  ## - PerformanceMetrics
-  ## - Schedulers
-  ## - AzureDBResourceStats
-  ## - AzureDBResourceGovernance
-  ## - SqlRequests
-  ## - ServerProperties
-  ## A list of queries to include. If not specified, all the above listed queries are used.
-  # include_query = []
+## Possible queries
+## Version 2:
+## - PerformanceCounters
+## - WaitStatsCategorized
+## - DatabaseIO
+## - ServerProperties
+## - MemoryClerk
+## - Schedulers
+## - SqlRequests
+## - SqlDiskSpace
+## Version 1:
+## - PerformanceCounters
+## - WaitStatsCategorized
+## - CPUHistory
+## - DatabaseIO
+## - DatabaseSize
+## - DatabaseStats
+## - DatabaseProperties
+## - MemoryClerk
+## - VolumeSpace
+## - PerformanceMetrics
 
-  ## A list of queries to explicitly ignore.
-  exclude_query = [ 'Schedulers' , 'SqlRequests']
+## A list of queries to include. If not specified, all the above listed queries are used.
+# include_query = []
+
+## A list of queries to explicitly ignore.
+exclude_query = [ 'Schedulers' , 'SqlRequests']
 `
 
 // SampleConfig return the sample configuration
