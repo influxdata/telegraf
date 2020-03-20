@@ -109,6 +109,7 @@ func initQueries(s *SQLServer) error {
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
+		queries["SqlDiskSpace"] = Query{Script: sqlServerDiskSpaceV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1551,6 +1552,37 @@ SELECT
 	 OR (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
 	 OPTION(MAXDOP 1)
 
+`
+
+const sqlServerDiskSpaceV2 string = `
+/* Only for on-prem version of SQL Server
+Gets data about disk space, only if the disk is used by SQL Server
+EngineEdition:
+1 = Personal or Desktop Engine
+2 = Standard
+3 = Enterprise
+4 = Express
+5 = SQL Database
+6 = SQL Data Warehouse
+8 = Managed Instance
+*/
+IF SERVERPROPERTY('EngineEdition') NOT IN (5)
+	BEGIN
+	SELECT DISTINCT
+		'sqlserver_disk_space' AS [measurement]
+		,SERVERPROPERTY('machinename') AS [server_name]
+		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+		,IIF( RIGHT(vs.[volume_mount_point],1) = '\'	/*Tag value cannot end with \ */
+			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+			,vs.[volume_mount_point]
+		) AS [volume_mount_point]
+		,vs.[total_bytes] AS [total_space_bytes]
+		,vs.[available_bytes] AS [available_space_bytes]
+		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
+	FROM
+		sys.master_files as mf
+		CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) as vs
+	END
 `
 
 // Queries V1
