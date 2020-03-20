@@ -130,16 +130,9 @@ type NginxSTSResponse struct {
 		Requests uint64 `json:"requests"`
 	} `json:"connections"`
 	Hostname            string                       `json:"hostName"`
-	SharedZones         map[string]SharedZone        `json:"sharedZones"`
 	StreamFilterZones   map[string]map[string]Server `json:"streamFilterZones"`
 	StreamServerZones   map[string]Server            `json:"streamServerZones"`
 	StreamUpstreamZones map[string][]Upstream        `json:"streamUpstreamZones"`
-}
-
-type SharedZone struct {
-	MaxSize  uint64 `json:"maxSize"`
-	UsedSize uint64 `json:"usedSize"`
-	UsedNode uint64 `json:"usedNode"`
 }
 
 type Server struct {
