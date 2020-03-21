@@ -19,6 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	defaultServiceAccountPath = "/run/secrets/kubernetes.io/serviceaccount/token"
+)
+
 // KubernetesInventory represents the config object for the plugin.
 type KubernetesInventory struct {
 	URL               string            `toml:"url"`
@@ -42,6 +46,8 @@ var sampleConfig = `
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
+  ## If both of these are empty, we'll use the default serviceaccount:
+  ## at: /run/secrets/kubernetes.io/serviceaccount/token
   # bearer_token = "/path/to/bearer/token"
   ## OR
   # bearer_token_string = "abc_123"
@@ -51,8 +57,8 @@ var sampleConfig = `
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "daemonsets", deployments", "nodes", "persistentvolumes",
-  ## "persistentvolumeclaims", "pods", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "endpoints", "ingress", "nodes",
+  ## "persistentvolumes", "persistentvolumeclaims", "pods", "services", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -77,14 +83,32 @@ func (ki *KubernetesInventory) Description() string {
 	return "Read metrics from the Kubernetes api"
 }
 
-// Gather collects kubernetes metrics from a given URL.
-func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
-	if ki.client == nil {
-		if ki.client, err = ki.initClient(); err != nil {
-			return err
-		}
+func (ki *KubernetesInventory) Init() error {
+	// If neither are provided, use the default service account.
+	if ki.BearerToken == "" && ki.BearerTokenString == "" {
+		ki.BearerToken = defaultServiceAccountPath
 	}
 
+	if ki.BearerToken != "" {
+		token, err := ioutil.ReadFile(ki.BearerToken)
+		if err != nil {
+			return err
+		}
+		ki.BearerTokenString = strings.TrimSpace(string(token))
+	}
+
+	var err error
+	ki.client, err = newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Gather collects kubernetes metrics from a given URL.
+func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 	resourceFilter, err := filter.NewIncludeExcludeFilter(ki.ResourceInclude, ki.ResourceExclude)
 	if err != nil {
 		return err
@@ -114,23 +138,11 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"endpoints":              collectEndpoints,
 	"ingress":                collectIngress,
 	"nodes":                  collectNodes,
-	"persistentvolumes":      collectPersistentVolumes,
-	"persistentvolumeclaims": collectPersistentVolumeClaims,
 	"pods":                   collectPods,
 	"services":               collectServices,
 	"statefulsets":           collectStatefulSets,
-}
-
-func (ki *KubernetesInventory) initClient() (*client, error) {
-	if ki.BearerToken != "" {
-		token, err := ioutil.ReadFile(ki.BearerToken)
-		if err != nil {
-			return nil, err
-		}
-		ki.BearerTokenString = strings.TrimSpace(string(token))
-	}
-
-	return newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
+	"persistentvolumes":      collectPersistentVolumes,
+	"persistentvolumeclaims": collectPersistentVolumeClaims,
 }
 
 func atoi(s string) int64 {
@@ -144,12 +156,12 @@ func atoi(s string) int64 {
 func convertQuantity(s string, m float64) int64 {
 	q, err := resource.ParseQuantity(s)
 	if err != nil {
-		log.Printf("E! Failed to parse quantity - %v", err)
+		log.Printf("D! [inputs.kube_inventory] failed to parse quantity: %s", err.Error())
 		return 0
 	}
 	f, err := strconv.ParseFloat(fmt.Sprint(q.AsDec()), 64)
 	if err != nil {
-		log.Printf("E! Failed to parse float - %v", err)
+		log.Printf("D! [inputs.kube_inventory] failed to parse float: %s", err.Error())
 		return 0
 	}
 	if m < 1 {

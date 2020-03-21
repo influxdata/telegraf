@@ -7,6 +7,9 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * VMs
 * Datastores
 
+## Supported versions of vSphere
+This plugin supports vSphere version 5.5 through 6.7.
+
 ## Configuration
 
 NOTE: To disable collection of a specific resource type, simply exclude all metrics using the XX_metric_exclude.
@@ -28,6 +31,7 @@ vm_metric_exclude = [ "*" ]
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
   # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
+  # vm_exclude = [] # Inventory paths to exclude
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -70,6 +74,7 @@ vm_metric_exclude = [ "*" ]
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
+  # host_exclude [] # Inventory paths to exclude
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -118,23 +123,30 @@ vm_metric_exclude = [ "*" ]
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
+    ## Collect IP addresses? Valid values are "ipv4" and "ipv6"
+  # ip_addresses = ["ipv6", "ipv4" ]
+
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
+
   ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # cluster_exclude = [] # Inventory paths to exclude
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
   ## Datastores
-  # cluster_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
+  # datastore_exclude = [] # Inventory paths to exclude
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default
 
   ## Datacenters
   # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
+  # datacenter_exclude = [] # Inventory paths to exclude
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default
@@ -155,11 +167,6 @@ vm_metric_exclude = [ "*" ]
   # collect_concurrency = 1
   # discover_concurrency = 1
 
-  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
-  ## when true for large environments this may cause errors for time elapsed while collecting metrics
-  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
-  # force_discover_on_init = false
-
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
 
@@ -173,6 +180,17 @@ vm_metric_exclude = [ "*" ]
   ## the plugin. Setting this flag to "false" will send values as floats to
   ## preserve the full precision when averaging takes place.
   # use_int_samples = true
+
+  ## Custom attributes from vCenter can be very useful for queries in order to slice the
+  ## metrics along different dimension and for forming ad-hoc relationships. They are disabled
+  ## by default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  ## By default, since they can add a considerable amount of tags to the resulting metrics. To
+  ## enable, simply set custom_attribute_exlude to [] (empty set) and use custom_attribute_include
+  ## to select the attributes you want to include.
+  # custom_attribute_include = []
+  # custom_attribute_exclude = ["*"]
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"

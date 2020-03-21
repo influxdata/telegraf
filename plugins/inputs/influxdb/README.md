@@ -20,6 +20,10 @@ InfluxDB-formatted endpoints. See below for more information.
     "http://localhost:8086/debug/vars"
   ]
 
+  ## Username and password to send using HTTP Basic Authentication.
+  # username = ""
+  # password = ""
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

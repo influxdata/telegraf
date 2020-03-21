@@ -3,7 +3,10 @@ package kibana
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -54,7 +57,9 @@ type responseTimes struct {
 }
 
 type process struct {
-	Mem mem `json:"mem"`
+	Mem            mem    `json:"mem"`
+	Memory         memory `json:"memory"`
+	UptimeInMillis int64  `json:"uptime_in_millis"`
 }
 
 type requests struct {
@@ -66,8 +71,17 @@ type mem struct {
 	HeapUsedInBytes int64 `json:"heap_used_in_bytes"`
 }
 
+type memory struct {
+	Heap heap `json:"heap"`
+}
+
+type heap struct {
+	TotalInBytes int64 `json:"total_in_bytes"`
+	UsedInBytes  int64 `json:"used_in_bytes"`
+}
+
 const sampleConfig = `
-  ## specify a list of one or more Kibana servers
+  ## Specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]
 
   ## Timeout for HTTP requests
@@ -187,14 +201,36 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 	tags["status"] = kibanaStatus.Status.Overall.State
 
 	fields["status_code"] = mapHealthStatusToCode(kibanaStatus.Status.Overall.State)
-
-	fields["uptime_ms"] = kibanaStatus.Metrics.UptimeInMillis
 	fields["concurrent_connections"] = kibanaStatus.Metrics.ConcurrentConnections
-	fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
-	fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
 	fields["response_time_avg_ms"] = kibanaStatus.Metrics.ResponseTimes.AvgInMillis
 	fields["response_time_max_ms"] = kibanaStatus.Metrics.ResponseTimes.MaxInMillis
 	fields["requests_per_sec"] = float64(kibanaStatus.Metrics.Requests.Total) / float64(kibanaStatus.Metrics.CollectionIntervalInMilles) * 1000
+
+	versionArray := strings.Split(kibanaStatus.Version.Number, ".")
+	arrayElement := 1
+
+	if len(versionArray) > 1 {
+		arrayElement = 2
+	}
+	versionNumber, err := strconv.ParseFloat(strings.Join(versionArray[:arrayElement], "."), 64)
+	if err != nil {
+		return err
+	}
+
+	// Same value will be assigned to both the metrics [heap_max_bytes and heap_total_bytes ]
+	// Which keeps the code backward compatible
+	if versionNumber >= 6.4 {
+		fields["uptime_ms"] = kibanaStatus.Metrics.Process.UptimeInMillis
+		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
+		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.TotalInBytes
+		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Memory.Heap.UsedInBytes
+	} else {
+		fields["uptime_ms"] = kibanaStatus.Metrics.UptimeInMillis
+		fields["heap_max_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
+		fields["heap_total_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapMaxInBytes
+		fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
+
+	}
 
 	acc.AddFields("kibana", fields, tags)
 
@@ -215,6 +251,12 @@ func (k *Kibana) gatherJsonData(url string, v interface{}) (host string, err err
 	}
 
 	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		body, _ := ioutil.ReadAll(io.LimitReader(response.Body, 200))
+		return request.Host, fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
+	}
 
 	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
 		return request.Host, err

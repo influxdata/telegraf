@@ -14,6 +14,16 @@ The powerdns plugin gathers metrics about PowerDNS using unix socket.
   unix_sockets = ["/var/run/pdns.controlsocket"]
 ```
 
+#### Permissions
+
+Telegraf will need read access to the powerdns control socket.
+
+On many systems this can be accomplished by adding the `telegraf` user to the
+`pdns` group:
+```
+usermod telegraf -a -G pdns
+```
+
 ### Measurements & Fields:
 
 - powerdns

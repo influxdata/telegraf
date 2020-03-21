@@ -40,7 +40,8 @@ GO
   ## By default, the host is localhost, listening on default port, TCP 1433.
   ##   for Windows, the user is the currently running AD user (SSO).
   ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-  ##   parameters.
+  ##   parameters, in particular, tls connections can be created like so:
+  ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
   # servers = [
   #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
   # ]
@@ -51,10 +52,9 @@ GO
   query_version = 2
 
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
-  # azuredb = true 
+  # azuredb = true
 
-  ## If you would like to exclude some of the metrics queries, list them here
-  ## Possible choices:
+  ## Possible queries:
   ## - PerformanceCounters
   ## - WaitStatsCategorized
   ## - DatabaseIO
@@ -66,8 +66,13 @@ GO
   ## - VolumeSpace
   ## - Schedulers
   ## - AzureDBResourceStats
-  ## - AzureDBResourceGovernance 
+  ## - AzureDBResourceGovernance
   ## - SqlRequests
+  ## - ServerProperties
+  ## A list of queries to include. If not specified, all the above listed queries are used.
+  # include_query = []
+
+  ## A list of queries to explicitly ignore.
   exclude_query = [ 'Schedulers' , 'SqlRequests']
 ```
 
@@ -107,7 +112,14 @@ The new (version 2) metrics provide:
 - *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version. In the case of Azure SQL relevent properties such as Tier, #Vcores, Memory etc.
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
 - *Schedulers* - This captures sys.dm_os_schedulers.
-- *SqlRequests* - This captures a snapshot of dm_exec_requests and dm_exec_sessions that gives you running requests as well as wait types and blocking sessions
+- *SqlRequests* - This captures a snapshot of dm_exec_requests and
+  dm_exec_sessions that gives you running requests as well as wait types and
+  blocking sessions.
+
+  In order to allow tracking on a per statement basis this query produces a
+  unique tag for each query.  Depending on the database workload, this may
+  result in a high cardinality series.  Reference the FAQ for tips on
+  [managing series cardinality][cardinality].
 - *Azure Managed Instances*
   - Stats from `sys.server_resource_stats`:
     - cpu_count
@@ -163,3 +175,5 @@ The following metrics can be used directly, with no delta calculations:
 Version 2 queries have the following tags:
 - `sql_instance`: Physical host and instance name (hostname:instance)
 - database_name:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
+
+[cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality

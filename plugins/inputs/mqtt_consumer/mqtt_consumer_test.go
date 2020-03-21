@@ -2,114 +2,377 @@ package mqtt_consumer
 
 import (
 	"testing"
+	"time"
 
 	"github.com/eclipse/paho.mqtt.golang"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-const (
-	testMsg    = "cpu_load_short,host=server01 value=23422.0 1422568543702900257\n"
-	invalidMsg = "cpu_load_short,host=server01 1422568543702900257\n"
-)
+type FakeClient struct {
+	ConnectF           func() mqtt.Token
+	SubscribeMultipleF func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token
+	AddRouteF          func(topic string, callback mqtt.MessageHandler)
+	DisconnectF        func(quiesce uint)
 
-func newTestMQTTConsumer() *MQTTConsumer {
-	n := &MQTTConsumer{
-		Topics:  []string{"telegraf"},
-		Servers: []string{"localhost:1883"},
-	}
+	connectCallCount    int
+	subscribeCallCount  int
+	addRouteCallCount   int
+	disconnectCallCount int
+}
 
-	return n
+func (c *FakeClient) Connect() mqtt.Token {
+	c.connectCallCount++
+	return c.ConnectF()
+}
+
+func (c *FakeClient) SubscribeMultiple(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+	c.subscribeCallCount++
+	return c.SubscribeMultipleF(filters, callback)
+}
+
+func (c *FakeClient) AddRoute(topic string, callback mqtt.MessageHandler) {
+	c.addRouteCallCount++
+	c.AddRouteF(topic, callback)
+}
+
+func (c *FakeClient) Disconnect(quiesce uint) {
+	c.disconnectCallCount++
+	c.DisconnectF(quiesce)
+}
+
+type FakeParser struct {
+}
+
+// FakeParser satisfies parsers.Parser
+var _ parsers.Parser = &FakeParser{}
+
+func (p *FakeParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	panic("not implemented")
+}
+
+func (p *FakeParser) ParseLine(line string) (telegraf.Metric, error) {
+	panic("not implemented")
+}
+
+func (p *FakeParser) SetDefaultTags(tags map[string]string) {
+	panic("not implemented")
+}
+
+type FakeToken struct {
+	sessionPresent bool
+}
+
+// FakeToken satisfies mqtt.Token
+var _ mqtt.Token = &FakeToken{}
+
+func (t *FakeToken) Wait() bool {
+	return true
+}
+
+func (t *FakeToken) WaitTimeout(time.Duration) bool {
+	return true
+}
+
+func (t *FakeToken) Error() error {
+	return nil
+}
+
+func (t *FakeToken) SessionPresent() bool {
+	return t.sessionPresent
+}
+
+// Test the basic lifecycle transitions of the plugin.
+func TestLifecycleSanity(t *testing.T) {
+	var acc testutil.Accumulator
+
+	plugin := New(func(o *mqtt.ClientOptions) Client {
+		return &FakeClient{
+			ConnectF: func() mqtt.Token {
+				return &FakeToken{}
+			},
+			AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+			},
+			SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+				return &FakeToken{}
+			},
+			DisconnectF: func(quiesce uint) {
+			},
+		}
+	})
+	plugin.Log = testutil.Logger{}
+	plugin.Servers = []string{"tcp://127.0.0.1"}
+
+	parser := &FakeParser{}
+	plugin.SetParser(parser)
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+
+	err = plugin.Gather(&acc)
+	require.NoError(t, err)
+
+	plugin.Stop()
 }
 
 // Test that default client has random ID
 func TestRandomClientID(t *testing.T) {
-	m1 := &MQTTConsumer{
-		Servers: []string{"localhost:1883"}}
-	opts, err := m1.createOpts()
-	assert.NoError(t, err)
+	var err error
 
-	m2 := &MQTTConsumer{
-		Servers: []string{"localhost:1883"}}
-	opts2, err2 := m2.createOpts()
-	assert.NoError(t, err2)
+	m1 := New(nil)
+	m1.Log = testutil.Logger{}
+	err = m1.Init()
+	require.NoError(t, err)
 
-	assert.NotEqual(t, opts.ClientID, opts2.ClientID)
+	m2 := New(nil)
+	m2.Log = testutil.Logger{}
+	err = m2.Init()
+	require.NoError(t, err)
+
+	require.NotEqual(t, m1.opts.ClientID, m2.opts.ClientID)
 }
 
-// Test that default client has random ID
-func TestClientID(t *testing.T) {
-	m1 := &MQTTConsumer{
-		Servers:  []string{"localhost:1883"},
-		ClientID: "telegraf-test",
-	}
-	opts, err := m1.createOpts()
-	assert.NoError(t, err)
-
-	m2 := &MQTTConsumer{
-		Servers:  []string{"localhost:1883"},
-		ClientID: "telegraf-test",
-	}
-	opts2, err2 := m2.createOpts()
-	assert.NoError(t, err2)
-
-	assert.Equal(t, "telegraf-test", opts2.ClientID)
-	assert.Equal(t, "telegraf-test", opts.ClientID)
-}
-
-// Test that Start() fails if client ID is not set but persistent is
+// PersistentSession requires ClientID
 func TestPersistentClientIDFail(t *testing.T) {
-	m1 := &MQTTConsumer{
-		Servers:           []string{"localhost:1883"},
-		PersistentSession: true,
+	plugin := New(nil)
+	plugin.Log = testutil.Logger{}
+	plugin.PersistentSession = true
+
+	err := plugin.Init()
+	require.Error(t, err)
+}
+
+type Message struct {
+}
+
+func (m *Message) Duplicate() bool {
+	panic("not implemented")
+}
+
+func (m *Message) Qos() byte {
+	panic("not implemented")
+}
+
+func (m *Message) Retained() bool {
+	panic("not implemented")
+}
+
+func (m *Message) Topic() string {
+	return "telegraf"
+}
+
+func (m *Message) MessageID() uint16 {
+	panic("not implemented")
+}
+
+func (m *Message) Payload() []byte {
+	return []byte("cpu time_idle=42i")
+}
+
+func (m *Message) Ack() {
+	panic("not implemented")
+}
+
+func TestTopicTag(t *testing.T) {
+	tests := []struct {
+		name     string
+		topicTag func() *string
+		expected []telegraf.Metric
+	}{
+		{
+			name: "default topic when topic tag is unset for backwards compatibility",
+			topicTag: func() *string {
+				return nil
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"topic": "telegraf",
+					},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "use topic tag when set",
+			topicTag: func() *string {
+				tag := "topic_tag"
+				return &tag
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"topic_tag": "telegraf",
+					},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "no topic tag is added when topic tag is set to the empty string",
+			topicTag: func() *string {
+				tag := ""
+				return &tag
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
-	acc := testutil.Accumulator{}
-	err := m1.Start(&acc)
-	assert.Error(t, err)
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var handler mqtt.MessageHandler
+			client := &FakeClient{
+				ConnectF: func() mqtt.Token {
+					return &FakeToken{}
+				},
+				AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+					handler = callback
+				},
+				SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+					return &FakeToken{}
+				},
+				DisconnectF: func(quiesce uint) {
+				},
+			}
 
-func mqttMsg(val string) mqtt.Message {
-	return &message{
-		topic:   "telegraf/unit_test",
-		payload: []byte(val),
+			plugin := New(func(o *mqtt.ClientOptions) Client {
+				return client
+			})
+			plugin.Log = testutil.Logger{}
+			plugin.Topics = []string{"telegraf"}
+			plugin.TopicTag = tt.topicTag()
+
+			parser, err := parsers.NewInfluxParser()
+			require.NoError(t, err)
+			plugin.SetParser(parser)
+
+			err = plugin.Init()
+			require.NoError(t, err)
+
+			var acc testutil.Accumulator
+			err = plugin.Start(&acc)
+			require.NoError(t, err)
+
+			handler(nil, &Message{})
+
+			plugin.Stop()
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(),
+				testutil.IgnoreTime())
+		})
 	}
 }
 
-// Take the message struct from the paho mqtt client library for returning
-// a test message interface.
-type message struct {
-	duplicate bool
-	qos       byte
-	retained  bool
-	topic     string
-	messageID uint16
-	payload   []byte
+func TestAddRouteCalledForEachTopic(t *testing.T) {
+	client := &FakeClient{
+		ConnectF: func() mqtt.Token {
+			return &FakeToken{}
+		},
+		AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+		},
+		SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+			return &FakeToken{}
+		},
+		DisconnectF: func(quiesce uint) {
+		},
+	}
+	plugin := New(func(o *mqtt.ClientOptions) Client {
+		return client
+	})
+	plugin.Log = testutil.Logger{}
+	plugin.Topics = []string{"a", "b"}
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+
+	plugin.Stop()
+
+	require.Equal(t, client.addRouteCallCount, 2)
 }
 
-func (m *message) Duplicate() bool {
-	return m.duplicate
+func TestSubscribeCalledIfNoSession(t *testing.T) {
+	client := &FakeClient{
+		ConnectF: func() mqtt.Token {
+			return &FakeToken{}
+		},
+		AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+		},
+		SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+			return &FakeToken{}
+		},
+		DisconnectF: func(quiesce uint) {
+		},
+	}
+	plugin := New(func(o *mqtt.ClientOptions) Client {
+		return client
+	})
+	plugin.Log = testutil.Logger{}
+	plugin.Topics = []string{"b"}
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	var acc testutil.Accumulator
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
+
+	plugin.Stop()
+
+	require.Equal(t, client.subscribeCallCount, 1)
 }
 
-func (m *message) Ack() {
-	return
-}
+func TestSubscribeNotCalledIfSession(t *testing.T) {
+	client := &FakeClient{
+		ConnectF: func() mqtt.Token {
+			return &FakeToken{sessionPresent: true}
+		},
+		AddRouteF: func(topic string, callback mqtt.MessageHandler) {
+		},
+		SubscribeMultipleF: func(filters map[string]byte, callback mqtt.MessageHandler) mqtt.Token {
+			return &FakeToken{}
+		},
+		DisconnectF: func(quiesce uint) {
+		},
+	}
+	plugin := New(func(o *mqtt.ClientOptions) Client {
+		return client
+	})
+	plugin.Log = testutil.Logger{}
+	plugin.Topics = []string{"b"}
 
-func (m *message) Qos() byte {
-	return m.qos
-}
+	err := plugin.Init()
+	require.NoError(t, err)
 
-func (m *message) Retained() bool {
-	return m.retained
-}
+	var acc testutil.Accumulator
+	err = plugin.Start(&acc)
+	require.NoError(t, err)
 
-func (m *message) Topic() string {
-	return m.topic
-}
+	plugin.Stop()
 
-func (m *message) MessageID() uint16 {
-	return m.messageID
-}
-
-func (m *message) Payload() []byte {
-	return m.payload
+	require.Equal(t, client.subscribeCallCount, 0)
 }

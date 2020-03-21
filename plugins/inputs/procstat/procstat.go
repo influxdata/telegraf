@@ -216,6 +216,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"write_bytes"] = io.WriteBytes
 	}
 
+	createdAt, err := proc.CreateTime() //Returns epoch in ms
+	if err == nil {
+		fields[prefix+"created_at"] = createdAt * 1000000 //Convert ms to ns
+	}
+
 	cpu_time, err := proc.Times()
 	if err == nil {
 		fields[prefix+"cpu_time_user"] = cpu_time.User
@@ -243,6 +248,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"memory_data"] = mem.Data
 		fields[prefix+"memory_stack"] = mem.Stack
 		fields[prefix+"memory_locked"] = mem.Locked
+	}
+
+	mem_perc, err := proc.MemoryPercent()
+	if err == nil {
+		fields[prefix+"memory_usage"] = mem_perc
 	}
 
 	rlims, err := proc.RlimitUsage(true)
