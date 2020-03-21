@@ -9,7 +9,7 @@ import (
 	"gopkg.in/ldap.v2"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -84,7 +84,11 @@ func (l *Ldap) Gather(acc telegraf.Accumulator) error {
 	beforeConnect := time.Now()
 	if l.Ssl != "" {
 		// build tls config
-		tlsConfig, err := internal.GetTLSConfig("", "", l.SslCa, l.InsecureSkipVerify)
+		clientConfig := &tls.ClientConfig{
+			TLSCA:              l.SslCa,
+			InsecureSkipVerify: l.InsecureSkipVerify,
+		}
+		tlsConfig, err := clientConfig.TLSConfig()
 		if err != nil {
 			acc.AddError(err)
 			return nil
