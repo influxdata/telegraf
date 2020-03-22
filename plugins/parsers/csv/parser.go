@@ -14,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+type TimeFunc func() time.Time
+
 type Parser struct {
 	MetricName        string
 	HeaderRowCount    int
