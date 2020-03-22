@@ -83,7 +83,7 @@ const sampleConfig = `
 #  ## The plugin supports connections to PLCs via OPCUA
 #  ##
 #  ## Device name
-name = "opcua rocks"
+name = "opcua_rocks"
 #
 #  # OPC UA Endpoint URL
 endpoint = "opc.tcp://opcua.rocks:4840"
