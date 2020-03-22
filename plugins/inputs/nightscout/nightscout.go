@@ -141,6 +141,7 @@ func (ns *Nightscout) importNSResult(r io.Reader, acc telegraf.Accumulator) erro
 	fields["filtered"] = bgData[0].Filtered
 	fields["unfiltered"] = bgData[0].Unfiltered
 	fields["rssi"] = bgData[0].RSSI
+	fields["direction_num"] = directionMapping(bgData[0].Direction)
 
 	acc.AddFields("nightscout", fields, tags, now)
 
@@ -150,4 +151,28 @@ func (ns *Nightscout) importNSResult(r io.Reader, acc telegraf.Accumulator) erro
 // init registers the plugin with telegraf
 func init() {
 	inputs.Add("nightscout", func() telegraf.Input { return &Nightscout{} })
+}
+
+// directionMapping converts the text direction to a number for easy processing in dashboards
+func directionMapping(direction string) string {
+	ans := ""
+	switch direction {
+	case "DoubleUp":
+		ans = "3"
+	case "SingleUp":
+		ans = "2"
+	case "FortyFiveUp":
+		ans = "1"
+	case "Flat":
+		ans = "0"
+	case "FortyFiveDown":
+		ans = "-1"
+	case "SingleDown":
+		ans = "-2"
+	case "DoubleDown":
+		ans = "-3"
+	default:
+		ans = ""
+	}
+	return ans
 }

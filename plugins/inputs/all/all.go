@@ -110,6 +110,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx_plus_api"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx_upstream_check"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx_vts"
+	_ "github.com/influxdata/telegraf/plugins/inputs/nightscout"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nsq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nsq_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nstat"
