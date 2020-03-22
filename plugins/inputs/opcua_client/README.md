@@ -45,9 +45,9 @@ The opcua_client plugin retrieves data from OPCUA slave devices
  ## Template 			- {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
  nodes = [
 	{name="NameSpaceArray", namespace="0", identifier_type="i", identifier="2255", data_type="string", description="List of NameSpace"},
-	{name="State", 			namespace="0", identifier_type="i", identifier="2259", data_type="int32", description="Running Status"},
+	{name="State", 		namespace="0", identifier_type="i", identifier="2259", data_type="int32", description="Running Status"},
 	{name="CurrentTime", 	namespace="0", identifier_type="i", identifier="2258", data_type="datetime", description="OPC UA Server Time"},
-	{name="Sine1", 			namespace="2", identifier_type="s",  identifier="Simulation Examples.Functions.Sine1", data_type="float", description="Simulation Sine Wave"},
+	{name="Sine1", 		namespace="2", identifier_type="s",  identifier="Simulation Examples.Functions.Sine1", data_type="float", description="Simulation Sine Wave"},
 	]
 ```
 ### Example Output:
