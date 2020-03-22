@@ -11,6 +11,7 @@ import (
 type Parser struct {
 	parsers.Config
 	DropOriginal bool     `toml:"drop_original"`
+	DropFields   []string `toml:"drop_fields"`
 	Merge        string   `toml:"merge"`
 	ParseFields  []string `toml:"parse_fields"`
 	Parser       parsers.Parser
@@ -56,7 +57,7 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 	for _, metric := range metrics {
 		newMetrics := []telegraf.Metric{}
-		if !p.DropOriginal {
+		if !p.DropOriginal {		
 			newMetrics = append(newMetrics, metric)
 		}
 
@@ -82,6 +83,11 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 						newMetrics = append(newMetrics, fromFieldMetric...)
 					default:
 						log.Printf("E! [processors.parser] field '%s' not a string, skipping", key)
+					}
+				}
+				for _, fieldToDrop := range p.DropFields {
+					if field.Key == fieldToDrop {
+						metric.RemoveField(fieldToDrop)
 					}
 				}
 			}
