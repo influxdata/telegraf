@@ -120,7 +120,6 @@ nodes = [
 		{name="ProductName", namespace="0", identifier_type="i", identifier="2261", data_type="string", description="open62541 OPC UA Server"},
 		{name="ProductUri", namespace="0", identifier_type="i", identifier="2262", data_type="string", description="http://open62541.org"},
 		{name="ManufacturerName", namespace="0", identifier_type="i", identifier="2263", data_type="string", description="open62541"},
-		{name="Auditing", namespace="0", identifier_type="i", identifier="2994", data_type="boolean", description="false"},
 ]
 `
 

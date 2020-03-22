@@ -20,7 +20,6 @@ func TestClient1(t *testing.T) {
 		{"ProductName", "0", "i", "2261", "string", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "string", "http://open62541.org"},
 		{"ManufacturerName", "0", "i", "2263", "string", "open62541"},
-		{"Auditing", "0", "i", "2994", "boolean", "false"},
 	}
 
 	var o OpcUA
