@@ -35,7 +35,7 @@ type Parser struct {
 	TimeFunc          func() time.Time
 }
 
-func (p *Parser) SetTimeFunc(fn metric.TimeFunc) {
+func (p *Parser) SetTimeFunc(fn TimeFunc) {
 	p.TimeFunc = fn
 }
 
