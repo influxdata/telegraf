@@ -1,6 +1,7 @@
 package csv
 
 import (
+	"log"
 	"bytes"
 	"encoding/csv"
 	"fmt"
@@ -13,8 +14,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-type TimeFunc func() time.Time
-
 type Parser struct {
 	MetricName        string
 	HeaderRowCount    int
@@ -24,6 +23,7 @@ type Parser struct {
 	Comment           string
 	TrimSpace         bool
 	ColumnNames       []string
+	Columns		  map[int][]string
 	ColumnTypes       []string
 	TagColumns        []string
 	MeasurementColumn string
@@ -33,7 +33,7 @@ type Parser struct {
 	TimeFunc          func() time.Time
 }
 
-func (p *Parser) SetTimeFunc(fn TimeFunc) {
+func (p *Parser) SetTimeFunc(fn metric.TimeFunc) {
 	p.TimeFunc = fn
 }
 
@@ -63,10 +63,13 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 	// if there is a header and nothing in DataColumns
 	// set DataColumns to names extracted from the header
-	headerNames := make([]string, 0)
+	headersMap := make(map[int][]string)
 	if len(p.ColumnNames) == 0 {
+		log.Printf("header row count: %d", p.HeaderRowCount)
 		for i := 0; i < p.HeaderRowCount; i++ {
+			headerNames := make([]string, 0)
 			header, err := csvReader.Read()
+			log.Printf("line %d: [%s] | columns: %d", i, header, len(header))
 			if err != nil {
 				return nil, err
 			}
@@ -78,19 +81,22 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 				}
 				if len(headerNames) <= i {
 					headerNames = append(headerNames, name)
-				} else {
-					headerNames[i] = headerNames[i] + name
-				}
-			}
-		}
-		p.ColumnNames = headerNames[p.SkipColumns:]
+				} //else {
+				//	headerNames[i] = headerNames[i] + name
+				//}
+			}			
+			p.ColumnNames = headerNames[p.SkipColumns:]
+			headersMap[len(p.ColumnNames)] = p.ColumnNames
+		}	
+		//p.Columns[len(p.ColumnNames)] = p.ColumnNames
 	} else {
 		// if columns are named, just skip header rows
 		for i := 0; i < p.HeaderRowCount; i++ {
 			csvReader.Read()
 		}
 	}
-
+	p.Columns = headersMap
+	log.Printf("done reading in headers: [%s]", p.Columns)
 	table, err := csvReader.ReadAll()
 	if err != nil {
 		return nil, err
@@ -117,7 +123,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	// if there is nothing in DataColumns, ParseLine will fail
-	if len(p.ColumnNames) == 0 {
+	if len(p.ColumnNames) == 0 && len(p.Columns) == 0 {
 		return nil, fmt.Errorf("[parsers.csv] data columns must be specified")
 	}
 
@@ -125,7 +131,9 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("parsing record..")
 	m, err := p.parseRecord(record)
+	log.Printf("parse complete")
 	if err != nil {
 		return nil, err
 	}
@@ -138,68 +146,73 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 
 	// skip columns in record
 	record = record[p.SkipColumns:]
-outer:
-	for i, fieldName := range p.ColumnNames {
-		if i < len(record) {
-			value := record[i]
-			if p.TrimSpace {
-				value = strings.Trim(value, " ")
-			}
+	if len(p.Columns) >= 2 {
+		p.ColumnNames = p.Columns[len(record)]
+	}
+	if p.ColumnNames != nil {
 
-			for _, tagName := range p.TagColumns {
-				if tagName == fieldName {
-					tags[tagName] = value
-					continue outer
-				}
-			}
-
-			// Try explicit conversion only when column types is defined.
-			if len(p.ColumnTypes) > 0 {
-				// Throw error if current column count exceeds defined types.
-				if i >= len(p.ColumnTypes) {
-					return nil, fmt.Errorf("column type: column count exceeded")
+	outer:
+		for i, fieldName := range p.ColumnNames {
+			if i < len(record) {
+			 	value := record[i]
+				if p.TrimSpace {
+					value = strings.Trim(value, " ")
 				}
 
-				var val interface{}
-				var err error
-
-				switch p.ColumnTypes[i] {
-				case "int":
-					val, err = strconv.ParseInt(value, 10, 64)
-					if err != nil {
-						return nil, fmt.Errorf("column type: parse int error %s", err)
+				for _, tagName := range p.TagColumns {
+					if tagName == fieldName {
+						tags[tagName] = value
+						continue outer
 					}
-				case "float":
-					val, err = strconv.ParseFloat(value, 64)
-					if err != nil {
-						return nil, fmt.Errorf("column type: parse float error %s", err)
-					}
-				case "bool":
-					val, err = strconv.ParseBool(value)
-					if err != nil {
-						return nil, fmt.Errorf("column type: parse bool error %s", err)
-					}
-				default:
-					val = value
 				}
 
-				recordFields[fieldName] = val
-				continue
-			}
+				// Try explicit conversion only when column types is defined.
+				if len(p.ColumnTypes) > 0 {
+					// Throw error if current column count exceeds defined types.
+					if i >= len(p.ColumnTypes) {
+						return nil, fmt.Errorf("column type: column count exceeded")
+					}
 
-			// attempt type conversions
-			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
-				recordFields[fieldName] = iValue
-			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
-				recordFields[fieldName] = fValue
-			} else if bValue, err := strconv.ParseBool(value); err == nil {
-				recordFields[fieldName] = bValue
-			} else {
-				recordFields[fieldName] = value
+					var val interface{}
+					var err error
+
+					switch p.ColumnTypes[i] {
+					case "int":
+						val, err = strconv.ParseInt(value, 10, 64)
+						if err != nil {
+							return nil, fmt.Errorf("column type: parse int error %s", err)
+						}
+					case "float":
+						val, err = strconv.ParseFloat(value, 64)
+						if err != nil {
+							return nil, fmt.Errorf("column type: parse float error %s", err)
+						}
+					case "bool":
+						val, err = strconv.ParseBool(value)
+						if err != nil {
+							return nil, fmt.Errorf("column type: parse bool error %s", err)
+						}
+					default:
+						val = value
+					}
+
+					recordFields[fieldName] = val
+					continue
+				}
+
+				// attempt type conversions
+				if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+					recordFields[fieldName] = iValue
+				} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+					recordFields[fieldName] = fValue
+				} else if bValue, err := strconv.ParseBool(value); err == nil {
+					recordFields[fieldName] = bValue
+				} else {
+					recordFields[fieldName] = value
+				}
 			}
 		}
 	}
-
 	// add default tags
 	for k, v := range p.DefaultTags {
 		tags[k] = v

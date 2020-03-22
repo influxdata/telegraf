@@ -220,7 +220,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.CSVTimestampFormat,
 			config.DefaultTags)
 	case "logfmt":
-		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
+		parser, err = NewLogFmtParser(config.MetricName, config.TagKeys, config.DefaultTags)
 	case "form_urlencoded":
 		parser, err = NewFormUrlencodedParser(
 			config.MetricName,
@@ -297,7 +297,7 @@ func newGrokParser(metricName string,
 	tZone string, uniqueTimestamp string) (Parser, error) {
 	parser := grok.Parser{
 		Measurement:        metricName,
-		Patterns:           patterns,
+		Patterns:	    patterns,
 		NamedPatterns:      nPatterns,
 		CustomPatterns:     cPatterns,
 		CustomPatternFiles: cPatternFiles,
@@ -373,8 +373,8 @@ func NewDropwizardParser(
 }
 
 // NewLogFmtParser returns a logfmt parser with the default options.
-func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
-	return logfmt.NewParser(metricName, defaultTags), nil
+func NewLogFmtParser(metricName string, tagKeys []string, defaultTags map[string]string) (Parser, error) {
+	return logfmt.NewParser(metricName, tagKeys, defaultTags), nil
 }
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
