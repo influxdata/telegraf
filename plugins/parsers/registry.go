@@ -250,6 +250,8 @@ func newCSVParser(metricName string,
 	nameColumn string,
 	timestampColumn string,
 	timestampFormat string,
+	dateColumn string,
+	dateFormat string,
 	defaultTags map[string]string) (Parser, error) {
 
 	if headerRowCount == 0 && len(columnNames) == 0 {
