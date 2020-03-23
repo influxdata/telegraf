@@ -16,11 +16,13 @@ import (
 
 func TestJobRequest(t *testing.T) {
 	tests := []struct {
-		input  jobRequest
-		output string
+		input         jobRequest
+		hierarchyName string
+		URL           string
 	}{
 		{
 			jobRequest{},
+			"",
 			"",
 		},
 		{
@@ -29,12 +31,26 @@ func TestJobRequest(t *testing.T) {
 				parents: []string{"3", "2"},
 			},
 			"3/2/1",
+			"/job/3/job/2/job/1/api/json",
+		},
+		{
+			jobRequest{
+				name:    "job 3",
+				parents: []string{"job 1", "job 2"},
+			},
+			"job 1/job 2/job 3",
+			"/job/job%201/job/job%202/job/job%203/api/json",
 		},
 	}
 	for _, test := range tests {
-		output := test.input.hierarchyName()
-		if output != test.output {
-			t.Errorf("Expected %s, got %s\n", test.output, output)
+		hierarchyName := test.input.hierarchyName()
+		URL := test.input.URL()
+		if hierarchyName != test.hierarchyName {
+			t.Errorf("Expected %s, got %s\n", test.hierarchyName, hierarchyName)
+		}
+
+		if test.URL != "" && URL != test.URL {
+			t.Errorf("Expected %s, got %s\n", test.URL, URL)
 		}
 	}
 }
@@ -66,7 +82,7 @@ type mockHandler struct {
 }
 
 func (h mockHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	o, ok := h.responseMap[r.URL.Path]
+	o, ok := h.responseMap[r.URL.RequestURI()]
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -550,6 +566,43 @@ func TestGatherJobs(t *testing.T) {
 			},
 		},
 		{
+			name: "gather metrics for jobs with space",
+			input: mockHandler{
+				responseMap: map[string]interface{}{
+					"/api/json": &jobResponse{
+						Jobs: []innerJob{
+							{Name: "job 1"},
+						},
+					},
+					"/job/job%201/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 3,
+						},
+					},
+					"/job/job%201/3/api/json": &buildResponse{
+						Building:  false,
+						Result:    "SUCCESS",
+						Duration:  25558,
+						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+					},
+				},
+			},
+			output: &testutil.Accumulator{
+				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"name":   "job 1",
+							"result": "SUCCESS",
+						},
+						Fields: map[string]interface{}{
+							"duration":    int64(25558),
+							"result_code": 0,
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "gather sub jobs, jobs filter",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
@@ -582,6 +635,8 @@ func TestGatherJobs(t *testing.T) {
 							{Name: "PR-100"},
 							{Name: "PR-101"},
 							{Name: "PR-ignore2"},
+							{Name: "PR 1"},
+							{Name: "PR ignore"},
 						},
 					},
 					"/job/apps/job/k8s-cloud/job/PR-100/api/json": &jobResponse{
@@ -592,6 +647,11 @@ func TestGatherJobs(t *testing.T) {
 					"/job/apps/job/k8s-cloud/job/PR-101/api/json": &jobResponse{
 						LastBuild: jobBuild{
 							Number: 4,
+						},
+					},
+					"/job/apps/job/k8s-cloud/job/PR%201/api/json": &jobResponse{
+						LastBuild: jobBuild{
+							Number: 1,
 						},
 					},
 					"/job/apps/job/chronograf/1/api/json": &buildResponse{
@@ -612,10 +672,27 @@ func TestGatherJobs(t *testing.T) {
 						Duration:  91558,
 						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
 					},
+					"/job/apps/job/k8s-cloud/job/PR%201/1/api/json": &buildResponse{
+						Building:  false,
+						Result:    "SUCCESS",
+						Duration:  87832,
+						Timestamp: (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+					},
 				},
 			},
 			output: &testutil.Accumulator{
 				Metrics: []*testutil.Metric{
+					{
+						Tags: map[string]string{
+							"name":    "PR 1",
+							"parents": "apps/k8s-cloud",
+							"result":  "SUCCESS",
+						},
+						Fields: map[string]interface{}{
+							"duration":    int64(87832),
+							"result_code": 0,
+						},
+					},
 					{
 						Tags: map[string]string{
 							"name":    "PR-100",
@@ -666,6 +743,7 @@ func TestGatherJobs(t *testing.T) {
 					"ignore-1",
 					"apps/ignore-all/*",
 					"apps/k8s-cloud/PR-ignore2",
+					"apps/k8s-cloud/PR ignore",
 				},
 			}
 			te := j.initialize(&http.Client{Transport: &http.Transport{}})
