@@ -73,17 +73,17 @@ const sampleConfig = `
  ##
  ## Device name
  name = "Device"
- 
+
  ## Slave ID - addresses a MODBUS device on the bus
  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
  slave_id = 1
- 
+
  ## Timeout for each request
  timeout = "1s"
- 
+
  # TCP - connect via Modbus/TCP
  controller = "tcp://localhost:502"
- 
+
  # Serial (RS485; RS232)
  #controller = "file:///dev/ttyUSB0"
  #baud_rate = 9600
@@ -91,15 +91,15 @@ const sampleConfig = `
  #parity = "N"
  #stop_bits = 1
  #transmission_mode = "RTU"
- 
- 
+
+
  ## Measurements
  ##
- 
+
  ## Digital Variables, Discrete Inputs and Coils
  ## name    - the variable name
  ## address - variable address
- 
+
  discrete_inputs = [
    { name = "start",          address = [0]},
    { name = "stop",           address = [1]},
@@ -111,7 +111,7 @@ const sampleConfig = `
    { name = "motor1_jog",     address = [1]},
    { name = "motor1_stop",    address = [2]},
  ]
- 
+
  ## Analog Variables, Input Registers and Holding Registers
  ## name       - the variable name
  ## byte_order - the ordering of bytes
@@ -122,7 +122,7 @@ const sampleConfig = `
  ## data_type  - UINT16, INT16, INT32, UINT32, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
  ## scale      - the final numeric variable representation
  ## address    - variable address
- 
+
  holding_registers = [
    { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale=0.01,  address = [8]},
    { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [0]},
