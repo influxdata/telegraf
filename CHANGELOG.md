@@ -82,6 +82,7 @@
 - [#7119](https://github.com/influxdata/telegraf/pull/7119): Fix internal metrics for output split into multiple lines.
 - [#7021](https://github.com/influxdata/telegraf/pull/7021): Fix schedulers query compatibility with pre SQL-2016.
 - [#7182](https://github.com/influxdata/telegraf/pull/7182): Set headers on influxdb_listener ping URL.
+- [#7165](https://github.com/influxdata/telegraf/issues/7165): Fix url encoding of job names in jenkins input plugin.
 
 ## v1.13.4 [2020-02-25]
 
