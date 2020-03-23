@@ -31,6 +31,8 @@ type Parser struct {
 	MeasurementColumn string
 	TimestampColumn   string
 	TimestampFormat   string
+	DateColumn	  string
+	DateFormat	  string
 	DefaultTags       map[string]string
 	TimeFunc          func() time.Time
 }
@@ -226,7 +228,7 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
 	}
 
-	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat)
+	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.DateColumn, p.DateFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -242,13 +244,46 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string,
+	timestampColumn, timestampFormat string, dateColumn string
 ) (time.Time, error) {
+	if dateColumn != "" {
+		if dateColumn, ok := recordFields[dateColumn]; ok {
+			if dateFormat != "" {
+				//Convert '/' to '-' so no checks are needed
+				dateColumn = strings.ReplaceAll(dateColumn, "/", "-")
+				dateFormat = strings.ReplaceAll(dateFormat, "/", "-")
+				dateColumnSplit := strings.SplitN(dateFormat, "-", -1)
+				dateFormatSplit := strings.SplitN(dateFormat, "-", -1)
+				if len(dateColumnSplit) != 3  {
+					return time.Time{}, fmt.Errorf("date column: %v could not be parsed", dateColumn)	
+				} 
+				if len(dateFormatSplit) != 3  {
+					return time.Time{}, fmt.Errorf("date format: %v is invalid", dateFormat)	
+				}
+				var day string
+				var month string
+				var year string
+				for i, val := range dateFormatSplit {
+					switch val {
+						case "2006":
+							year = dateColumnSplit(i)
+						case "01": 
+							month = dateColumnSplit(i)
+						case "02":
+							day += dateColumnSplit(i)
+					}
+				}
+				goDate := year + "-" + month + "-" + day
+				recordFields[timestampColumn] = goDate + "T" + timeStampColumn + "Z"	
+			}	
+		}
+		
+	}
 	if timestampColumn != "" {
 		if recordFields[timestampColumn] == nil {
 			return time.Time{}, fmt.Errorf("timestamp column: %v could not be found", timestampColumn)
 		}
-
+		//timestampFormat should remain complete; dateFormat does NOT affect timestamp format
 		switch timestampFormat {
 		case "":
 			return time.Time{}, fmt.Errorf("timestamp format must be specified")
