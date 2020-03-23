@@ -16,13 +16,13 @@ func TestSqlServer_QueriesInclusionExclusion(t *testing.T) {
 	cases := []map[string]interface{}{
 		{
 			"IncludeQuery": []string{},
-			"ExcludeQuery": []string{"WaitStatsCategorized", "DatabaseIO", "ServerProperties", "MemoryClerk", "Schedulers"},
+			"ExcludeQuery": []string{"WaitStatsCategorized", "DatabaseIO", "ServerProperties", "MemoryClerk", "Schedulers", "SqlDiskSpace"},
 			"queries":      []string{"PerformanceCounters", "SqlRequests"},
 			"queriesTotal": 2,
 		},
 		{
 			"IncludeQuery": []string{"PerformanceCounters", "SqlRequests"},
-			"ExcludeQuery": []string{"SqlRequests", "WaitStatsCategorized", "DatabaseIO"},
+			"ExcludeQuery": []string{"SqlRequests", "WaitStatsCategorized", "DatabaseIO", "SqlDiskSpace"},
 			"queries":      []string{"PerformanceCounters"},
 			"queriesTotal": 1,
 		},
