@@ -244,9 +244,9 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string, dateColumn string) (time.Time, error) {
+	timestampColumn, timestampFormat string, dateColumn string, dateFormat string) (time.Time, error) {
 	if dateColumn != "" {
-		if dateColumn, ok := recordFields[dateColumn]; ok {
+		if dateColumn, ok := recordFields[dateColumn].(string); ok {
 			if dateFormat != "" {
 				//Convert '/' to '-' so no checks are needed
 				dateColumn = strings.ReplaceAll(dateColumn, "/", "-")
