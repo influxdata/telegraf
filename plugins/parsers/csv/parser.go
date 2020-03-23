@@ -205,10 +205,10 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 				// attempt type conversions
 				if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 					recordFields[fieldName] = iValue
-				} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
-					recordFields[fieldName] = fValue
-				} else if bValue, err := strconv.ParseBool(value); err == nil {
-					recordFields[fieldName] = bValue
+				//} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+				//	recordFields[fieldName] = fValue
+				//} else if bValue, err := strconv.ParseBool(value); err == nil {
+				//	recordFields[fieldName] = bValue
 				} else {
 					recordFields[fieldName] = value
 				}
