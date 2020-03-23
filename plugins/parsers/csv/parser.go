@@ -265,11 +265,11 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 				for i, val := range dateFormatSplit {
 					switch val {
 						case "2006":
-							year = dateColumnSplit(i)
+							year = dateColumnSplit[i]
 						case "01": 
-							month = dateColumnSplit(i)
+							month = dateColumnSplit[i]
 						case "02":
-							day += dateColumnSplit(i)
+							day += dateColumnSplit[i]
 					}
 				}
 				goDate := year + "-" + month + "-" + day
