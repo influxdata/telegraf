@@ -273,7 +273,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 					}
 				}
 				goDate := year + "-" + month + "-" + day
-				recordFields[timestampColumn] = goDate + "T" + timeStampColumn + "Z"	
+				recordFields[timestampColumn] = goDate + "T" + timestampColumn + "Z"	
 			}	
 		}
 		
