@@ -1,3 +1,10 @@
+## v1.15 [unreleased]
+
+#### Features
+
+- [#6905](https://github.com/influxdata/telegraf/pull/6905): Add commands stats to mongodb input plugin.
+- [#7193](https://github.com/influxdata/telegraf/pull/7193): Add additional concurrent transaction information.
+
 ## v1.14 [unreleased]
 
 #### Release Notes
