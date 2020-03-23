@@ -259,6 +259,7 @@ For documentation on the latest development code see the [documentation index][d
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
 * [nvidia_smi](./plugins/inputs/nvidia_smi)
+* [opcua_client](./plugins/inputs/opcua_client)
 * [openldap](./plugins/inputs/openldap)
 * [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
