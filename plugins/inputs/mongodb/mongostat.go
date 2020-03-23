@@ -174,7 +174,9 @@ type ConcurrentTransactions struct {
 }
 
 type ConcurrentTransStats struct {
-	Out int64 `bson:"out"`
+	Out          int64 `bson:"out"`
+	Available    int64 `bson:"available"`
+	TotalTickets int64 `bson:"totalTickets"`
 }
 
 // CacheStats stores cache statistics for WiredTiger.
@@ -582,27 +584,29 @@ type StatLine struct {
 	UnmodifiedPagesEvicted    int64
 
 	// Replicated Opcounter fields
-	InsertR, InsertRCnt                  int64
-	QueryR, QueryRCnt                    int64
-	UpdateR, UpdateRCnt                  int64
-	DeleteR, DeleteRCnt                  int64
-	GetMoreR, GetMoreRCnt                int64
-	CommandR, CommandRCnt                int64
-	ReplLag                              int64
-	OplogStats                           *OplogStats
-	Flushes, FlushesCnt                  int64
-	FlushesTotalTime                     int64
-	Mapped, Virtual, Resident, NonMapped int64
-	Faults, FaultsCnt                    int64
-	HighestLocked                        *LockStatus
-	QueuedReaders, QueuedWriters         int64
-	ActiveReaders, ActiveWriters         int64
-	NetIn, NetInCnt                      int64
-	NetOut, NetOutCnt                    int64
-	NumConnections                       int64
-	ReplSetName                          string
-	NodeType                             string
-	NodeState                            string
+	InsertR, InsertRCnt                      int64
+	QueryR, QueryRCnt                        int64
+	UpdateR, UpdateRCnt                      int64
+	DeleteR, DeleteRCnt                      int64
+	GetMoreR, GetMoreRCnt                    int64
+	CommandR, CommandRCnt                    int64
+	ReplLag                                  int64
+	OplogStats                               *OplogStats
+	Flushes, FlushesCnt                      int64
+	FlushesTotalTime                         int64
+	Mapped, Virtual, Resident, NonMapped     int64
+	Faults, FaultsCnt                        int64
+	HighestLocked                            *LockStatus
+	QueuedReaders, QueuedWriters             int64
+	ActiveReaders, ActiveWriters             int64
+	AvailableReaders, AvailableWriters       int64
+	TotalTicketsReaders, TotalTicketsWriters int64
+	NetIn, NetInCnt                          int64
+	NetOut, NetOutCnt                        int64
+	NumConnections                           int64
+	ReplSetName                              string
+	NodeType                                 string
+	NodeState                                string
 
 	// Cluster fields
 	JumboChunksCount int64
@@ -967,6 +971,10 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		if hasWT {
 			returnVal.ActiveReaders = newStat.WiredTiger.Concurrent.Read.Out
 			returnVal.ActiveWriters = newStat.WiredTiger.Concurrent.Write.Out
+			returnVal.AvailableReaders = newStat.WiredTiger.Concurrent.Read.Available
+			returnVal.AvailableWriters = newStat.WiredTiger.Concurrent.Write.Available
+			returnVal.TotalTicketsReaders = newStat.WiredTiger.Concurrent.Read.TotalTickets
+			returnVal.TotalTicketsWriters = newStat.WiredTiger.Concurrent.Write.TotalTickets
 		} else if newStat.GlobalLock.ActiveClients != nil {
 			returnVal.ActiveReaders = newStat.GlobalLock.ActiveClients.Readers
 			returnVal.ActiveWriters = newStat.GlobalLock.ActiveClients.Writers
