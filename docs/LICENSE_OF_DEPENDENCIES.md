@@ -3,7 +3,7 @@
 When distributed in a binary form, Telegraf may contain portions of the
 following works:
 
-- cloud.google.com/go [Apache License 2.0](https://github.com/GoogleCloudPlatform/google-cloud-go/blob/master/LICENSE)
+- cloud.google.com/go [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
 - collectd.org [MIT License](https://git.octo.it/?p=collectd.git;a=blob;f=COPYING;hb=HEAD)
 - github.com/Azure/azure-amqp-common-go [MIT License](https://github.com/Azure/azure-amqp-common-go/blob/master/LICENSE)
@@ -28,6 +28,7 @@ following works:
 - github.com/beorn7/perks [MIT License](https://github.com/beorn7/perks/blob/master/LICENSE)
 - github.com/caio/go-tdigest [MIT License](https://github.com/caio/go-tdigest/blob/master/LICENSE)
 - github.com/cenkalti/backoff [MIT License](https://github.com/cenkalti/backoff/blob/master/LICENSE)
+- github.com/cespare/xxhash [MIT License](https://github.com/cespare/xxhash/blob/master/LICENSE.txt)
 - github.com/cisco-ie/nx-telemetry-proto [Apache License 2.0](https://github.com/cisco-ie/nx-telemetry-proto/blob/master/LICENSE)
 - github.com/couchbase/go-couchbase [MIT License](https://github.com/couchbase/go-couchbase/blob/master/LICENSE)
 - github.com/couchbase/gomemcached [MIT License](https://github.com/couchbase/gomemcached/blob/master/LICENSE)
@@ -59,9 +60,11 @@ following works:
 - github.com/gofrs/uuid [MIT License](https://github.com/gofrs/uuid/blob/master/LICENSE)
 - github.com/gogo/protobuf [BSD 3-Clause Clear License](https://github.com/gogo/protobuf/blob/master/LICENSE)
 - github.com/golang/geo [Apache License 2.0](https://github.com/golang/geo/blob/master/LICENSE)
+- github.com/golang/groupcache [Apache License 2.0](https://github.com/golang/groupcache/blob/master/LICENSE)
 - github.com/golang/mock [Apache License 2.0](https://github.com/golang/mock/blob/master/LICENSE)
 - github.com/golang/protobuf [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/protobuf/blob/master/LICENSE)
 - github.com/golang/snappy [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/snappy/blob/master/LICENSE)
+- github.com/google/go-cmp [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-cmp/blob/master/LICENSE)
 - github.com/google/go-github [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-github/blob/master/LICENSE)
 - github.com/google/go-querystring [BSD 3-Clause "New" or "Revised" License](https://github.com/google/go-querystring/blob/master/LICENSE)
 - github.com/googleapis/gax-go [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/gax-go/blob/master/LICENSE)
@@ -72,7 +75,6 @@ following works:
 - github.com/hashicorp/go-cleanhttp [Mozilla Public License 2.0](https://github.com/hashicorp/go-cleanhttp/blob/master/LICENSE)
 - github.com/hashicorp/go-rootcerts [Mozilla Public License 2.0](https://github.com/hashicorp/go-rootcerts/blob/master/LICENSE)
 - github.com/hashicorp/go-uuid [Mozilla Public License 2.0](https://github.com/hashicorp/go-uuid/LICENSE)
-- github.com/hashicorp/golang-lru [Mozilla Public License 2.0](https://github.com/hashicorp/golang-lru/blob/master/LICENSE)
 - github.com/hashicorp/serf [Mozilla Public License 2.0](https://github.com/hashicorp/serf/blob/master/LICENSE)
 - github.com/influxdata/go-syslog [MIT License](https://github.com/influxdata/go-syslog/blob/develop/LICENSE)
 - github.com/influxdata/tail [MIT License](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
@@ -163,8 +165,6 @@ following works:
 - gopkg.in/olivere/elastic.v5 [MIT License](https://github.com/olivere/elastic/blob/v5.0.76/LICENSE)
 - gopkg.in/tomb.v1 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v1/LICENSE)
 - gopkg.in/yaml.v2 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v2.2.2/LICENSE)
-- k8s.io/apimachinery [Apache License 2.0](https://github.com/kubernetes/apimachinery/blob/master/LICENSE)
-- k8s.io/klog [Apache License 2.0](https://github.com/kubernetes/klog/blob/master/LICENSE)
 
 ## telegraf used and modified code from these projects
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)

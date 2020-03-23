@@ -18,13 +18,14 @@
 - [lanz](/plugins/inputs/lanz/README.md): Contributed by @timhughes
 - [modbus](/plugins/inputs/modbus/README.md) - Contributed by @garciaolais
 - [monit](/plugins/inputs/monit/README.md) - Contributed by @SirishaGopigiri
+- [sflow](/plugins/inputs/sflow/README.md) - Contributed by @influxdata
 - [wireguard](/plugins/inputs/wireguard/README.md) - Contributed by @LINKIWI
 
 #### New Processors
 
 - [dedup](/plugins/processors/dedup/README.md) - Contributed by @igomura
 - [template](/plugins/processors/template/README.md) - Contributed by @RobMalvern
-- [s2_geo](/plugins/processors/s2_geo/README.md) - Contributed by @alespour
+- [s2geo](/plugins/processors/s2geo/README.md) - Contributed by @alespour
 
 #### New Outputs
 
@@ -81,6 +82,7 @@
 - [#7119](https://github.com/influxdata/telegraf/pull/7119): Fix internal metrics for output split into multiple lines.
 - [#7021](https://github.com/influxdata/telegraf/pull/7021): Fix schedulers query compatibility with pre SQL-2016.
 - [#7182](https://github.com/influxdata/telegraf/pull/7182): Set headers on influxdb_listener ping URL.
+- [#7165](https://github.com/influxdata/telegraf/issues/7165): Fix url encoding of job names in jenkins input plugin.
 
 ## v1.13.4 [2020-02-25]
 
