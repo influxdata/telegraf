@@ -31,8 +31,8 @@ type Parser struct {
 	MeasurementColumn string
 	TimestampColumn   string
 	TimestampFormat   string
-	DateColumn	  string
-	DateFormat	  string
+	AltTimestamp       []string
+	AltTimestampFormat []string
 	DefaultTags       map[string]string
 	TimeFunc          func() time.Time
 }
@@ -228,7 +228,7 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
 	}
 
-	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.DateColumn, p.DateFormat)
+	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.AltTimestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -244,34 +244,58 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string, dateColumn string, dateFormat string) (time.Time, error) {
-	if dateColumn != "" {
-		if dateColumn, ok := recordFields[dateColumn].(string); ok {
-			if dateFormat != "" {
-				//Convert '/' to '-' so no checks are needed
-				dateColumn = strings.ReplaceAll(dateColumn, "/", "-")
-				dateFormat = strings.ReplaceAll(dateFormat, "/", "-")
-				dateColumnSplit := strings.SplitN(dateFormat, "-", -1)
-				dateFormatSplit := strings.SplitN(dateFormat, "-", -1)
-				if len(dateColumnSplit) != 3  {
-					return time.Time{}, fmt.Errorf("date column: %v could not be parsed", dateColumn)	
-				} 
-				if len(dateFormatSplit) != 3  {
-					return time.Time{}, fmt.Errorf("date format: %v is invalid", dateFormat)	
-				}
+	timestampColumn, timestampFormat string, altTimestamp []string, altTimestampFormat []string) (time.Time, error) {
+	if len(altTimestamp) != 0 {
+		//altTimestamp should contain date/time column names stored in an array (the order matters, 0 index is the start). 
+		//Additional strings can be included in altTimestamp to format the timestamp accordingly (to match the timestampFormat)
+		//For example, if you have a "Date" column and a "Time" column, and you want to format the two columns in ISO-8601 format
+		//If Date is 
+		splitCols := strings.SplitN(altTimestamp, "|", -1)
+
+			
 				var day string
 				var month string
 				var year string
-				for i, val := range dateFormatSplit {
-					switch val {
-						case "2006":
-							year = dateColumnSplit[i]
-						case "01": 
-							month = dateColumnSplit[i]
-						case "02":
-							day += dateColumnSplit[i]
+		//Loop through the entire altTimestamp, parse the column names as necessary (if a format is given)
+		for i, colKey := range altTimestamp {
+			if colValue, ok := recordFields[colKey]; ok {
+				// if the colKey is a valid column in the logfile, parse it into the appropriate format (if it is specified)
+				colFormat := altTimestampFormat[i]
+				if colFormat != "" {
+					// Supported date formats will contain a '-' or a '/'
+					if strings.Contain(colFormat, "/") || strings.Contain(colFormat, "-") {
+						colValue := strings.ReplaceAll(colValue, "/", "-")
+						colFormat := strings.ReplaceAll(colFormat, "/", "-")
+						colValueSplit := strings.SplitN(colValue, "-", -1)
+						colFormatSplit := strings.SplitN(colFormat, "-", -1)
+						if len(colValueSplit) != len(colFormatSplit) && len(colFormatSplit) != 3{
+							return time.Time{}, fmt.Errorf("invalid format column: %v does not match column %v", colFormat, colValue)	
+						}
+						colFormattedValue := make([]string, 3)
+						for _, value := range colFormatSplit {
+							switch value {
+								case "2006":
+									colFormattedValue[0] = value
+								case "01": 
+									colFormattedValue[1] = value
+								case "02":
+									colFormattedValue[2] = value
+							}
+						}
+						
+					}
+					// Supported time formats will contain a ':" to separate the hours, minutes, seconds, etc.
+					if strings.Contain(colFormat, ":") {
+						
 					}
 				}
+				
+			}
+			
+			switch val {
+			
+			}
+		}
 				goDate := year + "-" + month + "-" + day
 				recordFields[timestampColumn] = goDate + "T" + timestampColumn + "Z"	
 			}	
