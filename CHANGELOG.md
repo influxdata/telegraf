@@ -4,6 +4,7 @@
 
 - [#6905](https://github.com/influxdata/telegraf/pull/6905): Add commands stats to mongodb input plugin.
 - [#7193](https://github.com/influxdata/telegraf/pull/7193): Add additional concurrent transaction information.
+- [#7223](https://github.com/influxdata/telegraf/pull/7223): Add ability to specify HTTP Headers in http_listener_v2 which will added as tags.
 
 ## v1.14 [unreleased]
 
