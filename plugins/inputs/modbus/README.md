@@ -52,6 +52,7 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ]
 
  ## Analog Variables, Input Registers and Holding Registers
+ ## measurement - the (optional) measurement name, defaults to "modbus"
  ## name       - the variable name 
  ## byte_order - the ordering of bytes
  ##  |---AB, ABCD   - Big Endian
