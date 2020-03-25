@@ -256,12 +256,13 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		if err != nil {
 			return time.Time{}, fmt.Errorf("altTimestamp could not be parsed")
 		}
-		//Only want the first two pieces (date and time)
-		tsSlice := strings.SplitN(ts, " ", 2)
-		//Convert into ISO-8601 format: 2014-04-08T22:05:00Z
-		tsString := fmt.Sprintf("%s%s", strings.Join(tsSlice, "T"), "Z")
-		recordFields["altTimestamp"] = tsString
-		timestampColumn = "altTimestamp"
+		//Convert to format: 2014-04-08T22:05:00Z
+		switch timestampFormat{
+			case "":
+				return time.Time{}, fmt.Errorf("timestamp format must be specified")
+			default:	
+				return ts.Format(timestampFormat), err
+		}
 	}
 	
 	if timestampColumn != "" {
