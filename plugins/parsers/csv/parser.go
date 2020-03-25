@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/araddon/dateparse"
 )
 
 type TimeFunc func() time.Time
@@ -244,64 +245,25 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string, altTimestamp []string, altTimestampFormat []string) (time.Time, error) {
-	if len(altTimestamp) != 0 {
-		//altTimestamp should contain date/time column names stored in an array (the order matters, 0 index is the start). 
-		//Additional strings can be included in altTimestamp to format the timestamp accordingly (to match the timestampFormat)
-		//For example, if you have a "Date" column and a "Time" column, and you want to format the two columns in ISO-8601 format
-		//If Date is 
-		splitCols := strings.SplitN(altTimestamp, "|", -1)
-
-			
-				var day string
-				var month string
-				var year string
-		//Loop through the entire altTimestamp, parse the column names as necessary (if a format is given)
-		for i, colKey := range altTimestamp {
-			if colValue, ok := recordFields[colKey]; ok {
-				// if the colKey is a valid column in the logfile, parse it into the appropriate format (if it is specified)
-				colFormat := altTimestampFormat[i]
-				if colFormat != "" {
-					// Supported date formats will contain a '-' or a '/'
-					if strings.Contain(colFormat, "/") || strings.Contain(colFormat, "-") {
-						colValue := strings.ReplaceAll(colValue, "/", "-")
-						colFormat := strings.ReplaceAll(colFormat, "/", "-")
-						colValueSplit := strings.SplitN(colValue, "-", -1)
-						colFormatSplit := strings.SplitN(colFormat, "-", -1)
-						if len(colValueSplit) != len(colFormatSplit) && len(colFormatSplit) != 3{
-							return time.Time{}, fmt.Errorf("invalid format column: %v does not match column %v", colFormat, colValue)	
-						}
-						colFormattedValue := make([]string, 3)
-						for _, value := range colFormatSplit {
-							switch value {
-								case "2006":
-									colFormattedValue[0] = value
-								case "01": 
-									colFormattedValue[1] = value
-								case "02":
-									colFormattedValue[2] = value
-							}
-						}
-						
-					}
-					// Supported time formats will contain a ':" to separate the hours, minutes, seconds, etc.
-					if strings.Contain(colFormat, ":") {
-						
-					}
-				}
-				
-			}
-			
-			switch val {
-			
-			}
+	timestampColumn, timestampFormat string, altTimestamp []string) (time.Time, error) {
+	if len(altTimestamp) != 0 && timestampColumn == ""{
+		for i, columnName := range altTimestamp {
+			altTimestamp[i]	= recordFields[columnName]
 		}
-				goDate := year + "-" + month + "-" + day
-				recordFields[timestampColumn] = goDate + "T" + timestampColumn + "Z"	
-			}	
+		t := strings.Join(altTimestamp, " ")
+		ts, err := dateparse.ParseLocal(t)
+		//Return format will be 2014-04-08 22:05:00 +0000 UTC
+		if err != nil {
+			return time.Time{}, fmt.Errorf("altTimestamp could not be parsed")
 		}
-		
+		//Only want the first two pieces (date and time)
+		tsSlice := strings.SplitN(ts, " ", 2)
+		//Convert into ISO-8601 format: 2014-04-08T22:05:00Z
+		tsString := fmt.Sprintf("%s%s", strings.Join(tsSlice, "T"), "Z")
+		recordFields["altTimestamp"] = tsString
+		timestampColumn = "altTimestamp"
 	}
+	
 	if timestampColumn != "" {
 		if recordFields[timestampColumn] == nil {
 			return time.Time{}, fmt.Errorf("timestamp column: %v could not be found", timestampColumn)
