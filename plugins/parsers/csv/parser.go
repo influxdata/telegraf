@@ -247,15 +247,17 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 	timestampColumn, timestampFormat string, altTimestamp []string) (time.Time, error) {
 	if len(altTimestamp) != 0 && timestampColumn == ""{
 		newRecordFields := make(map[string]interface{})
+		altTimestampValues := make([len(altTimestamp)]string)
 		for i, columnName := range altTimestamp {
 			if recordFields[columnName] == nil {
 				return time.Time{}, fmt.Errorf("column: %v could not be found", columnName)
 			}
 			columnValue := fmt.Sprint(recordFields[columnName])
-			altTimestamp[i] = columnValue
+			altTimestampValues[i] = columnValue
 		}
-		t := strings.Join(altTimestamp, " ")
+		t := strings.Join(altTimestampValues, " ")
 		ts, err := dateparse.ParseLocal(t)
+		
 		newRecordFields["altTimestamp"] = ts.Format(timestampFormat)
 		//Return format will be 2014-04-08 22:05:00 +0000 UTC
 		if err != nil {
