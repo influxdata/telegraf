@@ -263,7 +263,11 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			case "":
 				return time.Time{}, fmt.Errorf("timestamp format must be specified")
 			default:	
-			return internal.ParseTimestamp(timestampFormat, newRecordFields["altTimestamp"], "UTC"), err
+				metricTime, err := internal.ParseTimestamp(timestampFormat, newRecordFields["altTimestamp"], "UTC")
+				if err != nil{
+					return time.Time{}, err
+				}
+				return metricTime, err		
 		}
 	}
 	
