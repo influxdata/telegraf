@@ -247,10 +247,12 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
 	timestampColumn, timestampFormat string, altTimestamp []string) (time.Time, error) {
 	if len(altTimestamp) != 0 && timestampColumn == ""{
+		newRecordFields := make([string]interface{})
 		for i, columnName := range altTimestamp {
-			altTimestamp[i]	= recordFields[columnName].(string)
+			altTimestamp[i] = recordFields[columnName].(string)
 		}
 		t := strings.Join(altTimestamp, " ")
+		newRecordFields["altTimestamp"] = t
 		ts, err := dateparse.ParseLocal(t)
 		//Return format will be 2014-04-08 22:05:00 +0000 UTC
 		if err != nil {
@@ -261,7 +263,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			case "":
 				return time.Time{}, fmt.Errorf("timestamp format must be specified")
 			default:	
-			return time.Parse(timestampFormat, ts.Format(timestampFormat)), err
+			return internal.ParseTimestamp(timestampFormat, newRecordFields["altTimestamp"], "UTC")), err
 		}
 	}
 	
