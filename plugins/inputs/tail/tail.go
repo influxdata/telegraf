@@ -270,9 +270,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 			metric.AddTag("path", tailer.Filename)
 		}
 
+		// Block until plugin is stopping or room is available to add metrics.
 		select {
 		case <-t.ctx.Done():
-			break
+			return
 		case t.sem <- empty{}:
 			t.acc.AddTrackingMetricGroup(metrics)
 		}
