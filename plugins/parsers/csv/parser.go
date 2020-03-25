@@ -261,7 +261,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			case "":
 				return time.Time{}, fmt.Errorf("timestamp format must be specified")
 			default:	
-			return time.Parse(ts.Format(timestampFormat)), err
+			return time.Parse(timestampFormat, ts.Format(timestampFormat)), err
 		}
 	}
 	
