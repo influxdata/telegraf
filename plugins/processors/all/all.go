@@ -2,6 +2,7 @@ package all
 
 import (
 	_ "github.com/influxdata/telegraf/plugins/processors/clone"
+	_ "github.com/influxdata/telegraf/plugins/processors/compute"
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
 	_ "github.com/influxdata/telegraf/plugins/processors/date"
 	_ "github.com/influxdata/telegraf/plugins/processors/dedup"
