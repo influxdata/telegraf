@@ -1748,7 +1748,20 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 			}
 		}
 	}
-
+	
+	if node, ok := tbl.Fields["csv_alt_timestamp"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVAltTimestamp = append(c.CSVAltTimestamp
+									   , str.Value)
+					}
+				}
+			}
+		}
+	}
+	
 	if node, ok := tbl.Fields["csv_header_row_count"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -1851,6 +1864,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_tag_columns")
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
+	delete(tbl.Fields, "csv_alt_timestamp")
 	delete(tbl.Fields, "csv_trim_space")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
 
