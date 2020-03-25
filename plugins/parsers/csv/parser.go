@@ -248,7 +248,11 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 	if len(altTimestamp) != 0 && timestampColumn == ""{
 		newRecordFields := make(map[string]interface{})
 		for i, columnName := range altTimestamp {
-			altTimestamp[i] = recordFields[columnName].(string)
+			if recordFields[columnName] == nil {
+				return time.Time{}, fmt.Errorf("column: %v could not be found", column)
+			}
+			columnValue := fmt.Sprint(recordFields[columnName])
+			altTimestamp[i] = columnValue
 		}
 		t := strings.Join(altTimestamp, " ")
 		ts, err := dateparse.ParseLocal(t)
