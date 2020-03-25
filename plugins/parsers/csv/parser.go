@@ -252,8 +252,8 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			altTimestamp[i] = recordFields[columnName].(string)
 		}
 		t := strings.Join(altTimestamp, " ")
-		newRecordFields["altTimestamp"] = t
 		ts, err := dateparse.ParseLocal(t)
+		newRecordFields["altTimestamp"] = ts.Format(timestampFormat)
 		//Return format will be 2014-04-08 22:05:00 +0000 UTC
 		if err != nil {
 			return time.Time{}, fmt.Errorf("altTimestamp could not be parsed")
