@@ -1,7 +1,11 @@
-# Stackdriver Output Plugin
+# Stackdriver Google Cloud Monitoring Output Plugin
 
-This plugin writes to the [Google Cloud Stackdriver API](https://cloud.google.com/monitoring/api/v3/)
-and requires [authentication](https://cloud.google.com/docs/authentication/getting-started) with Google Cloud using either a service account or user credentials. See the [Stackdriver documentation](https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services) for details on pricing.
+This plugin writes to the [Google Cloud Monitoring API][stackdriver] (formerly
+Stackdriver) and requires [authentication][] with Google Cloud using either a
+service account or user credentials
+
+This plugin accesses APIs which are [chargeable][pricing]; you might incur
+costs.
 
 Requires `project` to specify where Stackdriver metrics will be delivered to.
 
@@ -47,3 +51,6 @@ aggregated before then can be written.  Consider using the [basicstats][]
 aggregator to do this.
 
 [basicstats]: /plugins/aggregators/basicstats/README.md
+[stackdriver]: https://cloud.google.com/monitoring/api/v3/
+[authentication]: https://cloud.google.com/docs/authentication/getting-started
+[pricing]: https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services

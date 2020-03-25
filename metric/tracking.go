@@ -34,8 +34,7 @@ var (
 )
 
 func newTrackingID() telegraf.TrackingID {
-	atomic.AddUint64(&lastID, 1)
-	return telegraf.TrackingID(lastID)
+	return telegraf.TrackingID(atomic.AddUint64(&lastID, 1))
 }
 
 func debugFinalizer(d *trackingData) {

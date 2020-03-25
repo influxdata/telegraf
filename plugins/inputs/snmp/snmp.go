@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -609,20 +610,30 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
 	s.connectionCache[idx] = gs
 
-	if strings.HasPrefix(agent, "tcp://") {
-		agent = strings.TrimPrefix(agent, "tcp://")
-		gs.Transport = "tcp"
+	if !strings.Contains(agent, "://") {
+		agent = "udp://" + agent
 	}
-	host, portStr, err := net.SplitHostPort(agent)
+
+	u, err := url.Parse(agent)
 	if err != nil {
-		if err, ok := err.(*net.AddrError); !ok || err.Err != "missing port in address" {
-			return nil, Errorf(err, "parsing host")
-		}
-		host = agent
+		return nil, err
+	}
+
+	switch u.Scheme {
+	case "tcp":
+		gs.Transport = "tcp"
+	case "", "udp":
+		gs.Transport = "udp"
+	default:
+		return nil, fmt.Errorf("unsupported scheme: %v", u.Scheme)
+	}
+
+	gs.Target = u.Hostname()
+
+	portStr := u.Port()
+	if portStr == "" {
 		portStr = "161"
 	}
-	gs.Target = host
-
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
 		return nil, Errorf(err, "parsing port")

@@ -13,6 +13,7 @@ import (
 type Strings struct {
 	Lowercase    []converter `toml:"lowercase"`
 	Uppercase    []converter `toml:"uppercase"`
+	Titlecase    []converter `toml:"titlecase"`
 	Trim         []converter `toml:"trim"`
 	TrimLeft     []converter `toml:"trim_left"`
 	TrimRight    []converter `toml:"trim_right"`
@@ -54,6 +55,10 @@ const sampleConfig = `
   # [[processors.strings.lowercase]]
   #   field = "uri_stem"
   #   dest = "uri_stem_normalised"
+
+  ## Convert a field value to titlecase
+  # [[processors.strings.titlecase]]
+  #   field = "status"
 
   ## Trim leading and trailing whitespace using the default cutset
   # [[processors.strings.trim]]
@@ -233,6 +238,10 @@ func (s *Strings) initOnce() {
 	}
 	for _, c := range s.Uppercase {
 		c.fn = strings.ToUpper
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Titlecase {
+		c.fn = strings.Title
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Trim {
