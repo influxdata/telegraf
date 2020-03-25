@@ -248,7 +248,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 	timestampColumn, timestampFormat string, altTimestamp []string) (time.Time, error) {
 	if len(altTimestamp) != 0 && timestampColumn == ""{
 		for i, columnName := range altTimestamp {
-			altTimestamp[i]	= recordFields[columnName]
+			altTimestamp[i]	= recordFields[columnName].(string)
 		}
 		t := strings.Join(altTimestamp, " ")
 		ts, err := dateparse.ParseLocal(t)
@@ -261,7 +261,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			case "":
 				return time.Time{}, fmt.Errorf("timestamp format must be specified")
 			default:	
-				return ts.Format(timestampFormat), err
+			return time.Parse(ts.Format(timestampFormat)), err
 		}
 	}
 	
