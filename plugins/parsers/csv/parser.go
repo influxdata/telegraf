@@ -213,6 +213,7 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 				//	recordFields[fieldName] = bValue
 				//} else {
 					recordFields[fieldName] = value
+				log.Printf("record[%s] = %v", fieldName, recordFields)
 				//}
 			}
 		}
