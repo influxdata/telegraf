@@ -23,6 +23,10 @@ import (
 // for unit test purposes (see ping_test.go)
 type HostPinger func(binary string, timeout float64, args ...string) (string, error)
 
+type HostResolver func(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error)
+
+type IsCorrectNetwork func(ip net.IPAddr) bool
+
 type Ping struct {
 	wg sync.WaitGroup
 
@@ -59,6 +63,9 @@ type Ping struct {
 
 	// host ping function
 	pingHost HostPinger
+
+	// resolve host function
+	resolveHost HostResolver
 
 	// listenAddr is the address associated with the interface defined.
 	listenAddr string
@@ -123,13 +130,6 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, host := range p.Urls {
-		_, err := net.LookupHost(host)
-		if err != nil {
-			acc.AddFields("ping", map[string]interface{}{"result_code": 1}, map[string]string{"url": host})
-			acc.AddError(err)
-			continue
-		}
-
 		p.wg.Add(1)
 		go func(host string) {
 			defer p.wg.Done()
@@ -194,25 +194,47 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 	return string(out), err
 }
 
+func filterIPs(addrs []net.IPAddr, filterFunc IsCorrectNetwork) []net.IPAddr {
+	n := 0
+	for _, x := range addrs {
+		if filterFunc(x) {
+			addrs[n] = x
+			n++
+		}
+	}
+	return addrs[:n]
+}
+
+func hostResolver(ctx context.Context, ipv6 bool, destination string) (*net.IPAddr, error) {
+	resolver := &net.Resolver{}
+	ips, err := resolver.LookupIPAddr(ctx, destination)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if ipv6 {
+		ips = filterIPs(ips, isV6)
+	} else {
+		ips = filterIPs(ips, isV4)
+	}
+
+	if len(ips) == 0 {
+		return nil, errors.New("Cannot resolve ip address")
+	}
+	return &ips[0], err
+}
+
+func isV4(ip net.IPAddr) bool {
+	return ip.IP.To4() != nil
+}
+
+func isV6(ip net.IPAddr) bool {
+	return !isV4(ip)
+}
+
 func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 	ctx := context.Background()
-
-	network := "ip4"
-	if p.IPv6 {
-		network = "ip6"
-	}
-
-	host, err := net.ResolveIPAddr(network, destination)
-	if err != nil {
-		acc.AddFields(
-			"ping",
-			map[string]interface{}{"result_code": 1},
-			map[string]string{"url": destination},
-		)
-		acc.AddError(err)
-		return
-	}
-
 	interval := p.PingInterval
 	if interval < 0.2 {
 		interval = 0.2
@@ -230,6 +252,17 @@ func (p *Ping) pingToURLNative(destination string, acc telegraf.Accumulator) {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(p.Deadline)*time.Second)
 		defer cancel()
+	}
+
+	host, err := p.resolveHost(ctx, p.IPv6, destination)
+	if err != nil {
+		acc.AddFields(
+			"ping",
+			map[string]interface{}{"result_code": 1},
+			map[string]string{"url": destination},
+		)
+		acc.AddError(err)
+		return
 	}
 
 	resps := make(chan *ping.Response)
@@ -392,6 +425,7 @@ func init() {
 	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{
 			pingHost:     hostPinger,
+			resolveHost:  hostResolver,
 			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,
