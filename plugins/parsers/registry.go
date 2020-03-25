@@ -144,9 +144,8 @@ type Config struct {
 	CSVTagColumns        []string `toml:"csv_tag_columns"`
 	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
+	CSVAltTimestamp      []string `toml:"csv_alt_timestamp"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
-	CSVDateColumn	     string   `toml:"csv_date_column"`
-	CSVDateFormat	     string   `toml:"csv_date_format"`
 	
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -220,8 +219,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.CSVMeasurementColumn,
 			config.CSVTimestampColumn,
 			config.CSVTimestampFormat,
-			config.CSVDateColumn,
-			config.CSVDateFormat,
+			config.CSVAltTimestamp,
 			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.TagKeys, config.DefaultTags)
@@ -250,8 +248,7 @@ func newCSVParser(metricName string,
 	nameColumn string,
 	timestampColumn string,
 	timestampFormat string,
-	dateColumn string,
-	dateFormat string,
+	altTimestamp []string,
 	defaultTags map[string]string) (Parser, error) {
 
 	if headerRowCount == 0 && len(columnNames) == 0 {
