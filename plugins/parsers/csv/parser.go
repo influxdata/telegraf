@@ -33,7 +33,6 @@ type Parser struct {
 	TimestampColumn   string
 	TimestampFormat   string
 	AltTimestamp       []string
-	AltTimestampFormat []string
 	DefaultTags       map[string]string
 	TimeFunc          func() time.Time
 }
