@@ -246,10 +246,8 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
 	timestampColumn, timestampFormat string, altTimestamp []string) (time.Time, error) {
 	if len(altTimestamp) != 0 && timestampColumn == ""{
-		log.Printf("PARSE TIMESTAMP! csv_alt_timestamp: %v", altTimestamp)
 		newRecordFields := make(map[string]interface{})
 		for i, columnName := range altTimestamp {
-			log.Printf("columnName: %s", columnName)
 			if recordFields[columnName] == nil {
 				return time.Time{}, fmt.Errorf("column: %v could not be found", columnName)
 			}
