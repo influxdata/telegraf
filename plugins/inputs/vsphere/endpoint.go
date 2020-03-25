@@ -127,7 +127,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL, log telegra
 		clientFactory:     NewClientFactory(ctx, url, parent),
 		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
 		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
-		log: log,
+		log:               log,
 	}
 
 	e.resourceKinds = map[string]*resourceKind{
@@ -420,27 +420,27 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		// Need to do this for all resource types even if they are not enabled
 		if res.enabled || k != "vm" {
 			rf := ResourceFilter{
-				finder:  &Finder{client},
-				resType: res.vcName,
-				paths:   res.paths,
-				xcludePaths: res.excludePaths}
+				finder:       &Finder{client},
+				resType:      res.vcName,
+				paths:        res.paths,
+				excludePaths: res.excludePaths}
 
-				ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-				defer cancel1()
-				objects, err := res.getObjects(ctx1, e, &rf)
-				if err != nil {
-					return err
-				}
+			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			objects, err := res.getObjects(ctx1, e, &rf)
+			cancel1()
+			if err != nil {
+				return err
+			}
 
-				// Fill in datacenter names where available (no need to do it for Datacenters)
-				if res.name != "Datacenter" {
-					for k, obj := range objects {
-						if obj.parentRef != nil {
-							obj.dcname = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
-							objects[k] = obj
-						}
+			// Fill in datacenter names where available (no need to do it for Datacenters)
+			if res.name != "Datacenter" {
+				for k, obj := range objects {
+					if obj.parentRef != nil {
+						obj.dcname = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
+						objects[k] = obj
 					}
 				}
+			}
 
 			// No need to collect metric metadata if resource type is not enabled
 			if res.enabled {
@@ -454,10 +454,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
 				numRes += int64(len(objects))
 			}
-			return nil
-		}()
+		}
 		if err != nil {
-			return err
+			e.log.Error(err)
 		}
 	}
 
@@ -640,19 +639,6 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 					cache[r.Parent.Value] = p
 				}
 			}
-			o := object.NewFolder(client.Client.Client, *r.Parent)
-			var folder mo.Folder
-			ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-			defer cancel3()
-			err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
-			if err != nil {
-				e.log.Warnf("Error while getting folder parent: %s", err.Error())
-				p = nil
-			} else {
-				pp := folder.Parent.Reference()
-				p = &pp
-				cache[r.Parent.Value] = p
-			}
 			return nil
 		}()
 		if err != nil {
@@ -758,7 +744,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 				}
 			}
 		}
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:         r.Name,
 			ref:          r.ExtensibleManagedObject.Reference(),
 			parentRef:    r.Runtime.Host,
@@ -959,7 +945,6 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 		e.log.Debugf("Submitting job for %s: %d objects", res.name, len(pqs))
 		submitChunkJob(ctx, te, job, pqs)
 	}
-
 
 	// Wait for background collection to finish
 	te.Wait()
