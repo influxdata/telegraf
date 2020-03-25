@@ -64,7 +64,7 @@ query_version = 2
 ## - MemoryClerk
 ## - Schedulers
 ## - SqlRequests
-## - SqlDiskSpace
+## - VolumeSpace
 ## Version 1:
 ## - PerformanceCounters
 ## - WaitStatsCategorized
@@ -116,7 +116,7 @@ func initQueries(s *SQLServer) error {
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
-		queries["SqlDiskSpace"] = Query{Script: sqlServerDiskSpaceV2, ResultByRow: false}
+		queries["VolumeSpace"] = Query{Script: sqlServerVolumeSpaceV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1561,7 +1561,7 @@ SELECT
 
 `
 
-const sqlServerDiskSpaceV2 string = `
+const sqlServerVolumeSpaceV2 string = `
 /* Only for on-prem version of SQL Server
 Gets data about disk space, only if the disk is used by SQL Server
 EngineEdition:
