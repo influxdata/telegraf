@@ -1754,8 +1754,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						c.CSVAltTimestamp = append(c.CSVAltTimestamp
-									   , str.Value)
+						c.CSVAltTimestamp = append(c.CSVAltTimestamp, str.Value)
 					}
 				}
 			}
