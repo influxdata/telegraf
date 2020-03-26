@@ -21,6 +21,10 @@ section if available.
 
 <!-- Include Telegraf version, operating system, and other relevant details -->
 
+### Docker
+
+<!-- If your bug involves third party dependencies or services, it can be very helpful to provide a Dockerfile or docker-compose.yml that repoduces the environment you're testing against -->
+
 ### Steps to reproduce:
 
 <!-- Describe the steps to reproduce the bug. -->
