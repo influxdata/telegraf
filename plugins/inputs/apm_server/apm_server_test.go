@@ -2,6 +2,7 @@ package apm_server
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -83,7 +84,7 @@ func TestAgentConfiguration(t *testing.T) {
 	defer resp.Body.Close()
 }
 
-func TestRumAgentConfiguration(t *testing.T) {
+func TestRUMAgentConfiguration(t *testing.T) {
 	server := newTestServer()
 	acc := &testutil.Accumulator{}
 	require.NoError(t, server.Init())
@@ -118,6 +119,64 @@ func TestSourceMap(t *testing.T) {
 	require.EqualValues(t, 202, resp.StatusCode)
 	require.Equal(t, 0, len(acc.Metrics))
 	defer resp.Body.Close()
+}
+
+func TestEventsIntakeInvalidHeader(t *testing.T) {
+
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	// post invalid intake
+	resp, err := http.Post(createURL(server, "http", "/intake/v2/events", ""), "application/json", bytes.NewBufferString("{}"))
+	require.NoError(t, err)
+	require.Equal(t, "application/json", resp.Header["Content-Type"][0])
+	require.EqualValues(t, 400, resp.StatusCode)
+	require.Equal(t, 0, len(acc.Metrics))
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, "{\"error\":\"invalid content type: 'application/json'\"}", string(body))
+}
+
+func TestEventsIntake(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		metadata string
+		event    string
+	}{
+		{name: "metricset mapping", metadata: "metadata.ndjson", event: "metricset.ndjson"},
+		{name: "transaction mapping", metadata: "metadata.ndjson", event: "transaction.ndjson"},
+		{name: "span mapping", metadata: "metadata.ndjson", event: "span.ndjson"},
+		{name: "error mapping", metadata: "metadata.ndjson", event: "error.ndjson"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			server := newTestServer()
+			acc := &testutil.Accumulator{}
+			require.NoError(t, server.Init())
+			require.NoError(t, server.Start(acc))
+			defer server.Stop()
+
+			metadataFile := fmt.Sprintf("./testdata/%s", test.metadata)
+			metadataBytes, _ := ioutil.ReadFile(metadataFile)
+
+			eventFile := fmt.Sprintf("./testdata/%s", test.event)
+			eventBytes, _ := ioutil.ReadFile(eventFile)
+
+			buffer := bytes.NewBuffer(metadataBytes)
+			buffer.Write(eventBytes)
+
+			resp, err := http.Post(createURL(server, "http", "/intake/v2/events", ""), "application/x-ndjson", buffer)
+			require.NoError(t, err)
+			//require.EqualValues(t, 202, resp.StatusCode)
+			//require.Equal(t, 0, len(acc.Metrics))
+			defer resp.Body.Close()
+		})
+	}
 }
 
 func createURL(server *APMServer, scheme string, path string, rawquery string) string {

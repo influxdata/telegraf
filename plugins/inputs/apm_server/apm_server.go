@@ -6,12 +6,14 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -139,21 +141,18 @@ func (s *APMServer) routes() {
 	s.mux.Handle("/config/v1/agents", s.handleAgentConfiguration())
 	s.mux.Handle("/config/v1/rum/agents", s.handleAgentConfiguration())
 	s.mux.Handle("/assets/v1/sourcemaps", s.handleSourceMap())
+	s.mux.Handle("/intake/v2/events", s.handleEventsIntake())
 }
 
 func (s *APMServer) handleServerInformation() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
-		res.Header().Set("Content-Type", "application/json")
 		if req.URL.Path != "/" {
-			res.WriteHeader(http.StatusNotFound)
-			b, _ := json.Marshal(map[string]string{
-				"error": "404 page not found",
-			})
-			_, _ = res.Write(b)
+			errorResponse(res, http.StatusNotFound, "404 page not found")
 			return
 		}
 
+		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(http.StatusOK)
 		b, _ := json.Marshal(map[string]string{
 			"build_date": s.buildDate.Format(time.RFC3339),
@@ -174,6 +173,28 @@ func (s *APMServer) handleSourceMap() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusAccepted)
 	}
+}
+
+func (s *APMServer) handleEventsIntake() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+
+		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
+			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
+			errorResponse(res, http.StatusBadRequest, message)
+			return
+		}
+
+		res.WriteHeader(http.StatusNotImplemented)
+	}
+}
+
+func errorResponse(res http.ResponseWriter, statusCode int, message string) {
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(statusCode)
+	b, _ := json.Marshal(map[string]string{
+		"error": message,
+	})
+	_, _ = res.Write(b)
 }
 
 func init() {
