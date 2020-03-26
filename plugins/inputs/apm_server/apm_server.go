@@ -10,9 +10,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"io"
 	"net"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -148,7 +151,7 @@ func (s *APMServer) handleServerInformation() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
 		if req.URL.Path != "/" {
-			errorResponse(res, http.StatusNotFound, "404 page not found")
+			s.errorResponse(res, http.StatusNotFound, "404 page not found")
 			return
 		}
 
@@ -180,15 +183,57 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
-			errorResponse(res, http.StatusBadRequest, message)
+			s.errorResponse(res, http.StatusBadRequest, message)
 			return
 		}
 
-		res.WriteHeader(http.StatusNotImplemented)
+		var metadata interface{}
+		reader := req.Body
+		d := json.NewDecoder(reader)
+		for {
+			var event interface{}
+			if err := d.Decode(&event); err != nil {
+				if err != io.EOF {
+					s.errorResponse(res, http.StatusBadRequest, err.Error())
+					break
+				}
+				// EOF => end
+				break
+			}
+			if metadata == nil {
+				metadata = event
+			} else {
+				agent := metadata.(map[string]interface{})["metadata"].(map[string]interface{})["service"].(map[string]interface{})["agent"].(map[string]interface{})
+				eventType := reflect.ValueOf(event.(map[string]interface{})).MapKeys()[0].String()
+
+				timestamp := int64(event.(map[string]interface{})[eventType].(map[string]interface{})["timestamp"].(float64))
+				sec := timestamp / 1000000
+				microSec := timestamp - (sec * 1000000)
+				println(timestamp)
+
+				m, err := metric.New("apm_server", map[string]string{
+					"agent_version":      agent["version"].(string),
+					"agent_name":         agent["name"].(string),
+					"agent_ephemeral_id": agent["ephemeral_id"].(string),
+				},
+					map[string]interface{}{
+						"event_type": eventType,
+					},
+					time.Unix(sec, microSec*1000).UTC())
+				if err != nil {
+					s.errorResponse(res, http.StatusBadRequest, err.Error())
+					return
+				}
+				s.acc.AddMetric(m)
+			}
+		}
+
+		res.WriteHeader(http.StatusAccepted)
 	}
 }
 
-func errorResponse(res http.ResponseWriter, statusCode int, message string) {
+func (s *APMServer) errorResponse(res http.ResponseWriter, statusCode int, message string) {
+	s.Log.Error(message)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(statusCode)
 	b, _ := json.Marshal(map[string]string{

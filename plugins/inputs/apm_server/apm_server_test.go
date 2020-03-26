@@ -143,15 +143,17 @@ func TestEventsIntakeInvalidHeader(t *testing.T) {
 }
 
 func TestEventsIntake(t *testing.T) {
+	tags := map[string]string{"agent_ephemeral_id": "e71be9ac-93b0-44b9-a997-5638f6ccfc36", "agent_name": "java", "agent_version": "1.10.0"}
 	for _, test := range []struct {
 		name     string
 		metadata string
 		event    string
+		fields   map[string]interface{}
 	}{
-		{name: "metricset mapping", metadata: "metadata.ndjson", event: "metricset.ndjson"},
-		{name: "transaction mapping", metadata: "metadata.ndjson", event: "transaction.ndjson"},
-		{name: "span mapping", metadata: "metadata.ndjson", event: "span.ndjson"},
-		{name: "error mapping", metadata: "metadata.ndjson", event: "error.ndjson"},
+		{name: "metricset mapping", metadata: "metadata.ndjson", event: "metricset.ndjson", fields: map[string]interface{}{"event_type": "metricset"}},
+		{name: "transaction mapping", metadata: "metadata.ndjson", event: "transaction.ndjson", fields: map[string]interface{}{"event_type": "transaction"}},
+		{name: "span mapping", metadata: "metadata.ndjson", event: "span.ndjson", fields: map[string]interface{}{"event_type": "span"}},
+		{name: "error mapping", metadata: "metadata.ndjson", event: "error.ndjson", fields: map[string]interface{}{"event_type": "error"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 
@@ -172,8 +174,12 @@ func TestEventsIntake(t *testing.T) {
 
 			resp, err := http.Post(createURL(server, "http", "/intake/v2/events", ""), "application/x-ndjson", buffer)
 			require.NoError(t, err)
-			//require.EqualValues(t, 202, resp.StatusCode)
-			//require.Equal(t, 0, len(acc.Metrics))
+			require.EqualValues(t, 202, resp.StatusCode)
+			require.Equal(t, 1, len(acc.Metrics))
+			require.Equal(t, "apm_server", acc.Metrics[0].Measurement)
+			require.Equal(t, tags, acc.Metrics[0].Tags)
+			require.Equal(t, test.fields, acc.Metrics[0].Fields)
+			require.NotNil(t, acc.Metrics[0].Time)
 			defer resp.Body.Close()
 		})
 	}
