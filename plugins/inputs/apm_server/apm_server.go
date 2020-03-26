@@ -136,21 +136,35 @@ func (s *APMServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 func (s *APMServer) routes() {
 	s.mux.Handle("/", s.handleServerInformation())
+	s.mux.Handle("/config/v1/agents", s.handleAgentConfiguration())
 }
 
 func (s *APMServer) handleServerInformation() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
 		res.Header().Set("Content-Type", "application/json")
+		if req.URL.Path != "/" {
+			res.WriteHeader(http.StatusNotFound)
+			b, _ := json.Marshal(map[string]string{
+				"error": "404 page not found",
+			})
+			_, _ = res.Write(b)
+			return
+		}
+
 		res.WriteHeader(http.StatusOK)
-		b, _ := json.Marshal(map[string]interface{}{
-			"ok": map[string]string{
-				"build_date": s.buildDate.Format(time.RFC3339),
-				"build_sha":  s.buildSHA,
-				"version":    internal.Version(),
-			},
+		b, _ := json.Marshal(map[string]string{
+			"build_date": s.buildDate.Format(time.RFC3339),
+			"build_sha":  s.buildSHA,
+			"version":    internal.Version(),
 		})
 		_, _ = res.Write(b)
+	}
+}
+
+func (s *APMServer) handleAgentConfiguration() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		res.WriteHeader(http.StatusForbidden)
 	}
 }
 
