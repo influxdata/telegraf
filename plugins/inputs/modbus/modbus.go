@@ -351,8 +351,10 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		// check address
 		if len(item.Address) != 1 && len(item.Address) != 2 && len(item.Address) != 4 {
 			return fmt.Errorf("invalid address '%v' length '%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
-		} else if n == cInputRegisters || n == cHoldingRegisters {
-			if (len(item.Address) == 1 && len(item.ByteOrder) != 2) || (len(item.Address) == 2 && len(item.ByteOrder) != 4) || (len(item.Address) == 4 && len(item.ByteOrder) != 8) {
+		}
+
+		if n == cInputRegisters || n == cHoldingRegisters {
+			if 2*len(item.Address) != len(item.ByteOrder) {
 				return fmt.Errorf("invalid byte order '%s' and address '%v'  in '%s' - '%s'", item.ByteOrder, item.Address, n, item.Name)
 			}
 
@@ -360,8 +362,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 			if len(item.Address) > len(removeDuplicates(item.Address)) {
 				return fmt.Errorf("duplicate address '%v'  in '%s' - '%s'", item.Address, n, item.Name)
 			}
-
-		} else if len(item.Address) > 1 || (n == cInputRegisters || n == cHoldingRegisters) {
+		} else if len(item.Address) != 1 {
 			return fmt.Errorf("invalid address'%v' length'%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
 		}
 	}
