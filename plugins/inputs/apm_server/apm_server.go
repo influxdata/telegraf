@@ -212,6 +212,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 					return
 				}
 
+				// Tags
 				tags := make(map[string]string, len(f.Fields))
 				for k := range f.Fields {
 					switch value := f.Fields[k].(type) {
@@ -228,19 +229,22 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				eventType := reflect.ValueOf(event.(map[string]interface{})).MapKeys()[0].String()
 				tags["type"] = eventType
 
-				timestamp := int64(event.(map[string]interface{})[eventType].(map[string]interface{})["timestamp"].(float64))
-				sec := timestamp / 1000000
-				microSec := timestamp - (sec * 1000000)
-				println(timestamp)
-
+				// Fields
 				f.Fields = make(map[string]interface{})
 				if err := f.FullFlattenJSON("", event, true, true); err != nil {
 					s.errorResponse(res, http.StatusBadRequest, err.Error())
 					return
 				}
+				delete(f.Fields, eventType+".timestamp")
 
-				t := time.Unix(sec, microSec*1000).UTC()
-				if m, err := metric.New("apm_server", tags, f.Fields, t); err != nil {
+				// Timestamp
+				timestamp, err := parseTimestamp(event, eventType)
+				if err != nil {
+					s.errorResponse(res, http.StatusBadRequest, err.Error())
+					return
+				}
+
+				if m, err := metric.New("apm_server", tags, f.Fields, timestamp); err != nil {
 					s.errorResponse(res, http.StatusBadRequest, err.Error())
 					return
 				} else {
@@ -251,6 +255,17 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 		res.WriteHeader(http.StatusAccepted)
 	}
+}
+
+func parseTimestamp(event interface{}, eventType string) (time.Time, error) {
+	value := event.(map[string]interface{})[eventType].(map[string]interface{})["timestamp"]
+	if value == nil {
+		return time.Now().UTC(), nil
+	}
+	microseconds := int64(value.(float64))
+	secPart := microseconds / 1000000
+	microPart := microseconds - (secPart * 1000000)
+	return time.Unix(secPart, microPart*1000).UTC(), nil
 }
 
 func (s *APMServer) errorResponse(res http.ResponseWriter, statusCode int, message string) {
