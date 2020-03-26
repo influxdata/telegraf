@@ -235,7 +235,8 @@ func (p *Parser) SetDefaultTags(tags map[string]string) {
 }
 
 type JSONFlattener struct {
-	Fields map[string]interface{}
+	Fields          map[string]interface{}
+	FieldsSeparator string
 }
 
 // FlattenJSON flattens nested maps/interfaces into a fields map (ignoring bools and string)
@@ -259,13 +260,16 @@ func (f *JSONFlattener) FullFlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
+	if len(f.FieldsSeparator) == 0 {
+		f.FieldsSeparator = "_"
+	}
 
 	switch t := v.(type) {
 	case map[string]interface{}:
 		for k, v := range t {
 			fieldkey := k
 			if fieldname != "" {
-				fieldkey = fieldname + "_" + fieldkey
+				fieldkey = fieldname + f.FieldsSeparator + fieldkey
 			}
 
 			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
@@ -277,7 +281,7 @@ func (f *JSONFlattener) FullFlattenJSON(
 		for i, v := range t {
 			fieldkey := strconv.Itoa(i)
 			if fieldname != "" {
-				fieldkey = fieldname + "_" + fieldkey
+				fieldkey = fieldname + f.FieldsSeparator + fieldkey
 			}
 			err := f.FullFlattenJSON(fieldkey, v, convertString, convertBool)
 			if err != nil {

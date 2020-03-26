@@ -12,10 +12,13 @@ import (
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -203,28 +206,46 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			if metadata == nil {
 				metadata = event
 			} else {
-				agent := metadata.(map[string]interface{})["metadata"].(map[string]interface{})["service"].(map[string]interface{})["agent"].(map[string]interface{})
+				f := jsonparser.JSONFlattener{FieldsSeparator: "."}
+				if err := f.FullFlattenJSON("", metadata, true, true); err != nil {
+					s.errorResponse(res, http.StatusBadRequest, err.Error())
+					return
+				}
+
+				tags := make(map[string]string, len(f.Fields))
+				for k := range f.Fields {
+					switch value := f.Fields[k].(type) {
+					case string:
+						tags[k] = value
+					case bool:
+						tags[k] = strconv.FormatBool(value)
+					case float64:
+						tags[k] = strconv.FormatFloat(value, 'f', -1, 64)
+					default:
+						log.Printf("E! [handleEventsIntake] Unrecognized tag type %T", value)
+					}
+				}
 				eventType := reflect.ValueOf(event.(map[string]interface{})).MapKeys()[0].String()
+				tags["type"] = eventType
 
 				timestamp := int64(event.(map[string]interface{})[eventType].(map[string]interface{})["timestamp"].(float64))
 				sec := timestamp / 1000000
 				microSec := timestamp - (sec * 1000000)
 				println(timestamp)
 
-				m, err := metric.New("apm_server", map[string]string{
-					"agent_version":      agent["version"].(string),
-					"agent_name":         agent["name"].(string),
-					"agent_ephemeral_id": agent["ephemeral_id"].(string),
-				},
-					map[string]interface{}{
-						"event_type": eventType,
-					},
-					time.Unix(sec, microSec*1000).UTC())
-				if err != nil {
+				f.Fields = make(map[string]interface{})
+				if err := f.FullFlattenJSON("", event, true, true); err != nil {
 					s.errorResponse(res, http.StatusBadRequest, err.Error())
 					return
 				}
-				s.acc.AddMetric(m)
+
+				t := time.Unix(sec, microSec*1000).UTC()
+				if m, err := metric.New("apm_server", tags, f.Fields, t); err != nil {
+					s.errorResponse(res, http.StatusBadRequest, err.Error())
+					return
+				} else {
+					s.acc.AddMetric(m)
+				}
 			}
 		}
 
