@@ -1,6 +1,7 @@
 package apm_server
 
 import (
+	"bytes"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -89,10 +90,32 @@ func TestRumAgentConfiguration(t *testing.T) {
 	require.NoError(t, server.Start(acc))
 	defer server.Stop()
 
-	// get agent configuration
-	resp, err := http.Get(createURL(server, "http", "/config/v1/rum/agents", "service.name=TEST"))
+	// get RUM agent configuration
+	resp, err := http.Get(createURL(server, "http", "/config/v1/rum/agents", ""))
 	require.NoError(t, err)
 	require.EqualValues(t, 403, resp.StatusCode)
+	require.Equal(t, 0, len(acc.Metrics))
+	defer resp.Body.Close()
+}
+
+func TestSourceMap(t *testing.T) {
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	sourceMap := `{
+  "version" : 3,
+  "sources" : ["index.js"],
+  "names" : ["resultNum","operator","el","element"],
+  "mappings" : "CAAC,WACC,aAyGA,IAAK"
+}`
+
+	// post SourceMap
+	resp, err := http.Post(createURL(server, "http", "/assets/v1/sourcemaps", "service.name=TEST"), "application/json", bytes.NewBufferString(sourceMap))
+	require.NoError(t, err)
+	require.EqualValues(t, 202, resp.StatusCode)
 	require.Equal(t, 0, len(acc.Metrics))
 	defer resp.Body.Close()
 }

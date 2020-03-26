@@ -138,6 +138,7 @@ func (s *APMServer) routes() {
 	s.mux.Handle("/", s.handleServerInformation())
 	s.mux.Handle("/config/v1/agents", s.handleAgentConfiguration())
 	s.mux.Handle("/config/v1/rum/agents", s.handleAgentConfiguration())
+	s.mux.Handle("/assets/v1/sourcemaps", s.handleSourceMap())
 }
 
 func (s *APMServer) handleServerInformation() http.HandlerFunc {
@@ -166,6 +167,12 @@ func (s *APMServer) handleServerInformation() http.HandlerFunc {
 func (s *APMServer) handleAgentConfiguration() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusForbidden)
+	}
+}
+
+func (s *APMServer) handleSourceMap() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		res.WriteHeader(http.StatusAccepted)
 	}
 }
 
