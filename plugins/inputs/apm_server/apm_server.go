@@ -137,6 +137,7 @@ func (s *APMServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func (s *APMServer) routes() {
 	s.mux.Handle("/", s.handleServerInformation())
 	s.mux.Handle("/config/v1/agents", s.handleAgentConfiguration())
+	s.mux.Handle("/config/v1/rum/agents", s.handleAgentConfiguration())
 }
 
 func (s *APMServer) handleServerInformation() http.HandlerFunc {

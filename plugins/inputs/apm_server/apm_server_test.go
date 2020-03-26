@@ -82,6 +82,21 @@ func TestAgentConfiguration(t *testing.T) {
 	defer resp.Body.Close()
 }
 
+func TestRumAgentConfiguration(t *testing.T) {
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	// get agent configuration
+	resp, err := http.Get(createURL(server, "http", "/config/v1/rum/agents", "service.name=TEST"))
+	require.NoError(t, err)
+	require.EqualValues(t, 403, resp.StatusCode)
+	require.Equal(t, 0, len(acc.Metrics))
+	defer resp.Body.Close()
+}
+
 func createURL(server *APMServer, scheme string, path string, rawquery string) string {
 	u := url.URL{
 		Scheme:   scheme,

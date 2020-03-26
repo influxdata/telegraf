@@ -18,7 +18,7 @@ The table below describe how this plugin conforms with them:
 |-------------------------------------------------------|-----------------------------------------------|-----------------------------------|
 | [Events intake][endpoint_events_intake]               | `/intake/v2/events`, `/intake/v2/rum/events`  | TODO  |
 | [Sourcemap upload][endpoint_sourcemap_upload]         | `/assets/v1/sourcemaps`                       | TODO  |
-| [Agent configuration][endpoint_agent_configuration]   | `/config/v1/agents`                           | `403` - disabled configuration    |
+| [Agent configuration][endpoint_agent_configuration]   | `/config/v1/agents`, `/config/v1/rum/agents`  | `403` - disabled configuration    |
 | [Server information][endpoint_server_information]     | `/`                                           | `200` - server information        |
 
 ### Configuration:
