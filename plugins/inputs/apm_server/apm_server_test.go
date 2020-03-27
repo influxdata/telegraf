@@ -124,7 +124,7 @@ func TestRUMAgentConfigurationPreflight(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 204, resp.StatusCode)
 	require.Equal(t, "https://foo.example", resp.Header.Get("Access-Control-Allow-Origin"))
-	require.Equal(t, "GET, OPTIONS", resp.Header.Get("Access-Control-Allow-Methods"))
+	require.Equal(t, "POST, OPTIONS", resp.Header.Get("Access-Control-Allow-Methods"))
 	require.Equal(t, "Content-Type, Content-Encoding, Accept", resp.Header.Get("Access-Control-Allow-Headers"))
 	require.Equal(t, "Etag", resp.Header.Get("Access-Control-Expose-Headers"))
 	require.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
@@ -414,6 +414,73 @@ func TestEventsIntakeZlib(t *testing.T) {
 	require.Equal(t, fields, acc.Metrics[0].Fields)
 	require.Equal(t, "2019-10-21 11:30:44.929001 +0000 UTC", acc.Metrics[0].Time.String())
 
+	defer resp.Body.Close()
+}
+
+func TestRUMEventsIntakePreflight(t *testing.T) {
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	// get RUM agent configuration
+	request, err := http.NewRequest("OPTIONS", createURL(server, "http", "/intake/v2/rum/events", ""), nil)
+	require.NoError(t, err)
+
+	request.Header.Set("Origin", "https://foo.example")
+	resp, err := http.DefaultClient.Do(request)
+
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+	require.Equal(t, "https://foo.example", resp.Header.Get("Access-Control-Allow-Origin"))
+	require.Equal(t, "POST, OPTIONS", resp.Header.Get("Access-Control-Allow-Methods"))
+	require.Equal(t, "Content-Type, Content-Encoding, Accept", resp.Header.Get("Access-Control-Allow-Headers"))
+	require.Equal(t, "Etag", resp.Header.Get("Access-Control-Expose-Headers"))
+	require.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+	require.Equal(t, "Origin", resp.Header.Get("Vary"))
+	require.Equal(t, 0, len(acc.Metrics))
+	defer resp.Body.Close()
+}
+
+func TestRUMEventsIntake(t *testing.T) {
+
+	now := time.Now().UTC()
+
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	rumBytes, _ := ioutil.ReadFile(fmt.Sprintf("./testdata/rum.ndjson"))
+	buffer := bytes.NewBuffer(rumBytes)
+
+	resp, err := http.Post(createURL(server, "http", "/intake/v2/rum/events", ""), "application/x-ndjson", buffer)
+	require.NoError(t, err)
+	require.EqualValues(t, 202, resp.StatusCode)
+	require.Equal(t, 4, len(acc.Metrics))
+	// 1
+	require.Equal(t, "apm_server", acc.Metrics[0].Measurement)
+	require.Equal(t, map[string]string{"metadata.service.agent.name": "rum-js", "metadata.service.agent.version": "5.0.0", "metadata.service.language.name": "javascript", "metadata.service.name": "DemoRails-RUM", "type": "transaction"}, acc.Metrics[0].Tags)
+	require.Equal(t, map[string]interface{}{"transaction.context.page.referer": "", "transaction.context.page.url": "http://localhost:3000/", "transaction.context.response.decoded_body_size": 943.0, "transaction.context.response.encoded_body_size": 943.0, "transaction.context.response.transfer_size": 1863.0, "transaction.duration": 159.20999998343177, "transaction.id": "bffcb5c637da7831", "transaction.marks.agent.domComplete": 155.0, "transaction.marks.agent.domInteractive": 148.0, "transaction.marks.agent.firstContentfulPaint": 153.28499997546896, "transaction.marks.agent.largestContentfulPaint": 156.28499997546896, "transaction.marks.agent.timeToFirstByte": 69.0, "transaction.marks.navigationTiming.connectEnd": 6.0, "transaction.marks.navigationTiming.connectStart": 6.0, "transaction.marks.navigationTiming.domComplete": 155.0, "transaction.marks.navigationTiming.domContentLoadedEventEnd": 149.0, "transaction.marks.navigationTiming.domContentLoadedEventStart": 148.0, "transaction.marks.navigationTiming.domInteractive": 148.0, "transaction.marks.navigationTiming.domLoading": 86.0, "transaction.marks.navigationTiming.domainLookupEnd": 6.0, "transaction.marks.navigationTiming.domainLookupStart": 6.0, "transaction.marks.navigationTiming.fetchStart": 0.0, "transaction.marks.navigationTiming.loadEventEnd": 156.0, "transaction.marks.navigationTiming.loadEventStart": 155.0, "transaction.marks.navigationTiming.requestStart": 6.0, "transaction.marks.navigationTiming.responseEnd": 70.0, "transaction.marks.navigationTiming.responseStart": 69.0, "transaction.name": "Unknown", "transaction.sampled": true, "transaction.span_count.started": 6.0, "transaction.trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "transaction.type": "page-load"}, acc.Metrics[0].Fields)
+	require.NotNil(t, acc.Metrics[0].Time)
+	require.True(t, acc.Metrics[0].Time.After(now))
+	// 2
+	require.Equal(t, "apm_server", acc.Metrics[1].Measurement)
+	require.Equal(t, map[string]string{"metadata.service.agent.name": "rum-js", "metadata.service.agent.version": "5.0.0", "metadata.service.language.name": "javascript", "metadata.service.name": "DemoRails-RUM", "type": "span"}, acc.Metrics[1].Tags)
+	require.Equal(t, map[string]interface{}{"span.duration": 64.0, "span.id": "665a2d250689f05d", "span.name": "Requesting and receiving the document", "span.parent_id": "bffcb5c637da7831", "span.start": 6.0, "span.subType": "browser-timing", "span.trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "span.transaction_id": "bffcb5c637da7831", "span.type": "hard-navigation"}, acc.Metrics[1].Fields)
+	require.True(t, acc.Metrics[1].Time.After(now))
+	// 3
+	require.Equal(t, "apm_server", acc.Metrics[2].Measurement)
+	require.Equal(t, map[string]string{"metadata.service.agent.name": "rum-js", "metadata.service.agent.version": "5.0.0", "metadata.service.language.name": "javascript", "metadata.service.name": "DemoRails-RUM", "type": "span"}, acc.Metrics[2].Tags)
+	require.Equal(t, map[string]interface{}{"span.duration": 62.0, "span.id": "aae7e219d6b5be7a", "span.name": "Parsing the document, executing sync. scripts", "span.parent_id": "bffcb5c637da7831", "span.start": 86.0, "span.subType": "browser-timing", "span.trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "span.transaction_id": "bffcb5c637da7831", "span.type": "hard-navigation"}, acc.Metrics[2].Fields)
+	require.True(t, acc.Metrics[2].Time.After(now))
+	// 4
+	require.Equal(t, "apm_server", acc.Metrics[3].Measurement)
+	require.Equal(t, map[string]string{"metadata.service.agent.name": "rum-js", "metadata.service.agent.version": "5.0.0", "metadata.service.language.name": "javascript", "metadata.service.name": "DemoRails-RUM", "type": "span"}, acc.Metrics[3].Tags)
+	require.Equal(t, map[string]interface{}{"span.context.destination.address": "localhost", "span.context.destination.port": 3000.0, "span.context.destination.service.name": "http://localhost:3000", "span.context.destination.service.resource": "localhost:3000", "span.context.destination.service.type": "resource", "span.context.http.response.decoded_body_size": 785.0, "span.context.http.response.encoded_body_size": 785.0, "span.context.http.response.transfer_size": 0.0, "span.context.http.url": "http://localhost:3000/assets/application.debug-8f0ab06df214da85f20badd5140ad9071c25a2186b569d896dbf0f00ebbd5acd.css", "span.duration": 8.354999998118728, "span.id": "9e0b3728b470a522", "span.name": "http://localhost:3000/assets/application.debug-8f0ab06df214da85f20badd5140ad9071c25a2186b569d896dbf0f00ebbd5acd.css", "span.parent_id": "bffcb5c637da7831", "span.start": 103.52499998407438, "span.subType": "link", "span.trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "span.transaction_id": "bffcb5c637da7831", "span.type": "resource"}, acc.Metrics[3].Fields)
+	require.True(t, acc.Metrics[3].Time.After(now))
 	defer resp.Body.Close()
 }
 

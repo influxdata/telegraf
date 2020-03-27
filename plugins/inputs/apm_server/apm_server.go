@@ -148,9 +148,10 @@ func (s *APMServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func (s *APMServer) routes() {
 	s.mux.Handle("/", s.handleServerInformation())
 	s.mux.Handle("/config/v1/agents", s.handleAgentConfiguration())
-	s.mux.Handle("/config/v1/rum/agents", s.handleRUM(s.handleAgentConfiguration(), "GET, OPTIONS"))
+	s.mux.Handle("/config/v1/rum/agents", s.handleRUM(s.handleAgentConfiguration()))
 	s.mux.Handle("/assets/v1/sourcemaps", s.handleSourceMap())
 	s.mux.Handle("/intake/v2/events", s.handleEventsIntake())
+	s.mux.Handle("/intake/v2/rum/events", s.handleRUM(s.handleEventsIntake()))
 }
 
 func (s *APMServer) handleServerInformation() http.HandlerFunc {
@@ -267,7 +268,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	}
 }
 
-func (s *APMServer) handleRUM(handler http.HandlerFunc, allowedMethods string) http.HandlerFunc {
+func (s *APMServer) handleRUM(handler http.HandlerFunc) http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
 		// Handle CORS
@@ -278,7 +279,7 @@ func (s *APMServer) handleRUM(handler http.HandlerFunc, allowedMethods string) h
 		res.Header().Set("Access-Control-Allow-Origin", origin)
 
 		if req.Method == "OPTIONS" {
-			res.Header().Set("Access-Control-Allow-Methods", allowedMethods)
+			res.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 			res.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Encoding, Accept")
 			res.Header().Set("Access-Control-Expose-Headers", "Etag")
 			res.Header().Set("Access-Control-Max-Age", "86400")
