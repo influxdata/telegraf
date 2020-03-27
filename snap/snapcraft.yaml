@@ -28,10 +28,10 @@ parts:
     build-attributes: [no-patchelf]
     plugin: nil
     build-snaps: [go]
+    build-packages: [make, gcc]
     override-build: |
       cd ..
       export GOPATH=$(pwd)/go
-      export GO111MODULE="off"
       mkdir -p $GOPATH
       go get -d github.com/influxdata/telegraf
       cd $GOPATH/src/github.com/influxdata/telegraf
