@@ -220,7 +220,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			}
 
 			f := jsonparser.JSONFlattener{FieldsSeparator: "."}
-			if err := f.FullFlattenJSON("", metadata, true, true); err != nil {
+			if err := f.FullFlattenJSON("", metadata.(map[string]interface{})["metadata"], true, true); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
@@ -243,11 +243,11 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 			// Fields
 			f.Fields = make(map[string]interface{})
-			if err := f.FullFlattenJSON("", event, true, true); err != nil {
+			if err := f.FullFlattenJSON("", event.(map[string]interface{})[eventType], true, true); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
-			delete(f.Fields, eventType+".timestamp")
+			delete(f.Fields, "timestamp")
 
 			// Timestamp
 			timestamp, err := parseTimestamp(event, eventType)
