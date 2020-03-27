@@ -26,6 +26,7 @@ func TestTailFromBeginning(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
 	require.NoError(t, err)
 
@@ -34,11 +35,13 @@ func TestTailFromBeginning(t *testing.T) {
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(1)
@@ -60,6 +63,7 @@ func TestTailFromEnd(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
 	require.NoError(t, err)
 
@@ -67,11 +71,13 @@ func TestTailFromEnd(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
 	for _, tailer := range tt.tailers {
 		for n, err := tailer.Tell(); err == nil && n == 0; n, err = tailer.Tell() {
 			// wait for tailer to jump to end
@@ -99,17 +105,20 @@ func TestTailBadLine(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
 
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
@@ -127,6 +136,7 @@ func TestTailDosLineendings(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\ncpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
 
@@ -135,11 +145,13 @@ func TestTailDosLineendings(t *testing.T) {
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(2)
@@ -180,11 +192,14 @@ cpu,42
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}, nil
 	})
-	defer plugin.Stop()
+
+	err = plugin.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	err = plugin.Start(&acc)
 	require.NoError(t, err)
+	defer plugin.Stop()
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	acc.Wait(2)
@@ -237,11 +252,14 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 				MetricName: "cpu",
 			})
 	})
-	defer plugin.Stop()
+
+	err = plugin.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	err = plugin.Start(&acc)
 	require.NoError(t, err)
+	defer plugin.Stop()
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	acc.Wait(2)

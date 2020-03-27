@@ -19,12 +19,11 @@ see http://man7.org/linux/man-pages/man1/tail.1.html for more details.
 The plugin expects messages in one of the
 [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
-### Configuration:
+### Configuration
 
 ```toml
-# Stream a log file, like the tail -f command
 [[inputs.tail]]
-  ## files to tail.
+  ## File names or a pattern to tail.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
@@ -34,13 +33,20 @@ The plugin expects messages in one of the
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]
+
   ## Read file from beginning.
-  from_beginning = false
+  # from_beginning = false
+
   ## Whether file is a named pipe
-  pipe = false
+  # pipe = false
 
   ## Method used to watch for file updates.  Can be either "inotify" or "poll".
   # watch_method = "inotify"
+
+  ## Maximum lines of the file to process that have not yet be written by the
+  ## output.  For best throughput set based on the number of metrics on each
+  ## line and the size of the output's metric_batch_size.
+  # max_undelivered_lines = 1000
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -49,7 +55,7 @@ The plugin expects messages in one of the
   data_format = "influx"
 ```
 
-### Metrics:
+### Metrics
 
 Metrics are produced according to the `data_format` option.  Additionally a
 tag labeled `path` is added to the metric containing the filename being tailed.
