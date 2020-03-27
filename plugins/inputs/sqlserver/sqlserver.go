@@ -1573,7 +1573,7 @@ EngineEdition:
 6 = SQL Data Warehouse
 8 = Managed Instance
 */
-IF SERVERPROPERTY('EngineEdition') NOT IN (5)
+IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
 	BEGIN
 	SELECT DISTINCT
 		'sqlserver_disk_space' AS [measurement]
