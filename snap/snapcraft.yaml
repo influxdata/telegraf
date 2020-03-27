@@ -30,11 +30,8 @@ parts:
     build-snaps: [go]
     build-packages: [make, gcc]
     override-build: |
-      cd ..
-      export GOPATH=$(pwd)/go
-      mkdir -p $GOPATH
-      go get -d github.com/influxdata/telegraf
-      cd $GOPATH/src/github.com/influxdata/telegraf
+      git clone https://github.com/influxdata/telegraf.git
+      cd telegraf
       tag="$(git tag -l | egrep -v '\-rc' | sort -rV | head -n 1)"
       version="$(echo $tag | cut -d 'v' -f 2)"
       snapcraftctl set-version "$version"
