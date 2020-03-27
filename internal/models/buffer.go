@@ -33,6 +33,11 @@ type Buffer struct {
 
 // NewBuffer returns a new empty Buffer with the given capacity.
 func NewBuffer(name string, alias string, capacity int) *Buffer {
+	tags := map[string]string{"output": name}
+	if alias != "" {
+		tags["alias"] = alias
+	}
+
 	b := &Buffer{
 		buf:   make([]telegraf.Metric, capacity),
 		first: 0,
@@ -43,27 +48,27 @@ func NewBuffer(name string, alias string, capacity int) *Buffer {
 		MetricsAdded: selfstat.Register(
 			"write",
 			"metrics_added",
-			map[string]string{"output": name, "alias": alias},
+			tags,
 		),
 		MetricsWritten: selfstat.Register(
 			"write",
 			"metrics_written",
-			map[string]string{"output": name, "alias": alias},
+			tags,
 		),
 		MetricsDropped: selfstat.Register(
 			"write",
 			"metrics_dropped",
-			map[string]string{"output": name, "alias": alias},
+			tags,
 		),
 		BufferSize: selfstat.Register(
 			"write",
 			"buffer_size",
-			map[string]string{"output": name, "alias": alias},
+			tags,
 		),
 		BufferLimit: selfstat.Register(
 			"write",
 			"buffer_limit",
-			map[string]string{"output": name, "alias": alias},
+			tags,
 		),
 	}
 	b.BufferSize.Set(int64(0))

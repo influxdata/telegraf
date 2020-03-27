@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"path"
 	"strings"
@@ -332,7 +333,7 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 	case *gnmi.TypedValue_BytesVal:
 		value = val.BytesVal
 	case *gnmi.TypedValue_DecimalVal:
-		value = val.DecimalVal
+		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
 	case *gnmi.TypedValue_FloatVal:
 		value = val.FloatVal
 	case *gnmi.TypedValue_IntVal:

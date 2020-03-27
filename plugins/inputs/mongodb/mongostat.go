@@ -174,7 +174,9 @@ type ConcurrentTransactions struct {
 }
 
 type ConcurrentTransStats struct {
-	Out int64 `bson:"out"`
+	Out          int64 `bson:"out"`
+	Available    int64 `bson:"available"`
+	TotalTickets int64 `bson:"totalTickets"`
 }
 
 // CacheStats stores cache statistics for WiredTiger.
@@ -333,6 +335,7 @@ type MetricsStats struct {
 	TTL      *TTLStats      `bson:"ttl"`
 	Cursor   *CursorStats   `bson:"cursor"`
 	Document *DocumentStats `bson:"document"`
+	Commands *CommandsStats `bson:"commands"`
 }
 
 // TTLStats stores information related to documents with a ttl index.
@@ -353,6 +356,21 @@ type DocumentStats struct {
 	Inserted int64 `bson:"inserted"`
 	Returned int64 `bson:"returned"`
 	Updated  int64 `bson:"updated"`
+}
+
+// CommandsStats stores information related to document metrics.
+type CommandsStats struct {
+	Delete        *CommandsStatsValue `bson:"delete"`
+	Find          *CommandsStatsValue `bson:"find"`
+	FindAndModify *CommandsStatsValue `bson:"findAndModify"`
+	GetMore       *CommandsStatsValue `bson:"getMore"`
+	Insert        *CommandsStatsValue `bson:"insert"`
+	Update        *CommandsStatsValue `bson:"update"`
+}
+
+type CommandsStatsValue struct {
+	Failed int64 `bson:"failed"`
+	Total  int64 `bson:"total"`
 }
 
 // OpenCursorStats stores information related to open cursor metrics
@@ -528,6 +546,14 @@ type StatLine struct {
 	// Document fields
 	DeletedD, InsertedD, ReturnedD, UpdatedD int64
 
+	//Commands fields
+	DeleteCommandTotal, DeleteCommandFailed               int64
+	FindCommandTotal, FindCommandFailed                   int64
+	FindAndModifyCommandTotal, FindAndModifyCommandFailed int64
+	GetMoreCommandTotal, GetMoreCommandFailed             int64
+	InsertCommandTotal, InsertCommandFailed               int64
+	UpdateCommandTotal, UpdateCommandFailed               int64
+
 	// Connection fields
 	CurrentC, AvailableC, TotalCreatedC int64
 
@@ -558,27 +584,29 @@ type StatLine struct {
 	UnmodifiedPagesEvicted    int64
 
 	// Replicated Opcounter fields
-	InsertR, InsertRCnt                  int64
-	QueryR, QueryRCnt                    int64
-	UpdateR, UpdateRCnt                  int64
-	DeleteR, DeleteRCnt                  int64
-	GetMoreR, GetMoreRCnt                int64
-	CommandR, CommandRCnt                int64
-	ReplLag                              int64
-	OplogStats                           *OplogStats
-	Flushes, FlushesCnt                  int64
-	FlushesTotalTime                     int64
-	Mapped, Virtual, Resident, NonMapped int64
-	Faults, FaultsCnt                    int64
-	HighestLocked                        *LockStatus
-	QueuedReaders, QueuedWriters         int64
-	ActiveReaders, ActiveWriters         int64
-	NetIn, NetInCnt                      int64
-	NetOut, NetOutCnt                    int64
-	NumConnections                       int64
-	ReplSetName                          string
-	NodeType                             string
-	NodeState                            string
+	InsertR, InsertRCnt                      int64
+	QueryR, QueryRCnt                        int64
+	UpdateR, UpdateRCnt                      int64
+	DeleteR, DeleteRCnt                      int64
+	GetMoreR, GetMoreRCnt                    int64
+	CommandR, CommandRCnt                    int64
+	ReplLag                                  int64
+	OplogStats                               *OplogStats
+	Flushes, FlushesCnt                      int64
+	FlushesTotalTime                         int64
+	Mapped, Virtual, Resident, NonMapped     int64
+	Faults, FaultsCnt                        int64
+	HighestLocked                            *LockStatus
+	QueuedReaders, QueuedWriters             int64
+	ActiveReaders, ActiveWriters             int64
+	AvailableReaders, AvailableWriters       int64
+	TotalTicketsReaders, TotalTicketsWriters int64
+	NetIn, NetInCnt                          int64
+	NetOut, NetOutCnt                        int64
+	NumConnections                           int64
+	ReplSetName                              string
+	NodeType                                 string
+	NodeState                                string
 
 	// Cluster fields
 	JumboChunksCount int64
@@ -739,6 +767,33 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			returnVal.InsertedD = newStat.Metrics.Document.Inserted
 			returnVal.ReturnedD = newStat.Metrics.Document.Returned
 			returnVal.UpdatedD = newStat.Metrics.Document.Updated
+		}
+
+		if newStat.Metrics.Commands != nil {
+			if newStat.Metrics.Commands.Delete != nil {
+				returnVal.DeleteCommandTotal = newStat.Metrics.Commands.Delete.Total
+				returnVal.DeleteCommandFailed = newStat.Metrics.Commands.Delete.Failed
+			}
+			if newStat.Metrics.Commands.Find != nil {
+				returnVal.FindCommandTotal = newStat.Metrics.Commands.Find.Total
+				returnVal.FindCommandFailed = newStat.Metrics.Commands.Find.Failed
+			}
+			if newStat.Metrics.Commands.FindAndModify != nil {
+				returnVal.FindAndModifyCommandTotal = newStat.Metrics.Commands.FindAndModify.Total
+				returnVal.FindAndModifyCommandFailed = newStat.Metrics.Commands.FindAndModify.Failed
+			}
+			if newStat.Metrics.Commands.GetMore != nil {
+				returnVal.GetMoreCommandTotal = newStat.Metrics.Commands.GetMore.Total
+				returnVal.GetMoreCommandFailed = newStat.Metrics.Commands.GetMore.Failed
+			}
+			if newStat.Metrics.Commands.Insert != nil {
+				returnVal.InsertCommandTotal = newStat.Metrics.Commands.Insert.Total
+				returnVal.InsertCommandFailed = newStat.Metrics.Commands.Insert.Failed
+			}
+			if newStat.Metrics.Commands.Update != nil {
+				returnVal.UpdateCommandTotal = newStat.Metrics.Commands.Update.Total
+				returnVal.UpdateCommandFailed = newStat.Metrics.Commands.Update.Failed
+			}
 		}
 	}
 
@@ -916,6 +971,10 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		if hasWT {
 			returnVal.ActiveReaders = newStat.WiredTiger.Concurrent.Read.Out
 			returnVal.ActiveWriters = newStat.WiredTiger.Concurrent.Write.Out
+			returnVal.AvailableReaders = newStat.WiredTiger.Concurrent.Read.Available
+			returnVal.AvailableWriters = newStat.WiredTiger.Concurrent.Write.Available
+			returnVal.TotalTicketsReaders = newStat.WiredTiger.Concurrent.Read.TotalTickets
+			returnVal.TotalTicketsWriters = newStat.WiredTiger.Concurrent.Write.TotalTickets
 		} else if newStat.GlobalLock.ActiveClients != nil {
 			returnVal.ActiveReaders = newStat.GlobalLock.ActiveClients.Readers
 			returnVal.ActiveWriters = newStat.GlobalLock.ActiveClients.Writers

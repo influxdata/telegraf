@@ -2,19 +2,21 @@ package statsd
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
-	testMsg = "test.tcp.msg:100|c"
+	testMsg         = "test.tcp.msg:100|c"
+	producerThreads = 10
 )
 
 func NewTestStatsd() *Statsd {
@@ -137,12 +139,27 @@ func BenchmarkUDP(b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
-		for i := 0; i < 250000; i++ {
-			fmt.Fprintf(conn, testMsg)
+
+		var wg sync.WaitGroup
+		for i := 1; i <= producerThreads; i++ {
+			wg.Add(1)
+			go sendRequests(conn, &wg)
 		}
+		wg.Wait()
+
 		// wait for 250,000 metrics to get added to accumulator
-		time.Sleep(time.Millisecond)
+		for len(listener.in) > 0 {
+			fmt.Printf("Left in buffer: %v \n", len(listener.in))
+			time.Sleep(time.Millisecond)
+		}
 		listener.Stop()
+	}
+}
+
+func sendRequests(conn net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for i := 0; i < 25000; i++ {
+		fmt.Fprintf(conn, testMsg)
 	}
 }
 
@@ -169,11 +186,16 @@ func BenchmarkTCP(b *testing.B) {
 		if err != nil {
 			panic(err)
 		}
-		for i := 0; i < 250000; i++ {
-			fmt.Fprintf(conn, testMsg)
+		var wg sync.WaitGroup
+		for i := 1; i <= producerThreads; i++ {
+			wg.Add(1)
+			go sendRequests(conn, &wg)
 		}
+		wg.Wait()
 		// wait for 250,000 metrics to get added to accumulator
-		time.Sleep(time.Millisecond)
+		for len(listener.in) > 0 {
+			time.Sleep(time.Millisecond)
+		}
 		listener.Stop()
 	}
 }
@@ -1646,6 +1668,51 @@ func TestTCP(t *testing.T) {
 	addr := statsd.TCPlistener.Addr().String()
 
 	conn, err := net.Dial("tcp", addr)
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+	err = conn.Close()
+	require.NoError(t, err)
+
+	for {
+		err = statsd.Gather(&acc)
+		require.NoError(t, err)
+
+		if len(acc.Metrics) > 0 {
+			break
+		}
+	}
+
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			testutil.MustMetric(
+				"cpu_time_idle",
+				map[string]string{
+					"metric_type": "counter",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+		},
+		acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(),
+	)
+}
+
+func TestUdp(t *testing.T) {
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "udp",
+		ServiceAddress:         "localhost:8125",
+		AllowedPendingMessages: 250000,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	defer statsd.Stop()
+
+	conn, err := net.Dial("udp", "127.0.0.1:8125")
 	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
 	require.NoError(t, err)
 	err = conn.Close()
