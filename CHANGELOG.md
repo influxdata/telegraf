@@ -6,6 +6,7 @@
 - [#7193](https://github.com/influxdata/telegraf/pull/7193): Add additional concurrent transaction information.
 - [#7223](https://github.com/influxdata/telegraf/pull/7223): Add ability to specify HTTP Headers in http_listener_v2 which will added as tags.
 - [#7140](https://github.com/influxdata/telegraf/pull/7140): Apply ping deadline to dns lookup.
+- [#7225](https://github.com/influxdata/telegraf/pull/7225): Add support for 64-bit integer types to modbus input.
 
 ## v1.14 [2020-03-26]
 
