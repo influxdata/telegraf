@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	_ "go.uber.org/automaxprocs"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
