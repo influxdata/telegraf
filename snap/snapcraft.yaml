@@ -24,24 +24,7 @@ parts:
       - etc
       - bin
 
-  dep:
-    plugin: nil
-    build-snaps: [go]
-    override-build: |
-      cd ..
-      export GOPATH=$(pwd)/go
-      export GO111MODULE="off"
-      mkdir -p $GOPATH
-      go get -d -u github.com/golang/dep
-      cd $(go env GOPATH)/src/github.com/golang/dep
-      DEP_LATEST=$(git describe --abbrev=0 --tags)
-      git checkout $DEP_LATEST
-      go build -ldflags="-X main.version=$DEP_LATEST" ./cmd/dep
-      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
-      cp -p dep $SNAPCRAFT_PART_INSTALL/bin/
-
   telegraf:
-    after: [dep]
     build-attributes: [no-patchelf]
     plugin: nil
     build-snaps: [go]
