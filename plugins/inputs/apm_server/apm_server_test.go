@@ -2,6 +2,8 @@ package apm_server
 
 import (
 	"bytes"
+	"compress/gzip"
+	"compress/zlib"
 	"fmt"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
@@ -247,7 +249,7 @@ func TestEventsIntakeMultipleMetadata(t *testing.T) {
 	defer resp.Body.Close()
 }
 
-func TestEventsWithoutTimestamp(t *testing.T) {
+func TestEventsIntakeWithoutTimestamp(t *testing.T) {
 	now := time.Now().UTC()
 	tags := map[string]string{"metadata.process.pid": "12345", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/bin/java", "type": "metricset"}
 	fields := map[string]interface{}{"metricset.tags.code": 200.0, "metricset.tags.success": true, "metricset.transaction.name": "GET/", "metricset.transaction.type": "request"}
@@ -276,7 +278,7 @@ func TestEventsWithoutTimestamp(t *testing.T) {
 	defer resp.Body.Close()
 }
 
-func TestEventsNotValidTimestamp(t *testing.T) {
+func TestEventsIntakeNotValidTimestamp(t *testing.T) {
 
 	server := newTestServer()
 	acc := &testutil.Accumulator{}
@@ -299,6 +301,88 @@ func TestEventsNotValidTimestamp(t *testing.T) {
 	body, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Equal(t, "{\"error\":\"cannot parse timestamp: 'xyz'\"}", string(body))
+}
+
+func TestEventsIntakeGzip(t *testing.T) {
+
+	tags := map[string]string{"metadata.process.pid": "12345", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/bin/java", "type": "metricset"}
+	fields := map[string]interface{}{"metricset.tags.code": 200.0, "metricset.tags.success": true, "metricset.transaction.name": "GET/", "metricset.transaction.type": "request"}
+
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	metadataBytes := []byte(`{"metadata":{"process":{"pid":12345,"title":"/usr/lib/bin/java","ppid":1}}}`)
+	eventBytes := []byte(`{"metricset":{"tags":{"code":200,"success":true},"transaction":{"type":"request","name":"GET/"}, "timestamp":1571657444929001}}`)
+
+	var buffer bytes.Buffer
+	w := gzip.NewWriter(&buffer)
+	_, err := w.Write(metadataBytes)
+	require.NoError(t, err)
+	_, err = w.Write(eventBytes)
+	require.NoError(t, err)
+	err = w.Close()
+	require.NoError(t, err)
+
+	request, err := http.NewRequest("POST", createURL(server, "http", "/intake/v2/events", ""), &buffer)
+	require.NoError(t, err)
+
+	request.Header.Set("Content-Type", "application/x-ndjson")
+	request.Header.Set("Content-Encoding", "gzip")
+	resp, err := http.DefaultClient.Do(request)
+
+	require.NoError(t, err)
+	require.EqualValues(t, 202, resp.StatusCode)
+	require.Equal(t, 1, len(acc.Metrics))
+	require.Equal(t, "apm_server", acc.Metrics[0].Measurement)
+	require.Equal(t, tags, acc.Metrics[0].Tags)
+	require.Equal(t, fields, acc.Metrics[0].Fields)
+	require.Equal(t, "2019-10-21 11:30:44.929001 +0000 UTC", acc.Metrics[0].Time.String())
+
+	defer resp.Body.Close()
+}
+
+func TestEventsIntakeZlib(t *testing.T) {
+
+	tags := map[string]string{"metadata.process.pid": "102030", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/bin/java", "type": "metricset"}
+	fields := map[string]interface{}{"metricset.tags.code": 202.0, "metricset.tags.success": true, "metricset.transaction.name": "GET/", "metricset.transaction.type": "request"}
+
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	metadataBytes := []byte(`{"metadata":{"process":{"pid":102030,"title":"/usr/lib/bin/java","ppid":1}}}`)
+	eventBytes := []byte(`{"metricset":{"tags":{"code":202,"success":true},"transaction":{"type":"request","name":"GET/"}, "timestamp":1571657444929001}}`)
+
+	var buffer bytes.Buffer
+	w := zlib.NewWriter(&buffer)
+	_, err := w.Write(metadataBytes)
+	require.NoError(t, err)
+	_, err = w.Write(eventBytes)
+	require.NoError(t, err)
+	err = w.Close()
+	require.NoError(t, err)
+
+	request, err := http.NewRequest("POST", createURL(server, "http", "/intake/v2/events", ""), &buffer)
+	require.NoError(t, err)
+
+	request.Header.Set("Content-Type", "application/x-ndjson")
+	request.Header.Set("Content-Encoding", "deflate")
+	resp, err := http.DefaultClient.Do(request)
+
+	require.NoError(t, err)
+	require.EqualValues(t, 202, resp.StatusCode)
+	require.Equal(t, 1, len(acc.Metrics))
+	require.Equal(t, "apm_server", acc.Metrics[0].Measurement)
+	require.Equal(t, tags, acc.Metrics[0].Tags)
+	require.Equal(t, fields, acc.Metrics[0].Fields)
+	require.Equal(t, "2019-10-21 11:30:44.929001 +0000 UTC", acc.Metrics[0].Time.String())
+
+	defer resp.Body.Close()
 }
 
 func createURL(server *APMServer, scheme string, path string, rawquery string) string {

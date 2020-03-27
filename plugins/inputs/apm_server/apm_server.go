@@ -1,6 +1,8 @@
 package apm_server
 
 import (
+	"compress/gzip"
+	"compress/zlib"
 	"context"
 	"crypto/sha1"
 	"crypto/tls"
@@ -155,7 +157,7 @@ func (s *APMServer) handleServerInformation() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
 		if req.URL.Path != "/" {
-			s.errorResponse(res, http.StatusNotFound, "404 page not found")
+			s.ErrorResponse(res, http.StatusNotFound, "404 page not found")
 			return
 		}
 
@@ -187,18 +189,23 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
-			s.errorResponse(res, http.StatusBadRequest, message)
+			s.ErrorResponse(res, http.StatusBadRequest, message)
 			return
 		}
 
 		var metadata interface{}
-		reader := req.Body
+		reader, err := ServerRequestBody(req)
+		if err != nil {
+			s.ErrorResponse(res, http.StatusBadRequest, err.Error())
+			return
+		}
+
 		d := json.NewDecoder(reader)
 		for {
 			var event interface{}
 			if err := d.Decode(&event); err != nil {
 				if err != io.EOF {
-					s.errorResponse(res, http.StatusBadRequest, err.Error())
+					s.ErrorResponse(res, http.StatusBadRequest, err.Error())
 					break
 				}
 				// EOF => end
@@ -213,7 +220,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 			f := jsonparser.JSONFlattener{FieldsSeparator: "."}
 			if err := f.FullFlattenJSON("", metadata, true, true); err != nil {
-				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
 
@@ -236,20 +243,20 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			// Fields
 			f.Fields = make(map[string]interface{})
 			if err := f.FullFlattenJSON("", event, true, true); err != nil {
-				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
 			delete(f.Fields, eventType+".timestamp")
 
 			// Timestamp
-			timestamp, err := parseTimestamp(event, eventType)
+			timestamp, err := ParseTimestamp(event, eventType)
 			if err != nil {
-				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
 
 			if m, err := metric.New("apm_server", tags, f.Fields, timestamp); err != nil {
-				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			} else {
 				s.acc.AddMetric(m)
@@ -260,7 +267,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	}
 }
 
-func parseTimestamp(event interface{}, eventType string) (time.Time, error) {
+func ParseTimestamp(event interface{}, eventType string) (time.Time, error) {
 	value := event.(map[string]interface{})[eventType].(map[string]interface{})["timestamp"]
 	if value == nil {
 		return time.Now().UTC(), nil
@@ -274,7 +281,26 @@ func parseTimestamp(event interface{}, eventType string) (time.Time, error) {
 	return time.Now().UTC(), errors.New(fmt.Sprintf("cannot parse timestamp: '%s'", value))
 }
 
-func (s *APMServer) errorResponse(res http.ResponseWriter, statusCode int, message string) {
+func ServerRequestBody(req *http.Request) (io.ReadCloser, error) {
+	reader := req.Body
+	switch req.Header.Get("Content-Encoding") {
+
+	case "gzip":
+		var err error
+		if reader, err = gzip.NewReader(reader); err != nil {
+			return nil, err
+		}
+	case "deflate":
+		var err error
+		if reader, err = zlib.NewReader(reader); err != nil {
+			return nil, err
+		}
+	}
+
+	return reader, nil
+}
+
+func (s *APMServer) ErrorResponse(res http.ResponseWriter, statusCode int, message string) {
 	s.Log.Error(message)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(statusCode)
