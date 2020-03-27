@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -262,10 +263,13 @@ func parseTimestamp(event interface{}, eventType string) (time.Time, error) {
 	if value == nil {
 		return time.Now().UTC(), nil
 	}
-	microseconds := int64(value.(float64))
-	secPart := microseconds / 1000000
-	microPart := microseconds - (secPart * 1000000)
-	return time.Unix(secPart, microPart*1000).UTC(), nil
+	if valueFloat, ok := value.(float64); ok {
+		microseconds := int64(valueFloat)
+		secPart := microseconds / 1000000
+		microPart := microseconds - (secPart * 1000000)
+		return time.Unix(secPart, microPart*1000).UTC(), nil
+	}
+	return time.Now().UTC(), errors.New(fmt.Sprintf("cannot parse timestamp: '%s'", value))
 }
 
 func (s *APMServer) errorResponse(res http.ResponseWriter, statusCode int, message string) {

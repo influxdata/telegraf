@@ -210,8 +210,9 @@ func TestEventsIntake(t *testing.T) {
 }
 
 func TestEventsWithoutTimestamp(t *testing.T) {
-	tags := map[string]string{"metadata.labels.ab_testing": "true", "metadata.labels.group": "experimental", "metadata.labels.segment": "5", "metadata.process.argv.0": "-v", "metadata.process.pid": "1234", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/jvm/java-10-openjdk-amd64/bin/java", "metadata.service.agent.ephemeral_id": "e71be9ac-93b0-44b9-a997-5638f6ccfc36", "metadata.service.agent.name": "java", "metadata.service.agent.version": "1.10.0", "metadata.service.environment": "production", "metadata.service.framework.name": "spring", "metadata.service.framework.version": "5.0.0", "metadata.service.language.name": "Java", "metadata.service.language.version": "10.0.2", "metadata.service.name": "1234_service-12a3", "metadata.service.node.configured_name": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "metadata.service.runtime.name": "Java", "metadata.service.runtime.version": "10.0.2", "metadata.service.version": "4.3.0", "metadata.system.architecture": "amd64", "metadata.system.configured_hostname": "host1", "metadata.system.container.id": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "metadata.system.detected_hostname": "8ec7ceb99074", "metadata.system.kubernetes.namespace": "default", "metadata.system.kubernetes.node.name": "node-name", "metadata.system.kubernetes.pod.name": "instrumented-java-service", "metadata.system.kubernetes.pod.uid": "b17f231da0ad128dc6c6c0b2e82f6f303d3893e3", "metadata.system.platform": "Linux", "type": "transaction"}
-	fields := map[string]interface{}{"transaction.context.custom.(": "notavalidregexandthatisfine", "transaction.context.custom.and_objects.foo.0": "bar", "transaction.context.custom.and_objects.foo.1": "baz", "transaction.context.custom.my_key": 1.0, "transaction.context.custom.some_other_value": "foobar", "transaction.context.request.body.additional.bar": 123.0, "transaction.context.request.body.additional.req": "additionalinformation", "transaction.context.request.body.string": "helloworld", "transaction.context.request.cookies.c1": "v1", "transaction.context.request.cookies.c2": "v2", "transaction.context.request.env.GATEWAY_INTERFACE": "CGI/1.1", "transaction.context.request.env.SERVER_SOFTWARE": "nginx", "transaction.context.request.headers.Elastic-Apm-Traceparent.0": "00-33a0bd4cceff0370a7c57d807032688e-69feaabc5b88d7e8-01", "transaction.context.request.headers.content-type": "text/html", "transaction.context.request.headers.cookie": "c1=v1,c2=v2", "transaction.context.request.headers.user-agent.0": "Mozilla/5.0(Macintosh;IntelMacOSX10_10_5)AppleWebKit/537.36(KHTML,likeGecko)Chrome/51.0.2704.103Safari/537.36", "transaction.context.request.headers.user-agent.1": "MozillaChromeEdge", "transaction.context.request.http_version": "1.1", "transaction.context.request.method": "POST", "transaction.context.request.socket.encrypted": true, "transaction.context.request.socket.remote_address": "12.53.12.1:8080", "transaction.context.request.url.full": "https://www.example.com/p/a/t/h?query=string#hash", "transaction.context.request.url.hash": "#hash", "transaction.context.request.url.hostname": "www.example.com", "transaction.context.request.url.pathname": "/p/a/t/h", "transaction.context.request.url.port": "8080", "transaction.context.request.url.protocol": "https:", "transaction.context.request.url.raw": "/p/a/t/h?query=string#hash", "transaction.context.request.url.search": "?query=string", "transaction.context.response.decoded_body_size": 401.9, "transaction.context.response.encoded_body_size": 356.9, "transaction.context.response.finished": true, "transaction.context.response.headers.content-type": "application/json", "transaction.context.response.headers_sent": true, "transaction.context.response.status_code": 200.0, "transaction.context.response.transfer_size": 300.0, "transaction.context.service.agent.ephemeral_id": "e71be9ac-93b0-44b9-a997-5638f6ccfc36", "transaction.context.service.agent.version": "1.10.0-SNAPSHOT", "transaction.context.service.name": "experimental-java", "transaction.context.tags.organization_uuid": "9f0e9d64-c185-4d21-a6f4-4673ed561ec8", "transaction.context.user.email": "foo@mail.com", "transaction.context.user.id": "99", "transaction.context.user.username": "foo", "transaction.duration": 32.592981, "transaction.id": "4340a8e0df1906ecbfa9", "transaction.name": "ResourceHttpRequestHandler", "transaction.parent_id": "abcdefabcdef01234567", "transaction.result": "HTTP2xx", "transaction.sampled": true, "transaction.span_count.dropped": 0.0, "transaction.span_count.started": 17.0, "transaction.trace_id": "0acd456789abcdef0123456789abcdef", "transaction.type": "http"}
+	now := time.Now().UTC()
+	tags := map[string]string{"metadata.process.pid": "12345", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/bin/java", "type": "metricset"}
+	fields := map[string]interface{}{"metricset.tags.code": 200.0, "metricset.tags.success": true, "metricset.transaction.name": "GET/", "metricset.transaction.type": "request"}
 
 	server := newTestServer()
 	acc := &testutil.Accumulator{}
@@ -219,8 +220,8 @@ func TestEventsWithoutTimestamp(t *testing.T) {
 	require.NoError(t, server.Start(acc))
 	defer server.Stop()
 
-	metadataBytes, _ := ioutil.ReadFile("./testdata/metadata.ndjson")
-	eventBytes, _ := ioutil.ReadFile("./testdata/transaction_without_timestamp.ndjson")
+	metadataBytes := []byte(`{"metadata":{"process":{"pid":12345,"title":"/usr/lib/bin/java","ppid":1}}}`)
+	eventBytes := []byte(`{"metricset":{"tags":{"code":200,"success":true},"transaction":{"type":"request","name":"GET/"}}}`)
 
 	buffer := bytes.NewBuffer(metadataBytes)
 	buffer.Write(eventBytes)
@@ -233,7 +234,33 @@ func TestEventsWithoutTimestamp(t *testing.T) {
 	require.Equal(t, tags, acc.Metrics[0].Tags)
 	require.Equal(t, fields, acc.Metrics[0].Fields)
 	require.NotNil(t, acc.Metrics[0].Time)
+	require.True(t, acc.Metrics[0].Time.After(now))
 	defer resp.Body.Close()
+}
+
+func TestEventsNotValidTimestamp(t *testing.T) {
+
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	metadataBytes := []byte(`{"metadata":{"process":{"pid":12345,"title":"/usr/lib/bin/java","ppid":1}}}`)
+	eventBytes := []byte(`{"metricset":{"tags":{"code":200,"success":true},"transaction":{"type":"request","name":"GET/"},"timestamp":"xyz"}}`)
+
+	buffer := bytes.NewBuffer(metadataBytes)
+	buffer.Write(eventBytes)
+
+	resp, err := http.Post(createURL(server, "http", "/intake/v2/events", ""), "application/x-ndjson", buffer)
+	require.NoError(t, err)
+	require.EqualValues(t, 400, resp.StatusCode)
+	require.Equal(t, 0, len(acc.Metrics))
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, "{\"error\":\"cannot parse timestamp: 'xyz'\"}", string(body))
 }
 
 func createURL(server *APMServer, scheme string, path string, rawquery string) string {
