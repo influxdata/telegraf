@@ -27,6 +27,11 @@ The table below describe how this plugin conforms with them:
 [[inputs.apm_server]]
   ## Address and port to list APM Agents
   service_address = ":8200"
+
+  ## maximum duration before timing out read of the request
+  # read_timeout = "10s"
+  ## maximum duration before timing out write of the response
+  # write_timeout = "10s"
 ```
 
 ### Agent Configuration

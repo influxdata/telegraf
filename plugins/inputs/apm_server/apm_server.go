@@ -204,53 +204,55 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				// EOF => end
 				break
 			}
-			if metadata == nil {
+
+			eventType := reflect.ValueOf(event.(map[string]interface{})).MapKeys()[0].String()
+			if eventType == "metadata" {
 				metadata = event
+				continue
+			}
+
+			f := jsonparser.JSONFlattener{FieldsSeparator: "."}
+			if err := f.FullFlattenJSON("", metadata, true, true); err != nil {
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				return
+			}
+
+			// Tags
+			tags := make(map[string]string, len(f.Fields))
+			tags["type"] = eventType
+			for k := range f.Fields {
+				switch value := f.Fields[k].(type) {
+				case string:
+					tags[k] = value
+				case bool:
+					tags[k] = strconv.FormatBool(value)
+				case float64:
+					tags[k] = strconv.FormatFloat(value, 'f', -1, 64)
+				default:
+					log.Printf("E! [handleEventsIntake] Unrecognized tag type %T", value)
+				}
+			}
+
+			// Fields
+			f.Fields = make(map[string]interface{})
+			if err := f.FullFlattenJSON("", event, true, true); err != nil {
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				return
+			}
+			delete(f.Fields, eventType+".timestamp")
+
+			// Timestamp
+			timestamp, err := parseTimestamp(event, eventType)
+			if err != nil {
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				return
+			}
+
+			if m, err := metric.New("apm_server", tags, f.Fields, timestamp); err != nil {
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
+				return
 			} else {
-				f := jsonparser.JSONFlattener{FieldsSeparator: "."}
-				if err := f.FullFlattenJSON("", metadata, true, true); err != nil {
-					s.errorResponse(res, http.StatusBadRequest, err.Error())
-					return
-				}
-
-				// Tags
-				tags := make(map[string]string, len(f.Fields))
-				for k := range f.Fields {
-					switch value := f.Fields[k].(type) {
-					case string:
-						tags[k] = value
-					case bool:
-						tags[k] = strconv.FormatBool(value)
-					case float64:
-						tags[k] = strconv.FormatFloat(value, 'f', -1, 64)
-					default:
-						log.Printf("E! [handleEventsIntake] Unrecognized tag type %T", value)
-					}
-				}
-				eventType := reflect.ValueOf(event.(map[string]interface{})).MapKeys()[0].String()
-				tags["type"] = eventType
-
-				// Fields
-				f.Fields = make(map[string]interface{})
-				if err := f.FullFlattenJSON("", event, true, true); err != nil {
-					s.errorResponse(res, http.StatusBadRequest, err.Error())
-					return
-				}
-				delete(f.Fields, eventType+".timestamp")
-
-				// Timestamp
-				timestamp, err := parseTimestamp(event, eventType)
-				if err != nil {
-					s.errorResponse(res, http.StatusBadRequest, err.Error())
-					return
-				}
-
-				if m, err := metric.New("apm_server", tags, f.Fields, timestamp); err != nil {
-					s.errorResponse(res, http.StatusBadRequest, err.Error())
-					return
-				} else {
-					s.acc.AddMetric(m)
-				}
+				s.acc.AddMetric(m)
 			}
 		}
 

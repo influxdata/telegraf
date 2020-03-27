@@ -209,6 +209,44 @@ func TestEventsIntake(t *testing.T) {
 	}
 }
 
+func TestEventsIntakeMultipleMetadata(t *testing.T) {
+	tags1 := map[string]string{"metadata.process.pid": "12345", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/bin/java", "type": "metricset"}
+	fields1 := map[string]interface{}{"metricset.tags.code": 200.0, "metricset.tags.success": true, "metricset.transaction.name": "GET/", "metricset.transaction.type": "request"}
+	tags2 := map[string]string{"metadata.process.pid": "54321", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/bin/java", "type": "metricset"}
+	fields2 := map[string]interface{}{"metricset.tags.code": 200.0, "metricset.tags.success": true, "metricset.transaction.name": "POST/", "metricset.transaction.type": "request"}
+
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	metadataBytes1 := []byte(`{"metadata":{"process":{"pid":12345,"title":"/usr/lib/bin/java","ppid":1}}}`)
+	eventBytes1 := []byte(`{"metricset":{"tags":{"code":200,"success":true},"transaction":{"type":"request","name":"GET/"}, "timestamp":1571657444929001}}`)
+
+	metadataBytes2 := []byte(`{"metadata":{"process":{"pid":54321,"title":"/usr/lib/bin/java","ppid":1}}}`)
+	eventBytes2 := []byte(`{"metricset":{"tags":{"code":200,"success":true},"transaction":{"type":"request","name":"POST/"}, "timestamp":1571657440929001}}`)
+
+	buffer := bytes.NewBuffer(metadataBytes1)
+	buffer.Write(eventBytes1)
+	buffer.Write(metadataBytes2)
+	buffer.Write(eventBytes2)
+
+	resp, err := http.Post(createURL(server, "http", "/intake/v2/events", ""), "application/x-ndjson", buffer)
+	require.NoError(t, err)
+	require.EqualValues(t, 202, resp.StatusCode)
+	require.Equal(t, 2, len(acc.Metrics))
+	require.Equal(t, "apm_server", acc.Metrics[0].Measurement)
+	require.Equal(t, tags1, acc.Metrics[0].Tags)
+	require.Equal(t, fields1, acc.Metrics[0].Fields)
+	require.Equal(t, "2019-10-21 11:30:44.929001 +0000 UTC", acc.Metrics[0].Time.String())
+	require.Equal(t, "apm_server", acc.Metrics[1].Measurement)
+	require.Equal(t, tags2, acc.Metrics[1].Tags)
+	require.Equal(t, fields2, acc.Metrics[1].Fields)
+	require.Equal(t, "2019-10-21 11:30:40.929001 +0000 UTC", acc.Metrics[1].Time.String())
+	defer resp.Body.Close()
+}
+
 func TestEventsWithoutTimestamp(t *testing.T) {
 	now := time.Now().UTC()
 	tags := map[string]string{"metadata.process.pid": "12345", "metadata.process.ppid": "1", "metadata.process.title": "/usr/lib/bin/java", "type": "metricset"}
