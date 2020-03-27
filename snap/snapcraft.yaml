@@ -52,7 +52,7 @@ parts:
       mkdir -p $GOPATH
       go get -d github.com/influxdata/telegraf
       cd $GOPATH/src/github.com/influxdata/telegraf
-      version="$(git tag -l | egrep -v '^v|\-rc' | sort -rV | head -n 1)"
+      version="$(git tag -l | egrep -v '\-rc' | sort -rV | head -n 1 | cut -d 'v' -f 2)"
       snapcraftctl set-version "$version"
       git checkout tags/$version
       make
