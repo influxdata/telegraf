@@ -148,7 +148,7 @@ func (s *APMServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func (s *APMServer) routes() {
 	s.mux.Handle("/", s.handleServerInformation())
 	s.mux.Handle("/config/v1/agents", s.handleAgentConfiguration())
-	s.mux.Handle("/config/v1/rum/agents", s.handleAgentConfiguration())
+	s.mux.Handle("/config/v1/rum/agents", s.handleRUM(s.handleAgentConfiguration(), "GET, OPTIONS"))
 	s.mux.Handle("/assets/v1/sourcemaps", s.handleSourceMap())
 	s.mux.Handle("/intake/v2/events", s.handleEventsIntake())
 }
@@ -157,7 +157,7 @@ func (s *APMServer) handleServerInformation() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
 		if req.URL.Path != "/" {
-			s.ErrorResponse(res, http.StatusNotFound, "404 page not found")
+			s.errorResponse(res, http.StatusNotFound, "404 page not found")
 			return
 		}
 
@@ -189,14 +189,14 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
-			s.ErrorResponse(res, http.StatusBadRequest, message)
+			s.errorResponse(res, http.StatusBadRequest, message)
 			return
 		}
 
 		var metadata interface{}
-		reader, err := ServerRequestBody(req)
+		reader, err := serverRequestBody(req)
 		if err != nil {
-			s.ErrorResponse(res, http.StatusBadRequest, err.Error())
+			s.errorResponse(res, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -205,7 +205,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			var event interface{}
 			if err := d.Decode(&event); err != nil {
 				if err != io.EOF {
-					s.ErrorResponse(res, http.StatusBadRequest, err.Error())
+					s.errorResponse(res, http.StatusBadRequest, err.Error())
 					break
 				}
 				// EOF => end
@@ -220,7 +220,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 			f := jsonparser.JSONFlattener{FieldsSeparator: "."}
 			if err := f.FullFlattenJSON("", metadata, true, true); err != nil {
-				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
 
@@ -243,20 +243,20 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			// Fields
 			f.Fields = make(map[string]interface{})
 			if err := f.FullFlattenJSON("", event, true, true); err != nil {
-				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
 			delete(f.Fields, eventType+".timestamp")
 
 			// Timestamp
-			timestamp, err := ParseTimestamp(event, eventType)
+			timestamp, err := parseTimestamp(event, eventType)
 			if err != nil {
-				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			}
 
 			if m, err := metric.New("apm_server", tags, f.Fields, timestamp); err != nil {
-				s.ErrorResponse(res, http.StatusBadRequest, err.Error())
+				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			} else {
 				s.acc.AddMetric(m)
@@ -267,7 +267,30 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	}
 }
 
-func ParseTimestamp(event interface{}, eventType string) (time.Time, error) {
+func (s *APMServer) handleRUM(handler http.HandlerFunc, allowedMethods string) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+
+		// Handle CORS
+		//
+		// https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#The_HTTP_response_headers
+		//
+		origin := req.Header.Get("Origin")
+		res.Header().Set("Access-Control-Allow-Origin", origin)
+
+		if req.Method == "OPTIONS" {
+			res.Header().Set("Access-Control-Allow-Methods", allowedMethods)
+			res.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Encoding, Accept")
+			res.Header().Set("Access-Control-Expose-Headers", "Etag")
+			res.Header().Set("Access-Control-Max-Age", "86400")
+			res.Header().Set("Vary", "Origin")
+			res.WriteHeader(http.StatusNoContent)
+		} else {
+			handler.ServeHTTP(res, req)
+		}
+	}
+}
+
+func parseTimestamp(event interface{}, eventType string) (time.Time, error) {
 	value := event.(map[string]interface{})[eventType].(map[string]interface{})["timestamp"]
 	if value == nil {
 		return time.Now().UTC(), nil
@@ -281,7 +304,7 @@ func ParseTimestamp(event interface{}, eventType string) (time.Time, error) {
 	return time.Now().UTC(), errors.New(fmt.Sprintf("cannot parse timestamp: '%s'", value))
 }
 
-func ServerRequestBody(req *http.Request) (io.ReadCloser, error) {
+func serverRequestBody(req *http.Request) (io.ReadCloser, error) {
 	reader := req.Body
 	switch req.Header.Get("Content-Encoding") {
 
@@ -300,7 +323,7 @@ func ServerRequestBody(req *http.Request) (io.ReadCloser, error) {
 	return reader, nil
 }
 
-func (s *APMServer) ErrorResponse(res http.ResponseWriter, statusCode int, message string) {
+func (s *APMServer) errorResponse(res http.ResponseWriter, statusCode int, message string) {
 	s.Log.Error(message)
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(statusCode)

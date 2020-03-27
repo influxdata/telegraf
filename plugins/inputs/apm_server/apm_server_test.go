@@ -94,9 +94,41 @@ func TestRUMAgentConfiguration(t *testing.T) {
 	defer server.Stop()
 
 	// get RUM agent configuration
-	resp, err := http.Get(createURL(server, "http", "/config/v1/rum/agents", ""))
+	request, err := http.NewRequest("GET", createURL(server, "http", "/config/v1/rum/agents", ""), nil)
+	require.NoError(t, err)
+
+	request.Header.Set("Origin", "https://foo.example")
+	resp, err := http.DefaultClient.Do(request)
+
 	require.NoError(t, err)
 	require.EqualValues(t, 403, resp.StatusCode)
+	require.Equal(t, 0, len(acc.Metrics))
+	require.Equal(t, "https://foo.example", resp.Header.Get("Access-Control-Allow-Origin"))
+	defer resp.Body.Close()
+}
+
+func TestRUMAgentConfigurationPreflight(t *testing.T) {
+	server := newTestServer()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, server.Init())
+	require.NoError(t, server.Start(acc))
+	defer server.Stop()
+
+	// get RUM agent configuration
+	request, err := http.NewRequest("OPTIONS", createURL(server, "http", "/config/v1/rum/agents", ""), nil)
+	require.NoError(t, err)
+
+	request.Header.Set("Origin", "https://foo.example")
+	resp, err := http.DefaultClient.Do(request)
+
+	require.NoError(t, err)
+	require.EqualValues(t, 204, resp.StatusCode)
+	require.Equal(t, "https://foo.example", resp.Header.Get("Access-Control-Allow-Origin"))
+	require.Equal(t, "GET, OPTIONS", resp.Header.Get("Access-Control-Allow-Methods"))
+	require.Equal(t, "Content-Type, Content-Encoding, Accept", resp.Header.Get("Access-Control-Allow-Headers"))
+	require.Equal(t, "Etag", resp.Header.Get("Access-Control-Expose-Headers"))
+	require.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+	require.Equal(t, "Origin", resp.Header.Get("Vary"))
 	require.Equal(t, 0, len(acc.Metrics))
 	defer resp.Body.Close()
 }
