@@ -130,7 +130,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4
-	golang.org/x/tools v0.0.0-20200317043434-63da46f3035e // indirect
+	golang.org/x/tools v0.0.0-20200321224714-0d839f3cf2ed // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	gonum.org/v1/gonum v0.6.2 // indirect
 	google.golang.org/api v0.20.0
