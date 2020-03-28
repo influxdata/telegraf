@@ -1,8 +1,8 @@
+// Package nightscout will gather blood gloucose data from nightscout sites using the site's api.
 package nightscout
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,16 +13,26 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// sampleConfig will provide and example and documentation for configuring the plugin
+// sampleConfig will provide an example and documentation for configuring the plugin.
 var sampleConfig = `
-[[outputs.influxdb]]
-  servers = ["http://137.135.67.239:8086"]
-  database = "mydb"
-  skip_database_creation = true
-  timeout = "10s"
+  ## This is a list of nightscout sites to pull data from.
+  ##  example: servers = ["https://my.nightscout.site/api/v1/entries"]
+  servers = []
+  ## The person is the owner of the nightscout site. The order of the list of owners must match the order of the
+  ## list of servers, for example the first server should match the first owner.
+  # owners = ""
+
+  ## The secret is the SHA-1 hash of the api secret used to access the site.
+  secret = ""
+
+  ## The count is the number of results to pull at a time. Unless you have a specific need, this should remain as 1.
+  # count = "1"
+
+  ## The token is the unique token that matches a role within your nightscout site(s).
+  token = ""
 `
 
-// BGData will hold all stats fetched from the database of a nightscout site
+// BGData will hold all stats fetched from the database of a nightscout site.
 type BGData struct {
 	Type       string `json:"type"`
 	DateString string `json:"dateString"`
@@ -35,33 +45,40 @@ type BGData struct {
 	RSSI       int    `json:"rssi"`
 }
 
-// Nightscout holds configuration and query parameters
+// Nightscout holds configuration and query parameters.
 type Nightscout struct {
 	Servers []string // Slice of servers to query
 	Token   string   // Web token generated from /admin
 	Secret  string   // API_SECRET as a SHA1 hash
-	Count   string   // how many results to fetch
+	Count   int      // how many results to fetch
+	Owners  []string // the data owner 1:1 with the server
 
 	tls.ClientConfig // TLS config
 
 	client *http.Client // HTTP client
+
+	Log telegraf.Logger `toml:"-"`
 }
 
-// SampleConfig returns the SampleConfig to aid in configuration of the plugin
+// SampleConfig returns the SampleConfig to aid in configuration of the plugin.
 func (ns *Nightscout) SampleConfig() string {
 	return sampleConfig
 }
 
-// Description is a one-liner about the plugin
+// Description is a one-liner about the plugin.
 func (ns *Nightscout) Description() string {
 	return "Fetch BG data from a nightscout site"
 }
 
-// Gather reads blood glucose data from all configured servers accumulates
-// stats. Returns any errors encountered while gather stats (if any).
+// Gather reads blood glucose data from all configured servers.
+// It will return any errors encountered while gather stats as well.
 func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 
-	for _, s := range ns.Servers {
+	for i, s := range ns.Servers {
+
+		tag := map[string]string{
+			"owner": ns.Owners[i],
+		}
 
 		acc.AddFields("server", map[string]interface{}{"Server": s}, nil)
 		req, err := http.NewRequest("GET", s, nil)
@@ -72,8 +89,12 @@ func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 		req.Header.Set("api_secret", ns.Secret)
 		req.Header.Set("accept", "application/json")
 
+		if ns.Count == 0 {
+			ns.Count = 1
+		}
+
 		q := req.URL.Query()
-		q.Add("count", ns.Count)
+		q.Add("count", string(ns.Count))
 		q.Add("token", ns.Token)
 		req.URL.RawQuery = q.Encode()
 
@@ -98,7 +119,7 @@ func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			acc.AddError(err)
 		} else {
-			err := ns.importNSResult(res.Body, acc)
+			err := ns.importNSResult(tag, res.Body, acc)
 			if err != nil {
 				acc.AddError(err)
 			}
@@ -108,8 +129,8 @@ func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// importNSResult will parse the json body into a standard format
-func (ns *Nightscout) importNSResult(r io.Reader, acc telegraf.Accumulator) error {
+// importNSResult will parse the json body into a standard format.
+func (ns *Nightscout) importNSResult(tag map[string]string, r io.Reader, acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	body, err := ioutil.ReadAll(r)
@@ -117,19 +138,18 @@ func (ns *Nightscout) importNSResult(r io.Reader, acc telegraf.Accumulator) erro
 		panic(err.Error())
 	}
 
-	fmt.Println(string(body))
-
 	fields := make(map[string]interface{})
-
-	tags := map[string]string{
-		"person": "batman",
-	}
 
 	bgData := make([]BGData, 0)
 
 	err = json.Unmarshal(body, &bgData)
 	if err != nil {
-		fmt.Println("whoops:", err)
+		ns.Log.Warnf("%v", err)
+	}
+
+	if len(bgData) <= 0 {
+		ns.Log.Warnf("No BG data was found in the response")
+		return nil
 	}
 
 	fields["type"] = bgData[0].Type
@@ -143,17 +163,17 @@ func (ns *Nightscout) importNSResult(r io.Reader, acc telegraf.Accumulator) erro
 	fields["rssi"] = bgData[0].RSSI
 	fields["direction_num"] = directionMapping(bgData[0].Direction)
 
-	acc.AddFields("nightscout", fields, tags, now)
+	acc.AddFields("nightscout", fields, tag, now)
 
 	return err
 }
 
-// init registers the plugin with telegraf
+// init registers the plugin with telegraf.
 func init() {
 	inputs.Add("nightscout", func() telegraf.Input { return &Nightscout{} })
 }
 
-// directionMapping converts the text direction to a number for easy processing in dashboards
+// directionMapping converts the text direction to a number for easy processing in dashboards.
 func directionMapping(direction string) string {
 	ans := ""
 	switch direction {
