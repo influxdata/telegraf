@@ -1,4 +1,4 @@
-# GitHub Input Plugin
+# Syncthing Input Plugin
 
 Gather metrics from an instance of [Syncthing](https://syncthing.net) and the folders configured on the instance.
 
@@ -13,48 +13,60 @@ Gather metrics from an instance of [Syncthing](https://syncthing.net) and the fo
 
 ### Metrics
 
-The exported metrics will look like this using the Prometheus output:
+- syncthing_system
+  - tags:
+    - host - The hostname
+    - instance - The Syncthing instance UUID
+  - fields:
+    - alloc (integer)
+    - cpu_percent (float, percentage)
+    - folder_max_files (integer)
+    - folder_max_mib (integer)
+    - goroutines (integer)
+    - memory_size (integer)
+    - memory_usage_mib (integer)
+    - num_cpu (integer)
+    - num_devices (integer)
+    - num_folders (integer)
+    - total_files (integer)
+    - total_mib (integer)
+    - uptime_seconds (integer)
+- syncthing_folder
+  - tags:
+    - host - The hostname
+    - instance - The Syncthing instance UUID
+    - folder - The folder ID
+  - fields:
+    - errors (integer)
+    - global_bytes (integer)
+    - global_deleted (integer)
+    - global_directories (integer)
+    - global_files (integer)
+    - global_symlinks (integer)
+    - global_total_items (integer)
+    - ignore_patterns (bool)
+    - in_sync_bytes (integer)
+    - in_sync_files (integer)
+    - local_bytes (integer)
+    - local_deleted (integer)
+    - local_directories (integer)
+    - local_files (integer)
+    - local_symlinks (integer)
+    - local_total_items (integer)
+    - need_bytes (integer)
+    - need_deletes (integer)
+    - need_directories (integer)
+    - need_files (integer)
+    - need_symlinks (integer)
+    - need_total_items (integer)
+    - pull_errors (integer)
+    - sequence (integer)
+    - version (integer)
 
-```
-syncthing_folder_errors{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_global_bytes{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 4.2835204964e+10
-syncthing_folder_global_deleted{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 49432
-syncthing_folder_global_directories{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 30373
-syncthing_folder_global_files{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 36981
-syncthing_folder_global_symlinks{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_global_total_items{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 116786
-syncthing_folder_ignore_patterns{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_in_sync_bytes{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 4.2835204964e+10
-syncthing_folder_in_sync_files{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 36981
-syncthing_folder_local_bytes{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 4.2835204964e+10
-syncthing_folder_local_deleted{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 130
-syncthing_folder_local_directories{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 30373
-syncthing_folder_local_files{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 36981
-syncthing_folder_local_symlinks{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_local_total_items{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 67484
-syncthing_folder_need_bytes{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_need_deletes{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_need_directories{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_need_files{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_need_symlinks{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_need_total_items{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_pull_errors{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 0
-syncthing_folder_sequence{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 484123
-syncthing_folder_version{folder="xTDuT-kZeuK",host="kramacbook.local",instance="FN7I426-..."} 484123
-syncthing_system_alloc{host="kramacbook.local",instance="FN7I426-..."} 1.6553996e+08
-syncthing_system_cpu_percent{host="kramacbook.local",instance="FN7I426-..."} 1.6437177446884992
-syncthing_system_folder_max_files{host="kramacbook.local",instance="FN7I426-..."} 185995
-syncthing_system_folder_max_mib{host="kramacbook.local",instance="FN7I426-..."} 725111
-syncthing_system_goroutines{host="kramacbook.local",instance="FN7I426-..."} 116
-syncthing_system_memory_size{host="kramacbook.local",instance="FN7I426-..."} 16384
-syncthing_system_memory_usage_mib{host="kramacbook.local",instance="FN7I426-..."} 360
-syncthing_system_num_cpu{host="kramacbook.local",instance="FN7I426-..."} 8
-syncthing_system_num_devices{host="kramacbook.local",instance="FN7I426-..."} 6
-syncthing_system_num_folders{host="kramacbook.local",instance="FN7I426-..."} 4
-syncthing_system_total_files{host="kramacbook.local",instance="FN7I426-..."} 227277
-syncthing_system_total_mib{host="kramacbook.local",instance="FN7I426-..."} 853776
-syncthing_system_uptime_seconds{host="kramacbook.local",instance="FN7I426-..."} 24158
-```
+### Troubleshooting
+
+Syncthing will by default not listen to other hosts than `localhost`, so if you have trouble with connecting to your Syncthing, and you are not hosting telegraf on the same machine, you might need to make Syncthing accessable on the network.
+Please be aware that this allows people on your network to access the Syncthing interface.
 
 ### Example Output
 
