@@ -73,7 +73,7 @@ fpm_common_args = "-f -s dir --log error \
     PACKAGE_URL,
     PACKAGE_LICENSE,
     MAINTAINER,
-    CONFIG_DIR + '/telegraf.conf',
+    CONFIG_DIR + '/telegraf.conf.sample',
     LOGROTATE_DIR + '/telegraf',
     POSTINST_SCRIPT,
     PREINST_SCRIPT,
@@ -138,10 +138,10 @@ def package_scripts(build_root, config_only=False, windows=False):
     if config_only or windows:
         logging.info("Copying configuration to build directory")
         if windows:
-            shutil.copyfile(DEFAULT_WINDOWS_CONFIG, os.path.join(build_root, "telegraf.conf"))
+            shutil.copyfile(DEFAULT_WINDOWS_CONFIG, os.path.join(build_root, "telegraf.conf.sample"))
         else:
-            shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, "telegraf.conf"))
-        os.chmod(os.path.join(build_root, "telegraf.conf"), 0o644)
+            shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, "telegraf.conf.sample"))
+        os.chmod(os.path.join(build_root, "telegraf.conf.sample"), 0o644)
     else:
         logging.info("Copying scripts and configuration to build directory")
         shutil.copyfile(INIT_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]))
@@ -150,8 +150,9 @@ def package_scripts(build_root, config_only=False, windows=False):
         os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]), 0o644)
         shutil.copyfile(LOGROTATE_SCRIPT, os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"))
         os.chmod(os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"), 0o644)
-        shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"))
-        os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"), 0o644)
+        shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf.sample"))
+        os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf.sample"), 0o644)
+
 
 def run_generate():
     # NOOP for Telegraf
