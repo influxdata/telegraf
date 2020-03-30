@@ -12,17 +12,17 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ##
  ## Device name
  name = "Device"
- 
+
  ## Slave ID - addresses a MODBUS device on the bus
  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
  slave_id = 1
- 
+
  ## Timeout for each request
  timeout = "1s"
- 
+
  # TCP - connect via Modbus/TCP
  controller = "tcp://localhost:502"
- 
+
  # Serial (RS485; RS232)
  #controller = "file:///dev/ttyUSB0"
  #baud_rate = 9600
@@ -30,15 +30,15 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  #parity = "N"
  #stop_bits = 1
  #transmission_mode = "RTU"
- 
- 
+
+
  ## Measurements
  ##
- 
+
  ## Digital Variables, Discrete Inputs and Coils
  ## name    - the variable name
  ## address - variable address
- 
+
  discrete_inputs = [
    { name = "Start",          address = [0]},   
    { name = "Stop",           address = [1]},
@@ -49,11 +49,12 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
    { name = "Motor1-Run",     address = [0]},
    { name = "Motor1-Jog",     address = [1]},
    { name = "Motor1-Stop",    address = [2]},
- ] 
- 
+ ]
+
  ## Analog Variables, Input Registers and Holding Registers
+ ## measurement - the (optional) measurement name, defaults to "modbus"
  ## name       - the variable name 
- ## byte_order - the ordering of bytes 
+ ## byte_order - the ordering of bytes
  ##  |---AB, ABCD   - Big Endian
  ##  |---BA, DCBA   - Little Endian
  ##  |---BADC       - Mid-Big Endian
@@ -61,7 +62,7 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
  ## scale      - the final numeric variable representation
  ## address    - variable address
- 
+
  holding_registers = [
    { name = "PowerFactor", byte_order = "AB",   data_type = "FLOAT32", scale=0.01,  address = [8]},
    { name = "Voltage",     byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [0]},

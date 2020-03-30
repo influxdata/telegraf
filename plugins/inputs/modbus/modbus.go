@@ -7,10 +7,12 @@ import (
 	"net"
 	"net/url"
 	"sort"
+	"time"
 
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -44,12 +46,13 @@ type register struct {
 }
 
 type fieldContainer struct {
-	Name      string   `toml:"name"`
-	ByteOrder string   `toml:"byte_order"`
-	DataType  string   `toml:"data_type"`
-	Scale     float64  `toml:"scale"`
-	Address   []uint16 `toml:"address"`
-	value     interface{}
+	Measurement string   `toml:"measurement"`
+	Name        string   `toml:"name"`
+	ByteOrder   string   `toml:"byte_order"`
+	DataType    string   `toml:"data_type"`
+	Scale       float64  `toml:"scale"`
+	Address     []uint16 `toml:"address"`
+	value       interface{}
 }
 
 type registerRange struct {
@@ -97,14 +100,15 @@ const sampleConfig = `
  ##
 
  ## Digital Variables, Discrete Inputs and Coils
- ## name    - the variable name
- ## address - variable address
+ ## measurement - the (optional) measurement name, defaults to "modbus"
+ ## name        - the variable name
+ ## address     - variable address
 
  discrete_inputs = [
    { name = "start",          address = [0]},
    { name = "stop",           address = [1]},
    { name = "reset",          address = [2]},
-   { name = "emergency_stop",  address = [3]},
+   { name = "emergency_stop", address = [3]},
  ]
  coils = [
    { name = "motor1_run",     address = [0]},
@@ -113,8 +117,9 @@ const sampleConfig = `
  ]
 
  ## Analog Variables, Input Registers and Holding Registers
- ## name       - the variable name
- ## byte_order - the ordering of bytes
+ ## measurement - the (optional) measurement name, defaults to "modbus"
+ ## name        - the variable name
+ ## byte_order  - the ordering of bytes
  ##  |---AB, ABCD   - Big Endian
  ##  |---BA, DCBA   - Little Endian
  ##  |---BADC       - Mid-Big Endian
@@ -134,7 +139,7 @@ const sampleConfig = `
  input_registers = [
    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale=1.0,     address = [3,4]},
+   { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
  ]
 `
 
@@ -319,10 +324,11 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		//search name duplicate
-		if nameEncountered[item.Name] {
-			return fmt.Errorf("name '%s' is duplicated in '%s' - '%s'", item.Name, n, item.Name)
+		canonical_name := item.Measurement + "." + item.Name
+		if nameEncountered[canonical_name] {
+			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
 		} else {
-			nameEncountered[item.Name] = true
+			nameEncountered[canonical_name] = true
 		}
 
 		if n == cInputRegisters || n == cHoldingRegisters {
@@ -635,6 +641,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	timestamp := time.Now()
 	err := m.getFields()
 	if err != nil {
 		disconnect(m)
@@ -642,18 +649,28 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	grouper := metric.NewSeriesGrouper()
 	for _, reg := range m.registers {
-		fields := make(map[string]interface{})
 		tags := map[string]string{
 			"name": m.Name,
 			"type": reg.Type,
 		}
 
 		for _, field := range reg.Fields {
-			fields[field.Name] = field.value
+			// In case no measurement was specified we use "modbus" as default
+			measurement := "modbus"
+			if field.Measurement != "" {
+				measurement = field.Measurement
+			}
+
+			// Group the data by series
+			grouper.Add(measurement, tags, timestamp, field.Name, field.value)
 		}
 
-		acc.AddFields("modbus", fields, tags)
+		// Add the metrics grouped by series to the accumulator
+		for _, metric := range grouper.Metrics() {
+			acc.AddMetric(metric)
+		}
 	}
 
 	return nil
