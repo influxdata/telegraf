@@ -121,7 +121,8 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
     system.container.id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system.detected_hostname=8ec7ceb99074,
     system.kubernetes.namespace=default,system.kubernetes.node.name=node-name,system.kubernetes.pod.name=instrumented-java-service,
     system.kubernetes.pod.uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system.platform=Linux,
-    type=metricset field1=field1value, field2=field2value,... 1571657444929001000
+    type=metricset field1=field1value, field2=field2value,... 
+    1571657444929001000
 ```
 
 #### Fields
