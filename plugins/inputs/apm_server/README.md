@@ -225,7 +225,8 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
     samples.float_gauge.value=9.16,samples.short_counter.value=227,samples.transaction.breakdown.count.value=12,
     tags.code=200,samples.span.self_time.sum.us.value=633.288,samples.span.self_time.count.value=1,
     samples.transaction.duration.count.value=2,samples.dotted.float.gauge.value=6.12,samples.integer_gauge.value=42767,
-    samples.byte_counter.value=1 1571657444929001000
+    samples.byte_counter.value=1 
+    1571657444929001000
 ```
 
 ##### Transaction
@@ -366,7 +367,8 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
     context.custom.some_other_value="foobar",context.service.name="experimental-java",context.request.method="POST",result="HTTP2xx",
     type="http",parent_id="abcdefabcdef01234567",context.user.username="foo",context.user.id="99",
     context.request.headers.Elastic-Apm-Traceparent.0="00-33a0bd4cceff0370a7c57d807032688e-69feaabc5b88d7e8-01",
-    context.custom.and_objects.foo.0="bar",context.request.url.full="https://www.example.com/p/a/t/h?query=string#hash" 1571657444929001000
+    context.custom.and_objects.foo.0="bar",context.request.url.full="https://www.example.com/p/a/t/h?query=string#hash" 
+    1571657444929001000
 ```
 
 ##### Span
@@ -462,7 +464,8 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
     context.service.name="opbeans-java-1",context.db.statement="SELECT * FROM product_types WHERE user_id = ?",
     context.db.instance="customers",sync=true,stacktrace.1.filename="AbstractView.java",stacktrace.1.abs_path="/tmp/AbstractView.java",
     context.service.agent.ephemeral_id="e71be9ac-93b0-44b9-a997-5638f6ccfc36",action="connect",context.db.link="other.db.com",
-    context.http.url="http://localhost:8000",context.db.user="postgres",context.db.type="sql",id="1234567890aaaade" 1571657444929001000
+    context.http.url="http://localhost:8000",context.db.user="postgres",context.db.type="sql",id="1234567890aaaade" 
+    1571657444929001000
 ```
 
 ##### Error
@@ -704,7 +707,8 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
     context.request.url.hostname="www.example.com",log.stacktrace.0.abs_path="/tmp/Socket.java",id="9876543210abcdeffedcba0123456789",
     context.service.node.configured_name="node-xyz",context.service.framework.name="Node",context.request.cookies.c1="v1",parent_id="9632587410abcdef",
     context.response.headers_sent=true,log.stacktrace.1.function="executeInternal",exception.stacktrace.0.function="connect",
-    exception.code=42,trace_id="0123456789abcdeffedcba0123456789",context.request.url.full="https://www.example.com/p/a/t/h?query=string#hash" 1571657444929001000
+    exception.code=42,trace_id="0123456789abcdeffedcba0123456789",context.request.url.full="https://www.example.com/p/a/t/h?query=string#hash" 
+    1571657444929001000
 ```
 
 [datamodel_metadata]: https://www.elastic.co/guide/en/apm/get-started/7.6/metadata.html
