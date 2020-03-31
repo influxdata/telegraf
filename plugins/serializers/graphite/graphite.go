@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
 
 const DEFAULT_TEMPLATE = "host.tags.measurement.field"
@@ -29,10 +30,16 @@ var (
 	fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
 )
 
+type GraphiteTemplate struct {
+	Filter filter.Filter
+	Value  string
+}
+
 type GraphiteSerializer struct {
 	Prefix     string
 	Template   string
 	TagSupport bool
+	Templates  []*GraphiteTemplate
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -59,7 +66,15 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			out = append(out, point...)
 		}
 	default:
-		bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
+		template := s.Template
+		for _, graphiteTemplate := range s.Templates {
+			if graphiteTemplate.Filter.Match(metric.Name()) {
+				template = graphiteTemplate.Value
+				break
+			}
+		}
+
+		bucket := SerializeBucketName(metric.Name(), metric.Tags(), template, s.Prefix)
 		if bucket == "" {
 			return out, nil
 		}
@@ -183,6 +198,45 @@ func SerializeBucketName(
 		return strings.Join(out, ".")
 	}
 	return prefix + "." + strings.Join(out, ".")
+}
+
+func InitGraphiteTemplates(templates []string) ([]*GraphiteTemplate, string, error) {
+	var graphiteTemplates []*GraphiteTemplate
+	defaultTemplate := ""
+
+	for i, t := range templates {
+		parts := strings.Fields(t)
+
+		if len(parts) == 0 {
+			return nil, "", fmt.Errorf("missing template at position: %d", i)
+		}
+		if len(parts) == 1 {
+			if parts[0] == "" {
+				return nil, "", fmt.Errorf("missing template at position: %d", i)
+			} else {
+				// Override default template
+				defaultTemplate = t
+				continue
+			}
+		}
+
+		if len(parts) > 2 {
+			return nil, "", fmt.Errorf("invalid template format: '%s'", t)
+		}
+
+		tFilter, err := filter.Compile([]string{parts[0]})
+
+		if err != nil {
+			return nil, "", err
+		}
+
+		graphiteTemplates = append(graphiteTemplates, &GraphiteTemplate{
+			Filter: tFilter,
+			Value:  parts[1],
+		})
+	}
+
+	return graphiteTemplates, defaultTemplate, nil
 }
 
 // SerializeBucketNameWithTags will take the given measurement name and tags and

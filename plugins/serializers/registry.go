@@ -68,6 +68,9 @@ type Config struct {
 	// only supports Graphite
 	Template string `toml:"template"`
 
+	// Templates same Template, but multiple
+	Templates []string `toml:"templates"`
+
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration `toml:"timestamp_units"`
 
@@ -104,7 +107,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.Templates)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	case "splunkmetric":
@@ -188,10 +191,21 @@ func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
 }
 
-func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string, tag_support bool, templates []string) (Serializer, error) {
+	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if defaultTemplate != "" {
+		template = defaultTemplate
+	}
+
 	return &graphite.GraphiteSerializer{
 		Prefix:     prefix,
 		Template:   template,
 		TagSupport: tag_support,
+		Templates:  graphiteTemplates,
 	}, nil
 }

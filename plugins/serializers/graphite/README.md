@@ -22,6 +22,16 @@ method is used, otherwise the [Template Pattern](templates) is used.
   prefix = "telegraf"
   ## Graphite template pattern
   template = "host.tags.measurement.field"
+  
+  ## Graphite templates patterns
+  ## 1. Template for cpu
+  ## 2. Template for disk*
+  ## 3. Default template
+  # templates = [
+  #  "cpu tags.measurement.host.field",
+  #  "disk* measurement.field",
+  #  "host.measurement.tags.field"
+  #]
 
   ## Support Graphite tags, recommended to enable when using Graphite 1.1 or later.
   # graphite_tag_support = false
