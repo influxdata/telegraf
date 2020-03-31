@@ -1,3 +1,9 @@
+## v1.14.1 [unreleased]
+
+#### Bugfixes
+
+- [#7236](https://github.com/influxdata/telegraf/pull/7236): Fix PerformanceCounter query performance degradation in sqlserver input.
+
 ## v1.14 [2020-03-26]
 
 #### Release Notes
