@@ -8,6 +8,7 @@
 - [#7140](https://github.com/influxdata/telegraf/pull/7140): Apply ping deadline to dns lookup.
 - [#7225](https://github.com/influxdata/telegraf/pull/7225): Add support for 64-bit integer types to modbus input.
 - [#7231](https://github.com/influxdata/telegraf/pull/7231): Add possibility to specify measurement per register.
+- [#7136](https://github.com/influxdata/telegraf/pull/7136): Support multiple templates for graphite serializers.
 
 ## v1.14 [2020-03-26]
 
