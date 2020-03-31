@@ -790,7 +790,8 @@ FROM	@PCounters AS pc
 			AND pc.object_name = pc1.object_name
 			AND pc.instance_name = pc1.instance_name
 			AND pc1.counter_name LIKE '%base'
-WHERE	pc.counter_name NOT LIKE '% base';
+WHERE	pc.counter_name NOT LIKE '% base'
+OPTION(RECOMPILE);
 `
 
 // Conditional check based on Azure SQL DB v/s the rest aka (Azure SQL Managed instance OR On-prem SQL Server)
