@@ -53,7 +53,7 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
-	
+	p.tsModder = &tsModder{}
 	if p.UniqueTimestamp == "" {
 		p.UniqueTimestamp = "auto"
 	}
