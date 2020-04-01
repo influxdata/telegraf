@@ -146,7 +146,7 @@ type Config struct {
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVAltTimestamp      []string `toml:"csv_alt_timestamp"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
-	GrokUniqueTimestamp  string   `toml:"csv_unique_timestamp"`
+	CSVUniqueTimestamp  string   `toml:"csv_unique_timestamp"`
 	
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
