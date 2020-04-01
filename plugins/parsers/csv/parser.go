@@ -34,7 +34,9 @@ type Parser struct {
 	TimestampFormat   string
 	AltTimestamp       []string
 	DefaultTags       map[string]string
+	UniqueTimestamp   string
 	TimeFunc          func() time.Time
+	tsModder          *tsModder
 }
 
 func (p *Parser) SetTimeFunc(fn TimeFunc) {
@@ -50,6 +52,10 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	}
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
+	}
+	
+	if p.UniqueTimestamp == "" {
+		p.UniqueTimestamp = "auto"
 	}
 	csvReader.TrimLeadingSpace = p.TrimSpace
 	return csvReader, nil
@@ -232,8 +238,11 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	m, err := metric.New(measurementName, tags, recordFields, metricTime)
+	if p.UniqueTimestamp != "auto" {
+		m, err := metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(metricTime))
+	} else {
+		m, err := metric.New(measurementName, tags, recordFields, metricTime)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -299,4 +308,77 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 // SetDefaultTags set the DefaultTags
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+
+// tsModder is a struct for incrementing identical timestamps of log lines
+// so that we don't push identical metrics that will get overwritten.
+type tsModder struct {
+	dupe     time.Time
+	last     time.Time
+	incr     time.Duration
+	incrn    time.Duration
+	rollover time.Duration
+}
+
+// tsMod increments the given timestamp one unit more from the previous
+// duplicate timestamp.
+// the increment unit is determined as the next smallest time unit below the
+// most significant time unit of ts.
+//   ie, if the input is at ms precision, it will increment it 1µs.
+func (t *tsModder) tsMod(ts time.Time) time.Time {
+	if ts.IsZero() {
+		return ts
+	}
+	defer func() { t.last = ts }()
+	// don't mod the time if we don't need to
+	if t.last.IsZero() || ts.IsZero() {
+		t.incrn = 0
+		t.rollover = 0
+		return ts
+	}
+	if !ts.Equal(t.last) && !ts.Equal(t.dupe) {
+		t.incr = 0
+		t.incrn = 0
+		t.rollover = 0
+		return ts
+	}
+	if ts.Equal(t.last) {
+		t.dupe = ts
+	}
+
+	if ts.Equal(t.dupe) && t.incr == time.Duration(0) {
+		tsNano := ts.UnixNano()
+
+		d := int64(10)
+		counter := 1
+		for {
+			a := tsNano % d
+			if a > 0 {
+				break
+			}
+			d = d * 10
+			counter++
+		}
+
+		switch {
+		case counter <= 6:
+			t.incr = time.Nanosecond
+		case counter <= 9:
+			t.incr = time.Microsecond
+		case counter > 9:
+			t.incr = time.Millisecond
+		}
+	}
+
+	t.incrn++
+	if t.incrn == 999 && t.incr > time.Nanosecond {
+		t.rollover = t.incr * t.incrn
+		t.incrn = 1
+		t.incr = t.incr / 1000
+		if t.incr < time.Nanosecond {
+			t.incr = time.Nanosecond
+		}
+	}
+	return ts.Add(t.incr*t.incrn + t.rollover)
 }
