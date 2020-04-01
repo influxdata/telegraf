@@ -237,7 +237,8 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 		return nil, err
 	}
 	
-	if p.UniqueTimestamp != "auto" {
+	if p.UniqueTimestamp == "auto" {
+		//increment the metricTime to treat the current metric as a unique entry.
 		m, err := metric.New(measurementName, tags, recordFields, p.tsModder.tsMod(metricTime))
 		if err != nil {
 			return nil, err
