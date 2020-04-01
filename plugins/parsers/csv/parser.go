@@ -75,11 +75,11 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// set DataColumns to names extracted from the header
 	headersMap := make(map[int][]string)
 	if len(p.ColumnNames) == 0 {
-		log.Printf("header row count: %d", p.HeaderRowCount)
+		//log.Printf("header row count: %d", p.HeaderRowCount)
 		for i := 0; i < p.HeaderRowCount; i++ {
 			headerNames := make([]string, 0)
 			header, err := csvReader.Read()
-			log.Printf("line %d: [%s] | columns: %d", i, header, len(header))
+			//log.Printf("line %d: [%s] | columns: %d", i, header, len(header))
 			if err != nil {
 				return nil, err
 			}
@@ -209,15 +209,15 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 				}
 
 				// attempt type conversions
-				//if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
-				//	recordFields[fieldName] = iValue
+				if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+					recordFields[fieldName] = iValue
 				//} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
 				//	recordFields[fieldName] = fValue
 				//} else if bValue, err := strconv.ParseBool(value); err == nil {
 				//	recordFields[fieldName] = bValue
-				//} else {
+				} else {
 					recordFields[fieldName] = value
-				//}
+				}
 			}
 		}
 	}
