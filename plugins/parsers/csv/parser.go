@@ -141,9 +141,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("parsing record..")
 	m, err := p.parseRecord(record)
-	log.Printf("parse complete")
 	if err != nil {
 		return nil, err
 	}
