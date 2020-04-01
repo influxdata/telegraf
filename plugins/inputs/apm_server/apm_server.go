@@ -219,7 +219,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				continue
 			}
 
-			f := jsonparser.JSONFlattener{FieldsSeparator: "."}
+			f := jsonparser.JSONFlattener{}
 			if err := f.FullFlattenJSON("", metadata.(map[string]interface{})["metadata"], true, true); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return

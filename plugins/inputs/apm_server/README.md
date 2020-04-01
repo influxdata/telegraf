@@ -41,7 +41,7 @@ The `metadata` are mapped to LineProtocol's tags and `eventdata` are mapped to L
 
 #### Tags
 
-Each measurement is tagged with the identifiers from `metadata`. Nested objects are represented by `dot` notation.
+Each measurement is tagged with the identifiers from `metadata`. Nested objects are represented by `_` notation.
 
 The example of incoming `metadata`:
 
@@ -112,22 +112,23 @@ The example of incoming `metadata`:
 and corresponding LineProtocol looks like:
 
 ```
-apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,process.argv.0=-v,process.pid=1234,
-    process.ppid=1,process.title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service.agent.ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
-    service.agent.name=java,service.agent.version=1.10.0,service.environment=production,service.framework.name=spring,
-    service.framework.version=5.0.0,service.language.name=Java,service.language.version=10.0.2,service.name=1234_service-12a3,
-    service.node.configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service.runtime.name=Java,
-    service.runtime.version=10.0.2,service.version=4.3.0,system.architecture=amd64,system.configured_hostname=host1,
-    system.container.id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system.detected_hostname=8ec7ceb99074,
-    system.kubernetes.namespace=default,system.kubernetes.node.name=node-name,system.kubernetes.pod.name=instrumented-java-service,
-    system.kubernetes.pod.uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system.platform=Linux,
-    type=metricset field1=field1value, field2=field2value,... 
+apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,process_argv_0=-v,process_pid=1234,
+    process_ppid=1,process_title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service_agent_ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
+    service_agent_name=java,service_agent_version=1.10.0,service_environment=production,service_framework_name=spring,
+    service_framework_version=5.0.0,service_language_name=Java,service_language_version=10.0.2,service_name=1234_service-12a3,
+    service_node_configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service_runtime_name=Java,
+    service_runtime_version=10.0.2,service_version=4.3.0,system_architecture=amd64,system_configured_hostname=host1,
+    system_container_id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system_detected_hostname=8ec7ceb99074,
+    system_kubernetes_namespace=default,system_kubernetes_node_name=node-name,system_kubernetes_pod_name=instrumented-java-service,
+    system_kubernetes_pod_uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system_platform=Linux,
+    type=metricset 
+    field1=field1value, field2=field2value,... 
     1571657444929001000
 ```
 
 #### Fields
 
-Each incoming `evendata` are mapped into measurement's fields. Nested objects are represented by `dot` notation. 
+Each incoming `evendata` are mapped into measurement's fields. Nested objects are represented by `_` notation. 
 
 There are four types of `eventdata`:
 1. Metricset
@@ -209,24 +210,22 @@ The example of incoming events:
 and corresponding LineProtocol looks like:
 
 ```
-apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,process.argv.0=-v,process.pid=1234,
-    process.ppid=1,process.title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service.agent.ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
-    service.agent.name=java,service.agent.version=1.10.0,service.environment=production,service.framework.name=spring,
-    service.framework.version=5.0.0,service.language.name=Java,service.language.version=10.0.2,service.name=1234_service-12a3,
-    service.node.configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service.runtime.name=Java,
-    service.runtime.version=10.0.2,service.version=4.3.0,system.architecture=amd64,system.configured_hostname=host1,
-    system.container.id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system.detected_hostname=8ec7ceb99074,
-    system.kubernetes.namespace=default,system.kubernetes.node.name=node-name,system.kubernetes.pod.name=instrumented-java-service,
-    system.kubernetes.pod.uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system.platform=Linux,
+apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,process_argv_0=-v,process_pid=1234,
+    process_ppid=1,process_title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service_agent_ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
+    service_agent_name=java,service_agent_version=1.10.0,service_environment=production,service_framework_name=spring,
+    service_framework_version=5.0.0,service_language_name=Java,service_language_version=10.0.2,service_name=1234_service-12a3,
+    service_node_configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service_runtime_name=Java,
+    service_runtime_version=10.0.2,service_version=4.3.0,system_architecture=amd64,system_configured_hostname=host1,
+    system_container_id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system_detected_hostname=8ec7ceb99074,
+    system_kubernetes_namespace=default,system_kubernetes_node_name=node-name,system_kubernetes_pod_name=instrumented-java-service,
+    system_kubernetes_pod_uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system_platform=Linux,
     type=metricset 
-    samples.double_gauge.value=3.141592653589793,samples.long_gauge.value=3147483648,
-    transaction.type="request",transaction.name="GET/",tags.success=true,span.subtype="mysql",
-    samples.transaction.self_time.sum.us.value=10,samples.negative.d.o.t.t.e.d.value=-1022,
-    samples.transaction.duration.sum.us.value=12,span.type="db",samples.transaction.self_time.count.value=2,
-    samples.float_gauge.value=9.16,samples.short_counter.value=227,samples.transaction.breakdown.count.value=12,
-    tags.code=200,samples.span.self_time.sum.us.value=633.288,samples.span.self_time.count.value=1,
-    samples.transaction.duration.count.value=2,samples.dotted.float.gauge.value=6.12,samples.integer_gauge.value=42767,
-    samples.byte_counter.value=1 
+    samples_transaction.duration.sum.us_value=12,samples_dotted.float.gauge_value=6.12,samples_span.self_time.sum.us_value=633.288,
+    span_type="db",tags_code=200,tags_success=true,samples_negative.d.o.t.t.e.d_value=-1022,samples_transaction.self_time.sum.us_value=10,
+    samples_transaction.self_time.count_value=2,samples_byte_counter_value=1,samples_transaction.duration.count_value=2,
+    samples_long_gauge_value=3147483648,span_subtype="mysql",samples_float_gauge_value=9.16,samples_transaction.breakdown.count_value=12,
+    samples_double_gauge_value=3.141592653589793,transaction_name="GET/",samples_short_counter_value=227,
+    samples_span.self_time.count_value=1,samples_integer_gauge_value=42767,transaction_type="request" 
     1571657444929001000
 ```
 
@@ -340,35 +339,31 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
 and corresponding LineProtocol looks like:
 
 ```
-apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,process.argv.0=-v,process.pid=1234,
-    process.ppid=1,process.title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service.agent.ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
-    service.agent.name=java,service.agent.version=1.10.0,service.environment=production,service.framework.name=spring,
-    service.framework.version=5.0.0,service.language.name=Java,service.language.version=10.0.2,service.name=1234_service-12a3,
-    service.node.configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service.runtime.name=Java,
-    service.runtime.version=10.0.2,service.version=4.3.0,system.architecture=amd64,system.configured_hostname=host1,
-    system.container.id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system.detected_hostname=8ec7ceb99074,
-    system.kubernetes.namespace=default,system.kubernetes.node.name=node-name,system.kubernetes.pod.name=instrumented-java-service,
-    system.kubernetes.pod.uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system.platform=Linux,
-    type=metricset 
-    span_count.started=17,context.response.encoded_body_size=356.9,trace_id="0acd456789abcdef0123456789abcdef",
-    context.request.cookies.c2="v2",context.request.cookies.c1="v1",context.request.url.raw="/p/a/t/h?query=string#hash",
-    context.request.url.hash="#hash",context.request.url.protocol="https:",context.request.headers.user-agent.1="MozillaChromeEdge",
-    context.request.env.SERVER_SOFTWARE="nginx",context.request.body.additional.bar=123,context.custom.(="notavalidregexandthatisfine",
-    context.request.headers.content-type="text/html",name="ResourceHttpRequestHandler",context.request.http_version="1.1",
-    context.response.headers_sent=true,context.request.url.port="8080",duration=32.592981,context.user.email="foo@mail.com",
-    context.response.finished=true,context.custom.my_key=1,id="4340a8e0df1906ecbfa9",context.response.transfer_size=300,
-    context.service.agent.ephemeral_id="e71be9ac-93b0-44b9-a997-5638f6ccfc36",context.request.socket.encrypted=true,
-    context.response.status_code=200,context.tags.organization_uuid="9f0e9d64-c185-4d21-a6f4-4673ed561ec8",
-    context.request.env.GATEWAY_INTERFACE="CGI/1.1",context.request.body.additional.req="additionalinformation",
-    context.request.headers.user-agent.0="Mozilla/5.0(Macintosh;IntelMacOSX10_10_5)AppleWebKit/537.36(KHTML,likeGecko)Chrome/51.0.2704.103Safari/537.36",
-    context.response.headers.content-type="application/json",context.request.url.hostname="www.example.com",span_count.dropped=0,
-    context.request.socket.remote_address="12.53.12.1:8080",context.request.headers.cookie="c1=v1,c2=v2",sampled=true,
-    context.request.url.pathname="/p/a/t/h",context.service.agent.version="1.10.0-SNAPSHOT",context.response.decoded_body_size=401.9,
-    context.request.body.string="helloworld",context.custom.and_objects.foo.1="baz",context.request.url.search="?query=string",
-    context.custom.some_other_value="foobar",context.service.name="experimental-java",context.request.method="POST",result="HTTP2xx",
-    type="http",parent_id="abcdefabcdef01234567",context.user.username="foo",context.user.id="99",
-    context.request.headers.Elastic-Apm-Traceparent.0="00-33a0bd4cceff0370a7c57d807032688e-69feaabc5b88d7e8-01",
-    context.custom.and_objects.foo.0="bar",context.request.url.full="https://www.example.com/p/a/t/h?query=string#hash" 
+apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,process_argv_0=-v,process_pid=1234,
+    process_ppid=1,process_title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service_agent_ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
+    service_agent_name=java,service_agent_version=1.10.0,service_environment=production,service_framework_name=spring,service_framework_version=5.0.0,
+    service_language_name=Java,service_language_version=10.0.2,service_name=1234_service-12a3,service_node_configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,
+    service_runtime_name=Java,service_runtime_version=10.0.2,service_version=4.3.0,system_architecture=amd64,system_configured_hostname=host1,
+    system_container_id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system_detected_hostname=8ec7ceb99074,system_kubernetes_namespace=default,
+    system_kubernetes_node_name=node-name,system_kubernetes_pod_name=instrumented-java-service,system_kubernetes_pod_uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system_platform=Linux,
+    type=transaction 
+    parent_id="abcdefabcdef01234567",context_custom_my_key=1,context_user_email="foo@mail.com",context_request_env_SERVER_SOFTWARE="nginx",
+    context_custom_some_other_value="foobar",context_request_cookies_c1="v1",context_request_cookies_c2="v2",context_request_socket_encrypted=true,
+    context_request_url_pathname="/p/a/t/h",id="4340a8e0df1906ecbfa9",context_request_http_version="1.1",context_request_url_full="https://www.example.com/p/a/t/h?query=string#hash",
+    context_user_username="foo",context_request_url_protocol="https:",context_request_body_additional_req="additionalinformation",result="HTTP2xx",
+    context_request_url_port="8080",context_custom_and_objects_foo_1="baz",context_request_headers_content-type="text/html",
+    context_user_id="99",context_service_name="experimental-java",type="http",context_custom_and_objects_foo_0="bar",
+    context_request_body_string="helloworld",context_request_url_hostname="www.example.com",context_response_headers_content-type="application/json",
+    context_request_url_hash="#hash",context_request_headers_Elastic-Apm-Traceparent_0="00-33a0bd4cceff0370a7c57d807032688e-69feaabc5b88d7e8-01",
+    name="ResourceHttpRequestHandler",context_service_agent_ephemeral_id="e71be9ac-93b0-44b9-a997-5638f6ccfc36",
+    context_request_url_search="?query=string",context_request_headers_user-agent_1="MozillaChromeEdge",context_response_decoded_body_size=401.9,
+    context_request_method="POST",context_response_finished=true,context_request_headers_cookie="c1=v1,c2=v2",context_request_url_raw="/p/a/t/h?query=string#hash",
+    sampled=true,context_request_env_GATEWAY_INTERFACE="CGI/1.1",span_count_dropped=0,context_request_socket_remote_address="12.53.12.1:8080",
+    span_count_started=17,context_response_transfer_size=300,context_request_body_additional_bar=123,duration=32.592981,
+    context_request_headers_user-agent_0="Mozilla/5.0(Macintosh;IntelMacOSX10_10_5)AppleWebKit/537.36(KHTML,likeGecko)Chrome/51.0.2704.103Safari/537.36",
+    context_tags_organization_uuid="9f0e9d64-c185-4d21-a6f4-4673ed561ec8",context_service_agent_version="1.10.0-SNAPSHOT",
+    context_custom_(="notavalidregexandthatisfine",trace_id="0acd456789abcdef0123456789abcdef",context_response_status_code=200,
+    context_response_encoded_body_size=356.9,context_response_headers_sent=true 
     1571657444929001000
 ```
 
@@ -445,27 +440,28 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
 and corresponding LineProtocol looks like:
 
 ```
-apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,process.argv.0=-v,process.pid=1234,
-    process.ppid=1,process.title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service.agent.ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
-    service.agent.name=java,service.agent.version=1.10.0,service.environment=production,service.framework.name=spring,
-    service.framework.version=5.0.0,service.language.name=Java,service.language.version=10.0.2,service.name=1234_service-12a3,
-    service.node.configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service.runtime.name=Java,
-    service.runtime.version=10.0.2,service.version=4.3.0,system.architecture=amd64,system.configured_hostname=host1,
-    system.container.id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system.detected_hostname=8ec7ceb99074,
-    system.kubernetes.namespace=default,system.kubernetes.node.name=node-name,system.kubernetes.pod.name=instrumented-java-service,
-    system.kubernetes.pod.uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system.platform=Linux,
-    type=metricset 
-    stacktrace.1.function="render",name="GET users-authenticated",type="external",context.http.response.status_code=200,
-    context.http.method="GET",duration=3.781912,transaction_id="1234567890987654",stacktrace.1.lineno=547,
-    context.http.response.decoded_body_size=401,context.http.response.transfer_size=300.12,context.http.response.headers.content-type="application/json",
-    trace_id="abcdef0123456789abcdef9876543210",stacktrace.1.library_frame=true,context.http.response.encoded_body_size=356,
-    stacktrace.1.context_line="line3",subtype="http",stacktrace.1.vars.key="value",context.http.status_code=302,
-    context.service.agent.version="1.10.0-SNAPSHOT",stacktrace.0.filename="DispatcherServlet.java",stacktrace.0.lineno=547,
-    parent_id="abcdef0123456789",context.service.agent.name="java",stacktrace.1.colno=4,stacktrace.1.module="org.springframework.web.servlet.view",
-    context.service.name="opbeans-java-1",context.db.statement="SELECT * FROM product_types WHERE user_id = ?",
-    context.db.instance="customers",sync=true,stacktrace.1.filename="AbstractView.java",stacktrace.1.abs_path="/tmp/AbstractView.java",
-    context.service.agent.ephemeral_id="e71be9ac-93b0-44b9-a997-5638f6ccfc36",action="connect",context.db.link="other.db.com",
-    context.http.url="http://localhost:8000",context.db.user="postgres",context.db.type="sql",id="1234567890aaaade" 
+apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,process_argv_0=-v,process_pid=1234,
+    process_ppid=1,process_title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service_agent_ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
+    service_agent_name=java,service_agent_version=1.10.0,service_environment=production,service_framework_name=spring,
+    service_framework_version=5.0.0,service_language_name=Java,service_language_version=10.0.2,service_name=1234_service-12a3,
+    service_node_configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service_runtime_name=Java,
+    service_runtime_version=10.0.2,service_version=4.3.0,system_architecture=amd64,system_configured_hostname=host1,
+    system_container_id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system_detected_hostname=8ec7ceb99074,
+    system_kubernetes_namespace=default,system_kubernetes_node_name=node-name,system_kubernetes_pod_name=instrumented-java-service,
+    system_kubernetes_pod_uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system_platform=Linux,
+    type=span 
+    stacktrace_1_module="org.springframework.web.servlet.view",trace_id="abcdef0123456789abcdef9876543210",
+    context_http_response_headers_content-type="application/json",context_service_agent_name="java",stacktrace_1_function="render",
+    sync=true,context_http_response_encoded_body_size=356,stacktrace_0_lineno=547,context_http_method="GET",
+    context_http_response_status_code=200,stacktrace_1_abs_path="/tmp/AbstractView.java",stacktrace_1_library_frame=true,
+    context_db_link="other.db.com",context_db_type="sql",stacktrace_1_filename="AbstractView.java",subtype="http",
+    context_http_response_transfer_size=300.12,context_service_name="opbeans-java-1",stacktrace_1_colno=4,
+    context_db_statement="SELECT * FROM product_types WHERE user_id = ?",type="external",name="GET users-authenticated",
+    context_db_instance="customers",id="1234567890aaaade",parent_id="abcdef0123456789",stacktrace_1_context_line="line3",
+    context_http_url="http://localhost:8000",context_service_agent_version="1.10.0-SNAPSHOT",action="connect",
+    stacktrace_1_vars_key="value",context_db_user="postgres",transaction_id="1234567890987654",duration=3.781912,
+    context_http_status_code=302,stacktrace_1_lineno=547,context_service_agent_ephemeral_id="e71be9ac-93b0-44b9-a997-5638f6ccfc36",
+    context_http_response_decoded_body_size=401,stacktrace_0_filename="DispatcherServlet.java" 
     1571657444929001000
 ```
 
@@ -666,49 +662,49 @@ apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,pro
 and corresponding LineProtocol looks like:
 
 ```
-apm_server,labels.ab_testing=true,labels.group=experimental,labels.segment=5,process.argv.0=-v,process.pid=1234,
-    process.ppid=1,process.title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service.agent.ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
-    service.agent.name=java,service.agent.version=1.10.0,service.environment=production,service.framework.name=spring,
-    service.framework.version=5.0.0,service.language.name=Java,service.language.version=10.0.2,service.name=1234_service-12a3,
-    service.node.configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,service.runtime.name=Java,
-    service.runtime.version=10.0.2,service.version=4.3.0,system.architecture=amd64,system.configured_hostname=host1,
-    system.container.id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,system.detected_hostname=8ec7ceb99074,
-    system.kubernetes.namespace=default,system.kubernetes.node.name=node-name,system.kubernetes.pod.name=instrumented-java-service,
-    system.kubernetes.pod.uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system.platform=Linux,
-    type=metricset 
-    exception.stacktrace.0.filename="AbstractPlainSocketImpl.java",context.request.url.protocol="https:",
-    log.logger_name="http404",exception.cause.0.type="InternalDbError",context.service.framework.version="1",
-    exception.stacktrace.0.pre_context.0="line1",context.custom.and_objects.foo.0="bar",exception.stacktrace.1.function="execute",
-    exception.module="org.springframework.http.client",context.request.socket.remote_address="12.53.12.1",
-    context.tags.organization_uuid="9f0e9d64-c185-4d21-a6f4-4673ed561ec8",context.request.env.SERVER_SOFTWARE="nginx",
-    context.user.email="user@foo.mail",context.custom.and_objects.foo.1="baz",context.request.headers.host="opbeans-java:3000",
-    log.stacktrace.0.post_context.1="line5",context.request.headers.Elastic-Apm-Traceparent="00-8c21b4b556467a0b17ae5da959b5f388-31301f1fb2998121-01",
-    exception.message="Theusernamerootisunknown",context.custom.my_key=1,exception.stacktrace.0.context_line="3",log.stacktrace.1.vars.key="value",
-    context.user.id=99,context.service.language.version="1.2",context.request.url.port=8080,exception.cause.0.cause.1.type="ConnectionError",
-    culprit="opbeans.controllers.DTInterceptor.preHandle(DTInterceptor.java:73)",exception.stacktrace.1.vars.key="value",
-    log.stacktrace.1.filename="SimpleBufferingClientHttpRequest.java",log.stacktrace.0.vars.key="value",context.request.headers.cookie.0="c1=v1",
-    log.stacktrace.0.filename="Socket.java",context.service.name="service1",transaction_id="1234567890987654",log.level="error",
-    exception.stacktrace.0.post_context.0="line4",exception.stacktrace.0.lineno=3,log.stacktrace.0.pre_context.1="line2",
-    exception.stacktrace.0.library_frame=true,exception.attributes.foo="bar",context.request.headers.content-length="0",
-    context.request.method="POST",log.stacktrace.1.lineno=102,log.stacktrace.1.abs_path="/tmp/SimpleBufferingClientHttpRequest.java",
-    exception.cause.0.cause.0.type="VeryInternalDbError",log.stacktrace.0.post_context.0="line4",context.request.url.hash="#hash",
-    exception.cause.0.message="something wrong writing a file",log.stacktrace.0.module="java.net",context.request.headers.cookie.1="c2=v2",
-    exception.handled=false,context.request.env.GATEWAY_INTERFACE="CGI/1.1",context.request.url.raw="/p/a/t/h?query=string#hash",
-    exception.stacktrace.1.lineno=102,context.response.status_code=200,exception.stacktrace.1.filename="AbstractClientHttpRequest.java",
-    context.request.url.search="?query=string",context.request.socket.encrypted=true,exception.cause.0.cause.0.message="disk spinning way too fast",
-    context.request.body="HelloWorld",context.custom.some_other_value="foobar",log.param_message="Request method 'POST' /events/:event not supported",
-    log.stacktrace.0.function="connect",log.stacktrace.0.colno=4,transaction.type="request",log.stacktrace.0.library_frame=true,
-    context.response.headers.content-type="application/json",context.request.cookies.c2="v2",log.stacktrace.0.lineno=3,
-    exception.stacktrace.0.module="java.net",log.stacktrace.0.pre_context.0="line1",log.stacktrace.0.classname="Request::Socket",
-    exception.stacktrace.0.pre_context.1="line2",context.request.http_version="1.1",exception.type="java.net.UnknownHostException",
-    context.request.url.pathname="/p/a/t/h",exception.cause.0.cause.1.message="on top of it,internet doesn't work",
-    context.request.headers.Forwarded="for=192.168.0.1",transaction.sampled=true,log.message="Request method 'POST' not supported",
-    exception.stacktrace.0.vars.key="value",exception.stacktrace.0.colno=4,context.user.username="foo",log.stacktrace.0.context_line="line3",
-    exception.stacktrace.0.abs_path="/tmp/AbstractPlainSocketImpl.java",context.response.finished=true,exception.stacktrace.0.post_context.1="line5",
-    context.request.url.hostname="www.example.com",log.stacktrace.0.abs_path="/tmp/Socket.java",id="9876543210abcdeffedcba0123456789",
-    context.service.node.configured_name="node-xyz",context.service.framework.name="Node",context.request.cookies.c1="v1",parent_id="9632587410abcdef",
-    context.response.headers_sent=true,log.stacktrace.1.function="executeInternal",exception.stacktrace.0.function="connect",
-    exception.code=42,trace_id="0123456789abcdeffedcba0123456789",context.request.url.full="https://www.example.com/p/a/t/h?query=string#hash" 
+apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,process_argv_0=-v,process_pid=1234,
+    process_ppid=1,process_title=/usr/lib/jvm/java-10-openjdk-amd64/bin/java,service_agent_ephemeral_id=e71be9ac-93b0-44b9-a997-5638f6ccfc36,
+    service_agent_name=java,service_agent_version=1.10.0,service_environment=production,service_framework_name=spring,
+    service_framework_version=5.0.0,service_language_name=Java,service_language_version=10.0.2,service_name=1234_service-12a3,
+    service_node_configured_name=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,
+    service_runtime_name=Java,service_runtime_version=10.0.2,service_version=4.3.0,system_architecture=amd64,
+    system_configured_hostname=host1,system_container_id=8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4,
+    system_detected_hostname=8ec7ceb99074,system_kubernetes_namespace=default,system_kubernetes_node_name=node-name,
+    system_kubernetes_pod_name=instrumented-java-service,system_kubernetes_pod_uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system_platform=Linux,
+    type=error 
+    log_stacktrace_0_context_line="line3",exception_cause_0_cause_0_type="VeryInternalDbError",context_request_url_raw="/p/a/t/h?query=string#hash",
+    context_request_headers_Forwarded="for=192.168.0.1",context_response_headers_content-type="application/json",
+    context_request_cookies_c1="v1",id="9876543210abcdeffedcba0123456789",exception_cause_0_cause_0_message="disk spinning way too fast",
+    exception_stacktrace_0_library_frame=true,exception_stacktrace_0_function="connect",context_custom_and_objects_foo_1="baz",
+    context_custom_and_objects_foo_0="bar",exception_stacktrace_0_pre_context_0="line1",exception_stacktrace_0_vars_key="value",
+    exception_code=42,exception_stacktrace_1_filename="AbstractClientHttpRequest.java",log_stacktrace_0_colno=4,exception_stacktrace_0_post_context_1="line5",
+    context_request_headers_host="opbeans-java:3000",exception_stacktrace_0_context_line="3",context_request_headers_cookie_0="c1=v1",
+    exception_stacktrace_0_pre_context_1="line2",log_stacktrace_1_vars_key="value",context_response_status_code=200,context_service_framework_name="Node",
+    log_stacktrace_0_lineno=3,exception_stacktrace_0_colno=4,transaction_sampled=true,log_stacktrace_0_vars_key="value",context_request_env_SERVER_SOFTWARE="nginx",
+    context_user_id=99,context_request_env_GATEWAY_INTERFACE="CGI/1.1",log_stacktrace_0_post_context_0="line4",context_service_framework_version="1",
+    context_custom_my_key=1,context_request_url_port=8080,trace_id="0123456789abcdeffedcba0123456789",log_stacktrace_1_function="executeInternal",
+    context_custom_some_other_value="foobar",context_request_headers_Elastic-Apm-Traceparent="00-8c21b4b556467a0b17ae5da959b5f388-31301f1fb2998121-01",
+    log_stacktrace_0_pre_context_1="line2",culprit="opbeans.controllers.DTInterceptor.preHandle(DTInterceptor.java:73)",exception_handled=false,
+    exception_cause_0_cause_1_message="on top of it,internet doesn't work",log_logger_name="http404",context_request_url_protocol="https:",
+    context_request_body="HelloWorld",exception_stacktrace_0_filename="AbstractPlainSocketImpl.java",transaction_type="request",
+    context_request_cookies_c2="v2",exception_cause_0_cause_1_type="ConnectionError",context_service_node_configured_name="node-xyz",
+    context_request_http_version="1.1",context_request_url_pathname="/p/a/t/h",context_service_language_version="1.2",
+    transaction_id="1234567890987654",exception_cause_0_message="something wrong writing a file",context_request_socket_remote_address="12.53.12.1",
+    context_response_headers_sent=true,log_stacktrace_0_filename="Socket.java",context_user_username="foo",context_request_socket_encrypted=true,
+    exception_attributes_foo="bar",log_stacktrace_0_pre_context_0="line1",log_message="Request method 'POST' not supported",
+    log_stacktrace_0_abs_path="/tmp/Socket.java",exception_stacktrace_0_module="java.net",log_stacktrace_0_post_context_1="line5",
+    exception_module="org.springframework.http.client",log_param_message="Request method 'POST' /events/:event not supported",
+    log_stacktrace_0_classname="Request::Socket",parent_id="9632587410abcdef",context_request_url_hostname="www.example.com",
+    log_level="error",context_tags_organization_uuid="9f0e9d64-c185-4d21-a6f4-4673ed561ec8",exception_stacktrace_0_lineno=3,
+    exception_stacktrace_1_lineno=102,log_stacktrace_1_abs_path="/tmp/SimpleBufferingClientHttpRequest.java",
+    context_request_url_full="https://www.example.com/p/a/t/h?query=string#hash",context_service_name="service1",
+    context_response_finished=true,context_request_method="POST",context_request_headers_cookie_1="c2=v2",
+    log_stacktrace_0_function="connect",exception_message="Theusernamerootisunknown",context_request_url_search="?query=string",
+    exception_cause_0_type="InternalDbError",log_stacktrace_1_lineno=102,context_request_headers_content-length="0",
+    log_stacktrace_0_library_frame=true,exception_stacktrace_1_vars_key="value",exception_stacktrace_0_post_context_0="line4",
+    context_request_url_hash="#hash",context_user_email="user@foo.mail",exception_type="java.net.UnknownHostException",
+    log_stacktrace_1_filename="SimpleBufferingClientHttpRequest.java",exception_stacktrace_0_abs_path="/tmp/AbstractPlainSocketImpl.java",
+    log_stacktrace_0_module="java.net",exception_stacktrace_1_function="execute" 
     1571657444929001000
 ```
 

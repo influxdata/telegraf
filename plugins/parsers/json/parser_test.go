@@ -1,7 +1,6 @@
 package json
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -948,23 +947,4 @@ func TestParse(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
 		})
 	}
-}
-
-func TestFieldsSeparator(t *testing.T) {
-	testString := `{
-		"a": 5,
-		"b": {
-			"c": "this is my name"
-		}
-	}`
-
-	var data interface{}
-	var err = json.Unmarshal([]byte(testString), &data)
-	require.NoError(t, err)
-
-	f := JSONFlattener{FieldsSeparator: "."}
-	err = f.FullFlattenJSON("", data, true, true)
-	require.NoError(t, err)
-
-	require.Equal(t, map[string]interface{}{"a": float64(5), "b.c": "this is my name"}, f.Fields)
 }
