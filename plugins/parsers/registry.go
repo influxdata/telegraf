@@ -146,6 +146,7 @@ type Config struct {
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
 	CSVAltTimestamp      []string `toml:"csv_alt_timestamp"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
+	GrokUniqueTimestamp  string   `toml:"csv_unique_timestamp"`
 	
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
@@ -220,6 +221,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.CSVTimestampColumn,
 			config.CSVTimestampFormat,
 			config.CSVAltTimestamp,
+			config.CSVUniqueTimestamp,
 			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.TagKeys, config.DefaultTags)
@@ -249,6 +251,7 @@ func newCSVParser(metricName string,
 	timestampColumn string,
 	timestampFormat string,
 	altTimestamp []string,
+	uniqueTimestamp string,
 	defaultTags map[string]string) (Parser, error) {
 
 	if headerRowCount == 0 && len(columnNames) == 0 {
@@ -289,6 +292,7 @@ func newCSVParser(metricName string,
 		TimestampFormat:   timestampFormat,
 		AltTimestamp:	   altTimestamp,
 		DefaultTags:       defaultTags,
+		UniqueTimestamp:   uniqueTimestamp,
 		TimeFunc:          time.Now,
 	}
 
