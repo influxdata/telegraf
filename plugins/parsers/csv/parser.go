@@ -106,7 +106,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 	}
 	p.Columns = headersMap
-	log.Printf("done reading in headers: [%s]", p.Columns)
+	//log.Printf("done reading in headers: [%s]", p.Columns)
 	table, err := csvReader.ReadAll()
 	if err != nil {
 		return nil, err
@@ -209,15 +209,15 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 				}
 
 				// attempt type conversions
-				if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
-					recordFields[fieldName] = iValue
+				//if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+				//	recordFields[fieldName] = iValue
 				//} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
 				//	recordFields[fieldName] = fValue
 				//} else if bValue, err := strconv.ParseBool(value); err == nil {
 				//	recordFields[fieldName] = bValue
-				} else {
+				//} else {
 					recordFields[fieldName] = value
-				}
+				//}
 			}
 		}
 	}
@@ -331,11 +331,14 @@ type tsModder struct {
 // most significant time unit of ts.
 //   ie, if the input is at ms precision, it will increment it 1µs.
 func (t *tsModder) tsMod(ts time.Time) time.Time {
-	log.Printf("tsMod")
 	if ts.IsZero() {
 		return ts
 	}
-	defer func() { t.last = ts }()
+	log.Printf("BEFORE tsMod: time: %v, last: %v", ts, t.last)
+	defer func() { t.last = ts 
+	log.Printf("AFTER tsMod: time: %v, last: %v", ts, t.last)
+}()
+	
 	// don't mod the time if we don't need to
 	if t.last.IsZero() || ts.IsZero() {
 		t.incrn = 0
