@@ -20,6 +20,11 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  ## Timeout for each request
  timeout = "1s"
 
+ ## Maximum number of retries and the time to wait between retries
+ ## when a slave-device is busy
+ #busy_retries = 0
+ #busy_retries_wait = "100ms"
+
  # TCP - connect via Modbus/TCP
  controller = "tcp://localhost:502"
 
@@ -53,7 +58,7 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
 
  ## Analog Variables, Input Registers and Holding Registers
  ## measurement - the (optional) measurement name, defaults to "modbus"
- ## name       - the variable name 
+ ## name       - the variable name
  ## byte_order - the ordering of bytes
  ##  |---AB, ABCD   - Big Endian
  ##  |---BA, DCBA   - Little Endian
