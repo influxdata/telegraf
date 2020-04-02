@@ -72,6 +72,10 @@ var sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Timestamp precision
+  ## InfluxDB accepts the following precisions: "ns" (default), "us", "ms", "s" 
+
 `
 
 type Client interface {
@@ -94,6 +98,7 @@ type InfluxDB struct {
 	UserAgent        string            `toml:"user_agent"`
 	ContentEncoding  string            `toml:"content_encoding"`
 	UintSupport      bool              `toml:"influx_uint_support"`
+	Precision        string            `toml:"precision"`
 	tls.ClientConfig
 
 	clients []Client
@@ -191,6 +196,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 		ContentEncoding:  i.ContentEncoding,
 		TLSConfig:        tlsConfig,
 		Serializer:       i.newSerializer(),
+		Precision:        i.Precision,
 	}
 
 	c, err := NewHTTPClient(config)

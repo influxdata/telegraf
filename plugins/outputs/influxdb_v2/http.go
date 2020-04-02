@@ -53,6 +53,7 @@ type HTTPConfig struct {
 	UserAgent        string
 	ContentEncoding  string
 	TLSConfig        *tls.Config
+	Precision        string
 
 	Serializer *influx.Serializer
 }
@@ -65,6 +66,7 @@ type httpClient struct {
 	Bucket           string
 	BucketTag        string
 	ExcludeBucketTag bool
+	Precision        string
 
 	client     *http.Client
 	serializer *influx.Serializer
@@ -127,6 +129,13 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		return nil, fmt.Errorf("unsupported scheme %q", config.URL.Scheme)
 	}
 
+	precision := config.Precision
+	if precision != "" && !checkValidPrecision(precision) {
+		return nil, fmt.Errorf("unsupported precision %v", precision)
+	} else {
+		precision = "ns"
+	}
+
 	client := &httpClient{
 		serializer: serializer,
 		client: &http.Client{
@@ -141,6 +150,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		Bucket:           config.Bucket,
 		BucketTag:        config.BucketTag,
 		ExcludeBucketTag: config.ExcludeBucketTag,
+		Precision:        precision,
 	}
 	return client, nil
 }
@@ -210,7 +220,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(*c.url, c.Organization, bucket)
+	url, err := makeWriteURL(*c.url, c.Organization, bucket, c.Precision)
 	if err != nil {
 		return err
 	}
@@ -327,10 +337,11 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	}
 }
 
-func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
+func makeWriteURL(loc url.URL, org, bucket string, precision string) (string, error) {
 	params := url.Values{}
 	params.Set("bucket", bucket)
 	params.Set("org", org)
+	params.Set("precision", precision)
 
 	switch loc.Scheme {
 	case "unix":
@@ -343,9 +354,20 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
 	loc.RawQuery = params.Encode()
+	fmt.Printf("%v\n", loc.RequestURI())
 	return loc.String(), nil
 }
 
 func (c *httpClient) Close() {
 	internal.CloseIdleConnections(c.client)
+}
+
+func checkValidPrecision(precision string) bool {
+	validPrecisions := [4]string{"ns", "us", "ms", "s"}
+	for _, value := range validPrecisions {
+		if value == precision {
+			return true
+		}
+	}
+	return false
 }
