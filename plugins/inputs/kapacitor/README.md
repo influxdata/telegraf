@@ -33,7 +33,7 @@ The Kapacitor plugin collects metrics from the given Kapacitor instances.
 	- [notification_dropped](#notification_dropped) _(integer)_
 	- [primary-handle-count](#primary-handle-count) _(integer)_
 	- [secondary-handle-count](#secondary-handle-count) _(integer)_
-- [kapacitor_cluster](#kapacitor_cluster) _(integer)_ (Kapacitor Enterprise only)
+- (Kapacitor Enterprise only) [kapacitor_cluster](#kapacitor_cluster) _(integer)_ 
 	- [dropped_member_events](#dropped_member_events) _(integer)_
 	- [dropped_user_events](#dropped_user_events) _(integer)_
 	- [query_handler_errors](#query_handler_errors) _(integer)_
@@ -109,28 +109,26 @@ The `kapacitor_alert` measurement stores fields with information related to
 [Kapacitor alerts](https://docs.influxdata.com/kapacitor/v1.5/working/alerts/).
 
 #### notification-dropped
-The number of alert or event handlers that failed.
+The number of internal notifications dropped because they arrive too late from another Kapacitor node. 
+If this count is increasing, Kapacitor Enterprise nodes aren't able to communicate fast enough 
+to keep up with the volume of alerts.
 
 #### primary-handle-count
-The number of alerts counted for the primary event handler.
+The number of times this node handled an alert as the primary. This count should increase under normal conditions.
 
 #### secondary-handle-count
-The number of alerts counted for the secondary event handler.
+The number of times this node handled an alert as the secondary. An increase in this counter indicates that the primary is failing to handle alerts in a timely manner.
 
 ---
 
 ### kapacitor_cluster
-The `kapacitor_cluster` measurement stores fields with information related to
-[Kapacitor clusters](https://docs.influxdata.com/enterprise_kapacitor/v1.5/cluster-management/). Kapacitor Enterprise deduplicates alert data to prevent duplicate alert notifications from being sent.
+The `kapacitor_cluster` measurement reflects the ability of [Kapacitor nodes to communicate](https://docs.influxdata.com/enterprise_kapacitor/v1.5/administration/configuration/#cluster-communications) with one another. Specifically, these metrics track the gossip communication between the Kapacitor nodes.
 
 #### dropped_member_events
-The number of member events dropped for alert deduplication.
+The number of gossip member events that were dropped.
 
 #### dropped_user_events
-The number of user events drooped for alert deduplication.
-
-#### query_handler_errors
-The number of query handler errors for alert deduplication.
+The number of gossip user events that were dropped.
 
 ---
 
