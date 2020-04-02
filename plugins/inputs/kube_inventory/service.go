@@ -38,6 +38,10 @@ func (ki *KubernetesInventory) gatherService(s v1.Service, acc telegraf.Accumula
 		"namespace":    s.Metadata.GetNamespace(),
 	}
 
+        for key, val := range s.GetSpec().GetSelector() {
+           tags["selector_" + key] = val
+        }
+
 	var getPorts = func() {
 		for _, port := range s.GetSpec().GetPorts() {
 			fields["port"] = port.GetPort()
