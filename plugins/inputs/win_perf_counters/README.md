@@ -81,6 +81,13 @@ Supported on Windows Vista/Windows Server 2008 and newer
 Example:
 `UsePerfCounterTime=true`
 
+#### IgnoreMissingData
+
+Bool, if set to `true`, the plugin will not report errors when counter is not providing any data.
+Useful when working with performance counters that have instances only when certain conditions are met, e.g. `\RemoteFX Network(*)\`.
+Example:
+`IgnoreMissingData=true`
+
 ### Object
 
 See Entry below.
@@ -387,6 +394,62 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     Instances = ["w3wp"]
     Measurement = "win_dotnet_security"
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
+```
+
+### RemoteFX monitoring
+```
+[[inputs.win_perf_counters]]
+  IgnoreMissingData = true
+
+  [[inputs.win_perf_counters.object]]
+    ObjectName = "RemoteFX Network"
+    Instances = ["*"]
+    Counters = [
+      "Total Received Bytes",
+      "Total Sent Bytes",
+      "Current UDP Bandwidth",
+      "Current UDP RTT",
+      "Base UDP RTT",
+      "FEC Rate",
+      "Retransmission Rate",
+      "Loss Rate",
+      "Sent Rate P3",
+      "Sent Rate P2",
+      "Sent Rate P1",
+      "Sent Rate P0",
+      "UDP Packets Sent/sec",
+      "UDP Sent Rate",
+      "TCP Sent Rate",
+      "Total Sent Rate",
+      "UDP Packets Received/sec",
+      "UDP Received Rate",
+      "TCP Received Rate",
+      "Total Received Rate",
+      "Current TCP Bandwidth",
+      "Current TCP RTT",
+      "Base TCP RTT",
+    ]
+    Measurement = "remotefx.network"
+    # Set to true to include _Total instance when querying for all (*).
+    IncludeTotal = false
+
+  [[inputs.win_perf_counters.object]]
+    ObjectName = "RemoteFX Graphics"
+    Instances = ["*"]
+    Counters = [
+      "Source Frames/Second",
+      "Average Encoding Time",
+      "Frame Quality",
+      "Frames Skipped/Second - Insufficient Server Resources",
+      "Frames Skipped/Second - Insufficient Network Resources",
+      "Frames Skipped/Second - Insufficient Client Resources",
+      "Output Frames/Second",
+      "Graphics Compression ratio",
+      "Input Frames/Second",
+    ]
+    Measurement = "remotefx.graphics"
+    # Set to true to include _Total instance when querying for all (*).
+    IncludeTotal = false
 ```
 
 ## Troubleshooting
