@@ -674,7 +674,6 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 				return err
 			}
 		}
-		log.Printf("D! [inputs.modbus] sleeping %d millisecond(s)...", m.RetriesWaitTime.Duration.Milliseconds())
 		time.Sleep(m.RetriesWaitTime.Duration)
 	}
 
