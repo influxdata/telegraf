@@ -56,6 +56,10 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+  
+  ## Timestamp precision
+  ## InfluxDB accepts the following precisions: "ns" (default), "us", "ms", "s" 
+
 ```
 
 [InfluxDB v2.x]: https://github.com/influxdata/influxdb
