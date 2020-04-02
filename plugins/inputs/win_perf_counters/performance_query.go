@@ -42,10 +42,6 @@ func (m *PdhError) Error() string {
 }
 
 func NewPdhError(code uint32) error {
-	// PDH_NO_DATA ignored....
-	if code == 0x800007D5 {
-		return nil
-	}
 	return &PdhError{
 		ErrorCode: code,
 		errorText: PdhFormatError(code),
