@@ -7,10 +7,12 @@ import (
 	"net"
 	"net/url"
 	"sort"
+	"time"
 
 	mb "github.com/goburrow/modbus"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -44,12 +46,13 @@ type register struct {
 }
 
 type fieldContainer struct {
-	Name      string   `toml:"name"`
-	ByteOrder string   `toml:"byte_order"`
-	DataType  string   `toml:"data_type"`
-	Scale     float64  `toml:"scale"`
-	Address   []uint16 `toml:"address"`
-	value     interface{}
+	Measurement string   `toml:"measurement"`
+	Name        string   `toml:"name"`
+	ByteOrder   string   `toml:"byte_order"`
+	DataType    string   `toml:"data_type"`
+	Scale       float64  `toml:"scale"`
+	Address     []uint16 `toml:"address"`
+	value       interface{}
 }
 
 type registerRange struct {
@@ -73,17 +76,17 @@ const sampleConfig = `
  ##
  ## Device name
  name = "Device"
- 
+
  ## Slave ID - addresses a MODBUS device on the bus
  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
  slave_id = 1
- 
+
  ## Timeout for each request
  timeout = "1s"
- 
+
  # TCP - connect via Modbus/TCP
  controller = "tcp://localhost:502"
- 
+
  # Serial (RS485; RS232)
  #controller = "file:///dev/ttyUSB0"
  #baud_rate = 9600
@@ -91,38 +94,40 @@ const sampleConfig = `
  #parity = "N"
  #stop_bits = 1
  #transmission_mode = "RTU"
- 
- 
+
+
  ## Measurements
  ##
- 
+
  ## Digital Variables, Discrete Inputs and Coils
- ## name    - the variable name
- ## address - variable address
- 
+ ## measurement - the (optional) measurement name, defaults to "modbus"
+ ## name        - the variable name
+ ## address     - variable address
+
  discrete_inputs = [
    { name = "start",          address = [0]},
    { name = "stop",           address = [1]},
    { name = "reset",          address = [2]},
-   { name = "emergency_stop",  address = [3]},
+   { name = "emergency_stop", address = [3]},
  ]
  coils = [
    { name = "motor1_run",     address = [0]},
    { name = "motor1_jog",     address = [1]},
    { name = "motor1_stop",    address = [2]},
  ]
- 
+
  ## Analog Variables, Input Registers and Holding Registers
- ## name       - the variable name
- ## byte_order - the ordering of bytes
+ ## measurement - the (optional) measurement name, defaults to "modbus"
+ ## name        - the variable name
+ ## byte_order  - the ordering of bytes
  ##  |---AB, ABCD   - Big Endian
  ##  |---BA, DCBA   - Little Endian
  ##  |---BADC       - Mid-Big Endian
  ##  |---CDAB       - Mid-Little Endian
- ## data_type  - UINT16, INT16, INT32, UINT32, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
+ ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
  ## scale      - the final numeric variable representation
  ## address    - variable address
- 
+
  holding_registers = [
    { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale=0.01,  address = [8]},
    { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [0]},
@@ -134,7 +139,7 @@ const sampleConfig = `
  input_registers = [
    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-   { name = "pump1_speed", byte_order = "ABCD",  data_type = "INT32",   scale=1.0,     address = [3,4]},
+   { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
  ]
 `
 
@@ -319,16 +324,17 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		//search name duplicate
-		if nameEncountered[item.Name] {
-			return fmt.Errorf("name '%s' is duplicated in '%s' - '%s'", item.Name, n, item.Name)
+		canonical_name := item.Measurement + "." + item.Name
+		if nameEncountered[canonical_name] {
+			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
 		} else {
-			nameEncountered[item.Name] = true
+			nameEncountered[canonical_name] = true
 		}
 
 		if n == cInputRegisters || n == cHoldingRegisters {
 			// search byte order
 			switch item.ByteOrder {
-			case "AB", "BA", "ABCD", "CDAB", "BADC", "DCBA":
+			case "AB", "BA", "ABCD", "CDAB", "BADC", "DCBA", "ABCDEFGH", "HGFEDCBA", "BADCFEHG", "GHEFCDAB":
 				break
 			default:
 				return fmt.Errorf("invalid byte order '%s' in '%s' - '%s'", item.ByteOrder, n, item.Name)
@@ -336,7 +342,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT32":
+			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT32":
 				break
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
@@ -349,10 +355,12 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		// check address
-		if len(item.Address) == 0 || len(item.Address) > 2 {
+		if len(item.Address) != 1 && len(item.Address) != 2 && len(item.Address) != 4 {
 			return fmt.Errorf("invalid address '%v' length '%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
-		} else if n == cInputRegisters || n == cHoldingRegisters {
-			if (len(item.Address) == 1 && len(item.ByteOrder) != 2) || (len(item.Address) == 2 && len(item.ByteOrder) != 4) {
+		}
+
+		if n == cInputRegisters || n == cHoldingRegisters {
+			if 2*len(item.Address) != len(item.ByteOrder) {
 				return fmt.Errorf("invalid byte order '%s' and address '%v'  in '%s' - '%s'", item.ByteOrder, item.Address, n, item.Name)
 			}
 
@@ -360,8 +368,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 			if len(item.Address) > len(removeDuplicates(item.Address)) {
 				return fmt.Errorf("duplicate address '%v'  in '%s' - '%s'", item.Address, n, item.Name)
 			}
-
-		} else if len(item.Address) > 1 || (n == cInputRegisters || n == cHoldingRegisters) {
+		} else if len(item.Address) != 1 {
 			return fmt.Errorf("invalid address'%v' length'%v' in '%s' - '%s'", item.Address, len(item.Address), n, item.Name)
 		}
 	}
@@ -480,6 +487,14 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		f32 := int32(e32)
 		return scaleInt32(t.Scale, f32)
+	case "UINT64":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		f64 := format64(t.DataType, e64).(uint64)
+		return scaleUint64(t.Scale, f64)
+	case "INT64":
+		e64 := convertEndianness64(t.ByteOrder, bytes)
+		f64 := format64(t.DataType, e64).(int64)
+		return scaleInt64(t.Scale, f64)
 	case "FLOAT32-IEEE":
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		f32 := math.Float32frombits(e32)
@@ -488,9 +503,12 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
 			return scale16toFloat32(t.Scale, e16)
-		} else {
+		} else if len(bytes) == 4 {
 			e32 := convertEndianness32(t.ByteOrder, bytes)
 			return scale32toFloat32(t.Scale, e32)
+		} else {
+			e64 := convertEndianness64(t.ByteOrder, bytes)
+			return scale64toFloat32(t.Scale, e64)
 		}
 	default:
 		return 0
@@ -523,6 +541,21 @@ func convertEndianness32(o string, b []byte) uint32 {
 	}
 }
 
+func convertEndianness64(o string, b []byte) uint64 {
+	switch o {
+	case "ABCDEFGH":
+		return binary.BigEndian.Uint64(b)
+	case "HGFEDCBA":
+		return binary.LittleEndian.Uint64(b)
+	case "BADCFEHG":
+		return uint64(binary.LittleEndian.Uint16(b[0:]))<<48 | uint64(binary.LittleEndian.Uint16(b[2:]))<<32 | uint64(binary.LittleEndian.Uint16(b[4:]))<<16 | uint64(binary.LittleEndian.Uint16(b[6:]))
+	case "GHEFCDAB":
+		return uint64(binary.BigEndian.Uint16(b[6:]))<<48 | uint64(binary.BigEndian.Uint16(b[4:]))<<32 | uint64(binary.BigEndian.Uint16(b[2:]))<<16 | uint64(binary.BigEndian.Uint16(b[0:]))
+	default:
+		return 0
+	}
+}
+
 func format16(f string, r uint16) interface{} {
 	switch f {
 	case "UINT16":
@@ -547,11 +580,26 @@ func format32(f string, r uint32) interface{} {
 	}
 }
 
+func format64(f string, r uint64) interface{} {
+	switch f {
+	case "UINT64":
+		return r
+	case "INT64":
+		return int64(r)
+	default:
+		return r
+	}
+}
+
 func scale16toFloat32(s float64, v uint16) float64 {
 	return float64(v) * s
 }
 
 func scale32toFloat32(s float64, v uint32) float64 {
+	return float64(float64(v) * float64(s))
+}
+
+func scale64toFloat32(s float64, v uint64) float64 {
 	return float64(float64(v) * float64(s))
 }
 
@@ -575,6 +623,14 @@ func scaleFloat32(s float64, v float32) float32 {
 	return float32(float64(v) * s)
 }
 
+func scaleUint64(s float64, v uint64) uint64 {
+	return uint64(float64(v) * float64(s))
+}
+
+func scaleInt64(s float64, v int64) int64 {
+	return int64(float64(v) * float64(s))
+}
+
 // Gather implements the telegraf plugin interface method for data accumulation
 func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	if !m.isConnected {
@@ -585,6 +641,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	timestamp := time.Now()
 	err := m.getFields()
 	if err != nil {
 		disconnect(m)
@@ -592,18 +649,28 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	grouper := metric.NewSeriesGrouper()
 	for _, reg := range m.registers {
-		fields := make(map[string]interface{})
 		tags := map[string]string{
 			"name": m.Name,
 			"type": reg.Type,
 		}
 
 		for _, field := range reg.Fields {
-			fields[field.Name] = field.value
+			// In case no measurement was specified we use "modbus" as default
+			measurement := "modbus"
+			if field.Measurement != "" {
+				measurement = field.Measurement
+			}
+
+			// Group the data by series
+			grouper.Add(measurement, tags, timestamp, field.Name, field.value)
 		}
 
-		acc.AddFields("modbus", fields, tags)
+		// Add the metrics grouped by series to the accumulator
+		for _, metric := range grouper.Metrics() {
+			acc.AddMetric(metric)
+		}
 	}
 
 	return nil
