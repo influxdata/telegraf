@@ -48,9 +48,9 @@ func TestService(t *testing.T) {
 									},
 									ExternalIPs: []string{"1.0.0.127"},
 									ClusterIP:   toStrPtr("127.0.0.1"),
-                                                                        Selector: map[string]string {
-                                                                                "sel1":  "val1",
-                                                                        },
+									Selector: map[string]string{
+										"sel1": "val1",
+									},
 								},
 								Metadata: &metav1.ObjectMeta{
 									Generation:        toInt64Ptr(12),
@@ -80,7 +80,7 @@ func TestService(t *testing.T) {
 							"port_protocol": "TCP",
 							"cluster_ip":    "127.0.0.1",
 							"ip":            "1.0.0.127",
-                                                        "selector_sel1": "val1",
+							"selector_sel1": "val1",
 						},
 					},
 				},
