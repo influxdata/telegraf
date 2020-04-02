@@ -4,10 +4,13 @@ This plugin generates metrics derived from the state of the following Kubernetes
 
 - daemonsets
 - deployments
+- endpoints
+- ingress
 - nodes
 - persistentvolumes
 - persistentvolumeclaims
 - pods (containers)
+- services
 - statefulsets
 
 Kubernetes is a fast moving project, with a new minor release every 3 months. As
@@ -223,6 +226,7 @@ subjects:
     - port_protocol
     - external_name
     - cluster_ip
+    - selector (\*varies)
   - fields
     - created
     - generation
