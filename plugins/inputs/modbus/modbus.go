@@ -3,6 +3,7 @@ package modbus
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"net/url"
@@ -27,6 +28,8 @@ type Modbus struct {
 	StopBits         int               `toml:"stop_bits"`
 	SlaveID          int               `toml:"slave_id"`
 	Timeout          internal.Duration `toml:"timeout"`
+	Retries          int               `toml:"busy_retries"`
+	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
 	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
 	Coils            []fieldContainer  `toml:"coils"`
 	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
@@ -83,6 +86,11 @@ const sampleConfig = `
 
  ## Timeout for each request
  timeout = "1s"
+
+ ## Maximum number of retries and the time to wait between retries
+ ## when a slave-device is busy
+ #busy_retries = 0
+ #busy_retries_wait = "100ms"
 
  # TCP - connect via Modbus/TCP
  controller = "tcp://localhost:502"
@@ -157,6 +165,14 @@ func (m *Modbus) Init() error {
 	//check device name
 	if m.Name == "" {
 		return fmt.Errorf("device name is empty")
+	}
+
+	if m.Retries < 0 {
+		return fmt.Errorf("retries cannot be negative")
+	}
+
+	if m.Retries > 0 && m.RetriesWaitTime.Duration < 0 {
+		return fmt.Errorf("wait time between retries cannot be negative")
 	}
 
 	err := m.InitRegister(m.DiscreteInputs, cDiscreteInputs)
@@ -642,11 +658,24 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	}
 
 	timestamp := time.Now()
-	err := m.getFields()
-	if err != nil {
-		disconnect(m)
-		m.isConnected = false
-		return err
+	for retry := 0; retry <= m.Retries; retry += 1 {
+		timestamp = time.Now()
+		err := m.getFields()
+		if err == nil {
+			// Reading was successful, leave the retry loop
+			break
+		} else {
+			mberr, ok := err.(*mb.ModbusError)
+			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
+				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
+			} else {
+				disconnect(m)
+				m.isConnected = false
+				return err
+			}
+		}
+		log.Printf("D! [inputs.modbus] sleeping %d millisecond(s)...", m.RetriesWaitTime.Duration.Milliseconds())
+		time.Sleep(m.RetriesWaitTime.Duration)
 	}
 
 	grouper := metric.NewSeriesGrouper()
