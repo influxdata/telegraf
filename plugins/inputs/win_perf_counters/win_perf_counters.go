@@ -359,7 +359,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		//some counters need two data samples before computing a value
 		if err = m.query.CollectData(); err != nil {
-			m.Log.Errorf("No data? Error: %s\n", err.Error())
 			return err
 		}
 		m.lastRefreshed = time.Now()
