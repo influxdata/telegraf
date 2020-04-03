@@ -105,12 +105,12 @@ Supported on Windows Vista/Windows Server 2008 and newer
 Example:
 `UsePerfCounterTime=true`
 
-#### IgnoreMissingData
+#### IgnoreMissingInstance
 
-Bool, if set to `true`, the plugin will not report errors when counter is not providing any data.
+Bool, if set to `true`, the plugin will not report errors when counter has no instances.
 Useful when working with performance counters that have instances only when certain conditions are met, e.g. `\RemoteFX Network(*)\`.
 Example:
-`IgnoreMissingData=true`
+`IgnoreMissingInstance=true`
 
 ### Object
 
@@ -439,7 +439,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ### RemoteFX monitoring
 ```
 [[inputs.win_perf_counters]]
-  IgnoreMissingData = true
+  IgnoreMissingInstance = true
 
   [[inputs.win_perf_counters.object]]
     ObjectName = "RemoteFX Network"
