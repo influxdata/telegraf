@@ -146,19 +146,19 @@ var sampleConfig = `
 type Win_PerfCounters struct {
 	PrintValid bool
 	//deprecated: determined dynamically
-	PreVistaSupport            bool
-	UsePerfCounterTime         bool
-	Object                     []perfobject
-	CountersRefreshInterval    config.Duration
-	UseWildcardsExpansion      bool
+	PreVistaSupport         bool
+	UsePerfCounterTime      bool
+	Object                  []perfobject
+	CountersRefreshInterval internal.Duration
+	UseWildcardsExpansion   bool
 	LocalizeWildcardsExpansion bool
+	IgnoreMissingInstance   bool
 
 	Log telegraf.Logger
 
 	lastRefreshed time.Time
 	counters      []*counter
 	query         PerformanceQuery
-	IgnoreMissingInstance bool
 }
 
 type perfobject struct {
