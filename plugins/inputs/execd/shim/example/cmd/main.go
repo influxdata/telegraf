@@ -7,7 +7,7 @@ import (
 	"time"
 
 	// TODO: import your plugins
-	_ "github.com/my_github_user/my_plugin_repo/plugins/inputs/my_plugin_name"
+	// _ "github.com/my_github_user/my_plugin_repo/plugins/inputs/my_plugin_name"
 
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs/execd/shim"
