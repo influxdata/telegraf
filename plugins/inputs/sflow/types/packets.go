@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	AddressTypeIPv4 uint32 = 1 // line: 1383
-	AddressTypeIPv6 uint32 = 2 // line: 1384
+	AddressTypeIPv6 uint32 = 2 // sflow_version_5.txt line: 1384
+	AddressTypeIPv4 uint32 = 1 // sflow_version_5.txt line: 1383
 
 	IPProtocolTCP uint8 = 6
 	IPProtocolUDP uint8 = 17
@@ -21,8 +21,8 @@ var ETypeMap = map[uint16]string{
 }
 
 var IPvMap = map[uint32]string{
-	1: "IPV4", // line: 1383
-	2: "IPV6", // line: 1384
+	1: "IPV4", // sflow_version_5.txt line: 1383
+	2: "IPV6", // sflow_version_5.txt line: 1384
 }
 
 type ContainsMetricData interface {
@@ -34,7 +34,7 @@ type ContainsMetricData interface {
 // with SFlow v5 specification at https://sflow.org/sflow_version_5.txt
 type V5Format struct {
 	Version        uint32
-	AgentAddress   net.IPAddr `tag:"agent_address"`
+	AgentAddress   net.IPAddr
 	SubAgentID     uint32
 	SequenceNumber uint32
 	Uptime         uint32
@@ -44,8 +44,8 @@ type V5Format struct {
 type SampleType uint32
 
 const (
-	SampleTypeFlowSample         SampleType = 1 // line: 1614
-	SampleTypeFlowSampleExpanded SampleType = 3 // line: 1698
+	SampleTypeFlowSample         SampleType = 1 // sflow_version_5.txt line: 1614
+	SampleTypeFlowSampleExpanded SampleType = 3 // sflow_version_5.txt line: 1698
 )
 
 type SampleData interface{}
@@ -57,9 +57,9 @@ type Sample struct {
 
 type SampleDataFlowSampleExpanded struct {
 	SequenceNumber  uint32
-	SourceIDType    uint32 `tag:"source_id_type"`
-	SourceIDIndex   uint32 `tag:"source_id_index"`
-	SamplingRate    uint32 `tag:"sampling_rate"`
+	SourceIDType    uint32
+	SourceIDIndex   uint32
+	SamplingRate    uint32
 	SamplePool      uint32
 	Drops           uint32
 	SampleDirection string // ingress/egress
@@ -73,7 +73,7 @@ type SampleDataFlowSampleExpanded struct {
 type FlowFormatType uint32
 
 const (
-	FlowFormatTypeRawPacketHeader FlowFormatType = 1 // line: 1938
+	FlowFormatTypeRawPacketHeader FlowFormatType = 1 // sflow_version_5.txt line: 1938
 )
 
 type FlowData ContainsMetricData
@@ -103,18 +103,18 @@ const (
 )
 
 var HeaderProtocolMap = map[HeaderProtocolType]string{
-	HeaderProtocolTypeEthernetISO88023: "ETHERNET-ISO88023", // line: 1920
+	HeaderProtocolTypeEthernetISO88023: "ETHERNET-ISO88023", // sflow_version_5.txt line: 1920
 }
 
 type Header ContainsMetricData
 
 type RawPacketHeaderFlowData struct {
-	HeaderProtocol HeaderProtocolType `tag:"header_protocol"`
-	FrameLength    uint32             `field:"frame_length"`
-	Bytes          uint32             `field:"bytes"`
+	HeaderProtocol HeaderProtocolType
+	FrameLength    uint32
+	Bytes          uint32
 	StrippedOctets uint32
-	HeaderLength   uint32 `field:"header_length"`
-	Header         Header // consider making this an interface if we're adding more types
+	HeaderLength   uint32
+	Header         Header
 }
 
 func (h RawPacketHeaderFlowData) GetTags() map[string]string {
@@ -133,12 +133,12 @@ func (h RawPacketHeaderFlowData) GetFields() map[string]interface{} {
 type IPHeader ContainsMetricData
 
 type EthHeader struct {
-	DestinationMAC        [6]byte `tag:"dst_mac"`
-	SourceMAC             [6]byte `tag:"src_mac"`
+	DestinationMAC        [6]byte
+	SourceMAC             [6]byte
 	TagProtocolIdentifier uint16
 	TagControlInformation uint16
 	EtherTypeCode         uint16
-	EtherType             string `tag:"ether_type"`
+	EtherType             string
 	IPHeader              IPHeader
 }
 
@@ -157,11 +157,11 @@ type ProtocolHeader ContainsMetricData
 
 // https://en.wikipedia.org/wiki/IPv4#Header
 type IPV4Header struct {
-	Version              uint8  // 4 bit
-	InternetHeaderLength uint8  // 4 bit
-	DSCP                 uint8  `tag:"ip_dscp"` // Differentiated Services Code Point: 6 bit
-	ECN                  uint8  `tag:"ip_ecn"`  // Explicit Congestion Notification: 2 bit
-	TotalLength          uint16 `field:"ip_total_length"`
+	Version              uint8 // 4 bit
+	InternetHeaderLength uint8 // 4 bit
+	DSCP                 uint8
+	ECN                  uint8
+	TotalLength          uint16
 	Identification       uint16
 	Flags                uint8
 	FragmentOffset       uint16
@@ -180,8 +180,6 @@ func (h IPV4Header) GetTags() map[string]string {
 	} else {
 		t = map[string]string{}
 	}
-	t["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
-	t["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)
 	t["src_ip"] = net.IP(h.SourceIP[:]).String()
 	t["dst_ip"] = net.IP(h.DestIP[:]).String()
 	return t
@@ -193,6 +191,8 @@ func (h IPV4Header) GetFields() map[string]interface{} {
 	} else {
 		f = map[string]interface{}{}
 	}
+	f["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
+	f["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)
 	f["ip_flags"] = h.Flags
 	f["ip_fragment_offset"] = h.FragmentOffset
 	f["ip_total_length"] = h.TotalLength
@@ -202,8 +202,8 @@ func (h IPV4Header) GetFields() map[string]interface{} {
 
 // https://en.wikipedia.org/wiki/IPv6_packet
 type IPV6Header struct {
-	DSCP            uint8 `tag:"ip_dscp"`
-	ECN             uint8 `tag:"ip_ecn"`
+	DSCP            uint8
+	ECN             uint8
 	PayloadLength   uint16
 	NextHeaderProto uint8 // tcp/udp?
 	HopLimit        uint8
@@ -219,8 +219,6 @@ func (h IPV6Header) GetTags() map[string]string {
 	} else {
 		t = map[string]string{}
 	}
-	t["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
-	t["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)
 	t["src_ip"] = net.IP(h.SourceIP[:]).String()
 	t["dst_ip"] = net.IP(h.DestIP[:]).String()
 	return t
@@ -232,7 +230,9 @@ func (h IPV6Header) GetFields() map[string]interface{} {
 	} else {
 		f = map[string]interface{}{}
 	}
-	// f["ip_total_length"] = h.PayloadLength // is this the same?
+	f["ip_dscp"] = strconv.FormatUint(uint64(h.DSCP), 10)
+	f["ip_ecn"] = strconv.FormatUint(uint64(h.ECN), 10)
+	f["payload_length"] = h.PayloadLength
 	return f
 }
 

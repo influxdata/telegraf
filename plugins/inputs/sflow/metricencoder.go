@@ -10,6 +10,7 @@ import (
 )
 
 func makeMetrics(p *types.V5Format) ([]telegraf.Metric, error) {
+	now := time.Now()
 	metrics := []telegraf.Metric{}
 	tags := map[string]string{
 		"agent_address": p.AgentAddress.String(),
@@ -34,7 +35,7 @@ func makeMetrics(p *types.V5Format) ([]telegraf.Metric, error) {
 				for k, v := range fields {
 					fields2[k] = v
 				}
-				m, err := metric.New("sflow", tags2, fields2, time.Now())
+				m, err := metric.New("sflow", tags2, fields2, now)
 				if err != nil {
 					return nil, err
 				}
