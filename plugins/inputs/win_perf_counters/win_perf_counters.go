@@ -145,13 +145,13 @@ type Win_PerfCounters struct {
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
 	UseWildcardsExpansion   bool
+	IgnoreMissingInstance   bool
 
 	Log telegraf.Logger
 
 	lastRefreshed time.Time
 	counters      []*counter
 	query         PerformanceQuery
-	IgnoreMissingInstance bool
 }
 
 type perfobject struct {
