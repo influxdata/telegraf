@@ -151,7 +151,7 @@ type Win_PerfCounters struct {
 	lastRefreshed time.Time
 	counters      []*counter
 	query         PerformanceQuery
-	IgnoreMissingData bool
+	IgnoreMissingInstance bool
 }
 
 type perfobject struct {
@@ -360,7 +360,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		//some counters need two data samples before computing a value
 		if err = m.query.CollectData(); err != nil {
-			if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_NO_DATA) && m.IgnoreMissingData {
+			if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_NO_DATA) && m.IgnoreMissingInstance {
 				return nil
 			} else {
 				return err
