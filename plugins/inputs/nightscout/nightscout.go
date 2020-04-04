@@ -17,7 +17,7 @@ import (
 var sampleConfig = `
   ## This is a list of nightscout sites to pull data from.
   ##  example: servers = ["https://my.nightscout.site/api/v1/entries"]
-  server = ""
+  servers = ""
   ## The person is the owner of the nightscout site.
   # owner = ""
 
@@ -75,10 +75,6 @@ func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 
 	for _, s := range ns.Servers {
 
-		tag := map[string]string{
-			"owner": ns.Owner,
-		}
-
 		acc.AddFields("server", map[string]interface{}{"Server": s}, nil)
 		req, err := http.NewRequest("GET", s, nil)
 		if err != nil {
@@ -118,7 +114,7 @@ func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			acc.AddError(err)
 		} else {
-			err := ns.importNSResult(tag, res.Body, acc)
+			err := ns.importNSResult(res.Body, acc)
 			if err != nil {
 				acc.AddError(err)
 			}
@@ -129,7 +125,7 @@ func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 }
 
 // importNSResult will parse the json body into a standard format.
-func (ns *Nightscout) importNSResult(tag map[string]string, r io.Reader, acc telegraf.Accumulator) error {
+func (ns *Nightscout) importNSResult(r io.Reader, acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	body, err := ioutil.ReadAll(r)
@@ -149,6 +145,10 @@ func (ns *Nightscout) importNSResult(tag map[string]string, r io.Reader, acc tel
 	if len(bgData) <= 0 {
 		ns.Log.Warnf("No BG data was found in the response")
 		return nil
+	}
+
+	tag := map[string]string{
+		"owner": ns.Owner,
 	}
 
 	fields["type"] = bgData[0].Type
