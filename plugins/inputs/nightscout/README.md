@@ -8,12 +8,11 @@ The nightscout plugin collects blood glucose related telemtry from a nightscout 
   ## This is a list of nightscout sites to pull data from.
   ##  example: servers = ["https://my.nightscout.site/api/v1/entries"]
   servers = []
-  ## The person is the owner of the nightscout site. The order of the list of owners must match the order of the
-  ## list of servers, for example the first server should match the first owner.
-  # owners = ""
+  ## The person is the owner of the nightscout site.
+  # owner = ""
 
   ## The secret is the SHA-1 hash of the api secret used to access the site.
-  secret = ""
+  # secret = ""
 
   ## The count is the number of results to pull at a time. Unless you have a specific need, this should remain as 1.
   # count = "1"
@@ -42,7 +41,7 @@ The nightscout plugin collects blood glucose related telemtry from a nightscout 
 ### Example Output:
 
 ```
-
+nightscout,host=localhost,owner=bob noise=0i,filtered=0i,rssi=0i,direction_num="-1",dateString="2020-04-04T14:12:51.000Z",date=1586009571000i,direction="FortyFiveDown",unfiltered=0i,type="sgv",sgv=277i 1586009730000000000
 ```
 
 ### Example Grafana Dashboard

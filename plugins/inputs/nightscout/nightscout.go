@@ -18,8 +18,7 @@ var sampleConfig = `
   ## This is a list of nightscout sites to pull data from.
   ##  example: servers = ["https://my.nightscout.site/api/v1/entries"]
   server = ""
-  ## The person is the owner of the nightscout site. The order of the list of owners must match the order of the
-  ## list of servers, for example the first server should match the first owner.
+  ## The person is the owner of the nightscout site.
   # owner = ""
 
   ## The secret is the SHA-1 hash of the api secret used to access the site.
