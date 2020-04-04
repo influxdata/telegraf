@@ -74,7 +74,7 @@ func (ns *Nightscout) Description() string {
 // It will return any errors encountered while gather stats as well.
 func (ns *Nightscout) Gather(acc telegraf.Accumulator) error {
 
-	for i, s := range ns.Servers {
+	for _, s := range ns.Servers {
 
 		tag := map[string]string{
 			"owner": ns.Owner,
