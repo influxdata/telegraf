@@ -34,6 +34,9 @@ The table below describe how this plugin conforms with them:
   # write_timeout = "10s"
 ```
 
+### TODO
+Fix - Failed to parse version of APM server http://localhost:8200/: For input string: "unknown"
+
 ### Metrics
 
 Each incoming event from APM Agent contains two parts: `metadata` and `eventdata`. 

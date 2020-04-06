@@ -188,6 +188,8 @@ func (s *APMServer) handleSourceMap() http.HandlerFunc {
 func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
+        defer timeTrack(time.Now(), req.RequestURI, req)
+
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
 			s.errorResponse(res, http.StatusBadRequest, message)
@@ -340,4 +342,10 @@ func init() {
 			ServiceAddress: ":8200",
 		}
 	})
+}
+
+func timeTrack(start time.Time, name string, req *http.Request) {
+	elapsed := time.Since(start)
+	marshal, _ := json.Marshal(req.Header)
+	log.Printf("%s took %s - status: %s", name, elapsed, marshal)
 }
