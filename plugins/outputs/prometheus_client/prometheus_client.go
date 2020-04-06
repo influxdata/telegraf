@@ -139,7 +139,7 @@ func (p *PrometheusClient) Init() error {
 			return err
 		}
 	case 2:
-		p.collector = v2.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel)
+		p.collector = v2.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.ExportTimestamp)
 		err := registry.Register(p.collector)
 		if err != nil {
 			return err
