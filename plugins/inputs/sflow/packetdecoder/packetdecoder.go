@@ -472,6 +472,9 @@ func (d *PacketDecoder) decodeUDPHeader(r io.Reader) (h types.UDPHeader, err err
 	if err := read(r, &h.UDPLength, "UDPLength"); err != nil {
 		return h, err
 	}
+	if err := read(r, &h.Checksum, "Checksum"); err != nil {
+		return h, err
+	}
 	return h, err
 }
 

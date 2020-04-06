@@ -69,7 +69,7 @@ require (
 	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90 // indirect
 	github.com/hashicorp/memberlist v0.1.5 // indirect
 	github.com/hashicorp/serf v0.8.1 // indirect
-	github.com/influxdata/binaryio v0.0.0-00010101000000-000000000000
+	github.com/influxdata/binaryio v0.0.0-20200403212503-39736c30083b
 	github.com/influxdata/go-syslog/v2 v2.0.1
 	github.com/influxdata/tail v1.0.1-0.20180327235535-c43482518d41
 	github.com/influxdata/toml v0.0.0-20190415235208-270119a8ce65
