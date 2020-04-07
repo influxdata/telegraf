@@ -29,6 +29,7 @@ import (
 // APM Server is a input plugin that listens for requests sent by Elastic APM Agents.
 type APMServer struct {
 	ServiceAddress string            `toml:"service_address"`
+	IdleTimeout    internal.Duration `toml:"idle_timeout"`
 	ReadTimeout    internal.Duration `toml:"read_timeout"`
 	WriteTimeout   internal.Duration `toml:"write_timeout"`
 	tlsint.ServerConfig
@@ -56,10 +57,12 @@ func (s *APMServer) SampleConfig() string {
   ## Address and port to list APM Agents
   service_address = ":8200"
 
+  ## maximum amount of time to wait for the next request when keep-alives are enabled	
+  # idle_timeout =	"45s"	
   ## maximum duration before timing out read of the request
-  # read_timeout = "10s"
+  # read_timeout =	"30s"
   ## maximum duration before timing out write of the response
-  # write_timeout = "10s"
+  # write_timeout = "30s"
 `
 }
 
@@ -67,6 +70,9 @@ func (s *APMServer) Init() error {
 
 	s.routes()
 
+	if s.IdleTimeout.Duration < time.Second {
+		s.IdleTimeout.Duration = time.Second * 10
+	}
 	if s.ReadTimeout.Duration < time.Second {
 		s.ReadTimeout.Duration = time.Second * 10
 	}
@@ -101,6 +107,7 @@ func (s *APMServer) Start(acc telegraf.Accumulator) error {
 	s.server = http.Server{
 		Addr:         s.ServiceAddress,
 		Handler:      s,
+		IdleTimeout:  s.IdleTimeout.Duration,
 		ReadTimeout:  s.ReadTimeout.Duration,
 		WriteTimeout: s.WriteTimeout.Duration,
 		TLSConfig:    tlsConf,
