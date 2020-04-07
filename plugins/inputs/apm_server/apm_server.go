@@ -167,7 +167,7 @@ func (s *APMServer) handleServerInformation() http.HandlerFunc {
 		b, _ := json.Marshal(map[string]string{
 			"build_date": s.buildDate.Format(time.RFC3339),
 			"build_sha":  s.buildSHA,
-			"version":    internal.Version(),
+			"version":    "7.6.0",
 		})
 		_, _ = res.Write(b)
 	}
@@ -188,7 +188,7 @@ func (s *APMServer) handleSourceMap() http.HandlerFunc {
 func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
-        defer timeTrack(time.Now(), req.RequestURI, req)
+		defer timeTrack(time.Now(), req.RequestURI, req)
 
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))

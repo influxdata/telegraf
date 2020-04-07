@@ -35,7 +35,7 @@ The table below describe how this plugin conforms with them:
 ```
 
 ### TODO
-Fix - Failed to parse version of APM server http://localhost:8200/: For input string: "unknown"
+~~Fix - Failed to parse version of APM server http://localhost:8200/: For input string: "unknown"~~
 
 ### Metrics
 

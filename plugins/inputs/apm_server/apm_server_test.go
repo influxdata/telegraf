@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"fmt"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -21,7 +20,6 @@ func newTestServer() *APMServer {
 		Log:            testutil.Logger{},
 		ServiceAddress: "localhost:0",
 	}
-	_ = internal.SetVersion("0.0.1")
 	return server
 }
 
@@ -68,7 +66,7 @@ func TestServerInformation(t *testing.T) {
 	body, err := ioutil.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.Equal(t, "{\"build_date\":\"2009-11-17T20:34:58Z\","+
-		"\"build_sha\":\"bc4d9a286a65b4283c2462404add86a26be61dca\",\"version\":\"0.0.1\"}", string(body))
+		"\"build_sha\":\"bc4d9a286a65b4283c2462404add86a26be61dca\",\"version\":\"7.6.0\"}", string(body))
 }
 
 func TestAgentConfiguration(t *testing.T) {
