@@ -375,91 +375,153 @@ EXEC(@SQL)
 // Conditional check based on Azure SQL DB OR On-prem SQL Server
 // EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `
-SET DEADLOCK_PRIORITY -10;
-DECLARE @SqlStatement AS nvarchar(max);
-IF SERVERPROPERTY('EngineEdition') = 5
-BEGIN
-	SET @SqlStatement = '
-	SELECT
-		 ''sqlserver_database_io'' As [measurement]
-		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-		,DB_NAME() as database_name
-		,vfs.database_id   -- /*needed as tempdb is different for each Azure SQL DB as grouping has to be by logical server + db_name + database_id*/
-		,vfs.file_id
-		,vfs.io_stall_read_ms AS read_latency_ms
-		,vfs.num_of_reads AS reads
-		,vfs.num_of_bytes_read AS read_bytes
-		,vfs.io_stall_write_ms AS write_latency_ms
-		,vfs.num_of_writes AS writes
-		,vfs.num_of_bytes_written AS write_bytes
-		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
-                ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
-		 ,CASE
-                        WHEN (vfs.database_id = 0) THEN ''RBPEX''
-                        ELSE b.logical_filename
-                  END as logical_filename
-                 ,CASE
-                        WHEN (vfs.database_id = 0) THEN ''RBPEX''
-                        ELSE b.physical_filename
-                  END as physical_filename
-		,CASE WHEN vfs.file_id = 2 THEN ''LOG'' ELSE ''DATA'' END AS file_type
-		,ISNULL(size,0)/128 AS current_size_mb
-		,ISNULL(FILEPROPERTY(b.logical_filename,''SpaceUsed'')/128,0) as space_used_mb
-	FROM [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
-        LEFT OUTER join
-        (
-             SELECT DB_ID() as database_id, file_id, logical_filename=name COLLATE SQL_Latin1_General_CP1_CI_AS
-                , physical_filename = physical_name COLLATE SQL_Latin1_General_CP1_CI_AS, size from  sys.database_files
-                where type <> 2
-             UNION ALL
-             SELECT 2 as database_id, file_id, logical_filename = name , physical_filename = physical_name, size
-                from  tempdb.sys.database_files
-         ) b ON b.database_id = vfs.database_id and b.file_id = vfs.file_id
-          where vfs.database_id IN (DB_ID(),0,2)
-	'
-	EXEC sp_executesql @SqlStatement
+SET DEADLOCK_PRIORITY -10
+DECLARE
+	 @MajorVersion AS int
+	,@MinorVersion AS int
+	,@BuildVersion AS int
+	,@RevisionVersion AS int
+	,@EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
 
-END
-ELSE
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+	,@MajorVersion = y.[MajorVersion]
+	,@MinorVersion = y.[MinorVersion]
+	,@BuildVersion = y.[BuildVersion]
+	,@RevisionVersion = y.[RevisionVersion]
+FROM (
+	SELECT
+		 [EngineEdition]
+		,CAST(PARSENAME(x.[FullVersion],4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(x.[FullVersion],3) AS int) AS [MinorVersion]
+		,CAST(PARSENAME(x.[FullVersion],2) AS int) AS [BuildVersion]
+		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
+	FROM (
+		SELECT 
+			CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+	) as x
+) as y
+
+IF @EngineEdition = 5 
 BEGIN
 
-	SET @SqlStatement = N'
-	SELECT
-		''sqlserver_database_io'' AS [measurement]
-		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-		,DB_NAME(vfs.[database_id]) AS [database_name]
-		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
-		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
-		,mf.[type_desc] AS [file_type]
-		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
-			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-			,vs.[volume_mount_point]
-		) AS [volume_mount_point]
-		,vfs.[io_stall_read_ms] AS [read_latency_ms]
-		,vfs.[num_of_reads] AS [reads]
-		,vfs.[num_of_bytes_read] AS [read_bytes]
-		,vfs.[io_stall_write_ms] AS [write_latency_ms]
-		,vfs.[num_of_writes] AS [writes]
-		,vfs.[num_of_bytes_written] AS [write_bytes]
-		'
-		+ 
-		CASE
-			WHEN LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) = '11'
-				/*SQL Server 2012 (ver 11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]*/
-				THEN ''
-				ELSE N',vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
-		END 
-		+
-	N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-	INNER JOIN sys.master_files AS mf WITH (NOLOCK)
-		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
-	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs
-	'
-	EXEC sp_executesql @SqlStatement
-
+SET @SqlStatement = N'
+SELECT ''sqlserver_database_io''AS [measurement]
+	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
+	,DB_NAME() AS database_name
+	,vfs.database_id /*needed as tempdb is different for each Azure SQL DB as grouping has to be by logical server + db_name + database_id*/
+	,vfs.file_id
+	,vfs.io_stall_read_ms AS read_latency_ms
+	,vfs.num_of_reads AS reads
+	,vfs.num_of_bytes_read AS read_bytes
+	,vfs.io_stall_write_ms AS write_latency_ms
+	,vfs.num_of_writes AS writes
+	,vfs.num_of_bytes_written AS write_bytes
+	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
+	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+	,CASE WHEN (vfs.database_id = 0)
+		THEN ''RBPEX'' /*RPBEX = Resilient Buffer Pool Extension*/
+		ELSE b.logical_filename
+	 END AS logical_filename
+	,CASE WHEN (vfs.database_id = 0)
+		THEN ''RBPEX'' /*RPBEX = Resilient Buffer Pool Extension*/
+		ELSE b.physical_filename
+	 END AS physical_filename
+	,CASE WHEN vfs.file_id = 2
+		THEN ''LOG''
+		ELSE ''DATA''
+	 END AS file_type
+	,ISNULL(size, 0) / 128 AS current_size_mb
+	,ISNULL(FILEPROPERTY(b.logical_filename, ''SpaceUsed '') / 128, 0) AS space_used_mb
+FROM [sys].[dm_io_virtual_file_stats](NULL, NULL) AS vfs
+/*needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id*/
+LEFT OUTER JOIN (
+	SELECT 
+		 DB_ID() AS database_id
+		,file_id
+		,logical_filename = name COLLATE SQL_Latin1_General_CP1_CI_AS
+		,physical_filename = physical_name COLLATE SQL_Latin1_General_CP1_CI_AS
+		,size
+	FROM sys.database_files
+	WHERE type <> 2
+	
+	UNION ALL
+	
+	SELECT 
+		2 AS database_id
+		,file_id
+		,logical_filename = name
+		,physical_filename = physical_name
+		,size
+	FROM tempdb.sys.database_files
+	) AS b 
+	ON 
+		b.database_id = vfs.database_id
+		AND b.file_id = vfs.file_id
+WHERE vfs.database_id IN (DB_ID(),0,2)
+'
+EXEC sp_executesql @SqlStatement
 END
 
+ELSE IF @EngineEdition IN (2,3,4) 
+BEGIN
+
+SET @SqlStatement = N'
+SELECT ''sqlserver_database_io ''AS [measurement]
+	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
+	,DB_NAME(vfs.[database_id]) AS [database_name]
+	,COALESCE(mf.[physical_name], ''RBPEX'') AS [physical_filename] /*RPBEX = Resilient Buffer Pool Extension*/
+	,COALESCE(mf.[name], ''RBPEX'') AS [logical_filename] /*RPBEX = Resilient Buffer Pool Extension*/
+	,mf.[type_desc] AS [file_type]
+'
++
+CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
+	THEN N'' /*Before SQL 2008 R2*/
+	ELSE 
+N'
+	,CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
+		THEN LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point]) - 1)
+		ELSE vs.[volume_mount_point]
+	 END AS [volume_mount_point] /*SQL 2008 R2 and later*/
+'
+END
++ N'
+	,vfs.[io_stall_read_ms] AS [read_latency_ms]
+	,vfs.[num_of_reads] AS [reads]
+	,vfs.[num_of_bytes_read] AS [read_bytes]
+	,vfs.[io_stall_write_ms] AS [write_latency_ms]
+	,vfs.[num_of_writes] AS [writes]
+	,vfs.[num_of_bytes_written] AS [write_bytes] '
++ 
+CASE WHEN @MajorVersion <= 11
+	THEN N'' /*before and including SQL 2012*/
+	ELSE 
+N'
+	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] /*SQL 2014 and later*/
+	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms] /*SQL 2014 and later*/
+'
+END
++ N'
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+INNER JOIN sys.master_files AS mf WITH (NOLOCK) ON vfs.[database_id] = mf.[database_id]
+	AND vfs.[file_id] = mf.[file_id]
+'
++
+CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
+	THEN N'' /*Before SQL 2008 R2*/
+	ELSE
+N'
+CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs /*SQL 2008 R2 and later*/
+'
+END
++N''
+
+SELECT @SqlStatement
+EXEC sp_executesql @SqlStatement
+
+END
 `
 
 // Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
