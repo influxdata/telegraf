@@ -84,13 +84,15 @@ func (m *Metric) SetName(value starlark.Value) error {
 	return errors.New("type error")
 }
 
-func (m *Metric) Tags() *TagSet {
-	tags := TagSet(*m)
+func (m *Metric) Tags() *MetricDataDict {
+	tagsaccessor := AccessibleTag(*m)
+	tags := MetricDataDict{data: &tagsaccessor, typename: "tags",}
 	return &tags
 }
 
-func (m *Metric) Fields() *FieldSet {
-	fields := FieldSet(*m)
+func (m *Metric) Fields() *MetricDataDict {
+	fieldaccessor := AccessibleField(*m)
+	fields := MetricDataDict{data: &fieldaccessor, typename: "fields",}
 	return &fields
 }
 
@@ -111,42 +113,4 @@ func (m *Metric) SetTime(value starlark.Value) error {
 	default:
 		return errors.New("type error")
 	}
-}
-
-// Temp to help setup tests
-func (m *Metric) TagsToDict() *starlark.Dict {
-	dict := starlark.NewDict(len(m.metric.TagList()))
-	for _, tag := range m.metric.TagList() {
-		dict.SetKey(
-			starlark.String(tag.Key),
-			starlark.String(tag.Value),
-		)
-	}
-	return dict
-}
-
-// Temp to help setup tests
-func (m *Metric) FieldsToDict() *starlark.Dict {
-	dict := starlark.NewDict(len(m.metric.FieldList()))
-	for _, field := range m.metric.FieldList() {
-		var sk = starlark.String(field.Key)
-		var sv starlark.Value
-		switch fv := field.Value.(type) {
-		case float64:
-			sv = starlark.Float(fv)
-		case int64:
-			sv = starlark.MakeInt64(fv)
-		case uint64:
-			sv = starlark.MakeUint64(fv)
-		case string:
-			sv = starlark.String(fv)
-		case bool:
-			sv = starlark.Bool(fv)
-		default:
-			// todo error
-		}
-
-		dict.SetKey(sk, sv)
-	}
-	return dict
 }
