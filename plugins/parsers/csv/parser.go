@@ -117,6 +117,11 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	metrics := make([]telegraf.Metric, 0)
 	for _, record := range table {
+		if p.Columns[len(record)] == nil{
+			//skip the record
+			log.Printf("Cannot find matching header - skipping record: %v", record) 
+			continue	
+		}
 		m, err := p.parseRecord(record)
 		if err != nil {
 			return metrics, err
@@ -144,7 +149,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("record: %v", record)
 	m, err := p.parseRecord(record)
 	if err != nil {
 		return nil, err
