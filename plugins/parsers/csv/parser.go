@@ -144,6 +144,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println(record)
 	m, err := p.parseRecord(record)
 	if err != nil {
 		return nil, err
@@ -223,8 +224,6 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 				//}
 			}
 		}
-	} else {
-		return nil, nil	
 	}
 	// add default tags
 	for k, v := range p.DefaultTags {
