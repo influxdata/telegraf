@@ -537,7 +537,6 @@ CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50
 END
 
 EXEC sp_executesql @SqlStatement
-
 END
 `
 
@@ -694,6 +693,7 @@ CROSS APPLY (
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
 const sqlServerSchedulersV2 string = `
 SET DEADLOCK_PRIORITY -10
+
 DECLARE
 	 @MajorVersion AS int
 	,@MinorVersion AS int
@@ -758,7 +758,38 @@ FROM sys.dm_os_schedulers AS s'
 EXEC sp_executesql @SqlStatement
 `
 
-const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
+const sqlPerformanceCountersV2 string = `
+SET DEADLOCK_PRIORITY -10
+
+DECLARE
+	 @MajorVersion AS int
+	,@MinorVersion AS int
+	,@BuildVersion AS int
+	,@RevisionVersion AS int
+	,@EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
+
+/*Get instance info*/
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+	,@MajorVersion = y.[MajorVersion]
+	,@MinorVersion = y.[MinorVersion]
+	,@BuildVersion = y.[BuildVersion]
+	,@RevisionVersion = y.[RevisionVersion]
+FROM (
+	SELECT
+		 [EngineEdition]
+		,CAST(PARSENAME(x.[FullVersion],4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(x.[FullVersion],3) AS int) AS [MinorVersion]
+		,CAST(PARSENAME(x.[FullVersion],2) AS int) AS [BuildVersion]
+		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
+	FROM (
+		SELECT 
+			 CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+	) as x
+) as y
+
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -769,13 +800,13 @@ DECLARE @PCounters TABLE
 	Primary Key(object_name, counter_name, instance_name)
 );
 
-DECLARE @SQL NVARCHAR(MAX)
-SET @SQL = N'SELECT	DISTINCT
+SET @SqlStatement = N'
+SELECT	DISTINCT
 		RTrim(spi.object_name) object_name,
 		RTrim(spi.counter_name) counter_name,'
 		+
 		CASE
-		WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
+		WHEN @MajorVersion IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
 		THEN N'CASE WHEN (
                              RTRIM(spi.object_name) LIKE ''%:Databases''
                              OR RTRIM(spi.object_name) LIKE ''%:Database Replica''
@@ -799,18 +830,18 @@ SET @SQL = N'SELECT	DISTINCT
 		FROM	sys.dm_os_performance_counters AS spi '
 +
 CASE 
-	WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
-	THEN CAST(N'LEFT JOIN sys.databases AS d
+	WHEN @MajorVersion IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
+	THEN N'LEFT JOIN sys.databases AS d
 	ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
 	= CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
                 d.name = ''master'' AND TRY_CONVERT(uniqueidentifier, d.physical_database_name) IS NOT NULL
                 THEN d.name
                 ELSE d.physical_database_name
-	END	' as NVARCHAR(MAX))
-	ELSE N' '
+	END	'
+	ELSE N''
 END
 
-SET @SQL = @SQL + CAST(N' WHERE	(
+SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 			counter_name IN (
 				''SQL Compilations/sec'',
 				''SQL Re-Compilations/sec'',
@@ -909,11 +940,12 @@ SET @SQL = @SQL + CAST(N' WHERE	(
 		)
 ' as NVARCHAR(MAX))
 INSERT	INTO @PCounters
-EXEC (@SQL)
+EXEC (@SqlStatement)
 
-
-SET  @SQL = REPLACE('SELECT
-"SQLServer:Workload Group Stats" AS object,
+IF @MajorVersion > 9 /*Only for SQL 2008 and later*/
+BEGIN
+SET  @SqlStatement = N'SELECT
+''SQLServer:Workload Group Stats'' AS object,
 counter,
 instance,
 CAST(vs.value AS BIGINT) AS value,
@@ -922,14 +954,17 @@ FROM
 (
     SELECT
     rgwg.name AS instance,
-    rgwg.total_request_count AS "Request Count",
-    rgwg.total_queued_request_count AS "Queued Request Count",
-    rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
-    rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
-    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' ELSE '' END + '
-    rgwg.total_lock_wait_count AS "Lock Wait Count",
-    rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
-    rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
+    rgwg.total_request_count AS ''Request Count'',
+    rgwg.total_queued_request_count AS ''Queued Request Count'',
+    rgwg.total_cpu_limit_violation_count AS ''CPU Limit Violation Count'',
+    rgwg.total_cpu_usage_ms AS ''CPU Usage (time)'',' 
+	+ CASE WHEN @MajorVersion > 10 
+		THEN 'rgwg.total_cpu_usage_preemptive_ms AS ''Premptive CPU Usage (time)'',' 
+		ELSE '' 
+	 END + '
+    rgwg.total_lock_wait_count AS ''Lock Wait Count'',
+    rgwg.total_lock_wait_time_ms AS ''Lock Wait Time'',
+    rgwg.total_reduced_memgrant_count AS ''Reduced Memory Grant Count''
     FROM sys.dm_resource_governor_workload_groups AS rgwg
     INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
     ON rgwg.pool_id = rgrp.pool_id
@@ -937,10 +972,11 @@ FROM
 UNPIVOT (
     value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
 ) AS vs'
-,'"','''')
+
 
 INSERT INTO @PCounters
-EXEC( @SQL )
+EXEC( @SqlStatement )
+END
 
 SELECT	'sqlserver_performance' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
