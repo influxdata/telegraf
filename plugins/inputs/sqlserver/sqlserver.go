@@ -722,12 +722,36 @@ CROSS APPLY (
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
 const sqlServerSchedulersV2 string = `
+SET DEADLOCK_PRIORITY -10
+DECLARE
+	 @MajorVersion AS int
+	,@MinorVersion AS int
+	,@BuildVersion AS int
+	,@RevisionVersion AS int
+	,@EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
 
+/*Get instance info*/
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+	,@MajorVersion = y.[MajorVersion]
+	,@MinorVersion = y.[MinorVersion]
+	,@BuildVersion = y.[BuildVersion]
+	,@RevisionVersion = y.[RevisionVersion]
+FROM (
+	SELECT
+		 [EngineEdition]
+		,CAST(PARSENAME(x.[FullVersion],4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(x.[FullVersion],3) AS int) AS [MinorVersion]
+		,CAST(PARSENAME(x.[FullVersion],2) AS int) AS [BuildVersion]
+		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
+	FROM (
+		SELECT 
+			 CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+	) as x
+) as y
 
-
-
-SET DEADLOCK_PRIORITY - 10;
-DECLARE @SqlStatement AS nvarchar(max);
 SET @SqlStatement = N'
 SELECT 
 	 ''sqlserver_schedulers'' AS [measurement]
@@ -746,19 +770,20 @@ SELECT
 	,s.[work_queue_count]
 	,s.[pending_disk_io_count]
 	,s.[load_factor]
-	,s.[yield_count]
-	'
+	,s.[yield_count]'
 	+ 
 	CASE
-		WHEN CAST(LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) AS int) >= 13
-			/*Only from SQL Server 2016+ (ver 13.x) [total_cpu_usage_ms] and [total_scheduler_delay_ms]*/
-			THEN N',s.[total_cpu_usage_ms], s.[total_scheduler_delay_ms]'
+		WHEN @MajorVersion >= 13
+			/*Only from SQL Server 2016+*/
+			THEN N'
+				,s.[total_cpu_usage_ms] /*SQL 2016 and later*/
+				,s.[total_scheduler_delay_ms] /*SQL 2016 and later*/'
 			ELSE ''
 	END 
 	+
 N'
-FROM sys.dm_os_schedulers AS s
-'
+FROM sys.dm_os_schedulers AS s'
+
 EXEC sp_executesql @SqlStatement
 `
 
