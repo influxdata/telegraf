@@ -108,15 +108,15 @@ func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
 }
 
 func (mapping *Mapping) getDestination(index int) string {
-	if mappedDest, found := mapping.Dest[index]; found == true {
-		return mappedDest
+	if len(mapping.Dest) != 0 && mapping.Dest[index] != ""{
+		return mapping.Dest[index]
 	}
 	return mapping.Fields[index]
 }
 
 func (mapping *Mapping) getDestinationTag(index int) string {
-	if mappedDest, found := mapping.Dest[index]; found == true {
-		return mappedDest
+	if len(mapping.Dest) != 0 && mapping.Dest[index] != ""
+		return mapping.Dest[index]
 	}
 	return mapping.Tags[index]
 }
