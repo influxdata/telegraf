@@ -261,6 +261,7 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
 	timestampColumn, timestampFormat string, altTimestamp []string) (time.Time, error) {
+	log.Printf("recordFields: %v", recordFields)
 	if len(altTimestamp) != 0 && timestampColumn == ""{
 		newRecordFields := make(map[string]interface{})
 		var altTimestampValues []string
