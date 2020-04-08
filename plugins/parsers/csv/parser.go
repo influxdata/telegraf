@@ -1,7 +1,6 @@
 package csv
 
 import (
-	"log"
 	"bytes"
 	"encoding/csv"
 	"fmt"
