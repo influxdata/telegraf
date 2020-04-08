@@ -1,6 +1,7 @@
 package csv
 
 import (
+	"log"
 	"bytes"
 	"encoding/csv"
 	"fmt"
@@ -74,11 +75,11 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// set DataColumns to names extracted from the header
 	headersMap := make(map[int][]string)
 	if len(p.ColumnNames) == 0 {
-		//log.Printf("header row count: %d", p.HeaderRowCount)
+		log.Printf("header row count: %d", p.HeaderRowCount)
 		for i := 0; i < p.HeaderRowCount; i++ {
 			headerNames := make([]string, 0)
 			header, err := csvReader.Read()
-			//log.Printf("line %d: [%s] | columns: %d", i, header, len(header))
+			log.Printf("line %d: [%s] | columns: %d", i, header, len(header))
 			if err != nil {
 				return nil, err
 			}
@@ -105,7 +106,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 	}
 	p.Columns = headersMap
-	//log.Printf("done reading in headers: [%s]", p.Columns)
+	log.Printf("done reading in headers: [%s]", p.Columns)
 	table, err := csvReader.ReadAll()
 	if err != nil {
 		return nil, err
