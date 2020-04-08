@@ -266,114 +266,8 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `SET DEADLOCK_PRIORITY -10;
-DECLARE @SQL NVARCHAR(MAX) = 'SELECT
-"sqlserver_memory_clerks" As [measurement],
-REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
-DB_NAME() as [database_name],
-ISNULL(clerk_names.name,mc.type) AS clerk_type,
-SUM({pages_kb}) AS size_kb
-FROM
-sys.dm_os_memory_clerks AS mc WITH (NOLOCK)
-LEFT OUTER JOIN ( VALUES
-("CACHESTORE_BROKERDSH","Service Broker Dialog Security Header Cache"),
-("CACHESTORE_BROKERKEK","Service Broker Key Exchange Key Cache"),
-("CACHESTORE_BROKERREADONLY","Service Broker (Read-Only)"),
-("CACHESTORE_BROKERRSB","Service Broker Null Remote Service Binding Cache"),
-("CACHESTORE_BROKERTBLACS","Broker dormant rowsets"),
-("CACHESTORE_BROKERTO","Service Broker Transmission Object Cache"),
-("CACHESTORE_BROKERUSERCERTLOOKUP","Service Broker user certificates lookup result cache"),
-("CACHESTORE_CLRPROC","CLR Procedure Cache"),
-("CACHESTORE_CLRUDTINFO","CLR UDT Info"),
-("CACHESTORE_COLUMNSTOREOBJECTPOOL","Column Store Object Pool"),
-("CACHESTORE_CONVPRI","Conversation Priority Cache"),
-("CACHESTORE_EVENTS","Event Notification Cache"),
-("CACHESTORE_FULLTEXTSTOPLIST","Full Text Stoplist Cache"),
-("CACHESTORE_NOTIF","Notification Store"),
-("CACHESTORE_OBJCP","Object Plans"),
-("CACHESTORE_PHDR","Bound Trees"),
-("CACHESTORE_SEARCHPROPERTYLIST","Search Property List Cache"),
-("CACHESTORE_SEHOBTCOLUMNATTRIBUTE","SE Shared Column Metadata Cache"),
-("CACHESTORE_SQLCP","SQL Plans"),
-("CACHESTORE_STACKFRAMES","SOS_StackFramesStore"),
-("CACHESTORE_SYSTEMROWSET","System Rowset Store"),
-("CACHESTORE_TEMPTABLES","Temporary Tables & Table Variables"),
-("CACHESTORE_VIEWDEFINITIONS","View Definition Cache"),
-("CACHESTORE_XML_SELECTIVE_DG","XML DB Cache (Selective)"),
-("CACHESTORE_XMLDBATTRIBUTE","XML DB Cache (Attribute)"),
-("CACHESTORE_XMLDBELEMENT","XML DB Cache (Element)"),
-("CACHESTORE_XMLDBTYPE","XML DB Cache (Type)"),
-("CACHESTORE_XPROC","Extended Stored Procedures"),
-("MEMORYCLERK_FILETABLE","Memory Clerk (File Table)"),
-("MEMORYCLERK_FSCHUNKER","Memory Clerk (FS Chunker)"),
-("MEMORYCLERK_FULLTEXT","Full Text"),
-("MEMORYCLERK_FULLTEXT_SHMEM","Full-text IG"),
-("MEMORYCLERK_HADR","HADR"),
-("MEMORYCLERK_HOST","Host"),
-("MEMORYCLERK_LANGSVC","Language Service"),
-("MEMORYCLERK_LWC","Light Weight Cache"),
-("MEMORYCLERK_QSRANGEPREFETCH","QS Range Prefetch"),
-("MEMORYCLERK_SERIALIZATION","Serialization"),
-("MEMORYCLERK_SNI","SNI"),
-("MEMORYCLERK_SOSMEMMANAGER","SOS Memory Manager"),
-("MEMORYCLERK_SOSNODE","SOS Node"),
-("MEMORYCLERK_SOSOS","SOS Memory Clerk"),
-("MEMORYCLERK_SQLBUFFERPOOL","Buffer Pool"),
-("MEMORYCLERK_SQLCLR","CLR"),
-("MEMORYCLERK_SQLCLRASSEMBLY","CLR Assembly"),
-("MEMORYCLERK_SQLCONNECTIONPOOL","Connection Pool"),
-("MEMORYCLERK_SQLGENERAL","General"),
-("MEMORYCLERK_SQLHTTP","HTTP"),
-("MEMORYCLERK_SQLLOGPOOL","Log Pool"),
-("MEMORYCLERK_SQLOPTIMIZER","SQL Optimizer"),
-("MEMORYCLERK_SQLQERESERVATIONS","SQL Reservations"),
-("MEMORYCLERK_SQLQUERYCOMPILE","SQL Query Compile"),
-("MEMORYCLERK_SQLQUERYEXEC","SQL Query Exec"),
-("MEMORYCLERK_SQLQUERYPLAN","SQL Query Plan"),
-("MEMORYCLERK_SQLSERVICEBROKER","SQL Service Broker"),
-("MEMORYCLERK_SQLSERVICEBROKERTRANSPORT","Unified Communication Stack"),
-("MEMORYCLERK_SQLSOAP","SQL SOAP"),
-("MEMORYCLERK_SQLSOAPSESSIONSTORE","SQL SOAP (Session Store)"),
-("MEMORYCLERK_SQLSTORENG","SQL Storage Engine"),
-("MEMORYCLERK_SQLUTILITIES","SQL Utilities"),
-("MEMORYCLERK_SQLXML","SQL XML"),
-("MEMORYCLERK_SQLXP","SQL XP"),
-("MEMORYCLERK_TRACE_EVTNOTIF","Trace Event Notification"),
-("MEMORYCLERK_XE","XE Engine"),
-("MEMORYCLERK_XE_BUFFER","XE Buffer"),
-("MEMORYCLERK_XTP","In-Memory OLTP"),
-("OBJECTSTORE_LBSS","Lbss Cache (Object Store)"),
-("OBJECTSTORE_LOCK_MANAGER","Lock Manager (Object Store)"),
-("OBJECTSTORE_SECAUDIT_EVENT_BUFFER","Audit Event Buffer (Object Store)"),
-("OBJECTSTORE_SERVICE_BROKER","Service Broker (Object Store)"),
-("OBJECTSTORE_SNI_PACKET","SNI Packet (Object Store)"),
-("OBJECTSTORE_XACT_CACHE","Transactions Cache (Object Store)"),
-("USERSTORE_DBMETADATA","DB Metadata (User Store)"),
-("USERSTORE_OBJPERM","Object Permissions (User Store)"),
-("USERSTORE_SCHEMAMGR","Schema Manager (User Store)"),
-("USERSTORE_SXC","SXC (User Store)"),
-("USERSTORE_TOKENPERM","Token Permissions (User Store)"),
-("USERSTORE_QDSSTMT","QDS Statement Buffer (Pre-persist)"),
-("CACHESTORE_QDSRUNTIMESTATS","QDS Runtime Stats (Pre-persist)"),
-("CACHESTORE_QDSCONTEXTSETTINGS","QDS Unique Context Settings"),
-("MEMORYCLERK_QUERYDISKSTORE","QDS General"),
-("MEMORYCLERK_QUERYDISKSTORE_HASHMAP","QDS Query/Plan Hash Table")
-) AS clerk_names(system_name,name)
-ON mc.type = clerk_names.system_name
-GROUP BY ISNULL(clerk_names.name,mc.type)
-HAVING SUM({pages_kb}) >= 1024
-OPTION( RECOMPILE );'
-
-IF CAST(LEFT(CAST(SERVERPROPERTY('productversion') as varchar), 2) AS INT) > 10 -- SQL Server 2008 Compat
-    SET @SQL = REPLACE(REPLACE(@SQL,'{pages_kb}','mc.pages_kb'),'"','''')
-ELSE
-    SET @SQL = REPLACE(REPLACE(@SQL,'{pages_kb}','mc.single_pages_kb + mc.multi_pages_kb'),'"','''')
-
-EXEC(@SQL)
-`
-
-const sqlDatabaseIOV2 = `
-SET DEADLOCK_PRIORITY -10
+const sqlMemoryClerkV2 = `
+SET DEADLOCK_PRIORITY -10;
 DECLARE
 	 @MajorVersion AS int
 	,@MinorVersion AS int
@@ -382,6 +276,7 @@ DECLARE
 	,@EngineEdition AS int
 	,@SqlStatement AS nvarchar(max)
 
+/*Get instance info*/
 SELECT 
 	 @EngineEdition = y.[EngineEdition]
 	,@MajorVersion = y.[MajorVersion]
@@ -397,7 +292,147 @@ FROM (
 		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
 	FROM (
 		SELECT 
-			CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			 CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+	) as x
+) as y
+
+
+SET @SqlStatement = '
+SELECT
+	 ''sqlserver_memory_clerks'' As [measurement]
+	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
+	,DB_NAME() as [database_name]
+	,ISNULL(clerk_names.[name],mc.[type]) AS [clerk_type]
+	,SUM({pages_kb}) AS [size_kb]
+FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
+LEFT OUTER JOIN (
+		  SELECT ''CACHESTORE_BROKERDSH'',''Service Broker Dialog Security Header Cache''
+	UNION SELECT ''CACHESTORE_BROKERKEK'',''Service Broker Key Exchange Key Cache''
+	UNION SELECT ''CACHESTORE_BROKERREADONLY'',''Service Broker (Read-Only)''
+	UNION SELECT ''CACHESTORE_BROKERRSB'',''Service Broker Null Remote Service Binding Cache''
+	UNION SELECT ''CACHESTORE_BROKERTBLACS'',''Broker dormant rowsets''
+	UNION SELECT ''CACHESTORE_BROKERTO'',''Service Broker Transmission Object Cache''
+	UNION SELECT ''CACHESTORE_BROKERUSERCERTLOOKUP'',''Service Broker user certificates lookup result cache''
+	UNION SELECT ''CACHESTORE_CLRPROC'',''CLR Procedure Cache''
+	UNION SELECT ''CACHESTORE_CLRUDTINFO'',''CLR UDT Info''
+	UNION SELECT ''CACHESTORE_COLUMNSTOREOBJECTPOOL'',''Column Store Object Pool''
+	UNION SELECT ''CACHESTORE_CONVPRI'',''Conversation Priority Cache''
+	UNION SELECT ''CACHESTORE_EVENTS'',''Event Notification Cache''
+	UNION SELECT ''CACHESTORE_FULLTEXTSTOPLIST'',''Full Text Stoplist Cache''
+	UNION SELECT ''CACHESTORE_NOTIF'',''Notification Store''
+	UNION SELECT ''CACHESTORE_OBJCP'',''Object Plans''
+	UNION SELECT ''CACHESTORE_PHDR'',''Bound Trees''
+	UNION SELECT ''CACHESTORE_SEARCHPROPERTYLIST'',''Search Property List Cache''
+	UNION SELECT ''CACHESTORE_SEHOBTCOLUMNATTRIBUTE'',''SE Shared Column Metadata Cache''
+	UNION SELECT ''CACHESTORE_SQLCP'',''SQL Plans''
+	UNION SELECT ''CACHESTORE_STACKFRAMES'',''SOS_StackFramesStore''
+	UNION SELECT ''CACHESTORE_SYSTEMROWSET'',''System Rowset Store''
+	UNION SELECT ''CACHESTORE_TEMPTABLES'',''Temporary Tables & Table Variables''
+	UNION SELECT ''CACHESTORE_VIEWDEFINITIONS'',''View Definition Cache''
+	UNION SELECT ''CACHESTORE_XML_SELECTIVE_DG'',''XML DB Cache (Selective)''
+	UNION SELECT ''CACHESTORE_XMLDBATTRIBUTE'',''XML DB Cache (Attribute)''
+	UNION SELECT ''CACHESTORE_XMLDBELEMENT'',''XML DB Cache (Element)''
+	UNION SELECT ''CACHESTORE_XMLDBTYPE'',''XML DB Cache (Type)''
+	UNION SELECT ''CACHESTORE_XPROC'',''Extended Stored Procedures''
+	UNION SELECT ''MEMORYCLERK_FILETABLE'',''Memory Clerk (File Table)''
+	UNION SELECT ''MEMORYCLERK_FSCHUNKER'',''Memory Clerk (FS Chunker)''
+	UNION SELECT ''MEMORYCLERK_FULLTEXT'',''Full Text''
+	UNION SELECT ''MEMORYCLERK_FULLTEXT_SHMEM'',''Full-text IG''
+	UNION SELECT ''MEMORYCLERK_HADR'',''HADR''
+	UNION SELECT ''MEMORYCLERK_HOST'',''Host''
+	UNION SELECT ''MEMORYCLERK_LANGSVC'',''Language Service''
+	UNION SELECT ''MEMORYCLERK_LWC'',''Light Weight Cache''
+	UNION SELECT ''MEMORYCLERK_QSRANGEPREFETCH'',''QS Range Prefetch''
+	UNION SELECT ''MEMORYCLERK_SERIALIZATION'',''Serialization''
+	UNION SELECT ''MEMORYCLERK_SNI'',''SNI''
+	UNION SELECT ''MEMORYCLERK_SOSMEMMANAGER'',''SOS Memory Manager''
+	UNION SELECT ''MEMORYCLERK_SOSNODE'',''SOS Node''
+	UNION SELECT ''MEMORYCLERK_SOSOS'',''SOS Memory Clerk''
+	UNION SELECT ''MEMORYCLERK_SQLBUFFERPOOL'',''Buffer Pool''
+	UNION SELECT ''MEMORYCLERK_SQLCLR'',''CLR''
+	UNION SELECT ''MEMORYCLERK_SQLCLRASSEMBLY'',''CLR Assembly''
+	UNION SELECT ''MEMORYCLERK_SQLCONNECTIONPOOL'',''Connection Pool''
+	UNION SELECT ''MEMORYCLERK_SQLGENERAL'',''General''
+	UNION SELECT ''MEMORYCLERK_SQLHTTP'',''HTTP''
+	UNION SELECT ''MEMORYCLERK_SQLLOGPOOL'',''Log Pool''
+	UNION SELECT ''MEMORYCLERK_SQLOPTIMIZER'',''SQL Optimizer''
+	UNION SELECT ''MEMORYCLERK_SQLQERESERVATIONS'',''SQL Reservations''
+	UNION SELECT ''MEMORYCLERK_SQLQUERYCOMPILE'',''SQL Query Compile''
+	UNION SELECT ''MEMORYCLERK_SQLQUERYEXEC'',''SQL Query Exec''
+	UNION SELECT ''MEMORYCLERK_SQLQUERYPLAN'',''SQL Query Plan''
+	UNION SELECT ''MEMORYCLERK_SQLSERVICEBROKER'',''SQL Service Broker''
+	UNION SELECT ''MEMORYCLERK_SQLSERVICEBROKERTRANSPORT'',''Unified Communication Stack''
+	UNION SELECT ''MEMORYCLERK_SQLSOAP'',''SQL SOAP''
+	UNION SELECT ''MEMORYCLERK_SQLSOAPSESSIONSTORE'',''SQL SOAP (Session Store)''
+	UNION SELECT ''MEMORYCLERK_SQLSTORENG'',''SQL Storage Engine''
+	UNION SELECT ''MEMORYCLERK_SQLUTILITIES'',''SQL Utilities''
+	UNION SELECT ''MEMORYCLERK_SQLXML'',''SQL XML''
+	UNION SELECT ''MEMORYCLERK_SQLXP'',''SQL XP''
+	UNION SELECT ''MEMORYCLERK_TRACE_EVTNOTIF'',''Trace Event Notification''
+	UNION SELECT ''MEMORYCLERK_XE'',''XE Engine''
+	UNION SELECT ''MEMORYCLERK_XE_BUFFER'',''XE Buffer''
+	UNION SELECT ''MEMORYCLERK_XTP'',''In-Memory OLTP''
+	UNION SELECT ''OBJECTSTORE_LBSS'',''Lbss Cache (Object Store)''
+	UNION SELECT ''OBJECTSTORE_LOCK_MANAGER'',''Lock Manager (Object Store)''
+	UNION SELECT ''OBJECTSTORE_SECAUDIT_EVENT_BUFFER'',''Audit Event Buffer (Object Store)''
+	UNION SELECT ''OBJECTSTORE_SERVICE_BROKER'',''Service Broker (Object Store)''
+	UNION SELECT ''OBJECTSTORE_SNI_PACKET'',''SNI Packet (Object Store)''
+	UNION SELECT ''OBJECTSTORE_XACT_CACHE'',''Transactions Cache (Object Store)''
+	UNION SELECT ''USERSTORE_DBMETADATA'',''DB Metadata (User Store)''
+	UNION SELECT ''USERSTORE_OBJPERM'',''Object Permissions (User Store)''
+	UNION SELECT ''USERSTORE_SCHEMAMGR'',''Schema Manager (User Store)''
+	UNION SELECT ''USERSTORE_SXC'',''SXC (User Store)''
+	UNION SELECT ''USERSTORE_TOKENPERM'',''Token Permissions (User Store)''
+	UNION SELECT ''USERSTORE_QDSSTMT'',''QDS Statement Buffer (Pre-persist)''
+	UNION SELECT ''CACHESTORE_QDSRUNTIMESTATS'',''QDS Runtime Stats (Pre-persist)''
+	UNION SELECT ''CACHESTORE_QDSCONTEXTSETTINGS'',''QDS Unique Context Settings''
+	UNION SELECT ''MEMORYCLERK_QUERYDISKSTORE'',''QDS General''
+	UNION SELECT ''MEMORYCLERK_QUERYDISKSTORE_HASHMAP'',''QDS Query/Plan Hash Table''
+) AS clerk_names(system_name,name)
+	ON mc.[type] = clerk_names.[system_name]
+GROUP BY 
+	ISNULL(clerk_names.[name], mc.[type])
+HAVING 
+	SUM({pages_kb}) >= 1024
+OPTION(RECOMPILE);
+'
+
+IF @MajorVersion > 10 /*SQL 2012 and later*/
+    SET @SqlStatement = REPLACE(@SqlStatement,'{pages_kb}','mc.pages_kb')
+ELSE /*SQL 2008 and previous*/
+    SET @SqlStatement = REPLACE(@SqlStatement,'{pages_kb}','mc.single_pages_kb + mc.multi_pages_kb')
+
+EXEC(@SqlStatement)
+`
+
+const sqlDatabaseIOV2 = `
+SET DEADLOCK_PRIORITY -10
+DECLARE
+	 @MajorVersion AS int
+	,@MinorVersion AS int
+	,@BuildVersion AS int
+	,@RevisionVersion AS int
+	,@EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
+
+/*Get instance info*/
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+	,@MajorVersion = y.[MajorVersion]
+	,@MinorVersion = y.[MinorVersion]
+	,@BuildVersion = y.[BuildVersion]
+	,@RevisionVersion = y.[RevisionVersion]
+FROM (
+	SELECT
+		 [EngineEdition]
+		,CAST(PARSENAME(x.[FullVersion],4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(x.[FullVersion],3) AS int) AS [MinorVersion]
+		,CAST(PARSENAME(x.[FullVersion],2) AS int) AS [BuildVersion]
+		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
+	FROM (
+		SELECT 
+			 CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
 			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
 	) as x
 ) as y
