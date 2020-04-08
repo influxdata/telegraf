@@ -372,8 +372,6 @@ ELSE
 EXEC(@SQL)
 `
 
-// Conditional check based on Azure SQL DB OR On-prem SQL Server
-// EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10
 DECLARE
@@ -404,7 +402,7 @@ FROM (
 	) as x
 ) as y
 
-IF @EngineEdition = 5 
+IF @EngineEdition = 5 /*Azure SQL DB*/
 BEGIN
 
 SET @SqlStatement = N'
@@ -460,12 +458,12 @@ LEFT OUTER JOIN (
 	ON 
 		b.database_id = vfs.database_id
 		AND b.file_id = vfs.file_id
-WHERE vfs.database_id IN (DB_ID(),0,2)
+WHERE vfs.database_id IN (DB_ID(), 0, 2)
 '
 EXEC sp_executesql @SqlStatement
 END
 
-ELSE IF @EngineEdition IN (2,3,4) 
+ELSE IF @EngineEdition IN (2,3,4) /*SQL Standard, Enterprise, Express*/
 BEGIN
 
 SET @SqlStatement = N'
@@ -518,7 +516,6 @@ CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs /*SQL
 END
 +N''
 
-SELECT @SqlStatement
 EXEC sp_executesql @SqlStatement
 
 END
