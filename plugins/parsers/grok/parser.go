@@ -368,7 +368,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			}
 		}
 	}
-
+	log.Printf("timestamp: %v", timestamp)
 	if p.UniqueTimestamp != "auto" {
 		return metric.New(p.Measurement, tags, fields, timestamp)
 	}
