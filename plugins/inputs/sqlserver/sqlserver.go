@@ -1729,11 +1729,11 @@ SET DEADLOCK_PRIORITY -10
 SET NOCOUNT ON
 
 SELECT 
-	blocking_session_id 
+	[blocking_session_id] 
 INTO #blockingSessions 
 FROM sys.dm_exec_requests 
 WHERE
-	blocking_session_id != 0
+	[blocking_session_id] != 0
 
 CREATE INDEX ix_blockingSessions_1 ON #blockingSessions (blocking_session_id)
 
