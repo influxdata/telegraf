@@ -53,7 +53,6 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
-	p.tsModder = &tsModder{}
 	if p.UniqueTimestamp == "" {
 		p.UniqueTimestamp = "auto"
 	}
@@ -62,6 +61,7 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	p.tsModder = &tsModder{}
 	r := bytes.NewReader(buf)
 	csvReader, err := p.compile(r)
 	if err != nil {
