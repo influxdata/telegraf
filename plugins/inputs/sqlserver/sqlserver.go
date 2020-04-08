@@ -1728,6 +1728,35 @@ const sqlServerRequestsV2 string = `
 SET DEADLOCK_PRIORITY -10
 SET NOCOUNT ON
 
+DECLARE
+	 @MajorVersion AS int
+	,@MinorVersion AS int
+	,@BuildVersion AS int
+	,@RevisionVersion AS int
+	,@EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
+
+/*Get instance info*/
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+	,@MajorVersion = y.[MajorVersion]
+	,@MinorVersion = y.[MinorVersion]
+	,@BuildVersion = y.[BuildVersion]
+	,@RevisionVersion = y.[RevisionVersion]
+FROM (
+	SELECT
+		 [EngineEdition]
+		,CAST(PARSENAME(x.[FullVersion],4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(x.[FullVersion],3) AS int) AS [MinorVersion]
+		,CAST(PARSENAME(x.[FullVersion],2) AS int) AS [BuildVersion]
+		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
+	FROM (
+		SELECT 
+			 CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+	) as x
+) as y
+
 SELECT 
 	[blocking_session_id] 
 INTO #blockingSessions 
@@ -1737,9 +1766,10 @@ WHERE
 
 CREATE INDEX ix_blockingSessions_1 ON #blockingSessions (blocking_session_id)
 
+SET @SqlStatement = N'
 SELECT	
-	 'sqlserver_requests' AS [measurement]
-	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	 ''sqlserver_requests'' AS [measurement]
+	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 	,DB_NAME() as [database_name]
 	,r.[session_id]
 	,r.[request_id]
@@ -1759,13 +1789,13 @@ SELECT
 	,s.[nt_user_name]
 	,r.[open_transaction_count]  AS [open_transaction]
 	,LEFT(CASE COALESCE(r.[transaction_isolation_level], s.[transaction_isolation_level])
-		WHEN 0 THEN '0-Read Committed' 
-		WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
-		WHEN 2 THEN '2-Read Committed' 
-		WHEN 3 THEN '3-Repeatable Read' 
-		WHEN 4 THEN '4-Serializable' 
-		WHEN 5 THEN '5-Snapshot' 
-		ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + '-UNKNOWN' 
+		WHEN 0 THEN ''0-Read Committed'' 
+		WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)'' 
+		WHEN 2 THEN ''2-Read Committed'' 
+		WHEN 3 THEN ''3-Repeatable Read'' 
+		WHEN 4 THEN ''4-Serializable'' 
+		WHEN 5 THEN ''5-Snapshot'' 
+		ELSE CONVERT (varchar(30), r.[transaction_isolation_level]) + ''-UNKNOWN'' 
 	END, 30) AS [transaction_isolation_level]
 	,r.[granted_query_memory] as [granted_query_memory_pages]
 	,r.[percent_complete]
@@ -1777,10 +1807,21 @@ SELECT
 		END - r.[statement_start_offset]) / 2)
 		) AS [statement_text]
 	,qt.[objectid]
-	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.[objectid],qt.[dbid])) + '.' +  QUOTENAME(OBJECT_NAME(qt.[objectid] ,qt.[dbid])) as [stmt_object_name]
-	,DB_NAME(qt.[dbid]) [stmt_db_name]
+	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.[objectid],qt.[dbid])) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.[objectid] ,qt.[dbid])) as [stmt_object_name]
+	,DB_NAME(qt.[dbid]) [stmt_db_name]'
+	+ CASE WHEN @MajorVersion >= 10 /*From SQL 2008 and later*/
+		THEN N'
 	,CONVERT(varchar(20),r.[query_hash],1) as [query_hash]
-	,CONVERT(varchar(20),r.[query_plan_hash],1) as [query_plan_hash]
+	,CONVERT(varchar(20),r.[query_plan_hash],1) as [query_plan_hash]'
+		ELSE /*SQL 2005 - create query hash*/ N'
+	,MASTER.dbo.Fn_varbintohexstr(HASHBYTES(''SHA'', (SUBSTRING(
+		qt.[text], r.[statement_start_offset] / 2 + 1
+		,(CASE WHEN r.[statement_end_offset] = -1
+			THEN LEN(CONVERT(NVARCHAR(MAX), qt.[text])) * 2
+			ELSE r.[statement_end_offset]
+		END - r.[statement_start_offset]) / 2)
+		))) AS [query_hash]'
+	END + N'
 FROM sys.dm_exec_requests r
 	LEFT OUTER JOIN sys.dm_exec_sessions s ON (s.[session_id] = r.[session_id])
 	OUTER APPLY sys.dm_exec_sql_text(r.[sql_handle]) AS qt
@@ -1789,11 +1830,14 @@ WHERE
 		r.[session_id] IS NOT NULL 
 		AND (
 			s.[is_user_process] = 1 
-			OR r.[status] COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')
+			OR r.[status] COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')
 		)
 	) 
-	OR (s.[session_id] IN (SELECT [blocking_session_id] FROM #blockingSessions))
+	OR (s.[session_id] IN (SELECT [blocking_session_id] FROM #blockingSessions) )
  OPTION(MAXDOP 1)
+'
+
+EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerVolumeSpaceV2 string = `
