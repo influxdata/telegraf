@@ -269,9 +269,9 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		newRecordFields := make(map[string]interface{})
 		var altTimestampValues []string
 		for _, columnName := range altTimestamp {
-			if recordFields[columnName] != nil {
-				return time.Time{}, fmt.Errorf("column: %v could not be found", columnName)
-			}
+			//if recordFields[columnName] != nil {
+			//	return time.Time{}, fmt.Errorf("column: %v could not be found", columnName)
+			//}
 			columnValue := fmt.Sprint(recordFields[columnName])
 			altTimestampValues = append(altTimestampValues, columnValue)
 		}
@@ -288,7 +288,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			case "":
 				return time.Time{}, fmt.Errorf("timestamp format must be specified")
 			default:	
-				metricTime, err := internal.ParseTimestamp(timestampFormat, newRecordFields["altTimestamp"], "UTC")
+				metricTime, err := internal.ParseTimestamp(timestampFormat, newRecordFields["altTimestamp"], "America/Toronto")
 				if err != nil{
 					return time.Time{}, err
 				}
