@@ -267,7 +267,8 @@ func init() {
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
 const sqlMemoryClerkV2 = `
-SET DEADLOCK_PRIORITY -10;
+SET DEADLOCK_PRIORITY -10
+
 DECLARE
 	 @MajorVersion AS int
 	,@MinorVersion AS int
@@ -276,7 +277,6 @@ DECLARE
 	,@EngineEdition AS int
 	,@SqlStatement AS nvarchar(max)
 
-/*Get instance info*/
 SELECT 
 	 @EngineEdition = y.[EngineEdition]
 	,@MajorVersion = y.[MajorVersion]
@@ -395,8 +395,7 @@ GROUP BY
 	ISNULL(clerk_names.[name], mc.[type])
 HAVING 
 	SUM({pages_kb}) >= 1024
-OPTION(RECOMPILE);
-'
+OPTION(RECOMPILE);'
 
 IF @MajorVersion > 10 /*SQL 2012 and later*/
     SET @SqlStatement = REPLACE(@SqlStatement,'{pages_kb}','mc.pages_kb')
@@ -408,6 +407,7 @@ EXEC(@SqlStatement)
 
 const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10
+
 DECLARE
 	 @MajorVersion AS int
 	,@MinorVersion AS int
@@ -416,7 +416,6 @@ DECLARE
 	,@EngineEdition AS int
 	,@SqlStatement AS nvarchar(max)
 
-/*Get instance info*/
 SELECT 
 	 @EngineEdition = y.[EngineEdition]
 	,@MajorVersion = y.[MajorVersion]
@@ -483,7 +482,7 @@ LEFT OUTER JOIN (
 	UNION ALL
 	
 	SELECT 
-		2 AS database_id
+		 2 AS database_id
 		,file_id
 		,logical_filename = name
 		,physical_filename = physical_name
@@ -493,8 +492,8 @@ LEFT OUTER JOIN (
 	ON 
 		b.database_id = vfs.database_id
 		AND b.file_id = vfs.file_id
-WHERE vfs.database_id IN (DB_ID(), 0, 2)
-'
+WHERE vfs.database_id IN (DB_ID(), 0, 2)'
+
 EXEC sp_executesql @SqlStatement
 END
 
@@ -507,49 +506,35 @@ SELECT ''sqlserver_database_io ''AS [measurement]
 	,DB_NAME(vfs.[database_id]) AS [database_name]
 	,COALESCE(mf.[physical_name], ''RBPEX'') AS [physical_filename] /*RPBEX = Resilient Buffer Pool Extension*/
 	,COALESCE(mf.[name], ''RBPEX'') AS [logical_filename] /*RPBEX = Resilient Buffer Pool Extension*/
-	,mf.[type_desc] AS [file_type]
-'
+	,mf.[type_desc] AS [file_type]'
 +
 CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
 	THEN N'' /*Before SQL 2008 R2*/
-	ELSE 
-N'
-	,CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
+	ELSE N'	,CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
 		THEN LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point]) - 1)
 		ELSE vs.[volume_mount_point]
-	 END AS [volume_mount_point] /*SQL 2008 R2 and later*/
-'
+	 END AS [volume_mount_point] /*SQL 2008 R2 and later*/'
 END
-+ N'
-	,vfs.[io_stall_read_ms] AS [read_latency_ms]
++ N'	,vfs.[io_stall_read_ms] AS [read_latency_ms]
 	,vfs.[num_of_reads] AS [reads]
 	,vfs.[num_of_bytes_read] AS [read_bytes]
 	,vfs.[io_stall_write_ms] AS [write_latency_ms]
 	,vfs.[num_of_writes] AS [writes]
-	,vfs.[num_of_bytes_written] AS [write_bytes] '
+	,vfs.[num_of_bytes_written] AS [write_bytes]'
 + 
 CASE WHEN @MajorVersion <= 11
 	THEN N'' /*before and including SQL 2012*/
-	ELSE 
-N'
-	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] /*SQL 2014 and later*/
-	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms] /*SQL 2014 and later*/
-'
+	ELSE N'	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] /*SQL 2014 and later*/
+	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms] /*SQL 2014 and later*/'
 END
-+ N'
-FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
++ N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 INNER JOIN sys.master_files AS mf WITH (NOLOCK) ON vfs.[database_id] = mf.[database_id]
-	AND vfs.[file_id] = mf.[file_id]
-'
+	AND vfs.[file_id] = mf.[file_id]'
 +
 CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
 	THEN N'' /*Before SQL 2008 R2*/
-	ELSE
-N'
-CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs /*SQL 2008 R2 and later*/
-'
+	ELSE N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs /*SQL 2008 R2 and later*/'
 END
-+N''
 
 EXEC sp_executesql @SqlStatement
 
@@ -650,38 +635,24 @@ SELECT
 '
 +
 CASE WHEN @MajorVersion < 10 
-	THEN N'
-	,NULL AS [server_memory]	/*before SQL 2008*/
-	,NULL AS [uptime]
-'
-	ELSE N'
-	,(SELECT [total_physical_memory_kb] FROM sys.dm_os_sys_memory) AS [server_memory]
-	,DATEDIFF(MINUTE, osi.[sqlserver_start_time], GETDATE()) AS [uptime]
-'
+	THEN N'	,NULL AS [server_memory] /*before SQL 2008*/
+	,NULL AS [uptime] /*before SQL 2008*/'
+	ELSE N'	,(SELECT [total_physical_memory_kb] FROM sys.dm_os_sys_memory) AS [server_memory]
+	,DATEDIFF(MINUTE, osi.[sqlserver_start_time], GETDATE()) AS [uptime]'
 END
-+N'
-	,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR(64)) as [sku]
-	,CAST(SERVERPROPERTY(''EngineEdition'') as smallint) as [engine_edition]
-'
++N'	,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR(64)) as [sku]
+	,CAST(SERVERPROPERTY(''EngineEdition'') as smallint) as [engine_edition]'
 +
 CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
-	THEN N'
-	,NULL AS [virtual_machine_type_desc] /*Before SQL 2008 R2*/
-' 
-	ELSE 
-N'
-	,CASE osi.[virtual_machine_type_desc]
+	THEN N'	,NULL AS [virtual_machine_type_desc] /*Before SQL 2008 R2*/' 
+	ELSE N'	,CASE osi.[virtual_machine_type_desc]
 		WHEN ''NONE'' THEN ''PHYSICAL Machine''
 		ELSE [virtual_machine_type_desc]
-	END AS [hardware_type]
-'
+	END AS [hardware_type]'
 END
-+
-N'
-	,NULL AS [total_storage_mb]
++N'	,NULL AS [total_storage_mb]
 	,NULL AS [available_storage_mb]
-FROM sys.dm_os_sys_info AS osi
-'
+FROM sys.dm_os_sys_info AS osi'
 
 EXEC sp_executesql @SqlStatement
 END
