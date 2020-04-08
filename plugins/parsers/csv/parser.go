@@ -61,6 +61,7 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	
 	p.tsModder = &tsModder{}
 	r := bytes.NewReader(buf)
 	csvReader, err := p.compile(r)
@@ -77,9 +78,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if len(p.ColumnNames) == 0 {
 		log.Printf("header row count: %d", p.HeaderRowCount)
 		for i := 0; i < p.HeaderRowCount; i++ {
+			log.Printf("%d: ", i)
 			headerNames := make([]string, 0)
 			header, err := csvReader.Read()
-			log.Printf("line %d: [%s] | columns: %d", i, header, len(header))
+			log.Printf("\t [%s] | columns: %d", header, len(header))
 			if err != nil {
 				return nil, err
 			}
