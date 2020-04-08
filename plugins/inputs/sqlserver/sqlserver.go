@@ -507,31 +507,29 @@ SELECT ''sqlserver_database_io ''AS [measurement]
 	,COALESCE(mf.[physical_name], ''RBPEX'') AS [physical_filename] /*RPBEX = Resilient Buffer Pool Extension*/
 	,COALESCE(mf.[name], ''RBPEX'') AS [logical_filename] /*RPBEX = Resilient Buffer Pool Extension*/
 	,mf.[type_desc] AS [file_type]'
-+
-CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
++ CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
 	THEN N'' /*Before SQL 2008 R2*/
 	ELSE N'	,CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
 		THEN LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point]) - 1)
 		ELSE vs.[volume_mount_point]
 	 END AS [volume_mount_point] /*SQL 2008 R2 and later*/'
-END
-+ N'	,vfs.[io_stall_read_ms] AS [read_latency_ms]
+END + N'	
+	,vfs.[io_stall_read_ms] AS [read_latency_ms]
 	,vfs.[num_of_reads] AS [reads]
 	,vfs.[num_of_bytes_read] AS [read_bytes]
 	,vfs.[io_stall_write_ms] AS [write_latency_ms]
 	,vfs.[num_of_writes] AS [writes]
 	,vfs.[num_of_bytes_written] AS [write_bytes]'
-+ 
-CASE WHEN @MajorVersion <= 11
++ CASE WHEN @MajorVersion <= 11
 	THEN N'' /*before and including SQL 2012*/
-	ELSE N'	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] /*SQL 2014 and later*/
+	ELSE N'	
+	,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] /*SQL 2014 and later*/
 	,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms] /*SQL 2014 and later*/'
-END
-+ N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+END + N'
+FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 INNER JOIN sys.master_files AS mf WITH (NOLOCK) ON vfs.[database_id] = mf.[database_id]
 	AND vfs.[file_id] = mf.[file_id]'
-+
-CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
++ CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
 	THEN N'' /*Before SQL 2008 R2*/
 	ELSE N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs /*SQL 2008 R2 and later*/'
 END
@@ -545,6 +543,7 @@ END
 
 const sqlServerPropertiesV2 = `
 SET DEADLOCK_PRIORITY -10
+
 DECLARE
 	 @MajorVersion AS int
 	,@MinorVersion AS int
@@ -630,26 +629,25 @@ BEGIN
 SET @SqlStatement = N'
 INSERT INTO #telegraf_server_properties (cpu_count, server_memory, uptime, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb)
 SELECT	
-	 osi.[cpu_count]
-'
-+
-CASE WHEN @MajorVersion < 10 
-	THEN N'	,NULL AS [server_memory] /*before SQL 2008*/
+	 osi.[cpu_count]'
++ CASE WHEN @MajorVersion < 10 
+	THEN N'
+	,NULL AS [server_memory] /*before SQL 2008*/
 	,NULL AS [uptime] /*before SQL 2008*/'
-	ELSE N'	,(SELECT [total_physical_memory_kb] FROM sys.dm_os_sys_memory) AS [server_memory]
+	ELSE N'
+	,(SELECT [total_physical_memory_kb] FROM sys.dm_os_sys_memory) AS [server_memory]
 	,DATEDIFF(MINUTE, osi.[sqlserver_start_time], GETDATE()) AS [uptime]'
-END
-+N'	,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR(64)) as [sku]
+END + N'
+	,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR(64)) as [sku]
 	,CAST(SERVERPROPERTY(''EngineEdition'') as smallint) as [engine_edition]'
-+
-CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
++ CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
 	THEN N'	,NULL AS [virtual_machine_type_desc] /*Before SQL 2008 R2*/' 
 	ELSE N'	,CASE osi.[virtual_machine_type_desc]
 		WHEN ''NONE'' THEN ''PHYSICAL Machine''
 		ELSE [virtual_machine_type_desc]
 	END AS [hardware_type]'
-END
-+N'	,NULL AS [total_storage_mb]
+END + N'	
+	,NULL AS [total_storage_mb]
 	,NULL AS [available_storage_mb]
 FROM sys.dm_os_sys_info AS osi'
 
@@ -742,17 +740,12 @@ SELECT
 	,s.[pending_disk_io_count]
 	,s.[load_factor]
 	,s.[yield_count]'
-	+ 
-	CASE
-		WHEN @MajorVersion >= 13
-			/*Only from SQL Server 2016+*/
-			THEN N'
-				,s.[total_cpu_usage_ms] /*SQL 2016 and later*/
-				,s.[total_scheduler_delay_ms] /*SQL 2016 and later*/'
-			ELSE ''
-	END 
-	+
-N'
++ CASE WHEN @MajorVersion >= 13 /*Only from SQL Server 2016+*/		
+	THEN N'
+		,s.[total_cpu_usage_ms] /*SQL 2016 and later*/
+		,s.[total_scheduler_delay_ms] /*SQL 2016 and later*/'
+	ELSE ''
+END + N'
 FROM sys.dm_os_schedulers AS s'
 
 EXEC sp_executesql @SqlStatement
