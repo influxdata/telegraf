@@ -37,8 +37,8 @@ type EnumMapper struct {
 }
 
 type Mapping struct {
-	Tag           []string
-	Field         []string
+	Tags           []string
+	Fields         []string
 	Dest          string
 	Default       interface{}
 	ValueMappings map[string]interface{}
