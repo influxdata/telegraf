@@ -81,6 +81,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			log.Printf("%d: ", i)
 			headerNames := make([]string, 0)
 			header, err := csvReader.Read()
+			header, err := csvReader.Read()
 			log.Printf("\t [%s] | columns: %d", header, len(header))
 			if err != nil {
 				return nil, err
