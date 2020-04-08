@@ -223,6 +223,8 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 				//}
 			}
 		}
+	} else {
+		return nil, nil	
 	}
 	// add default tags
 	for k, v := range p.DefaultTags {
@@ -267,7 +269,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		newRecordFields := make(map[string]interface{})
 		var altTimestampValues []string
 		for _, columnName := range altTimestamp {
-			if recordFields[columnName] == nil {
+			if recordFields[columnName] != nil {
 				return time.Time{}, fmt.Errorf("column: %v could not be found", columnName)
 			}
 			columnValue := fmt.Sprint(recordFields[columnName])
