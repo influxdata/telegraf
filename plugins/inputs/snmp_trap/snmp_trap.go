@@ -31,6 +31,22 @@ type mibEntry struct {
 type SnmpTrap struct {
 	ServiceAddress string            `toml:"service_address"`
 	Timeout        internal.Duration `toml:"timeout"`
+	Version        string            `toml:"version"`
+
+	// Settings for version 3
+	ContextName string `toml:"context_name"`
+	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
+	SecLevel string `toml:"sec_level"`
+	SecName  string `toml:"sec_name"`
+	// Values: "MD5", "SHA", "". Default: ""
+	AuthProtocol string `toml:"auth_protocol"`
+	AuthPassword string `toml:"auth_password"`
+	// Values: "DES", "AES", "". Default: ""
+	PrivProtocol string `toml:"priv_protocol"`
+	PrivPassword string `toml:"priv_password"`
+	EngineID     string `toml:"-"`
+	EngineBoots  uint32 `toml:"-"`
+	EngineTime   uint32 `toml:"-"`
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
@@ -58,6 +74,24 @@ var sampleConfig = `
   # service_address = "udp://:162"
   ## Timeout running snmptranslate command
   # timeout = "5s"
+  ## Snmp version, defaults to 2c
+  # version = "2c"
+  ## SNMPv3 authentication and encryption options.
+  ##
+  ## Security Name.
+  # sec_name = "myuser"
+  ## Authentication protocol; one of "MD5", "SHA", or "".
+  # auth_protocol = "MD5"
+  ## Authentication password.
+  # auth_password = "pass"
+  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
+  # sec_level = "authNoPriv"
+  ## Context Name.
+  # context_name = ""
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
+  # priv_protocol = ""
+  ## Privacy password used for encrypted messages.
+  # priv_password = ""
 `
 
 func (s *SnmpTrap) SampleConfig() string {
@@ -78,6 +112,7 @@ func init() {
 			timeFunc:       time.Now,
 			ServiceAddress: "udp://:162",
 			Timeout:        defaultTimeout,
+			Version:        "2c",
 		}
 	})
 }
@@ -104,6 +139,73 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	s.listener = gosnmp.NewTrapListener()
 	s.listener.OnNewTrap = makeTrapHandler(s)
 	s.listener.Params = gosnmp.Default
+
+	switch s.Version {
+	case "3":
+		s.listener.Params.Version = gosnmp.Version3
+	case "2c":
+		s.listener.Params.Version = gosnmp.Version2c
+	case "1":
+		s.listener.Params.Version = gosnmp.Version1
+	default:
+		s.listener.Params.Version = gosnmp.Version2c
+	}
+
+	if s.listener.Params.Version == gosnmp.Version3 {
+		s.listener.Params.ContextName = s.ContextName
+
+		sp := &gosnmp.UsmSecurityParameters{}
+		s.listener.Params.SecurityParameters = sp
+		s.listener.Params.SecurityModel = gosnmp.UserSecurityModel
+
+		switch strings.ToLower(s.SecLevel) {
+		case "noauthnopriv", "":
+			s.listener.Params.MsgFlags = gosnmp.NoAuthNoPriv
+		case "authnopriv":
+			s.listener.Params.MsgFlags = gosnmp.AuthNoPriv
+		case "authpriv":
+			s.listener.Params.MsgFlags = gosnmp.AuthPriv
+		default:
+			return fmt.Errorf("unknown security level '%s'", s.SecLevel)
+		}
+
+		sp.UserName = s.SecName
+
+		switch strings.ToLower(s.AuthProtocol) {
+		case "md5":
+			sp.AuthenticationProtocol = gosnmp.MD5
+		case "sha":
+			sp.AuthenticationProtocol = gosnmp.SHA
+		case "":
+			sp.AuthenticationProtocol = gosnmp.NoAuth
+		default:
+			return fmt.Errorf("unknown authentication protocol '%s'", s.AuthProtocol)
+		}
+		if s.AuthPassword != "" {
+			sp.AuthenticationPassphrase = s.AuthPassword
+		}
+
+		switch strings.ToLower(s.PrivProtocol) {
+		case "des":
+			sp.PrivacyProtocol = gosnmp.DES
+		case "aes":
+			sp.PrivacyProtocol = gosnmp.AES
+		case "":
+			sp.PrivacyProtocol = gosnmp.NoPriv
+		default:
+			return fmt.Errorf("unknown privacy protocol '%s'", s.PrivProtocol)
+		}
+
+		if s.PrivPassword != "" {
+			sp.PrivacyPassphrase = s.PrivPassword
+		}
+
+		sp.AuthoritativeEngineID = s.EngineID
+
+		sp.AuthoritativeEngineBoots = s.EngineBoots
+
+		sp.AuthoritativeEngineTime = s.EngineTime
+	}
 
 	// wrap the handler, used in unit tests
 	if nil != s.makeHandlerWrapper {
