@@ -37,9 +37,9 @@ type EnumMapper struct {
 }
 
 type Mapping struct {
-	Tags           []string
-	Fields         []string
-	Dest          string
+	Tags          []string
+	Fields        []string
+	Dest          []string
 	Default       interface{}
 	ValueMappings map[string]interface{}
 }
@@ -62,25 +62,25 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	for _, mapping := range mapper.Mappings {
 		if len(mapping.Fields) != 0 {
-			for _, m_field := range mapping.Fields {
+			for i, m_field := range mapping.Fields {
 				if originalValue, isPresent := metric.GetField(m_field); isPresent {
 					if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString {
 						if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
-							writeField(metric, mapping.getDestination(), mappedValue)
+							writeField(metric, mapping.getDestination(i), mappedValue)
 						}
 					}
 				}
 			}
 		}
 		if len(mapping.Tags) != 0 {
-			for _, m_tag := range mapping.Tags {
+			for i, m_tag := range mapping.Tags {
 				if originalValue, isPresent := metric.GetTag(m_tag); isPresent {
 					if mappedValue, isMappedValuePresent := mapping.mapValue(originalValue); isMappedValuePresent {
 						switch val := mappedValue.(type) {
 						case string:
-							writeTag(metric, mapping.getDestinationTag(), val)
+							writeTag(metric, mapping.getDestinationTag(i), val)
 						default:
-							writeTag(metric, mapping.getDestinationTag(), fmt.Sprintf("%v", val))
+							writeTag(metric, mapping.getDestinationTag(i), fmt.Sprintf("%v", val))
 						}
 					}
 				}
@@ -107,18 +107,18 @@ func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
 	return original, false
 }
 
-func (mapping *Mapping) getDestination() string {
-	if mapping.Dest != "" {
-		return mapping.Dest
+func (mapping *Mapping) getDestination(index int) string {
+	if mapping.Dest[index] != "" {
+		return mapping.Dest[index]
 	}
-	return mapping.Field
+	return mapping.Fields[index]
 }
 
-func (mapping *Mapping) getDestinationTag() string {
-	if mapping.Dest != "" {
-		return mapping.Dest
+func (mapping *Mapping) getDestinationTag(index int) string {
+	if mapping.Dest[index] != "" {
+		return mapping.Dest[index]
 	}
-	return mapping.Tag
+	return mapping.Tags[index]
 }
 
 func writeField(metric telegraf.Metric, name string, value interface{}) {
