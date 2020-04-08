@@ -76,13 +76,13 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	// set DataColumns to names extracted from the header
 	headersMap := make(map[int][]string)
 	if len(p.ColumnNames) == 0 {
-		log.Printf("header row count: %d", p.HeaderRowCount)
+		//log.Printf("header row count: %d", p.HeaderRowCount)
 		for i := 0; i < p.HeaderRowCount; i++ {
-			log.Printf("%d: ", i)
+			//log.Printf("%d: ", i)
 			headerNames := make([]string, 0)
 			header, err := csvReader.Read()
 
-			log.Printf("\t [%s] | columns: %d", header, len(header))
+			//log.Printf("\t [%s] | columns: %d", header, len(header))
 			if err != nil {
 				return nil, err
 			}
@@ -109,7 +109,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		}
 	}
 	p.Columns = headersMap
-	log.Printf("done reading in headers: [%s]", p.Columns)
+	//log.Printf("done reading in headers: [%s]", p.Columns)
 	table, err := csvReader.ReadAll()
 	if err != nil {
 		return nil, err
@@ -121,7 +121,6 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			//skip the record
 			continue	
 		}
-		log.Printf("columns: [%v]", p.Columns[len(record)])
 		m, err := p.parseRecord(record)
 		if err != nil {
 			return metrics, err
@@ -266,8 +265,6 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
 	timestampColumn, timestampFormat string, altTimestamp []string) (time.Time, error) {
-	log.Printf("recordFields: %v", recordFields)
-	log.Printf("recordFields[Date]: %v", recordFields["Date"])
 	if len(altTimestamp) != 0 && timestampColumn == ""{
 		newRecordFields := make(map[string]interface{})
 		var altTimestampValues []string
@@ -395,5 +392,6 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 			t.incr = time.Nanosecond
 		}
 	}
+	log.Printf("time: %v", ts.Add(t.incr*t.incrn + t.rollover))
 	return ts.Add(t.incr*t.incrn + t.rollover)
 }
