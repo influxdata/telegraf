@@ -559,8 +559,38 @@ END
 // Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
 // EngineEdition=5 is Azure SQL DB, EngineEdition=8 is Managed instance
 
-const sqlServerPropertiesV2 = `SET DEADLOCK_PRIORITY -10;
-DECLARE @sys_info TABLE (
+const sqlServerPropertiesV2 = `
+SET DEADLOCK_PRIORITY -10
+DECLARE
+	 @MajorVersion AS int
+	,@MinorVersion AS int
+	,@BuildVersion AS int
+	,@RevisionVersion AS int
+	,@EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
+
+/*Get instance info*/
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+	,@MajorVersion = y.[MajorVersion]
+	,@MinorVersion = y.[MinorVersion]
+	,@BuildVersion = y.[BuildVersion]
+	,@RevisionVersion = y.[RevisionVersion]
+FROM (
+	SELECT
+		 [EngineEdition]
+		,CAST(PARSENAME(x.[FullVersion],4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(x.[FullVersion],3) AS int) AS [MinorVersion]
+		,CAST(PARSENAME(x.[FullVersion],2) AS int) AS [BuildVersion]
+		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
+	FROM (
+		SELECT 
+			 CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+	) as x
+) as y
+
+CREATE TABLE #telegraf_server_properties (
 	cpu_count INT,
 	server_memory BIGINT,
 	sku NVARCHAR(64),
@@ -571,83 +601,123 @@ DECLARE @sys_info TABLE (
 	uptime INT
 )
 
-IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
- 	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-	SELECT 	TOP(1)
-			virtual_core_count AS cpu_count,
-			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
-			sku,
-			cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
-			hardware_generation AS hardware_type,
-			reserved_storage_mb AS total_storage_mb,
-			(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
-			(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
-	FROM	sys.server_resource_stats
-	ORDER BY start_time DESC
-
-IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
-	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-	SELECT 	TOP(1)
-			(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS cpu_count,
-			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
-			slo.edition as sku,
-			cast(SERVERPROPERTY('EngineEdition') as smallint)  AS engine_edition,
-			slo.service_objective AS hardware_type,
-                        cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)  AS total_storage_mb,
-			NULL AS available_storage_mb,  -- Can we find out storage?
-			NULL as uptime
-	FROM	 sys.databases d   
-		-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
-		CROSS JOIN sys.database_service_objectives slo
-		WHERE d.name = DB_NAME() AND slo.database_id = DB_ID()
-
-ELSE
+IF @EngineEdition = 8  /*Managed Instance*/
 BEGIN
-	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-	SELECT	cpu_count,
-			(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
-			CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
-			CAST(SERVERPROPERTY('EngineEdition') as smallint) as engine_edition,
-			CASE virtual_machine_type_desc
-				WHEN 'NONE' THEN 'PHYSICAL Machine'
-				ELSE virtual_machine_type_desc
-			END AS hardware_type,
-			NULL,
-			NULL,
-			 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
-	FROM	sys.dm_os_sys_info
+SET @SqlStatement = N'
+INSERT INTO #telegraf_server_properties (cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime)
+SELECT TOP(1)
+	srs.[virtual_core_count] AS [cpu_count],
+	(SELECT [process_memory_limit_mb] FROM sys.dm_os_job_object) AS server_memory,
+	srs.[sku],
+	cast(SERVERPROPERTY(''EngineEdition'') AS smallint) AS engine_edition,
+	srs.[hardware_generation] AS [hardware_type],
+	srs.[reserved_storage_mb] AS [total_storage_mb],
+	(srs.[reserved_storage_mb] - srs.[storage_space_used_mb]) AS [available_storage_mb],
+	(select DATEDIFF(MINUTE, sqlserver_start_time, GETDATE()) from sys.dm_os_sys_info) as [uptime]
+FROM sys.server_resource_stats AS srs
+'
+EXEC sp_executesql @SqlStatement
 END
-SELECT	'sqlserver_server_properties' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		DB_NAME() as [database_name],
-		s.cpu_count,
-		s.server_memory,
-		s.sku,
-		s.engine_edition,
-		s.hardware_type,
-		s.total_storage_mb,
-		s.available_storage_mb,
-		s.uptime,
-		SERVERPROPERTY('ProductVersion') AS sql_version,
-		db_online,
-		db_restoring,
-		db_recovering,
-		db_recoveryPending,
-		db_suspect,
-		db_offline
-FROM	(
-			SELECT	SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
-					SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
-					SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
-					SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
-					SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-					SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
-			FROM	sys.databases
-		) AS dbs
-		CROSS APPLY (
-			SELECT	cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime
-			FROM	@sys_info
-		) AS s
+
+IF @EngineEdition = 5  /*Azure SQL DB*/
+BEGIN
+SET @SqlStatement = N'
+INSERT INTO #telegraf_server_properties (cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime)
+SELECT TOP(1)
+	(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = ''VISIBLE ONLINE'') AS [cpu_count],
+	(SELECT [process_memory_limit]_mb FROM sys.dm_os_job_object) AS [server_memory],
+	slo.edition as [sku],
+	cast(SERVERPROPERTY(''EngineEdition'') as smallint)  AS [engine_edition],
+	slo.[service_objective] AS [hardware_type],
+    cast(DATABASEPROPERTYEX(DB_NAME(),''MaxSizeInBytes'') as bigint)/(1024*1024)  AS [total_storage_mb],
+	NULL AS [available_storage_mb],  -- Can we find out storage?
+	NULL as [uptime]
+FROM sys.databases AS d   
+	/*sys.databases.database_id may not match current DB_ID on Azure SQL DB*/
+CROSS JOIN sys.database_service_objectives AS slo
+	WHERE d.[name] = DB_NAME() AND slo.[database_id] = DB_ID()
+'
+
+EXEC sp_executesql @SqlStatement
+END
+
+IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
+BEGIN
+SET @SqlStatement = N'
+INSERT INTO #telegraf_server_properties (cpu_count, server_memory, uptime, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb)
+SELECT	
+	 osi.[cpu_count]
+'
++
+CASE WHEN @MajorVersion < 10 
+	THEN N'
+	,NULL AS [server_memory]	/*before SQL 2008*/
+	,NULL AS [uptime]
+'
+	ELSE N'
+	,(SELECT [total_physical_memory_kb] FROM sys.dm_os_sys_memory) AS [server_memory]
+	,DATEDIFF(MINUTE, osi.[sqlserver_start_time], GETDATE()) AS [uptime]
+'
+END
++N'
+	,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR(64)) as [sku]
+	,CAST(SERVERPROPERTY(''EngineEdition'') as smallint) as [engine_edition]
+'
++
+CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 
+	THEN N'
+	,NULL AS [virtual_machine_type_desc] /*Before SQL 2008 R2*/
+' 
+	ELSE 
+N'
+	,CASE osi.[virtual_machine_type_desc]
+		WHEN ''NONE'' THEN ''PHYSICAL Machine''
+		ELSE [virtual_machine_type_desc]
+	END AS [hardware_type]
+'
+END
++
+N'
+	,NULL AS [total_storage_mb]
+	,NULL AS [available_storage_mb]
+FROM sys.dm_os_sys_info AS osi
+'
+
+EXEC sp_executesql @SqlStatement
+END
+
+SELECT	
+	'sqlserver_server_properties' AS [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	DB_NAME() as [database_name],
+	s.[cpu_count],
+	s.[server_memory],
+	s.[sku],
+	s.[engine_edition],
+	s.[hardware_type],
+	s.[total_storage_mb],
+	s.[available_storage_mb],
+	s.[uptime],
+	SERVERPROPERTY('ProductVersion') AS [sql_version],
+	[db_online],
+	[db_restoring],
+	[db_recovering],
+	[db_recoveryPending],
+	[db_suspect],
+	[db_offline]
+FROM (
+	SELECT	SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS [db_online],
+			SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS [db_restoring],
+			SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS [db_recovering],
+			SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS [db_recoveryPending],
+			SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS [db_suspect],
+			SUM( CASE WHEN state IN (6,10) THEN 1 ELSE 0 END ) AS [db_offline]
+	FROM	sys.databases
+) AS dbs
+CROSS APPLY (
+	SELECT	[cpu_count], [server_memory], [sku], [engine_edition], [hardware_type], [total_storage_mb], [available_storage_mb], [uptime]
+	FROM	#telegraf_server_properties
+) AS s
 `
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
