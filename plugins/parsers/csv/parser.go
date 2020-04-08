@@ -334,10 +334,7 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 	if ts.IsZero() {
 		return ts
 	}
-	log.Printf("BEFORE tsMod: time: %v, last: %v", ts, t.last)
-	defer func() { t.last = ts 
-	log.Printf("AFTER tsMod: time: %v, last: %v", ts, t.last)
-}()
+	defer func() { t.last = ts }()
 	
 	// don't mod the time if we don't need to
 	if t.last.IsZero() || ts.IsZero() {
