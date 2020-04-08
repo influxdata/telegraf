@@ -10,11 +10,11 @@ import (
 
 var sampleConfig = `
   [[processors.enum.mapping]]
-    ## Name of the field to map
-    field = "status"
+    ## Name of the field(s) to map
+    fields = ["status"]
 
-    ## Name of the tag to map
-    # tag = "status"
+    ## Name of the tag(s) to map
+    # tags = ["status"]
 
     ## Destination tag or field to be used for the mapped value.  By default the
     ## source tag or field is used, overwriting the original value.
@@ -37,8 +37,8 @@ type EnumMapper struct {
 }
 
 type Mapping struct {
-	Tag           string
-	Field         string
+	Tag           []string
+	Field         []string
 	Dest          string
 	Default       interface{}
 	ValueMappings map[string]interface{}
@@ -61,23 +61,27 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	for _, mapping := range mapper.Mappings {
-		if mapping.Field != "" {
-			if originalValue, isPresent := metric.GetField(mapping.Field); isPresent {
-				if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString {
-					if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
-						writeField(metric, mapping.getDestination(), mappedValue)
+		if len(mapping.Fields) != 0 {
+			for _, m_field := range mapping.Fields {
+				if originalValue, isPresent := metric.GetField(m_field); isPresent {
+					if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString {
+						if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent {
+							writeField(metric, mapping.getDestination(), mappedValue)
+						}
 					}
 				}
 			}
 		}
-		if mapping.Tag != "" {
-			if originalValue, isPresent := metric.GetTag(mapping.Tag); isPresent {
-				if mappedValue, isMappedValuePresent := mapping.mapValue(originalValue); isMappedValuePresent {
-					switch val := mappedValue.(type) {
-					case string:
-						writeTag(metric, mapping.getDestinationTag(), val)
-					default:
-						writeTag(metric, mapping.getDestinationTag(), fmt.Sprintf("%v", val))
+		if len(mapping.Tags) != 0 {
+			for _, m_tag := range mapping.Tags {
+				if originalValue, isPresent := metric.GetTag(m_tag); isPresent {
+					if mappedValue, isMappedValuePresent := mapping.mapValue(originalValue); isMappedValuePresent {
+						switch val := mappedValue.(type) {
+						case string:
+							writeTag(metric, mapping.getDestinationTag(), val)
+						default:
+							writeTag(metric, mapping.getDestinationTag(), fmt.Sprintf("%v", val))
+						}
 					}
 				}
 			}
