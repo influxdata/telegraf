@@ -59,6 +59,9 @@ func (i *IothubConsumer) SampleConfig() string {
 #  module_id = ""
 #  shared_access_key = ""
 #  use_gateway = true
+#
+#  # 3.
+#  Provide no configuration for IoT Edge module, and it will self-configure from environment variables present in edge modules.
 
 `
 }
@@ -139,7 +142,7 @@ func (i *IothubConsumer) createConnectionString() {
 	i.ConnectionString = conn
 }
 
-func (i *IothubConsumer) validateConfiguration() error {
+func (i *IothubConsumer) validateConfiguration() bool {
 	valid := false
 
 	// connection_string provided
@@ -157,12 +160,7 @@ func (i *IothubConsumer) validateConfiguration() error {
 		valid = true
 	}
 
-	// return
-	if valid == true {
-		return nil
-	} else {
-		return fmt.Errorf("invalid plugin configuration")
-	}
+	return valid
 }
 
 func messageToMetric(msg *iotcommon.Message, acc telegraf.Accumulator) {
@@ -226,41 +224,53 @@ func fields(msg *iotcommon.Message) map[string]interface{} {
 
 // Init IoT Hub
 func (i *IothubConsumer) Init() error {
+
 	// check for a valid configuration
-	err := i.validateConfiguration()
-	if err != nil {
+	valid := i.validateConfiguration()
+
+	// if connection parameters supplied
+	if valid {
+
+		// if there's no explict connection string given
+		if !i.hasConnectionString() {
+			// create connection string from IoT Hub configuration
+			i.createConnectionString()
+		}
+
+		// create a new client from connection string
+
+		gwhn := os.Getenv("IOTEDGE_GATEWAYHOSTNAME")
+		mgid := os.Getenv("IOTEDGE_MODULEGENERATIONID")
+		wluri := os.Getenv("IOTEDGE_WORKLOADURI")
+
+		c, err := iothub.NewModuleFromConnectionString(
+			iotmqtt.NewModuleTransport(), i.ConnectionString, gwhn, mgid, wluri, true,
+		)
+
+		// set IoT Hub client
+		i.Client = *c
+		return err
+
+	} else {
+
+		// create from environment
+		c, err := iothub.NewModuleFromEnvironment(
+			iotmqtt.NewModuleTransport(), true,
+		)
+
+		// set IoT Hub client
+		i.Client = *c
 		return err
 	}
-
-	// if there's no explict connection string given
-	if !i.hasConnectionString() {
-		// create connection string from IoT Hub configuration
-		i.createConnectionString()
-	}
-
-	// create a new client from connection string
-
-	gwhn := os.Getenv("IOTEDGE_GATEWAYHOSTNAME")
-	mgid := os.Getenv("IOTEDGE_MODULEGENERATIONID")
-	wluri := os.Getenv("IOTEDGE_WORKLOADURI")
-
-	c, err := iothub.NewModuleFromConnectionString(
-		iotmqtt.NewModuleTransport(), i.ConnectionString, gwhn, mgid, wluri, true,
-	)
-
-	// set IoT Hub client
-	i.Client = *c
-
-	return err
 }
 
-// Gather -
+// Gather is not implemented
 func (i *IothubConsumer) Gather(acc telegraf.Accumulator) error {
 
 	return nil
 }
 
-// Start -
+// Start the IothubConsumer
 func (i *IothubConsumer) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	i.cancel = cancel
@@ -302,17 +312,7 @@ func (i *IothubConsumer) listen(acc telegraf.Accumulator) error {
 	return err
 }
 
-// func (i *Iothub) process(ctx context.Context, msg *iothub.Event, acc telegraf.Accumulator) error {
-// 	metrics, err := i.parser.Parse(msg.Payload)
-
-// 	for _, metric := range metrics {
-// 		acc.AddMetric(metric)
-// 	}
-
-// 	return err
-// }
-
-// Stop -
+// Stop the IotHubConsumer
 func (i *IothubConsumer) Stop() {
 	i.cancel()
 	i.Client.Close()

@@ -82,6 +82,23 @@ func (c *SharedAccessKeyCredentials) UseEdgeGateway() bool {
 	return false
 }
 
+// GetSAK not implemented for SharedAccessKeyCredentials
+func (c *SharedAccessKeyCredentials) GetSAK() string {
+	return ""
+}
+
+// GetSAK not implemented for X509Credentials
+func (c *X509Credentials) GetSAK() string {
+	return ""
+}
+
+// TokenFromEdge not implemented for X509Credentials
+func (c *X509Credentials) TokenFromEdge(
+	workloadURI, module, genid, resource string, lifetime time.Duration,
+) (*common.SharedAccessSignature, error) {
+	return nil, errors.New("cannot generate SAS tokens with x509 credentials")
+}
+
 // GetModuleID not implemented for X509Credentials
 func (c *X509Credentials) GetModuleID() string {
 	return ""

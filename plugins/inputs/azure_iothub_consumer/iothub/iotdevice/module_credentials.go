@@ -52,7 +52,7 @@ func (c *ModuleSharedAccessKeyCredentials) GetCertificate() *tls.Certificate {
 
 // GetSAK returns SharedAccessKey
 func (c *ModuleSharedAccessKeyCredentials) GetSAK() string {
-	return c.SharedAccessKey.SharedAccessKey
+	return c.SharedAccessKeyCredentials.SharedAccessKey.SharedAccessKey
 }
 
 // GetWorkloadURI returns the URI of the IoT Edge workload API

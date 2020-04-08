@@ -36,9 +36,41 @@ func NewModuleFromConnectionString(
 	return NewModule(transport, creds, opts...)
 }
 
+func NewModuleFromEnvironment(
+	transport transport.Transport,
+	edge bool,
+	opts ...ClientOption,
+) (*ModuleClient, error) {
+	creds, err := ParseModuleEnvironmentVariables()
+	if err != nil {
+		return nil, err
+	}
+	creds.EdgeGateway = edge
+	return NewModule(transport, creds, opts...)
+}
+
+func ParseModuleEnvironmentVariables() (*ModuleSharedAccessKeyCredentials, error) {
+	m, err := common.GetEdgeModuleEnvironmentVariables()
+	if err != nil {
+		return nil, err
+	}
+	return &ModuleSharedAccessKeyCredentials{
+		SharedAccessKeyCredentials: SharedAccessKeyCredentials{
+			DeviceID: m["DeviceID"],
+			SharedAccessKey: common.SharedAccessKey{
+				HostName: m["IOTHubHostName"],
+			},
+		},
+		ModuleID:     m["ModuleID"],
+		WorkloadURI:  m["WorkloadAPI"],
+		GenerationID: m["GenerationID"],
+		Gateway:      m["GatewayHostName"],
+	}, nil
+}
+
 // ParseModuleConnectionString returns a ModuleSharedAccessKeyCredentials struct with some properties derrived from a supplied connection string
 func ParseModuleConnectionString(cs string) (*ModuleSharedAccessKeyCredentials, error) {
-	m, err := common.ParseConnectionString(cs, "DeviceId", "ModuleId", "SharedAccessKey")
+	m, err := common.ParseConnectionString(cs, "DeviceId", "ModuleId")
 	if err != nil {
 		return nil, err
 	}

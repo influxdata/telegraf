@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 // DigiCert Baltimore Root
@@ -97,6 +98,11 @@ type TrustBundleResponse struct {
 
 // TrustBundle root CA certificates pool for connecting to EdgeHub Gateway.
 func TrustBundle(workloadURI string) (*x509.CertPool, error) {
+
+	// catch unix domain sockets URIs
+	if strings.Contains(workloadURI, "unix://") {
+		return nil, fmt.Errorf("tls: unable to get trust-bundle: unix sockets not yet implemented")
+	}
 
 	// format uri string
 	uri := fmt.Sprintf("%strust-bundle?api-version=2019-11-05", workloadURI)

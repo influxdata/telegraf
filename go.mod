@@ -1,6 +1,6 @@
 module github.com/influxdata/telegraf
 
-replace github.com/amenzhinsky/iothub => /go/src/github.com/influxdata/telegraf/plugins/outputs/azure_iothub/iothub
+replace github.com/amenzhinsky/iothub => /go/src/github.com/influxdata/telegraf/plugins/inputs/azure_iothub_consumer/iothub
 
 go 1.12
 

@@ -28,6 +28,8 @@ type Credentials interface {
 	GetHostName() string
 	GetCertificate() *tls.Certificate
 	Token(resource string, lifetime time.Duration) (*common.SharedAccessSignature, error)
+	TokenFromEdge(workloadURI, module, genid, resource string, lifetime time.Duration) (*common.SharedAccessSignature, error)
+	GetSAK() string
 	GetModuleID() string
 	GetGenerationID() string
 	GetGateway() string
