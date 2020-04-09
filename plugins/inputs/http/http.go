@@ -168,12 +168,12 @@ func (h *HTTP) gatherURL(
 	}
 
 	if h.BearerToken != "" {
-		token, err := ioutil.ReadFile(ki.BearerToken)
+		token, err := ioutil.ReadFile(h.BearerToken)
 		if err != nil {
 			return err
 		}
-		token = "Bearer " + token
-		request.Header.Set("Authorization", token)
+		bearer := "Bearer " + string(token)
+		request.Header.Set("Authorization", bearer)
 	}
 
 	if h.ContentEncoding == "gzip" {
