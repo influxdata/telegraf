@@ -50,11 +50,109 @@ func (o *Opcua) SampleConfig() string {
 
 // Connect Opcua client
 func (o *Opcua) Connect() error {
+	
+	o.setupOptions()
+
+	o.Client := opcua.NewClient(*o.Endpoint, o.opts...)
+	
+	if err := c.Connect(ctx); err != nil {
+		o.Client = nil
+		return err
+	}
+
+	return nil
+}
+
+func (o *Opcua) clearOptions() error{
+	opts := []opcua.Option{}
+	return nil
+}
+
+func (o *Opcua) setupOptions() error{
+	
+	opts := []opcua.Option{}
+
+	// endpoint = flag.String("endpoint", address, "OPC UA Endpoint URL")
+	// nodeID   = flag.String("node", node, "NodeID to read")
+	//policy   = flag.String("policy", "Basic256Sha256", "Security policy: None, Basic128Rsa15, Basic256, Basic256Sha256. Default: auto")
+	//mode     = flag.String("mode", "SignAndEncrypt", "Security mode: None, Sign, SignAndEncrypt. Default: auto")
+	//certFile = flag.String("cert", "./trusted/cert.pem", "Path to cert.pem. Required for security mode/policy != None")
+	//keyFile  = flag.String("key", "./trusted/key.pem", "Path to private key.pem. Required for security mode/policy != None")
+	// policy = flag.String("policy", "None", "Security policy: None, Basic128Rsa15, Basic256, Basic256Sha256. Default: auto")
+	// mode   = flag.String("mode", "None", "Security mode: None, Sign, SignAndEncrypt. Default: auto")
+
+	Endpoint
+	NodeID
+	Policy
+	Mode
+	Username
+	Password
+	CertFile
+	KeyFile
+	AuthMethod
+	Debug
+	CreateSelfSignedCert
+	SelfSignedCertExpiresAfter
+	selfSignedCertNextExpires
+	cleanupCerts
+
+	opts := Append(opts, opcua.SecurityPolicy(*o.Policy))
+	opcua.SecurityModeString(*mode),
+	opcua.CertificateFile(*certFile),
+	opcua.PrivateKeyFile(*keyFile),
+	opcua.AuthAnonymous(),
+	opcua.SecurityFromEndpoint(ep, ua.UserTokenTypeAnonymous),
+
+	o.opts = opts
+	
 	return nil
 }
 
 // Write new value to node
 func (o *Opcua) Write(metrics []telegraf.Metric) error {
+
+	allErrs := map[string]error{}
+
+	for _,metric := range metrics {
+		for key,value := range metric.Fields {
+			err := o.updateNode(key, value)
+			if err != nil {
+				allErrs[key] = err
+			}
+		}
+	}
+
+	if len(allErrs) > 0 {
+		message := "Errors during write:"
+		for node,e := range allErrs {
+			message = fmt.Sprintf("%s,\n%s: %s", message, node, e.Error())
+		}
+		return fmt.Errorf("ERROR: %s", message)
+	}
+
+	return nil
+}
+
+func (o *Opcua) updateNode(nodeID string, newValue interface{}) error {
+	
+	req := &ua.WriteRequest{
+		NodesToWrite: []*ua.WriteValue{
+			&ua.WriteValue{
+				NodeID:      id,
+				AttributeID: ua.AttributeIDValue,
+				Value: &ua.DataValue{
+					EncodingMask: ua.DataValueValue,
+					Value:        v,
+				},
+			},
+		},
+	}
+
+	resp, err := o.Client.Write(req)
+	if err != nil {
+		return err
+	}
+	
 	return nil
 }
 
