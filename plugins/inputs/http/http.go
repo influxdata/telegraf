@@ -172,7 +172,7 @@ func (h *HTTP) gatherURL(
 		if err != nil {
 			return err
 		}
-		bearer := "Bearer " + string(token)
+		bearer := "Bearer " + strings.Trim(string(token), "\n")
 		request.Header.Set("Authorization", bearer)
 	}
 
