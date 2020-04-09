@@ -494,20 +494,20 @@ func (a *Agent) runOutputs(
 	startTime time.Time,
 	src <-chan telegraf.Metric,
 ) error {
-	interval := a.Config.Agent.FlushInterval.Duration
-	jitter := a.Config.Agent.FlushJitter.Duration
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var wg sync.WaitGroup
 	for _, output := range a.Config.Outputs {
-		interval := interval
+		firstIntervalCollectionTime := a.Config.Agent.Interval.Duration + a.Config.Agent.CollectionJitter.Duration
+		flushImmediately := a.Config.Agent.FlushAfterFirstIntervalCollection
+
+		interval := a.Config.Agent.FlushInterval.Duration
 		// Overwrite agent flush_interval if this plugin has its own.
 		if output.Config.FlushInterval != 0 {
 			interval = output.Config.FlushInterval
 		}
 
-		jitter := jitter
+		jitter := a.Config.Agent.FlushJitter.Duration
 		// Overwrite agent flush_jitter if this plugin has its own.
 		if output.Config.FlushJitter != nil {
 			jitter = *output.Config.FlushJitter
@@ -517,6 +517,15 @@ func (a *Agent) runOutputs(
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
 
+			if flushImmediately {
+				// wait long enough for one input collection, then flush.
+				if err := internal.SleepContext(ctx, firstIntervalCollectionTime+1*time.Second); err != nil {
+					return
+				}
+				if err := a.flushOnce(output, interval, output.Write); err != nil {
+					log.Printf("E! [agent] Error writing to %s: %v", output.LogName(), err)
+				}
+			}
 			if a.Config.Agent.RoundInterval {
 				err := internal.SleepContext(
 					ctx, internal.AlignDuration(startTime, interval))

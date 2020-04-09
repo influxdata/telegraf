@@ -120,6 +120,13 @@ type AgentConfig struct {
 	// ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
 	FlushJitter internal.Duration
 
+	// FlushAfterFirstIntervalCollection instructs Telegraf to flush metrics after
+	// first starting and collecting the first round of metrics. This is
+	// specifically used for cases where your FlushInterval is really large, but
+	// you don't want to wait the full FlushInterval to see your first metrics
+	// come through. It's typically not required to set this.
+	FlushAfterFirstIntervalCollection bool `toml:"flush_after_first_interval_collection"`
+
 	// MetricBatchSize is the maximum number of metrics that is wrote to an
 	// output plugin in one call.
 	MetricBatchSize int
@@ -279,6 +286,13 @@ var agentConfig = `
   ## large write spikes for users running a large number of telegraf instances.
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
+
+	## FlushAfterFirstIntervalCollection instructs Telegraf to flush metrics after
+	## first starting and collecting the first round of metrics. This is
+	## specifically used for cases where your FlushInterval is really large, but
+	## you don't want to wait the full FlushInterval to see your first metrics
+	## come through. It's typically not required to set this.
+	# flush_after_first_interval_collection = false
 
   ## By default or when set to "0s", precision will be set to the same
   ## timestamp order as the collection interval, with the maximum being 1s.

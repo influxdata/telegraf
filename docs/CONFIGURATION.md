@@ -132,6 +132,12 @@ The agent table configures Telegraf and the defaults used across all plugins.
   running a large number of telegraf instances. ie, a jitter of 5s and interval
   10s means flushes will happen every 10-15s.
 
+- **flush_after_first_interval_collection**:
+  Instructs Telegraf to flush metrics after first starting and collecting the
+  first round of metrics. This is specifically used for cases where your
+  FlushInterval is really large, but you don't want to wait the full
+  FlushInterval to see your first metrics come through. Defaults to false.
+  It's typically not required to set this.
 
 - **precision**:
   Collected metrics are rounded to the precision specified as an [interval][].
