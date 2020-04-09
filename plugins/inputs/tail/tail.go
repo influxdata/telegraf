@@ -3,6 +3,7 @@
 package tail
 
 import (
+	"log"
 	"strings"
 	"sync"
 
@@ -229,6 +230,7 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 
 		for _, metric := range metrics {
 			metric.AddTag("path", tailer.Filename)
+			log.Printf("time: [%v]", metric.Time())
 			t.acc.AddMetric(metric)
 		}
 	}
