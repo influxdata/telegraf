@@ -661,19 +661,18 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 	for retry := 0; retry <= m.Retries; retry += 1 {
 		timestamp = time.Now()
 		err := m.getFields()
-		if err == nil {
-			// Reading was successful, leave the retry loop
-			break
-		} else {
+		if err != nil {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
 				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
-			} else {
-				disconnect(m)
-				m.isConnected = false
-				return err
+				continue
 			}
+			disconnect(m)
+			m.isConnected = false
+			return err
 		}
+		// Reading was successful, leave the retry loop
+		break
 		time.Sleep(m.RetriesWaitTime.Duration)
 	}
 
