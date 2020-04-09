@@ -63,6 +63,7 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 			if f.FileTag != "" {
 				m.AddTag(f.FileTag, filepath.Base(k))
 			}
+			log.Printf("time: [%v]", m.Time())
 			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}
