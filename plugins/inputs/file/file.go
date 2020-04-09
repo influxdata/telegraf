@@ -65,7 +65,8 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 				m.AddTag(f.FileTag, filepath.Base(k))
 			}
 			log.Printf("time: [%v]", m.Time())
-			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			//acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			acc.AddMetric(m)
 		}
 	}
 	return nil
