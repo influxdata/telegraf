@@ -1,6 +1,7 @@
 package file
 
 import (
+	"log"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
