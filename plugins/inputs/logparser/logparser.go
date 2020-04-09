@@ -103,7 +103,7 @@ const sampleConfig = `
   # strip_path_prefix = ""
   ## Remove a suffix from the 'path' generated tag.
   ## e.g: strip_path_suffix=".log", for a file '/var/log/mylogfile.log' -> resulting tag '/var/log/mylogfile'.
-  # strip_path_suffix = ".log"
+  # strip_path_suffix = ""
   ## Remove the folder part of the 'path' generated tag. If set to 'true', 'strip_path_prefix' is ignored.
   ## e.g: strip_path_folder=true, for a file '/var/log/mylogfile.log' -> resulting tag 'mylogfile.log'/
   # strip_path_folder = false
