@@ -222,6 +222,87 @@ func TestGrokParseLogFiles_TimestampInEpochMilli(t *testing.T) {
 		})
 }
 
+func TestGrokParseLogFilesWithPathTagStripping(t *testing.T) {
+	thisdir := getCurrentDir()
+	type testCaseScenario struct {
+		name                   string
+		stripPathPrefix        string
+		stripPathSuffix        string
+		stripPathFolder        bool
+		stripPathFileExtension bool
+		expectedPathTag        string
+	}
+
+	logparser := &LogParserPlugin{
+		Log: testutil.Logger{},
+		GrokConfig: GrokConfig{
+			MeasurementName:    "logparser_grok",
+			Patterns:           []string{"%{TEST_LOG_A}"},
+			CustomPatternFiles: []string{thisdir + "testdata/test-patterns"},
+		},
+		FromBeginning: true,
+		Files:         []string{thisdir + "testdata/test_a.log"},
+	}
+
+	testCaseScenarios := []testCaseScenario{
+		{
+			name:            "No_Path_Stripping_When_Disabled",
+			expectedPathTag: thisdir + "testdata/test_a.log",
+		},
+		{
+			name:            "Path_Prefix_Stripped",
+			stripPathPrefix: thisdir,
+			expectedPathTag: "testdata/test_a.log",
+		},
+		{
+			name:            "Path_Suffix_Stripped",
+			stripPathSuffix: "_a.log",
+			expectedPathTag: thisdir + "testdata/test",
+		},
+		{
+			name:            "Path_Folder_Stripped",
+			stripPathFolder: true,
+			expectedPathTag: "test_a.log",
+		},
+		{
+			name:                   "Path_File_Extension_Stripped",
+			stripPathFileExtension: true,
+			expectedPathTag:        thisdir + "testdata/test_a",
+		},
+		{
+			name:            "StripPathPrefix_Ignored_When_StripPathFolder",
+			stripPathPrefix: thisdir,
+			stripPathFolder: true,
+			expectedPathTag: "test_a.log",
+		},
+		{
+			name:                   "StripPathSuffix_Ignored_When_StripPathFileExtension",
+			stripPathSuffix:        "_a.log",
+			stripPathFileExtension: true,
+			expectedPathTag:        thisdir + "testdata/test_a",
+		},
+	}
+	for _, tc := range testCaseScenarios {
+		t.Run(tc.name, func(t *testing.T) {
+			logparser.StripPathSuffix = tc.stripPathSuffix
+			logparser.StripPathPrefix = tc.stripPathPrefix
+			logparser.StripPathFileExtension = tc.stripPathFileExtension
+			logparser.StripPathFolder = tc.stripPathFolder
+
+			acc := testutil.Accumulator{}
+			require.NoError(t, logparser.Start(&acc))
+			acc.Wait(1)
+			logparser.Stop()
+			gotMetric := acc.GetTelegrafMetrics()[0]
+			if gotPathTag, ok := gotMetric.Tags()["path"]; !ok {
+				t.Fatal("Missing 'path' key in metric")
+			} else {
+				assert.Equal(t, tc.expectedPathTag, gotPathTag)
+			}
+		})
+	}
+}
+
 func getCurrentDir() string {
 	_, filename, _, _ := runtime.Caller(1)
 	return strings.Replace(filename, "logparser_test.go", "", 1)

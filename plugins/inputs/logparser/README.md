@@ -57,6 +57,56 @@ regex patterns.
     # timezone = "Canada/Eastern"
 ```
 
+### The 'path' tag
+
+This plugin generates a `path` tag, that by default includes the full path of the file for which the metric was issued.
+
+#### Discarding the tag
+
+The tag can be dropped by standard
+[metric-filtering](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering)
+
+```toml
+[[inputs.logparser]]
+  tagexclude = ["path"]
+```
+
+#### Removing prefixes and suffixes
+
+The configuration variables `strip_path_prefix` and `strip_path_suffix` allow manipulating the tag to strip static
+prefixes or suffixes from it.
+
+Given the partial configuration:
+
+```toml
+[[inputs.logparser]]
+  files = ["/var/log/myfolder/**"]
+  strip_path_suffix = ".log"
+  strip_path_prefix = "/var/log/myfolder/"
+```
+
+- `/var/log/myfolder/myfile1.err` will generate the `path=myfile1.err` tag
+- `/var/log/myfolder/subfolder/myfile2.log` will generate the `path=subfolder/myfile2` tag
+
+Please note that these settings are ignored when using `strip_path_folder` and `strip_path_file_extension`
+
+#### Removing folder and extension
+
+The variables `strip_path_folder` and `strip_path_file_extension` can be used for removing the folder part and the
+extension of the path respectively.
+
+Given the partial configuration:
+
+```toml
+[[inputs.logparser]]
+  files = ["/var/log/myfolder/**"]
+  strip_path_folder = true
+  strip_path_file_extension = true
+```
+
+- `/var/log/myfolder/myfile1.err` will generate the `path=myfile1` tag
+- `/var/log/myfolder/subfolder/myfile2.log` will generate the `path=myfile2` tag
+
 ## Grok Parser
 
 The best way to get acquainted with grok patterns is to read the logstash docs,

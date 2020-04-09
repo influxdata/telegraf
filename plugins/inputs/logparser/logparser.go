@@ -4,14 +4,15 @@ package logparser
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/influxdata/tail"
+	"github.com/influxdata/telegraf/plugins/inputs"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
@@ -45,6 +46,11 @@ type LogParserPlugin struct {
 	Files         []string
 	FromBeginning bool
 	WatchMethod   string
+
+	StripPathPrefix        string
+	StripPathSuffix        string
+	StripPathFolder        bool
+	StripPathFileExtension bool
 
 	Log telegraf.Logger
 
@@ -91,6 +97,19 @@ const sampleConfig = `
 
   ## Method used to watch for file updates.  Can be either "inotify" or "poll".
   # watch_method = "inotify"
+
+  ## Remove a prefix from the 'path' generated tag.
+  ## e.g: strip_path_prefix="/var/log/", for a file '/var/log/mylogfile.log' -> resulting tag 'mylogfile.log'.
+  # strip_path_prefix = ""
+  ## Remove a suffix from the 'path' generated tag.
+  ## e.g: strip_path_suffix=".log", for a file '/var/log/mylogfile.log' -> resulting tag '/var/log/mylogfile'.
+  # strip_path_suffix = ".log"
+  ## Remove the folder part of the 'path' generated tag. If set to 'true', 'strip_path_prefix' is ignored.
+  ## e.g: strip_path_folder=true, for a file '/var/log/mylogfile.log' -> resulting tag 'mylogfile.log'/
+  # strip_path_folder = false
+  ## Remove the file extension for the 'path' generated tag. If set to 'true', 'strip_path_suffix' is ignored.
+  ## e.g: strip_path_file_extension=true, for a file '/var/log/mylogfile.log' -> resulting tag '/var/log/mylogfile'.
+  # strip_path_file_extension = false
 
   ## Parse logstash-style "grok" patterns:
   [inputs.logparser.grok]
@@ -152,6 +171,14 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
 
+	if l.StripPathFolder && l.StripPathPrefix != "" {
+		l.Log.Warn("Both 'strip_path_folder' and 'strip_path_prefix' are configured. Ignoring 'strip_path_prefix'")
+	}
+
+	if l.StripPathFileExtension && l.StripPathSuffix != "" {
+		l.Log.Warn("Both 'strip_path_file_extension' and 'strip_path_suffix' are set. Ignoring 'strip_path_suffix'")
+	}
+
 	l.acc = acc
 	l.lines = make(chan logEntry, 1000)
 	l.done = make(chan struct{})
@@ -204,10 +231,10 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 	}
 
 	// Create a "tailer" for each file
-	for _, filepath := range l.Files {
-		g, err := globpath.Compile(filepath)
+	for _, filePath := range l.Files {
+		g, err := globpath.Compile(filePath)
 		if err != nil {
-			l.Log.Errorf("Glob %q failed to compile: %s", filepath, err)
+			l.Log.Errorf("Glob %q failed to compile: %s", filePath, err)
 			continue
 		}
 		files := g.Match()
@@ -289,6 +316,24 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 	}
 }
 
+// getPathTag returns the value to be used for 'path' tag for a given file path
+func (l *LogParserPlugin) getPathTag(path string) string {
+
+	if l.StripPathFolder {
+		path = filepath.Base(path)
+	} else if l.StripPathPrefix != "" {
+		path = strings.TrimPrefix(path, l.StripPathPrefix)
+	}
+
+	if l.StripPathFileExtension {
+		path = strings.TrimSuffix(path, filepath.Ext(path))
+	} else if l.StripPathSuffix != "" {
+		path = strings.TrimSuffix(path, l.StripPathSuffix)
+	}
+
+	return path
+}
+
 // parse is launched as a goroutine to watch the l.lines channel.
 // when a line is available, parse parses it and adds the metric(s) to the
 // accumulator.
@@ -311,7 +356,7 @@ func (l *LogParserPlugin) parser() {
 		if err == nil {
 			if m != nil {
 				tags := m.Tags()
-				tags["path"] = entry.path
+				tags["path"] = l.getPathTag(entry.path)
 				l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
 		} else {
