@@ -245,8 +245,11 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 	}
 	
 	if p.UniqueTimestamp == "auto" {
+		log.Println("Checking for duplicate times..")
+		modTs := p.tsModder.tsMod(metricTime)
+		fmt.Printf("modded time: [%v] = %d\n", modTs, modTs.UnixNano())
 		//increment the metricTime to treat the current metric as a unique entry.
-		m, err := metric.New(measurementName, tags, recordFields, p.tsModder.tsMod(metricTime))
+		m, err := metric.New(measurementName, tags, recordFields, modTs)
 		if err != nil {
 			return nil, err
 		}
@@ -276,9 +279,12 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			altTimestampValues = append(altTimestampValues, columnValue)
 		}
 		t := strings.Join(altTimestampValues, " ")
+		loc, err := time.LoadLocation("Canada/Eastern")
+		time.Local = loc
 		ts, err := dateparse.ParseLocal(t)
 		
-		newRecordFields["altTimestamp"] = ts.Format(timestampFormat)
+		newRecordFields["altTimestamp"] = ts.Format("2006-01-02 15:04:05.000000000")
+		//log.Printf("altTs: [%v]", newRecordFields["altTimestamp"])
 		//Return format will be 2014-04-08 22:05:00 +0000 UTC
 		if err != nil {
 			return time.Time{}, fmt.Errorf("altTimestamp could not be parsed")
@@ -288,7 +294,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 			case "":
 				return time.Time{}, fmt.Errorf("timestamp format must be specified")
 			default:	
-				metricTime, err := internal.ParseTimestamp(timestampFormat, newRecordFields["altTimestamp"], "America/Toronto")
+				metricTime, err := internal.ParseTimestamp("2006-01-02 15:04:05.000000000", newRecordFields["altTimestamp"], "Canada/Eastern")
 				if err != nil{
 					return time.Time{}, err
 				}
@@ -341,7 +347,11 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 	if ts.IsZero() {
 		return ts
 	}
-	defer func() { t.last = ts }()
+	fmt.Printf("last time (before): %d\n", t.last.UnixNano())
+	defer func() { 
+t.last = ts 
+fmt.Printf("last time (after): %d\n", t.last.UnixNano())
+}()
 	
 	// don't mod the time if we don't need to
 	if t.last.IsZero() || ts.IsZero() {
@@ -392,6 +402,5 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 			t.incr = time.Nanosecond
 		}
 	}
-	log.Printf("time: %v", ts.Add(t.incr*t.incrn + t.rollover))
 	return ts.Add(t.incr*t.incrn + t.rollover)
 }
