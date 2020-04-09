@@ -3,7 +3,6 @@
 import sys
 import os
 import subprocess
-import time
 from datetime import datetime
 import shutil
 import tempfile
@@ -53,9 +52,9 @@ VENDOR = "InfluxData"
 DESCRIPTION = "Plugin-driven server agent for reporting metrics into InfluxDB."
 
 # SCRIPT START
-prereqs = [ 'git', 'go' ]
+prereqs = ['git', 'go']
 go_vet_command = "go tool vet -composites=true ./"
-optional_prereqs = [ 'gvm', 'fpm', 'rpmbuild' ]
+optional_prereqs = ['gvm', 'fpm', 'rpmbuild']
 
 fpm_common_args = "-f -s dir --log error \
  --vendor {} \
@@ -74,7 +73,7 @@ fpm_common_args = "-f -s dir --log error \
     PACKAGE_URL,
     PACKAGE_LICENSE,
     MAINTAINER,
-    CONFIG_DIR + '/telegraf.conf',
+    CONFIG_DIR + '/telegraf.conf.sample',
     LOGROTATE_DIR + '/telegraf',
     POSTINST_SCRIPT,
     PREINST_SCRIPT,
@@ -84,21 +83,21 @@ fpm_common_args = "-f -s dir --log error \
     DESCRIPTION)
 
 targets = {
-    'telegraf' : './cmd/telegraf',
+    'telegraf': './cmd/telegraf',
 }
 
 supported_builds = {
-    'darwin': [ "amd64" ],
-    "windows": [ "amd64", "i386" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x", "mipsel", "mips"],
-    "freebsd": [ "amd64", "i386" ]
+    'darwin': ["amd64"],
+    "windows": ["amd64", "i386"],
+    "linux": ["amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x", "mipsel", "mips"],
+    "freebsd": ["amd64", "i386"]
 }
 
 supported_packages = {
-    "darwin": [ "tar" ],
-    "linux": [ "deb", "rpm", "tar" ],
-    "windows": [ "zip" ],
-    "freebsd": [ "tar" ]
+    "darwin": ["tar"],
+    "linux": ["deb", "rpm", "tar"],
+    "windows": ["zip"],
+    "freebsd": ["tar"]
 }
 
 next_version = '1.15.0'
@@ -106,6 +105,7 @@ next_version = '1.15.0'
 ################
 #### Telegraf Functions
 ################
+
 
 def print_banner():
     logging.info("""
@@ -118,16 +118,18 @@ def print_banner():
  Build Script
 """)
 
+
 def create_package_fs(build_root):
     """Create a filesystem structure to mimic the package filesystem.
     """
     logging.debug("Creating a filesystem hierarchy from directory: {}".format(build_root))
     # Using [1:] for the path names due to them being absolute
     # (will overwrite previous paths, per 'os.path.join' documentation)
-    dirs = [ INSTALL_ROOT_DIR[1:], LOG_DIR[1:], SCRIPT_DIR[1:], CONFIG_DIR[1:], LOGROTATE_DIR[1:], CONFIG_DIR_D[1:] ]
+    dirs = [INSTALL_ROOT_DIR[1:], LOG_DIR[1:], SCRIPT_DIR[1:], CONFIG_DIR[1:], LOGROTATE_DIR[1:], CONFIG_DIR_D[1:]]
     for d in dirs:
         os.makedirs(os.path.join(build_root, d))
         os.chmod(os.path.join(build_root, d), 0o755)
+
 
 def package_scripts(build_root, config_only=False, windows=False):
     """Copy the necessary scripts and configuration files to the package
@@ -136,10 +138,10 @@ def package_scripts(build_root, config_only=False, windows=False):
     if config_only or windows:
         logging.info("Copying configuration to build directory")
         if windows:
-            shutil.copyfile(DEFAULT_WINDOWS_CONFIG, os.path.join(build_root, "telegraf.conf"))
+            shutil.copyfile(DEFAULT_WINDOWS_CONFIG, os.path.join(build_root, "telegraf.conf.sample"))
         else:
-            shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, "telegraf.conf"))
-        os.chmod(os.path.join(build_root, "telegraf.conf"), 0o644)
+            shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, "telegraf.conf.sample"))
+        os.chmod(os.path.join(build_root, "telegraf.conf.sample"), 0o644)
     else:
         logging.info("Copying scripts and configuration to build directory")
         shutil.copyfile(INIT_SCRIPT, os.path.join(build_root, SCRIPT_DIR[1:], INIT_SCRIPT.split('/')[1]))
@@ -148,12 +150,14 @@ def package_scripts(build_root, config_only=False, windows=False):
         os.chmod(os.path.join(build_root, SCRIPT_DIR[1:], SYSTEMD_SCRIPT.split('/')[1]), 0o644)
         shutil.copyfile(LOGROTATE_SCRIPT, os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"))
         os.chmod(os.path.join(build_root, LOGROTATE_DIR[1:], "telegraf"), 0o644)
-        shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"))
-        os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf"), 0o644)
+        shutil.copyfile(DEFAULT_CONFIG, os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf.sample"))
+        os.chmod(os.path.join(build_root, CONFIG_DIR[1:], "telegraf.conf.sample"), 0o644)
+
 
 def run_generate():
     # NOOP for Telegraf
     return True
+
 
 def go_get(branch, update=False, no_uncommitted=False):
     """Retrieve build dependencies or restore pinned dependencies.
@@ -165,9 +169,11 @@ def go_get(branch, update=False, no_uncommitted=False):
     run("go mod download")
     return True
 
+
 def run_tests(race, parallel, timeout, no_vet):
     # Currently a NOOP for Telegraf
     return True
+
 
 ################
 #### All Telegraf-specific content above this line
@@ -187,14 +193,14 @@ def run(command, allow_failure=False, shell=False):
         # logging.debug("Command output: {}".format(out))
     except subprocess.CalledProcessError as e:
         if allow_failure:
-            logging.warn("Command '{}' failed with error: {}".format(command, e.output))
+            logging.warning("Command '{}' failed with error: {}".format(command, e.output))
             return None
         else:
             logging.error("Command '{}' failed with error: {}".format(command, e.output))
             sys.exit(1)
     except OSError as e:
         if allow_failure:
-            logging.warn("Command '{}' failed with error: {}".format(command, e))
+            logging.warning("Command '{}' failed with error: {}".format(command, e))
             return out
         else:
             logging.error("Command '{}' failed with error: {}".format(command, e))
@@ -202,7 +208,8 @@ def run(command, allow_failure=False, shell=False):
     else:
         return out
 
-def create_temp_dir(prefix = None):
+
+def create_temp_dir(prefix=None):
     """ Create temporary directory with optional prefix.
     """
     if prefix is None:
@@ -210,13 +217,14 @@ def create_temp_dir(prefix = None):
     else:
         return tempfile.mkdtemp(prefix=prefix)
 
+
 def increment_minor_version(version):
     """Return the version with the minor version incremented and patch
     version set to zero.
     """
     ver_list = version.split('.')
     if len(ver_list) != 3:
-        logging.warn("Could not determine how to increment version '{}', will just use provided version.".format(version))
+        logging.warning("Could not determine how to increment version '{}', will just use provided version.".format(version))
         return version
     ver_list[1] = str(int(ver_list[1]) + 1)
     ver_list[2] = str(0)
@@ -224,12 +232,14 @@ def increment_minor_version(version):
     logging.debug("Incremented version from '{}' to '{}'.".format(version, inc_version))
     return inc_version
 
+
 def get_current_version_tag():
     """Retrieve the raw git version tag.
     """
     version = run("git describe --exact-match --tags 2>/dev/null",
-            allow_failure=True, shell=True)
+                  allow_failure=True, shell=True)
     return version
+
 
 def get_current_version():
     """Parse version information from git tag output.
@@ -242,21 +252,22 @@ def get_current_version():
         version_tag = version_tag[1:]
     # Replace any '-'/'_' with '~'
     if '-' in version_tag:
-        version_tag = version_tag.replace("-","~")
+        version_tag = version_tag.replace("-", "~")
     if '_' in version_tag:
-        version_tag = version_tag.replace("_","~")
+        version_tag = version_tag.replace("_", "~")
     return version_tag
+
 
 def get_current_commit(short=False):
     """Retrieve the current git commit.
     """
-    command = None
     if short:
         command = "git log --pretty=format:'%h' -n 1"
     else:
         command = "git rev-parse HEAD"
     out = run(command)
     return out.strip('\'\n\r ')
+
 
 def get_current_branch():
     """Retrieve the current git branch.
@@ -265,6 +276,7 @@ def get_current_branch():
     out = run(command)
     return out.strip()
 
+
 def local_changes():
     """Return True if there are local un-committed changes.
     """
@@ -272,6 +284,7 @@ def local_changes():
     if len(output) > 0:
         return True
     return False
+
 
 def get_system_arch():
     """Retrieve current system architecture.
@@ -288,6 +301,7 @@ def get_system_arch():
         arch = "arm"
     return arch
 
+
 def get_system_platform():
     """Retrieve current system platform.
     """
@@ -295,6 +309,7 @@ def get_system_platform():
         return "linux"
     else:
         return sys.platform
+
 
 def get_go_version():
     """Retrieve version information for Go.
@@ -305,6 +320,7 @@ def get_go_version():
         return matches.groups()[0].strip()
     return None
 
+
 def check_path_for(b):
     """Check the the user's path for the provided binary.
     """
@@ -314,20 +330,22 @@ def check_path_for(b):
     for path in os.environ["PATH"].split(os.pathsep):
         path = path.strip('"')
         full_path = os.path.join(path, b)
-        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+        if is_exe(full_path):
             return full_path
 
-def check_environ(build_dir = None):
+
+def check_environ(build_dir=None):
     """Check environment for common Go variables.
     """
     logging.info("Checking environment...")
-    for v in [ "GOPATH", "GOBIN", "GOROOT" ]:
+    for v in ["GOPATH", "GOBIN", "GOROOT"]:
         logging.debug("Using '{}' for {}".format(os.environ.get(v), v))
 
     cwd = os.getcwd()
     if build_dir is None and os.environ.get("GOPATH") and os.environ.get("GOPATH") not in cwd:
-        logging.warn("Your current directory is not under your GOPATH. This may lead to build failures.")
+        logging.warning("Your current directory is not under your GOPATH. This may lead to build failures.")
     return True
+
 
 def check_prereqs():
     """Check user path for required dependencies.
@@ -338,6 +356,7 @@ def check_prereqs():
             logging.error("Could not find dependency: {}".format(req))
             return False
     return True
+
 
 def upload_packages(packages, bucket_name=None, overwrite=False):
     """Upload provided package output to AWS S3.
@@ -379,8 +398,9 @@ def upload_packages(packages, bucket_name=None, overwrite=False):
                 n = k.set_contents_from_filename(p, replace=False)
             k.make_public()
         else:
-            logging.warn("Not uploading file {}, as it already exists in the target bucket.".format(name))
+            logging.warning("Not uploading file {}, as it already exists in the target bucket.".format(name))
     return True
+
 
 def go_list(vendor=False, relative=False):
     """
@@ -408,6 +428,7 @@ def go_list(vendor=False, relative=False):
         packages = relative_pkgs
     return packages
 
+
 def build(version=None,
           platform=None,
           arch=None,
@@ -415,10 +436,12 @@ def build(version=None,
           race=False,
           clean=False,
           outdir=".",
-          tags=[],
+          tags=None,
           static=False):
     """Build each target for the specified architecture and platform.
     """
+    if tags is None:
+        tags = []
     logging.info("Starting build for {}/{}...".format(platform, arch))
     logging.info("Using Go version: {}".format(get_go_version()))
     logging.info("Using git branch: {}".format(get_current_branch()))
@@ -502,6 +525,7 @@ def build(version=None,
         logging.info("Time taken: {}s".format((end_time - start_time).total_seconds()))
     return True
 
+
 def generate_sha256_from_file(path):
     """Generate SHA256 hash signature based on the contents of the file at path.
     """
@@ -510,19 +534,21 @@ def generate_sha256_from_file(path):
         m.update(f.read())
     return m.hexdigest()
 
+
 def generate_sig_from_file(path):
     """Generate a detached GPG signature from the file at path.
     """
     logging.debug("Generating GPG signature for file: {}".format(path))
     gpg_path = check_path_for('gpg')
     if gpg_path is None:
-        logging.warn("gpg binary not found on path! Skipping signature creation.")
+        logging.warning("gpg binary not found on path! Skipping signature creation.")
         return False
     if os.environ.get("GNUPG_HOME") is not None:
         run('gpg --homedir {} --armor --yes --detach-sign {}'.format(os.environ.get("GNUPG_HOME"), path))
     else:
         run('gpg --armor --detach-sign --yes {}'.format(path))
     return True
+
 
 def package(build_output, pkg_name, version, nightly=False, iteration=1, static=False, release=False):
     """Package the output of the build process.
@@ -659,7 +685,7 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                         if matches is not None:
                             outfile = matches.groups()[0]
                         if outfile is None:
-                            logging.warn("Could not determine output from packaging output!")
+                            logging.warning("Could not determine output from packaging output!")
                         else:
                             if nightly:
                                 # Strip nightly version from package name
@@ -676,6 +702,7 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
     finally:
         # Cleanup
         shutil.rmtree(tmp_build_dir)
+
 
 def main(args):
     global PACKAGE_NAME
@@ -736,7 +763,7 @@ def main(args):
         platforms = [args.platform]
 
     for platform in platforms:
-        build_output.update( { platform : {} } )
+        build_output.update({platform: {}})
         archs = []
         if args.arch == "all":
             single_build = False
@@ -758,7 +785,7 @@ def main(args):
                          tags=args.build_tags,
                          static=args.static):
                 return 1
-            build_output.get(platform).update( { arch : od } )
+            build_output.get(platform).update({arch: od})
 
     # Build packages
     if args.package:
@@ -774,7 +801,7 @@ def main(args):
                            release=args.release)
         if args.sign:
             logging.debug("Generating GPG signatures for packages: {}".format(packages))
-            sigs = [] # retain signatures so they can be uploaded with packages
+            sigs = []  # retain signatures so they can be uploaded with packages
             for p in packages:
                 if generate_sig_from_file(p):
                     sigs.append(p + '.asc')
@@ -799,6 +826,7 @@ def main(args):
 
     return 0
 
+
 if __name__ == '__main__':
     LOG_LEVEL = logging.INFO
     if '--debug' in sys.argv[1:]:
@@ -808,7 +836,7 @@ if __name__ == '__main__':
                         format=log_format)
 
     parser = argparse.ArgumentParser(description='InfluxDB build and packaging script.')
-    parser.add_argument('--verbose','-v','--debug',
+    parser.add_argument('--verbose', '-v', '--debug',
                         action='store_true',
                         help='Use debug output')
     parser.add_argument('--outdir', '-o',
@@ -886,7 +914,7 @@ if __name__ == '__main__':
     parser.add_argument('--upload',
                         action='store_true',
                         help='Upload output packages to AWS S3')
-    parser.add_argument('--upload-overwrite','-w',
+    parser.add_argument('--upload-overwrite', '-w',
                         action='store_true',
                         help='Upload output packages to AWS S3')
     parser.add_argument('--bucket',
