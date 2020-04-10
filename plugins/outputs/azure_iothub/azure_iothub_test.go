@@ -1,6 +1,4 @@
-package azure_iothub_consumer
-
-// azure_iothub_consumer.go
+package azure_iothub
 
 import (
 	"fmt"
@@ -31,14 +29,14 @@ var invalid_connection_string = "He=myiothub.azure-devices.net;Dd=mydevice;Md=my
 var empty_string = ""
 var whitespace_string = "     "
 
-var iothub_all_connection_properties = &IothubConsumer{
+var iothub_all_connection_properties = &Iothub{
 	HubName:         "myiothub",
 	SharedAccessKey: "My+L0ng+K3y=",
 	DeviceID:        "mydevice",
 	ModuleID:        "mymodule",
 }
 
-var iothub_all_connection_properties_plus_policy = &IothubConsumer{
+var iothub_all_connection_properties_plus_policy = &Iothub{
 	HubName:             "myiothub",
 	SharedAccessKey:     "My+L0ng+K3y=",
 	SharedAccessKeyName: "mykeyname",
@@ -46,29 +44,29 @@ var iothub_all_connection_properties_plus_policy = &IothubConsumer{
 	ModuleID:            "mymodule",
 }
 
-var iothub_connection_string_only = &IothubConsumer{
+var iothub_connection_string_only = &Iothub{
 	ConnectionString: module_connection_string,
 }
 
-var iothub_missing_hubname = &IothubConsumer{
+var iothub_missing_hubname = &Iothub{
 	SharedAccessKey: "My+L0ng+K3y=",
 	DeviceID:        "mydevice",
 	ModuleID:        "mymodule",
 }
 
-var iothub_missing_sharedaccesskey = &IothubConsumer{
+var iothub_missing_sharedaccesskey = &Iothub{
 	HubName:  "myiothub",
 	DeviceID: "mydevice",
 	ModuleID: "mymodule",
 }
 
-var iothub_missing_deviceid = &IothubConsumer{
+var iothub_missing_deviceid = &Iothub{
 	HubName:         "myiothub",
 	SharedAccessKey: "My+L0ng+K3y=",
 	ModuleID:        "mymodule",
 }
 
-var iothub_missing_moduleid = &IothubConsumer{
+var iothub_missing_moduleid = &Iothub{
 	HubName:         "myiothub",
 	SharedAccessKey: "My+L0ng+K3y=",
 	DeviceID:        "mydevice",
@@ -100,7 +98,7 @@ func TestHasConnectionString(t *testing.T) {
 		t.Logf("Testing against: %s\n", row.Name)
 
 		// create new Iothub
-		temp := &IothubConsumer{
+		temp := &Iothub{
 			ConnectionString: fmt.Sprint(row.Input),
 		}
 
@@ -137,7 +135,7 @@ func TestHasHubName(t *testing.T) {
 
 		t.Logf("Testing against: %s\n", row.Name)
 
-		temp := &IothubConsumer{}
+		temp := &Iothub{}
 		copier.Copy(temp, row.Input)
 
 		// test hasHubName() against Iothub
@@ -173,7 +171,7 @@ func TestHasSharedAccessKey(t *testing.T) {
 
 		t.Logf("Testing against: %s\n", row.Name)
 
-		temp := &IothubConsumer{}
+		temp := &Iothub{}
 		copier.Copy(temp, row.Input)
 
 		// test hasSharedAccessKey() against Iothub
@@ -210,7 +208,7 @@ func TestHasSharedAccessKeyName(t *testing.T) {
 
 		t.Logf("Testing against: %s\n", row.Name)
 
-		temp := &IothubConsumer{}
+		temp := &Iothub{}
 		copier.Copy(temp, row.Input)
 
 		// test hasSharedAccessKeyName() against Iothub
@@ -224,51 +222,47 @@ func TestHasSharedAccessKeyName(t *testing.T) {
 	}
 }
 
+// #####################
+// ###### TestInit #####
+// #####################
 
+// Tests to run, format: input, expected output, actual output
+var TableTestInit = []TestValidation{
+	{"Iothub with all connection properties", iothub_all_connection_properties, "HostName=myiothub;DeviceId=mydevice;ModuleId=mymodule;SharedAccessKey=My+L0ng+K3y=", nil},
+	{"Iothub missing HubName", iothub_missing_hubname, "invalid plugin configuration", nil},
+	{"Iothub missing SharedAccessKey", iothub_missing_sharedaccesskey, "invalid plugin configuration", nil},
+	{"Iothub missing DeviceID", iothub_missing_deviceid, "invalid plugin configuration", nil},
+	{"Iothub missing ModuleID", iothub_missing_moduleid, "HostName=myiothub;DeviceId=mydevice;SharedAccessKey=My+L0ng+K3y=", nil},
+	{"Iothub with all connection properties + policy name", iothub_all_connection_properties_plus_policy, "HostName=myiothub;DeviceId=mydevice;ModuleId=mymodule;SharedAccessKeyName=mykeyname;SharedAccessKey=My+L0ng+K3y=", nil},
+	{"Iothub with connection string", iothub_connection_string_only, iothub_connection_string_only.ConnectionString, nil},
+}
 
-// These tests have an error in the syntax somewhere. Couldn't find it.
+func TestInit(t *testing.T) {
 
-// // #####################
-// // ###### TestInit #####
-// // #####################
+	t.Log("##### Running tests for TestInit #####")
 
-// // Tests to run, format: input, expected output, actual output
-// var TableTestInit = []TestValidation{
-// 	//{"Iothub with all connection properties", iothub_all_connection_properties, "HostName=myiothub;DeviceId=mydevice;ModuleId=mymodule;SharedAccessKey=My+L0ng+K3y=", nil},
-// 	{"Iothub missing HubName", iothub_missing_hubname, "invalid plugin configuration", nil},
-// 	{"Iothub missing SharedAccessKey", iothub_missing_sharedaccesskey, "invalid plugin configuration", nil},
-// 	{"Iothub missing DeviceID", iothub_missing_deviceid, "invalid plugin configuration", nil},
-// 	{"Iothub missing ModuleID", iothub_missing_moduleid, "HostName=myiothub;DeviceId=mydevice;SharedAccessKey=My+L0ng+K3y=", nil},
-// 	//{"Iothub with all connection properties + policy name", iothub_all_connection_properties_plus_policy, "HostName=myiothub;DeviceId=mydevice;ModuleId=mymodule;SharedAccessKeyName=mykeyname;SharedAccessKey=My+L0ng+K3y=", nil},
-// 	//{"Iothub with connection string", iothub_connection_string_only, iothub_connection_string_only.ConnectionString, nil},
-// }
+	// for each TestValidation item in TableTestHasSharedAccessKeyName
+	for _, row := range TableTestInit {
 
-// func TestInit(t *testing.T) {
+		t.Logf("Testing against: %s\n", row.Name)
 
-// 	t.Log("##### Running tests for TestInit #####")
+		temp := &Iothub{}
+		copier.Copy(temp, row.Input)
 
-// 	// for each TestValidation item in TableTestHasSharedAccessKeyName
-// 	for _, row := range TableTestInit {
+		// test Init() against Iothub
+		result := ""
+		err := temp.Init()
 
-// 		t.Logf("Testing against: %s\n", row.Name)
+		if err != nil {
+			result = err.Error()
+		} else {
+			result = temp.ConnectionString
+		}
 
-// 		temp := &IothubConsumer{}
-// 		copier.Copy(temp, row.Input)
+		// update TestValidation item with result
+		row.ActualOutput = result
 
-// 		// test Init() against Iothub
-// 		result := ""
-// 		err := temp.Init()
-
-// 		if err != nil {
-// 			result = err.Error()
-// 		} else {
-// 			result = temp.ConnectionString
-// 		}
-
-// 		// update TestValidation item with result
-// 		row.ActualOutput = result
-
-// 		// check result against expected result
-// 		Check(row, t)
-// 	}
-// }
+		// check result against expected result
+		Check(row, t)
+	}
+}
