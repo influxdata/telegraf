@@ -39,7 +39,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   ## tag is not set the 'retention_policy' option is used as the default.
   # retention_policy_tag = ""
 
-  ## If true, the 'retention_policy_tag' will not be removed from the metric.
+  ## If true, the 'retention_policy_tag' will not be added to the metric.
   # exclude_retention_policy_tag = false
 
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
