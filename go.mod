@@ -110,7 +110,7 @@ require (
 	github.com/shirou/gopsutil v2.20.2+incompatible
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114 // indirect
 	github.com/sirupsen/logrus v1.4.2
-	github.com/soniah/gosnmp v1.22.0
+	github.com/soniah/gosnmp v1.24.1-0.20200323083626-1bf2e10bcab4
 	github.com/streadway/amqp v0.0.0-20180528204448-e5adc2ada8b8
 	github.com/stretchr/testify v1.4.0
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
