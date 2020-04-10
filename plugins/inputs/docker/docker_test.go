@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io/ioutil"
 	"sort"
 	"strings"
@@ -751,6 +752,7 @@ func TestDockerGatherInfo(t *testing.T) {
 		newClient: newClient,
 		TagEnvironment: []string{"ENVVAR1", "ENVVAR2", "ENVVAR3", "ENVVAR5",
 			"ENVVAR6", "ENVVAR7", "ENVVAR8", "ENVVAR9"},
+		PerDevice: true,
 	}
 
 	err := acc.GatherError(d.Gather)
@@ -1116,4 +1118,88 @@ func TestHostnameFromID(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_parseContainerStatsPerDevice(t *testing.T) {
+	type args struct {
+		stat         *types.StatsJSON
+		acc          telegraf.Accumulator
+		tags         map[string]string
+		id           string
+		perDevice    bool
+		total        bool
+		daemonOSType string
+	}
+	stats := testStats()
+
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			"Per_device_enabled",
+			args{
+				stat:      stats,
+				perDevice: true,
+			},
+		},
+		{
+			"Per_device_disabled",
+			args{
+				stat:      stats,
+				perDevice: false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+			parseContainerStats(tt.args.stat, &acc, tt.args.tags, tt.args.id, tt.args.perDevice, tt.args.total,
+				tt.args.daemonOSType)
+
+			var numCpus int
+			if stats.CPUStats.OnlineCPUs > 0 {
+				numCpus = len(stats.CPUStats.CPUUsage.PercpuUsage[:stats.CPUStats.OnlineCPUs])
+			} else {
+				numCpus = len(stats.CPUStats.CPUUsage.PercpuUsage)
+			}
+
+			numNetworks := len(stats.Networks)
+
+			deviceStatMap := getDeviceStatMap(stats.BlkioStats)
+
+			if tt.args.perDevice {
+				// cpu
+				for i := 0; i < numCpus; i++ {
+					acc.AssertTagValuesInMeasurement(t, "docker_container_cpu", map[string]string{"cpu": fmt.Sprintf("cpu%d", i)})
+				}
+				// network
+				for i := 0; i < numNetworks; i++ {
+					acc.AssertTagValuesInMeasurement(t, "docker_container_net", map[string]string{"network": fmt.Sprintf("eth%d", i)})
+				}
+
+				// blkio
+				for device := range deviceStatMap {
+					acc.AssertTagValuesInMeasurement(t, "docker_container_blkio", map[string]string{"device": device})
+				}
+
+			} else {
+				// cpu
+				for i := 0; i < numCpus; i++ {
+					acc.AssertTagValuesNotInMeasurement(t, "docker_container_cpu", map[string]string{"cpu": fmt.Sprintf("cpu%d", i)})
+				}
+
+				// network
+				for i := 0; i < numNetworks; i++ {
+					acc.AssertTagValuesNotInMeasurement(t, "docker_container_net", map[string]string{"network": fmt.Sprintf("eth%d", i)})
+				}
+
+				// blkio
+				for device := range deviceStatMap {
+					acc.AssertTagValuesNotInMeasurement(t, "docker_container_blkio", map[string]string{"device": device})
+				}
+			}
+		})
+	}
 }

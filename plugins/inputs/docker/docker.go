@@ -110,8 +110,8 @@ var sampleConfig = `
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
-  ## Whether to report for each container per-device blkio (8:0, 8:1...) and
-  ## network (eth0, eth1, ...) stats or not
+  ## Whether to report for each container per-device blkio (8:0, 8:1...),
+  ## network (eth0, eth1, ...) and cpu (cpu0, cpu1, ...) stats or not
   perdevice = true
 
   ## Whether to report for each container total blkio and network stats or not
@@ -670,23 +670,25 @@ func parseContainerStats(
 	cputags["cpu"] = "cpu-total"
 	acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
 
-	// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
-	// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
-	var percpuusage []uint64
-	if stat.CPUStats.OnlineCPUs > 0 {
-		percpuusage = stat.CPUStats.CPUUsage.PercpuUsage[:stat.CPUStats.OnlineCPUs]
-	} else {
-		percpuusage = stat.CPUStats.CPUUsage.PercpuUsage
-	}
-
-	for i, percpu := range percpuusage {
-		percputags := copyTags(tags)
-		percputags["cpu"] = fmt.Sprintf("cpu%d", i)
-		fields := map[string]interface{}{
-			"usage_total":  percpu,
-			"container_id": id,
+	if perDevice {
+		// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
+		// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
+		var percpuusage []uint64
+		if stat.CPUStats.OnlineCPUs > 0 {
+			percpuusage = stat.CPUStats.CPUUsage.PercpuUsage[:stat.CPUStats.OnlineCPUs]
+		} else {
+			percpuusage = stat.CPUStats.CPUUsage.PercpuUsage
 		}
-		acc.AddFields("docker_container_cpu", fields, percputags, tm)
+
+		for i, percpu := range percpuusage {
+			percputags := copyTags(tags)
+			percputags["cpu"] = fmt.Sprintf("cpu%d", i)
+			fields := map[string]interface{}{
+				"usage_total":  percpu,
+				"container_id": id,
+			}
+			acc.AddFields("docker_container_cpu", fields, percputags, tm)
+		}
 	}
 
 	totalNetworkStatMap := make(map[string]interface{})
@@ -745,17 +747,8 @@ func parseContainerStats(
 	gatherBlockIOMetrics(stat, acc, tags, tm, id, perDevice, total)
 }
 
-func gatherBlockIOMetrics(
-	stat *types.StatsJSON,
-	acc telegraf.Accumulator,
-	tags map[string]string,
-	tm time.Time,
-	id string,
-	perDevice bool,
-	total bool,
-) {
-	blkioStats := stat.BlkioStats
-	// Make a map of devices to their block io stats
+// Make a map of devices to their block io stats
+func getDeviceStatMap(blkioStats types.BlkioStats) map[string]map[string]interface{} {
 	deviceStatMap := make(map[string]map[string]interface{})
 
 	for _, metric := range blkioStats.IoServiceBytesRecursive {
@@ -813,6 +806,20 @@ func gatherBlockIOMetrics(
 		device := fmt.Sprintf("%d:%d", metric.Major, metric.Minor)
 		deviceStatMap[device]["sectors_recursive"] = metric.Value
 	}
+	return deviceStatMap
+}
+
+func gatherBlockIOMetrics(
+	stat *types.StatsJSON,
+	acc telegraf.Accumulator,
+	tags map[string]string,
+	tm time.Time,
+	id string,
+	perDevice bool,
+	total bool,
+) {
+	blkioStats := stat.BlkioStats
+	deviceStatMap := getDeviceStatMap(blkioStats)
 
 	totalStatMap := make(map[string]interface{})
 	for device, fields := range deviceStatMap {

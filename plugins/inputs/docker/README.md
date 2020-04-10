@@ -43,8 +43,8 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
-  ## Whether to report for each container per-device blkio (8:0, 8:1...) and
-  ## network (eth0, eth1, ...) stats or not
+  ## Whether to report for each container per-device blkio (8:0, 8:1...),
+  ## network (eth0, eth1, ...) and cpu (cpu0, cpu1, ...) stats or not
   perdevice = true
 
   ## Whether to report for each container total blkio and network stats or not
