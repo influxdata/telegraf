@@ -202,7 +202,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 				stat = strings.Replace(stat, "."+vclactive, "", 1)
 			}
 			if strings.HasPrefix(stat, "VBE.goto") {
-				re := regexp.MustCompile("^VBE\\.goto\\.[0-9a-f]+\\.\\([^\\)]*\\)\\.(.+)$")
+				re := regexp.MustCompile("^VBE\\.goto\\.[0-9a-f]+\\.(.+)$")
 				match := re.FindStringSubmatch(stat)
 				stat = ("VBE.goto" + match[1])
 			}
