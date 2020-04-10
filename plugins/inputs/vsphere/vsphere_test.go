@@ -5,9 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"regexp"
-	"sort"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 	"unsafe"
@@ -42,6 +39,7 @@ var configHeader = `
 
 func defaultVSphere() *VSphere {
 	return &VSphere{
+		Log: testutil.Logger{},
 		ClusterMetricInclude: []string{
 			"cpu.usage.*",
 			"cpu.usagemhz.*",
@@ -229,36 +227,6 @@ func TestParseConfig(t *testing.T) {
 	require.NotNil(t, tab)
 }
 
-func TestThrottledExecutor(t *testing.T) {
-	max := int64(0)
-	ngr := int64(0)
-	n := 10000
-	var mux sync.Mutex
-	results := make([]int, 0, n)
-	te := NewThrottledExecutor(5)
-	for i := 0; i < n; i++ {
-		func(i int) {
-			te.Run(context.Background(), func() {
-				atomic.AddInt64(&ngr, 1)
-				mux.Lock()
-				defer mux.Unlock()
-				results = append(results, i*2)
-				if ngr > max {
-					max = ngr
-				}
-				time.Sleep(100 * time.Microsecond)
-				atomic.AddInt64(&ngr, -1)
-			})
-		}(i)
-	}
-	te.Wait()
-	sort.Ints(results)
-	for i := 0; i < n; i++ {
-		require.Equal(t, results[i], i*2, "Some jobs didn't run")
-	}
-	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
-}
-
 func TestMaxQuery(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -376,10 +344,59 @@ func TestFinder(t *testing.T) {
 	testLookupVM(ctx, t, &f, "/*/host/**/*DC*/*/*DC*", 4, "")
 
 	vm = []mo.VirtualMachine{}
-	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
+	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, []string{}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
 
+	rf := ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/DC0/vm/DC0_H0_VM0"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 3, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 0, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/this won't match anything"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 8, len(vm))
+
+	rf = ResourceFilter{
+		finder:       &f,
+		paths:        []string{"/**"},
+		excludePaths: []string{"/**/*VM0"},
+		resType:      "VirtualMachine",
+	}
+	vm = []mo.VirtualMachine{}
+	require.NoError(t, rf.FindAll(ctx, &vm))
+	require.Equal(t, 4, len(vm))
 }
 
 func TestFolders(t *testing.T) {

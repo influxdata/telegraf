@@ -29,6 +29,7 @@ values.
 
   ## For assigning explicit data types to columns.
   ## Supported types: "int", "float", "bool", "string".
+  ## Specify types in order by column (e.g. `["string", "int", "float"]`)
   ## If this is not specified, type conversion will be done on the types above.
   csv_column_types = []
 
@@ -86,6 +87,9 @@ on how to set the time format.
 One metric is created for each row with the columns added as fields.  The type
 of the field is automatically determined based on the contents of the value.
 
+In addition to the options above, you can use [metric filtering][] to skip over
+columns and rows.
+
 ### Examples
 
 Config:
@@ -108,3 +112,5 @@ Output:
 ```
 cpu cpu=cpu0,time_user=42,time_system=42,time_idle=42 1536869008000000000
 ```
+
+[metric filtering]: /docs/CONFIGURATION.md#metric-filtering

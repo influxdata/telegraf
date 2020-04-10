@@ -196,6 +196,7 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		}
 	}
 
+	hasErrors := false
 	for _, input := range a.Config.Inputs {
 		select {
 		case <-ctx.Done():
@@ -210,20 +211,23 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
 		switch input.Config.Name {
-		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
+		case "cpu", "mongodb", "procstat":
 			nulAcc := NewAccumulator(input, nulC)
 			nulAcc.SetPrecision(a.Precision())
 			if err := input.Input.Gather(nulAcc); err != nil {
 				acc.AddError(err)
+				hasErrors = true
 			}
 
 			time.Sleep(500 * time.Millisecond)
 			if err := input.Input.Gather(acc); err != nil {
 				acc.AddError(err)
+				hasErrors = true
 			}
 		default:
 			if err := input.Input.Gather(acc); err != nil {
 				acc.AddError(err)
+				hasErrors = true
 			}
 		}
 	}
@@ -235,7 +239,7 @@ func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
 		a.stopServiceInputs()
 	}
 
-	if NErrors.Get() > 0 {
+	if hasErrors {
 		return fmt.Errorf("One or more input plugins had an error")
 	}
 	return nil
@@ -501,6 +505,12 @@ func (a *Agent) runOutputs(
 		// Overwrite agent flush_interval if this plugin has its own.
 		if output.Config.FlushInterval != 0 {
 			interval = output.Config.FlushInterval
+		}
+
+		jitter := jitter
+		// Overwrite agent flush_jitter if this plugin has its own.
+		if output.Config.FlushJitter != nil {
+			jitter = *output.Config.FlushJitter
 		}
 
 		wg.Add(1)

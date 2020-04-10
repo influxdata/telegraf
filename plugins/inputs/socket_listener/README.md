@@ -66,6 +66,10 @@ This is a sample configuration for the plugin.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
+
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
 ```
 
 ## A Note on UDP OS Buffer Sizes
@@ -84,6 +88,7 @@ at least 8MB before trying to run large amounts of UDP traffic to your instance.
 8MB is just a recommendation, and can be adjusted higher.
 
 ### Linux
+
 Check the current UDP/IP receive buffer limit & default by typing the following
 commands:
 

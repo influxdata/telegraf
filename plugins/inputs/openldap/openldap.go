@@ -5,11 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/ldap.v2"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"gopkg.in/ldap.v3"
 )
 
 type Openldap struct {
@@ -57,6 +56,12 @@ var attrTranslate = map[string]string{
 	"monitoredInfo":      "",
 	"monitorOpInitiated": "_initiated",
 	"monitorOpCompleted": "_completed",
+	"olmMDBPagesMax":     "_mdb_pages_max",
+	"olmMDBPagesUsed":    "_mdb_pages_used",
+	"olmMDBPagesFree":    "_mdb_pages_free",
+	"olmMDBReadersMax":   "_mdb_readers_max",
+	"olmMDBReadersUsed":  "_mdb_readers_used",
+	"olmMDBEntries":      "_mdb_entries",
 }
 
 func (o *Openldap) SampleConfig() string {

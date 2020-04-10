@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/go-syslog/nontransparent"
-	"github.com/influxdata/go-syslog/rfc5424"
+	"github.com/influxdata/go-syslog/v2/nontransparent"
+	"github.com/influxdata/go-syslog/v2/rfc5424"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	framing "github.com/influxdata/telegraf/internal/syslog"

@@ -4,6 +4,8 @@ package tail
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -19,7 +21,8 @@ import (
 )
 
 const (
-	defaultWatchMethod = "inotify"
+	defaultWatchMethod         = "inotify"
+	defaultMaxUndeliveredLines = 1000
 )
 
 var (
@@ -27,22 +30,32 @@ var (
 	offsetsMutex = new(sync.Mutex)
 )
 
-type Tail struct {
-	Files         []string
-	FromBeginning bool
-	Pipe          bool
-	WatchMethod   string
+type empty struct{}
+type semaphore chan empty
 
+type Tail struct {
+	Files               []string `toml:"files"`
+	FromBeginning       bool     `toml:"from_beginning"`
+	Pipe                bool     `toml:"pipe"`
+	WatchMethod         string   `toml:"watch_method"`
+	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
+
+	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
 	parserFunc parsers.ParserFunc
 	wg         sync.WaitGroup
-	acc        telegraf.Accumulator
+
+	acc telegraf.TrackingAccumulator
 
 	sync.Mutex
 
 	MultilineConfig MultilineConfig `toml:"multiline"`
 	multiline       *Multiline
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	sem    semaphore
 }
 
 func NewTail() *Tail {
@@ -54,13 +67,14 @@ func NewTail() *Tail {
 	offsetsMutex.Unlock()
 
 	return &Tail{
-		FromBeginning: false,
-		offsets:       offsetsCopy,
+		FromBeginning:       false,
+		MaxUndeliveredLines: 1000,
+		offsets:             offsetsCopy,
 	}
 }
 
 const sampleConfig = `
-  ## files to tail.
+  ## File names or a pattern to tail.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
@@ -70,13 +84,20 @@ const sampleConfig = `
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]
+
   ## Read file from beginning.
-  from_beginning = false
+  # from_beginning = false
+
   ## Whether file is a named pipe
-  pipe = false
+  # pipe = false
 
   ## Method used to watch for file updates.  Can be either "inotify" or "poll".
   # watch_method = "inotify"
+
+  ## Maximum lines of the file to process that have not yet be written by the
+  ## output.  For best throughput set based on the number of metrics on each
+  ## line and the size of the output's metric_batch_size.
+  # max_undelivered_lines = 1000
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -109,24 +130,43 @@ func (t *Tail) Description() string {
 	return "Stream a log file, like the tail -f command"
 }
 
-func (t *Tail) Gather(acc telegraf.Accumulator) error {
-	t.Lock()
-	defer t.Unlock()
+func (t *Tail) Init() error {
+	if t.MaxUndeliveredLines == 0 {
+		return errors.New("max_undelivered_lines must be positive")
+	}
+	t.sem = make(semaphore, t.MaxUndeliveredLines)
+	return nil
+}
 
+func (t *Tail) Gather(acc telegraf.Accumulator) error {
 	return t.tailNewFiles(true)
 }
 
 func (t *Tail) Start(acc telegraf.Accumulator) error {
-	t.Lock()
-	defer t.Unlock()
+	t.acc = acc.WithTracking(t.MaxUndeliveredLines)
+
+	t.ctx, t.cancel = context.WithCancel(context.Background())
+
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-t.acc.Delivered():
+				<-t.sem
+			}
+		}
+	}()
 
 	var err error
 	t.multiline, err = t.MultilineConfig.NewMultiline()
+
 	if err != nil {
 		return err
 	}
 
-	t.acc = acc
 	t.tailers = make(map[string]*tail.Tail)
 
 	err = t.tailNewFiles(t.FromBeginning)
@@ -151,7 +191,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("E! [inputs.tail] Error Glob %s failed to compile, %s", filepath, err))
+			t.Log.Errorf("Glob %q failed to compile: %s", filepath, err.Error())
 		}
 		for _, file := range g.Match() {
 			if _, ok := t.tailers[file]; ok {
@@ -162,7 +202,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			var seek *tail.SeekInfo
 			if !t.Pipe && !fromBeginning {
 				if offset, ok := t.offsets[file]; ok {
-					log.Printf("D! [inputs.tail] using offset %d for file: %v", offset, file)
+					t.Log.Debugf("Using offset %d for %q", offset, file)
 					seek = &tail.SeekInfo{
 						Whence: 0,
 						Offset: offset,
@@ -185,25 +225,37 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					Pipe:      t.Pipe,
 					Logger:    tail.DiscardingLogger,
 				})
+
 			if err != nil {
-				t.acc.AddError(err)
+				t.Log.Debugf("Failed to open file (%s): %v", file, err)
 				continue
 			}
 
-			log.Printf("D! [inputs.tail] tail added for file: %v", file)
+			t.Log.Debugf("Tail added for %q", file)
 
 			parser, err := t.parserFunc()
 			if err != nil {
-				t.acc.AddError(fmt.Errorf("E! [inputs.tail] error creating parser: %v", err))
+				t.Log.Errorf("Creating parser: %s", err.Error())
 			}
 
 			// create a goroutine for each "tailer"
 			t.wg.Add(1)
-			if t.multiline.IsEnabled() {
-				go t.receiverMultiline(parser, tailer)
-			} else {
-				go t.receiver(parser, tailer)
-			}
+
+			go func() {
+				defer t.wg.Done()
+				if t.multiline.IsEnabled() {
+					go t.receiverMultiline(parser, tailer)
+				} else {
+					go t.receiver(parser, tailer)
+				}
+
+				t.Log.Debugf("Tail removed for %q", tailer.Filename)
+
+				if err := tailer.Err(); err != nil {
+					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+				}
+			}()
+
 			t.tailers[tailer.Filename] = tailer
 		}
 	}
@@ -239,24 +291,40 @@ func parseLine(parser parsers.Parser, line string, firstLine bool) ([]telegraf.M
 // for changes, parse any incoming msgs, and add to the accumulator.
 func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	var firstLine = true
-	var line *tail.Line
-
-	for line = range tailer.Lines {
-		if text := t.getLineText(line, tailer.Filename); text == "" {
+	for line := range tailer.Lines {
+		if line.Err != nil {
+			t.Log.Errorf("Tailing %q: %s", tailer.Filename, line.Err.Error())
 			continue
-		} else {
-			t.parse(parser, tailer.Filename, text, &firstLine)
+		}
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
+		metrics, err := parseLine(parser, text, firstLine)
+		if err != nil {
+			t.Log.Errorf("Malformed log line in %q: [%q]: %s",
+				tailer.Filename, line.Text, err.Error())
+			continue
+		}
+		firstLine = false
+
+		for _, metric := range metrics {
+			metric.AddTag("path", tailer.Filename)
+		}
+
+		// Block until plugin is stopping or room is available to add metrics.
+		select {
+		case <-t.ctx.Done():
+			return
+		case t.sem <- empty{}:
+			t.acc.AddTrackingMetricGroup(metrics)
 		}
 	}
-	t.handleTailerExit(tailer)
 }
 
 // same as the receiver method but multiline aware
 // it buffers lines according to the multiline class
 // it uses timeout channel to flush buffered lines
 func (t *Tail) receiverMultiline(parser parsers.Parser, tailer *tail.Tail) {
-	defer t.wg.Done()
-
 	var buffer bytes.Buffer
 	var firstLine = true
 	for {
@@ -345,25 +413,23 @@ func (t *Tail) parse(parser parsers.Parser, filename string, text string, firstL
 }
 
 func (t *Tail) Stop() {
-	t.Lock()
-	defer t.Unlock()
-
 	for _, tailer := range t.tailers {
 		if !t.Pipe && !t.FromBeginning {
 			// store offset for resume
 			offset, err := tailer.Tell()
 			if err == nil {
-				log.Printf("D! [inputs.tail] recording offset %d for file: %v", offset, tailer.Filename)
+				t.Log.Debugf("Recording offset %d for %q", offset, tailer.Filename)
 			} else {
-				t.acc.AddError(fmt.Errorf("error recording offset for file %s", tailer.Filename))
+				t.Log.Errorf("Recording offset for %q: %s", tailer.Filename, err.Error())
 			}
 		}
 		err := tailer.Stop()
 		if err != nil {
-			t.acc.AddError(fmt.Errorf("E! [inputs.tail] error stopping tail on file %s\n", tailer.Filename))
+			t.Log.Errorf("Stopping tail on %q: %s", tailer.Filename, err.Error())
 		}
 	}
 
+	t.cancel()
 	t.wg.Wait()
 
 	// persist offsets

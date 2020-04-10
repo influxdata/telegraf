@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/templating"
-
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -119,10 +118,6 @@ func (p *GraphiteParser) ParseLine(line string) (telegraf.Metric, error) {
 	v, err := strconv.ParseFloat(fields[1], 64)
 	if err != nil {
 		return nil, fmt.Errorf(`field "%s" value: %s`, fields[0], err)
-	}
-
-	if math.IsNaN(v) || math.IsInf(v, 0) {
-		return nil, &UnsupposedValueError{Field: fields[0], Value: v}
 	}
 
 	fieldValues := map[string]interface{}{}

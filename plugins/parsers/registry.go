@@ -89,6 +89,9 @@ type Config struct {
 	// default timezone
 	JSONTimezone string `toml:"json_timezone"`
 
+	// Whether to continue if a JSON object can't be coerced
+	JSONStrict bool `toml:"json_strict"`
+
 	// Authentication file for collectd
 	CollectdAuthFile string `toml:"collectd_auth_file"`
 	// One of none (default), sign, or encrypt
@@ -164,6 +167,7 @@ func NewParser(config *Config) (Parser, error) {
 				TimeFormat:   config.JSONTimeFormat,
 				Timezone:     config.JSONTimezone,
 				DefaultTags:  config.DefaultTags,
+				Strict:       config.JSONStrict,
 			},
 		)
 	case "value":

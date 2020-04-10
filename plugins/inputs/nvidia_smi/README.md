@@ -55,10 +55,19 @@ SELECT mean("temperature_gpu") FROM "nvidia_smi" WHERE time > now() - 5m GROUP B
 
 ### Troubleshooting
 
-As the `telegraf` user run the following command.  Adjust the path to `nvidia-smi` if customized.
+Check the full output by running `nvidia-smi` binary manually.
+
+Linux:
 ```
-/usr/bin/nvidia-smi --format=noheader,nounits,csv --query-gpu=fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw,pcie.link.gen.current,pcie.link.width.current,encoder.stats.sessionCount,encoder.stats.averageFps,encoder.stats.averageLatency,clocks.current.graphics,clocks.current.sm,clocks.current.memory,clocks.current.video
+sudo -u telegraf -- /usr/bin/nvidia-smi -q -x
 ```
+
+Windows:
+```
+"C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe" -q -x
+```
+
+Please include the output of this command if opening an GitHub issue.
 
 ### Example Output
 ```

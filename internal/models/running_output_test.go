@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -216,6 +218,60 @@ func TestRunningOutput_TagIncludeMatch(t *testing.T) {
 	assert.Len(t, m.Metrics()[0].Tags(), 1)
 }
 
+// Test that measurement name overriding correctly
+func TestRunningOutput_NameOverride(t *testing.T) {
+	conf := &OutputConfig{
+		NameOverride: "new_metric_name",
+	}
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Equal(t, "new_metric_name", m.Metrics()[0].Name())
+}
+
+// Test that measurement name prefix is added correctly
+func TestRunningOutput_NamePrefix(t *testing.T) {
+	conf := &OutputConfig{
+		NamePrefix: "prefix_",
+	}
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Equal(t, "prefix_metric1", m.Metrics()[0].Name())
+}
+
+// Test that measurement name suffix is added correctly
+func TestRunningOutput_NameSuffix(t *testing.T) {
+	conf := &OutputConfig{
+		NameSuffix: "_suffix",
+	}
+
+	m := &mockOutput{}
+	ro := NewRunningOutput("test", m, conf, 1000, 10000)
+
+	ro.AddMetric(testutil.TestMetric(101, "metric1"))
+	assert.Len(t, m.Metrics(), 0)
+
+	err := ro.Write()
+	assert.NoError(t, err)
+	assert.Len(t, m.Metrics(), 1)
+	assert.Equal(t, "metric1_suffix", m.Metrics()[0].Name())
+}
+
 // Test that we can write metrics with simple default setup.
 func TestRunningOutputDefault(t *testing.T) {
 	conf := &OutputConfig{
@@ -410,6 +466,50 @@ func TestRunningOutputWriteFailOrder3(t *testing.T) {
 	// Verify that they are in order
 	expected := []telegraf.Metric{next5[0], first5[4], first5[3], first5[2], first5[1], first5[0]}
 	assert.Equal(t, expected, m.Metrics())
+}
+
+func TestInternalMetrics(t *testing.T) {
+	_ = NewRunningOutput(
+		"test_internal",
+		&mockOutput{},
+		&OutputConfig{
+			Filter: Filter{},
+			Name:   "test_name",
+			Alias:  "test_alias",
+		},
+		5,
+		10)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"internal_write",
+			map[string]string{
+				"output": "test_name",
+				"alias":  "test_alias",
+			},
+			map[string]interface{}{
+				"buffer_limit":     10,
+				"buffer_size":      0,
+				"errors":           0,
+				"metrics_added":    0,
+				"metrics_dropped":  0,
+				"metrics_filtered": 0,
+				"metrics_written":  0,
+				"write_time_ns":    0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	var actual []telegraf.Metric
+	for _, m := range selfstat.Metrics() {
+		output, _ := m.GetTag("output")
+		if m.Name() == "internal_write" && output == "test_name" {
+			actual = append(actual, m)
+		}
+	}
+
+	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
 
 type mockOutput struct {

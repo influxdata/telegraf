@@ -7,7 +7,10 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-var GlobalMetricsGathered = selfstat.Register("agent", "metrics_gathered", map[string]string{})
+var (
+	GlobalMetricsGathered = selfstat.Register("agent", "metrics_gathered", map[string]string{})
+	GlobalGatherErrors    = selfstat.Register("agent", "gather_errors", map[string]string{})
+)
 
 type RunningInput struct {
 	Input  telegraf.Input
@@ -21,12 +24,17 @@ type RunningInput struct {
 }
 
 func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
-	logger := &Logger{
-		Name: logName("inputs", config.Name, config.Alias),
-		Errs: selfstat.Register("gather", "errors",
-			map[string]string{"input": config.Name, "alias": config.Alias}),
+	tags := map[string]string{"input": config.Name}
+	if config.Alias != "" {
+		tags["alias"] = config.Alias
 	}
 
+	inputErrorsRegister := selfstat.Register("gather", "errors", tags)
+	logger := NewLogger("inputs", config.Name, config.Alias)
+	logger.OnErr(func() {
+		inputErrorsRegister.Incr(1)
+		GlobalGatherErrors.Incr(1)
+	})
 	setLogIfExist(input, logger)
 
 	return &RunningInput{
@@ -35,12 +43,12 @@ func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 		MetricsGathered: selfstat.Register(
 			"gather",
 			"metrics_gathered",
-			map[string]string{"input": config.Name, "alias": config.Alias},
+			tags,
 		),
 		GatherTime: selfstat.RegisterTiming(
 			"gather",
 			"gather_time_ns",
-			map[string]string{"input": config.Name, "alias": config.Alias},
+			tags,
 		),
 		log: logger,
 	}
@@ -112,4 +120,8 @@ func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
 
 func (r *RunningInput) SetDefaultTags(tags map[string]string) {
 	r.defaultTags = tags
+}
+
+func (r *RunningInput) Log() telegraf.Logger {
+	return r.log
 }

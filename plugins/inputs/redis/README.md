@@ -80,8 +80,8 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - instantaneous_ops_per_sec(int, number)
     - total_net_input_bytes(int, bytes)
     - total_net_output_bytes(int, bytes)
-    - instantaneous_input_kbps(float, bytes)
-    - instantaneous_output_kbps(float, bytes)
+    - instantaneous_input_kbps(float, KB/sec)
+    - instantaneous_output_kbps(float, KB/sec)
     - rejected_connections(int, number)
     - sync_full(int, number)
     - sync_partial_ok(int, number)
@@ -126,6 +126,16 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - usec(int, mircoseconds)
     - usec_per_call(float, microseconds)
 
+- redis_replication
+  - tags:
+    - replication_role
+    - replica_ip
+    - replica_port
+    - state (either "online", "wait_bgsave", or "send_bulk")
+
+  - fields:
+    - lag(int, number)
+    - offset(int, number)
 
 ### Tags:
 

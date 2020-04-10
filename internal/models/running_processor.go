@@ -29,12 +29,16 @@ type ProcessorConfig struct {
 }
 
 func NewRunningProcessor(processor telegraf.Processor, config *ProcessorConfig) *RunningProcessor {
-	logger := &Logger{
-		Name: logName("processors", config.Name, config.Alias),
-		Errs: selfstat.Register("process", "errors",
-			map[string]string{"input": config.Name, "alias": config.Alias}),
+	tags := map[string]string{"processor": config.Name}
+	if config.Alias != "" {
+		tags["alias"] = config.Alias
 	}
 
+	processErrorsRegister := selfstat.Register("process", "errors", tags)
+	logger := NewLogger("processors", config.Name, config.Alias)
+	logger.OnErr(func() {
+		processErrorsRegister.Incr(1)
+	})
 	setLogIfExist(processor, logger)
 
 	return &RunningProcessor{
@@ -93,4 +97,8 @@ func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	}
 
 	return ret
+}
+
+func (r *RunningProcessor) Log() telegraf.Logger {
+	return r.log
 }

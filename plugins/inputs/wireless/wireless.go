@@ -7,7 +7,8 @@ import (
 
 // Wireless is used to store configuration values.
 type Wireless struct {
-	HostProc string `toml:"host_proc"`
+	HostProc string          `toml:"host_proc"`
+	Log      telegraf.Logger `toml:"-"`
 }
 
 var sampleConfig = `

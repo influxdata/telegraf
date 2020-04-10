@@ -1,7 +1,9 @@
 package tail
 
 import (
+	"bytes"
 	"io/ioutil"
+	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -26,18 +28,22 @@ func TestTailFromBeginning(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(1)
@@ -59,17 +65,21 @@ func TestTailFromEnd(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
 	for _, tailer := range tt.tailers {
 		for n, err := tailer.Tell(); err == nil && n == 0; n, err = tailer.Tell() {
 			// wait for tailer to jump to end
@@ -97,41 +107,53 @@ func TestTailBadLine(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
 	require.NoError(t, err)
 
-	acc.WaitError(1)
-	assert.Contains(t, acc.Errors[0].Error(), "E! [inputs.tail] malformed log line")
+	time.Sleep(500 * time.Millisecond)
+	assert.Contains(t, buf.String(), "Malformed log line")
 }
 
 func TestTailDosLineendings(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\ncpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.SetParserFunc(parsers.NewInfluxParser)
-	defer tt.Stop()
-	defer tmpfile.Close()
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
 	require.NoError(t, acc.GatherError(tt.Gather))
 
 	acc.Wait(2)
@@ -151,6 +173,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	duration, _ := time.ParseDuration("100s")
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
 	tt.MultilineConfig = MultilineConfig{
@@ -161,8 +184,13 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	}
 	tt.SetParserFunc(createGrokParser)
 
+	err := tt.Init()
+	require.NoError(t, err)
+
 	acc := testutil.Accumulator{}
 	assert.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+
 	acc.Wait(3)
 
 	expectedPath := thisdir + "testdata/test_multiline.log"
@@ -192,7 +220,6 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 		})
 
 	assert.Equal(t, uint64(3), acc.NMetrics())
-	tt.Stop()
 }
 
 func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
@@ -203,6 +230,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	duration, _ := time.ParseDuration("10ms")
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.MultilineConfig = MultilineConfig{
@@ -212,6 +240,9 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 		Timeout: &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)
+
+	err = tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, tt.Start(&acc))
@@ -252,6 +283,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 	duration, _ := time.ParseDuration("100s")
 
 	tt := NewTail()
+	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
 	tt.MultilineConfig = MultilineConfig{
@@ -261,6 +293,9 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 		Timeout: &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)
+
+	err := tt.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, tt.Start(&acc))
@@ -309,6 +344,7 @@ cpu,42
 	require.NoError(t, err)
 
 	plugin := NewTail()
+	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
@@ -318,11 +354,14 @@ cpu,42
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
 		}, nil
 	})
-	defer plugin.Stop()
+
+	err = plugin.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	err = plugin.Start(&acc)
 	require.NoError(t, err)
+	defer plugin.Stop()
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	acc.Wait(2)
@@ -366,6 +405,7 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	require.NoError(t, err)
 
 	plugin := NewTail()
+	plugin.Log = testutil.Logger{}
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
@@ -374,11 +414,14 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 				MetricName: "cpu",
 			})
 	})
-	defer plugin.Stop()
+
+	err = plugin.Init()
+	require.NoError(t, err)
 
 	acc := testutil.Accumulator{}
 	err = plugin.Start(&acc)
 	require.NoError(t, err)
+	defer plugin.Stop()
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	acc.Wait(2)

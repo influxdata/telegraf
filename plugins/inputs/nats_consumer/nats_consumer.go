@@ -3,14 +3,14 @@ package natsconsumer
 import (
 	"context"
 	"fmt"
-	"log"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	nats "github.com/nats-io/go-nats"
+	"github.com/nats-io/nats.go"
 )
 
 var (
@@ -32,13 +32,17 @@ func (e natsError) Error() string {
 }
 
 type natsConsumer struct {
-	QueueGroup string   `toml:"queue_group"`
-	Subjects   []string `toml:"subjects"`
-	Servers    []string `toml:"servers"`
-	Secure     bool     `toml:"secure"`
-	Username   string   `toml:"username"`
-	Password   string   `toml:"password"`
+	QueueGroup  string   `toml:"queue_group"`
+	Subjects    []string `toml:"subjects"`
+	Servers     []string `toml:"servers"`
+	Secure      bool     `toml:"secure"`
+	Username    string   `toml:"username"`
+	Password    string   `toml:"password"`
+	Credentials string   `toml:"credentials"`
+
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	// Client pending limits:
 	PendingMessageLimit int `toml:"pending_message_limit"`
@@ -68,12 +72,16 @@ var sampleConfig = `
 
   ## subject(s) to consume
   subjects = ["telegraf"]
+
   ## name a queue group
   queue_group = "telegraf_consumers"
 
   ## Optional credentials
   # username = ""
   # password = ""
+
+  ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  # credentials = "/etc/telegraf/nats.creds"
 
   ## Use Transport Layer Security
   # secure = false
@@ -133,19 +141,18 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 
 	var connectErr error
 
-	// set default NATS connection options
-	opts := nats.DefaultOptions
-
-	// override max reconnection tries
-	opts.MaxReconnect = -1
-
-	// override servers if any were specified
-	opts.Servers = n.Servers
+	options := []nats.Option{
+		nats.MaxReconnects(-1),
+		nats.ErrorHandler(n.natsErrHandler),
+	}
 
 	// override authentication, if any was specified
-	if n.Username != "" {
-		opts.User = n.Username
-		opts.Password = n.Password
+	if n.Username != "" && n.Password != "" {
+		options = append(options, nats.UserInfo(n.Username, n.Password))
+	}
+
+	if n.Credentials != "" {
+		options = append(options, nats.UserCredentials(n.Credentials))
 	}
 
 	if n.Secure {
@@ -154,19 +161,17 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		opts.Secure = true
-		opts.TLSConfig = tlsConfig
+		options = append(options, nats.Secure(tlsConfig))
 	}
 
 	if n.conn == nil || n.conn.IsClosed() {
-		n.conn, connectErr = opts.Connect()
+		n.conn, connectErr = nats.Connect(strings.Join(n.Servers, ","), options...)
 		if connectErr != nil {
 			return connectErr
 		}
 
 		// Setup message and error channels
 		n.errs = make(chan error)
-		n.conn.SetErrorHandler(n.natsErrHandler)
 
 		n.in = make(chan *nats.Msg, 1000)
 		for _, subj := range n.Subjects {
@@ -176,14 +181,13 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 			if err != nil {
 				return err
 			}
-			// ensure that the subscription has been processed by the server
-			if err = n.conn.Flush(); err != nil {
-				return err
-			}
+
 			// set the subscription pending limits
-			if err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit); err != nil {
+			err = sub.SetPendingLimits(n.PendingMessageLimit, n.PendingBytesLimit)
+			if err != nil {
 				return err
 			}
+
 			n.subs = append(n.subs, sub)
 		}
 	}
@@ -198,7 +202,7 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 		go n.receiver(ctx)
 	}()
 
-	log.Printf("I! Started the NATS consumer service, nats: %v, subjects: %v, queue: %v\n",
+	n.Log.Infof("Started the NATS consumer service, nats: %v, subjects: %v, queue: %v",
 		n.conn.ConnectedUrl(), n.Subjects, n.QueueGroup)
 
 	return nil
@@ -216,21 +220,21 @@ func (n *natsConsumer) receiver(ctx context.Context) {
 		case <-n.acc.Delivered():
 			<-sem
 		case err := <-n.errs:
-			n.acc.AddError(err)
+			n.Log.Error(err)
 		case sem <- empty{}:
 			select {
 			case <-ctx.Done():
 				return
 			case err := <-n.errs:
 				<-sem
-				n.acc.AddError(err)
+				n.Log.Error(err)
 			case <-n.acc.Delivered():
 				<-sem
 				<-sem
 			case msg := <-n.in:
 				metrics, err := n.parser.Parse(msg.Data)
 				if err != nil {
-					n.acc.AddError(fmt.Errorf("subject: %s, error: %s", msg.Subject, err.Error()))
+					n.Log.Errorf("Subject: %s, error: %s", msg.Subject, err.Error())
 					<-sem
 					continue
 				}
@@ -244,8 +248,8 @@ func (n *natsConsumer) receiver(ctx context.Context) {
 func (n *natsConsumer) clean() {
 	for _, sub := range n.subs {
 		if err := sub.Unsubscribe(); err != nil {
-			n.acc.AddError(fmt.Errorf("Error unsubscribing from subject %s in queue %s: %s\n",
-				sub.Subject, sub.Queue, err.Error()))
+			n.Log.Errorf("Error unsubscribing from subject %s in queue %s: %s",
+				sub.Subject, sub.Queue, err.Error())
 		}
 	}
 
