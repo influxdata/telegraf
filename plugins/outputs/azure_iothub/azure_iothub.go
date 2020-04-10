@@ -125,7 +125,7 @@ func (i *Iothub) createConnectionString() {
 	i.ConnectionString = conn
 }
 
-func (i *Iothub) validateConfiguration() error {
+func (i *Iothub) validateConfiguration() bool {
 	valid := false
 
 	// connection_string provided
@@ -143,49 +143,66 @@ func (i *Iothub) validateConfiguration() error {
 		valid = true
 	}
 
-	// return
-	if valid == true {
-		return nil
-	} else {
-		return fmt.Errorf("invalid plugin configuration")
-	}
+	return valid
 }
 
 // Init IoT Hub
 func (i *Iothub) Init() error {
+
 	// check for a valid configuration
-	err := i.validateConfiguration()
-	if err != nil {
+	valid := i.validateConfiguration()
+
+	if valid {
+
+		// if there's no explict connection string given
+		if !i.hasConnectionString() {
+			// create connection string from IoT Hub configuration
+			i.createConnectionString()
+		}
+
+		// create a new client from connection string
+
+		gwhn := os.Getenv("IOTEDGE_GATEWAYHOSTNAME")
+		mgid := os.Getenv("IOTEDGE_MODULEGENERATIONID")
+		wluri := os.Getenv("IOTEDGE_WORKLOADURI")
+
+		c, err := iothub.NewModuleFromConnectionString(
+			iotmqtt.NewModuleTransport(), i.ConnectionString, gwhn, mgid, wluri, true,
+		)
+		if err != nil {
+			return err
+		}
+
+		// set IoT Hub client
+		i.Client = *c
+
+		s, err := serializers.NewJsonSerializer(time.Second)
+		if err != nil {
+			return err
+		}
+		i.serializer = s
+
+		return err
+	} else {
+
+		c, err := iothub.NewModuleFromEnvironment(
+			iotmqtt.NewModuleTransport(), true,
+		)
+		if err != nil {
+			return err
+		}
+
+		// set IoT Hub client
+		i.Client = *c
+
+		s, err := serializers.NewJsonSerializer(time.Second)
+		if err != nil {
+			return err
+		}
+		i.serializer = s
+
 		return err
 	}
-
-	// if there's no explict connection string given
-	if !i.hasConnectionString() {
-		// create connection string from IoT Hub configuration
-		i.createConnectionString()
-	}
-
-	// create a new client from connection string
-
-	gwhn := os.Getenv("IOTEDGE_GATEWAYHOSTNAME")
-	mgid := os.Getenv("IOTEDGE_MODULEGENERATIONID")
-	wluri := os.Getenv("IOTEDGE_WORKLOADURI")
-
-	c, err := iothub.NewModuleFromConnectionString(
-		iotmqtt.NewModuleTransport(), i.ConnectionString, gwhn, mgid, wluri, true,
-	)
-	if err != nil {
-		return err
-	}
-
-	// set IoT Hub client
-	i.Client = *c
-
-	s, err := serializers.NewJsonSerializer(time.Second)
-
-	i.serializer = s
-
-	return err
 }
 
 // Connect IoT Hub Client
