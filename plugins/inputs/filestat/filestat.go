@@ -85,10 +85,12 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			fileInfo, err := os.Stat(fileName)
 			if os.IsNotExist(err) {
 				fields["exists"] = int64(0)
+				acc.AddFields("filestat", fields, tags)
+				continue
 			}
 
 			if fileInfo == nil {
-				f.Log.Errorf("Unable to get info for file %q, possible permissions issue",
+				f.Log.Errorf("Unable to get info for file %q: %v",
 					fileName)
 			} else {
 				fields["size_bytes"] = fileInfo.Size()
