@@ -11,8 +11,8 @@ import (
 
 func TestMultilineConfigOK(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: ".*",
-		What:    Previous,
+		Pattern:        ".*",
+		MatchWhichLine: Previous,
 	}
 
 	_, err := c.NewMultiline()
@@ -22,8 +22,8 @@ func TestMultilineConfigOK(t *testing.T) {
 
 func TestMultilineConfigError(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: "\xA0",
-		What:    Previous,
+		Pattern:        "\xA0",
+		MatchWhichLine: Previous,
 	}
 
 	_, err := c.NewMultiline()
@@ -34,9 +34,9 @@ func TestMultilineConfigError(t *testing.T) {
 func TestMultilineConfigTimeoutSpecified(t *testing.T) {
 	duration, _ := time.ParseDuration("10s")
 	c := &MultilineConfig{
-		Pattern: ".*",
-		What:    Previous,
-		Timeout: &internal.Duration{Duration: duration},
+		Pattern:        ".*",
+		MatchWhichLine: Previous,
+		Timeout:        &internal.Duration{Duration: duration},
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -47,8 +47,8 @@ func TestMultilineConfigTimeoutSpecified(t *testing.T) {
 func TestMultilineConfigDefaultTimeout(t *testing.T) {
 	duration, _ := time.ParseDuration("5s")
 	c := &MultilineConfig{
-		Pattern: ".*",
-		What:    Previous,
+		Pattern:        ".*",
+		MatchWhichLine: Previous,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -58,8 +58,8 @@ func TestMultilineConfigDefaultTimeout(t *testing.T) {
 
 func TestMultilineIsEnabled(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: ".*",
-		What:    Previous,
+		Pattern:        ".*",
+		MatchWhichLine: Previous,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -71,7 +71,7 @@ func TestMultilineIsEnabled(t *testing.T) {
 
 func TestMultilineIsDisabled(t *testing.T) {
 	c := &MultilineConfig{
-		What: Previous,
+		MatchWhichLine: Previous,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -83,8 +83,8 @@ func TestMultilineIsDisabled(t *testing.T) {
 
 func TestMultilineFlushEmpty(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: "^=>",
-		What:    Previous,
+		Pattern:        "^=>",
+		MatchWhichLine: Previous,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -97,8 +97,8 @@ func TestMultilineFlushEmpty(t *testing.T) {
 
 func TestMultilineFlush(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: "^=>",
-		What:    Previous,
+		Pattern:        "^=>",
+		MatchWhichLine: Previous,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -113,8 +113,8 @@ func TestMultilineFlush(t *testing.T) {
 
 func TestMultiLineProcessLinePrevious(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: "^=>",
-		What:    Previous,
+		Pattern:        "^=>",
+		MatchWhichLine: Previous,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -143,8 +143,8 @@ func TestMultiLineProcessLinePrevious(t *testing.T) {
 
 func TestMultiLineProcessLineNext(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: "=>$",
-		What:    Next,
+		Pattern:        "=>$",
+		MatchWhichLine: Next,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -173,9 +173,9 @@ func TestMultiLineProcessLineNext(t *testing.T) {
 
 func TestMultiLineMatchStringWithNegateFalse(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: "=>$",
-		What:    Next,
-		Negate:  false,
+		Pattern:        "=>$",
+		MatchWhichLine: Next,
+		Negate:         false,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -189,9 +189,9 @@ func TestMultiLineMatchStringWithNegateFalse(t *testing.T) {
 
 func TestMultiLineMatchStringWithNegateTrue(t *testing.T) {
 	c := &MultilineConfig{
-		Pattern: "=>$",
-		What:    Next,
-		Negate:  true,
+		Pattern:        "=>$",
+		MatchWhichLine: Next,
+		Negate:         true,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -204,32 +204,32 @@ func TestMultiLineMatchStringWithNegateTrue(t *testing.T) {
 }
 
 func TestMultilineWhat(t *testing.T) {
-	var w1 MultilineWhat
+	var w1 MultilineMatchWhichLine
 	w1.UnmarshalTOML([]byte(`"previous"`))
 	assert.Equal(t, Previous, w1)
 
-	var w2 MultilineWhat
+	var w2 MultilineMatchWhichLine
 	w2.UnmarshalTOML([]byte(`previous`))
 	assert.Equal(t, Previous, w2)
 
-	var w3 MultilineWhat
+	var w3 MultilineMatchWhichLine
 	w3.UnmarshalTOML([]byte(`'previous'`))
 	assert.Equal(t, Previous, w3)
 
-	var w4 MultilineWhat
+	var w4 MultilineMatchWhichLine
 	w4.UnmarshalTOML([]byte(`"next"`))
 	assert.Equal(t, Next, w4)
 
-	var w5 MultilineWhat
+	var w5 MultilineMatchWhichLine
 	w5.UnmarshalTOML([]byte(`next`))
 	assert.Equal(t, Next, w5)
 
-	var w6 MultilineWhat
+	var w6 MultilineMatchWhichLine
 	w6.UnmarshalTOML([]byte(`'next'`))
 	assert.Equal(t, Next, w6)
 
-	var w7 MultilineWhat
+	var w7 MultilineMatchWhichLine
 	err := w7.UnmarshalTOML([]byte(`nope`))
-	assert.Equal(t, MultilineWhat(-1), w7)
+	assert.Equal(t, MultilineMatchWhichLine(-1), w7)
 	assert.Error(t, err)
 }

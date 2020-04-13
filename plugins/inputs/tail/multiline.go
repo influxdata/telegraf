@@ -11,7 +11,7 @@ import (
 )
 
 // Indicates relation to the multiline event: previous or next
-type MultilineWhat int
+type MultilineMatchWhichLine int
 
 type Multiline struct {
 	config        *MultilineConfig
@@ -20,15 +20,15 @@ type Multiline struct {
 }
 
 type MultilineConfig struct {
-	Pattern string
-	What    MultilineWhat
-	Negate  bool
-	Timeout *internal.Duration
+	Pattern        string
+	MatchWhichLine MultilineMatchWhichLine `toml:"match_which_line"`
+	Negate         bool
+	Timeout        *internal.Duration
 }
 
 const (
 	// Previous => Append current line to previous line
-	Previous MultilineWhat = iota
+	Previous MultilineMatchWhichLine = iota
 	// Next => Next line will be appended to current line
 	Next
 )
@@ -44,8 +44,7 @@ func (m *MultilineConfig) NewMultiline() (*Multiline, error) {
 			return nil, err
 		}
 		if m.Timeout == nil || m.Timeout.Duration.Nanoseconds() == int64(0) {
-			duration, _ := time.ParseDuration("5s")
-			m.Timeout = &internal.Duration{Duration: duration}
+			m.Timeout = &internal.Duration{Duration: 5 * time.Second}
 		}
 	}
 
@@ -64,7 +63,8 @@ func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 		buffer.WriteString(text)
 		return ""
 	}
-	if m.config.What == Previous {
+
+	if m.config.MatchWhichLine == Previous {
 		previousText := buffer.String()
 		buffer.Reset()
 		buffer.WriteString(text)
@@ -94,7 +94,7 @@ func (m *Multiline) matchString(text string) bool {
 	return m.patternRegexp.MatchString(text) != m.config.Negate
 }
 
-func (w MultilineWhat) String() string {
+func (w MultilineMatchWhichLine) String() string {
 	switch w {
 	case Previous:
 		return "previous"
@@ -104,13 +104,13 @@ func (w MultilineWhat) String() string {
 	return ""
 }
 
-// UnmarshalTOML implements ability to unmarshal MultilineWhat from TOML files.
-func (w *MultilineWhat) UnmarshalTOML(data []byte) (err error) {
+// UnmarshalTOML implements ability to unmarshal MultilineMatchWhichLine from TOML files.
+func (w *MultilineMatchWhichLine) UnmarshalTOML(data []byte) (err error) {
 	return w.UnmarshalText(data)
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler
-func (w *MultilineWhat) UnmarshalText(data []byte) (err error) {
+func (w *MultilineMatchWhichLine) UnmarshalText(data []byte) (err error) {
 	s := string(data)
 	switch strings.ToUpper(s) {
 	case `PREVIOUS`:
@@ -130,14 +130,14 @@ func (w *MultilineWhat) UnmarshalText(data []byte) (err error) {
 		return
 	}
 	*w = -1
-	return fmt.Errorf("E! [inputs.tail] unknown multiline what")
+	return fmt.Errorf("E! [inputs.tail] unknown multiline MatchWhichLine")
 }
 
 // MarshalText implements encoding.TextMarshaler
-func (w MultilineWhat) MarshalText() ([]byte, error) {
+func (w MultilineMatchWhichLine) MarshalText() ([]byte, error) {
 	s := w.String()
 	if s != "" {
 		return []byte(s), nil
 	}
-	return nil, fmt.Errorf("E! [inputs.tail] unknown multiline what")
+	return nil, fmt.Errorf("E! [inputs.tail] unknown multiline MatchWhichLine")
 }

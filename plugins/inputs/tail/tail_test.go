@@ -177,10 +177,10 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	tt.FromBeginning = true
 	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
 	tt.MultilineConfig = MultilineConfig{
-		Pattern: `^[^\[]`,
-		What:    Previous,
-		Negate:  false,
-		Timeout: &internal.Duration{Duration: duration},
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		Negate:         false,
+		Timeout:        &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)
 
@@ -226,18 +226,19 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
+
 	// set tight timeout for tests
-	duration, _ := time.ParseDuration("10ms")
+	duration := 1 * time.Second
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
 	tt.MultilineConfig = MultilineConfig{
-		Pattern: `^[^\[]`,
-		What:    Previous,
-		Negate:  false,
-		Timeout: &internal.Duration{Duration: duration},
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		Negate:         false,
+		Timeout:        &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)
 
@@ -246,12 +247,12 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, tt.Start(&acc))
-	time.Sleep(20) // will force timeout
+	time.Sleep(5 * time.Second) // will force timeout
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] INFO HelloExample: This is info\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
 	acc.Wait(1)
-	time.Sleep(20) // will force timeout
+	time.Sleep(5 * time.Second) // will force timeout
 	_, err = tmpfile.WriteString("[04/Jun/2016:12:41:48 +0100] WARN HelloExample: This is warn\r\n")
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Sync())
@@ -287,10 +288,10 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 	tt.FromBeginning = true
 	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
 	tt.MultilineConfig = MultilineConfig{
-		Pattern: `^[^\[]`,
-		What:    Previous,
-		Negate:  false,
-		Timeout: &internal.Duration{Duration: duration},
+		Pattern:        `^[^\[]`,
+		MatchWhichLine: Previous,
+		Negate:         false,
+		Timeout:        &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)
 
