@@ -248,6 +248,10 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 }
 
 func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
+	if a.client == nil {
+		a.Init()
+	}
+	
 	dataQueues, err := a.GetMetrics(a.QueuesURL())
 	if err != nil {
 		return err
