@@ -15,6 +15,7 @@
 #### Bugfixes
 
 - [#7236](https://github.com/influxdata/telegraf/pull/7236): Fix PerformanceCounter query performance degradation in sqlserver input.
+- [#7258](https://github.com/influxdata/telegraf/pull/7258): Fix using the Name field in template processor.
 
 ## v1.14 [2020-03-26]
 
