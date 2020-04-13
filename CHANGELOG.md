@@ -9,6 +9,8 @@
 - [#7225](https://github.com/influxdata/telegraf/pull/7225): Add support for 64-bit integer types to modbus input.
 - [#7231](https://github.com/influxdata/telegraf/pull/7231): Add possibility to specify measurement per register.
 - [#7136](https://github.com/influxdata/telegraf/pull/7136): Support multiple templates for graphite serializers.
+- [#7250](https://github.com/influxdata/telegraf/pull/7250): Deploy telegraf configuration as a "non config" file.
+- [#7214](https://github.com/influxdata/telegraf/pull/7214): Add VolumeSpace query for sqlserver input with metric_version 2.
 
 ## v1.14.1 [unreleased]
 
@@ -16,6 +18,7 @@
 
 - [#7236](https://github.com/influxdata/telegraf/pull/7236): Fix PerformanceCounter query performance degradation in sqlserver input.
 - [#7258](https://github.com/influxdata/telegraf/pull/7258): Fix using the Name field in template processor.
+- [#7289](https://github.com/influxdata/telegraf/pull/7289): Fix export timestamp not working for prometheus on v2.
 
 ## v1.14 [2020-03-26]
 
