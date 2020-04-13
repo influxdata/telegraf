@@ -302,18 +302,14 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 		timeout = timer.C
 	}
 
-	reset := func() {
-		if timer != nil {
-			timer.Reset(t.MultilineConfig.Timeout.Duration)
-		}
-	}
-
 	channelOpen := true
 
 	for {
 		var line *tail.Line
 
-		reset()
+		if timer != nil {
+			timer.Reset(t.MultilineConfig.Timeout.Duration)
+		}
 
 		select {
 		case <-t.ctx.Done():
