@@ -13,6 +13,8 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+type TimeFunc func() time.Time
+
 type Parser struct {
 	MetricName        string
 	HeaderRowCount    int
@@ -31,7 +33,7 @@ type Parser struct {
 	TimeFunc          func() time.Time
 }
 
-func (p *Parser) SetTimeFunc(fn metric.TimeFunc) {
+func (p *Parser) SetTimeFunc(fn TimeFunc) {
 	p.TimeFunc = fn
 }
 
@@ -45,6 +47,7 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	if p.Comment != "" {
 		csvReader.Comment = []rune(p.Comment)[0]
 	}
+	csvReader.TrimLeadingSpace = p.TrimSpace
 	return csvReader, nil
 }
 

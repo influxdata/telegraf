@@ -14,6 +14,8 @@ import (
 
 const helpString = "Telegraf collected metric"
 
+type TimeFunc func() time.Time
+
 type MetricFamily struct {
 	Name string
 	Type telegraf.ValueType
@@ -22,6 +24,7 @@ type MetricFamily struct {
 type Metric struct {
 	Labels    []LabelPair
 	Time      time.Time
+	AddTime   time.Time
 	Scaler    *Scaler
 	Histogram *Histogram
 	Summary   *Summary
@@ -52,10 +55,30 @@ type Histogram struct {
 	Sum     float64
 }
 
+func (h *Histogram) merge(b Bucket) {
+	for i := range h.Buckets {
+		if h.Buckets[i].Bound == b.Bound {
+			h.Buckets[i].Count = b.Count
+			return
+		}
+	}
+	h.Buckets = append(h.Buckets, b)
+}
+
 type Summary struct {
 	Quantiles []Quantile
 	Count     uint64
 	Sum       float64
+}
+
+func (s *Summary) merge(q Quantile) {
+	for i := range s.Quantiles {
+		if s.Quantiles[i].Quantile == q.Quantile {
+			s.Quantiles[i].Value = q.Value
+			return
+		}
+	}
+	s.Quantiles = append(s.Quantiles, q)
 }
 
 type MetricKey uint64
@@ -77,14 +100,14 @@ type Entry struct {
 }
 
 type Collection struct {
-	config  FormatConfig
 	Entries map[MetricFamily]Entry
+	config  FormatConfig
 }
 
 func NewCollection(config FormatConfig) *Collection {
 	cache := &Collection{
-		config:  config,
 		Entries: make(map[MetricFamily]Entry),
+		config:  config,
 	}
 	return cache
 }
@@ -113,7 +136,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 			}
 		}
 
-		name, ok := SanitizeName(tag.Key)
+		name, ok := SanitizeLabelName(tag.Key)
 		if !ok {
 			continue
 		}
@@ -132,7 +155,7 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 			continue
 		}
 
-		name, ok := SanitizeName(field.Key)
+		name, ok := SanitizeLabelName(field.Key)
 		if !ok {
 			continue
 		}
@@ -157,11 +180,11 @@ func (c *Collection) createLabels(metric telegraf.Metric) []LabelPair {
 	return labels
 }
 
-func (c *Collection) Add(metric telegraf.Metric) {
+func (c *Collection) Add(metric telegraf.Metric, now time.Time) {
 	labels := c.createLabels(metric)
 	for _, field := range metric.FieldList() {
 		metricName := MetricName(metric.Name(), field.Key, metric.Type())
-		metricName, ok := SanitizeName(metricName)
+		metricName, ok := SanitizeMetricName(metricName)
 		if !ok {
 			continue
 		}
@@ -205,18 +228,19 @@ func (c *Collection) Add(metric telegraf.Metric) {
 			}
 
 			m = &Metric{
-				Labels: labels,
-				Time:   metric.Time(),
-				Scaler: &Scaler{Value: value},
+				Labels:  labels,
+				Time:    metric.Time(),
+				AddTime: now,
+				Scaler:  &Scaler{Value: value},
 			}
 
-			// what if already here
 			entry.Metrics[metricKey] = m
 		case telegraf.Histogram:
 			if m == nil {
 				m = &Metric{
 					Labels:    labels,
 					Time:      metric.Time(),
+					AddTime:   now,
 					Histogram: &Histogram{},
 				}
 			}
@@ -236,7 +260,7 @@ func (c *Collection) Add(metric telegraf.Metric) {
 					continue
 				}
 
-				m.Histogram.Buckets = append(m.Histogram.Buckets, Bucket{
+				m.Histogram.merge(Bucket{
 					Bound: bound,
 					Count: count,
 				})
@@ -264,6 +288,7 @@ func (c *Collection) Add(metric telegraf.Metric) {
 				m = &Metric{
 					Labels:  labels,
 					Time:    metric.Time(),
+					AddTime: now,
 					Summary: &Summary{},
 				}
 			}
@@ -297,7 +322,7 @@ func (c *Collection) Add(metric telegraf.Metric) {
 					continue
 				}
 
-				m.Summary.Quantiles = append(m.Summary.Quantiles, Quantile{
+				m.Summary.merge(Quantile{
 					Quantile: quantile,
 					Value:    value,
 				})
@@ -312,7 +337,7 @@ func (c *Collection) Expire(now time.Time, age time.Duration) {
 	expireTime := now.Add(-age)
 	for _, entry := range c.Entries {
 		for key, metric := range entry.Metrics {
-			if metric.Time.Before(expireTime) {
+			if metric.AddTime.Before(expireTime) {
 				delete(entry.Metrics, key)
 				if len(entry.Metrics) == 0 {
 					delete(c.Entries, entry.Family)

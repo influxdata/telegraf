@@ -149,6 +149,7 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	p, err := parsers.NewParser(&parsers.Config{
 		MetricName: "exec",
 		DataFormat: "json",
+		JSONStrict: true,
 	})
 	assert.NoError(t, err)
 	ex.SetParser(p)

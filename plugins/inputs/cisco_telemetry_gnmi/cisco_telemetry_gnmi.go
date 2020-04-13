@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"path"
 	"strings"
@@ -280,11 +281,26 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 		}
 
 		// Group metrics
-		for key, val := range fields {
-			if len(aliasPath) > 0 {
+		for k, v := range fields {
+			key := k
+			if len(aliasPath) < len(key) {
+				// This may not be an exact prefix, due to naming style
+				// conversion on the key.
 				key = key[len(aliasPath)+1:]
+			} else {
+				// Otherwise use the last path element as the field key.
+				key = path.Base(key)
+
+				// If there are no elements skip the item; this would be an
+				// invalid message.
+				key = strings.TrimLeft(key, "/.")
+				if key == "" {
+					c.Log.Errorf("invalid empty path: %q", k)
+					continue
+				}
 			}
-			grouper.Add(name, tags, timestamp, key, val)
+
+			grouper.Add(name, tags, timestamp, key, v)
 		}
 
 		lastAliasPath = aliasPath
@@ -317,7 +333,7 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 	case *gnmi.TypedValue_BytesVal:
 		value = val.BytesVal
 	case *gnmi.TypedValue_DecimalVal:
-		value = val.DecimalVal
+		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
 	case *gnmi.TypedValue_FloatVal:
 		value = val.FloatVal
 	case *gnmi.TypedValue_IntVal:

@@ -22,6 +22,8 @@ type Jenkins struct {
 	URL      string
 	Username string
 	Password string
+	Source   string
+	Port     string
 	// HTTP Timeout specified as a string - 3s, 1m, 1h
 	ResponseTimeout internal.Duration
 
@@ -71,7 +73,7 @@ const sampleConfig = `
 
   ## Optional Sub Job Per Layer
   ## In workflow-multibranch-plugin, each branch will be created as a sub job.
-  ## This config will limit to call only the lasted branches in each layer, 
+  ## This config will limit to call only the lasted branches in each layer,
   ## empty will use default value 10
   # max_subjob_per_layer = 10
 
@@ -88,8 +90,9 @@ const sampleConfig = `
 
 // measurement
 const (
-	measurementNode = "jenkins_node"
-	measurementJob  = "jenkins_job"
+	measurementJenkins = "jenkins"
+	measurementNode    = "jenkins_node"
+	measurementJob     = "jenkins_job"
 )
 
 // SampleConfig implements telegraf.Input interface
@@ -137,6 +140,22 @@ func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 // seperate the client as dependency to use httptest Client for mocking
 func (j *Jenkins) initialize(client *http.Client) error {
 	var err error
+
+	// init jenkins tags
+	u, err := url.Parse(j.URL)
+	if err != nil {
+		return err
+	}
+	if u.Port() == "" {
+		if u.Scheme == "http" {
+			j.Port = "80"
+		} else if u.Scheme == "https" {
+			j.Port = "443"
+		}
+	} else {
+		j.Port = u.Port()
+	}
+	j.Source = u.Hostname()
 
 	// init job filter
 	j.jobFilter, err = filter.Compile(j.JobExclude)
@@ -191,12 +210,8 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 		tags["status"] = "offline"
 	}
 
-	u, err := url.Parse(j.URL)
-	if err != nil {
-		return err
-	}
-	tags["source"] = u.Hostname()
-	tags["port"] = u.Port()
+	tags["source"] = j.Source
+	tags["port"] = j.Port
 
 	fields := make(map[string]interface{})
 	fields["num_executors"] = n.NumExecutors
@@ -230,6 +245,15 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
+
+	// get total and busy executors
+	tags := map[string]string{"source": j.Source, "port": j.Port}
+	fields := make(map[string]interface{})
+	fields["busy_executors"] = nodeResp.BusyExecutors
+	fields["total_executors"] = nodeResp.TotalExecutors
+
+	acc.AddFields(measurementJenkins, fields, tags)
+
 	// get node data
 	for _, node := range nodeResp.Computers {
 		err = j.gatherNodeData(node, acc)
@@ -334,12 +358,14 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	gatherJobBuild(jr, build, acc)
+	j.gatherJobBuild(jr, build, acc)
 	return nil
 }
 
 type nodeResponse struct {
-	Computers []node `json:"computer"`
+	Computers      []node `json:"computer"`
+	BusyExecutors  int    `json:"busyExecutors"`
+	TotalExecutors int    `json:"totalExecutors"`
 }
 
 type node struct {
@@ -416,12 +442,20 @@ func (jr jobRequest) combined() []string {
 	return append(jr.parents, jr.name)
 }
 
+func (jr jobRequest) combinedEscaped() []string {
+	jobs := jr.combined()
+	for index, job := range jobs {
+		jobs[index] = url.PathEscape(job)
+	}
+	return jobs
+}
+
 func (jr jobRequest) URL() string {
-	return "/job/" + strings.Join(jr.combined(), "/job/") + jobPath
+	return "/job/" + strings.Join(jr.combinedEscaped(), "/job/") + jobPath
 }
 
 func (jr jobRequest) buildURL(number int64) string {
-	return "/job/" + strings.Join(jr.combined(), "/job/") + "/" + strconv.Itoa(int(number)) + jobPath
+	return "/job/" + strings.Join(jr.combinedEscaped(), "/job/") + "/" + strconv.Itoa(int(number)) + jobPath
 }
 
 func (jr jobRequest) hierarchyName() string {
@@ -432,8 +466,8 @@ func (jr jobRequest) parentsString() string {
 	return strings.Join(jr.parents, "/")
 }
 
-func gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
-	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result}
+func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
+	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result, "source": j.Source, "port": j.Port}
 	fields := make(map[string]interface{})
 	fields["duration"] = b.Duration
 	fields["result_code"] = mapResultCode(b.Result)

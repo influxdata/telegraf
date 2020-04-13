@@ -1,9 +1,8 @@
 # Cisco GNMI Telemetry
 
-Cisco GNMI Telemetry is an input plugin that consumes telemetry data similar to the [GNMI specification](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md).
-This GRPC-based protocol can utilize TLS for authentication and encryption.
+Cisco GNMI Telemetry is an input plugin that consumes telemetry data based on the [GNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.
 
-This plugin has been developed to support GNMI telemetry as produced by Cisco IOS XR (64-bit) version 6.5.1 and later.
+It has been optimized to support GNMI telemetry as produced by Cisco IOS XR (64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
 
 
 ### Configuration
