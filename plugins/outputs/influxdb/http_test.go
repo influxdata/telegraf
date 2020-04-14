@@ -907,6 +907,37 @@ func TestDBRPTags(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
+		{
+			name: "exclude database tag keeps retention policy tag",
+			config: influxdb.HTTPConfig{
+				URL:                  u,
+				SkipDatabaseCreation: true,
+				Database:             "telegraf",
+				RetentionPolicyTag:   "rp",
+				ExcludeDatabaseTag:   true,
+				Log:                  testutil.Logger{},
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"rp": "foo",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			handlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.FormValue("db"), "telegraf")
+				require.Equal(t, r.FormValue("rp"), "foo")
+				body, err := ioutil.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Contains(t, string(body), "cpu,rp=foo value=42")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

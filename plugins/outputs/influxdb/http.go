@@ -272,8 +272,12 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			// Avoid modifying the metric in case we need to retry the request.
 			metric = metric.Copy()
 			metric.Accept()
-			metric.RemoveTag(c.config.DatabaseTag)
-			metric.RemoveTag(c.config.RetentionPolicyTag)
+			if c.config.ExcludeDatabaseTag {
+				metric.RemoveTag(c.config.DatabaseTag)
+			}
+			if c.config.ExcludeRetentionPolicyTag {
+				metric.RemoveTag(c.config.RetentionPolicyTag)
+			}
 		}
 
 		batches[dbrp] = append(batches[dbrp], metric)
