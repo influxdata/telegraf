@@ -21,7 +21,10 @@ The Modbus plugin collects Discrete Inputs, Coils, Input Registers and Holding R
  timeout = "1s"
 
  ## Maximum number of retries and the time to wait between retries
- ## when a slave-device is busy
+ ## when a slave-device is busy.
+ ## NOTE: Please make sure that the overall retry time (#retries * wait time)
+ ##       is always smaller than the query interval as otherwise you will get
+ ##       an "did not complete within its interval" warning.
  #busy_retries = 0
  #busy_retries_wait = "100ms"
 
