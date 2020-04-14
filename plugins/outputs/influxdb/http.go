@@ -107,9 +107,9 @@ type HTTPConfig struct {
 }
 
 type httpClient struct {
-	client           *http.Client
-	config           HTTPConfig
-	createdDatabases map[string]bool
+	client                 *http.Client
+	config                 HTTPConfig
+	createDatabaseExecuted map[string]bool
 
 	log telegraf.Logger
 }
@@ -177,9 +177,9 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 			Timeout:   config.Timeout,
 			Transport: transport,
 		},
-		createdDatabases: make(map[string]bool),
-		config:           config,
-		log:              config.Log,
+		createDatabaseExecuted: make(map[string]bool),
+		config:                 config,
+		log:                    config.Log,
 	}
 	return client, nil
 }
@@ -209,13 +209,19 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 	defer resp.Body.Close()
 
+	// Track that a 'create database` statement was executed for the database
+	// even if the statement fails.  One initial attempt to create the database
+	// is made each time a new database is encountered in the database_tag.
+	// After this initial attempt it will only be executed if a "database not
+	// found" error occurs.
+	c.createDatabaseExecuted[database] = true
+
 	queryResp := &QueryResponse{}
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(queryResp)
 
 	if err != nil {
 		if resp.StatusCode == 200 {
-			c.createdDatabases[database] = true
 			return nil
 		}
 
@@ -227,7 +233,6 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 
 	// Even with a 200 response there can be an error
 	if resp.StatusCode == http.StatusOK && queryResp.Error() == "" {
-		c.createdDatabases[database] = true
 		return nil
 	}
 
@@ -280,7 +285,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	for dbrp, batch := range batches {
-		if !c.config.SkipDatabaseCreation && !c.createdDatabases[dbrp.Database] {
+		if !c.config.SkipDatabaseCreation && !c.createDatabaseExecuted[dbrp.Database] {
 			err := c.CreateDatabase(ctx, dbrp.Database)
 			if err != nil {
 				c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
