@@ -11,6 +11,7 @@
 - [#7136](https://github.com/influxdata/telegraf/pull/7136): Support multiple templates for graphite serializers.
 - [#7250](https://github.com/influxdata/telegraf/pull/7250): Deploy telegraf configuration as a "non config" file.
 - [#7214](https://github.com/influxdata/telegraf/pull/7214): Add VolumeSpace query for sqlserver input with metric_version 2.
+- [#7304](https://github.com/influxdata/telegraf/pull/7304): Add reading bearer token from a file to http input.
 
 ## v1.14.1 [unreleased]
 
