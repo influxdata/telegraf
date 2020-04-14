@@ -312,9 +312,9 @@ func globUnixSocket(url string) ([]string, error) {
 
 	for _, path := range paths {
 		if status != "" {
-			status = fmt.Sprintf(":%s", status)
+			path = path + ":" + status
 		}
-		addrs = append(addrs, fmt.Sprintf("%s%s", path, status))
+		addrs = append(addrs, path)
 	}
 
 	return addrs, nil
