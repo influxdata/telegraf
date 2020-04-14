@@ -16,9 +16,11 @@
 
 #### Bugfixes
 
-- [#7236](https://github.com/influxdata/telegraf/pull/7236): Fix PerformanceCounter query performance degradation in sqlserver input.
-- [#7258](https://github.com/influxdata/telegraf/pull/7258): Fix using the Name field in template processor.
+- [#7236](https://github.com/influxdata/telegraf/issues/7236): Fix PerformanceCounter query performance degradation in sqlserver input.
+- [#7257](https://github.com/influxdata/telegraf/issues/7257): Fix error when using the Name field in template processor.
 - [#7289](https://github.com/influxdata/telegraf/pull/7289): Fix export timestamp not working for prometheus on v2.
+- [#7310](https://github.com/influxdata/telegraf/issues/7310): Fix exclude database and retention policy tags is shared.
+- [#7262](https://github.com/influxdata/telegraf/issues/7262): Fix status path when using globs in phpfpm.
 
 ## v1.14 [2020-03-26]
 
