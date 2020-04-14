@@ -665,6 +665,7 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 			mberr, ok := err.(*mb.ModbusError)
 			if ok && mberr.ExceptionCode == mb.ExceptionCodeServerDeviceBusy && retry < m.Retries {
 				log.Printf("I! [inputs.modbus] device busy! Retrying %d more time(s)...", m.Retries-retry)
+				time.Sleep(m.RetriesWaitTime.Duration)
 				continue
 			}
 			disconnect(m)
@@ -673,7 +674,6 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		}
 		// Reading was successful, leave the retry loop
 		break
-		time.Sleep(m.RetriesWaitTime.Duration)
 	}
 
 	grouper := metric.NewSeriesGrouper()
