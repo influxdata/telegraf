@@ -208,6 +208,15 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
+		if strings.HasPrefix(stat, "KVSTORE.") {
+			if !strings.Contains(stat, vclactive) {
+				continue
+			}
+			if strings.Contains(stat, vclactive) {
+				stat = strings.Replace(stat, "."+vclactive, "", 1)
+			}
+		}
+
 		parts := strings.SplitN(stat, ".", 2)
 		section := parts[0]
 		field := parts[1]
