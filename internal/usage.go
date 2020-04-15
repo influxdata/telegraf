@@ -19,6 +19,9 @@ The commands & flags are:
   --plugin-directory             directory containing *.so files, this directory will be
                                  searched recursively. Any Plugin found will be loaded
                                  and namespaced.
+  --config-http-retry            used when pulling down config from http source. 
+                                 Specifies a retry period in seconds in case source is 
+                                 down on startup.
   --debug                        turn on debug logging
   --input-filter <filter>        filter the inputs to enable, separator is :
   --input-list                   print available input plugins.

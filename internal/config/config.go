@@ -618,7 +618,7 @@ func PrintOutputConfig(name string) error {
 	return nil
 }
 
-func (c *Config) LoadDirectory(path string) error {
+func (c *Config) LoadDirectory(path string, httpRetryInterval int) error {
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
 		if info == nil {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
@@ -637,7 +637,7 @@ func (c *Config) LoadDirectory(path string) error {
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
 		}
-		err := c.LoadConfig(thispath)
+		err := c.LoadConfig(thispath, httpRetryInterval)
 		if err != nil {
 			return err
 		}
@@ -675,14 +675,14 @@ func getDefaultConfigPath() (string, error) {
 }
 
 // LoadConfig loads the given config file and applies it to c
-func (c *Config) LoadConfig(path string) error {
+func (c *Config) LoadConfig(path string, httpRetryInterval int) error {
 	var err error
 	if path == "" {
 		if path, err = getDefaultConfigPath(); err != nil {
 			return err
 		}
 	}
-	data, err := loadConfig(path)
+	data, err := loadConfig(path, httpRetryInterval)
 	if err != nil {
 		return fmt.Errorf("Error loading %s, %s", path, err)
 	}
@@ -834,7 +834,7 @@ func escapeEnv(value string) string {
 	return envVarEscaper.Replace(value)
 }
 
-func loadConfig(config string) ([]byte, error) {
+func loadConfig(config string, httpRetryInterval int) ([]byte, error) {
 	u, err := url.Parse(config)
 	if err != nil {
 		return nil, err
@@ -842,7 +842,7 @@ func loadConfig(config string) ([]byte, error) {
 
 	switch u.Scheme {
 	case "https", "http":
-		return fetchConfig(u)
+		return fetchConfig(u, httpRetryInterval)
 	default:
 		// If it isn't a https scheme, try it as a file.
 	}
@@ -850,27 +850,29 @@ func loadConfig(config string) ([]byte, error) {
 
 }
 
-func fetchConfig(u *url.URL) ([]byte, error) {
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
+func fetchConfig(u *url.URL, httpRetryInterval int) ([]byte, error) {
+	for {
+		req, err := http.NewRequest("GET", u.String(), nil)
+		if err != nil {
+			return nil, err
+		}
 
-	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
-		req.Header.Add("Authorization", "Token "+v)
+		if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+			req.Header.Add("Authorization", "Token "+v)
+		}
+		req.Header.Add("Accept", "application/toml")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Printf("Error getting HTTP response.  Retry in %d seconds.", httpRetryInterval)
+		} else if resp.StatusCode != http.StatusOK {
+			log.Printf("Bad status from HTTP Response - %s.  Retry in %d seconds.", resp.Status, httpRetryInterval)
+		} else {
+			log.Printf("HTTP Configuration successful")
+			defer resp.Body.Close()
+			return ioutil.ReadAll(resp.Body)
+		}
+		time.Sleep(time.Duration(httpRetryInterval) * time.Second)
 	}
-	req.Header.Add("Accept", "application/toml")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to retrieve remote config: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
 }
 
 // parseConfig loads a TOML configuration from a provided path and

@@ -16,6 +16,9 @@ The commands & flags are:
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
   --config-directory <directory> directory containing additional *.conf files
+  --config-http-retry            used when pulling down config from http source. 
+                                 Specifies a retry period in seconds in case source is 
+                                 down on startup.
   --debug                        turn on debug logging
   --input-filter <filter>        filter the inputs to enable, separator is :
   --input-list                   print available input plugins.
