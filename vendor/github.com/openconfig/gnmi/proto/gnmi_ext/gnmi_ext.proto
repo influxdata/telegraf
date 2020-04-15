@@ -1,0 +1,73 @@
+//
+// Copyright 2018 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+syntax = "proto3";
+
+// Package gnmi_ext defines a set of extensions messages which can be optionally
+// included with the request and response messages of gNMI RPCs. A set of
+// well-known extensions are defined within this file, along with a registry for
+// extensions defined outside of this package.
+package gnmi_ext;
+
+// The Extension message contains a single gNMI extension.
+message Extension {
+  oneof ext {
+    RegisteredExtension registered_ext = 1;    // A registered extension.
+    // Well known extensions.
+    MasterArbitration master_arbitration = 2;  // Master arbitration extension.
+  }
+}
+
+// The RegisteredExtension message defines an extension which is defined outside
+// of this file.
+message RegisteredExtension {
+  ExtensionID id = 1; // The unique ID assigned to this extension.
+  bytes msg = 2;      // The binary-marshalled protobuf extension payload.
+}
+
+// RegisteredExtension is an enumeration acting as a registry for extensions
+// defined by external sources.
+enum ExtensionID {
+  EID_UNSET = 0;
+  // New extensions are to be defined within this enumeration - their definition
+  // MUST link to a reference describing their implementation.
+
+  // An experimental extension that may be used during prototyping of a new
+  // extension.
+  EID_EXPERIMENTAL = 999;
+}
+
+// MasterArbitration is used to select the master among multiple gNMI clients
+// with the same Roles. The client with the largest election_id is honored as
+// the master.
+// The document about gNMI master arbitration can be found at
+// https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-master-arbitration.md
+message MasterArbitration {
+  Role role = 1;
+  Uint128 election_id = 2;
+}
+
+// Representation of unsigned 128-bit integer.
+message Uint128 {
+  uint64 high = 1;
+  uint64 low = 2;
+}
+
+// There can be one master for each role. The role is identified by its id.
+message Role {
+  string id = 1;
+  // More fields can be added if needed, for example, to specify what paths the
+  // role can read/write.
+}

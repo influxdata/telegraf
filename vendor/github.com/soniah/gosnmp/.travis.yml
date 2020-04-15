@@ -1,0 +1,39 @@
+language: go
+
+go:
+- "1.11"
+
+# $TRAVIS_GOARCH hack - see https://github.com/travis-ci/travis-ci/issues/6126
+
+env:
+  global:
+    - GOSNMP_TARGET=127.0.0.1
+    - GOSNMP_PORT=161
+    - GOSNMP_TARGET_IPV4=127.0.0.1
+    - GOSNMP_PORT_IPV4=161
+    - GOSNMP_TARGET_IPV6='::1'
+    - GOSNMP_PORT_IPV6=161
+  matrix:
+    - TRAVIS_GOARCH=amd64
+    - TRAVIS_GOARCH=386
+
+before_install:
+ - sudo apt-get update -qq
+ - sudo apt-get install snmpd
+ - export GOARCH=$TRAVIS_GOARCH
+
+install:
+ - go get github.com/soniah/gosnmp
+ - go get github.com/stretchr/testify/assert
+ - go get -u golang.org/x/tools/cmd/goimports
+ - sudo ./snmp_users.sh
+ - sudo /etc/init.d/snmpd restart
+
+script:
+ - ./linters.sh
+ - go test -v -tags helper
+ - go test -v -tags marshal
+ - go test -v -tags misc
+ - go test -v -tags api
+ - go test -v -tags end2end
+ - go test -v -tags trap

@@ -1,0 +1,456 @@
+//
+// Copyright 2016 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+syntax = "proto3";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
+import "github.com/openconfig/gnmi/proto/gnmi_ext/gnmi_ext.proto";
+
+// Package gNMI defines a service specification for the gRPC Network Management
+// Interface. This interface is defined to be a standard interface via which
+// a network management system ("client") can subscribe to state values,
+// retrieve snapshots of state information, and manipulate the state of a data
+// tree supported by a device ("target").
+//
+// This document references the gNMI Specification which can be found at
+// http://github.com/openconfig/reference/blob/master/rpc/gnmi
+package gnmi;
+
+// Define a protobuf FileOption that defines the gNMI service version.
+extend google.protobuf.FileOptions {
+  // The gNMI service semantic version.
+  string gnmi_service = 1001;
+}
+
+// gNMI_service is the current version of the gNMI service, returned through
+// the Capabilities RPC.
+option (gnmi_service) = "0.7.0";
+
+service gNMI {
+  // Capabilities allows the client to retrieve the set of capabilities that
+  // is supported by the target. This allows the target to validate the
+  // service version that is implemented and retrieve the set of models that
+  // the target supports. The models can then be specified in subsequent RPCs
+  // to restrict the set of data that is utilized.
+  // Reference: gNMI Specification Section 3.2
+  rpc Capabilities(CapabilityRequest) returns (CapabilityResponse);
+  // Retrieve a snapshot of data from the target. A Get RPC requests that the
+  // target snapshots a subset of the data tree as specified by the paths
+  // included in the message and serializes this to be returned to the
+  // client using the specified encoding.
+  // Reference: gNMI Specification Section 3.3
+  rpc Get(GetRequest) returns (GetResponse);
+  // Set allows the client to modify the state of data on the target. The
+  // paths to modified along with the new values that the client wishes
+  // to set the value to.
+  // Reference: gNMI Specification Section 3.4
+  rpc Set(SetRequest) returns (SetResponse);
+  // Subscribe allows a client to request the target to send it values
+  // of particular paths within the data tree. These values may be streamed
+  // at a particular cadence (STREAM), sent one off on a long-lived channel
+  // (POLL), or sent as a one-off retrieval (ONCE).
+  // Reference: gNMI Specification Section 3.5
+  rpc Subscribe(stream SubscribeRequest) returns (stream SubscribeResponse);
+}
+
+// Notification is a re-usable message that is used to encode data from the
+// target to the client. A Notification carries two types of changes to the data
+// tree:
+//  - Deleted values (delete) - a set of paths that have been removed from the
+//    data tree.
+//  - Updated values (update) - a set of path-value pairs indicating the path
+//    whose value has changed in the data tree.
+// Reference: gNMI Specification Section 2.1
+message Notification {
+  int64 timestamp = 1;          // Timestamp in nanoseconds since Epoch.
+  Path prefix = 2;              // Prefix used for paths in the message.
+  // An alias for the path specified in the prefix field.
+  // Reference: gNMI Specification Section 2.4.2
+  string alias = 3;
+  repeated Update update = 4;   // Data elements that have changed values.
+  repeated Path delete = 5;     // Data elements that have been deleted.
+  // This notification contains a set of paths that are always updated together
+  // referenced by a globally unique prefix.
+  bool atomic = 6;
+}
+
+// Update is a re-usable message that is used to store a particular Path,
+// Value pair.
+// Reference: gNMI Specification Section 2.1
+message Update {
+  Path path = 1;                      // The path (key) for the update.
+  Value value = 2 [deprecated=true];  // The value (value) for the update.
+  TypedValue val = 3;                 // The explicitly typed update value.
+  uint32 duplicates = 4;              // Number of coalesced duplicates.
+}
+
+// TypedValue is used to encode a value being sent between the client and
+// target (originated by either entity).
+message TypedValue {
+  // One of the fields within the val oneof is populated with the value
+  // of the update. The type of the value being included in the Update
+  // determines which field should be populated. In the case that the
+  // encoding is a particular form of the base protobuf type, a specific
+  // field is used to store the value (e.g., json_val).
+  oneof value {
+    string string_val = 1;            // String value.
+    int64 int_val = 2;                // Integer value.
+    uint64 uint_val = 3;              // Unsigned integer value.
+    bool bool_val = 4;                // Bool value.
+    bytes bytes_val = 5;              // Arbitrary byte sequence value.
+    float float_val = 6;              // Floating point value.
+    Decimal64 decimal_val = 7;        // Decimal64 encoded value.
+    ScalarArray leaflist_val = 8;     // Mixed type scalar array value.
+    google.protobuf.Any any_val = 9;  // protobuf.Any encoded bytes.
+    bytes json_val = 10;              // JSON-encoded text.
+    bytes json_ietf_val = 11;         // JSON-encoded text per RFC7951.
+    string ascii_val = 12;            // Arbitrary ASCII text.
+    // Protobuf binary encoded bytes. The message type is not included.
+    // See the specification at
+    // github.com/openconfig/reference/blob/master/rpc/gnmi/protobuf-vals.md
+    // for a complete specification.
+    bytes proto_bytes = 13;
+  }
+}
+
+// Path encodes a data tree path as a series of repeated strings, with
+// each element of the path representing a data tree node name and the
+// associated attributes.
+// Reference: gNMI Specification Section 2.2.2.
+message Path {
+  // Elements of the path are no longer encoded as a string, but rather within
+  // the elem field as a PathElem message.
+  repeated string element = 1 [deprecated=true];
+  string origin = 2;                              // Label to disambiguate path.
+  repeated PathElem elem = 3;                     // Elements of the path.
+  string target = 4;                              // The name of the target
+                                                  // (Sec. 2.2.2.1)
+}
+
+// PathElem encodes an element of a gNMI path, along ith any attributes (keys)
+// that may be associated with it.
+// Reference: gNMI Specification Section 2.2.2.
+message PathElem {
+  string name = 1;                    // The name of the element in the path.
+  map<string, string> key = 2;        // Map of key (attribute) name to value.
+}
+
+// Value encodes a data tree node's value - along with the way in which
+// the value is encoded. This message is deprecated by gNMI 0.3.0.
+// Reference: gNMI Specification Section 2.2.3.
+message Value {
+  option deprecated = true;
+  bytes value = 1;      // Value of the variable being transmitted.
+  Encoding type = 2;    // Encoding used for the value field.
+}
+
+// Encoding defines the value encoding formats that are supported by the gNMI
+// protocol. These encodings are used by both the client (when sending Set
+// messages to modify the state of the target) and the target when serializing
+// data to be returned to the client (in both Subscribe and Get RPCs).
+// Reference: gNMI Specification Section 2.3
+enum Encoding {
+  JSON = 0;           // JSON encoded text.
+  BYTES = 1;          // Arbitrarily encoded bytes.
+  PROTO = 2;          // Encoded according to out-of-band agreed Protobuf.
+  ASCII = 3;          // ASCII text of an out-of-band agreed format.
+  JSON_IETF = 4;      // JSON encoded text as per RFC7951.
+}
+
+// Error message previously utilised to return errors to the client. Deprecated
+// in favour of using the google.golang.org/genproto/googleapis/rpc/status
+// message in the RPC response.
+// Reference: gNMI Specification Section 2.5
+message Error {
+  option deprecated = true;
+  uint32 code = 1;                // Canonical gRPC error code.
+  string message = 2;             // Human readable error.
+  google.protobuf.Any data = 3;   // Optional additional information.
+}
+
+// Decimal64 is used to encode a fixed precision decimal number. The value
+// is expressed as a set of digits with the precision specifying the
+// number of digits following the decimal point in the digit set.
+message Decimal64 {
+  int64 digits = 1;         // Set of digits.
+  uint32 precision = 2;     // Number of digits following the decimal point.
+}
+
+// ScalarArray is used to encode a mixed-type array of values.
+message ScalarArray {
+  // The set of elements within the array. Each TypedValue message should
+  // specify only elements that have a field identifier of 1-7 (i.e., the
+  // values are scalar values).
+  repeated TypedValue element = 1;
+}
+
+// SubscribeRequest is the message sent by the client to the target when
+// initiating a subscription to a set of paths within the data tree. The
+// request field must be populated and the initial message must specify a
+// SubscriptionList to initiate a subscription. The message is subsequently
+// used to define aliases or trigger polled data to be sent by the target.
+// Reference: gNMI Specification Section 3.5.1.1
+message SubscribeRequest {
+  oneof request {
+    SubscriptionList subscribe = 1; // Specify the paths within a subscription.
+    Poll poll = 3;                  // Trigger a polled update.
+    AliasList aliases = 4;          // Aliases to be created.
+  }
+  // Extension messages associated with the SubscribeRequest. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 5;
+}
+
+// Poll is sent within a SubscribeRequest to trigger the device to
+// send telemetry updates for the paths that are associated with the
+// subscription.
+// Reference: gNMI Specification Section Section 3.5.1.4
+message Poll {
+}
+
+// SubscribeResponse is the message used by the target within a Subscribe RPC.
+// The target includes a Notification message which is used to transmit values
+// of the path(s) that are associated with the subscription. The same message
+// is to indicate that the target has sent all data values once (is
+// synchronized).
+// Reference: gNMI Specification Section 3.5.1.4
+message SubscribeResponse {
+  oneof response {
+    Notification update = 1;          // Changed or sampled value for a path.
+    // Indicate target has sent all values associated with the subscription
+    // at least once.
+    bool sync_response = 3;
+    // Deprecated in favour of google.golang.org/genproto/googleapis/rpc/status
+    Error error = 4 [deprecated=true];
+  }
+  // Extension messages associated with the SubscribeResponse. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 5;
+}
+
+// SubscriptionList is used within a Subscribe message to specify the list of
+// paths that the client wishes to subscribe to. The message consists of a
+// list of (possibly prefixed) paths, and options that relate to the
+// subscription.
+// Reference: gNMI Specification Section 3.5.1.2
+message SubscriptionList {
+  Path prefix = 1;                          // Prefix used for paths.
+  repeated Subscription subscription = 2;   // Set of subscriptions to create.
+  // Whether target defined aliases are allowed within the subscription.
+  bool use_aliases = 3;
+  QOSMarking qos = 4;                       // DSCP marking to be used.
+  // Mode of the subscription.
+  enum Mode {
+    STREAM = 0; // Values streamed by the target (Sec. 3.5.1.5.2).
+    ONCE = 1;   // Values sent once-off by the target (Sec. 3.5.1.5.1).
+    POLL = 2;   // Values sent in response to a poll request (Sec. 3.5.1.5.3).
+  }
+  Mode mode = 5;
+  // Whether elements of the schema that are marked as eligible for aggregation
+  // should be aggregated or not.
+  bool allow_aggregation = 6;
+  // The set of schemas that define the elements of the data tree that should
+  // be sent by the target.
+  repeated ModelData use_models = 7;
+  // The encoding that the target should use within the Notifications generated
+  // corresponding to the SubscriptionList.
+  Encoding encoding = 8;
+  // An optional field to specify that only updates to current state should be
+  // sent to a client. If set, the initial state is not sent to the client but
+  // rather only the sync message followed by any subsequent updates to the
+  // current state. For ONCE and POLL modes, this causes the server to send only
+  // the sync message (Sec. 3.5.2.3).
+  bool updates_only = 9;
+}
+
+// Subscription is a single request within a SubscriptionList. The path
+// specified is interpreted (along with the prefix) as the elements of the data
+// tree that the client is subscribing to. The mode determines how the target
+// should trigger updates to be sent.
+// Reference: gNMI Specification Section 3.5.1.3
+message Subscription {
+  Path path = 1;                    // The data tree path.
+  SubscriptionMode mode = 2;        // Subscription mode to be used.
+  uint64 sample_interval = 3;       // ns between samples in SAMPLE mode.
+  // Indicates whether values that not changed should be sent in a SAMPLE
+  // subscription.
+  bool suppress_redundant = 4;
+  // Specifies the maximum allowable silent period in nanoseconds when
+  // suppress_redundant is in use. The target should send a value at least once
+  // in the period specified.
+  uint64 heartbeat_interval = 5;
+}
+
+// SubscriptionMode is the mode of the subscription, specifying how the
+// target must return values in a subscription.
+// Reference: gNMI Specification Section 3.5.1.3
+enum SubscriptionMode {
+  TARGET_DEFINED = 0;  // The target selects the relevant mode for each element.
+  ON_CHANGE      = 1;  // The target sends an update on element value change.
+  SAMPLE         = 2;  // The target samples values according to the interval.
+}
+
+// QOSMarking specifies the DSCP value to be set on transmitted telemetry
+// updates from the target.
+// Reference: gNMI Specification Section 3.5.1.2
+message QOSMarking {
+  uint32 marking = 1;
+}
+
+// Alias specifies a data tree path, and an associated string which defines an
+// alias which is to be used for this path in the context of the RPC. The alias
+// is specified as a string which is prefixed with "#" to disambiguate it from
+// data tree element paths.
+// Reference: gNMI Specification Section 2.4.2
+message Alias {
+  Path path = 1;     // The path to be aliased.
+  string alias = 2;  // The alias value, a string prefixed by "#".
+}
+
+// AliasList specifies a list of aliases. It is used in a SubscribeRequest for
+// a client to create a set of aliases that the target is to utilize.
+// Reference: gNMI Specification Section 3.5.1.6
+message AliasList {
+  repeated Alias alias = 1;    // The set of aliases to be created.
+}
+
+// SetRequest is sent from a client to the target to update values in the data
+// tree. Paths are either deleted by the client, or modified by means of being
+// updated, or replaced. Where a replace is used, unspecified values are
+// considered to be replaced, whereas when update is used the changes are
+// considered to be incremental. The set of changes that are specified within
+// a single SetRequest are considered to be a transaction.
+// Reference: gNMI Specification Section 3.4.1
+message SetRequest {
+  Path prefix = 1;                // Prefix used for paths in the message.
+  repeated Path delete = 2;       // Paths to be deleted from the data tree.
+  repeated Update replace = 3;    // Updates specifying elements to be replaced.
+  repeated Update update = 4;     // Updates specifying elements to updated.
+  // Extension messages associated with the SetRequest. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 5;
+}
+
+// SetResponse is the response to a SetRequest, sent from the target to the
+// client. It reports the result of the modifications to the data tree that were
+// specified by the client. Errors for this RPC should be reported using the
+// https://github.com/googleapis/googleapis/blob/master/google/rpc/status.proto
+// message in the RPC return. The gnmi.Error message can be used to add additional
+// details where required.
+// Reference: gNMI Specification Section 3.4.2
+message SetResponse {
+  Path prefix = 1;                      // Prefix used for paths.
+  // A set of responses specifying the result of the operations specified in
+  // the SetRequest.
+  repeated UpdateResult response = 2;
+  Error message = 3 [deprecated=true]; // The overall status of the transaction.
+  int64 timestamp = 4;                 // Timestamp of transaction (ns since epoch).
+  // Extension messages associated with the SetResponse. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 5;
+}
+
+// UpdateResult is used within the SetResponse message to communicate the
+// result of an operation specified within a SetRequest message.
+// Reference: gNMI Specification Section 3.4.2
+message UpdateResult {
+  // The operation that was associated with the Path specified.
+  enum Operation {
+    INVALID = 0;
+    DELETE = 1;           // The result relates to a delete of Path.
+    REPLACE = 2;          // The result relates to a replace of Path.
+    UPDATE = 3;           // The result relates to an update of Path.
+  }
+  // Deprecated timestamp for the UpdateResult, this field has been
+  // replaced by the timestamp within the SetResponse message, since
+  // all mutations effected by a set should be applied as a single
+  // transaction.
+  int64 timestamp = 1 [deprecated=true];
+  Path path = 2;                            // Path associated with the update.
+  Error message = 3 [deprecated=true];      // Status of the update operation.
+  Operation op = 4;                         // Update operation type.
+}
+
+// GetRequest is sent when a client initiates a Get RPC. It is used to specify
+// the set of data elements for which the target should return a snapshot of
+// data. The use_models field specifies the set of schema modules that are to
+// be used by the target - where use_models is not specified then the target
+// must use all schema models that it has.
+// Reference: gNMI Specification Section 3.3.1
+message GetRequest {
+  Path prefix = 1;                      // Prefix used for paths.
+  repeated Path path = 2;               // Paths requested by the client.
+  // Type of elements within the data tree.
+  enum DataType {
+    ALL = 0;                            // All data elements.
+    CONFIG = 1;                         // Config (rw) only elements.
+    STATE = 2;                          // State (ro) only elements.
+    // Data elements marked in the schema as operational. This refers to data
+    // elements whose value relates to the state of processes or interactions
+    // running on the device.
+    OPERATIONAL = 3;
+  }
+  DataType type = 3;                    // The type of data being requested.
+  Encoding encoding = 5;                // Encoding to be used.
+  repeated ModelData use_models = 6;    // The schema models to be used.
+  // Extension messages associated with the GetRequest. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 7;
+}
+
+// GetResponse is used by the target to respond to a GetRequest from a client.
+// The set of Notifications corresponds to the data values that are requested
+// by the client in the GetRequest.
+// Reference: gNMI Specification Section 3.3.2
+message GetResponse {
+  repeated Notification notification = 1;   // Data values.
+  Error error = 2 [deprecated=true];        // Errors that occurred in the Get.
+  // Extension messages associated with the GetResponse. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 3;
+}
+
+// CapabilityRequest is sent by the client in the Capabilities RPC to request
+// that the target reports its capabilities.
+// Reference: gNMI Specification Section 3.2.1
+message CapabilityRequest {
+  // Extension messages associated with the CapabilityRequest. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 1;
+}
+
+// CapabilityResponse is used by the target to report its capabilities to the
+// client within the Capabilities RPC.
+// Reference: gNMI Specification Section 3.2.2
+message CapabilityResponse {
+  repeated ModelData supported_models = 1;    // Supported schema models.
+  repeated Encoding supported_encodings = 2;  // Supported encodings.
+  string gNMI_version = 3;                    // Supported gNMI version.
+  // Extension messages associated with the CapabilityResponse. See the
+  // gNMI extension specification for further definition.
+  repeated gnmi_ext.Extension extension = 4;
+}
+
+// ModelData is used to describe a set of schema modules. It can be used in a
+// CapabilityResponse where a target reports the set of modules that it
+// supports, and within the SubscribeRequest and GetRequest messages to specify
+// the set of models from which data tree elements should be reported.
+// Reference: gNMI Specification Section 3.2.3
+message ModelData {
+  string name = 1;            // Name of the model.
+  string organization = 2;    // Organization publishing the model.
+  string version = 3;         // Semantic version of the model.
+}

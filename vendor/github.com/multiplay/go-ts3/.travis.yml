@@ -1,0 +1,15 @@
+language: go
+  
+go:
+  - 1.x
+  - master
+
+install:
+  - go get github.com/stretchr/testify/assert
+  - go get github.com/mitchellh/mapstructure
+  - go get -u gopkg.in/alecthomas/gometalinter.v1
+  - gometalinter.v1 --install
+
+script:
+  - go test -v -race ./...
+  - gometalinter.v1 --cyclo-over=16 ./...

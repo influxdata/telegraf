@@ -1,0 +1,3 @@
+* text=auto
+*.go text
+*.bat text eol=crlf

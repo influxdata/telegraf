@@ -1,0 +1,36 @@
+language: go
+
+sudo: required
+
+go:
+  - 1.8
+  - 1.9
+  - '1.10'
+
+services:
+  - docker
+
+env:
+  - K8S_CLIENT_TEST=1 KUBECONFIG=scripts/kubeconfig
+ 
+install:
+  - go get -v ./...
+  - go get -v github.com/ghodss/yaml # Required for examples.
+  - ./scripts/run-kube.sh
+  - curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.9.1/bin/linux/amd64/kubectl
+  - chmod +x kubectl
+  - mv kubectl $GOPATH/bin
+
+script:
+  - make
+  - make test
+  - make test-examples
+  - make verify-generate
+
+
+notifications:
+  email: false
+
+branches:
+  only:
+  - master

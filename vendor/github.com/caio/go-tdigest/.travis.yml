@@ -1,0 +1,28 @@
+language: go
+
+env:
+  - DEP_VERSION="0.3.2"
+
+before_install:
+  - curl -L -s https://github.com/golang/dep/releases/download/v${DEP_VERSION}/dep-linux-amd64 -o $GOPATH/bin/dep
+  - chmod +x $GOPATH/bin/dep
+
+install:
+  - dep ensure
+
+go:
+  - "1.9"
+  - "1.10"
+  - "1.11"
+  - tip
+
+matrix:
+    allow_failures:
+        - go: tip
+    fast_finish: true
+
+before_script:
+  - go vet ./...
+
+script:
+  - go test -v

@@ -1,0 +1,4 @@
+language: go
+
+before_script:
+  - go get golang.org/x/sys/unix

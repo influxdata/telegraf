@@ -1,0 +1,78 @@
+// Copyright (c) 2011 Arista Networks, Inc.  All rights reserved.
+// Use of this source code is governed by the Apache License 2.0
+// that can be found in the COPYING file.
+//
+// This Google Protocol Buffer schema contains the message
+// that are used for Lanz streaming.
+//
+
+syntax = "proto2";
+
+option go_package = "proto";
+
+package LanzProtobuf;
+
+message ConfigRecord {
+   required uint64 timestamp = 1;    // Time of change in configuration in micro-seconds (UTC)
+   required uint32 lanzVersion = 2;  // LANZ feature version
+   required uint32 numOfPorts = 3;   // Num of ports in the switch
+   required uint32 segmentSize = 4;  // Segement size
+   required uint32 maxQueueSize = 5; // Maximum queue size in segments
+   optional uint32 qLenInterval = 10; // Frequency of update
+   message PortConfigRecord {
+      required string intfName = 1;      // Name of the port
+      required uint32 switchId = 2;      // Id of the chip on a multi-chip system
+      required uint32 portId = 3;        // Id of the port
+      required bool internalPort = 4;    // 'True' if it's an internal port
+      required uint32 highThreshold = 5; // Higher threshold
+      required uint32 lowThreshold = 6;  // Lower threshold
+   }
+   repeated PortConfigRecord portConfigRecord = 6; // Lanz config details of each port
+   optional uint32 globalUsageHighThreshold = 7;   // High threshold for global usage monitoring
+   optional uint32 globalUsageLowThreshold = 8;    // Low threshold for global usage monitoring
+   optional bool globalUsageReportingEnabled = 9;  // Global buffer reporting enabled
+}
+
+message GlobalBufferUsageRecord {
+   enum EntryType {
+      LOW = 1;
+      UPDATE = 2;
+      HIGH = 3;
+   }
+   optional EntryType entryType = 1;
+   optional uint64 timestamp = 2;    // Time of entry in micro-seconds (UTC)
+   optional uint32 bufferSize = 3;   // Size of global buffer
+   optional uint32 duration = 4;     // duration of buffer usage between high and low
+}
+
+message CongestionRecord {
+   required uint64 timestamp = 1;  // Time of congestion in micro-seconds (UTC)
+   required string intfName = 2;   // Name of the port
+   required uint32 switchId = 3;   // Id of the chip on a multi-chip system
+   required uint32 portId = 4;     // Id of the port
+   required uint32 queueSize = 5;  // Queue size in segments at time of congestion
+   enum EntryType {
+      START = 1;
+      UPDATE = 2;
+      END = 3;
+      POLLING = 4;
+   }
+   optional EntryType entryType = 6;    // Type of entry
+   optional uint32 trafficClass = 7;    // Traffic Class
+   optional uint64 timeOfMaxQLen = 8;   // Time of max q len since congestion start
+   optional uint32 txLatency = 9;       // Transmit latency
+   optional uint32 qDropCount = 10;     // Queue drop count
+   optional string fabricPeerIntfName = 11; // Name of the fabric port's peer
+}
+
+message ErrorRecord {
+   required uint64 timestamp = 1;    // Time of event in micro-seconds (UTC)
+   required string errorMessage = 2; // Text message
+}
+
+message LanzRecord {
+   optional ConfigRecord configRecord = 1;
+   optional CongestionRecord congestionRecord = 2;
+   optional ErrorRecord errorRecord = 3;
+   optional GlobalBufferUsageRecord globalBufferUsageRecord = 4;
+}

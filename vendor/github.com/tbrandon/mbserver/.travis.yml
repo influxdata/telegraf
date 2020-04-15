@@ -1,0 +1,19 @@
+language: go
+
+sudo: required
+
+go:
+  - 1.7.x
+  - 1.8.x
+
+before_install:
+  - sudo apt-get install -y socat
+
+script:
+  # Serial Read Close race condition.
+  # https://github.com/golang/go/issues/10001
+  #- go test -race -coverprofile=coverage.txt -covermode=atomic
+  - go test -coverprofile=coverage.txt -covermode=atomic
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

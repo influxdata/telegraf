@@ -1,0 +1,13 @@
+language: go
+
+go:
+  - 1.7
+  - 1.8
+  - tip
+
+script:
+  - go test -v ./...
+  - GOOS=linux go build
+  - GOOS=darwin go build
+  - GOOS=freebsd go build
+  - GOOS=windows go build
