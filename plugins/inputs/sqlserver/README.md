@@ -48,27 +48,35 @@ GO
 
   ## Optional parameter, setting this to 2 will use a new version
   ## of the collection queries that break compatibility with the original
-  ## dashboards. All new functionality is under V2
+  ## dashboards.
+  ## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
   query_version = 2
 
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
-  # azuredb = true
+  # azuredb = false
 
-  ## Possible queries:
+  ## Possible queries
+  ## Version 2:
   ## - PerformanceCounters
   ## - WaitStatsCategorized
   ## - DatabaseIO
-  ## - DatabaseProperties
+  ## - ServerProperties
+  ## - MemoryClerk
+  ## - Schedulers
+  ## - SqlRequests
+  ## - VolumeSpace
+  ## Version 1:
+  ## - PerformanceCounters
+  ## - WaitStatsCategorized
   ## - CPUHistory
+  ## - DatabaseIO
   ## - DatabaseSize
   ## - DatabaseStats
+  ## - DatabaseProperties
   ## - MemoryClerk
   ## - VolumeSpace
-  ## - Schedulers
-  ## - AzureDBResourceStats
-  ## - AzureDBResourceGovernance
-  ## - SqlRequests
-  ## - ServerProperties
+  ## - PerformanceMetrics
+
   ## A list of queries to include. If not specified, all the above listed queries are used.
   # include_query = []
 
@@ -79,7 +87,7 @@ GO
 ### Metrics:
 To provide backwards compatibility, this plugin support two versions of metrics queries.
 
-**Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards or queries based on the old query format will not work with the new format. The version 2 queries are written in such a way as to only gather SQL specific metrics (no disk space or overall CPU related metrics) and they only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
+**Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards or queries based on the old query format will not work with the new format. The version 2 queries are written in such a way as to only gather SQL specific metrics (no overall CPU related metrics) and they only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
 
 #### Version 1 (deprecated in 1.6):
 The original metrics queries provide:
@@ -115,6 +123,7 @@ The new (version 2) metrics provide:
 - *SqlRequests* - This captures a snapshot of dm_exec_requests and
   dm_exec_sessions that gives you running requests as well as wait types and
   blocking sessions.
+- *VolumeSpace* - uses sys.dm_os_volume_stats to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
 
   In order to allow tracking on a per statement basis this query produces a
   unique tag for each query.  Depending on the database workload, this may
