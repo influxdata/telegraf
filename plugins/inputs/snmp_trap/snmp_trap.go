@@ -88,7 +88,7 @@ var sampleConfig = `
   # sec_level = "authNoPriv"
   ## Context Name.
   # context_name = ""
-  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C" or "".
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
@@ -153,9 +153,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 
 	if s.listener.Params.Version == gosnmp.Version3 {
 		s.listener.Params.ContextName = s.ContextName
-
-		sp := &gosnmp.UsmSecurityParameters{}
-		s.listener.Params.SecurityParameters = sp
 		s.listener.Params.SecurityModel = gosnmp.UserSecurityModel
 
 		switch strings.ToLower(s.SecLevel) {
@@ -169,42 +166,49 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			return fmt.Errorf("unknown security level '%s'", s.SecLevel)
 		}
 
-		sp.UserName = s.SecName
-
+		var authenticationProtocol gosnmp.SnmpV3AuthProtocol
 		switch strings.ToLower(s.AuthProtocol) {
 		case "md5":
-			sp.AuthenticationProtocol = gosnmp.MD5
+			authenticationProtocol = gosnmp.MD5
 		case "sha":
-			sp.AuthenticationProtocol = gosnmp.SHA
+			authenticationProtocol = gosnmp.SHA
 		case "":
-			sp.AuthenticationProtocol = gosnmp.NoAuth
+			authenticationProtocol = gosnmp.NoAuth
 		default:
 			return fmt.Errorf("unknown authentication protocol '%s'", s.AuthProtocol)
 		}
-		if s.AuthPassword != "" {
-			sp.AuthenticationPassphrase = s.AuthPassword
-		}
 
+		var privacyProtocol gosnmp.SnmpV3PrivProtocol
 		switch strings.ToLower(s.PrivProtocol) {
-		case "des":
-			sp.PrivacyProtocol = gosnmp.DES
 		case "aes":
-			sp.PrivacyProtocol = gosnmp.AES
+			privacyProtocol = gosnmp.AES
+		case "des":
+			privacyProtocol = gosnmp.DES
+		case "aes192":
+			privacyProtocol = gosnmp.AES192
+		case "aes192c":
+			privacyProtocol = gosnmp.AES192C
+		case "aes256":
+			privacyProtocol = gosnmp.AES256
+		case "aes256c":
+			privacyProtocol = gosnmp.AES256C
 		case "":
-			sp.PrivacyProtocol = gosnmp.NoPriv
+			privacyProtocol = gosnmp.NoPriv
 		default:
 			return fmt.Errorf("unknown privacy protocol '%s'", s.PrivProtocol)
 		}
 
-		if s.PrivPassword != "" {
-			sp.PrivacyPassphrase = s.PrivPassword
+		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
+			AuthoritativeEngineID:    s.EngineID,
+			AuthoritativeEngineBoots: s.EngineBoots,
+			AuthoritativeEngineTime:  s.EngineTime,
+			UserName:                 s.SecName,
+			PrivacyProtocol:          privacyProtocol,
+			PrivacyPassphrase:        s.PrivPassword,
+			AuthenticationPassphrase: s.AuthPassword,
+			AuthenticationProtocol:   authenticationProtocol,
 		}
 
-		sp.AuthoritativeEngineID = s.EngineID
-
-		sp.AuthoritativeEngineBoots = s.EngineBoots
-
-		sp.AuthoritativeEngineTime = s.EngineTime
 	}
 
 	// wrap the handler, used in unit tests
