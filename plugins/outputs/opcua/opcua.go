@@ -97,7 +97,7 @@ func (o *Opcua) setupOptions() error{
 	cleanupCerts
 
 	opts := Append(opts, opcua.SecurityPolicy(*o.Policy))
-	opcua.SecurityModeString(*mode),
+	opts := Append(opts, opcua.SecurityModeString(*o.mode))
 	opcua.CertificateFile(*certFile),
 	opcua.PrivateKeyFile(*keyFile),
 	opcua.AuthAnonymous(),
