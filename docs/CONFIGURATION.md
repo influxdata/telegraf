@@ -454,9 +454,9 @@ The inverse of `taginclude`. Tags with a tag key matching one of the patterns
 will be discarded from the metric.  Any tag can be filtered including global
 tags and the agent `host` tag.
 
-##### Filtering Examples
+#### Filtering Examples
 
-Using tagpass and tagdrop:
+##### Using tagpass and tagdrop:
 ```toml
 [[inputs.cpu]]
   percpu = true
@@ -489,7 +489,7 @@ Using tagpass and tagdrop:
     instance = ["isatap*", "Local*"]
 ```
 
-Using fieldpass and fielddrop:
+##### Using fieldpass and fielddrop:
 ```toml
 # Drop all metrics for guest & steal CPU usage
 [[inputs.cpu]]
@@ -502,7 +502,7 @@ Using fieldpass and fielddrop:
   fieldpass = ["inodes*"]
 ```
 
-Using namepass and namedrop:
+##### Using namepass and namedrop:
 ```toml
 # Drop all metrics about containers for kubelet
 [[inputs.prometheus]]
@@ -515,7 +515,7 @@ Using namepass and namedrop:
   namepass = ["rest_client_*"]
 ```
 
-Using taginclude and tagexclude:
+##### Using taginclude and tagexclude:
 ```toml
 # Only include the "cpu" tag in the measurements for the cpu plugin.
 [[inputs.cpu]]
@@ -528,7 +528,7 @@ Using taginclude and tagexclude:
   tagexclude = ["fstype"]
 ```
 
-Metrics can be routed to different outputs using the metric name and tags:
+##### Metrics can be routed to different outputs using the metric name and tags:
 ```toml
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
@@ -550,9 +550,11 @@ Metrics can be routed to different outputs using the metric name and tags:
     cpu = ["cpu0"]
 ```
 
-Routing metrics to different outputs based on the input.  Metrics are tagged
-with `influxdb_database` in the input, which is then used to select the
-output.  The tag is removed in the outputs before writing.
+##### Routing metrics to different outputs based on the input.
+
+Metrics are tagged with `influxdb_database` in the input, which is then used to
+select the output.  The tag is removed in the outputs before writing.
+
 ```toml
 [[outputs.influxdb]]
   urls = ["http://influxdb.example.com"]
