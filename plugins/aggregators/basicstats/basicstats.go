@@ -2,6 +2,7 @@ package basicstats
 
 import (
 	"math"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -25,6 +26,7 @@ type configuredStats struct {
 	sum               bool
 	diff              bool
 	non_negative_diff bool
+	start_time        bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -34,9 +36,10 @@ func NewBasicStats() *BasicStats {
 }
 
 type aggregate struct {
-	fields map[string]basicstats
-	name   string
-	tags   map[string]string
+	fields    map[string]basicstats
+	name      string
+	tags      map[string]string
+	startTime time.Time
 }
 
 type basicstats struct {
@@ -75,9 +78,10 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 	if _, ok := b.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
 		a := aggregate{
-			name:   in.Name(),
-			tags:   in.Tags(),
-			fields: make(map[string]basicstats),
+			name:      in.Name(),
+			tags:      in.Tags(),
+			fields:    make(map[string]basicstats),
+			startTime: in.Time(),
 		}
 		for _, field := range in.FieldList() {
 			if fv, ok := convert(field.Value); ok {
@@ -148,6 +152,9 @@ func (b *BasicStats) Add(in telegraf.Metric) {
 func (b *BasicStats) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range b.cache {
 		fields := map[string]interface{}{}
+		if b.statsConfig.start_time {
+			fields["start_time"] = aggregate.startTime.Format(time.RFC3339)
+		}
 		for k, v := range aggregate.fields {
 
 			if b.statsConfig.count {
@@ -217,6 +224,8 @@ func (b *BasicStats) parseStats() *configuredStats {
 			parsed.diff = true
 		case "non_negative_diff":
 			parsed.non_negative_diff = true
+		case "start_time":
+			parsed.start_time = true
 
 		default:
 			b.Log.Warnf("Unrecognized basic stat %q, ignoring", name)

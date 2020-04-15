@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
+	"github.com/influxdata/telegraf/plugins/serializers/ubazaar"
 	"github.com/influxdata/telegraf/plugins/serializers/wavefront"
 )
 
@@ -117,6 +118,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewWavefrontSerializer(config.Prefix, config.WavefrontUseStrict, config.WavefrontSourceOverride)
 	case "prometheus":
 		serializer, err = NewPrometheusSerializer(config)
+	case "ubazaar":
+		serializer, err = NewUBazaarSerializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -152,6 +155,10 @@ func NewWavefrontSerializer(prefix string, useStrict bool, sourceOverride []stri
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
+}
+
+func NewUBazaarSerializer() (Serializer, error) {
+	return ubazaar.NewSerializer()
 }
 
 func NewCarbon2Serializer() (Serializer, error) {

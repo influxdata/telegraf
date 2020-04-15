@@ -271,7 +271,6 @@ func TestBasicStatsWithOnlyMax(t *testing.T) {
 
 // Test only aggregating mean
 func TestBasicStatsWithOnlyMean(t *testing.T) {
-
 	aggregator := NewBasicStats()
 	aggregator.Stats = []string{"mean"}
 	aggregator.Log = testutil.Logger{}
@@ -646,4 +645,47 @@ func TestBasicStatsWithDefaultStats(t *testing.T) {
 	assert.True(t, acc.HasField("m1", "a_stdev"))
 	assert.True(t, acc.HasField("m1", "a_s2"))
 	assert.False(t, acc.HasField("m1", "a_sum"))
+}
+
+var m0, _ = metric.New("m1",
+	map[string]string{"foo": "bar"},
+	map[string]interface{}{},
+	time.Now().Add(time.Second-10),
+)
+
+func TestBasicStatsWithStartTime(t *testing.T) {
+	initialTime := time.Now()
+
+	m1, _ = metric.New("m",
+		map[string]string{"foo": "bar"},
+		map[string]interface{}{},
+		initialTime,
+	)
+	m2, _ = metric.New("m",
+		map[string]string{"foo": "bar"},
+		map[string]interface{}{},
+		initialTime.Add(time.Second*5),
+	)
+	m3, _ := metric.New("m",
+		map[string]string{"foo": "bar"},
+		map[string]interface{}{},
+		initialTime.Add(time.Second*10),
+	)
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"start_time"}
+	aggregator.Log = testutil.Logger{}
+	aggregator.getConfiguredStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+	aggregator.Add(m3)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	assert.True(t, acc.HasField("m", "start_time"))
+	acc.AssertContainsFields(t, "m", map[string]interface{}{
+		"start_time": initialTime.Format(time.RFC3339),
+	})
 }

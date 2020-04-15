@@ -2,3 +2,5 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
+.idea
+cmd/config.toml
