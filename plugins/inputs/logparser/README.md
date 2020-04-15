@@ -4,6 +4,40 @@ The `logparser` plugin streams and parses the given logfiles. Currently it
 has the capability of parsing "grok" patterns from logfiles, which also supports
 regex patterns.
 
+**Deprecated in Telegraf 1.15**: Please use the [tail][] plugin along with the [`grok` data format][grok parser].
+
+The `tail` plugin now provides all the functionality of the `logparser` plugin.
+Most options can be translated directly to the `tail` plugin:
+- For options in the `[inputs.logparser.grok]` section, the equivalent option
+  will have add the `grok_` prefix when using them in the `tail` input.
+- The grok `measurement` option can be replaced using the standard plugin
+  `name_override` option.
+
+Migration Example:
+```diff
+- [[inputs.logparser]]
+-   files = ["/var/log/apache/access.log"]
+-   from_beginning = false
+-   [inputs.logparser.grok]
+-     patterns = ["%{COMBINED_LOG_FORMAT}"]
+-     measurement = "apache_access_log"
+-     custom_pattern_files = []
+-     custom_patterns = '''
+-     '''
+-     timezone = "Canada/Eastern"
+
++ [[inputs.tail]]
++   files = ["/var/log/apache/access.log"]
++   from_beginning = false
++   grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
++   name_override = "apache_access_log"
++   grok_custom_pattern_files = []
++   grok_custom_patterns = '''
++   '''
++   grok_timezone = "Canada/Eastern"
++   data_format = "grok"
+```
+
 ### Configuration
 
 ```toml
@@ -61,8 +95,10 @@ regex patterns.
 Reference the [grok parser][] documentation to setup the grok section of the
 configuration.
 
-[grok parser]: /plugins/parsers/grok/README.md
 
 ### Additional Resources
 
 - https://www.influxdata.com/telegraf-correlate-log-metrics-data-performance-bottlenecks/
+
+[tail]: /plugins/inputs/tail/README.md
+[grok parser]: /plugins/parsers/grok/README.md
