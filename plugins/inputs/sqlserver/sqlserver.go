@@ -1777,27 +1777,47 @@ EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerVolumeSpaceV2 string = `
-/* Only for on-prem version of SQL Server
-Gets data about disk space, only if the disk is used by SQL Server
-EngineEdition:
-1 = Personal or Desktop Engine
-2 = Standard
-3 = Enterprise
-4 = Express
-5 = SQL Database
-6 = SQL Data Warehouse
-8 = Managed Instance
-*/
-IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
+SET DEADLOCK_PRIORITY -10
+
+DECLARE
+	 @MajorVersion AS int
+	,@MinorVersion AS int
+	,@BuildVersion AS int
+	,@RevisionVersion AS int
+	,@EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
+
+/*Get instance info*/
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+	,@MajorVersion = y.[MajorVersion]
+	,@MinorVersion = y.[MinorVersion]
+	,@BuildVersion = y.[BuildVersion]
+	,@RevisionVersion = y.[RevisionVersion]
+FROM (
+	SELECT
+		 [EngineEdition]
+		,CAST(PARSENAME(x.[FullVersion],4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(x.[FullVersion],3) AS int) AS [MinorVersion]
+		,CAST(PARSENAME(x.[FullVersion],2) AS int) AS [BuildVersion]
+		,CAST(PARSENAME(x.[FullVersion],1) AS int) AS [RevisionVersion]
+	FROM (
+		SELECT 
+			 CAST(SERVERPROPERTY('ProductVersion') as nvarchar) as [FullVersion]
+			,CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+	) as x
+) as y
+
+IF @EngineEdition NOT IN (5,8) AND NOT(@MajorVersion <= 10 AND @MinorVersion < 50)
 	BEGIN
 	SELECT DISTINCT
 		'sqlserver_disk_space' AS [measurement]
 		,SERVERPROPERTY('machinename') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-		,IIF( RIGHT(vs.[volume_mount_point],1) = '\'	/*Tag value cannot end with \ */
-			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-			,vs.[volume_mount_point]
-		) AS [volume_mount_point]
+		,CASE WHEN RIGHT(vs.[volume_mount_point],1) = '\'
+			THEN LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+			ELSE vs.[volume_mount_point]
+		 END AS [volume_mount_point]
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
