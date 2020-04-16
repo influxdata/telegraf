@@ -987,6 +987,17 @@ OPTION(RECOMPILE);
 const sqlWaitStatsCategorizedV2 string = `
 SET DEADLOCK_PRIORITY -10
 
+DECLARE
+	 @EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
+
+/*Get instance info*/
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+FROM (
+	SELECT CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+) as y
+
 IF @EngineEdition != 5
 SELECT
 	'sqlserver_waitstats' AS [measurement],
