@@ -45,7 +45,7 @@ func (f *File) SampleConfig() string {
 }
 
 func (f *File) Description() string {
-	return "Reload and gather from file[s] on telegraf's interval."
+	return "Parse a complete file each interval"
 }
 
 func (f *File) Gather(acc telegraf.Accumulator) error {

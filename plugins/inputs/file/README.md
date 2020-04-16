@@ -1,10 +1,10 @@
 # File Input Plugin
 
 The file plugin updates a list of files every interval and parses the contents
-using the selected [input data format](/docs/DATA_FORMATS_INPUT.md).
+using the selected [input data format][].
 
-Files will always be read in their entirety, if you wish to tail/follow a file
-use the [tail input plugin](/plugins/inputs/tail) instead.
+Files will always be read in their entirety, if you wish to parse only newly
+appended lines use the [tail input plugin][] instead.
 
 ### Configuration:
 
@@ -28,3 +28,6 @@ use the [tail input plugin](/plugins/inputs/tail) instead.
   ## to disable.
   # file_tag = ""
 ```
+
+[input data format]: /docs/DATA_FORMATS_INPUT.md
+[tail input plugin]: /plugins/inputs/tail
