@@ -851,26 +851,34 @@ func loadConfig(config string) ([]byte, error) {
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
-	req, err := http.NewRequest("GET", u.String(), nil)
+	// Read the startup flag for config-http-retry and try to convert to integer
+	configHttpRetry, err := strconv.Atoi(flag.Lookup("config-http-retry").Value.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to process config-http-retry ")
 	}
+	// Loop to retry http config request to prevent agent dying on startup if endpoint is unavailable
+	for {
+		req, err := http.NewRequest("GET", u.String(), nil)
+		if err != nil {
+			return nil, err
+		}
 
-	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
-		req.Header.Add("Authorization", "Token "+v)
+		if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
+			req.Header.Add("Authorization", "Token "+v)
+		}
+		req.Header.Add("Accept", "application/toml")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Printf("Unable to connect to HTTP config server.  Retry in %d seconds", configHttpRetry)
+		} else if resp.StatusCode != http.StatusOK {
+			log.Printf("Error getting HTTP config, retry in %d seconds.  Status=%s", configHttpRetry, resp.Status)
+		} else {
+			log.Printf("Successful retrieval of config from HTTP endpoint.")
+			defer resp.Body.Close()
+			return ioutil.ReadAll(resp.Body)
+		}
+		time.Sleep(time.Duration(configHttpRetry) * time.Second)
 	}
-	req.Header.Add("Accept", "application/toml")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to retrieve remote config: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
 }
 
 // parseConfig loads a TOML configuration from a provided path and

@@ -16,6 +16,7 @@ The commands & flags are:
   --aggregator-filter <filter>   filter the aggregators to enable, separator is :
   --config <file>                configuration file to load
   --config-directory <directory> directory containing additional *.conf files
+  --config-http-retry <secs>     retry a failed remote http config request
   --plugin-directory             directory containing *.so files, this directory will be
                                  searched recursively. Any Plugin found will be loaded
                                  and namespaced.
