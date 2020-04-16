@@ -123,6 +123,7 @@ The new (version 2) metrics provide:
 - *SqlRequests* - This captures a snapshot of dm_exec_requests and
   dm_exec_sessions that gives you running requests as well as wait types and
   blocking sessions.
+- *VolumeSpace* - uses sys.dm_os_volume_stats to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
 
   In order to allow tracking on a per statement basis this query produces a
   unique tag for each query.  Depending on the database workload, this may
