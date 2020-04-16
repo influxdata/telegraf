@@ -1,16 +1,17 @@
 # File Input Plugin
 
-The file plugin updates a list of files every interval and parses the contents
-using the selected [input data format][].
+The file plugin parses the complete contents of a file each interval using the
+selected [input data format][].
 
-Files will always be read in their entirety, if you wish to parse only newly
-appended lines use the [tail input plugin][] instead.
+**Note:** If you wish to parse only newly appended lines use the [tail][] input
+plugin instead.
 
 ### Configuration:
 
 ```toml
 [[inputs.file]]
-  ## Files to parse each interval.
+  ## Files to completely parse each interval.
+  ##
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
   ##   /var/log/**.log     -> recursively find all .log files in /var/log
@@ -30,4 +31,4 @@ appended lines use the [tail input plugin][] instead.
 ```
 
 [input data format]: /docs/DATA_FORMATS_INPUT.md
-[tail input plugin]: /plugins/inputs/tail
+[tail]: /plugins/inputs/tail
