@@ -229,7 +229,7 @@ For documentation on the latest development code see the [documentation index][d
 * [lanz](./plugins/inputs/lanz)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
-* [logparser](./plugins/inputs/logparser)
+* [logparser](./plugins/inputs/logparser) (deprecated, use [tail](/plugins/inputs/tail))
 * [logstash](./plugins/inputs/logstash)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
