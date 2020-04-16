@@ -1,5 +1,10 @@
 ## v1.15 [unreleased]
 
+#### Release Notes
+
+- The `logparser` input is deprecated, use the `tail` input with `data_format =
+  "grok"` as a replacement.
+
 #### Features
 
 - [#6905](https://github.com/influxdata/telegraf/pull/6905): Add commands stats to mongodb input plugin.
