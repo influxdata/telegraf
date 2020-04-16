@@ -1,10 +1,12 @@
 package common
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -99,32 +101,66 @@ type TrustBundleResponse struct {
 // TrustBundle root CA certificates pool for connecting to EdgeHub Gateway.
 func TrustBundle(workloadURI string) (*x509.CertPool, error) {
 
+	tbr := TrustBundleResponse{}
+	var err error
+
 	// catch unix domain sockets URIs
 	if strings.Contains(workloadURI, "unix://") {
-		return nil, fmt.Errorf("tls: unable to get trust-bundle: unix sockets not yet implemented")
-	}
 
-	// format uri string
-	uri := fmt.Sprintf("%strust-bundle?api-version=2019-11-05", workloadURI)
+		addr, err := net.ResolveUnixAddr("unix", strings.TrimPrefix(workloadURI, "unix://"))
+		if err != nil {
+			fmt.Printf("Failed to resolve: %v\n", err)
+			return nil, err
+		}
 
-	// get http response and handle error
-	resp, err := http.Get(uri)
-	if err != nil {
-		return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
-	}
-	defer resp.Body.Close()
+		httpc := http.Client{
+			Transport: &http.Transport{
+				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+					return net.Dial("unix", addr.Name)
+				},
+			},
+		}
 
-	// read response
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
-	}
+		var response *http.Response
+		//var err error
 
-	// convert to struct
-	tbr := TrustBundleResponse{}
-	err = json.Unmarshal(body, &tbr)
-	if err != nil {
-		return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
+		response, err = httpc.Get("http://iotedge" + "/trust-bundle?api-version=2019-11-05")
+		if err != nil {
+			return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
+		}
+
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
+		}
+
+		err = json.Unmarshal(body, &tbr)
+		if err != nil {
+			return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
+		}
+
+	} else {
+
+		// format uri string
+		uri := fmt.Sprintf("%strust-bundle?api-version=2019-11-05", workloadURI)
+
+		// get http response and handle error
+		resp, err := http.Get(uri)
+		if err != nil {
+			return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
+		}
+		defer resp.Body.Close()
+
+		// read response
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
+		}
+
+		err = json.Unmarshal(body, &tbr)
+		if err != nil {
+			return nil, fmt.Errorf("tls: unable to append certificates: %s", err.Error())
+		}
 	}
 
 	p := x509.NewCertPool()
