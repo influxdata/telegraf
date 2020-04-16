@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -9,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -212,13 +214,7 @@ type EdgeSignRequestResponse struct {
 
 func edgeSignRequest(workloadURI, name, genid string, payload *EdgeSignRequestPayload) (string, error) {
 
-	// catch unix domain sockets URIs
-	if strings.Contains(workloadURI, "unix://") {
-		return "", fmt.Errorf("sign: unable to sign request: unix sockets not yet implemented")
-	}
-
-	// format uri string for base uri
-	uri := fmt.Sprintf("%smodules/%s/genid/%s/sign?api-version=2018-06-28", workloadURI, name, genid)
+	esrr := EdgeSignRequestResponse{}
 
 	// validate payload properties
 	err := payload.Validate()
@@ -228,24 +224,62 @@ func edgeSignRequest(workloadURI, name, genid string, payload *EdgeSignRequestPa
 
 	payloadJSON, _ := json.Marshal(payload)
 
-	// get http response and handle error
-	resp, err := http.Post(uri, "text/plain", bytes.NewBuffer(payloadJSON))
-	if err != nil {
-		return "", fmt.Errorf("sign: unable to sign request (resp): %s", err.Error())
-	}
-	defer resp.Body.Close()
+	// catch unix domain sockets URIs
+	if strings.Contains(workloadURI, "unix://") {
 
-	// read response
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("sign: unable to sign request (read): %s", err.Error())
-	}
+		addr, err := net.ResolveUnixAddr("unix", strings.TrimPrefix(workloadURI, "unix://"))
+		if err != nil {
+			fmt.Printf("Failed to resolve: %v\n", err)
+			return "", err
+		}
 
-	// convert to struct
-	esrr := EdgeSignRequestResponse{}
-	err = json.Unmarshal(body, &esrr)
-	if err != nil {
-		return "", fmt.Errorf("sign: unable to sign request (unm): %s", err.Error())
+		httpc := http.Client{
+			Transport: &http.Transport{
+				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+					return net.Dial("unix", addr.Name)
+				},
+			},
+		}
+
+		var response *http.Response
+		//var err error
+
+		response, err = httpc.Post("http://iotedge"+fmt.Sprintf("/modules/%s/genid/%s/sign?api-version=2018-06-28", name, genid), "text/plain", bytes.NewBuffer(payloadJSON))
+		if err != nil {
+			return "", fmt.Errorf("sign: unable to sign request (resp): %s", err.Error())
+		}
+
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return "", fmt.Errorf("sign: unable to sign request (read): %s", err.Error())
+		}
+
+		err = json.Unmarshal(body, &esrr)
+		if err != nil {
+			return "", fmt.Errorf("sign: unable to sign request (unm): %s", err.Error())
+		}
+
+	} else {
+		// format uri string for base uri
+		uri := fmt.Sprintf("%smodules/%s/genid/%s/sign?api-version=2018-06-28", workloadURI, name, genid)
+
+		// get http response and handle error
+		resp, err := http.Post(uri, "text/plain", bytes.NewBuffer(payloadJSON))
+		if err != nil {
+			return "", fmt.Errorf("sign: unable to sign request (resp): %s", err.Error())
+		}
+		defer resp.Body.Close()
+
+		// read response
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("sign: unable to sign request (read): %s", err.Error())
+		}
+
+		err = json.Unmarshal(body, &esrr)
+		if err != nil {
+			return "", fmt.Errorf("sign: unable to sign request (unm): %s", err.Error())
+		}
 	}
 
 	// if error returned from WorkloadAPI
