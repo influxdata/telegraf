@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
