@@ -606,7 +606,7 @@ SET @SqlStatement = N'
 INSERT INTO #telegraf_server_properties (cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime)
 SELECT TOP(1)
 	(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = ''VISIBLE ONLINE'') AS [cpu_count],
-	(SELECT [process_memory_limit]_mb FROM sys.dm_os_job_object) AS [server_memory],
+	(SELECT [process_memory_limit_mb] FROM sys.dm_os_job_object) AS [server_memory],
 	slo.edition as [sku],
 	cast(SERVERPROPERTY(''EngineEdition'') as smallint)  AS [engine_edition],
 	slo.[service_objective] AS [hardware_type],
@@ -941,7 +941,7 @@ EXEC (@SqlStatement)
 		rgwg.total_queued_request_count AS ''Queued Request Count'',
 		rgwg.total_cpu_limit_violation_count AS ''CPU Limit Violation Count'',
 		rgwg.total_cpu_usage_ms AS ''CPU Usage (time)'',' 
-		+ CASE WHEN @MajorVersion > 10 
+		+ CASE WHEN @MajorVersion >= 13 /*SQL 2016 and later*/ 
 			THEN 'rgwg.total_cpu_usage_preemptive_ms AS ''Premptive CPU Usage (time)'',' 
 			ELSE '' 
 		END + '
