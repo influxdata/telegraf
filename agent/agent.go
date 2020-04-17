@@ -591,7 +591,6 @@ func (a *Agent) flushLoop(
 		case <-ticker.C:
 			logError(a.flushOnce(output, interval, output.Write))
 		case <-flushRequested:
-			log.Printf("I! [agent] User-requested flush received")
 			logError(a.flushOnce(output, interval, output.Write))
 		case <-output.BatchReady:
 			// Favor the ticker over batch ready
