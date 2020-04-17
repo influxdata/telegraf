@@ -28,6 +28,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 )
 
+// If you update these, update usage.go and usage_windows.go
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
 var pprofAddr = flag.String("pprof-addr", "",

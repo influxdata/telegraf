@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"runtime"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -17,8 +16,6 @@ import (
 	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
-
-const flushSignal = syscall.SIGUSR1
 
 // Agent runs a set of plugins.
 type Agent struct {
@@ -558,9 +555,11 @@ func (a *Agent) flushLoop(
 	}
 
 	// watch for flush requests
-	flushRequested := make(chan os.Signal, 1)
-	signal.Notify(flushRequested, flushSignal)
-	defer signal.Stop(flushRequested)
+	if runtime.GOOS != "windows" {
+		flushRequested := make(chan os.Signal, 1)
+		signal.Notify(flushRequested, flushSignal)
+		defer signal.Stop(flushRequested)
+	}
 
 	// align to round interval
 	if a.Config.Agent.RoundInterval {

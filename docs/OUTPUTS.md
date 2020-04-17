@@ -101,7 +101,11 @@ Metrics are flushed to outputs when any of the following events happen:
 - At least `metric_batch_size` count of metrics are waiting in the buffer
 - The telegraf process has received a SIGUSR1 signal
 
-Note that if the flush takes longer than the `agent.interval` to write the metrics to the output, you'll see a message saying the output `did not complete within its flush interval`. This may mean your output is not keeping up with the flow of metrics, and you may want to look into enabling compression, reducing the size of your metrics, or investigate other reasons why the writes might be taking longer than expected.
+Note that if the flush takes longer than the `agent.interval` to write the metrics
+to the output, you'll see a message saying the output `did not complete within its 
+flush interval`. This may mean your output is not keeping up with the flow of metrics, 
+and you may want to look into enabling compression, reducing the size of your metrics, 
+or investigate other reasons why the writes might be taking longer than expected.
 
 [file]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/file
 [output data formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
