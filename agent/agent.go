@@ -555,8 +555,8 @@ func (a *Agent) flushLoop(
 	}
 
 	// watch for flush requests
+	flushRequested := make(chan os.Signal, 1)
 	if runtime.GOOS != "windows" {
-		flushRequested := make(chan os.Signal, 1)
 		signal.Notify(flushRequested, flushSignal)
 		defer signal.Stop(flushRequested)
 	}
