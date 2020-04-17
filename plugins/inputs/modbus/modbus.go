@@ -174,10 +174,6 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("retries cannot be negative")
 	}
 
-	if m.Retries > 0 && m.RetriesWaitTime.Duration < 0 {
-		return fmt.Errorf("wait time between retries cannot be negative")
-	}
-
 	err := m.InitRegister(m.DiscreteInputs, cDiscreteInputs)
 	if err != nil {
 		return err
