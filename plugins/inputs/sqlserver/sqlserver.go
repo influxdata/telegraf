@@ -117,7 +117,7 @@ func initQueries(s *SQLServer) error {
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
 		queries["VolumeSpace"] = Query{Script: sqlServerVolumeSpaceV2, ResultByRow: false}
-		queries["Cpu"] = Query{Script: sqlServerCPUV2, ResultByRow: false}
+		queries["Cpu"] = Query{Script: sqlServerCpuV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1594,12 +1594,20 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
 	END
 `
 
-const sqlServerCPUV2 string = `
-DECLARE @ts_now BIGINT
+const sqlServerCpuV2 string = `
+/*The ring buffer has a new value every minute*/
+DECLARE
+	 @EngineEdition AS int
 
-SELECT @ts_now = [ms_ticks]
-FROM sys.dm_os_sys_info
+SELECT 
+	 @EngineEdition = y.[EngineEdition]
+FROM (
+	SELECT
+		CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
+) as y
 
+IF @EngineEdition NOT IN (5,8) /*No azure DB and managed instance*/
+BEGIN
 SELECT 
 	 'sqlserver_cpu' AS [measurement]
 	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -1609,7 +1617,7 @@ SELECT
 FROM (
 	SELECT TOP 1
 		 [record_id]
-		,dateadd(ms, (y.[timestamp] - @ts_now), GETDATE()) AS [EventTime]
+		/*,dateadd(ms, (y.[timestamp] - (SELECT CAST([ms_ticks] AS BIGINT) FROM sys.dm_os_sys_info)), GETDATE()) AS [EventTime] --use for check/debug purpose*/
 		,[SQLProcessUtilization]
 		,[SystemIdle]
 	FROM (
@@ -1627,6 +1635,8 @@ FROM (
 		) AS y
 	ORDER BY record_id DESC
 ) as z
+
+END
 `
 
 // Queries V1
