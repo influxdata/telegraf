@@ -116,7 +116,11 @@ func stdinCollectMetricsPrompt(ctx context.Context, collectMetricsPrompt chan<- 
 			return
 		default:
 		}
-		// now push a non-blocking message to poke to collect metrics
+
+		// now push a non-blocking message to trigger metric collection.
+		// The channel is defined with a buffer of 1, so if it blocks, that means
+		// that there's already a prompt waiting to be processed, and we don't need
+		// to push a second one.
 		select {
 		case collectMetricsPrompt <- nil:
 		default:
