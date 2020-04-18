@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -43,14 +44,16 @@ const sampleConfig = `
 type Execd struct {
 	Command      []string
 	Signal       string
-	RestartDelay internal.Duration
+	RestartDelay config.Duration
 
 	acc    telegraf.Accumulator
 	cmd    *exec.Cmd
 	parser parsers.Parser
 	stdin  io.WriteCloser
+	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+	errCh  chan error
 }
 
 func (e *Execd) SampleConfig() string {
@@ -67,6 +70,7 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
+	e.errCh = make(chan error, 10)
 
 	if len(e.Command) == 0 {
 		return fmt.Errorf("E! [inputs.execd] FATAL no command specified")
@@ -74,13 +78,19 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 
 	e.wg.Add(1)
 
-	var ctx context.Context
-	ctx, e.cancel = context.WithCancel(context.Background())
+	e.ctx, e.cancel = context.WithCancel(context.Background())
 
 	go func() {
-		e.cmdLoop(ctx)
+		e.cmdLoop(e.ctx)
 		e.wg.Done()
 	}()
+
+	// wait a second to see if there's any errors.
+	select {
+	case <-time.NewTimer(1 * time.Second).C:
+	case err := <-e.errCh:
+		return err
+	}
 
 	return nil
 }
@@ -101,21 +111,27 @@ func (e *Execd) cmdLoop(ctx context.Context) {
 
 		select {
 		case <-ctx.Done():
-			e.stdin.Close()
-			// Immediately exit process but with a graceful shutdown
-			// period before killing
-			internal.WaitTimeout(e.cmd, 200*time.Millisecond)
+			if e.stdin != nil {
+				e.stdin.Close()
+				// Immediately exit process but with a graceful shutdown
+				// period before killing
+				internal.WaitTimeout(e.cmd, 200*time.Millisecond)
+			}
 			return
 		case err := <-done:
+			if err != nil {
+				e.errCh <- err
+			}
+
 			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)
 		}
 
-		log.Printf("E! [inputs.execd] Restarting in %s...", e.RestartDelay.Duration)
+		log.Printf("E! [inputs.execd] Restarting in %s...", time.Duration(e.RestartDelay))
 
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(e.RestartDelay.Duration):
+		case <-time.After(time.Duration(e.RestartDelay)):
 			// Continue the loop and restart the process
 		}
 	}
@@ -205,7 +221,7 @@ func init() {
 	inputs.Add("execd", func() telegraf.Input {
 		return &Execd{
 			Signal:       "none",
-			RestartDelay: internal.Duration{Duration: 10 * time.Second},
+			RestartDelay: config.Duration(10 * time.Second),
 		}
 	})
 }

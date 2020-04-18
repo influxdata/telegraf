@@ -20,15 +20,14 @@ var cfg *config.Config
 
 func main() {
 	flag.Parse()
-	if *configFile == "" {
-		flag.Usage()
-		os.Exit(2)
-	}
 
 	cfg = config.NewConfig()
-	if err := cfg.LoadConfig(*configFile); err != nil {
-		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
-		os.Exit(1)
+
+	if *configFile != "" {
+		if err := cfg.LoadConfig(*configFile); err != nil {
+			fmt.Fprintf(os.Stderr, "Err: %s\n", err)
+			os.Exit(1)
+		}
 	}
 
 	shim.RunPlugins(cfg, pollInterval)

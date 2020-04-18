@@ -14,9 +14,17 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
+	select {
+	case <-e.ctx.Done():
+		return nil
+	default:
+	}
+
 	switch e.Signal {
 	case "STDIN":
-		io.WriteString(e.stdin, "\n")
+		if _, err := io.WriteString(e.stdin, "\n"); err != nil {
+			return fmt.Errorf("Error writing to stdin: %s", err)
+		}
 	case "none":
 	default:
 		return fmt.Errorf("invalid signal: %s", e.Signal)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -25,12 +26,14 @@ const (
 )
 
 func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
+	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	collectMetricsPrompt := make(chan os.Signal, 1)
 	signal.Notify(collectMetricsPrompt, syscall.SIGUSR1, syscall.SIGHUP)
 
+	wg.Add(1) // wait for the metric channel to close
 	metricCh := make(chan telegraf.Metric, 1)
 
 	s := influx.NewSerializer()
@@ -42,32 +45,46 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
 		if err := runningInput.Init(); err != nil {
 			handleErr(err)
 		}
+
 		acc := agent.NewAccumulator(runningInput, metricCh)
 		acc.SetPrecision(time.Nanosecond)
 
 		if serviceInput, ok := runningInput.Input.(telegraf.ServiceInput); ok {
+			wg.Add(1)
 			if err := serviceInput.Start(acc); err != nil {
 				handleErr(err)
 			}
-		} else {
-			gatherPromptCh := make(chan empty, 1)
-			gatherPromptChans = append(gatherPromptChans, gatherPromptCh)
-			go startGathering(ctx, cfg.Inputs[i], acc, gatherPromptCh, pollInterval)
 		}
+		gatherPromptCh := make(chan empty, 1)
+		gatherPromptChans = append(gatherPromptChans, gatherPromptCh)
+		wg.Add(1)
+		go func() {
+			startGathering(ctx, cfg.Inputs[i], acc, gatherPromptCh, pollInterval)
+			wg.Done()
+		}()
 	}
 
 	go stdinCollectMetricsPrompt(ctx, collectMetricsPrompt)
 
+	hasQuit := false
+loop:
 	for {
 		select {
 		case <-quit:
 			cancel()
 			os.Stdin.Close()
-			stopServices(cfg)
-			return
+			stopServices(&wg, cfg)
+			hasQuit = true
+			// keep looping until the metric channel closes.
 		case <-collectMetricsPrompt:
-			collectMetrics()
-		case m := <-metricCh:
+			if !hasQuit {
+				collectMetrics()
+			}
+		case m, open := <-metricCh:
+			if !open {
+				wg.Done()
+				break loop
+			}
 			b, err := s.Serialize(m)
 			if err != nil {
 				handleErr(err)
@@ -76,23 +93,31 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
 		}
 	}
 
-	// TODO: wait for stop?
+	wg.Wait()
 }
 
-func stopServices(cfg *config.Config) {
+func stopServices(wg *sync.WaitGroup, cfg *config.Config) {
 	for _, runningInput := range cfg.Inputs {
 		if serviceInput, ok := runningInput.Input.(telegraf.ServiceInput); ok {
 			serviceInput.Stop()
+			wg.Done()
 		}
 	}
 }
 
 func stdinCollectMetricsPrompt(ctx context.Context, collectMetricsPrompt chan<- os.Signal) {
 	s := bufio.NewScanner(os.Stdin)
+	// for every line read from stdin, make sure we're not supposed to quit,
+	// then push a message on to the collectMetricsPrompt
 	for s.Scan() {
-		select { // don't block.
+		// first check if we should quit
+		select {
 		case <-ctx.Done():
 			return
+		default:
+		}
+		// now push a non-blocking message to poke to collect metrics
+		select {
 		case collectMetricsPrompt <- nil:
 		default:
 		}
@@ -101,7 +126,7 @@ func stdinCollectMetricsPrompt(ctx context.Context, collectMetricsPrompt chan<- 
 
 func collectMetrics() {
 	for i := 0; i < len(gatherPromptChans); i++ {
-		// don't block
+		// push a message out to each channel to collect metrics. don't block.
 		select {
 		case gatherPromptChans[i] <- empty{}:
 		default:
@@ -116,6 +141,13 @@ func startGathering(ctx context.Context, runningInput *models.RunningInput, acc 
 	t := time.NewTicker(pollInterval)
 	defer t.Stop()
 	for {
+		// give priority to stopping.
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		// see what's up
 		select {
 		case <-ctx.Done():
 			return
