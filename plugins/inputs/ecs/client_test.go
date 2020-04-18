@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 
@@ -239,12 +240,76 @@ func TestEcsClient_ContainerStats(t *testing.T) {
 	}
 }
 
-func TestGetMetadataPath(t *testing.T) {
-	assert.Equal(t, "/v2/metadata", getMetadataPath(2))
-	assert.Equal(t, "/task", getMetadataPath(3))
+func TestResolveTaskURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		ver  int
+		exp  string
+	}{
+		{
+			name: "default v2 endpoint",
+			base: v2Endpoint,
+			ver:  2,
+			exp:  "http://169.254.170.2/v2/metadata",
+		},
+		{
+			name: "custom v2 endpoint",
+			base: "http://192.168.0.1",
+			ver:  2,
+			exp:  "http://192.168.0.1/v2/metadata",
+		},
+		{
+			name: "theoretical v3 endpoint",
+			base: "http://169.254.170.2/v3/metadata",
+			ver:  3,
+			exp:  "http://169.254.170.2/v3/metadata/task",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseURL, err := url.Parse(tt.base)
+			assert.NoError(t, err)
+
+			act := resolveTaskURL(baseURL, tt.ver)
+			assert.Equal(t, tt.exp, act)
+		})
+	}
 }
 
-func TestGetMetaStatsPath(t *testing.T) {
-	assert.Equal(t, "/v2/stats", getMetaStatsPath(2))
-	assert.Equal(t, "/task/stats", getMetaStatsPath(3))
+func TestResolveStatsURL(t *testing.T) {
+	tests := []struct {
+		name string
+		base string
+		ver  int
+		exp  string
+	}{
+		{
+			name: "default v2 endpoint",
+			base: v2Endpoint,
+			ver:  2,
+			exp:  "http://169.254.170.2/v2/stats",
+		},
+		{
+			name: "custom v2 endpoint",
+			base: "http://192.168.0.1",
+			ver:  2,
+			exp:  "http://192.168.0.1/v2/stats",
+		},
+		{
+			name: "theoretical v3 endpoint",
+			base: "http://169.254.170.2/v3/metadata",
+			ver:  3,
+			exp:  "http://169.254.170.2/v3/metadata/task/stats",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseURL, err := url.Parse(tt.base)
+			assert.NoError(t, err)
+
+			act := resolveStatsURL(baseURL, tt.ver)
+			assert.Equal(t, tt.exp, act)
+		})
+	}
 }

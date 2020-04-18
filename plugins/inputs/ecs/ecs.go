@@ -1,7 +1,6 @@
 package ecs
 
 import (
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -14,9 +13,8 @@ import (
 
 // Ecs config object
 type Ecs struct {
-	EndpointURL     string `toml:"endpoint_url"`
-	MetadataVersion int    `toml:"metadata_version"`
-	Timeout         internal.Duration
+	EndpointURL string `toml:"endpoint_url"`
+	Timeout     internal.Duration
 
 	ContainerNameInclude []string `toml:"container_name_include"`
 	ContainerNameExclude []string `toml:"container_name_exclude"`
@@ -27,13 +25,14 @@ type Ecs struct {
 	LabelInclude []string `toml:"ecs_label_include"`
 	LabelExclude []string `toml:"ecs_label_exclude"`
 
-	newClient func(timeout time.Duration, version int) (*EcsClient, error)
+	newClient func(timeout time.Duration, endpoint string, version int) (*EcsClient, error)
 
 	client              Client
 	filtersCreated      bool
 	labelFilter         filter.Filter
 	containerNameFilter filter.Filter
 	statusFilter        filter.Filter
+	metadataVersion     int
 }
 
 const (
@@ -47,13 +46,10 @@ const (
 )
 
 var sampleConfig = `
-  ## ECS metadata url. Auto-set if empty.
-  # endpoint_url = "http://169.254.170.2"
-
-  ## ECS metadata version (2, 3)
-  ## Ignored if endpoint_url is empty and auto-set according to the
-  ## detected metadata availability.
-  # metadata_version = 2
+  ## ECS metadata url.
+  ## Metadata v2 API is used if set explicitly. Otherwise,
+  ## v3 metadata endpoint API is used if available.
+  # endpoint_url = ""
 
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
@@ -116,20 +112,12 @@ func (ecs *Ecs) Gather(acc telegraf.Accumulator) error {
 
 func initSetup(ecs *Ecs) error {
 	if ecs.client == nil {
-		initEndpoint(ecs)
+		resolveEndpoint(ecs)
 
-		var err error
-		var c *EcsClient
-		c, err = ecs.newClient(ecs.Timeout.Duration, ecs.MetadataVersion)
+		c, err := ecs.newClient(ecs.Timeout.Duration, ecs.EndpointURL, ecs.metadataVersion)
 		if err != nil {
 			return err
 		}
-
-		c.BaseURL, err = url.Parse(ecs.EndpointURL)
-		if err != nil {
-			return err
-		}
-
 		ecs.client = c
 	}
 
@@ -153,23 +141,27 @@ func initSetup(ecs *Ecs) error {
 	return nil
 }
 
-func initEndpoint(ecs *Ecs) {
-	// Auto-detect metadata endpoint.
-	if ecs.EndpointURL == "" {
-		// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html
-		v3Endpoint := os.Getenv("ECS_CONTAINER_METADATA_URI")
-		if v3Endpoint != "" {
-			ecs.EndpointURL = v3Endpoint
-			ecs.MetadataVersion = 3
-		} else {
-			ecs.EndpointURL = v2Endpoint
-			ecs.MetadataVersion = 2
-		}
+func resolveEndpoint(ecs *Ecs) {
+	if ecs.EndpointURL != "" {
+		// Use metadata v2 API since endpoint is set explicitly.
+		ecs.metadataVersion = 2
+		return
 	}
-	// Assume metadata version 2 if not explicitly set to version 3.
-	if ecs.MetadataVersion != 3 {
-		ecs.MetadataVersion = 2
+
+	// Auto-detect metadata endpoint version.
+
+	// Use metadata v3 if available.
+	// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html
+	v3Endpoint := os.Getenv("ECS_CONTAINER_METADATA_URI")
+	if v3Endpoint != "" {
+		ecs.EndpointURL = v3Endpoint
+		ecs.metadataVersion = 3
+		return
 	}
+
+	// Use v2 endpoint if nothing else is available.
+	ecs.EndpointURL = v2Endpoint
+	ecs.metadataVersion = 2
 }
 
 func (ecs *Ecs) accTask(task *Task, tags map[string]string, acc telegraf.Accumulator) {
@@ -270,11 +262,10 @@ func (ecs *Ecs) createContainerStatusFilters() error {
 func init() {
 	inputs.Add("ecs", func() telegraf.Input {
 		return &Ecs{
-			EndpointURL:     v2Endpoint,
-			MetadataVersion: 2,
-			Timeout:         internal.Duration{Duration: 5 * time.Second},
-			newClient:       NewClient,
-			filtersCreated:  false,
+			EndpointURL:    "",
+			Timeout:        internal.Duration{Duration: 5 * time.Second},
+			newClient:      NewClient,
+			filtersCreated: false,
 		}
 	})
 }

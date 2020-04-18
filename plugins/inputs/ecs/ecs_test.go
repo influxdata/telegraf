@@ -769,7 +769,7 @@ var validMeta = Task{
 	PullStoppedAt: metaPullStop,
 }
 
-func TestInitEndpoint(t *testing.T) {
+func TestResolveEndpoint(t *testing.T) {
 	tests := []struct {
 		name   string
 		given  Ecs
@@ -778,38 +778,27 @@ func TestInitEndpoint(t *testing.T) {
 		afterF func()
 	}{
 		{
-			name: "defaults are preserved",
+			name: "Endpoint is explicitly set => use v2 metadata",
 			given: Ecs{
-				EndpointURL:     v2Endpoint,
-				MetadataVersion: 2,
+				EndpointURL: "192.162.0.1/custom_endpoint",
 			},
 			exp: Ecs{
-				EndpointURL:     v2Endpoint,
-				MetadataVersion: 2,
+				EndpointURL:     "192.162.0.1/custom_endpoint",
+				metadataVersion: 2,
 			},
 		},
 		{
-			name: "overrides version to 2 if not explicitly set to 3",
-			given: Ecs{
-				EndpointURL: v2Endpoint,
-			},
-			exp: Ecs{
-				EndpointURL:     v2Endpoint,
-				MetadataVersion: 2,
-			},
-		},
-		{
-			name: "EndpointURL not set. No ECS_CONTAINER_METADATA_URI.",
+			name: "Endpoint is not set, ECS_CONTAINER_METADATA_URI is not set => use v2 metadata",
 			given: Ecs{
 				EndpointURL: "",
 			},
 			exp: Ecs{
 				EndpointURL:     v2Endpoint,
-				MetadataVersion: 2,
+				metadataVersion: 2,
 			},
 		},
 		{
-			name: "EndpointURL not set. ECS_CONTAINER_METADATA_URI is set",
+			name: "Endpoint is not set, ECS_CONTAINER_METADATA_URI is set => use v3 metadata",
 			preF: func() {
 				os.Setenv("ECS_CONTAINER_METADATA_URI", "v3-endpoint.local")
 			},
@@ -821,7 +810,7 @@ func TestInitEndpoint(t *testing.T) {
 			},
 			exp: Ecs{
 				EndpointURL:     "v3-endpoint.local",
-				MetadataVersion: 3,
+				metadataVersion: 3,
 			},
 		},
 	}
@@ -835,7 +824,7 @@ func TestInitEndpoint(t *testing.T) {
 			}
 
 			act := tt.given
-			initEndpoint(&act)
+			resolveEndpoint(&act)
 			assert.Equal(t, tt.exp, act)
 		})
 	}

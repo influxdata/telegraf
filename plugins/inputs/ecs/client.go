@@ -32,10 +32,15 @@ type httpClient interface {
 }
 
 // NewClient constructs an ECS client with the passed configuration params
-func NewClient(timeout time.Duration, version int) (*EcsClient, error) {
+func NewClient(timeout time.Duration, endpoint string, version int) (*EcsClient, error) {
 	if version != 2 && version != 3 {
 		const msg = "expected metadata version 2 or 3, got %d"
 		return nil, fmt.Errorf(msg, version)
+	}
+
+	baseURL, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
 	}
 
 	c := &http.Client{
@@ -43,27 +48,62 @@ func NewClient(timeout time.Duration, version int) (*EcsClient, error) {
 	}
 
 	return &EcsClient{
-		client:  c,
-		version: version,
+		client:   c,
+		baseURL:  baseURL,
+		taskURL:  resolveTaskURL(baseURL, version),
+		statsURL: resolveStatsURL(baseURL, version),
+		version:  version,
 	}, nil
+}
+
+func resolveTaskURL(base *url.URL, version int) string {
+	var path string
+	switch version {
+	case 2:
+		path = ecsMetadataPath
+	case 3:
+		path = ecsMetadataPathV3
+	default:
+		// Should never happen.
+		const msg = "resolveTaskURL: unexpected version %d"
+		panic(fmt.Errorf(msg, version))
+	}
+	return resolveURL(base, path)
+}
+
+func resolveStatsURL(base *url.URL, version int) string {
+	var path string
+	switch version {
+	case 2:
+		path = ecsMetaStatsPath
+	case 3:
+		path = ecsMetaStatsPathV3
+	default:
+		// Should never happen.
+		const msg = "resolveStatsURL: unexpected version %d"
+		panic(fmt.Errorf(msg, version))
+	}
+	return resolveURL(base, path)
+}
+
+// resolveURL returns a URL string by concatenating the string representation of base
+// and path. This is consistent with AWS metadata documentation:
+// https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-metadata-endpoint-v3.html#task-metadata-endpoint-v3-paths
+func resolveURL(base *url.URL, path string) string {
+	return base.String() + path
 }
 
 // EcsClient contains ECS connection config
 type EcsClient struct {
 	client   httpClient
 	version  int
-	BaseURL  *url.URL
+	baseURL  *url.URL
 	taskURL  string
 	statsURL string
 }
 
 // Task calls the ECS metadata endpoint and returns a populated Task
 func (c *EcsClient) Task() (*Task, error) {
-	if c.taskURL == "" {
-		path := getMetadataPath(c.version)
-		c.taskURL = c.BaseURL.String() + path
-	}
-
 	req, _ := http.NewRequest("GET", c.taskURL, nil)
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -85,20 +125,8 @@ func (c *EcsClient) Task() (*Task, error) {
 	return task, nil
 }
 
-func getMetadataPath(version int) string {
-	if version == 3 {
-		return ecsMetadataPathV3
-	}
-	return ecsMetadataPath
-}
-
 // ContainerStats calls the ECS stats endpoint and returns a populated container stats map
 func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
-	if c.statsURL == "" {
-		path := getMetaStatsPath(c.version)
-		c.statsURL = c.BaseURL.String() + path
-	}
-
 	req, _ := http.NewRequest("GET", c.statsURL, nil)
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -119,13 +147,6 @@ func (c *EcsClient) ContainerStats() (map[string]types.StatsJSON, error) {
 	}
 
 	return statsMap, nil
-}
-
-func getMetaStatsPath(version int) string {
-	if version == 3 {
-		return ecsMetaStatsPathV3
-	}
-	return ecsMetaStatsPath
 }
 
 // PollSync executes Task and ContainerStats in parallel. If both succeed, both structs are returned.
