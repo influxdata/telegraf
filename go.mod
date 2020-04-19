@@ -80,7 +80,6 @@ require (
 	github.com/kardianos/service v1.0.0
 	github.com/karrick/godirwalk v1.12.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/klauspost/compress v1.9.2 // indirect
 	github.com/kubernetes/apimachinery v0.0.0-20190119020841-d41becfba9ee
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leesper/go_rng v0.0.0-20190531154944-a612b043e353 // indirect
