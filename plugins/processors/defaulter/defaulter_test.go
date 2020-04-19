@@ -11,15 +11,6 @@ import (
 func TestDefaulter(t *testing.T) {
 	assert.Equal(t, 1, 1)
 
-	/*
-		tests := []struct {
-				name      string
-				converter *Converter
-				input     telegraf.Metric
-				expected  []telegraf.Metric
-			}
-	*/
-
 	scenarios := []struct {
 		name      string
 		defaulter *Defaulter
@@ -33,6 +24,7 @@ func TestDefaulter(t *testing.T) {
 					{
 						Fields: []string{"usage", "temperature", "is_dead"},
 						Value:  "Foobar",
+						Metric: "CPU metrics",
 					},
 				},
 			},
@@ -40,23 +32,68 @@ func TestDefaulter(t *testing.T) {
 				"CPU metrics",
 				map[string]string{},
 				map[string]interface{}{
-					"usage" : "",
+					"usage":       "30%",
+					"temperature": "70F",
+					"is_dead":     "nopes",
 				},
 				time.Unix(0, 0),
 			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"CPU metrics",
+					map[string]string{},
+					map[string]interface{}{
+						"usage":       "30%",
+						"temperature": "70F",
+						"is_dead":     "nopes",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "Test single default set",
+			defaulter: &Defaulter{
+				DefaultFieldsSets: []DefaultFieldsSet{
+					{
+						Fields: []string{"usage", "temperature", "is_dead"},
+						Value:  "Foobar",
+						Metric: "CPU metrics",
+					},
+				},
+			},
+			input: testutil.MustMetric(
+				"CPU metrics",
+				map[string]string{},
+				map[string]interface{}{
+					"usage":       "",
+					"temperature": "0",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"CPU metrics",
+					map[string]string{},
+					map[string]interface{}{
+						"usage":       "Foobar",
+						"temperature": "Foobar",
+						"is_dead":     "Foobar",
+					},
+					time.Unix(0, 0),
+				),
+			},
 		},
 	}
 
 	for _, scenario := range scenarios {
-		/*
-		tt.converter.Log = testutil.Logger{}
-
-				err := tt.converter.Init()
-				require.NoError(t, err)
-				actual := tt.converter.Apply(tt.input)
-
-				testutil.RequireMetricsEqual(t, tt.expected, actual)*/
-		err := scenario.defaulter.Init()
+		defaulter := scenario.defaulter
+		err := defaulter.Init()
 		assert.NoError(t, err, "There was an error initializing the Defaulter")
+
+		resultMetrics := defaulter.Apply(scenario.input)
+		assert.Len(t, resultMetrics, 1)
+
+		testutil.RequireMetricsEqual(t, scenario.expected, resultMetrics)
 	}
 }

@@ -2,18 +2,19 @@ package defaulter
 
 import (
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
 )
 
 const sampleConfig = `
 	[[processors.defaulter.values]]
 		fields = ["field_1", "field_2", "field_3"]
 		value = "NONE"
+		metric_name = "CPU"
 
 
 	[[processors.defaulter.values]]
 		field = ["field_4", "field_5"]
 		value = "TEST"
+		metric_name = "Disk"
 
 	## If the same field shows up in multiple of these value objects,
 	then the last one will win out.
@@ -21,17 +22,12 @@ const sampleConfig = `
 
 type DefaultFieldsSet struct {
 	Fields []string `toml:"fields"`
-	Value string    `toml:"value"`
-
-	filter filter.Filter
+	Metric string   `toml:"metric_name"`
+	Value  string   `toml:"value"`
 }
 
 type Defaulter struct {
 	DefaultFieldsSets []DefaultFieldsSet `toml:"values"`
-
-	defaultValueCache map[string]string
-	// May be worth it later to add a non match cache. That is, fields for which no filter matches
-	// Should be placed in a cache so we don't look over the list for them
 }
 
 func (def *Defaulter) SampleConfig() string {
@@ -43,54 +39,29 @@ func (def *Defaulter) Description() string {
 }
 
 func (def *Defaulter) Init() error {
-	for _, fieldsSet := range def.DefaultFieldsSets {
-		f, err := filter.Compile(fieldsSet.Fields)
-		if err != nil {
-			return err
-		}
-		fieldsSet.filter = f
-	}
-
 	return nil
 }
 
 func (def *Defaulter) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
-	if def.defaultValueCache == nil {
-		def.defaultValueCache = make(map[string]string)
-	}
-
 	for _, metric := range inputMetrics {
-		for fieldName, fieldValue := range metric.Fields() {
-			if fieldValue == nil || fieldValue == "" || fieldValue == 0 || fieldValue == ' ' {
-				if cachedVal := def.cached(fieldName); cachedVal != nil {
-					metric.RemoveField(fieldName)
-					metric.AddField(fieldName, &cachedVal)
+		for _, defSet := range def.DefaultFieldsSets {
+			if metric.Name() != defSet.Metric {
+				continue
+			}
+			for _, field := range defSet.Fields {
+				maybeCurrent, isSet := metric.GetField(field)
+				if !isSet {
+					metric.AddField(field, defSet.Value)
 					continue
 				}
 
-				var foundValue *string
-				for _, set := range def.DefaultFieldsSets {
-					if set.filter.Match(fieldName) {
-						foundValue = &set.Value
-						break
-					}
-				}
-
-				if foundValue != nil {
-					def.defaultValueCache[fieldName] = *foundValue
-					metric.RemoveField(fieldName)
-					metric.AddField(fieldName, *foundValue)
+				if maybeCurrent == "" || maybeCurrent == ' ' || maybeCurrent == 0 || maybeCurrent == "0" {
+					metric.RemoveField(field)
+					metric.AddField(field, defSet.Value)
 				}
 			}
 		}
 	}
 
 	return inputMetrics
-}
-
-func (def *Defaulter) cached(key string) *string {
-	if val, ok := def.defaultValueCache[key]; ok {
-		return &val
-	}
-	return nil
 }
