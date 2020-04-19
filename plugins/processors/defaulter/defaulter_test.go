@@ -67,7 +67,7 @@ func TestDefaulter(t *testing.T) {
 				map[string]string{},
 				map[string]interface{}{
 					"usage":       "",
-					"temperature": "0",
+					"temperature": 0,
 				},
 				time.Unix(0, 0),
 			),

@@ -55,7 +55,7 @@ func (def *Defaulter) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 					continue
 				}
 
-				if maybeCurrent == "" || maybeCurrent == ' ' || maybeCurrent == 0 || maybeCurrent == "0" {
+				if maybeCurrent == "" || maybeCurrent == ' ' || maybeCurrent == 0 || maybeCurrent == int64(0) || maybeCurrent == "0" {
 					metric.RemoveField(field)
 					metric.AddField(field, defSet.Value)
 				}
