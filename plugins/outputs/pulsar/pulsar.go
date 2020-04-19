@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gofrs/uuid"
+	"log"
 	"strings"
 	"time"
 
@@ -379,6 +380,12 @@ func (p *Pulsar) routingKey(metric telegraf.Metric) string {
 	}
 	return p.RoutingKey
 }
+func sendAsyncCallback(id pulsar.MessageID, message *pulsar.ProducerMessage, err error) {
+	if err != nil {
+		log.Printf("Failed to publish metrics : %s", err.Error())
+	}
+
+}
 
 func (p *Pulsar) Write(metrics []telegraf.Metric) error {
 
@@ -401,12 +408,7 @@ func (p *Pulsar) Write(metrics []telegraf.Metric) error {
 			if !metric.Time().Before(zeroTime) {
 				m.EventTime = metric.Time()
 			}
-			_, err = producer.Send(context.Background(), &m)
-			if err != nil {
-				p.Log.Errorf("Unable to publish the message %s: dropping metrics", err.Error())
-				continue
-
-			}
+			producer.SendAsync(context.Background(), &m, sendAsyncCallback)
 
 		} else {
 			p.Log.Errorf("Unable to create producer for topic %s : %s", topic, err.Error())
