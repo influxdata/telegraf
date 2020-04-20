@@ -58,10 +58,10 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
 		gatherPromptCh := make(chan empty, 1)
 		gatherPromptChans = append(gatherPromptChans, gatherPromptCh)
 		wg.Add(1)
-		go func() {
+		go func(i int) {
 			startGathering(ctx, cfg.Inputs[i], acc, gatherPromptCh, pollInterval)
 			wg.Done()
-		}()
+		}(i)
 	}
 
 	go stdinCollectMetricsPrompt(ctx, collectMetricsPrompt)
