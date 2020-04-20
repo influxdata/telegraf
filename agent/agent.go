@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"runtime"
 	"sync"
 	"time"
@@ -556,10 +555,7 @@ func (a *Agent) flushLoop(
 
 	// watch for flush requests
 	flushRequested := make(chan os.Signal, 1)
-	if runtime.GOOS != "windows" {
-		signal.Notify(flushRequested, flushSignal)
-		defer signal.Stop(flushRequested)
-	}
+	watchForFlushSignal(flushRequested)
 
 	// align to round interval
 	if a.Config.Agent.RoundInterval {
