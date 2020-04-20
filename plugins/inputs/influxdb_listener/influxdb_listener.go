@@ -53,6 +53,7 @@ type InfluxDBListener struct {
 	notFoundsServed selfstat.Stat
 	buffersCreated  selfstat.Stat
 	authFailures    selfstat.Stat
+	maxAge          selfstat.Stat
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -104,15 +105,26 @@ func (h *InfluxDBListener) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *InfluxDBListener) routes() {
+func copyAppendTags(tags map[string]string, key string, value string) map[string]string {
+	newTags := make(map[string]string)
+	for k, v := range tags {
+		newTags[k] = v
+	}
+	newTags[key] = value
+	return newTags
+}
+
+func (h *InfluxDBListener) routes(measurement string, tags map[string]string) {
 	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "influxdb",
 		func(_ http.ResponseWriter) {
 			h.authFailures.Incr(1)
 		},
 	)
 
-	h.mux.Handle("/write", authHandler(h.handleWrite()))
-	h.mux.Handle("/query", authHandler(h.handleQuery()))
+	writeMeasuringHandler := internal.MeasuringHandler(measurement, copyAppendTags(tags, "endpoint", "/write"))
+	h.mux.Handle("/write", authHandler(writeMeasuringHandler(h.handleWrite())))
+	queryMeasuringHandler := internal.MeasuringHandler(measurement, copyAppendTags(tags, "endpoint", "/query"))
+	h.mux.Handle("/query", authHandler(queryMeasuringHandler(h.handleQuery())))
 	h.mux.Handle("/ping", h.handlePing())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
 }
@@ -130,7 +142,9 @@ func (h *InfluxDBListener) Init() error {
 	h.notFoundsServed = selfstat.Register("influxdb_listener", "not_founds_served", tags)
 	h.buffersCreated = selfstat.Register("influxdb_listener", "buffers_created", tags)
 	h.authFailures = selfstat.Register("influxdb_listener", "auth_failures", tags)
-	h.routes()
+	h.maxAge = selfstat.RegisterTiming("influxdb_listener", "max_age", tags)
+
+	h.routes("influxdb_listener", tags)
 
 	if h.MaxBodySize.Size == 0 {
 		h.MaxBodySize.Size = defaultMaxBodySize
@@ -248,6 +262,7 @@ func (h *InfluxDBListener) handleDefault() http.HandlerFunc {
 func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.writesServed.Incr(1)
+
 		// Check that the content length is not too large for us to handle.
 		if req.ContentLength > h.MaxBodySize.Size {
 			tooLarge(res)
@@ -284,6 +299,10 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 		var parseErrorCount int
 		var lastPos int = 0
 		var firstParseErrorStr string
+
+		var refTime time.Time = time.Now()
+		var maxAge time.Duration
+
 		for {
 			select {
 			case <-req.Context().Done():
@@ -316,9 +335,15 @@ func (h *InfluxDBListener) handleWrite() http.HandlerFunc {
 				m.AddTag(h.DatabaseTag, db)
 			}
 
+			age := m.Time().Sub(refTime)
+			if age > maxAge {
+				maxAge = age
+			}
 			h.acc.AddMetric(m)
-
 		}
+
+		h.maxAge.Incr(maxAge.Nanoseconds())
+
 		if err != influx.EOF {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
 			badRequest(res, err.Error())
