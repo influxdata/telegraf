@@ -310,7 +310,7 @@ func TestHTTP_Write(t *testing.T) {
 				Log:      testutil.Logger{},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.Header.Get("User-Agent"), "Telegraf/1.2.3")
+				require.True(t, strings.HasPrefix(r.Header.Get("User-Agent"), "Telegraf/1.2.3"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},

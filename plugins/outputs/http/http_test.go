@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -435,7 +436,7 @@ func TestDefaultUserAgent(t *testing.T) {
 
 	t.Run("default-user-agent", func(t *testing.T) {
 		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			require.Equal(t, "Telegraf/1.2.3", r.Header.Get("User-Agent"))
+			require.True(t, strings.HasPrefix(r.Header.Get("User-Agent"), "Telegraf/1.2.3"))
 			w.WriteHeader(http.StatusOK)
 		})
 
