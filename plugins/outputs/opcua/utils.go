@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -16,6 +17,11 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/debug"
+	"github.com/gopcua/opcua/ua"
+	"github.com/pkg/errors"
 )
 
 // SELF SIGNED CERT FUNCTIONS
@@ -135,4 +141,189 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 	default:
 		return nil
 	}
+}
+
+// OPT FUNCTIONS
+
+func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string, gencert bool, certDuration time.Duration) []opcua.Option {
+	opts := []opcua.Option{}
+
+	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
+	if *certFile == "" && !*gencert {
+		opts = append(opts, opcua.ApplicationURI(*appuri))
+	}
+
+	var cert []byte
+	if *gencert || (*certFile != "" && *keyFile != "") {
+		if *gencert {
+			generate_cert(*appuri, 2048, *certFile, *keyFile)
+		}
+		debug.Printf("Loading cert/key from %s/%s", *certFile, *keyFile)
+		c, err := tls.LoadX509KeyPair(*certFile, *keyFile)
+		if err != nil {
+			log.Printf("Failed to load certificate: %s", err)
+		} else {
+			pk, ok := c.PrivateKey.(*rsa.PrivateKey)
+			if !ok {
+				log.Fatalf("Invalid private key")
+			}
+			cert = c.Certificate[0]
+			opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
+		}
+	}
+
+	var secPolicy string
+	switch {
+	case *policy == "auto":
+		// set it later
+	case strings.HasPrefix(*policy, ua.SecurityPolicyURIPrefix):
+		secPolicy = *policy
+		*policy = ""
+	case *policy == "None" || *policy == "Basic128Rsa15" || *policy == "Basic256" || *policy == "Basic256Sha256" || *policy == "Aes128_Sha256_RsaOaep" || *policy == "Aes256_Sha256_RsaPss":
+		secPolicy = ua.SecurityPolicyURIPrefix + *policy
+		*policy = ""
+	default:
+		log.Fatalf("Invalid security policy: %s", *policy)
+	}
+
+	// Select the most appropriate authentication mode from server capabilities and user input
+	authMode, authOption := generateAuth(auth, cert, username, password)
+	opts = append(opts, authOption)
+
+	var secMode ua.MessageSecurityMode
+	switch strings.ToLower(*mode) {
+	case "auto":
+	case "none":
+		secMode = ua.MessageSecurityModeNone
+		*mode = ""
+	case "sign":
+		secMode = ua.MessageSecurityModeSign
+		*mode = ""
+	case "signandencrypt":
+		secMode = ua.MessageSecurityModeSignAndEncrypt
+		*mode = ""
+	default:
+		log.Fatalf("Invalid security mode: %s", *mode)
+	}
+
+	// Allow input of only one of sec-mode,sec-policy when choosing 'None'
+	if secMode == ua.MessageSecurityModeNone || secPolicy == ua.SecurityPolicyURINone {
+		secMode = ua.MessageSecurityModeNone
+		secPolicy = ua.SecurityPolicyURINone
+	}
+
+	// Find the best endpoint based on our input and server recommendation (highest SecurityMode+SecurityLevel)
+	var serverEndpoint *ua.EndpointDescription
+	switch {
+	case *mode == "auto" && *policy == "auto": // No user selection, choose best
+		for _, e := range endpoints {
+			if serverEndpoint == nil || (e.SecurityMode >= serverEndpoint.SecurityMode && e.SecurityLevel >= serverEndpoint.SecurityLevel) {
+				serverEndpoint = e
+			}
+		}
+
+	case *mode != "auto" && *policy == "auto": // User only cares about mode, select highest securitylevel with that mode
+		for _, e := range endpoints {
+			if e.SecurityMode == secMode && (serverEndpoint == nil || e.SecurityLevel >= serverEndpoint.SecurityLevel) {
+				serverEndpoint = e
+			}
+		}
+
+	case *mode == "auto" && *policy != "auto": // User only cares about policy, select highest securitylevel with that policy
+		for _, e := range endpoints {
+			if e.SecurityPolicyURI == secPolicy && (serverEndpoint == nil || e.SecurityLevel >= serverEndpoint.SecurityLevel) {
+				serverEndpoint = e
+			}
+		}
+
+	default: // User cares about both
+		fmt.Println("secMode: ", secMode, "secPolicy:", secPolicy)
+		for _, e := range endpoints {
+			if e.SecurityPolicyURI == secPolicy && e.SecurityMode == secMode && (serverEndpoint == nil || e.SecurityLevel >= serverEndpoint.SecurityLevel) {
+				serverEndpoint = e
+			}
+		}
+	}
+
+	if serverEndpoint == nil { // Didn't find an endpoint with matching policy and mode.
+		log.Printf("unable to find suitable server endpoint with selected sec-policy and sec-mode")
+		printEndpointOptions(endpoints)
+		log.Fatalf("quitting")
+	}
+
+	secPolicy = serverEndpoint.SecurityPolicyURI
+	secMode = serverEndpoint.SecurityMode
+
+	// Check that the selected endpoint is a valid combo
+	err := validateEndpointConfig(endpoints, secPolicy, secMode, authMode)
+	if err != nil {
+		log.Fatalf("error validating input: %s", err)
+	}
+
+	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
+
+	log.Printf("Using config:\nEndpoint: %s\nSecurity mode: %s, %s\nAuth mode : %s\n", serverEndpoint.EndpointURL, serverEndpoint.SecurityPolicyURI, serverEndpoint.SecurityMode, authMode)
+	return opts
+}
+
+func generateAuth(auth string, cert []byte, username, password string) (ua.UserTokenType, opcua.Option) {
+	var err error
+
+	var authMode ua.UserTokenType
+	var authOption opcua.Option
+	switch strings.ToLower(*auth) {
+	case "anonymous":
+		authMode = ua.UserTokenTypeAnonymous
+		authOption = opcua.AuthAnonymous()
+
+	case "username":
+		authMode = ua.UserTokenTypeUserName
+
+		if *username == "" {
+			if err != nil {
+				log.Fatalf("error reading username input: %s", err)
+			}
+		}
+
+		if *password == "" {
+			if err != nil {
+				log.Fatalf("error reading username input: %s", err)
+			}
+		}
+
+		authOption = opcua.AuthUsername(*username, *password)
+
+	case "certificate":
+		authMode = ua.UserTokenTypeCertificate
+		authOption = opcua.AuthCertificate(cert)
+
+	case "issuedtoken":
+		// todo: this is unsupported, fail here or fail in the opcua package?
+		authMode = ua.UserTokenTypeIssuedToken
+		authOption = opcua.AuthIssuedToken([]byte(nil))
+
+	default:
+		log.Printf("unknown auth-mode, defaulting to Anonymous")
+		authMode = ua.UserTokenTypeAnonymous
+		authOption = opcua.AuthAnonymous()
+
+	}
+
+	return authMode, authOption
+}
+
+func validateEndpointConfig(endpoints []*ua.EndpointDescription, secPolicy string, secMode ua.MessageSecurityMode, authMode ua.UserTokenType) error {
+	for _, e := range endpoints {
+		if e.SecurityMode == secMode && e.SecurityPolicyURI == secPolicy {
+			for _, t := range e.UserIdentityTokens {
+				if t.TokenType == authMode {
+					return nil
+				}
+			}
+		}
+	}
+
+	err := errors.Errorf("server does not support an endpoint with security : %s , %s", secPolicy, secMode)
+	printEndpointOptions(endpoints)
+	return err
 }

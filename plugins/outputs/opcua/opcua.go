@@ -16,20 +16,19 @@ import (
 type Opcua struct {
 	Client                     opcua.Client   //internally created
 	Endpoint                   string         `toml:"endpoint"`                       //defaults to "opc.tcp://localhost:50000"
-	NodeID                     string         `toml:"node_id"`                        //required
+	NodeIDMap                  map[string]string         `toml:"node_id_map"`                        //required
 	Policy                     string         `toml:"policy"`                         //defaults to "Auto"
 	Mode                       string         `toml:"mode"`                           //defaults to "Auto"
 	Username                   string         `toml:"username"`                       //defaults to nil
 	Password                   string         `toml:"password"`                       //defaults to nil
-	CertFile                   string         `toml:"cert_file"`                      //defaults to "None"
-	KeyFile                    string         `toml:"key_file"`                       //defaults to "None"
+	CertFile                   string         `toml:"cert_file"`                      //defaults to ""
+	KeyFile                    string         `toml:"key_file"`                       //defaults to ""
 	AuthMethod                 string         `toml:"auth_method"`                    //defaults to "Anonymous" - accepts Anonymous, Username, Certificate
 	Debug                      bool           `toml:"debug"`                          //defaults to false
 	CreateSelfSignedCert       bool           `toml:"self_signed_cert"`               //defaults to false
 	SelfSignedCertExpiresAfter time.Duration  `toml:"self_signed_cert_expires_after"` //defaults to 1 year
 	selfSignedCertNextExpires  time.Time      //internally created
 	opts                       []opcua.Option //internally created
-	cleanupCerts               bool           //internally created
 }
 
 var sampleConfig = `
@@ -39,6 +38,10 @@ var sampleConfig = `
 
   #########
 
+  [[[node_id_map]]]
+  height="ns=2;s=HeightData"
+  weight="ns=2;s=WeightData"
+  age="ns=2;s=AgeData"
 `
 
 // SampleConfig returns a sample config
@@ -69,41 +72,13 @@ func (o *Opcua) clearOptions() error{
 }
 
 func (o *Opcua) setupOptions() error{
-	
-	opts := []opcua.Option{}
 
-	// endpoint = flag.String("endpoint", address, "OPC UA Endpoint URL")
-	// nodeID   = flag.String("node", node, "NodeID to read")
-	//policy   = flag.String("policy", "Basic256Sha256", "Security policy: None, Basic128Rsa15, Basic256, Basic256Sha256. Default: auto")
-	//mode     = flag.String("mode", "SignAndEncrypt", "Security mode: None, Sign, SignAndEncrypt. Default: auto")
-	//certFile = flag.String("cert", "./trusted/cert.pem", "Path to cert.pem. Required for security mode/policy != None")
-	//keyFile  = flag.String("key", "./trusted/key.pem", "Path to private key.pem. Required for security mode/policy != None")
-	// policy = flag.String("policy", "None", "Security policy: None, Basic128Rsa15, Basic256, Basic256Sha256. Default: auto")
-	// mode   = flag.String("mode", "None", "Security mode: None, Sign, SignAndEncrypt. Default: auto")
-
-	Endpoint
-	NodeID
-	Policy
-	Mode
-	Username
-	Password
-	CertFile
-	KeyFile
-	AuthMethod
-	Debug
-	CreateSelfSignedCert
-	SelfSignedCertExpiresAfter
-	selfSignedCertNextExpires
-	cleanupCerts
-
-	opts := Append(opts, opcua.SecurityPolicy(*o.Policy))
-	opts := Append(opts, opcua.SecurityModeString(*o.mode))
-	opcua.CertificateFile(*certFile),
-	opcua.PrivateKeyFile(*keyFile),
-	opcua.AuthAnonymous(),
-	opcua.SecurityFromEndpoint(ep, ua.UserTokenTypeAnonymous),
-
-	o.opts = opts
+	// Get a list of the endpoints for our target server
+	endpoints, err := opcua.GetEndpoints(*o.Endpoint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	o.opts = generateClientOptions(endpoints, o.CertFile, o.KeyFile, o.Policy, o.Mode, o.AuthMethod, o.Username, o.Password, o.CreateSelfSignedCert, o.SelfSignedCertExpiresAfter)
 	
 	return nil
 }
@@ -115,9 +90,16 @@ func (o *Opcua) Write(metrics []telegraf.Metric) error {
 
 	for _,metric := range metrics {
 		for key,value := range metric.Fields {
-			err := o.updateNode(key, value)
-			if err != nil {
-				allErrs[key] = err
+
+			_nodeID := o.NodeIDMap[key]
+
+			if _nodeID != "" {
+				err := o.updateNode(_nodeID, value)
+				if err != nil {
+					allErrs[key] = err
+				}
+			} else {
+				log.Printf("No mapping found for field '%s' (value '%s')", _nodeID, value)
 			}
 		}
 	}
@@ -227,17 +209,21 @@ func (o *Opcua) parseOptions() error {
 	return err
 }
 
-func getEndpointDescription(endpoint, policy, mode string) (ua.EndpointDescription, error) {
-	endpoints, err := opcua.GetEndpoints(endpoint)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ep := opcua.SelectEndpoint(endpoints, policy, ua.MessageSecurityModeFromString(mode))
-	if ep == nil {
-		err = fmt.Errorf("Failed to find suitable endpoint")
-	}
+// func getEndpointDescription(endpoint, policy, mode string) (ua.EndpointDescription, error) {
+// 	endpoints, err := opcua.GetEndpoints(endpoint)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	ep := opcua.SelectEndpoint(endpoints, policy, ua.MessageSecurityModeFromString(mode))
+// 	if ep == nil {
+// 		err = fmt.Errorf("Failed to find suitable endpoint")
+// 	}
 
-	return *ep, err
+// 	return *ep, err
+// }
+
+func (o *Opcua) Init() error {
+
 }
 
 func init() {
@@ -246,8 +232,8 @@ func init() {
 			Endpoint:                   "opc.tcp://localhost:50000",
 			Policy:                     "Auto",
 			Mode:                       "Auto",
-			CertFile:                   "None",
-			KeyFile:                    "None",
+			CertFile:                   "",
+			KeyFile:                    "",
 			AuthMethod:                 "Anonymous",
 			Debug:                      false,
 			CreateSelfSignedCert:       false,
