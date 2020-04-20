@@ -18,6 +18,10 @@
 - [#7214](https://github.com/influxdata/telegraf/pull/7214): Add VolumeSpace query for sqlserver input with metric_version 2.
 - [#7304](https://github.com/influxdata/telegraf/pull/7304): Add reading bearer token from a file to http input.
 
+#### Bugfixes
+
+- [#7371](https://github.com/influxdata/telegraf/issues/7371): Fix unable to write metrics to CloudWatch with IMDSv1 disabled.
+
 ## v1.14.1 [2020-04-14]
 
 #### Bugfixes
