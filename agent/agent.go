@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -516,16 +517,7 @@ func (a *Agent) runOutputs(
 		wg.Add(1)
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
-
-			if a.Config.Agent.RoundInterval {
-				err := internal.SleepContext(
-					ctx, internal.AlignDuration(startTime, interval))
-				if err != nil {
-					return
-				}
-			}
-
-			a.flush(ctx, output, interval, jitter)
+			a.flushLoop(ctx, startTime, output, interval, jitter)
 		}(output)
 	}
 
@@ -546,24 +538,38 @@ func (a *Agent) runOutputs(
 	return nil
 }
 
-// flush runs an output's flush function periodically until the context is
+// flushLoop runs an output's flush function periodically until the context is
 // done.
-func (a *Agent) flush(
+func (a *Agent) flushLoop(
 	ctx context.Context,
+	startTime time.Time,
 	output *models.RunningOutput,
 	interval time.Duration,
 	jitter time.Duration,
 ) {
-	// since we are watching two channels we need a ticker with the jitter
-	// integrated.
-	ticker := NewTicker(interval, jitter)
-	defer ticker.Stop()
-
 	logError := func(err error) {
 		if err != nil {
 			log.Printf("E! [agent] Error writing to %s: %v", output.LogName(), err)
 		}
 	}
+
+	// watch for flush requests
+	flushRequested := make(chan os.Signal, 1)
+	watchForFlushSignal(flushRequested)
+
+	// align to round interval
+	if a.Config.Agent.RoundInterval {
+		err := internal.SleepContext(
+			ctx, internal.AlignDuration(startTime, interval))
+		if err != nil {
+			return
+		}
+	}
+
+	// since we are watching two channels we need a ticker with the jitter
+	// integrated.
+	ticker := NewTicker(interval, jitter)
+	defer ticker.Stop()
 
 	for {
 		// Favor shutdown over other methods.
@@ -575,7 +581,12 @@ func (a *Agent) flush(
 		}
 
 		select {
+		case <-ctx.Done():
+			logError(a.flushOnce(output, interval, output.Write))
+			return
 		case <-ticker.C:
+			logError(a.flushOnce(output, interval, output.Write))
+		case <-flushRequested:
 			logError(a.flushOnce(output, interval, output.Write))
 		case <-output.BatchReady:
 			// Favor the ticker over batch ready
@@ -585,9 +596,6 @@ func (a *Agent) flush(
 			default:
 				logError(a.flushOnce(output, interval, output.WriteBatch))
 			}
-		case <-ctx.Done():
-			logError(a.flushOnce(output, interval, output.Write))
-			return
 		}
 	}
 }
