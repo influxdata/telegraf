@@ -32,8 +32,9 @@ The commands & flags are:
                                  Valid values are 'agent', 'global_tags', 'outputs',
                                  'processors', 'aggregators' and 'inputs'
   --sample-config                print out full sample configuration
-  --test                         gather metrics, print them out, and exit;
-                                 processors, aggregators, and outputs are not run
+  --test                         enable test mode: gather metrics, print them out,
+                                 and exit. Note: Test mode only runs inputs, not
+                                 processors, aggregators, or outputs
   --test-wait                    wait up to this many seconds for service
                                  inputs to complete in test mode
   --usage <plugin>               print usage for a plugin, ie, 'telegraf --usage mysql'
