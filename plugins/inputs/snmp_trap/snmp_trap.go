@@ -80,7 +80,7 @@ var sampleConfig = `
   ##
   ## Security Name.
   # sec_name = "myuser"
-  ## Authentication protocol; one of "MD5", "SHA", or "".
+  ## Authentication protocol; one of "MD5", "SHA", "SHA224", "SHA256", "SHA384", "SHA512", or "".
   # auth_protocol = "MD5"
   ## Authentication password.
   # auth_password = "pass"
@@ -172,6 +172,14 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			authenticationProtocol = gosnmp.MD5
 		case "sha":
 			authenticationProtocol = gosnmp.SHA
+		case "sha224":
+			authenticationProtocol = gosnmp.SHA224
+		case "sha256":
+			authenticationProtocol = gosnmp.SHA256
+		case "sha384":
+			authenticationProtocol = gosnmp.SHA384
+		case "sha512":
+			authenticationProtocol = gosnmp.SHA512
 		case "":
 			authenticationProtocol = gosnmp.NoAuth
 		default:
