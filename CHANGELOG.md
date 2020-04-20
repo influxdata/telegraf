@@ -17,6 +17,7 @@
 - [#7250](https://github.com/influxdata/telegraf/pull/7250): Deploy telegraf configuration as a "non config" file.
 - [#7214](https://github.com/influxdata/telegraf/pull/7214): Add VolumeSpace query for sqlserver input with metric_version 2.
 - [#7304](https://github.com/influxdata/telegraf/pull/7304): Add reading bearer token from a file to http input.
+- [#7366](https://github.com/influxdata/telegraf/pull/7366): add support for SIGUSR1 to trigger flush.
 
 #### Bugfixes
 
