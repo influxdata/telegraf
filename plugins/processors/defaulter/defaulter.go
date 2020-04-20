@@ -2,6 +2,7 @@ package defaulter
 
 import (
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 const sampleConfig = `
@@ -16,8 +17,8 @@ const sampleConfig = `
 		value = "TEST"
 		metric_name = "Disk"
 
-	## If the same field shows up in multiple of these value objects,
-	then the last one will win out.
+	# If the same field shows up in multiple of these value objects,
+	#then the last one will win out.
 `
 
 type DefaultFieldsSet struct {
@@ -64,4 +65,10 @@ func (def *Defaulter) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 	}
 
 	return inputMetrics
+}
+
+func init() {
+	processors.Add("defaulter", func() telegraf.Processor {
+		return &Defaulter{}
+	})
 }
