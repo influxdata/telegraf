@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -205,6 +205,37 @@ func TestWriteKeepDatabase(t *testing.T) {
 			map[string]string{"host": hostTag, "database": "mydb"},
 		)
 	}
+}
+
+func TestWriteRetentionPolicyTag(t *testing.T) {
+	listener := newTestListener()
+	listener.RetentionPolicyTag = "rp"
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	resp, err := http.Post(createURL(listener, "http", "/write", "rp=myrp"), "", bytes.NewBuffer([]byte("cpu time_idle=42")))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, 204, resp.StatusCode)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"rp": "myrp",
+			},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	acc.Wait(1)
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 // http listener should add a newline at the end of the buffer if it's not there
