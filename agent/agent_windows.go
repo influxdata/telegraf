@@ -5,5 +5,9 @@ package agent
 import "os"
 
 func watchForFlushSignal(flushRequested chan os.Signal) {
-	// not implemented
+	// not supported
+}
+
+func stopListeningForFlushSignal(flushRequested chan os.Signal) {
+	// not supported
 }

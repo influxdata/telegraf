@@ -556,6 +556,7 @@ func (a *Agent) flushLoop(
 	// watch for flush requests
 	flushRequested := make(chan os.Signal, 1)
 	watchForFlushSignal(flushRequested)
+	defer stopListeningForFlushSignal(flushRequested)
 
 	// align to round interval
 	if a.Config.Agent.RoundInterval {
