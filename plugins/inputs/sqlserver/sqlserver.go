@@ -629,9 +629,9 @@ SET @SQL = N'SELECT	DISTINCT
  			WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
 				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
 			THEN d.name + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
-                       ELSE spi.instance_name
+                       ELSE RTRIM(spi.instance_name)
                 END AS instance_name,'
-		ELSE 'spi.instance_name as instance_name, '
+		ELSE 'RTRIM(spi.instance_name) as instance_name, '
 		END
 		+
 		'CAST(spi.cntr_value AS BIGINT) AS cntr_value,
