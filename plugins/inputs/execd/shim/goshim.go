@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"sync"
@@ -19,7 +20,11 @@ import (
 
 type empty struct{}
 
-var gatherPromptChans []chan empty
+var (
+	gatherPromptChans []chan empty
+	stdout            io.Writer = os.Stdout
+	stdin             io.Reader = os.Stdin
+)
 
 const (
 	PollIntervalDisabled = time.Duration(0)
@@ -31,7 +36,7 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	collectMetricsPrompt := make(chan os.Signal, 1)
-	signal.Notify(collectMetricsPrompt, syscall.SIGUSR1, syscall.SIGHUP)
+	listenForCollectMetricsSignals(collectMetricsPrompt)
 
 	wg.Add(1) // wait for the metric channel to close
 	metricCh := make(chan telegraf.Metric, 1)
@@ -72,7 +77,6 @@ loop:
 		select {
 		case <-quit:
 			cancel()
-			os.Stdin.Close()
 			stopServices(&wg, cfg)
 			hasQuit = true
 			// keep looping until the metric channel closes.
@@ -89,7 +93,8 @@ loop:
 			if err != nil {
 				handleErr(err)
 			}
-			fmt.Print(string(b))
+			// Write this to stdout
+			fmt.Fprint(stdout, string(b))
 		}
 	}
 
@@ -106,7 +111,7 @@ func stopServices(wg *sync.WaitGroup, cfg *config.Config) {
 }
 
 func stdinCollectMetricsPrompt(ctx context.Context, collectMetricsPrompt chan<- os.Signal) {
-	s := bufio.NewScanner(os.Stdin)
+	s := bufio.NewScanner(stdin)
 	// for every line read from stdin, make sure we're not supposed to quit,
 	// then push a message on to the collectMetricsPrompt
 	for s.Scan() {
