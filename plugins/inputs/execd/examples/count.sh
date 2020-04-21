@@ -4,9 +4,9 @@
 
 counter=0
 
-while read; do
+while read LINE; do
     echo "counter_bash count=${counter}"
-    let counter=counter+1
+    counter=`expr $counter + 1`
 done
 
 (>&2 echo "terminate")
