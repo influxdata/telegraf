@@ -32,10 +32,13 @@ The table below describe how this plugin conforms with them:
   # read_timeout = "10s"
   ## maximum duration before timing out write of the response
   # write_timeout = "10s"
-```
 
-### TODO
-~~Fix - Failed to parse version of APM server http://localhost:8200/: For input string: "unknown"~~
+  ## exclude fields matching following patterns
+  excluded = ["exception_stacktrace_*", "log_stacktrace_*"]
+  ## store selected fields as tags 
+  tag_keys =["my_tag_1", "my_tag_2" ]
+
+```
 
 ### Metrics
 

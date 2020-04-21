@@ -176,11 +176,13 @@ func TestEventsIntakeInvalidHeader(t *testing.T) {
 
 func TestEventsIntake(t *testing.T) {
 	for _, test := range []struct {
-		name     string
-		metadata string
-		event    string
-		tags     map[string]string
-		fields   map[string]interface{}
+		name           string
+		metadata       string
+		event          string
+		tags           map[string]string
+		fields         map[string]interface{}
+		excludedFields []string
+		store_as_tags  []string
 	}{
 		{
 			name:     "metricset mapping",
@@ -210,11 +212,78 @@ func TestEventsIntake(t *testing.T) {
 			tags:     map[string]string{"labels_ab_testing": "true", "labels_group": "experimental", "labels_segment": "5", "process_argv_0": "-v", "process_pid": "1234", "process_ppid": "1", "process_title": "/usr/lib/jvm/java-10-openjdk-amd64/bin/java", "service_agent_ephemeral_id": "e71be9ac-93b0-44b9-a997-5638f6ccfc36", "service_agent_name": "java", "service_agent_version": "1.10.0", "service_environment": "production", "service_framework_name": "spring", "service_framework_version": "5.0.0", "service_language_name": "Java", "service_language_version": "10.0.2", "service_name": "1234_service-12a3", "service_node_configured_name": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "service_runtime_name": "Java", "service_runtime_version": "10.0.2", "service_version": "4.3.0", "system_architecture": "amd64", "system_configured_hostname": "host1", "system_container_id": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "system_detected_hostname": "8ec7ceb99074", "system_kubernetes_namespace": "default", "system_kubernetes_node_name": "node-name", "system_kubernetes_pod_name": "instrumented-java-service", "system_kubernetes_pod_uid": "b17f231da0ad128dc6c6c0b2e82f6f303d3893e3", "system_platform": "Linux", "type": "error"},
 			fields:   map[string]interface{}{"context_custom_and_objects_foo_0": "bar", "context_custom_and_objects_foo_1": "baz", "context_custom_my_key": 1.0, "context_custom_some_other_value": "foobar", "context_request_body": "HelloWorld", "context_request_cookies_c1": "v1", "context_request_cookies_c2": "v2", "context_request_env_GATEWAY_INTERFACE": "CGI/1.1", "context_request_env_SERVER_SOFTWARE": "nginx", "context_request_headers_Elastic-Apm-Traceparent": "00-8c21b4b556467a0b17ae5da959b5f388-31301f1fb2998121-01", "context_request_headers_Forwarded": "for=192.168.0.1", "context_request_headers_content-length": "0", "context_request_headers_cookie_0": "c1=v1", "context_request_headers_cookie_1": "c2=v2", "context_request_headers_host": "opbeans-java:3000", "context_request_http_version": "1.1", "context_request_method": "POST", "context_request_socket_encrypted": true, "context_request_socket_remote_address": "12.53.12.1", "context_request_url_full": "https://www.example.com/p/a/t/h?query=string#hash", "context_request_url_hash": "#hash", "context_request_url_hostname": "www.example.com", "context_request_url_pathname": "/p/a/t/h", "context_request_url_port": 8080.0, "context_request_url_protocol": "https:", "context_request_url_raw": "/p/a/t/h?query=string#hash", "context_request_url_search": "?query=string", "context_response_finished": true, "context_response_headers_content-type": "application/json", "context_response_headers_sent": true, "context_response_status_code": 200.0, "context_service_framework_name": "Node", "context_service_framework_version": "1", "context_service_language_version": "1.2", "context_service_name": "service1", "context_service_node_configured_name": "node-xyz", "context_tags_organization_uuid": "9f0e9d64-c185-4d21-a6f4-4673ed561ec8", "context_user_email": "user@foo.mail", "context_user_id": 99.0, "context_user_username": "foo", "culprit": "opbeans.controllers.DTInterceptor.preHandle(DTInterceptor.java:73)", "exception_attributes_foo": "bar", "exception_cause_0_cause_0_message": "disk spinning way too fast", "exception_cause_0_cause_0_type": "VeryInternalDbError", "exception_cause_0_cause_1_message": "on top of it,internet doesn't work", "exception_cause_0_cause_1_type": "ConnectionError", "exception_cause_0_message": "something wrong writing a file", "exception_cause_0_type": "InternalDbError", "exception_code": 42.0, "exception_handled": false, "exception_message": "Theusernamerootisunknown", "exception_module": "org.springframework.http.client", "exception_stacktrace_0_abs_path": "/tmp/AbstractPlainSocketImpl.java", "exception_stacktrace_0_colno": 4.0, "exception_stacktrace_0_context_line": "3", "exception_stacktrace_0_filename": "AbstractPlainSocketImpl.java", "exception_stacktrace_0_function": "connect", "exception_stacktrace_0_library_frame": true, "exception_stacktrace_0_lineno": 3.0, "exception_stacktrace_0_module": "java.net", "exception_stacktrace_0_post_context_0": "line4", "exception_stacktrace_0_post_context_1": "line5", "exception_stacktrace_0_pre_context_0": "line1", "exception_stacktrace_0_pre_context_1": "line2", "exception_stacktrace_0_vars_key": "value", "exception_stacktrace_1_filename": "AbstractClientHttpRequest.java", "exception_stacktrace_1_function": "execute", "exception_stacktrace_1_lineno": 102.0, "exception_stacktrace_1_vars_key": "value", "exception_type": "java.net.UnknownHostException", "id": "9876543210abcdeffedcba0123456789", "log_level": "error", "log_logger_name": "http404", "log_message": "Request method 'POST' not supported", "log_param_message": "Request method 'POST' /events/:event not supported", "log_stacktrace_0_abs_path": "/tmp/Socket.java", "log_stacktrace_0_classname": "Request::Socket", "log_stacktrace_0_colno": 4.0, "log_stacktrace_0_context_line": "line3", "log_stacktrace_0_filename": "Socket.java", "log_stacktrace_0_function": "connect", "log_stacktrace_0_library_frame": true, "log_stacktrace_0_lineno": 3.0, "log_stacktrace_0_module": "java.net", "log_stacktrace_0_post_context_0": "line4", "log_stacktrace_0_post_context_1": "line5", "log_stacktrace_0_pre_context_0": "line1", "log_stacktrace_0_pre_context_1": "line2", "log_stacktrace_0_vars_key": "value", "log_stacktrace_1_abs_path": "/tmp/SimpleBufferingClientHttpRequest.java", "log_stacktrace_1_filename": "SimpleBufferingClientHttpRequest.java", "log_stacktrace_1_function": "executeInternal", "log_stacktrace_1_lineno": 102.0, "log_stacktrace_1_vars_key": "value", "parent_id": "9632587410abcdef", "trace_id": "0123456789abcdeffedcba0123456789", "transaction_id": "1234567890987654", "transaction_sampled": true, "transaction_type": "request"},
 		},
+		{
+			name:     "error mapping filter exceptions",
+			metadata: "metadata.ndjson",
+			event:    "error.ndjson",
+			tags:     map[string]string{"labels_ab_testing": "true", "labels_group": "experimental", "labels_segment": "5", "process_argv_0": "-v", "process_pid": "1234", "process_ppid": "1", "process_title": "/usr/lib/jvm/java-10-openjdk-amd64/bin/java", "service_agent_ephemeral_id": "e71be9ac-93b0-44b9-a997-5638f6ccfc36", "service_agent_name": "java", "service_agent_version": "1.10.0", "service_environment": "production", "service_framework_name": "spring", "service_framework_version": "5.0.0", "service_language_name": "Java", "service_language_version": "10.0.2", "service_name": "1234_service-12a3", "service_node_configured_name": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "service_runtime_name": "Java", "service_runtime_version": "10.0.2", "service_version": "4.3.0", "system_architecture": "amd64", "system_configured_hostname": "host1", "system_container_id": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "system_detected_hostname": "8ec7ceb99074", "system_kubernetes_namespace": "default", "system_kubernetes_node_name": "node-name", "system_kubernetes_pod_name": "instrumented-java-service", "system_kubernetes_pod_uid": "b17f231da0ad128dc6c6c0b2e82f6f303d3893e3", "system_platform": "Linux", "type": "error"},
+			fields: map[string]interface{}{"context_custom_and_objects_foo_0": "bar", "context_custom_and_objects_foo_1": "baz",
+				"context_custom_my_key": 1.0, "context_custom_some_other_value": "foobar", "context_request_body": "HelloWorld",
+				"context_request_cookies_c1": "v1", "context_request_cookies_c2": "v2", "context_request_env_GATEWAY_INTERFACE": "CGI/1.1",
+				"context_request_env_SERVER_SOFTWARE": "nginx", "context_request_headers_Elastic-Apm-Traceparent": "00-8c21b4b556467a0b17ae5da959b5f388-31301f1fb2998121-01",
+				"context_request_headers_Forwarded": "for=192.168.0.1", "context_request_headers_content-length": "0", "context_request_headers_cookie_0": "c1=v1",
+				"context_request_headers_cookie_1": "c2=v2", "context_request_headers_host": "opbeans-java:3000", "context_request_http_version": "1.1",
+				"context_request_method": "POST", "context_request_socket_encrypted": true, "context_request_socket_remote_address": "12.53.12.1",
+				"context_request_url_full": "https://www.example.com/p/a/t/h?query=string#hash", "context_request_url_hash": "#hash",
+				"context_request_url_hostname": "www.example.com", "context_request_url_pathname": "/p/a/t/h", "context_request_url_port": 8080.0,
+				"context_request_url_protocol": "https:", "context_request_url_raw": "/p/a/t/h?query=string#hash",
+				"context_request_url_search": "?query=string", "context_response_finished": true, "context_response_headers_content-type": "application/json",
+				"context_response_headers_sent": true, "context_response_status_code": 200.0, "context_service_framework_name": "Node",
+				"context_service_framework_version": "1", "context_service_language_version": "1.2", "context_service_name": "service1",
+				"context_service_node_configured_name": "node-xyz", "context_tags_organization_uuid": "9f0e9d64-c185-4d21-a6f4-4673ed561ec8",
+				"context_user_email": "user@foo.mail", "context_user_id": 99.0, "context_user_username": "foo",
+				"culprit": "opbeans.controllers.DTInterceptor.preHandle(DTInterceptor.java:73)", "exception_attributes_foo": "bar",
+				"exception_cause_0_cause_0_message": "disk spinning way too fast", "exception_cause_0_cause_0_type": "VeryInternalDbError",
+				"exception_cause_0_cause_1_message": "on top of it,internet doesn't work", "exception_cause_0_cause_1_type": "ConnectionError",
+				"exception_cause_0_message": "something wrong writing a file", "exception_cause_0_type": "InternalDbError", "exception_code": 42.0,
+				"exception_handled": false, "exception_message": "Theusernamerootisunknown", "exception_module": "org.springframework.http.client",
+				"exception_type": "java.net.UnknownHostException", "id": "9876543210abcdeffedcba0123456789",
+				"log_level": "error", "log_logger_name": "http404", "log_message": "Request method 'POST' not supported",
+				"log_param_message": "Request method 'POST' /events/:event not supported",
+				"parent_id":         "9632587410abcdef", "trace_id": "0123456789abcdeffedcba0123456789", "transaction_id": "1234567890987654", "transaction_sampled": true, "transaction_type": "request"},
+			excludedFields: []string{"exception_stacktrace*", "log_stacktrace*", "foo2"},
+		},
+		{
+			name:     "error mapping filter exceptions and log_level tag",
+			metadata: "metadata.ndjson",
+			event:    "error.ndjson",
+			tags:     map[string]string{"labels_ab_testing": "true", "labels_group": "experimental", "labels_segment": "5", "log_level": "error", "log_logger_name": "http404", "process_argv_0": "-v", "process_pid": "1234", "process_ppid": "1", "process_title": "/usr/lib/jvm/java-10-openjdk-amd64/bin/java", "service_agent_ephemeral_id": "e71be9ac-93b0-44b9-a997-5638f6ccfc36", "service_agent_name": "java", "service_agent_version": "1.10.0", "service_environment": "production", "service_framework_name": "spring", "service_framework_version": "5.0.0", "service_language_name": "Java", "service_language_version": "10.0.2", "service_name": "1234_service-12a3", "service_node_configured_name": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "service_runtime_name": "Java", "service_runtime_version": "10.0.2", "service_version": "4.3.0", "system_architecture": "amd64", "system_configured_hostname": "host1", "system_container_id": "8ec7ceb990749e79b37f6dc6cd3628633618d6ce412553a552a0fa6b69419ad4", "system_detected_hostname": "8ec7ceb99074", "system_kubernetes_namespace": "default", "system_kubernetes_node_name": "node-name", "system_kubernetes_pod_name": "instrumented-java-service", "system_kubernetes_pod_uid": "b17f231da0ad128dc6c6c0b2e82f6f303d3893e3", "system_platform": "Linux", "type": "error"},
+			fields: map[string]interface{}{"context_custom_and_objects_foo_0": "bar", "context_custom_and_objects_foo_1": "baz",
+				"context_custom_my_key": 1.0, "context_custom_some_other_value": "foobar", "context_request_body": "HelloWorld",
+				"context_request_cookies_c1": "v1", "context_request_cookies_c2": "v2", "context_request_env_GATEWAY_INTERFACE": "CGI/1.1",
+				"context_request_env_SERVER_SOFTWARE": "nginx", "context_request_headers_Elastic-Apm-Traceparent": "00-8c21b4b556467a0b17ae5da959b5f388-31301f1fb2998121-01",
+				"context_request_headers_Forwarded": "for=192.168.0.1", "context_request_headers_content-length": "0", "context_request_headers_cookie_0": "c1=v1",
+				"context_request_headers_cookie_1": "c2=v2", "context_request_headers_host": "opbeans-java:3000", "context_request_http_version": "1.1",
+				"context_request_method": "POST", "context_request_socket_encrypted": true, "context_request_socket_remote_address": "12.53.12.1",
+				"context_request_url_full": "https://www.example.com/p/a/t/h?query=string#hash", "context_request_url_hash": "#hash",
+				"context_request_url_hostname": "www.example.com", "context_request_url_pathname": "/p/a/t/h", "context_request_url_port": 8080.0,
+				"context_request_url_protocol": "https:", "context_request_url_raw": "/p/a/t/h?query=string#hash",
+				"context_request_url_search": "?query=string", "context_response_finished": true, "context_response_headers_content-type": "application/json",
+				"context_response_headers_sent": true, "context_response_status_code": 200.0, "context_service_framework_name": "Node",
+				"context_service_framework_version": "1", "context_service_language_version": "1.2", "context_service_name": "service1",
+				"context_service_node_configured_name": "node-xyz", "context_tags_organization_uuid": "9f0e9d64-c185-4d21-a6f4-4673ed561ec8",
+				"context_user_email": "user@foo.mail", "context_user_id": 99.0, "context_user_username": "foo",
+				"culprit": "opbeans.controllers.DTInterceptor.preHandle(DTInterceptor.java:73)", "exception_attributes_foo": "bar",
+				"exception_cause_0_cause_0_message": "disk spinning way too fast", "exception_cause_0_cause_0_type": "VeryInternalDbError",
+				"exception_cause_0_cause_1_message": "on top of it,internet doesn't work", "exception_cause_0_cause_1_type": "ConnectionError",
+				"exception_cause_0_message": "something wrong writing a file", "exception_cause_0_type": "InternalDbError", "exception_code": 42.0,
+				"exception_handled": false, "exception_message": "Theusernamerootisunknown", "exception_module": "org.springframework.http.client",
+				"exception_type": "java.net.UnknownHostException", "id": "9876543210abcdeffedcba0123456789",
+				"log_message":       "Request method 'POST' not supported",
+				"log_param_message": "Request method 'POST' /events/:event not supported",
+				"parent_id":         "9632587410abcdef", "trace_id": "0123456789abcdeffedcba0123456789", "transaction_id": "1234567890987654", "transaction_sampled": true, "transaction_type": "request"},
+			excludedFields: []string{"exception_stacktrace*", "foo2", "log_stacktrace*"},
+			store_as_tags:  []string{"log_level", "log_logger_name"},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 
 			server := newTestServer()
 			acc := &testutil.Accumulator{}
+
+			server.ExcludedFields = test.excludedFields
+			server.TagKeys = test.store_as_tags
+
 			require.NoError(t, server.Init())
 			require.NoError(t, server.Start(acc))
 			defer server.Stop()

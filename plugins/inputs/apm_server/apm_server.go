@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
@@ -32,6 +33,11 @@ type APMServer struct {
 	IdleTimeout    internal.Duration `toml:"idle_timeout"`
 	ReadTimeout    internal.Duration `toml:"read_timeout"`
 	WriteTimeout   internal.Duration `toml:"write_timeout"`
+
+	//customize json -> line protocol mapping
+	ExcludedFields []string `toml:"excluded"`
+	TagKeys        []string `toml:"tag_keys"`
+
 	tlsint.ServerConfig
 
 	port     int
@@ -46,6 +52,9 @@ type APMServer struct {
 	Log telegraf.Logger
 
 	mux http.ServeMux
+
+	excludedFilter filter.Filter
+	tagFilter      filter.Filter
 }
 
 func (s *APMServer) Description() string {
@@ -63,6 +72,10 @@ func (s *APMServer) SampleConfig() string {
   # read_timeout =	"30s"
   ## maximum duration before timing out write of the response
   # write_timeout = "30s"
+  ## exclude fields matching following patterns
+  # excluded = ["exception_stacktrace_*", "log_stacktrace_*"]
+  ## store selected fields as tags 
+  # tag_keys =["my_tag_1", "my_tag_2" ]
 `
 }
 
@@ -85,6 +98,18 @@ func (s *APMServer) Init() error {
 	h.Write([]byte(s.SampleConfig()))
 	s.buildSHA = hex.EncodeToString(h.Sum(nil))
 	s.buildDate = time.Now()
+
+	excludedFilter, err := filter.Compile(s.ExcludedFields)
+	if err != nil {
+		return err
+	}
+	s.excludedFilter = excludedFilter
+
+	tagFilter, err := filter.Compile(s.TagKeys)
+	if err != nil {
+		return err
+	}
+	s.tagFilter = tagFilter
 
 	return nil
 }
@@ -255,6 +280,31 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			if err := f.FullFlattenJSON("", event.(map[string]interface{})[eventType], true, true); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
+			}
+
+			for k, v := range f.Fields {
+
+				// Exclude fields filter
+				if s.excludedFilter != nil && s.excludedFilter.Match(k) {
+					delete(f.Fields, k)
+					fmt.Printf("Drop - key[%s] value[%s]\n", k, v)
+				}
+
+				// Store fields as tags
+				if s.tagFilter != nil && s.tagFilter.Match(k) {
+					switch value := f.Fields[k].(type) {
+					case string:
+						tags[k] = value
+					case bool:
+						tags[k] = strconv.FormatBool(value)
+					case float64:
+						tags[k] = strconv.FormatFloat(value, 'f', -1, 64)
+					default:
+						log.Printf("E! [handleEventsIntake] Unrecognized tag type %T", value)
+					}
+					delete(f.Fields, k)
+					fmt.Printf("Store [%s] value[%s] as a tag \n", k, v)
+				}
 			}
 			delete(f.Fields, "timestamp")
 
