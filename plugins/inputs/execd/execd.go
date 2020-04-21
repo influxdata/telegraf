@@ -50,9 +50,10 @@ type Execd struct {
 	cmd    *exec.Cmd
 	parser parsers.Parser
 	stdin  io.WriteCloser
+	stdout io.ReadCloser
+	stderr io.ReadCloser
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
-	errCh  chan error
 }
 
 func (e *Execd) SampleConfig() string {
@@ -69,7 +70,6 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
-	e.errCh = make(chan error, 10)
 
 	if len(e.Command) == 0 {
 		return fmt.Errorf("E! [inputs.execd] FATAL no command specified")
@@ -80,17 +80,14 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancel = cancel
 
+	if err := e.cmdStart(); err != nil {
+		return err
+	}
+
 	go func() {
 		e.cmdLoop(ctx)
 		e.wg.Done()
 	}()
-
-	// wait a second to see if there's any errors.
-	select {
-	case <-time.NewTimer(1 * time.Second).C:
-	case err := <-e.errCh:
-		return err
-	}
 
 	return nil
 }
@@ -100,13 +97,14 @@ func (e *Execd) Stop() {
 	e.wg.Wait()
 }
 
-func (e *Execd) cmdLoop(ctx context.Context) {
+// cmdLoop watches an already running process, restarting it when appropriate.
+func (e *Execd) cmdLoop(ctx context.Context) error {
 	for {
 		// Use a buffered channel to ensure goroutine below can exit
 		// if `ctx.Done` is selected and nothing reads on `done` anymore
 		done := make(chan error, 1)
 		go func() {
-			done <- e.cmdRun()
+			done <- e.cmdWait()
 		}()
 
 		select {
@@ -117,48 +115,44 @@ func (e *Execd) cmdLoop(ctx context.Context) {
 				// period before killing
 				internal.WaitTimeout(e.cmd, 200*time.Millisecond)
 			}
-			return
+			return nil
 		case err := <-done:
-			if err != nil {
-				e.errCh <- err
-			}
-
 			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)
+			return err
 		}
 
 		log.Printf("E! [inputs.execd] Restarting in %s...", time.Duration(e.RestartDelay))
 
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-time.After(time.Duration(e.RestartDelay)):
 			// Continue the loop and restart the process
+			if err := e.cmdStart(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-func (e *Execd) cmdRun() error {
-	var wg sync.WaitGroup
-
+func (e *Execd) cmdStart() (err error) {
 	if len(e.Command) > 1 {
 		e.cmd = exec.Command(e.Command[0], e.Command[1:]...)
 	} else {
 		e.cmd = exec.Command(e.Command[0])
 	}
 
-	stdin, err := e.cmd.StdinPipe()
+	e.stdin, err = e.cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("E! [inputs.execd] Error opening stdin pipe: %s", err)
 	}
 
-	e.stdin = stdin
-
-	stdout, err := e.cmd.StdoutPipe()
+	e.stdout, err = e.cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("E! [inputs.execd] Error opening stdout pipe: %s", err)
 	}
 
-	stderr, err := e.cmd.StderrPipe()
+	e.stderr, err = e.cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("E! [inputs.execd] Error opening stderr pipe: %s", err)
 	}
@@ -170,15 +164,20 @@ func (e *Execd) cmdRun() error {
 		return fmt.Errorf("E! [inputs.execd] Error starting process: %s", err)
 	}
 
+	return nil
+}
+
+func (e *Execd) cmdWait() error {
+	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
-		e.cmdReadOut(stdout)
+		e.cmdReadOut(e.stdout)
 		wg.Done()
 	}()
 
 	go func() {
-		e.cmdReadErr(stderr)
+		e.cmdReadErr(e.stderr)
 		wg.Done()
 	}()
 
