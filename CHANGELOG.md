@@ -19,6 +19,7 @@
 - [#7304](https://github.com/influxdata/telegraf/pull/7304): Add reading bearer token from a file to http input.
 - [#7366](https://github.com/influxdata/telegraf/pull/7366): add support for SIGUSR1 to trigger flush.
 - [#7271](https://github.com/influxdata/telegraf/pull/7271): Add retry when slave is busy to modbus input.
+- [#7356](https://github.com/influxdata/telegraf/pull/7356): Add option to save retention policy as tag in influxdb_listener.
 
 #### Bugfixes
 
