@@ -182,7 +182,8 @@ func testAlignUniform(t *testing.T, n int) {
 		}
 		values[i] = 1
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
@@ -207,7 +208,8 @@ func TestAlignMetrics(t *testing.T) {
 		}
 		values[i] = int64(i%3 + 1)
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
