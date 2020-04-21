@@ -72,86 +72,83 @@ const (
 
 const description = `Retrieve data from MODBUS slave devices`
 const sampleConfig = `
- ## Connection Configuration
- ##
- ## The plugin supports connections to PLCs via MODBUS/TCP or
- ## via serial line communication in binary (RTU) or readable (ASCII) encoding
- ##
- ## Device name
- name = "Device"
+  ## Connection Configuration
+  ##
+  ## The plugin supports connections to PLCs via MODBUS/TCP or
+  ## via serial line communication in binary (RTU) or readable (ASCII) encoding
+  ##
+  ## Device name
+  name = "Device"
 
- ## Slave ID - addresses a MODBUS device on the bus
- ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
- slave_id = 1
+  ## Slave ID - addresses a MODBUS device on the bus
+  ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
+  slave_id = 1
 
- ## Timeout for each request
- timeout = "1s"
+  ## Timeout for each request
+  timeout = "1s"
 
- ## Maximum number of retries and the time to wait between retries
- ## when a slave-device is busy.
- ## NOTE: Please make sure that the overall retry time (#retries * wait time)
- ##       is always smaller than the query interval as otherwise you will get
- ##       an "did not complete within its interval" warning.
- #busy_retries = 0
- #busy_retries_wait = "100ms"
+  ## Maximum number of retries and the time to wait between retries
+  ## when a slave-device is busy.
+  # busy_retries = 0
+  # busy_retries_wait = "100ms"
 
- # TCP - connect via Modbus/TCP
- controller = "tcp://localhost:502"
+  # TCP - connect via Modbus/TCP
+  controller = "tcp://localhost:502"
 
- # Serial (RS485; RS232)
- #controller = "file:///dev/ttyUSB0"
- #baud_rate = 9600
- #data_bits = 8
- #parity = "N"
- #stop_bits = 1
- #transmission_mode = "RTU"
+  ## Serial (RS485; RS232)
+  # controller = "file:///dev/ttyUSB0"
+  # baud_rate = 9600
+  # data_bits = 8
+  # parity = "N"
+  # stop_bits = 1
+  # transmission_mode = "RTU"
 
 
- ## Measurements
- ##
+  ## Measurements
+  ##
 
- ## Digital Variables, Discrete Inputs and Coils
- ## measurement - the (optional) measurement name, defaults to "modbus"
- ## name        - the variable name
- ## address     - variable address
+  ## Digital Variables, Discrete Inputs and Coils
+  ## measurement - the (optional) measurement name, defaults to "modbus"
+  ## name        - the variable name
+  ## address     - variable address
 
- discrete_inputs = [
-   { name = "start",          address = [0]},
-   { name = "stop",           address = [1]},
-   { name = "reset",          address = [2]},
-   { name = "emergency_stop", address = [3]},
- ]
- coils = [
-   { name = "motor1_run",     address = [0]},
-   { name = "motor1_jog",     address = [1]},
-   { name = "motor1_stop",    address = [2]},
- ]
+  discrete_inputs = [
+    { name = "start",          address = [0]},
+    { name = "stop",           address = [1]},
+    { name = "reset",          address = [2]},
+    { name = "emergency_stop", address = [3]},
+  ]
+  coils = [
+    { name = "motor1_run",     address = [0]},
+    { name = "motor1_jog",     address = [1]},
+    { name = "motor1_stop",    address = [2]},
+  ]
 
- ## Analog Variables, Input Registers and Holding Registers
- ## measurement - the (optional) measurement name, defaults to "modbus"
- ## name        - the variable name
- ## byte_order  - the ordering of bytes
- ##  |---AB, ABCD   - Big Endian
- ##  |---BA, DCBA   - Little Endian
- ##  |---BADC       - Mid-Big Endian
- ##  |---CDAB       - Mid-Little Endian
- ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
- ## scale      - the final numeric variable representation
- ## address    - variable address
+  ## Analog Variables, Input Registers and Holding Registers
+  ## measurement - the (optional) measurement name, defaults to "modbus"
+  ## name        - the variable name
+  ## byte_order  - the ordering of bytes
+  ##  |---AB, ABCD   - Big Endian
+  ##  |---BA, DCBA   - Little Endian
+  ##  |---BADC       - Mid-Big Endian
+  ##  |---CDAB       - Mid-Little Endian
+  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32, FLOAT32-IEEE (the IEEE 754 binary representation)
+  ## scale      - the final numeric variable representation
+  ## address    - variable address
 
- holding_registers = [
-   { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale=0.01,  address = [8]},
-   { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [0]},
-   { name = "energy",       byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [5,6]},
-   { name = "current",      byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [1,2]},
-   { name = "frequency",    byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [7]},
-   { name = "power",        byte_order = "ABCD", data_type = "FLOAT32", scale=0.1,   address = [3,4]},
- ]
- input_registers = [
-   { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
-   { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-   { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
- ]
+  holding_registers = [
+    { name = "power_factor", byte_order = "AB",   data_type = "FLOAT32", scale=0.01,  address = [8]},
+    { name = "voltage",      byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [0]},
+    { name = "energy",       byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [5,6]},
+    { name = "current",      byte_order = "ABCD", data_type = "FLOAT32", scale=0.001, address = [1,2]},
+    { name = "frequency",    byte_order = "AB",   data_type = "FLOAT32", scale=0.1,   address = [7]},
+    { name = "power",        byte_order = "ABCD", data_type = "FLOAT32", scale=0.1,   address = [3,4]},
+  ]
+  input_registers = [
+    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
+    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
+    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
+  ]
 `
 
 // SampleConfig returns a basic configuration for the plugin
