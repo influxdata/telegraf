@@ -486,7 +486,7 @@ func (s *Solr) gatherData(url string, v interface{}) error {
 		req.SetBasicAuth(s.Username, s.Password)
 	}
 
-	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	req.Header.Set("User-Agent", internal.ProductToken())
 
 	r, err := s.client.Do(req)
 	if err != nil {
