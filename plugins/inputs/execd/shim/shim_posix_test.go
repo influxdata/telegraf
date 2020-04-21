@@ -4,6 +4,7 @@ package shim
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"runtime"
 	"strings"
@@ -22,6 +23,8 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 	stdoutBytes := bytes.NewBufferString("")
 	stdout = stdoutBytes
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	wait := runInputPlugin(40 * time.Second)
 
 	// sleep a bit to avoid a race condition where the input hasn't loaded yet.
@@ -31,8 +34,22 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 	pid := os.Getpid()
 	process, err := os.FindProcess(pid)
 	assert.NoError(t, err)
-	err = process.Signal(syscall.SIGUSR1)
-	assert.NoError(t, err)
+
+	go func() {
+		// On slow machines this signal can fire before the service comes up.
+		// rather than depend on accurate sleep times, we'll just retry sending
+		// the signal every so often until it goes through.
+		for {
+			select {
+			case <-ctx.Done():
+				return // test is done
+			default:
+				// test isn't done, keep going.
+				process.Signal(syscall.SIGUSR1)
+				time.Sleep(200 * time.Millisecond)
+			}
+		}
+	}()
 
 	<-wait
 	for stdoutBytes.Len() == 0 {
