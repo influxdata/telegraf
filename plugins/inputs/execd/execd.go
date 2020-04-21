@@ -50,7 +50,6 @@ type Execd struct {
 	cmd    *exec.Cmd
 	parser parsers.Parser
 	stdin  io.WriteCloser
-	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 	errCh  chan error
@@ -78,10 +77,11 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 
 	e.wg.Add(1)
 
-	e.ctx, e.cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	e.cancel = cancel
 
 	go func() {
-		e.cmdLoop(e.ctx)
+		e.cmdLoop(ctx)
 		e.wg.Done()
 	}()
 

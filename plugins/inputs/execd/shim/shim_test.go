@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -24,12 +24,12 @@ func TestShimWorks(t *testing.T) {
 	select {
 	case <-wait:
 	case <-timeout.C:
-		assert.Fail(t, "Timeout waiting for metric to arrive")
+		require.Fail(t, "Timeout waiting for metric to arrive")
 	}
 	for stdoutBytes.Len() == 0 {
 		select {
 		case <-timeout.C:
-			assert.Fail(t, "Timeout waiting to read metric from stdout")
+			require.Fail(t, "Timeout waiting to read metric from stdout")
 			return
 		default:
 			time.Sleep(10 * time.Millisecond)
@@ -37,10 +37,9 @@ func TestShimWorks(t *testing.T) {
 	}
 
 	out := string(stdoutBytes.Bytes())
-	if assert.Contains(t, out, "\n") {
-		metricLine := strings.Split(out, "\n")[0]
-		assert.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
-	}
+	require.Contains(t, out, "\n")
+	metricLine := strings.Split(out, "\n")[0]
+	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
 }
 
 func TestShimStdinSignalingWorks(t *testing.T) {
@@ -57,13 +56,13 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	select {
 	case <-wait:
 	case <-timeout.C:
-		assert.Fail(t, "Timeout waiting for metric to arrive")
+		require.Fail(t, "Timeout waiting for metric to arrive")
 	}
 
 	for stdoutBytes.Len() == 0 {
 		select {
 		case <-timeout.C:
-			assert.Fail(t, "Timeout waiting to read metric from stdout")
+			require.Fail(t, "Timeout waiting to read metric from stdout")
 			return
 		default:
 			time.Sleep(10 * time.Millisecond)
@@ -71,10 +70,9 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	}
 
 	out := string(stdoutBytes.Bytes())
-	if assert.Contains(t, out, "\n") {
-		metricLine := strings.Split(out, "\n")[0]
-		assert.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
-	}
+	require.Contains(t, out, "\n")
+	metricLine := strings.Split(out, "\n")[0]
+	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
 }
 
 func runInputPlugin(timeout time.Duration) chan bool {

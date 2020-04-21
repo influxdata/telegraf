@@ -30,5 +30,8 @@ func main() {
 		}
 	}
 
-	shim.RunPlugins(cfg, pollInterval)
+	if err := shim.RunPlugins(cfg, pollInterval); err != nil {
+		fmt.Fprintf(os.Stderr, "Err: %s\n", err)
+		os.Exit(1)
+	}
 }

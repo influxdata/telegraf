@@ -27,10 +27,13 @@ var (
 )
 
 const (
+	// PollIntervalDisabled is used to indicate that you want to disable polling,
+	// as opposed to duration 0 meaning poll constantly.
 	PollIntervalDisabled = time.Duration(0)
 )
 
-func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
+// RunPlugins runs the input plugins..
+func RunPlugins(cfg *config.Config, pollInterval time.Duration) error {
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -48,7 +51,7 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
 
 	for i, runningInput := range cfg.Inputs {
 		if err := runningInput.Init(); err != nil {
-			handleErr(err)
+			return fmt.Errorf("failed to init input: %w", err)
 		}
 
 		acc := agent.NewAccumulator(runningInput, metricCh)
@@ -57,7 +60,7 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) {
 		if serviceInput, ok := runningInput.Input.(telegraf.ServiceInput); ok {
 			wg.Add(1)
 			if err := serviceInput.Start(acc); err != nil {
-				handleErr(err)
+				return fmt.Errorf("failed to start input: %w", err)
 			}
 		}
 		gatherPromptCh := make(chan empty, 1)
@@ -91,7 +94,7 @@ loop:
 			}
 			b, err := s.Serialize(m)
 			if err != nil {
-				handleErr(err)
+				return fmt.Errorf("failed to serialize metric: %w", err)
 			}
 			// Write this to stdout
 			fmt.Fprint(stdout, string(b))
@@ -99,6 +102,7 @@ loop:
 	}
 
 	wg.Wait()
+	return nil
 }
 
 func stopServices(wg *sync.WaitGroup, cfg *config.Config) {
@@ -162,17 +166,12 @@ func startGathering(ctx context.Context, runningInput *models.RunningInput, acc 
 			return
 		case <-gatherPromptCh:
 			if err := runningInput.Gather(acc); err != nil {
-				handleErr(err)
+				fmt.Fprintf(os.Stderr, "failed to gather metrics: %s", err)
 			}
 		case <-t.C:
 			if err := runningInput.Gather(acc); err != nil {
-				handleErr(err)
+				fmt.Fprintf(os.Stderr, "failed to gather metrics: %s", err)
 			}
 		}
 	}
-}
-
-func handleErr(err error) {
-	fmt.Fprintf(os.Stderr, "Err: %s\n", err)
-	os.Exit(1)
 }
