@@ -1,3 +1,9 @@
+## v1.14.2 [unreleased]
+
+#### Bugfixes
+
+- [#7241](https://github.com/influxdata/telegraf/issues/7241): Trim whitespace from instance tag in sqlserver input.
+
 ## v1.14.1 [2020-04-14]
 
 #### Bugfixes
