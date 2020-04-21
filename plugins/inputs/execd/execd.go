@@ -72,7 +72,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
 
 	if len(e.Command) == 0 {
-		return fmt.Errorf("E! [inputs.execd] FATAL no command specified")
+		return fmt.Errorf("FATAL no command specified")
 	}
 
 	e.wg.Add(1)
@@ -117,11 +117,11 @@ func (e *Execd) cmdLoop(ctx context.Context) error {
 			}
 			return nil
 		case err := <-done:
-			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)
+			log.Printf("Process %s terminated: %s", e.Command, err)
 			return err
 		}
 
-		log.Printf("E! [inputs.execd] Restarting in %s...", time.Duration(e.RestartDelay))
+		log.Printf("Restarting in %s...", time.Duration(e.RestartDelay))
 
 		select {
 		case <-ctx.Done():
@@ -144,24 +144,24 @@ func (e *Execd) cmdStart() (err error) {
 
 	e.stdin, err = e.cmd.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stdin pipe: %s", err)
+		return fmt.Errorf("Error opening stdin pipe: %s", err)
 	}
 
 	e.stdout, err = e.cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stdout pipe: %s", err)
+		return fmt.Errorf("Error opening stdout pipe: %s", err)
 	}
 
 	e.stderr, err = e.cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stderr pipe: %s", err)
+		return fmt.Errorf("Error opening stderr pipe: %s", err)
 	}
 
-	log.Printf("D! [inputs.execd] Starting process: %s", e.Command)
+	log.Printf("Starting process: %s", e.Command)
 
 	err = e.cmd.Start()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error starting process: %s", err)
+		return fmt.Errorf("Error starting process: %s", err)
 	}
 
 	return nil
@@ -191,7 +191,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
-			e.acc.AddError(fmt.Errorf("E! [inputs.execd] Parse error: %s", err))
+			e.acc.AddError(fmt.Errorf("Parse error: %s", err))
 		}
 
 		for _, metric := range metrics {
@@ -200,7 +200,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("E! [inputs.execd] Error reading stdout: %s", err))
+		e.acc.AddError(fmt.Errorf("Error reading stdout: %s", err))
 	}
 }
 
@@ -208,11 +208,11 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("E! [inputs.execd] stderr: %q", scanner.Text())
+		log.Printf("stderr: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("E! [inputs.execd] Error reading stderr: %s", err))
+		e.acc.AddError(fmt.Errorf("Error reading stderr: %s", err))
 	}
 }
 

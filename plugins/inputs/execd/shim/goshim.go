@@ -58,7 +58,6 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) error {
 		acc.SetPrecision(time.Nanosecond)
 
 		if serviceInput, ok := runningInput.Input.(telegraf.ServiceInput); ok {
-			wg.Add(1)
 			if err := serviceInput.Start(acc); err != nil {
 				return fmt.Errorf("failed to start input: %w", err)
 			}
@@ -68,6 +67,9 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) error {
 		wg.Add(1)
 		go func(i int) {
 			startGathering(ctx, cfg.Inputs[i], acc, gatherPromptCh, pollInterval)
+			if serviceInput, ok := cfg.Inputs[i].Input.(telegraf.ServiceInput); ok {
+				serviceInput.Stop()
+			}
 			wg.Done()
 		}(i)
 	}
@@ -80,7 +82,6 @@ loop:
 		select {
 		case <-quit:
 			cancel()
-			stopServices(&wg, cfg)
 			hasQuit = true
 			// keep looping until the metric channel closes.
 		case <-collectMetricsPrompt:
@@ -103,15 +104,6 @@ loop:
 
 	wg.Wait()
 	return nil
-}
-
-func stopServices(wg *sync.WaitGroup, cfg *config.Config) {
-	for _, runningInput := range cfg.Inputs {
-		if serviceInput, ok := runningInput.Input.(telegraf.ServiceInput); ok {
-			serviceInput.Stop()
-			wg.Done()
-		}
-	}
 }
 
 func stdinCollectMetricsPrompt(ctx context.Context, collectMetricsPrompt chan<- os.Signal) {
