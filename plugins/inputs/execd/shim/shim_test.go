@@ -18,10 +18,22 @@ func TestShimWorks(t *testing.T) {
 	stdoutBytes := bytes.NewBufferString("")
 	stdout = stdoutBytes
 
+	timeout := time.NewTimer(10 * time.Second)
 	wait := runInputPlugin(10 * time.Millisecond)
-	<-wait
+
+	select {
+	case <-wait:
+	case <-timeout.C:
+		assert.Fail(t, "Timeout waiting for metric to arrive")
+	}
 	for stdoutBytes.Len() == 0 {
-		time.Sleep(10 * time.Millisecond)
+		select {
+		case <-timeout.C:
+			assert.Fail(t, "Timeout waiting to read metric from stdout")
+			return
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 
 	out := string(stdoutBytes.Bytes())
@@ -37,12 +49,25 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	stdinBytes := bytes.NewBufferString("")
 	stdin = stdinBytes
 
+	timeout := time.NewTimer(10 * time.Second)
 	wait := runInputPlugin(40 * time.Second)
 
 	stdinBytes.WriteString("\n")
-	<-wait
+
+	select {
+	case <-wait:
+	case <-timeout.C:
+		assert.Fail(t, "Timeout waiting for metric to arrive")
+	}
+
 	for stdoutBytes.Len() == 0 {
-		time.Sleep(10 * time.Millisecond)
+		select {
+		case <-timeout.C:
+			assert.Fail(t, "Timeout waiting to read metric from stdout")
+			return
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 
 	out := string(stdoutBytes.Bytes())

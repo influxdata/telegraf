@@ -51,9 +51,22 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 		}
 	}()
 
-	<-wait
+	timeout := time.NewTimer(10 * time.Second)
+
+	select {
+	case <-wait:
+	case <-timeout.C:
+		assert.Fail(t, "Timeout waiting for metric to arrive")
+	}
+
 	for stdoutBytes.Len() == 0 {
-		time.Sleep(10 * time.Millisecond)
+		select {
+		case <-timeout.C:
+			assert.Fail(t, "Timeout waiting to read metric from stdout")
+			return
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 
 	out := string(stdoutBytes.Bytes())
