@@ -1596,17 +1596,7 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
 
 const sqlServerCpuV2 string = `
 /*The ring buffer has a new value every minute*/
-DECLARE
-	 @EngineEdition AS int
-
-SELECT 
-	 @EngineEdition = y.[EngineEdition]
-FROM (
-	SELECT
-		CAST(SERVERPROPERTY('EngineEdition') AS int) as [EngineEdition]
-) as y
-
-IF @EngineEdition NOT IN (5,8) /*No azure DB and managed instance*/
+IF SERVERPROPERTY('EngineEdition') NOT IN (5,8) /*No azure DB and managed instance*/
 BEGIN
 SELECT 
 	 'sqlserver_cpu' AS [measurement]
