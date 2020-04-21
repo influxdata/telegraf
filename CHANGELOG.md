@@ -25,6 +25,11 @@
 - [#7371](https://github.com/influxdata/telegraf/issues/7371): Fix unable to write metrics to CloudWatch with IMDSv1 disabled.
 - [#7233](https://github.com/influxdata/telegraf/issues/7233): Fix vSphere 6.7 missing data issue.
 
+## v1.14.2 [unreleased]
+
+#### Bugfixes
+
+- [#7241](https://github.com/influxdata/telegraf/issues/7241): Trim whitespace from instance tag in sqlserver input.
 
 ## v1.14.1 [2020-04-14]
 
