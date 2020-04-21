@@ -20,7 +20,7 @@ require (
 	github.com/aerospike/aerospike-client-go v1.27.0
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
-	github.com/apache/pulsar-client-go v0.1.1-0.20200414225617-a575681b1492
+	github.com/apache/pulsar-client-go v0.1.1-0.20200420165938-fcda9b53af92
 	github.com/apache/thrift v0.12.0
 	github.com/aristanetworks/glog v0.0.0-20191112221043-67e8567f59f3 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190325233358-a123909ec740
