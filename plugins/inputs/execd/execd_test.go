@@ -39,7 +39,7 @@ func TestExternalInputWorks(t *testing.T) {
 	e.Stop()
 
 	// grab a metric and make sure it's a thing
-	m := <-metrics
+	m := readChanWithTimeout(t, metrics, 10*time.Second)
 
 	assert.Equal(t, "counter_bash", m.Name())
 	val, ok := m.GetField("count")
@@ -47,6 +47,18 @@ func TestExternalInputWorks(t *testing.T) {
 	assert.Equal(t, float64(0), val)
 	// test that a later gather will not panic
 	e.Gather(acc)
+}
+
+func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout time.Duration) telegraf.Metric {
+	to := time.NewTimer(timeout)
+	defer to.Stop()
+	select {
+	case m := <-metrics:
+		return m
+	case <-to.C:
+		assert.FailNow(t, "timeout waiting for metric")
+	}
+	return nil
 }
 
 func fileShellScriptPath() string {
