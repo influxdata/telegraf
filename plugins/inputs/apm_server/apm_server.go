@@ -282,12 +282,11 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				return
 			}
 
-			for k, v := range f.Fields {
+			for k, _ := range f.Fields {
 
 				// Exclude fields filter
 				if s.excludedFilter != nil && s.excludedFilter.Match(k) {
 					delete(f.Fields, k)
-					fmt.Printf("Drop - key[%s] value[%s]\n", k, v)
 				}
 
 				// Store fields as tags
@@ -303,7 +302,6 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 						log.Printf("E! [handleEventsIntake] Unrecognized tag type %T", value)
 					}
 					delete(f.Fields, k)
-					fmt.Printf("Store [%s] value[%s] as a tag \n", k, v)
 				}
 			}
 			delete(f.Fields, "timestamp")
