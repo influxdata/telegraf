@@ -275,7 +275,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		ep, err := NewEndpoint(ctx, v, u)
+		ep, err := NewEndpoint(ctx, v, u, v.Log)
 		if err != nil {
 			return err
 		}
