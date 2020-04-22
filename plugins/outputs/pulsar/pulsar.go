@@ -24,21 +24,20 @@ var zeroTime = time.Unix(0, 0)
 
 type (
 	Pulsar struct {
-		URL             string      `toml:"url"`
-		Topic           string      `toml:"topic"`
-		TopicTag        string      `toml:"topic_tag"`
-		ExcludeTopicTag bool        `toml:"exclude_topic_tag"`
-		TopicSuffix     TopicSuffix `toml:"topic_suffix"`
-		RoutingTag      string      `toml:"routing_tag"`
-		RoutingKey      string      `toml:"routing_key"`
+		URL             string `toml:"url"`
+		Topic           string `toml:"topic"`
+		TopicTag        string `toml:"topic_tag"`
+		ExcludeTopicTag bool   `toml:"exclude_topic_tag"`
+		RoutingTag      string `toml:"routing_tag"`
+		RoutingKey      string `toml:"routing_key"`
 
 		//Client Options
 		AuthProvider               string `toml:"auth_provider"`
-		TLSAllowInsecureConnection bool   `toml:"tls_allow_insecure_connection"`
-		TLSTrustCertsFilePath      string `toml:"tls_trust_certs_file_path"`
+		TLSAllowInsecureConnection bool   `toml:"insecure_skip_verify"`
+		TLSTrustCertsFilePath      string `toml:"tls_ca"`
 		TLSValidateHostname        bool   `toml:"tls_validate_host_name"`
-		TLSCertificatePath         string `toml:"tls_certificate_path"`
-		TLSPrivateKeyPath          string `toml:"tls_private_key_path"`
+		TLSCertificatePath         string `toml:"tls_cert"`
+		TLSPrivateKeyPath          string `toml:"tls_key"`
 		AuthToken                  string `toml:"auth_token"`
 		ConnectionTimeout          string `toml:"connection_timeout"`
 		OperationTimeout           string `toml:"operation_timeout"`
@@ -47,7 +46,6 @@ type (
 		CompressionType         int    `toml:"compression_type"`
 		MaxPendingMessages      int    `toml:"max_pending_messages"`
 		HashingScheme           string `toml:"hashing_scheme"`
-		DisableBatching         bool   `toml:"disable_batching"`
 		BatchingMaxPublishDelay string `toml:"batching_max_publish_delay"`
 		BatchingMaxMessages     uint   `toml:"batching_max_messages"`
 
@@ -59,11 +57,6 @@ type (
 		client pulsar.Client
 
 		serializer serializers.Serializer
-	}
-	TopicSuffix struct {
-		Method    string   `toml:"method"`
-		Keys      []string `toml:"keys"`
-		Separator string   `toml:"separator"`
 	}
 )
 
@@ -99,18 +92,18 @@ var sampleConfig = `
 
  ## Optional Authentication Provider Config Defaults to empty "" NoAuthentication
  ## if set to "token" provide the JWT token
- ## if set to "tls" the please mention tls_certificate_path and tls_private_key_path
+ ## if set to "tls" the please mention tls_cert and tls_key
  # auth_provider = ""
 
  # For token auth provider
  # auth_token = ""
 
  # Set the following values for tls auth provider
- # tls_allow_insecure_connection = false
- # tls_trust_certs_file_path = ""
+ # insecure_skip_verify = false
+ # tls_ca = ""
  # tls_validate_host_name = true
- # tls_certificate_path = ""
- # tls_private_key_path = ""
+ # tls_cert = ""
+ # tls_key = ""
 
  ## Optional timeout Config
  # connection_timeout = "30s"
@@ -130,14 +123,9 @@ var sampleConfig = `
  ## acknowledgment from the broker.
  # max_pending_messages = 1000
 
- ## BatchingMaxPublishDelay set the time period within which the messages sent will be batched (default: 10ms)
- ## if batch messages are enabled. If set to a non zero value, messages will be queued until this time
- ## interval or until
- # batching_max_publish_delay = "10ms"
-
- ## BatchingMaxMessages set the maximum number of messages permitted in a batch. (default: 1000)
+ ## BatchingMaxMessages set the maximum number of messages permitted in a batch. (default: metric_batch_size)
  ## If set to a value greater than 1, messages will be queued until this threshold is reached or
- ## batch interval has elapsed.
+ ## batch interval has elapsed. By Default it is set to "metric_batch_size"
  # batching_max_messages = 1000
 
  ## HashingScheme change the "HashingScheme" used to chose the partition on where to publish a particular message.
@@ -145,45 +133,12 @@ var sampleConfig = `
  ##  Murmur3_32Hash : Murmur3_32Hash Hashing
  # hashing_scheme = "JavaStringHash"
 
- ## Disable batching will reduce the throughput
- # disable_batching = false
-
 
  ## Data format to output.
  ## Each data format has its own unique set of configuration options, read
  ## more about them here:
  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
  # data_format = "influx"
-
- ## Optional topic suffix configuration.
- ## If the section is omitted, no suffix is used.
- ## Following topic suffix methods are supported:
- ##   measurement - suffix equals to separator + measurement's name
- ##   tags        - suffix equals to separator + specified tags' values
- ##                 interleaved with separator
- ## The routing tag specifies a tagkey on the metric whose value is used as
- ## the message key.  The message key is used to determine which partition to
- ## send the message to.  This tag is prefered over the routing_key option.
-
- ## Suffix equals to "_" + measurement name
- #  [outputs.pulsar.topic_suffix]
- #    method = "measurement"
- #    separator = "-"
-
- ## Suffix equals to "__" + measurement's "foo" tag value.
- ##   If there's no such a tag, suffix equals to an empty string
- #  [outputs.pulsar.topic_suffix]
- #    method = "tags"
- #    keys = ["foo"]
- #    separator = "-"
-
- ## Suffix equals to "_" + measurement's "foo" and "bar"
- ##   tag values, separated by "_". If there is no such tags,
- ##   their values treated as empty strings.
- #  [outputs.pulsar.topic_suffix]
- #    method = "tags"
- #    keys = ["foo","bar"]
- #    separator = "-"
 
 `
 
@@ -210,31 +165,14 @@ func (p *Pulsar) GetTopicName(metric telegraf.Metric) (telegraf.Metric, string) 
 			}
 		}
 	}
-
-	var topicName string
-	switch p.TopicSuffix.Method {
-	case "measurement":
-		topicName = topic + p.TopicSuffix.Separator + metric.Name()
-	case "tags":
-		var topicNameComponents []string
-		topicNameComponents = append(topicNameComponents, topic)
-		for _, tag := range p.TopicSuffix.Keys {
-			tagValue := metric.Tags()[tag]
-			if tagValue != "" {
-				topicNameComponents = append(topicNameComponents, tagValue)
-			}
-		}
-		topicName = strings.Join(topicNameComponents, p.TopicSuffix.Separator)
-	default:
-		topicName = topic
-	}
-	return metric, topicName
+	return metric, topic
 }
 
-func (p *Pulsar) GetProducer(topic string) (pulsar.Producer, error) {
+func (p *Pulsar) GetProducer(topic string, metricBatchSize uint) (pulsar.Producer, error) {
 	if producer, ok := p.producerCache[topic]; !ok {
 		producerOptions := pulsar.ProducerOptions{
-			Topic: topic,
+			Topic:               topic,
+			BatchingMaxMessages: metricBatchSize,
 		}
 		switch p.CompressionType {
 		case 0:
@@ -260,13 +198,6 @@ func (p *Pulsar) GetProducer(topic string) (pulsar.Producer, error) {
 		if p.MaxPendingMessages > 0 {
 			producerOptions.MaxPendingMessages = p.MaxPendingMessages
 		}
-		if producerOptions.DisableBatching == true {
-			producerOptions.DisableBatching = p.DisableBatching
-		}
-		if p.BatchingMaxMessages > 0 {
-			producerOptions.BatchingMaxMessages = p.BatchingMaxMessages
-		}
-
 		duration, err := time.ParseDuration(p.BatchingMaxPublishDelay)
 		if err != nil {
 			producerOptions.BatchingMaxPublishDelay = duration
@@ -294,10 +225,6 @@ func (p *Pulsar) Connect() error {
 	p.producerCache = make(map[string]pulsar.Producer)
 	splits := strings.Split(p.Topic, "/")
 	p.tenantNameSpace = strings.Join(splits[0:4], "/")
-	err := ValidateTopicSuffixMethod(p.TopicSuffix.Method)
-	if err != nil {
-		return err
-	}
 	clientOptions := pulsar.ClientOptions{
 		URL:                        p.URL,
 		TLSAllowInsecureConnection: p.TLSAllowInsecureConnection,
@@ -388,10 +315,16 @@ func sendAsyncCallback(id pulsar.MessageID, message *pulsar.ProducerMessage, err
 }
 
 func (p *Pulsar) Write(metrics []telegraf.Metric) error {
-
+	var batchSize uint
+	// Setting the batch size to metric_batch_size is unset
+	if p.BatchingMaxMessages == 0 {
+		batchSize = uint(len(metrics))
+	} else {
+		batchSize = p.BatchingMaxMessages
+	}
 	for _, metric := range metrics {
 		metric, topic := p.GetTopicName(metric)
-		producer, err := p.GetProducer(topic)
+		producer, err := p.GetProducer(topic, batchSize)
 		if err == nil {
 			buf, err := p.serializer.Serialize(metric)
 			if err != nil {
@@ -409,11 +342,21 @@ func (p *Pulsar) Write(metrics []telegraf.Metric) error {
 				m.EventTime = metric.Time()
 			}
 			producer.SendAsync(context.Background(), &m, sendAsyncCallback)
-
 		} else {
 			p.Log.Errorf("Unable to create producer for topic %s : %s", topic, err.Error())
+			return err
 		}
 
+	}
+	// We flush and make sure all the metrics are published and acknowledged by the broker
+	// so that in case of failure the metrics are retried
+	for topic, producer := range p.producerCache {
+		err := producer.Flush()
+		if err != nil {
+			p.Log.Errorf("Failed to publish the metrics in topic %s : %s ", topic, err.Error())
+			//return error on first occurrence of  flush error
+			return err
+		}
 	}
 
 	return nil
@@ -421,6 +364,8 @@ func (p *Pulsar) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("pulsar", func() telegraf.Output {
-		return &Pulsar{}
+		return &Pulsar{
+			BatchingMaxPublishDelay: "1000ms",
+		}
 	})
 }
