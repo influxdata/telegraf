@@ -32,6 +32,7 @@
 #### Bugfixes
 
 - [#7241](https://github.com/influxdata/telegraf/issues/7241): Trim whitespace from instance tag in sqlserver input.
+- [#7322](https://github.com/influxdata/telegraf/issues/7322): Use increased AWS Cloudwatch GetMetricData limit of 500 metrics per call.
 
 ## v1.14.1 [2020-04-14]
 
