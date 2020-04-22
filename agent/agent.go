@@ -21,6 +21,11 @@ type Agent struct {
 	Config *config.Config
 }
 
+type Ticker interface {
+	Elapsed() <-chan time.Time
+	Stop()
+}
+
 // NewAgent returns an Agent for the given Config.
 func NewAgent(config *config.Config) (*Agent, error) {
 	a := &Agent{
@@ -265,22 +270,22 @@ func (a *Agent) runInputs(
 			interval = input.Config.Interval
 		}
 
+		var ticker Ticker
+		if a.Config.Agent.RoundInterval {
+			ticker = NewAlignedTicker(startTime, interval, jitter)
+		} else {
+			leading := true
+			ticker = NewRelativeTicker(interval, jitter, leading)
+		}
+		defer ticker.Stop()
+
 		acc := NewAccumulator(input, dst)
 		acc.SetPrecision(a.Precision())
 
 		wg.Add(1)
 		go func(input *models.RunningInput) {
 			defer wg.Done()
-
-			if a.Config.Agent.RoundInterval {
-				err := internal.SleepContext(
-					ctx, internal.AlignDuration(startTime, interval))
-				if err != nil {
-					return
-				}
-			}
-
-			a.gatherOnInterval(ctx, acc, input, interval, jitter)
+			a.gatherOnInterval(ctx, acc, input, ticker)
 		}(input)
 	}
 	wg.Wait()
@@ -294,30 +299,19 @@ func (a *Agent) gatherOnInterval(
 	ctx context.Context,
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
-	interval time.Duration,
-	jitter time.Duration,
+	ticker Ticker,
 ) {
 	defer panicRecover(input)
 
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
 	for {
-		err := internal.SleepContext(ctx, internal.RandomDuration(jitter))
-		if err != nil {
-			return
-		}
-
-		err = a.gatherOnce(acc, input, interval)
-		if err != nil {
-			acc.AddError(err)
-		}
-
 		select {
-		case <-ticker.C:
-			continue
 		case <-ctx.Done():
 			return
+		case <-ticker.Elapsed():
+			err := a.gatherOnce(acc, input, ticker)
+			if err != nil {
+				acc.AddError(err)
+			}
 		}
 	}
 }
@@ -327,11 +321,8 @@ func (a *Agent) gatherOnInterval(
 func (a *Agent) gatherOnce(
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
-	timeout time.Duration,
+	ticker Ticker,
 ) error {
-	ticker := time.NewTicker(timeout)
-	defer ticker.Stop()
-
 	done := make(chan error)
 	go func() {
 		done <- input.Gather(acc)
@@ -341,7 +332,7 @@ func (a *Agent) gatherOnce(
 		select {
 		case err := <-done:
 			return err
-		case <-ticker.C:
+		case <-ticker.Elapsed():
 			log.Printf("W! [agent] [%s] did not complete within its interval",
 				input.LogName())
 		}
@@ -569,7 +560,7 @@ func (a *Agent) flushLoop(
 
 	// since we are watching two channels we need a ticker with the jitter
 	// integrated.
-	ticker := NewTicker(interval, jitter)
+	ticker := NewRelativeTicker(interval, jitter, false)
 	defer ticker.Stop()
 
 	for {
@@ -585,14 +576,14 @@ func (a *Agent) flushLoop(
 		case <-ctx.Done():
 			logError(a.flushOnce(output, interval, output.Write))
 			return
-		case <-ticker.C:
+		case <-ticker.Elapsed():
 			logError(a.flushOnce(output, interval, output.Write))
 		case <-flushRequested:
 			logError(a.flushOnce(output, interval, output.Write))
 		case <-output.BatchReady:
 			// Favor the ticker over batch ready
 			select {
-			case <-ticker.C:
+			case <-ticker.Elapsed():
 				logError(a.flushOnce(output, interval, output.Write))
 			default:
 				logError(a.flushOnce(output, interval, output.WriteBatch))
