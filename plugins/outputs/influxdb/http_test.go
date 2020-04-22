@@ -248,8 +248,6 @@ func TestHTTP_Write(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
-	internal.SetVersion("1.2.3")
-
 	tests := []struct {
 		name             string
 		config           influxdb.HTTPConfig
@@ -310,7 +308,7 @@ func TestHTTP_Write(t *testing.T) {
 				Log:      testutil.Logger{},
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				require.Equal(t, r.Header.Get("User-Agent"), "Telegraf/1.2.3")
+				require.Equal(t, internal.ProductToken(), r.Header.Get("User-Agent"))
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
