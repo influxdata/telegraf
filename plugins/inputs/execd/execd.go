@@ -118,7 +118,9 @@ func (e *Execd) cmdLoop(ctx context.Context) error {
 			return nil
 		case err := <-done:
 			log.Printf("Process %s terminated: %s", e.Command, err)
-			return err
+			if isQuitting(ctx) {
+				return err
+			}
 		}
 
 		log.Printf("Restarting in %s...", time.Duration(e.RestartDelay))
@@ -132,6 +134,15 @@ func (e *Execd) cmdLoop(ctx context.Context) error {
 				return err
 			}
 		}
+	}
+}
+
+func isQuitting(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
 	}
 }
 
