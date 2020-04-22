@@ -51,7 +51,7 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) error {
 
 	for i, runningInput := range cfg.Inputs {
 		if err := runningInput.Init(); err != nil {
-			return fmt.Errorf("failed to init input: %w", err)
+			return fmt.Errorf("failed to init input: %s", err)
 		}
 
 		acc := agent.NewAccumulator(runningInput, metricCh)
@@ -59,7 +59,7 @@ func RunPlugins(cfg *config.Config, pollInterval time.Duration) error {
 
 		if serviceInput, ok := runningInput.Input.(telegraf.ServiceInput); ok {
 			if err := serviceInput.Start(acc); err != nil {
-				return fmt.Errorf("failed to start input: %w", err)
+				return fmt.Errorf("failed to start input: %s", err)
 			}
 		}
 		gatherPromptCh := make(chan empty, 1)
@@ -95,7 +95,7 @@ loop:
 			}
 			b, err := s.Serialize(m)
 			if err != nil {
-				return fmt.Errorf("failed to serialize metric: %w", err)
+				return fmt.Errorf("failed to serialize metric: %s", err)
 			}
 			// Write this to stdout
 			fmt.Fprint(stdout, string(b))
