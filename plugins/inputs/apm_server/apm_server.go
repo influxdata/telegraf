@@ -34,8 +34,9 @@ type APMServer struct {
 	ReadTimeout    internal.Duration `toml:"read_timeout"`
 	WriteTimeout   internal.Duration `toml:"write_timeout"`
 
+	ExcludeEventTypes []string `toml:"exclude_events"`
 	//customize json -> line protocol mapping
-	ExcludedFields []string `toml:"excluded"`
+	ExcludedFields []string `toml:"exclude_fields"`
 	TagKeys        []string `toml:"tag_keys"`
 
 	tlsint.ServerConfig
@@ -53,8 +54,9 @@ type APMServer struct {
 
 	mux http.ServeMux
 
-	excludedFilter filter.Filter
-	tagFilter      filter.Filter
+	eventTypeFilter      filter.Filter
+	excludedFieldsFilter filter.Filter
+	tagFilter            filter.Filter
 }
 
 func (s *APMServer) Description() string {
@@ -72,8 +74,10 @@ func (s *APMServer) SampleConfig() string {
   # read_timeout =	"30s"
   ## maximum duration before timing out write of the response
   # write_timeout = "30s"
+  ## exclude event types
+  exclude_events = ["span"]	
   ## exclude fields matching following patterns
-  # excluded = ["exception_stacktrace_*", "log_stacktrace_*"]
+  exclude = ["exception_stacktrace_*", "log_stacktrace_*"]
   ## store selected fields as tags 
   # tag_keys =["my_tag_1", "my_tag_2" ]
 `
@@ -103,7 +107,7 @@ func (s *APMServer) Init() error {
 	if err != nil {
 		return err
 	}
-	s.excludedFilter = excludedFilter
+	s.excludedFieldsFilter = excludedFilter
 
 	tagFilter, err := filter.Compile(s.TagKeys)
 	if err != nil {
@@ -111,12 +115,16 @@ func (s *APMServer) Init() error {
 	}
 	s.tagFilter = tagFilter
 
+	eventTypeFilter, err := filter.Compile(s.ExcludeEventTypes)
+	if err != nil {
+		return err
+	}
+	s.eventTypeFilter = eventTypeFilter
+
 	return nil
 }
 
-func (s *APMServer) Gather(acc telegraf.Accumulator) error {
-	acc.AddFields("apm_server", map[string]interface{}{"service_address": s.ServiceAddress}, nil)
-
+func (s *APMServer) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
@@ -220,8 +228,6 @@ func (s *APMServer) handleSourceMap() http.HandlerFunc {
 func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
-		defer timeTrack(time.Now(), req.RequestURI, req)
-
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
 			s.errorResponse(res, http.StatusBadRequest, message)
@@ -253,6 +259,10 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				continue
 			}
 
+			if s.eventTypeFilter != nil && s.eventTypeFilter.Match(eventType) {
+				continue
+			}
+
 			f := jsonparser.JSONFlattener{}
 			if err := f.FullFlattenJSON("", metadata.(map[string]interface{})["metadata"], true, true); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
@@ -263,6 +273,12 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			tags := make(map[string]string, len(f.Fields))
 			tags["type"] = eventType
 			for k := range f.Fields {
+
+				//skip if excluded
+				if s.excludedFieldsFilter != nil && s.excludedFieldsFilter.Match(k) {
+					continue
+				}
+
 				switch value := f.Fields[k].(type) {
 				case string:
 					tags[k] = value
@@ -282,13 +298,11 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				return
 			}
 
-			for k, _ := range f.Fields {
-
+			for k := range f.Fields {
 				// Exclude fields filter
-				if s.excludedFilter != nil && s.excludedFilter.Match(k) {
+				if s.excludedFieldsFilter != nil && s.excludedFieldsFilter.Match(k) {
 					delete(f.Fields, k)
 				}
-
 				// Store fields as tags
 				if s.tagFilter != nil && s.tagFilter.Match(k) {
 					switch value := f.Fields[k].(type) {
@@ -397,10 +411,4 @@ func init() {
 			ServiceAddress: ":8200",
 		}
 	})
-}
-
-func timeTrack(start time.Time, name string, req *http.Request) {
-	elapsed := time.Since(start)
-	marshal, _ := json.Marshal(req.Header)
-	log.Printf("%s took %s - status: %s", name, elapsed, marshal)
 }

@@ -33,10 +33,12 @@ The table below describe how this plugin conforms with them:
   ## maximum duration before timing out write of the response
   # write_timeout = "10s"
 
+  ## exclude event types
+  exclude_events = ["span"]
   ## exclude fields matching following patterns
-  excluded = ["exception_stacktrace_*", "log_stacktrace_*"]
+  exclude_fields = ["exception_stacktrace_*", "log_stacktrace_*"]
   ## store selected fields as tags 
-  tag_keys =["my_tag_1", "my_tag_2" ]
+  tag_keys =[ "context_request_method", "result"]
 
 ```
 
