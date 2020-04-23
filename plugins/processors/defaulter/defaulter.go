@@ -29,6 +29,7 @@ type DefaultFieldsSet struct {
 
 type Defaulter struct {
 	DefaultFieldsSets []DefaultFieldsSet `toml:"values"`
+	Log    telegraf.Logger `toml:"-"`
 }
 
 func (def *Defaulter) SampleConfig() string {
@@ -46,17 +47,20 @@ func (def *Defaulter) Init() error {
 func (def *Defaulter) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range inputMetrics {
 		for _, defSet := range def.DefaultFieldsSets {
-			if metric.Name() != defSet.Metric {
+			def.Log.Debugf("Going over the fields of a metric with name: %s", metric.Name())
+			if defSet.Metric != "" && metric.Name() != defSet.Metric {
 				continue
 			}
 			for _, field := range defSet.Fields {
 				maybeCurrent, isSet := metric.GetField(field)
 				if !isSet {
+					def.Log.Debugf("Field with name: %v was not set.", field)
 					metric.AddField(field, defSet.Value)
 					continue
 				}
 
 				if maybeCurrent == "" || maybeCurrent == ' ' || maybeCurrent == 0 || maybeCurrent == int64(0) || maybeCurrent == "0" {
+					def.Log.Debugf("Field with name: %v was set but value was an empty: %v. Setting new value to %v", field, maybeCurrent, defSet.Value)
 					metric.RemoveField(field)
 					metric.AddField(field, defSet.Value)
 				}
