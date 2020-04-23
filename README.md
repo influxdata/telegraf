@@ -20,6 +20,9 @@ and we work to incorporate as many pull requests as possible.
 
 You can try Telegraf right in your browser in the [Telegraf playground](https://rootnroll.com/d/telegraf/).
 
+New plugins are designed to be easy to contribute, we'll eagerly accept pull
+requests and will manage the set of plugins that Telegraf supports.
+
 ## Contributing
 
 There are many ways to contribute:
@@ -165,6 +168,7 @@ For documentation on the latest development code see the [documentation index][d
 * [chrony](./plugins/inputs/chrony)
 * [cisco_telemetry_gnmi](./plugins/inputs/cisco_telemetry_gnmi)
 * [cisco_telemetry_mdt](./plugins/inputs/cisco_telemetry_mdt)
+* [cisco_telemetry_mdt_netconf_dialin](./plugins/inputs/cisco_telemetry_mdt_netconf_dialin)
 * [clickhouse](./plugins/inputs/clickhouse)
 * [cloud_pubsub](./plugins/inputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cloud_pubsub_push](./plugins/inputs/cloud_pubsub_push) Google Cloud Pub/Sub push endpoint
