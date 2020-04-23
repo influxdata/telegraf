@@ -25,6 +25,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt_netconf_dialin"
 	_ "github.com/influxdata/telegraf/plugins/inputs/clickhouse"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cisco_telemetry_mdt_netconf_dialin"
+	_ "github.com/influxdata/telegraf/plugins/inputs/clickhouse"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cloud_pubsub_push"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cloudwatch"
