@@ -61,6 +61,10 @@ in Prometheus format.
   # tls_key = /path/to/keyfile
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Specify timestamp precision.
+  ## Valid time units are "ns", "us", "ms", "s".
+  # precision = ""
 ```
 
 `urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`

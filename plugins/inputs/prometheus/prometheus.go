@@ -49,6 +49,8 @@ type Prometheus struct {
 
 	URLTag string `toml:"url_tag"`
 
+	Precision string `toml:"precision"`
+
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -121,6 +123,10 @@ var sampleConfig = `
   # tls_key = /path/to/keyfile
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Specify timestamp precision.
+  ## Valid time units are "ns", "us", "ms", "s".
+  # precision = ""
 `
 
 func (p *Prometheus) SampleConfig() string {
@@ -211,7 +217,9 @@ func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
-	acc.SetPrecision(time.Nanosecond)
+	if p.Precision != "" {
+		acc.SetPrecision(p.precision())
+	}
 	if p.client == nil {
 		client, err := p.createHTTPClient()
 		if err != nil {
@@ -237,6 +245,21 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	wg.Wait()
 
 	return nil
+}
+
+// Returns the rounding precision for metrics.
+func (p *Prometheus) precision() time.Duration {
+
+	switch p.Precision {
+	case "ms":
+		return time.Millisecond
+	case "us":
+		return time.Microsecond
+	case "ns":
+		return time.Nanosecond
+	default:
+		return time.Second
+	}
 }
 
 func (p *Prometheus) createHTTPClient() (*http.Client, error) {
