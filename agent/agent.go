@@ -18,15 +18,13 @@ import (
 
 // Agent runs a set of plugins.
 type Agent struct {
-	Config  *config.Config
-	RunOnce bool
+	Config *config.Config
 }
 
 // NewAgent returns an Agent for the given Config.
-func NewAgent(config *config.Config, runOnce bool) (*Agent, error) {
+func NewAgent(config *config.Config) (*Agent, error) {
 	a := &Agent{
-		Config:  config,
-		RunOnce: runOnce,
+		Config: config,
 	}
 	return a, nil
 }
@@ -60,12 +58,10 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	startTime := time.Now()
 
-	if !a.RunOnce {
-		log.Printf("D! [agent] Starting service inputs")
-		err = a.startServiceInputs(ctx, inputC)
-		if err != nil {
-			return err
-		}
+	log.Printf("D! [agent] Starting service inputs")
+	err = a.startServiceInputs(ctx, inputC)
+	if err != nil {
+		return err
 	}
 
 	var wg sync.WaitGroup
@@ -82,10 +78,8 @@ func (a *Agent) Run(ctx context.Context) error {
 			log.Printf("E! [agent] Error running inputs: %v", err)
 		}
 
-		if !a.RunOnce {
-			log.Printf("D! [agent] Stopping service inputs")
-			a.stopServiceInputs()
-		}
+		log.Printf("D! [agent] Stopping service inputs")
+		a.stopServiceInputs()
 
 		close(dst)
 		log.Printf("D! [agent] Input channel closed")
@@ -140,6 +134,95 @@ func (a *Agent) Run(ctx context.Context) error {
 	}(src)
 
 	wg.Wait()
+
+	log.Printf("D! [agent] Closing outputs")
+	a.closeOutputs()
+
+	log.Printf("D! [agent] Stopped Successfully")
+	return nil
+}
+
+// Run starts and runs only once
+func (a *Agent) RunOnce(ctx context.Context) error {
+	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
+		"Flush Interval:%s",
+		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
+		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
+
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
+	log.Printf("D! [agent] Initializing plugins")
+	err := a.initPlugins()
+	if err != nil {
+		return err
+	}
+
+	log.Printf("D! [agent] Connecting outputs")
+	err = a.connectOutputs(ctx)
+	if err != nil {
+		return err
+	}
+
+	inputC := make(chan telegraf.Metric, 100)
+	procC := make(chan telegraf.Metric, 100)
+	outputC := make(chan telegraf.Metric, 100)
+
+	startTime := time.Now()
+
+	log.Printf("D! [agent] Starting service inputs")
+	err = a.startServiceInputs(ctx, inputC)
+	if err != nil {
+		return err
+	}
+
+	src := inputC
+	dst := inputC
+
+	err = a.runInputs(ctx, startTime, dst)
+	if err != nil {
+		log.Printf("E! [agent] Error running inputs: %v", err)
+	}
+
+	log.Printf("D! [agent] Stopping service inputs")
+	a.stopServiceInputs()
+
+	close(dst)
+	log.Printf("D! [agent] Input channel closed")
+
+	src = dst
+
+	if len(a.Config.Processors) > 0 {
+		dst = procC
+
+		err = a.runProcessors(src, dst)
+		if err != nil {
+			log.Printf("E! [agent] Error running processors: %v", err)
+		}
+		close(dst)
+		log.Printf("D! [agent] Processor channel closed")
+
+		src = dst
+	}
+
+	if len(a.Config.Aggregators) > 0 {
+		dst = outputC
+
+		err = a.runAggregators(startTime, src, dst)
+		if err != nil {
+			log.Printf("E! [agent] Error running aggregators: %v", err)
+		}
+		close(dst)
+		log.Printf("D! [agent] Output channel closed")
+
+		src = dst
+	}
+
+	err = a.runOutputs(startTime, src)
+	if err != nil {
+		log.Printf("E! [agent] Error running outputs: %v", err)
+	}
 
 	log.Printf("D! [agent] Closing outputs")
 	a.closeOutputs()
@@ -278,17 +361,20 @@ func (a *Agent) runInputs(
 		go func(input *models.RunningInput) {
 			defer wg.Done()
 
-			if !a.RunOnce && a.Config.Agent.RoundInterval {
+			if a.Config.Agent.RunOnce {
+				err := a.gatherOnce(acc, input, interval)
+				if err != nil {
+					acc.AddError(err)
+				}
+				return
+			}
+
+			if a.Config.Agent.RoundInterval {
 				err := internal.SleepContext(
 					ctx, internal.AlignDuration(startTime, interval))
 				if err != nil {
 					return
 				}
-			}
-
-			if a.RunOnce {
-				a.gatherOnce(acc, input, interval)
-				return
 			}
 
 			a.gatherOnInterval(ctx, acc, input, interval, jitter)
@@ -529,7 +615,15 @@ func (a *Agent) runOutputs(
 		go func(output *models.RunningOutput) {
 			defer wg.Done()
 
-			if !a.RunOnce && !a.Config.Agent.RoundInterval {
+			if a.Config.Agent.RunOnce {
+				err := a.flushOnce(output, interval, output.Write)
+				if err != nil {
+					fmt.Println("Dead")
+				}
+				return
+			}
+
+			if !a.Config.Agent.RoundInterval {
 				err := internal.SleepContext(
 					ctx, internal.AlignDuration(startTime, interval))
 				if err != nil {

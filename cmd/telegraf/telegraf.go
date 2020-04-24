@@ -152,7 +152,13 @@ func runAgent(ctx context.Context,
 			c.Agent.Interval.Duration)
 	}
 
-	ag, err := agent.NewAgent(c, *fRunOnce)
+	// Command-line argument takes precedence over configuration file
+	if *fRunOnce {
+		c.Agent.RunOnce = true
+
+	}
+
+	ag, err := agent.NewAgent(c)
 	if err != nil {
 		return err
 	}
@@ -197,6 +203,10 @@ func runAgent(ctx context.Context,
 				}
 			}()
 		}
+	}
+
+	if ag.Config.Agent.RunOnce {
+		return ag.RunOnce(ctx)
 	}
 
 	return ag.Run(ctx)

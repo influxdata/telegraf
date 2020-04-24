@@ -77,6 +77,7 @@ func NewConfig() *Config {
 			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
 			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
+			RunOnce:                    false,
 		},
 
 		Tags:          make(map[string]string),
@@ -167,6 +168,9 @@ type AgentConfig struct {
 	// Maximum number of rotated archives to keep, any older logs are deleted.
 	// If set to -1, no archives are removed.
 	LogfileRotationMaxArchives int `toml:"logfile_rotation_max_archives"`
+
+	// Run the collection once, then exit
+	RunOnce bool `toml:"run_once"`
 
 	Hostname     string
 	OmitHostname bool
