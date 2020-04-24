@@ -36,6 +36,7 @@
 - [#7322](https://github.com/influxdata/telegraf/issues/7322): Use increased AWS Cloudwatch GetMetricData limit of 500 metrics per call.
 - [#7318](https://github.com/influxdata/telegraf/issues/7318): Fix dimension limit on azure_monitor output.
 - [#7407](https://github.com/influxdata/telegraf/pull/7407): Fix 64-bit integer to string conversion in snmp input.
+- [#7327](https://github.com/influxdata/telegraf/issues/7327): Fix shard indices reporting in elasticsearch input.
 
 ## v1.14.1 [2020-04-14]
 
