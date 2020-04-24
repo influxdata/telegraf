@@ -172,14 +172,14 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 			authenticationProtocol = gosnmp.MD5
 		case "sha":
 			authenticationProtocol = gosnmp.SHA
-		case "sha224":
-			authenticationProtocol = gosnmp.SHA224
-		case "sha256":
-			authenticationProtocol = gosnmp.SHA256
-		case "sha384":
-			authenticationProtocol = gosnmp.SHA384
-		case "sha512":
-			authenticationProtocol = gosnmp.SHA512
+		//case "sha224":
+		//	authenticationProtocol = gosnmp.SHA224
+		//case "sha256":
+		//	authenticationProtocol = gosnmp.SHA256
+		//case "sha384":
+		//	authenticationProtocol = gosnmp.SHA384
+		//case "sha512":
+		//	authenticationProtocol = gosnmp.SHA512
 		case "":
 			authenticationProtocol = gosnmp.NoAuth
 		default:
