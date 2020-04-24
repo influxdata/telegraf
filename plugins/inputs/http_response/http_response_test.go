@@ -86,6 +86,11 @@ func setUpTestMux() http.Handler {
 		http.Redirect(w, req, "/good", http.StatusMovedPermanently)
 	})
 	mux.HandleFunc("/good", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Server", "MyTestServer")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		fmt.Fprintf(w, "hit the good page!")
+	})
+	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "hit the good page!")
 	})
 	mux.HandleFunc("/jsonresponse", func(w http.ResponseWriter, req *http.Request) {
@@ -215,6 +220,72 @@ func TestFields(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func TestHTTPHeaderTags(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		Address:         ts.URL + "/good",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		HTTPHeaderTags:  map[string]string{"Server": "my_server", "Content-Type": "content_type"},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":       nil,
+		"method":       "GET",
+		"status_code":  "200",
+		"result":       "success",
+		"my_server":    "MyTestServer",
+		"content_type": "application/json; charset=utf-8",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+
+	h = &HTTPResponse{
+		Log:             testutil.Logger{},
+		Address:         ts.URL + "/noheader",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		HTTPHeaderTags:  map[string]string{"Server": "my_server", "Content-Type": "content_type"},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		FollowRedirects: true,
+	}
+
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedTags = map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
 
