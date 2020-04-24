@@ -100,7 +100,7 @@ func (t *Tail) SampleConfig() string {
 }
 
 func (t *Tail) Description() string {
-	return "Stream a log file, like the tail -f command"
+	return "Parse the new lines appended to a file"
 }
 
 func (t *Tail) Init() error {
