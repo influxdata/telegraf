@@ -694,6 +694,8 @@ func TestFieldConvert(t *testing.T) {
 		{uint64(123), "float(3)", float64(0.123)},
 		{"123", "int", int64(123)},
 		{[]byte("123"), "int", int64(123)},
+		{"123123123123", "int", int64(123123123123)},
+		{[]byte("123123123123"), "int", int64(123123123123)},
 		{float32(12.3), "int", int64(12)},
 		{float64(12.3), "int", int64(12)},
 		{int(123), "int", int64(123)},
