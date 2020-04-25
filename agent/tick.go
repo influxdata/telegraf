@@ -166,7 +166,11 @@ func (t *UnalignedTicker) run(ctx context.Context, ticker *clock.Ticker, clock c
 			return
 		case <-ticker.C:
 			jitter := internal.RandomDuration(t.jitter)
-			sleep(ctx, jitter, clock)
+			err := sleep(ctx, jitter, clock)
+			if err != nil {
+				ticker.Stop()
+				return
+			}
 			select {
 			case t.ch <- clock.Now():
 			default:

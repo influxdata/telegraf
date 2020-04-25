@@ -59,6 +59,7 @@ func TestAlignedTickerJitter(t *testing.T) {
 		select {
 		case tm := <-ticker.Elapsed():
 			require.True(t, tm.Sub(last) <= 15*time.Second)
+			require.True(t, tm.Sub(last) >= 5*time.Second)
 			last = last.Add(interval)
 		default:
 		}
@@ -165,7 +166,10 @@ func TestAlignedTickerDistribution(t *testing.T) {
 	since := clock.Now()
 
 	ticker := newAlignedTicker(since, interval, jitter, clock)
-	printDist(ticker, clock)
+	dist := simulatedDist(ticker, clock)
+	printDist(dist)
+	require.True(t, 350 < dist.Count)
+	require.True(t, 9 < dist.Mean() && dist.Mean() < 11)
 }
 
 // Simulates running the Ticker for an hour and displays stats about the
@@ -181,7 +185,10 @@ func TestUnalignedTickerDistribution(t *testing.T) {
 	clock := clock.NewMock()
 
 	ticker := newUnalignedTicker(interval, jitter, clock)
-	printDist(ticker, clock)
+	dist := simulatedDist(ticker, clock)
+	printDist(dist)
+	require.True(t, 350 < dist.Count)
+	require.True(t, 9 < dist.Mean() && dist.Mean() < 11)
 }
 
 // Simulates running the Ticker for an hour and displays stats about the
@@ -197,33 +204,48 @@ func TestRollingTickerDistribution(t *testing.T) {
 	clock := clock.NewMock()
 
 	ticker := newRollingTicker(interval, jitter, clock)
-	printDist(ticker, clock)
+	dist := simulatedDist(ticker, clock)
+	printDist(dist)
+	require.True(t, 275 < dist.Count)
+	require.True(t, 12 < dist.Mean() && 13 > dist.Mean())
 }
 
-func printDist(ticker Ticker, clock *clock.Mock) {
+type Distribution struct {
+	Buckets  [60]int
+	Count    int
+	Waittime float64
+}
+
+func (d *Distribution) Mean() float64 {
+	return d.Waittime / float64(d.Count)
+}
+
+func printDist(dist Distribution) {
+	for i, count := range dist.Buckets {
+		fmt.Printf("%2d %s\n", i, strings.Repeat("x", count))
+	}
+	fmt.Printf("Average interval: %f\n", dist.Mean())
+	fmt.Printf("Count: %d\n", dist.Count)
+}
+
+func simulatedDist(ticker Ticker, clock *clock.Mock) Distribution {
 	since := clock.Now()
 	until := since.Add(1 * time.Hour)
 
-	dist := [60]int{}
-	count := 0.0
-	waittime := 0.0
+	var dist Distribution
 
 	last := clock.Now()
 	for !clock.Now().After(until) {
 		select {
 		case tm := <-ticker.Elapsed():
-			dist[tm.Second()] += 1
-			count++
-			waittime += tm.Sub(last).Seconds()
+			dist.Buckets[tm.Second()] += 1
+			dist.Count++
+			dist.Waittime += tm.Sub(last).Seconds()
 			last = tm
 		default:
 			clock.Add(1 * time.Second)
 		}
 	}
 
-	for i, count := range dist {
-		fmt.Printf("%2d %s\n", i, strings.Repeat("x", count))
-	}
-
-	fmt.Printf("Average interval: %f\n", waittime/count)
+	return dist
 }
