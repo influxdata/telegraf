@@ -25,12 +25,14 @@ This plugin writes to a [Apache Pulsar](https://pulsar.apache.org/en/) acting as
  ## routing_tag is set or as a fallback when the tag specified in routing tag
  ## is not found.
  ##
+ ## If set to "measurement", measurement name will be used for routing key.
  ## If set to "random", a random value will be generated for each message.
  ##
  ## When unset, no message key is added and each message is routed to a random
  ## partition.
  ##
- ##   ex: routing_key = "random"
+ ##   ex: routing_key = "measurement"
+ ##       routing_key = "random"
  ##       routing_key = "telegraf"
  # routing_key = ""
 
