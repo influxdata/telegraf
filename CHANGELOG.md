@@ -21,6 +21,7 @@
 - [#7271](https://github.com/influxdata/telegraf/pull/7271): Add retry when slave is busy to modbus input.
 - [#7356](https://github.com/influxdata/telegraf/pull/7356): Add option to save retention policy as tag in influxdb_listener.
 - [#6915](https://github.com/influxdata/telegraf/pull/6915): Add support for MDS and RGW sockets to ceph input.
+- [#7391](https://github.com/influxdata/telegraf/pull/7391): Extract target as a tag for each rule in iptables input.
 
 #### Bugfixes
 
@@ -34,6 +35,8 @@
 - [#7241](https://github.com/influxdata/telegraf/issues/7241): Trim whitespace from instance tag in sqlserver input.
 - [#7322](https://github.com/influxdata/telegraf/issues/7322): Use increased AWS Cloudwatch GetMetricData limit of 500 metrics per call.
 - [#7318](https://github.com/influxdata/telegraf/issues/7318): Fix dimension limit on azure_monitor output.
+- [#7407](https://github.com/influxdata/telegraf/pull/7407): Fix 64-bit integer to string conversion in snmp input.
+- [#7327](https://github.com/influxdata/telegraf/issues/7327): Fix shard indices reporting in elasticsearch input.
 
 ## v1.14.1 [2020-04-14]
 

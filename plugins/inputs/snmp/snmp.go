@@ -804,9 +804,9 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case uint64:
 			v = int64(vt)
 		case []byte:
-			v, _ = strconv.Atoi(string(vt))
+			v, _ = strconv.ParseInt(string(vt), 10, 64)
 		case string:
-			v, _ = strconv.Atoi(vt)
+			v, _ = strconv.ParseInt(vt, 10, 64)
 		}
 		return v, nil
 	}
