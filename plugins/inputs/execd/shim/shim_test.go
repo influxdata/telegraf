@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/models"
-	"github.com/influxdata/telegraf/selfstat"
 )
 
 func TestShimWorks(t *testing.T) {
@@ -19,7 +16,7 @@ func TestShimWorks(t *testing.T) {
 	stdout = stdoutBytes
 
 	timeout := time.NewTimer(10 * time.Second)
-	wait := runInputPlugin(10 * time.Millisecond)
+	wait := runInputPlugin(t, 10*time.Millisecond)
 
 	select {
 	case <-wait:
@@ -49,7 +46,7 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	stdin = stdinBytes
 
 	timeout := time.NewTimer(10 * time.Second)
-	wait := runInputPlugin(40 * time.Second)
+	wait := runInputPlugin(t, 40*time.Second)
 
 	stdinBytes.WriteString("\n")
 
@@ -75,23 +72,18 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
 }
 
-func runInputPlugin(timeout time.Duration) chan bool {
+func runInputPlugin(t *testing.T, timeout time.Duration) chan bool {
 	wait := make(chan bool)
-	inp := &models.RunningInput{
-		Input: &testInput{
-			wait: wait,
-		},
-		Config:          &models.InputConfig{},
-		GatherTime:      selfstat.Register("", "", map[string]string{}),
-		MetricsGathered: selfstat.Register("", "", map[string]string{}),
+	inp := &testInput{
+		wait: wait,
 	}
 
-	cfg := &config.Config{
-		Inputs: []*models.RunningInput{
-			inp,
-		},
-	}
-	go RunPlugins(cfg, timeout) // we aren't using the timer here
+	shim := New()
+	shim.AddInput(inp)
+	go func() {
+		err := shim.Run(timeout) // we aren't using the timer here
+		require.NoError(t, err)
+	}()
 	return wait
 }
 

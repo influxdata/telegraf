@@ -25,7 +25,7 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	wait := runInputPlugin(40 * time.Second)
+	wait := runInputPlugin(t, 40*time.Second)
 
 	// sleep a bit to avoid a race condition where the input hasn't loaded yet.
 	time.Sleep(10 * time.Millisecond)
