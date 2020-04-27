@@ -69,12 +69,12 @@ type Devices struct {
 	Type       string `json:"type"`
 	Enabled    bool   `json:"enabled"`
 	Properties struct {
-		BatteryLevel interface{} `json:"batteryLevel"`
-		Dead         interface{} `json:"dead"`
-		Energy       interface{} `json:"energy"`
-		Power        interface{} `json:"power"`
+		BatteryLevel *string     `json:"batteryLevel"`
+		Dead         string      `json:"dead"`
+		Energy       *string     `json:"energy"`
+		Power        *string     `json:"power"`
 		Value        interface{} `json:"value"`
-		Value2       interface{} `json:"value2"`
+		Value2       *string     `json:"value2"`
 	} `json:"properties"`
 }
 
@@ -176,19 +176,19 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 		fields := make(map[string]interface{})
 
 		if device.Properties.BatteryLevel != nil {
-			if fValue, err := strconv.ParseFloat(device.Properties.BatteryLevel.(string), 64); err == nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.BatteryLevel, 64); err == nil {
 				fields["batteryLevel"] = fValue
 			}
 		}
 
 		if device.Properties.Energy != nil {
-			if fValue, err := strconv.ParseFloat(device.Properties.Energy.(string), 64); err == nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.Energy, 64); err == nil {
 				fields["energy"] = fValue
 			}
 		}
 
 		if device.Properties.Power != nil {
-			if fValue, err := strconv.ParseFloat(device.Properties.Power.(string), 64); err == nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.Power, 64); err == nil {
 				fields["power"] = fValue
 			}
 		}
@@ -208,7 +208,7 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if device.Properties.Value2 != nil {
-			if fValue, err := strconv.ParseFloat(device.Properties.Value2.(string), 64); err == nil {
+			if fValue, err := strconv.ParseFloat(*device.Properties.Value2, 64); err == nil {
 				fields["value2"] = fValue
 			}
 		}
