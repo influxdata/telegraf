@@ -7,6 +7,14 @@ import (
 	"io"
 )
 
+type readErr struct {
+	Err error
+}
+
+func (e *readErr) Error() string {
+	return e.Err.Error()
+}
+
 var (
 	ErrNameParse = errors.New("expected measurement name")
 	ErrFieldParse = errors.New("expected field")
@@ -17,11 +25,11 @@ var (
 )
 
 
-//line plugins/parsers/influx/machine.go.rl:310
+//line plugins/parsers/influx/machine.go.rl:318
 
 
 
-//line plugins/parsers/influx/machine.go:25
+//line plugins/parsers/influx/machine.go:33
 const LineProtocol_start int = 270
 const LineProtocol_first_final int = 270
 const LineProtocol_error int = 0
@@ -32,7 +40,7 @@ const LineProtocol_en_align int = 740
 const LineProtocol_en_series int = 261
 
 
-//line plugins/parsers/influx/machine.go.rl:313
+//line plugins/parsers/influx/machine.go.rl:321
 
 type Handler interface {
 	SetMeasurement(name []byte) error
@@ -66,24 +74,24 @@ func NewMachine(handler Handler) *machine {
 	}
 
 	
-//line plugins/parsers/influx/machine.go.rl:346
+//line plugins/parsers/influx/machine.go.rl:354
 	
-//line plugins/parsers/influx/machine.go.rl:347
+//line plugins/parsers/influx/machine.go.rl:355
 	
-//line plugins/parsers/influx/machine.go.rl:348
+//line plugins/parsers/influx/machine.go.rl:356
 	
-//line plugins/parsers/influx/machine.go.rl:349
+//line plugins/parsers/influx/machine.go.rl:357
 	
-//line plugins/parsers/influx/machine.go.rl:350
+//line plugins/parsers/influx/machine.go.rl:358
 	
-//line plugins/parsers/influx/machine.go.rl:351
+//line plugins/parsers/influx/machine.go.rl:359
 	
-//line plugins/parsers/influx/machine.go:82
+//line plugins/parsers/influx/machine.go:90
 	{
 	( m.cs) = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:352
+//line plugins/parsers/influx/machine.go.rl:360
 
 	return m
 }
@@ -95,22 +103,22 @@ func NewSeriesMachine(handler Handler) *machine {
 	}
 
 	
-//line plugins/parsers/influx/machine.go.rl:363
+//line plugins/parsers/influx/machine.go.rl:371
 	
-//line plugins/parsers/influx/machine.go.rl:364
+//line plugins/parsers/influx/machine.go.rl:372
 	
-//line plugins/parsers/influx/machine.go.rl:365
+//line plugins/parsers/influx/machine.go.rl:373
 	
-//line plugins/parsers/influx/machine.go.rl:366
+//line plugins/parsers/influx/machine.go.rl:374
 	
-//line plugins/parsers/influx/machine.go.rl:367
+//line plugins/parsers/influx/machine.go.rl:375
 	
-//line plugins/parsers/influx/machine.go:109
+//line plugins/parsers/influx/machine.go:117
 	{
 	( m.cs) = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:368
+//line plugins/parsers/influx/machine.go.rl:376
 
 	return m
 }
@@ -128,12 +136,12 @@ func (m *machine) SetData(data []byte) {
 	m.finishMetric = false
 
 	
-//line plugins/parsers/influx/machine.go:132
+//line plugins/parsers/influx/machine.go:140
 	{
 	( m.cs) = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:385
+//line plugins/parsers/influx/machine.go.rl:393
 	m.cs = m.initState
 }
 
@@ -156,7 +164,7 @@ func (m *machine) Next() error {
 func (m *machine) exec() error {
 	var err error
 	
-//line plugins/parsers/influx/machine.go:160
+//line plugins/parsers/influx/machine.go:168
 	{
 	if ( m.p) == ( m.pe) {
 		goto _test_eof
@@ -3180,17 +3188,17 @@ _resume:
 		}
 		goto tr457
 tr33:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st1
 tr457:
-//line plugins/parsers/influx/machine.go.rl:74
+//line plugins/parsers/influx/machine.go.rl:82
 
 	m.beginMetric = true
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -3200,7 +3208,7 @@ tr457:
 			goto _test_eof1
 		}
 	st_case_1:
-//line plugins/parsers/influx/machine.go:3204
+//line plugins/parsers/influx/machine.go:3212
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr2
@@ -3221,7 +3229,7 @@ tr457:
 		goto st1
 tr1:
 	( m.cs) = 2
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -3234,7 +3242,7 @@ tr1:
 	goto _again
 tr60:
 	( m.cs) = 2
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -3250,7 +3258,7 @@ tr60:
 			goto _test_eof2
 		}
 	st_case_2:
-//line plugins/parsers/influx/machine.go:3254
+//line plugins/parsers/influx/machine.go:3262
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr8
@@ -3272,7 +3280,7 @@ tr60:
 		}
 		goto tr6
 tr6:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -3282,7 +3290,7 @@ tr6:
 			goto _test_eof3
 		}
 	st_case_3:
-//line plugins/parsers/influx/machine.go:3286
+//line plugins/parsers/influx/machine.go:3294
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr8
@@ -3304,7 +3312,7 @@ tr6:
 		goto st3
 tr2:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -3315,7 +3323,7 @@ tr2:
 	goto _again
 tr8:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -3326,7 +3334,7 @@ tr8:
 	goto _again
 tr35:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -3337,7 +3345,7 @@ tr35:
 	goto _again
 tr39:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -3345,7 +3353,7 @@ tr39:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -3356,7 +3364,7 @@ tr39:
 	goto _again
 tr43:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -3364,7 +3372,7 @@ tr43:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -3375,7 +3383,7 @@ tr43:
 	goto _again
 tr47:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -3383,7 +3391,7 @@ tr47:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -3394,7 +3402,7 @@ tr47:
 	goto _again
 tr105:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -3402,7 +3410,7 @@ tr105:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -3413,7 +3421,7 @@ tr105:
 	goto _again
 tr132:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -3421,7 +3429,7 @@ tr132:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -3429,7 +3437,7 @@ tr132:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -3440,7 +3448,7 @@ tr132:
 	goto _again
 tr198:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -3448,7 +3456,7 @@ tr198:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -3459,7 +3467,7 @@ tr198:
 	goto _again
 tr423:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -3467,7 +3475,7 @@ tr423:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -3475,7 +3483,7 @@ tr423:
 	( m.cs) = 258;
 	{( m.p)++; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -3486,7 +3494,7 @@ tr423:
 	goto _again
 tr426:
 	( m.cs) = 0
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -3496,20 +3504,20 @@ tr426:
 
 	goto _again
 tr1055:
-//line plugins/parsers/influx/machine.go.rl:65
+//line plugins/parsers/influx/machine.go.rl:73
 
 	( m.p)--
 
 	{goto st270 }
 
 	goto st0
-//line plugins/parsers/influx/machine.go:3507
+//line plugins/parsers/influx/machine.go:3515
 st_case_0:
 	st0:
 		( m.cs) = 0
 		goto _out
 tr12:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -3519,7 +3527,7 @@ tr12:
 			goto _test_eof4
 		}
 	st_case_4:
-//line plugins/parsers/influx/machine.go:3523
+//line plugins/parsers/influx/machine.go:3531
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st5
@@ -3561,17 +3569,17 @@ tr12:
 		}
 		goto tr23
 tr23:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st6
 tr24:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3579,7 +3587,7 @@ tr24:
 
 	goto st6
 tr29:
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3591,7 +3599,7 @@ tr29:
 			goto _test_eof6
 		}
 	st_case_6:
-//line plugins/parsers/influx/machine.go:3595
+//line plugins/parsers/influx/machine.go:3603
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -3606,7 +3614,7 @@ tr29:
 		}
 		goto st6
 tr25:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -3616,18 +3624,18 @@ tr25:
 			goto _test_eof7
 		}
 	st_case_7:
-//line plugins/parsers/influx/machine.go:3620
+//line plugins/parsers/influx/machine.go:3628
 		if ( m.data)[( m.p)] == 10 {
 			goto tr29
 		}
 		goto tr8
 tr26:
 	( m.cs) = 271
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -3640,7 +3648,7 @@ tr26:
 	goto _again
 tr31:
 	( m.cs) = 271
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -3656,7 +3664,7 @@ tr31:
 			goto _test_eof271
 		}
 	st_case_271:
-//line plugins/parsers/influx/machine.go:3660
+//line plugins/parsers/influx/machine.go:3668
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -3673,7 +3681,7 @@ tr31:
 		goto tr105
 tr535:
 	( m.cs) = 272
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -3686,7 +3694,7 @@ tr535:
 	goto _again
 tr932:
 	( m.cs) = 272
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -3699,7 +3707,7 @@ tr932:
 	goto _again
 tr935:
 	( m.cs) = 272
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -3712,7 +3720,7 @@ tr935:
 	goto _again
 tr939:
 	( m.cs) = 272
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -3728,7 +3736,7 @@ tr939:
 			goto _test_eof272
 		}
 	st_case_272:
-//line plugins/parsers/influx/machine.go:3732
+//line plugins/parsers/influx/machine.go:3740
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -3749,7 +3757,7 @@ tr939:
 		}
 		goto tr426
 tr103:
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3758,7 +3766,7 @@ tr103:
 	goto st273
 tr470:
 	( m.cs) = 273
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -3768,7 +3776,7 @@ tr470:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3777,7 +3785,7 @@ tr470:
 	goto _again
 tr734:
 	( m.cs) = 273
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -3787,7 +3795,7 @@ tr734:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3796,7 +3804,7 @@ tr734:
 	goto _again
 tr952:
 	( m.cs) = 273
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -3806,7 +3814,7 @@ tr952:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3815,7 +3823,7 @@ tr952:
 	goto _again
 tr957:
 	( m.cs) = 273
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -3825,7 +3833,7 @@ tr957:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3834,7 +3842,7 @@ tr957:
 	goto _again
 tr962:
 	( m.cs) = 273
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -3844,7 +3852,7 @@ tr962:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -3852,7 +3860,7 @@ tr962:
 
 	goto _again
 	st273:
-//line plugins/parsers/influx/machine.go.rl:164
+//line plugins/parsers/influx/machine.go.rl:172
 
 	m.finishMetric = true
 	( m.cs) = 740;
@@ -3862,7 +3870,7 @@ tr962:
 			goto _test_eof273
 		}
 	st_case_273:
-//line plugins/parsers/influx/machine.go:3866
+//line plugins/parsers/influx/machine.go:3874
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr35
@@ -3884,7 +3892,7 @@ tr962:
 		}
 		goto tr33
 tr458:
-//line plugins/parsers/influx/machine.go.rl:74
+//line plugins/parsers/influx/machine.go.rl:82
 
 	m.beginMetric = true
 
@@ -3894,7 +3902,7 @@ tr458:
 			goto _test_eof8
 		}
 	st_case_8:
-//line plugins/parsers/influx/machine.go:3898
+//line plugins/parsers/influx/machine.go:3906
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr35
@@ -3916,17 +3924,17 @@ tr458:
 		}
 		goto tr33
 tr36:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st9
 tr459:
-//line plugins/parsers/influx/machine.go.rl:74
+//line plugins/parsers/influx/machine.go.rl:82
 
 	m.beginMetric = true
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -3936,7 +3944,7 @@ tr459:
 			goto _test_eof9
 		}
 	st_case_9:
-//line plugins/parsers/influx/machine.go:3940
+//line plugins/parsers/influx/machine.go:3948
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr39
@@ -3959,7 +3967,7 @@ tr459:
 		goto tr33
 tr38:
 	( m.cs) = 10
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -3975,7 +3983,7 @@ tr38:
 			goto _test_eof10
 		}
 	st_case_10:
-//line plugins/parsers/influx/machine.go:3979
+//line plugins/parsers/influx/machine.go:3987
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr43
@@ -3999,7 +4007,7 @@ tr38:
 		}
 		goto tr41
 tr41:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4009,7 +4017,7 @@ tr41:
 			goto _test_eof11
 		}
 	st_case_11:
-//line plugins/parsers/influx/machine.go:4013
+//line plugins/parsers/influx/machine.go:4021
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4032,7 +4040,7 @@ tr41:
 		goto st11
 tr48:
 	( m.cs) = 12
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -4045,7 +4053,7 @@ tr48:
 	goto _again
 tr51:
 	( m.cs) = 12
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -4055,7 +4063,7 @@ tr51:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4065,7 +4073,7 @@ tr51:
 			goto _test_eof12
 		}
 	st_case_12:
-//line plugins/parsers/influx/machine.go:4069
+//line plugins/parsers/influx/machine.go:4077
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4088,7 +4096,7 @@ tr51:
 		goto tr41
 tr4:
 	( m.cs) = 13
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -4101,7 +4109,7 @@ tr4:
 	goto _again
 tr62:
 	( m.cs) = 13
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -4117,7 +4125,7 @@ tr62:
 			goto _test_eof13
 		}
 	st_case_13:
-//line plugins/parsers/influx/machine.go:4121
+//line plugins/parsers/influx/machine.go:4129
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -4138,7 +4146,7 @@ tr62:
 		}
 		goto tr52
 tr52:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4148,7 +4156,7 @@ tr52:
 			goto _test_eof14
 		}
 	st_case_14:
-//line plugins/parsers/influx/machine.go:4152
+//line plugins/parsers/influx/machine.go:4160
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -4169,7 +4177,7 @@ tr52:
 		}
 		goto st14
 tr55:
-//line plugins/parsers/influx/machine.go.rl:87
+//line plugins/parsers/influx/machine.go.rl:95
 
 	m.key = m.text()
 
@@ -4179,7 +4187,7 @@ tr55:
 			goto _test_eof15
 		}
 	st_case_15:
-//line plugins/parsers/influx/machine.go:4183
+//line plugins/parsers/influx/machine.go:4191
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -4200,7 +4208,7 @@ tr55:
 		}
 		goto tr57
 tr57:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4210,7 +4218,7 @@ tr57:
 			goto _test_eof16
 		}
 	st_case_16:
-//line plugins/parsers/influx/machine.go:4214
+//line plugins/parsers/influx/machine.go:4222
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr2
@@ -4233,7 +4241,7 @@ tr57:
 		goto st16
 tr61:
 	( m.cs) = 17
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -4249,7 +4257,7 @@ tr61:
 			goto _test_eof17
 		}
 	st_case_17:
-//line plugins/parsers/influx/machine.go:4253
+//line plugins/parsers/influx/machine.go:4261
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4271,7 +4279,7 @@ tr61:
 		}
 		goto tr64
 tr64:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4281,7 +4289,7 @@ tr64:
 			goto _test_eof18
 		}
 	st_case_18:
-//line plugins/parsers/influx/machine.go:4285
+//line plugins/parsers/influx/machine.go:4293
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4304,7 +4312,7 @@ tr64:
 		goto st18
 tr68:
 	( m.cs) = 19
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -4317,7 +4325,7 @@ tr68:
 	goto _again
 tr65:
 	( m.cs) = 19
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -4327,7 +4335,7 @@ tr65:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4337,7 +4345,7 @@ tr65:
 			goto _test_eof19
 		}
 	st_case_19:
-//line plugins/parsers/influx/machine.go:4341
+//line plugins/parsers/influx/machine.go:4349
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4359,7 +4367,7 @@ tr65:
 		}
 		goto tr64
 tr66:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4369,7 +4377,7 @@ tr66:
 			goto _test_eof20
 		}
 	st_case_20:
-//line plugins/parsers/influx/machine.go:4373
+//line plugins/parsers/influx/machine.go:4381
 		if ( m.data)[( m.p)] == 92 {
 			goto st21
 		}
@@ -4383,14 +4391,14 @@ tr66:
 		}
 		goto st18
 	st21:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof21
 		}
 	st_case_21:
-//line plugins/parsers/influx/machine.go:4394
+//line plugins/parsers/influx/machine.go:4402
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4412,7 +4420,7 @@ tr66:
 		}
 		goto st18
 tr58:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4422,7 +4430,7 @@ tr58:
 			goto _test_eof22
 		}
 	st_case_22:
-//line plugins/parsers/influx/machine.go:4426
+//line plugins/parsers/influx/machine.go:4434
 		if ( m.data)[( m.p)] == 92 {
 			goto st23
 		}
@@ -4436,14 +4444,14 @@ tr58:
 		}
 		goto st16
 	st23:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof23
 		}
 	st_case_23:
-//line plugins/parsers/influx/machine.go:4447
+//line plugins/parsers/influx/machine.go:4455
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr2
@@ -4465,7 +4473,7 @@ tr58:
 		}
 		goto st16
 tr53:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4475,7 +4483,7 @@ tr53:
 			goto _test_eof24
 		}
 	st_case_24:
-//line plugins/parsers/influx/machine.go:4479
+//line plugins/parsers/influx/machine.go:4487
 		if ( m.data)[( m.p)] == 92 {
 			goto st25
 		}
@@ -4489,14 +4497,14 @@ tr53:
 		}
 		goto st14
 	st25:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof25
 		}
 	st_case_25:
-//line plugins/parsers/influx/machine.go:4500
+//line plugins/parsers/influx/machine.go:4508
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -4517,17 +4525,17 @@ tr53:
 		}
 		goto st14
 tr49:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
 	goto st26
 tr425:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -4537,7 +4545,7 @@ tr425:
 			goto _test_eof26
 		}
 	st_case_26:
-//line plugins/parsers/influx/machine.go:4541
+//line plugins/parsers/influx/machine.go:4549
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4579,7 +4587,7 @@ tr425:
 		goto st1
 tr3:
 	( m.cs) = 27
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -4595,7 +4603,7 @@ tr3:
 			goto _test_eof27
 		}
 	st_case_27:
-//line plugins/parsers/influx/machine.go:4599
+//line plugins/parsers/influx/machine.go:4607
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -4617,7 +4625,7 @@ tr3:
 		}
 		goto tr41
 tr45:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4627,7 +4635,7 @@ tr45:
 			goto _test_eof28
 		}
 	st_case_28:
-//line plugins/parsers/influx/machine.go:4631
+//line plugins/parsers/influx/machine.go:4639
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -4664,7 +4672,7 @@ tr45:
 		}
 		goto tr82
 tr82:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4674,7 +4682,7 @@ tr82:
 			goto _test_eof30
 		}
 	st_case_30:
-//line plugins/parsers/influx/machine.go:4678
+//line plugins/parsers/influx/machine.go:4686
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -4698,7 +4706,7 @@ tr82:
 		goto st30
 tr89:
 	( m.cs) = 31
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -4711,7 +4719,7 @@ tr89:
 	goto _again
 tr83:
 	( m.cs) = 31
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -4721,14 +4729,14 @@ tr83:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr231:
 	( m.cs) = 31
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -4744,7 +4752,7 @@ tr231:
 			goto _test_eof31
 		}
 	st_case_31:
-//line plugins/parsers/influx/machine.go:4748
+//line plugins/parsers/influx/machine.go:4756
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st31
@@ -4769,7 +4777,7 @@ tr231:
 		}
 		goto tr94
 tr94:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4779,7 +4787,7 @@ tr94:
 			goto _test_eof32
 		}
 	st_case_32:
-//line plugins/parsers/influx/machine.go:4783
+//line plugins/parsers/influx/machine.go:4791
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -4803,11 +4811,11 @@ tr94:
 		goto st32
 tr97:
 	( m.cs) = 274
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -4820,7 +4828,7 @@ tr97:
 	goto _again
 tr100:
 	( m.cs) = 274
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -4833,7 +4841,7 @@ tr100:
 	goto _again
 tr386:
 	( m.cs) = 274
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -4843,7 +4851,7 @@ tr386:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4853,7 +4861,7 @@ tr386:
 			goto _test_eof274
 		}
 	st_case_274:
-//line plugins/parsers/influx/machine.go:4857
+//line plugins/parsers/influx/machine.go:4865
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -4908,7 +4916,7 @@ tr386:
 		goto st3
 tr472:
 	( m.cs) = 33
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -4921,7 +4929,7 @@ tr472:
 	goto _again
 tr736:
 	( m.cs) = 33
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -4934,7 +4942,7 @@ tr736:
 	goto _again
 tr954:
 	( m.cs) = 33
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -4947,7 +4955,7 @@ tr954:
 	goto _again
 tr959:
 	( m.cs) = 33
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -4960,7 +4968,7 @@ tr959:
 	goto _again
 tr964:
 	( m.cs) = 33
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -4976,13 +4984,13 @@ tr964:
 			goto _test_eof33
 		}
 	st_case_33:
-//line plugins/parsers/influx/machine.go:4980
+//line plugins/parsers/influx/machine.go:4988
 		if ( m.data)[( m.p)] == 10 {
 			goto tr103
 		}
 		goto st0
 tr467:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -4992,7 +5000,7 @@ tr467:
 			goto _test_eof34
 		}
 	st_case_34:
-//line plugins/parsers/influx/machine.go:4996
+//line plugins/parsers/influx/machine.go:5004
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr105
@@ -5017,7 +5025,7 @@ tr467:
 		}
 		goto st3
 tr468:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -5027,7 +5035,7 @@ tr468:
 			goto _test_eof276
 		}
 	st_case_276:
-//line plugins/parsers/influx/machine.go:5031
+//line plugins/parsers/influx/machine.go:5039
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr470
@@ -5055,7 +5063,7 @@ tr468:
 		goto st3
 tr469:
 	( m.cs) = 277
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -5071,7 +5079,7 @@ tr469:
 			goto _test_eof277
 		}
 	st_case_277:
-//line plugins/parsers/influx/machine.go:5075
+//line plugins/parsers/influx/machine.go:5083
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -5086,7 +5094,7 @@ tr469:
 		goto st0
 tr471:
 	( m.cs) = 278
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -5102,7 +5110,7 @@ tr471:
 			goto _test_eof278
 		}
 	st_case_278:
-//line plugins/parsers/influx/machine.go:5106
+//line plugins/parsers/influx/machine.go:5114
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -5124,7 +5132,7 @@ tr471:
 		}
 		goto st3
 tr10:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -5134,7 +5142,7 @@ tr10:
 			goto _test_eof35
 		}
 	st_case_35:
-//line plugins/parsers/influx/machine.go:5138
+//line plugins/parsers/influx/machine.go:5146
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -5681,7 +5689,7 @@ tr10:
 		goto st3
 tr930:
 	( m.cs) = 36
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -5694,7 +5702,7 @@ tr930:
 	goto _again
 tr1046:
 	( m.cs) = 36
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -5707,7 +5715,7 @@ tr1046:
 	goto _again
 tr1048:
 	( m.cs) = 36
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -5720,7 +5728,7 @@ tr1048:
 	goto _again
 tr1050:
 	( m.cs) = 36
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -5736,7 +5744,7 @@ tr1050:
 			goto _test_eof36
 		}
 	st_case_36:
-//line plugins/parsers/influx/machine.go:5740
+//line plugins/parsers/influx/machine.go:5748
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr8
@@ -5757,7 +5765,7 @@ tr1050:
 		}
 		goto tr6
 tr101:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -5767,7 +5775,7 @@ tr101:
 			goto _test_eof37
 		}
 	st_case_37:
-//line plugins/parsers/influx/machine.go:5771
+//line plugins/parsers/influx/machine.go:5779
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -5800,7 +5808,7 @@ tr101:
 		goto st6
 tr107:
 	( m.cs) = 297
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -5816,7 +5824,7 @@ tr107:
 			goto _test_eof297
 		}
 	st_case_297:
-//line plugins/parsers/influx/machine.go:5820
+//line plugins/parsers/influx/machine.go:5828
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr494
@@ -5838,14 +5846,14 @@ tr107:
 		}
 		goto tr23
 tr493:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st298
 tr988:
 	( m.cs) = 298
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -5858,7 +5866,7 @@ tr988:
 	goto _again
 tr993:
 	( m.cs) = 298
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -5871,7 +5879,7 @@ tr993:
 	goto _again
 tr996:
 	( m.cs) = 298
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -5884,7 +5892,7 @@ tr996:
 	goto _again
 tr999:
 	( m.cs) = 298
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -5900,7 +5908,7 @@ tr999:
 			goto _test_eof298
 		}
 	st_case_298:
-//line plugins/parsers/influx/machine.go:5904
+//line plugins/parsers/influx/machine.go:5912
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr221
@@ -5927,11 +5935,11 @@ tr999:
 		}
 		goto st6
 tr494:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -5939,7 +5947,7 @@ tr494:
 
 	goto st299
 tr221:
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -5948,7 +5956,7 @@ tr221:
 	goto st299
 tr639:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -5958,7 +5966,7 @@ tr639:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -5967,13 +5975,13 @@ tr639:
 	goto _again
 tr603:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -5986,7 +5994,7 @@ tr603:
 	goto _again
 tr823:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -5996,7 +6004,7 @@ tr823:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -6005,7 +6013,7 @@ tr823:
 	goto _again
 tr829:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -6015,7 +6023,7 @@ tr829:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -6024,13 +6032,13 @@ tr829:
 	goto _again
 tr810:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -6043,13 +6051,13 @@ tr810:
 	goto _again
 tr765:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -6062,13 +6070,13 @@ tr765:
 	goto _again
 tr798:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -6081,13 +6089,13 @@ tr798:
 	goto _again
 tr804:
 	( m.cs) = 299
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -6099,7 +6107,7 @@ tr804:
 
 	goto _again
 	st299:
-//line plugins/parsers/influx/machine.go.rl:164
+//line plugins/parsers/influx/machine.go.rl:172
 
 	m.finishMetric = true
 	( m.cs) = 740;
@@ -6109,7 +6117,7 @@ tr804:
 			goto _test_eof299
 		}
 	st_case_299:
-//line plugins/parsers/influx/machine.go:6113
+//line plugins/parsers/influx/machine.go:6121
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st38
@@ -6162,7 +6170,7 @@ tr804:
 		}
 		goto tr82
 tr117:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6172,7 +6180,7 @@ tr117:
 			goto _test_eof39
 		}
 	st_case_39:
-//line plugins/parsers/influx/machine.go:6176
+//line plugins/parsers/influx/machine.go:6184
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr119
@@ -6198,7 +6206,7 @@ tr117:
 		goto tr82
 tr119:
 	( m.cs) = 40
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6214,7 +6222,7 @@ tr119:
 			goto _test_eof40
 		}
 	st_case_40:
-//line plugins/parsers/influx/machine.go:6218
+//line plugins/parsers/influx/machine.go:6226
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st40
@@ -6241,7 +6249,7 @@ tr119:
 		}
 		goto tr121
 tr121:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6251,7 +6259,7 @@ tr121:
 			goto _test_eof41
 		}
 	st_case_41:
-//line plugins/parsers/influx/machine.go:6255
+//line plugins/parsers/influx/machine.go:6263
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -6277,7 +6285,7 @@ tr121:
 		goto st41
 tr127:
 	( m.cs) = 42
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6290,7 +6298,7 @@ tr127:
 	goto _again
 tr131:
 	( m.cs) = 42
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6300,7 +6308,7 @@ tr131:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6310,7 +6318,7 @@ tr131:
 			goto _test_eof42
 		}
 	st_case_42:
-//line plugins/parsers/influx/machine.go:6314
+//line plugins/parsers/influx/machine.go:6322
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -6336,11 +6344,11 @@ tr131:
 		goto tr121
 tr124:
 	( m.cs) = 300
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -6353,7 +6361,7 @@ tr124:
 	goto _again
 tr128:
 	( m.cs) = 300
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -6369,7 +6377,7 @@ tr128:
 			goto _test_eof300
 		}
 	st_case_300:
-//line plugins/parsers/influx/machine.go:6373
+//line plugins/parsers/influx/machine.go:6381
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -6392,7 +6400,7 @@ tr128:
 		goto st11
 tr501:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6405,7 +6413,7 @@ tr501:
 	goto _again
 tr566:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -6418,7 +6426,7 @@ tr566:
 	goto _again
 tr641:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6428,7 +6436,7 @@ tr641:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -6441,7 +6449,7 @@ tr641:
 	goto _again
 tr731:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -6451,7 +6459,7 @@ tr731:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -6464,7 +6472,7 @@ tr731:
 	goto _again
 tr743:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -6474,7 +6482,7 @@ tr743:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -6487,7 +6495,7 @@ tr743:
 	goto _again
 tr750:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -6497,7 +6505,7 @@ tr750:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -6510,7 +6518,7 @@ tr750:
 	goto _again
 tr757:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -6520,7 +6528,7 @@ tr757:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -6533,7 +6541,7 @@ tr757:
 	goto _again
 tr825:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6543,7 +6551,7 @@ tr825:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -6556,7 +6564,7 @@ tr825:
 	goto _again
 tr831:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6566,7 +6574,7 @@ tr831:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -6579,7 +6587,7 @@ tr831:
 	goto _again
 tr836:
 	( m.cs) = 301
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6589,7 +6597,7 @@ tr836:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -6605,7 +6613,7 @@ tr836:
 			goto _test_eof301
 		}
 	st_case_301:
-//line plugins/parsers/influx/machine.go:6609
+//line plugins/parsers/influx/machine.go:6617
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -6634,7 +6642,7 @@ tr836:
 		}
 		goto tr6
 tr505:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6644,7 +6652,7 @@ tr505:
 			goto _test_eof302
 		}
 	st_case_302:
-//line plugins/parsers/influx/machine.go:6648
+//line plugins/parsers/influx/machine.go:6656
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -6674,7 +6682,7 @@ tr505:
 		goto tr6
 tr502:
 	( m.cs) = 303
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6687,7 +6695,7 @@ tr502:
 	goto _again
 tr506:
 	( m.cs) = 303
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6697,7 +6705,7 @@ tr506:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6707,7 +6715,7 @@ tr506:
 			goto _test_eof303
 		}
 	st_case_303:
-//line plugins/parsers/influx/machine.go:6711
+//line plugins/parsers/influx/machine.go:6719
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -6736,7 +6744,7 @@ tr506:
 		}
 		goto tr41
 tr507:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6746,7 +6754,7 @@ tr507:
 			goto _test_eof43
 		}
 	st_case_43:
-//line plugins/parsers/influx/machine.go:6750
+//line plugins/parsers/influx/machine.go:6758
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr132
@@ -6773,7 +6781,7 @@ tr507:
 		}
 		goto st11
 tr508:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6783,7 +6791,7 @@ tr508:
 			goto _test_eof304
 		}
 	st_case_304:
-//line plugins/parsers/influx/machine.go:6787
+//line plugins/parsers/influx/machine.go:6795
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr470
@@ -6811,7 +6819,7 @@ tr508:
 		goto st11
 tr514:
 	( m.cs) = 305
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6824,7 +6832,7 @@ tr514:
 	goto _again
 tr575:
 	( m.cs) = 305
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -6837,7 +6845,7 @@ tr575:
 	goto _again
 tr509:
 	( m.cs) = 305
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6847,7 +6855,7 @@ tr509:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -6860,7 +6868,7 @@ tr509:
 	goto _again
 tr572:
 	( m.cs) = 305
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -6870,7 +6878,7 @@ tr572:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -6886,7 +6894,7 @@ tr572:
 			goto _test_eof305
 		}
 	st_case_305:
-//line plugins/parsers/influx/machine.go:6890
+//line plugins/parsers/influx/machine.go:6898
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -6908,7 +6916,7 @@ tr572:
 		}
 		goto tr6
 tr513:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -6918,7 +6926,7 @@ tr513:
 			goto _test_eof306
 		}
 	st_case_306:
-//line plugins/parsers/influx/machine.go:6922
+//line plugins/parsers/influx/machine.go:6930
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -6941,7 +6949,7 @@ tr513:
 		goto tr6
 tr515:
 	( m.cs) = 307
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6951,14 +6959,14 @@ tr515:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr510:
 	( m.cs) = 307
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -6968,7 +6976,7 @@ tr510:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -6984,7 +6992,7 @@ tr510:
 			goto _test_eof307
 		}
 	st_case_307:
-//line plugins/parsers/influx/machine.go:6988
+//line plugins/parsers/influx/machine.go:6996
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -7542,7 +7550,7 @@ tr510:
 		goto st11
 tr503:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -7555,7 +7563,7 @@ tr503:
 	goto _again
 tr568:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -7568,7 +7576,7 @@ tr568:
 	goto _again
 tr819:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -7578,7 +7586,7 @@ tr819:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -7591,7 +7599,7 @@ tr819:
 	goto _again
 tr737:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -7601,7 +7609,7 @@ tr737:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -7614,7 +7622,7 @@ tr737:
 	goto _again
 tr955:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -7624,7 +7632,7 @@ tr955:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -7637,7 +7645,7 @@ tr955:
 	goto _again
 tr960:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -7647,7 +7655,7 @@ tr960:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -7660,7 +7668,7 @@ tr960:
 	goto _again
 tr965:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -7670,7 +7678,7 @@ tr965:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -7683,7 +7691,7 @@ tr965:
 	goto _again
 tr1014:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -7693,7 +7701,7 @@ tr1014:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -7706,7 +7714,7 @@ tr1014:
 	goto _again
 tr1017:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -7716,7 +7724,7 @@ tr1017:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -7729,7 +7737,7 @@ tr1017:
 	goto _again
 tr1020:
 	( m.cs) = 44
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -7739,7 +7747,7 @@ tr1020:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -7755,7 +7763,7 @@ tr1020:
 			goto _test_eof44
 		}
 	st_case_44:
-//line plugins/parsers/influx/machine.go:7759
+//line plugins/parsers/influx/machine.go:7767
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr47
@@ -7776,7 +7784,7 @@ tr1020:
 		}
 		goto tr134
 tr134:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -7786,7 +7794,7 @@ tr134:
 			goto _test_eof45
 		}
 	st_case_45:
-//line plugins/parsers/influx/machine.go:7790
+//line plugins/parsers/influx/machine.go:7798
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr47
@@ -7807,11 +7815,11 @@ tr134:
 		}
 		goto st45
 tr137:
-//line plugins/parsers/influx/machine.go.rl:87
+//line plugins/parsers/influx/machine.go.rl:95
 
 	m.key = m.text()
 
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -7821,7 +7829,7 @@ tr137:
 			goto _test_eof46
 		}
 	st_case_46:
-//line plugins/parsers/influx/machine.go:7825
+//line plugins/parsers/influx/machine.go:7833
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr47
@@ -7862,7 +7870,7 @@ tr137:
 		}
 		goto tr57
 tr139:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -7872,7 +7880,7 @@ tr139:
 			goto _test_eof47
 		}
 	st_case_47:
-//line plugins/parsers/influx/machine.go:7876
+//line plugins/parsers/influx/machine.go:7884
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr149
@@ -7897,7 +7905,7 @@ tr139:
 		}
 		goto tr148
 tr148:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -7907,7 +7915,7 @@ tr148:
 			goto _test_eof48
 		}
 	st_case_48:
-//line plugins/parsers/influx/machine.go:7911
+//line plugins/parsers/influx/machine.go:7919
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -7933,7 +7941,7 @@ tr148:
 		goto st48
 tr180:
 	( m.cs) = 49
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -7946,7 +7954,7 @@ tr180:
 	goto _again
 tr155:
 	( m.cs) = 49
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -7959,7 +7967,7 @@ tr155:
 	goto _again
 tr149:
 	( m.cs) = 49
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -7969,7 +7977,7 @@ tr149:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -7979,7 +7987,7 @@ tr149:
 			goto _test_eof49
 		}
 	st_case_49:
-//line plugins/parsers/influx/machine.go:7983
+//line plugins/parsers/influx/machine.go:7991
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st49
@@ -8004,7 +8012,7 @@ tr149:
 		}
 		goto tr160
 tr160:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8014,7 +8022,7 @@ tr160:
 			goto _test_eof50
 		}
 	st_case_50:
-//line plugins/parsers/influx/machine.go:8018
+//line plugins/parsers/influx/machine.go:8026
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -8037,7 +8045,7 @@ tr160:
 		}
 		goto st50
 tr165:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -8047,7 +8055,7 @@ tr165:
 			goto _test_eof51
 		}
 	st_case_51:
-//line plugins/parsers/influx/machine.go:8051
+//line plugins/parsers/influx/machine.go:8059
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -8079,7 +8087,7 @@ tr165:
 		}
 		goto st6
 tr167:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8089,7 +8097,7 @@ tr167:
 			goto _test_eof52
 		}
 	st_case_52:
-//line plugins/parsers/influx/machine.go:8093
+//line plugins/parsers/influx/machine.go:8101
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -8111,7 +8119,7 @@ tr167:
 		}
 		goto st6
 tr168:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8121,7 +8129,7 @@ tr168:
 			goto _test_eof53
 		}
 	st_case_53:
-//line plugins/parsers/influx/machine.go:8125
+//line plugins/parsers/influx/machine.go:8133
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -8173,14 +8181,14 @@ tr168:
 		}
 		goto st6
 tr925:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st327
 tr533:
 	( m.cs) = 327
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -8193,7 +8201,7 @@ tr533:
 	goto _again
 tr931:
 	( m.cs) = 327
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -8206,7 +8214,7 @@ tr931:
 	goto _again
 tr934:
 	( m.cs) = 327
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -8219,7 +8227,7 @@ tr934:
 	goto _again
 tr938:
 	( m.cs) = 327
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -8235,7 +8243,7 @@ tr938:
 			goto _test_eof327
 		}
 	st_case_327:
-//line plugins/parsers/influx/machine.go:8239
+//line plugins/parsers/influx/machine.go:8247
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr275
@@ -8262,11 +8270,11 @@ tr938:
 		}
 		goto st6
 tr669:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -8274,7 +8282,7 @@ tr669:
 
 	goto st328
 tr275:
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -8283,7 +8291,7 @@ tr275:
 	goto st328
 tr534:
 	( m.cs) = 328
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -8293,7 +8301,7 @@ tr534:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -8302,13 +8310,13 @@ tr534:
 	goto _again
 tr678:
 	( m.cs) = 328
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -8321,7 +8329,7 @@ tr678:
 	goto _again
 tr741:
 	( m.cs) = 328
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -8331,7 +8339,7 @@ tr741:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -8340,7 +8348,7 @@ tr741:
 	goto _again
 tr748:
 	( m.cs) = 328
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -8350,7 +8358,7 @@ tr748:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -8359,13 +8367,13 @@ tr748:
 	goto _again
 tr755:
 	( m.cs) = 328
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -8378,7 +8386,7 @@ tr755:
 	goto _again
 tr900:
 	( m.cs) = 328
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -8388,7 +8396,7 @@ tr900:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -8396,7 +8404,7 @@ tr900:
 
 	goto _again
 	st328:
-//line plugins/parsers/influx/machine.go.rl:164
+//line plugins/parsers/influx/machine.go.rl:172
 
 	m.finishMetric = true
 	( m.cs) = 740;
@@ -8406,7 +8414,7 @@ tr900:
 			goto _test_eof328
 		}
 	st_case_328:
-//line plugins/parsers/influx/machine.go:8410
+//line plugins/parsers/influx/machine.go:8418
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st165
@@ -8431,7 +8439,7 @@ tr900:
 		}
 		goto tr337
 tr337:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8441,7 +8449,7 @@ tr337:
 			goto _test_eof54
 		}
 	st_case_54:
-//line plugins/parsers/influx/machine.go:8445
+//line plugins/parsers/influx/machine.go:8453
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -8465,7 +8473,7 @@ tr337:
 		goto st54
 tr181:
 	( m.cs) = 55
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -8481,7 +8489,7 @@ tr181:
 			goto _test_eof55
 		}
 	st_case_55:
-//line plugins/parsers/influx/machine.go:8485
+//line plugins/parsers/influx/machine.go:8493
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -8506,7 +8514,7 @@ tr181:
 		}
 		goto tr184
 tr184:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8516,7 +8524,7 @@ tr184:
 			goto _test_eof56
 		}
 	st_case_56:
-//line plugins/parsers/influx/machine.go:8520
+//line plugins/parsers/influx/machine.go:8528
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -8542,7 +8550,7 @@ tr184:
 		goto st56
 tr188:
 	( m.cs) = 57
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -8555,7 +8563,7 @@ tr188:
 	goto _again
 tr185:
 	( m.cs) = 57
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -8565,7 +8573,7 @@ tr185:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8575,7 +8583,7 @@ tr185:
 			goto _test_eof57
 		}
 	st_case_57:
-//line plugins/parsers/influx/machine.go:8579
+//line plugins/parsers/influx/machine.go:8587
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -8601,7 +8609,7 @@ tr185:
 		goto tr184
 tr182:
 	( m.cs) = 58
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -8614,7 +8622,7 @@ tr182:
 	goto _again
 tr158:
 	( m.cs) = 58
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -8627,7 +8635,7 @@ tr158:
 	goto _again
 tr152:
 	( m.cs) = 58
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -8637,7 +8645,7 @@ tr152:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8647,7 +8655,7 @@ tr152:
 			goto _test_eof58
 		}
 	st_case_58:
-//line plugins/parsers/influx/machine.go:8651
+//line plugins/parsers/influx/machine.go:8659
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -8670,7 +8678,7 @@ tr152:
 		}
 		goto tr191
 tr191:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8680,7 +8688,7 @@ tr191:
 			goto _test_eof59
 		}
 	st_case_59:
-//line plugins/parsers/influx/machine.go:8684
+//line plugins/parsers/influx/machine.go:8692
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -8704,11 +8712,11 @@ tr191:
 		goto st59
 tr192:
 	( m.cs) = 329
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -8721,7 +8729,7 @@ tr192:
 	goto _again
 tr195:
 	( m.cs) = 329
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -8737,7 +8745,7 @@ tr195:
 			goto _test_eof329
 		}
 	st_case_329:
-//line plugins/parsers/influx/machine.go:8741
+//line plugins/parsers/influx/machine.go:8749
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -8791,7 +8799,7 @@ tr195:
 		}
 		goto st14
 tr544:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8801,7 +8809,7 @@ tr544:
 			goto _test_eof60
 		}
 	st_case_60:
-//line plugins/parsers/influx/machine.go:8805
+//line plugins/parsers/influx/machine.go:8813
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr198
@@ -8826,7 +8834,7 @@ tr544:
 		}
 		goto st14
 tr545:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -8836,7 +8844,7 @@ tr545:
 			goto _test_eof331
 		}
 	st_case_331:
-//line plugins/parsers/influx/machine.go:8840
+//line plugins/parsers/influx/machine.go:8848
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr470
@@ -8864,7 +8872,7 @@ tr545:
 		goto st14
 tr546:
 	( m.cs) = 332
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -8880,7 +8888,7 @@ tr546:
 			goto _test_eof332
 		}
 	st_case_332:
-//line plugins/parsers/influx/machine.go:8884
+//line plugins/parsers/influx/machine.go:8892
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -9437,7 +9445,7 @@ tr546:
 		}
 		goto st14
 tr196:
-//line plugins/parsers/influx/machine.go.rl:87
+//line plugins/parsers/influx/machine.go.rl:95
 
 	m.key = m.text()
 
@@ -9447,7 +9455,7 @@ tr196:
 			goto _test_eof61
 		}
 	st_case_61:
-//line plugins/parsers/influx/machine.go:9451
+//line plugins/parsers/influx/machine.go:9459
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -9471,11 +9479,11 @@ tr196:
 		goto tr148
 tr151:
 	( m.cs) = 351
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -9488,7 +9496,7 @@ tr151:
 	goto _again
 tr157:
 	( m.cs) = 351
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -9504,7 +9512,7 @@ tr157:
 			goto _test_eof351
 		}
 	st_case_351:
-//line plugins/parsers/influx/machine.go:9508
+//line plugins/parsers/influx/machine.go:9516
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -9527,7 +9535,7 @@ tr157:
 		goto st16
 tr567:
 	( m.cs) = 352
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9540,7 +9548,7 @@ tr567:
 	goto _again
 tr735:
 	( m.cs) = 352
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9550,7 +9558,7 @@ tr735:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -9563,7 +9571,7 @@ tr735:
 	goto _again
 tr953:
 	( m.cs) = 352
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9573,7 +9581,7 @@ tr953:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -9586,7 +9594,7 @@ tr953:
 	goto _again
 tr958:
 	( m.cs) = 352
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9596,7 +9604,7 @@ tr958:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -9609,7 +9617,7 @@ tr958:
 	goto _again
 tr963:
 	( m.cs) = 352
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9619,7 +9627,7 @@ tr963:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -9635,7 +9643,7 @@ tr963:
 			goto _test_eof352
 		}
 	st_case_352:
-//line plugins/parsers/influx/machine.go:9639
+//line plugins/parsers/influx/machine.go:9647
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -9665,7 +9673,7 @@ tr963:
 		goto tr64
 tr594:
 	( m.cs) = 353
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9678,7 +9686,7 @@ tr594:
 	goto _again
 tr569:
 	( m.cs) = 353
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9688,7 +9696,7 @@ tr569:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -9698,7 +9706,7 @@ tr569:
 			goto _test_eof353
 		}
 	st_case_353:
-//line plugins/parsers/influx/machine.go:9702
+//line plugins/parsers/influx/machine.go:9710
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -9727,7 +9735,7 @@ tr569:
 		}
 		goto tr64
 tr570:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -9737,7 +9745,7 @@ tr570:
 			goto _test_eof62
 		}
 	st_case_62:
-//line plugins/parsers/influx/machine.go:9741
+//line plugins/parsers/influx/machine.go:9749
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr132
@@ -9764,7 +9772,7 @@ tr570:
 		}
 		goto st18
 tr571:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -9774,7 +9782,7 @@ tr571:
 			goto _test_eof354
 		}
 	st_case_354:
-//line plugins/parsers/influx/machine.go:9778
+//line plugins/parsers/influx/machine.go:9786
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr470
@@ -9802,7 +9810,7 @@ tr571:
 		goto st18
 tr576:
 	( m.cs) = 355
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9812,14 +9820,14 @@ tr576:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr573:
 	( m.cs) = 355
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -9829,7 +9837,7 @@ tr573:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -9845,7 +9853,7 @@ tr573:
 			goto _test_eof355
 		}
 	st_case_355:
-//line plugins/parsers/influx/machine.go:9849
+//line plugins/parsers/influx/machine.go:9857
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -10402,7 +10410,7 @@ tr573:
 		}
 		goto st18
 tr153:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -10412,7 +10420,7 @@ tr153:
 			goto _test_eof63
 		}
 	st_case_63:
-//line plugins/parsers/influx/machine.go:10416
+//line plugins/parsers/influx/machine.go:10424
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st48
@@ -10429,14 +10437,14 @@ tr153:
 		}
 		goto st16
 	st64:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof64
 		}
 	st_case_64:
-//line plugins/parsers/influx/machine.go:10440
+//line plugins/parsers/influx/machine.go:10448
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -10462,7 +10470,7 @@ tr153:
 		goto st48
 tr156:
 	( m.cs) = 65
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -10475,7 +10483,7 @@ tr156:
 	goto _again
 tr150:
 	( m.cs) = 65
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -10485,7 +10493,7 @@ tr150:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -10495,7 +10503,7 @@ tr150:
 			goto _test_eof65
 		}
 	st_case_65:
-//line plugins/parsers/influx/machine.go:10499
+//line plugins/parsers/influx/machine.go:10507
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -10520,7 +10528,7 @@ tr150:
 		}
 		goto tr202
 tr202:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -10530,7 +10538,7 @@ tr202:
 			goto _test_eof66
 		}
 	st_case_66:
-//line plugins/parsers/influx/machine.go:10534
+//line plugins/parsers/influx/machine.go:10542
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -10556,7 +10564,7 @@ tr202:
 		goto st66
 tr207:
 	( m.cs) = 67
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -10569,7 +10577,7 @@ tr207:
 	goto _again
 tr203:
 	( m.cs) = 67
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -10579,7 +10587,7 @@ tr203:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -10589,7 +10597,7 @@ tr203:
 			goto _test_eof67
 		}
 	st_case_67:
-//line plugins/parsers/influx/machine.go:10593
+//line plugins/parsers/influx/machine.go:10601
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -10615,11 +10623,11 @@ tr203:
 		goto tr202
 tr204:
 	( m.cs) = 374
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -10632,7 +10640,7 @@ tr204:
 	goto _again
 tr208:
 	( m.cs) = 374
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -10648,7 +10656,7 @@ tr208:
 			goto _test_eof374
 		}
 	st_case_374:
-//line plugins/parsers/influx/machine.go:10652
+//line plugins/parsers/influx/machine.go:10660
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -10670,7 +10678,7 @@ tr208:
 		}
 		goto st18
 tr205:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -10680,7 +10688,7 @@ tr205:
 			goto _test_eof68
 		}
 	st_case_68:
-//line plugins/parsers/influx/machine.go:10684
+//line plugins/parsers/influx/machine.go:10692
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st66
@@ -10697,14 +10705,14 @@ tr205:
 		}
 		goto st18
 	st69:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof69
 		}
 	st_case_69:
-//line plugins/parsers/influx/machine.go:10708
+//line plugins/parsers/influx/machine.go:10716
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -10729,7 +10737,7 @@ tr205:
 		}
 		goto st66
 tr193:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -10739,7 +10747,7 @@ tr193:
 			goto _test_eof70
 		}
 	st_case_70:
-//line plugins/parsers/influx/machine.go:10743
+//line plugins/parsers/influx/machine.go:10751
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st59
@@ -10756,14 +10764,14 @@ tr193:
 		}
 		goto st14
 	st71:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof71
 		}
 	st_case_71:
-//line plugins/parsers/influx/machine.go:10767
+//line plugins/parsers/influx/machine.go:10775
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -10786,17 +10794,17 @@ tr193:
 		}
 		goto st59
 tr189:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
 	goto st72
 tr346:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -10806,7 +10814,7 @@ tr346:
 			goto _test_eof72
 		}
 	st_case_72:
-//line plugins/parsers/influx/machine.go:10810
+//line plugins/parsers/influx/machine.go:10818
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -10847,7 +10855,7 @@ tr346:
 		goto st54
 tr212:
 	( m.cs) = 375
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -10863,7 +10871,7 @@ tr212:
 			goto _test_eof375
 		}
 	st_case_375:
-//line plugins/parsers/influx/machine.go:10867
+//line plugins/parsers/influx/machine.go:10875
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr595
@@ -10887,7 +10895,7 @@ tr212:
 		goto tr82
 tr626:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -10900,7 +10908,7 @@ tr626:
 	goto _again
 tr595:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -10910,14 +10918,14 @@ tr595:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr769:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -10930,7 +10938,7 @@ tr769:
 	goto _again
 tr638:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -10940,7 +10948,7 @@ tr638:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -10953,7 +10961,7 @@ tr638:
 	goto _again
 tr764:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -10963,7 +10971,7 @@ tr764:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -10976,7 +10984,7 @@ tr764:
 	goto _again
 tr797:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -10986,7 +10994,7 @@ tr797:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -10999,7 +11007,7 @@ tr797:
 	goto _again
 tr803:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -11009,7 +11017,7 @@ tr803:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -11022,7 +11030,7 @@ tr803:
 	goto _again
 tr809:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -11032,7 +11040,7 @@ tr809:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -11045,7 +11053,7 @@ tr809:
 	goto _again
 tr822:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -11055,7 +11063,7 @@ tr822:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -11068,7 +11076,7 @@ tr822:
 	goto _again
 tr828:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -11078,7 +11086,7 @@ tr828:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -11091,7 +11099,7 @@ tr828:
 	goto _again
 tr834:
 	( m.cs) = 376
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -11101,7 +11109,7 @@ tr834:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -11117,7 +11125,7 @@ tr834:
 			goto _test_eof376
 		}
 	st_case_376:
-//line plugins/parsers/influx/machine.go:11121
+//line plugins/parsers/influx/machine.go:11129
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st376
@@ -11147,7 +11155,7 @@ tr834:
 		}
 		goto tr94
 tr599:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -11157,7 +11165,7 @@ tr599:
 			goto _test_eof377
 		}
 	st_case_377:
-//line plugins/parsers/influx/machine.go:11161
+//line plugins/parsers/influx/machine.go:11169
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st376
@@ -11187,14 +11195,14 @@ tr599:
 		}
 		goto tr94
 tr495:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st73
 tr605:
 	( m.cs) = 73
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -11207,7 +11215,7 @@ tr605:
 	goto _again
 tr642:
 	( m.cs) = 73
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -11220,7 +11228,7 @@ tr642:
 	goto _again
 tr800:
 	( m.cs) = 73
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -11233,7 +11241,7 @@ tr800:
 	goto _again
 tr806:
 	( m.cs) = 73
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -11246,7 +11254,7 @@ tr806:
 	goto _again
 tr812:
 	( m.cs) = 73
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -11262,13 +11270,13 @@ tr812:
 			goto _test_eof73
 		}
 	st_case_73:
-//line plugins/parsers/influx/machine.go:11266
+//line plugins/parsers/influx/machine.go:11274
 		if ( m.data)[( m.p)] == 10 {
 			goto tr221
 		}
 		goto tr8
 tr600:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -11278,7 +11286,7 @@ tr600:
 			goto _test_eof74
 		}
 	st_case_74:
-//line plugins/parsers/influx/machine.go:11282
+//line plugins/parsers/influx/machine.go:11290
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -11304,7 +11312,7 @@ tr600:
 		}
 		goto st32
 tr601:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -11314,7 +11322,7 @@ tr601:
 			goto _test_eof378
 		}
 	st_case_378:
-//line plugins/parsers/influx/machine.go:11318
+//line plugins/parsers/influx/machine.go:11326
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr602
@@ -11343,7 +11351,7 @@ tr601:
 		goto st32
 tr602:
 	( m.cs) = 379
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -11359,7 +11367,7 @@ tr602:
 			goto _test_eof379
 		}
 	st_case_379:
-//line plugins/parsers/influx/machine.go:11363
+//line plugins/parsers/influx/machine.go:11371
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr221
@@ -11379,7 +11387,7 @@ tr602:
 		}
 		goto st6
 tr27:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -11389,7 +11397,7 @@ tr27:
 			goto _test_eof75
 		}
 	st_case_75:
-//line plugins/parsers/influx/machine.go:11393
+//line plugins/parsers/influx/machine.go:11401
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st6
@@ -11399,7 +11407,7 @@ tr27:
 		goto tr8
 tr604:
 	( m.cs) = 380
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -11415,7 +11423,7 @@ tr604:
 			goto _test_eof380
 		}
 	st_case_380:
-//line plugins/parsers/influx/machine.go:11419
+//line plugins/parsers/influx/machine.go:11427
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st379
@@ -11440,7 +11448,7 @@ tr604:
 		}
 		goto st32
 tr98:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -11450,7 +11458,7 @@ tr98:
 			goto _test_eof76
 		}
 	st_case_76:
-//line plugins/parsers/influx/machine.go:11454
+//line plugins/parsers/influx/machine.go:11462
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st32
@@ -12023,7 +12031,7 @@ tr98:
 		goto st32
 tr596:
 	( m.cs) = 399
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12033,14 +12041,14 @@ tr596:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr640:
 	( m.cs) = 399
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12050,7 +12058,7 @@ tr640:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -12063,7 +12071,7 @@ tr640:
 	goto _again
 tr824:
 	( m.cs) = 399
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12073,7 +12081,7 @@ tr824:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -12086,7 +12094,7 @@ tr824:
 	goto _again
 tr830:
 	( m.cs) = 399
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12096,7 +12104,7 @@ tr830:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -12109,7 +12117,7 @@ tr830:
 	goto _again
 tr835:
 	( m.cs) = 399
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12119,7 +12127,7 @@ tr835:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -12135,7 +12143,7 @@ tr835:
 			goto _test_eof399
 		}
 	st_case_399:
-//line plugins/parsers/influx/machine.go:12139
+//line plugins/parsers/influx/machine.go:12147
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr626
@@ -12166,7 +12174,7 @@ tr835:
 		goto tr121
 tr627:
 	( m.cs) = 400
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12176,7 +12184,7 @@ tr627:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12186,7 +12194,7 @@ tr627:
 			goto _test_eof400
 		}
 	st_case_400:
-//line plugins/parsers/influx/machine.go:12190
+//line plugins/parsers/influx/machine.go:12198
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr626
@@ -12217,7 +12225,7 @@ tr627:
 		goto tr121
 tr92:
 	( m.cs) = 77
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12230,7 +12238,7 @@ tr92:
 	goto _again
 tr86:
 	( m.cs) = 77
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12240,14 +12248,14 @@ tr86:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr233:
 	( m.cs) = 77
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -12263,7 +12271,7 @@ tr233:
 			goto _test_eof77
 		}
 	st_case_77:
-//line plugins/parsers/influx/machine.go:12267
+//line plugins/parsers/influx/machine.go:12275
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -12286,7 +12294,7 @@ tr233:
 		}
 		goto tr223
 tr223:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12296,7 +12304,7 @@ tr223:
 			goto _test_eof78
 		}
 	st_case_78:
-//line plugins/parsers/influx/machine.go:12300
+//line plugins/parsers/influx/machine.go:12308
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -12319,7 +12327,7 @@ tr223:
 		}
 		goto st78
 tr226:
-//line plugins/parsers/influx/machine.go.rl:87
+//line plugins/parsers/influx/machine.go.rl:95
 
 	m.key = m.text()
 
@@ -12329,7 +12337,7 @@ tr226:
 			goto _test_eof79
 		}
 	st_case_79:
-//line plugins/parsers/influx/machine.go:12333
+//line plugins/parsers/influx/machine.go:12341
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -12352,7 +12360,7 @@ tr226:
 		}
 		goto tr228
 tr228:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12362,7 +12370,7 @@ tr228:
 			goto _test_eof80
 		}
 	st_case_80:
-//line plugins/parsers/influx/machine.go:12366
+//line plugins/parsers/influx/machine.go:12374
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -12388,7 +12396,7 @@ tr228:
 		goto st80
 tr232:
 	( m.cs) = 81
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -12404,7 +12412,7 @@ tr232:
 			goto _test_eof81
 		}
 	st_case_81:
-//line plugins/parsers/influx/machine.go:12408
+//line plugins/parsers/influx/machine.go:12416
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -12429,7 +12437,7 @@ tr232:
 		}
 		goto tr235
 tr235:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12439,7 +12447,7 @@ tr235:
 			goto _test_eof82
 		}
 	st_case_82:
-//line plugins/parsers/influx/machine.go:12443
+//line plugins/parsers/influx/machine.go:12451
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -12465,7 +12473,7 @@ tr235:
 		goto st82
 tr239:
 	( m.cs) = 83
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -12478,7 +12486,7 @@ tr239:
 	goto _again
 tr236:
 	( m.cs) = 83
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -12488,7 +12496,7 @@ tr236:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12498,7 +12506,7 @@ tr236:
 			goto _test_eof83
 		}
 	st_case_83:
-//line plugins/parsers/influx/machine.go:12502
+//line plugins/parsers/influx/machine.go:12510
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -12523,7 +12531,7 @@ tr236:
 		}
 		goto tr235
 tr237:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12533,7 +12541,7 @@ tr237:
 			goto _test_eof84
 		}
 	st_case_84:
-//line plugins/parsers/influx/machine.go:12537
+//line plugins/parsers/influx/machine.go:12545
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st82
@@ -12550,14 +12558,14 @@ tr237:
 		}
 		goto st18
 	st85:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof85
 		}
 	st_case_85:
-//line plugins/parsers/influx/machine.go:12561
+//line plugins/parsers/influx/machine.go:12569
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -12582,7 +12590,7 @@ tr237:
 		}
 		goto st82
 tr229:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12592,7 +12600,7 @@ tr229:
 			goto _test_eof86
 		}
 	st_case_86:
-//line plugins/parsers/influx/machine.go:12596
+//line plugins/parsers/influx/machine.go:12604
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st80
@@ -12609,14 +12617,14 @@ tr229:
 		}
 		goto st16
 	st87:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof87
 		}
 	st_case_87:
-//line plugins/parsers/influx/machine.go:12620
+//line plugins/parsers/influx/machine.go:12628
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -12641,7 +12649,7 @@ tr229:
 		}
 		goto st80
 tr224:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12651,7 +12659,7 @@ tr224:
 			goto _test_eof88
 		}
 	st_case_88:
-//line plugins/parsers/influx/machine.go:12655
+//line plugins/parsers/influx/machine.go:12663
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st78
@@ -12668,14 +12676,14 @@ tr224:
 		}
 		goto st14
 	st89:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof89
 		}
 	st_case_89:
-//line plugins/parsers/influx/machine.go:12679
+//line plugins/parsers/influx/machine.go:12687
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -12698,7 +12706,7 @@ tr224:
 		}
 		goto st78
 tr628:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12708,7 +12716,7 @@ tr628:
 			goto _test_eof90
 		}
 	st_case_90:
-//line plugins/parsers/influx/machine.go:12712
+//line plugins/parsers/influx/machine.go:12720
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -12736,7 +12744,7 @@ tr628:
 		}
 		goto st41
 tr629:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12746,7 +12754,7 @@ tr629:
 			goto _test_eof401
 		}
 	st_case_401:
-//line plugins/parsers/influx/machine.go:12750
+//line plugins/parsers/influx/machine.go:12758
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr630
@@ -12775,7 +12783,7 @@ tr629:
 		goto st41
 tr635:
 	( m.cs) = 402
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12788,7 +12796,7 @@ tr635:
 	goto _again
 tr776:
 	( m.cs) = 402
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -12801,7 +12809,7 @@ tr776:
 	goto _again
 tr630:
 	( m.cs) = 402
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12811,7 +12819,7 @@ tr630:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -12824,7 +12832,7 @@ tr630:
 	goto _again
 tr773:
 	( m.cs) = 402
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -12834,7 +12842,7 @@ tr773:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -12850,7 +12858,7 @@ tr773:
 			goto _test_eof402
 		}
 	st_case_402:
-//line plugins/parsers/influx/machine.go:12854
+//line plugins/parsers/influx/machine.go:12862
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st402
@@ -12875,7 +12883,7 @@ tr773:
 		}
 		goto tr94
 tr634:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -12885,7 +12893,7 @@ tr634:
 			goto _test_eof403
 		}
 	st_case_403:
-//line plugins/parsers/influx/machine.go:12889
+//line plugins/parsers/influx/machine.go:12897
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st402
@@ -12911,7 +12919,7 @@ tr634:
 		goto tr94
 tr636:
 	( m.cs) = 404
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12921,14 +12929,14 @@ tr636:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr631:
 	( m.cs) = 404
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -12938,7 +12946,7 @@ tr631:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -12954,7 +12962,7 @@ tr631:
 			goto _test_eof404
 		}
 	st_case_404:
-//line plugins/parsers/influx/machine.go:12958
+//line plugins/parsers/influx/machine.go:12966
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr635
@@ -12979,17 +12987,17 @@ tr631:
 		}
 		goto tr121
 tr129:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
 	goto st91
 tr383:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -12999,7 +13007,7 @@ tr383:
 			goto _test_eof91
 		}
 	st_case_91:
-//line plugins/parsers/influx/machine.go:13003
+//line plugins/parsers/influx/machine.go:13011
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -13040,7 +13048,7 @@ tr383:
 		goto st30
 tr90:
 	( m.cs) = 92
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13053,7 +13061,7 @@ tr90:
 	goto _again
 tr84:
 	( m.cs) = 92
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13063,7 +13071,7 @@ tr84:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13073,7 +13081,7 @@ tr84:
 			goto _test_eof92
 		}
 	st_case_92:
-//line plugins/parsers/influx/machine.go:13077
+//line plugins/parsers/influx/machine.go:13085
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -13098,7 +13106,7 @@ tr84:
 		}
 		goto tr121
 tr125:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13108,7 +13116,7 @@ tr125:
 			goto _test_eof93
 		}
 	st_case_93:
-//line plugins/parsers/influx/machine.go:13112
+//line plugins/parsers/influx/machine.go:13120
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st41
@@ -13125,7 +13133,7 @@ tr125:
 		}
 		goto st11
 tr245:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13135,7 +13143,7 @@ tr245:
 			goto _test_eof94
 		}
 	st_case_94:
-//line plugins/parsers/influx/machine.go:13139
+//line plugins/parsers/influx/machine.go:13147
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -13166,11 +13174,11 @@ tr245:
 		goto st30
 tr85:
 	( m.cs) = 405
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -13183,7 +13191,7 @@ tr85:
 	goto _again
 tr91:
 	( m.cs) = 405
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -13196,7 +13204,7 @@ tr91:
 	goto _again
 tr118:
 	( m.cs) = 405
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -13206,7 +13214,7 @@ tr118:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13216,7 +13224,7 @@ tr118:
 			goto _test_eof405
 		}
 	st_case_405:
-//line plugins/parsers/influx/machine.go:13220
+//line plugins/parsers/influx/machine.go:13228
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -13237,7 +13245,7 @@ tr118:
 		goto st1
 tr637:
 	( m.cs) = 406
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13250,7 +13258,7 @@ tr637:
 	goto _again
 tr818:
 	( m.cs) = 406
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13260,7 +13268,7 @@ tr818:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -13273,7 +13281,7 @@ tr818:
 	goto _again
 tr1013:
 	( m.cs) = 406
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13283,7 +13291,7 @@ tr1013:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -13296,7 +13304,7 @@ tr1013:
 	goto _again
 tr1016:
 	( m.cs) = 406
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13306,7 +13314,7 @@ tr1016:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -13319,7 +13327,7 @@ tr1016:
 	goto _again
 tr1019:
 	( m.cs) = 406
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13329,7 +13337,7 @@ tr1019:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -13345,7 +13353,7 @@ tr1019:
 			goto _test_eof406
 		}
 	st_case_406:
-//line plugins/parsers/influx/machine.go:13349
+//line plugins/parsers/influx/machine.go:13357
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -13374,17 +13382,17 @@ tr1019:
 		}
 		goto tr41
 tr37:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st95
 tr460:
-//line plugins/parsers/influx/machine.go.rl:74
+//line plugins/parsers/influx/machine.go.rl:82
 
 	m.beginMetric = true
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13394,7 +13402,7 @@ tr460:
 			goto _test_eof95
 		}
 	st_case_95:
-//line plugins/parsers/influx/machine.go:13398
+//line plugins/parsers/influx/machine.go:13406
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -13405,7 +13413,7 @@ tr460:
 		}
 		goto st1
 tr246:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13415,7 +13423,7 @@ tr246:
 			goto _test_eof96
 		}
 	st_case_96:
-//line plugins/parsers/influx/machine.go:13419
+//line plugins/parsers/influx/machine.go:13427
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr89
@@ -13475,7 +13483,7 @@ tr246:
 		goto st30
 tr597:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13485,14 +13493,14 @@ tr597:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr643:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13502,7 +13510,7 @@ tr643:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -13515,7 +13523,7 @@ tr643:
 	goto _again
 tr767:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -13525,7 +13533,7 @@ tr767:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -13538,7 +13546,7 @@ tr767:
 	goto _again
 tr801:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -13548,7 +13556,7 @@ tr801:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -13561,7 +13569,7 @@ tr801:
 	goto _again
 tr807:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -13571,7 +13579,7 @@ tr807:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -13584,7 +13592,7 @@ tr807:
 	goto _again
 tr813:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -13594,7 +13602,7 @@ tr813:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -13607,7 +13615,7 @@ tr813:
 	goto _again
 tr826:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13617,7 +13625,7 @@ tr826:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -13630,7 +13638,7 @@ tr826:
 	goto _again
 tr832:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13640,7 +13648,7 @@ tr832:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -13653,7 +13661,7 @@ tr832:
 	goto _again
 tr837:
 	( m.cs) = 97
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -13663,7 +13671,7 @@ tr837:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -13679,7 +13687,7 @@ tr837:
 			goto _test_eof97
 		}
 	st_case_97:
-//line plugins/parsers/influx/machine.go:13683
+//line plugins/parsers/influx/machine.go:13691
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -13702,7 +13710,7 @@ tr837:
 		}
 		goto tr257
 tr257:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13712,7 +13720,7 @@ tr257:
 			goto _test_eof98
 		}
 	st_case_98:
-//line plugins/parsers/influx/machine.go:13716
+//line plugins/parsers/influx/machine.go:13724
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -13736,11 +13744,11 @@ tr257:
 		goto st98
 tr258:
 	( m.cs) = 408
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -13753,7 +13761,7 @@ tr258:
 	goto _again
 tr261:
 	( m.cs) = 408
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -13769,7 +13777,7 @@ tr261:
 			goto _test_eof408
 		}
 	st_case_408:
-//line plugins/parsers/influx/machine.go:13773
+//line plugins/parsers/influx/machine.go:13781
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -13823,7 +13831,7 @@ tr261:
 		}
 		goto st45
 tr646:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13833,7 +13841,7 @@ tr646:
 			goto _test_eof99
 		}
 	st_case_99:
-//line plugins/parsers/influx/machine.go:13837
+//line plugins/parsers/influx/machine.go:13845
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr132
@@ -13858,7 +13866,7 @@ tr646:
 		}
 		goto st45
 tr647:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13868,7 +13876,7 @@ tr647:
 			goto _test_eof410
 		}
 	st_case_410:
-//line plugins/parsers/influx/machine.go:13872
+//line plugins/parsers/influx/machine.go:13880
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr470
@@ -13896,7 +13904,7 @@ tr647:
 		goto st45
 tr648:
 	( m.cs) = 411
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -13912,7 +13920,7 @@ tr648:
 			goto _test_eof411
 		}
 	st_case_411:
-//line plugins/parsers/influx/machine.go:13916
+//line plugins/parsers/influx/machine.go:13924
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -13934,7 +13942,7 @@ tr648:
 		}
 		goto st45
 tr135:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -13944,7 +13952,7 @@ tr135:
 			goto _test_eof100
 		}
 	st_case_100:
-//line plugins/parsers/influx/machine.go:13948
+//line plugins/parsers/influx/machine.go:13956
 		if ( m.data)[( m.p)] == 92 {
 			goto st101
 		}
@@ -13958,14 +13966,14 @@ tr135:
 		}
 		goto st45
 	st101:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof101
 		}
 	st_case_101:
-//line plugins/parsers/influx/machine.go:13969
+//line plugins/parsers/influx/machine.go:13977
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr47
@@ -14521,11 +14529,11 @@ tr135:
 		}
 		goto st45
 tr262:
-//line plugins/parsers/influx/machine.go.rl:87
+//line plugins/parsers/influx/machine.go.rl:95
 
 	m.key = m.text()
 
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -14535,7 +14543,7 @@ tr262:
 			goto _test_eof102
 		}
 	st_case_102:
-//line plugins/parsers/influx/machine.go:14539
+//line plugins/parsers/influx/machine.go:14547
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -14576,11 +14584,11 @@ tr262:
 		goto tr228
 tr266:
 	( m.cs) = 430
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -14596,7 +14604,7 @@ tr266:
 			goto _test_eof430
 		}
 	st_case_430:
-//line plugins/parsers/influx/machine.go:14600
+//line plugins/parsers/influx/machine.go:14608
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr668
@@ -14622,7 +14630,7 @@ tr266:
 		goto tr148
 tr863:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -14635,7 +14643,7 @@ tr863:
 	goto _again
 tr701:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -14648,7 +14656,7 @@ tr701:
 	goto _again
 tr668:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -14658,14 +14666,14 @@ tr668:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr859:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -14675,7 +14683,7 @@ tr859:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -14688,7 +14696,7 @@ tr859:
 	goto _again
 tr729:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -14698,7 +14706,7 @@ tr729:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -14711,7 +14719,7 @@ tr729:
 	goto _again
 tr740:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -14721,7 +14729,7 @@ tr740:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -14734,7 +14742,7 @@ tr740:
 	goto _again
 tr747:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -14744,7 +14752,7 @@ tr747:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -14757,7 +14765,7 @@ tr747:
 	goto _again
 tr754:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -14767,7 +14775,7 @@ tr754:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -14780,7 +14788,7 @@ tr754:
 	goto _again
 tr891:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -14790,7 +14798,7 @@ tr891:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -14803,7 +14811,7 @@ tr891:
 	goto _again
 tr895:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -14813,7 +14821,7 @@ tr895:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -14826,7 +14834,7 @@ tr895:
 	goto _again
 tr899:
 	( m.cs) = 431
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -14836,7 +14844,7 @@ tr899:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -14852,7 +14860,7 @@ tr899:
 			goto _test_eof431
 		}
 	st_case_431:
-//line plugins/parsers/influx/machine.go:14856
+//line plugins/parsers/influx/machine.go:14864
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st431
@@ -14882,7 +14890,7 @@ tr899:
 		}
 		goto tr160
 tr674:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -14892,7 +14900,7 @@ tr674:
 			goto _test_eof432
 		}
 	st_case_432:
-//line plugins/parsers/influx/machine.go:14896
+//line plugins/parsers/influx/machine.go:14904
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st431
@@ -14922,14 +14930,14 @@ tr674:
 		}
 		goto tr160
 tr671:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st103
 tr680:
 	( m.cs) = 103
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -14942,7 +14950,7 @@ tr680:
 	goto _again
 tr536:
 	( m.cs) = 103
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -14955,7 +14963,7 @@ tr536:
 	goto _again
 tr744:
 	( m.cs) = 103
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -14968,7 +14976,7 @@ tr744:
 	goto _again
 tr751:
 	( m.cs) = 103
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -14981,7 +14989,7 @@ tr751:
 	goto _again
 tr758:
 	( m.cs) = 103
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -14997,13 +15005,13 @@ tr758:
 			goto _test_eof103
 		}
 	st_case_103:
-//line plugins/parsers/influx/machine.go:15001
+//line plugins/parsers/influx/machine.go:15009
 		if ( m.data)[( m.p)] == 10 {
 			goto tr275
 		}
 		goto tr8
 tr675:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -15013,7 +15021,7 @@ tr675:
 			goto _test_eof104
 		}
 	st_case_104:
-//line plugins/parsers/influx/machine.go:15017
+//line plugins/parsers/influx/machine.go:15025
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -15039,7 +15047,7 @@ tr675:
 		}
 		goto st50
 tr676:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -15049,7 +15057,7 @@ tr676:
 			goto _test_eof433
 		}
 	st_case_433:
-//line plugins/parsers/influx/machine.go:15053
+//line plugins/parsers/influx/machine.go:15061
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr677
@@ -15078,7 +15086,7 @@ tr676:
 		goto st50
 tr677:
 	( m.cs) = 434
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -15094,7 +15102,7 @@ tr677:
 			goto _test_eof434
 		}
 	st_case_434:
-//line plugins/parsers/influx/machine.go:15098
+//line plugins/parsers/influx/machine.go:15106
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr275
@@ -15115,7 +15123,7 @@ tr677:
 		goto st6
 tr679:
 	( m.cs) = 435
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -15131,7 +15139,7 @@ tr679:
 			goto _test_eof435
 		}
 	st_case_435:
-//line plugins/parsers/influx/machine.go:15135
+//line plugins/parsers/influx/machine.go:15143
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st434
@@ -15156,7 +15164,7 @@ tr679:
 		}
 		goto st50
 tr163:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -15166,7 +15174,7 @@ tr163:
 			goto _test_eof105
 		}
 	st_case_105:
-//line plugins/parsers/influx/machine.go:15170
+//line plugins/parsers/influx/machine.go:15178
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st50
@@ -15739,7 +15747,7 @@ tr163:
 		goto st50
 tr670:
 	( m.cs) = 454
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -15749,14 +15757,14 @@ tr670:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr730:
 	( m.cs) = 454
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -15766,7 +15774,7 @@ tr730:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -15779,7 +15787,7 @@ tr730:
 	goto _again
 tr742:
 	( m.cs) = 454
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -15789,7 +15797,7 @@ tr742:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -15802,7 +15810,7 @@ tr742:
 	goto _again
 tr749:
 	( m.cs) = 454
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -15812,7 +15820,7 @@ tr749:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -15825,7 +15833,7 @@ tr749:
 	goto _again
 tr756:
 	( m.cs) = 454
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -15835,7 +15843,7 @@ tr756:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -15851,7 +15859,7 @@ tr756:
 			goto _test_eof454
 		}
 	st_case_454:
-//line plugins/parsers/influx/machine.go:15855
+//line plugins/parsers/influx/machine.go:15863
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr701
@@ -15882,7 +15890,7 @@ tr756:
 		goto tr202
 tr702:
 	( m.cs) = 455
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -15892,7 +15900,7 @@ tr702:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -15902,7 +15910,7 @@ tr702:
 			goto _test_eof455
 		}
 	st_case_455:
-//line plugins/parsers/influx/machine.go:15906
+//line plugins/parsers/influx/machine.go:15914
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr701
@@ -15932,7 +15940,7 @@ tr702:
 		}
 		goto tr202
 tr703:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -15942,7 +15950,7 @@ tr703:
 			goto _test_eof106
 		}
 	st_case_106:
-//line plugins/parsers/influx/machine.go:15946
+//line plugins/parsers/influx/machine.go:15954
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -15970,7 +15978,7 @@ tr703:
 		}
 		goto st66
 tr704:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -15980,7 +15988,7 @@ tr704:
 			goto _test_eof456
 		}
 	st_case_456:
-//line plugins/parsers/influx/machine.go:15984
+//line plugins/parsers/influx/machine.go:15992
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr705
@@ -16009,7 +16017,7 @@ tr704:
 		goto st66
 tr870:
 	( m.cs) = 457
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -16022,7 +16030,7 @@ tr870:
 	goto _again
 tr710:
 	( m.cs) = 457
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16035,7 +16043,7 @@ tr710:
 	goto _again
 tr867:
 	( m.cs) = 457
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -16045,7 +16053,7 @@ tr867:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -16058,7 +16066,7 @@ tr867:
 	goto _again
 tr705:
 	( m.cs) = 457
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16068,7 +16076,7 @@ tr705:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -16084,7 +16092,7 @@ tr705:
 			goto _test_eof457
 		}
 	st_case_457:
-//line plugins/parsers/influx/machine.go:16088
+//line plugins/parsers/influx/machine.go:16096
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st457
@@ -16109,7 +16117,7 @@ tr705:
 		}
 		goto tr160
 tr709:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -16119,7 +16127,7 @@ tr709:
 			goto _test_eof458
 		}
 	st_case_458:
-//line plugins/parsers/influx/machine.go:16123
+//line plugins/parsers/influx/machine.go:16131
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st457
@@ -16145,7 +16153,7 @@ tr709:
 		goto tr160
 tr711:
 	( m.cs) = 459
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16155,14 +16163,14 @@ tr711:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr706:
 	( m.cs) = 459
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16172,7 +16180,7 @@ tr706:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -16188,7 +16196,7 @@ tr706:
 			goto _test_eof459
 		}
 	st_case_459:
-//line plugins/parsers/influx/machine.go:16192
+//line plugins/parsers/influx/machine.go:16200
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr710
@@ -16769,7 +16777,7 @@ tr706:
 		goto st66
 tr672:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16779,14 +16787,14 @@ tr672:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr861:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -16796,7 +16804,7 @@ tr861:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -16809,7 +16817,7 @@ tr861:
 	goto _again
 tr732:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16819,7 +16827,7 @@ tr732:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -16832,7 +16840,7 @@ tr732:
 	goto _again
 tr745:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16842,7 +16850,7 @@ tr745:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -16855,7 +16863,7 @@ tr745:
 	goto _again
 tr752:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16865,7 +16873,7 @@ tr752:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -16878,7 +16886,7 @@ tr752:
 	goto _again
 tr759:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -16888,7 +16896,7 @@ tr759:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -16901,7 +16909,7 @@ tr759:
 	goto _again
 tr893:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -16911,7 +16919,7 @@ tr893:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -16924,7 +16932,7 @@ tr893:
 	goto _again
 tr897:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -16934,7 +16942,7 @@ tr897:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -16947,7 +16955,7 @@ tr897:
 	goto _again
 tr902:
 	( m.cs) = 107
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -16957,7 +16965,7 @@ tr902:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -16973,7 +16981,7 @@ tr902:
 			goto _test_eof107
 		}
 	st_case_107:
-//line plugins/parsers/influx/machine.go:16977
+//line plugins/parsers/influx/machine.go:16985
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -16996,7 +17004,7 @@ tr902:
 		}
 		goto tr278
 tr278:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17006,7 +17014,7 @@ tr278:
 			goto _test_eof108
 		}
 	st_case_108:
-//line plugins/parsers/influx/machine.go:17010
+//line plugins/parsers/influx/machine.go:17018
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -17029,11 +17037,11 @@ tr278:
 		}
 		goto st108
 tr281:
-//line plugins/parsers/influx/machine.go.rl:87
+//line plugins/parsers/influx/machine.go.rl:95
 
 	m.key = m.text()
 
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -17043,7 +17051,7 @@ tr281:
 			goto _test_eof109
 		}
 	st_case_109:
-//line plugins/parsers/influx/machine.go:17047
+//line plugins/parsers/influx/machine.go:17055
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -17083,7 +17091,7 @@ tr281:
 		}
 		goto tr148
 tr283:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17093,7 +17101,7 @@ tr283:
 			goto _test_eof110
 		}
 	st_case_110:
-//line plugins/parsers/influx/machine.go:17097
+//line plugins/parsers/influx/machine.go:17105
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -17125,7 +17133,7 @@ tr283:
 		}
 		goto st48
 tr284:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17135,7 +17143,7 @@ tr284:
 			goto _test_eof111
 		}
 	st_case_111:
-//line plugins/parsers/influx/machine.go:17139
+//line plugins/parsers/influx/machine.go:17147
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr155
@@ -17235,7 +17243,7 @@ tr284:
 		goto st48
 tr295:
 	( m.cs) = 479
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -17251,7 +17259,7 @@ tr295:
 			goto _test_eof479
 		}
 	st_case_479:
-//line plugins/parsers/influx/machine.go:17255
+//line plugins/parsers/influx/machine.go:17263
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -17513,7 +17521,7 @@ tr295:
 		}
 		goto st48
 tr285:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17523,7 +17531,7 @@ tr285:
 			goto _test_eof486
 		}
 	st_case_486:
-//line plugins/parsers/influx/machine.go:17527
+//line plugins/parsers/influx/machine.go:17535
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr729
@@ -17589,7 +17597,7 @@ tr285:
 		}
 		goto st48
 tr286:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17599,7 +17607,7 @@ tr286:
 			goto _test_eof488
 		}
 	st_case_488:
-//line plugins/parsers/influx/machine.go:17603
+//line plugins/parsers/influx/machine.go:17611
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr729
@@ -17637,7 +17645,7 @@ tr286:
 		}
 		goto st48
 tr287:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17647,7 +17655,7 @@ tr287:
 			goto _test_eof489
 		}
 	st_case_489:
-//line plugins/parsers/influx/machine.go:17651
+//line plugins/parsers/influx/machine.go:17659
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr754
@@ -17884,7 +17892,7 @@ tr287:
 		}
 		goto st48
 tr288:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17894,7 +17902,7 @@ tr288:
 			goto _test_eof491
 		}
 	st_case_491:
-//line plugins/parsers/influx/machine.go:17898
+//line plugins/parsers/influx/machine.go:17906
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr754
@@ -17983,7 +17991,7 @@ tr288:
 		}
 		goto st48
 tr289:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -17993,7 +18001,7 @@ tr289:
 			goto _test_eof492
 		}
 	st_case_492:
-//line plugins/parsers/influx/machine.go:17997
+//line plugins/parsers/influx/machine.go:18005
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr754
@@ -18020,7 +18028,7 @@ tr289:
 		}
 		goto st48
 tr290:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -18030,7 +18038,7 @@ tr290:
 			goto _test_eof493
 		}
 	st_case_493:
-//line plugins/parsers/influx/machine.go:18034
+//line plugins/parsers/influx/machine.go:18042
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr754
@@ -18057,7 +18065,7 @@ tr290:
 		}
 		goto st48
 tr279:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -18067,7 +18075,7 @@ tr279:
 			goto _test_eof122
 		}
 	st_case_122:
-//line plugins/parsers/influx/machine.go:18071
+//line plugins/parsers/influx/machine.go:18079
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st108
@@ -18084,14 +18092,14 @@ tr279:
 		}
 		goto st45
 	st123:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof123
 		}
 	st_case_123:
-//line plugins/parsers/influx/machine.go:18095
+//line plugins/parsers/influx/machine.go:18103
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -18114,7 +18122,7 @@ tr279:
 		}
 		goto st108
 tr267:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -18124,7 +18132,7 @@ tr267:
 			goto _test_eof124
 		}
 	st_case_124:
-//line plugins/parsers/influx/machine.go:18128
+//line plugins/parsers/influx/machine.go:18136
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -18156,7 +18164,7 @@ tr267:
 		}
 		goto st80
 tr268:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -18166,7 +18174,7 @@ tr268:
 			goto _test_eof125
 		}
 	st_case_125:
-//line plugins/parsers/influx/machine.go:18170
+//line plugins/parsers/influx/machine.go:18178
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -18230,7 +18238,7 @@ tr268:
 		goto st80
 tr766:
 	( m.cs) = 495
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -18240,7 +18248,7 @@ tr766:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -18253,7 +18261,7 @@ tr766:
 	goto _again
 tr799:
 	( m.cs) = 495
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -18263,7 +18271,7 @@ tr799:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -18276,7 +18284,7 @@ tr799:
 	goto _again
 tr805:
 	( m.cs) = 495
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -18286,7 +18294,7 @@ tr805:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -18299,7 +18307,7 @@ tr805:
 	goto _again
 tr811:
 	( m.cs) = 495
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -18309,7 +18317,7 @@ tr811:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -18325,7 +18333,7 @@ tr811:
 			goto _test_eof495
 		}
 	st_case_495:
-//line plugins/parsers/influx/machine.go:18329
+//line plugins/parsers/influx/machine.go:18337
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr769
@@ -18356,7 +18364,7 @@ tr811:
 		goto tr235
 tr770:
 	( m.cs) = 496
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -18366,7 +18374,7 @@ tr770:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -18376,7 +18384,7 @@ tr770:
 			goto _test_eof496
 		}
 	st_case_496:
-//line plugins/parsers/influx/machine.go:18380
+//line plugins/parsers/influx/machine.go:18388
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr769
@@ -18406,7 +18414,7 @@ tr770:
 		}
 		goto tr235
 tr771:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -18416,7 +18424,7 @@ tr771:
 			goto _test_eof126
 		}
 	st_case_126:
-//line plugins/parsers/influx/machine.go:18420
+//line plugins/parsers/influx/machine.go:18428
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr231
@@ -18444,7 +18452,7 @@ tr771:
 		}
 		goto st82
 tr772:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -18454,7 +18462,7 @@ tr772:
 			goto _test_eof497
 		}
 	st_case_497:
-//line plugins/parsers/influx/machine.go:18458
+//line plugins/parsers/influx/machine.go:18466
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr773
@@ -18483,7 +18491,7 @@ tr772:
 		goto st82
 tr777:
 	( m.cs) = 498
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -18493,14 +18501,14 @@ tr777:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr774:
 	( m.cs) = 498
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -18510,7 +18518,7 @@ tr774:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -18526,7 +18534,7 @@ tr774:
 			goto _test_eof498
 		}
 	st_case_498:
-//line plugins/parsers/influx/machine.go:18530
+//line plugins/parsers/influx/machine.go:18538
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr776
@@ -19347,7 +19355,7 @@ tr774:
 		}
 		goto st80
 tr269:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -19357,7 +19365,7 @@ tr269:
 			goto _test_eof522
 		}
 	st_case_522:
-//line plugins/parsers/influx/machine.go:19361
+//line plugins/parsers/influx/machine.go:19369
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr764
@@ -19423,7 +19431,7 @@ tr269:
 		}
 		goto st80
 tr270:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -19433,7 +19441,7 @@ tr270:
 			goto _test_eof524
 		}
 	st_case_524:
-//line plugins/parsers/influx/machine.go:19437
+//line plugins/parsers/influx/machine.go:19445
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr764
@@ -19471,7 +19479,7 @@ tr270:
 		}
 		goto st80
 tr271:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -19481,7 +19489,7 @@ tr271:
 			goto _test_eof525
 		}
 	st_case_525:
-//line plugins/parsers/influx/machine.go:19485
+//line plugins/parsers/influx/machine.go:19493
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr809
@@ -19718,7 +19726,7 @@ tr271:
 		}
 		goto st80
 tr272:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -19728,7 +19736,7 @@ tr272:
 			goto _test_eof527
 		}
 	st_case_527:
-//line plugins/parsers/influx/machine.go:19732
+//line plugins/parsers/influx/machine.go:19740
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr809
@@ -19817,7 +19825,7 @@ tr272:
 		}
 		goto st80
 tr273:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -19827,7 +19835,7 @@ tr273:
 			goto _test_eof528
 		}
 	st_case_528:
-//line plugins/parsers/influx/machine.go:19831
+//line plugins/parsers/influx/machine.go:19839
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr809
@@ -19854,7 +19862,7 @@ tr273:
 		}
 		goto st80
 tr274:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -19864,7 +19872,7 @@ tr274:
 			goto _test_eof529
 		}
 	st_case_529:
-//line plugins/parsers/influx/machine.go:19868
+//line plugins/parsers/influx/machine.go:19876
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr809
@@ -19891,7 +19899,7 @@ tr274:
 		}
 		goto st80
 tr259:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -19901,7 +19909,7 @@ tr259:
 			goto _test_eof137
 		}
 	st_case_137:
-//line plugins/parsers/influx/machine.go:19905
+//line plugins/parsers/influx/machine.go:19913
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st98
@@ -19918,14 +19926,14 @@ tr259:
 		}
 		goto st45
 	st138:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof138
 		}
 	st_case_138:
-//line plugins/parsers/influx/machine.go:19929
+//line plugins/parsers/influx/machine.go:19937
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -19983,7 +19991,7 @@ tr259:
 		goto st30
 tr317:
 	( m.cs) = 530
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -19999,7 +20007,7 @@ tr317:
 			goto _test_eof530
 		}
 	st_case_530:
-//line plugins/parsers/influx/machine.go:20003
+//line plugins/parsers/influx/machine.go:20011
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -20110,7 +20118,7 @@ tr317:
 		}
 		goto st30
 tr87:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -20120,7 +20128,7 @@ tr87:
 			goto _test_eof141
 		}
 	st_case_141:
-//line plugins/parsers/influx/machine.go:20124
+//line plugins/parsers/influx/machine.go:20132
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st30
@@ -20272,7 +20280,7 @@ tr87:
 		}
 		goto st30
 tr247:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -20282,7 +20290,7 @@ tr247:
 			goto _test_eof537
 		}
 	st_case_537:
-//line plugins/parsers/influx/machine.go:20286
+//line plugins/parsers/influx/machine.go:20294
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr638
@@ -20344,7 +20352,7 @@ tr247:
 		}
 		goto st30
 tr248:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -20354,7 +20362,7 @@ tr248:
 			goto _test_eof539
 		}
 	st_case_539:
-//line plugins/parsers/influx/machine.go:20358
+//line plugins/parsers/influx/machine.go:20366
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr638
@@ -20390,7 +20398,7 @@ tr248:
 		}
 		goto st30
 tr249:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -20400,7 +20408,7 @@ tr249:
 			goto _test_eof540
 		}
 	st_case_540:
-//line plugins/parsers/influx/machine.go:20404
+//line plugins/parsers/influx/machine.go:20412
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr834
@@ -20621,7 +20629,7 @@ tr249:
 		}
 		goto st30
 tr250:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -20631,7 +20639,7 @@ tr250:
 			goto _test_eof542
 		}
 	st_case_542:
-//line plugins/parsers/influx/machine.go:20635
+//line plugins/parsers/influx/machine.go:20643
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr834
@@ -20714,7 +20722,7 @@ tr250:
 		}
 		goto st30
 tr251:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -20724,7 +20732,7 @@ tr251:
 			goto _test_eof543
 		}
 	st_case_543:
-//line plugins/parsers/influx/machine.go:20728
+//line plugins/parsers/influx/machine.go:20736
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr834
@@ -20749,7 +20757,7 @@ tr251:
 		}
 		goto st30
 tr252:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -20759,7 +20767,7 @@ tr252:
 			goto _test_eof544
 		}
 	st_case_544:
-//line plugins/parsers/influx/machine.go:20763
+//line plugins/parsers/influx/machine.go:20771
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr834
@@ -21339,7 +21347,7 @@ tr252:
 		}
 		goto st41
 tr213:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -21349,7 +21357,7 @@ tr213:
 			goto _test_eof150
 		}
 	st_case_150:
-//line plugins/parsers/influx/machine.go:21353
+//line plugins/parsers/influx/machine.go:21361
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -21379,7 +21387,7 @@ tr213:
 		}
 		goto st54
 tr214:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -21389,7 +21397,7 @@ tr214:
 			goto _test_eof151
 		}
 	st_case_151:
-//line plugins/parsers/influx/machine.go:21393
+//line plugins/parsers/influx/machine.go:21401
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -21449,7 +21457,7 @@ tr214:
 		goto st54
 tr860:
 	( m.cs) = 564
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -21459,7 +21467,7 @@ tr860:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -21472,7 +21480,7 @@ tr860:
 	goto _again
 tr892:
 	( m.cs) = 564
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -21482,7 +21490,7 @@ tr892:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -21495,7 +21503,7 @@ tr892:
 	goto _again
 tr896:
 	( m.cs) = 564
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -21505,7 +21513,7 @@ tr896:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -21518,7 +21526,7 @@ tr896:
 	goto _again
 tr901:
 	( m.cs) = 564
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -21528,7 +21536,7 @@ tr901:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -21544,7 +21552,7 @@ tr901:
 			goto _test_eof564
 		}
 	st_case_564:
-//line plugins/parsers/influx/machine.go:21548
+//line plugins/parsers/influx/machine.go:21556
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr863
@@ -21575,7 +21583,7 @@ tr901:
 		goto tr184
 tr864:
 	( m.cs) = 565
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -21585,7 +21593,7 @@ tr864:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -21595,7 +21603,7 @@ tr864:
 			goto _test_eof565
 		}
 	st_case_565:
-//line plugins/parsers/influx/machine.go:21599
+//line plugins/parsers/influx/machine.go:21607
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr863
@@ -21625,7 +21633,7 @@ tr864:
 		}
 		goto tr184
 tr865:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -21635,7 +21643,7 @@ tr865:
 			goto _test_eof152
 		}
 	st_case_152:
-//line plugins/parsers/influx/machine.go:21639
+//line plugins/parsers/influx/machine.go:21647
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr180
@@ -21663,7 +21671,7 @@ tr865:
 		}
 		goto st56
 tr866:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -21673,7 +21681,7 @@ tr866:
 			goto _test_eof566
 		}
 	st_case_566:
-//line plugins/parsers/influx/machine.go:21677
+//line plugins/parsers/influx/machine.go:21685
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr867
@@ -21702,7 +21710,7 @@ tr866:
 		goto st56
 tr871:
 	( m.cs) = 567
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -21712,14 +21720,14 @@ tr871:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto _again
 tr868:
 	( m.cs) = 567
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -21729,7 +21737,7 @@ tr868:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -21745,7 +21753,7 @@ tr868:
 			goto _test_eof567
 		}
 	st_case_567:
-//line plugins/parsers/influx/machine.go:21749
+//line plugins/parsers/influx/machine.go:21757
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr870
@@ -21770,7 +21778,7 @@ tr868:
 		}
 		goto tr184
 tr186:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -21780,7 +21788,7 @@ tr186:
 			goto _test_eof153
 		}
 	st_case_153:
-//line plugins/parsers/influx/machine.go:21784
+//line plugins/parsers/influx/machine.go:21792
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st56
@@ -22444,7 +22452,7 @@ tr186:
 		}
 		goto st54
 tr340:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -22454,7 +22462,7 @@ tr340:
 			goto _test_eof156
 		}
 	st_case_156:
-//line plugins/parsers/influx/machine.go:22458
+//line plugins/parsers/influx/machine.go:22466
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st54
@@ -22606,7 +22614,7 @@ tr340:
 		}
 		goto st54
 tr215:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -22616,7 +22624,7 @@ tr215:
 			goto _test_eof591
 		}
 	st_case_591:
-//line plugins/parsers/influx/machine.go:22620
+//line plugins/parsers/influx/machine.go:22628
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr859
@@ -22678,7 +22686,7 @@ tr215:
 		}
 		goto st54
 tr216:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -22688,7 +22696,7 @@ tr216:
 			goto _test_eof593
 		}
 	st_case_593:
-//line plugins/parsers/influx/machine.go:22692
+//line plugins/parsers/influx/machine.go:22700
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr859
@@ -22724,7 +22732,7 @@ tr216:
 		}
 		goto st54
 tr217:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -22734,7 +22742,7 @@ tr217:
 			goto _test_eof594
 		}
 	st_case_594:
-//line plugins/parsers/influx/machine.go:22738
+//line plugins/parsers/influx/machine.go:22746
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr899
@@ -22955,7 +22963,7 @@ tr217:
 		}
 		goto st54
 tr218:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -22965,7 +22973,7 @@ tr218:
 			goto _test_eof596
 		}
 	st_case_596:
-//line plugins/parsers/influx/machine.go:22969
+//line plugins/parsers/influx/machine.go:22977
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr899
@@ -23048,7 +23056,7 @@ tr218:
 		}
 		goto st54
 tr219:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -23058,7 +23066,7 @@ tr219:
 			goto _test_eof597
 		}
 	st_case_597:
-//line plugins/parsers/influx/machine.go:23062
+//line plugins/parsers/influx/machine.go:23070
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr899
@@ -23083,7 +23091,7 @@ tr219:
 		}
 		goto st54
 tr220:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -23093,7 +23101,7 @@ tr220:
 			goto _test_eof598
 		}
 	st_case_598:
-//line plugins/parsers/influx/machine.go:23097
+//line plugins/parsers/influx/machine.go:23105
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr899
@@ -23146,7 +23154,7 @@ tr220:
 		}
 		goto tr337
 tr339:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -23156,7 +23164,7 @@ tr339:
 			goto _test_eof166
 		}
 	st_case_166:
-//line plugins/parsers/influx/machine.go:23160
+//line plugins/parsers/influx/machine.go:23168
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr341
@@ -23182,7 +23190,7 @@ tr339:
 		goto tr337
 tr341:
 	( m.cs) = 167
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -23198,7 +23206,7 @@ tr341:
 			goto _test_eof167
 		}
 	st_case_167:
-//line plugins/parsers/influx/machine.go:23202
+//line plugins/parsers/influx/machine.go:23210
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st167
@@ -23225,18 +23233,18 @@ tr341:
 		}
 		goto tr184
 tr344:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st168
 tr345:
 	( m.cs) = 168
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -23252,7 +23260,7 @@ tr345:
 			goto _test_eof168
 		}
 	st_case_168:
-//line plugins/parsers/influx/machine.go:23256
+//line plugins/parsers/influx/machine.go:23264
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr341
@@ -23278,11 +23286,11 @@ tr345:
 		goto tr184
 tr342:
 	( m.cs) = 169
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -23298,7 +23306,7 @@ tr342:
 			goto _test_eof169
 		}
 	st_case_169:
-//line plugins/parsers/influx/machine.go:23302
+//line plugins/parsers/influx/machine.go:23310
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr341
@@ -23323,7 +23331,7 @@ tr342:
 		}
 		goto tr184
 tr541:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -23333,7 +23341,7 @@ tr541:
 			goto _test_eof170
 		}
 	st_case_170:
-//line plugins/parsers/influx/machine.go:23337
+//line plugins/parsers/influx/machine.go:23345
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -23351,7 +23359,7 @@ tr541:
 		}
 		goto st6
 tr542:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -23361,7 +23369,7 @@ tr542:
 			goto _test_eof599
 		}
 	st_case_599:
-//line plugins/parsers/influx/machine.go:23365
+//line plugins/parsers/influx/machine.go:23373
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr678
@@ -23885,14 +23893,14 @@ tr542:
 		}
 		goto st6
 tr926:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st171
 tr537:
 	( m.cs) = 171
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -23905,7 +23913,7 @@ tr537:
 	goto _again
 tr933:
 	( m.cs) = 171
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -23918,7 +23926,7 @@ tr933:
 	goto _again
 tr936:
 	( m.cs) = 171
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -23931,7 +23939,7 @@ tr936:
 	goto _again
 tr940:
 	( m.cs) = 171
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -23947,7 +23955,7 @@ tr940:
 			goto _test_eof171
 		}
 	st_case_171:
-//line plugins/parsers/influx/machine.go:23951
+//line plugins/parsers/influx/machine.go:23959
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -23970,7 +23978,7 @@ tr940:
 		}
 		goto tr348
 tr348:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -23980,7 +23988,7 @@ tr348:
 			goto _test_eof172
 		}
 	st_case_172:
-//line plugins/parsers/influx/machine.go:23984
+//line plugins/parsers/influx/machine.go:23992
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -24003,7 +24011,7 @@ tr348:
 		}
 		goto st172
 tr351:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -24013,7 +24021,7 @@ tr351:
 			goto _test_eof173
 		}
 	st_case_173:
-//line plugins/parsers/influx/machine.go:24017
+//line plugins/parsers/influx/machine.go:24025
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -24046,7 +24054,7 @@ tr351:
 		goto st6
 tr353:
 	( m.cs) = 618
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -24062,7 +24070,7 @@ tr353:
 			goto _test_eof618
 		}
 	st_case_618:
-//line plugins/parsers/influx/machine.go:24066
+//line plugins/parsers/influx/machine.go:24074
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr669
@@ -24084,7 +24092,7 @@ tr353:
 		}
 		goto tr23
 tr169:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24094,7 +24102,7 @@ tr169:
 			goto _test_eof619
 		}
 	st_case_619:
-//line plugins/parsers/influx/machine.go:24098
+//line plugins/parsers/influx/machine.go:24106
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr534
@@ -24193,7 +24201,7 @@ tr169:
 		goto st6
 tr358:
 	( m.cs) = 621
-//line plugins/parsers/influx/machine.go.rl:140
+//line plugins/parsers/influx/machine.go.rl:148
 
 	err = m.handler.AddString(m.key, m.text())
 	if err != nil {
@@ -24209,7 +24217,7 @@ tr358:
 			goto _test_eof621
 		}
 	st_case_621:
-//line plugins/parsers/influx/machine.go:24213
+//line plugins/parsers/influx/machine.go:24221
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr103
@@ -24355,7 +24363,7 @@ tr358:
 		}
 		goto st6
 tr170:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24365,7 +24373,7 @@ tr170:
 			goto _test_eof626
 		}
 	st_case_626:
-//line plugins/parsers/influx/machine.go:24369
+//line plugins/parsers/influx/machine.go:24377
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr534
@@ -24402,7 +24410,7 @@ tr170:
 		}
 		goto st6
 tr354:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24412,7 +24420,7 @@ tr354:
 			goto _test_eof627
 		}
 	st_case_627:
-//line plugins/parsers/influx/machine.go:24416
+//line plugins/parsers/influx/machine.go:24424
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr755
@@ -24583,7 +24591,7 @@ tr354:
 		}
 		goto st6
 tr355:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24593,7 +24601,7 @@ tr355:
 			goto _test_eof629
 		}
 	st_case_629:
-//line plugins/parsers/influx/machine.go:24597
+//line plugins/parsers/influx/machine.go:24605
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr755
@@ -24659,7 +24667,7 @@ tr355:
 		}
 		goto st6
 tr356:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24669,7 +24677,7 @@ tr356:
 			goto _test_eof630
 		}
 	st_case_630:
-//line plugins/parsers/influx/machine.go:24673
+//line plugins/parsers/influx/machine.go:24681
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr755
@@ -24693,7 +24701,7 @@ tr356:
 		}
 		goto st6
 tr357:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24703,7 +24711,7 @@ tr357:
 			goto _test_eof631
 		}
 	st_case_631:
-//line plugins/parsers/influx/machine.go:24707
+//line plugins/parsers/influx/machine.go:24715
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr755
@@ -24727,7 +24735,7 @@ tr357:
 		}
 		goto st6
 tr349:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24737,7 +24745,7 @@ tr349:
 			goto _test_eof184
 		}
 	st_case_184:
-//line plugins/parsers/influx/machine.go:24741
+//line plugins/parsers/influx/machine.go:24749
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st172
@@ -24830,7 +24838,7 @@ tr349:
 		}
 		goto st6
 tr171:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -24840,7 +24848,7 @@ tr171:
 			goto _test_eof634
 		}
 	st_case_634:
-//line plugins/parsers/influx/machine.go:24844
+//line plugins/parsers/influx/machine.go:24852
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr900
@@ -25011,7 +25019,7 @@ tr171:
 		}
 		goto st6
 tr172:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25021,7 +25029,7 @@ tr172:
 			goto _test_eof636
 		}
 	st_case_636:
-//line plugins/parsers/influx/machine.go:25025
+//line plugins/parsers/influx/machine.go:25033
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr900
@@ -25087,7 +25095,7 @@ tr172:
 		}
 		goto st6
 tr173:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25097,7 +25105,7 @@ tr173:
 			goto _test_eof637
 		}
 	st_case_637:
-//line plugins/parsers/influx/machine.go:25101
+//line plugins/parsers/influx/machine.go:25109
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr900
@@ -25121,7 +25129,7 @@ tr173:
 		}
 		goto st6
 tr174:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25131,7 +25139,7 @@ tr174:
 			goto _test_eof638
 		}
 	st_case_638:
-//line plugins/parsers/influx/machine.go:25135
+//line plugins/parsers/influx/machine.go:25143
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr900
@@ -25155,7 +25163,7 @@ tr174:
 		}
 		goto st6
 tr162:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25165,7 +25173,7 @@ tr162:
 			goto _test_eof193
 		}
 	st_case_193:
-//line plugins/parsers/influx/machine.go:25169
+//line plugins/parsers/influx/machine.go:25177
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st49
@@ -25190,7 +25198,7 @@ tr162:
 		}
 		goto tr160
 tr140:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25200,7 +25208,7 @@ tr140:
 			goto _test_eof194
 		}
 	st_case_194:
-//line plugins/parsers/influx/machine.go:25204
+//line plugins/parsers/influx/machine.go:25212
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -25231,7 +25239,7 @@ tr140:
 		}
 		goto st16
 tr141:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25241,7 +25249,7 @@ tr141:
 			goto _test_eof195
 		}
 	st_case_195:
-//line plugins/parsers/influx/machine.go:25245
+//line plugins/parsers/influx/machine.go:25253
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -25505,7 +25513,7 @@ tr141:
 		}
 		goto st16
 tr142:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25515,7 +25523,7 @@ tr142:
 			goto _test_eof644
 		}
 	st_case_644:
-//line plugins/parsers/influx/machine.go:25519
+//line plugins/parsers/influx/machine.go:25527
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr734
@@ -25577,7 +25585,7 @@ tr142:
 		}
 		goto st16
 tr143:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25587,7 +25595,7 @@ tr143:
 			goto _test_eof646
 		}
 	st_case_646:
-//line plugins/parsers/influx/machine.go:25591
+//line plugins/parsers/influx/machine.go:25599
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr734
@@ -25624,7 +25632,7 @@ tr143:
 		}
 		goto st16
 tr144:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25634,7 +25642,7 @@ tr144:
 			goto _test_eof647
 		}
 	st_case_647:
-//line plugins/parsers/influx/machine.go:25638
+//line plugins/parsers/influx/machine.go:25646
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -25847,7 +25855,7 @@ tr144:
 		}
 		goto st16
 tr145:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25857,7 +25865,7 @@ tr145:
 			goto _test_eof649
 		}
 	st_case_649:
-//line plugins/parsers/influx/machine.go:25861
+//line plugins/parsers/influx/machine.go:25869
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -25937,7 +25945,7 @@ tr145:
 		}
 		goto st16
 tr146:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25947,7 +25955,7 @@ tr146:
 			goto _test_eof650
 		}
 	st_case_650:
-//line plugins/parsers/influx/machine.go:25951
+//line plugins/parsers/influx/machine.go:25959
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -25971,7 +25979,7 @@ tr146:
 		}
 		goto st16
 tr147:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -25981,7 +25989,7 @@ tr147:
 			goto _test_eof651
 		}
 	st_case_651:
-//line plugins/parsers/influx/machine.go:25985
+//line plugins/parsers/influx/machine.go:25993
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -26005,18 +26013,18 @@ tr147:
 		}
 		goto st16
 tr123:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st206
 tr382:
 	( m.cs) = 206
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -26032,7 +26040,7 @@ tr382:
 			goto _test_eof206
 		}
 	st_case_206:
-//line plugins/parsers/influx/machine.go:26036
+//line plugins/parsers/influx/machine.go:26044
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr119
@@ -26058,11 +26066,11 @@ tr382:
 		goto tr121
 tr120:
 	( m.cs) = 207
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -26078,7 +26086,7 @@ tr120:
 			goto _test_eof207
 		}
 	st_case_207:
-//line plugins/parsers/influx/machine.go:26082
+//line plugins/parsers/influx/machine.go:26090
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr119
@@ -26103,7 +26111,7 @@ tr120:
 		}
 		goto tr121
 tr499:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -26113,7 +26121,7 @@ tr499:
 			goto _test_eof208
 		}
 	st_case_208:
-//line plugins/parsers/influx/machine.go:26117
+//line plugins/parsers/influx/machine.go:26125
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -26131,7 +26139,7 @@ tr499:
 		}
 		goto st6
 tr500:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -26141,7 +26149,7 @@ tr500:
 			goto _test_eof652
 		}
 	st_case_652:
-//line plugins/parsers/influx/machine.go:26145
+//line plugins/parsers/influx/machine.go:26153
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr603
@@ -26665,14 +26673,14 @@ tr500:
 		}
 		goto st6
 tr496:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st209
 tr989:
 	( m.cs) = 209
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -26685,7 +26693,7 @@ tr989:
 	goto _again
 tr994:
 	( m.cs) = 209
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -26698,7 +26706,7 @@ tr994:
 	goto _again
 tr997:
 	( m.cs) = 209
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -26711,7 +26719,7 @@ tr997:
 	goto _again
 tr1000:
 	( m.cs) = 209
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -26727,7 +26735,7 @@ tr1000:
 			goto _test_eof209
 		}
 	st_case_209:
-//line plugins/parsers/influx/machine.go:26731
+//line plugins/parsers/influx/machine.go:26739
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -26750,7 +26758,7 @@ tr1000:
 		}
 		goto tr385
 tr385:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -26760,7 +26768,7 @@ tr385:
 			goto _test_eof210
 		}
 	st_case_210:
-//line plugins/parsers/influx/machine.go:26764
+//line plugins/parsers/influx/machine.go:26772
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st6
@@ -26783,7 +26791,7 @@ tr385:
 		}
 		goto st210
 tr389:
-//line plugins/parsers/influx/machine.go.rl:100
+//line plugins/parsers/influx/machine.go.rl:108
 
 	m.key = m.text()
 
@@ -26793,7 +26801,7 @@ tr389:
 			goto _test_eof211
 		}
 	st_case_211:
-//line plugins/parsers/influx/machine.go:26797
+//line plugins/parsers/influx/machine.go:26805
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -26825,7 +26833,7 @@ tr389:
 		}
 		goto st6
 tr391:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -26835,7 +26843,7 @@ tr391:
 			goto _test_eof212
 		}
 	st_case_212:
-//line plugins/parsers/influx/machine.go:26839
+//line plugins/parsers/influx/machine.go:26847
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -26857,7 +26865,7 @@ tr391:
 		}
 		goto st6
 tr392:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -26867,7 +26875,7 @@ tr392:
 			goto _test_eof213
 		}
 	st_case_213:
-//line plugins/parsers/influx/machine.go:26871
+//line plugins/parsers/influx/machine.go:26879
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -27132,7 +27140,7 @@ tr392:
 		}
 		goto st6
 tr393:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27142,7 +27150,7 @@ tr393:
 			goto _test_eof677
 		}
 	st_case_677:
-//line plugins/parsers/influx/machine.go:27146
+//line plugins/parsers/influx/machine.go:27154
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr765
@@ -27204,7 +27212,7 @@ tr393:
 		}
 		goto st6
 tr394:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27214,7 +27222,7 @@ tr394:
 			goto _test_eof679
 		}
 	st_case_679:
-//line plugins/parsers/influx/machine.go:27218
+//line plugins/parsers/influx/machine.go:27226
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr765
@@ -27251,7 +27259,7 @@ tr394:
 		}
 		goto st6
 tr112:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27261,7 +27269,7 @@ tr112:
 			goto _test_eof680
 		}
 	st_case_680:
-//line plugins/parsers/influx/machine.go:27265
+//line plugins/parsers/influx/machine.go:27273
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr810
@@ -27432,7 +27440,7 @@ tr112:
 		}
 		goto st6
 tr113:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27442,7 +27450,7 @@ tr113:
 			goto _test_eof682
 		}
 	st_case_682:
-//line plugins/parsers/influx/machine.go:27446
+//line plugins/parsers/influx/machine.go:27454
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr810
@@ -27508,7 +27516,7 @@ tr113:
 		}
 		goto st6
 tr114:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27518,7 +27526,7 @@ tr114:
 			goto _test_eof683
 		}
 	st_case_683:
-//line plugins/parsers/influx/machine.go:27522
+//line plugins/parsers/influx/machine.go:27530
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr810
@@ -27542,7 +27550,7 @@ tr114:
 		}
 		goto st6
 tr115:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27552,7 +27560,7 @@ tr115:
 			goto _test_eof684
 		}
 	st_case_684:
-//line plugins/parsers/influx/machine.go:27556
+//line plugins/parsers/influx/machine.go:27564
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr810
@@ -27576,7 +27584,7 @@ tr115:
 		}
 		goto st6
 tr387:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27586,7 +27594,7 @@ tr387:
 			goto _test_eof224
 		}
 	st_case_224:
-//line plugins/parsers/influx/machine.go:27590
+//line plugins/parsers/influx/machine.go:27598
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st210
@@ -27603,7 +27611,7 @@ tr387:
 		}
 		goto st3
 tr108:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27613,7 +27621,7 @@ tr108:
 			goto _test_eof225
 		}
 	st_case_225:
-//line plugins/parsers/influx/machine.go:27617
+//line plugins/parsers/influx/machine.go:27625
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -27635,7 +27643,7 @@ tr108:
 		}
 		goto st6
 tr109:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27645,7 +27653,7 @@ tr109:
 			goto _test_eof226
 		}
 	st_case_226:
-//line plugins/parsers/influx/machine.go:27649
+//line plugins/parsers/influx/machine.go:27657
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr29
@@ -27910,7 +27918,7 @@ tr109:
 		}
 		goto st6
 tr110:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27920,7 +27928,7 @@ tr110:
 			goto _test_eof691
 		}
 	st_case_691:
-//line plugins/parsers/influx/machine.go:27924
+//line plugins/parsers/influx/machine.go:27932
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr639
@@ -27982,7 +27990,7 @@ tr110:
 		}
 		goto st6
 tr111:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -27992,7 +28000,7 @@ tr111:
 			goto _test_eof693
 		}
 	st_case_693:
-//line plugins/parsers/influx/machine.go:27996
+//line plugins/parsers/influx/machine.go:28004
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr639
@@ -28029,7 +28037,7 @@ tr111:
 		}
 		goto st6
 tr96:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28039,7 +28047,7 @@ tr96:
 			goto _test_eof229
 		}
 	st_case_229:
-//line plugins/parsers/influx/machine.go:28043
+//line plugins/parsers/influx/machine.go:28051
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto st31
@@ -28064,7 +28072,7 @@ tr96:
 		}
 		goto tr94
 tr74:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28074,7 +28082,7 @@ tr74:
 			goto _test_eof230
 		}
 	st_case_230:
-//line plugins/parsers/influx/machine.go:28078
+//line plugins/parsers/influx/machine.go:28086
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -28103,7 +28111,7 @@ tr74:
 		}
 		goto st1
 tr75:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28113,7 +28121,7 @@ tr75:
 			goto _test_eof231
 		}
 	st_case_231:
-//line plugins/parsers/influx/machine.go:28117
+//line plugins/parsers/influx/machine.go:28125
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr47
@@ -28361,7 +28369,7 @@ tr75:
 		}
 		goto st1
 tr76:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28371,7 +28379,7 @@ tr76:
 			goto _test_eof699
 		}
 	st_case_699:
-//line plugins/parsers/influx/machine.go:28375
+//line plugins/parsers/influx/machine.go:28383
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr734
@@ -28429,7 +28437,7 @@ tr76:
 		}
 		goto st1
 tr77:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28439,7 +28447,7 @@ tr77:
 			goto _test_eof701
 		}
 	st_case_701:
-//line plugins/parsers/influx/machine.go:28443
+//line plugins/parsers/influx/machine.go:28451
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr734
@@ -28474,7 +28482,7 @@ tr77:
 		}
 		goto st1
 tr78:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28484,7 +28492,7 @@ tr78:
 			goto _test_eof702
 		}
 	st_case_702:
-//line plugins/parsers/influx/machine.go:28488
+//line plugins/parsers/influx/machine.go:28496
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -28681,7 +28689,7 @@ tr78:
 		}
 		goto st1
 tr79:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28691,7 +28699,7 @@ tr79:
 			goto _test_eof704
 		}
 	st_case_704:
-//line plugins/parsers/influx/machine.go:28695
+//line plugins/parsers/influx/machine.go:28703
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -28765,7 +28773,7 @@ tr79:
 		}
 		goto st1
 tr80:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28775,7 +28783,7 @@ tr80:
 			goto _test_eof705
 		}
 	st_case_705:
-//line plugins/parsers/influx/machine.go:28779
+//line plugins/parsers/influx/machine.go:28787
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -28797,7 +28805,7 @@ tr80:
 		}
 		goto st1
 tr81:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28807,7 +28815,7 @@ tr81:
 			goto _test_eof706
 		}
 	st_case_706:
-//line plugins/parsers/influx/machine.go:28811
+//line plugins/parsers/influx/machine.go:28819
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -28829,18 +28837,18 @@ tr81:
 		}
 		goto st1
 tr44:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
 	goto st242
 tr424:
 	( m.cs) = 242
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -28856,7 +28864,7 @@ tr424:
 			goto _test_eof242
 		}
 	st_case_242:
-//line plugins/parsers/influx/machine.go:28860
+//line plugins/parsers/influx/machine.go:28868
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr423
@@ -28879,11 +28887,11 @@ tr424:
 		goto tr41
 tr40:
 	( m.cs) = 243
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -28899,7 +28907,7 @@ tr40:
 			goto _test_eof243
 		}
 	st_case_243:
-//line plugins/parsers/influx/machine.go:28903
+//line plugins/parsers/influx/machine.go:28911
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr423
@@ -28921,7 +28929,7 @@ tr40:
 		}
 		goto tr41
 tr464:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28931,13 +28939,13 @@ tr464:
 			goto _test_eof244
 		}
 	st_case_244:
-//line plugins/parsers/influx/machine.go:28935
+//line plugins/parsers/influx/machine.go:28943
 		if 48 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 57 {
 			goto st707
 		}
 		goto tr426
 tr465:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -28947,7 +28955,7 @@ tr465:
 			goto _test_eof707
 		}
 	st_case_707:
-//line plugins/parsers/influx/machine.go:28951
+//line plugins/parsers/influx/machine.go:28959
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr470
@@ -29357,7 +29365,7 @@ tr465:
 		}
 		goto tr426
 tr15:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29367,7 +29375,7 @@ tr15:
 			goto _test_eof245
 		}
 	st_case_245:
-//line plugins/parsers/influx/machine.go:29371
+//line plugins/parsers/influx/machine.go:29379
 		switch ( m.data)[( m.p)] {
 		case 46:
 			goto st246
@@ -29379,7 +29387,7 @@ tr15:
 		}
 		goto tr8
 tr16:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29389,7 +29397,7 @@ tr16:
 			goto _test_eof246
 		}
 	st_case_246:
-//line plugins/parsers/influx/machine.go:29393
+//line plugins/parsers/influx/machine.go:29401
 		if 48 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 57 {
 			goto st726
 		}
@@ -29562,7 +29570,7 @@ tr16:
 		}
 		goto tr105
 tr17:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29572,7 +29580,7 @@ tr17:
 			goto _test_eof731
 		}
 	st_case_731:
-//line plugins/parsers/influx/machine.go:29576
+//line plugins/parsers/influx/machine.go:29584
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr734
@@ -29622,7 +29630,7 @@ tr17:
 		}
 		goto tr105
 tr18:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29632,7 +29640,7 @@ tr18:
 			goto _test_eof733
 		}
 	st_case_733:
-//line plugins/parsers/influx/machine.go:29636
+//line plugins/parsers/influx/machine.go:29644
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr734
@@ -29663,7 +29671,7 @@ tr18:
 		}
 		goto tr105
 tr19:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29673,7 +29681,7 @@ tr19:
 			goto _test_eof734
 		}
 	st_case_734:
-//line plugins/parsers/influx/machine.go:29677
+//line plugins/parsers/influx/machine.go:29685
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -29766,7 +29774,7 @@ tr19:
 		}
 		goto tr8
 tr20:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29776,7 +29784,7 @@ tr20:
 			goto _test_eof736
 		}
 	st_case_736:
-//line plugins/parsers/influx/machine.go:29780
+//line plugins/parsers/influx/machine.go:29788
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -29814,7 +29822,7 @@ tr20:
 		}
 		goto tr8
 tr21:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29824,7 +29832,7 @@ tr21:
 			goto _test_eof737
 		}
 	st_case_737:
-//line plugins/parsers/influx/machine.go:29828
+//line plugins/parsers/influx/machine.go:29836
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -29842,7 +29850,7 @@ tr21:
 		}
 		goto tr105
 tr22:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29852,7 +29860,7 @@ tr22:
 			goto _test_eof738
 		}
 	st_case_738:
-//line plugins/parsers/influx/machine.go:29856
+//line plugins/parsers/influx/machine.go:29864
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr962
@@ -29870,7 +29878,7 @@ tr22:
 		}
 		goto tr105
 tr9:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29880,7 +29888,7 @@ tr9:
 			goto _test_eof257
 		}
 	st_case_257:
-//line plugins/parsers/influx/machine.go:29884
+//line plugins/parsers/influx/machine.go:29892
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr8
@@ -29911,13 +29919,13 @@ tr9:
 		}
 		goto st258
 tr440:
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:70
+//line plugins/parsers/influx/machine.go.rl:78
 
 	{goto st740 }
 
@@ -29927,7 +29935,7 @@ tr440:
 			goto _test_eof739
 		}
 	st_case_739:
-//line plugins/parsers/influx/machine.go:29931
+//line plugins/parsers/influx/machine.go:29939
 		goto st0
 	st261:
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -29954,11 +29962,11 @@ tr440:
 		}
 		goto tr443
 tr443:
-//line plugins/parsers/influx/machine.go.rl:74
+//line plugins/parsers/influx/machine.go.rl:82
 
 	m.beginMetric = true
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -29968,7 +29976,7 @@ tr443:
 			goto _test_eof741
 		}
 	st_case_741:
-//line plugins/parsers/influx/machine.go:29972
+//line plugins/parsers/influx/machine.go:29980
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr2
@@ -29987,7 +29995,7 @@ tr443:
 		}
 		goto st741
 tr445:
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -29996,7 +30004,7 @@ tr445:
 	goto st742
 tr1058:
 	( m.cs) = 742
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -30006,7 +30014,7 @@ tr1058:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -30015,7 +30023,7 @@ tr1058:
 	goto _again
 tr1062:
 	( m.cs) = 742
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -30025,7 +30033,7 @@ tr1062:
 		{( m.p)++; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -30033,7 +30041,7 @@ tr1062:
 
 	goto _again
 	st742:
-//line plugins/parsers/influx/machine.go.rl:164
+//line plugins/parsers/influx/machine.go.rl:172
 
 	m.finishMetric = true
 	( m.cs) = 740;
@@ -30043,11 +30051,11 @@ tr1062:
 			goto _test_eof742
 		}
 	st_case_742:
-//line plugins/parsers/influx/machine.go:30047
+//line plugins/parsers/influx/machine.go:30055
 		goto st0
 tr1059:
 	( m.cs) = 262
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -30060,7 +30068,7 @@ tr1059:
 	goto _again
 tr1063:
 	( m.cs) = 262
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -30076,14 +30084,14 @@ tr1063:
 			goto _test_eof262
 		}
 	st_case_262:
-//line plugins/parsers/influx/machine.go:30080
+//line plugins/parsers/influx/machine.go:30088
 		if ( m.data)[( m.p)] == 10 {
 			goto tr445
 		}
 		goto st0
 tr1060:
 	( m.cs) = 263
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -30096,7 +30104,7 @@ tr1060:
 	goto _again
 tr1064:
 	( m.cs) = 263
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -30112,7 +30120,7 @@ tr1064:
 			goto _test_eof263
 		}
 	st_case_263:
-//line plugins/parsers/influx/machine.go:30116
+//line plugins/parsers/influx/machine.go:30124
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -30133,7 +30141,7 @@ tr1064:
 		}
 		goto tr446
 tr446:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -30143,7 +30151,7 @@ tr446:
 			goto _test_eof264
 		}
 	st_case_264:
-//line plugins/parsers/influx/machine.go:30147
+//line plugins/parsers/influx/machine.go:30155
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -30164,7 +30172,7 @@ tr446:
 		}
 		goto st264
 tr449:
-//line plugins/parsers/influx/machine.go.rl:87
+//line plugins/parsers/influx/machine.go.rl:95
 
 	m.key = m.text()
 
@@ -30174,7 +30182,7 @@ tr449:
 			goto _test_eof265
 		}
 	st_case_265:
-//line plugins/parsers/influx/machine.go:30178
+//line plugins/parsers/influx/machine.go:30186
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -30195,7 +30203,7 @@ tr449:
 		}
 		goto tr451
 tr451:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -30205,7 +30213,7 @@ tr451:
 			goto _test_eof743
 		}
 	st_case_743:
-//line plugins/parsers/influx/machine.go:30209
+//line plugins/parsers/influx/machine.go:30217
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr2
@@ -30226,7 +30234,7 @@ tr451:
 		}
 		goto st743
 tr452:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -30236,7 +30244,7 @@ tr452:
 			goto _test_eof266
 		}
 	st_case_266:
-//line plugins/parsers/influx/machine.go:30240
+//line plugins/parsers/influx/machine.go:30248
 		if ( m.data)[( m.p)] == 92 {
 			goto st744
 		}
@@ -30250,14 +30258,14 @@ tr452:
 		}
 		goto st743
 	st744:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof744
 		}
 	st_case_744:
-//line plugins/parsers/influx/machine.go:30261
+//line plugins/parsers/influx/machine.go:30269
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr2
@@ -30278,7 +30286,7 @@ tr452:
 		}
 		goto st743
 tr447:
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -30288,7 +30296,7 @@ tr447:
 			goto _test_eof267
 		}
 	st_case_267:
-//line plugins/parsers/influx/machine.go:30292
+//line plugins/parsers/influx/machine.go:30300
 		if ( m.data)[( m.p)] == 92 {
 			goto st268
 		}
@@ -30302,14 +30310,14 @@ tr447:
 		}
 		goto st264
 	st268:
-//line plugins/parsers/influx/machine.go.rl:240
+//line plugins/parsers/influx/machine.go.rl:248
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof268
 		}
 	st_case_268:
-//line plugins/parsers/influx/machine.go:30313
+//line plugins/parsers/influx/machine.go:30321
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -30330,11 +30338,11 @@ tr447:
 		}
 		goto st264
 tr444:
-//line plugins/parsers/influx/machine.go.rl:74
+//line plugins/parsers/influx/machine.go.rl:82
 
 	m.beginMetric = true
 
-//line plugins/parsers/influx/machine.go.rl:20
+//line plugins/parsers/influx/machine.go.rl:28
 
 	m.pb = m.p
 
@@ -30344,7 +30352,7 @@ tr444:
 			goto _test_eof269
 		}
 	st_case_269:
-//line plugins/parsers/influx/machine.go:30348
+//line plugins/parsers/influx/machine.go:30356
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -30355,7 +30363,7 @@ tr444:
 		}
 		goto st741
 tr441:
-//line plugins/parsers/influx/machine.go.rl:158
+//line plugins/parsers/influx/machine.go.rl:166
 
 	m.lineno++
 	m.sol = m.p
@@ -30367,7 +30375,7 @@ tr441:
 			goto _test_eof740
 		}
 	st_case_740:
-//line plugins/parsers/influx/machine.go:30371
+//line plugins/parsers/influx/machine.go:30379
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr441
@@ -31150,7 +31158,7 @@ tr441:
 	if ( m.p) == ( m.eof) {
 		switch ( m.cs) {
 		case 8, 261:
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -31159,7 +31167,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 2, 3, 4, 5, 6, 7, 28, 31, 32, 35, 36, 37, 49, 50, 51, 52, 53, 73, 75, 76, 93, 103, 105, 141, 153, 156, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 257:
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31168,7 +31176,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 13, 14, 15, 22, 24, 25, 263, 264, 265, 266, 267, 268:
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31177,7 +31185,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 244:
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -31186,7 +31194,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 741:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31197,7 +31205,7 @@ tr441:
 	}
 
 		case 743, 744:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31208,12 +31216,12 @@ tr441:
 	}
 
 		case 271, 272, 273, 274, 275, 277, 278, 297, 298, 299, 301, 302, 305, 306, 327, 328, 329, 330, 332, 376, 377, 379, 380, 402, 403, 408, 409, 411, 431, 432, 434, 435, 457, 458, 618, 621:
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 10, 38, 40, 165, 167:
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -31221,7 +31229,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31230,7 +31238,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 34, 74, 104, 170, 208:
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31238,7 +31246,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -31247,7 +31255,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 20, 44, 45, 46, 58, 59, 61, 63, 68, 70, 71, 77, 78, 79, 84, 86, 88, 89, 97, 98, 100, 101, 102, 107, 108, 109, 122, 123, 137, 138:
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31255,7 +31263,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31264,7 +31272,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 60:
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31272,7 +31280,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -31281,16 +31289,16 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 270:
-//line plugins/parsers/influx/machine.go.rl:74
+//line plugins/parsers/influx/machine.go.rl:82
 
 	m.beginMetric = true
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 1:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31300,7 +31308,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31309,7 +31317,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 300, 303, 307, 375, 399, 400, 404, 405, 406, 530, 564, 565, 567:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31319,12 +31327,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 16, 23:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31334,7 +31342,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31343,7 +31351,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 351, 352, 353, 355, 374, 430, 454, 455, 459, 479, 495, 496, 498:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31353,12 +31361,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 624, 675, 689, 729:
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -31368,12 +31376,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 625, 678, 692, 732:
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -31383,12 +31391,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 326, 619, 620, 622, 623, 626, 632, 633, 671, 672, 673, 674, 676, 677, 679, 685, 686, 687, 688, 690, 691, 693, 726, 727, 728, 730, 731, 733:
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -31398,12 +31406,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 627, 628, 629, 630, 631, 634, 635, 636, 637, 638, 680, 681, 682, 683, 684, 734, 735, 736, 737, 738:
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -31413,12 +31421,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 276, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 331, 333, 334, 335, 336, 337, 338, 339, 340, 341, 342, 343, 344, 345, 346, 347, 348, 349, 350, 378, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 410, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426, 427, 428, 429, 433, 436, 437, 438, 439, 440, 441, 442, 443, 444, 445, 446, 447, 448, 449, 450, 451, 452, 453, 599, 600, 601, 602, 603, 604, 605, 606, 607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 652, 653, 654, 655, 656, 657, 658, 659, 660, 661, 662, 663, 664, 665, 666, 667, 668, 669, 670, 707, 708, 709, 710, 711, 712, 713, 714, 715, 716, 717, 718, 719, 720, 721, 722, 723, 724, 725:
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -31428,12 +31436,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 9:
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -31441,7 +31449,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31451,7 +31459,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31460,7 +31468,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 99:
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31468,7 +31476,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31476,7 +31484,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -31485,7 +31493,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 11, 12, 26, 27, 29, 30, 41, 42, 54, 55, 56, 57, 72, 91, 92, 94, 96, 139, 140, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 154, 155, 157, 158, 159, 160, 161, 162, 163, 164, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31495,7 +31503,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31503,7 +31511,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31512,7 +31520,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 535, 589, 697:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31522,7 +31530,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -31532,12 +31540,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 538, 592, 700:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31547,7 +31555,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -31557,12 +31565,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 407, 531, 532, 533, 534, 536, 537, 539, 563, 586, 587, 588, 590, 591, 593, 694, 695, 696, 698, 699, 701:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31572,7 +31580,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -31582,12 +31590,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 540, 541, 542, 543, 544, 594, 595, 596, 597, 598, 702, 703, 704, 705, 706:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31597,7 +31605,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -31607,12 +31615,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 304, 308, 309, 310, 311, 312, 313, 314, 315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 401, 545, 546, 547, 548, 549, 550, 551, 552, 553, 554, 555, 556, 557, 558, 559, 560, 561, 562, 566, 568, 569, 570, 571, 572, 573, 574, 575, 576, 577, 578, 579, 580, 581, 582, 583, 584, 585:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31622,7 +31630,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -31632,12 +31640,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 17, 18, 19, 21, 47, 48, 64, 65, 66, 67, 69, 80, 81, 82, 83, 85, 87, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 124, 125, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31647,7 +31655,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31655,7 +31663,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31664,7 +31672,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 484, 520, 642:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31674,7 +31682,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:104
+//line plugins/parsers/influx/machine.go.rl:112
 
 	err = m.handler.AddInt(m.key, m.text())
 	if err != nil {
@@ -31684,12 +31692,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 487, 523, 645:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31699,7 +31707,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:113
+//line plugins/parsers/influx/machine.go.rl:121
 
 	err = m.handler.AddUint(m.key, m.text())
 	if err != nil {
@@ -31709,12 +31717,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 478, 480, 481, 482, 483, 485, 486, 488, 494, 517, 518, 519, 521, 522, 524, 639, 640, 641, 643, 644, 646:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31724,7 +31732,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:122
+//line plugins/parsers/influx/machine.go.rl:130
 
 	err = m.handler.AddFloat(m.key, m.text())
 	if err != nil {
@@ -31734,12 +31742,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 489, 490, 491, 492, 493, 525, 526, 527, 528, 529, 647, 648, 649, 650, 651:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31749,7 +31757,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:131
+//line plugins/parsers/influx/machine.go.rl:139
 
 	err = m.handler.AddBool(m.key, m.text())
 	if err != nil {
@@ -31759,12 +31767,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 354, 356, 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 456, 460, 461, 462, 463, 464, 465, 466, 467, 468, 469, 470, 471, 472, 473, 474, 475, 476, 477, 497, 499, 500, 501, 502, 503, 504, 505, 506, 507, 508, 509, 510, 511, 512, 513, 514, 515, 516:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31774,7 +31782,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:149
+//line plugins/parsers/influx/machine.go.rl:157
 
 	err = m.handler.SetTimestamp(m.text())
 	if err != nil {
@@ -31784,12 +31792,12 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:170
+//line plugins/parsers/influx/machine.go.rl:178
 
 	m.finishMetric = true
 
 		case 39, 166, 168, 169, 206, 207, 242, 243:
-//line plugins/parsers/influx/machine.go.rl:24
+//line plugins/parsers/influx/machine.go.rl:32
 
 	err = ErrNameParse
 	( m.p)--
@@ -31797,7 +31805,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31807,7 +31815,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31815,7 +31823,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31824,7 +31832,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 43, 90, 152:
-//line plugins/parsers/influx/machine.go.rl:78
+//line plugins/parsers/influx/machine.go.rl:86
 
 	err = m.handler.SetMeasurement(m.text())
 	if err != nil {
@@ -31834,7 +31842,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31842,7 +31850,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31850,7 +31858,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -31859,7 +31867,7 @@ tr441:
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
 		case 62, 106, 126:
-//line plugins/parsers/influx/machine.go.rl:91
+//line plugins/parsers/influx/machine.go.rl:99
 
 	err = m.handler.AddTag(m.key, m.text())
 	if err != nil {
@@ -31869,7 +31877,7 @@ tr441:
 		{( m.p)++; ( m.cs) = 0; goto _out }
 	}
 
-//line plugins/parsers/influx/machine.go.rl:38
+//line plugins/parsers/influx/machine.go.rl:46
 
 	err = ErrTagParse
 	( m.p)--
@@ -31877,7 +31885,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:31
+//line plugins/parsers/influx/machine.go.rl:39
 
 	err = ErrFieldParse
 	( m.p)--
@@ -31885,7 +31893,7 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go.rl:45
+//line plugins/parsers/influx/machine.go.rl:53
 
 	err = ErrTimestampParse
 	( m.p)--
@@ -31893,14 +31901,14 @@ tr441:
 	( m.cs) = 258;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go:31897
+//line plugins/parsers/influx/machine.go:31905
 		}
 	}
 
 	_out: {}
 	}
 
-//line plugins/parsers/influx/machine.go.rl:407
+//line plugins/parsers/influx/machine.go.rl:415
 
 	if err != nil {
 		return err
@@ -31999,7 +32007,12 @@ func (m *streamMachine) Next() error {
 		if n == 0 && err == io.EOF {
 			m.machine.eof = m.machine.pe
 		} else if err != nil && err != io.EOF {
-			return err
+			// After the reader returns an error this function shouldn't be
+			// called again.  This will cause the machine to return EOF this
+			// is done.
+			m.machine.p = m.machine.pe
+			m.machine.eof = m.machine.pe
+			return &readErr{Err: err}
 		}
 
 		m.machine.pe += n
