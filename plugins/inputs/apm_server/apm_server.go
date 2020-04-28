@@ -29,10 +29,11 @@ import (
 
 // APM Server is a input plugin that listens for requests sent by Elastic APM Agents.
 type APMServer struct {
-	ServiceAddress string            `toml:"service_address"`
-	IdleTimeout    internal.Duration `toml:"idle_timeout"`
-	ReadTimeout    internal.Duration `toml:"read_timeout"`
-	WriteTimeout   internal.Duration `toml:"write_timeout"`
+	ServiceAddress    string            `toml:"service_address"`
+	IdleTimeout       internal.Duration `toml:"idle_timeout"`
+	ReadTimeout       internal.Duration `toml:"read_timeout"`
+	WriteTimeout      internal.Duration `toml:"write_timeout"`
+	EventTypeSeparate bool              `toml:"event_type_separate"`
 
 	ExcludeEventTypes []string `toml:"exclude_events"`
 	//customize json -> line protocol mapping
@@ -271,7 +272,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 			// Tags
 			tags := make(map[string]string, len(f.Fields))
-			tags["type"] = eventType
+			tags["apm_event_type"] = eventType
 			for k := range f.Fields {
 
 				//skip if excluded
@@ -299,10 +300,20 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			}
 
 			for k := range f.Fields {
+
+				//remove _value suffix
+				if strings.HasSuffix(k, "_value") {
+					var val = f.Fields[k]
+					delete(f.Fields, k)
+					k = k[0 : len(k)-len("_value")]
+					f.Fields[k] = val
+				}
+
 				// Exclude fields filter
 				if s.excludedFieldsFilter != nil && s.excludedFieldsFilter.Match(k) {
 					delete(f.Fields, k)
 				}
+
 				// Store fields as tags
 				if s.tagFilter != nil && s.tagFilter.Match(k) {
 					switch value := f.Fields[k].(type) {
@@ -327,7 +338,11 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				return
 			}
 
-			if m, err := metric.New("apm_server", tags, f.Fields, timestamp); err != nil {
+			var measurementName = "apm_server"
+			if s.EventTypeSeparate {
+				measurementName = "apm_" + eventType
+			}
+			if m, err := metric.New(measurementName, tags, f.Fields, timestamp); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
 			} else {
