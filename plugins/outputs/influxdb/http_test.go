@@ -936,6 +936,10 @@ type MockHandlerChain struct {
 }
 
 func (h *MockHandlerChain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if len(h.handlers) == 0 {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	next, rest := h.handlers[0], h.handlers[1:]
 	h.handlers = rest
 	next(w, r)
@@ -945,7 +949,7 @@ func (h *MockHandlerChain) Done() bool {
 	return len(h.handlers) == 0
 }
 
-func TestDBRPTagsCreateDatabaseNotCalledOnRetry(t *testing.T) {
+func TestDBRPTagsCreateDatabaseNotCalledOnRetryAfterForbidden(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
 
@@ -962,6 +966,7 @@ func TestDBRPTagsCreateDatabaseNotCalledOnRetry(t *testing.T) {
 						return
 					}
 					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"results": [{"error": "error authorizing query"}]}`))
 				default:
 					w.WriteHeader(http.StatusInternalServerError)
 				}
@@ -1033,6 +1038,7 @@ func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
 						return
 					}
 					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"results": [{"error": "error authorizing query"}]}`))
 				default:
 					w.WriteHeader(http.StatusInternalServerError)
 				}

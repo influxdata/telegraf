@@ -107,8 +107,12 @@ type HTTPConfig struct {
 }
 
 type httpClient struct {
-	client                 *http.Client
-	config                 HTTPConfig
+	client *http.Client
+	config HTTPConfig
+	// Tracks that the 'create database` statement was executed for the
+	// database.  An attempt to create the database is made each time a new
+	// database is encountered in the database_tag and after a "database not
+	// found" error occurs.
 	createDatabaseExecuted map[string]bool
 
 	log telegraf.Logger
@@ -209,13 +213,6 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 	defer resp.Body.Close()
 
-	// Track that a 'create database` statement was executed for the database
-	// even if the statement fails.  One initial attempt to create the database
-	// is made each time a new database is encountered in the database_tag.
-	// After this initial attempt it will only be executed if a "database not
-	// found" error occurs.
-	c.createDatabaseExecuted[database] = true
-
 	queryResp := &QueryResponse{}
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(queryResp)
@@ -231,9 +228,17 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 		}
 	}
 
-	// Even with a 200 response there can be an error
+	// Even with a 200 status code there can be an error in the response body.
+	// If there is also no error string then the operation was successful.
 	if resp.StatusCode == http.StatusOK && queryResp.Error() == "" {
+		c.createDatabaseExecuted[database] = true
 		return nil
+	}
+
+	// Don't attempt to recreate the database after a 403 Forbidden error.
+	// This behavior exists only to maintain backwards compatiblity.
+	if resp.StatusCode == http.StatusForbidden {
+		c.createDatabaseExecuted[database] = true
 	}
 
 	return &APIError{
