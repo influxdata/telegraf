@@ -107,9 +107,13 @@ type HTTPConfig struct {
 }
 
 type httpClient struct {
-	client           *http.Client
-	config           HTTPConfig
-	createdDatabases map[string]bool
+	client *http.Client
+	config HTTPConfig
+	// Tracks that the 'create database` statement was executed for the
+	// database.  An attempt to create the database is made each time a new
+	// database is encountered in the database_tag and after a "database not
+	// found" error occurs.
+	createDatabaseExecuted map[string]bool
 
 	log telegraf.Logger
 }
@@ -177,9 +181,9 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 			Timeout:   config.Timeout,
 			Transport: transport,
 		},
-		createdDatabases: make(map[string]bool),
-		config:           config,
-		log:              config.Log,
+		createDatabaseExecuted: make(map[string]bool),
+		config:                 config,
+		log:                    config.Log,
 	}
 	return client, nil
 }
@@ -215,7 +219,6 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 
 	if err != nil {
 		if resp.StatusCode == 200 {
-			c.createdDatabases[database] = true
 			return nil
 		}
 
@@ -225,10 +228,17 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 		}
 	}
 
-	// Even with a 200 response there can be an error
+	// Even with a 200 status code there can be an error in the response body.
+	// If there is also no error string then the operation was successful.
 	if resp.StatusCode == http.StatusOK && queryResp.Error() == "" {
-		c.createdDatabases[database] = true
+		c.createDatabaseExecuted[database] = true
 		return nil
+	}
+
+	// Don't attempt to recreate the database after a 403 Forbidden error.
+	// This behavior exists only to maintain backwards compatiblity.
+	if resp.StatusCode == http.StatusForbidden {
+		c.createDatabaseExecuted[database] = true
 	}
 
 	return &APIError{
@@ -284,7 +294,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	for dbrp, batch := range batches {
-		if !c.config.SkipDatabaseCreation && !c.createdDatabases[dbrp.Database] {
+		if !c.config.SkipDatabaseCreation && !c.createDatabaseExecuted[dbrp.Database] {
 			err := c.CreateDatabase(ctx, dbrp.Database)
 			if err != nil {
 				c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
