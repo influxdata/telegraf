@@ -228,7 +228,7 @@ fieldbool =
 	(true | false) >begin %bool;
 
 fieldstringchar =
-	[^\f\r\n\\"] | '\\' [\\"] | newline;
+	[^\n\\"] | '\\' [\\"] | newline;
 
 fieldstring =
 	fieldstringchar* >begin %string;
