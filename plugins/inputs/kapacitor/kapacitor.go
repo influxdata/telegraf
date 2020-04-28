@@ -171,7 +171,7 @@ func (k *Kapacitor) gatherURL(
 				"alloc_bytes":         s.MemStats.Alloc,
 				"buck_hash_sys_bytes": s.MemStats.BuckHashSys,
 				"frees":               s.MemStats.Frees,
-				"gcc_pu_fraction":     s.MemStats.GCCPUFraction,
+				"gc_cpu_fraction":     s.MemStats.GCCPUFraction,
 				"gc_sys_bytes":        s.MemStats.GCSys,
 				"heap_alloc_bytes":    s.MemStats.HeapAlloc,
 				"heap_idle_bytes":     s.MemStats.HeapIdle,
