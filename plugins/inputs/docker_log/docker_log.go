@@ -2,8 +2,10 @@ package docker_log
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -67,6 +69,9 @@ const (
 	// docker code:
 	// https://github.com/moby/moby/blob/master/daemon/logger/copier.go#L21
 	maxLineBytes = 16 * 1024
+
+	//Length of docker time stamp in every log message
+	dockerTimeStampLength = 30
 )
 
 var (
@@ -287,7 +292,7 @@ func (d *DockerLogs) tailContainerLogs(
 	logOptions := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Timestamps: false,
+		Timestamps: true,
 		Details:    false,
 		Follow:     true,
 		Tail:       tail,
@@ -311,6 +316,37 @@ func (d *DockerLogs) tailContainerLogs(
 	}
 }
 
+func parseLogEntry(rawMessage []byte, acc *telegraf.Accumulator, containerID *string) (time.Time, []byte) {
+	var message []byte
+	switch length := len(rawMessage); {
+
+	case length > dockerTimeStampLength+1: //regular case, timestamp separated from rawMessage with ' ': [timestamp] [rawMessage]
+		message = rawMessage[dockerTimeStampLength+1:]
+
+	case length == dockerTimeStampLength: //edge case, empty message with only timestamp
+		message = []byte{} //empty string
+
+	case length == 0: //empty message, without ts, do nothing
+		return time.Now(), []byte{}
+
+	case length < dockerTimeStampLength: //Sort of garbage or incomplete
+		(*acc).AddError(fmt.Errorf("container ID %q, can't parse timestamp from log entry: %q", *containerID, rawMessage))
+		return time.Now(), rawMessage
+
+	case length == dockerTimeStampLength+1: //hypotetical edge case, [timestamp] + 1 symbol
+		message = rawMessage[dockerTimeStampLength:]
+	}
+
+	timeStamp, err := time.Parse(time.RFC3339Nano, string(rawMessage[:dockerTimeStampLength]))
+	if err != nil {
+		(*acc).AddError(fmt.Errorf("container ID %q, can't parse timestamp from log string %q, reason: %v",
+			*containerID, rawMessage[:dockerTimeStampLength], err))
+		return time.Now(), message
+	}
+
+	return timeStamp, message
+}
+
 func tailStream(
 	acc telegraf.Accumulator,
 	baseTags map[string]string,
@@ -329,21 +365,25 @@ func tailStream(
 	r := bufio.NewReaderSize(reader, 64*1024)
 
 	var err error
-	var message string
+	var message []byte
+	var messageTs time.Time
+
 	for {
-		message, err = r.ReadString('\n')
+		message, err = r.ReadBytes('\n')
+		//Parsing timestamp and message
+		messageTs, message = parseLogEntry(message, &acc, &containerID)
 
 		// Keep any leading space, but remove whitespace from end of line.
 		// This preserves space in, for example, stacktraces, while removing
 		// annoying end of line characters and is similar to how other logging
 		// plugins such as syslog behave.
-		message = strings.TrimRightFunc(message, unicode.IsSpace)
+		message = bytes.TrimRightFunc(message, unicode.IsSpace)
 
 		if len(message) != 0 {
 			acc.AddFields("docker_log", map[string]interface{}{
 				"container_id": containerID,
 				"message":      message,
-			}, tags)
+			}, tags, messageTs)
 		}
 
 		if err != nil {
