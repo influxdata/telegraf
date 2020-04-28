@@ -959,3 +959,179 @@ func TestDBRPTags(t *testing.T) {
 		})
 	}
 }
+
+type MockHandlerChain struct {
+	handlers []http.HandlerFunc
+}
+
+func (h *MockHandlerChain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if len(h.handlers) == 0 {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	next, rest := h.handlers[0], h.handlers[1:]
+	h.handlers = rest
+	next(w, r)
+}
+
+func (h *MockHandlerChain) Done() bool {
+	return len(h.handlers) == 0
+}
+
+func TestDBRPTagsCreateDatabaseNotCalledOnRetryAfterForbidden(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	handlers := &MockHandlerChain{
+		handlers: []http.HandlerFunc{
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/query":
+					if r.FormValue("q") != `CREATE DATABASE "telegraf"` {
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"results": [{"error": "error authorizing query"}]}`))
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/write":
+					w.WriteHeader(http.StatusNoContent)
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/write":
+					w.WriteHeader(http.StatusNoContent)
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+		},
+	}
+	ts.Config.Handler = handlers
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	output := influxdb.InfluxDB{
+		URL:         u.String(),
+		Database:    "telegraf",
+		DatabaseTag: "database",
+		Log:         testutil.Logger{},
+		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
+			return influxdb.NewHTTPClient(*config)
+		},
+	}
+	err = output.Connect()
+	require.NoError(t, err)
+	err = output.Write(metrics)
+	require.NoError(t, err)
+	err = output.Write(metrics)
+	require.NoError(t, err)
+
+	require.True(t, handlers.Done(), "all handlers not called")
+}
+
+func TestDBRPTagsCreateDatabaseCalledOnDatabaseNotFound(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	handlers := &MockHandlerChain{
+		handlers: []http.HandlerFunc{
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/query":
+					if r.FormValue("q") != `CREATE DATABASE "telegraf"` {
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusForbidden)
+					w.Write([]byte(`{"results": [{"error": "error authorizing query"}]}`))
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/write":
+					w.WriteHeader(http.StatusNotFound)
+					w.Write([]byte(`{"error": "database not found: \"telegraf\""}`))
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/query":
+					if r.FormValue("q") != `CREATE DATABASE "telegraf"` {
+						w.WriteHeader(http.StatusInternalServerError)
+						return
+					}
+					w.WriteHeader(http.StatusForbidden)
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+			func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/write":
+					w.WriteHeader(http.StatusNoContent)
+				default:
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			},
+		},
+	}
+	ts.Config.Handler = handlers
+
+	metrics := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": 42.0,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	output := influxdb.InfluxDB{
+		URL:         u.String(),
+		Database:    "telegraf",
+		DatabaseTag: "database",
+		Log:         testutil.Logger{},
+		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
+			return influxdb.NewHTTPClient(*config)
+		},
+	}
+
+	err = output.Connect()
+	require.NoError(t, err)
+	err = output.Write(metrics)
+	require.Error(t, err)
+	err = output.Write(metrics)
+	require.NoError(t, err)
+
+	require.True(t, handlers.Done(), "all handlers not called")
+}
