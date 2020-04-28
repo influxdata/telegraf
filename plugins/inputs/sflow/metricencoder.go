@@ -6,10 +6,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/inputs/sflow/types"
 )
 
-func makeMetrics(p *types.V5Format) ([]telegraf.Metric, error) {
+func makeMetrics(p *V5Format) ([]telegraf.Metric, error) {
 	now := time.Now()
 	metrics := []telegraf.Metric{}
 	tags := map[string]string{

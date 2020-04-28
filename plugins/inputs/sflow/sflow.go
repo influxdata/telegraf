@@ -13,8 +13,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/sflow/packetdecoder"
-	"github.com/influxdata/telegraf/plugins/inputs/sflow/types"
 )
 
 const sampleConfig = `
@@ -40,7 +38,7 @@ type SFlow struct {
 	Log telegraf.Logger `toml:"-"`
 
 	addr    net.Addr
-	decoder *packetdecoder.PacketDecoder
+	decoder *PacketDecoder
 	closer  io.Closer
 	cancel  context.CancelFunc
 	wg      sync.WaitGroup
@@ -57,14 +55,14 @@ func (s *SFlow) SampleConfig() string {
 }
 
 func (s *SFlow) Init() error {
-	s.decoder = packetdecoder.New()
+	s.decoder = NewDecoder()
 	s.decoder.Log = s.Log
 	return nil
 }
 
 // Start starts this sFlow listener listening on the configured network for sFlow packets
 func (s *SFlow) Start(acc telegraf.Accumulator) error {
-	s.decoder.OnPacket(func(p *types.V5Format) {
+	s.decoder.OnPacket(func(p *V5Format) {
 		metrics, err := makeMetrics(p)
 		if err != nil {
 			s.Log.Errorf("Failed to make metric from packet: %s", err)

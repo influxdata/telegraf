@@ -1,10 +1,9 @@
-package packetdecoder
+package sflow
 
 import (
 	"bytes"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/inputs/sflow/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -13,13 +12,14 @@ func TestUDPHeader(t *testing.T) {
 		0x00, 0x01, // src_port
 		0x00, 0x02, // dst_port
 		0x00, 0x03, // udp_length
+		0x00, 0x00, // checksum
 	})
 
-	dc := New()
+	dc := NewDecoder()
 	actual, err := dc.decodeUDPHeader(octets)
 	require.NoError(t, err)
 
-	expected := types.UDPHeader{
+	expected := UDPHeader{
 		SourcePort:      1,
 		DestinationPort: 2,
 		UDPLength:       3,
@@ -33,9 +33,10 @@ func BenchmarkUDPHeader(b *testing.B) {
 		0x00, 0x01, // src_port
 		0x00, 0x02, // dst_port
 		0x00, 0x03, // udp_length
+		0x00, 0x00, // checksum
 	})
 
-	dc := New()
+	dc := NewDecoder()
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -59,13 +60,14 @@ func TestIPv4Header(t *testing.T) {
 			0x00, 0x01, // src_port
 			0x00, 0x02, // dst_port
 			0x00, 0x03, // udp_length
+			0x00, 0x00, // checksum
 		},
 	)
-	dc := New()
+	dc := NewDecoder()
 	actual, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
-	expected := types.IPV4Header{
+	expected := IPV4Header{
 		Version:              0x40,
 		InternetHeaderLength: 0x05,
 		DSCP:                 0,
@@ -79,7 +81,7 @@ func TestIPv4Header(t *testing.T) {
 		HeaderChecksum:       0,
 		SourceIP:             [4]byte{127, 0, 0, 1},
 		DestIP:               [4]byte{127, 0, 0, 2},
-		ProtocolHeader: types.UDPHeader{
+		ProtocolHeader: UDPHeader{
 			SourcePort:      1,
 			DestinationPort: 2,
 			UDPLength:       3,
@@ -108,9 +110,10 @@ func TestIPv4HeaderSwitch(t *testing.T) {
 			0x00, 0x01, // src_port
 			0x00, 0x02, // dst_port
 			0x00, 0x03, // udp_length
+			0x00, 0x00, // checksum
 		},
 	)
-	dc := New()
+	dc := NewDecoder()
 	_, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
@@ -136,17 +139,17 @@ func TestIPv4HeaderSwitch(t *testing.T) {
 			0x00, 0x00, // tcp_urgent_pointer
 		},
 	)
-	dc = New()
+	dc = NewDecoder()
 	actual, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
-	expected := types.IPV4Header{
+	expected := IPV4Header{
 		Version:              64,
 		InternetHeaderLength: 5,
 		Protocol:             6,
 		SourceIP:             [4]byte{127, 0, 0, 1},
 		DestIP:               [4]byte{127, 0, 0, 2},
-		ProtocolHeader: types.TCPHeader{
+		ProtocolHeader: TCPHeader{
 			SourcePort:      1,
 			DestinationPort: 2,
 		},
@@ -188,11 +191,11 @@ func TestUnknownProtocol(t *testing.T) {
 			0x00,
 		},
 	)
-	dc := New()
+	dc := NewDecoder()
 	actual, err := dc.decodeIPv4Header(octets)
 	require.NoError(t, err)
 
-	expected := types.IPV4Header{
+	expected := IPV4Header{
 		Version:              64,
 		InternetHeaderLength: 5,
 		Protocol:             153,
