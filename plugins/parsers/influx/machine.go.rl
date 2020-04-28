@@ -5,6 +5,14 @@ import (
 	"io"
 )
 
+type readErr struct {
+	Err error
+}
+
+func (e *readErr) Error() string {
+	return e.Err.Error()
+}
+
 var (
 	ErrNameParse = errors.New("expected measurement name")
 	ErrFieldParse = errors.New("expected field")
@@ -220,7 +228,7 @@ fieldbool =
 	(true | false) >begin %bool;
 
 fieldstringchar =
-	[^\f\r\n\\"] | '\\' [\\"] | newline;
+	[^\n\\"] | '\\' [\\"] | newline;
 
 fieldstring =
 	fieldstringchar* >begin %string;
@@ -502,7 +510,12 @@ func (m *streamMachine) Next() error {
 		if n == 0 && err == io.EOF {
 			m.machine.eof = m.machine.pe
 		} else if err != nil && err != io.EOF {
-			return err
+			// After the reader returns an error this function shouldn't be
+			// called again.  This will cause the machine to return EOF this
+			// is done.
+			m.machine.p = m.machine.pe
+			m.machine.eof = m.machine.pe
+			return &readErr{Err: err}
 		}
 
 		m.machine.pe += n

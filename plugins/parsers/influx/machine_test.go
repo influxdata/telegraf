@@ -874,6 +874,27 @@ var tests = []struct {
 		},
 	},
 	{
+		name:  "cr in string field",
+		input: []byte("cpu value=\"4\r2\""),
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldString,
+				Value: []byte("4\r2"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
 		name:  "bool field",
 		input: []byte("cpu value=true"),
 		results: []Result{
