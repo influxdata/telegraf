@@ -35,14 +35,11 @@ const (
 )
 
 type Shim struct {
-	Inputs   []telegraf.Input
-	metricCh chan telegraf.Metric
+	Inputs []telegraf.Input
 }
 
 func New() *Shim {
-	return &Shim{
-		metricCh: make(chan telegraf.Metric, 1),
-	}
+	return &Shim{}
 }
 
 // AddInput adds the input to the shim. Later calls to Run() will run this input.
