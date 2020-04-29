@@ -67,13 +67,13 @@ func New(config *Config) (*Parser, error) {
 	}, nil
 }
 
-func (p *Parser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
+func (p *Parser) parseArray(data []interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
 	results := make([]telegraf.Metric, 0)
 
 	for _, item := range data {
 		switch v := item.(type) {
 		case map[string]interface{}:
-			metrics, err := p.parseObject(v)
+			metrics, err := p.parseObject(v, timestamp)
 			if err != nil {
 				if p.strict {
 					return nil, err
@@ -90,7 +90,7 @@ func (p *Parser) parseArray(data []interface{}) ([]telegraf.Metric, error) {
 	return results, nil
 }
 
-func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, error) {
+func (p *Parser) parseObject(data map[string]interface{}, timestamp time.Time) ([]telegraf.Metric, error) {
 	tags := make(map[string]string)
 	for k, v := range p.defaultTags {
 		tags[k] = v
@@ -112,8 +112,7 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 		}
 	}
 
-	//if time key is specified, set it to nTime
-	nTime := time.Now().UTC()
+	//if time key is specified, set timestamp to it
 	if p.timeKey != "" {
 		if p.timeFormat == "" {
 			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
@@ -125,7 +124,7 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 			return nil, err
 		}
 
-		nTime, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
+		timestamp, err = internal.ParseTimestamp(p.timeFormat, f.Fields[p.timeKey], p.timezone)
 		if err != nil {
 			return nil, err
 		}
@@ -133,13 +132,13 @@ func (p *Parser) parseObject(data map[string]interface{}) ([]telegraf.Metric, er
 		delete(f.Fields, p.timeKey)
 
 		//if the year is 0, set to current year
-		if nTime.Year() == 0 {
-			nTime = nTime.AddDate(time.Now().Year(), 0, 0)
+		if timestamp.Year() == 0 {
+			timestamp = timestamp.AddDate(time.Now().Year(), 0, 0)
 		}
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-	metric, err := metric.New(name, tags, nFields, nTime)
+	metric, err := metric.New(name, tags, nFields, timestamp)
 	if err != nil {
 		return nil, err
 	}
@@ -206,11 +205,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
+	timestamp := time.Now().UTC()
 	switch v := data.(type) {
 	case map[string]interface{}:
-		return p.parseObject(v)
+		return p.parseObject(v, timestamp)
 	case []interface{}:
-		return p.parseArray(v)
+		return p.parseArray(v, timestamp)
 	default:
 		return nil, ErrWrongType
 	}
