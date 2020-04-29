@@ -112,3 +112,8 @@ sflow,agent_address=0.0.0.0,dst_ip=10.0.0.2,dst_mac=ff:ff:ff:ff:ff:ff,dst_port=4
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
+
+### Reference Documentation
+
+This sflow implementation was built from the reference document 
+[https://sflow.org/sflow_version_5.txt](https://sflow.org/sflow_version_5.txt)
