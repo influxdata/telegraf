@@ -1,3 +1,9 @@
+## v1.14.3 [unreleased]
+
+#### Bugfixes
+
+- [#7412](https://github.com/influxdata/telegraf/pull/7412): Use same timestamp for all objects in arrays in the json parser.
+
 ## v1.14.2 [2020-04-28]
 
 #### Bugfixes
