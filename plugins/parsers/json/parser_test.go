@@ -794,6 +794,18 @@ func TestTimeErrors(t *testing.T) {
 	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
 }
 
+func TestShareTimestamp(t *testing.T) {
+	parser, err := New(&Config{
+		MetricName: "json_test",
+	})
+	require.NoError(t, err)
+
+	metrics, err := parser.Parse([]byte(validJSONArrayMultiple))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(metrics))
+	require.Equal(t, true, metrics[0].Time() == metrics[1].Time())
+}
+
 func TestNameKey(t *testing.T) {
 	testString := `{
 		"a": 5,
