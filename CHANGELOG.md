@@ -28,6 +28,12 @@
 - [#7371](https://github.com/influxdata/telegraf/issues/7371): Fix unable to write metrics to CloudWatch with IMDSv1 disabled.
 - [#7233](https://github.com/influxdata/telegraf/issues/7233): Fix vSphere 6.7 missing data issue.
 
+## v1.14.3 [unreleased]
+
+#### Bugfixes
+
+- [#7412](https://github.com/influxdata/telegraf/pull/7412): Use same timestamp for all objects in arrays in the json parser.
+
 ## v1.14.2 [2020-04-28]
 
 #### Bugfixes
