@@ -30,7 +30,7 @@ func (nr *NewRelic) SampleConfig() string {
 	## New Relic Insights API key (required)
 	insights_key = "insights api key"
 	#metric_prefix if defined, prefix's metrics name for easy identification (optional)
-	# metric_prefix = "Telegraf_"
+	# metric_prefix = ""
 `
 }
 
@@ -61,18 +61,18 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
 		// create tag map
 		tags := make(map[string]interface{})
-		for k, v := range metric.Tags() {
-			tags[k] = v
+		for _, tag := range metric.TagList() {
+			tags[tag.Key] = tag.Value
 		}
-		for k, v := range metric.Fields() {
+		for _, field := range metric.FieldList() {
 			var mvalue float64
 			var mname string
 			if nr.MetricPrefix != "" {
-				mname = nr.MetricPrefix + "." + metric.Name() + "." + k
+				mname = nr.MetricPrefix + "." + metric.Name() + "." + field.Key
 			} else {
-				mname = metric.Name() + "." + k
+				mname = metric.Name() + "." + field.Key
 			}
-			switch n := v.(type) {
+			switch n := field.Value.(type) {
 			case int64:
 				mvalue = float64(n)
 			case uint64:
@@ -84,8 +84,11 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 				if n {
 					mvalue = float64(1)
 				}
+			case string:
+				// Do not log everytime we encounter string
+				// we just skip
 			default:
-				return fmt.Errorf("Undefined field type: %T", v)
+				return fmt.Errorf("Undefined field type: %T", field.Value)
 			}
 
 			switch metric.Type() {
