@@ -17,6 +17,9 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 #### Windows
 
 On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe`
+On Windows 10, you may also find this located here `C:\Windows\System32\nvidia-smi.exe`
+
+You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe`
 
 ### Metrics
 - measurement: `nvidia_smi`

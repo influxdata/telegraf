@@ -174,11 +174,15 @@ func (h *StreamParser) SetTimePrecision(u time.Duration) {
 }
 
 // Next parses the next item from the stream.  You can repeat calls to this
-// function until it returns EOF.
+// function if it returns ParseError to get the next metric or error.
 func (p *StreamParser) Next() (telegraf.Metric, error) {
 	err := p.machine.Next()
 	if err == EOF {
-		return nil, EOF
+		return nil, err
+	}
+
+	if e, ok := err.(*readErr); ok {
+		return nil, e.Err
 	}
 
 	if err != nil {

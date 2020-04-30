@@ -212,7 +212,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	results := []*cloudwatch.MetricDataResult{}
 
 	// 100 is the maximum number of metric data queries a `GetMetricData` request can contain.
-	batchSize := 100
+	batchSize := 500
 	var batches [][]*cloudwatch.MetricDataQuery
 
 	for batchSize < len(queries) {

@@ -1,5 +1,10 @@
 ## v1.15 [unreleased]
 
+#### Release Notes
+
+- The `logparser` input is deprecated, use the `tail` input with `data_format =
+  "grok"` as a replacement.
+
 #### Features
 
 - [#6905](https://github.com/influxdata/telegraf/pull/6905): Add commands stats to mongodb input plugin.
@@ -12,6 +17,36 @@
 - [#7250](https://github.com/influxdata/telegraf/pull/7250): Deploy telegraf configuration as a "non config" file.
 - [#7214](https://github.com/influxdata/telegraf/pull/7214): Add VolumeSpace query for sqlserver input with metric_version 2.
 - [#7304](https://github.com/influxdata/telegraf/pull/7304): Add reading bearer token from a file to http input.
+- [#7366](https://github.com/influxdata/telegraf/pull/7366): add support for SIGUSR1 to trigger flush.
+- [#7271](https://github.com/influxdata/telegraf/pull/7271): Add retry when slave is busy to modbus input.
+- [#7356](https://github.com/influxdata/telegraf/pull/7356): Add option to save retention policy as tag in influxdb_listener.
+- [#6915](https://github.com/influxdata/telegraf/pull/6915): Add support for MDS and RGW sockets to ceph input.
+- [#7391](https://github.com/influxdata/telegraf/pull/7391): Extract target as a tag for each rule in iptables input.
+
+#### Bugfixes
+
+- [#7371](https://github.com/influxdata/telegraf/issues/7371): Fix unable to write metrics to CloudWatch with IMDSv1 disabled.
+- [#7233](https://github.com/influxdata/telegraf/issues/7233): Fix vSphere 6.7 missing data issue.
+
+## v1.14.3 [unreleased]
+
+#### Bugfixes
+
+- [#7412](https://github.com/influxdata/telegraf/pull/7412): Use same timestamp for all objects in arrays in the json parser.
+
+## v1.14.2 [2020-04-28]
+
+#### Bugfixes
+
+- [#7241](https://github.com/influxdata/telegraf/issues/7241): Trim whitespace from instance tag in sqlserver input.
+- [#7322](https://github.com/influxdata/telegraf/issues/7322): Use increased AWS Cloudwatch GetMetricData limit of 500 metrics per call.
+- [#7318](https://github.com/influxdata/telegraf/issues/7318): Fix dimension limit on azure_monitor output.
+- [#7407](https://github.com/influxdata/telegraf/pull/7407): Fix 64-bit integer to string conversion in snmp input.
+- [#7327](https://github.com/influxdata/telegraf/issues/7327): Fix shard indices reporting in elasticsearch input.
+- [#7388](https://github.com/influxdata/telegraf/issues/7388): Ignore fields with NaN or Inf floats in the JSON serializer.
+- [#7402](https://github.com/influxdata/telegraf/issues/7402): Fix typo in name of gc_cpu_fraction field of the kapacitor input.
+- [#7235](https://github.com/influxdata/telegraf/issues/7235): Don't retry `create database` when using database_tag if forbidden by the server in influxdb output.
+- [#7406](https://github.com/influxdata/telegraf/issues/7406): Allow CR and FF inside of string fields in influx parser.
 
 ## v1.14.1 [2020-04-14]
 
