@@ -15,11 +15,14 @@ import (
 )
 
 type SocketWriter struct {
+	ContentEncoding string `toml:"content_encoding"`
 	Address         string
 	KeepAlivePeriod *internal.Duration
 	tlsint.ClientConfig
 
 	serializers.Serializer
+
+	encoder internal.ContentEncoder
 
 	net.Conn
 }
@@ -54,6 +57,11 @@ func (sw *SocketWriter) SampleConfig() string {
   ## 0 disables keep alive probes.
   ## Defaults to the OS configuration.
   # keep_alive_period = "5m"
+
+  ## Content encoding for packet-based connections (i.e. UDP, unixgram).
+  ## Can be set to "gzip" or to "identity" to apply no encoding.
+  ##
+  # content_encoding = "identity"
 
   ## Data format to generate.
   ## Each data format has its own unique set of configuration options, read
@@ -90,6 +98,11 @@ func (sw *SocketWriter) Connect() error {
 
 	if err := sw.setKeepAlive(c); err != nil {
 		log.Printf("unable to configure keep alive (%s): %s", sw.Address, err)
+	}
+	//set encoder
+	sw.encoder, err = internal.NewContentEncoder(sw.ContentEncoding)
+	if err != nil {
+		return err
 	}
 
 	sw.Conn = c
@@ -130,6 +143,13 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 			log.Printf("D! [outputs.socket_writer] Could not serialize metric: %v", err)
 			continue
 		}
+
+		bs, err = sw.encoder.Encode(bs)
+		if err != nil {
+			log.Printf("D! [outputs.socket_writer] Could not encode metric: %v", err)
+			continue
+		}
+
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
 			if err, ok := err.(net.Error); !ok || !err.Temporary() {
