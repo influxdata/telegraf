@@ -10,6 +10,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/azure_storage_queue"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/beanstalkd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/becs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bind"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bond"
 	_ "github.com/influxdata/telegraf/plugins/inputs/burrow"
