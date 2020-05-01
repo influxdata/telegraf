@@ -4,18 +4,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
-// structure holding the expected results for a given scenario according to their options
-type pathResults struct {
-	path              string
-	inputTags         map[string]string
-	inputFields       map[string]interface{}
-	mustIncludeTags   map[string]string
-	mustIncludeFields map[string]string
-	*Options
+const smokeMetricName = "testmetric"
+
+type testCase struct {
+	name            string
+	o               *Options
+	inputMetrics    []telegraf.Metric
+	expectedMetrics []telegraf.Metric
 }
 
 func newOptions(basePath string) *Options {
@@ -62,7 +61,7 @@ func newOptions(basePath string) *Options {
 	}
 }
 
-func getMetricTags(path string) map[string]string {
+func getSampleMetricTags(path string) map[string]string {
 	return map[string]string{
 		"baseTag":  path,
 		"dirTag":   path,
@@ -73,7 +72,7 @@ func getMetricTags(path string) map[string]string {
 	}
 }
 
-func getMetricFields(path string) map[string]interface{} {
+func getSampleMetricFields(path string) map[string]interface{} {
 	return map[string]interface{}{
 		"baseField":  path,
 		"dirField":   path,
@@ -84,36 +83,18 @@ func getMetricFields(path string) map[string]interface{} {
 	}
 }
 
-func runTestOptionsApply(t *testing.T, tests []struct {
-	name string
-	pr   pathResults
-}) {
+func getSmokeTestInputMetrics(path string) []telegraf.Metric {
+	return []telegraf.Metric{
+		testutil.MustMetric(smokeMetricName, getSampleMetricTags(path), getSampleMetricFields(path),
+			time.Now()),
+	}
+}
+
+func runTestOptionsApply(t *testing.T, tests []testCase) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := tt.pr.Options
-			metric := testutil.MustMetric("testmetric",
-				tt.pr.inputTags,
-				tt.pr.inputFields,
-				time.Now())
-
-			got := o.Apply(metric)
-
-			for k, v := range tt.pr.mustIncludeTags {
-				gotTagValue, ok := got[0].GetTag(k)
-				assert.True(t, ok, "Expected tag '%s' not found in processed metric '%s'",
-					k, got[0].Name())
-				assert.Equal(t, v, gotTagValue, "Expected value for tag '%s': %s, but got: %s",
-					k, v, gotTagValue)
-			}
-
-			for k, v := range tt.pr.mustIncludeFields {
-				gotFieldValue, ok := got[0].GetField(k)
-				assert.True(t, ok, "Expected field '%s' not found in processed metric '%s'",
-					k, got[0].Name())
-				assert.Equal(t, v, gotFieldValue, "Expected value for field '%s': '%s', but got: '%s'",
-					k, v, gotFieldValue)
-			}
-
+			got := tt.o.Apply(tt.inputMetrics...)
+			testutil.RequireMetricsEqual(t, tt.expectedMetrics, got, testutil.SortMetrics(), testutil.IgnoreTime())
 		})
 	}
 }
