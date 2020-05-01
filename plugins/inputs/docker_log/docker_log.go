@@ -316,35 +316,42 @@ func (d *DockerLogs) tailContainerLogs(
 	}
 }
 
-func parseLogEntry(rawMessage []byte, acc *telegraf.Accumulator, containerID *string) (time.Time, []byte) {
-	var message []byte
-	switch length := len(rawMessage); {
+func parseLogEntry(rawMessage []byte) (time.Time, []byte, error) {
+	var (
+		message   []byte
+		ts        []byte
+		err       error
+		timeStamp time.Time
+	)
 
-	case length > dockerTimeStampLength+1: //regular case, timestamp separated from rawMessage with ' ': [timestamp] [rawMessage]
-		message = rawMessage[dockerTimeStampLength+1:]
-
-	case length == dockerTimeStampLength: //edge case, empty message with only timestamp
-		message = []byte{} //empty string
-
-	case length == 0: //empty message, without ts, do nothing
-		return time.Now(), []byte{}
-
-	case length < dockerTimeStampLength: //Sort of garbage or incomplete
-		(*acc).AddError(fmt.Errorf("container ID %q, can't parse timestamp from log entry: %q", *containerID, rawMessage))
-		return time.Now(), rawMessage
-
-	case length == dockerTimeStampLength+1: //hypotetical edge case, [timestamp] + 1 symbol
-		message = rawMessage[dockerTimeStampLength:]
+	if len(rawMessage) == 0 {
+		return time.Time{}, nil, nil
 	}
 
-	timeStamp, err := time.Parse(time.RFC3339Nano, string(rawMessage[:dockerTimeStampLength]))
+	msgSplit := bytes.SplitN(rawMessage, []byte(" "), 2)
+
+	switch parts := len(msgSplit); {
+
+	case parts == 2: //regular case, timestamp separated from rawMessage with ' ': [timestamp] [rawMessage]
+		ts = msgSplit[0]
+		message = msgSplit[1]
+	case parts == 1:
+
+		if len(rawMessage) == dockerTimeStampLength { //edge case, empty message with only timestamp
+			ts = rawMessage
+			message = []byte{} //empty string
+		} else {
+			return time.Time{}, nil, fmt.Errorf("can't parse timestamp from log entry: %q", rawMessage)
+
+		}
+	}
+
+	timeStamp, err = time.Parse(time.RFC3339Nano, string(ts))
 	if err != nil {
-		(*acc).AddError(fmt.Errorf("container ID %q, can't parse timestamp from log string %q, reason: %v",
-			*containerID, rawMessage[:dockerTimeStampLength], err))
-		return time.Now(), message
+		return time.Now(), message, fmt.Errorf("can't parse timestamp from string %q, reason: %v", ts, err)
 	}
 
-	return timeStamp, message
+	return timeStamp, message, nil
 }
 
 func tailStream(
@@ -364,14 +371,18 @@ func tailStream(
 
 	r := bufio.NewReaderSize(reader, 64*1024)
 
-	var err error
-	var message []byte
-	var messageTs time.Time
+	var (
+		err, parseErr error
+		message       []byte
+		messageTs     time.Time
+		emptyTs       time.Time
+	)
 
 	for {
 		message, err = r.ReadBytes('\n')
 		//Parsing timestamp and message
-		messageTs, message = parseLogEntry(message, &acc, &containerID)
+		messageTs, message, parseErr = parseLogEntry(message)
+		acc.AddError(parseErr)
 
 		// Keep any leading space, but remove whitespace from end of line.
 		// This preserves space in, for example, stacktraces, while removing
@@ -379,7 +390,7 @@ func tailStream(
 		// plugins such as syslog behave.
 		message = bytes.TrimRightFunc(message, unicode.IsSpace)
 
-		if len(message) != 0 {
+		if len(message) != 0 || (messageTs != emptyTs) {
 			acc.AddFields("docker_log", map[string]interface{}{
 				"container_id": containerID,
 				"message":      message,
@@ -393,6 +404,7 @@ func tailStream(
 			return err
 		}
 	}
+
 }
 
 func tailMultiplexed(

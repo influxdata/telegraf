@@ -52,12 +52,15 @@ type Response struct {
 func (r *Response) Close() error {
 	return nil
 }
-func getFirst(p ...interface{}) interface{} {
-	if len(p) > 0 {
-		return p[0]
+
+func MustParse(layout, value string) time.Time {
+	tm, err := time.Parse(layout, value)
+	if err != nil {
+		panic(err)
 	}
-	return nil
+	return tm
 }
+
 func Test(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -109,7 +112,7 @@ func Test(t *testing.T) {
 						"container_id": "deadbeef",
 						"message":      "hello",
 					},
-					getFirst(time.Parse(time.RFC3339Nano, "2020-04-28T18:43:16.432691200Z")).(time.Time),
+					MustParse(time.RFC3339Nano, "2020-04-28T18:43:16.432691200Z"),
 				),
 			},
 		},
@@ -153,7 +156,7 @@ func Test(t *testing.T) {
 						"container_id": "deadbeef",
 						"message":      "hello from stdout",
 					},
-					getFirst(time.Parse(time.RFC3339Nano, "2020-04-28T18:42:16.432691200Z")).(time.Time),
+					MustParse(time.RFC3339Nano, "2020-04-28T18:42:16.432691200Z"),
 				),
 			},
 		},
