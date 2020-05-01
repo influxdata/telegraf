@@ -5,6 +5,10 @@
 - The `logparser` input is deprecated, use the `tail` input with `data_format =
   "grok"` as a replacement.
 
+#### New Processors
+
+- [filepath](/plugins/processors/filepathdedup/README.md) - Contributed by @kir4h
+
 #### Features
 
 - [#6905](https://github.com/influxdata/telegraf/pull/6905): Add commands stats to mongodb input plugin.
