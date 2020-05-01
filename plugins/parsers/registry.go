@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers/bindata"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
@@ -148,6 +149,12 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
+
+	// BinData configuration
+	BinDataTimeFormat     string          `toml:"bindata_time_format"`
+	BinDataEndiannes      string          `toml:"bindata_endiannes"`
+	BinDataStringEncoding string          `toml:"bindata_string_encoding"`
+	BinDataFields         []bindata.Field `toml:"bindata_fields"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -155,6 +162,15 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
+	case "bindata":
+		parser, err = newBinDataParser(
+			config.MetricName,
+			config.BinDataTimeFormat,
+			config.BinDataEndiannes,
+			config.BinDataStringEncoding,
+			config.BinDataFields,
+			config.DefaultTags,
+		)
 	case "json":
 		parser, err = json.New(
 			&json.Config{
@@ -324,6 +340,24 @@ func NewGraphiteParser(
 	defaultTags map[string]string,
 ) (Parser, error) {
 	return graphite.NewGraphiteParser(separator, templates, defaultTags)
+}
+
+func newBinDataParser(
+	metricName string,
+	timeFormat string,
+	endiannes string,
+	stringEncoding string,
+	fields []bindata.Field,
+	defaultTags map[string]string,
+) (Parser, error) {
+	return bindata.NewBinDataParser(
+		metricName,
+		timeFormat,
+		endiannes,
+		stringEncoding,
+		fields,
+		defaultTags,
+	)
 }
 
 func NewValueParser(

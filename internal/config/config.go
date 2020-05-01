@@ -25,6 +25,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/bindata"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/toml"
@@ -1462,6 +1463,61 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["bindata_endiannes"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.BinDataEndiannes = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["bindata_time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.BinDataTimeFormat = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["bindata_string_encoding"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.BinDataStringEncoding = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["bindata_fields"]; ok {
+		if bindataFields, ok := node.([]*ast.Table); ok {
+			for _, bindataField := range bindataFields {
+				var field bindata.Field
+				for _, prop := range bindataField.Fields {
+					if kv, ok := prop.(*ast.KeyValue); ok {
+						if str, ok := kv.Value.(*ast.String); ok {
+							switch kv.Key {
+							case "name":
+								field.Name = str.Value
+							case "type":
+								field.Type = str.Value
+							default:
+							}
+						} else if integer, ok := kv.Value.(*ast.Integer); ok {
+							v, err := strconv.ParseUint(integer.Value, 10, 32)
+							if err == nil {
+								switch kv.Key {
+								case "size":
+									field.Size = uint(v)
+								default:
+								}
+							}
+						}
+					}
+				}
+				c.BinDataFields = append(c.BinDataFields, field)
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["json_string_fields"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1816,6 +1872,10 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
+	delete(tbl.Fields, "bindata_endiannes")
+	delete(tbl.Fields, "bindata_string_encoding")
+	delete(tbl.Fields, "bindata_time_format")
+	delete(tbl.Fields, "bindata_fields")
 	delete(tbl.Fields, "json_name_key")
 	delete(tbl.Fields, "json_query")
 	delete(tbl.Fields, "json_string_fields")
