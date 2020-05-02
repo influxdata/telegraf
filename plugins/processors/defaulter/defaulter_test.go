@@ -1,11 +1,12 @@
 package defaulter
 
 import (
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"time"
 )
 
 func TestDefaulter(t *testing.T) {
@@ -18,23 +19,21 @@ func TestDefaulter(t *testing.T) {
 		expected  []telegraf.Metric
 	}{
 		{
-			name: "Test single default set",
+			name: "Test that no values are changed since they are not nil or empty",
 			defaulter: &Defaulter{
-				DefaultFieldsSets: []DefaultFieldsSet{
-					{
-						Fields: []string{"usage", "temperature", "is_dead"},
-						Value:  "Foobar",
-						Metric: "CPU metrics",
-					},
+				DefaultFieldsSets: map[string]interface{}{
+					"usage":     30,
+					"wind_feel": "very chill",
+					"is_dead":   true,
 				},
 			},
 			input: testutil.MustMetric(
 				"CPU metrics",
 				map[string]string{},
 				map[string]interface{}{
-					"usage":       "30%",
-					"temperature": "70F",
-					"is_dead":     "nopes",
+					"usage":     45,
+					"wind_feel": "a dragon's breath",
+					"is_dead":   false,
 				},
 				time.Unix(0, 0),
 			),
@@ -43,31 +42,30 @@ func TestDefaulter(t *testing.T) {
 					"CPU metrics",
 					map[string]string{},
 					map[string]interface{}{
-						"usage":       "30%",
-						"temperature": "70F",
-						"is_dead":     "nopes",
+						"usage":     45,
+						"wind_feel": "a dragon's breath",
+						"is_dead":   false,
 					},
 					time.Unix(0, 0),
 				),
 			},
 		},
 		{
-			name: "Test single default set",
+			name: "Tests that the missing fields are set on the metric",
 			defaulter: &Defaulter{
-				DefaultFieldsSets: []DefaultFieldsSet{
-					{
-						Fields: []string{"usage", "temperature", "is_dead"},
-						Value:  "Foobar",
-						Metric: "CPU metrics",
-					},
+				DefaultFieldsSets: map[string]interface{}{
+					"max_clock_gz":  6,
+					"wind_feel":     "Unknown",
+					"boost_enabled": false,
+					"variance":      1.2,
 				},
 			},
 			input: testutil.MustMetric(
 				"CPU metrics",
 				map[string]string{},
 				map[string]interface{}{
-					"usage":       "",
-					"temperature": 0,
+					"usage":       45,
+					"temperature": 64,
 				},
 				time.Unix(0, 0),
 			),
@@ -76,9 +74,43 @@ func TestDefaulter(t *testing.T) {
 					"CPU metrics",
 					map[string]string{},
 					map[string]interface{}{
-						"usage":       "Foobar",
-						"temperature": "Foobar",
-						"is_dead":     "Foobar",
+						"usage":         45,
+						"temperature":   64,
+						"max_clock_gz":  6,
+						"wind_feel":     "Unknown",
+						"boost_enabled": false,
+						"variance":      1.2,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "Tests that empty fields are replaced by specified defaults",
+			defaulter: &Defaulter{
+				DefaultFieldsSets: map[string]interface{}{
+					"max_clock_gz":  6,
+					"wind_feel":     "Unknown",
+					"boost_enabled": false,
+				},
+			},
+			input: testutil.MustMetric(
+				"CPU metrics",
+				map[string]string{},
+				map[string]interface{}{
+					"max_clock_gz": "",
+					"wind_feel":    " ",
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"CPU metrics",
+					map[string]string{},
+					map[string]interface{}{
+						"max_clock_gz":  6,
+						"wind_feel":     "Unknown",
+						"boost_enabled": false,
 					},
 					time.Unix(0, 0),
 				),
@@ -87,13 +119,13 @@ func TestDefaulter(t *testing.T) {
 	}
 
 	for _, scenario := range scenarios {
-		defaulter := scenario.defaulter
-		err := defaulter.Init()
-		assert.NoError(t, err, "There was an error initializing the Defaulter")
+		t.Run(scenario.name, func(t *testing.T) {
+			defaulter := scenario.defaulter
+			defaulter.Log = testutil.Logger{}
 
-		resultMetrics := defaulter.Apply(scenario.input)
-		assert.Len(t, resultMetrics, 1)
-
-		testutil.RequireMetricsEqual(t, scenario.expected, resultMetrics)
+			resultMetrics := defaulter.Apply(scenario.input)
+			assert.Len(t, resultMetrics, 1)
+			testutil.RequireMetricsEqual(t, scenario.expected, resultMetrics)
+		})
 	}
 }

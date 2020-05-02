@@ -6,68 +6,52 @@ import (
 )
 
 const sampleConfig = `
-	[[processors.defaulter.values]]
-		fields = ["field_1", "field_2", "field_3"]
-		value = "NONE"
-		metric_name = "CPU"
-
-
-	[[processors.defaulter.values]]
-		field = ["field_4", "field_5"]
-		value = "TEST"
-		metric_name = "Disk"
-
-	# If the same field shows up in multiple of these value objects,
-	#then the last one will win out.
+	## Ensure's a set of fields always exist on your metric(s) with at the specified default value.
+	## For any given field pair (key = default) under *[processors.defaulter.fields]*, if it's not set, or its value
+	## is 'empty' on the incoming metric, a new or updated metric is set on the metric with the specified default.
+	## 
+	#	[processors.defaulter.fields]
+	#	 field_1 = "bar"
+	#    time_idle = 0
+	#    is_error = true
 `
 
-type DefaultFieldsSet struct {
-	Fields []string `toml:"fields"`
-	Metric string   `toml:"metric_name"`
-	Value  string   `toml:"value"`
-}
-
+// Defaulter is a processor for ensuring certain fields always exist
+// on your Metrics with at least a default value.
 type Defaulter struct {
-	DefaultFieldsSets []DefaultFieldsSet `toml:"values"`
-	Log    telegraf.Logger `toml:"-"`
+	DefaultFieldsSets map[string]interface{} `toml:"fields"`
+	Log               telegraf.Logger        `toml:"-"`
 }
 
+// SampleConfig represents a sample toml config for this plugin.
 func (def *Defaulter) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description is a brief description of this processor plugin's behaviour.
 func (def *Defaulter) Description() string {
-	return "Set the selected fields to a specified default value if they are nil or empty or zero"
+	// return "Sets specified fields to a default value if they are nil or empty string or a single space character."
+	return "Defaulter sets default value(s) for specified fields that are nil, empty or a single space character on incoming metrics."
 }
 
-func (def *Defaulter) Init() error {
-	return nil
-}
-
+// Apply contains the main implementation of this processor.
+// For each metric in 'inputMetrics', it goes over each default pair.
+// If the field in the pair does not exist on the metric, the associated default is added.
+// If the field was found, then, if its value is the empty string or a single space, it is replaced
+// by the associated default.
 func (def *Defaulter) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range inputMetrics {
-		for _, defSet := range def.DefaultFieldsSets {
-			def.Log.Debugf("Going over the fields of a metric with name: %s", metric.Name())
-			if defSet.Metric != "" && metric.Name() != defSet.Metric {
-				continue
-			}
-			for _, field := range defSet.Fields {
-				maybeCurrent, isSet := metric.GetField(field)
-				if !isSet {
-					def.Log.Debugf("Field with name: %v was not set.", field)
-					metric.AddField(field, defSet.Value)
-					continue
-				}
-
-				if maybeCurrent == "" || maybeCurrent == ' ' || maybeCurrent == 0 || maybeCurrent == int64(0) || maybeCurrent == "0" {
-					def.Log.Debugf("Field with name: %v was set but value was an empty: %v. Setting new value to %v", field, maybeCurrent, defSet.Value)
-					metric.RemoveField(field)
-					metric.AddField(field, defSet.Value)
-				}
+		for defField, defValue := range def.DefaultFieldsSets {
+			if maybeCurrent, isSet := metric.GetField(defField); !isSet {
+				def.Log.Debugf("Field with name: %v, was not set on metric: %v.", defField, metric.Name())
+				metric.AddField(defField, defValue)
+			} else if maybeCurrent == "" || maybeCurrent == ' ' {
+				def.Log.Debugf("Field with name: %v was set, but the value (%v) is considered empty. Setting new value to %v", defField, maybeCurrent, defValue)
+				metric.RemoveField(defField)
+				metric.AddField(defField, defValue)
 			}
 		}
 	}
-
 	return inputMetrics
 }
 
