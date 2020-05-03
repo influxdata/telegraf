@@ -107,7 +107,11 @@ func (e *Execd) cmdLoop(ctx context.Context) {
 			internal.WaitTimeout(e.cmd, 200*time.Millisecond)
 			return
 		case err := <-done:
-			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)
+			var reason string
+			if err != nil {
+				reason = fmt.Sprintf(": %s", err)
+			}
+			log.Printf("E! [inputs.execd] Process %s terminated%s", e.Command, reason)
 		}
 
 		log.Printf("E! [inputs.execd] Restarting in %s...", e.RestartDelay.Duration)
