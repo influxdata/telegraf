@@ -45,7 +45,7 @@ func (def *Defaulter) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 			if maybeCurrent, isSet := metric.GetField(defField); !isSet {
 				def.Log.Debugf("Field with name: %v, was not set on metric: %v.", defField, metric.Name())
 				metric.AddField(defField, defValue)
-			} else if maybeCurrent == "" || maybeCurrent == ' ' {
+			} else if maybeCurrent == "" || maybeCurrent == " " {
 				def.Log.Debugf("Field with name: %v was set, but the value (%v) is considered empty. Setting new value to %v", defField, maybeCurrent, defValue)
 				metric.RemoveField(defField)
 				metric.AddField(defField, defValue)

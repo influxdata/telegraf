@@ -86,7 +86,7 @@ func TestDefaulter(t *testing.T) {
 			},
 		},
 		{
-			name: "Tests that empty fields are replaced by specified defaults",
+			name: "Tests that set but empty fields are replaced by specified defaults",
 			defaulter: &Defaulter{
 				DefaultFieldsSets: map[string]interface{}{
 					"max_clock_gz":  6,
