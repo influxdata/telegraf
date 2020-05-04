@@ -179,12 +179,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 	// The tags are common to all events in this timeseries
 	commonTags := CommonTags{}
 
-	commonObj := map[string]interface{}{}
-
-	commonObj["config:hecRouting"] = s.HecRouting
-	commonObj["config:multiMetric"] = s.SplunkmetricMultiMetric
-
-	commonTags.Fields = commonObj
+	commonTags.Fields = map[string]interface{}{}
 
 	// Break tags out into key(n)=value(t) pairs
 	for n, t := range metric.Tags() {
