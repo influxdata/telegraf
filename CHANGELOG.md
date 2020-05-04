@@ -7,7 +7,7 @@
 
 #### New Processors
 
-- [filepath](/plugins/processors/filepathdedup/README.md) - Contributed by @kir4h
+- [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
 
 #### Features
 
