@@ -26,6 +26,7 @@ var (
 	gatherPromptChans []chan empty
 	stdout            io.Writer = os.Stdout
 	stdin             io.Reader = os.Stdin
+	forever                     = 100 * 365 * 24 * time.Hour
 )
 
 const (
@@ -107,12 +108,14 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 
 	go stdinCollectMetricsPrompt(ctx, collectMetricsPrompt)
 
+	quitTimeout := time.NewTimer(forever)
 loop:
 	for {
 		select {
 		case <-quit:
 			// cancel, but keep looping until the metric channel closes.
 			cancel()
+			quitTimeout = time.NewTimer(2 * time.Second)
 		case <-collectMetricsPrompt:
 			collectMetrics(ctx)
 		case m, open := <-metricCh:
@@ -126,6 +129,10 @@ loop:
 			}
 			// Write this to stdout
 			fmt.Fprint(stdout, string(b))
+		case <-quitTimeout.C:
+			// give up waiting for stdin to close and exit.
+			// this is important when you're trying to close the plugin without Telegraf
+			return errors.New("timeout waiting for stdin to close")
 		}
 	}
 
@@ -229,7 +236,7 @@ func DefaultImportedPlugins() (i []telegraf.Input, e error) {
 
 // LoadConfig loads the config and returns inputs that later need to be loaded.
 func LoadConfig(filePath *string) ([]telegraf.Input, error) {
-	if filePath == nil {
+	if filePath == nil || *filePath == "" {
 		return DefaultImportedPlugins()
 	}
 
