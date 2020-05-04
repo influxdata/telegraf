@@ -111,7 +111,7 @@ func (b *Becs) Gather(acc telegraf.Accumulator) error {
 		defer wg.Done()
 		b.clientFind(acc)
 	}()
-	
+
 	wg.Wait()
 
 	return nil
