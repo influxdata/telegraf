@@ -38,8 +38,6 @@ you can send all of your CPU stats in one JSON struct, an example event looks li
   "event": "metric",
   "host": "mono.local",
   "fields": {
-    "_config_hecRouting": false,
-    "_config_multiMetric": true,
     "class": "osx",
     "cpu": "cpu0",
     "metric_name:telegraf.cpu.usage_guest": 0,
