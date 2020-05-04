@@ -5,6 +5,10 @@
 - The `logparser` input is deprecated, use the `tail` input with `data_format =
   "grok"` as a replacement.
 
+- Several fields used primarily for debugging have been removed from the
+  `splunkmetric` serializer, if you are making use of these fields they can be
+  added back with the `tag` option.
+
 #### New Processors
 
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
@@ -31,6 +35,7 @@
 
 - [#7371](https://github.com/influxdata/telegraf/issues/7371): Fix unable to write metrics to CloudWatch with IMDSv1 disabled.
 - [#7233](https://github.com/influxdata/telegraf/issues/7233): Fix vSphere 6.7 missing data issue.
+- [#7448](https://github.com/influxdata/telegraf/issues/7448): Remove debug fields from spunkmetric serializer.
 
 ## v1.14.3 [unreleased]
 
