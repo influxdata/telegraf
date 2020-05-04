@@ -2,6 +2,7 @@ package influx
 
 import (
 	"bytes"
+	"errors"
 	"strconv"
 	"strings"
 	"testing"
@@ -868,4 +869,29 @@ func TestStreamParserErrorString(t *testing.T) {
 			}
 		})
 	}
+}
+
+type MockReader struct {
+	ReadF func(p []byte) (int, error)
+}
+
+func (r *MockReader) Read(p []byte) (int, error) {
+	return r.ReadF(p)
+}
+
+// Errors from the Reader are returned from the Parser
+func TestStreamParserReaderError(t *testing.T) {
+	readerErr := errors.New("error but not eof")
+
+	parser := NewStreamParser(&MockReader{
+		ReadF: func(p []byte) (int, error) {
+			return 0, readerErr
+		},
+	})
+	_, err := parser.Next()
+	require.Error(t, err)
+	require.Equal(t, err, readerErr)
+
+	_, err = parser.Next()
+	require.Equal(t, err, EOF)
 }

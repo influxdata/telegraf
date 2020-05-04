@@ -23,7 +23,9 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 	case "SIGUSR2":
 		e.cmd.Process.Signal(syscall.SIGUSR2)
 	case "STDIN":
-		io.WriteString(e.stdin, "\n")
+		if _, err := io.WriteString(e.stdin, "\n"); err != nil {
+			return fmt.Errorf("Error writing to stdin: %s", err)
+		}
 	case "none":
 	default:
 		return fmt.Errorf("invalid signal: %s", e.Signal)
