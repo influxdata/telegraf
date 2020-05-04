@@ -8,19 +8,6 @@ import (
 	"io"
 )
 
-// NewStreamContentEncoder returns a writer that will encode the stream
-// according to the encoding type.
-func NewStreamContentEncoder(encoding string, w io.Writer) (io.Writer, error) {
-	switch encoding {
-	case "gzip":
-		return NewGzipWriter(w)
-	case "identity", "":
-		return w, nil
-	default:
-		return nil, errors.New("invalid value for content_encoding")
-	}
-}
-
 // NewStreamContentDecoder returns a reader that will decode the stream
 // according to the encoding type.
 func NewStreamContentDecoder(encoding string, r io.Reader) (io.Reader, error) {
@@ -32,30 +19,6 @@ func NewStreamContentDecoder(encoding string, r io.Reader) (io.Reader, error) {
 	default:
 		return nil, errors.New("invalid value for content_encoding")
 	}
-}
-
-// GzipWriter is similar to the gzip.Writer but flushes after each call to
-// write, this ensure that the written data can be decompressed on the read
-// size immediately.
-type GzipWriter struct {
-	w io.Writer
-	z *gzip.Writer
-}
-
-func NewGzipWriter(w io.Writer) (io.Writer, error) {
-	return &GzipWriter{w: w, z: new(gzip.Writer)}, nil
-}
-
-func (w *GzipWriter) Write(p []byte) (int, error) {
-	w.z.Reset(w.w)
-
-	n, err := w.z.Write(p)
-	if err != nil {
-		return n, err
-	}
-
-	err = w.z.Close()
-	return n, err
 }
 
 // GzipReader is similar to gzip.Reader but reads only a single gzip stream per read.

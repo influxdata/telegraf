@@ -59,19 +59,6 @@ func TestIdentityEncodeDecode(t *testing.T) {
 	require.Equal(t, "howdy", string(actual))
 }
 
-func TestStreamIdentityEncode(t *testing.T) {
-	var w bytes.Buffer
-
-	enc, err := NewStreamContentEncoder("identity", &w)
-	require.NoError(t, err)
-
-	n, err := enc.Write([]byte("howdy"))
-	require.NoError(t, err)
-	require.Equal(t, 5, n)
-
-	require.Equal(t, []byte("howdy"), w.Bytes())
-}
-
 func TestStreamIdentityDecode(t *testing.T) {
 	var r bytes.Buffer
 	n, err := r.Write([]byte("howdy"))
@@ -85,24 +72,6 @@ func TestStreamIdentityDecode(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, []byte("howdy"), data)
-}
-
-func TestStreamGzipEncode(t *testing.T) {
-	var w bytes.Buffer
-
-	enc, err := NewStreamContentEncoder("gzip", &w)
-	require.NoError(t, err)
-
-	n, err := enc.Write([]byte("howdy"))
-	require.NoError(t, err)
-	require.Equal(t, 5, n)
-
-	dec, err := NewGzipDecoder()
-	require.NoError(t, err)
-
-	actual, err := dec.Decode(w.Bytes())
-	require.NoError(t, err)
-	require.Equal(t, []byte("howdy"), actual)
 }
 
 func TestStreamGzipDecode(t *testing.T) {
