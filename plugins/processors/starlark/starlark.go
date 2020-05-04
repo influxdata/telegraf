@@ -57,6 +57,10 @@ func (s *Starlark) Init() error {
 		return err
 	}
 
+	// TODO: Should we freeze the globals?  It seems like this isn't required
+	// since we don't intend to run this program concurrently.
+	// globals.Freeze()
+
 	// The source should define an apply function.
 	apply := globals["apply"]
 
@@ -135,6 +139,9 @@ func init() {
 	resolve.AllowFloat = true
 	resolve.AllowLambda = true
 	resolve.AllowSet = true
+
+	starlark.Universe["Metric"] = starlark.NewBuiltin("Metric", newMetric)
+	starlark.Universe["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 }
 
 func init() {

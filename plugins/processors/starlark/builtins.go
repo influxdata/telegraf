@@ -3,14 +3,39 @@ package starlark
 import (
 	"fmt"
 	"sort"
+	"time"
 
+	"github.com/influxdata/telegraf/metric"
 	"go.starlark.net/starlark"
 )
+
+func newMetric(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var name starlark.String
+	if err := starlark.UnpackPositionalArgs("Metric", args, kwargs, 1, &name); err != nil {
+		return nil, err
+	}
+
+	m, err := metric.New(string(name), nil, nil, time.Now())
+	if err != nil {
+		return nil, err
+	}
+
+	return &Metric{metric: m}, nil
+}
+
+func deepcopy(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var sm *Metric
+	if err := starlark.UnpackPositionalArgs("deepcopy", args, kwargs, 1, &sm); err != nil {
+		return nil, err
+	}
+
+	return &Metric{metric: sm.metric.Copy()}, nil
+}
 
 type Removeable interface {
 	starlark.Value
 	Clear() error
-  Delete(starlark.Value) (starlark.Value, bool, error)
+	Delete(starlark.Value) (starlark.Value, bool, error)
 }
 
 type builtinMethod func(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)
@@ -62,7 +87,6 @@ func dict_get(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple)
 	}
 	return starlark.None, nil
 }
-
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·items
 func dict_items(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -126,7 +150,7 @@ func dict_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tu
 	}
 
 	// Remove the item
-	tuple,ok := item.(starlark.Tuple)
+	tuple, ok := item.(starlark.Tuple)
 	if !ok || tuple.Len() != 2 {
 		return starlark.None, fmt.Errorf("%s: returned item is not a valid tuple", b.Name())
 	}
@@ -178,7 +202,7 @@ func dict_update(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tup
 		// Anyway we assume that if we get an iterable mapping it is much more
 		// efficient to use the Items() method.
 		if iter_arg, ok := args[0].(starlark.IterableMapping); ok {
-			for _,item := range iter_arg.Items() {
+			for _, item := range iter_arg.Items() {
 				if err := dict_set_tuple(recv, item); err != nil {
 					return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 				}
@@ -203,7 +227,7 @@ func dict_update(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tup
 	}
 
 	// Use the specified keyword-argument(s) to update if any
-	for _,item := range kwargs {
+	for _, item := range kwargs {
 		if err := dict_set_tuple(recv, item); err != nil {
 			return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 		}
