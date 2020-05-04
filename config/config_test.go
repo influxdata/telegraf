@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
 	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"

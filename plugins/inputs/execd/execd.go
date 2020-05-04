@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -43,12 +44,14 @@ const sampleConfig = `
 type Execd struct {
 	Command      []string
 	Signal       string
-	RestartDelay internal.Duration
+	RestartDelay config.Duration
 
 	acc    telegraf.Accumulator
 	cmd    *exec.Cmd
 	parser parsers.Parser
 	stdin  io.WriteCloser
+	stdout io.ReadCloser
+	stderr io.ReadCloser
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 }
@@ -69,13 +72,17 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
 
 	if len(e.Command) == 0 {
-		return fmt.Errorf("E! [inputs.execd] FATAL no command specified")
+		return fmt.Errorf("FATAL no command specified")
 	}
 
 	e.wg.Add(1)
 
-	var ctx context.Context
-	ctx, e.cancel = context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	e.cancel = cancel
+
+	if err := e.cmdStart(); err != nil {
+		return err
+	}
 
 	go func() {
 		e.cmdLoop(ctx)
@@ -90,79 +97,98 @@ func (e *Execd) Stop() {
 	e.wg.Wait()
 }
 
-func (e *Execd) cmdLoop(ctx context.Context) {
+// cmdLoop watches an already running process, restarting it when appropriate.
+func (e *Execd) cmdLoop(ctx context.Context) error {
 	for {
 		// Use a buffered channel to ensure goroutine below can exit
 		// if `ctx.Done` is selected and nothing reads on `done` anymore
 		done := make(chan error, 1)
 		go func() {
-			done <- e.cmdRun()
+			done <- e.cmdWait()
 		}()
 
 		select {
 		case <-ctx.Done():
-			e.stdin.Close()
-			// Immediately exit process but with a graceful shutdown
-			// period before killing
-			internal.WaitTimeout(e.cmd, 200*time.Millisecond)
-			return
+			if e.stdin != nil {
+				e.stdin.Close()
+				// Immediately exit process but with a graceful shutdown
+				// period before killing
+				internal.WaitTimeout(e.cmd, 200*time.Millisecond)
+			}
+			return nil
 		case err := <-done:
-			log.Printf("E! [inputs.execd] Process %s terminated: %s", e.Command, err)
+			log.Printf("Process %s terminated: %s", e.Command, err)
+			if isQuitting(ctx) {
+				return err
+			}
 		}
 
-		log.Printf("E! [inputs.execd] Restarting in %s...", e.RestartDelay.Duration)
+		log.Printf("Restarting in %s...", time.Duration(e.RestartDelay))
 
 		select {
 		case <-ctx.Done():
-			return
-		case <-time.After(e.RestartDelay.Duration):
+			return nil
+		case <-time.After(time.Duration(e.RestartDelay)):
 			// Continue the loop and restart the process
+			if err := e.cmdStart(); err != nil {
+				return err
+			}
 		}
 	}
 }
 
-func (e *Execd) cmdRun() error {
-	var wg sync.WaitGroup
+func isQuitting(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
 
+func (e *Execd) cmdStart() (err error) {
 	if len(e.Command) > 1 {
 		e.cmd = exec.Command(e.Command[0], e.Command[1:]...)
 	} else {
 		e.cmd = exec.Command(e.Command[0])
 	}
 
-	stdin, err := e.cmd.StdinPipe()
+	e.stdin, err = e.cmd.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stdin pipe: %s", err)
+		return fmt.Errorf("Error opening stdin pipe: %s", err)
 	}
 
-	e.stdin = stdin
-
-	stdout, err := e.cmd.StdoutPipe()
+	e.stdout, err = e.cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stdout pipe: %s", err)
+		return fmt.Errorf("Error opening stdout pipe: %s", err)
 	}
 
-	stderr, err := e.cmd.StderrPipe()
+	e.stderr, err = e.cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error opening stderr pipe: %s", err)
+		return fmt.Errorf("Error opening stderr pipe: %s", err)
 	}
 
-	log.Printf("D! [inputs.execd] Starting process: %s", e.Command)
+	log.Printf("Starting process: %s", e.Command)
 
 	err = e.cmd.Start()
 	if err != nil {
-		return fmt.Errorf("E! [inputs.execd] Error starting process: %s", err)
+		return fmt.Errorf("Error starting process: %s", err)
 	}
 
+	return nil
+}
+
+func (e *Execd) cmdWait() error {
+	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
-		e.cmdReadOut(stdout)
+		e.cmdReadOut(e.stdout)
 		wg.Done()
 	}()
 
 	go func() {
-		e.cmdReadErr(stderr)
+		e.cmdReadErr(e.stderr)
 		wg.Done()
 	}()
 
@@ -176,7 +202,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
-			e.acc.AddError(fmt.Errorf("E! [inputs.execd] Parse error: %s", err))
+			e.acc.AddError(fmt.Errorf("Parse error: %s", err))
 		}
 
 		for _, metric := range metrics {
@@ -185,7 +211,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("E! [inputs.execd] Error reading stdout: %s", err))
+		e.acc.AddError(fmt.Errorf("Error reading stdout: %s", err))
 	}
 }
 
@@ -193,11 +219,11 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("E! [inputs.execd] stderr: %q", scanner.Text())
+		log.Printf("stderr: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("E! [inputs.execd] Error reading stderr: %s", err))
+		e.acc.AddError(fmt.Errorf("Error reading stderr: %s", err))
 	}
 }
 
@@ -205,7 +231,7 @@ func init() {
 	inputs.Add("execd", func() telegraf.Input {
 		return &Execd{
 			Signal:       "none",
-			RestartDelay: internal.Duration{Duration: 10 * time.Second},
+			RestartDelay: config.Duration(10 * time.Second),
 		}
 	})
 }

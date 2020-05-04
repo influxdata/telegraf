@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/gofrs/uuid"
 	"github.com/influxdata/telegraf"
-	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
