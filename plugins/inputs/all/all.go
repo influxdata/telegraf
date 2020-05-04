@@ -142,6 +142,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/sensors"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sflow"
 	_ "github.com/influxdata/telegraf/plugins/inputs/smart"
+	_ "github.com/influxdata/telegraf/plugins/inputs/smc_ipmi"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp_legacy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp_trap"
