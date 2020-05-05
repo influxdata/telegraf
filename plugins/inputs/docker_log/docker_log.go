@@ -322,14 +322,19 @@ func parseLine(line []byte) (time.Time, string, error) {
 	}
 
 	tsString := string(parts[0])
-	message := string(parts[1])
+
+	// Keep any leading space, but remove whitespace from end of line.
+	// This preserves space in, for example, stacktraces, while removing
+	// annoying end of line characters and is similar to how other logging
+	// plugins such as syslog behave.
+	message := bytes.TrimRightFunc(parts[1], unicode.IsSpace)
 
 	ts, err := time.Parse(time.RFC3339Nano, tsString)
 	if err != nil {
 		return time.Time{}, "", fmt.Errorf("error parsing timestamp %q: %v", tsString, err)
 	}
 
-	return ts, message, nil
+	return ts, string(message), nil
 }
 
 func tailStream(
@@ -357,12 +362,6 @@ func tailStream(
 			if err != nil {
 				acc.AddError(err)
 			} else {
-				// Keep any leading space, but remove whitespace from end of line.
-				// This preserves space in, for example, stacktraces, while removing
-				// annoying end of line characters and is similar to how other logging
-				// plugins such as syslog behave.
-				message = strings.TrimRightFunc(message, unicode.IsSpace)
-
 				acc.AddFields("docker_log", map[string]interface{}{
 					"container_id": containerID,
 					"message":      message,
