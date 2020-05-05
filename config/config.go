@@ -1810,7 +1810,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
-		//for XML parser
+	//for XML parser
 	if node, ok := tbl.Fields["xml_merge_nodes"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.Boolean); ok {
