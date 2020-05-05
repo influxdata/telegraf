@@ -142,107 +142,205 @@ func (a *Agent) Run(ctx context.Context) error {
 	return nil
 }
 
-// Test runs the inputs once and prints the output to stdout in line protocol.
-func (a *Agent) Test(ctx context.Context, waitDuration time.Duration) error {
-	var wg sync.WaitGroup
-	metricC := make(chan telegraf.Metric)
-	nulC := make(chan telegraf.Metric)
-	defer func() {
-		close(metricC)
-		close(nulC)
-		wg.Wait()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
+	outputF := func(src <-chan telegraf.Metric) {
 		s := influx.NewSerializer()
 		s.SetFieldSortOrder(influx.SortFields)
-		for metric := range metricC {
+
+		for metric := range src {
 			octets, err := s.Serialize(metric)
 			if err == nil {
 				fmt.Print("> ", string(octets))
 			}
 			metric.Reject()
 		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for range nulC {
-		}
-	}()
-
-	hasServiceInputs := false
-	for _, input := range a.Config.Inputs {
-		if _, ok := input.Input.(telegraf.ServiceInput); ok {
-			hasServiceInputs = true
-			break
-		}
 	}
 
+	return a.test(ctx, wait, outputF)
+}
+func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
+	outputF := func(src <-chan telegraf.Metric) {
+		interval := a.Config.Agent.FlushInterval.Duration
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		var wg sync.WaitGroup
+		for _, output := range a.Config.Outputs {
+			interval := interval
+			// Overwrite agent flush_interval if this plugin has its own.
+			if output.Config.FlushInterval != 0 {
+				interval = output.Config.FlushInterval
+			}
+
+			jitter := 0 * time.Second
+
+			ticker := NewRollingTicker(interval, jitter)
+			defer ticker.Stop()
+
+			wg.Add(1)
+			go func(output *models.RunningOutput) {
+				defer wg.Done()
+				a.flushLoop(ctx, output, ticker)
+			}(output)
+		}
+
+		for metric := range src {
+			for i, output := range a.Config.Outputs {
+				if i == len(a.Config.Outputs)-1 {
+					output.AddMetric(metric)
+				} else {
+					output.AddMetric(metric.Copy())
+				}
+			}
+		}
+
+		cancel()
+		wg.Wait()
+	}
+	return a.test(ctx, wait, outputF)
+}
+
+func (a *Agent) test(ctx context.Context, wait time.Duration, outputF func(<-chan telegraf.Metric)) error {
 	log.Printf("D! [agent] Initializing plugins")
 	err := a.initPlugins()
 	if err != nil {
 		return err
 	}
 
-	if hasServiceInputs {
-		log.Printf("D! [agent] Starting service inputs")
-		err := a.startServiceInputs(ctx, metricC)
-		if err != nil {
-			return err
-		}
+	log.Printf("D! [agent] Connecting outputs")
+	err = a.connectOutputs(ctx)
+	if err != nil {
+		return err
 	}
 
-	hasErrors := false
-	for _, input := range a.Config.Inputs {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			break
-		}
+	inputC := make(chan telegraf.Metric, 100)
+	procC := make(chan telegraf.Metric, 100)
+	outputC := make(chan telegraf.Metric, 100)
 
-		acc := NewAccumulator(input, metricC)
-		acc.SetPrecision(a.Precision())
+	startTime := time.Now()
 
-		// Special instructions for some inputs. cpu, for example, needs to be
-		// run twice in order to return cpu usage percentages.
-		switch input.Config.Name {
-		case "cpu", "mongodb", "procstat":
-			nulAcc := NewAccumulator(input, nulC)
-			nulAcc.SetPrecision(a.Precision())
-			if err := input.Input.Gather(nulAcc); err != nil {
-				acc.AddError(err)
-				hasErrors = true
-			}
-
-			time.Sleep(500 * time.Millisecond)
-			if err := input.Input.Gather(acc); err != nil {
-				acc.AddError(err)
-				hasErrors = true
-			}
-		default:
-			if err := input.Input.Gather(acc); err != nil {
-				acc.AddError(err)
-				hasErrors = true
-			}
-		}
+	log.Printf("D! [agent] Starting service inputs")
+	err = a.startServiceInputs(ctx, inputC)
+	if err != nil {
+		return err
 	}
 
-	if hasServiceInputs {
-		log.Printf("D! [agent] Waiting for service inputs")
-		internal.SleepContext(ctx, waitDuration)
+	var wg sync.WaitGroup
+
+	src := inputC
+	dst := inputC
+
+	nul := make(chan telegraf.Metric)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range nul {
+		}
+	}()
+
+	wg.Add(1)
+	go func(dst chan telegraf.Metric) {
+		defer wg.Done()
+
+		var wg sync.WaitGroup
+		for _, input := range a.Config.Inputs {
+			wg.Add(1)
+			go func(input *models.RunningInput) {
+				defer wg.Done()
+				jitter := 0 * time.Second
+				interval := a.Config.Agent.Interval.Duration
+
+				// Overwrite agent interval if this plugin has its own.
+				if input.Config.Interval != 0 {
+					interval = input.Config.Interval
+				}
+
+				ticker := NewUnalignedTicker(interval, jitter)
+				defer ticker.Stop()
+				<-ticker.Elapsed()
+
+				switch input.Config.Name {
+				case "cpu", "mongodb", "procstat":
+					nulAcc := NewAccumulator(input, nul)
+					nulAcc.SetPrecision(a.Precision())
+					if err := input.Input.Gather(nulAcc); err != nil {
+						nulAcc.AddError(err)
+					}
+
+					time.Sleep(500 * time.Millisecond)
+				}
+
+				acc := NewAccumulator(input, dst)
+				acc.SetPrecision(a.Precision())
+
+				if err := input.Input.Gather(acc); err != nil {
+					acc.AddError(err)
+				}
+			}(input)
+
+		}
+		wg.Wait()
+
+		internal.SleepContext(ctx, wait)
+
 		log.Printf("D! [agent] Stopping service inputs")
 		a.stopServiceInputs()
+
+		close(nul)
+		close(dst)
+		log.Printf("D! [agent] Input channel closed")
+	}(dst)
+
+	src = dst
+
+	if len(a.Config.Processors) > 0 {
+		dst = procC
+
+		wg.Add(1)
+		go func(src, dst chan telegraf.Metric) {
+			defer wg.Done()
+
+			err := a.runProcessors(src, dst)
+			if err != nil {
+				log.Printf("E! [agent] Error running processors: %v", err)
+			}
+			close(dst)
+			log.Printf("D! [agent] Processor channel closed")
+		}(src, dst)
+
+		src = dst
 	}
 
-	if hasErrors {
-		return fmt.Errorf("One or more input plugins had an error")
+	if len(a.Config.Aggregators) > 0 {
+		dst = outputC
+
+		wg.Add(1)
+		go func(src, dst chan telegraf.Metric) {
+			defer wg.Done()
+
+			err := a.runAggregators(startTime, src, dst)
+			if err != nil {
+				log.Printf("E! [agent] Error running aggregators: %v", err)
+			}
+			close(dst)
+			log.Printf("D! [agent] Output channel closed")
+		}(src, dst)
+
+		src = dst
 	}
+
+	wg.Add(1)
+	go func(src <-chan telegraf.Metric) {
+		defer wg.Done()
+		outputF(src)
+	}(src)
+
+	wg.Wait()
+
+	log.Printf("D! [agent] Closing outputs")
+	a.closeOutputs()
+
+	log.Printf("D! [agent] Stopped Successfully")
 	return nil
 }
 
