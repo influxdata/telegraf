@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 )
 
 const sampleConfig = `
@@ -197,6 +198,12 @@ func (e *Execd) cmdWait() error {
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
+	if _, isInfluxParser := e.parser.(*influx.Parser); isInfluxParser {
+		// work around the lack of built-in streaming parser. :(
+		e.cmdReadOutStream(out)
+		return
+	}
+
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
@@ -212,6 +219,29 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 
 	if err := scanner.Err(); err != nil {
 		e.acc.AddError(fmt.Errorf("Error reading stdout: %s", err))
+	}
+}
+
+func (e *Execd) cmdReadOutStream(out io.Reader) {
+	parser := influx.NewStreamParser(out)
+
+	for {
+		metric, err := parser.Next()
+		if err != nil {
+			if err == influx.EOF {
+				break // stream ended
+			}
+			if parseErr, isParseError := err.(*influx.ParseError); isParseError {
+				// parse error.
+				e.acc.AddError(parseErr)
+				continue
+			}
+			// some non-recoverable error?
+			e.acc.AddError(err)
+			return
+		}
+
+		e.acc.AddMetric(metric)
 	}
 }
 

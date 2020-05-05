@@ -3,6 +3,8 @@
 package execd
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +47,51 @@ func TestExternalInputWorks(t *testing.T) {
 	require.Equal(t, float64(0), val)
 	// test that a later gather will not panic
 	e.Gather(acc)
+}
+
+func TestParsesLinesContainingNewline(t *testing.T) {
+	parser, err := parsers.NewInfluxParser()
+	require.NoError(t, err)
+
+	metrics := make(chan telegraf.Metric, 10)
+	defer close(metrics)
+	acc := agent.NewAccumulator(&TestMetricMaker{}, metrics)
+
+	e := &Execd{
+		Command:      []string{shell(), fileShellScriptPath()},
+		RestartDelay: config.Duration(5 * time.Second),
+		parser:       parser,
+		Signal:       "STDIN",
+		acc:          acc,
+	}
+
+	cases := []struct {
+		Name  string
+		Value string
+	}{
+		{
+			Name:  "no-newline",
+			Value: "my message",
+		}, {
+			Name:  "newline",
+			Value: "my\nmessage",
+		},
+	}
+
+	for _, test := range cases {
+		t.Run(test.Name, func(t *testing.T) {
+			line := fmt.Sprintf("event message=\"%v\" 1587128639239000000", test.Value)
+
+			e.cmdReadOut(strings.NewReader(line))
+
+			m := readChanWithTimeout(t, metrics, 1*time.Second)
+
+			require.Equal(t, "event", m.Name())
+			val, ok := m.GetField("message")
+			require.True(t, ok)
+			require.Equal(t, test.Value, val)
+		})
+	}
 }
 
 func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout time.Duration) telegraf.Metric {
