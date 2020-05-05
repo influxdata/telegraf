@@ -40,7 +40,12 @@ func (nr *NewRelic) Connect() error {
 		return fmt.Errorf("InsightKey is a required for newrelic")
 	}
 	var err error
-	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey))
+	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey),
+		telemetry.ConfigHarvestPeriod(0),
+		func(cfg *telemetry.Config) {
+			cfg.Product = "NewRelic-Telgraf-Plugin"
+			cfg.ProductVersion = "1.0"
+		})
 	if err != nil {
 		return fmt.Errorf("unable to connect to newrelic %v", err)
 	}
