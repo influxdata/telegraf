@@ -180,7 +180,7 @@ func Test(t *testing.T) {
 			acc.Wait(len(tt.expected))
 			plugin.Stop()
 
-			require.Nil(t, acc.Errors) //no errors during gathering
+			require.Nil(t, acc.Errors) // no errors during gathering
 
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
