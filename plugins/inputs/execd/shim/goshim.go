@@ -23,9 +23,9 @@ import (
 type empty struct{}
 
 var (
-	gatherPromptChans []chan empty
-	stdout            io.Writer = os.Stdout
-	stdin             io.Reader = os.Stdin
+	stdout  io.Writer = os.Stdout
+	stdin   io.Reader = os.Stdin
+	forever           = 100 * 365 * 24 * time.Hour
 )
 
 const (
@@ -34,10 +34,15 @@ const (
 	PollIntervalDisabled = time.Duration(0)
 )
 
+// Shim allows you to wrap your inputs and run them as if they were part of Telegraf,
+// except built externally.
 type Shim struct {
-	Inputs []telegraf.Input
+	Inputs            []telegraf.Input
+	gatherPromptChans []chan empty
+	metricCh          chan telegraf.Metric
 }
 
+// New creates a new shim interface
 func New() *Shim {
 	return &Shim{}
 }
@@ -67,25 +72,26 @@ func (s *Shim) AddInputs(newInputs []telegraf.Input) error {
 
 // Run the input plugins..
 func (s *Shim) Run(pollInterval time.Duration) error {
+	// context is used only to close the stdin reader. everything else cascades
+	// from that point and closes cleanly when it's done.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s.metricCh = make(chan telegraf.Metric, 1)
+
 	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	collectMetricsPrompt := make(chan os.Signal, 1)
-	listenForCollectMetricsSignals(collectMetricsPrompt)
-
-	wg.Add(1) // wait for the metric channel to close
-	metricCh := make(chan telegraf.Metric, 1)
+	listenForCollectMetricsSignals(ctx, collectMetricsPrompt)
 
 	serializer := influx.NewSerializer()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	for _, input := range s.Inputs {
 		wrappedInput := inputShim{Input: input}
 
-		acc := agent.NewAccumulator(wrappedInput, metricCh)
+		acc := agent.NewAccumulator(wrappedInput, s.metricCh)
 		acc.SetPrecision(time.Nanosecond)
 
 		if serviceInput, ok := input.(telegraf.ServiceInput); ok {
@@ -94,30 +100,35 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 			}
 		}
 		gatherPromptCh := make(chan empty, 1)
-		gatherPromptChans = append(gatherPromptChans, gatherPromptCh)
+		s.gatherPromptChans = append(s.gatherPromptChans, gatherPromptCh)
 		wg.Add(1)
 		go func(input telegraf.Input) {
 			startGathering(ctx, input, acc, gatherPromptCh, pollInterval)
 			if serviceInput, ok := input.(telegraf.ServiceInput); ok {
 				serviceInput.Stop()
 			}
+			close(gatherPromptCh)
 			wg.Done()
 		}(input)
 	}
 
-	go stdinCollectMetricsPrompt(ctx, collectMetricsPrompt)
+	go s.stdinCollectMetricsPrompt(ctx, cancel, collectMetricsPrompt)
+	go s.closeMetricChannelWhenInputsFinish(&wg)
 
 loop:
 	for {
 		select {
-		case <-quit:
+		case <-quit: // user-triggered quit
 			// cancel, but keep looping until the metric channel closes.
 			cancel()
-		case <-collectMetricsPrompt:
-			collectMetrics(ctx)
-		case m, open := <-metricCh:
+		case _, open := <-collectMetricsPrompt:
+			if !open { // stdin-close-triggered quit
+				cancel()
+				continue
+			}
+			s.collectMetrics(ctx)
+		case m, open := <-s.metricCh:
 			if !open {
-				wg.Done()
 				break loop
 			}
 			b, err := serializer.Serialize(m)
@@ -129,7 +140,6 @@ loop:
 		}
 	}
 
-	wg.Wait()
 	return nil
 }
 
@@ -142,11 +152,16 @@ func hasQuit(ctx context.Context) bool {
 	}
 }
 
-func stdinCollectMetricsPrompt(ctx context.Context, collectMetricsPrompt chan<- os.Signal) {
-	s := bufio.NewScanner(stdin)
+func (s *Shim) stdinCollectMetricsPrompt(ctx context.Context, cancel context.CancelFunc, collectMetricsPrompt chan<- os.Signal) {
+	defer func() {
+		cancel()
+		close(collectMetricsPrompt)
+	}()
+
+	scanner := bufio.NewScanner(stdin)
 	// for every line read from stdin, make sure we're not supposed to quit,
 	// then push a message on to the collectMetricsPrompt
-	for s.Scan() {
+	for scanner.Scan() {
 		// first check if we should quit
 		if hasQuit(ctx) {
 			return
@@ -159,7 +174,7 @@ func stdinCollectMetricsPrompt(ctx context.Context, collectMetricsPrompt chan<- 
 
 // pushCollectMetricsRequest pushes a non-blocking (nil) message to the
 // collectMetricsPrompt channel to trigger metric collection.
-// The channel is defined with a buffer of 1, so if it's full, duplicated
+// The channel is defined with a buffer of 1, so while it's full, subsequent
 // requests are discarded.
 func pushCollectMetricsRequest(collectMetricsPrompt chan<- os.Signal) {
 	select {
@@ -168,14 +183,14 @@ func pushCollectMetricsRequest(collectMetricsPrompt chan<- os.Signal) {
 	}
 }
 
-func collectMetrics(ctx context.Context) {
+func (s *Shim) collectMetrics(ctx context.Context) {
 	if hasQuit(ctx) {
 		return
 	}
-	for i := 0; i < len(gatherPromptChans); i++ {
+	for i := 0; i < len(s.gatherPromptChans); i++ {
 		// push a message out to each channel to collect metrics. don't block.
 		select {
-		case gatherPromptChans[i] <- empty{}:
+		case s.gatherPromptChans[i] <- empty{}:
 		default:
 		}
 	}
@@ -196,7 +211,11 @@ func startGathering(ctx context.Context, input telegraf.Input, acc telegraf.Accu
 		select {
 		case <-ctx.Done():
 			return
-		case <-gatherPromptCh:
+		case _, open := <-gatherPromptCh:
+			if !open {
+				// stdin has closed.
+				return
+			}
 			if err := input.Gather(acc); err != nil {
 				fmt.Fprintf(os.Stderr, "failed to gather metrics: %s", err)
 			}
@@ -229,7 +248,7 @@ func DefaultImportedPlugins() (i []telegraf.Input, e error) {
 
 // LoadConfig loads the config and returns inputs that later need to be loaded.
 func LoadConfig(filePath *string) ([]telegraf.Input, error) {
-	if filePath == nil {
+	if filePath == nil || *filePath == "" {
 		return DefaultImportedPlugins()
 	}
 
@@ -275,4 +294,9 @@ func loadConfigIntoInputs(md toml.MetaData, inputConfigs map[string][]toml.Primi
 		}
 	}
 	return renderedInputs, nil
+}
+
+func (s *Shim) closeMetricChannelWhenInputsFinish(wg *sync.WaitGroup) {
+	wg.Wait()
+	close(s.metricCh)
 }
