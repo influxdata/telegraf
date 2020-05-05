@@ -1,5 +1,3 @@
- plugins/parsers/xml/parser.go 
-@@ -0,0 +1,174 @@
 package xml
 
 import (
