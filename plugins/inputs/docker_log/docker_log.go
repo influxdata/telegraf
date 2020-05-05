@@ -69,9 +69,6 @@ const (
 	// docker code:
 	// https://github.com/moby/moby/blob/master/daemon/logger/copier.go#L21
 	maxLineBytes = 16 * 1024
-
-	//Length of docker time stamp in every log message
-	dockerTimeStampLength = 30
 )
 
 var (
@@ -316,42 +313,23 @@ func (d *DockerLogs) tailContainerLogs(
 	}
 }
 
-func parseLogEntry(rawMessage []byte) (time.Time, []byte, error) {
-	var (
-		message   []byte
-		ts        []byte
-		err       error
-		timeStamp time.Time
-	)
+func parseLine(line []byte) (time.Time, string, error) {
+	parts := bytes.SplitN(line, []byte(" "), 2)
 
-	if len(rawMessage) == 0 {
-		return time.Time{}, nil, nil
+	switch len(parts) {
+	case 1:
+		parts = append(parts, []byte(""))
 	}
 
-	msgSplit := bytes.SplitN(rawMessage, []byte(" "), 2)
+	tsString := string(parts[0])
+	message := string(parts[1])
 
-	switch parts := len(msgSplit); {
-
-	case parts == 2: //regular case, timestamp separated from rawMessage with ' ': [timestamp] [rawMessage]
-		ts = msgSplit[0]
-		message = msgSplit[1]
-	case parts == 1:
-
-		if len(rawMessage) == dockerTimeStampLength { //edge case, empty message with only timestamp
-			ts = rawMessage
-			message = []byte{} //empty string
-		} else {
-			return time.Time{}, nil, fmt.Errorf("can't parse timestamp from log entry: %q", rawMessage)
-
-		}
-	}
-
-	timeStamp, err = time.Parse(time.RFC3339Nano, string(ts))
+	ts, err := time.Parse(time.RFC3339Nano, tsString)
 	if err != nil {
-		return time.Now(), message, fmt.Errorf("can't parse timestamp from string %q, reason: %v", ts, err)
+		return time.Time{}, "", fmt.Errorf("error parsing timestamp %q: %v", tsString, err)
 	}
 
-	return timeStamp, message, nil
+	return ts, message, nil
 }
 
 func tailStream(
@@ -371,30 +349,25 @@ func tailStream(
 
 	r := bufio.NewReaderSize(reader, 64*1024)
 
-	var (
-		err, parseErr error
-		message       []byte
-		messageTs     time.Time
-		emptyTs       time.Time
-	)
-
 	for {
-		message, err = r.ReadBytes('\n')
-		//Parsing timestamp and message
-		messageTs, message, parseErr = parseLogEntry(message)
-		acc.AddError(parseErr)
+		line, err := r.ReadBytes('\n')
 
-		// Keep any leading space, but remove whitespace from end of line.
-		// This preserves space in, for example, stacktraces, while removing
-		// annoying end of line characters and is similar to how other logging
-		// plugins such as syslog behave.
-		message = bytes.TrimRightFunc(message, unicode.IsSpace)
+		if len(line) != 0 {
+			ts, message, err := parseLine(line)
+			if err != nil {
+				acc.AddError(err)
+			} else {
+				// Keep any leading space, but remove whitespace from end of line.
+				// This preserves space in, for example, stacktraces, while removing
+				// annoying end of line characters and is similar to how other logging
+				// plugins such as syslog behave.
+				message = strings.TrimRightFunc(message, unicode.IsSpace)
 
-		if len(message) != 0 || (messageTs != emptyTs) {
-			acc.AddFields("docker_log", map[string]interface{}{
-				"container_id": containerID,
-				"message":      message,
-			}, tags, messageTs)
+				acc.AddFields("docker_log", map[string]interface{}{
+					"container_id": containerID,
+					"message":      message,
+				}, tags, ts)
+			}
 		}
 
 		if err != nil {
@@ -404,7 +377,6 @@ func tailStream(
 			return err
 		}
 	}
-
 }
 
 func tailMultiplexed(
