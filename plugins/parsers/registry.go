@@ -149,7 +149,7 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
-	
+
 	// xml configuration
 	XMLMergeNodes bool   `toml:"xml_merge_nodes"`
 	XMLTagNode    bool   `toml:"xml_node_to_tag"`

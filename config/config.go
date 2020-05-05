@@ -1842,7 +1842,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 			}
 		}
 	}
-	
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1889,7 +1889,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "xml_merge_nodes")
 	delete(tbl.Fields, "xml_node_to_tag")
 	delete(tbl.Fields, "xml_query")
-	
+
 	return c, nil
 }
 
