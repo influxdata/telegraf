@@ -165,3 +165,22 @@ An example configuration of a file based output is:
    splunkmetric_hec_routing = false
    splunkmetric_multimetric = true
 ```
+
+## Non-numeric metric values
+
+Splunk supports only numeric field values, so serializer would silently drop metrics with the string values. For some cases it is possible to workaround using ENUM processor. Example, provided below doing this for the `docker_container_health.health_status` metric:
+
+```toml
+# splunkmetric does not support sting values
+[[processors.enum]]
+  namepass = ["docker_container_health"]
+  [[processors.enum.mapping]]
+    ## Name of the field to map
+    field = "health_status"
+    [processors.enum.mapping.value_mappings]
+    starting = 0
+    healthy = 1
+    unhealthy = 2
+    none = 3
+```
+
