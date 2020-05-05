@@ -261,3 +261,7 @@ func (r *RunningOutput) LogBufferStatus() {
 func (r *RunningOutput) Log() telegraf.Logger {
 	return r.log
 }
+
+func (r *RunningOutput) BufferLength() int {
+	return r.buffer.Len()
+}

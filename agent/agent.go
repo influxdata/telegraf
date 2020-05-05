@@ -156,7 +156,16 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 		}
 	}
 
-	return a.test(ctx, wait, outputF)
+	err := a.test(ctx, wait, outputF)
+	if err != nil {
+		return err
+	}
+
+	if models.GlobalGatherErrors.Get() != 0 {
+		return fmt.Errorf("input plugins recorded %d errors", models.GlobalGatherErrors.Get())
+	}
+	return nil
+
 }
 func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 	outputF := func(src <-chan telegraf.Metric) {
@@ -197,7 +206,18 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 		cancel()
 		wg.Wait()
 	}
-	return a.test(ctx, wait, outputF)
+
+	err := a.test(ctx, wait, outputF)
+	if err != nil {
+		return err
+	}
+
+	unsent := 0
+	for _, output := range a.Config.Outputs {
+		unsent += output.BufferLength()
+	}
+
+	return fmt.Errorf("output plugins unable to send %d metrics", unsent)
 }
 
 func (a *Agent) test(ctx context.Context, wait time.Duration, outputF func(<-chan telegraf.Metric)) error {
@@ -341,6 +361,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputF func(<-cha
 	a.closeOutputs()
 
 	log.Printf("D! [agent] Stopped Successfully")
+
 	return nil
 }
 
