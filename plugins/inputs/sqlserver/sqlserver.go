@@ -1577,7 +1577,7 @@ EngineEdition:
 IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
 	BEGIN
 	SELECT DISTINCT
-		'sqlserver_disk_space' AS [measurement]
+		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('machinename') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
 		,IIF( RIGHT(vs.[volume_mount_point],1) = '\'	/*Tag value cannot end with \ */
