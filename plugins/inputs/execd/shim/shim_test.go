@@ -1,7 +1,9 @@
 package shim
 
 import (
+	"bufio"
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -15,11 +17,13 @@ func TestShimWorks(t *testing.T) {
 	stdoutBytes := bytes.NewBufferString("")
 	stdout = stdoutBytes
 
+	stdin, _ = io.Pipe() // hold the stdin pipe open
+
 	timeout := time.NewTimer(10 * time.Second)
-	wait := runInputPlugin(t, 10*time.Millisecond)
+	metricProcessed, _ := runInputPlugin(t, 10*time.Millisecond)
 
 	select {
-	case <-wait:
+	case <-metricProcessed:
 	case <-timeout.C:
 		require.Fail(t, "Timeout waiting for metric to arrive")
 	}
@@ -40,55 +44,52 @@ func TestShimWorks(t *testing.T) {
 }
 
 func TestShimStdinSignalingWorks(t *testing.T) {
-	stdoutBytes := bytes.NewBufferString("")
-	stdout = stdoutBytes
-	stdinBytes := bytes.NewBufferString("")
-	stdin = stdinBytes
+	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter := io.Pipe()
+
+	stdin = stdinReader
+	stdout = stdoutWriter
 
 	timeout := time.NewTimer(10 * time.Second)
-	wait := runInputPlugin(t, 40*time.Second)
+	metricProcessed, exited := runInputPlugin(t, 40*time.Second)
 
-	stdinBytes.WriteString("\n")
+	stdinWriter.Write([]byte("\n"))
 
 	select {
-	case <-wait:
+	case <-metricProcessed:
 	case <-timeout.C:
 		require.Fail(t, "Timeout waiting for metric to arrive")
 	}
 
-	for stdoutBytes.Len() == 0 {
-		select {
-		case <-timeout.C:
-			require.Fail(t, "Timeout waiting to read metric from stdout")
-			return
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
+	r := bufio.NewReader(stdoutReader)
+	out, err := r.ReadString('\n')
+	require.NoError(t, err)
+	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
-	out := string(stdoutBytes.Bytes())
-	require.Contains(t, out, "\n")
-	metricLine := strings.Split(out, "\n")[0]
-	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
+	stdinWriter.Close()
+	// check that it exits cleanly
+	<-exited
 }
 
-func runInputPlugin(t *testing.T, timeout time.Duration) chan bool {
-	wait := make(chan bool)
+func runInputPlugin(t *testing.T, interval time.Duration) (metricProcessed chan bool, exited chan bool) {
+	metricProcessed = make(chan bool)
+	exited = make(chan bool)
 	inp := &testInput{
-		wait: wait,
+		metricProcessed: metricProcessed,
 	}
 
 	shim := New()
 	shim.AddInput(inp)
 	go func() {
-		err := shim.Run(timeout) // we aren't using the timer here
+		err := shim.Run(interval)
 		require.NoError(t, err)
+		exited <- true
 	}()
-	return wait
+	return metricProcessed, exited
 }
 
 type testInput struct {
-	wait chan bool
+	metricProcessed chan bool
 }
 
 func (i *testInput) SampleConfig() string {
@@ -107,7 +108,7 @@ func (i *testInput) Gather(acc telegraf.Accumulator) error {
 		map[string]string{
 			"tag": "tag",
 		}, time.Unix(1234, 5678))
-	i.wait <- true
+	i.metricProcessed <- true
 	return nil
 }
 

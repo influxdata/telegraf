@@ -5,7 +5,9 @@ package execd
 import (
 	"fmt"
 	"io"
+	"os"
 	"syscall"
+	"time"
 
 	"github.com/influxdata/telegraf"
 )
@@ -23,6 +25,9 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 	case "SIGUSR2":
 		e.cmd.Process.Signal(syscall.SIGUSR2)
 	case "STDIN":
+		if osStdin, ok := e.stdin.(*os.File); ok {
+			osStdin.SetWriteDeadline(time.Now().Add(1 * time.Second))
+		}
 		if _, err := io.WriteString(e.stdin, "\n"); err != nil {
 			return fmt.Errorf("Error writing to stdin: %s", err)
 		}

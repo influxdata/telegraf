@@ -1,4 +1,4 @@
-// +build windows
+// +build !windows
 
 package shim
 
@@ -10,7 +10,8 @@ import (
 )
 
 func listenForCollectMetricsSignals(ctx context.Context, collectMetricsPrompt chan os.Signal) {
-	signal.Notify(collectMetricsPrompt, syscall.SIGHUP)
+	// just listen to all the signals.
+	signal.Notify(collectMetricsPrompt, syscall.SIGHUP, syscall.SIGUSR1, syscall.SIGUSR2)
 
 	go func() {
 		select {

@@ -3,11 +3,11 @@
 package shim
 
 import (
-	"bytes"
+	"bufio"
 	"context"
+	"io"
 	"os"
 	"runtime"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -20,15 +20,15 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 		t.Skip()
 		return
 	}
-	stdoutBytes := bytes.NewBufferString("")
-	stdout = stdoutBytes
+	stdinReader, stdinWriter := io.Pipe()
+	stdoutReader, stdoutWriter := io.Pipe()
+
+	stdin = stdinReader
+	stdout = stdoutWriter
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	wait := runInputPlugin(t, 40*time.Second)
-
-	// sleep a bit to avoid a race condition where the input hasn't loaded yet.
-	time.Sleep(10 * time.Millisecond)
+	metricProcessed, exited := runInputPlugin(t, 20*time.Minute)
 
 	// signal USR1 to yourself.
 	pid := os.Getpid()
@@ -54,23 +54,17 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 	timeout := time.NewTimer(10 * time.Second)
 
 	select {
-	case <-wait:
+	case <-metricProcessed:
 	case <-timeout.C:
 		require.Fail(t, "Timeout waiting for metric to arrive")
 	}
+	cancel()
 
-	for stdoutBytes.Len() == 0 {
-		select {
-		case <-timeout.C:
-			require.Fail(t, "Timeout waiting to read metric from stdout")
-			return
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
+	r := bufio.NewReader(stdoutReader)
+	out, err := r.ReadString('\n')
+	require.NoError(t, err)
+	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
-	out := string(stdoutBytes.Bytes())
-	require.Contains(t, out, "\n")
-	metricLine := strings.Split(out, "\n")[0]
-	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
+	stdinWriter.Close()
+	<-exited
 }
