@@ -33,10 +33,11 @@ func TestExternalInputWorks(t *testing.T) {
 
 	require.NoError(t, e.Start(acc))
 	require.NoError(t, e.Gather(acc))
-	e.Stop()
 
 	// grab a metric and make sure it's a thing
 	m := readChanWithTimeout(t, metrics, 10*time.Second)
+
+	e.Stop()
 
 	require.Equal(t, "counter_bash", m.Name())
 	val, ok := m.GetField("count")
