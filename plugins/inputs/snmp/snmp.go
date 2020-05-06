@@ -431,6 +431,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			if i != 0 {
 				t.Fields[0], t.Fields[i] = t.Fields[i], t.Fields[0]
 			}
+			break
 		}
 	}
 
@@ -540,7 +541,9 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 
 		for idx, v := range ifv {
 			if f.UseSecondaryIndex == true {
-				idx = secIdxTab[idx]
+				if newidx, ok := secIdxTab[idx]; ok {
+					idx = newidx
+				}
 			}
 			rtr, ok := rows[idx]
 			if !ok {
