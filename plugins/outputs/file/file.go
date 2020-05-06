@@ -1,7 +1,6 @@
 package file
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -103,7 +102,6 @@ func (f *File) Description() string {
 }
 
 func (f *File) Write(metrics []telegraf.Metric) error {
-	return errors.New("output err")
 	var writeErr error = nil
 
 	if f.UseBatchFormat {
