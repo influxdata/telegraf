@@ -257,8 +257,8 @@ type Field struct {
 	//  that this filed will be used to join them. There can be only one secondary index table.
 	SecondaryIndexTable bool
 	// This field is using secondary index, and will be later merged with primary index
-	//  using SecondaryIndexTable. SecondaryIndexTable and UseSecodaryIndex are exclusive.
-	UseSecodaryIndex bool
+	//  using SecondaryIndexTable. SecondaryIndexTable and UseSecondaryIndex are exclusive.
+	UseSecondaryIndex bool
 
 	initialized bool
 }
@@ -285,8 +285,8 @@ func (f *Field) init() error {
 		//TODO use textual convention conversion from the MIB
 	}
 
-	if f.SecondaryIndexTable == true && f.UseSecodaryIndex == true {
-		return errors.New("SecondaryIndexTable and UseSecodaryIndex are exclusive")
+	if f.SecondaryIndexTable == true && f.UseSecondaryIndex == true {
+		return errors.New("SecondaryIndexTable and UseSecondaryIndex are exclusive")
 	}
 
 	f.initialized = true
@@ -539,7 +539,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		}
 
 		for idx, v := range ifv {
-			if f.UseSecodaryIndex == true {
+			if f.UseSecondaryIndex == true {
 				idx = secIdxTab[idx]
 			}
 			rtr, ok := rows[idx]
