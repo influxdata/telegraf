@@ -25,13 +25,13 @@ type Datadog struct {
 
 var sampleConfig = `
   ## Datadog API key
-  apikey = "my-secret-key" # required.
-
-  # The base endpoint URL can optionally be specified but it defaults to:
-  #url = "https://app.datadoghq.com/api/v1/series"
+  apikey = "my-secret-key"
 
   ## Connection timeout.
   # timeout = "5s"
+
+  ## Write URL override; useful for debugging.
+  # url = "https://app.datadoghq.com/api/v1/series"
 `
 
 type TimeSeries struct {

@@ -30,6 +30,7 @@
 - [#7356](https://github.com/influxdata/telegraf/pull/7356): Add option to save retention policy as tag in influxdb_listener.
 - [#6915](https://github.com/influxdata/telegraf/pull/6915): Add support for MDS and RGW sockets to ceph input.
 - [#7391](https://github.com/influxdata/telegraf/pull/7391): Extract target as a tag for each rule in iptables input.
+- [#7434](https://github.com/influxdata/telegraf/pull/7434): Use docker log timestamp as metric time.
 
 #### Bugfixes
 
@@ -37,6 +38,7 @@
 - [#7233](https://github.com/influxdata/telegraf/issues/7233): Fix vSphere 6.7 missing data issue.
 - [#7448](https://github.com/influxdata/telegraf/issues/7448): Remove debug fields from spunkmetric serializer.
 - [#7446](https://github.com/influxdata/telegraf/issues/7446): Fix gzip support in socket_listener with tcp sockets.
+- [#7390](https://github.com/influxdata/telegraf/issues/7390): Fix interval drift when round_interval is set in agent.
 
 ## v1.14.3 [unreleased]
 
