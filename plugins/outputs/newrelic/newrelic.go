@@ -4,8 +4,10 @@ package newrelic
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/cumulative"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
@@ -15,8 +17,9 @@ import (
 type NewRelic struct {
 	harvestor    *telemetry.Harvester
 	dc           *cumulative.DeltaCalculator
-	InsightsKey  string `toml:"insights_key"`
-	MetricPrefix string `toml:"metric_prefix"`
+	InsightsKey  string            `toml:"insights_key"`
+	MetricPrefix string            `toml:"metric_prefix"`
+	Timeout      internal.Duration `toml:"timeout"`
 	savedErrors  []map[string]interface{}
 }
 
@@ -30,8 +33,12 @@ func (nr *NewRelic) SampleConfig() string {
 	return `
 	## New Relic Insights API key (required)
 	insights_key = "insights api key"
-	#metric_prefix if defined, prefix's metrics name for easy identification (optional)
+
+	# metric_prefix if defined, prefix's metrics name for easy identification (optional)
 	# metric_prefix = ""
+	
+	# harvest timeout, default is 15 seconds
+	# timeout = "15s"
 `
 }
 
@@ -46,6 +53,7 @@ func (nr *NewRelic) Connect() error {
 		func(cfg *telemetry.Config) {
 			cfg.Product = "NewRelic-Telgraf-Plugin"
 			cfg.ProductVersion = "1.0"
+			cfg.HarvestTimeout = nr.Timeout.Duration
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				nr.savedErrors = append(nr.savedErrors, e)
 			}
@@ -132,6 +140,8 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 
 func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
-		return &NewRelic{}
+		return &NewRelic{
+			Timeout: internal.Duration{Duration: time.Second * 15},
+		}
 	})
 }
