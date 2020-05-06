@@ -1,6 +1,7 @@
 package newrelic
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf"
@@ -8,6 +9,16 @@ import (
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 	"github.com/stretchr/testify/require"
 )
+
+func ErrorContains(out error, want string) bool {
+	if out == nil {
+		return want == ""
+	}
+	if want == "" {
+		return false
+	}
+	return strings.Contains(out.Error(), want)
+}
 
 func TestBasic(t *testing.T) {
 	nr := &NewRelic{
@@ -19,7 +30,9 @@ func TestBasic(t *testing.T) {
 	require.NoError(t, err)
 
 	err = nr.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	if !ErrorContains(err, "403") {
+		t.Errorf("unexpected error: %v", err)
+	}
 }
 
 func TestNewRelic_Write(t *testing.T) {
