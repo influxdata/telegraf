@@ -541,7 +541,9 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 
 		for idx, v := range ifv {
 			if f.UseSecondaryIndex == true {
+				log.Printf("D! [inputs.snmp] Looking up %s",idx)
 				if newidx, ok := secIdxTab[idx]; ok {
+					log.Printf("D! [inputs.snmp] Changing idx from %s to %s", idx, newidx)
 					idx = newidx
 				}
 			}
@@ -570,7 +572,14 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					rtr.Fields[f.Name] = v
 				}
 				if f.SecondaryIndexTable == true {
-					secIdxTab[vs] = idx
+					var vss string
+					if ok {
+						vss = "."+vs
+					} else {
+						vss = fmt.Sprintf(".%v", v)
+					}
+					secIdxTab[vss] = "."+idx
+					log.Printf("D! [inputs.snmp] Secondary Index Table add %s -> %s", vss, idx)
 				}
 			}
 		}
