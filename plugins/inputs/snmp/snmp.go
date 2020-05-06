@@ -3,7 +3,6 @@ package snmp
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
@@ -181,10 +180,18 @@ func (t *Table) Init() error {
 		return err
 	}
 
+	SecondaryIndexTable := false
 	// initialize all the nested fields
 	for i := range t.Fields {
 		if err := t.Fields[i].init(); err != nil {
 			return fmt.Errorf("initializing field %s: %w", t.Fields[i].Name, err)
+		}
+		if t.Fields[i].SecondaryIndexTable {
+			if SecondaryIndexTable == false {
+				SecondaryIndexTable = true
+			} else {
+				return errors.New("Only one field can be a SecondaryIndexTable")
+			}
 		}
 	}
 
@@ -246,6 +253,12 @@ type Field struct {
 	Conversion string
 	// Translate tells if the value of the field should be snmptranslated
 	Translate bool
+	// Secondary index table allows to merge data from two tables with different index
+	//  that this filed will be used to join them. There can be only one secondary index table.
+	SecondaryIndexTable bool
+	// This field is using secondary index, and will be later merged with primary index
+	//  using SecondaryIndexTable. SecondaryIndexTable and UseSecodaryIndex are exclusive.
+	UseSecodaryIndex bool
 
 	initialized bool
 }
@@ -270,6 +283,10 @@ func (f *Field) init() error {
 			f.Conversion = conversion
 		}
 		//TODO use textual convention conversion from the MIB
+	}
+
+	if f.SecondaryIndexTable == true && f.UseSecodaryIndex == true {
+		return errors.New("SecondaryIndexTable and UseSecodaryIndex are exclusive")
 	}
 
 	f.initialized = true
@@ -408,6 +425,15 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
+	secIdxTab := make(map[string]string)
+	for i, f := range t.Fields {
+		if f.SecondaryIndexTable {
+			if i != 0 {
+				t.Fields[0], t.Fields[i] = t.Fields[i], t.Fields[0]
+			}
+		}
+	}
+
 	tagCount := 0
 	for _, f := range t.Fields {
 		if f.IsTag {
@@ -513,6 +539,9 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		}
 
 		for idx, v := range ifv {
+			if f.UseSecodaryIndex == true {
+				idx = secIdxTab[idx]
+			}
 			rtr, ok := rows[idx]
 			if !ok {
 				rtr = RTableRow{}
@@ -536,6 +565,9 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					}
 				} else {
 					rtr.Fields[f.Name] = v
+				}
+				if f.SecondaryIndexTable == true {
+					secIdxTab[vs] = idx
 				}
 			}
 		}
