@@ -7,7 +7,7 @@ This plugins writes to New Relic insights.
 ## New Relic Insights API key
 insights_key = "insights api key"
 ##metric_prefix if defined, prefix's metrics name for easy identification
-# metric_prefix = "Telegraf_"
+# metric_prefix = ""
 ```
 ####Parameters
 

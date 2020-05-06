@@ -17,6 +17,7 @@ type NewRelic struct {
 	dc           *cumulative.DeltaCalculator
 	InsightsKey  string `toml:"insights_key"`
 	MetricPrefix string `toml:"metric_prefix"`
+	savedErrors  []map[string]interface{}
 }
 
 // Description returns a one-sentence description on the Output
@@ -45,6 +46,9 @@ func (nr *NewRelic) Connect() error {
 		func(cfg *telemetry.Config) {
 			cfg.Product = "NewRelic-Telgraf-Plugin"
 			cfg.ProductVersion = "1.0"
+			cfg.ErrorLogger = func(e map[string]interface{}) {
+				nr.savedErrors = append(nr.savedErrors, e)
+			}
 		})
 	if err != nil {
 		return fmt.Errorf("unable to connect to newrelic %v", err)
@@ -58,6 +62,7 @@ func (nr *NewRelic) Connect() error {
 func (nr *NewRelic) Close() error {
 	nr.harvestor = nil
 	nr.dc = nil
+	nr.savedErrors = nil
 	return nil
 }
 
@@ -114,8 +119,17 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 	// backend every 5 seconds.  You can force data to be sent at any time
 	// using HarvestNow.
 	nr.harvestor.HarvestNow(context.Background())
+
+	//Check if we encountered errors
+	if len(nr.savedErrors) != 0 {
+		// we have errors, build error string
+		er := fmt.Sprintf("%#v", nr.savedErrors)
+		nr.savedErrors = nil
+		return fmt.Errorf("unable to harvest metrics  %s", er)
+	}
 	return nil
 }
+
 func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{}
