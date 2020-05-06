@@ -147,6 +147,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/snmp_trap"
 	_ "github.com/influxdata/telegraf/plugins/inputs/socket_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/solr"
+	_ "github.com/influxdata/telegraf/plugins/inputs/sonic_telemetry"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
