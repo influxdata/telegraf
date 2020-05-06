@@ -2,8 +2,10 @@ package docker_log
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -287,7 +289,7 @@ func (d *DockerLogs) tailContainerLogs(
 	logOptions := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Timestamps: false,
+		Timestamps: true,
 		Details:    false,
 		Follow:     true,
 		Tail:       tail,
@@ -311,6 +313,30 @@ func (d *DockerLogs) tailContainerLogs(
 	}
 }
 
+func parseLine(line []byte) (time.Time, string, error) {
+	parts := bytes.SplitN(line, []byte(" "), 2)
+
+	switch len(parts) {
+	case 1:
+		parts = append(parts, []byte(""))
+	}
+
+	tsString := string(parts[0])
+
+	// Keep any leading space, but remove whitespace from end of line.
+	// This preserves space in, for example, stacktraces, while removing
+	// annoying end of line characters and is similar to how other logging
+	// plugins such as syslog behave.
+	message := bytes.TrimRightFunc(parts[1], unicode.IsSpace)
+
+	ts, err := time.Parse(time.RFC3339Nano, tsString)
+	if err != nil {
+		return time.Time{}, "", fmt.Errorf("error parsing timestamp %q: %v", tsString, err)
+	}
+
+	return ts, string(message), nil
+}
+
 func tailStream(
 	acc telegraf.Accumulator,
 	baseTags map[string]string,
@@ -328,22 +354,19 @@ func tailStream(
 
 	r := bufio.NewReaderSize(reader, 64*1024)
 
-	var err error
-	var message string
 	for {
-		message, err = r.ReadString('\n')
+		line, err := r.ReadBytes('\n')
 
-		// Keep any leading space, but remove whitespace from end of line.
-		// This preserves space in, for example, stacktraces, while removing
-		// annoying end of line characters and is similar to how other logging
-		// plugins such as syslog behave.
-		message = strings.TrimRightFunc(message, unicode.IsSpace)
-
-		if len(message) != 0 {
-			acc.AddFields("docker_log", map[string]interface{}{
-				"container_id": containerID,
-				"message":      message,
-			}, tags)
+		if len(line) != 0 {
+			ts, message, err := parseLine(line)
+			if err != nil {
+				acc.AddError(err)
+			} else {
+				acc.AddFields("docker_log", map[string]interface{}{
+					"container_id": containerID,
+					"message":      message,
+				}, tags, ts)
+			}
 		}
 
 		if err != nil {
