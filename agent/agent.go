@@ -212,6 +212,10 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 		return err
 	}
 
+	if models.GlobalGatherErrors.Get() != 0 {
+		return fmt.Errorf("input plugins recorded %d errors", models.GlobalGatherErrors.Get())
+	}
+
 	unsent := 0
 	for _, output := range a.Config.Outputs {
 		unsent += output.BufferLength()
