@@ -3,8 +3,10 @@ package newrelic
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
 	"github.com/stretchr/testify/require"
@@ -24,6 +26,7 @@ func TestBasic(t *testing.T) {
 	nr := &NewRelic{
 		MetricPrefix: "Test",
 		InsightsKey:  "12345",
+		Timeout:      internal.Duration{Duration: time.Second * 15},
 	}
 
 	err := nr.Connect()
@@ -40,6 +43,7 @@ func TestNewRelic_Write(t *testing.T) {
 		harvestor    *telemetry.Harvester
 		InsightsKey  string
 		MetricPrefix string
+		Timeout      internal.Duration
 	}
 	type args struct {
 		metrics []telegraf.Metric
@@ -56,6 +60,7 @@ func TestNewRelic_Write(t *testing.T) {
 			fields: fields{
 				InsightsKey:  "insightskey",
 				MetricPrefix: "test1",
+				Timeout:      internal.Duration{Duration: time.Second * 15},
 			},
 			metrics: testutil.MockMetrics(),
 			wantErr: false,
