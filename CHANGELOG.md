@@ -30,6 +30,7 @@
 - [#7356](https://github.com/influxdata/telegraf/pull/7356): Add option to save retention policy as tag in influxdb_listener.
 - [#6915](https://github.com/influxdata/telegraf/pull/6915): Add support for MDS and RGW sockets to ceph input.
 - [#7391](https://github.com/influxdata/telegraf/pull/7391): Extract target as a tag for each rule in iptables input.
+- [#7434](https://github.com/influxdata/telegraf/pull/7434): Use docker log timestamp as metric time.
 
 #### Bugfixes
 
