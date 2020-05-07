@@ -259,7 +259,12 @@ type Field struct {
 	// This field is using secondary index, and will be later merged with primary index
 	//  using SecondaryIndexTable. SecondaryIndexTable and SecondaryIndexUse are exclusive.
 	SecondaryIndexUse bool
-	// Not implemented yet
+	// Controls if entries from secondary table should be added or not if joining
+	//  index is present or not. I set to true, means that join is outer, and
+	//  index is prepended with "Secondary-" for missing values to avoid overlaping
+	//  indexes from both tables.
+	// Can be set per field or globally with SecondaryIndexTable, global true overrides
+	//  per field false.
 	SecondaryOuterJoin bool
 
 	initialized bool
@@ -289,6 +294,10 @@ func (f *Field) init() error {
 
 	if f.SecondaryIndexTable == true && f.SecondaryIndexUse == true {
 		return errors.New("SecondaryIndexTable and UseSecondaryIndex are exclusive")
+	}
+
+	if f.SecondaryIndexTable == false && f.SecondaryIndexUse == false && f.SecondaryOuterJoin == true {
+		return errors.New("SecondaryOuterJoin set to true, but field is not being used in join")
 	}
 
 	f.initialized = true
@@ -427,9 +436,12 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmpConnection, t Table,
 func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 	rows := map[string]RTableRow{}
 
+	//translation table for secondary index (when preforming join on two tables)
 	secIdxTab := make(map[string]string)
+	secGlobalOuterJoin := false
 	for i, f := range t.Fields {
 		if f.SecondaryIndexTable {
+			secGlobalOuterJoin = f.SecondaryOuterJoin
 			if i != 0 {
 				t.Fields[0], t.Fields[i] = t.Fields[i], t.Fields[0]
 			}
@@ -543,10 +555,12 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 
 		for idx, v := range ifv {
 			if f.SecondaryIndexUse == true {
-				log.Printf("D! [inputs.snmp] Looking up %s", idx)
 				if newidx, ok := secIdxTab[idx]; ok {
-					log.Printf("D! [inputs.snmp] Changing idx from %s to %s", idx, newidx)
 					idx = newidx
+				} else {
+					if !secGlobalOuterJoin && !f.SecondaryOuterJoin {
+						continue
+					}
 				}
 			}
 			rtr, ok := rows[idx]
@@ -574,6 +588,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					rtr.Fields[f.Name] = v
 				}
 				if f.SecondaryIndexTable == true {
+					//indexes are stored here with prepending "." so we need to add them
 					var vss string
 					if ok {
 						vss = "." + vs
@@ -581,7 +596,6 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 						vss = fmt.Sprintf(".%v", v)
 					}
 					secIdxTab[vss] = "." + idx
-					log.Printf("D! [inputs.snmp] Secondary Index Table add %s -> %s", vss, idx)
 				}
 			}
 		}
