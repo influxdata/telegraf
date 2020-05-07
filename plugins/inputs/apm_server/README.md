@@ -228,12 +228,12 @@ apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,pro
     system_kubernetes_namespace=default,system_kubernetes_node_name=node-name,system_kubernetes_pod_name=instrumented-java-service,
     system_kubernetes_pod_uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system_platform=Linux,
     type=metricset 
-    samples_transaction.duration.sum.us_value=12,samples_dotted.float.gauge_value=6.12,samples_span.self_time.sum.us_value=633.288,
-    span_type="db",tags_code=200,tags_success=true,samples_negative.d.o.t.t.e.d_value=-1022,samples_transaction.self_time.sum.us_value=10,
-    samples_transaction.self_time.count_value=2,samples_byte_counter_value=1,samples_transaction.duration.count_value=2,
-    samples_long_gauge_value=3147483648,span_subtype="mysql",samples_float_gauge_value=9.16,samples_transaction.breakdown.count_value=12,
-    samples_double_gauge_value=3.141592653589793,transaction_name="GET/",samples_short_counter_value=227,
-    samples_span.self_time.count_value=1,samples_integer_gauge_value=42767,transaction_type="request" 
+    samples_transaction.duration.sum.us=12,samples_dotted.float.gauge=6.12,samples_span.self_time.sum.us=633.288,
+    span_type="db",tags_code=200,tags_success=true,samples_negative.d.o.t.t.e.d=-1022,samples_transaction.self_time.sum.us=10,
+    samples_transaction.self_time.count=2,samples_byte_counter=1,samples_transaction.duration.count=2,
+    samples_long_gauge=3147483648,span_subtype="mysql",samples_float_gauge=9.16,samples_transaction.breakdown.count=12,
+    samples_double_gauge=3.141592653589793,transaction_name="GET/",samples_short_counter=227,
+    samples_span.self_time.count=1,samples_integer_gauge=42767,transaction_type="request" 
     1571657444929001000
 ```
 
@@ -356,7 +356,7 @@ apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,pro
     system_kubernetes_node_name=node-name,system_kubernetes_pod_name=instrumented-java-service,system_kubernetes_pod_uid=b17f231da0ad128dc6c6c0b2e82f6f303d3893e3,system_platform=Linux,
     type=transaction 
     parent_id="abcdefabcdef01234567",context_custom_my_key=1,context_user_email="foo@mail.com",context_request_env_SERVER_SOFTWARE="nginx",
-    context_custom_some_other_value="foobar",context_request_cookies_c1="v1",context_request_cookies_c2="v2",context_request_socket_encrypted=true,
+    context_custom_some_other="foobar",context_request_cookies_c1="v1",context_request_cookies_c2="v2",context_request_socket_encrypted=true,
     context_request_url_pathname="/p/a/t/h",id="4340a8e0df1906ecbfa9",context_request_http_version="1.1",context_request_url_full="https://www.example.com/p/a/t/h?query=string#hash",
     context_user_username="foo",context_request_url_protocol="https:",context_request_body_additional_req="additionalinformation",result="HTTP2xx",
     context_request_url_port="8080",context_custom_and_objects_foo_1="baz",context_request_headers_content-type="text/html",
@@ -691,7 +691,7 @@ apm_server,labels_ab_testing=true,labels_group=experimental,labels_segment=5,pro
     log_stacktrace_0_lineno=3,exception_stacktrace_0_colno=4,transaction_sampled=true,log_stacktrace_0_vars_key="value",context_request_env_SERVER_SOFTWARE="nginx",
     context_user_id=99,context_request_env_GATEWAY_INTERFACE="CGI/1.1",log_stacktrace_0_post_context_0="line4",context_service_framework_version="1",
     context_custom_my_key=1,context_request_url_port=8080,trace_id="0123456789abcdeffedcba0123456789",log_stacktrace_1_function="executeInternal",
-    context_custom_some_other_value="foobar",context_request_headers_Elastic-Apm-Traceparent="00-8c21b4b556467a0b17ae5da959b5f388-31301f1fb2998121-01",
+    context_custom_some_other="foobar",context_request_headers_Elastic-Apm-Traceparent="00-8c21b4b556467a0b17ae5da959b5f388-31301f1fb2998121-01",
     log_stacktrace_0_pre_context_1="line2",culprit="opbeans.controllers.DTInterceptor.preHandle(DTInterceptor.java:73)",exception_handled=false,
     exception_cause_0_cause_1_message="on top of it,internet doesn't work",log_logger_name="http404",context_request_url_protocol="https:",
     context_request_body="HelloWorld",exception_stacktrace_0_filename="AbstractPlainSocketImpl.java",transaction_type="request",
