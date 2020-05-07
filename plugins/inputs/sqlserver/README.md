@@ -65,6 +65,7 @@ GO
   ## - Schedulers
   ## - SqlRequests
   ## - VolumeSpace
+  ## - Cpu
   ## Version 1:
   ## - PerformanceCounters
   ## - WaitStatsCategorized
@@ -81,13 +82,13 @@ GO
   # include_query = []
 
   ## A list of queries to explicitly ignore.
-  exclude_query = [ 'Schedulers' , 'SqlRequests']
+  exclude_query = [ 'Schedulers' , 'SqlRequests' ]
 ```
 
 ### Metrics:
 To provide backwards compatibility, this plugin support two versions of metrics queries.
 
-**Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards or queries based on the old query format will not work with the new format. The version 2 queries are written in such a way as to only gather SQL specific metrics (no overall CPU related metrics) and they only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
+**Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards or queries based on the old query format will not work with the new format. The version 2 queries only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
 
 #### Version 1 (deprecated in 1.6):
 The original metrics queries provide:
@@ -124,6 +125,7 @@ The new (version 2) metrics provide:
   dm_exec_sessions that gives you running requests as well as wait types and
   blocking sessions.
 - *VolumeSpace* - uses sys.dm_os_volume_stats to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
+- *Cpu* - uses the buffer ring (sys.dm_os_ring_buffers) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
 
   In order to allow tracking on a per statement basis this query produces a
   unique tag for each query.  Depending on the database workload, this may

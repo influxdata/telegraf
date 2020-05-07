@@ -117,6 +117,7 @@ func initQueries(s *SQLServer) error {
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
 		queries["VolumeSpace"] = Query{Script: sqlServerVolumeSpaceV2, ResultByRow: false}
+		queries["Cpu"] = Query{Script: sqlServerCpuV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1591,6 +1592,41 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
 		sys.master_files as mf
 		CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) as vs
 	END
+`
+
+const sqlServerCpuV2 string = `
+/*The ring buffer has a new value every minute*/
+IF SERVERPROPERTY('EngineEdition') NOT IN (5,8) /*No azure DB and managed instance*/
+BEGIN
+SELECT 
+	 'sqlserver_cpu' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,[SQLProcessUtilization] AS [sqlserver_process_cpu]
+	,[SystemIdle] AS [system_idle_cpu]
+	,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
+FROM (
+	SELECT TOP 1
+		 [record_id]
+		/*,dateadd(ms, (y.[timestamp] - (SELECT CAST([ms_ticks] AS BIGINT) FROM sys.dm_os_sys_info)), GETDATE()) AS [EventTime] --use for check/debug purpose*/
+		,[SQLProcessUtilization]
+		,[SystemIdle]
+	FROM (
+		SELECT record.value('(./Record/@id)[1]', 'int') AS [record_id]
+			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
+			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
+			,[TIMESTAMP]
+		FROM (
+			SELECT [TIMESTAMP]
+				,convert(XML, [record]) AS [record]
+			FROM sys.dm_os_ring_buffers
+			WHERE [ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
+				AND [record] LIKE '%<SystemHealth>%'
+			) AS x
+		) AS y
+	ORDER BY record_id DESC
+) as z
+
+END
 `
 
 // Queries V1
