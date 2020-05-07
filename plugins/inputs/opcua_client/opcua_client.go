@@ -286,7 +286,7 @@ func Connect(o *OpcUA) error {
 			opcua.SecurityFromEndpoint(ep, ua.UserTokenTypeAnonymous),
 		}
 
-		o.client = opcua.NewClient(ep.EndpointURL, opts...)
+		o.client = opcua.NewClient(o.Endpoint, opts...)
 		if err := o.client.Connect(o.ctx); err != nil {
 			return fmt.Errorf("Error in Client Connection: %s", err)
 		}
@@ -364,7 +364,6 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		err := Connect(o)
 		if err != nil {
 			o.state = Disconnected
-			disconnect(o)
 			return err
 		}
 	}
