@@ -20,7 +20,8 @@ type NewRelic struct {
 	InsightsKey  string            `toml:"insights_key"`
 	MetricPrefix string            `toml:"metric_prefix"`
 	Timeout      internal.Duration `toml:"timeout"`
-	savedErrors  []map[string]interface{}
+	savedErrors  map[int]interface{}
+	errorCount   int
 }
 
 // Description returns a one-sentence description on the Output
@@ -51,11 +52,16 @@ func (nr *NewRelic) Connect() error {
 	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey),
 		telemetry.ConfigHarvestPeriod(0),
 		func(cfg *telemetry.Config) {
-			cfg.Product = "NewRelic-Telgraf-Plugin"
+			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
 			cfg.HarvestTimeout = nr.Timeout.Duration
 			cfg.ErrorLogger = func(e map[string]interface{}) {
-				nr.savedErrors = append(nr.savedErrors, e)
+				var errorString string
+				for k, v := range e {
+					errorString += fmt.Sprintf("%s = %s ", k, v)
+				}
+				nr.errorCount++
+				nr.savedErrors[nr.errorCount] = errorString
 			}
 		})
 	if err != nil {
@@ -71,11 +77,16 @@ func (nr *NewRelic) Close() error {
 	nr.harvestor = nil
 	nr.dc = nil
 	nr.savedErrors = nil
+	nr.errorCount = 0
 	return nil
 }
 
 // Write takes in group of points to be written to the Output
 func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
+
+	nr.errorCount = 0
+	nr.savedErrors = make(map[int]interface{})
+
 	for _, metric := range metrics {
 		// create tag map
 		tags := make(map[string]interface{})
@@ -129,11 +140,8 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 	nr.harvestor.HarvestNow(context.Background())
 
 	//Check if we encountered errors
-	if len(nr.savedErrors) != 0 {
-		// we have errors, build error string
-		er := fmt.Sprintf("%#v", nr.savedErrors)
-		nr.savedErrors = nil
-		return fmt.Errorf("unable to harvest metrics  %s", er)
+	if nr.errorCount != 0 {
+		return fmt.Errorf("unable to harvest metrics  %s ", nr.savedErrors[nr.errorCount])
 	}
 	return nil
 }
