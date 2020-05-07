@@ -38,6 +38,11 @@ func (ki *KubernetesInventory) gatherDaemonSet(d v1.DaemonSet, acc telegraf.Accu
 		"daemonset_name": d.Metadata.GetName(),
 		"namespace":      d.Metadata.GetNamespace(),
 	}
+	for key, val := range d.GetSpec().GetSelector().GetMatchLabels() {
+		if ki.selectorFilter.Match(key) {
+			tags["selector_"+key] = val
+		}
+	}
 
 	if d.Metadata.CreationTimestamp.GetSeconds() != 0 {
 		fields["created"] = time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos())).UnixNano()
