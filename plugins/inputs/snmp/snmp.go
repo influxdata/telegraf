@@ -261,7 +261,7 @@ type Field struct {
 	SecondaryIndexUse bool
 	// Controls if entries from secondary table should be added or not if joining
 	//  index is present or not. I set to true, means that join is outer, and
-	//  index is prepended with "Secondary-" for missing values to avoid overlaping
+	//  index is prepended with "Secondary." for missing values to avoid overlaping
 	//  indexes from both tables.
 	// Can be set per field or globally with SecondaryIndexTable, global true overrides
 	//  per field false.
@@ -560,6 +560,8 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				} else {
 					if !secGlobalOuterJoin && !f.SecondaryOuterJoin {
 						continue
+					} else {
+						idx = ".Secondary" + idx
 					}
 				}
 			}
