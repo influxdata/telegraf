@@ -26,14 +26,14 @@ func TestBasic(t *testing.T) {
 	nr := &NewRelic{
 		MetricPrefix: "Test",
 		InsightsKey:  "12345",
-		Timeout:      internal.Duration{Duration: time.Second * 15},
+		Timeout:      internal.Duration{Duration: time.Second * 5},
 	}
 
 	err := nr.Connect()
 	require.NoError(t, err)
 
 	err = nr.Write(testutil.MockMetrics())
-	if !ErrorContains(err, "403") {
+	if !ErrorContains(err, "unable to harvest metrics ") {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
@@ -54,7 +54,6 @@ func TestNewRelic_Write(t *testing.T) {
 		metrics []telegraf.Metric
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Test: Basic mock metric write",
 			fields: fields{
@@ -81,10 +80,9 @@ func TestNewRelic_Write(t *testing.T) {
 }
 
 func TestNewRelic_Connect(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
-
+	//if testing.Short() {
+	////	t.Skip("skipping test in short mode.")
+	//}
 	tests := []struct {
 		name     string
 		newrelic *NewRelic
@@ -102,6 +100,21 @@ func TestNewRelic_Connect(t *testing.T) {
 			newrelic: &NewRelic{
 				InsightsKey:  "12312133",
 				MetricPrefix: "prefix",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test: Only Insights key",
+			newrelic: &NewRelic{
+				InsightsKey: "12312133",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test: Insights key and Timeout",
+			newrelic: &NewRelic{
+				InsightsKey: "12312133",
+				Timeout:     internal.Duration{Duration: time.Second * 5},
 			},
 			wantErr: false,
 		},
