@@ -257,8 +257,10 @@ type Field struct {
 	//  that this filed will be used to join them. There can be only one secondary index table.
 	SecondaryIndexTable bool
 	// This field is using secondary index, and will be later merged with primary index
-	//  using SecondaryIndexTable. SecondaryIndexTable and UseSecondaryIndex are exclusive.
-	UseSecondaryIndex bool
+	//  using SecondaryIndexTable. SecondaryIndexTable and SecondaryIndexUse are exclusive.
+	SecondaryIndexUse bool
+	// Not implemented yet
+	SecondaryOuterJoin bool
 
 	initialized bool
 }
@@ -285,7 +287,7 @@ func (f *Field) init() error {
 		//TODO use textual convention conversion from the MIB
 	}
 
-	if f.SecondaryIndexTable == true && f.UseSecondaryIndex == true {
+	if f.SecondaryIndexTable == true && f.SecondaryIndexUse == true {
 		return errors.New("SecondaryIndexTable and UseSecondaryIndex are exclusive")
 	}
 
@@ -540,8 +542,8 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		}
 
 		for idx, v := range ifv {
-			if f.UseSecondaryIndex == true {
-				log.Printf("D! [inputs.snmp] Looking up %s",idx)
+			if f.SecondaryIndexUse == true {
+				log.Printf("D! [inputs.snmp] Looking up %s", idx)
 				if newidx, ok := secIdxTab[idx]; ok {
 					log.Printf("D! [inputs.snmp] Changing idx from %s to %s", idx, newidx)
 					idx = newidx
@@ -574,11 +576,11 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if f.SecondaryIndexTable == true {
 					var vss string
 					if ok {
-						vss = "."+vs
+						vss = "." + vs
 					} else {
 						vss = fmt.Sprintf(".%v", v)
 					}
-					secIdxTab[vss] = "."+idx
+					secIdxTab[vss] = "." + idx
 					log.Printf("D! [inputs.snmp] Secondary Index Table add %s -> %s", vss, idx)
 				}
 			}
