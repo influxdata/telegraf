@@ -19,3 +19,4 @@ insights_key = "insights api key"
 |:-|:-|:-|
 | insights_key | Required | Insights API Insert key  |
 | metric_prefix | Optional | If defined, prefix's metrics name for easy identification |
+| timeout | Optional | If defined, changes harvest timeout |
