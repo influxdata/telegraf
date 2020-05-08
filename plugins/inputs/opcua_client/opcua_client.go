@@ -36,6 +36,7 @@ type OpcUA struct {
 
 	// internal values
 	client *opcua.Client
+	req    *ua.ReadRequest
 	// nodeMonitor       *monitor.NodeMonitor
 	// nodesData         *monitor.DataChangeMessage
 	// nodesSubscription *monitor.Subscription
@@ -298,34 +299,42 @@ func Connect(o *OpcUA) error {
 			return fmt.Errorf("RegisterNodes failed: %v", err)
 		}
 
-		req := &ua.ReadRequest{
+		o.req = &ua.ReadRequest{
 			MaxAge:             2000,
 			NodesToRead:        readvalues(regResp.RegisteredNodeIDs),
 			TimestampsToReturn: ua.TimestampsToReturnBoth,
 		}
-		resp, err := o.client.Read(req)
-		if err != nil {
-			o.ReadError++
-			return fmt.Errorf("RegisterNodes failed: %v", err)
-		}
-		o.ReadSuccess++
-		for i, d := range resp.Results {
-			if d.Status != ua.StatusOK {
-				return fmt.Errorf("Status not OK: %v", d.Status)
-			}
-			o.NodeData[i].TagName = o.NodeList[i].Name
-			if d.Value != nil {
-				o.NodeData[i].Value = d.Value.Value()
-				o.NodeData[i].DataType = d.Value.Type()
-			}
-			o.NodeData[i].Quality = d.Status
-			o.NodeData[i].TimeStamp = d.ServerTimestamp.String()
-			o.NodeData[i].Time = d.SourceTimestamp.String()
 
+		err = o.getData()
+		if err != nil {
+			return fmt.Errorf("Get Data Failed: %v", err)
 		}
 
 	default:
 		return fmt.Errorf("invalid opc.tcp endpoint")
+	}
+	return nil
+}
+
+func (o *OpcUA) getData() error {
+	resp, err := o.client.Read(o.req)
+	if err != nil {
+		o.ReadError++
+		return fmt.Errorf("RegisterNodes Read failed: %v", err)
+	}
+	o.ReadSuccess++
+	for i, d := range resp.Results {
+		if d.Status != ua.StatusOK {
+			return fmt.Errorf("Status not OK: %v", d.Status)
+		}
+		o.NodeData[i].TagName = o.NodeList[i].Name
+		if d.Value != nil {
+			o.NodeData[i].Value = d.Value.Value()
+			o.NodeData[i].DataType = d.Value.Type()
+		}
+		o.NodeData[i].Quality = d.Status
+		o.NodeData[i].TimeStamp = d.ServerTimestamp.String()
+		o.NodeData[i].Time = d.SourceTimestamp.String()
 	}
 	return nil
 }
@@ -369,6 +378,13 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	}
 
 	o.state = Connected
+
+	err := o.getData()
+	if err != nil {
+		o.state = Disconnected
+		disconnect(o)
+		return err
+	}
 
 	for i, n := range o.NodeList {
 		fields := make(map[string]interface{})
