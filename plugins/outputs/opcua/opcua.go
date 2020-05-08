@@ -1,9 +1,10 @@
 package opcua
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"path/filepath"
+	"path"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -14,21 +15,21 @@ import (
 
 // Opcua struct to configure client.
 type Opcua struct {
-	Client                     opcua.Client   //internally created
-	Endpoint                   string         `toml:"endpoint"`                       //defaults to "opc.tcp://localhost:50000"
-	NodeIDMap                  map[string]string         `toml:"node_id_map"`                        //required
-	Policy                     string         `toml:"policy"`                         //defaults to "Auto"
-	Mode                       string         `toml:"mode"`                           //defaults to "Auto"
-	Username                   string         `toml:"username"`                       //defaults to nil
-	Password                   string         `toml:"password"`                       //defaults to nil
-	CertFile                   string         `toml:"cert_file"`                      //defaults to ""
-	KeyFile                    string         `toml:"key_file"`                       //defaults to ""
-	AuthMethod                 string         `toml:"auth_method"`                    //defaults to "Anonymous" - accepts Anonymous, Username, Certificate
-	Debug                      bool           `toml:"debug"`                          //defaults to false
-	CreateSelfSignedCert       bool           `toml:"self_signed_cert"`               //defaults to false
-	SelfSignedCertExpiresAfter time.Duration  `toml:"self_signed_cert_expires_after"` //defaults to 1 year
-	selfSignedCertNextExpires  time.Time      //internally created
-	opts                       []opcua.Option //internally created
+	Client                     *opcua.Client     //internally created
+	Endpoint                   string            `toml:"endpoint"`                       //defaults to "opc.tcp://localhost:50000"
+	NodeIDMap                  map[string]string `toml:"node_id_map"`                    //required
+	Policy                     string            `toml:"policy"`                         //defaults to "Auto"
+	Mode                       string            `toml:"mode"`                           //defaults to "Auto"
+	Username                   string            `toml:"username"`                       //defaults to nil
+	Password                   string            `toml:"password"`                       //defaults to nil
+	CertFile                   string            `toml:"cert_file"`                      //defaults to ""
+	KeyFile                    string            `toml:"key_file"`                       //defaults to ""
+	AuthMethod                 string            `toml:"auth_method"`                    //defaults to "Anonymous" - accepts Anonymous, Username, Certificate
+	Debug                      bool              `toml:"debug"`                          //defaults to false
+	CreateSelfSignedCert       bool              `toml:"self_signed_cert"`               //defaults to false
+	SelfSignedCertExpiresAfter time.Duration     `toml:"self_signed_cert_expires_after"` //defaults to 1 year
+	selfSignedCertNextExpires  time.Time         //internally created
+	opts                       []opcua.Option    //internally created
 }
 
 var sampleConfig = `
@@ -38,6 +39,7 @@ var sampleConfig = `
 
   #########
 
+  #TODO: UPDATE THIS
   [[[node_id_map]]]
   height="ns=2;s=HeightData"
   weight="ns=2;s=WeightData"
@@ -53,33 +55,35 @@ func (o *Opcua) SampleConfig() string {
 
 // Connect Opcua client
 func (o *Opcua) Connect() error {
-	
+
 	o.setupOptions()
 
-	o.Client := opcua.NewClient(*o.Endpoint, o.opts...)
-	
+	c := opcua.NewClient(o.Endpoint, o.opts...)
+	ctx := context.Background()
 	if err := c.Connect(ctx); err != nil {
 		o.Client = nil
 		return err
 	}
 
+	o.Client = c
+
 	return nil
 }
 
-func (o *Opcua) clearOptions() error{
-	opts := []opcua.Option{}
+func (o *Opcua) clearOptions() error {
+	o.opts = []opcua.Option{}
 	return nil
 }
 
-func (o *Opcua) setupOptions() error{
+func (o *Opcua) setupOptions() error {
 
 	// Get a list of the endpoints for our target server
-	endpoints, err := opcua.GetEndpoints(*o.Endpoint)
+	endpoints, err := opcua.GetEndpoints(o.Endpoint)
 	if err != nil {
 		log.Fatal(err)
 	}
-	o.opts = generateClientOptions(endpoints, o.CertFile, o.KeyFile, o.Policy, o.Mode, o.AuthMethod, o.Username, o.Password, o.CreateSelfSignedCert, o.SelfSignedCertExpiresAfter)
-	
+	o.opts = generateClientOpts(endpoints, o.CertFile, o.KeyFile, o.Policy, o.Mode, o.AuthMethod, o.Username, o.Password, o.CreateSelfSignedCert, o.SelfSignedCertExpiresAfter)
+
 	return nil
 }
 
@@ -88,27 +92,29 @@ func (o *Opcua) Write(metrics []telegraf.Metric) error {
 
 	allErrs := map[string]error{}
 
-	for _,metric := range metrics {
-		for key,value := range metric.Fields {
+	for _, metric := range metrics {
+		for key, value := range metric.Fields() {
 
 			_nodeID := o.NodeIDMap[key]
 
 			if _nodeID != "" {
 				err := o.updateNode(_nodeID, value)
 				if err != nil {
+					log.Printf("Error writing to '%s' (value '%s')\n error:%s", _nodeID, value, err)
 					allErrs[key] = err
 				}
 			} else {
-				log.Printf("No mapping found for field '%s' (value '%s')", _nodeID, value)
+				log.Printf("No mapping found for field '%s' (value '%s')", key, &value)
 			}
 		}
 	}
 
 	if len(allErrs) > 0 {
 		message := "Errors during write:"
-		for node,e := range allErrs {
+		for node, e := range allErrs {
 			message = fmt.Sprintf("%s,\n%s: %s", message, node, e.Error())
 		}
+		log.Printf("All errs:\n '%s'", message)
 		return fmt.Errorf("ERROR: %s", message)
 	}
 
@@ -116,7 +122,10 @@ func (o *Opcua) Write(metrics []telegraf.Metric) error {
 }
 
 func (o *Opcua) updateNode(nodeID string, newValue interface{}) error {
-	
+
+	id, err := ua.ParseNodeID(nodeID)
+	v, err := ua.NewVariant(newValue)
+
 	req := &ua.WriteRequest{
 		NodesToWrite: []*ua.WriteValue{
 			&ua.WriteValue{
@@ -134,7 +143,10 @@ func (o *Opcua) updateNode(nodeID string, newValue interface{}) error {
 	if err != nil {
 		return err
 	}
-	
+	for _, code := range resp.Results {
+		log.Printf("Result:\n '%s'\n", code.Error())
+	}
+
 	return nil
 }
 
@@ -148,82 +160,18 @@ func (o *Opcua) Close() error {
 	return nil
 }
 
-// Close Opcua connection
-func (o *Opcua) parseOptions() error {
-	// opts := []opcua.Option{
-	// 	opcua.SecurityPolicy(*policy),
-	// 	opcua.SecurityModeString(*mode),
-	// 	opcua.CertificateFile(*certFile),
-	// 	opcua.PrivateKeyFile(*keyFile),
-	// 	opcua.AuthAnonymous(),
-	// 	opcua.SecurityFromEndpoint(ep, ua.UserTokenTypeAnonymous),
-	// }
-
-	//ua.UserTokenTypeAnonymous - opcua.AuthAnonymous()
-	//ua.UserTokenTypeUserName - opcua.AuthUsername(*o.Username, *o.Password)
-	//ua.UserTokenTypeCertificate - ua.UserTokenTypeCertificate(cert)
-
-	var err error
-
-	// Set Policy
-	if len(o.Policy) > 0 {
-		o.opts = append(o.opts, opcua.SecurityPolicy(o.Policy))
-	}
-
-	// Set Mode
-	if len(o.Mode) > 0 {
-		o.opts = append(o.opts, opcua.SecurityModeString(o.Mode))
-	}
-
-	// Set Auth
-	if len(o.Username) > 0 {
-		if len(o.Password) > 0 {
-			o.opts = append(o.opts, opcua.AuthUsername(o.Username, o.Password))
-		} else {
-			return fmt.Errorf("username supplied for auth without supplying a password")
-		}
-	} else {
-		o.opts = append(o.opts, opcua.AuthAnonymous())
-	}
-
-	// Set Certs
-	if o.CreateSelfSignedCert {
-
-		// if no cert file path specified
-		if len(o.CertFile) < 1 {
-			tempDir, err := newTempDir()
-			if err != nil {
-
-			}
-			o.CertFile = filepath.Join(tempDir, "cert.pem")
-			log.Printf("creating file %s", o.CertFile)
-			o.KeyFile = filepath.Join(tempDir, "key.pem")
-			log.Printf("creating file %s", o.KeyFile)
-			o.cleanupCerts = true
-		}
-
-		generateCert(o.Endpoint, 2048, o.CertFile, o.KeyFile, o.SelfSignedCertExpiresAfter)
-
-	}
-
-	return err
-}
-
-// func getEndpointDescription(endpoint, policy, mode string) (ua.EndpointDescription, error) {
-// 	endpoints, err := opcua.GetEndpoints(endpoint)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	ep := opcua.SelectEndpoint(endpoints, policy, ua.MessageSecurityModeFromString(mode))
-// 	if ep == nil {
-// 		err = fmt.Errorf("Failed to find suitable endpoint")
-// 	}
-
-// 	return *ep, err
-// }
-
 func (o *Opcua) Init() error {
 
+	if o.CreateSelfSignedCert && o.CertFile == "" && o.KeyFile == "" {
+		directory, err := newTempDir()
+
+		o.CertFile = path.Join(directory, "cert.pem")
+		o.KeyFile = path.Join(directory, "key.pem")
+
+		return err
+	}
+
+	return nil
 }
 
 func init() {
@@ -238,7 +186,6 @@ func init() {
 			Debug:                      false,
 			CreateSelfSignedCert:       false,
 			SelfSignedCertExpiresAfter: (365 * 24 * time.Hour),
-			cleanupCerts:               false,
 		}
 	})
 }
