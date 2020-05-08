@@ -23,7 +23,8 @@ import (
 
 const sampleConfig = `
   ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
+  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443",
+            "/etc/mycerts/*.mydomain.org.pem"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -46,6 +47,7 @@ type X509Cert struct {
 	ServerName string            `toml:"server_name"`
 	tlsCfg     *tls.Config
 	_tls.ClientConfig
+	urls []*url.URL
 }
 
 // Description returns description of the plugin.
@@ -71,7 +73,7 @@ func (c *X509Cert) locationToURL(location string) (*url.URL, error) {
 		return nil, fmt.Errorf("failed to parse cert location - %s", err.Error())
 	}
 
-	return u, nil
+	return nil
 }
 
 func (c *X509Cert) serverName(u *url.URL) (string, error) {
@@ -233,11 +235,6 @@ func (c *X509Cert) refreshFilePaths() error {
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
-	err := c.refreshFilePaths()
-	if err != nil {
-		return err
-	}
-
 	for _, location := range c.Sources {
 		u, err := c.locationToURL(location)
 		if err != nil {
@@ -245,14 +242,14 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			return nil
 		}
 
-		certs, err := c.getCert(u, c.Timeout.Duration)
+		certs, err := c.getCert(u, c.Timeout.Duration*time.Second)
 		if err != nil {
-			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
+			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", url, err.Error()))
 		}
 
 		for i, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert, location)
+			tags := getTags(cert, url.String())
 
 			// The first certificate is the leaf/end-entity certificate which needs DNS
 			// name validation against the URL hostname.
@@ -293,6 +290,16 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 }
 
 func (c *X509Cert) Init() error {
+	err := c.refreshFilePaths()
+	if err != nil {
+		return err
+	}
+
+	err = c.locationToURL()
+	if err != nil {
+		return err
+	}
+
 	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
