@@ -879,8 +879,8 @@ func TestBasicAuth(t *testing.T) {
 		Body:            "{ 'test': 'data'}",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
-    Username:        "me",
-    Password:        "mypassword",
+		Username:        "me",
+		Password:        "mypassword",
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
@@ -906,4 +906,3 @@ func TestBasicAuth(t *testing.T) {
 	absentFields := []string{"response_string_match"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
-
