@@ -603,7 +603,7 @@ func format64(f string, r uint64) interface{} {
 	}
 }
 
-func scale16toFloat32(s float64, v uint16) float64 {
+func scale16toFloat32(s float64, v int16) float64 {
 	return float64(v) * s
 }
 
