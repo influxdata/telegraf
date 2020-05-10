@@ -286,6 +286,7 @@ func TestStateTag(t *testing.T) {
 		"queries_per_sec":                int64(0),
 		"queued_reads":                   int64(0),
 		"queued_writes":                  int64(0),
+		"repl_state":                     int64(0),
 		"repl_commands":                  int64(0),
 		"repl_commands_per_sec":          int64(0),
 		"repl_deletes":                   int64(0),
