@@ -129,6 +129,7 @@ var DefaultReplStats = map[string]string{
 	"repl_commands_per_sec": "CommandR",
 	"member_status":         "NodeType",
 	"state":                 "NodeState",
+	"repl_state":            "NodeStateInt",
 	"repl_lag":              "ReplLag",
 }
 
