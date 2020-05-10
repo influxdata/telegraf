@@ -1518,7 +1518,7 @@ SELECT
 	, DB_NAME(s.database_id) as session_db_name
 	, r.status
 	, r.cpu_time as cpu_time_ms
-	, r.total_elapsed_time as total_elasped_time_ms
+	, r.total_elapsed_time as total_elapsed_time_ms
 	, r.logical_reads
 	, r.writes
 	, r.command
