@@ -218,7 +218,7 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
 				if mdErr != iterator.Done {
-					c.log.Errorf("Failed iterating metric desciptor responses: %q: %v", req.String(), mdErr)
+					c.log.Errorf("Failed iterating metric descriptor responses: %q: %v", req.String(), mdErr)
 				}
 				break
 			}
