@@ -117,7 +117,7 @@ func (k *KinesisOutput) Description() string {
 
 func (k *KinesisOutput) Connect() error {
 	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
+		log.Print("E! kinesis : Deprecated partitionkey configuration in use, please consider using outputs.kinesis.partition")
 	}
 
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
