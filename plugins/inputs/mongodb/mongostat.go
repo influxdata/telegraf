@@ -607,6 +607,8 @@ type StatLine struct {
 	ReplSetName                              string
 	NodeType                                 string
 	NodeState                                string
+	NodeStateInt				 int64
+
 
 	// Cluster fields
 	JumboChunksCount int64
@@ -1002,6 +1004,9 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				if member.Name == myName {
 					// Store my state string
 					returnVal.NodeState = member.StateStr
+					// Store my state integer
+					returnVal.NodeStateInt = member.State
+
 					if member.State == 1 {
 						// I'm the master
 						returnVal.ReplLag = 0
