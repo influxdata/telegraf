@@ -16,7 +16,7 @@ import (
 
 var (
 	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-_./\p{L}]`)
-	hypenChars   = strings.NewReplacer(
+	hyphenChars  = strings.NewReplacer(
 		"@", "-",
 		"*", "-",
 		`%`, "-",
@@ -261,8 +261,8 @@ func (o *OpenTSDB) Close() error {
 }
 
 func sanitize(value string) string {
-	// Apply special hypenation rules to preserve backwards compatibility
-	value = hypenChars.Replace(value)
+	// Apply special hyphenation rules to preserve backwards compatibility
+	value = hyphenChars.Replace(value)
 	// Replace any remaining illegal chars
 	return allowedChars.ReplaceAllLiteralString(value, "_")
 }
