@@ -607,8 +607,7 @@ type StatLine struct {
 	ReplSetName                              string
 	NodeType                                 string
 	NodeState                                string
-	NodeStateInt				 int64
-
+	NodeStateInt                             int64
 
 	// Cluster fields
 	JumboChunksCount int64
