@@ -23,7 +23,7 @@ var (
 		"#", "-",
 		"$", "-")
 	defaultHttpPath  = "/api/put"
-	defaultSeperator = "_"
+	defaultSeparator = "_"
 )
 
 type OpenTSDB struct {
@@ -271,7 +271,7 @@ func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
 		return &OpenTSDB{
 			HttpPath:  defaultHttpPath,
-			Separator: defaultSeperator,
+			Separator: defaultSeparator,
 		}
 	})
 }
