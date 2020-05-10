@@ -1,8 +1,8 @@
 package modbus
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 
 	m "github.com/goburrow/modbus"
 	"github.com/stretchr/testify/assert"
