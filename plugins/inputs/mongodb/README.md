@@ -113,6 +113,7 @@ by running Telegraf with the `--debug` argument.
     - repl_queries (integer)
     - repl_updates (integer)
     - repl_oplog_window_sec (integer)
+    - repl_state (integer)
     - resident_megabytes (integer)
     - state (string)
     - total_available (integer)
