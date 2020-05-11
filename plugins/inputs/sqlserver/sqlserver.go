@@ -65,6 +65,7 @@ query_version = 2
 ## - Schedulers
 ## - SqlRequests
 ## - VolumeSpace
+## - Cpu
 ## Version 1:
 ## - PerformanceCounters
 ## - WaitStatsCategorized
@@ -477,7 +478,7 @@ BEGIN
 		,DB_NAME(vfs.[database_id]) AS [database_name]
 		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
 		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
-		,mf.[type_desc] AS [file_type]
+		,mf.[type_desc] AS [file_type]' +
 		CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 /*Before SQL 2008 R2*/
 			THEN N''
 			ELSE N' ,CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
@@ -513,7 +514,7 @@ BEGIN
 	N'
 	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs /*SQL 2008 R2 and later*/
 	'
-	END
+	END +N''
 	
 	EXEC sp_executesql @SqlStatement
 
@@ -720,7 +721,6 @@ DECLARE @PCounters TABLE
 	Primary Key(object_name, counter_name, instance_name)
 );
 
-DECLARE @SqlStatement NVARCHAR(MAX)
 SET @SqlStatement = N'SELECT DISTINCT
 		RTrim(spi.object_name) object_name,
 		RTrim(spi.counter_name) counter_name,'
