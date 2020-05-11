@@ -37,6 +37,7 @@ type RedisTimeSeries struct {
 	// TODO: externalize pipeline window
 	// TODO: consider using MADD and TS.CREATE to skip label setting
 	// TODO: consider adding introspective metrics (last write, time to parse, to write, errors, ...)
+	// TODO: consider using go-redis as it is already in the deps
 	URI       string
 	Retention int64
 	Debug     bool
@@ -46,7 +47,7 @@ type RedisTimeSeries struct {
 // Connect handles the connection
 func (rts *RedisTimeSeries) Connect() (err error) {
 	opts := []radix.PoolOpt{
-		radix.PoolPipelineWindow(0, 100),
+		radix.PoolPipelineWindow(0, 0),
 	}
 	rts.pool, err = radix.NewPool("tcp", rts.URI, 1, opts...)
 	return
