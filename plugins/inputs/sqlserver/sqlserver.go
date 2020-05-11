@@ -508,7 +508,25 @@ END
 // Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
 // EngineEdition=5 is Azure SQL DB, EngineEdition=8 is Managed instance
 
-const sqlServerPropertiesV2 = `SET DEADLOCK_PRIORITY -10;
+const sqlServerPropertiesV2 = `
+SET DEADLOCK_PRIORITY -10;
+DECLARE
+	 @EngineEdition AS int
+	,@MajorVersion AS int
+	,@MinorVersion AS int
+	,@SqlStatement AS nvarchar(max)
+
+SELECT 
+	@EngineEdition = x.[EngineEdition]
+   ,@MajorVersion = x.[MajorVersion]
+   ,@MinorVersion = x.[MinorVersion]
+FROM (
+	SELECT
+		 CAST(SERVERPROPERTY('EngineEdition') AS int) AS [EngineEdition]
+		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int) AS [MinorVersion]
+) AS x
+
 DECLARE @sys_info TABLE (
 	cpu_count INT,
 	server_memory BIGINT,
@@ -520,27 +538,29 @@ DECLARE @sys_info TABLE (
 	uptime INT
 )
 
-IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
+IF @EngineEdition = 8  -- Managed Instance
+	SET @SqlStatement = '
  	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT 	TOP(1)
 			virtual_core_count AS cpu_count,
 			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
 			sku,
-			cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
+			cast(@EngineEdition as smallint) AS engine_edition,
 			hardware_generation AS hardware_type,
 			reserved_storage_mb AS total_storage_mb,
 			(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
 			(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
 	FROM	sys.server_resource_stats
-	ORDER BY start_time DESC
+	ORDER BY start_time DESC'
 
-IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
+IF @EngineEdition = 5  -- Azure SQL DB
+	SET @SqlStatement = '
 	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT 	TOP(1)
 			(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS cpu_count,
 			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
 			slo.edition as sku,
-			cast(SERVERPROPERTY('EngineEdition') as smallint)  AS engine_edition,
+			cast(@EngineEdition as smallint)  AS engine_edition,
 			slo.service_objective AS hardware_type,
                         cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)  AS total_storage_mb,
 			NULL AS available_storage_mb,  -- Can we find out storage?
@@ -549,23 +569,35 @@ IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
 		-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
 		CROSS JOIN sys.database_service_objectives slo
 		WHERE d.name = DB_NAME() AND slo.database_id = DB_ID()
+	'
 
-ELSE
+ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
 BEGIN
+	SET @SqlStatement = '
 	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT	cpu_count,
 			(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
 			CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
-			CAST(SERVERPROPERTY('EngineEdition') as smallint) as engine_edition,
-			CASE virtual_machine_type_desc
+			CAST(@EngineEdition as smallint) as engine_edition,
+			'
+			+
+			CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 /*Before SQL 2008 R2*/
+			THEN 'NULL AS [virtual_machine_type_desc],'
+			ELSE N'CASE virtual_machine_type_desc
 				WHEN 'NONE' THEN 'PHYSICAL Machine'
 				ELSE virtual_machine_type_desc
-			END AS hardware_type,
+			END AS hardware_type,'
+			END
+			+ N'
 			NULL,
 			NULL,
 			 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
 	FROM	sys.dm_os_sys_info
+	'
 END
+
+EXEC sp_executesql @SqlStatement
+
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 		DB_NAME() as [database_name],
