@@ -556,7 +556,6 @@ DECLARE @sys_info TABLE (
 
 IF @EngineEdition = 8  -- Managed Instance
 	SET @SqlStatement = '
- 	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT 	TOP(1)
 			virtual_core_count AS cpu_count,
 			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
@@ -571,14 +570,13 @@ IF @EngineEdition = 8  -- Managed Instance
 
 IF @EngineEdition = 5  -- Azure SQL DB
 	SET @SqlStatement = '
-	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT 	TOP(1)
-			(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS cpu_count,
+			(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = ''VISIBLE ONLINE'') AS cpu_count,
 			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
 			slo.edition as sku,
 			cast(@EngineEdition as smallint)  AS engine_edition,
 			slo.service_objective AS hardware_type,
-                        cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)  AS total_storage_mb,
+                        cast(DATABASEPROPERTYEX(DB_NAME(),''MaxSizeInBytes'') as bigint)/(1024*1024)  AS total_storage_mb,
 			NULL AS available_storage_mb,  -- Can we find out storage?
 			NULL as uptime
 	FROM	 sys.databases d   
@@ -590,17 +588,16 @@ IF @EngineEdition = 5  -- Azure SQL DB
 ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
 BEGIN
 	SET @SqlStatement = '
-	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT	cpu_count,
 			(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
-			CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
+			CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR(64)) as sku,
 			CAST(@EngineEdition as smallint) as engine_edition,
 			'
 			+
 			CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 /*Before SQL 2008 R2*/
 			THEN 'NULL AS [virtual_machine_type_desc],'
 			ELSE N'CASE virtual_machine_type_desc
-				WHEN 'NONE' THEN 'PHYSICAL Machine'
+				WHEN ''NONE'' THEN ''PHYSICAL Machine''
 				ELSE virtual_machine_type_desc
 			END AS hardware_type,'
 			END
@@ -612,7 +609,9 @@ BEGIN
 	'
 END
 
-EXEC sp_executesql @SqlStatement
+--Insert the dynamic sql result into the table variable
+INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime ) 
+EXEC sp_executesql @SqlStatement,N'@EngineEdition int', @EngineEdition
 
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
