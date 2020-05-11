@@ -54,7 +54,7 @@ func (rts *RedisTimeSeries) Connect() (err error) {
 
 // Close handles closing the connection
 func (rts *RedisTimeSeries) Close() (err error) {
-	rts.pool.Close()
+	err = rts.pool.Close()
 	return
 }
 
