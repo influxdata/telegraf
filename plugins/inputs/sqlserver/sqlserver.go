@@ -684,12 +684,15 @@ SET DEADLOCK_PRIORITY -10;
 DECLARE
 	 @EngineEdition AS int
 	,@SqlStatement AS nvarchar(max)
+	,@MajorVersion AS int
 
 SELECT 
-	@EngineEdition = x.[EngineEdition]
+	 @EngineEdition = x.[EngineEdition]
+	,@MajorVersion = x.[MajorVersion]
 FROM (
 	SELECT
 		 CAST(SERVERPROPERTY('EngineEdition') AS int) AS [EngineEdition]
+		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
 ) AS x
 
 DECLARE @PCounters TABLE
@@ -859,7 +862,10 @@ FROM
     rgwg.total_queued_request_count AS "Queued Request Count",
     rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
     rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
-    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' ELSE '' END + '
+	' + CASE WHEN @MajorVersion >= 13 /*From SQL 2016*/
+		THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' 
+		ELSE '' 
+	END + N'
     rgwg.total_lock_wait_count AS "Lock Wait Count",
     rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
     rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
@@ -868,7 +874,7 @@ FROM
     ON rgwg.pool_id = rgrp.pool_id
 ) AS rg
 UNPIVOT (
-    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN @MajorVersion >= 13 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
 ) AS vs'
 ,'"','''')
 
@@ -897,7 +903,9 @@ OPTION(RECOMPILE);
 
 // Conditional check based on Azure SQL DB v/s the rest aka (Azure SQL Managed instance OR On-prem SQL Server)
 // EngineEdition=5 is Azure SQL DB
-const sqlWaitStatsCategorizedV2 string = `SET DEADLOCK_PRIORITY -10;
+const sqlWaitStatsCategorizedV2 string = `
+SET DEADLOCK_PRIORITY -10;
+
 IF SERVERPROPERTY('EngineEdition') != 5
 SELECT
 	'sqlserver_waitstats' AS [measurement],
