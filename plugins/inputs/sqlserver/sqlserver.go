@@ -1666,16 +1666,24 @@ SELECT
 const sqlServerVolumeSpaceV2 string = `
 /* Only for on-prem version of SQL Server
 Gets data about disk space, only if the disk is used by SQL Server
-EngineEdition:
-1 = Personal or Desktop Engine
-2 = Standard
-3 = Enterprise
-4 = Express
-5 = SQL Database
-6 = SQL Data Warehouse
-8 = Managed Instance
 */
-IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
+DECLARE
+	 @EngineEdition AS int
+	,@MajorVersion AS int
+	,@MinorVersion AS int
+
+SELECT 
+	@EngineEdition = x.[EngineEdition]
+   ,@MajorVersion = x.[MajorVersion]
+   ,@MinorVersion = x.[MinorVersion]
+FROM (
+	SELECT
+		 CAST(SERVERPROPERTY('EngineEdition') AS int) AS [EngineEdition]
+		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
+		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int) AS [MinorVersion]
+) AS x
+
+IF @EngineEdition IN (2,3,4) AND NOT(@MajorVersion <= 10 AND @MinorVersion < 50) /*Exec only for SQL 2008 R2 and later*/
 	BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
