@@ -86,7 +86,7 @@ func (rts *RedisTimeSeries) Write(metrics []telegraf.Metric) (err error) {
 
 	for _, metric := range metrics {
 		name := metric.Name()
-		timestamp := metric.Time().UnixNano() / int64(time.Microsecond)
+		timestamp := metric.Time().UnixNano() / int64(time.Millisecond)
 
 		labels := make([]string, len(metric.TagList())*2)
 		for i, tag := range metric.TagList() {
