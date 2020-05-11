@@ -1704,7 +1704,7 @@ IF @EngineEdition IN (2,3,4) AND NOT(@MajorVersion <= 10 AND @MinorVersion < 50)
 
 const sqlServerCpuV2 string = `
 /*The ring buffer has a new value every minute*/
-IF SERVERPROPERTY('EngineEdition') NOT IN (5,8) /*No azure DB and managed instance*/
+IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 BEGIN
 SELECT 
 	 'sqlserver_cpu' AS [measurement]
