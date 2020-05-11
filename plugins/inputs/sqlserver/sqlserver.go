@@ -271,12 +271,10 @@ const sqlMemoryClerkV2 = `
 SET DEADLOCK_PRIORITY -10;
 DECLARE
 	 @MajorVersion AS int
-	,@MinorVersion AS int
 	,@SqlStatement AS nvarchar(max)
 
 SELECT 
     @MajorVersion = x.[MajorVersion]
-   ,@MinorVersion = x.[MinorVersion]
 FROM (
 	SELECT
 		 CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
@@ -384,7 +382,7 @@ OPTION(RECOMPILE);
 '
 IF @MajorVersion > 10 /*SQL 2012 and later*/
     SET @SqlStatement = REPLACE(@SqlStatement,'{pages_kb}','mc.pages_kb')
-ELSE /*SQL 2008 and previous*/
+ELSE /*SQL 2008 R2 and previous*/
     SET @SqlStatement = REPLACE(@SqlStatement,'{pages_kb}','mc.single_pages_kb + mc.multi_pages_kb')
 EXEC(@SqlStatement)
 `
