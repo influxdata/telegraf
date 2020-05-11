@@ -489,7 +489,6 @@ BEGIN
 	EXEC sp_executesql @SqlStatement
 
 END
-
 `
 
 // Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
