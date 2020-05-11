@@ -1,7 +1,7 @@
 # Redfish Input Plugin
 
-The `redfish` plugin gathers  metrics and status information about CPU temperature, Fanspeed, Powersupply, voltage, Hostname and Location details(datacenter,placement,rack and room) of Dell hardware servers for which redfish is enabled.
-And also metrics like CPU temperature,Fanspeed, Powersupply and Hostname metrics for HP Hardware server(redfish should be enabled).
+The `redfish` plugin gathers  metrics and status information about CPU temperature, fanspeed, Powersupply, voltage, hostname and Location details(datacenter,placement,rack and room) of Dell hardware servers for which redfish is enabled.
+And also metrics like CPU temperature,fanspeed, Powersupply and hostname metrics for HP Hardware server(redfish should be enabled).
 
 Note: Currently this plugin only supports DELL and HP servers.
 
@@ -12,7 +12,7 @@ Note: Currently this plugin only supports DELL and HP servers.
 ```toml
 [[inputs.redfish]]
 ## Server OOB-IP
-host = "https://192.0.0.1"
+host = "http://192.0.0.1"
 
 ## Username,Password for hardware server
 basicauthusername = "test"
@@ -21,6 +21,12 @@ basicauthpassword = "test"
 server= "dell"
 ## Resource Id for redfish APIs
 id="System.Embedded.1"
+## Optional TLS Config
+# tls_ca = "/etc/telegraf/ca.pem"
+# tls_cert = "/etc/telegraf/cert.pem"
+# tls_key = "/etc/telegraf/key.pem"
+## Use TLS but skip chain & host verification
+# insecure_skip_verify = false
 
 ## Amount of time allowed to complete the HTTP request
 # timeout = "5s"
@@ -28,132 +34,132 @@ id="System.Embedded.1"
 
 ### Metrics for Dell Servers
 
-- cputemperatures
+- cpu_temperatures
 	- tags:
-		- Hostname
-		- Name
-		- OOBIP
+		- hostname
+		- name
+		- oob_ip
 		- host
 	- Fields:
-		- Datacenter
-		- Temperature
-		- Health
-		- Rack
-		- Room
-		- Row
-		- State
+		- datacenter
+		- temperature
+		- health
+		- rack
+		- room
+		- row
+		- state
 
 - fans
 	- tags:
-		- Hostname
-		- Name
-		- OOBIP
+		- hostname
+		- name
+		- oob_ip
 		- host
 	- Fields:
-		- Datacenter
-		- Fanspeed
-		- Health
-		- Rack
-		- Room
-		- Row
-		- State
+		- datacenter
+		- fanspeed
+		- health
+		- rack
+		- room
+		- row
+		- state
 
-- Voltages
+- voltages
 	- tags:
-		- Hostname
-		- Name
-		- OOBIP
+		- hostname
+		- name
+		- oob_ip
 		- host
 	- Fields:
-		- Datacenter
-		- Voltage
-		- Health
-		- Rack
-		- Room
-		- Row
-		- State
+		- datacenter
+		- voltage
+		- health
+		- rack
+		- room
+		- row
+		- state
 
 - Powersupply 
 	- tags:
-		- Hostname
-		- Name
-		- OOBIP
+		- hostname
+		- name
+		- oobip
 		- host
 	- Fields:
-		- Datacenter
-		- Health
-		- PowerCapacityWatts
-		- PowerInputWatts
-		- PowerOutputWatts
-		- Rack
-		- Room
-		- Row
-		- State
+		- datacenter
+		- health
+		- power_capacity_watts
+		- power_input_watts
+		- power_output_watts
+		- rack
+		- room
+		- row
+		- state
 
 ### Metrics for HP Servers
 
-- cputemperatures
+- cpu_temperature
 	- tags:
-		- Hostname
-		- Name
-		- OOBIP
+		- hostname
+		- name
+		- oob_ip
 		- host
 	- Fields:
-		- Temperature
-		- Health
-		- State
+		- temperature
+		- health
+		- state
 
 - fans
 	- tags:
-		- Hostname
-		- Name
-		- OOBIP
+		- hostname
+		- name
+		- oob_ip
 		- host
 	- Fields:
-		- Fanspeed
-		- Health
-		- State
+		- fanspeed
+		- health
+		- state
 - Powersupply 
 	- tags:
-		- Hostname
-		- Name
-		- OOBIP
+		- hostname
+		- name
+		- oob_ip
 		- host
-		- MemberId
+		- member_id
 	- Fields:
-		- PowerCapacityWatts
-		- LastPowerOutputWatts 
-		- LineInputVoltage 
+		- power_capacity_watts
+		- last_powerOutput_watts 
+		- line_input_voltage 
 
 ### Example Output For HP
 ```
-cputemperature,Hostname=tpa_hostname,Name=01-Inlet\ Ambient,OOBIP=https://127.0.0.1,host=tpa_po Health="OK",State="Enabled",Temperature="19" 1582612210000000000
-cputemperature,Hostname=tpa_hostname,Name=02-CPU\ 1,OOBIP=https://127.0.0.1,host=tpa_po Health="OK",State="Enabled",Temperature="40" 1582612210000000000
-fans,Hostname=tpa_hostname,Name=Fan\ 4,OOBIP=https://127.0.0.1,host=tpa_po Fanspeed="23",Health="OK",State="Enabled" 1582612210000000000
-fans,Hostname=tpa_hostname,Name=Fan\ 5,OOBIP=https://127.0.0.1,host=tpa_po Fanspeed="23",Health="OK",State="Enabled" 1582612210000000000
-fans,Hostname=tpa_hostname,Name=Fan\ 6,OOBIP=https://127.0.0.1,host=tpa_po Fanspeed="23",Health="OK",State="Enabled" 1582612210000000000
-fans,Hostname=tpa_hostname,Name=Fan\ 7,OOBIP=https://127.0.0.1,host=tpa_po Fanspeed="23",Health="OK",State="Enabled" 1582612210000000000
-powersupply,Hostname=tpa_hostname,MemberId=0,Name=HpeServerPowerSupply,OOBIP=https://127.0.0.1,host=tpa_po LastPowerOutputWatts="109",LineInputVoltage="206",PowerCapacityWatts="800" 1582612210000000000
-powersupply,Hostname=tpa_hostname,MemberId=1,Name=HpeServerPowerSupply,OOBIP=https://127.0.0.1,host=tpa_po LastPowerOutputWatts="98",LineInputVoltage="204",PowerCapacityWatts="800" 1582612210000000000
+cpu_temperature,hostname=tpa_hostname,name=01-Inlet\ Ambient,oob_ip=http://127.0.0.1,host=tpa_po health="OK",state="Enabled",temperature="19" 1582612210000000000
+cpu_temperature,hostname=tpa_hostname,name=02-CPU\ 1,oob_ip=http://127.0.0.1,host=tpa_po health="OK",state="Enabled",temperature="40" 1582612210000000000
+fans,hostname=tpa_hostname,name=Fan\ 4,oob_ip=http://127.0.0.1,host=tpa_po fanspeed="23",health="OK",state="Enabled" 1582612210000000000
+fans,hostname=tpa_hostname,name=Fan\ 5,oob_ip=http://127.0.0.1,host=tpa_po fanspeed="23",health="OK",state="Enabled" 1582612210000000000
+fans,hostname=tpa_hostname,name=Fan\ 6,oob_ip=http://127.0.0.1,host=tpa_po fanspeed="23",health="OK",state="Enabled" 1582612210000000000
+fans,hostname=tpa_hostname,name=Fan\ 7,oob_ip=http://127.0.0.1,host=tpa_po fanspeed="23",health="OK",state="Enabled" 1582612210000000000
+powersupply,hostname=tpa_hostname,member_id=0,name=HpeServerPowerSupply,oob_ip=http://127.0.0.1,host=tpa_po last_power_output_watts="109",line_input_voltage="206",power_capacity_watts="800" 1582612210000000000
+powersupply,hostname=tpa_hostname,member_id=1,name=HpeServerPowerSupply,oob_ip=http://127.0.0.1,host=tpa_po last_power_output_watts="98",line_input_voltage="204",power_capacity_watts="800" 1582612210000000000
 
 ```
 
 ### Example Output For Dell
 ```
-cputemperature,Hostname=test-hostname,Name=CPU1\ Temp,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Temperature="41" 1582114112000000000
-cputemperature,Hostname=test-hostname,Name=CPU2\ Temp,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Temperature="51" 1582114112000000000
-cputemperature,Hostname=test-hostname,Name=System\ Board\ Inlet\ Temp,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Temperature="23" 1582114112000000000
-cputemperature,Hostname=test-hostname,Name=System\ Board\ Exhaust\ Temp,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Temperature="33" 1582114112000000000
-fans,Hostname=test-hostname,Name=System\ Board\ Fan1A,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Fanspeed="17760",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled" 1582114112000000000
-fans,Hostname=test-hostname,Name=System\ Board\ Fan1B,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Fanspeed="15360",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled" 1582114112000000000
-fans,Hostname=test-hostname,Name=System\ Board\ Fan2A,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Fanspeed="17880",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled" 1582114112000000000
-powersupply,Hostname=test-hostname,Name=PS1\ Status,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",PowerCapacityWatts="750",PowerInputWatts="900",PowerOutputWatts="208",Rack="12",Room="tbc",Row="3",State="Enabled" 1582114112000000000
-powersupply,Hostname=test-hostname,Name=PS2\ Status,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",PowerCapacityWatts="750",PowerInputWatts="900",PowerOutputWatts="194",Rack="12",Room="tbc",Row="3",State="Enabled" 1582114112000000000
-voltages,Hostname=test-hostname,Name=CPU1\ MEM345\ VDDQ\ PG,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Voltage="1" 1582114112000000000
-voltages,Hostname=test-hostname,Name=CPU1\ MEM345\ VPP\ PG,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Voltage="1" 1582114112000000000
-voltages,Hostname=test-hostname,Name=CPU1\ MEM345\ VTT\ PG,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Voltage="1" 1582114112000000000
-voltages,Hostname=test-hostname,Name=PS1\ Voltage\ 1,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Voltage="208" 1582114112000000000
-voltages,Hostname=test-hostname,Name=PS2\ Voltage\ 2,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Voltage="208" 1582114112000000000
-voltages,Hostname=test-hostname,Name=System\ Board\ 3.3V\ A\ PG,OOBIP=https://190.0.0.1,host=test-telegraf Datacenter="Tampa",Health="OK",Rack="12",Room="tbc",Row="3",State="Enabled",Voltage="1" 1582114112000000000
+cpu_temperature,hostname=test-hostname,name=CPU1\ Temp,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",temperature="41" 1582114112000000000
+cpu_temperature,hostname=test-hostname,name=CPU2\ Temp,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",temperature="51" 1582114112000000000
+cpu_temperature,hostname=test-hostname,name=System\ Board\ Inlet\ Temp,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",temperature="23" 1582114112000000000
+cpu_temperature,hostname=test-hostname,name=System\ Board\ Exhaust\ Temp,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",temperature="33" 1582114112000000000
+fans,hostname=test-hostname,name=System\ Board\ Fan1A,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",fanspeed="17760",health="OK",rack="12",room="tbc",row="3",state="Enabled" 1582114112000000000
+fans,hostname=test-hostname,name=System\ Board\ Fan1B,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",fanspeed="15360",health="OK",rack="12",room="tbc",row="3",state="Enabled" 1582114112000000000
+fans,hostname=test-hostname,name=System\ Board\ Fan2A,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",fanspeed="17880",health="OK",rack="12",room="tbc",row="3",state="Enabled" 1582114112000000000
+powersupply,hostname=test-hostname,name=PS1\ Status,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",power_capacity_watts="750",power_input_watts="900",power_output_watts="208",rack="12",room="tbc",row="3",state="Enabled" 1582114112000000000
+powersupply,hostname=test-hostname,name=PS2\ Status,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",power_capacity_watts="750",power_input_watts="900",power_output_watts="194",rack="12",room="tbc",row="3",state="Enabled" 1582114112000000000
+voltages,hostname=test-hostname,name=CPU1\ MEM345\ VDDQ\ PG,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",voltage="1" 1582114112000000000
+voltages,hostname=test-hostname,name=CPU1\ MEM345\ VPP\ PG,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",voltage="1" 1582114112000000000
+voltages,hostname=test-hostname,name=CPU1\ MEM345\ VTT\ PG,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",voltage="1" 1582114112000000000
+voltages,hostname=test-hostname,name=PS1\ voltage\ 1,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",Voltage="208" 1582114112000000000
+voltages,hostname=test-hostname,name=PS2\ voltage\ 2,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",Voltage="208" 1582114112000000000
+voltages,hostname=test-hostname,name=System\ Board\ 3.3V\ A\ PG,oob_ip=http://190.0.0.1,host=test-telegraf datacenter="Tampa",health="OK",rack="12",room="tbc",row="3",state="Enabled",voltage="1" 1582114112000000000
 
 ```
