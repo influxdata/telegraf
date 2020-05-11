@@ -28,6 +28,12 @@ var sampleConfig = `
 
 // RedisTimeSeries represents a redistimeseries telegraf backend
 type RedisTimeSeries struct {
+	// TODO ## Optional TLS Config
+	// TODO :# tls_ca = "/etc/telegraf/ca.pem"
+	// TODO # tls_cert = "/etc/telegraf/cert.pem"
+	// TODO # tls_key = "/etc/telegraf/key.pem"
+	// TODO ## Use TLS but skip chain & host verification
+	// TODO # insecure_skip_verify = true
 	// TODO: externalize pipeline window
 	// TODO: consider using MADD and TS.CREATE to skip label setting
 	// TODO: consider adding introspective metrics (last write, time to parse, to write, errors, ...)
