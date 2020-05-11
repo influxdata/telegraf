@@ -633,12 +633,19 @@ FROM	(
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
 const sqlServerSchedulersV2 string = `
-
-
-
-
 SET DEADLOCK_PRIORITY - 10;
-DECLARE @SqlStatement AS nvarchar(max);
+
+DECLARE
+	 @MajorVersion AS int
+	,@SqlStatement AS nvarchar(max)
+
+SELECT 
+	@MajorVersion = x.[MajorVersion]
+FROM (
+	SELECT
+		CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
+) AS x
+
 SET @SqlStatement = N'
 SELECT 
 	 ''sqlserver_schedulers'' AS [measurement]
@@ -660,16 +667,14 @@ SELECT
 	,s.[yield_count]
 	'
 	+ 
-	CASE
-		WHEN CAST(LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) AS int) >= 13
-			/*Only from SQL Server 2016+ (ver 13.x) [total_cpu_usage_ms] and [total_scheduler_delay_ms]*/
-			THEN N',s.[total_cpu_usage_ms], s.[total_scheduler_delay_ms]'
-			ELSE ''
+	CASE WHEN @MajorVersion >= 13 /*SQL 2016 and later*/
+		THEN N',s.[total_cpu_usage_ms], s.[total_scheduler_delay_ms]'
+		ELSE ''
 	END 
 	+
 N'
-FROM sys.dm_os_schedulers AS s
-'
+FROM sys.dm_os_schedulers AS s'
+
 EXEC sp_executesql @SqlStatement
 `
 
