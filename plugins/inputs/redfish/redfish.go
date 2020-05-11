@@ -4,28 +4,17 @@
 package redfish
 
 import (
-	"crypto/tls"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 )
 
-type Redfish struct {
-	Host              string            `toml:"host"`
-	BasicAuthUsername string            `toml:"basicauthusername"`
-	BasicAuthPassword string            `toml:"basicauthpassword"`
-	Id                string            `toml:"id"`
-	Server            string            `toml:"server"`
-	parser            parsers.Parser    `toml:"parser"`
-	Timeout           internal.Duration `toml:"timeout"`
-}
 type Hostname struct {
 	Hostname string `json:"HostName"`
 }
@@ -68,7 +57,7 @@ type watt struct {
 }
 type watthp struct {
 	Name                 string  `json:"Name"`
-	MemberId             string  `json:"MemberId"`
+	MemberID             string  `json:"MemberId"`
 	PowerCapacityWatts   float64 `json:"PowerCapacityWatts"`
 	LastPowerOutputWatts float64 `json:"LastPowerOutputWatts"`
 	LineInputVoltage     float64 `json:"LineInputVoltage"`
@@ -104,138 +93,87 @@ type Placement struct {
 	Rack string `json:"Rack"`
 	Row  string `json:"Row"`
 }
-
-var h Hostname
-var t Temperatures
-var f Fans
-var p PowerSupplies
-var v Voltages
-var php PowerSupplieshp
-var l Location
-
-func basicAuth(username, password string) string {
-	auth := username + ":" + password
-	return base64.StdEncoding.EncodeToString([]byte(auth))
+type Redfish struct {
+	Host              string `toml:"host"`
+	BasicAuthUsername string `toml:"basicauthusername"`
+	BasicAuthPassword string `toml:"basicauthpassword"`
+	Id                string `toml:"id"`
+	Server            string `toml:"server"`
+	client            http.Client
+	tls.ClientConfig
+	Timeout     internal.Duration `toml:"timeout"`
+	hostname    Hostname
+	temperature Temperatures
+	fan         Fans
+	powerdell   PowerSupplies
+	voltage     Voltages
+	powerhp     PowerSupplieshp
+	location    Location
 }
 
-func getThermal(host, username, password, id string) error {
-	r := fmt.Sprint(host, "/redfish/v1/Chassis/", id, "/Thermal")
-	client := &http.Client{}
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	req, err := http.NewRequest("GET", r, nil)
-	req.Header.Add("Authorization", "Basic "+basicAuth(username, password))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
+func (r *Redfish) getMetrics() error {
+	url := make(map[string]map[string]interface{})
+	url["Thermal"] = make(map[string]interface{})
+	url["Power"] = make(map[string]interface{})
+	url["Hostname"] = make(map[string]interface{})
+	url["Thermal"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Chassis/", r.Id, "/Thermal")
+	url["Thermal"]["pointer"] = &r.temperature
+	url["Thermal"]["fanpointer"] = &r.fan
+	url["Power"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Chassis/", r.Id, "/Power")
+	if r.Server == "dell" {
+		url["Power"]["pointer"] = &r.powerdell
+		url["Power"]["voltpointer"] = &r.voltage
+	} else if r.Server == "hp" {
+		url["Power"]["pointer"] = &r.powerhp
 	}
-	if resp.StatusCode == 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		jsonErr := json.Unmarshal(body, &t)
-		if jsonErr != nil {
-			return fmt.Errorf("error parsing input: %v", jsonErr)
-		}
-		jsonErr = json.Unmarshal(body, &f)
-		if jsonErr != nil {
-			return fmt.Errorf("error parsing input: %v", jsonErr)
-		}
-	} else {
-		return fmt.Errorf("received status code %d (%s), expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode))
+	url["Hostname"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Systems/", r.Id)
+	url["Hostname"]["pointer"] = &r.hostname
+	if r.Server == "dell" {
+		url["Location"] = make(map[string]interface{})
+		url["Location"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Chassis/", r.Id, "/")
+		url["Location"]["pointer"] = &r.location
 	}
-	return nil
-}
 
-func getPower(host, username, password, id, server string) error {
-	r := fmt.Sprint(host, "/redfish/v1/Chassis/", id, "/Power")
-	client := &http.Client{}
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	req, err := http.NewRequest("GET", r, nil)
-	req.Header.Add("Authorization", "Basic "+basicAuth(username, password))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		if server == "dell" {
-			jsonErr := json.Unmarshal(body, &p)
+	for key, value := range url {
+		req, err := http.NewRequest("GET", value["endpoint"].(string), nil)
+		if err != nil {
+			return err
+		}
+		req.SetBasicAuth(r.BasicAuthUsername, r.BasicAuthPassword)
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := r.client.Do(req)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode == 200 {
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return err
+			}
+			jsonErr := json.Unmarshal(body, value["pointer"])
 			if jsonErr != nil {
 				return fmt.Errorf("error parsing input: %v", jsonErr)
 			}
-			jsonErr = json.Unmarshal(body, &v)
-			if jsonErr != nil {
-				return fmt.Errorf("error parsing input: %v", jsonErr)
+			if r.Server == "dell" && key == "Power" {
+				jsonErr = json.Unmarshal(body, value["voltpointer"])
+				if jsonErr != nil {
+					return fmt.Errorf("error parsing input: %v", jsonErr)
+				}
+
+			} else if key == "Thermal" {
+				jsonErr = json.Unmarshal(body, value["fanpointer"])
+				if jsonErr != nil {
+					return fmt.Errorf("error parsing input: %v", jsonErr)
+				}
 			}
-		}
-		if server == "hp" {
-			jsonErr := json.Unmarshal(body, &php)
-			if jsonErr != nil {
-				return fmt.Errorf("error parsing input: %v", jsonErr)
-			}
-		}
-		return nil
-	} else {
-		return fmt.Errorf("received status code %d (%s), expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode))
-	}
-}
 
-func getHostname(host, username, password, id string) error {
-	url := fmt.Sprint(host, "/redfish/v1/Systems/", id)
-	client := &http.Client{}
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	req, err := http.NewRequest("GET", url, nil)
-	req.Header.Add("Authorization", "Basic "+basicAuth(username, password))
-	req.Header.Set("Accept", "*/*")
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		jsonErr := json.Unmarshal(body, &h)
-		if jsonErr != nil {
-			return fmt.Errorf("error parsing input: %v", jsonErr)
+		} else {
+			return fmt.Errorf("received status code %d (%s), expected 200",
+				resp.StatusCode,
+				http.StatusText(resp.StatusCode))
 		}
-	} else {
-		return fmt.Errorf("received status code %d (%s), expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode))
 	}
-	return nil
-}
-
-func getLocation(host, Username, password, id string) error {
-	r := fmt.Sprint(host, "/redfish/v1/Chassis/", id, "/")
-	client := &http.Client{}
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	req, err := http.NewRequest("GET", r, nil)
-	req.Header.Add("Authorization", "Basic "+basicAuth(Username, password))
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == 200 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		jsonErr := json.Unmarshal(body, &l)
-		if jsonErr != nil {
-			return fmt.Errorf("error parsing input: %v", jsonErr)
-		}
-	} else {
-		return fmt.Errorf("received status code %d (%s), expected 200",
-			resp.StatusCode,
-			http.StatusText(resp.StatusCode))
-	}
-
 	return nil
 }
 
@@ -254,6 +192,12 @@ basicauthpassword = "test"
 server= "dell"
 ## Resource Id for redfish APIs
 id="System.Embedded.1"
+## Optional TLS Config
+# tls_ca = "/etc/telegraf/ca.pem"
+# tls_cert = "/etc/telegraf/cert.pem"
+# tls_key = "/etc/telegraf/key.pem"
+## Use TLS but skip chain & host verification
+# insecure_skip_verify = false
 
 ## Amount of time allowed to complete the HTTP request
 # timeout = "5s"
@@ -263,130 +207,123 @@ func (r *Redfish) SampleConfig() string {
 	return redfishConfig
 }
 
-func (r *Redfish) SetParser(parser parsers.Parser) {
-	r.parser = parser
-}
-
 func (r *Redfish) Init() error {
+	tlsCfg, err := r.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	r.client = http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			Proxy:           http.ProxyFromEnvironment,
+		},
+		Timeout: r.Timeout.Duration,
+	}
 	return nil
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
-	if len(r.Host) > 0 && len(r.BasicAuthUsername) > 0 && len(r.BasicAuthPassword) > 0 && len(r.Server) > 0 && len(r.Id) > 0 && (r.Server == "dell" || r.Server == "hp") {
-		err := getThermal(r.Host, r.BasicAuthUsername, r.BasicAuthPassword, r.Id)
-		if err != nil {
-			return err
-		}
-		err = getHostname(r.Host, r.BasicAuthUsername, r.BasicAuthPassword, r.Id)
-		if err != nil {
-			return err
-		}
-
-		err = getPower(r.Host, r.BasicAuthUsername, r.BasicAuthPassword, r.Id, r.Server)
-		if err != nil {
-			return err
-		}
-
-		if r.Server == "dell" {
-			err = getLocation(r.Host, r.BasicAuthUsername, r.BasicAuthPassword, r.Id)
-			if err != nil {
-				return err
-			}
-
-		}
-
-		for i := 0; i < len(t.Temperatures); i++ {
-			//  Tags
-			//			tags := map[string]string{"Name": t.Temperatures[i].Name}
-			tags := map[string]string{"OOBIP": r.Host, "Name": t.Temperatures[i].Name, "Hostname": h.Hostname}
-			//  Fields
-			fields := make(map[string]interface{})
-			fields["Temperature"] = strconv.FormatInt(t.Temperatures[i].Temperature, 10)
-			fields["State"] = t.Temperatures[i].Status.State
-			fields["Health"] = t.Temperatures[i].Status.Health
-			if r.Server == "dell" {
-				fields["Datacenter"] = l.Location.PostalAddress.DataCenter
-				fields["Room"] = l.Location.PostalAddress.Room
-				fields["Rack"] = l.Location.Placement.Rack
-				fields["Row"] = l.Location.Placement.Row
-				acc.AddFields("cputemperature", fields, tags)
-			}
-			if r.Server == "hp" {
-				acc.AddFields("cputemperature", fields, tags)
-			}
-		}
-		for i := 0; i < len(f.Fans); i++ {
-			//  Tags
-			tags := map[string]string{"OOBIP": r.Host, "Name": f.Fans[i].Name, "Hostname": h.Hostname}
-			//  Fields
-			fields := make(map[string]interface{})
-			fields["Fanspeed"] = strconv.FormatInt(f.Fans[i].Speed, 10)
-			fields["State"] = f.Fans[i].Status.State
-			fields["Health"] = f.Fans[i].Status.Health
-			if r.Server == "dell" {
-				fields["Datacenter"] = l.Location.PostalAddress.DataCenter
-				fields["Room"] = l.Location.PostalAddress.Room
-				fields["Rack"] = l.Location.Placement.Rack
-				fields["Row"] = l.Location.Placement.Row
-				acc.AddFields("fans", fields, tags)
-			}
-			if r.Server == "hp" {
-				acc.AddFields("fans", fields, tags)
-			}
-		}
-		if r.Server == "dell" {
-			for i := 0; i < len(p.PowerSupplies); i++ {
-				//  Tags
-				tags := map[string]string{"OOBIP": r.Host, "Name": p.PowerSupplies[i].Name, "Hostname": h.Hostname}
-				//  Fields
-				fields := make(map[string]interface{})
-				fields["PowerInputWatts"] = strconv.FormatFloat(p.PowerSupplies[i].PowerInputWatts, 'f', -1, 64)
-				fields["PowerCapacityWatts"] = strconv.FormatFloat(p.PowerSupplies[i].PowerCapacityWatts, 'f', -1, 64)
-				fields["PowerOutputWatts"] = strconv.FormatFloat(p.PowerSupplies[i].PowerOutputWatts, 'f', -1, 64)
-				fields["State"] = p.PowerSupplies[i].Status.State
-				fields["Health"] = p.PowerSupplies[i].Status.Health
-				fields["Datacenter"] = l.Location.PostalAddress.DataCenter
-				fields["Room"] = l.Location.PostalAddress.Room
-				fields["Rack"] = l.Location.Placement.Rack
-				fields["Row"] = l.Location.Placement.Row
-				acc.AddFields("powersupply", fields, tags)
-			}
-		}
-		if r.Server == "hp" {
-			for i := 0; i < len(php.PowerSupplieshp); i++ {
-				//  Tags
-				tags := map[string]string{"OOBIP": r.Host, "Name": php.PowerSupplieshp[i].Name, "MemberId": php.PowerSupplieshp[i].MemberId, "Hostname": h.Hostname}
-				//  Fields
-				fields := make(map[string]interface{})
-				fields["LineInputVoltage"] = strconv.FormatFloat(php.PowerSupplieshp[i].LineInputVoltage, 'f', -1, 64)
-				fields["PowerCapacityWatts"] = strconv.FormatFloat(php.PowerSupplieshp[i].PowerCapacityWatts, 'f', -1, 64)
-				fields["LastPowerOutputWatts"] = strconv.FormatFloat(php.PowerSupplieshp[i].LastPowerOutputWatts, 'f', -1, 64)
-				acc.AddFields("powersupply", fields, tags)
-			}
-		}
-
-		if r.Server == "dell" {
-			for i := 0; i < len(v.Voltages); i++ {
-				//  Tags
-				tags := map[string]string{"OOBIP": r.Host, "Name": v.Voltages[i].Name, "Hostname": h.Hostname}
-				//  Fields
-				fields := make(map[string]interface{})
-				fields["Voltage"] = strconv.FormatInt(v.Voltages[i].ReadingVolts, 10)
-				fields["State"] = v.Voltages[i].Status.State
-				fields["Health"] = v.Voltages[i].Status.Health
-				fields["Datacenter"] = l.Location.PostalAddress.DataCenter
-				fields["Room"] = l.Location.PostalAddress.Room
-				fields["Rack"] = l.Location.Placement.Rack
-				fields["Row"] = l.Location.Placement.Row
-				acc.AddFields("voltages", fields, tags)
-			}
-		}
-		return nil
-	} else {
+	if len(r.Host) == 0 || len(r.BasicAuthUsername) == 0 || len(r.BasicAuthPassword) == 0 {
+		return fmt.Errorf("Did not provide IP or username and password")
+	}
+	if len(r.Server) == 0 || len(r.Id) == 0 {
 		return fmt.Errorf("Did not provide all the mandatory fields in the configuration")
 	}
+	if !(r.Server == "dell" || r.Server == "hp") {
+		return fmt.Errorf("Did not provide correct server information, supported server details are dell or hp")
+	}
+	err := r.getMetrics()
+	if err != nil {
+		return err
+	}
 
+	for i := 0; i < len(r.temperature.Temperatures); i++ {
+		//  Tags
+		tags := map[string]string{"oob_ip": r.Host, "name": r.temperature.Temperatures[i].Name, "hostname": r.hostname.Hostname}
+		//  Fields
+		fields := make(map[string]interface{})
+		fields["temperature"] = strconv.FormatInt(r.temperature.Temperatures[i].Temperature, 10)
+		fields["state"] = r.temperature.Temperatures[i].Status.State
+		fields["health"] = r.temperature.Temperatures[i].Status.Health
+		if r.Server == "dell" {
+			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
+			fields["room"] = r.location.Location.PostalAddress.Room
+			fields["rack"] = r.location.Location.Placement.Rack
+			fields["row"] = r.location.Location.Placement.Row
+			acc.AddFields("cpu_temperature", fields, tags)
+		}
+		if r.Server == "hp" {
+			acc.AddFields("cpu_temperature", fields, tags)
+		}
+	}
+	for i := 0; i < len(r.fan.Fans); i++ {
+		//  Tags
+		tags := map[string]string{"oob_ip": r.Host, "name": r.fan.Fans[i].Name, "hostname": r.hostname.Hostname}
+		//  Fields
+		fields := make(map[string]interface{})
+		fields["fanspeed"] = strconv.FormatInt(r.fan.Fans[i].Speed, 10)
+		fields["state"] = r.fan.Fans[i].Status.State
+		fields["health"] = r.fan.Fans[i].Status.Health
+		if r.Server == "dell" {
+			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
+			fields["room"] = r.location.Location.PostalAddress.Room
+			fields["rack"] = r.location.Location.Placement.Rack
+			fields["row"] = r.location.Location.Placement.Row
+			acc.AddFields("fans", fields, tags)
+		}
+		if r.Server == "hp" {
+			acc.AddFields("fans", fields, tags)
+		}
+	}
+	if r.Server == "dell" {
+		for i := 0; i < len(r.powerdell.PowerSupplies); i++ {
+			//  Tags
+			tags := map[string]string{"oob_ip": r.Host, "name": r.powerdell.PowerSupplies[i].Name, "hostname": r.hostname.Hostname}
+			//  Fields
+			fields := make(map[string]interface{})
+			fields["power_input_watts"] = strconv.FormatFloat(r.powerdell.PowerSupplies[i].PowerInputWatts, 'f', -1, 64)
+			fields["power_capacity_watts"] = strconv.FormatFloat(r.powerdell.PowerSupplies[i].PowerCapacityWatts, 'f', -1, 64)
+			fields["power_output_watts"] = strconv.FormatFloat(r.powerdell.PowerSupplies[i].PowerOutputWatts, 'f', -1, 64)
+			fields["state"] = r.powerdell.PowerSupplies[i].Status.State
+			fields["health"] = r.powerdell.PowerSupplies[i].Status.Health
+			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
+			fields["room"] = r.location.Location.PostalAddress.Room
+			fields["rack"] = r.location.Location.Placement.Rack
+			fields["row"] = r.location.Location.Placement.Row
+			acc.AddFields("powersupply", fields, tags)
+		}
+		for i := 0; i < len(r.voltage.Voltages); i++ {
+			//  Tags
+			tags := map[string]string{"oob_ip": r.Host, "name": r.voltage.Voltages[i].Name, "hostname": r.hostname.Hostname}
+			//  Fields
+			fields := make(map[string]interface{})
+			fields["voltage"] = strconv.FormatInt(r.voltage.Voltages[i].ReadingVolts, 10)
+			fields["state"] = r.voltage.Voltages[i].Status.State
+			fields["health"] = r.voltage.Voltages[i].Status.Health
+			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
+			fields["room"] = r.location.Location.PostalAddress.Room
+			fields["rack"] = r.location.Location.Placement.Rack
+			fields["row"] = r.location.Location.Placement.Row
+			acc.AddFields("voltages", fields, tags)
+		}
+
+	}
+	if r.Server == "hp" {
+		for i := 0; i < len(r.powerhp.PowerSupplieshp); i++ {
+			//  Tags
+			tags := map[string]string{"oob_ip": r.Host, "name": r.powerhp.PowerSupplieshp[i].Name, "member_id": r.powerhp.PowerSupplieshp[i].MemberID, "hostname": r.hostname.Hostname}
+			//  Fields
+			fields := make(map[string]interface{})
+			fields["line_input_voltage"] = strconv.FormatFloat(r.powerhp.PowerSupplieshp[i].LineInputVoltage, 'f', -1, 64)
+			fields["power_capacity_watts"] = strconv.FormatFloat(r.powerhp.PowerSupplieshp[i].PowerCapacityWatts, 'f', -1, 64)
+			fields["last_power_output_watts"] = strconv.FormatFloat(r.powerhp.PowerSupplieshp[i].LastPowerOutputWatts, 'f', -1, 64)
+			acc.AddFields("powersupply", fields, tags)
+		}
+	}
+
+	return nil
 }
 
 func init() {
