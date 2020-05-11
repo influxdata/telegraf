@@ -170,14 +170,14 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
-	if *fTest || *fTestWait != 0 {
-		wait := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, wait)
-	}
-
 	if *fRunOnce {
 		wait := time.Duration(*fTestWait) * time.Second
 		return ag.Once(ctx, wait)
+	}
+
+	if *fTest || *fTestWait != 0 {
+		wait := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, wait)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
