@@ -678,7 +678,20 @@ FROM sys.dm_os_schedulers AS s'
 EXEC sp_executesql @SqlStatement
 `
 
-const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
+const sqlPerformanceCountersV2 string = `
+SET DEADLOCK_PRIORITY -10;
+
+DECLARE
+	 @EngineEdition AS int
+	,@SqlStatement AS nvarchar(max)
+
+SELECT 
+	@EngineEdition = x.[EngineEdition]
+FROM (
+	SELECT
+		 CAST(SERVERPROPERTY('EngineEdition') AS int) AS [EngineEdition]
+) AS x
+
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -689,13 +702,13 @@ DECLARE @PCounters TABLE
 	Primary Key(object_name, counter_name, instance_name)
 );
 
-DECLARE @SQL NVARCHAR(MAX)
-SET @SQL = N'SELECT	DISTINCT
+DECLARE @SqlStatement NVARCHAR(MAX)
+SET @SqlStatement = N'SELECT DISTINCT
 		RTrim(spi.object_name) object_name,
 		RTrim(spi.counter_name) counter_name,'
 		+
 		CASE
-		WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
+		WHEN @EngineEdition IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
 		THEN N'CASE WHEN (
                              RTRIM(spi.object_name) LIKE ''%:Databases''
                              OR RTRIM(spi.object_name) LIKE ''%:Database Replica''
@@ -719,7 +732,7 @@ SET @SQL = N'SELECT	DISTINCT
 		FROM	sys.dm_os_performance_counters AS spi '
 +
 CASE 
-	WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
+	WHEN @EngineEdition IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
 	THEN CAST(N'LEFT JOIN sys.databases AS d
 	ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
 	= CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
@@ -727,10 +740,10 @@ CASE
                 THEN d.name
                 ELSE d.physical_database_name
 	END	' as NVARCHAR(MAX))
-	ELSE N' '
+	ELSE N''
 END
 
-SET @SQL = @SQL + CAST(N' WHERE	(
+SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 			counter_name IN (
 				''SQL Compilations/sec'',
 				''SQL Re-Compilations/sec'',
@@ -829,10 +842,10 @@ SET @SQL = @SQL + CAST(N' WHERE	(
 		)
 ' as NVARCHAR(MAX))
 INSERT	INTO @PCounters
-EXEC (@SQL)
+EXEC (@SqlStatement)
 
 
-SET  @SQL = REPLACE('SELECT
+SET  @SqlStatement = REPLACE('SELECT
 "SQLServer:Workload Group Stats" AS object,
 counter,
 instance,
@@ -860,7 +873,7 @@ UNPIVOT (
 ,'"','''')
 
 INSERT INTO @PCounters
-EXEC( @SQL )
+EXEC( @SqlStatement )
 
 SELECT	'sqlserver_performance' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
