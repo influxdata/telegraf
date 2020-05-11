@@ -1629,7 +1629,7 @@ SELECT
     DB_NAME() as [database_name],
 	r.session_id
 	, r.request_id
-	, DB_NAME(s.database_id) as session_db_name
+	, DB_NAME(r.database_id) as session_db_name
 	, r.status
 	, r.cpu_time as cpu_time_ms
 	, r.total_elapsed_time as total_elasped_time_ms
@@ -1703,10 +1703,10 @@ IF @EngineEdition IN (2,3,4) AND NOT(@MajorVersion <= 10 AND @MinorVersion < 50)
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('machinename') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-		,IIF( RIGHT(vs.[volume_mount_point],1) = '\'	/*Tag value cannot end with \ */
-			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-			,vs.[volume_mount_point]
-		) AS [volume_mount_point]
+		,CASE WHEN RIGHT(vs.[volume_mount_point],1) = '\'
+			THEN LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+			ELSE vs.[volume_mount_point]
+		 END AS [volume_mount_point]
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
