@@ -63,7 +63,7 @@ func runAsWindowsService(inputFilters, outputFilters, aggregatorFilters, process
 	svcConfig := &service.Config{
 		Name:        *fServiceName,
 		DisplayName: *fServiceDisplayName,
-		Description: "Collects data using a series of plugins and publishes it to" +
+		Description: "Collects data using a series of plugins and publishes it to " +
 			"another series of plugins.",
 		Arguments: []string{"--config", programFiles + "\\Telegraf\\telegraf.conf"},
 	}
