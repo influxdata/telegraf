@@ -33,6 +33,7 @@
 - [#7434](https://github.com/influxdata/telegraf/pull/7434): Use docker log timestamp as metric time.
 - [#7359](https://github.com/influxdata/telegraf/pull/7359): Add cpu query to sqlserver input.
 - [#7464](https://github.com/influxdata/telegraf/pull/7464): Add field creation to date processor and integer unix time support.
+- [#7483](https://github.com/influxdata/telegraf/pull/7483): Add integer mapping support to enum processor.
 
 #### Bugfixes
 
