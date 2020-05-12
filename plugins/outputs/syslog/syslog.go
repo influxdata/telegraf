@@ -64,13 +64,13 @@ var sampleConfig = `
   ## be one of "octet-counting", "non-transparent".
   # framing = "octet-counting"
 
-  ## The trailer to be expected in case of non-trasparent framing (default = "LF").
+  ## The trailer to be expected in case of non-transparent framing (default = "LF").
   ## Must be one of "LF", or "NUL".
   # trailer = "LF"
 
   ## SD-PARAMs settings
   ## Syslog messages can contain key/value pairs within zero or more
-  ## structured data sections.  For each unrecognised metric tag/field a
+  ## structured data sections.  For each unrecognized metric tag/field a
   ## SD-PARAMS is created.
   ##
   ## Example:
@@ -86,8 +86,8 @@ var sampleConfig = `
   # sdparam_separator = "_"
 
   ## Default sdid used for tags/fields that don't contain a prefix defined in
-  ## the explict sdids setting below If no default is specified, no SD-PARAMs
-  ## will be used for unrecognised field.
+  ## the explicit sdids setting below If no default is specified, no SD-PARAMs
+  ## will be used for unrecognized field.
   # default_sdid = "default@32473"
 
   ## List of explicit prefixes to extract from tag/field keys and use as the

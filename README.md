@@ -117,7 +117,7 @@ telegraf config > telegraf.conf
 telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
 ```
 
-#### Run a single telegraf collection, outputing metrics to stdout:
+#### Run a single telegraf collection, outputting metrics to stdout:
 
 ```
 telegraf --config telegraf.conf --test

@@ -544,7 +544,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(
 	for _, filter := range filters {
 		// Add filter for list metric descriptors if
 		// includeMetricTypePrefixes is specified,
-		// this is more effecient than iterating over
+		// this is more efficient than iterating over
 		// all metric descriptors
 		req.Filter = filter
 		mdRespChan, err := s.client.ListMetricDescriptors(ctx, req)

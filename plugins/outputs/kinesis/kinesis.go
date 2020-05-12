@@ -70,7 +70,7 @@ var sampleConfig = `
   streamname = "StreamName"
   ## DEPRECATED: PartitionKey as used for sharding data.
   partitionkey = "PartitionKey"
-  ## DEPRECATED: If set the paritionKey will be a random UUID on every put.
+  ## DEPRECATED: If set the partitionKey will be a random UUID on every put.
   ## This allows for scaling across multiple shards in a stream.
   ## This will cause issues with ordering.
   use_random_partitionkey = false

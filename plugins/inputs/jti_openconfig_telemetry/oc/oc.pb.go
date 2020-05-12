@@ -980,7 +980,7 @@ type OpenConfigTelemetryClient interface {
 	// The device should send telemetry data back on the same
 	// connection as the subscription request.
 	TelemetrySubscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (OpenConfigTelemetry_TelemetrySubscribeClient, error)
-	// Terminates and removes an exisiting telemetry subscription
+	// Terminates and removes an existing telemetry subscription
 	CancelTelemetrySubscription(ctx context.Context, in *CancelSubscriptionRequest, opts ...grpc.CallOption) (*CancelSubscriptionReply, error)
 	// Get the list of current telemetry subscriptions from the
 	// target. This command returns a list of existing subscriptions
@@ -1076,7 +1076,7 @@ type OpenConfigTelemetryServer interface {
 	// The device should send telemetry data back on the same
 	// connection as the subscription request.
 	TelemetrySubscribe(*SubscriptionRequest, OpenConfigTelemetry_TelemetrySubscribeServer) error
-	// Terminates and removes an exisiting telemetry subscription
+	// Terminates and removes an existing telemetry subscription
 	CancelTelemetrySubscription(context.Context, *CancelSubscriptionRequest) (*CancelSubscriptionReply, error)
 	// Get the list of current telemetry subscriptions from the
 	// target. This command returns a list of existing subscriptions

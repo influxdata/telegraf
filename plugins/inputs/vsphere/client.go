@@ -36,7 +36,7 @@ type ClientFactory struct {
 	parent *VSphere
 }
 
-// Client represents a connection to vSphere and is backed by a govmoni connection
+// Client represents a connection to vSphere and is backed by a govmomi connection
 type Client struct {
 	Client    *govmomi.Client
 	Views     *view.Manager

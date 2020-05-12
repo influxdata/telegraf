@@ -28,7 +28,7 @@ Additional resource labels can be configured by `resource_labels`. By default th
   ## Custom resource type
   # resource_type = "generic_node"
 
-  ## Additonal resource labels
+  ## Additional resource labels
   # [outputs.stackdriver.resource_labels]
   #   node_id = "$HOSTNAME"
   #   namespace = "myapp"
