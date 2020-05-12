@@ -21,16 +21,21 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address             string   // deprecated in 1.12
-	URLs                []string `toml:"urls"`
-	HTTPProxy           string   `toml:"http_proxy"`
-	Body                string
-	Method              string
-	ResponseTimeout     internal.Duration
-	Headers             map[string]string
-	FollowRedirects     bool
+	Address         string   // deprecated in 1.12
+	URLs            []string `toml:"urls"`
+	HTTPProxy       string   `toml:"http_proxy"`
+	Body            string
+	Method          string
+	ResponseTimeout internal.Duration
+	Headers         map[string]string
+	FollowRedirects bool
+	// Absolute path to file with Bearer token
+	BearerToken         string `toml:"bearer_token"`
 	ResponseStringMatch string
 	Interface           string
+	// HTTP Basic Auth Credentials
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 	tls.ClientConfig
 
 	Log telegraf.Logger
@@ -63,6 +68,14 @@ var sampleConfig = `
 
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
+
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
+
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
 
   ## Optional HTTP Request Body
   # body = '''
@@ -227,11 +240,24 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		return nil, nil, err
 	}
 
+	if h.BearerToken != "" {
+		token, err := ioutil.ReadFile(h.BearerToken)
+		if err != nil {
+			return nil, nil, err
+		}
+		bearer := "Bearer " + strings.Trim(string(token), "\n")
+		request.Header.Add("Authorization", bearer)
+	}
+
 	for key, val := range h.Headers {
 		request.Header.Add(key, val)
 		if key == "Host" {
 			request.Host = val
 		}
+	}
+
+	if h.Username != "" || h.Password != "" {
+		request.SetBasicAuth(h.Username, h.Password)
 	}
 
 	// Start Timer

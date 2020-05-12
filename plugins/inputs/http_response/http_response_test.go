@@ -864,3 +864,45 @@ func TestRedirect(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime())
 }
+
+func TestBasicAuth(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		aHeader := r.Header.Get("Authorization")
+		assert.Equal(t, "Basic bWU6bXlwYXNzd29yZA==", aHeader)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		Address:         ts.URL + "/good",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Username:        "me",
+		Password:        "mypassword",
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+	}
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
