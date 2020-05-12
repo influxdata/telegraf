@@ -4,52 +4,122 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"sort"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/mediocregopher/radix/v3"
 	"github.com/mediocregopher/radix/v3/resp/resp2"
 )
 
-var sampleConfig = `
-  ## The URI of the RedisTimeSeries server
-  # URI = "redis://user:password@127.0.0.1:6379/0"
+var (
+	pluginName      = "RedisTimeSeries"
+	defaultURL      = "redis://localhost:6379"
+	defaultPoolSize = 1
+	sampleConfig    = `
+  ## The URLs of the RedisTimeSeries servers
+  # urls = ["redis://127.0.0.1:6379"]
 
-  ## The retention period of metrics in milliseconds, where:
-  # -1 means the database's default retention
-  # 0 means unlimited
-  # retention = 0
+  ## When set to TRUE indicates that Redis is clustered
+  # cluster = false
+
+  ## Number of connections in the pool
+  # pool_size = 1
+
+  ## Connection pool pipeline window duration
+  # pipeline_window_duration = "0ms"
+
+  ## Connection pool pipeline window limit
+  # pipeline_window_limit = 0
+
+  ## When set to TRUE uses the database's default retention
+  # default_retention = false
+
+  ## When 'default_retention' is FALSE this is the retention period for
+  ## RedisTimeSeries values where 0 means unlimited
+  # retention = "0ms"
 
   ## Output debug information
   # debug = false
 `
+)
+
+// TODO: cluster support
+// TODO ## Optional TLS Config
+// TODO :# tls_ca = "/etc/telegraf/ca.pem"
+// TODO # tls_cert = "/etc/telegraf/cert.pem"
+// TODO # tls_key = "/etc/telegraf/key.pem"
+// TODO ## Use TLS but skip chain & host verification
+// TODO # insecure_skip_verify = true
+// TODO: consider using MADD and TS.CREATE to skip label setting
+// TODO: consider adding introspective metrics (last write, time to parse, to write, errors, ...)
+// TODO: consider using go-redis as it is already in the deps
 
 // RedisTimeSeries represents a redistimeseries telegraf backend
 type RedisTimeSeries struct {
-	// TODO ## Optional TLS Config
-	// TODO :# tls_ca = "/etc/telegraf/ca.pem"
-	// TODO # tls_cert = "/etc/telegraf/cert.pem"
-	// TODO # tls_key = "/etc/telegraf/key.pem"
-	// TODO ## Use TLS but skip chain & host verification
-	// TODO # insecure_skip_verify = true
-	// TODO: externalize pipeline window
-	// TODO: consider using MADD and TS.CREATE to skip label setting
-	// TODO: consider adding introspective metrics (last write, time to parse, to write, errors, ...)
-	// TODO: consider using go-redis as it is already in the deps
-	URI       string
-	Retention int64
-	Debug     bool
-	pool      *radix.Pool
+	URLs                   []string          `toml:"urls"`
+	Cluster                bool              `toml:"cluster"`
+	PoolSize               int               `toml:"pool_size"`
+	PipelineWindowDuration internal.Duration `toml:"pipeline_window_duration"`
+	PipelineWindowLimit    int               `toml:"pipeline_window_limit"`
+	DefaultRetention       bool              `toml:"default_retention"`
+	Retention              internal.Duration `toml:"retention"`
+	Debug                  bool              `toml:"debug"`
+	rententionClause       []string
+	pool                   *radix.Pool
 }
 
 // Connect handles the connection
 func (rts *RedisTimeSeries) Connect() (err error) {
-	opts := []radix.PoolOpt{
-		radix.PoolPipelineWindow(0, 0),
+	if rts.Cluster {
+		// TOOD: :)
+		return fmt.Errorf("cluster not supported yet")
 	}
-	rts.pool, err = radix.NewPool("tcp", rts.URI, 1, opts...)
+
+	if !rts.DefaultRetention {
+		rts.rententionClause = []string{"RETENTION", fmt.Sprint(rts.Retention.Duration.Milliseconds())}
+	}
+
+	poolSize := rts.PoolSize
+	if poolSize == 0 {
+		poolSize = defaultPoolSize
+		if rts.Debug {
+			log.Printf("[%s] set connection pool size to %d by default\n", pluginName, poolSize)
+		}
+	}
+
+	urls := make([]string, 0, len(rts.URLs))
+	urls = append(urls, rts.URLs...)
+
+	if len(urls) == 0 {
+		urls = append(urls, defaultURL)
+	}
+
+	if len(urls) > 1 && !rts.Cluster {
+		// TOOD: :)
+		return fmt.Errorf("urls list should be len 0 or 1 when not a cluster")
+	}
+
+	for _, u := range urls {
+		parts, err := url.Parse(u)
+		if err != nil {
+			return fmt.Errorf("error parsing url [%q]: %v", u, err)
+		}
+		switch parts.Scheme {
+		case "redis":
+			continue
+		default:
+			return fmt.Errorf("unsupported scheme [%q]: %q", u, parts.Scheme)
+		}
+	}
+
+	opts := []radix.PoolOpt{
+		radix.PoolPipelineWindow(rts.PipelineWindowDuration.Duration, rts.PipelineWindowLimit),
+	}
+	rts.pool, err = radix.NewPool("tcp", urls[0], poolSize, opts...)
 	return
 }
 
@@ -90,9 +160,13 @@ func (rts *RedisTimeSeries) Write(metrics []telegraf.Metric) (err error) {
 
 		labels := make([]string, len(metric.TagList())*2)
 		for i, tag := range metric.TagList() {
+			if tag.Key == "host" {
+				name = fmt.Sprintf("%s:%s", tag.Value, name)
+			} else {
+				name = fmt.Sprintf("%s:%s", name, tag.Value)
+			}
 			labels[i*2] = tag.Key
 			labels[i*2+1] = tag.Value
-			name = fmt.Sprintf("%s:%s", name, tag.Value)
 		}
 
 		for _, field := range metric.FieldList() {
@@ -106,35 +180,41 @@ func (rts *RedisTimeSeries) Write(metrics []telegraf.Metric) (err error) {
 			case int64:
 				value = float64(v)
 			default:
-				err = fmt.Errorf("D! [RedisTimeSeries] Skipping unknown value type %T of field '%s' in metric '%v'",
-					field.Value, field.Key, metric)
+				if rts.Debug {
+					log.Printf("[%s] skipping over unknown value type %T of field '%s' in metric '%v'",
+						pluginName, field.Value, field.Key, metric)
+				}
+				continue
 			}
-			if err == nil {
-				args := []string{
-					key,
-					fmt.Sprint(timestamp),
-					fmt.Sprint(value),
-				}
-				if rts.Retention >= 0 {
-					args = append(args, "RETENTION", fmt.Sprint(rts.Retention))
-				}
-				if len(labels) > 0 {
-					args = append(args, "LABELS")
-					args = append(args, labels...)
-				}
 
-				err = rts.pool.Do(radix.Cmd(nil, "TS.ADD", args...))
+			args := []string{
+				key,
+				fmt.Sprint(timestamp),
+				fmt.Sprint(value),
+			}
+
+			if !rts.DefaultRetention {
+				args = append(args, rts.rententionClause...)
+			}
+
+			if len(labels) > 0 {
+				args = append(args, "LABELS")
+				args = append(args, labels...)
+			}
+
+			err = rts.pool.Do(radix.Cmd(nil, "TS.ADD", args...))
+			if err != nil {
 				var redisErr resp2.Error
 				if errors.As(err, &redisErr) {
-					log.Printf("E! [RedisTimeSeries] %v", redisErr.E)
-					return
+					// Handle Redis errors
+				} else {
+					// Handle generic errors
 				}
-			} else {
-				// Warnings issued during metric serialization
 				if rts.Debug {
-					log.Print(err)
+					log.Printf("[%s] error while storing value '%v' of field '%s' in metric '%v'\n",
+						pluginName, field.Value, field.Key, metric)
 				}
-				err = nil
+				return
 			}
 		}
 	}
@@ -142,7 +222,7 @@ func (rts *RedisTimeSeries) Write(metrics []telegraf.Metric) (err error) {
 }
 
 func init() {
-	outputs.Add("RedisTimeSeries", func() telegraf.Output {
+	outputs.Add(pluginName, func() telegraf.Output {
 		return &RedisTimeSeries{}
 	})
 }
