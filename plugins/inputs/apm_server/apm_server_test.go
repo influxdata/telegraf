@@ -311,9 +311,9 @@ func TestEventsIntake(t *testing.T) {
 }
 
 func TestEventsIntakeMultipleMetadata(t *testing.T) {
-	tags1 := map[string]string{"process_pid": "12345", "process_ppid": "1", "process_title": "/usr/lib/bin/java", "type": "metricset"}
+	tags1 := map[string]string{"apm_event_type": "metricset", "process_pid": "12345", "process_ppid": "1", "process_title": "/usr/lib/bin/java"}
 	fields1 := map[string]interface{}{"tags_code": 200.0, "tags_success": true, "transaction_name": "GET/", "transaction_type": "request"}
-	tags2 := map[string]string{"process_pid": "54321", "process_ppid": "1", "process_title": "/usr/lib/bin/java", "type": "metricset"}
+	tags2 := map[string]string{"apm_event_type": "metricset", "process_pid": "54321", "process_ppid": "1", "process_title": "/usr/lib/bin/java"}
 	fields2 := map[string]interface{}{"tags_code": 200.0, "tags_success": true, "transaction_name": "POST/", "transaction_type": "request"}
 
 	server := newTestServer()
@@ -350,7 +350,7 @@ func TestEventsIntakeMultipleMetadata(t *testing.T) {
 
 func TestEventsIntakeWithoutTimestamp(t *testing.T) {
 	now := time.Now().UTC()
-	tags := map[string]string{"process_pid": "12345", "process_ppid": "1", "process_title": "/usr/lib/bin/java", "type": "metricset"}
+	tags := map[string]string{"apm_event_type": "metricset", "process_pid": "12345", "process_ppid": "1", "process_title": "/usr/lib/bin/java"}
 	fields := map[string]interface{}{"tags_code": 200.0, "tags_success": true, "transaction_name": "GET/", "transaction_type": "request"}
 
 	server := newTestServer()
@@ -404,7 +404,7 @@ func TestEventsIntakeNotValidTimestamp(t *testing.T) {
 
 func TestEventsIntakeGzip(t *testing.T) {
 
-	tags := map[string]string{"process_pid": "12345", "process_ppid": "1", "process_title": "/usr/lib/bin/java", "type": "metricset"}
+	tags := map[string]string{"apm_event_type": "metricset", "process_pid": "12345", "process_ppid": "1", "process_title": "/usr/lib/bin/java"}
 	fields := map[string]interface{}{"tags_code": 200.0, "tags_success": true, "transaction_name": "GET/", "transaction_type": "request"}
 
 	server := newTestServer()
@@ -445,7 +445,7 @@ func TestEventsIntakeGzip(t *testing.T) {
 
 func TestEventsIntakeZlib(t *testing.T) {
 
-	tags := map[string]string{"process_pid": "102030", "process_ppid": "1", "process_title": "/usr/lib/bin/java", "type": "metricset"}
+	tags := map[string]string{"apm_event_type": "metricset", "process_pid": "102030", "process_ppid": "1", "process_title": "/usr/lib/bin/java"}
 	fields := map[string]interface{}{"tags_code": 202.0, "tags_success": true, "transaction_name": "GET/", "transaction_type": "request"}
 
 	server := newTestServer()
@@ -529,23 +529,23 @@ func TestRUMEventsIntake(t *testing.T) {
 	require.Equal(t, 4, len(acc.Metrics))
 	// 1
 	require.Equal(t, "apm_server", acc.Metrics[0].Measurement)
-	require.Equal(t, map[string]string{"service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM", "type": "transaction"}, acc.Metrics[0].Tags)
+	require.Equal(t, map[string]string{"apm_event_type": "transaction", "service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM"}, acc.Metrics[0].Tags)
 	require.Equal(t, map[string]interface{}{"context_page_referer": "", "context_page_url": "http://localhost:3000/", "context_response_decoded_body_size": 943.0, "context_response_encoded_body_size": 943.0, "context_response_transfer_size": 1863.0, "duration": 159.20999998343177, "id": "bffcb5c637da7831", "marks_agent_domComplete": 155.0, "marks_agent_domInteractive": 148.0, "marks_agent_firstContentfulPaint": 153.28499997546896, "marks_agent_largestContentfulPaint": 156.28499997546896, "marks_agent_timeToFirstByte": 69.0, "marks_navigationTiming_connectEnd": 6.0, "marks_navigationTiming_connectStart": 6.0, "marks_navigationTiming_domComplete": 155.0, "marks_navigationTiming_domContentLoadedEventEnd": 149.0, "marks_navigationTiming_domContentLoadedEventStart": 148.0, "marks_navigationTiming_domInteractive": 148.0, "marks_navigationTiming_domLoading": 86.0, "marks_navigationTiming_domainLookupEnd": 6.0, "marks_navigationTiming_domainLookupStart": 6.0, "marks_navigationTiming_fetchStart": 0.0, "marks_navigationTiming_loadEventEnd": 156.0, "marks_navigationTiming_loadEventStart": 155.0, "marks_navigationTiming_requestStart": 6.0, "marks_navigationTiming_responseEnd": 70.0, "marks_navigationTiming_responseStart": 69.0, "name": "Unknown", "sampled": true, "span_count_started": 6.0, "trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "type": "page-load"}, acc.Metrics[0].Fields)
 	require.NotNil(t, acc.Metrics[0].Time)
 	require.True(t, acc.Metrics[0].Time.After(now))
 	// 2
 	require.Equal(t, "apm_server", acc.Metrics[1].Measurement)
-	require.Equal(t, map[string]string{"service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM", "type": "span"}, acc.Metrics[1].Tags)
+	require.Equal(t, map[string]string{"apm_event_type": "span", "service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM"}, acc.Metrics[1].Tags)
 	require.Equal(t, map[string]interface{}{"duration": 64.0, "id": "665a2d250689f05d", "name": "Requesting and receiving the document", "parent_id": "bffcb5c637da7831", "start": 6.0, "subType": "browser-timing", "trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "transaction_id": "bffcb5c637da7831", "type": "hard-navigation"}, acc.Metrics[1].Fields)
 	require.True(t, acc.Metrics[1].Time.After(now))
 	// 3
 	require.Equal(t, "apm_server", acc.Metrics[2].Measurement)
-	require.Equal(t, map[string]string{"service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM", "type": "span"}, acc.Metrics[2].Tags)
+	require.Equal(t, map[string]string{"apm_event_type": "span", "service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM"}, acc.Metrics[2].Tags)
 	require.Equal(t, map[string]interface{}{"duration": 62.0, "id": "aae7e219d6b5be7a", "name": "Parsing the document, executing sync. scripts", "parent_id": "bffcb5c637da7831", "start": 86.0, "subType": "browser-timing", "trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "transaction_id": "bffcb5c637da7831", "type": "hard-navigation"}, acc.Metrics[2].Fields)
 	require.True(t, acc.Metrics[2].Time.After(now))
 	// 4
 	require.Equal(t, "apm_server", acc.Metrics[3].Measurement)
-	require.Equal(t, map[string]string{"service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM", "type": "span"}, acc.Metrics[3].Tags)
+	require.Equal(t, map[string]string{"apm_event_type": "span", "service_agent_name": "rum-js", "service_agent_version": "5.0.0", "service_language_name": "javascript", "service_name": "DemoRails-RUM"}, acc.Metrics[3].Tags)
 	require.Equal(t, map[string]interface{}{"context_destination_address": "localhost", "context_destination_port": 3000.0, "context_destination_service_name": "http://localhost:3000", "context_destination_service_resource": "localhost:3000", "context_destination_service_type": "resource", "context_http_response_decoded_body_size": 785.0, "context_http_response_encoded_body_size": 785.0, "context_http_response_transfer_size": 0.0, "context_http_url": "http://localhost:3000/assets/application.debug-8f0ab06df214da85f20badd5140ad9071c25a2186b569d896dbf0f00ebbd5acd.css", "duration": 8.354999998118728, "id": "9e0b3728b470a522", "name": "http://localhost:3000/assets/application.debug-8f0ab06df214da85f20badd5140ad9071c25a2186b569d896dbf0f00ebbd5acd.css", "parent_id": "bffcb5c637da7831", "start": 103.52499998407438, "subType": "link", "trace_id": "3a3bd994744f26c4ca7ae74332e04a76", "transaction_id": "bffcb5c637da7831", "type": "resource"}, acc.Metrics[3].Fields)
 	require.True(t, acc.Metrics[3].Time.After(now))
 	defer resp.Body.Close()
