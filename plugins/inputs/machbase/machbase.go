@@ -24,7 +24,7 @@ type MachDB struct {
     GatherSysTime       bool        `toml:"gather_mach_systime"`
     GatherStorage       bool        `toml:"gather_mach_storage"`
     
-    Log telegraf.Logger `toml:"-"`
+    Log telegraf.Logger
 }
 
 // queries
@@ -115,7 +115,6 @@ func (m *MachDB) SampleConfig() string {
 }
 
 func (m *MachDB) Gather(acc telegraf.Accumulator) error {
-    m.Log.Debugf("Gather start")
 	if len(m.Drivers) == 0 {
         // use default to driver if nothing specified.
         m.Log.Debugf("driver length 0")
@@ -142,7 +141,6 @@ func (m *MachDB) Gather(acc telegraf.Accumulator) error {
 
 
 func (m *MachDB) GatherInfo(aDriver string, acc telegraf.Accumulator) error {
-    m.Log.Debugf("GatherInfo start")
     sHost := aDriver
     var gatherError error
     
@@ -181,7 +179,6 @@ func (m *MachDB) GatherInfo(aDriver string, acc telegraf.Accumulator) error {
 }
 
 func (m *MachDB) GatherSysStatInfo(aHost string, acc telegraf.Accumulator) error {
-    m.Log.Debugf("GatherSysStatInfo API start")
     var sError error
 
     sGenaralField   := MakeField(gGENERAL)
@@ -227,12 +224,10 @@ func (m *MachDB) GatherSysStatInfo(aHost string, acc telegraf.Accumulator) error
     acc.AddFields("mach_sysstat_file", sFileField, sTags)
     acc.AddFields("mach_sysstat_etc", sEtcField, sTags)
 
-    m.Log.Debugf("GatherSysStatInfo success")
     return nil
 }
 
 func (m *MachDB) GatherSysTimeInfo(aHost string, acc telegraf.Accumulator) error {
-    m.Log.Debugf("GatherSysTimeInfo API start")
     
     sAccumField := MakeField(gTIME)
     sAvgField   := MakeField(gTIME)
@@ -274,12 +269,10 @@ func (m *MachDB) GatherSysTimeInfo(aHost string, acc telegraf.Accumulator) error
     sTags["category"] = "systime_count"
     acc.AddFields("mach_systime", sCountField, sTags)
 
-    m.Log.Debugf("GatherSysTimeInfo success")
     return nil
 }
 
 func (m *MachDB) GatherStorageInfo(aHost string, acc telegraf.Accumulator) error {
-    m.Log.Debugf("GatherStorageInfo API start")
 
     //v$strorage
     sStorageField := MakeField(gSTORAGE)
@@ -361,13 +354,10 @@ func (m *MachDB) GatherStorageInfo(aHost string, acc telegraf.Accumulator) error
     sTags := map[string]string {"hostname": aHost}
     acc.AddFields("mach_storage", sStorageField, sTags)
 
-    m.Log.Debugf("GatherStorageInfo success")
     return nil
 }
 
 func (m *MachDB) GatherSessionInfo(aHost string, acc telegraf.Accumulator) error {
-    m.Log.Debugf("GatherSessionInfo API start")
-    
     sSessionField := MakeField(gSESSION)
     sTags := map[string]string {
         "hostname": aHost,
@@ -426,17 +416,13 @@ func (m *MachDB) GatherSessionInfo(aHost string, acc telegraf.Accumulator) error
         sValue, _ = strconv.ParseInt(sData["RS_CACHE_APPROXIMATE_RESULT_ENABLE"].(string),10,64)
         sSessionField["rs_cache_approximate_result_enable"] = sValue
 
-        m.Log.Debugf("add field start")
         acc.AddFields("mach_session", sSessionField, sTags)
-        m.Log.Debugf("add field end")
     }
 
-    m.Log.Debugf("GatherSessionInfo success")
     return nil
 }
 
 func (m *MachDB) GatherStmtInfo(aHost string, acc telegraf.Accumulator) error {
-    m.Log.Debugf("GatherStmtInfo API start")
     
     sStatField := MakeField(gSTAT)
     sTags := map[string]string {
@@ -465,12 +451,10 @@ func (m *MachDB) GatherStmtInfo(aHost string, acc telegraf.Accumulator) error {
 
     }
     
-    m.Log.Debugf("GatherStmtInfo success")
     return nil
 }
 
 func (m *MachDB) GetData(aUrl string, aQuery string) (interface{}, error){
-    m.Log.Debugf("GetData start")
     var sError error
     var sData interface{}
     sUrl := MakeUrl(aUrl)

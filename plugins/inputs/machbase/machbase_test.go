@@ -1,7 +1,6 @@
 package machbase
 
 import (
-    "fmt"
     "testing"
 
     "github.com/influxdata/telegraf/testutil"
@@ -352,7 +351,7 @@ func TestMakeField(t *testing.T) {
         out := MakeField(test.input)
         for _, keys := range test.output {
             if _, exist := out[keys]; !exist {
-                t.Errorf("Expected %s, got %s\n", test.input, fmt.Sprint(out))
+                t.Errorf("Expected %s, got %s\n", test.output, out)
                 break
             }
         }
