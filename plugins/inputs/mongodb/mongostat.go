@@ -48,7 +48,7 @@ type ServerStatus struct {
 	UptimeMillis       int64                  `bson:"uptimeMillis"`
 	UptimeEstimate     int64                  `bson:"uptimeEstimate"`
 	LocalTime          time.Time              `bson:"localTime"`
-	Asserts            map[string]int64       `bson:"asserts"`
+	Asserts            *AssertsStats          `bson:"asserts"`
 	BackgroundFlushing *FlushStats            `bson:"backgroundFlushing"`
 	ExtraInfo          *ExtraInfo             `bson:"extra_info"`
 	Connections        *ConnectionStats       `bson:"connections"`
@@ -66,6 +66,7 @@ type ServerStatus struct {
 	StorageEngine      map[string]string      `bson:"storageEngine"`
 	WiredTiger         *WiredTiger            `bson:"wiredTiger"`
 	Metrics            *MetricsStats          `bson:"metrics"`
+	TCMallocStats      *TCMallocStats         `bson:"tcmalloc"`
 }
 
 // DbStats stores stats from all dbs
@@ -177,6 +178,15 @@ type ConcurrentTransStats struct {
 	Out          int64 `bson:"out"`
 	Available    int64 `bson:"available"`
 	TotalTickets int64 `bson:"totalTickets"`
+}
+
+// AssertsStats stores information related to assertions raised since the MongoDB process started
+type AssertsStats struct {
+	Regular   int64 `bson:"regular"`
+	Warning   int64 `bson:"warning"`
+	Msg       int64 `bson:"msg"`
+	User      int64 `bson:"user"`
+	Rollovers int64 `bson:"rollovers"`
 }
 
 // CacheStats stores cache statistics for WiredTiger.
@@ -332,10 +342,14 @@ type LatencyStats struct {
 
 // MetricsStats stores information related to metrics
 type MetricsStats struct {
-	TTL      *TTLStats      `bson:"ttl"`
-	Cursor   *CursorStats   `bson:"cursor"`
-	Document *DocumentStats `bson:"document"`
-	Commands *CommandsStats `bson:"commands"`
+	TTL           *TTLStats           `bson:"ttl"`
+	Cursor        *CursorStats        `bson:"cursor"`
+	Document      *DocumentStats      `bson:"document"`
+	Commands      *CommandsStats      `bson:"commands"`
+	Operation     *OperationStats     `bson:"operation"`
+	QueryExecutor *QueryExecutorStats `bson:"queryExecutor"`
+	Repl          *ReplStats          `bson:"repl"`
+	Storage       *StorageStats       `bson:"storage"`
 }
 
 // TTLStats stores information related to documents with a ttl index.
@@ -360,7 +374,10 @@ type DocumentStats struct {
 
 // CommandsStats stores information related to document metrics.
 type CommandsStats struct {
+	Aggregate     *CommandsStatsValue `bson:"aggregate"`
+	Count         *CommandsStatsValue `bson:"count"`
 	Delete        *CommandsStatsValue `bson:"delete"`
+	Distinct      *CommandsStatsValue `bson:"distinct"`
 	Find          *CommandsStatsValue `bson:"find"`
 	FindAndModify *CommandsStatsValue `bson:"findAndModify"`
 	GetMore       *CommandsStatsValue `bson:"getMore"`
@@ -378,6 +395,59 @@ type OpenCursorStats struct {
 	NoTimeout int64 `bson:"noTimeout"`
 	Pinned    int64 `bson:"pinned"`
 	Total     int64 `bson:"total"`
+}
+
+// OperationStats stores information related to query operations
+// using special operation types
+type OperationStats struct {
+	ScanAndOrder   int64 `bson:"scanAndOrder"`
+	WriteConflicts int64 `bson:"writeConflicts"`
+}
+
+// QueryExecutorStats stores information related to query execution
+type QueryExecutorStats struct {
+	Scanned        int64 `bson:"scanned"`
+	ScannedObjects int64 `bson:"scannedObjects"`
+}
+
+// ReplStats stores information related to replication process
+type ReplStats struct {
+	Apply    *ReplApplyStats    `bson:"apply"`
+	Buffer   *ReplBufferStats   `bson:"buffer"`
+	Executor *ReplExecutorStats `bson:"executor,omitempty"`
+	Network  *ReplNetworkStats  `bson:"network"`
+}
+
+// ReplApplyStats stores information related to oplog application process
+type ReplApplyStats struct {
+	Batches *BasicStats `bson:"batches"`
+	Ops     int64       `bson:"ops"`
+}
+
+// ReplBufferStats stores information related to oplog buffer
+type ReplBufferStats struct {
+	Count     int64 `bson:"count"`
+	SizeBytes int64 `bson:"sizeBytes"`
+}
+
+// ReplExecutorStats stores information related to replication executor
+type ReplExecutorStats struct {
+	Pool             map[string]int64 `bson:"pool"`
+	Queues           map[string]int64 `bson:"queues"`
+	UnsignaledEvents int64            `bson:"unsignaledEvents"`
+}
+
+// ReplNetworkStats stores information related to network usage by replication process
+type ReplNetworkStats struct {
+	Bytes    int64       `bson:"bytes"`
+	GetMores *BasicStats `bson:"getmores"`
+	Ops      int64       `bson:"ops"`
+}
+
+// BasicStats stores information about an operation
+type BasicStats struct {
+	Num         int64 `bson:"num"`
+	TotalMillis int64 `bson:"totalMillis"`
 }
 
 // ReadWriteLockTimes stores time spent holding read/write locks.
@@ -404,6 +474,46 @@ type LockStats struct {
 // ExtraInfo stores additional platform specific information.
 type ExtraInfo struct {
 	PageFaults *int64 `bson:"page_faults"`
+}
+
+// TCMallocStats stores information related to TCMalloc memory allocator metrics
+type TCMallocStats struct {
+	Generic  *GenericTCMAllocStats  `bson:"generic"`
+	TCMalloc *DetailedTCMallocStats `bson:"tcmalloc"`
+}
+
+// GenericTCMAllocStats stores generic TCMalloc memory allocator metrics
+type GenericTCMAllocStats struct {
+	CurrentAllocatedBytes int64 `bson:"current_allocated_bytes"`
+	HeapSize              int64 `bson:"heap_size"`
+}
+
+// DetailedTCMallocStats stores detailed TCMalloc memory allocator metrics
+type DetailedTCMallocStats struct {
+	PageheapFreeBytes            int64 `bson:"pageheap_free_bytes"`
+	PageheapUnmappedBytes        int64 `bson:"pageheap_unmapped_bytes"`
+	MaxTotalThreadCacheBytes     int64 `bson:"max_total_thread_cache_bytes"`
+	CurrentTotalThreadCacheBytes int64 `bson:"current_total_thread_cache_bytes"`
+	TotalFreeBytes               int64 `bson:"total_free_bytes"`
+	CentralCacheFreeBytes        int64 `bson:"central_cache_free_bytes"`
+	TransferCacheFreeBytes       int64 `bson:"transfer_cache_free_bytes"`
+	ThreadCacheFreeBytes         int64 `bson:"thread_cache_free_bytes"`
+	PageheapComittedBytes        int64 `bson:"pageheap_committed_bytes"`
+	PageheapScavengeCount        int64 `bson:"pageheap_scavenge_count"`
+	PageheapCommitCount          int64 `bson:"pageheap_commit_count"`
+	PageheapTotalCommitBytes     int64 `bson:"pageheap_total_commit_bytes"`
+	PageheapDecommitCount        int64 `bson:"pageheap_decommit_count"`
+	PageheapTotalDecommitBytes   int64 `bson:"pageheap_total_decommit_bytes"`
+	PageheapReserveCount         int64 `bson:"pageheap_reserve_count"`
+	PageheapTotalReserveBytes    int64 `bson:"pageheap_total_reserve_bytes"`
+	SpinLockTotalDelayNanos      int64 `bson:"spinlock_total_delay_ns"`
+}
+
+// StorageStats stores information related to record allocations
+type StorageStats struct {
+	FreelistSearchBucketExhausted int64 `bson:"freelist.search.bucketExhausted"`
+	FreelistSearchRequests        int64 `bson:"freelist.search.requests"`
+	FreelistSearchScanned         int64 `bson:"freelist.search.scanned"`
 }
 
 // StatHeader describes a single column for mongostat's terminal output,
@@ -508,6 +618,7 @@ type StatLine struct {
 	Error    error
 	IsMongos bool
 	Host     string
+	Version  string
 
 	UptimeNanos int64
 
@@ -524,6 +635,13 @@ type StatLine struct {
 	Delete, DeleteCnt   int64
 	GetMore, GetMoreCnt int64
 	Command, CommandCnt int64
+
+	// Asserts fields
+	Regular   int64
+	Warning   int64
+	Msg       int64
+	User      int64
+	Rollovers int64
 
 	// OpLatency fields
 	WriteOpsCnt    int64
@@ -547,12 +665,21 @@ type StatLine struct {
 	DeletedD, InsertedD, ReturnedD, UpdatedD int64
 
 	//Commands fields
+	AggregateCommandTotal, AggregateCommandFailed         int64
+	CountCommandTotal, CountCommandFailed                 int64
 	DeleteCommandTotal, DeleteCommandFailed               int64
+	DistinctCommandTotal, DistinctCommandFailed           int64
 	FindCommandTotal, FindCommandFailed                   int64
 	FindAndModifyCommandTotal, FindAndModifyCommandFailed int64
 	GetMoreCommandTotal, GetMoreCommandFailed             int64
 	InsertCommandTotal, InsertCommandFailed               int64
 	UpdateCommandTotal, UpdateCommandFailed               int64
+
+	// Operation fields
+	ScanAndOrderOp, WriteConflictsOp int64
+
+	// Query Executor fields
+	TotalKeysScanned, TotalObjectsScanned int64
 
 	// Connection fields
 	CurrentC, AvailableC, TotalCreatedC int64
@@ -608,6 +735,21 @@ type StatLine struct {
 	NodeType                                 string
 	NodeState                                string
 
+	// Replicated Metrics fields
+	ReplNetworkBytes                    int64
+	ReplNetworkGetmoresNum              int64
+	ReplNetworkGetmoresTotalMillis      int64
+	ReplNetworkOps                      int64
+	ReplBufferCount                     int64
+	ReplBufferSizeBytes                 int64
+	ReplApplyBatchesNum                 int64
+	ReplApplyBatchesTotalMillis         int64
+	ReplApplyOps                        int64
+	ReplExecutorPoolInProgressCount     int64
+	ReplExecutorQueuesNetworkInProgress int64
+	ReplExecutorQueuesSleepers          int64
+	ReplExecutorUnsignaledEvents        int64
+
 	// Cluster fields
 	JumboChunksCount int64
 
@@ -622,6 +764,32 @@ type StatLine struct {
 
 	// Shard Hosts stats field
 	ShardHostStatsLines map[string]ShardHostStatLine
+
+	// TCMalloc stats field
+	TCMallocCurrentAllocatedBytes        int64
+	TCMallocHeapSize                     int64
+	TCMallocCentralCacheFreeBytes        int64
+	TCMallocCurrentTotalThreadCacheBytes int64
+	TCMallocMaxTotalThreadCacheBytes     int64
+	TCMallocTotalFreeBytes               int64
+	TCMallocTransferCacheFreeBytes       int64
+	TCMallocThreadCacheFreeBytes         int64
+	TCMallocSpinLockTotalDelayNanos      int64
+	TCMallocPageheapFreeBytes            int64
+	TCMallocPageheapUnmappedBytes        int64
+	TCMallocPageheapComittedBytes        int64
+	TCMallocPageheapScavengeCount        int64
+	TCMallocPageheapCommitCount          int64
+	TCMallocPageheapTotalCommitBytes     int64
+	TCMallocPageheapDecommitCount        int64
+	TCMallocPageheapTotalDecommitBytes   int64
+	TCMallocPageheapReserveCount         int64
+	TCMallocPageheapTotalReserveBytes    int64
+
+	// Storage stats field
+	StorageFreelistSearchBucketExhausted int64
+	StorageFreelistSearchRequests        int64
+	StorageFreelistSearchScanned         int64
 }
 
 type DbStatLine struct {
@@ -704,6 +872,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	returnVal := &StatLine{
 		Key:       key,
 		Host:      newStat.Host,
+		Version:   newStat.Version,
 		Mapped:    -1,
 		Virtual:   -1,
 		Resident:  -1,
@@ -749,6 +918,41 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		}
 	}
 
+	if newStat.Asserts != nil {
+		returnVal.Regular = newStat.Asserts.Regular
+		returnVal.Warning = newStat.Asserts.Warning
+		returnVal.Msg = newStat.Asserts.Msg
+		returnVal.User = newStat.Asserts.User
+		returnVal.Rollovers = newStat.Asserts.Rollovers
+	}
+
+	if newStat.TCMallocStats != nil {
+		if newStat.TCMallocStats.Generic != nil {
+			returnVal.TCMallocCurrentAllocatedBytes = newStat.TCMallocStats.Generic.CurrentAllocatedBytes
+			returnVal.TCMallocHeapSize = newStat.TCMallocStats.Generic.HeapSize
+		}
+		if newStat.TCMallocStats.TCMalloc != nil {
+			returnVal.TCMallocCentralCacheFreeBytes = newStat.TCMallocStats.TCMalloc.CentralCacheFreeBytes
+			returnVal.TCMallocCurrentTotalThreadCacheBytes = newStat.TCMallocStats.TCMalloc.CurrentTotalThreadCacheBytes
+			returnVal.TCMallocMaxTotalThreadCacheBytes = newStat.TCMallocStats.TCMalloc.MaxTotalThreadCacheBytes
+			returnVal.TCMallocTransferCacheFreeBytes = newStat.TCMallocStats.TCMalloc.TransferCacheFreeBytes
+			returnVal.TCMallocThreadCacheFreeBytes = newStat.TCMallocStats.TCMalloc.ThreadCacheFreeBytes
+			returnVal.TCMallocTotalFreeBytes = newStat.TCMallocStats.TCMalloc.TotalFreeBytes
+			returnVal.TCMallocSpinLockTotalDelayNanos = newStat.TCMallocStats.TCMalloc.SpinLockTotalDelayNanos
+
+			returnVal.TCMallocPageheapFreeBytes = newStat.TCMallocStats.TCMalloc.PageheapFreeBytes
+			returnVal.TCMallocPageheapUnmappedBytes = newStat.TCMallocStats.TCMalloc.PageheapUnmappedBytes
+			returnVal.TCMallocPageheapComittedBytes = newStat.TCMallocStats.TCMalloc.PageheapComittedBytes
+			returnVal.TCMallocPageheapScavengeCount = newStat.TCMallocStats.TCMalloc.PageheapScavengeCount
+			returnVal.TCMallocPageheapCommitCount = newStat.TCMallocStats.TCMalloc.PageheapCommitCount
+			returnVal.TCMallocPageheapTotalCommitBytes = newStat.TCMallocStats.TCMalloc.PageheapTotalCommitBytes
+			returnVal.TCMallocPageheapDecommitCount = newStat.TCMallocStats.TCMalloc.PageheapDecommitCount
+			returnVal.TCMallocPageheapTotalDecommitBytes = newStat.TCMallocStats.TCMalloc.PageheapTotalDecommitBytes
+			returnVal.TCMallocPageheapReserveCount = newStat.TCMallocStats.TCMalloc.PageheapReserveCount
+			returnVal.TCMallocPageheapTotalReserveBytes = newStat.TCMallocStats.TCMalloc.PageheapTotalReserveBytes
+		}
+	}
+
 	if newStat.Metrics != nil && oldStat.Metrics != nil {
 		if newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
 			returnVal.Passes, returnVal.PassesCnt = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
@@ -770,9 +974,21 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		}
 
 		if newStat.Metrics.Commands != nil {
+			if newStat.Metrics.Commands.Aggregate != nil {
+				returnVal.AggregateCommandTotal = newStat.Metrics.Commands.Aggregate.Total
+				returnVal.AggregateCommandFailed = newStat.Metrics.Commands.Aggregate.Failed
+			}
+			if newStat.Metrics.Commands.Count != nil {
+				returnVal.CountCommandTotal = newStat.Metrics.Commands.Count.Total
+				returnVal.CountCommandFailed = newStat.Metrics.Commands.Count.Failed
+			}
 			if newStat.Metrics.Commands.Delete != nil {
 				returnVal.DeleteCommandTotal = newStat.Metrics.Commands.Delete.Total
 				returnVal.DeleteCommandFailed = newStat.Metrics.Commands.Delete.Failed
+			}
+			if newStat.Metrics.Commands.Distinct != nil {
+				returnVal.DistinctCommandTotal = newStat.Metrics.Commands.Distinct.Total
+				returnVal.DistinctCommandFailed = newStat.Metrics.Commands.Distinct.Failed
 			}
 			if newStat.Metrics.Commands.Find != nil {
 				returnVal.FindCommandTotal = newStat.Metrics.Commands.Find.Total
@@ -794,6 +1010,46 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				returnVal.UpdateCommandTotal = newStat.Metrics.Commands.Update.Total
 				returnVal.UpdateCommandFailed = newStat.Metrics.Commands.Update.Failed
 			}
+		}
+
+		if newStat.Metrics.Operation != nil {
+			returnVal.ScanAndOrderOp = newStat.Metrics.Operation.ScanAndOrder
+			returnVal.WriteConflictsOp = newStat.Metrics.Operation.WriteConflicts
+		}
+
+		if newStat.Metrics.QueryExecutor != nil {
+			returnVal.TotalKeysScanned = newStat.Metrics.QueryExecutor.Scanned
+			returnVal.TotalObjectsScanned = newStat.Metrics.QueryExecutor.ScannedObjects
+		}
+
+		if newStat.Metrics.Repl != nil {
+			if newStat.Metrics.Repl.Apply != nil {
+				returnVal.ReplApplyBatchesNum = newStat.Metrics.Repl.Apply.Batches.Num
+				returnVal.ReplApplyBatchesTotalMillis = newStat.Metrics.Repl.Apply.Batches.TotalMillis
+				returnVal.ReplApplyOps = newStat.Metrics.Repl.Apply.Ops
+			}
+			if newStat.Metrics.Repl.Buffer != nil {
+				returnVal.ReplBufferCount = newStat.Metrics.Repl.Buffer.Count
+				returnVal.ReplBufferSizeBytes = newStat.Metrics.Repl.Buffer.SizeBytes
+			}
+			if newStat.Metrics.Repl.Executor != nil {
+				returnVal.ReplExecutorPoolInProgressCount = newStat.Metrics.Repl.Executor.Pool["inProgressCount"]
+				returnVal.ReplExecutorQueuesNetworkInProgress = newStat.Metrics.Repl.Executor.Queues["networkInProgress"]
+				returnVal.ReplExecutorQueuesSleepers = newStat.Metrics.Repl.Executor.Queues["sleepers"]
+				returnVal.ReplExecutorUnsignaledEvents = newStat.Metrics.Repl.Executor.UnsignaledEvents
+			}
+			if newStat.Metrics.Repl.Network != nil {
+				returnVal.ReplNetworkBytes = newStat.Metrics.Repl.Network.Bytes
+				returnVal.ReplNetworkGetmoresNum = newStat.Metrics.Repl.Network.GetMores.Num
+				returnVal.ReplNetworkGetmoresTotalMillis = newStat.Metrics.Repl.Network.GetMores.TotalMillis
+				returnVal.ReplNetworkOps = newStat.Metrics.Repl.Network.Ops
+			}
+		}
+
+		if newStat.Metrics.Storage != nil {
+			returnVal.StorageFreelistSearchBucketExhausted = newStat.Metrics.Storage.FreelistSearchBucketExhausted
+			returnVal.StorageFreelistSearchRequests = newStat.Metrics.Storage.FreelistSearchRequests
+			returnVal.StorageFreelistSearchScanned = newStat.Metrics.Storage.FreelistSearchScanned
 		}
 	}
 

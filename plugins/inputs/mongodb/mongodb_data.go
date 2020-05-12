@@ -88,11 +88,29 @@ var DefaultStats = map[string]string{
 	"connections_current":       "CurrentC",
 	"connections_available":     "AvailableC",
 	"connections_total_created": "TotalCreatedC",
+	"operation_scan_and_order":  "ScanAndOrderOp",
+	"operation_write_conflicts": "WriteConflictsOp",
+	"total_keys_scanned":        "TotalKeysScanned",
+	"total_docs_scanned":        "TotalObjectsScanned",
+}
+
+var DefaultAssertsStats = map[string]string{
+	"assert_regular":   "Regular",
+	"assert_warning":   "Warning",
+	"assert_msg":       "Msg",
+	"assert_user":      "User",
+	"assert_rollovers": "Rollovers",
 }
 
 var DefaultCommandsStats = map[string]string{
+	"aggregate_command_total":        "AggregateCommandTotal",
+	"aggregate_command_failed":       "AggregateCommandFailed",
+	"count_command_total":            "CountCommandTotal",
+	"count_command_failed":           "CountCommandFailed",
 	"delete_command_total":           "DeleteCommandTotal",
 	"delete_command_failed":          "DeleteCommandFailed",
+	"distinct_command_total":         "DistinctCommandTotal",
+	"distinct_command_failed":        "DistinctCommandFailed",
 	"find_command_total":             "FindCommandTotal",
 	"find_command_failed":            "FindCommandFailed",
 	"find_and_modify_command_total":  "FindAndModifyCommandTotal",
@@ -115,21 +133,34 @@ var DefaultLatencyStats = map[string]string{
 }
 
 var DefaultReplStats = map[string]string{
-	"repl_inserts":          "InsertRCnt",
-	"repl_inserts_per_sec":  "InsertR",
-	"repl_queries":          "QueryRCnt",
-	"repl_queries_per_sec":  "QueryR",
-	"repl_updates":          "UpdateRCnt",
-	"repl_updates_per_sec":  "UpdateR",
-	"repl_deletes":          "DeleteRCnt",
-	"repl_deletes_per_sec":  "DeleteR",
-	"repl_getmores":         "GetMoreRCnt",
-	"repl_getmores_per_sec": "GetMoreR",
-	"repl_commands":         "CommandRCnt",
-	"repl_commands_per_sec": "CommandR",
-	"member_status":         "NodeType",
-	"state":                 "NodeState",
-	"repl_lag":              "ReplLag",
+	"repl_inserts":                             "InsertRCnt",
+	"repl_inserts_per_sec":                     "InsertR",
+	"repl_queries":                             "QueryRCnt",
+	"repl_queries_per_sec":                     "QueryR",
+	"repl_updates":                             "UpdateRCnt",
+	"repl_updates_per_sec":                     "UpdateR",
+	"repl_deletes":                             "DeleteRCnt",
+	"repl_deletes_per_sec":                     "DeleteR",
+	"repl_getmores":                            "GetMoreRCnt",
+	"repl_getmores_per_sec":                    "GetMoreR",
+	"repl_commands":                            "CommandRCnt",
+	"repl_commands_per_sec":                    "CommandR",
+	"member_status":                            "NodeType",
+	"state":                                    "NodeState",
+	"repl_lag":                                 "ReplLag",
+	"repl_network_bytes":                       "ReplNetworkBytes",
+	"repl_network_getmores_num":                "ReplNetworkGetmoresNum",
+	"repl_network_getmores_total_millis":       "ReplNetworkGetmoresTotalMillis",
+	"repl_network_ops":                         "ReplNetworkOps",
+	"repl_buffer_count":                        "ReplBufferCount",
+	"repl_buffer_size_bytes":                   "ReplBufferSizeBytes",
+	"repl_apply_batches_num":                   "ReplApplyBatchesNum",
+	"repl_apply_batches_total_millis":          "ReplApplyBatchesTotalMillis",
+	"repl_apply_ops":                           "ReplApplyOps",
+	"repl_executor_pool_in_progress_count":     "ReplExecutorPoolInProgressCount",
+	"repl_executor_queues_network_in_progress": "ReplExecutorQueuesNetworkInProgress",
+	"repl_executor_queues_sleepers":            "ReplExecutorQueuesSleepers",
+	"repl_executor_unsignaled_events":          "ReplExecutorUnsignaledEvents",
 }
 
 var DefaultClusterStats = map[string]string{
@@ -180,6 +211,34 @@ var WiredTigerExtStats = map[string]string{
 	"wtcache_internal_pages_evicted":       "InternalPagesEvicted",
 	"wtcache_modified_pages_evicted":       "ModifiedPagesEvicted",
 	"wtcache_unmodified_pages_evicted":     "UnmodifiedPagesEvicted",
+}
+
+var DefaultTCMallocStats = map[string]string{
+	"tcmalloc_current_allocated_bytes":          "TCMallocCurrentAllocatedBytes",
+	"tcmalloc_heap_size":                        "TCMallocHeapSize",
+	"tcmalloc_central_cache_free_bytes":         "TCMallocCentralCacheFreeBytes",
+	"tcmalloc_current_total_thread_cache_bytes": "TCMallocCurrentTotalThreadCacheBytes",
+	"tcmalloc_max_total_thread_cache_bytes":     "TCMallocMaxTotalThreadCacheBytes",
+	"tcmalloc_total_free_bytes":                 "TCMallocTotalFreeBytes",
+	"tcmalloc_transfer_cache_free_bytes":        "TCMallocTransferCacheFreeBytes",
+	"tcmalloc_thread_cache_free_bytes":          "TCMallocThreadCacheFreeBytes",
+	"tcmalloc_spinlock_total_delay_ns":          "TCMallocSpinLockTotalDelayNanos",
+	"tcmalloc_pageheap_free_bytes":              "TCMallocPageheapFreeBytes",
+	"tcmalloc_pageheap_unmapped_bytes":          "TCMallocPageheapUnmappedBytes",
+	"tcmalloc_pageheap_committed_bytes":         "TCMallocPageheapComittedBytes",
+	"tcmalloc_pageheap_scavenge_count":          "TCMallocPageheapScavengeCount",
+	"tcmalloc_pageheap_commit_count":            "TCMallocPageheapCommitCount",
+	"tcmalloc_pageheap_total_commit_bytes":      "TCMallocPageheapTotalCommitBytes",
+	"tcmalloc_pageheap_decommit_count":          "TCMallocPageheapDecommitCount",
+	"tcmalloc_pageheap_total_decommit_bytes":    "TCMallocPageheapTotalDecommitBytes",
+	"tcmalloc_pageheap_reserve_count":           "TCMallocPageheapReserveCount",
+	"tcmalloc_pageheap_total_reserve_bytes":     "TCMallocPageheapTotalReserveBytes",
+}
+
+var DefaultStorageStats = map[string]string{
+	"storage_freelist_search_bucket_exhausted": "StorageFreelistSearchBucketExhausted",
+	"storage_freelist_search_requests":         "StorageFreelistSearchRequests",
+	"storage_freelist_search_scanned":          "StorageFreelistSearchScanned",
 }
 
 var DbDataStats = map[string]string{
@@ -272,9 +331,16 @@ func (d *MongodbData) AddDefaultStats() {
 		d.add("repl_oplog_window_sec", d.StatLine.OplogStats.TimeDiff)
 	}
 
-	d.addStat(statLine, DefaultCommandsStats)
+	if d.StatLine.Version != "" {
+		d.add("version", d.StatLine.Version)
+	}
+
+	d.addStat(statLine, DefaultAssertsStats)
 	d.addStat(statLine, DefaultClusterStats)
+	d.addStat(statLine, DefaultCommandsStats)
 	d.addStat(statLine, DefaultShardStats)
+	d.addStat(statLine, DefaultStorageStats)
+	d.addStat(statLine, DefaultTCMallocStats)
 
 	if d.StatLine.StorageEngine == "mmapv1" || d.StatLine.StorageEngine == "rocksdb" {
 		d.addStat(statLine, MmapStats)
