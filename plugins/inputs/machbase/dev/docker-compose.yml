@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  machbase:
+    image: machbase
+
+  telegraf:
+    image: glinton/scratch
+    depends_on:
+      - machbase
+    volumes:
+      - ./telegraf.conf:/telegraf.conf
+      - ../../../../telegraf:/telegraf
+    entrypoint:
+      - /telegraf
+      - --config
+      - /telegraf.conf
