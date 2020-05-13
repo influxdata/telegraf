@@ -4,6 +4,7 @@ package newrelic
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -22,6 +23,7 @@ type NewRelic struct {
 	Timeout      internal.Duration `toml:"timeout"`
 	savedErrors  map[int]interface{}
 	errorCount   int
+	Client       http.Client
 }
 
 // Description returns a one-sentence description on the Output
@@ -55,6 +57,7 @@ func (nr *NewRelic) Connect() error {
 			cfg.Product = "NewRelic-Telegraf-Plugin"
 			cfg.ProductVersion = "1.0"
 			cfg.HarvestTimeout = nr.Timeout.Duration
+			cfg.Client = &nr.Client
 			cfg.ErrorLogger = func(e map[string]interface{}) {
 				var errorString string
 				for k, v := range e {
@@ -74,10 +77,9 @@ func (nr *NewRelic) Connect() error {
 
 // Close any connections to the Output
 func (nr *NewRelic) Close() error {
-	nr.harvestor = nil
-	nr.dc = nil
-	nr.savedErrors = nil
+
 	nr.errorCount = 0
+	nr.Client.CloseIdleConnections()
 	return nil
 }
 
@@ -116,6 +118,7 @@ func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 			case string:
 				// Do not log everytime we encounter string
 				// we just skip
+				continue
 			default:
 				return fmt.Errorf("Undefined field type: %T", field.Value)
 			}
@@ -150,6 +153,7 @@ func init() {
 	outputs.Add("newrelic", func() telegraf.Output {
 		return &NewRelic{
 			Timeout: internal.Duration{Duration: time.Second * 15},
+			Client:  http.Client{},
 		}
 	})
 }
