@@ -561,12 +561,7 @@ func printFilteredGlobalSections(sectionFilters []string) {
 	}
 }
 
-type printer interface {
-	Description() string
-	SampleConfig() string
-}
-
-func printConfig(name string, p printer, op string, commented bool) {
+func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool) {
 	comment := ""
 	if commented {
 		comment = "# "
@@ -925,11 +920,18 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 }
 
 func (c *Config) addProcessor(name string, table *ast.Table) error {
-	creator, ok := processors.Processors[name]
-	if !ok {
+	creator1, ok1 := processors.Processors[name]
+	creator2, ok2 := processors.StreamingProcessors[name]
+	if !ok1 && !ok2 {
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
-	processor := creator()
+	var processor telegraf.PluginDescriber
+	if ok1 {
+		processor = creator1()
+	}
+	if ok2 {
+		processor = creator2()
+	}
 
 	processorConfig, err := buildProcessor(name, table)
 	if err != nil {

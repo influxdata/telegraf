@@ -66,7 +66,6 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	var wg sync.WaitGroup
 
-	src := inputC
 	dst := inputC
 
 	wg.Add(1)
@@ -85,7 +84,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		log.Printf("D! [agent] Input channel closed")
 	}(dst)
 
-	src = dst
+	src := dst
 
 	if len(a.Config.Processors) > 0 {
 		dst = procC
@@ -476,29 +475,47 @@ func (a *Agent) gatherOnce(
 }
 
 // runProcessors applies processors to metrics.
+// processors are set up in a chain of channels, as ordered by the processor's
+// configured order. As input channels are closed, processors finish up their
+// work and then close their downstream channel, letting downstream processors
+// finish up, etc.
 func (a *Agent) runProcessors(
 	src <-chan telegraf.Metric,
-	agg chan<- telegraf.Metric,
+	dest chan<- telegraf.Metric,
 ) error {
-	for metric := range src {
-		metrics := a.applyProcessors(metric)
-
-		for _, metric := range metrics {
-			agg <- metric
+	wg := sync.WaitGroup{}
+	in := src
+	out := dest
+	for i, processor := range a.Config.Processors {
+		wg.Add(1)
+		nextCh := make(chan telegraf.Metric, 10)
+		nextChIn := (<-chan telegraf.Metric)(nextCh)
+		nextChOut := (chan<- telegraf.Metric)(nextCh)
+		isLastProcessor := i+1 == len(a.Config.Processors)
+		if isLastProcessor {
+			nextChOut = out
 		}
+
+		go func(
+			in <-chan telegraf.Metric,
+			out chan<- telegraf.Metric,
+			rp *models.RunningProcessor,
+		) {
+			acc := NewStreamingAccumulator(in, out)
+			acc = models.NewStreamingAccumulatorWrapper(acc, rp.ApplyFilters)
+
+			if err := rp.Start(acc); err != nil {
+				log.Printf("E! [%s] Error running processor: %v", rp.Config.Name, err)
+			}
+			close(out)
+			wg.Done()
+		}(in, nextChOut, processor)
+
+		in = nextChIn
 	}
 
+	wg.Wait()
 	return nil
-}
-
-// applyProcessors applies all processors to a metric.
-func (a *Agent) applyProcessors(m telegraf.Metric) []telegraf.Metric {
-	metrics := []telegraf.Metric{m}
-	for _, processor := range a.Config.Processors {
-		metrics = processor.Apply(metrics...)
-	}
-
-	return metrics
 }
 
 func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
@@ -549,7 +566,7 @@ func (a *Agent) runAggregators(
 			}
 
 			if !dropOriginal {
-				dst <- metric
+				dst <- metric // keep original.
 			} else {
 				metric.Drop()
 			}
@@ -578,12 +595,7 @@ func (a *Agent) runAggregators(
 		close(aggregations)
 	}()
 
-	for metric := range aggregations {
-		metrics := a.applyProcessors(metric)
-		for _, metric := range metrics {
-			dst <- metric
-		}
-	}
+	a.runProcessors(aggregations, dst)
 
 	wg.Wait()
 	return nil

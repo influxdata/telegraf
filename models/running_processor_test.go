@@ -158,7 +158,13 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			}
 			rp.Config.Filter.Compile()
 
-			actual := rp.Apply(tt.input...)
+			acc := testutil.NewTestStreamingAccumulator(true)
+			acc.Enqueue(tt.input...)
+			sa := NewStreamingAccumulatorWrapper(acc, rp.ApplyFilters)
+			err := rp.Start(sa)
+			require.NoError(t, err)
+
+			actual := acc.ProcessedMetrics
 			require.Equal(t, tt.expected, actual)
 		})
 	}
