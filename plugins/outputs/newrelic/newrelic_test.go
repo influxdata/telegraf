@@ -1,7 +1,7 @@
 package newrelic
 
 import (
-	"strings"
+	"math"
 	"testing"
 	"time"
 
@@ -9,18 +9,9 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/newrelic/newrelic-telemetry-sdk-go/telemetry"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func ErrorContains(out error, want string) bool {
-	if out == nil {
-		return want == ""
-	}
-	if want == "" {
-		return false
-	}
-	return strings.Contains(out.Error(), want)
-}
 
 func TestBasic(t *testing.T) {
 	nr := &NewRelic{
@@ -28,51 +19,113 @@ func TestBasic(t *testing.T) {
 		InsightsKey:  "12345",
 		Timeout:      internal.Duration{Duration: time.Second * 5},
 	}
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 
 	err := nr.Connect()
 	require.NoError(t, err)
 
 	err = nr.Write(testutil.MockMetrics())
-	if !ErrorContains(err, "unable to harvest metrics ") {
-		t.Errorf("unexpected error: %v", err)
-	}
+	assert.Contains(t, err.Error(), "unable to harvest metrics")
 }
 
 func TestNewRelic_Write(t *testing.T) {
-	type fields struct {
-		harvestor    *telemetry.Harvester
-		InsightsKey  string
-		MetricPrefix string
-		Timeout      internal.Duration
-	}
 	type args struct {
 		metrics []telegraf.Metric
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		metrics []telegraf.Metric
-		wantErr bool
+		name         string
+		metrics      []telegraf.Metric
+		auditMessage string
+		wantErr      bool
 	}{
 		{
-			name: "Test: Basic mock metric write",
-			fields: fields{
-				InsightsKey:  "insightskey",
-				MetricPrefix: "test1",
-				Timeout:      internal.Duration{Duration: time.Second * 15},
+			name:         "Test: Basic mock metric write",
+			metrics:      testutil.MockMetrics(),
+			wantErr:      false,
+			auditMessage: `"metrics":[{"name":"test1.value","type":"gauge","value":1,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
+		},
+		{
+			name: "Test: Test string ",
+			metrics: []telegraf.Metric{
+				testutil.TestMetric("value1", "test_String"),
 			},
-			metrics: testutil.MockMetrics(),
-			wantErr: false,
+			wantErr:      false,
+			auditMessage: "",
+		},
+		{
+			name: "Test: Test int64 ",
+			metrics: []telegraf.Metric{
+				testutil.TestMetric(math.MaxInt64, "test_int64"),
+			},
+			wantErr:      false,
+			auditMessage: `"metrics":[{"name":"test_int64.value","type":"gauge","value":9.223372036854776e+18,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
+		},
+		{
+			name: "Test: Test  uint64 ",
+			metrics: []telegraf.Metric{
+				testutil.TestMetric(uint64(20), "test_uint64"),
+			},
+			wantErr:      false,
+			auditMessage: `"metrics":[{"name":"test_uint64.value","type":"gauge","value":20,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
+		},
+		{
+			name: "Test: Test bool true ",
+			metrics: []telegraf.Metric{
+				testutil.TestMetric(bool(true), "test_bool_true"),
+			},
+			wantErr:      false,
+			auditMessage: `"metrics":[{"name":"test_bool_true.value","type":"gauge","value":1,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
+		},
+		{
+			name: "Test: Test bool false ",
+			metrics: []telegraf.Metric{
+				testutil.TestMetric(bool(false), "test_bool_false"),
+			},
+			wantErr:      false,
+			auditMessage: `"metrics":[{"name":"test_bool_false.value","type":"gauge","value":0,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
+		},
+		{
+			name: "Test: Test max float64 ",
+			metrics: []telegraf.Metric{
+				testutil.TestMetric(math.MaxFloat64, "test_maxfloat64"),
+			},
+			wantErr:      false,
+			auditMessage: `"metrics":[{"name":"test_maxfloat64.value","type":"gauge","value":1.7976931348623157e+308,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
+		},
+		{
+			name: "Test: Test NAN ",
+			metrics: []telegraf.Metric{
+				testutil.TestMetric(math.NaN, "test_NaN"),
+			},
+			wantErr:      false,
+			auditMessage: ``,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nr := &NewRelic{
-				harvestor:    tt.fields.harvestor,
-				InsightsKey:  tt.fields.InsightsKey,
-				MetricPrefix: tt.fields.MetricPrefix,
+			var auditLog map[string]interface{}
+			nr := &NewRelic{}
+			nr.harvestor, _ = telemetry.NewHarvester(
+				telemetry.ConfigHarvestPeriod(0),
+				func(cfg *telemetry.Config) {
+					cfg.APIKey = "dummyTestKey"
+					cfg.HarvestPeriod = 0
+					cfg.HarvestTimeout = 0
+					cfg.AuditLogger = func(e map[string]interface{}) {
+						auditLog = e
+					}
+				})
+			err := nr.Write(tt.metrics)
+			assert.NoError(t, err)
+			if auditLog["data"] != nil {
+				assert.Contains(t, auditLog["data"], tt.auditMessage)
+			} else {
+				assert.Contains(t, "", tt.auditMessage)
 			}
-			if err := nr.Write(tt.metrics); (err != nil) != tt.wantErr {
+
+			if (err != nil) != tt.wantErr {
 				t.Errorf("NewRelic.Write() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -80,9 +133,6 @@ func TestNewRelic_Write(t *testing.T) {
 }
 
 func TestNewRelic_Connect(t *testing.T) {
-	//if testing.Short() {
-	////	t.Skip("skipping test in short mode.")
-	//}
 	tests := []struct {
 		name     string
 		newrelic *NewRelic
