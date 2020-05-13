@@ -103,7 +103,6 @@ func (r *RunningProcessor) Start(acc telegraf.StreamingAccumulator) error {
 		// unknown processor type.
 		return fmt.Errorf("Unknown processor type %T", r.Processor)
 	}
-	return nil
 }
 
 type metricModifierFn func(m telegraf.Metric) telegraf.Metric
