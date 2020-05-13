@@ -45,6 +45,10 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
 
   ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0. default is true
   #convert_bool = true
+
+  ## Truncate metric tags to a total of 254 characters for the tag name value. Wavefront will reject any 
+  ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
+  #truncate_tags = false
 ```
 
 
