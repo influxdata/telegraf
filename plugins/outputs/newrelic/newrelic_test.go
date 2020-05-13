@@ -57,10 +57,10 @@ func TestNewRelic_Write(t *testing.T) {
 		{
 			name: "Test: Test int64 ",
 			metrics: []telegraf.Metric{
-				testutil.TestMetric(math.MaxInt64, "test_int64"),
+				testutil.TestMetric(int64(15), "test_int64"),
 			},
 			wantErr:      false,
-			auditMessage: `"metrics":[{"name":"test_int64.value","type":"gauge","value":9.223372036854776e+18,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
+			auditMessage: `"metrics":[{"name":"test_int64.value","type":"gauge","value":15,"timestamp":1257894000000,"attributes":{"tag1":"value1"}}]`,
 		},
 		{
 			name: "Test: Test  uint64 ",
@@ -171,11 +171,7 @@ func TestNewRelic_Connect(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nr := &NewRelic{
-				harvestor:    tt.newrelic.harvestor,
-				InsightsKey:  tt.newrelic.InsightsKey,
-				MetricPrefix: tt.newrelic.MetricPrefix,
-			}
+			nr := tt.newrelic
 			if err := nr.Connect(); (err != nil) != tt.wantErr {
 				t.Errorf("NewRelic.Connect() error = %v, wantErr %v", err, tt.wantErr)
 			}
