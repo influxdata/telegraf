@@ -36,6 +36,7 @@
 - [#7483](https://github.com/influxdata/telegraf/pull/7483): Add integer mapping support to enum processor.
 - [#7321](https://github.com/influxdata/telegraf/pull/7321): Add additional fields to mongodb input.
 - [#7491](https://github.com/influxdata/telegraf/pull/7491): Add authentication support to the http_response input plugin.
+- [#7503](https://github.com/influxdata/telegraf/pull/7503): Add truncate_tags setting to wavefront output.
 
 #### Bugfixes
 
