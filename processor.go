@@ -1,5 +1,9 @@
 package telegraf
 
+import (
+	"sync"
+)
+
 // Processor is a processor plugin interface for defining new inline processors.
 // these are extremely efficient and should be used over StreamingProcessor if
 // you do not need asynchronous metric writes.
@@ -32,4 +36,47 @@ type StreamingStartStopper interface {
 	// returns true. Wait for this to happen, then return from Stop. After Stop()
 	// returns, the reference to the StreamingAccumulator should not be used.
 	Stop()
+}
+
+// NewProcessorWrapper turns a standard processor into a streaming processor
+func NewProcessorWrapper(p Processor) StreamingProcessor {
+	spw := &streamingProcessorWrapper{
+		processor: p,
+		wg:        sync.WaitGroup{},
+	}
+	spw.wg.Add(1)
+	return spw
+}
+
+type streamingProcessorWrapper struct {
+	wg        sync.WaitGroup
+	processor Processor
+}
+
+func (spw *streamingProcessorWrapper) SampleConfig() string {
+	return spw.processor.SampleConfig()
+}
+
+func (spw *streamingProcessorWrapper) Description() string {
+	return spw.processor.Description()
+}
+
+func (spw *streamingProcessorWrapper) Start(acc StreamingAccumulator) error {
+	defer spw.wg.Done()
+	for {
+		m := acc.GetNextMetric()
+		if m == nil {
+			if acc.IsStreamClosed() {
+				return nil
+			}
+			continue
+		}
+		for _, metric := range spw.processor.Apply(m) {
+			acc.PassMetric(metric)
+		}
+	}
+}
+
+func (spw *streamingProcessorWrapper) Stop() {
+	spw.wg.Wait()
 }
