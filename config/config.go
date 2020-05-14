@@ -671,7 +671,8 @@ func getDefaultConfigPath() (string, error) {
 
 	// if we got here, we didn't find a file in a default location
 	return "", fmt.Errorf("No config file specified, and could not find one"+
-		" in $TELEGRAF_CONFIG_PATH, %s, or %s", homefile, etcfile)
+		" in $TELEGRAF_CONFIG_PATH, %s, or %s. "+
+		"Use --no-config to run Telegraf without a main config file.", homefile, etcfile)
 }
 
 // LoadConfig loads the given config file and applies it to c

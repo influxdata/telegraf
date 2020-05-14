@@ -40,6 +40,7 @@ var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for servi
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
+var fNoConfig = flag.Bool("no-config", false, "Run Telegraf with no main config file. Useful with --config-directory")
 var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -117,15 +118,18 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
+	var err error
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig)
-	if err != nil {
-		return err
+	if !*fNoConfig {
+		err = c.LoadConfig(*fConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	if *fConfigDirectory != "" {
