@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  sqs:
+    image: roribio16/alpine-sqs:latest
+    restart: always
+    ports:
+      - 9324:9324
+      - 9325:9325
+    volumes:
+      - ./elasticmq.conf:/opt/custom/elasticmq.conf
+
+  telegraf:
+    image: glinton/scratch
+    volumes:
+      - ./telegraf.conf:/telegraf.conf
+      - ../../../../telegraf:/telegraf
+    depends_on:
+      - sqs
+    entrypoint:
+      - /telegraf
+      - --debug
+      - --config
+      - /telegraf.conf
+
+
+
+
