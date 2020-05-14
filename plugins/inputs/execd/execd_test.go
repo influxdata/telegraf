@@ -34,6 +34,12 @@ func TestExternalInputWorks(t *testing.T) {
 	acc := agent.NewAccumulator(&TestMetricMaker{}, metrics)
 
 	require.NoError(t, e.Start(acc))
+
+	// startup time on slow machines. CI is inherently slow and racey. Not much to
+	// do about it. In my tests this drops it from 3% fail rate to 0% fail rate
+	// in go 1.12 container. Didn't seem to affect later go version containers.
+	time.Sleep(1 * time.Second)
+
 	require.NoError(t, e.Gather(acc))
 
 	// grab a metric and make sure it's a thing
