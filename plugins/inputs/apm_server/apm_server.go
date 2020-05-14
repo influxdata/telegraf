@@ -288,7 +288,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				case float64:
 					tags[k] = strconv.FormatFloat(value, 'f', -1, 64)
 				default:
-					log.Printf("E! [handleEventsIntake] Unrecognized tag type %T", value)
+					log.Printf("E! [handleEventsIntake] Unrecognized tag type %s %T", k, value)
 				}
 			}
 
@@ -312,6 +312,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				// Exclude fields filter
 				if s.excludedFieldsFilter != nil && s.excludedFieldsFilter.Match(k) {
 					delete(f.Fields, k)
+					continue
 				}
 
 				// Store fields as tags
@@ -324,7 +325,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 					case float64:
 						tags[k] = strconv.FormatFloat(value, 'f', -1, 64)
 					default:
-						log.Printf("E! [handleEventsIntake] Unrecognized tag type %T", value)
+						log.Printf("E! [handleEventsIntake] Unrecognized tag type %s %T", k, value)
 					}
 					delete(f.Fields, k)
 				}
