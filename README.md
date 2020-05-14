@@ -232,6 +232,7 @@ For documentation on the latest development code see the [documentation index][d
 * [logparser](./plugins/inputs/logparser) (deprecated, use [tail](/plugins/inputs/tail))
 * [logstash](./plugins/inputs/logstash)
 * [lustre2](./plugins/inputs/lustre2)
+* [machbase](./plugins/inputs/machbase)
 * [mailchimp](./plugins/inputs/mailchimp)
 * [marklogic](./plugins/inputs/marklogic)
 * [mcrouter](./plugins/inputs/mcrouter)
