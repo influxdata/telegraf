@@ -13,6 +13,11 @@
 1. Ensure you have added proper unit tests and documentation.
 1. Open a new [pull request][].
 
+#### Contributing an External Plugin *(experimental)*
+Input plugins written for internal Telegraf can be run as externally-compiled plugins through the [Execd Input Plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/execd) without having to change the plugin code.
+
+Follow the guidelines of how to integrate your plugin with the [Execd Go Shim](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/execd/shim) to easily compile it as a separate app and run it from the inputs.execd plugin. 
+
 #### Security Vulnerability Reporting
 InfluxData takes security and our users' trust very seriously. If you believe you have found a security issue in any of our
 open source projects, please responsibly disclose it by contacting security@influxdata.com. More details about 
