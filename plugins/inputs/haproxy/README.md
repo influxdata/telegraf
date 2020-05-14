@@ -32,6 +32,9 @@ or [HTTP statistics page](https://cbonte.github.io/haproxy-dconv/1.9/management.
   ## field names.
   # keep_field_names = false
 
+  ## Timeout for each HTTP request/response exchange.
+  # timeout = "5s"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

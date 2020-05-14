@@ -14,17 +14,23 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 
+var (
+	defaultTimeout = internal.Duration{Duration: 5 * time.Second}
+)
+
 type haproxy struct {
 	Servers        []string
 	KeepFieldNames bool
 	Username       string
 	Password       string
+	Timeout        internal.Duration
 	tls.ClientConfig
 
 	client *http.Client
@@ -53,6 +59,9 @@ var sampleConfig = `
   ## field names.
   # keep_field_names = false
 
+  ## Timeout for each HTTP request/response exchange.
+  # timeout = "5s"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -67,6 +76,13 @@ func (r *haproxy) SampleConfig() string {
 
 func (r *haproxy) Description() string {
 	return "Read metrics of haproxy, via socket or csv stats page"
+}
+
+func (g *haproxy) Init() error {
+	if g.Timeout.Duration <= 0 {
+		g.Timeout = defaultTimeout
+	}
+	return nil
 }
 
 // Reads stats from all configured servers accumulates stats.
@@ -146,12 +162,11 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			TLSClientConfig:       tlsCfg,
+			TLSClientConfig: tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   g.Timeout.Duration,
 		}
 		g.client = client
 	}
@@ -303,6 +318,8 @@ func (g *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 
 func init() {
 	inputs.Add("haproxy", func() telegraf.Input {
-		return &haproxy{}
+		return &haproxy{
+			Timeout: defaultTimeout,
+		}
 	})
 }
