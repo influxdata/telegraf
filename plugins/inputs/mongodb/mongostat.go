@@ -1,7 +1,7 @@
 /***
 The code contained here came from https://github.com/mongodb/mongo-tools/blob/master/mongostat/stat_types.go
 and contains modifications so that no other dependency from that project is needed. Other modifications included
-removing uneccessary code specific to formatting the output and determine the current state of the database. It
+removing unnecessary code specific to formatting the output and determine the current state of the database. It
 is licensed under Apache Version 2.0, http://www.apache.org/licenses/LICENSE-2.0.html
 ***/
 
@@ -317,7 +317,7 @@ type NetworkStats struct {
 	NumRequests int64 `bson:"numRequests"`
 }
 
-// OpcountStats stores information related to comamnds and basic CRUD operations.
+// OpcountStats stores information related to commands and basic CRUD operations.
 type OpcountStats struct {
 	Insert  int64 `bson:"insert"`
 	Query   int64 `bson:"query"`
@@ -691,7 +691,7 @@ type StatLine struct {
 	CacheDirtyPercent float64
 	CacheUsedPercent  float64
 
-	// Cache ultilization extended (wiredtiger only)
+	// Cache utilization extended (wiredtiger only)
 	TrackedDirtyBytes         int64
 	CurrentCachedBytes        int64
 	MaxBytesConfigured        int64

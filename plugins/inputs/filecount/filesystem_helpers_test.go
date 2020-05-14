@@ -72,7 +72,7 @@ func getTestFileSystem() fakeFileSystem {
 
 	mtime := time.Date(2015, time.December, 14, 18, 25, 5, 0, time.UTC)
 
-	// set file permisions
+	// set file permissions
 	var fmask uint32 = 0666
 	var dmask uint32 = 0666
 

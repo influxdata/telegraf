@@ -178,7 +178,7 @@ Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
 [processors][], and [aggregators][].
 
 Unlike the `global_tags` and `agent` tables, any plugin can be defined
-multiple times and each instance will run independantly.  This allows you to
+multiple times and each instance will run independently.  This allows you to
 have plugins defined with differing configurations as needed within a single
 Telegraf process.
 

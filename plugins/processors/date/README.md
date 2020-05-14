@@ -6,7 +6,7 @@ A common use is to add a tag that can be used to group by month or year.
 
 A few example usecases include:
 1) consumption data for utilities on per month basis
-2) bandwith capacity per month
+2) bandwidth capacity per month
 3) compare energy production or sales on a yearly or monthly basis
 
 ### Configuration

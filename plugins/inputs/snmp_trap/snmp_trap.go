@@ -254,7 +254,7 @@ func (s *SnmpTrap) lookup(oid string) (e mibEntry, err error) {
 	defer s.cacheLock.Unlock()
 	var ok bool
 	if e, ok = s.cache[oid]; !ok {
-		// cache miss.  exec snmptranlate
+		// cache miss.  exec snmptranslate
 		e, err = s.snmptranslate(oid)
 		if err == nil {
 			s.cache[oid] = e

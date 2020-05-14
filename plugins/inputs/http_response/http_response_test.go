@@ -722,7 +722,7 @@ func TestNetworkErrors(t *testing.T) {
 	absentTags := []string{"status_code"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 
-	// Connecton failed
+	// Connection failed
 	h = &HTTPResponse{
 		Log:             testutil.Logger{},
 		Address:         "https:/nonexistent.nonexistent", // Any non-routable IP works here

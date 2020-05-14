@@ -5,7 +5,7 @@ out to a stand-alone repo for the purpose of compiling it as a separate app and
 running it from the inputs.execd plugin.
 
 The execd-shim is still experimental and the interface may change in the future.
-Especially as the concept expands to prcoessors, aggregators, and outputs.
+Especially as the concept expands to processors, aggregators, and outputs.
 
 ## Steps to externalize a plugin
 

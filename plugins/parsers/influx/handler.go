@@ -31,7 +31,7 @@ func (h *MetricHandler) SetTimePrecision(p time.Duration) {
 	// comes from the server clock, truncated to the nearest unit of
 	// measurement provided in precision.
 	//
-	// When a timestamp is provided in the metric, precsision is
+	// When a timestamp is provided in the metric, precision is
 	// overloaded to hold the unit of measurement of the timestamp.
 }
 

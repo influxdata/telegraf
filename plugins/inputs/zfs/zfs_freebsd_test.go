@@ -155,7 +155,7 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = z.Gather(&acc)
 	require.NoError(t, err)
 
-	//four pool, vdev_cache_stats and zfetchstatus metrics
+	//four pool, vdev_cache_stats and zfetchstats metrics
 	intMetrics = getKstatMetricsVdevAndZfetch()
 
 	acc.AssertContainsTaggedFields(t, "zfs", intMetrics, tags)

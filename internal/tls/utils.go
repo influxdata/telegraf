@@ -21,7 +21,7 @@ func ParseCiphers(ciphers []string) ([]uint16, error) {
 }
 
 // ParseTLSVersion returns a `uint16` by received version string key that represents tls version from crypto/tls.
-// If version isn't supportes ParseTLSVersion returns 0 with error
+// If version isn't supported ParseTLSVersion returns 0 with error
 func ParseTLSVersion(version string) (uint16, error) {
 	if v, ok := tlsVersionMap[version]; ok {
 		return v, nil

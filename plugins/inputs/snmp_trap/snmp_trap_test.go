@@ -84,7 +84,7 @@ func TestReceiveTrap(t *testing.T) {
 		version gosnmp.SnmpVersion
 		trap    gosnmp.SnmpTrap // include pdus
 
-		// recieve
+		// receive
 		entries []entry
 		metrics []telegraf.Metric
 	}{

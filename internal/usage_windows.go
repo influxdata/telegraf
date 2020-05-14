@@ -50,7 +50,7 @@ Examples:
   # generate config with only cpu input & influxdb output plugins defined
   telegraf --input-filter cpu --output-filter influxdb config
 
-  # run a single telegraf collection, outputing metrics to stdout
+  # run a single telegraf collection, outputting metrics to stdout
   telegraf --config telegraf.conf --test
 
   # run telegraf with all plugins defined in config file

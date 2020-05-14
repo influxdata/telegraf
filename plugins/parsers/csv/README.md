@@ -40,7 +40,7 @@ values.
   ## These columns will be skipped in the header as well.
   csv_skip_columns = 0
 
-  ## The seperator between csv fields
+  ## The separator between csv fields
   ## By default, the parser assumes a comma (",")
   csv_delimiter = ","
 

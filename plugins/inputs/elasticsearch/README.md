@@ -18,7 +18,7 @@ Specific Elasticsearch endpoints that are queried:
 - Indices Stats:  /_all/_stats
 - Shard Stats:  /_all/_stats?level=shards
 
-Note that specific statistics information can change between Elassticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
+Note that specific statistics information can change between Elasticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
 
 ### Configuration
 

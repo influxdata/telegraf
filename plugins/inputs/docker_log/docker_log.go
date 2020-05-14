@@ -73,7 +73,7 @@ const (
 
 var (
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-	// ensure *DockerLogs implements telegaf.ServiceInput
+	// ensure *DockerLogs implements telegraf.ServiceInput
 	_ telegraf.ServiceInput = (*DockerLogs)(nil)
 )
 

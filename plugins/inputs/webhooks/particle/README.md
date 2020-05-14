@@ -31,7 +31,7 @@ String data = String::format("{ \"tags\" : {
 ```
 
 Escaping the "" is required in the source file.
-The number of tag values and field values is not restrictied so you can send as many values per webhook call as you'd like.
+The number of tag values and field values is not restricted so you can send as many values per webhook call as you'd like.
 
 You will need to enable JSON messages in the Webhooks setup of Particle.io, and make sure to check the "include default data" box as well.
 

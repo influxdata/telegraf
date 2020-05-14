@@ -194,7 +194,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 
 	// AddRoute sets up the function for handling messages.  These need to be
 	// added in case we find a persistent session containing subscriptions so we
-	// know where to dispatch presisted and new messages to.  In the alternate
+	// know where to dispatch persisted and new messages to.  In the alternate
 	// case that we need to create the subscriptions these will be replaced.
 	for _, topic := range m.Topics {
 		m.client.AddRoute(topic, m.recvMessage)
@@ -218,7 +218,7 @@ func (m *MQTTConsumer) connect() error {
 	m.state = Connected
 	m.messages = make(map[telegraf.TrackingID]bool)
 
-	// Presistent sessions should skip subscription if a session is present, as
+	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.
 	type sessionPresent interface {
 		SessionPresent() bool
