@@ -236,7 +236,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 	}
 
 	// Don't attempt to recreate the database after a 403 Forbidden error.
-	// This behavior exists only to maintain backwards compatiblity.
+	// This behavior exists only to maintain backwards compatibility.
 	if resp.StatusCode == http.StatusForbidden {
 		c.createDatabaseExecuted[database] = true
 	}

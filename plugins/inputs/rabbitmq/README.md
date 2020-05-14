@@ -53,7 +53,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   # queue_name_include = []
   # queue_name_exclude = []
 
-  ## Federation upstreams to include and exlude specified as an array of glob
+  ## Federation upstreams to include and exclude specified as an array of glob
   ## pattern strings.  Federation links can also be limited by the queue and
   ## exchange filters.
   # federation_upstream_include = []

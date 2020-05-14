@@ -23,7 +23,7 @@ section if available.
 
 ### Docker
 
-<!-- If your bug involves third party dependencies or services, it can be very helpful to provide a Dockerfile or docker-compose.yml that repoduces the environment you're testing against -->
+<!-- If your bug involves third party dependencies or services, it can be very helpful to provide a Dockerfile or docker-compose.yml that reproduces the environment you're testing against -->
 
 ### Steps to reproduce:
 

@@ -274,7 +274,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		// Get error details
 		netErr := setError(err, fields, tags)
 
-		// If recognize the returnded error, get out
+		// If recognize the returned error, get out
 		if netErr != nil {
 			return fields, tags, nil
 		}

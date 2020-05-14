@@ -215,7 +215,7 @@ by running Telegraf with the `--debug` argument.
     - repl_inserts_per_sec (integer, deprecated in 1.10; use `repl_inserts`))
     - repl_queries_per_sec (integer, deprecated in 1.10; use `repl_queries`))
     - repl_updates_per_sec (integer, deprecated in 1.10; use `repl_updates`))
-    - ttl_deletes_per_sec (integer, deprecated in 1.10; use `ttl_deltes`))
+    - ttl_deletes_per_sec (integer, deprecated in 1.10; use `ttl_deletes`))
     - ttl_passes_per_sec (integer, deprecated in 1.10; use `ttl_passes`))
     - updates_per_sec (integer, deprecated in 1.10; use `updates`))
 
@@ -247,7 +247,7 @@ by running Telegraf with the `--debug` argument.
     - total_index_size (integer)
     - ok (integer)
     - count (integer)
-    - type (tring)
+    - type (string)
 
 - mongodb_shard_stats
   - tags:
