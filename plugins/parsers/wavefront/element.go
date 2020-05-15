@@ -28,7 +28,7 @@ type WhiteSpaceParser struct {
 type TagParser struct{}
 type LoopedParser struct {
 	wrappedParser ElementParser
-	wsPaser       *WhiteSpaceParser
+	wsParser      *WhiteSpaceParser
 }
 type LiteralParser struct {
 	literal string
@@ -136,7 +136,7 @@ func (ep *LoopedParser) parse(p *PointParser, pt *Point) error {
 		if err != nil {
 			return err
 		}
-		err = ep.wsPaser.parse(p, pt)
+		err = ep.wsParser.parse(p, pt)
 		if err == ErrEOF {
 			break
 		}

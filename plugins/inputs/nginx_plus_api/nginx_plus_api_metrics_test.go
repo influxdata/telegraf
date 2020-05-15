@@ -715,7 +715,7 @@ func TestGatherHttpLocationZonesMetrics(t *testing.T) {
 		})
 }
 
-func TestHatherHttpUpstreamsMetrics(t *testing.T) {
+func TestGatherHttpUpstreamsMetrics(t *testing.T) {
 	ts, n := prepareEndpoint(t, httpUpstreamsPath, defaultApiVersion, httpUpstreamsPayload)
 	defer ts.Close()
 

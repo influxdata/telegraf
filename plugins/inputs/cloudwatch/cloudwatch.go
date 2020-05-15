@@ -295,7 +295,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 	if c.Metrics != nil {
 		for _, m := range c.Metrics {
 			metrics := []*cloudwatch.Metric{}
-			if !hasWilcard(m.Dimensions) {
+			if !hasWildcard(m.Dimensions) {
 				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
 				for k, d := range m.Dimensions {
 					dimensions[k] = &cloudwatch.Dimension{
@@ -603,7 +603,7 @@ func (f *metricCache) isValid() bool {
 	return f.metrics != nil && time.Since(f.built) < f.ttl
 }
 
-func hasWilcard(dimensions []*Dimension) bool {
+func hasWildcard(dimensions []*Dimension) bool {
 	for _, d := range dimensions {
 		if d.Value == "" || d.Value == "*" {
 			return true
