@@ -135,7 +135,7 @@ func defaultVSphere() *VSphere {
 		VMInclude:       []string{"/**"},
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
-			"disk.provsioned.*"},
+			"disk.provisioned.*"},
 		DatastoreMetricExclude:  nil,
 		DatastoreInclude:        []string{"/**"},
 		DatacenterMetricInclude: nil,

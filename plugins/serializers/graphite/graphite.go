@@ -17,7 +17,7 @@ const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
 var (
 	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
-	hypenChars   = strings.NewReplacer(
+	hyphenChars  = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
 		"*", "-",
@@ -308,8 +308,8 @@ func buildTags(tags map[string]string) string {
 }
 
 func sanitize(value string) string {
-	// Apply special hypenation rules to preserve backwards compatibility
-	value = hypenChars.Replace(value)
+	// Apply special hyphenation rules to preserve backwards compatibility
+	value = hyphenChars.Replace(value)
 	// Apply rule to drop some chars to preserve backwards compatibility
 	value = dropChars.Replace(value)
 	// Replace any remaining illegal chars

@@ -892,7 +892,7 @@ if __name__ == '__main__':
                         help='Send build stats to InfluxDB using provided database name')
     parser.add_argument('--nightly',
                         action='store_true',
-                        help='Mark build output as nightly build (will incremement the minor version)')
+                        help='Mark build output as nightly build (will increment the minor version)')
     parser.add_argument('--update',
                         action='store_true',
                         help='Update build dependencies prior to building')

@@ -32,8 +32,8 @@ const (
 
 // Rcon package errors.
 var (
-	ErrInvalidWrite        = errors.New("Failed to write the payload corretly to remote connection.")
-	ErrInvalidRead         = errors.New("Failed to read the response corretly from remote connection.")
+	ErrInvalidWrite        = errors.New("Failed to write the payload correctly to remote connection.")
+	ErrInvalidRead         = errors.New("Failed to read the response correctly from remote connection.")
 	ErrInvalidChallenge    = errors.New("Server failed to mirror request challenge.")
 	ErrUnauthorizedRequest = errors.New("Client not authorized to remote server.")
 	ErrFailedAuthorization = errors.New("Failed to authorize to the remote server.")

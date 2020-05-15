@@ -81,7 +81,7 @@ func TestParseSimpleOutputwithStatePrefix(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "openntpd", firstpeerfields, firstpeertags)
 }
 
-func TestParseSimpleOutputInavlidPeer(t *testing.T) {
+func TestParseSimpleOutputInvalidPeer(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Openntpd{
 		run: OpenntpdCTL(simpleOutputInvalidPeer, TestTimeout, false),

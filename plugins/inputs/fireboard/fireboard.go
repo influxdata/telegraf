@@ -106,7 +106,7 @@ func (r *Fireboard) Gather(acc telegraf.Accumulator) error {
 		if resp.StatusCode == http.StatusForbidden {
 			return fmt.Errorf("fireboard server responded with %d [Forbidden], verify your authToken", resp.StatusCode)
 		}
-		return fmt.Errorf("fireboard responded with unexepcted status code %d", resp.StatusCode)
+		return fmt.Errorf("fireboard responded with unexpected status code %d", resp.StatusCode)
 	}
 	// Decode the response JSON into a new stats struct
 	var stats []fireboardStats

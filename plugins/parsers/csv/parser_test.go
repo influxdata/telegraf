@@ -243,7 +243,7 @@ func TestTrimSpace(t *testing.T) {
 	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
-func TestTrimSpaceDelimetedBySpace(t *testing.T) {
+func TestTrimSpaceDelimitedBySpace(t *testing.T) {
 	p := Parser{
 		Delimiter:      " ",
 		HeaderRowCount: 1,

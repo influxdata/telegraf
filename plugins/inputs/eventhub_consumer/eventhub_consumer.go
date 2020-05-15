@@ -292,7 +292,7 @@ func (e *EventHub) onDelivery(
 	delete(groups, track.ID())
 	if !ok {
 		// The metrics should always be found, this message indicates a programming error.
-		e.Log.Errorf("Could not find delievery: %d", track.ID())
+		e.Log.Errorf("Could not find delivery: %d", track.ID())
 		return true
 	}
 

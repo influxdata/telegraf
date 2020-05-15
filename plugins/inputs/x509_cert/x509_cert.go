@@ -127,7 +127,7 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 		return certs, nil
 	default:
-		return nil, fmt.Errorf("unsuported scheme '%s' in location %s", u.Scheme, u.String())
+		return nil, fmt.Errorf("unsupported scheme '%s' in location %s", u.Scheme, u.String())
 	}
 }
 

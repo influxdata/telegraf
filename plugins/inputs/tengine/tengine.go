@@ -101,7 +101,7 @@ func (n *Tengine) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-type TengineSatus struct {
+type TengineStatus struct {
 	host                     string
 	bytes_in                 uint64
 	bytes_out                uint64
@@ -135,7 +135,7 @@ type TengineSatus struct {
 }
 
 func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	var tenginestatus TengineSatus
+	var tenginestatus TengineStatus
 	resp, err := n.client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
