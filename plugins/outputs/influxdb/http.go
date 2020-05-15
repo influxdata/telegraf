@@ -209,6 +209,12 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		// Close connection after a timeout error. If this is a HTTP2
+		// connection this ensures that next interval a new connection will be
+		// used and name lookup will be performed.
+		if err, ok := err.(*url.Error); ok && err.Timeout() {
+			c.client.CloseIdleConnections()
+		}
 		return err
 	}
 	defer resp.Body.Close()
@@ -311,7 +317,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
+	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
 		return err
 	}
@@ -322,13 +328,20 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 	}
 	defer reader.Close()
 
-	req, err := c.makeWriteRequest(url, reader)
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
 		return err
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		// Close connection after a timeout error. If this is a HTTP2
+		// connection this ensures that next interval a new connection will be
+		// used and name lookup will be performed.
+		//   https://github.com/golang/go/issues/36026
+		if err, ok := err.(*url.Error); ok && err.Timeout() {
+			c.client.CloseIdleConnections()
+		}
 		return err
 	}
 	defer resp.Body.Close()
