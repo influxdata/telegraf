@@ -47,14 +47,15 @@ type Execd struct {
 	Signal       string
 	RestartDelay config.Duration
 
-	acc    telegraf.Accumulator
-	cmd    *exec.Cmd
-	parser parsers.Parser
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
-	stderr io.ReadCloser
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	acc         telegraf.Accumulator
+	cmd         *exec.Cmd
+	parser      parsers.Parser
+	stdin       io.WriteCloser
+	stdout      io.ReadCloser
+	stderr      io.ReadCloser
+	cancel      context.CancelFunc
+	mainLoopWg  sync.WaitGroup
+	startDoneWg sync.WaitGroup
 }
 
 func (e *Execd) SampleConfig() string {
@@ -76,7 +77,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("FATAL no command specified")
 	}
 
-	e.wg.Add(1) // for the main loop
+	e.mainLoopWg.Add(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancel = cancel
@@ -85,17 +86,21 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	e.startDoneWg.Add(2) // stream reader synchronization
+
 	go func() {
 		e.cmdLoop(ctx)
-		e.wg.Done()
+		e.mainLoopWg.Done()
 	}()
 
 	return nil
 }
 
 func (e *Execd) Stop() {
+	// don't try to stop before all stream readers have started.
+	e.startDoneWg.Wait()
 	e.cancel()
-	e.wg.Wait()
+	e.mainLoopWg.Wait()
 }
 
 // cmdLoop watches an already running process, restarting it when appropriate.
@@ -206,6 +211,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 
 	scanner := bufio.NewScanner(out)
 
+	e.startDoneWg.Done()
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
@@ -225,6 +231,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 func (e *Execd) cmdReadOutStream(out io.Reader) {
 	parser := influx.NewStreamParser(out)
 
+	e.startDoneWg.Done()
 	for {
 		metric, err := parser.Next()
 		if err != nil {
@@ -248,6 +255,7 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
+	e.startDoneWg.Done()
 	for scanner.Scan() {
 		log.Printf("stderr: %q", scanner.Text())
 	}

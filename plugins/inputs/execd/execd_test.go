@@ -34,12 +34,6 @@ func TestExternalInputWorks(t *testing.T) {
 	acc := agent.NewAccumulator(&TestMetricMaker{}, metrics)
 
 	require.NoError(t, e.Start(acc))
-
-	// startup time on slow machines. CI is inherently slow and racey. Not much to
-	// do about it. In my tests this drops it from 3% fail rate to 0% fail rate
-	// in go 1.12 container. Didn't seem to affect later go version containers.
-	time.Sleep(1 * time.Second)
-
 	require.NoError(t, e.Gather(acc))
 
 	// grab a metric and make sure it's a thing
@@ -88,6 +82,7 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			line := fmt.Sprintf("event message=\"%v\" 1587128639239000000", test.Value)
 
+			e.startDoneWg.Add(1)
 			e.cmdReadOut(strings.NewReader(line))
 
 			m := readChanWithTimeout(t, metrics, 1*time.Second)
