@@ -152,3 +152,5 @@ require (
 
 // replaced due to https://github.com/satori/go.uuid/issues/73
 replace github.com/satori/go.uuid => github.com/gofrs/uuid v3.2.0+incompatible
+
+replace github.com/benbjohnson/clock => github.com/danielnelson/clock v1.0.2-0.20200513230420-8d5f46b7dee5
