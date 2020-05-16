@@ -56,3 +56,11 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 	// Otherwise there was an error unrelated to termination.
 	return err
 }
+
+func GracefulStop(cmd *exec.Cmd, timeout time.Duration) {
+	cmd.Process.Signal(syscall.SIGTERM)
+	go func() {
+		<-time.NewTimer(timeout).C
+		cmd.Process.Kill()
+	}()
+}

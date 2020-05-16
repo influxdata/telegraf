@@ -89,7 +89,9 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.startDoneWg.Add(2) // stream reader synchronization
 
 	go func() {
-		e.cmdLoop(ctx)
+		if err := e.cmdLoop(ctx); err != nil {
+			log.Printf("Process quit with message: %s", err.Error())
+		}
 		e.mainLoopWg.Done()
 	}()
 
@@ -117,9 +119,7 @@ func (e *Execd) cmdLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			if e.stdin != nil {
 				e.stdin.Close()
-				// Immediately exit process but with a graceful shutdown
-				// period before killing
-				internal.WaitTimeout(e.cmd, 200*time.Millisecond)
+				internal.GracefulStop(e.cmd, 200*time.Millisecond)
 			}
 			return nil
 		case err := <-done:
