@@ -39,3 +39,8 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 	// Otherwise there was an error unrelated to termination.
 	return err
 }
+
+func GracefulStop(cmd *exec.Cmd, timeout time.Duration) {
+	// TODO: Maybe we can send a WM_ENDSESSION message here first.
+	cmd.Process.Kill()
+}
