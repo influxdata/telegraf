@@ -1,9 +1,7 @@
-// Copyright 2020, Verizon
-//Licensed under the terms of the MIT License. SEE LICENSE file in project root for terms.
-
 package redfish
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,12 +9,13 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	//	"github.com/influxdata/telegraf/internal/tls"
 )
 
 func TestApis(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		if !checkAuth(r, "test", "test") {
 			http.Error(w, "Unauthorized.", 401)
@@ -38,111 +37,122 @@ func TestApis(t *testing.T) {
 			http.ServeFile(w, r, "testdata/hp_power.json")
 		case "/redfish/v1/Systems/System.Embedded.2":
 			http.ServeFile(w, r, "testdata/hp_hostname.json")
+		case "/redfish/v1/Chassis/System.Embedded.2/":
+			http.ServeFile(w, r, "testdata/hp_power.json")
 		default:
 			panic("Cannot handle request")
 		}
 	}))
 
+	CUSTOM_URL := "127.0.0.1:3458"
+	l, _ := net.Listen("tcp", CUSTOM_URL)
+	ts.Listener = l
+	ts.StartTLS()
 	defer ts.Close()
+
+	//ts.StartTLS()
+	//defer ts.Close()
 
 	expected_metrics_hp := []telegraf.Metric{
 		testutil.MustMetric(
-			"cpu_temperature",
+			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":     "01-Inlet Ambient",
-				"hostname": "tpa-hostname",
-				"oob_ip":   ts.URL,
+				"name":      "01-Inlet Ambient",
+				"source":    "tpa-hostname",
+				"source_ip": CUSTOM_URL,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
-				"health":      "OK",
-				"state":       "Enabled",
-				"temperature": "19",
+				"temperature": 19,
 			},
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"cpu_temperature",
+			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":     "44-P/S 2 Zone",
-				"hostname": "tpa-hostname",
-				"oob_ip":   ts.URL,
+				"name":      "44-P/S 2 Zone",
+				"source":    "tpa-hostname",
+				"source_ip": CUSTOM_URL,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
-				"health":      "OK",
-				"state":       "Enabled",
-				"temperature": "34",
+				"temperature": 34,
 			},
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"fans",
+			"redfish_thermal_fans",
 			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "Fan 1",
-				"oob_ip":   ts.URL,
+				"source":    "tpa-hostname",
+				"name":      "Fan 1",
+				"source_ip": CUSTOM_URL,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
-				"fanspeed": "23",
-				"health":   "OK",
-				"state":    "Enabled",
+				"fanspeed": 23,
 			},
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"fans",
+			"redfish_thermal_fans",
 			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "Fan 2",
-				"oob_ip":   ts.URL,
+				"source":    "tpa-hostname",
+				"name":      "Fan 2",
+				"source_ip": CUSTOM_URL,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
-				"fanspeed": "23",
-				"health":   "OK",
-				"state":    "Enabled",
+				"fanspeed": 23,
 			},
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"fans",
+			"redfish_thermal_fans",
 			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "Fan 3",
-				"oob_ip":   ts.URL,
+				"source":    "tpa-hostname",
+				"name":      "Fan 3",
+				"source_ip": CUSTOM_URL,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
-				"fanspeed": "23",
-				"health":   "OK",
-				"state":    "Enabled",
+				"fanspeed": 23,
 			},
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"powersupply",
+			"redfish_power_powersupplies",
 			map[string]string{
-				"hostname":  "tpa-hostname",
+				"source":    "tpa-hostname",
 				"name":      "HpeServerPowerSupply",
-				"member_id": "0",
-				"oob_ip":    ts.URL,
+				"source_ip": CUSTOM_URL,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
-				"power_capacity_watts":    "800",
-				"line_input_voltage":      "205",
-				"last_power_output_watts": "0",
+				"power_capacity_watts":    800.0,
+				"line_input_voltage":      205.0,
+				"last_power_output_watts": 0.0,
 			},
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"powersupply",
+			"redfish_power_powersupplies",
 			map[string]string{
-				"hostname":  "tpa-hostname",
+				"source":    "tpa-hostname",
 				"name":      "HpeServerPowerSupply",
-				"member_id": "1",
-				"oob_ip":    ts.URL,
+				"source_ip": CUSTOM_URL,
+				"health":    "OK",
+				"state":     "Enabled",
 			},
 			map[string]interface{}{
-				"power_capacity_watts":    "800",
-				"line_input_voltage":      "205",
-				"last_power_output_watts": "90",
+				"power_capacity_watts":    800.0,
+				"line_input_voltage":      205.0,
+				"last_power_output_watts": 90.0,
 			},
 			time.Unix(0, 0),
 		),
@@ -150,415 +160,416 @@ func TestApis(t *testing.T) {
 
 	expected_metrics := []telegraf.Metric{
 		testutil.MustMetric(
-			"cpu_temperature",
+			"redfish_thermal_temperatures",
 			map[string]string{
-				"name":     "CPU1 Temp",
-				"hostname": "tpa-hostname",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter":  "",
-				"health":      "OK",
-				"rack":        "",
-				"room":        "",
-				"row":         "",
-				"state":       "Enabled",
-				"temperature": "40",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan1A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "17760",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan1B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15360",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan2A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "17880",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan2B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15120",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan3A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "18000",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan3B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15600",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan4A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "17280",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan4B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15360",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan5A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "17640",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan5B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15600",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan6A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "17760",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan6B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15600",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan7A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "17400",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan7B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15720",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan8A",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "18000",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"fans",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board Fan8B",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter": "",
-				"fanspeed":   "15840",
-				"health":     "OK",
-				"rack":       "",
-				"room":       "",
-				"row":        "",
-				"state":      "Enabled",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"powersupply",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "PS1 Status",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
-				"datacenter":           "",
-				"health":               "OK",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"state":                "Enabled",
-				"power_capacity_watts": "750",
-				"power_input_watts":    "900",
-				"power_output_watts":   "203",
-			},
-			time.Unix(0, 0),
-		),
-		testutil.MustMetric(
-			"voltages",
-			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board DIMM PG",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
+				"name":       "CPU1 Temp",
+				"source":     "tpa-hostname",
+				"source_ip":  CUSTOM_URL,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
 				"room":       "",
 				"row":        "",
 				"state":      "Enabled",
-				"voltage":    "1",
+			},
+			map[string]interface{}{
+				"temperature": 40,
 			},
 			time.Unix(0, 0),
 		),
 		testutil.MustMetric(
-			"voltages",
+			"redfish_thermal_fans",
 			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board NDC PG",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan1A",
+				"source_ip":  CUSTOM_URL,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
 				"room":       "",
 				"row":        "",
 				"state":      "Enabled",
-				"voltage":    "1",
+			},
+			map[string]interface{}{
+				"fanspeed": 17760,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan1B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15360,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan2A",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 17880,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan2B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15120,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan3A",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 18000,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan3B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15600,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan4A",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 17280,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan4B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15360,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan5A",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 17640,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan5B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15600,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan6A",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 17760,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan6B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15600,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan7A",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 17400,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan7B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15720,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan8A",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 18000,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_thermal_fans",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board Fan8B",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"fanspeed": 15840,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_powersupplies",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "PS1 Status",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"power_capacity_watts":    750.0,
+				"power_input_watts":       900.0,
+				"power_output_watts":      203.0,
+				"last_power_output_watts": 0.0,
+				"line_input_voltage":      206.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_voltages",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board DIMM PG",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"voltage": 1,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"redfish_power_voltages",
+			map[string]string{
+				"source":     "tpa-hostname",
+				"name":       "System Board NDC PG",
+				"source_ip":  CUSTOM_URL,
+				"datacenter": "",
+				"health":     "OK",
+				"rack":       "",
+				"room":       "",
+				"row":        "",
+				"state":      "Enabled",
+			},
+			map[string]interface{}{
+				"voltage": 1,
 			},
 			time.Unix(0, 0),
 		),
 
 		testutil.MustMetric(
-			"voltages",
+			"redfish_power_voltages",
 			map[string]string{
-				"hostname": "tpa-hostname",
-				"name":     "System Board PS1 PG FAIL",
-				"oob_ip":   ts.URL,
-			},
-			map[string]interface{}{
+				"source":     "tpa-hostname",
+				"name":       "System Board PS1 PG FAIL",
+				"source_ip":  CUSTOM_URL,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
 				"room":       "",
 				"row":        "",
 				"state":      "Enabled",
-				"voltage":    "1",
+			},
+			map[string]interface{}{
+				"voltage": 1,
 			},
 			time.Unix(0, 0),
 		),
 	}
 	plugin := &Redfish{
-		Host:              ts.URL,
+		Host:              "127.0.0.1:3458",
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
 		Id:                "System.Embedded.1",
-		Server:            "dell",
-		//	insecure_skip_verify : "true",
 	}
 	plugin.Init()
 	var acc testutil.Accumulator
 
-	_ = plugin.Gather(&acc)
-	assert.True(t, acc.HasMeasurement("cpu_temperature"))
+	err := plugin.Gather(&acc)
+	require.NoError(t, err)
+	require.True(t, acc.HasMeasurement("redfish_thermal_temperatures"))
 	testutil.RequireMetricsEqual(t, expected_metrics, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 
 	hp_plugin := &Redfish{
-		Host:              ts.URL,
+		Host:              "127.0.0.1:3458",
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
 		Id:                "System.Embedded.2",
-		Server:            "hp",
 	}
 	hp_plugin.Init()
 	var hp_acc testutil.Accumulator
 
-	_ = hp_plugin.Gather(&hp_acc)
-	assert.True(t, hp_acc.HasMeasurement("cpu_temperature"))
+	err = hp_plugin.Gather(&hp_acc)
+	require.NoError(t, err)
+	require.True(t, hp_acc.HasMeasurement("redfish_thermal_temperatures"))
 	testutil.RequireMetricsEqual(t, expected_metrics_hp, hp_acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
 }
@@ -574,12 +585,10 @@ func checkAuth(r *http.Request, username, password string) bool {
 func TestConnection(t *testing.T) {
 
 	r := &Redfish{
-		Host:              "https://127.0.0.1",
+		Host:              "127.0.0.1",
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
 		Id:                "System.Embedded.1",
-		Server:            "dell",
-		//insecure_skip_verify : "true",
 	}
 
 	var acc testutil.Accumulator
@@ -587,15 +596,13 @@ func TestConnection(t *testing.T) {
 	r.Init()
 
 	err := r.Gather(&acc)
-
-	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "connect: connection refused")
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "connect: connection refused")
 }
 
 func TestInvalidUsernameorPassword(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
@@ -609,25 +616,28 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 			panic("Cannot handle request")
 		}
 	}))
-
+	CUSTOM_URL := "127.0.0.1:3458"
+	l, _ := net.Listen("tcp", CUSTOM_URL)
+	ts.Listener = l
+	ts.StartTLS()
 	defer ts.Close()
 
 	r := &Redfish{
-		Host:              ts.URL,
+		Host:              CUSTOM_URL,
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
 		Id:                "System.Embedded.1",
-		Server:            "dell",
 	}
 
 	var acc testutil.Accumulator
 	r.Init()
 	err := r.Gather(&acc)
-	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
+	require.Error(t, err)
+	require.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		if !checkAuth(r, "testing", "testing") {
 			http.Error(w, "Unauthorized.", 401)
@@ -641,52 +651,22 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 			panic("Cannot handle request")
 		}
 	}))
-
+	CUSTOM_URL := "127.0.0.1:3458"
+	l, _ := net.Listen("tcp", CUSTOM_URL)
+	ts.Listener = l
+	ts.StartTLS()
 	defer ts.Close()
 
 	r := &Redfish{
-		Host:   ts.URL,
-		Id:     "System.Embedded.1",
-		Server: "dell",
+		Host: CUSTOM_URL,
+		Id:   "System.Embedded.1",
 	}
 
 	var acc testutil.Accumulator
 	r.Init()
 	err := r.Gather(&acc)
-	assert.EqualError(t, err, "Did not provide IP or username and password")
-}
-
-func TestInvalidServerVarConfiguration(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		if !checkAuth(r, "test", "test") {
-			http.Error(w, "Unauthorized.", 401)
-			return
-		}
-
-		switch r.URL.Path {
-		case "/redfish/v1/Chassis/System.Embedded.1/Thermal":
-			http.ServeFile(w, r, "testdata/dell_thermal.json")
-		default:
-			panic("Cannot handle request")
-		}
-	}))
-
-	defer ts.Close()
-
-	r := &Redfish{
-		Host:              ts.URL,
-		BasicAuthUsername: "test",
-		BasicAuthPassword: "test",
-		Id:                "System.Embedded.1",
-		Server:            "wtu",
-	}
-
-	var acc testutil.Accumulator
-	r.Init()
-	err := r.Gather(&acc)
-	assert.EqualError(t, err, "Did not provide correct server information, supported server details are dell or hp")
+	require.Error(t, err)
+	require.EqualError(t, err, "Did not provide IP or username and password")
 }
 
 func TestInvalidDellJSON(t *testing.T) {
@@ -697,6 +677,7 @@ func TestInvalidDellJSON(t *testing.T) {
 		powerfilename    string
 		locationfilename string
 		hostnamefilename string
+		CUSTOM_URL       string
 	}{
 		{
 			name:             "check Thermal",
@@ -704,6 +685,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			powerfilename:    "testdata/dell_power.json",
 			locationfilename: "testdata/dell_location.json",
 			hostnamefilename: "testdata/dell_hostname.json",
+			CUSTOM_URL:       "127.0.0.1:3459",
 		},
 		{
 			name:             "check Power",
@@ -711,6 +693,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			powerfilename:    "testdata/dell_powerinvalid.json",
 			locationfilename: "testdata/dell_location.json",
 			hostnamefilename: "testdata/dell_hostname.json",
+			CUSTOM_URL:       "127.0.0.1:3451",
 		},
 		{
 			name:             "check Location",
@@ -718,6 +701,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			powerfilename:    "testdata/dell_power.json",
 			locationfilename: "testdata/dell_locationinvalid.json",
 			hostnamefilename: "testdata/dell_hostname.json",
+			CUSTOM_URL:       "127.0.0.1:3452",
 		},
 		{
 			name:             "check Hostname",
@@ -725,10 +709,11 @@ func TestInvalidDellJSON(t *testing.T) {
 			powerfilename:    "testdata/dell_power.json",
 			locationfilename: "testdata/dell_location.json",
 			hostnamefilename: "testdata/dell_hostnameinvalid.json",
+			CUSTOM_URL:       "127.0.0.1:3453",
 		},
 	}
 	for _, tt := range tests {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if !checkAuth(r, "test", "test") {
 				http.Error(w, "Unauthorized.", 401)
@@ -748,25 +733,25 @@ func TestInvalidDellJSON(t *testing.T) {
 				panic("Cannot handle request")
 			}
 		}))
-
+		//CUSTOM_URL := "127.0.0.1:3459"
+		l, _ := net.Listen("tcp", tt.CUSTOM_URL)
+		ts.Listener = l
+		ts.StartTLS()
 		defer ts.Close()
 
 		plugin := &Redfish{
-			Host:              ts.URL,
+			Host:              tt.CUSTOM_URL,
 			BasicAuthUsername: "test",
 			BasicAuthPassword: "test",
 			Id:                "System.Embedded.1",
-			Server:            "dell",
 		}
 
 		plugin.Init()
 
 		var acc testutil.Accumulator
 		err := plugin.Gather(&acc)
-
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "error parsing input:")
-		}
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "error parsing input:")
 	}
 }
 
@@ -777,28 +762,32 @@ func TestInvalidHPJSON(t *testing.T) {
 		thermalfilename  string
 		powerfilename    string
 		hostnamefilename string
+		CUSTOM_URL       string
 	}{
 		{
 			name:             "check Thermal",
 			thermalfilename:  "testdata/hp_thermalinvalid.json",
 			powerfilename:    "testdata/hp_power.json",
 			hostnamefilename: "testdata/hp_hostname.json",
+			CUSTOM_URL:       "127.0.0.1:3278",
 		},
 		{
 			name:             "check Power",
 			thermalfilename:  "testdata/hp_thermal.json",
 			powerfilename:    "testdata/hp_powerinvalid.json",
 			hostnamefilename: "testdata/hp_hostname.json",
+			CUSTOM_URL:       "127.0.0.1:3289",
 		},
 		{
 			name:             "check Hostname",
 			thermalfilename:  "testdata/hp_thermal.json",
 			powerfilename:    "testdata/hp_power.json",
 			hostnamefilename: "testdata/hp_hostnameinvalid.json",
+			CUSTOM_URL:       "127.0.0.1:3290",
 		},
 	}
 	for _, tt := range tests {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if !checkAuth(r, "test", "test") {
 				http.Error(w, "Unauthorized.", 401)
@@ -816,24 +805,23 @@ func TestInvalidHPJSON(t *testing.T) {
 				panic("Cannot handle request")
 			}
 		}))
-
+		l, _ := net.Listen("tcp", tt.CUSTOM_URL)
+		ts.Listener = l
+		ts.StartTLS()
 		defer ts.Close()
 
 		plugin := &Redfish{
-			Host:              ts.URL,
+			Host:              tt.CUSTOM_URL,
 			BasicAuthUsername: "test",
 			BasicAuthPassword: "test",
 			Id:                "System.Embedded.2",
-			Server:            "hp",
 		}
 
 		plugin.Init()
 
 		var acc testutil.Accumulator
 		err := plugin.Gather(&acc)
-
-		if assert.Error(t, err) {
-			assert.Contains(t, err.Error(), "error parsing input:")
-		}
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "error parsing input:")
 	}
 }

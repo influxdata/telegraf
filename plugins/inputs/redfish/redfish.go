@@ -1,6 +1,3 @@
-// Copyright 2020, Verizon
-//Licensed under the terms of the MIT License. SEE LICENSE file in project root for terms.
-
 package redfish
 
 import (
@@ -12,130 +9,145 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"net/http"
-	"strconv"
+	//"strconv"
 )
 
-type Hostname struct {
-	Hostname string `json:"HostName"`
-}
 type Cpu struct {
-	Name        string    `json:"Name"`
-	Temperature int64     `json:"ReadingCelsius"`
-	Status      CpuStatus `json:"Status"`
+	Name           string    `json:"Name"`
+	ReadingCelsius int64     `json:"ReadingCelsius"`
+	Status         CpuStatus `json:"Status"`
 }
-type Temperatures struct {
-	Temperatures []Cpu `json:"Temperatures"`
+type Payload struct {
+	Temperatures  []*Cpu   `json:",omitempty"`
+	Fans          []*speed `json:",omitempty"`
+	PowerSupplies []*Watt  `json:",omitempty"`
+	Hostname      string   `json:",omitempty"`
+	Voltages      []*volt  `json:",omitempty"`
+	Location      *Address `json:",omitempty"`
 }
 type CpuStatus struct {
-	State  string `json:"State"`
-	Health string `json:"Health"`
-}
-type Fans struct {
-	Fans []speed `json:"Fans"`
+	State  string
+	Health string
 }
 type speed struct {
-	Name   string     `json:"Name"`
-	Speed  int64      `json:"Reading"`
-	Status FansStatus `json:"Status"`
+	Name    string
+	Reading int64
+	Status  FansStatus
 }
 type FansStatus struct {
 	State  string `json:"State"`
 	Health string `json:"Health"`
 }
-type PowerSupplies struct {
-	PowerSupplies []watt `json:"PowerSupplies"`
-}
-type PowerSupplieshp struct {
-	PowerSupplieshp []watthp `json:"PowerSupplies"`
-}
-type watt struct {
-	Name               string      `json:"Name"`
-	PowerInputWatts    float64     `json:"PowerInputWatts"`
-	PowerCapacityWatts float64     `json:"PowerCapacityWatts"`
-	PowerOutputWatts   float64     `json:"PowerOutputWatts"`
-	Status             PowerStatus `json:"Status"`
-}
-type watthp struct {
-	Name                 string  `json:"Name"`
-	MemberID             string  `json:"MemberId"`
-	PowerCapacityWatts   float64 `json:"PowerCapacityWatts"`
-	LastPowerOutputWatts float64 `json:"LastPowerOutputWatts"`
-	LineInputVoltage     float64 `json:"LineInputVoltage"`
+type Watt struct {
+	Name                 string       `json:",omitempty"`
+	PowerInputWatts      float64      `json:",omitempty"`
+	PowerCapacityWatts   float64      `json:",omitempty"`
+	PowerOutputWatts     float64      `json:",omitempty"`
+	LastPowerOutputWatts float64      `json:",omitempty"`
+	Status               *PowerStatus `json:",omitempty"`
+	LineInputVoltage     float64      `json:",omitempty"`
 }
 type PowerStatus struct {
-	State  string `json:"State"`
-	Health string `json:"Health"`
-}
-type Voltages struct {
-	Voltages []volt `json:"Voltages"`
+	State  string
+	Health string
 }
 type volt struct {
-	Name         string     `json:"Name"`
-	ReadingVolts int64      `json:"ReadingVolts"`
-	Status       VoltStatus `json:"Status"`
+	Name         string
+	ReadingVolts int64
+	Status       VoltStatus
 }
 type VoltStatus struct {
-	State  string `json:"State"`
-	Health string `json:"Health"`
-}
-type Location struct {
-	Location Address `json:"Location"`
+	State  string
+	Health string
 }
 type Address struct {
-	PostalAddress PostalAddress `json:"PostalAddress"`
-	Placement     Placement     `json:"Placement"`
+	PostalAddress PostalAddress
+	Placement     Placement
 }
 type PostalAddress struct {
-	DataCenter string `json:"Building"`
-	Room       string `json:"Room"`
+	DataCenter string
+	Room       string
 }
 type Placement struct {
-	Rack string `json:"Rack"`
-	Row  string `json:"Row"`
+	Rack string
+	Row  string
 }
 type Redfish struct {
 	Host              string `toml:"host"`
-	BasicAuthUsername string `toml:"basicauthusername"`
-	BasicAuthPassword string `toml:"basicauthpassword"`
+	BasicAuthUsername string `toml:"username"`
+	BasicAuthPassword string `toml:"password"`
 	Id                string `toml:"id"`
-	Server            string `toml:"server"`
 	client            http.Client
 	tls.ClientConfig
-	Timeout     internal.Duration `toml:"timeout"`
-	hostname    Hostname
-	temperature Temperatures
-	fan         Fans
-	powerdell   PowerSupplies
-	voltage     Voltages
-	powerhp     PowerSupplieshp
-	location    Location
+	Timeout internal.Duration `toml:"timeout"`
 }
 
-func (r *Redfish) getMetrics() error {
-	url := make(map[string]map[string]interface{})
-	url["Thermal"] = make(map[string]interface{})
-	url["Power"] = make(map[string]interface{})
-	url["Hostname"] = make(map[string]interface{})
-	url["Thermal"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Chassis/", r.Id, "/Thermal")
-	url["Thermal"]["pointer"] = &r.temperature
-	url["Thermal"]["fanpointer"] = &r.fan
-	url["Power"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Chassis/", r.Id, "/Power")
-	if r.Server == "dell" {
-		url["Power"]["pointer"] = &r.powerdell
-		url["Power"]["voltpointer"] = &r.voltage
-	} else if r.Server == "hp" {
-		url["Power"]["pointer"] = &r.powerhp
+func (r *Redfish) Description() string {
+	return "Read CPU, Fans, Powersupply and Voltage metrics of Dell/HP hardware server through redfish APIs"
+}
+
+var redfishConfig = `
+  ##Server  OOB-IP
+  host = "192.0.0.1"
+
+  ##Username,  Password   for   hardware   server
+  username = "test"
+  password = "test"
+
+  ##Resource  Id   for   redfish   APIs
+  id="System.Embedded.1"
+
+  ##Optional TLS   Config, if not provided insecure skip verifies defaults to true
+  #tls_ca = "/etc/telegraf/ca.pem"
+  #tls_cert = "/etc/telegraf/cert.pem"
+  #tls_key = "/etc/telegraf/key.pem"
+  
+
+  ## Amount   of   time   allowed   to   complete   the   HTTP   request
+  # timeout = "5s"
+`
+
+func (r *Redfish) SampleConfig() string {
+	return redfishConfig
+}
+
+func (r *Redfish) Init() error {
+	tlsCfg, err := r.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
 	}
-	url["Hostname"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Systems/", r.Id)
-	url["Hostname"]["pointer"] = &r.hostname
-	if r.Server == "dell" {
-		url["Location"] = make(map[string]interface{})
-		url["Location"]["endpoint"] = fmt.Sprint(r.Host, "/redfish/v1/Chassis/", r.Id, "/")
-		url["Location"]["pointer"] = &r.location
+	if (len(r.ClientConfig.TLSCA) == 0) || (len(r.ClientConfig.TLSCert) == 0 && len(r.ClientConfig.TLSKey) == 0) {
+		var insecuretls tls.ClientConfig
+		insecuretls.InsecureSkipVerify = true
+		tlsCfg, err = insecuretls.TLSConfig()
+		if err != nil {
+			return err
+		}
+	}
+	r.client = http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			Proxy:           http.ProxyFromEnvironment,
+		},
+		Timeout: r.Timeout.Duration,
+	}
+	return nil
+}
+
+func (r *Redfish) Gather(acc telegraf.Accumulator) error {
+	var url []string
+	var payload Payload
+	url = append(url, fmt.Sprint("https://", r.Host, "/redfish/v1/Chassis/", r.Id, "/Thermal"), fmt.Sprint("https://", r.Host, "/redfish/v1/Chassis/", r.Id, "/Power"), fmt.Sprint("https://", r.Host, "/redfish/v1/Systems/", r.Id), fmt.Sprint("https://", r.Host, "/redfish/v1/Chassis/", r.Id, "/"))
+
+	if len(r.Host) == 0 || len(r.BasicAuthUsername) == 0 || len(r.BasicAuthPassword) == 0 {
+		return fmt.Errorf("Did not provide IP or username and password")
+	}
+	if len(r.Id) == 0 {
+		return fmt.Errorf("Did not provide all the ID of the resource")
 	}
 
-	for key, value := range url {
-		req, err := http.NewRequest("GET", value["endpoint"].(string), nil)
+	for _, i := range url {
+		req, err := http.NewRequest("GET", i, nil)
 		if err != nil {
 			return err
 		}
@@ -149,23 +161,11 @@ func (r *Redfish) getMetrics() error {
 		if resp.StatusCode == 200 {
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				return err
+				return fmt.Errorf("%v", err)
 			}
-			jsonErr := json.Unmarshal(body, value["pointer"])
+			jsonErr := json.Unmarshal(body, &payload)
 			if jsonErr != nil {
 				return fmt.Errorf("error parsing input: %v", jsonErr)
-			}
-			if r.Server == "dell" && key == "Power" {
-				jsonErr = json.Unmarshal(body, value["voltpointer"])
-				if jsonErr != nil {
-					return fmt.Errorf("error parsing input: %v", jsonErr)
-				}
-
-			} else if key == "Thermal" {
-				jsonErr = json.Unmarshal(body, value["fanpointer"])
-				if jsonErr != nil {
-					return fmt.Errorf("error parsing input: %v", jsonErr)
-				}
 			}
 
 		} else {
@@ -174,152 +174,137 @@ func (r *Redfish) getMetrics() error {
 				http.StatusText(resp.StatusCode))
 		}
 	}
-	return nil
-}
-
-func (r *Redfish) Description() string {
-	return "Read CPU, Fans, Powersupply and Voltage metrics of Dell/HP hardware server through redfish APIs"
-}
-
-var redfishConfig = `
-## Server OOB-IP
-host = "https://192.0.0.1"
-
-## Username,Password for hardware server
-basicauthusername = "test"
-basicauthpassword = "test"
-## Server Vendor(dell or hp)
-server= "dell"
-## Resource Id for redfish APIs
-id="System.Embedded.1"
-## Optional TLS Config
-# tls_ca = "/etc/telegraf/ca.pem"
-# tls_cert = "/etc/telegraf/cert.pem"
-# tls_key = "/etc/telegraf/key.pem"
-## Use TLS but skip chain & host verification
-# insecure_skip_verify = false
-
-## Amount of time allowed to complete the HTTP request
-# timeout = "5s"
-`
-
-func (r *Redfish) SampleConfig() string {
-	return redfishConfig
-}
-
-func (r *Redfish) Init() error {
-	tlsCfg, err := r.ClientConfig.TLSConfig()
-	if err != nil {
-		return err
-	}
-
-	r.client = http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-			Proxy:           http.ProxyFromEnvironment,
-		},
-		Timeout: r.Timeout.Duration,
-	}
-	return nil
-}
-
-func (r *Redfish) Gather(acc telegraf.Accumulator) error {
-
-	if len(r.Host) == 0 || len(r.BasicAuthUsername) == 0 || len(r.BasicAuthPassword) == 0 {
-		return fmt.Errorf("Did not provide IP or username and password")
-	}
-	if len(r.Server) == 0 || len(r.Id) == 0 {
-		return fmt.Errorf("Did not provide all the mandatory fields in the configuration")
-	}
-	if !(r.Server == "dell" || r.Server == "hp") {
-		return fmt.Errorf("Did not provide correct server information, supported server details are dell or hp")
-	}
-	err := r.getMetrics()
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < len(r.temperature.Temperatures); i++ {
-		//  Tags
-		tags := map[string]string{"oob_ip": r.Host, "name": r.temperature.Temperatures[i].Name, "hostname": r.hostname.Hostname}
-		//  Fields
-		fields := make(map[string]interface{})
-		fields["temperature"] = strconv.FormatInt(r.temperature.Temperatures[i].Temperature, 10)
-		fields["state"] = r.temperature.Temperatures[i].Status.State
-		fields["health"] = r.temperature.Temperatures[i].Status.Health
-		if r.Server == "dell" {
-			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
-			fields["room"] = r.location.Location.PostalAddress.Room
-			fields["rack"] = r.location.Location.Placement.Rack
-			fields["row"] = r.location.Location.Placement.Row
-			acc.AddFields("cpu_temperature", fields, tags)
-		}
-		if r.Server == "hp" {
-			acc.AddFields("cpu_temperature", fields, tags)
-		}
-	}
-	for i := 0; i < len(r.fan.Fans); i++ {
-		//  Tags
-		tags := map[string]string{"oob_ip": r.Host, "name": r.fan.Fans[i].Name, "hostname": r.hostname.Hostname}
-		//  Fields
-		fields := make(map[string]interface{})
-		fields["fanspeed"] = strconv.FormatInt(r.fan.Fans[i].Speed, 10)
-		fields["state"] = r.fan.Fans[i].Status.State
-		fields["health"] = r.fan.Fans[i].Status.Health
-		if r.Server == "dell" {
-			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
-			fields["room"] = r.location.Location.PostalAddress.Room
-			fields["rack"] = r.location.Location.Placement.Rack
-			fields["row"] = r.location.Location.Placement.Row
-			acc.AddFields("fans", fields, tags)
-		}
-		if r.Server == "hp" {
-			acc.AddFields("fans", fields, tags)
-		}
-	}
-	if r.Server == "dell" {
-		for i := 0; i < len(r.powerdell.PowerSupplies); i++ {
+	if payload.Location != nil {
+		for _, j := range payload.Temperatures {
 			//  Tags
-			tags := map[string]string{"oob_ip": r.Host, "name": r.powerdell.PowerSupplies[i].Name, "hostname": r.hostname.Hostname}
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
+			tags["room"] = payload.Location.PostalAddress.Room
+			tags["rack"] = payload.Location.Placement.Rack
+			tags["row"] = payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["power_input_watts"] = strconv.FormatFloat(r.powerdell.PowerSupplies[i].PowerInputWatts, 'f', -1, 64)
-			fields["power_capacity_watts"] = strconv.FormatFloat(r.powerdell.PowerSupplies[i].PowerCapacityWatts, 'f', -1, 64)
-			fields["power_output_watts"] = strconv.FormatFloat(r.powerdell.PowerSupplies[i].PowerOutputWatts, 'f', -1, 64)
-			fields["state"] = r.powerdell.PowerSupplies[i].Status.State
-			fields["health"] = r.powerdell.PowerSupplies[i].Status.Health
-			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
-			fields["room"] = r.location.Location.PostalAddress.Room
-			fields["rack"] = r.location.Location.Placement.Rack
-			fields["row"] = r.location.Location.Placement.Row
-			acc.AddFields("powersupply", fields, tags)
+			fields["temperature"] = j.ReadingCelsius
+			acc.AddFields("redfish_thermal_temperatures", fields, tags)
 		}
-		for i := 0; i < len(r.voltage.Voltages); i++ {
+		for _, j := range payload.Fans {
 			//  Tags
-			tags := map[string]string{"oob_ip": r.Host, "name": r.voltage.Voltages[i].Name, "hostname": r.hostname.Hostname}
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
+			tags["room"] = payload.Location.PostalAddress.Room
+			tags["rack"] = payload.Location.Placement.Rack
+			tags["row"] = payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["voltage"] = strconv.FormatInt(r.voltage.Voltages[i].ReadingVolts, 10)
-			fields["state"] = r.voltage.Voltages[i].Status.State
-			fields["health"] = r.voltage.Voltages[i].Status.Health
-			fields["datacenter"] = r.location.Location.PostalAddress.DataCenter
-			fields["room"] = r.location.Location.PostalAddress.Room
-			fields["rack"] = r.location.Location.Placement.Rack
-			fields["row"] = r.location.Location.Placement.Row
-			acc.AddFields("voltages", fields, tags)
+			fields["fanspeed"] = j.Reading
+			acc.AddFields("redfish_thermal_fans", fields, tags)
 		}
-
-	}
-	if r.Server == "hp" {
-		for i := 0; i < len(r.powerhp.PowerSupplieshp); i++ {
+		for _, j := range payload.PowerSupplies {
 			//  Tags
-			tags := map[string]string{"oob_ip": r.Host, "name": r.powerhp.PowerSupplieshp[i].Name, "member_id": r.powerhp.PowerSupplieshp[i].MemberID, "hostname": r.hostname.Hostname}
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name //j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
+			tags["room"] = payload.Location.PostalAddress.Room
+			tags["rack"] = payload.Location.Placement.Rack
+			tags["row"] = payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["line_input_voltage"] = strconv.FormatFloat(r.powerhp.PowerSupplieshp[i].LineInputVoltage, 'f', -1, 64)
-			fields["power_capacity_watts"] = strconv.FormatFloat(r.powerhp.PowerSupplieshp[i].PowerCapacityWatts, 'f', -1, 64)
-			fields["last_power_output_watts"] = strconv.FormatFloat(r.powerhp.PowerSupplieshp[i].LastPowerOutputWatts, 'f', -1, 64)
-			acc.AddFields("powersupply", fields, tags)
+			fields["power_input_watts"] = j.PowerInputWatts
+			fields["power_output_watts"] = j.PowerOutputWatts
+			fields["line_input_voltage"] = j.LineInputVoltage
+			fields["last_power_output_watts"] = j.LastPowerOutputWatts
+			fields["power_capacity_watts"] = j.PowerCapacityWatts
+			acc.AddFields("redfish_power_powersupplies", fields, tags)
+		}
+		for _, j := range payload.Voltages {
+			//  Tags
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
+			tags["room"] = payload.Location.PostalAddress.Room
+			tags["rack"] = payload.Location.Placement.Rack
+			tags["row"] = payload.Location.Placement.Row
+			//  Fields
+			fields := make(map[string]interface{})
+			fields["voltage"] = j.ReadingVolts
+			acc.AddFields("redfish_power_voltages", fields, tags)
+		}
+	} else {
+		for _, j := range payload.Temperatures {
+			//  Tags
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			//  Fields
+			fields := make(map[string]interface{})
+			fields["temperature"] = j.ReadingCelsius
+			acc.AddFields("redfish_thermal_temperatures", fields, tags)
+		}
+		for _, j := range payload.Fans {
+			//  Tags
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			//  Fields
+			fields := make(map[string]interface{})
+			fields["fanspeed"] = j.Reading
+			acc.AddFields("redfish_thermal_fans", fields, tags)
+		}
+		for _, j := range payload.PowerSupplies {
+			//  Tags
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name //j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			//  Fields
+			fields := make(map[string]interface{})
+			/* if (j.PowerInputWatts != 0){
+			        fields["power_input_watts"]  = j.PowerInputWatts
+			        fields["power_output_watts"] = j.PowerOutputWatts
+			}*/
+			fields["line_input_voltage"] = j.LineInputVoltage
+			fields["last_power_output_watts"] = j.LastPowerOutputWatts
+			fields["power_capacity_watts"] = j.PowerCapacityWatts
+			acc.AddFields("redfish_power_powersupplies", fields, tags)
+		}
+		for _, j := range payload.Voltages {
+			//  Tags
+			tags := map[string]string{}
+			tags["source_ip"] = r.Host
+			tags["name"] = j.Name
+			tags["source"] = payload.Hostname
+			tags["state"] = j.Status.State
+			tags["health"] = j.Status.Health
+			//  Fields
+			fields := make(map[string]interface{})
+			fields["voltage"] = j.ReadingVolts
+			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	}
 
