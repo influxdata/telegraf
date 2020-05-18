@@ -16,7 +16,8 @@ import (
 )
 
 type Graphite struct {
-	GraphiteTagSupport bool
+	GraphiteTagSupport   bool
+	GraphiteTagSeparator string
 	// URL is only for backwards compatibility
 	Servers   []string
 	Prefix    string
@@ -40,6 +41,9 @@ var sampleConfig = `
 
   ## Enable Graphite tags support
   # graphite_tag_support = false
+
+  ## Character for separating metric name and field for Graphite tags
+  # graphite_separator = "."
 
   ## Graphite templates patterns
   ## 1. Template for cpu
@@ -145,7 +149,7 @@ func checkEOF(conn net.Conn) {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.Templates)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport, g.GraphiteTagSeparator, g.Templates)
 	if err != nil {
 		return err
 	}
