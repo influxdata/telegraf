@@ -382,6 +382,7 @@ def apply(metric):
 		},
 	},
 	{
+		// remove for benchmarks
 		name: "error to setattr tags",
 		source: `
 def apply(metric):
@@ -401,7 +402,7 @@ def apply(metric):
 		name: "iterate tags",
 		source: `
 def apply(metric):
-	for k, v in metric.tags:
+	for k in metric.tags:
 		pass
 	return metric
 `,
@@ -429,11 +430,10 @@ def apply(metric):
 		},
 	},
 	{
-		name: "iterate and copy tag keys to fields",
+		name: "iterate tags and copy to fields",
 		source: `
 def apply(metric):
 	for k in metric.tags:
-		print(type(k))
 		metric.fields[k] = k
 	return metric
 `,
@@ -463,7 +463,38 @@ def apply(metric):
 		},
 	},
 	{
-		name: "keys iterate and copy tag keys to fields",
+		name: "iterate tag keys",
+		source: `
+def apply(metric):
+	for k in metric.tags.keys():
+		pass
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"host": "example.org",
+					"cpu":  "cpu0",
+					"foo":  "bar",
+				},
+				map[string]interface{}{"time_idle": 42.0},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"host": "example.org",
+					"cpu":  "cpu0",
+					"foo":  "bar",
+				},
+				map[string]interface{}{"time_idle": 42.0},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "iterate tag keys and copy to fields",
 		source: `
 def apply(metric):
 	for k in metric.tags.keys():
@@ -532,7 +563,7 @@ def apply(metric):
 		name: "iterate fields",
 		source: `
 def apply(metric):
-	for k, v in metric.fields:
+	for k in metric.fields:
 		pass
 	return metric
 `,

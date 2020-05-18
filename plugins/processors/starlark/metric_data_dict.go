@@ -91,26 +91,23 @@ func (m *MetricDataDict) Items() []starlark.Tuple {
 }
 
 func (m *MetricDataDict) Iterate() starlark.Iterator {
-	return &MetricDataIterator{entries: m.data.List()}
+	return &MetricDataIterator{data: m.data}
 }
 
 type MetricDataIterator struct {
-	entries []AccessibleEntry
-	index   int
+	data  Accessible
+	index int
 }
 
 func (i *MetricDataIterator) Next(p *starlark.Value) bool {
-	if i.index >= len(i.entries) {
+	if i.index >= i.data.Len() {
 		return false
 	}
 
-	field := i.entries[i.index]
+	fieldkey := i.data.GetIndex(i.index)
+	key := starlark.String(fieldkey)
 
-	key := starlark.String(field.Key)
-	val, _ := asStarlarkValue(field.Value)
-	pair := starlark.Tuple{key, val}
-
-	*p = pair
+	*p = key
 	i.index++
 	return true
 }

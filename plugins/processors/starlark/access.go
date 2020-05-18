@@ -14,6 +14,7 @@ type Accessible interface {
 	Remove(key string)
 	Clear()
 	Get(key string) (interface{}, bool)
+	GetIndex(index int) string
 	List() []AccessibleEntry
 	Len() int
 }
@@ -39,6 +40,10 @@ func (m *AccessibleField) Clear() {
 
 func (m *AccessibleField) Get(key string) (interface{}, bool) {
 	return m.metric.GetField(key)
+}
+
+func (m *AccessibleField) GetIndex(index int) string {
+	return m.metric.FieldList()[index].Key
 }
 
 func (m *AccessibleField) List() []AccessibleEntry {
@@ -77,6 +82,10 @@ func (m *AccessibleTag) Clear() {
 
 func (m *AccessibleTag) Get(key string) (interface{}, bool) {
 	return m.metric.GetTag(key)
+}
+
+func (m *AccessibleTag) GetIndex(index int) string {
+	return m.metric.TagList()[index].Key
 }
 
 func (m *AccessibleTag) List() []AccessibleEntry {
