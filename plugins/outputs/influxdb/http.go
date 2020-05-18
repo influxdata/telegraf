@@ -517,5 +517,5 @@ func (c *httpClient) onRequestError(err error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }

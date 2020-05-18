@@ -354,5 +354,5 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }
