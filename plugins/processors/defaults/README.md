@@ -1,21 +1,20 @@
-# Defaulter Processor
+# Defaults Processor
 
-The *Defaulter* processor allows you to ensure certain fields will always exist with a specified default value on your metric(s).
+The *Defaults* processor allows you to ensure certain fields will always exist with a specified default value on your metric(s).
 
-There are two cases where this processor will insert a configured default field.
+There are three cases where this processor will insert a configured default field.
 
 1. The field is nil on the incoming metric
-1. The field is present, but its value is empty.
+1. The field is not nil, but its value is an empty string.
+1. The field is not nil, but it's value is a string of one or more empty spaces.
     
-    This processor considers the field empty if its value is the empty string or a single space character.
-
 ### Configuration
 ```toml
 ## Set default fields on your metric(s) when they are nil or empty
-[[processors.defaulter]]
+[[processors.defaults]]
 
 ## This table determines what fields will be inserted in your metric(s)
-  [processors.defaulter.fields]
+  [processors.defaults.fields]
     field_1 = "bar"
     time_idle = 0
     is_error = true
@@ -25,8 +24,8 @@ There are two cases where this processor will insert a configured default field.
 Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one it's not set in the metric be default:
 
 ```toml
-[[processors.defaulter]]
-  [processors.defaulter.fields]
+[[processors.defaults]]
+  [processors.defaults.fields]
     status_code = "N/A"
 ```
 

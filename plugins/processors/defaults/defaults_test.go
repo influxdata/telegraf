@@ -1,4 +1,4 @@
-package defaulter
+package defaults
 
 import (
 	"testing"
@@ -9,18 +9,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDefaulter(t *testing.T) {
-	assert.Equal(t, 1, 1)
-
+func TestDefaults(t *testing.T) {
 	scenarios := []struct {
 		name      string
-		defaulter *Defaulter
+		defaults *Defaults
 		input     telegraf.Metric
 		expected  []telegraf.Metric
 	}{
 		{
 			name: "Test that no values are changed since they are not nil or empty",
-			defaulter: &Defaulter{
+			defaults: &Defaults{
 				DefaultFieldsSets: map[string]interface{}{
 					"usage":     30,
 					"wind_feel": "very chill",
@@ -52,7 +50,7 @@ func TestDefaulter(t *testing.T) {
 		},
 		{
 			name: "Tests that the missing fields are set on the metric",
-			defaulter: &Defaulter{
+			defaults: &Defaults{
 				DefaultFieldsSets: map[string]interface{}{
 					"max_clock_gz":  6,
 					"wind_feel":     "Unknown",
@@ -87,7 +85,7 @@ func TestDefaulter(t *testing.T) {
 		},
 		{
 			name: "Tests that set but empty fields are replaced by specified defaults",
-			defaulter: &Defaulter{
+			defaults: &Defaults{
 				DefaultFieldsSets: map[string]interface{}{
 					"max_clock_gz":  6,
 					"wind_feel":     "Unknown",
@@ -120,10 +118,9 @@ func TestDefaulter(t *testing.T) {
 
 	for _, scenario := range scenarios {
 		t.Run(scenario.name, func(t *testing.T) {
-			defaulter := scenario.defaulter
-			defaulter.Log = testutil.Logger{}
+			defaults := scenario.defaults
 
-			resultMetrics := defaulter.Apply(scenario.input)
+			resultMetrics := defaults.Apply(scenario.input)
 			assert.Len(t, resultMetrics, 1)
 			testutil.RequireMetricsEqual(t, scenario.expected, resultMetrics)
 		})
