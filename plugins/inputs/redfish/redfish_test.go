@@ -10,7 +10,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	//	"github.com/influxdata/telegraf/internal/tls"
 )
 
 func TestApis(t *testing.T) {
@@ -49,9 +48,6 @@ func TestApis(t *testing.T) {
 	ts.Listener = l
 	ts.StartTLS()
 	defer ts.Close()
-
-	//ts.StartTLS()
-	//defer ts.Close()
 
 	expected_metrics_hp := []telegraf.Metric{
 		testutil.MustMetric(
@@ -733,7 +729,6 @@ func TestInvalidDellJSON(t *testing.T) {
 				panic("Cannot handle request")
 			}
 		}))
-		//CUSTOM_URL := "127.0.0.1:3459"
 		l, _ := net.Listen("tcp", tt.CUSTOM_URL)
 		ts.Listener = l
 		ts.StartTLS()
