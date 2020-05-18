@@ -209,7 +209,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
-		c.onRequestError(err)
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -330,7 +330,7 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
-		c.onRequestError(err)
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -504,16 +504,6 @@ func makeQueryURL(loc *url.URL) (string, error) {
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
 	return u.String(), nil
-}
-
-func (c *httpClient) onRequestError(err error) {
-	// Close connection after a timeout error. If this is a HTTP2
-	// connection this ensures that next interval a new connection will be
-	// used and name lookup will be performed.
-	//   https://github.com/golang/go/issues/36026
-	if err, ok := err.(*url.Error); ok && err.Timeout() {
-		c.client.CloseIdleConnections()
-	}
 }
 
 func (c *httpClient) Close() {
