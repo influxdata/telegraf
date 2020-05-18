@@ -30,13 +30,13 @@ Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one it's
 ```
 
 ```diff
-- lb,http_method=GET cache_status=HIT latency=230
-+ lb,http_method=GET cache_status latency=230 status_code="N/A"
+- lb,http_method=GET cache_status=HIT,latency=230
++ lb,http_method=GET cache_status=HIT,latency=230,status_code="N/A"
 ```
 
 Ensure an empty string gets replaced by a default:
 
 ```diff
-- lb,http_method=GET cache_status=HIT latency=230 status_code=""
-+ lb,http_method=GET cache_status latency=230 status_code="N/A"
+- lb,http_method=GET cache_status=HIT,latency=230,status_code=""
++ lb,http_method=GET cache_status=HIT,latency=230,status_code="N/A"
 ```
