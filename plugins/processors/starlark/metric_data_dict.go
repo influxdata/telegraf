@@ -2,18 +2,33 @@ package starlark
 
 import (
 	"errors"
+	"strings"
 
 	"go.starlark.net/starlark"
 )
 
 type MetricDataDict struct {
-	data Accessible
+	data     Accessible
 	typename string
 }
 
-// type Value
 func (m *MetricDataDict) String() string {
-	return "not implemented yet"
+	buf := new(strings.Builder)
+	buf.WriteString("{")
+	sep := ""
+	for _, item := range m.Items() {
+		k, v := item[0], item[1]
+		buf.WriteString(sep)
+		buf.WriteString(k.String())
+		buf.WriteString(": ")
+		buf.WriteString(v.String())
+		sep = ", "
+	}
+	buf.WriteString("}")
+	return buf.String()
+}
+
+func writeValue(out *strings.Builder, m *MetricDataDict) {
 }
 
 func (m *MetricDataDict) Type() string {
@@ -34,7 +49,7 @@ func (m *MetricDataDict) Hash() (uint32, error) {
 
 // type Mapping
 func (m *MetricDataDict) Get(key starlark.Value) (v starlark.Value, found bool, err error) {
-	if k,ok := key.(starlark.String); ok {
+	if k, ok := key.(starlark.String); ok {
 		gv, found := m.data.Get(k.GoString())
 		if !found {
 			return starlark.None, false, nil
@@ -54,7 +69,7 @@ func (m *MetricDataDict) SetKey(k, v starlark.Value) error {
 	if key, ok = k.(starlark.String); !ok {
 		return errors.New("key must be of type 'str'")
 	}
-	value,err := asGoValue(v)
+	value, err := asGoValue(v)
 	if err != nil {
 		return err
 	}

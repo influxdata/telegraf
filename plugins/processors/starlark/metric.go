@@ -3,6 +3,7 @@ package starlark
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -11,14 +12,28 @@ import (
 
 type Metric struct {
 	metric telegraf.Metric
+	frozen bool
 }
 
 func (m *Metric) Unwrap() telegraf.Metric {
 	return m.metric
 }
 
+// The String function is called by both the repr() and str() functions.  There
+// is a slight difference in how strings are quoted between the two functions,
+// but this type isn't a string so it is irrelevent.
 func (m *Metric) String() string {
-	return "metric"
+	buf := new(strings.Builder)
+	buf.WriteString("Metric(")
+	buf.WriteString(m.Name().String())
+	buf.WriteString(", tags=")
+	buf.WriteString(m.Tags().String())
+	buf.WriteString(", fields=")
+	buf.WriteString(m.Fields().String())
+	buf.WriteString(", time=")
+	buf.WriteString(m.Time().String())
+	buf.WriteString(")")
+	return buf.String()
 }
 
 func (m *Metric) Type() string {
@@ -26,6 +41,7 @@ func (m *Metric) Type() string {
 }
 
 func (m *Metric) Freeze() {
+	m.frozen = true
 }
 
 func (m *Metric) Truth() starlark.Bool {
@@ -58,6 +74,10 @@ func (m *Metric) Attr(name string) (starlark.Value, error) {
 }
 
 func (m *Metric) SetField(name string, value starlark.Value) error {
+	if m.frozen {
+		return fmt.Errorf("cannot modify frozen metric")
+	}
+
 	switch name {
 	case "name":
 		m.SetName(value)

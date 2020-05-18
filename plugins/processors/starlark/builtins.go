@@ -29,7 +29,9 @@ func deepcopy(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple,
 		return nil, err
 	}
 
-	return &Metric{metric: sm.metric.Copy()}, nil
+	dup := sm.metric.Copy()
+	dup.Accept()
+	return &Metric{metric: dup}, nil
 }
 
 type Removeable interface {

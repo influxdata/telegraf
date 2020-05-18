@@ -2,7 +2,6 @@ package starlark
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -57,15 +56,17 @@ func (s *Starlark) Init() error {
 		return err
 	}
 
-	// TODO: Should we freeze the globals?  It seems like this isn't required
-	// since we don't intend to run this program concurrently.
-	// globals.Freeze()
+	// Freeze the global state.  This prevents modifications to the processor
+	// state and prevents scripts from containing errors storing tracking
+	// metrics.  Tasks that require global state will not be possible due to
+	// this, so maybe we should relax this in the future.
+	globals.Freeze()
 
 	// The source should define an apply function.
 	apply := globals["apply"]
 
 	if apply == nil {
-		return errors.New("apply not found")
+		return errors.New("apply is not defined")
 	}
 
 	var ok bool
@@ -77,10 +78,14 @@ func (s *Starlark) Init() error {
 		return errors.New("apply function must take one parameter")
 	}
 
-	s.args = make(starlark.Tuple, 1)
+	// Reusing the same metric wrapper to skip an allocation.  This will cause
+	// any saved references point to the new metric, but due to freezing the
+	// globals none should exist.
 	met := &Metric{}
+	s.args = make(starlark.Tuple, 1)
 	s.args[0] = met
 
+	// Allocate a slice for return values.  FIXME can we remove?
 	s.results = make([]telegraf.Metric, 0, 10)
 
 	return nil
@@ -98,13 +103,15 @@ func (s *Starlark) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	s.results = s.results[:0]
 	for _, m := range metrics {
 		s.args[0].(*Metric).metric = m
+
 		rv, err := starlark.Call(s.thread, s.applyFunc, s.args, nil)
 		if err != nil {
-			// FIXME What do? toss metric/keep metric
-			// s.Log.Errorf("Error calling apply function: %v", err)
-			err := err.(*starlark.EvalError)
-			for _, line := range strings.Split(err.Backtrace(), "\n") {
-				s.Log.Error(line)
+			if err, ok := err.(*starlark.EvalError); ok {
+				for _, line := range strings.Split(err.Backtrace(), "\n") {
+					s.Log.Error(line)
+				}
+			} else {
+				s.Log.Error(err)
 			}
 			continue
 		}
@@ -117,21 +124,34 @@ func (s *Starlark) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			for iter.Next(&v) {
 				switch v := v.(type) {
 				case *Metric:
-					s.results = append(s.results, v.Unwrap())
+					m := v.Unwrap()
+					if containsMetric(s.results, m) {
+						s.Log.Errorf("Duplicate metric reference detected")
+						continue
+					}
+					s.results = append(s.results, m)
 				default:
-					fmt.Printf("error, rv: %T\n", v)
+					s.Log.Errorf("Invalid type returned in list: %T", v)
 				}
 			}
 		case *Metric:
 			s.results = append(s.results, rv.Unwrap())
 		case starlark.NoneType:
-			continue
+			return nil
 		default:
-			fmt.Printf("error, rv: %T\n", rv)
+			s.Log.Errorf("Invalid type returned: %T", rv)
 		}
 	}
-
 	return s.results
+}
+
+func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {
+	for _, m := range metrics {
+		if m == metric {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {
@@ -140,6 +160,7 @@ func init() {
 	resolve.AllowLambda = true
 	resolve.AllowSet = true
 
+	// FIXME Can we do this per program?
 	starlark.Universe["Metric"] = starlark.NewBuiltin("Metric", newMetric)
 	starlark.Universe["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 }

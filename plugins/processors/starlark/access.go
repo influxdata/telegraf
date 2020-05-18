@@ -20,6 +20,7 @@ type Accessible interface {
 
 type AccessibleField struct {
 	metric telegraf.Metric
+	frozen bool
 }
 
 func (m *AccessibleField) Add(key string, value interface{}) {
@@ -41,10 +42,10 @@ func (m *AccessibleField) Get(key string) (interface{}, bool) {
 }
 
 func (m *AccessibleField) List() []AccessibleEntry {
-	fields  := m.metric.FieldList()
+	fields := m.metric.FieldList()
 	entries := make([]AccessibleEntry, len(fields))
-	for i,field := range fields {
-		entries[i].Key   = field.Key
+	for i, field := range fields {
+		entries[i].Key = field.Key
 		entries[i].Value = field.Value
 	}
 
@@ -55,9 +56,9 @@ func (m *AccessibleField) Len() int {
 	return len(m.metric.FieldList())
 }
 
-
 type AccessibleTag struct {
 	metric telegraf.Metric
+	frozen bool
 }
 
 func (m *AccessibleTag) Add(key string, value interface{}) {
@@ -81,8 +82,8 @@ func (m *AccessibleTag) Get(key string) (interface{}, bool) {
 func (m *AccessibleTag) List() []AccessibleEntry {
 	tags := m.metric.TagList()
 	entries := make([]AccessibleEntry, len(tags))
-	for i,tag := range tags {
-		entries[i].Key   = tag.Key
+	for i, tag := range tags {
+		entries[i].Key = tag.Key
 		entries[i].Value = tag.Value
 	}
 
