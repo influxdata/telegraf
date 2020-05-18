@@ -7,7 +7,7 @@ Tag can contain a number ("80") or number and protocol separated by slash ("443/
 ### Configuration
 
 ```toml
-[[processors.lookup_port]]
+[[processors.port_name]]
   ## Name of tag holding the port number
   # tag = "port"
 
@@ -21,6 +21,5 @@ Tag can contain a number ("80") or number and protocol separated by slash ("443/
 ### Example
 
 ```diff
-+ throughput month=Jun,environment=qa,region=us-east1,lower=10i,upper=1000i,mean=500i 1560540094000000000
-+ throughput environment=qa,region=us-east1,lower=10i 1560540094000000000
++ measurement,port=80,service=http field=123 1560540094000000000
 ```

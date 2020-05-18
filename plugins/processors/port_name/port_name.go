@@ -12,6 +12,15 @@ import (
 )
 
 var sampleConfig = `
+[[processors.port_name]]
+  ## Name of tag holding the port number
+  # tag = "port"
+
+  ## Name of output tag where service name will be added
+  # dest = "service"
+
+  ## Default tcp or udp
+  # default_protocol = "tcp"
 `
 
 type sMap map[string]map[int]string // "https" == services["tcp"][443]
