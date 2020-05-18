@@ -66,6 +66,9 @@ type Config struct {
 	Aggregators []*models.RunningAggregator
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors models.RunningProcessors
+
+	// State storage
+	State telegraf.State
 }
 
 func NewConfig() *Config {
@@ -77,6 +80,7 @@ func NewConfig() *Config {
 			FlushInterval:              internal.Duration{Duration: 10 * time.Second},
 			LogTarget:                  "file",
 			LogfileRotationMaxArchives: 5,
+			State:                      "",
 		},
 
 		Tags:          make(map[string]string),
@@ -170,6 +174,11 @@ type AgentConfig struct {
 
 	Hostname     string
 	OmitHostname bool
+
+	// If this is a non-empty string, then Telegraf will attempt to persist any
+	// state from state enabled plugins within the configured State store.
+	State          string `toml:"state"`
+	StateDirectory string `tomp:"state_directory"`
 }
 
 // Inputs returns a list of strings of the configured inputs.
@@ -321,6 +330,8 @@ var agentConfig = `
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
 
+  ## Should state from state enabled plugins be persisted?
+  # state = "json"
 `
 
 var outputHeader = `
