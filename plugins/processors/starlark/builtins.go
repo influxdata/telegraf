@@ -139,31 +139,21 @@ func dict_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tu
 		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
 	}
 
-	// Get the item
-	iter := b.Receiver().(starlark.Iterable).Iterate()
-	if iter == nil {
-		return starlark.None, fmt.Errorf("%s: couldn't get iterator", b.Name())
-	}
-	defer iter.Done()
+	recv := b.Receiver().(*MetricDataDict)
 
-	var item starlark.Value
-	if ok := iter.Next(&item); !ok {
-		return starlark.None, fmt.Errorf("%s: empty", b.Name())
+	if recv.data.Len() == 0 {
+		return nil, nameErr(b, "empty dict")
 	}
 
-	// Remove the item
-	tuple, ok := item.(starlark.Tuple)
-	if !ok || tuple.Len() != 2 {
-		return starlark.None, fmt.Errorf("%s: returned item is not a valid tuple", b.Name())
+	k := recv.data.GetIndex(0)
+	key := starlark.String(k)
+	v, _ := recv.data.Get(k)
+	recv.data.Remove(k)
+	value, err := asStarlarkValue(v)
+	if err != nil {
+		return nil, err
 	}
-
-	if _, found, err := b.Receiver().(Removeable).Delete(tuple[0]); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	} else if !found {
-		return starlark.None, fmt.Errorf("%s: key '%s' not found", b.Name(), tuple[0])
-	}
-
-	return item, nil
+	return starlark.Tuple{key, value}, nil
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·setdefault
@@ -259,4 +249,10 @@ func dict_set_tuple(recv starlark.HasSetKey, pair starlark.Tuple) error {
 	recv.SetKey(pair[0], pair[1])
 
 	return nil
+}
+
+// nameErr returns an error message of the form "name: msg"
+// where name is b.Name() and msg is a string or error.
+func nameErr(b *starlark.Builtin, msg interface{}) error {
+	return fmt.Errorf("%s: %v", b.Name(), msg)
 }

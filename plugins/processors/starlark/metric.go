@@ -85,6 +85,10 @@ func (m *Metric) SetField(name string, value starlark.Value) error {
 	case "time":
 		m.SetTime(value)
 		return nil
+	case "tags":
+		return errors.New("AttributeError: can't set tags")
+	case "fields":
+		return errors.New("AttributeError: can't set fields")
 	default:
 		return starlark.NoSuchAttrError(
 			fmt.Sprintf("cannot assign to field '%s'", name))
