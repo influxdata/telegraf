@@ -4,6 +4,7 @@ import (
 	"crypto/subtle"
 	"net"
 	"net/http"
+	"net/url"
 )
 
 type BasicAuthErrorFunc func(rw http.ResponseWriter)
@@ -94,4 +95,14 @@ func (h *ipRangeHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	h.onError(rw, http.StatusForbidden)
+}
+
+func OnClientError(client *http.Client, err error) {
+	// Close connection after a timeout error. If this is a HTTP2
+	// connection this ensures that next interval a new connection will be
+	// used and name lookup will be performed.
+	//   https://github.com/golang/go/issues/36026
+	if err, ok := err.(*url.Error); ok && err.Timeout() {
+		client.CloseIdleConnections()
+	}
 }
