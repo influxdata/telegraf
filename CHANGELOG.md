@@ -51,7 +51,9 @@
 #### Bugfixes
 
 - [#7412](https://github.com/influxdata/telegraf/pull/7412): Use same timestamp for all objects in arrays in the json parser.
-- [#7439](https://github.com/influxdata/telegraf/pull/7439): Handle multiple metrics with the same timestamp in dedup processor.
+- [#7343](https://github.com/influxdata/telegraf/issues/7343): Handle multiple metrics with the same timestamp in dedup processor.
+- [#5905](https://github.com/influxdata/telegraf/issues/5905): Fix reconnection of timed out HTTP2 connections influxdb outputs.
+- [#7468](https://github.com/influxdata/telegraf/issues/7468): Fix negative value parsing in impi_sensor input.
 
 ## v1.14.2 [2020-04-28]
 
