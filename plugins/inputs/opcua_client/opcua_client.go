@@ -94,8 +94,8 @@ endpoint = "opc.tcp://opcua.rocks:4840"
 #  ## with a context.
 timeout = 30
 #
-#  # Time Inteval, default = 100 * time.Millisecond
-#  # interval = "10000000"
+#  # Time Inteval, default = 10s
+interval = "1s"
 #
 #  # Security policy: None, Basic128Rsa15, Basic256, Basic256Sha256. Default: auto
 security_policy = "None"
@@ -137,6 +137,8 @@ func (o *OpcUA) SampleConfig() string {
 // Init will initialize all tags
 func (o *OpcUA) Init() error {
 	o.state = Disconnected
+
+	o.ctx = context.Background()
 
 	err := o.validateEndpoint()
 	if err != nil {
@@ -358,6 +360,7 @@ func disconnect(o *OpcUA) error {
 
 	switch u.Scheme {
 	case "opc.tcp":
+		o.state = Disconnected
 		o.client.Close()
 		return nil
 	default:
@@ -380,7 +383,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	o.state = Connected
 
 	err := o.getData()
-	if err != nil {
+	if err != nil && o.state == Connected {
 		o.state = Disconnected
 		disconnect(o)
 		return err
