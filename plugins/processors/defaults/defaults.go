@@ -3,6 +3,7 @@ package defaults
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"strings"
 )
 
 const sampleConfig = `
@@ -47,13 +48,21 @@ func (def *Defaults) Apply(inputMetrics ...telegraf.Metric) []telegraf.Metric {
 		for defField, defValue := range def.DefaultFieldsSets {
 			if maybeCurrent, isSet := metric.GetField(defField); !isSet {
 				metric.AddField(defField, defValue)
-			} else if maybeCurrent == "" || maybeCurrent == " " {
+			} else if trimmed, isStr := maybeTrimmedString(maybeCurrent); isStr && trimmed == "" {
 				metric.RemoveField(defField)
 				metric.AddField(defField, defValue)
 			}
 		}
 	}
 	return inputMetrics
+}
+
+func maybeTrimmedString(v interface{}) (string, bool) {
+	switch value := v.(type) {
+	case string:
+		return strings.TrimSpace(value), true
+	}
+	return "", false
 }
 
 func init() {

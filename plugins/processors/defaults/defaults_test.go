@@ -11,10 +11,10 @@ import (
 
 func TestDefaults(t *testing.T) {
 	scenarios := []struct {
-		name      string
+		name     string
 		defaults *Defaults
-		input     telegraf.Metric
-		expected  []telegraf.Metric
+		input    telegraf.Metric
+		expected []telegraf.Metric
 	}{
 		{
 			name: "Test that no values are changed since they are not nil or empty",
@@ -89,6 +89,7 @@ func TestDefaults(t *testing.T) {
 				DefaultFieldsSets: map[string]interface{}{
 					"max_clock_gz":  6,
 					"wind_feel":     "Unknown",
+					"fan_loudness":  "Inaudible",
 					"boost_enabled": false,
 				},
 			},
@@ -98,6 +99,7 @@ func TestDefaults(t *testing.T) {
 				map[string]interface{}{
 					"max_clock_gz": "",
 					"wind_feel":    " ",
+					"fan_loudness": "         ",
 				},
 				time.Unix(0, 0),
 			),
@@ -108,6 +110,7 @@ func TestDefaults(t *testing.T) {
 					map[string]interface{}{
 						"max_clock_gz":  6,
 						"wind_feel":     "Unknown",
+						"fan_loudness":  "Inaudible",
 						"boost_enabled": false,
 					},
 					time.Unix(0, 0),
