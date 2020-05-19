@@ -46,7 +46,7 @@
 - [#7446](https://github.com/influxdata/telegraf/issues/7446): Fix gzip support in socket_listener with tcp sockets.
 - [#7390](https://github.com/influxdata/telegraf/issues/7390): Fix interval drift when round_interval is set in agent.
 
-## v1.14.3 [unreleased]
+## v1.14.3 [2020-05-19]
 
 #### Bugfixes
 
