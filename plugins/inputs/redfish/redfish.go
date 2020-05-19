@@ -8,8 +8,8 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
+	"math"
 	"net/http"
-	//"strconv"
 )
 
 type Cpu struct {
@@ -53,7 +53,7 @@ type PowerStatus struct {
 }
 type volt struct {
 	Name         string
-	ReadingVolts int64
+	ReadingVolts float64
 	Status       VoltStatus
 }
 type VoltStatus struct {
@@ -213,7 +213,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			//  Tags
 			tags := map[string]string{}
 			tags["source_ip"] = r.Host
-			tags["name"] = j.Name //j.Name
+			tags["name"] = j.Name
 			tags["source"] = payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
@@ -223,11 +223,11 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["row"] = payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["power_input_watts"] = j.PowerInputWatts
-			fields["power_output_watts"] = j.PowerOutputWatts
-			fields["line_input_voltage"] = j.LineInputVoltage
-			fields["last_power_output_watts"] = j.LastPowerOutputWatts
-			fields["power_capacity_watts"] = j.PowerCapacityWatts
+			fields["power_input_watts"] = math.Round(j.PowerInputWatts*100) / 100
+			fields["power_output_watts"] = math.Round(j.PowerOutputWatts*100) / 100
+			fields["line_input_voltage"] = math.Round(j.LineInputVoltage*100) / 100
+			fields["last_power_output_watts"] = math.Round(j.LastPowerOutputWatts*100) / 100
+			fields["power_capacity_watts"] = math.Round(j.PowerCapacityWatts*100) / 100
 			acc.AddFields("redfish_power_powersupplies", fields, tags)
 		}
 		for _, j := range payload.Voltages {
@@ -244,7 +244,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["row"] = payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["voltage"] = j.ReadingVolts
+			fields["voltage"] = math.Round(j.ReadingVolts*100) / 100
 			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	} else {
@@ -284,13 +284,9 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["health"] = j.Status.Health
 			//  Fields
 			fields := make(map[string]interface{})
-			/* if (j.PowerInputWatts != 0){
-			        fields["power_input_watts"]  = j.PowerInputWatts
-			        fields["power_output_watts"] = j.PowerOutputWatts
-			}*/
-			fields["line_input_voltage"] = j.LineInputVoltage
-			fields["last_power_output_watts"] = j.LastPowerOutputWatts
-			fields["power_capacity_watts"] = j.PowerCapacityWatts
+			fields["line_input_voltage"] = math.Round(j.LineInputVoltage*100) / 100
+			fields["last_power_output_watts"] = math.Round(j.LastPowerOutputWatts*100) / 100
+			fields["power_capacity_watts"] = math.Round(j.PowerCapacityWatts*100) / 100
 			acc.AddFields("redfish_power_powersupplies", fields, tags)
 		}
 		for _, j := range payload.Voltages {
@@ -303,7 +299,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["health"] = j.Status.Health
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["voltage"] = j.ReadingVolts
+			fields["voltage"] = math.Round(j.ReadingVolts*100) / 100
 			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	}

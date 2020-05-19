@@ -497,7 +497,7 @@ func TestApis(t *testing.T) {
 				"state":      "Enabled",
 			},
 			map[string]interface{}{
-				"voltage": 1,
+				"voltage": 1.0,
 			},
 			time.Unix(0, 0),
 		),
@@ -515,7 +515,7 @@ func TestApis(t *testing.T) {
 				"state":      "Enabled",
 			},
 			map[string]interface{}{
-				"voltage": 1,
+				"voltage": 1.0,
 			},
 			time.Unix(0, 0),
 		),
@@ -534,7 +534,7 @@ func TestApis(t *testing.T) {
 				"state":      "Enabled",
 			},
 			map[string]interface{}{
-				"voltage": 1,
+				"voltage": 1.0,
 			},
 			time.Unix(0, 0),
 		),
