@@ -209,6 +209,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -311,7 +312,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
+	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
 		return err
 	}
@@ -322,13 +323,14 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 	}
 	defer reader.Close()
 
-	req, err := c.makeWriteRequest(url, reader)
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
 		return err
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -505,5 +507,5 @@ func makeQueryURL(loc *url.URL) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }
