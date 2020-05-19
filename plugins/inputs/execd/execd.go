@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -47,15 +46,14 @@ type Execd struct {
 	Signal       string
 	RestartDelay config.Duration
 
-	acc         telegraf.Accumulator
-	cmd         *exec.Cmd
-	parser      parsers.Parser
-	stdin       io.WriteCloser
-	stdout      io.ReadCloser
-	stderr      io.ReadCloser
-	cancel      context.CancelFunc
-	mainLoopWg  sync.WaitGroup
-	startDoneWg sync.WaitGroup
+	acc        telegraf.Accumulator
+	cmd        *exec.Cmd
+	parser     parsers.Parser
+	stdin      io.WriteCloser
+	stdout     io.ReadCloser
+	stderr     io.ReadCloser
+	cancel     context.CancelFunc
+	mainLoopWg sync.WaitGroup
 }
 
 func (e *Execd) SampleConfig() string {
@@ -86,8 +84,6 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	e.startDoneWg.Add(2) // stream reader synchronization
-
 	go func() {
 		if err := e.cmdLoop(ctx); err != nil {
 			log.Printf("Process quit with message: %s", err.Error())
@@ -100,7 +96,6 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 
 func (e *Execd) Stop() {
 	// don't try to stop before all stream readers have started.
-	e.startDoneWg.Wait()
 	e.cancel()
 	e.mainLoopWg.Wait()
 }
@@ -119,7 +114,7 @@ func (e *Execd) cmdLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			if e.stdin != nil {
 				e.stdin.Close()
-				internal.GracefulStop(e.cmd, 200*time.Millisecond)
+				gracefulStop(e.cmd, 200*time.Millisecond)
 			}
 			return nil
 		case err := <-done:
@@ -211,7 +206,6 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 
 	scanner := bufio.NewScanner(out)
 
-	e.startDoneWg.Done()
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
@@ -231,7 +225,6 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 func (e *Execd) cmdReadOutStream(out io.Reader) {
 	parser := influx.NewStreamParser(out)
 
-	e.startDoneWg.Done()
 	for {
 		metric, err := parser.Next()
 		if err != nil {
@@ -255,7 +248,6 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
-	e.startDoneWg.Done()
 	for scanner.Scan() {
 		log.Printf("stderr: %q", scanner.Text())
 	}

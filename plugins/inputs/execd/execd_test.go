@@ -82,7 +82,6 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			line := fmt.Sprintf("event message=\"%v\" 1587128639239000000", test.Value)
 
-			e.startDoneWg.Add(1)
 			e.cmdReadOut(strings.NewReader(line))
 
 			m := readChanWithTimeout(t, metrics, 1*time.Second)

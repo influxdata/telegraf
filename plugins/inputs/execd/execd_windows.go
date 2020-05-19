@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -30,4 +31,8 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func gracefulStop(cmd *exec.Cmd, timeout time.Duration) {
+	cmd.Process.Kill()
 }
