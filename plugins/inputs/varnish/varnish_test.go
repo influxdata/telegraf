@@ -192,7 +192,7 @@ MAIN.s_req                         0         0.00 Total requests seen
 MAIN.s_pipe                        0         0.00 Total pipe sessions seen
 MAIN.s_pass                        0         0.00 Total pass-ed requests seen
 MAIN.s_fetch                       0         0.00 Total backend fetches initiated
-MAIN.s_synth                       0         0.00 Total synthethic responses made
+MAIN.s_synth                       0         0.00 Total synthetic responses made
 MAIN.s_req_hdrbytes                0         0.00 Request header bytes
 MAIN.s_req_bodybytes               0         0.00 Request body bytes
 MAIN.s_resp_hdrbytes               0         0.00 Response header bytes

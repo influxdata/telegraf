@@ -226,7 +226,7 @@ func addAdminCoresStatusToAcc(acc telegraf.Accumulator, adminCoreStatus *AdminCo
 func addCoreMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
 	var coreMetrics map[string]Core
 	if len(mBeansData.SolrMbeans) < 2 {
-		return fmt.Errorf("no core metric data to unmarshall")
+		return fmt.Errorf("no core metric data to unmarshal")
 	}
 	if err := json.Unmarshal(mBeansData.SolrMbeans[1], &coreMetrics); err != nil {
 		return err
@@ -257,7 +257,7 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 	var queryMetrics map[string]QueryHandler
 
 	if len(mBeansData.SolrMbeans) < 4 {
-		return fmt.Errorf("no query handler metric data to unmarshall")
+		return fmt.Errorf("no query handler metric data to unmarshal")
 	}
 
 	if err := json.Unmarshal(mBeansData.SolrMbeans[3], &queryMetrics); err != nil {
@@ -332,7 +332,7 @@ func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansD
 	var updateMetrics map[string]UpdateHandler
 
 	if len(mBeansData.SolrMbeans) < 6 {
-		return fmt.Errorf("no update handler metric data to unmarshall")
+		return fmt.Errorf("no update handler metric data to unmarshal")
 	}
 	if err := json.Unmarshal(mBeansData.SolrMbeans[5], &updateMetrics); err != nil {
 		return err
@@ -410,7 +410,7 @@ func getInt(unk interface{}) int64 {
 // Add cache metrics section to accumulator
 func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
 	if len(mBeansData.SolrMbeans) < 8 {
-		return fmt.Errorf("no cache metric data to unmarshall")
+		return fmt.Errorf("no cache metric data to unmarshal")
 	}
 	var cacheMetrics map[string]Cache
 	if err := json.Unmarshal(mBeansData.SolrMbeans[7], &cacheMetrics); err != nil {

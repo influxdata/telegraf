@@ -21,7 +21,7 @@ It fetches its data from the [limits endpoint](https://developer.salesforce.com/
 
 ### Measurements & Fields:
 
-Salesforce provide one measurment named "salesforce".
+Salesforce provide one measurement named "salesforce".
 Each entry is converted to snake\_case and 2 fields are created.
 
 - \<key\>_max represents the limit threshold

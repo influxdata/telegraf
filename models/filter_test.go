@@ -97,7 +97,7 @@ func TestFilter_Empty(t *testing.T) {
 		"foo_bar",
 		"foo.bar",
 		"foo-bar",
-		"supercalifradjulisticexpialidocious",
+		"supercalifragilisticexpialidocious",
 	}
 
 	for _, measurement := range measurements {

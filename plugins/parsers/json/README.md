@@ -46,7 +46,7 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## metric.
   json_time_key = ""
 
-  ## Time format is the time layout that should be used to interprete the json_time_key.
+  ## Time format is the time layout that should be used to interpret the json_time_key.
   ## The time must be `unix`, `unix_ms`, `unix_us`, `unix_ns`, or a time in the
   ## "reference time".  To define a different format, arrange the values from
   ## the "reference time" in the example to match the format you will be

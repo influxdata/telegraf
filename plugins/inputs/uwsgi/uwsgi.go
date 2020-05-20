@@ -42,7 +42,7 @@ func (u *Uwsgi) SampleConfig() string {
   ## servers = ["tcp://localhost:5050", "http://localhost:1717", "unix:///tmp/statsock"]
   servers = ["tcp://127.0.0.1:1717"]
 
-  ## General connection timout
+  ## General connection timeout
   # timeout = "5s"
 `
 }

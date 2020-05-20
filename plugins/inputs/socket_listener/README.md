@@ -82,7 +82,7 @@ setting.
 
 Instructions on how to adjust these OS settings are available below.
 
-Some OSes (most notably, Linux) place very restricive limits on the performance
+Some OSes (most notably, Linux) place very restrictive limits on the performance
 of UDP protocols. It is _highly_ recommended that you increase these OS limits to
 at least 8MB before trying to run large amounts of UDP traffic to your instance.
 8MB is just a recommendation, and can be adjusted higher.

@@ -51,7 +51,7 @@ var sampleConfig = `
   template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
-  ## Display Communcation to Instrumental
+  ## Display Communication to Instrumental
   debug = false
 `
 

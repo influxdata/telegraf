@@ -666,7 +666,7 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     else:
                         if package_type == 'rpm' and release and '~' in package_version:
                             package_version, suffix = package_version.split('~', 1)
-                            # The ~ indicatees that this is a prerelease so we give it a leading 0.
+                            # The ~ indicates that this is a prerelease so we give it a leading 0.
                             package_iteration = "0.%s" % suffix
                         fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
                             fpm_common_args,
@@ -892,7 +892,7 @@ if __name__ == '__main__':
                         help='Send build stats to InfluxDB using provided database name')
     parser.add_argument('--nightly',
                         action='store_true',
-                        help='Mark build output as nightly build (will incremement the minor version)')
+                        help='Mark build output as nightly build (will increment the minor version)')
     parser.add_argument('--update',
                         action='store_true',
                         help='Update build dependencies prior to building')
