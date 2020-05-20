@@ -2,28 +2,28 @@ package testutil
 
 import "github.com/influxdata/telegraf"
 
-type testStreamingAccumulator struct {
+type testMetricStream struct {
 	queue                     []telegraf.Metric
 	ProcessedMetrics          []telegraf.Metric
 	closeStreamWhenQueueEmpty bool
 }
 
-func NewTestStreamingAccumulator(closeOnEmpty bool) *testStreamingAccumulator {
-	return &testStreamingAccumulator{
+func NewTestMetricStream(closeOnEmpty bool) *testMetricStream {
+	return &testMetricStream{
 		queue:                     []telegraf.Metric{},
 		closeStreamWhenQueueEmpty: closeOnEmpty,
 	}
 }
 
-func (a *testStreamingAccumulator) Enqueue(m ...telegraf.Metric) {
+func (a *testMetricStream) Enqueue(m ...telegraf.Metric) {
 	a.queue = append(a.queue, m...)
 }
 
-func (a *testStreamingAccumulator) PassMetric(m telegraf.Metric) {
+func (a *testMetricStream) PassMetric(m telegraf.Metric) {
 	a.ProcessedMetrics = append(a.ProcessedMetrics, m)
 }
 
-func (a *testStreamingAccumulator) GetNextMetric() telegraf.Metric {
+func (a *testMetricStream) GetNextMetric() telegraf.Metric {
 	if !a.IsMetricAvailable() {
 		return nil
 	}
@@ -32,11 +32,11 @@ func (a *testStreamingAccumulator) GetNextMetric() telegraf.Metric {
 	return m
 }
 
-func (a *testStreamingAccumulator) IsMetricAvailable() bool {
+func (a *testMetricStream) IsMetricAvailable() bool {
 	return len(a.queue) > 0
 }
 
-func (a *testStreamingAccumulator) IsStreamClosed() bool {
+func (a *testMetricStream) IsStreamClosed() bool {
 	// approximate queue closure here if we need to.
 	if a.closeStreamWhenQueueEmpty {
 		return len(a.queue) == 0

@@ -479,6 +479,8 @@ func (a *Agent) gatherOnce(
 // configured order. As input channels are closed, processors finish up their
 // work and then close their downstream channel, letting downstream processors
 // finish up, etc.
+// runProcessors exits when all processors have exited their Start() function.
+// To trigger processors to close, close the main src input channel.
 func (a *Agent) runProcessors(
 	src <-chan telegraf.Metric,
 	dest chan<- telegraf.Metric,
@@ -501,8 +503,8 @@ func (a *Agent) runProcessors(
 			out chan<- telegraf.Metric,
 			rp *models.RunningProcessor,
 		) {
-			acc := NewStreamingAccumulator(in, out)
-			acc = models.NewStreamingAccumulatorWrapper(acc, rp.ApplyFilters)
+			acc := NewMetricStream(in, out)
+			acc = models.NewMetricStreamWrapper(acc, rp.ApplyFilters)
 
 			if err := rp.Start(acc); err != nil {
 				log.Printf("E! [%s] Error running processor: %v", rp.Config.Name, err)

@@ -158,9 +158,9 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			}
 			rp.Config.Filter.Compile()
 
-			acc := testutil.NewTestStreamingAccumulator(true)
+			acc := testutil.NewTestMetricStream(true)
 			acc.Enqueue(tt.input...)
-			sa := NewStreamingAccumulatorWrapper(acc, rp.ApplyFilters)
+			sa := NewMetricStreamWrapper(acc, rp.ApplyFilters)
 			err := rp.Start(sa)
 			require.NoError(t, err)
 

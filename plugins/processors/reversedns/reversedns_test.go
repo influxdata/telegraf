@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -29,7 +30,7 @@ func TestSimpleReverseLookup(t *testing.T) {
 			Dest: "dest_name",
 		},
 	}
-	acc := testutil.NewTestStreamingAccumulator(true)
+	acc := testutil.NewTestMetricStream(true)
 	acc.Enqueue(m)
 	go dns.Start(acc)
 
@@ -46,4 +47,12 @@ func TestSimpleReverseLookup(t *testing.T) {
 	tag, ok := processedMetric.GetTag("dest_name")
 	require.True(t, ok)
 	require.EqualValues(t, "dns.google.", tag)
+}
+
+func TestLoadingConfig(t *testing.T) {
+	c := config.NewConfig()
+	err := c.LoadConfigData([]byte(sampleConfig))
+	require.NoError(t, err)
+
+	require.Len(t, c.Processors, 1)
 }

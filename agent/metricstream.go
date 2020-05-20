@@ -6,53 +6,53 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-// streamingAccumulator implements the StreamingAccumulator interface
-type streamingAccumulator struct {
-	sync.Locker
+// metricStream implements the MetricStream interface
+type metricStream struct {
+	l sync.Mutex
 
 	// in pipe is closed and there are no more pending messages if this is true.
-	inClosed bool
+	inChClosed bool
 
 	cachedMetric telegraf.Metric
 	in           <-chan telegraf.Metric
 	out          chan<- telegraf.Metric
 }
 
-// NewStreamingAccumulator creates a new streaming accumulator that is safe to
+// NewMetricStream creates a new streaming accumulator that is safe to
 // use across multiple goroutines. It conceptually wraps a incoming and outgoing
 // channels so that the user doesn't have to deal with them directly.
 // It also handles metric filtering and modifications so that plugins don't need
 // to deal with it.
-func NewStreamingAccumulator(
+func NewMetricStream(
 	inMetrics <-chan telegraf.Metric,
 	outMetrics chan<- telegraf.Metric,
-) telegraf.StreamingAccumulator {
-	return &streamingAccumulator{
+) telegraf.MetricStream {
+	return &metricStream{
 		in:  inMetrics,
 		out: outMetrics,
 	}
 }
 
-func (sa *streamingAccumulator) PassMetric(m telegraf.Metric) {
+func (sa *metricStream) PassMetric(m telegraf.Metric) {
 	sa.out <- m
 }
 
 // GetNextMetric returns a metric or blocks until one is available.
-func (sa *streamingAccumulator) GetNextMetric() telegraf.Metric {
-	sa.Lock()
+func (sa *metricStream) GetNextMetric() telegraf.Metric {
+	sa.l.Lock()
 	if sa.cachedMetric != nil {
 		m := sa.cachedMetric
 		sa.cachedMetric = nil
-		sa.Unlock()
+		sa.l.Unlock()
 		return m
 	}
-	sa.Unlock()
+	sa.l.Unlock()
 
 	m, ok := <-sa.in
 	if !ok {
-		sa.Lock()
-		sa.inClosed = true
-		sa.Unlock()
+		sa.l.Lock()
+		sa.inChClosed = true
+		sa.l.Unlock()
 		return nil
 	}
 	return m
@@ -60,20 +60,21 @@ func (sa *streamingAccumulator) GetNextMetric() telegraf.Metric {
 
 // IsMetricAvailable returns true if a metric is available to be read.
 // it returns false if GetNextMetric would block or if the stream is closed
-func (sa *streamingAccumulator) IsMetricAvailable() bool {
-	sa.Lock()
-	defer sa.Unlock()
+func (sa *metricStream) IsMetricAvailable() bool {
+	sa.l.Lock()
+	defer sa.l.Unlock()
 	if sa.cachedMetric != nil {
 		return true
 	}
-	if sa.inClosed {
+	if sa.inChClosed {
 		return false
 	}
 
 	select {
 	case m, ok := <-sa.in:
 		if !ok {
-			sa.inClosed = true
+			sa.inChClosed = true
+			return false
 		}
 		sa.cachedMetric = m
 		return true
@@ -84,8 +85,8 @@ func (sa *streamingAccumulator) IsMetricAvailable() bool {
 
 // IsStreamClosed returns true when the stream is closed and there are no more
 // metrics to read.
-func (sa *streamingAccumulator) IsStreamClosed() bool {
-	sa.Lock()
-	defer sa.Unlock()
-	return sa.cachedMetric == nil && sa.inClosed
+func (sa *metricStream) IsStreamClosed() bool {
+	sa.l.Lock()
+	defer sa.l.Unlock()
+	return sa.cachedMetric == nil && sa.inChClosed
 }

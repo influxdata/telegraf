@@ -207,7 +207,7 @@ func TestConfig_FieldNotDefined(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/invalid_field.toml")
 	require.Error(t, err, "invalid field name")
-	assert.Equal(t, "Error parsing ./testdata/invalid_field.toml, line 2: field corresponding to `not_a_field' is not defined in http_listener_v2.HTTPListenerV2", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/invalid_field.toml, Error parsing http_listener_v2, line 2: field corresponding to `not_a_field' is not defined in http_listener_v2.HTTPListenerV2", err.Error())
 
 }
 
@@ -215,12 +215,12 @@ func TestConfig_WrongFieldType(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 2: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, Error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	assert.Equal(t, "Error parsing ./testdata/wrong_field_type2.toml, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/wrong_field_type2.toml, Error parsing http_listener_v2, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
 }
 
 func TestConfig_InlineTables(t *testing.T) {
@@ -255,5 +255,5 @@ func TestConfig_BadOrdering(t *testing.T) {
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")
-	assert.Equal(t, "Error parsing ./testdata/non_slice_slice.toml, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/non_slice_slice.toml, Error parsing http array, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }

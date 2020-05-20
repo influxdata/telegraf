@@ -682,9 +682,17 @@ func (c *Config) LoadConfig(path string) error {
 		return fmt.Errorf("Error loading %s, %s", path, err)
 	}
 
+	if err = c.LoadConfigData(data); err != nil {
+		return fmt.Errorf("Error parsing %s, %s", path, err)
+	}
+	return nil
+}
+
+// LoadConfigData loads TOML-formatted config data
+func (c *Config) LoadConfigData(data []byte) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
-		return fmt.Errorf("Error parsing %s, %s", path, err)
+		return fmt.Errorf("Error parsing data: %s", err)
 	}
 
 	// Parse tags tables first:
@@ -692,11 +700,11 @@ func (c *Config) LoadConfig(path string) error {
 		if val, ok := tbl.Fields[tableName]; ok {
 			subTable, ok := val.(*ast.Table)
 			if !ok {
-				return fmt.Errorf("%s: invalid configuration", path)
+				return fmt.Errorf("invalid configuration, bad table name %q", tableName)
 			}
 			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("E! Could not parse [global_tags] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
+				return fmt.Errorf("Error parsing  table name %q: %s", tableName, err)
 			}
 		}
 	}
@@ -705,11 +713,11 @@ func (c *Config) LoadConfig(path string) error {
 	if val, ok := tbl.Fields["agent"]; ok {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return fmt.Errorf("%s: invalid configuration", path)
+			return fmt.Errorf("invalid configuration, error parsing agent table")
 		}
 		if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			log.Printf("E! Could not parse [agent] config\n")
-			return fmt.Errorf("Error parsing %s, %s", path, err)
+			return fmt.Errorf("Error parsing agent table: %s", err)
 		}
 	}
 
@@ -730,7 +738,7 @@ func (c *Config) LoadConfig(path string) error {
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return fmt.Errorf("%s: invalid configuration", path)
+			return fmt.Errorf("invalid configuration, error parsing field %q as table", name)
 		}
 
 		switch name {
@@ -741,17 +749,17 @@ func (c *Config) LoadConfig(path string) error {
 				// legacy [outputs.influxdb] support
 				case *ast.Table:
 					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
-						return fmt.Errorf("Error parsing %s, %s", path, err)
+						return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addOutput(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s array, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		case "inputs", "plugins":
@@ -760,17 +768,17 @@ func (c *Config) LoadConfig(path string) error {
 				// legacy [inputs.cpu] support
 				case *ast.Table:
 					if err = c.addInput(pluginName, pluginSubTable); err != nil {
-						return fmt.Errorf("Error parsing %s, %s", path, err)
+						return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addInput(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		case "processors":
@@ -779,12 +787,12 @@ func (c *Config) LoadConfig(path string) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addProcessor(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		case "aggregators":
@@ -793,19 +801,19 @@ func (c *Config) LoadConfig(path string) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addAggregator(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
 			if err = c.addInput(name, subTable); err != nil {
-				return fmt.Errorf("Error parsing %s, %s", path, err)
+				return fmt.Errorf("Error parsing %s, %s", name, err)
 			}
 		}
 	}
@@ -920,18 +928,11 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 }
 
 func (c *Config) addProcessor(name string, table *ast.Table) error {
-	creator1, ok1 := processors.Processors[name]
-	creator2, ok2 := processors.StreamingProcessors[name]
-	if !ok1 && !ok2 {
+	creator, ok := processors.Processors[name]
+	if !ok {
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
-	var processor telegraf.PluginDescriber
-	if ok1 {
-		processor = creator1()
-	}
-	if ok2 {
-		processor = creator2()
-	}
+	processor := creator()
 
 	processorConfig, err := buildProcessor(name, table)
 	if err != nil {
