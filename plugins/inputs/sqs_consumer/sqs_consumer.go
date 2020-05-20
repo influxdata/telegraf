@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -18,10 +19,11 @@ type empty struct{}
 type semaphore chan empty
 
 const (
-	defaultMaxNumberOfMessages    = 10
-	defaultWaitTimeSeconds        = 20
-	defaultDeleteBatchSIze        = 0
-	defaultMaxUndeliveredMessages = 1000
+	defaultMaxNumberOfMessages     = 10
+	defaultWaitTimeSeconds         = 20
+	defaultDeleteBatchSize         = 0
+	defaultDeleteBatchFlushSeconds = 30
+	defaultMaxUndeliveredMessages  = 1000
 )
 
 type SQSConsumer struct {
@@ -38,10 +40,11 @@ type SQSConsumer struct {
 	QueueOwnerAccountID string `toml:"queue_owner_acount_id"`
 	QueueURL            string `toml:"queue_url"`
 
-	MaxNumberOfMessages int `toml:"max_number_of_messages"`
-	VisibilityTimeout   int `toml:"visibility_timeout"`
-	WaitTimeSeconds     int `toml:"wait_time_seconds"`
-	DeleteBatchSize     int `toml:"delete_batch_size"`
+	MaxNumberOfMessages     int `toml:"max_number_of_messages"`
+	VisibilityTimeout       int `toml:"visibility_timeout"`
+	WaitTimeSeconds         int `toml:"wait_time_seconds"`
+	DeleteBatchSize         int `toml:"delete_batch_size"`
+	DeleteBatchFlushSeconds int `toml:"delete_batch_flush_seconds"`
 
 	MaxMessageLen          int `toml:"max_message_len"`
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
@@ -62,12 +65,26 @@ type SQSConsumer struct {
 	deliveries map[telegraf.TrackingID]*sqs.Message
 }
 
+type ticker struct {
+	period time.Duration
+	ticker time.Ticker
+}
+
+func createTicker(period time.Duration) *ticker {
+	return &ticker{period, *time.NewTicker(period)}
+}
+
+func (t *ticker) resetTicker() {
+	t.ticker.Stop()
+	t.ticker = *time.NewTicker(t.period)
+}
+
 func (s *SQSConsumer) Description() string {
 	return "Read metrics from AWS SQS"
 }
 
 func (s *SQSConsumer) SampleConfig() string {
-	return fmt.Sprintf(sampleConfig, defaultMaxNumberOfMessages, defaultWaitTimeSeconds, defaultDeleteBatchSIze, defaultMaxUndeliveredMessages)
+	return fmt.Sprintf(sampleConfig, defaultMaxNumberOfMessages, defaultWaitTimeSeconds, defaultDeleteBatchSize, defaultDeleteBatchFlushSeconds, defaultMaxUndeliveredMessages)
 }
 
 // Gather does nothing for this service input.
@@ -207,6 +224,7 @@ func (s *SQSConsumer) receive(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
+			s.Log.Debugf("recieving messages from %s", s.QueueURL)
 			resp, err := s.sqs.ReceiveMessage(&input)
 			if err != nil {
 				s.acc.AddError(fmt.Errorf("receiver for queue %s recieved an error: %v", s.QueueURL, err))
@@ -241,6 +259,9 @@ func (s *SQSConsumer) handleDeletes(ctx context.Context) {
 	var err error
 	var entriesBuffer []*sqs.DeleteMessageBatchRequestEntry
 
+	batchTicker := createTicker(time.Duration(s.DeleteBatchFlushSeconds) * time.Second)
+	defer batchTicker.ticker.Stop()
+
 	// TODO: add ticker to flush buffer when there were no new messages for some time
 	for {
 		select {
@@ -256,6 +277,8 @@ func (s *SQSConsumer) handleDeletes(ctx context.Context) {
 			}
 			return
 		case msg := <-s.delete:
+			batchTicker.resetTicker()
+
 			entry := sqs.DeleteMessageBatchRequestEntry{
 				Id:            msg.MessageId,
 				ReceiptHandle: msg.ReceiptHandle,
@@ -264,18 +287,30 @@ func (s *SQSConsumer) handleDeletes(ctx context.Context) {
 			// TODO: switch to map to handle redelivered messages
 			entriesBuffer = append(entriesBuffer, &entry)
 			s.Log.Debugf("%s queue delete buffer fullness: %d / %d messages", s.QueueURL, len(entriesBuffer), s.DeleteBatchSize)
-		}
 
-		if v := len(entriesBuffer); v == s.DeleteBatchSize {
-			s.Log.Debugf("processign deletion of %d messages from queue %s...", v, s.QueueURL)
+			if v := len(entriesBuffer); v == s.DeleteBatchSize {
+				s.Log.Debugf("processign deletion of %d messages from queue %s...", v, s.QueueURL)
 
-			input.Entries = entriesBuffer
-			_, err = s.sqs.DeleteMessageBatch(input)
-			if err != nil {
-				s.acc.AddError(fmt.Errorf("failed deleting messages from queue %s: %v", s.QueueURL, err))
+				input.Entries = entriesBuffer
+				_, err = s.sqs.DeleteMessageBatch(input)
+				if err != nil {
+					s.acc.AddError(fmt.Errorf("failed deleting messages from queue %s: %v", s.QueueURL, err))
+				}
+
+				entriesBuffer = []*sqs.DeleteMessageBatchRequestEntry{}
 			}
+		case <-batchTicker.ticker.C:
+			if v := len(entriesBuffer); v > 0 {
+				s.Log.Debugf("flushing %d messages from queue delete batch %s...", v, s.QueueURL)
 
-			entriesBuffer = []*sqs.DeleteMessageBatchRequestEntry{}
+				input.Entries = entriesBuffer
+				_, err = s.sqs.DeleteMessageBatch(input)
+				if err != nil {
+					s.acc.AddError(fmt.Errorf("failed deleting messages from queue %s: %v", s.QueueURL, err))
+				}
+
+				entriesBuffer = []*sqs.DeleteMessageBatchRequestEntry{}
+			}
 		}
 	}
 }
@@ -316,6 +351,7 @@ func (s *SQSConsumer) deleteMessage(msg *sqs.Message) error {
 			ReceiptHandle: msg.ReceiptHandle,
 		}
 
+		s.Log.Debugf("deleting message from %s", s.QueueURL)
 		_, err = s.sqs.DeleteMessage(&input)
 		if err != nil {
 			return err
@@ -330,10 +366,11 @@ func (s *SQSConsumer) deleteMessage(msg *sqs.Message) error {
 func init() {
 	inputs.Add("sqs_consumer", func() telegraf.Input {
 		return &SQSConsumer{
-			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-			MaxNumberOfMessages:    defaultMaxNumberOfMessages,
-			WaitTimeSeconds:        defaultWaitTimeSeconds,
-			DeleteBatchSize:        defaultDeleteBatchSIze,
+			MaxUndeliveredMessages:  defaultMaxUndeliveredMessages,
+			MaxNumberOfMessages:     defaultMaxNumberOfMessages,
+			WaitTimeSeconds:         defaultWaitTimeSeconds,
+			DeleteBatchSize:         defaultDeleteBatchSize,
+			DeleteBatchFlushSeconds: defaultDeleteBatchFlushSeconds,
 		}
 	})
 }
@@ -387,6 +424,10 @@ const sampleConfig = `
   ## Optional. When > 1 messages will be deleted from a queue in batches of provided size.
   ## Defaults to %d
   # delete_batch_size = 10
+
+  ## Optional. If batch delete is enabled - flush messages
+  ## Set this equal to or lower then your visibility timeout. Defaults to %d
+  # delete_batch_flush_seconds = 30
 
   ## Optional. Maximum byte length of a message to consume.
   ## Larger messages are dropped with an error. If less than 0 or unspecified,

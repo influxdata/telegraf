@@ -57,6 +57,10 @@ using one of the supported [input data formats](/docs/DATA_FORMATS_INPUT.md).
   ## Defaults to 0
   # delete_batch_size = 10
 
+  ## Optional. If batch delete is enabled - flush messages
+  ## Set this equal to or lower then your visibility timeout. Defaults to 30
+  # delete_batch_flush_seconds = 30
+
   ## Optional. Maximum byte length of a message to consume.
   ## Larger messages are dropped with an error. If less than 0 or unspecified,
   ## treated as no limit.
