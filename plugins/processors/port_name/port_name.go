@@ -83,6 +83,7 @@ func readServices(r io.Reader) sMap {
 			continue
 		}
 		proto := portProtoSlice[1] // "tcp"
+		proto = strings.ToLower(proto)
 
 		protoMap, ok := services[proto]
 		if !ok {
@@ -126,6 +127,7 @@ func (d *PortName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		if l > 1 && len(portProtoSlice[1]) > 0 {
 			proto = portProtoSlice[1]
 		}
+		proto = strings.ToLower(proto)
 
 		protoMap, ok := services[proto]
 		if !ok {
