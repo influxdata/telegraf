@@ -626,10 +626,10 @@ SET @SQL = N'SELECT	DISTINCT
                              OR RTRIM(spi.object_name) LIKE ''%:Advanced Analytics'')
                              AND TRY_CONVERT(uniqueidentifier, spi.instance_name) 
 							 IS NOT NULL -- for cloud only
-                       THEN d.name
- 			WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
+                THEN ISNULL(d.name,RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
+			  WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
 				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
-			THEN d.name + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
+			THEN ISNULL(d.name,RTRIM(spi.instance_name)) + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
                        ELSE RTRIM(spi.instance_name)
                 END AS instance_name,'
 		ELSE 'RTRIM(spi.instance_name) as instance_name, '
