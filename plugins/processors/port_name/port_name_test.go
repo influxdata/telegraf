@@ -188,6 +188,32 @@ func TestTable(t *testing.T) {
 			},
 		},
 		{
+			name: "unknown port",
+			tag:  "port",
+			dest: "service",
+			prot: "tcp",
+			input: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{
+						"port": "9999",
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric(
+					"meas",
+					map[string]string{
+						"port": "9999",
+					},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "don't mix up protocols",
 			tag:  "port",
 			dest: "service",
@@ -224,6 +250,7 @@ func TestTable(t *testing.T) {
 				SourceTag:       tt.tag,
 				DestTag:         tt.dest,
 				DefaultProtocol: tt.prot,
+				Log:             testutil.Logger{},
 			}
 
 			actual := p.Apply(tt.input...)

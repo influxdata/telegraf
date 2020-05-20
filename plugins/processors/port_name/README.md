@@ -21,5 +21,6 @@ Tag can contain a number ("80") or number and protocol separated by slash ("443/
 ### Example
 
 ```diff
+- measurement,port=80 field=123 1560540094000000000
 + measurement,port=80,service=http field=123 1560540094000000000
 ```

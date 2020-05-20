@@ -4,8 +4,9 @@ package portname
 
 import (
 	"os"
+	"path/filepath"
 )
 
 func servicesPath() string {
-	return os.Getenv("WINDIR") + `\system32\drivers\etc\services`
+	return filepath.Join(os.Getenv("WINDIR"), `system32\drivers\etc\services`)
 }
