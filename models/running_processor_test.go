@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,7 @@ func TagProcessor(key, value string) *MockProcessor {
 
 func TestRunningProcessor_Apply(t *testing.T) {
 	type args struct {
-		Processor telegraf.Processor
+		Processor telegraf.StreamingProcessor
 		Config    *ProcessorConfig
 	}
 
@@ -56,7 +57,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 		{
 			name: "inactive filter applies metrics",
 			args: args{
-				Processor: TagProcessor("apply", "true"),
+				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
 				Config: &ProcessorConfig{
 					Filter: Filter{},
 				},
@@ -87,7 +88,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 		{
 			name: "filter applies",
 			args: args{
-				Processor: TagProcessor("apply", "true"),
+				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
 				Config: &ProcessorConfig{
 					Filter: Filter{
 						NamePass: []string{"cpu"},
@@ -120,7 +121,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 		{
 			name: "filter doesn't apply",
 			args: args{
-				Processor: TagProcessor("apply", "true"),
+				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
 				Config: &ProcessorConfig{
 					Filter: Filter{
 						NameDrop: []string{"cpu"},

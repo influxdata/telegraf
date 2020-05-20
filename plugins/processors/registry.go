@@ -20,6 +20,6 @@ func AddStreaming(name string, creator StreamingCreator) {
 
 func upgradeToStreamingProcessor(oldCreator Creator) StreamingCreator {
 	return func() telegraf.StreamingProcessor {
-		return telegraf.NewProcessorWrapper(oldCreator())
+		return NewStreamingProcessorFromProcessor(oldCreator())
 	}
 }
