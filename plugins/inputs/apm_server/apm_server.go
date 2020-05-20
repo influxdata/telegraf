@@ -29,11 +29,12 @@ import (
 
 // APM Server is a input plugin that listens for requests sent by Elastic APM Agents.
 type APMServer struct {
-	ServiceAddress    string            `toml:"service_address"`
-	IdleTimeout       internal.Duration `toml:"idle_timeout"`
-	ReadTimeout       internal.Duration `toml:"read_timeout"`
-	WriteTimeout      internal.Duration `toml:"write_timeout"`
-	EventTypeSeparate bool              `toml:"event_type_separate"`
+	ServiceAddress            string            `toml:"service_address"`
+	IdleTimeout               internal.Duration `toml:"idle_timeout"`
+	ReadTimeout               internal.Duration `toml:"read_timeout"`
+	WriteTimeout              internal.Duration `toml:"write_timeout"`
+	EventTypeSeparate         bool              `toml:"event_type_separate"`
+	DropUnsampledTransactions bool              `toml:"drop_unsampled_transactions"`
 
 	ExcludeEventTypes []string `toml:"exclude_events"`
 	//customize json -> line protocol mapping
@@ -81,6 +82,8 @@ func (s *APMServer) SampleConfig() string {
   exclude = ["exception_stacktrace_*", "log_stacktrace_*"]
   ## store selected fields as tags 
   # tag_keys =["my_tag_1", "my_tag_2" ]
+  ## ignore unsampled transactions (affected by "transaction_sample_rate" agent settings) 
+  drop_unsampled_transactions = false
 `
 }
 
@@ -297,6 +300,11 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 			if err := f.FullFlattenJSON("", event.(map[string]interface{})[eventType], true, true); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
+			}
+
+			//skip transactions that are not sampled
+			if eventType == "transaction" && f.Fields["sampled"] == false {
+				continue
 			}
 
 			for k := range f.Fields {
