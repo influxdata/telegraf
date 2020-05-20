@@ -130,7 +130,7 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 
 	if tlsConfig.MinVersion != 0 && tlsConfig.MaxVersion != 0 && tlsConfig.MinVersion > tlsConfig.MaxVersion {
 		return nil, fmt.Errorf(
-			"tls min version %q can't be greater then tls max version %q", tlsConfig.MinVersion, tlsConfig.MaxVersion)
+			"tls min version %q can't be greater than tls max version %q", tlsConfig.MinVersion, tlsConfig.MaxVersion)
 	}
 
 	return tlsConfig, nil

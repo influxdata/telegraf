@@ -31,7 +31,7 @@ var sampleConfig = `
 
   ## Use batch serialization format instead of line based delimiting.  The
   ## batch format allows for the production of non line based output formats and
-  ## may more effiently encode metric groups.
+  ## may more efficiently encode metric groups.
   # use_batch_format = false
 
   ## The file will be rotated after the time interval specified.  When set

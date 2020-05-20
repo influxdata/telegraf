@@ -1,9 +1,10 @@
 package dedup
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -151,4 +152,43 @@ func TestCacheShrink(t *testing.T) {
 	deduplicate.Apply(source)
 
 	require.Equal(t, 0, len(deduplicate.Cache))
+}
+
+func TestSameTimestamp(t *testing.T) {
+	now := time.Now()
+	dedup := createDedup(now)
+	var in telegraf.Metric
+	var out []telegraf.Metric
+
+	in, _ = metric.New("metric",
+		map[string]string{"tag": "value"},
+		map[string]interface{}{"foo": 1}, // field
+		now,
+	)
+	out = dedup.Apply(in)
+	require.Equal(t, []telegraf.Metric{in}, out) // pass
+
+	in, _ = metric.New("metric",
+		map[string]string{"tag": "value"},
+		map[string]interface{}{"bar": 1}, // different field
+		now,
+	)
+	out = dedup.Apply(in)
+	require.Equal(t, []telegraf.Metric{in}, out) // pass
+
+	in, _ = metric.New("metric",
+		map[string]string{"tag": "value"},
+		map[string]interface{}{"bar": 2}, // same field different value
+		now,
+	)
+	out = dedup.Apply(in)
+	require.Equal(t, []telegraf.Metric{in}, out) // pass
+
+	in, _ = metric.New("metric",
+		map[string]string{"tag": "value"},
+		map[string]interface{}{"bar": 2}, // same field same value
+		now,
+	)
+	out = dedup.Apply(in)
+	require.Equal(t, []telegraf.Metric{}, out) // drop
 }

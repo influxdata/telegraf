@@ -137,7 +137,7 @@ func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 	}, nil
 }
 
-// seperate the client as dependency to use httptest Client for mocking
+// separate the client as dependency to use httptest Client for mocking
 func (j *Jenkins) initialize(client *http.Client) error {
 	var err error
 

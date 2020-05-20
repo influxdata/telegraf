@@ -46,7 +46,7 @@ When the [internal][] input is enabled:
 
 + internal_github
   - tags:
-    - access_token - An obfusticated reference to the configured access token or "Unauthenticated"
+    - access_token - An obfuscated reference to the configured access token or "Unauthenticated"
   - fields:
     - limit - How many requests you are limited to (per hour)
     - remaining - How many requests you have remaining (per hour)

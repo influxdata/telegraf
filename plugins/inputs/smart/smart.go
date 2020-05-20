@@ -105,7 +105,7 @@ var (
 		"Available Spare": {
 			Name: "Available_Spare",
 			Parse: func(fields, deviceFields map[string]interface{}, str string) error {
-				return parseCommaSeperatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
+				return parseCommaSeparatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
 			},
 		},
 	}
@@ -360,7 +360,7 @@ func gatherDisk(acc telegraf.Accumulator, timeout internal.Duration, usesudo, co
 						tags["id"] = attr.ID
 					}
 
-					parse := parseCommaSeperatedInt
+					parse := parseCommaSeparatedInt
 					if attr.Parse != nil {
 						parse = attr.Parse
 					}
@@ -421,7 +421,7 @@ func parseInt(str string) int64 {
 	return 0
 }
 
-func parseCommaSeperatedInt(fields, _ map[string]interface{}, str string) error {
+func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error {
 	i, err := strconv.ParseInt(strings.Replace(str, ",", "", -1), 10, 64)
 	if err != nil {
 		return err

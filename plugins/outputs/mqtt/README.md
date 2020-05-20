@@ -53,7 +53,7 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 ### Optional parameters:
 * `username`: The username to connect MQTT server.
 * `password`: The password to connect MQTT server.
-* `client_id`: The unique client id to connect MQTT server. If this paramater is not set then a random ID is generated.
+* `client_id`: The unique client id to connect MQTT server. If this parameter is not set then a random ID is generated.
 * `timeout`: Timeout for write operations. default: 5s
 * `tls_ca`: TLS CA
 * `tls_cert`: TLS CERT

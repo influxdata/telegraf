@@ -225,7 +225,7 @@ func TestServerConfig(t *testing.T) {
 			expErr: true,
 		},
 		{
-			name: "TLS Max Version less then TLS Min version",
+			name: "TLS Max Version less than TLS Min version",
 			server: tls.ServerConfig{
 				TLSCert:           pki.ServerCertPath(),
 				TLSKey:            pki.ServerKeyPath(),

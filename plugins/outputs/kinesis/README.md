@@ -51,7 +51,7 @@ solution to scale out.
 
 ### use_random_partitionkey [DEPRECATED]
 
-When true a random UUID will be generated and used as the partitionkey when sending data to Kinesis. This allows data to evenly spread across multiple shards in the stream. Due to using a random paritionKey there can be no guarantee of ordering when consuming the data off the shards.
+When true a random UUID will be generated and used as the partitionkey when sending data to Kinesis. This allows data to evenly spread across multiple shards in the stream. Due to using a random partitionKey there can be no guarantee of ordering when consuming the data off the shards.
 If true then the partitionkey option will be ignored.
 
 ### partition
@@ -70,7 +70,7 @@ All metrics will be mapped to the same shard which may limit throughput.
 
 #### tag
 
-This will take the value of the specified tag from each metric as the paritionKey.
+This will take the value of the specified tag from each metric as the partitionKey.
 If the tag is not found the `default` value will be used or `telegraf` if unspecified
 
 #### measurement
