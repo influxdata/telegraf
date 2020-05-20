@@ -195,7 +195,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	buf = bytes.TrimSpace(buf)
 	buf = bytes.TrimPrefix(buf, utf8BOM)
-	buf = bytes.Trim(buf,"\x00")
+	buf = bytes.Trim(buf, "\x00")
 	if len(buf) == 0 {
 		return make([]telegraf.Metric, 0), nil
 	}
