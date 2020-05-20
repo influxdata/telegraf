@@ -142,6 +142,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	return nil
 }
 
+// Test runs the inputs, processors and aggregators for a single gather and
+// writes the metrics to stdout.
 func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	outputF := func(src <-chan telegraf.Metric) {
 		s := influx.NewSerializer()
@@ -167,6 +169,8 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 	return nil
 
 }
+
+// Once runs the full agent for a single gather.
 func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 	outputF := func(src <-chan telegraf.Metric) {
 		interval := a.Config.Agent.FlushInterval.Duration
@@ -220,10 +224,15 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 	for _, output := range a.Config.Outputs {
 		unsent += output.BufferLength()
 	}
-
-	return fmt.Errorf("output plugins unable to send %d metrics", unsent)
+	if unsent != 0 {
+		return fmt.Errorf("output plugins unable to send %d metrics", unsent)
+	}
+	return nil
 }
 
+// Test runs the agent and performs a single gather sending output to the
+// outputF.  After gathering pauses for the wait duration to allow service
+// inputs to run.
 func (a *Agent) test(ctx context.Context, wait time.Duration, outputF func(<-chan telegraf.Metric)) error {
 	log.Printf("D! [agent] Initializing plugins")
 	err := a.initPlugins()
@@ -243,74 +252,17 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputF func(<-cha
 
 	startTime := time.Now()
 
-	log.Printf("D! [agent] Starting service inputs")
-	err = a.startServiceInputs(ctx, inputC)
-	if err != nil {
-		return err
-	}
-
 	var wg sync.WaitGroup
 
 	src := inputC
 	dst := inputC
 
-	nul := make(chan telegraf.Metric)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for range nul {
-		}
-	}()
-
 	wg.Add(1)
 	go func(dst chan telegraf.Metric) {
 		defer wg.Done()
 
-		var wg sync.WaitGroup
-		for _, input := range a.Config.Inputs {
-			wg.Add(1)
-			go func(input *models.RunningInput) {
-				defer wg.Done()
-				jitter := 0 * time.Second
-				interval := a.Config.Agent.Interval.Duration
+		a.testRunInputs(ctx, wait, dst)
 
-				// Overwrite agent interval if this plugin has its own.
-				if input.Config.Interval != 0 {
-					interval = input.Config.Interval
-				}
-
-				ticker := NewUnalignedTicker(interval, jitter)
-				defer ticker.Stop()
-				<-ticker.Elapsed()
-
-				switch input.Config.Name {
-				case "cpu", "mongodb", "procstat":
-					nulAcc := NewAccumulator(input, nul)
-					nulAcc.SetPrecision(a.Precision())
-					if err := input.Input.Gather(nulAcc); err != nil {
-						nulAcc.AddError(err)
-					}
-
-					time.Sleep(500 * time.Millisecond)
-				}
-
-				acc := NewAccumulator(input, dst)
-				acc.SetPrecision(a.Precision())
-
-				if err := input.Input.Gather(acc); err != nil {
-					acc.AddError(err)
-				}
-			}(input)
-
-		}
-		wg.Wait()
-
-		internal.SleepContext(ctx, wait)
-
-		log.Printf("D! [agent] Stopping service inputs")
-		a.stopServiceInputs()
-
-		close(nul)
 		close(dst)
 		log.Printf("D! [agent] Input channel closed")
 	}(dst)
@@ -367,6 +319,73 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputF func(<-cha
 	log.Printf("D! [agent] Stopped Successfully")
 
 	return nil
+}
+
+func (a *Agent) testRunInputs(
+	ctx context.Context,
+	wait time.Duration,
+	dst chan<- telegraf.Metric,
+) {
+	log.Printf("D! [agent] Starting service inputs")
+	for _, input := range a.Config.Inputs {
+		if si, ok := input.Input.(telegraf.ServiceInput); ok {
+			// Service input plugins are not subject to timestamp rounding.
+			// This only applies to the accumulator passed to Start(), the
+			// Gather() accumulator does apply rounding according to the
+			// precision agent setting.
+			acc := NewAccumulator(input, dst)
+			acc.SetPrecision(time.Nanosecond)
+
+			err := si.Start(acc)
+			if err != nil {
+				acc.AddError(err)
+				si.Stop()
+				continue
+			}
+		}
+	}
+
+	nul := make(chan telegraf.Metric)
+	go func() {
+		for range nul {
+		}
+	}()
+
+	var wg sync.WaitGroup
+	for _, input := range a.Config.Inputs {
+		wg.Add(1)
+		go func(input *models.RunningInput) {
+			defer wg.Done()
+
+			// Run plugins that require multiple gathers to calculate rate
+			// and delta metrics twice.
+			switch input.Config.Name {
+			case "cpu", "mongodb", "procstat":
+				nulAcc := NewAccumulator(input, nul)
+				nulAcc.SetPrecision(a.Precision())
+				if err := input.Input.Gather(nulAcc); err != nil {
+					nulAcc.AddError(err)
+				}
+
+				time.Sleep(500 * time.Millisecond)
+			}
+
+			acc := NewAccumulator(input, dst)
+			acc.SetPrecision(a.Precision())
+
+			if err := input.Input.Gather(acc); err != nil {
+				acc.AddError(err)
+			}
+		}(input)
+	}
+	wg.Wait()
+	close(nul)
+
+	internal.SleepContext(ctx, wait)
+
+	log.Printf("D! [agent] Stopping service inputs")
+	a.stopServiceInputs()
+
 }
 
 // runInputs starts and triggers the periodic gather for Inputs.
