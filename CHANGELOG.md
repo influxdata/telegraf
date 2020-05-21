@@ -46,6 +46,12 @@
 - [#7446](https://github.com/influxdata/telegraf/issues/7446): Fix gzip support in socket_listener with tcp sockets.
 - [#7390](https://github.com/influxdata/telegraf/issues/7390): Fix interval drift when round_interval is set in agent.
 
+## v1.14.4 [unreleased]
+
+#### Bugfixes
+
+- [#7325](https://github.com/influxdata/telegraf/issues/7325): Fix "cannot insert the value NULL error" with PerformanceCounters query.
+
 ## v1.14.3 [2020-05-19]
 
 #### Bugfixes
