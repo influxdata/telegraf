@@ -38,6 +38,7 @@
 - [#7491](https://github.com/influxdata/telegraf/pull/7491): Add authentication support to the http_response input plugin.
 - [#7503](https://github.com/influxdata/telegraf/pull/7503): Add truncate_tags setting to wavefront output.
 - [#7545](https://github.com/influxdata/telegraf/pull/7545): Add configurable separator graphite serializer and output.
+- [#7489](https://github.com/influxdata/telegraf/pull/7489): Add cluster state integer to mongodb input.
 
 #### Bugfixes
 
