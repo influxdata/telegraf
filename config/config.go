@@ -1951,6 +1951,14 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["graphite_separator"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GraphiteSeparator = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["json_timestamp_units"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -2055,6 +2063,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
 	delete(tbl.Fields, "graphite_tag_support")
+	delete(tbl.Fields, "graphite_separator")
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
