@@ -1,3 +1,9 @@
+## v1.14.4 [unreleased]
+
+#### Bugfixes
+
+- [#7325](https://github.com/influxdata/telegraf/issues/7325): Fix "cannot insert the value NULL error" with PerformanceCounters query.
+
 ## v1.14.3 [2020-05-19]
 
 #### Bugfixes
