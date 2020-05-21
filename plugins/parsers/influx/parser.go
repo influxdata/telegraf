@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,6 +33,10 @@ type ParseError struct {
 
 func (e *ParseError) Error() string {
 	buffer := e.buf[e.LineOffset:]
+	eol := strings.IndexAny(buffer, "\r\n")
+	if eol >= 0 {
+		buffer = buffer[:eol]
+	}
 	if len(buffer) > maxErrorBufferSize {
 		startEllipsis := true
 		offset := e.Offset - e.LineOffset
