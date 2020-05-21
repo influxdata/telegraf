@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"syscall"
 	"time"
 
@@ -37,4 +38,12 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func gracefulStop(cmd *exec.Cmd, timeout time.Duration) {
+	cmd.Process.Signal(syscall.SIGTERM)
+	go func() {
+		<-time.NewTimer(timeout).C
+		cmd.Process.Kill()
+	}()
 }
