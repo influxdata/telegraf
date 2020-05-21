@@ -58,6 +58,7 @@ func (h *HDDTemp) Gather(acc telegraf.Accumulator) error {
 		for _, chosenDevice := range h.Devices {
 			if chosenDevice == "*" || chosenDevice == disk.DeviceName {
 				tags := map[string]string{
+					"uuid":   disk.UUID,
 					"device": disk.DeviceName,
 					"model":  disk.Model,
 					"unit":   disk.Unit,

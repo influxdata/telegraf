@@ -9,6 +9,7 @@ import (
 )
 
 type Disk struct {
+	UUID				string
 	DeviceName  string
 	Model       string
 	Temperature int32
@@ -56,6 +57,7 @@ func (h *hddtemp) Fetch(address string) ([]Disk, error) {
 		}
 
 		disks = append(disks, Disk{
+			UUID:				 fields[0],
 			DeviceName:  device,
 			Model:       fields[offset+2],
 			Temperature: int32(temperature),
@@ -63,6 +65,5 @@ func (h *hddtemp) Fetch(address string) ([]Disk, error) {
 			Status:      status,
 		})
 	}
-
 	return disks, nil
 }
