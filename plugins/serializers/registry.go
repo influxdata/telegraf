@@ -51,6 +51,9 @@ type Config struct {
 	// Support tags in graphite protocol
 	GraphiteTagSupport bool `toml:"graphite_tag_support"`
 
+	// Character for separating metric name and field for Graphite tags
+	GraphiteSeparator string `toml:"graphite_separator"`
+
 	// Maximum line length in bytes; influx format only
 	InfluxMaxLineBytes int `toml:"influx_max_line_bytes"`
 
@@ -107,7 +110,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.Templates)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport, config.GraphiteSeparator, config.Templates)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	case "splunkmetric":
@@ -191,7 +194,7 @@ func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
 }
 
-func NewGraphiteSerializer(prefix, template string, tag_support bool, templates []string) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string, tag_support bool, separator string, templates []string) (Serializer, error) {
 	graphiteTemplates, defaultTemplate, err := graphite.InitGraphiteTemplates(templates)
 
 	if err != nil {
@@ -202,10 +205,15 @@ func NewGraphiteSerializer(prefix, template string, tag_support bool, templates 
 		template = defaultTemplate
 	}
 
+	if separator == "" {
+		separator = "."
+	}
+
 	return &graphite.GraphiteSerializer{
 		Prefix:     prefix,
 		Template:   template,
 		TagSupport: tag_support,
+		Separator:  separator,
 		Templates:  graphiteTemplates,
 	}, nil
 }

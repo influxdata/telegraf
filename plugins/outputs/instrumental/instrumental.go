@@ -86,7 +86,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, i.Templates)
+	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, ".", i.Templates)
 	if err != nil {
 		return err
 	}
