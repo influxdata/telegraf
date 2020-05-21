@@ -114,7 +114,7 @@ func (e *Execd) cmdLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			if e.stdin != nil {
 				e.stdin.Close()
-				gracefulStop(e.cmd, 200*time.Millisecond)
+				gracefulStop(e.cmd, 5*time.Second)
 			}
 			return nil
 		case err := <-done:
