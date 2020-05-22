@@ -39,6 +39,7 @@
 - [#7503](https://github.com/influxdata/telegraf/pull/7503): Add truncate_tags setting to wavefront output.
 - [#7545](https://github.com/influxdata/telegraf/pull/7545): Add configurable separator graphite serializer and output.
 - [#7489](https://github.com/influxdata/telegraf/pull/7489): Add cluster state integer to mongodb input.
+- [#7515](https://github.com/influxdata/telegraf/pull/7515): Add option to disable mongodb cluster status.
 
 #### Bugfixes
 
