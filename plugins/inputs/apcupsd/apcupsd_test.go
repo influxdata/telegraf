@@ -1,5 +1,3 @@
-// +build go1.11
-
 package apcupsd
 
 import (
