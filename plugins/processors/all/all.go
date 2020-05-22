@@ -5,6 +5,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
 	_ "github.com/influxdata/telegraf/plugins/processors/date"
 	_ "github.com/influxdata/telegraf/plugins/processors/dedup"
+	_ "github.com/influxdata/telegraf/plugins/processors/defaults"
 	_ "github.com/influxdata/telegraf/plugins/processors/enum"
 	_ "github.com/influxdata/telegraf/plugins/processors/filepath"
 	_ "github.com/influxdata/telegraf/plugins/processors/override"
