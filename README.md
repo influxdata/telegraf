@@ -363,6 +363,7 @@ For documentation on the latest development code see the [documentation index][d
 * [converter](/plugins/processors/converter)
 * [date](/plugins/processors/date)
 * [dedup](/plugins/processors/dedup)
+* [defaults](/plugins/processors/defaults)
 * [enum](/plugins/processors/enum)
 * [filepath](/plugins/processors/filepath)
 * [override](/plugins/processors/override)
