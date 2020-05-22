@@ -11,6 +11,11 @@
   ##   mongodb://10.10.3.33:18832,
   servers = ["mongodb://127.0.0.1:27017"]
 
+  ## When true, collect cluster status.
+  ## Note that the query that counts jumbo chunks triggers a COLLSCAN, which
+  ## may have an impact on performance.
+  # gather_cluster_status = true
+
   ## When true, collect per database stats
   # gather_perdb_stats = false
 
