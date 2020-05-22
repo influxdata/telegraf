@@ -159,10 +159,13 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			}
 			rp.Config.Filter.Compile()
 
-			acc := testutil.NewTestMetricStream(true)
-			acc.Enqueue(tt.input...)
-			sa := NewMetricStreamWrapper(acc, rp.ApplyFilters)
-			err := rp.Start(sa)
+			in := make(chan telegraf.Metric, 10)
+			for _, m := range tt.input {
+				in <- m
+			}
+			close(in)
+			acc := testutil.NewTestMetricStreamAccumulator()
+			err := rp.Start(in, acc)
 			require.NoError(t, err)
 
 			actual := acc.ProcessedMetrics

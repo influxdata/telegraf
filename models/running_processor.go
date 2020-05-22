@@ -91,56 +91,23 @@ func (r *RunningProcessor) Log() telegraf.Logger {
 	return r.log
 }
 
-func (r *RunningProcessor) Start(acc telegraf.MetricStream) error {
-	return r.Processor.Start(acc)
-}
-
-type metricModifierFn func(m telegraf.Metric) telegraf.Metric
-
-// NewMetricStreamWrapper wraps a streaming accumulator, calling a function
-// on each metric that passes through the stream.
-func NewMetricStreamWrapper(acc telegraf.MetricStream, f metricModifierFn) telegraf.MetricStream {
-	sa := &metricStreamWrapper{
-		acc: acc,
-		f:   f,
+func (r *RunningProcessor) Start(in <-chan telegraf.Metric, acc telegraf.MetricStreamAccumulator) error {
+	if err := r.Processor.Start(acc); err != nil {
+		return err
 	}
-	return sa
-}
 
-type metricStreamWrapper struct {
-	acc telegraf.MetricStream
-	f   func(telegraf.Metric) telegraf.Metric
-}
-
-func (sa *metricStreamWrapper) PassMetric(m telegraf.Metric) {
-	sa.acc.PassMetric(m)
-}
-
-func (sa *metricStreamWrapper) GetNextMetric() telegraf.Metric {
-	for {
-		m := sa.acc.GetNextMetric()
-		if m == nil {
-			if sa.acc.IsStreamClosed() {
-				return nil
-			}
+	for m := range in {
+		filteredMetric := r.ApplyFilters(m)
+		if filteredMetric == nil {
+			acc.PassMetric(m)
+			continue
+		}
+		if len(m.FieldList()) == 0 {
+			acc.DropMetric(filteredMetric)
 			continue
 		}
 
-		m2 := sa.f(m)
-		if m2 == nil {
-			// metric was dropped, pass through to next layer
-			sa.acc.PassMetric(m)
-			continue
-		}
-		if len(m2.FieldList()) == 0 {
-			continue
-		}
-		return m
+		r.Processor.Add(filteredMetric)
 	}
-}
-func (sa *metricStreamWrapper) IsMetricAvailable() bool {
-	return sa.acc.IsMetricAvailable()
-}
-func (sa *metricStreamWrapper) IsStreamClosed() bool {
-	return sa.acc.IsStreamClosed()
+	return nil
 }

@@ -46,13 +46,16 @@ type ReverseDNSCache struct {
 	expireListLock sync.Mutex
 }
 
-func NewReverseDNSCache(ttl, lookupTimeout time.Duration) *ReverseDNSCache {
+func NewReverseDNSCache(ttl, lookupTimeout time.Duration, workerPoolSize int) *ReverseDNSCache {
+	if workerPoolSize <= 0 {
+		workerPoolSize = defaultMaxWorkers
+	}
 	d := &ReverseDNSCache{
 		ttl:           ttl,
 		lookupTimeout: lookupTimeout,
 		cache:         map[string]*dnslookup{},
 		expireList:    []*dnslookup{},
-		workerPool:    make(chan empty, defaultMaxWorkers),
+		workerPool:    make(chan empty, workerPoolSize),
 	}
 	d.startCleanupWorker()
 	return d

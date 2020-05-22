@@ -93,7 +93,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		go func(src, dst chan telegraf.Metric) {
 			defer wg.Done()
 
-			err := a.runProcessors(src, dst)
+			err := a.runProcessors(src, dst, a.Config.Processors)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
@@ -484,18 +484,23 @@ func (a *Agent) gatherOnce(
 func (a *Agent) runProcessors(
 	src <-chan telegraf.Metric,
 	dest chan<- telegraf.Metric,
+	processors models.RunningProcessors,
 ) error {
 	wg := sync.WaitGroup{}
 	in := src
 	out := dest
-	for i, processor := range a.Config.Processors {
+	for i, processor := range processors {
 		wg.Add(1)
+		// if we're not the last processor in the chain, make a new channel and
+		// connect it in between our input and output
 		nextCh := make(chan telegraf.Metric, 10)
-		nextChIn := (<-chan telegraf.Metric)(nextCh)
-		nextChOut := (chan<- telegraf.Metric)(nextCh)
-		isLastProcessor := i+1 == len(a.Config.Processors)
+		nextChIn := (chan<- telegraf.Metric)(nextCh)
+		nextChOut := (<-chan telegraf.Metric)(nextCh)
+		isLastProcessor := i+1 == len(processors)
 		if isLastProcessor {
-			nextChOut = out
+			out = dest
+		} else {
+			out = nextChIn
 		}
 
 		go func(
@@ -503,17 +508,15 @@ func (a *Agent) runProcessors(
 			out chan<- telegraf.Metric,
 			rp *models.RunningProcessor,
 		) {
-			acc := NewMetricStream(in, out)
-			acc = models.NewMetricStreamWrapper(acc, rp.ApplyFilters)
-
-			if err := rp.Start(acc); err != nil {
+			acc := NewMetricStreamAccumulator(out)
+			if err := rp.Start(in, acc); err != nil {
 				log.Printf("E! [%s] Error running processor: %v", rp.Config.Name, err)
 			}
 			close(out)
 			wg.Done()
-		}(in, nextChOut, processor)
+		}(in, out, processor)
 
-		in = nextChIn
+		in = nextChOut
 	}
 
 	wg.Wait()
@@ -597,7 +600,7 @@ func (a *Agent) runAggregators(
 		close(aggregations)
 	}()
 
-	a.runProcessors(aggregations, dst)
+	a.runProcessors(aggregations, dst, a.Config.AggProcessors)
 
 	wg.Wait()
 	return nil

@@ -9,7 +9,7 @@ import (
 )
 
 func TestSimpleReverseDNSLookup(t *testing.T) {
-	d := NewReverseDNSCache(1*time.Second, 1*time.Second)
+	d := NewReverseDNSCache(1*time.Second, 1*time.Second, -1)
 	answer := d.Lookup("8.8.8.8")
 	require.Equal(t, []string{"dns.google."}, answer)
 	d.waitForWorkers()
@@ -30,7 +30,7 @@ func TestSimpleReverseDNSLookup(t *testing.T) {
 }
 
 func TestParallelReverseDNSLookup(t *testing.T) {
-	d := NewReverseDNSCache(1*time.Second, 1*time.Second)
+	d := NewReverseDNSCache(1*time.Second, 1*time.Second, -1)
 	var answer1 []string
 	var answer2 []string
 	wg := &sync.WaitGroup{}
@@ -59,7 +59,7 @@ func TestParallelReverseDNSLookup(t *testing.T) {
 }
 
 func TestUnavailableDNSServerRespectsTimeout(t *testing.T) {
-	d := NewReverseDNSCache(0, 1)
+	d := NewReverseDNSCache(0, 1, -1)
 
 	result := d.Lookup("192.153.33.3")
 
@@ -68,7 +68,7 @@ func TestUnavailableDNSServerRespectsTimeout(t *testing.T) {
 
 func TestCleanupHappens(t *testing.T) {
 	ttl := 100 * time.Millisecond
-	d := NewReverseDNSCache(ttl, 1*time.Second)
+	d := NewReverseDNSCache(ttl, 1*time.Second, -1)
 	_ = d.Lookup("8.8.8.8")
 	d.waitForWorkers()
 
@@ -84,7 +84,7 @@ func TestCleanupHappens(t *testing.T) {
 }
 
 func TestCachePassthrough(t *testing.T) {
-	d := NewReverseDNSCache(0, 1*time.Second)
+	d := NewReverseDNSCache(0, 1*time.Second, -1)
 	_ = d.Lookup("8.8.8.8")
 	d.waitForWorkers()
 

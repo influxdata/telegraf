@@ -1,7 +1,6 @@
 package reversedns
 
 import (
-	"runtime"
 	"testing"
 	"time"
 
@@ -30,11 +29,10 @@ func TestSimpleReverseLookup(t *testing.T) {
 			Dest: "dest_name",
 		},
 	}
-	acc := testutil.NewTestMetricStream(true)
-	acc.Enqueue(m)
-	go dns.Start(acc)
-
-	runtime.Gosched()
+	acc := testutil.NewTestMetricStreamAccumulator()
+	dns.Init()
+	dns.Start(acc)
+	dns.Add(m)
 	dns.Stop()
 	// should be processed now.
 
@@ -51,7 +49,7 @@ func TestSimpleReverseLookup(t *testing.T) {
 
 func TestLoadingConfig(t *testing.T) {
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte(sampleConfig))
+	err := c.LoadConfigData([]byte("[[processors.reversedns]]\n" + sampleConfig))
 	require.NoError(t, err)
 
 	require.Len(t, c.Processors, 1)

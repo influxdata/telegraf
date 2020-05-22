@@ -65,7 +65,8 @@ type Config struct {
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
 	// Processors have a slice wrapper type because they need to be sorted
-	Processors models.RunningProcessors
+	Processors    models.RunningProcessors
+	AggProcessors models.RunningProcessors
 }
 
 func NewConfig() *Config {
@@ -83,6 +84,7 @@ func NewConfig() *Config {
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
 		Processors:    make([]*models.RunningProcessor, 0),
+		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -932,21 +934,57 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if !ok {
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
-	processor := creator()
 
 	processorConfig, err := buildProcessor(name, table)
 	if err != nil {
 		return err
 	}
 
-	if err := toml.UnmarshalTable(table, processor); err != nil {
+	rf, err := c.newRunningProcessor(creator, processorConfig, name, table)
+	if err != nil {
 		return err
+	}
+	c.Processors = append(c.Processors, rf)
+
+	// save a copy for the aggregator
+	rf, err = c.newRunningProcessor(creator, processorConfig, name, table)
+	if err != nil {
+		return err
+	}
+	c.AggProcessors = append(c.AggProcessors, rf)
+
+	return nil
+}
+
+func (c *Config) newRunningProcessor(
+	creator processors.StreamingCreator,
+	processorConfig *models.ProcessorConfig,
+	name string,
+	table *ast.Table,
+) (*models.RunningProcessor, error) {
+	processor := creator()
+
+	if p, ok := processor.(parsers.ParserInput); ok {
+		parser, err := buildParser(name, table)
+		if err != nil {
+			return nil, err
+		}
+		p.SetParser(parser)
+	}
+	if p, ok := processor.(serializers.SerializerOutput); ok {
+		serializer, err := buildSerializer(name, table)
+		if err != nil {
+			return nil, err
+		}
+		p.SetSerializer(serializer)
+	}
+
+	if err := toml.UnmarshalTable(table, processor); err != nil {
+		return nil, err
 	}
 
 	rf := models.NewRunningProcessor(processor, processorConfig)
-
-	c.Processors = append(c.Processors, rf)
-	return nil
+	return rf, nil
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {

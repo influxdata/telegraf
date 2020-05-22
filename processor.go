@@ -14,18 +14,18 @@ type Processor interface {
 type StreamingProcessor interface {
 	PluginDescriber
 
-	// Start is called when the processor should start.
-	// The MetricStream may be retained and used until Stop returns.
+	// Start is the initializer for the processor
 	// Start is only called once per plugin instance, and never in parallel.
-	// Start should exit when acc.IsStreamClosed() returns true.
-	// Start should not exit until the processor is ready to quit and the stream
-	// is empty.
-	Start(acc MetricStream) error
+	// Start should exit immediately after setup
+	Start(acc MetricStreamAccumulator) error
 
-	// Stop is called when the plugin should stop processing.
-	// at this point no new metrics will be coming in to the MetricStream,
-	// you can finish up processing the remaining metrics until IsStreamClosed()
-	// returns true. Wait for this to happen, then return from Stop. After Stop()
-	// returns, the reference to the MetricStream should not be used.
-	Stop()
+	// Add is called for each metric to be processed.
+	Add(metric Metric)
+
+	// Stop gives you a callback to free resources.
+	// by the time Stop is called, the input stream will have already been closed
+	// and Add will not be called anymore.
+	// When stop returns, you should no longer be writing metrics to the
+	// accumulator.
+	Stop() error
 }
