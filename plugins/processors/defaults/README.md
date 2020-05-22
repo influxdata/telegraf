@@ -6,7 +6,7 @@ There are three cases where this processor will insert a configured default fiel
 
 1. The field is nil on the incoming metric
 1. The field is not nil, but its value is an empty string.
-1. The field is not nil, but it's value is a string of one or more empty spaces.
+1. The field is not nil, but its value is a string of one or more empty spaces.
     
 ### Configuration
 ```toml
