@@ -767,7 +767,7 @@ FROM
     rgwg.total_queued_request_count AS "Queued Request Count",
     rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
     rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
-    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' ELSE '' END + '
+    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Preemptive CPU Usage (time)",' ELSE '' END + '
     rgwg.total_lock_wait_count AS "Lock Wait Count",
     rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
     rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
@@ -776,7 +776,7 @@ FROM
     ON rgwg.pool_id = rgrp.pool_id
 ) AS rg
 UNPIVOT (
-    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Preemptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
 ) AS vs'
 ,'"','''')
 
@@ -1518,7 +1518,7 @@ SELECT
 	, DB_NAME(s.database_id) as session_db_name
 	, r.status
 	, r.cpu_time as cpu_time_ms
-	, r.total_elapsed_time as total_elasped_time_ms
+	, r.total_elapsed_time as total_elapsed_time_ms
 	, r.logical_reads
 	, r.writes
 	, r.command
@@ -2182,7 +2182,7 @@ SELECT database_name, num_of_writes_persec
 FROM #baselinewritten
 WHERE datafile_type = ''ROWS''
 ) as V
-PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTabl
+PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
 UNION ALL
 SELECT measurement = ''Log (reads/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
@@ -2606,7 +2606,7 @@ VALUES (N'QDS_SHUTDOWN_QUEUE'), (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'DIRTY_PAGE_POLL'),                (N'DISPATCHER_QUEUE_SEMAPHORE'),
 	(N'EXECSYNC'),                       (N'FSAGENT'),
 	(N'FT_IFTS_SCHEDULER_IDLE_WAIT'),    (N'FT_IFTSHC_MUTEX'),
-	(N'HADR_CLUSAPI_CALL'),              (N'HADR_FILESTREAM_IOMGR_IOCOMPLETIO(N'),
+	(N'HADR_CLUSAPI_CALL'),              (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'HADR_LOGCAPTURE_WAIT'),           (N'HADR_NOTIFICATION_DEQUEUE'),
 	(N'HADR_TIMER_TASK'),                (N'HADR_WORK_QUEUE'),
 	(N'KSOURCE_WAKEUP'),                 (N'LAZYWRITER_SLEEP'),
