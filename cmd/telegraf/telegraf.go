@@ -37,6 +37,7 @@ var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "enable test mode: gather metrics, print them out, and exit. Note: Test mode only runs inputs, not processors, aggregators, or outputs")
 var fTestWait = flag.Int("test-wait", 0, "wait up to this many seconds for service inputs to complete in test mode")
+var fOnce = flag.Bool("once", false, "run each input/processor/aggregator/output once and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
@@ -179,6 +180,10 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
 	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 	log.Printf("I! Tags enabled: %s", c.ListTags())
+
+	if *fOnce {
+		return ag.RunOnce(ctx)
+	}
 
 	if *fPidfile != "" {
 		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)

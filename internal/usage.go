@@ -37,6 +37,7 @@ The commands & flags are:
                                  processors, aggregators, or outputs
   --test-wait                    wait up to this many seconds for service
                                  inputs to complete in test mode
+  --once                         run each input/processor/aggregator/output once and exit
   --usage <plugin>               print usage for a plugin, ie, 'telegraf --usage mysql'
   --version                      display the version and exit
 

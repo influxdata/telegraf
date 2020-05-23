@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"runtime"
 	"sync"
@@ -139,6 +140,172 @@ func (a *Agent) Run(ctx context.Context) error {
 	a.closeOutputs()
 
 	log.Printf("D! [agent] Stopped Successfully")
+	return nil
+}
+
+func (a *Agent) RunOnce(ctx context.Context) error {
+	log.Printf("D! [agent] Initializing plugins")
+	err := a.initPlugins()
+	if err != nil {
+		return err
+	}
+
+	log.Printf("D! [agent] Connecting outputs")
+	err = a.connectOutputs(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, input := range a.Config.Inputs {
+		if _, ok := input.Input.(telegraf.ServiceInput); ok {
+			return fmt.Errorf("Error: input '%s' is a service input and is configured. Service "+
+				"inputs are not supported when running with '--once'", input.Config.Name)
+		}
+	}
+
+	inputChan := make(chan telegraf.Metric)
+	nullChan := make(chan telegraf.Metric)
+	aggregateChan := make(chan telegraf.Metric)
+
+	go func() {
+		for range nullChan {
+		}
+	}()
+
+	var inputWait sync.WaitGroup
+	for _, input := range a.Config.Inputs {
+		inputWait.Add(1)
+		go func(input *models.RunningInput) {
+			defer inputWait.Done()
+			acc := NewAccumulator(input, inputChan)
+			acc.SetPrecision(a.Precision())
+
+			// Special instructions for some inputs. cpu, for example, needs to be
+			// run twice in order to return cpu usage percentages.
+			switch input.Config.Name {
+			case "cpu", "mongodb", "procstat":
+				nulAcc := NewAccumulator(input, nullChan)
+				nulAcc.SetPrecision(a.Precision())
+				if err := input.Input.Gather(nulAcc); err != nil {
+					acc.AddError(err)
+					return
+				}
+
+				time.Sleep(500 * time.Millisecond)
+			}
+
+			if err := input.Input.Gather(acc); err != nil {
+				acc.AddError(err)
+			}
+		}(input)
+	}
+
+	var aggregateWait sync.WaitGroup
+	aggregateWait.Add(1)
+	go func() {
+		defer aggregateWait.Done()
+		for _, agg := range a.Config.Aggregators {
+			since := time.Unix(0, 0)
+			until := time.Unix(math.MaxInt64, math.MaxInt64)
+			agg.UpdateWindow(since, until)
+		}
+
+		for metric := range inputChan {
+			log.Printf("D! [agent] Received input")
+			metrics := a.applyProcessors(metric)
+			for _, metric := range metrics {
+				var dropOriginal bool
+				for _, agg := range a.Config.Aggregators {
+					if ok := agg.Add(metric); ok {
+						dropOriginal = true
+					}
+				}
+
+				if !dropOriginal {
+					aggregateChan <- metric
+				} else {
+					metric.Drop()
+				}
+			}
+		}
+
+		for _, agg := range a.Config.Aggregators {
+			acc := NewAccumulator(agg, aggregateChan)
+			acc.SetPrecision(a.Precision())
+			agg.Aggregator.Push(acc)
+		}
+	}()
+
+	buffer := make([]telegraf.Metric, 0)
+	var bufferWait sync.WaitGroup
+	bufferWait.Add(1)
+	go func() {
+		defer bufferWait.Done()
+		for aggMetric := range aggregateChan {
+			metrics := a.applyProcessors(aggMetric)
+			for _, metric := range metrics {
+				buffer = append(buffer, metric)
+			}
+		}
+	}()
+
+	inputWait.Wait()
+	close(inputChan)
+	close(nullChan)
+	aggregateWait.Wait()
+	close(aggregateChan)
+	bufferWait.Wait()
+
+	batchSize := a.Config.Agent.MetricBatchSize
+	if batchSize == 0 {
+		batchSize = models.DEFAULT_METRIC_BATCH_SIZE
+	}
+	var outputWait sync.WaitGroup
+	for _, output := range a.Config.Outputs {
+		outputWait.Add(1)
+		go func(output *models.RunningOutput) {
+			defer outputWait.Done()
+			batch := make([]telegraf.Metric, 0, batchSize)
+
+			for _, bufferMetric := range buffer {
+				if ok := output.Config.Filter.Select(bufferMetric); !ok {
+					continue
+				}
+
+				metric := bufferMetric.Copy()
+				output.Config.Filter.Modify(metric)
+				if len(metric.FieldList()) == 0 {
+					continue
+				}
+
+				if len(output.Config.NameOverride) > 0 {
+					metric.SetName(output.Config.NameOverride)
+				}
+
+				if len(output.Config.NamePrefix) > 0 {
+					metric.AddPrefix(output.Config.NamePrefix)
+				}
+
+				if len(output.Config.NameSuffix) > 0 {
+					metric.AddSuffix(output.Config.NameSuffix)
+				}
+
+				batch = append(batch, metric)
+				if len(batch) == batchSize {
+					err = output.Output.Write(batch)
+					batch = batch[:0]
+				}
+			}
+
+			if len(batch) > 0 {
+				err = output.Output.Write(batch)
+			}
+		}(output)
+	}
+
+	outputWait.Wait()
+	a.closeOutputs()
+
 	return nil
 }
 
