@@ -63,7 +63,10 @@ type SQSConsumer struct {
 	delete chan *sqs.Message
 
 	deliveries map[telegraf.TrackingID]*sqs.Message
+	deletes    map[string]string
 }
+
+// TODO: Add internal metrics similar too https://github.com/influxdata/telegraf/blob/master/plugins/inputs/influxdb_listener/influxdb_listener.go#L48
 
 type ticker struct {
 	period time.Duration
@@ -250,66 +253,33 @@ func (s *SQSConsumer) receive(ctx context.Context) {
 
 func (s *SQSConsumer) handleDeletes(ctx context.Context) {
 	s.delete = make(chan *sqs.Message)
+	s.deletes = make(map[string]string, s.DeleteBatchSize)
 
 	s.Log.Debugf("starting %s queue delete buffer loop", s.QueueURL)
-	input := &sqs.DeleteMessageBatchInput{
-		QueueUrl: aws.String(s.QueueURL),
-	}
-
-	var err error
-	var entriesBuffer []*sqs.DeleteMessageBatchRequestEntry
 
 	batchTicker := createTicker(time.Duration(s.DeleteBatchFlushSeconds) * time.Second)
 	defer batchTicker.ticker.Stop()
 
-	// TODO: add ticker to flush buffer when there were no new messages for some time
 	for {
 		select {
 		case <-ctx.Done():
-			if v := len(entriesBuffer); v > 0 {
-				s.Log.Debugf("processign deletion of %d messages from queue %s...", v, s.QueueURL)
-
-				input.Entries = entriesBuffer
-				_, err = s.sqs.DeleteMessageBatch(input)
-				if err != nil {
-					s.acc.AddError(fmt.Errorf("failed deleting messages from queue %s: %v", s.QueueURL, err))
-				}
+			if v := len(s.deletes); v > 0 {
+				s.deleteBatch()
 			}
 			return
-		case msg := <-s.delete:
-			batchTicker.resetTicker()
-
-			entry := sqs.DeleteMessageBatchRequestEntry{
-				Id:            msg.MessageId,
-				ReceiptHandle: msg.ReceiptHandle,
-			}
-
-			// TODO: switch to map to handle redelivered messages
-			entriesBuffer = append(entriesBuffer, &entry)
-			s.Log.Debugf("%s queue delete buffer fullness: %d / %d messages", s.QueueURL, len(entriesBuffer), s.DeleteBatchSize)
-
-			if v := len(entriesBuffer); v == s.DeleteBatchSize {
-				s.Log.Debugf("processign deletion of %d messages from queue %s...", v, s.QueueURL)
-
-				input.Entries = entriesBuffer
-				_, err = s.sqs.DeleteMessageBatch(input)
-				if err != nil {
-					s.acc.AddError(fmt.Errorf("failed deleting messages from queue %s: %v", s.QueueURL, err))
-				}
-
-				entriesBuffer = []*sqs.DeleteMessageBatchRequestEntry{}
-			}
 		case <-batchTicker.ticker.C:
-			if v := len(entriesBuffer); v > 0 {
-				s.Log.Debugf("flushing %d messages from queue delete batch %s...", v, s.QueueURL)
+			if v := len(s.deletes); v > 0 {
+				s.deleteBatch()
+			}
+		case msg := <-s.delete:
+			s.deletes[*msg.MessageId] = *msg.ReceiptHandle
 
-				input.Entries = entriesBuffer
-				_, err = s.sqs.DeleteMessageBatch(input)
-				if err != nil {
-					s.acc.AddError(fmt.Errorf("failed deleting messages from queue %s: %v", s.QueueURL, err))
-				}
+			s.Log.Debugf("%s queue delete buffer fullness: %d / %d messages", s.QueueURL, len(s.deletes), s.DeleteBatchSize)
 
-				entriesBuffer = []*sqs.DeleteMessageBatchRequestEntry{}
+			if v := len(s.deletes); v == s.DeleteBatchSize {
+				batchTicker.resetTicker()
+
+				s.deleteBatch()
 			}
 		}
 	}
@@ -361,6 +331,29 @@ func (s *SQSConsumer) deleteMessage(msg *sqs.Message) error {
 	}
 
 	return nil
+}
+
+func (s *SQSConsumer) deleteBatch() {
+	s.Log.Debugf("processign deletion of %d messages from queue %s...", len(s.deletes), s.QueueURL)
+
+	var entries []*sqs.DeleteMessageBatchRequestEntry
+
+	for i, r := range s.deletes {
+		entries = append(entries, &sqs.DeleteMessageBatchRequestEntry{
+			Id:            aws.String(i),
+			ReceiptHandle: aws.String(r),
+		})
+
+		delete(s.deletes, i)
+	}
+
+	_, err := s.sqs.DeleteMessageBatch(&sqs.DeleteMessageBatchInput{
+		QueueUrl: aws.String(s.QueueURL),
+		Entries:  entries,
+	})
+	if err != nil {
+		s.acc.AddError(fmt.Errorf("failed deleting messages from queue %s: %v", s.QueueURL, err))
+	}
 }
 
 func init() {
