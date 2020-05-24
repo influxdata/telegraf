@@ -303,7 +303,11 @@ func (s *SQSConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
 }
 
 func (s *SQSConsumer) createMetrics(msg *sqs.Message) ([]telegraf.Metric, error) {
-	// TODO: check message size max_message_len
+	if s.MaxMessageLen > 0 && len(*msg.Body) > s.MaxMessageLen {
+		// TODO: delete message from queue or allow it to be redelivered and fall in dead letter queue?
+		return nil, fmt.Errorf("message longer than max_message_len (%d > %d)", len(*msg.Body), s.MaxMessageLen)
+	}
+
 	metrics, err := s.parser.Parse([]byte(*msg.Body))
 	if err != nil {
 		return nil, err
