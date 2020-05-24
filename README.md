@@ -184,6 +184,7 @@ For documentation on the latest development code see the [documentation index][d
 * [docker_log](./plugins/inputs/docker_log)
 * [dovecot](./plugins/inputs/dovecot)
 * [aws ecs](./plugins/inputs/ecs) (Amazon Elastic Container Service, Fargate)
+* [aws sqs](./plugins/inputs/sqs_consumer) (Amazon Simple Queue Service, SQS)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [ethtool](./plugins/inputs/ethtool)
 * [eventhub_consumer](./plugins/inputs/eventhub_consumer) (Azure Event Hubs \& Azure IoT Hub)
