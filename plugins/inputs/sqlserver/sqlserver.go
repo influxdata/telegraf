@@ -464,10 +464,8 @@ BEGIN
 	DECLARE @Tables as nvarchar(max) = ''
 
 	IF @MajorMinorVersion >= 1050 BEGIN 
-		SET @Columns += N',CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
-	THEN LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point]) - 1)
-	ELSE vs.[volume_mount_point]
-END AS [volume_mount_point]'
+		/* [volume_mount_point] TRIMS trailing "\" which are not allowed in InfluxDB */
+		SET @Columns += N'SET @Columns += N',LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point])-(PATINDEX(''%[^\]%'',REVERSE([volume_mount_point]))-1)) AS [volume_mount_point]'
 		SET @Tables += N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs'
 	END
 		
@@ -481,7 +479,6 @@ END AS [volume_mount_point]'
 	--PRINT @Columns
 	--PRINT @Tables
 	
-
 	SET @SqlStatement = N'
 	SELECT
 		''sqlserver_database_io'' AS [measurement]
@@ -506,7 +503,6 @@ END AS [volume_mount_point]'
 	/*Debug only*/
 	--PRINT @SqlStatement
 	
-
 	EXEC sp_executesql @SqlStatement
 
 END
