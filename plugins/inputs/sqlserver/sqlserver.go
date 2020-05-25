@@ -407,22 +407,9 @@ EXEC(@SqlStatement)
 // EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10;
-DECLARE
-	 @EngineEdition AS int
-	,@MajorVersion AS int
-	,@MinorVersion AS int
-	,@SqlStatement AS nvarchar(max)
-
-SELECT 
-	@EngineEdition = x.[EngineEdition]
-   ,@MajorVersion = x.[MajorVersion]
-   ,@MinorVersion = x.[MinorVersion]
-FROM (
-	SELECT
-		 CAST(SERVERPROPERTY('EngineEdition') AS int) AS [EngineEdition]
-		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
-		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int) AS [MinorVersion]
-) AS x
+DECLARE 
+	 @SqlStatement AS nvarchar(max)
+	,@EngineEdition AS int = CAST(SERVERPROPERTY('EngineEdition') AS int)
 
 IF @EngineEdition = 5
 BEGIN
@@ -471,6 +458,30 @@ END
 ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
 BEGIN
 
+	DECLARE @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+
+	DECLARE @Columns as nvarchar(max) = ''
+	DECLARE @Tables as nvarchar(max) = ''
+
+	IF @MajorMinorVersion >= 1050 BEGIN 
+		SET @Columns += N',CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
+	THEN LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point]) - 1)
+	ELSE vs.[volume_mount_point]
+END AS [volume_mount_point]'
+		SET @Tables += N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs'
+	END
+		
+	IF @MajorMinorVersion > 1100 BEGIN
+		SET @Columns += N'
+,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
+,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
+	END
+	
+	/*Debug only*/
+	--PRINT @Columns
+	--PRINT @Tables
+	
+
 	SET @SqlStatement = N'
 	SELECT
 		''sqlserver_database_io'' AS [measurement]
@@ -478,44 +489,24 @@ BEGIN
 		,DB_NAME(vfs.[database_id]) AS [database_name]
 		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
 		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
-		,mf.[type_desc] AS [file_type]' +
-		CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 /*Before SQL 2008 R2*/
-			THEN N''
-			ELSE N' ,CASE WHEN RIGHT(vs.[volume_mount_point], 1) = ''\''
-				THEN LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point]) - 1)
-				ELSE vs.[volume_mount_point]
-			END AS [volume_mount_point]'
-		END
-		+
-		N'
+		,mf.[type_desc] AS [file_type]
 		,vfs.[io_stall_read_ms] AS [read_latency_ms]
 		,vfs.[num_of_reads] AS [reads]
 		,vfs.[num_of_bytes_read] AS [read_bytes]
 		,vfs.[io_stall_write_ms] AS [write_latency_ms]
 		,vfs.[num_of_writes] AS [writes]
-		,vfs.[num_of_bytes_written] AS [write_bytes]
-		'
-		+ 
-		CASE
-			WHEN @MajorVersion <= '11' /*SQL 2012 and previous*/
-				/*SQL Server 2012 (ver 11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]*/
-				THEN ''
-				ELSE N',vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
-		END 
-		+
-	N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+		,vfs.[num_of_bytes_written] AS [write_bytes]'
+		+ @Columns + N'
+	FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 	INNER JOIN sys.master_files AS mf WITH (NOLOCK)
 		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
 	'
-	+
-	CASE WHEN @MajorVersion <= 10 AND @MinorVersion < 50 /*Before SQL 2008 R2*/
-		THEN N'' 
-		ELSE
-	N'
-	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs /*SQL 2008 R2 and later*/
-	'
-	END +N''
+	+ @Tables;
 	
+	/*Debug only*/
+	--PRINT @SqlStatement
+	
+
 	EXEC sp_executesql @SqlStatement
 
 END
