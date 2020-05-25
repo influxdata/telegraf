@@ -583,7 +583,8 @@ END AS [hardware_type]';
 		' + @Columns + '
 	FROM sys.[dm_os_sys_info]'
 
-	PRINT @SqlStatement
+	/*Debug Only*/
+	--PRINT @SqlStatement
 
 	/*Insert the dynamic sql result into the table variable*/
 	INSERT INTO @sys_info ( [cpu_count], [server_memory], [sku], [engine_edition], [uptime], [hardware_type] ) 
