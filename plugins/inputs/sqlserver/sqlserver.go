@@ -567,9 +567,9 @@ BEGIN
 
 	IF @MajorMinorVersion >= 1050
 		SET @Columns = N',CASE [virtual_machine_type_desc] 
-	WHEN ''NONE'' THEN ''PHYSICAL Machine''
-	ELSE [virtual_machine_type_desc]
-END AS [hardware_type]';
+			WHEN ''NONE'' THEN ''PHYSICAL Machine''
+			ELSE [virtual_machine_type_desc]
+		END AS [hardware_type]';
 	ELSE /*data not available*/
 		SET @Columns = N',''<n/a>'' AS [hardware_type]';
 
@@ -584,7 +584,7 @@ END AS [hardware_type]';
 	FROM sys.[dm_os_sys_info]'
 
 	/*Debug Only*/
-	--PRINT @SqlStatement
+	--SELECT @SqlStatement
 
 	/*Insert the dynamic sql result into the table variable*/
 	INSERT INTO @sys_info ( [cpu_count], [server_memory], [sku], [engine_edition], [uptime], [hardware_type] ) 
