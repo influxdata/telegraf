@@ -47,6 +47,11 @@ This input plugin checks HTTP/HTTPS connections.
   # [inputs.http_response.headers]
   #   Host = "github.com"
 
+  ## Optional setting to map reponse http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
+
   ## Interface to use when dialing an address
   # interface = "eth0"
 ```
