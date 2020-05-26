@@ -286,24 +286,22 @@ see https://sqlserverbuilds.blogspot.com/ for all the details about the version 
 const sqlMemoryClerkV2 = `
 SET DEADLOCK_PRIORITY -10;
 DECLARE
-	 @MajorVersion AS int
-	,@SqlStatement AS nvarchar(max)
+	 @SqlStatement AS nvarchar(max)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(max) = ''
 
-SELECT 
-    @MajorVersion = x.[MajorVersion]
-FROM (
-	SELECT
-		 CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
-		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int) AS [MinorVersion]
-) AS x
+IF @MajorMinorVersion >= 1050
+	SET @Columns += N'mc.[pages_kb]';
+ELSE
+	SET @Columns += N'mc.[single_pages_kb] + mc.[multi_pages_kb]';
 
-SET @SqlStatement = '
+SET @SqlStatement = N'
 SELECT
-	 ''sqlserver_memory_clerks'' As [measurement]
+	 ''sqlserver_memory_clerks'' AS [measurement]
 	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
-	,DB_NAME() as [database_name]
+	,DB_NAME() AS [database_name]
 	,ISNULL(clerk_names.[name],mc.[type]) AS [clerk_type]
-	,SUM({pages_kb}) AS [size_kb]
+	,SUM(' + @Columns + N') AS [size_kb]
 FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
 LEFT OUTER JOIN (
 		  SELECT ''CACHESTORE_BROKERDSH'',''Service Broker Dialog Security Header Cache''
@@ -388,18 +386,17 @@ LEFT OUTER JOIN (
 	UNION SELECT ''CACHESTORE_QDSCONTEXTSETTINGS'',''QDS Unique Context Settings''
 	UNION SELECT ''MEMORYCLERK_QUERYDISKSTORE'',''QDS General''
 	UNION SELECT ''MEMORYCLERK_QUERYDISKSTORE_HASHMAP'',''QDS Query/Plan Hash Table''
-) AS clerk_names(system_name,name)
+) AS clerk_names([system_name],[name])
 	ON mc.[type] = clerk_names.[system_name]
 GROUP BY 
 	ISNULL(clerk_names.[name], mc.[type])
 HAVING 
-	SUM({pages_kb}) >= 1024
+	SUM(' + @Columns + N') >= 1024
 OPTION(RECOMPILE);
 '
-IF @MajorVersion > 10 /*SQL 2012 and later*/
-    SET @SqlStatement = REPLACE(@SqlStatement,'{pages_kb}','mc.pages_kb')
-ELSE /*SQL 2008 R2 and previous*/
-    SET @SqlStatement = REPLACE(@SqlStatement,'{pages_kb}','mc.single_pages_kb + mc.multi_pages_kb')
+/*Debug only*/
+--SELECT @SqlStatement
+
 EXEC(@SqlStatement)
 `
 
