@@ -32,13 +32,13 @@ using one of the supported [input data formats](/docs/DATA_FORMATS_INPUT.md).
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
 
-  ## Optional.
+  ## Optional. Use together with queue_owner_account_id to discover queue url
   # queue_name = ""
 
-  ## Optional.
-  # queue_owner_acount_id = ""
+  ## Optional. Use together with queue_name to discover queue url
+  # queue_owner_account_id = ""
 
-  ## Optional. Required if queue_name and queue_owner_acount_id were not provided
+  ## Optional. Required if queue_name and queue_owner_account_id were not provided
   queue_url = ""
 
   ## Optional. The maximum number of messages to return. Defaults to 10
@@ -54,12 +54,16 @@ using one of the supported [input data formats](/docs/DATA_FORMATS_INPUT.md).
   # wait_time_seconds = 20
 
   ## Optional. When > 1 messages will be deleted from a queue in batches of provided size.
-  ## Defaults to 0
+  ## Defaults to 10
   # delete_batch_size = 10
 
-  ## Optional. If batch delete is enabled - flush messages
-  ## Set this equal to or lower then your visibility timeout. Defaults to 30
-  # delete_batch_flush_seconds = 30
+  ## Optional. If batch delete is enabled - flush messages when no new messages were received for
+  ## this period of time to avoid redeliveries. Defaults to 20
+  # delete_batch_flush_seconds = 20
+
+  ## Optional. Number of seconds to wait before attempting receiving messages
+  ## after failed attempt. Defaults to 5
+  # retry_receive_delay_seconds = 5
 
   ## Optional. Maximum byte length of a message to consume.
   ## Larger messages are dropped with an error. If less than 0 or unspecified,
@@ -82,6 +86,33 @@ using one of the supported [input data formats](/docs/DATA_FORMATS_INPUT.md).
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+```
+
+#### Required AWS IAM permissions
+
+Minimum required permissions for queue:
+ - `sqs:ReceiveMessage`
+ - `sqs:DeleteMessage`
+
+If you are using `queue_name` and `queue_owner_account_id` fields to discover queue URL you will also need to add this permission:
+ - `sqs:GetQueueUrl`
+
+Example policy:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "sqs:DeleteMessage",
+                "sqs:ReceiveMessage"
+            ],
+            "Effect": "Allow",
+            "Resource": "arn:aws:sqs:us-east-1:12345678:queue_name"
+        }
+    ]
+}
 ```
 
 ### Developing

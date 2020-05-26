@@ -17,11 +17,15 @@ services:
       - ../../../../telegraf:/telegraf
     depends_on:
       - sqs
+    ports:
+      - 6060:6060
     entrypoint:
       - /telegraf
       - --debug
       - --config
       - /telegraf.conf
+      - --pprof-addr
+      - 0.0.0.0:6060
 
 
 

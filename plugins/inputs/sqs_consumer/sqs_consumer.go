@@ -19,11 +19,12 @@ type empty struct{}
 type semaphore chan empty
 
 const (
-	defaultMaxNumberOfMessages     = 10
-	defaultWaitTimeSeconds         = 20
-	defaultDeleteBatchSize         = 0
-	defaultDeleteBatchFlushSeconds = 30
-	defaultMaxUndeliveredMessages  = 1000
+	defaultMaxNumberOfMessages      = 10
+	defaultWaitTimeSeconds          = 20
+	defaultDeleteBatchSize          = 10
+	defaultDeleteBatchFlushSeconds  = 20
+	defaultRetryReceiveDelaySeconds = 5
+	defaultMaxUndeliveredMessages   = 1000
 )
 
 type SQSConsumer struct {
@@ -37,14 +38,15 @@ type SQSConsumer struct {
 	EndpointURL string `toml:"endpoint_url"`
 
 	QueueName           string `toml:"queue_name"`
-	QueueOwnerAccountID string `toml:"queue_owner_acount_id"`
+	QueueOwnerAccountID string `toml:"queue_owner_account_id"`
 	QueueURL            string `toml:"queue_url"`
 
-	MaxNumberOfMessages     int `toml:"max_number_of_messages"`
-	VisibilityTimeout       int `toml:"visibility_timeout"`
-	WaitTimeSeconds         int `toml:"wait_time_seconds"`
-	DeleteBatchSize         int `toml:"delete_batch_size"`
-	DeleteBatchFlushSeconds int `toml:"delete_batch_flush_seconds"`
+	MaxNumberOfMessages      int `toml:"max_number_of_messages"`
+	VisibilityTimeout        int `toml:"visibility_timeout"`
+	WaitTimeSeconds          int `toml:"wait_time_seconds"`
+	DeleteBatchSize          int `toml:"delete_batch_size"`
+	DeleteBatchFlushSeconds  int `toml:"delete_batch_flush_seconds"`
+	RetryReceiveDelaySeconds int `toml:"retry_receive_delay_seconds"`
 
 	MaxMessageLen          int `toml:"max_message_len"`
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
@@ -66,8 +68,6 @@ type SQSConsumer struct {
 	deletes    map[string]string
 }
 
-// TODO: Add internal metrics similar too https://github.com/influxdata/telegraf/blob/master/plugins/inputs/influxdb_listener/influxdb_listener.go#L48
-
 type ticker struct {
 	period time.Duration
 	ticker time.Ticker
@@ -87,7 +87,14 @@ func (s *SQSConsumer) Description() string {
 }
 
 func (s *SQSConsumer) SampleConfig() string {
-	return fmt.Sprintf(sampleConfig, defaultMaxNumberOfMessages, defaultWaitTimeSeconds, defaultDeleteBatchSize, defaultDeleteBatchFlushSeconds, defaultMaxUndeliveredMessages)
+	return fmt.Sprintf(sampleConfig,
+		defaultMaxNumberOfMessages,
+		defaultWaitTimeSeconds,
+		defaultDeleteBatchSize,
+		defaultDeleteBatchFlushSeconds,
+		defaultRetryReceiveDelaySeconds,
+		defaultMaxUndeliveredMessages,
+	)
 }
 
 // Gather does nothing for this service input.
@@ -227,16 +234,18 @@ func (s *SQSConsumer) receive(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			s.Log.Debugf("recieving messages from %s", s.QueueURL)
+			s.Log.Debugf("receiving messages from %s", s.QueueURL)
 			resp, err := s.sqs.ReceiveMessage(&input)
 			if err != nil {
-				s.acc.AddError(fmt.Errorf("receiver for queue %s recieved an error: %v", s.QueueURL, err))
-				// TODO: handle errors, probably sleep on retriable errors (timeout, etc), and bail out on other (auth error, wrong queue)
+				s.acc.AddError(fmt.Errorf("receiver for queue %s received an error: %v", s.QueueURL, err))
+				if v := s.RetryReceiveDelaySeconds; v > 0 {
+					s.Log.Infof("waiting %d seconds before attempting to receive new messages...", v)
+					time.Sleep(time.Duration(v) * time.Second)
+				}
 			}
 
 			if len(resp.Messages) == 0 {
 				break
-				// TODO: add customized wait time on erro or empty reply
 			}
 
 			for _, msg := range resp.Messages {
@@ -363,11 +372,12 @@ func (s *SQSConsumer) deleteBatch() {
 func init() {
 	inputs.Add("sqs_consumer", func() telegraf.Input {
 		return &SQSConsumer{
-			MaxUndeliveredMessages:  defaultMaxUndeliveredMessages,
-			MaxNumberOfMessages:     defaultMaxNumberOfMessages,
-			WaitTimeSeconds:         defaultWaitTimeSeconds,
-			DeleteBatchSize:         defaultDeleteBatchSize,
-			DeleteBatchFlushSeconds: defaultDeleteBatchFlushSeconds,
+			MaxUndeliveredMessages:   defaultMaxUndeliveredMessages,
+			MaxNumberOfMessages:      defaultMaxNumberOfMessages,
+			WaitTimeSeconds:          defaultWaitTimeSeconds,
+			DeleteBatchSize:          defaultDeleteBatchSize,
+			DeleteBatchFlushSeconds:  defaultDeleteBatchFlushSeconds,
+			RetryReceiveDelaySeconds: defaultRetryReceiveDelaySeconds,
 		}
 	})
 }
@@ -397,13 +407,13 @@ const sampleConfig = `
   ##   ex: endpoint_url = "http://localhost:8000"
   # endpoint_url = ""
 
-  ## Optional.
+  ## Optional. Use together with queue_owner_account_id to discover queue url
   # queue_name = ""
 
-  ## Optional.
-  # queue_owner_acount_id = ""
+  ## Optional. Use together with queue_name to discover queue url
+  # queue_owner_account_id = ""
 
-  ## Optional. Required if queue_name and queue_owner_acount_id were not provided
+  ## Optional. Required if queue_name and queue_owner_account_id were not provided
   queue_url = ""
 
   ## Optional. The maximum number of messages to return. Defaults to %d
@@ -422,9 +432,14 @@ const sampleConfig = `
   ## Defaults to %d
   # delete_batch_size = 10
 
-  ## Optional. If batch delete is enabled - flush messages
+  ## Optional. If batch delete is enabled - flush messages when no new messages were received for
+  ## this period of time to avoid redeliveries.
   ## Set this equal to or lower then your visibility timeout. Defaults to %d
   # delete_batch_flush_seconds = 30
+
+  ## Optional. Number of seconds to wait before attempting receiving messages
+  ## after failed attempt. Defaults to %d
+  # retry_receive_delay_seconds = 5
 
   ## Optional. Maximum byte length of a message to consume.
   ## Larger messages are dropped with an error. If less than 0 or unspecified,
