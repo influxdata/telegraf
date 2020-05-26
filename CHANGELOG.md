@@ -51,6 +51,7 @@
 - [#7446](https://github.com/influxdata/telegraf/issues/7446): Fix gzip support in socket_listener with tcp sockets.
 - [#7390](https://github.com/influxdata/telegraf/issues/7390): Fix interval drift when round_interval is set in agent.
 - [#7524](https://github.com/influxdata/telegraf/pull/7524): Fix typo in total_elapsed_time_ms field of sqlserver input.
+- [#7203](https://github.com/influxdata/telegraf/issues/7203): Exclude csv_timestamp_column and csv_measurement_column from fields.
 
 ## v1.14.4 [unreleased]
 
