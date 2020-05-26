@@ -28,15 +28,12 @@ func (m *MetricDataDict) String() string {
 	return buf.String()
 }
 
-func writeValue(out *strings.Builder, m *MetricDataDict) {
-}
-
 func (m *MetricDataDict) Type() string {
 	return m.typename
 }
 
 func (m *MetricDataDict) Freeze() {
-	// To be implemented
+	// TODO
 }
 
 func (m *MetricDataDict) Truth() starlark.Bool {
@@ -47,7 +44,7 @@ func (m *MetricDataDict) Hash() (uint32, error) {
 	return 0, errors.New("not hashable")
 }
 
-// type Mapping
+// Get implements the starlark.Mapping interface.
 func (m *MetricDataDict) Get(key starlark.Value) (v starlark.Value, found bool, err error) {
 	if k, ok := key.(starlark.String); ok {
 		gv, found := m.data.Get(k.GoString())
@@ -61,7 +58,8 @@ func (m *MetricDataDict) Get(key starlark.Value) (v starlark.Value, found bool, 
 	return starlark.None, false, errors.New("key must be of type 'str'")
 }
 
-// type HasSetKey
+// SetKey implements the starlark.HasSetKey interface to support map update
+// using x[k]=v syntax, like a dictionary.
 func (m *MetricDataDict) SetKey(k, v starlark.Value) error {
 	var key starlark.String
 	var ok bool
@@ -77,7 +75,7 @@ func (m *MetricDataDict) SetKey(k, v starlark.Value) error {
 	return m.data.Add(key.GoString(), value)
 }
 
-// type IterableMapping
+// Items implements the starlark.IterableMapping interface.
 func (m *MetricDataDict) Items() []starlark.Tuple {
 	items := make([]starlark.Tuple, 0, m.data.Len())
 	for _, fields := range m.data.List() {
@@ -89,6 +87,7 @@ func (m *MetricDataDict) Items() []starlark.Tuple {
 	return items
 }
 
+// Items implements the starlark.Mapping interface.
 func (m *MetricDataDict) Iterate() starlark.Iterator {
 	return &MetricDataIterator{data: m.data}
 }
@@ -114,13 +113,14 @@ func (i *MetricDataIterator) Next(p *starlark.Value) bool {
 func (i *MetricDataIterator) Done() {
 }
 
-// type HasAttrs
-func (m *MetricDataDict) Attr(name string) (starlark.Value, error) {
-	return builtinAttr(m, name, MetricDataDictMethods)
-}
-
+// AttrNames implements the starlark.HasAttrs interface.
 func (m *MetricDataDict) AttrNames() []string {
 	return builtinAttrNames(MetricDataDictMethods)
+}
+
+// Attr implements the starlark.HasAttrs interface.
+func (m *MetricDataDict) Attr(name string) (starlark.Value, error) {
+	return builtinAttr(m, name, MetricDataDictMethods)
 }
 
 var MetricDataDictMethods = map[string]builtinMethod{
@@ -141,6 +141,7 @@ func (m *MetricDataDict) Clear() error {
 	return nil
 }
 
+// FIXME called from builtins
 func (m *MetricDataDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {
 	if key, ok := k.(starlark.String); ok {
 		value, ok := m.data.Get(key.GoString())
@@ -153,7 +154,7 @@ func (m *MetricDataDict) Delete(k starlark.Value) (v starlark.Value, found bool,
 	return starlark.None, false, errors.New("key must be of type 'str'")
 }
 
-// Internal converter functions
+// FIXME field conversions
 func asStarlarkValue(value interface{}) (starlark.Value, error) {
 	switch v := value.(type) {
 	case float64:
@@ -171,6 +172,7 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 	return starlark.None, errors.New("invalid type")
 }
 
+// FIXME field conversions
 func asGoValue(value interface{}) (interface{}, error) {
 	switch v := value.(type) {
 	case starlark.Float:

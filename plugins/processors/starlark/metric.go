@@ -52,11 +52,12 @@ func (m *Metric) Hash() (uint32, error) {
 	return 0, errors.New("not hashable")
 }
 
+// AttrNames implements the starlark.HasAttrs interface.
 func (m *Metric) AttrNames() []string {
 	return []string{"name", "tags", "fields", "time"}
 }
 
-// Attr implements the HasAttrs interface
+// Attr implements the starlark.HasAttrs interface.
 func (m *Metric) Attr(name string) (starlark.Value, error) {
 	switch name {
 	case "name":
@@ -73,6 +74,7 @@ func (m *Metric) Attr(name string) (starlark.Value, error) {
 	}
 }
 
+// SetField implements the starlark.HasSetField interface.
 func (m *Metric) SetField(name string, value starlark.Value) error {
 	if m.frozen {
 		return fmt.Errorf("cannot modify frozen metric")
@@ -106,10 +108,11 @@ func (m *Metric) SetName(value starlark.Value) error {
 	return errors.New("type error")
 }
 
-func (m *Metric) Tags() *MetricDataDict {
-	tagsaccessor := AccessibleTag(*m)
-	tags := MetricDataDict{data: &tagsaccessor, typename: "tags"}
-	return &tags
+func (m *Metric) Tags() TagDict {
+	// tagsaccessor := AccessibleTag(*m)
+	// tags := MetricDataDict{data: &tagsaccessor, typename: "tags"}
+	// return &tags
+	return TagDict{m}
 }
 
 func (m *Metric) Fields() *MetricDataDict {

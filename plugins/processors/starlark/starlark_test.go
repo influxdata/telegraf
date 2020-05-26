@@ -388,6 +388,91 @@ def apply(metric):
 			expected: []telegraf.Metric{},
 		},
 		{
+			name: "empty tags are false",
+			source: `
+def apply(metric):
+	if not metric.tags:
+		return metric
+	return None
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "non-empty tags are true",
+			source: `
+def apply(metric):
+	if metric.tags:
+		return metric
+	return None
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "tags in operator",
+			source: `
+def apply(metric):
+	if 'host' not in metric.tags:
+		return
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "lookup tag",
 			source: `
 def apply(metric):
@@ -1023,6 +1108,29 @@ def apply(metric):
 				),
 			},
 			expected: []telegraf.Metric{},
+		},
+		{
+			name: "fields in operator",
+			source: `
+def apply(metric):
+	if 'time_idle' not in metric.fields:
+		return
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
 		},
 		{
 			name: "lookup string field",
@@ -1924,6 +2032,28 @@ def apply(metric):
 			},
 		},
 		{
+			// This should be faster than calling items()
+			name: "iterate tags and get values",
+			source: `
+def apply(metric):
+	for k in metric.tags:
+		v = metric.tags[k]
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"a": "b",
+						"c": "d",
+						"e": "f",
+						"g": "h",
+					},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "iterate tag items",
 			source: `
 def apply(metric):
@@ -2002,3 +2132,7 @@ def apply(metric):
 		})
 	}
 }
+
+// TODO test truthiness of fields
+// TODO benchmark in function
+// TODO test error when pop() is not found
