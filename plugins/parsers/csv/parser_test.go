@@ -281,10 +281,10 @@ hello,80,test_name2`
 
 	expectedFields := map[string]interface{}{
 		"line2": int64(80),
-		"line3": "test_name2",
 	}
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
+	require.Equal(t, "test_name2", metrics[0].Name())
 	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
@@ -364,7 +364,64 @@ func TestTimestampUnixFloatPrecision(t *testing.T) {
 			map[string]string{},
 			map[string]interface{}{
 				"value": 42,
-				"time":  1551129661.954561233,
+			},
+			time.Unix(1551129661, 954561233),
+		),
+	}
+
+	metrics, err := p.Parse([]byte(data))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
+}
+
+func TestSkipMeasurementColumn(t *testing.T) {
+	p := Parser{
+		MetricName:      "csv",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+		TrimSpace:       true,
+	}
+	data := `id,value,timestamp
+		1,5,1551129661.954561233`
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"id":    1,
+				"value": 5,
+			},
+			time.Unix(1551129661, 954561233),
+		),
+	}
+
+	metrics, err := p.Parse([]byte(data))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
+}
+
+func TestSkipTimestampColumn(t *testing.T) {
+	p := Parser{
+		MetricName:      "csv",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+		TrimSpace:       true,
+	}
+	data := `id,value,timestamp
+		1,5,1551129661.954561233`
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"id":    1,
+				"value": 5,
 			},
 			time.Unix(1551129661, 954561233),
 		),

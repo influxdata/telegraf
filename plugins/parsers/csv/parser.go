@@ -216,6 +216,10 @@ outer:
 		return nil, err
 	}
 
+	// Exclude `TimestampColumn` and `MeasurementColumn`
+	delete(recordFields, p.TimestampColumn)
+	delete(recordFields, p.MeasurementColumn)
+
 	m, err := metric.New(measurementName, tags, recordFields, metricTime)
 	if err != nil {
 		return nil, err
