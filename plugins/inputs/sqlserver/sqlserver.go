@@ -290,7 +290,7 @@ DECLARE
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
 	,@Columns AS nvarchar(max) = ''
 
-IF @MajorMinorVersion >= 1050
+IF @MajorMinorVersion >= 1100
 	SET @Columns += N'mc.[pages_kb]';
 ELSE
 	SET @Columns += N'mc.[single_pages_kb] + mc.[multi_pages_kb]';
@@ -824,7 +824,7 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 INSERT	INTO @PCounters
 EXEC (@SqlStatement)
 
-IF @MajorMinorVersion >= 13 BEGIN
+IF @MajorMinorVersion >= 1300 BEGIN
 	SET @Columns += N',rgwg.[total_cpu_usage_preemptive_ms] AS [Premptive CPU Usage (time)]'
 	SET @PivotColumns += N',[Premptive CPU Usage (time)]'
 END
