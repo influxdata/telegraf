@@ -630,7 +630,7 @@ DECLARE
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 
-	IF @MajorMinorVersion >= 13 BEGIN
+	IF @MajorMinorVersion >= 1300 BEGIN
 		SET @Columns += N',s.[total_cpu_usage_ms]
 	,s.[total_scheduler_delay_ms]'
 	END
