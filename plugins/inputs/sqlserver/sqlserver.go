@@ -629,15 +629,14 @@ const sqlServerSchedulersV2 string = `
 SET DEADLOCK_PRIORITY - 10;
 
 DECLARE
-	 @MajorVersion AS int
-	,@SqlStatement AS nvarchar(max)
+	 @SqlStatement AS nvarchar(max)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(MAX) = ''
 
-SELECT 
-	@MajorVersion = x.[MajorVersion]
-FROM (
-	SELECT
-		CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
-) AS x
+	IF @MajorMinorVersion >= 13 BEGIN
+		SET @Columns += N',s.[total_cpu_usage_ms]
+	,s.[total_scheduler_delay_ms]'
+	END
 
 SET @SqlStatement = N'
 SELECT 
@@ -658,15 +657,11 @@ SELECT
 	,s.[pending_disk_io_count]
 	,s.[load_factor]
 	,s.[yield_count]
-	'
-	+ 
-	CASE WHEN @MajorVersion >= 13 /*SQL 2016 and later*/
-		THEN N',s.[total_cpu_usage_ms], s.[total_scheduler_delay_ms]'
-		ELSE ''
-	END 
-	+
-N'
+	' + @Columns + N'
 FROM sys.dm_os_schedulers AS s'
+
+/*Debug Only*/
+--SELECT @SqlStatement
 
 EXEC sp_executesql @SqlStatement
 `
