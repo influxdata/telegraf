@@ -59,5 +59,8 @@ elif [[ -f /etc/os-release ]]; then
             # Amazon Linux logic
             disable_chkconfig
         fi
+    elif [[ "$NAME" = "Solus" ]]; then
+        rm -f /etc/default/telegraf
+        disable_systemd /usr/lib/systemd/system/telegraf.service
     fi
 fi
