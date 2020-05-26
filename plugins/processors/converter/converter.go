@@ -327,12 +327,12 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 
 func toBool(v interface{}) (bool, bool) {
 	switch value := v.(type) {
-	case int64, uint64, float64:
-		if value != 0 {
-			return true, true
-		} else {
-			return false, false
-		}
+	case int64:
+		return value != 0, true
+	case uint64:
+		return value != 0, true
+	case float64:
+		return value != 0, true
 	case bool:
 		return value, true
 	case string:
