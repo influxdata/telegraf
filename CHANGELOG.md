@@ -57,7 +57,8 @@
 #### Bugfixes
 
 - [#7325](https://github.com/influxdata/telegraf/issues/7325): Fix "cannot insert the value NULL error" with PerformanceCounters query.
-- [#7579](https://github.com/influxdata/telegraf/issues/7579): Fix numeric to bool conversion in converter processor.
+- [#7579](https://github.com/influxdata/telegraf/pull/7579): Fix numeric to bool conversion in converter processor.
+- [#7551](https://github.com/influxdata/telegraf/issues/7551): Fix typo in name of gc_cpu_fraction field of the influxdb input.
 
 ## v1.14.3 [2020-05-19]
 
