@@ -1646,34 +1646,20 @@ SELECT
 
 const sqlServerVolumeSpaceV2 string = `
 /* Only for on-prem version of SQL Server
-Gets data about disk space, only if the disk is used by SQL Server
+Gets data about disk space, only for volumes used by SQL Server (data available form sql 2008R2 and later)
 */
 DECLARE
-	 @EngineEdition AS int
-	,@MajorVersion AS int
-	,@MinorVersion AS int
-
-SELECT 
-	@EngineEdition = x.[EngineEdition]
-   ,@MajorVersion = x.[MajorVersion]
-   ,@MinorVersion = x.[MinorVersion]
-FROM (
-	SELECT
-		 CAST(SERVERPROPERTY('EngineEdition') AS int) AS [EngineEdition]
-		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
-		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int) AS [MinorVersion]
-) AS x
-
-IF @EngineEdition IN (2,3,4) AND NOT(@MajorVersion <= 10 AND @MinorVersion < 50) /*Exec only for SQL 2008 R2 and later*/
+	 @EngineEdition AS int = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	
+IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 	BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('machinename') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-		,CASE WHEN RIGHT(vs.[volume_mount_point],1) = '\'
-			THEN LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-			ELSE vs.[volume_mount_point]
-		 END AS [volume_mount_point]
+		/* [volume_mount_point] TRIMS trailing "\" which are not allowed in InfluxDB */
+		,LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point])-(PATINDEX('%[^\]%',REVERSE([volume_mount_point]))-1)) AS [volume_mount_point]
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
