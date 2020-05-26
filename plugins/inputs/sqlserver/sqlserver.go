@@ -670,18 +670,11 @@ const sqlPerformanceCountersV2 string = `
 SET DEADLOCK_PRIORITY -10;
 
 DECLARE
-	 @EngineEdition AS int
-	,@SqlStatement AS nvarchar(max)
-	,@MajorVersion AS int
-
-SELECT 
-	 @EngineEdition = x.[EngineEdition]
-	,@MajorVersion = x.[MajorVersion]
-FROM (
-	SELECT
-		 CAST(SERVERPROPERTY('EngineEdition') AS int) AS [EngineEdition]
-		,CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) AS [MajorVersion]
-) AS x
+	 @SqlStatement AS nvarchar(max)
+	,@EngineEdition AS int = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(MAX) = ''
+	,@PivotColumns AS nvarchar(MAX) = ''
 
 DECLARE @PCounters TABLE
 (
@@ -834,36 +827,37 @@ SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 INSERT	INTO @PCounters
 EXEC (@SqlStatement)
 
+IF @MajorMinorVersion >= 13 BEGIN
+	SET @Columns += N',rgwg.[total_cpu_usage_preemptive_ms] AS [Premptive CPU Usage (time)]'
+	SET @PivotColumns += N',[Premptive CPU Usage (time)]'
+END
 
-SET  @SqlStatement = REPLACE('SELECT
-"SQLServer:Workload Group Stats" AS object,
-counter,
-instance,
-CAST(vs.value AS BIGINT) AS value,
-1
+SET  @SqlStatement = N'
+SELECT
+	 ''SQLServer:Workload Group Stats'' AS [object]
+	,[counter]
+	,[instance]
+	,CAST(vs.[value] AS BIGINT) AS [value]
+	,1
 FROM
 (
     SELECT
-    rgwg.name AS instance,
-    rgwg.total_request_count AS "Request Count",
-    rgwg.total_queued_request_count AS "Queued Request Count",
-    rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
-    rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
-	' + CASE WHEN @MajorVersion >= 13 /*From SQL 2016*/
-		THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' 
-		ELSE '' 
-	END + N'
-    rgwg.total_lock_wait_count AS "Lock Wait Count",
-    rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
-    rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
-    FROM sys.dm_resource_governor_workload_groups AS rgwg
-    INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
-    ON rgwg.pool_id = rgrp.pool_id
+		 rgwg.name AS instance
+		,rgwg.total_request_count AS [Request Count]
+		,rgwg.total_queued_request_count AS [Queued Request Count]
+		,rgwg.total_cpu_limit_violation_count AS [CPU Limit Violation Count]
+		,rgwg.total_cpu_usage_ms AS [CPU Usage (time)]
+		,rgwg.total_lock_wait_count AS [Lock Wait Count]
+		,rgwg.total_lock_wait_time_ms AS [Lock Wait Time]
+		,rgwg.total_reduced_memgrant_count AS [Reduced Memory Grant Count]
+		' + @Columns + N'
+	FROM sys.[dm_resource_governor_workload_groups] AS rgwg
+	INNER JOIN sys.[dm_resource_governor_resource_pools] AS rgrp
+		ON rgwg.[pool_id] = rgrp.[pool_id]
 ) AS rg
 UNPIVOT (
-    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN @MajorVersion >= 13 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], [Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] ' + @PivotColumns + N')
 ) AS vs'
-,'"','''')
 
 INSERT INTO @PCounters
 EXEC( @SqlStatement )
