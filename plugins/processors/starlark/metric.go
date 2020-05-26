@@ -83,8 +83,7 @@ func (m *Metric) SetField(name string, value starlark.Value) error {
 		m.SetName(value)
 		return nil
 	case "time":
-		m.SetTime(value)
-		return nil
+		return m.SetTime(value)
 	case "tags":
 		return errors.New("AttributeError: can't set tags")
 	case "fields":

@@ -213,7 +213,7 @@ def apply(metric):
 	}
 }
 
-// Tests for the behavior of the Starlark Metric wrapper type.
+// Tests for the behavior of the Metric type.
 var metricTests = []struct {
 	name     string
 	source   string
@@ -221,7 +221,7 @@ var metricTests = []struct {
 	expected []telegraf.Metric
 }{
 	{
-		name: "produce new metric",
+		name: "create new metric",
 		source: `
 def apply(metric):
 	m = Metric('cpu')
@@ -838,7 +838,7 @@ def apply(metric):
 		},
 	},
 	{
-		name: "clear",
+		name: "clear tags",
 		source: `
 def apply(metric):
 	metric.tags.clear()
@@ -916,6 +916,24 @@ def apply(metric):
 				time.Unix(0, 42).UTC(),
 			),
 		},
+	},
+	{
+		name: "set time wrong type",
+		source: `
+def apply(metric):
+	metric.time = 'howdy'
+	return metric
+			`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"time_idle": 42,
+				},
+				time.Unix(0, 0).UTC(),
+			),
+		},
+		expected: []telegraf.Metric{},
 	},
 	{
 		name: "get time",
