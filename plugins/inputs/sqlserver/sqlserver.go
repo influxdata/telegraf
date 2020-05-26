@@ -698,10 +698,10 @@ SET @SqlStatement = N'SELECT DISTINCT
                              OR RTRIM(spi.object_name) LIKE ''%:Advanced Analytics'')
                              AND TRY_CONVERT(uniqueidentifier, spi.instance_name) 
 							 IS NOT NULL -- for cloud only
-                       THEN d.name
- 			WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
+                THEN ISNULL(d.name,RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
+			  WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
 				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
-			THEN d.name + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
+			THEN ISNULL(d.name,RTRIM(spi.instance_name)) + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
                        ELSE RTRIM(spi.instance_name)
                 END AS instance_name,'
 		ELSE 'RTRIM(spi.instance_name) as instance_name, '
@@ -1596,7 +1596,7 @@ SELECT
 	, DB_NAME(r.database_id) as session_db_name
 	, r.status
 	, r.cpu_time as cpu_time_ms
-	, r.total_elapsed_time as total_elasped_time_ms
+	, r.total_elapsed_time as total_elapsed_time_ms
 	, r.logical_reads
 	, r.writes
 	, r.command
@@ -2254,7 +2254,7 @@ SELECT database_name, num_of_writes_persec
 FROM #baselinewritten
 WHERE datafile_type = ''ROWS''
 ) as V
-PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTabl
+PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
 UNION ALL
 SELECT measurement = ''Log (reads/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
@@ -2678,7 +2678,7 @@ VALUES (N'QDS_SHUTDOWN_QUEUE'), (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'DIRTY_PAGE_POLL'),                (N'DISPATCHER_QUEUE_SEMAPHORE'),
 	(N'EXECSYNC'),                       (N'FSAGENT'),
 	(N'FT_IFTS_SCHEDULER_IDLE_WAIT'),    (N'FT_IFTSHC_MUTEX'),
-	(N'HADR_CLUSAPI_CALL'),              (N'HADR_FILESTREAM_IOMGR_IOCOMPLETIO(N'),
+	(N'HADR_CLUSAPI_CALL'),              (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'HADR_LOGCAPTURE_WAIT'),           (N'HADR_NOTIFICATION_DEQUEUE'),
 	(N'HADR_TIMER_TASK'),                (N'HADR_WORK_QUEUE'),
 	(N'KSOURCE_WAKEUP'),                 (N'LAZYWRITER_SLEEP'),

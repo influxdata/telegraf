@@ -58,7 +58,7 @@ systems.
 
 #### With a PowerShell on Windows, the output of the script appears to be truncated.
 
-You may need to set a variable in your script to increase the numer of columns
+You may need to set a variable in your script to increase the number of columns
 available for output:
 ```
 $host.UI.RawUI.BufferSize = new-object System.Management.Automation.Host.Size(1024,50)

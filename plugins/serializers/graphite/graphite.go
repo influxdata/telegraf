@@ -17,7 +17,7 @@ const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
 var (
 	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
-	hypenChars   = strings.NewReplacer(
+	hyphenChars  = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
 		"*", "-",
@@ -39,6 +39,7 @@ type GraphiteSerializer struct {
 	Prefix     string
 	Template   string
 	TagSupport bool
+	Separator  string
 	Templates  []*GraphiteTemplate
 }
 
@@ -55,7 +56,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			if fieldValue == "" {
 				continue
 			}
-			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, fieldName)
+			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName)
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
 				bucket,
@@ -246,6 +247,7 @@ func SerializeBucketNameWithTags(
 	measurement string,
 	tags map[string]string,
 	prefix string,
+	separator string,
 	field string,
 ) string {
 	var out string
@@ -259,13 +261,13 @@ func SerializeBucketNameWithTags(
 	sort.Strings(tagsCopy)
 
 	if prefix != "" {
-		out = prefix + "."
+		out = prefix + separator
 	}
 
 	out += measurement
 
 	if field != "value" {
-		out += "." + field
+		out += separator + field
 	}
 
 	out = sanitize(out)
@@ -308,8 +310,8 @@ func buildTags(tags map[string]string) string {
 }
 
 func sanitize(value string) string {
-	// Apply special hypenation rules to preserve backwards compatibility
-	value = hypenChars.Replace(value)
+	// Apply special hyphenation rules to preserve backwards compatibility
+	value = hyphenChars.Replace(value)
 	// Apply rule to drop some chars to preserve backwards compatibility
 	value = dropChars.Replace(value)
 	// Replace any remaining illegal chars

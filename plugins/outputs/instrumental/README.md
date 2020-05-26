@@ -20,6 +20,6 @@ by whitespace. The `increment` type is only used if the metric comes in as a cou
   template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
-  ## Debug true - Print communcation to Instrumental
+  ## Debug true - Print communication to Instrumental
   debug = false
 ```

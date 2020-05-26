@@ -49,7 +49,7 @@ var sampleConfig = `
   ## The default location of the unbound config file can be overridden with:
   # config_file = "/etc/unbound/unbound.conf"
 
-  ## The default timeout of 1s can be overriden with:
+  ## The default timeout of 1s can be overridden with:
   # timeout = "1s"
 
   ## When set to true, thread metrics are tagged with the thread id.
@@ -126,7 +126,7 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 
-	// Always exclude histrogram statistics
+	// Always exclude histogram statistics
 	statExcluded := []string{"histogram.*"}
 	filterExcluded, err := filter.Compile(statExcluded)
 	if err != nil {

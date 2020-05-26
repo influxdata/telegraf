@@ -590,7 +590,7 @@ func TestConnection(t *testing.T) {
 	}
 }
 
-func TestInvalidUsernameorPassword(t *testing.T) {
+func TestInvalidUsernameOrPassword(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -624,7 +624,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	assert.EqualError(t, err, "received status code 401 (Unauthorized), expected 200")
 }
 
-func TestNoUsernameorPasswordConfiguration(t *testing.T) {
+func TestNoUsernameOrPasswordConfiguration(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

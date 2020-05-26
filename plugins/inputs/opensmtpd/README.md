@@ -12,7 +12,7 @@ This plugin gathers stats from [OpenSMTPD - a FREE implementation of the server-
    ## The default location of the smtpctl binary can be overridden with:
    binary = "/usr/sbin/smtpctl"
 
-   # The default timeout of 1s can be overriden with:
+   # The default timeout of 1s can be overridden with:
    #timeout = "1s"
 ```
 

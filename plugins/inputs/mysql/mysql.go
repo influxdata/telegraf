@@ -71,7 +71,7 @@ const sampleConfig = `
   ##           <1.6: metric_version = 1 (or unset)
   metric_version = 2
 
-  ## if the list is empty, then metrics are gathered from all databasee tables
+  ## if the list is empty, then metrics are gathered from all database tables
   # table_schema_databases = []
 
   ## gather metrics from INFORMATION_SCHEMA.TABLES for databases provided above list

@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockProcessor is a Processor with an overrideable Apply implementation.
+// MockProcessor is a Processor with an overridable Apply implementation.
 type MockProcessor struct {
 	ApplyF func(in ...telegraf.Metric) []telegraf.Metric
 }
