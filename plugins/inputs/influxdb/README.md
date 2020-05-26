@@ -59,7 +59,7 @@ and may vary between versions.
   - heap_sys
   - mcache_sys
   - next_gc
-  - gcc_pu_fraction
+  - gc_cpu_fraction
   - other_sys
   - alloc
   - stack_inuse
@@ -95,7 +95,7 @@ telegraf --config ~/ws/telegraf.conf --input-filter influxdb --test
 > influxdb_measurement,database=_internal,host=tyrion,measurement=tsm1_filestore,url=http://localhost:8086/debug/vars numSeries=2 1463590500247354636
 > influxdb_measurement,database=_internal,host=tyrion,measurement=tsm1_wal,url=http://localhost:8086/debug/vars numSeries=4 1463590500247354636
 > influxdb_measurement,database=_internal,host=tyrion,measurement=write,url=http://localhost:8086/debug/vars numSeries=1 1463590500247354636
-> influxdb_memstats,host=tyrion,url=http://localhost:8086/debug/vars alloc=7642384i,buck_hash_sys=1463471i,frees=1169558i,gc_sys=653312i,gcc_pu_fraction=0.00003825652361068311,heap_alloc=7642384i,heap_idle=9912320i,heap_inuse=9125888i,heap_objects=48276i,heap_released=0i,heap_sys=19038208i,last_gc=1463590480877651621i,lookups=90i,mallocs=1217834i,mcache_inuse=4800i,mcache_sys=16384i,mspan_inuse=70920i,mspan_sys=81920i,next_gc=11679787i,num_gc=141i,other_sys=1244233i,pause_total_ns=24034027i,stack_inuse=884736i,stack_sys=884736i,sys=23382264i,total_alloc=679012200i 1463590500277918755
+> influxdb_memstats,host=tyrion,url=http://localhost:8086/debug/vars alloc=7642384i,buck_hash_sys=1463471i,frees=1169558i,gc_sys=653312i,gc_cpu_fraction=0.00003825652361068311,heap_alloc=7642384i,heap_idle=9912320i,heap_inuse=9125888i,heap_objects=48276i,heap_released=0i,heap_sys=19038208i,last_gc=1463590480877651621i,lookups=90i,mallocs=1217834i,mcache_inuse=4800i,mcache_sys=16384i,mspan_inuse=70920i,mspan_sys=81920i,next_gc=11679787i,num_gc=141i,other_sys=1244233i,pause_total_ns=24034027i,stack_inuse=884736i,stack_sys=884736i,sys=23382264i,total_alloc=679012200i 1463590500277918755
 > influxdb_shard,database=_internal,engine=tsm1,host=tyrion,id=4,path=/Users/sparrc/.influxdb/data/_internal/monitor/4,retentionPolicy=monitor,url=http://localhost:8086/debug/vars fieldsCreate=65,seriesCreate=26,writePointsOk=7274,writeReq=280 1463590500247354636
 > influxdb_subscriber,host=tyrion,url=http://localhost:8086/debug/vars pointsWritten=7274 1463590500247354636
 > influxdb_tsm1_cache,database=_internal,host=tyrion,path=/Users/sparrc/.influxdb/data/_internal/monitor/1,retentionPolicy=monitor,url=http://localhost:8086/debug/vars WALCompactionTimeMs=0,cacheAgeMs=2809192,cachedBytes=0,diskBytes=0,memBytes=0,snapshotCount=0 1463590500247354636
