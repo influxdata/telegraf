@@ -9,6 +9,8 @@
   `splunkmetric` serializer, if you are making use of these fields they can be
   added back with the `tag` option.
 
+- Official packages now built with Go 1.14.3.
+
 #### New Processors
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
