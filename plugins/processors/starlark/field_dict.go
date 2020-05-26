@@ -34,10 +34,11 @@ func (d FieldDict) Type() string {
 }
 
 func (d FieldDict) Freeze() {
+	d.frozen = true
 }
 
 func (d FieldDict) Truth() starlark.Bool {
-	return len(d.metric.TagList()) != 0
+	return len(d.metric.FieldList()) != 0
 }
 
 func (d FieldDict) Hash() (uint32, error) {
@@ -55,12 +56,12 @@ func (d FieldDict) Attr(name string) (starlark.Value, error) {
 }
 
 var FieldDictMethods = map[string]builtinMethod{
-	"clear":      fields_clear,
+	"clear":      dict_clear,
 	"get":        dict_get,
 	"items":      dict_items,
 	"keys":       dict_keys,
-	"pop":        fields_pop,
-	"popitem":    fields_popitem,
+	"pop":        dict_pop,
+	"popitem":    dict_popitem,
 	"setdefault": dict_setdefault,
 	"update":     dict_update,
 	"values":     dict_values,
@@ -126,6 +127,25 @@ func (d FieldDict) Clear() error {
 		d.metric.RemoveField(key)
 	}
 	return nil
+}
+
+func (d FieldDict) PopItem() (v starlark.Value, err error) {
+	for _, field := range d.metric.FieldList() {
+		k := field.Key
+		v := field.Value
+
+		d.metric.RemoveField(k)
+
+		sk := starlark.String(k)
+		sv, err := asStarlarkValue(v)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert to starlark value")
+		}
+
+		return starlark.Tuple{sk, sv}, nil
+	}
+
+	return nil, errors.New("popitem(): field dictionary is empty")
 }
 
 func (d FieldDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {
@@ -201,54 +221,4 @@ func asGoValue(value interface{}) (interface{}, error) {
 	}
 
 	return nil, errors.New("invalid starlark type")
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·clear
-func fields_clear(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-	return starlark.None, b.Receiver().(FieldDict).Clear()
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·pop
-func fields_pop(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var k, d starlark.Value
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &k, &d); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-	if v, found, err := b.Receiver().(FieldDict).Delete(k); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err) // dict is frozen or key is unhashable
-	} else if found {
-		return v, nil
-	} else if d != nil {
-		return d, nil
-	}
-	return starlark.None, fmt.Errorf("%s: missing key", b.Name())
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·popitem
-func fields_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-
-	recv := b.Receiver().(FieldDict)
-
-	for _, field := range recv.metric.FieldList() {
-		k := field.Key
-		v := field.Value
-
-		recv.metric.RemoveField(k)
-
-		sk := starlark.String(k)
-		sv, err := asStarlarkValue(v)
-		if err != nil {
-			return nil, fmt.Errorf("could not convert to starlark value")
-		}
-
-		return starlark.Tuple{sk, sv}, nil
-	}
-
-	return nil, nameErr(b, "empty dict")
 }

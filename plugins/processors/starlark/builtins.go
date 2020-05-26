@@ -64,7 +64,52 @@ func nameErr(b *starlark.Builtin, msg interface{}) error {
 	return fmt.Errorf("%s: %v", b.Name(), msg)
 }
 
+type clearer interface {
+	Clear() error
+}
+
+type deleter interface {
+	Delete(k starlark.Value) (starlark.Value, bool, error)
+}
+
+type popitemer interface {
+	PopItem() (starlark.Value, error)
+}
+
 // --- dictionary methods ---
+
+// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·clear
+func dict_clear(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
+		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+	}
+	return starlark.None, b.Receiver().(clearer).Clear()
+}
+
+// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·pop
+func dict_pop(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var k, d starlark.Value
+	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &k, &d); err != nil {
+		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+	}
+	if v, found, err := b.Receiver().(deleter).Delete(k); err != nil {
+		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err) // dict is frozen or key is unhashable
+	} else if found {
+		return v, nil
+	} else if d != nil {
+		return d, nil
+	}
+	return starlark.None, fmt.Errorf("%s: missing key", b.Name())
+}
+
+// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·popitem
+func dict_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
+		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+	}
+
+	return b.Receiver().(popitemer).PopItem()
+}
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·get
 func dict_get(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {

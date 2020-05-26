@@ -1110,6 +1110,56 @@ def apply(metric):
 			expected: []telegraf.Metric{},
 		},
 		{
+			name: "empty fields are false",
+			source: `
+def apply(metric):
+	if not metric.fields:
+		return metric
+	return None
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "non-empty fields are true",
+			source: `
+def apply(metric):
+	if metric.fields:
+		return metric
+	return None
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "fields in operator",
 			source: `
 def apply(metric):
@@ -2011,6 +2061,26 @@ def apply(metric):
 			},
 		},
 		{
+			name: "tag in operator",
+			source: `
+def apply(metric):
+	if 'c' in metric.tags:
+		return metric
+	return None
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"a": "b",
+						"c": "d",
+						"e": "f",
+					},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "iterate tags",
 			source: `
 def apply(metric):
@@ -2092,6 +2162,49 @@ def apply(metric):
 			},
 		},
 		{
+			name: "iterate fields",
+			source: `
+def apply(metric):
+	for k in metric.fields:
+		pass
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":   42.0,
+						"time_user":   42.0,
+						"time_guest":  42.0,
+						"time_system": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			// This should be faster than calling items()
+			name: "iterate fields and get values",
+			source: `
+def apply(metric):
+	for k in metric.fields:
+		v = metric.fields[k]
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle":   42.0,
+						"time_user":   42.0,
+						"time_guest":  42.0,
+						"time_system": 42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "iterate field items",
 			source: `
 def apply(metric):
@@ -2132,7 +2245,3 @@ def apply(metric):
 		})
 	}
 }
-
-// TODO test truthiness of fields
-// TODO benchmark in function
-// TODO test error when pop() is not found

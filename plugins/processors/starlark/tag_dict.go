@@ -2,7 +2,6 @@ package starlark
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -34,6 +33,7 @@ func (d TagDict) Type() string {
 }
 
 func (d TagDict) Freeze() {
+	d.frozen = true
 }
 
 func (d TagDict) Truth() starlark.Bool {
@@ -55,12 +55,12 @@ func (d TagDict) Attr(name string) (starlark.Value, error) {
 }
 
 var TagDictMethods = map[string]builtinMethod{
-	"clear":      tags_clear,
+	"clear":      dict_clear,
 	"get":        dict_get,
 	"items":      dict_items,
 	"keys":       dict_keys,
-	"pop":        tags_pop,
-	"popitem":    tags_popitem,
+	"pop":        dict_pop,
+	"popitem":    dict_popitem,
 	"setdefault": dict_setdefault,
 	"update":     dict_update,
 	"values":     dict_values,
@@ -120,6 +120,21 @@ func (d TagDict) Clear() error {
 	return nil
 }
 
+func (d TagDict) PopItem() (v starlark.Value, err error) {
+	for _, tag := range d.metric.TagList() {
+		k := tag.Key
+		v := tag.Value
+
+		d.metric.RemoveTag(k)
+
+		sk := starlark.String(k)
+		sv := starlark.String(v)
+		return starlark.Tuple{sk, sv}, nil
+	}
+
+	return nil, errors.New("popitem(): tag dictionary is empty")
+}
+
 func (d TagDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {
 	if key, ok := k.(starlark.String); ok {
 		value, ok := d.metric.GetTag(key.GoString())
@@ -155,52 +170,4 @@ func (i *TagIterator) Next(p *starlark.Value) bool {
 }
 
 func (i *TagIterator) Done() {
-}
-
-// --- dictionary methods ---
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·clear
-func tags_clear(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-	return starlark.None, b.Receiver().(TagDict).Clear()
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·pop
-func tags_pop(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var k, d starlark.Value
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &k, &d); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-	if v, found, err := b.Receiver().(TagDict).Delete(k); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err) // dict is frozen or key is unhashable
-	} else if found {
-		return v, nil
-	} else if d != nil {
-		return d, nil
-	}
-	return starlark.None, fmt.Errorf("%s: missing key", b.Name())
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·popitem
-func tags_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-
-	recv := b.Receiver().(TagDict)
-
-	for _, tag := range recv.metric.TagList() {
-		k := tag.Key
-		v := tag.Value
-
-		recv.metric.RemoveTag(k)
-
-		sk := starlark.String(k)
-		sv := starlark.String(v)
-		return starlark.Tuple{sk, sv}, nil
-	}
-
-	return nil, nameErr(b, "empty dict")
 }
