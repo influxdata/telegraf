@@ -6,6 +6,7 @@ var tlsVersionMap = map[string]uint16{
 	"TLS10": tls.VersionTLS10,
 	"TLS11": tls.VersionTLS11,
 	"TLS12": tls.VersionTLS12,
+	"TLS13": tls.VersionTLS13,
 }
 
 var tlsCipherMap = map[string]uint16{
@@ -31,4 +32,7 @@ var tlsCipherMap = map[string]uint16{
 	"TLS_RSA_WITH_RC4_128_SHA":                tls.TLS_RSA_WITH_RC4_128_SHA,
 	"TLS_ECDHE_RSA_WITH_RC4_128_SHA":          tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
 	"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":        tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
+	"TLS_AES_128_GCM_SHA256":                  tls.TLS_AES_128_GCM_SHA256,
+	"TLS_AES_256_GCM_SHA384":                  tls.TLS_AES_256_GCM_SHA384,
+	"TLS_CHACHA20_POLY1305_SHA256":            tls.TLS_CHACHA20_POLY1305_SHA256,
 }
