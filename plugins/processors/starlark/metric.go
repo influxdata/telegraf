@@ -80,8 +80,7 @@ func (m *Metric) SetField(name string, value starlark.Value) error {
 
 	switch name {
 	case "name":
-		m.SetName(value)
-		return nil
+		return m.SetName(value)
 	case "time":
 		return m.SetTime(value)
 	case "tags":

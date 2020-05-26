@@ -303,6 +303,22 @@ def apply(metric):
 		},
 	},
 	{
+		name: "set name wrong type",
+		source: `
+def apply(metric):
+	metric.name = 42
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"time_idle": 42.0},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{},
+	},
+	{
 		name: "get name",
 		source: `
 def apply(metric):
