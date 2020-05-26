@@ -34,12 +34,6 @@ func deepcopy(thread *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple,
 	return &Metric{metric: dup}, nil
 }
 
-type Removeable interface {
-	starlark.Value
-	Clear() error
-	Delete(starlark.Value) (starlark.Value, bool, error)
-}
-
 type builtinMethod func(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)
 
 func builtinAttr(recv starlark.Value, name string, methods map[string]builtinMethod) (starlark.Value, error) {
@@ -64,15 +58,13 @@ func builtinAttrNames(methods map[string]builtinMethod) []string {
 	return names
 }
 
-// --- dictionary methods ---
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·clear
-func dict_clear(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-	return starlark.None, b.Receiver().(Removeable).Clear()
+// nameErr returns an error message of the form "name: msg"
+// where name is b.Name() and msg is a string or error.
+func nameErr(b *starlark.Builtin, msg interface{}) error {
+	return fmt.Errorf("%s: %v", b.Name(), msg)
 }
+
+// --- dictionary methods ---
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·get
 func dict_get(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -88,72 +80,6 @@ func dict_get(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple)
 		return dflt, nil
 	}
 	return starlark.None, nil
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·items
-func dict_items(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-	items := b.Receiver().(starlark.IterableMapping).Items()
-	res := make([]starlark.Value, len(items))
-	for i, item := range items {
-		res[i] = item // convert [2]starlark.Value to starlark.Value
-	}
-	return starlark.NewList(res), nil
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·keys
-func dict_keys(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-
-	items := b.Receiver().(starlark.IterableMapping).Items()
-	res := make([]starlark.Value, len(items))
-	for i, item := range items {
-		res[i] = item[0]
-	}
-	return starlark.NewList(res), nil
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·pop
-func dict_pop(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var k, d starlark.Value
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 1, &k, &d); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-	if v, found, err := b.Receiver().(Removeable).Delete(k); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err) // dict is frozen or key is unhashable
-	} else if found {
-		return v, nil
-	} else if d != nil {
-		return d, nil
-	}
-	return starlark.None, fmt.Errorf("%s: missing key", b.Name())
-}
-
-// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·popitem
-func dict_popitem(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
-		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
-	}
-
-	recv := b.Receiver().(*MetricDataDict)
-
-	if recv.data.Len() == 0 {
-		return nil, nameErr(b, "empty dict")
-	}
-
-	k := recv.data.GetIndex(0)
-	key := starlark.String(k)
-	v, _ := recv.data.Get(k)
-	recv.data.Remove(k)
-	value, err := asStarlarkValue(v)
-	if err != nil {
-		return nil, err
-	}
-	return starlark.Tuple{key, value}, nil
 }
 
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·setdefault
@@ -250,6 +176,33 @@ func dict_update(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tup
 	return starlark.None, nil
 }
 
+// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·items
+func dict_items(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
+		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+	}
+	items := b.Receiver().(starlark.IterableMapping).Items()
+	res := make([]starlark.Value, len(items))
+	for i, item := range items {
+		res[i] = item // convert [2]starlark.Value to starlark.Value
+	}
+	return starlark.NewList(res), nil
+}
+
+// https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·keys
+func dict_keys(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
+		return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+	}
+
+	items := b.Receiver().(starlark.IterableMapping).Items()
+	res := make([]starlark.Value, len(items))
+	for i, item := range items {
+		res[i] = item[0]
+	}
+	return starlark.NewList(res), nil
+}
+
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·update
 func dict_values(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	if err := starlark.UnpackPositionalArgs(b.Name(), args, kwargs, 0); err != nil {
@@ -261,20 +214,4 @@ func dict_values(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tup
 		res[i] = item[1]
 	}
 	return starlark.NewList(res), nil
-}
-
-// -- internal functions --
-func dict_set_tuple(recv starlark.HasSetKey, pair starlark.Tuple) error {
-	if pair.Len() != 2 {
-		return fmt.Errorf("item is not a key/value pair")
-	}
-	recv.SetKey(pair[0], pair[1])
-
-	return nil
-}
-
-// nameErr returns an error message of the form "name: msg"
-// where name is b.Name() and msg is a string or error.
-func nameErr(b *starlark.Builtin, msg interface{}) error {
-	return fmt.Errorf("%s: %v", b.Name(), msg)
 }
