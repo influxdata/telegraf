@@ -572,7 +572,91 @@ def apply(metric):
 		},
 	},
 	{
-		name: "tags update",
+		name: "tags update list of tuple",
+		source: `
+def apply(metric):
+	metric.tags.update([('b', 'y'), ('c', 'z')])
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"a": "x",
+				},
+				map[string]interface{}{"time_idle": 0},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"a": "x",
+					"b": "y",
+					"c": "z",
+				},
+				map[string]interface{}{"time_idle": 0},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "tags update kwargs",
+		source: `
+def apply(metric):
+	metric.tags.update(b='y', c='z')
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"a": "x",
+				},
+				map[string]interface{}{"time_idle": 0},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"a": "x",
+					"b": "y",
+					"c": "z",
+				},
+				map[string]interface{}{"time_idle": 0},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "tags update dict",
+		source: `
+def apply(metric):
+	metric.tags.update({'b': 'y', 'c': 'z'})
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"a": "x",
+				},
+				map[string]interface{}{"time_idle": 0},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{
+					"a": "x",
+					"b": "y",
+					"c": "z",
+				},
+				map[string]interface{}{"time_idle": 0},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "tags update list tuple and kwargs",
 		source: `
 def apply(metric):
 	metric.tags.update([('b', 'y'), ('c', 'z')], d='zz')
@@ -600,7 +684,6 @@ def apply(metric):
 			),
 		},
 	},
-
 	{
 		name: "iterate tags",
 		source: `
@@ -907,6 +990,7 @@ def apply(metric):
 			),
 		},
 	},
+
 	{
 		name: "set time",
 		source: `
@@ -1021,80 +1105,6 @@ func TestMetric(t *testing.T) {
 // 		})
 // 	}
 // }
-
-// --- Metric implementation testing --
-func TestMetricAccess(t *testing.T) {
-	tests := []struct {
-		name     string
-		source   string
-		input    telegraf.Metric
-		expected []telegraf.Metric
-	}{
-		{
-			name: "get fields",
-			source: `
-def apply(metric):
-	print("[metric/get fields] {}".format(metric.fields['time_idle']))
-	return metric
-			`,
-			input: testutil.MustMetric(
-				"cpu",
-				map[string]string{
-					"host": "example.org",
-				},
-				map[string]interface{}{
-					"time_idle": 42,
-				},
-				time.Unix(0, 0),
-			),
-			expected: []telegraf.Metric{
-				testutil.MustMetric(
-					"cpu",
-					map[string]string{
-						"host": "example.org",
-					},
-					map[string]interface{}{
-						"time_idle": 42,
-					},
-					time.Unix(0, 0),
-				),
-			},
-		},
-		{
-			name: "set fields", // This should fail
-			source: `
-def apply(metric):
-	metric.fields = {}
-	return metric
-			`,
-			input: testutil.MustMetric(
-				"cpu",
-				map[string]string{
-					"host": "example.org",
-				},
-				map[string]interface{}{
-					"time_idle": 42,
-				},
-				time.Unix(0, 0),
-			),
-			expected: []telegraf.Metric{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := &Starlark{
-				Source:  tt.source,
-				OnError: "drop",
-				Log:     testutil.Logger{},
-			}
-			err := plugin.Init()
-			require.NoError(t, err)
-
-			actual := plugin.Apply(tt.input)
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
-		})
-	}
-}
 
 // --- Fieldset implementation testing --
 func TestFieldsGetSet(t *testing.T) {

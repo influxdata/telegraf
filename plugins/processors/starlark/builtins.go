@@ -180,48 +180,70 @@ func dict_setdefault(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark
 // https://github.com/google/starlark-go/blob/master/doc/spec.md#dict·update
 func dict_update(b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	// Unpack the arguments
-	if len(args) != 1 {
-		return starlark.None, fmt.Errorf("update: got %d arguments, expected 1", len(args))
+	if len(args) > 1 {
+		return nil, fmt.Errorf("update: got %d arguments, want at most 1", len(args))
 	}
 
 	// Get the target
-	recv := b.Receiver().(starlark.HasSetKey)
+	dict := b.Receiver().(starlark.HasSetKey)
 
-	// Use the specified iterable argument to update if given
-	if args[0] != starlark.None {
-		// We cannot simply iterate over a dictionary as this will return key and
-		// value alternatingly instead of returning pairs.... :-0
-		// Anyway we assume that if we get an iterable mapping it is much more
-		// efficient to use the Items() method.
-		if iter_arg, ok := args[0].(starlark.IterableMapping); ok {
-			for _, item := range iter_arg.Items() {
-				if err := dict_set_tuple(recv, item); err != nil {
-					return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+	if len(args) == 1 {
+		switch updates := args[0].(type) {
+		case starlark.IterableMapping:
+			// Iterate over dict's key/value pairs, not just keys.
+			for _, item := range updates.Items() {
+				if err := dict.SetKey(item[0], item[1]); err != nil {
+					return nil, err // dict is frozen
 				}
 			}
-		} else if iter_arg, ok := args[0].(starlark.Iterable); ok {
-			iter := iter_arg.Iterate()
+		default:
+			// all other sequences
+			iter := starlark.Iterate(updates)
+			if iter == nil {
+				return nil, fmt.Errorf("got %s, want iterable", updates.Type())
+			}
 			defer iter.Done()
+			var pair starlark.Value
+			for i := 0; iter.Next(&pair); i++ {
+				iter2 := starlark.Iterate(pair)
+				if iter2 == nil {
+					return nil, fmt.Errorf("dictionary update sequence element #%d is not iterable (%s)", i, pair.Type())
 
-			var v starlark.Value
-			for iter.Next(&v) {
-				item, ok := v.(starlark.Tuple)
-				if !ok {
-					return starlark.None, fmt.Errorf("%s: item is not a tuple", b.Name())
 				}
-				if err := dict_set_tuple(recv, item); err != nil {
-					return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+				defer iter2.Done()
+				len := starlark.Len(pair)
+				if len < 0 {
+					return nil, fmt.Errorf("dictionary update sequence element #%d has unknown length (%s)", i, pair.Type())
+				} else if len != 2 {
+					return nil, fmt.Errorf("dictionary update sequence element #%d has length %d, want 2", i, len)
+				}
+				var k, v starlark.Value
+				iter2.Next(&k)
+				iter2.Next(&v)
+				if err := dict.SetKey(k, v); err != nil {
+					return nil, err
 				}
 			}
-		} else {
-			return starlark.None, fmt.Errorf("%s: argument is not iterable", b.Name())
 		}
 	}
 
-	// Use the specified keyword-argument(s) to update if any
-	for _, item := range kwargs {
-		if err := dict_set_tuple(recv, item); err != nil {
-			return starlark.None, fmt.Errorf("%s: %v", b.Name(), err)
+	// Then add the kwargs.
+	before := starlark.Len(dict)
+	for _, pair := range kwargs {
+		if err := dict.SetKey(pair[0], pair[1]); err != nil {
+			return nil, err // dict is frozen
+		}
+	}
+	// In the common case, each kwarg will add another dict entry.
+	// If that's not so, check whether it is because there was a duplicate kwarg.
+	if starlark.Len(dict) < before+len(kwargs) {
+		keys := make(map[starlark.String]bool, len(kwargs))
+		for _, kv := range kwargs {
+			k := kv[0].(starlark.String)
+			if keys[k] {
+				return nil, fmt.Errorf("duplicate keyword arg: %v", k)
+			}
+			keys[k] = true
 		}
 	}
 
