@@ -99,9 +99,9 @@ func (d TagDict) SetKey(k, v starlark.Value) error {
 // Items implements the starlark.IterableMapping interface.
 func (d TagDict) Items() []starlark.Tuple {
 	items := make([]starlark.Tuple, 0, len(d.metric.TagList()))
-	for _, tags := range d.metric.TagList() {
-		key := starlark.String(tags.Key)
-		value := starlark.String(tags.Value)
+	for _, tag := range d.metric.TagList() {
+		key := starlark.String(tag.Key)
+		value := starlark.String(tag.Value)
 		pair := starlark.Tuple{key, value}
 		items = append(items, pair)
 	}

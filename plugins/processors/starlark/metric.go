@@ -109,16 +109,11 @@ func (m *Metric) SetName(value starlark.Value) error {
 }
 
 func (m *Metric) Tags() TagDict {
-	// tagsaccessor := AccessibleTag(*m)
-	// tags := MetricDataDict{data: &tagsaccessor, typename: "tags"}
-	// return &tags
 	return TagDict{m}
 }
 
-func (m *Metric) Fields() *MetricDataDict {
-	fieldaccessor := AccessibleField(*m)
-	fields := MetricDataDict{data: &fieldaccessor, typename: "fields"}
-	return &fields
+func (m *Metric) Fields() FieldDict {
+	return FieldDict{m}
 }
 
 func (m *Metric) Time() starlark.Int {
