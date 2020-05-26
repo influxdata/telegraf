@@ -57,6 +57,7 @@
 #### Bugfixes
 
 - [#7325](https://github.com/influxdata/telegraf/issues/7325): Fix "cannot insert the value NULL error" with PerformanceCounters query.
+- [#7579](https://github.com/influxdata/telegraf/issues/7579): Fix numeric to bool conversion in converter processor.
 
 ## v1.14.3 [2020-05-19]
 
