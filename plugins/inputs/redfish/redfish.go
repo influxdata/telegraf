@@ -10,51 +10,59 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"strconv"
 )
 
 type Cpu struct {
-	Name           string    `json:"Name"`
-	ReadingCelsius int64     `json:"ReadingCelsius"`
-	Status         CpuStatus `json:"Status"`
+	Name                   string
+	ReadingCelsius         int
+	UpperThresholdCritical int
+	UpperThresholdFatal    int
+	Status                 CpuStatus
 }
 type Payload struct {
-	Temperatures  []*Cpu   `json:",omitempty"`
-	Fans          []*speed `json:",omitempty"`
-	PowerSupplies []*Watt  `json:",omitempty"`
+	Temperatures  []Cpu    `json:",omitempty"`
+	Fans          []Speed  `json:",omitempty"`
+	PowerSupplies []Watt   `json:",omitempty"`
 	Hostname      string   `json:",omitempty"`
-	Voltages      []*volt  `json:",omitempty"`
+	Voltages      []Volt   `json:",omitempty"`
 	Location      *Address `json:",omitempty"`
 }
 type CpuStatus struct {
 	State  string
 	Health string
 }
-type speed struct {
-	Name    string
-	Reading int64
-	Status  FansStatus
+type Speed struct {
+	Name                   string
+	Reading                int
+	ReadingUnits           string
+	UpperThresholdCritical int
+	UpperThresholdFatal    int
+	Status                 FansStatus
 }
 type FansStatus struct {
-	State  string `json:"State"`
-	Health string `json:"Health"`
+	State  string
+	Health string
 }
 type Watt struct {
-	Name                 string       `json:",omitempty"`
-	PowerInputWatts      float64      `json:",omitempty"`
-	PowerCapacityWatts   float64      `json:",omitempty"`
-	PowerOutputWatts     float64      `json:",omitempty"`
-	LastPowerOutputWatts float64      `json:",omitempty"`
-	Status               *PowerStatus `json:",omitempty"`
-	LineInputVoltage     float64      `json:",omitempty"`
+	Name                 string
+	PowerInputWatts      float64
+	PowerCapacityWatts   float64
+	PowerOutputWatts     float64
+	LastPowerOutputWatts float64
+	Status               PowerStatus
+	LineInputVoltage     float64
 }
 type PowerStatus struct {
 	State  string
 	Health string
 }
-type volt struct {
-	Name         string
-	ReadingVolts float64
-	Status       VoltStatus
+type Volt struct {
+	Name                   string
+	ReadingVolts           float64
+	UpperThresholdCritical float64
+	UpperThresholdFatal    float64
+	Status                 VoltStatus
 }
 type VoltStatus struct {
 	State  string
@@ -134,6 +142,20 @@ func (r *Redfish) Init() error {
 	return nil
 }
 
+func Severity(critical, fatal, val int) string {
+	severity := "NA"
+	if (critical != 0) || (fatal != 0) {
+		if (val >= fatal) && (fatal != 0) {
+			severity = "Fatal"
+		} else if (val >= critical) && (critical != 0) {
+			severity = "Critical"
+		} else {
+			severity = "OK"
+		}
+	}
+	return severity
+}
+
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	var url []string
 	var payload Payload
@@ -187,14 +209,18 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["room"] = payload.Location.PostalAddress.Room
 			tags["rack"] = payload.Location.Placement.Rack
 			tags["row"] = payload.Location.Placement.Row
+			tags["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.ReadingCelsius)
 			//  Fields
 			fields := make(map[string]interface{})
 			fields["temperature"] = j.ReadingCelsius
+			fields["upper_threshold_critical"] = j.UpperThresholdCritical
+			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
 			acc.AddFields("redfish_thermal_temperatures", fields, tags)
 		}
 		for _, j := range payload.Fans {
 			//  Tags
 			tags := map[string]string{}
+			fields := make(map[string]interface{})
 			tags["source_ip"] = r.Host
 			tags["name"] = j.Name
 			tags["source"] = payload.Hostname
@@ -204,8 +230,14 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["room"] = payload.Location.PostalAddress.Room
 			tags["rack"] = payload.Location.Placement.Rack
 			tags["row"] = payload.Location.Placement.Row
+			if j.ReadingUnits == "RPM" {
+				tags["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.Reading)
+				fields["upper_threshold_critical"] = j.UpperThresholdCritical
+				fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+
+			}
+
 			//  Fields
-			fields := make(map[string]interface{})
 			fields["fanspeed"] = j.Reading
 			acc.AddFields("redfish_thermal_fans", fields, tags)
 		}
@@ -242,9 +274,12 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["room"] = payload.Location.PostalAddress.Room
 			tags["rack"] = payload.Location.Placement.Rack
 			tags["row"] = payload.Location.Placement.Row
+			tags["severity"] = Severity(int(math.Round(j.UpperThresholdCritical)), int(math.Round(j.UpperThresholdFatal)), int(math.Round(j.ReadingVolts)))
 			//  Fields
 			fields := make(map[string]interface{})
 			fields["voltage"] = math.Round(j.ReadingVolts*100) / 100
+			fields["upper_threshold_critical"] = math.Round(j.UpperThresholdCritical*100) / 100
+			fields["upper_threshold_fatal"] = math.Round(j.UpperThresholdFatal*100) / 100
 			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	} else {
@@ -256,21 +291,29 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
+			tags["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.ReadingCelsius)
 			//  Fields
 			fields := make(map[string]interface{})
 			fields["temperature"] = j.ReadingCelsius
+			fields["upper_threshold_critical"] = j.UpperThresholdCritical
+			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
 			acc.AddFields("redfish_thermal_temperatures", fields, tags)
 		}
 		for _, j := range payload.Fans {
 			//  Tags
 			tags := map[string]string{}
+			fields := make(map[string]interface{})
 			tags["source_ip"] = r.Host
 			tags["name"] = j.Name
 			tags["source"] = payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
+			if j.ReadingUnits == "RPM" {
+				tags["upper_threshold_critical"] = strconv.Itoa(j.UpperThresholdCritical)
+				fields["upper_threshold_fatal"] = strconv.Itoa(j.UpperThresholdFatal)
+				fields["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.Reading)
+			}
 			//  Fields
-			fields := make(map[string]interface{})
 			fields["fanspeed"] = j.Reading
 			acc.AddFields("redfish_thermal_fans", fields, tags)
 		}
@@ -297,9 +340,12 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			tags["source"] = payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
+			tags["severity"] = Severity(int(math.Round(j.UpperThresholdCritical)), int(math.Round(j.UpperThresholdFatal)), int(math.Round(j.ReadingVolts)))
 			//  Fields
 			fields := make(map[string]interface{})
 			fields["voltage"] = math.Round(j.ReadingVolts*100) / 100
+			fields["upper_threshold_critical"] = math.Round(j.UpperThresholdCritical*100) / 100
+			fields["upper_threshold_fatal"] = math.Round(j.UpperThresholdFatal*100) / 100
 			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	}
