@@ -36,8 +36,13 @@ func (m *AccessibleField) Remove(key string) {
 }
 
 func (m *AccessibleField) Clear() {
+	keys := make([]string, 0, len(m.metric.FieldList()))
 	for _, field := range m.metric.FieldList() {
-		m.metric.RemoveField(field.Key)
+		keys = append(keys, field.Key)
+	}
+
+	for _, key := range keys {
+		m.metric.RemoveField(key)
 	}
 }
 
@@ -84,8 +89,13 @@ func (m *AccessibleTag) Remove(key string) {
 }
 
 func (m *AccessibleTag) Clear() {
-	for _, field := range m.metric.TagList() {
-		m.metric.RemoveTag(field.Key)
+	keys := make([]string, 0, len(m.metric.TagList()))
+	for _, tag := range m.metric.TagList() {
+		keys = append(keys, tag.Key)
+	}
+
+	for _, key := range keys {
+		m.metric.RemoveTag(key)
 	}
 }
 
