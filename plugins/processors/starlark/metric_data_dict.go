@@ -74,8 +74,7 @@ func (m *MetricDataDict) SetKey(k, v starlark.Value) error {
 		return err
 	}
 
-	m.data.Add(key.GoString(), value)
-	return nil
+	return m.data.Add(key.GoString(), value)
 }
 
 // type IterableMapping

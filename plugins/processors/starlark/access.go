@@ -1,6 +1,8 @@
 package starlark
 
 import (
+	"errors"
+
 	"github.com/influxdata/telegraf"
 )
 
@@ -10,7 +12,7 @@ type AccessibleEntry struct {
 }
 
 type Accessible interface {
-	Add(key string, value interface{})
+	Add(key string, value interface{}) error
 	Remove(key string)
 	Clear()
 	Get(key string) (interface{}, bool)
@@ -24,8 +26,9 @@ type AccessibleField struct {
 	frozen bool
 }
 
-func (m *AccessibleField) Add(key string, value interface{}) {
+func (m *AccessibleField) Add(key string, value interface{}) error {
 	m.metric.AddField(key, value)
+	return nil
 }
 
 func (m *AccessibleField) Remove(key string) {
@@ -66,8 +69,14 @@ type AccessibleTag struct {
 	frozen bool
 }
 
-func (m *AccessibleTag) Add(key string, value interface{}) {
-	m.metric.AddTag(key, value.(string))
+func (m *AccessibleTag) Add(key string, value interface{}) error {
+	switch str := value.(type) {
+	case string:
+		m.metric.AddTag(key, str)
+		return nil
+	default:
+		return errors.New("value must be of type 'str'")
+	}
 }
 
 func (m *AccessibleTag) Remove(key string) {

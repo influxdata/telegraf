@@ -454,6 +454,22 @@ def apply(metric):
 		},
 	},
 	{
+		name: "set tag type error",
+		source: `
+def apply(metric):
+	metric.tags['host'] = 42
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"time_idle": 42.0},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{},
+	},
+	{
 		name: "pop tag",
 		source: `
 def apply(metric):
@@ -958,7 +974,298 @@ def apply(metric):
 			),
 		},
 	},
-
+	{
+		name: "getattr fields",
+		source: `
+def apply(metric):
+	metric.fields
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "setattr fields is not allowed",
+		source: `
+def apply(metric):
+	metric.fields = {}
+	return metric
+		`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"time_idle": 42},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{},
+	},
+	{
+		name: "lookup string field",
+		source: `
+def apply(metric):
+	value = metric.fields['value']
+	if value != "xyzzy" and type(value) != "str":
+		return
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": "xyzzy"},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": "xyzzy"},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "lookup integer field",
+		source: `
+def apply(metric):
+	value = metric.fields['value']
+	if value != 42 and type(value) != "int":
+		return
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": 42},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "lookup unsigned field",
+		source: `
+def apply(metric):
+	value = metric.fields['value']
+	if value != 42 and type(value) != "int":
+		return
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": uint64(42)},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": uint64(42)},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "lookup bool field",
+		source: `
+def apply(metric):
+	value = metric.fields['value']
+	if value != True and type(value) != "bool":
+		return
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": true},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": true},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "lookup float field",
+		source: `
+def apply(metric):
+	value = metric.fields['value']
+	if value != 42.0 and type(value) != "float":
+		return
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": 42.0},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"value": 42.0},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "lookup field not set",
+		source: `
+def apply(metric):
+	metric.fields['foo']
+	return metric
+		`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{"time_idle": 42},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{},
+	},
+	{
+		name: "set string field",
+		source: `
+def apply(metric):
+	metric.fields['host'] = 'example.org'
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"host": "example.org",
+				},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "set integer field",
+		source: `
+def apply(metric):
+	metric.fields['time_idle'] = 42
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"time_idle": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "set float field",
+		source: `
+def apply(metric):
+	metric.fields['time_idle'] = 42.0
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"time_idle": 42.0,
+				},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "set bool field",
+		source: `
+def apply(metric):
+	metric.fields['time_idle'] = True
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"time_idle": true,
+				},
+				time.Unix(0, 0),
+			),
+		},
+	},
+	{
+		name: "set field type error",
+		source: `
+def apply(metric):
+	metric.fields['time_idle'] = {}
+	return metric
+`,
+		input: []telegraf.Metric{
+			testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{},
+				time.Unix(0, 0),
+			),
+		},
+		expected: []telegraf.Metric{},
+	},
 	{
 		name: "iterate fields",
 		source: `
