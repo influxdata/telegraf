@@ -825,8 +825,8 @@ INSERT	INTO @PCounters
 EXEC (@SqlStatement)
 
 IF @MajorMinorVersion >= 1300 BEGIN
-	SET @Columns += N',rgwg.[total_cpu_usage_preemptive_ms] AS [Premptive CPU Usage (time)]'
-	SET @PivotColumns += N',[Premptive CPU Usage (time)]'
+	SET @Columns += N',rgwg.[total_cpu_usage_preemptive_ms] AS [Preemptive CPU Usage (time)]'
+	SET @PivotColumns += N',[Preemptive CPU Usage (time)]'
 END
 
 SET  @SqlStatement = N'
