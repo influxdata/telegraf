@@ -56,11 +56,13 @@ values.
   ## will be added as fields.
   csv_tag_columns = []
 
-  ## The column to extract the name of the metric from
+  ## The column to extract the name of the metric from. Will not be
+  ## included as field in metric.
   csv_measurement_column = ""
 
   ## The column to extract time information for the metric
-  ## `csv_timestamp_format` must be specified if this is used
+  ## `csv_timestamp_format` must be specified if this is used.
+  ## Will not be included as field in metric.
   csv_timestamp_column = ""
 
   ## The format of time data extracted from `csv_timestamp_column`
