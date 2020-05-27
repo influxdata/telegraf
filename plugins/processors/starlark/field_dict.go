@@ -88,6 +88,10 @@ func (d FieldDict) Get(key starlark.Value) (v starlark.Value, found bool, err er
 // SetKey implements the starlark.HasSetKey interface to support map update
 // using x[k]=v syntax, like a dictionary.
 func (d FieldDict) SetKey(k, v starlark.Value) error {
+	if d.fieldIterCount > 0 {
+		return fmt.Errorf("cannot insert during iteration")
+	}
+
 	key, ok := k.(starlark.String)
 	if !ok {
 		return errors.New("field key must be of type 'str'")
@@ -118,6 +122,10 @@ func (d FieldDict) Items() []starlark.Tuple {
 }
 
 func (d FieldDict) Clear() error {
+	if d.fieldIterCount > 0 {
+		return fmt.Errorf("cannot delete during iteration")
+	}
+
 	keys := make([]string, 0, len(d.metric.FieldList()))
 	for _, field := range d.metric.FieldList() {
 		keys = append(keys, field.Key)
@@ -130,6 +138,10 @@ func (d FieldDict) Clear() error {
 }
 
 func (d FieldDict) PopItem() (v starlark.Value, err error) {
+	if d.fieldIterCount > 0 {
+		return nil, fmt.Errorf("cannot delete during iteration")
+	}
+
 	for _, field := range d.metric.FieldList() {
 		k := field.Key
 		v := field.Value
@@ -149,6 +161,10 @@ func (d FieldDict) PopItem() (v starlark.Value, err error) {
 }
 
 func (d FieldDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {
+	if d.fieldIterCount > 0 {
+		return nil, false, fmt.Errorf("cannot delete during iteration")
+	}
+
 	if key, ok := k.(starlark.String); ok {
 		value, ok := d.metric.GetField(key.GoString())
 		if ok {
@@ -163,10 +179,12 @@ func (d FieldDict) Delete(k starlark.Value) (v starlark.Value, found bool, err e
 
 // Items implements the starlark.Mapping interface.
 func (d FieldDict) Iterate() starlark.Iterator {
-	return &FieldIterator{fields: d.metric.FieldList()}
+	d.fieldIterCount++
+	return &FieldIterator{Metric: d.Metric, fields: d.metric.FieldList()}
 }
 
 type FieldIterator struct {
+	*Metric
 	fields []*telegraf.Field
 }
 
@@ -183,6 +201,7 @@ func (i *FieldIterator) Next(p *starlark.Value) bool {
 }
 
 func (i *FieldIterator) Done() {
+	i.fieldIterCount--
 }
 
 // AsStarlarkValue converts a field value to a starlark.Value.

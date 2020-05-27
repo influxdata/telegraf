@@ -30,6 +30,4 @@ what if a metric is copied
 - must call deepcopy()
 - returning multiple references is an error
 
-disallow remove, add, clear during iteration
-
 ### Example

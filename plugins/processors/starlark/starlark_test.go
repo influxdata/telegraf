@@ -1154,6 +1154,32 @@ def apply(metric):
 			expected: []telegraf.Metric{},
 		},
 		{
+			name: "tags can be cleared after iterating",
+			source: `
+def apply(metric):
+	for k in metric.tags:
+		pass
+	metric.tags.clear()
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"a": "b",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "getattr fields",
 			source: `
 def apply(metric):
@@ -1972,6 +1998,98 @@ def apply(metric):
 						"time_system": 0,
 						"time_user":   0,
 					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "fields cannot pop while iterating",
+			source: `
+def apply(metric):
+	for k in metric.fields:
+		metric.fields.pop(k)
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "fields cannot popitem while iterating",
+			source: `
+def apply(metric):
+	for k in metric.fields:
+		metric.fields.popitem()
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "fields cannot clear while iterating",
+			source: `
+def apply(metric):
+	for k in metric.fields:
+		metric.fields.clear()
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "fields cannot insert while iterating",
+			source: `
+def apply(metric):
+	for k in metric.fields:
+		metric.fields['time_guest'] = 0
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "fields can be cleared after iterating",
+			source: `
+def apply(metric):
+	for k in metric.fields:
+		pass
+	metric.fields.clear()
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 0},
 					time.Unix(0, 0),
 				),
 			},
