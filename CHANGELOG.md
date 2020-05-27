@@ -49,6 +49,7 @@
 - [#7515](https://github.com/influxdata/telegraf/pull/7515): Add option to disable mongodb cluster status.
 - [#7319](https://github.com/influxdata/telegraf/pull/7319): Add support for battery level monitoring to the fibaro input.
 - [#7405](https://github.com/influxdata/telegraf/pull/7405): Allow collection of HTTP Headers in http_response input.
+- [#7540](https://github.com/influxdata/telegraf/pull/7540): Add processor to look up service name by port.
 
 #### Bugfixes
 
