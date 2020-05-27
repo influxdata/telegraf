@@ -1066,6 +1066,94 @@ def apply(metric):
 			},
 		},
 		{
+			name: "tags cannot pop while iterating",
+			source: `
+def apply(metric):
+	for k in metric.tags:
+		metric.tags.pop(k)
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"a": "b",
+						"c": "d",
+						"e": "f",
+						"g": "h",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "tags cannot popitem while iterating",
+			source: `
+def apply(metric):
+	for k in metric.tags:
+		metric.tags.popitem()
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"a": "b",
+						"c": "d",
+						"e": "f",
+						"g": "h",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "tags cannot clear while iterating",
+			source: `
+def apply(metric):
+	for k in metric.tags:
+		metric.tags.clear()
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"a": "b",
+						"c": "d",
+						"e": "f",
+						"g": "h",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
+			name: "tags cannot insert while iterating",
+			source: `
+def apply(metric):
+	for k in metric.tags:
+		metric.tags['i'] = 'j'
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"a": "b",
+						"c": "d",
+						"e": "f",
+						"g": "h",
+					},
+					map[string]interface{}{"time_idle": 0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{},
+		},
+		{
 			name: "getattr fields",
 			source: `
 def apply(metric):

@@ -2,6 +2,7 @@ package starlark
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -82,6 +83,10 @@ func (d TagDict) Get(key starlark.Value) (v starlark.Value, found bool, err erro
 // SetKey implements the starlark.HasSetKey interface to support map update
 // using x[k]=v syntax, like a dictionary.
 func (d TagDict) SetKey(k, v starlark.Value) error {
+	if d.tagIterCount > 0 {
+		return fmt.Errorf("cannot insert during iteration")
+	}
+
 	key, ok := k.(starlark.String)
 	if !ok {
 		return errors.New("tag key must be of type 'str'")
@@ -109,6 +114,10 @@ func (d TagDict) Items() []starlark.Tuple {
 }
 
 func (d TagDict) Clear() error {
+	if d.tagIterCount > 0 {
+		return fmt.Errorf("cannot delete during iteration")
+	}
+
 	keys := make([]string, 0, len(d.metric.TagList()))
 	for _, tag := range d.metric.TagList() {
 		keys = append(keys, tag.Key)
@@ -121,6 +130,10 @@ func (d TagDict) Clear() error {
 }
 
 func (d TagDict) PopItem() (v starlark.Value, err error) {
+	if d.tagIterCount > 0 {
+		return nil, fmt.Errorf("cannot delete during iteration")
+	}
+
 	for _, tag := range d.metric.TagList() {
 		k := tag.Key
 		v := tag.Value
@@ -136,6 +149,10 @@ func (d TagDict) PopItem() (v starlark.Value, err error) {
 }
 
 func (d TagDict) Delete(k starlark.Value) (v starlark.Value, found bool, err error) {
+	if d.tagIterCount > 0 {
+		return nil, false, fmt.Errorf("cannot delete during iteration")
+	}
+
 	if key, ok := k.(starlark.String); ok {
 		value, ok := d.metric.GetTag(key.GoString())
 		if ok {
@@ -150,10 +167,12 @@ func (d TagDict) Delete(k starlark.Value) (v starlark.Value, found bool, err err
 
 // Items implements the starlark.Mapping interface.
 func (d TagDict) Iterate() starlark.Iterator {
-	return &TagIterator{tags: d.metric.TagList()}
+	d.tagIterCount++
+	return &TagIterator{Metric: d.Metric, tags: d.metric.TagList()}
 }
 
 type TagIterator struct {
+	*Metric
 	tags []*telegraf.Tag
 }
 
@@ -170,4 +189,5 @@ func (i *TagIterator) Next(p *starlark.Value) bool {
 }
 
 func (i *TagIterator) Done() {
+	i.tagIterCount--
 }

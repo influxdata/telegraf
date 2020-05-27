@@ -11,8 +11,10 @@ import (
 )
 
 type Metric struct {
-	metric telegraf.Metric
-	frozen bool
+	metric         telegraf.Metric
+	tagIterCount   int
+	fieldIterCount int
+	frozen         bool
 }
 
 func (m *Metric) Unwrap() telegraf.Metric {
