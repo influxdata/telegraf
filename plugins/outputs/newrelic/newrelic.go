@@ -16,14 +16,15 @@ import (
 
 // NewRelic nr structure
 type NewRelic struct {
-	harvestor    *telemetry.Harvester
-	dc           *cumulative.DeltaCalculator
 	InsightsKey  string            `toml:"insights_key"`
 	MetricPrefix string            `toml:"metric_prefix"`
 	Timeout      internal.Duration `toml:"timeout"`
-	savedErrors  map[int]interface{}
-	errorCount   int
-	Client       http.Client
+
+	harvestor   *telemetry.Harvester
+	dc          *cumulative.DeltaCalculator
+	savedErrors map[int]interface{}
+	errorCount  int
+	Client      http.Client `toml:"-"`
 }
 
 // Description returns a one-sentence description on the Output
@@ -34,14 +35,14 @@ func (nr *NewRelic) Description() string {
 // SampleConfig : return  default configuration of the Output
 func (nr *NewRelic) SampleConfig() string {
 	return `
-	## New Relic Insights API key (required)
-	insights_key = "insights api key"
+  ## New Relic Insights API key
+  insights_key = "insights api key"
 
-	# metric_prefix if defined, prefix's metrics name for easy identification (optional)
-	# metric_prefix = ""
-	
-	# harvest timeout, default is 15 seconds
-	# timeout = "15s"
+  ## Prefix to add to add to metric name for easy identification.
+  # metric_prefix = ""
+
+  ## Timeout for writes to the New Relic API.
+  # timeout = "15s"
 `
 }
 
@@ -77,7 +78,6 @@ func (nr *NewRelic) Connect() error {
 
 // Close any connections to the Output
 func (nr *NewRelic) Close() error {
-
 	nr.errorCount = 0
 	nr.Client.CloseIdleConnections()
 	return nil
@@ -85,7 +85,6 @@ func (nr *NewRelic) Close() error {
 
 // Write takes in group of points to be written to the Output
 func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
-
 	nr.errorCount = 0
 	nr.savedErrors = make(map[int]interface{})
 

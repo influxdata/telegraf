@@ -16,6 +16,10 @@
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
 
+#### New Outputs
+
+- [newrelic](/plugins/outputs/newrelic/README.md) - Contributed by @hsinghkalsi
+
 #### Features
 
 - [#6905](https://github.com/influxdata/telegraf/pull/6905): Add commands stats to mongodb input plugin.
