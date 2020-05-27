@@ -2191,6 +2191,76 @@ def apply(metric):
 	}
 }
 
+func TestScript(t *testing.T) {
+	var tests = []struct {
+		name     string
+		plugin   *Starlark
+		input    []telegraf.Metric
+		expected []telegraf.Metric
+	}{
+		{
+			name: "rename",
+			plugin: &Starlark{
+				Script:  "testdata/rename.star",
+				OnError: "drop",
+				Log:     testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"lower": "0",
+						"upper": "10",
+					},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"min": "0",
+						"max": "10",
+					},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "scale",
+			plugin: &Starlark{
+				Script:  "testdata/scale.star",
+				OnError: "drop",
+				Log:     testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 10.0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 100.0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.plugin.Init()
+			require.NoError(t, err)
+
+			actual := tt.plugin.Apply(tt.input...)
+			testutil.RequireMetricsEqual(t, tt.expected, actual)
+		})
+	}
+}
+
 // Benchmarks modify the metric in place, so the scripts shouldn't modify the
 // metric.
 func Benchmark(b *testing.B) {

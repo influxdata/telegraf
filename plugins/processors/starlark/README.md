@@ -2,12 +2,6 @@
 
 https://github.com/google/starlark-go/blob/master/doc/spec.md
 
-Retaining metrics:
-- must use deepcopy function
-- or copy to a new type
-- i could also freeze and disallow retaining copies.  this is more in spirit of starlark's intentions.
-- global scope is frozen
-
 ### Configuration
 
 ```toml
@@ -22,12 +16,24 @@ error line number
 
 ### TODO
 
-what if a metric deleted
+how to delete a metric?
 - must call Drop?
-- check returned values and autodrop
+- don't return: check returned values and autodrop
 
-what if a metric is copied
+how to copy a metric?
 - must call deepcopy()
 - returning multiple references is an error
+
+how to return multiple metrics?
+- return a list of metric
+
+how to create a new metric?
+
+fastest way to iterate?
+
+how to modify while iterating
+
+how to retain metrics/modify globals
+- global scope is froze
 
 ### Example

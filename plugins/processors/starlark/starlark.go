@@ -15,13 +15,16 @@ const (
 	description  = "Process metrics using a Starlark script"
 	sampleConfig = `
   source = ""
-  on_error = "pass"
+  script = ""
+  on_error = "drop"
 `
-	defaultOnError = "pass"
+
+	defaultOnError = "drop"
 )
 
 type Starlark struct {
 	Source  string `toml:"source"`
+	Script  string `toml:"script"`
 	OnError string `toml:"on_error"`
 
 	Log telegraf.Logger `toml:"-"`
@@ -38,16 +41,32 @@ func (s *Starlark) Init() error {
 		return err
 	}
 
+	if s.Source == "" && s.Script == "" {
+		return errors.New("one of source or script must be set")
+	}
+	if s.Source != "" && s.Script != "" {
+		return errors.New("both source or script cannot be set")
+	}
+
 	s.thread = &starlark.Thread{
-		Name:  "processor.starlark",
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
 	}
 
 	predeclared := starlark.StringDict{}
+	predeclared["Metric"] = starlark.NewBuiltin("Metric", newMetric)
+	predeclared["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 
-	_, program, err := starlark.SourceProgram("processor.starlark", s.Source, predeclared.Has)
-	if err != nil {
-		return err
+	var program *starlark.Program
+	if s.Source != "" {
+		_, program, err = starlark.SourceProgram("processor.starlark", s.Source, predeclared.Has)
+		if err != nil {
+			return err
+		}
+	} else if s.Script != "" {
+		_, program, err = starlark.SourceProgram(s.Script, nil, predeclared.Has)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Execute source
@@ -156,13 +175,12 @@ func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {
 
 func init() {
 	// https://github.com/bazelbuild/starlark/issues/20
-	resolve.AllowFloat = true
+	resolve.AllowNestedDef = true
 	resolve.AllowLambda = true
+	resolve.AllowFloat = true
 	resolve.AllowSet = true
-
-	// FIXME Can we do this per program?
-	starlark.Universe["Metric"] = starlark.NewBuiltin("Metric", newMetric)
-	starlark.Universe["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
+	resolve.AllowGlobalReassign = true
+	resolve.AllowRecursion = true
 }
 
 func init() {
