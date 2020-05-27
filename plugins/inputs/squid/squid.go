@@ -24,7 +24,7 @@ type Squid struct {
 
 const sampleConfig string = `
   ## url of the squid proxy manager counters page
-  url = http://localhost:3128
+  url = "http://localhost:3128"
 
   ## Maximum time to receive response.
   response_timeout = "5s"
