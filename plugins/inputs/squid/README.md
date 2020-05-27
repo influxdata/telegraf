@@ -10,7 +10,8 @@ To use this plugin you must [configure the manager api to allow access](https://
 # Squid web proxy cache plugin
 [[inputs.squid]]
   ## url of the squid proxy manager counters page
-  url = http://localhost:3128/squid-internal-mgr/counters
+  url = "http://localhost:3128"
+
   ## Maximum time to receive response.
   response_timeout = "5s"
 

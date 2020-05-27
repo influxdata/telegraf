@@ -24,7 +24,8 @@ type Squid struct {
 
 const sampleConfig string = `
   ## url of the squid proxy manager counters page
-  url = http://localhost:3128/squid-internal-mgr/counters
+  url = http://localhost:3128
+
   ## Maximum time to receive response.
   response_timeout = "5s"
 
@@ -32,6 +33,7 @@ const sampleConfig string = `
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+  
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
@@ -47,7 +49,7 @@ func (o *Squid) Description() string {
 // return an initialized Squid
 func NewSquid() *Squid {
 	return &Squid{
-		Url:             "http://localhost:3128/squid-internal-mgr/counters",
+		Url:             "http://localhost:3128",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 5},
 	}
 }
@@ -67,13 +69,14 @@ func (s *Squid) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	acc.AddError(s.gatherCounters(s.Url, acc))
+	acc.AddError(s.gatherCounters(s.Url+"/squid-internal-mgr/counters", acc))
 
 	return nil
 }
 
 // gather counters
 func (s *Squid) gatherCounters(url string, acc telegraf.Accumulator) error {
+	url += "/squid-internal-mgr/counters"
 	resp, err := s.client.Get(url)
 	if err != nil {
 		return fmt.Errorf("unable to GET \"%s\": %s", url, err)
