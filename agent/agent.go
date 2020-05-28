@@ -503,15 +503,17 @@ func (a *Agent) runProcessors(
 			out = nextChIn
 		}
 
+		acc := NewMetricStreamAccumulator(out)
+		if err := processor.Start(acc); err != nil {
+			return fmt.Errorf("Error starting processor %s: %w", processor.Config.Name, err)
+		}
+
 		go func(
 			in <-chan telegraf.Metric,
 			out chan<- telegraf.Metric,
 			rp *models.RunningProcessor,
 		) {
-			acc := NewMetricStreamAccumulator(out)
-			if err := rp.Start(in, acc); err != nil {
-				log.Printf("E! [%s] Error running processor: %v", rp.Config.Name, err)
-			}
+			rp.Run(in, acc)
 			close(out)
 			wg.Done()
 		}(in, out, processor)

@@ -11,8 +11,6 @@ import (
 )
 
 type IPType uint8
-type empty struct{}
-type workerPoolType chan empty
 
 var defaultMaxWorkers = 10
 
@@ -31,7 +29,7 @@ type ReverseDNSCache struct {
 
 	// internal
 	rwLock     sync.RWMutex
-	workerPool workerPoolType
+	workerPool parallel.WorkerPool
 
 	cache map[string]*dnslookup
 
@@ -55,7 +53,7 @@ func NewReverseDNSCache(ttl, lookupTimeout time.Duration, workerPoolSize int) *R
 		lookupTimeout: lookupTimeout,
 		cache:         map[string]*dnslookup{},
 		expireList:    []*dnslookup{},
-		workerPool:    make(chan empty, workerPoolSize),
+		workerPool:    parallel.NewWorkerPool(workerPoolSize),
 	}
 	d.startCleanupWorker()
 	return d
@@ -265,19 +263,11 @@ func (d *ReverseDNSCache) cleanup() {
 	d.cache = newMap
 }
 
-func (p workerPoolType) checkout() {
-	p <- empty{}
-}
-
-func (p workerPoolType) checkin() {
-	<-p
-}
-
 // waitForWorkers is a test function that eats up all the worker pool space to
 // make sure workers are done running.
 func (d *ReverseDNSCache) waitForWorkers() {
 	for i := 0; i < d.maxWorkers; i++ {
-		d.workerPool.checkout()
+		d.workerPool.Checkout()
 	}
 }
 

@@ -25,7 +25,3 @@ func NewMetricStreamAccumulator(
 func (sa *metricStream) PassMetric(m telegraf.Metric) {
 	sa.out <- m
 }
-
-func (sa *metricStream) DropMetric(m telegraf.Metric) {
-
-}

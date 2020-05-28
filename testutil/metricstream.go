@@ -13,6 +13,3 @@ func NewTestMetricStreamAccumulator() *testMetricStream {
 func (a *testMetricStream) PassMetric(m telegraf.Metric) {
 	a.ProcessedMetrics = append(a.ProcessedMetrics, m)
 }
-
-func (a *testMetricStream) DropMetric(m telegraf.Metric) {
-}

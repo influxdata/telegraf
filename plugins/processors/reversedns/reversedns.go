@@ -22,7 +22,7 @@ const sampleConfig = `
 
   # lookup_timeout is how long should you wait for a single dns request to repsond.
   # this is also the maximum acceptable latency for a metric travelling through
-  # the reversedns processor. After lookup_timeout is exceeded, a metric will
+  # the reverse_dns processor. After lookup_timeout is exceeded, a metric will
   # be passed on unaltered.
   # multiple simultaneous resolution requests for the same IP will only make a
   # single rDNS request, and they will all wait for the answer for this long.
@@ -30,12 +30,12 @@ const sampleConfig = `
 
   max_parallel_lookups = 100
 
-  [[processors.reversedns.lookup]]
+  [[processors.reverse_dns.lookup]]
     # get the ip from the field "source_ip", and put the result in the field "source_name"
     field = "source_ip"
     dest = "source_name"
 
-  [[processors.reversedns.lookup]]
+  [[processors.reverse_dns.lookup]]
     # get the ip from the tag "destination_ip", and put the result in the tag 
     # "destination_name".
     tag = "destination_ip"
@@ -58,7 +58,7 @@ type lookupEntry struct {
 type ReverseDNS struct {
 	reverseDNSCache *ReverseDNSCache
 	acc             telegraf.MetricStreamAccumulator
-	workers         *parallel.Parallel
+	parallel        parallel.Parallel
 
 	Lookups            []lookupEntry   `toml:"lookup"`
 	CacheTTL           config.Duration `toml:"cache_ttl"`
@@ -84,17 +84,17 @@ func (r *ReverseDNS) Init() {
 
 func (r *ReverseDNS) Start(acc telegraf.MetricStreamAccumulator) error {
 	r.acc = acc
-	r.workers = parallel.New(acc, 10000).Ordered()
+	r.parallel = parallel.NewOrdered(acc, 10000)
 	return nil
 }
 
 func (r *ReverseDNS) Stop() error {
-	r.workers.Wait()
+	r.parallel.Wait()
 	return nil
 }
 
 func (r *ReverseDNS) Add(metric telegraf.Metric) {
-	r.workers.Parallel(func(acc telegraf.MetricStreamAccumulator) {
+	r.parallel.Do(func(acc telegraf.MetricStreamAccumulator) {
 		for _, lookup := range r.Lookups {
 			if len(lookup.Field) > 0 {
 				if ipField, ok := metric.GetField(lookup.Field); ok {
@@ -121,7 +121,7 @@ func first(s []string) string {
 }
 
 func init() {
-	processors.AddStreaming("reversedns", func() telegraf.StreamingProcessor {
+	processors.AddStreaming("reverse_dns", func() telegraf.StreamingProcessor {
 		return newReverseDNS()
 	})
 }

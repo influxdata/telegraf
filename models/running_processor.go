@@ -91,11 +91,15 @@ func (r *RunningProcessor) Log() telegraf.Logger {
 	return r.log
 }
 
-func (r *RunningProcessor) Start(in <-chan telegraf.Metric, acc telegraf.MetricStreamAccumulator) error {
+func (r *RunningProcessor) Start(acc telegraf.MetricStreamAccumulator) error {
 	if err := r.Processor.Start(acc); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (r *RunningProcessor) Run(in <-chan telegraf.Metric, acc telegraf.MetricStreamAccumulator) {
 	for m := range in {
 		filteredMetric := r.ApplyFilters(m)
 		if filteredMetric == nil {
@@ -103,11 +107,10 @@ func (r *RunningProcessor) Start(in <-chan telegraf.Metric, acc telegraf.MetricS
 			continue
 		}
 		if len(m.FieldList()) == 0 {
-			acc.DropMetric(filteredMetric)
+			// drop metric
 			continue
 		}
 
 		r.Processor.Add(filteredMetric)
 	}
-	return nil
 }
