@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+// Iothub struct
 type Iothub struct {
 	Client              iothub.ModuleClient
 	UseGateway          bool   `toml:"use_gateway"`
@@ -28,17 +29,27 @@ type Iothub struct {
 	serializer          serializers.Serializer
 }
 
+// Description returns plugin description
 func (i *Iothub) Description() string {
 	return "Output plugin for Azure IoT Hub Edge Module"
 }
 
+// SampleConfig returns a sample configuration
 func (i *Iothub) SampleConfig() string {
 	return `
 	## One of the following sets required for configuration:
 	#  
+	## For use on IoT Edge:
+	#
+	# use_gateway = true
+	#
+	## To specify a device/module connection string:
+	#
 	#  # 1.
 	#  connection_string = ""
 	#  use_gateway = true
+	#
+	## To use a shared access key to form a connection string
 	#
 	#  # 2.
 	#  hub_name = ""
@@ -161,7 +172,6 @@ func (i *Iothub) Init() error {
 		}
 
 		// create a new client from connection string
-
 		gwhn := os.Getenv("IOTEDGE_GATEWAYHOSTNAME")
 		mgid := os.Getenv("IOTEDGE_MODULEGENERATIONID")
 		wluri := os.Getenv("IOTEDGE_WORKLOADURI")
@@ -185,6 +195,7 @@ func (i *Iothub) Init() error {
 		return err
 	} else {
 
+		// New client from Environment variables. Applicable for deployment to IoT Edge
 		c, err := iothub.NewModuleFromEnvironment(
 			iotmqtt.NewModuleTransport(), true,
 		)
