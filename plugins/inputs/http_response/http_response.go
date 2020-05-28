@@ -12,11 +12,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+const (
+	// defaultResponseBodyMaxSize is the default maximum response body size, in bytes.
+	// if the response body is over this size, we will raise a body_read_error.
+	defaultResponseBodyMaxSize = 32 * 1024 * 1024
 )
 
 // HTTPResponse struct
@@ -31,7 +38,9 @@ type HTTPResponse struct {
 	Headers         map[string]string
 	FollowRedirects bool
 	// Absolute path to file with Bearer token
-	BearerToken         string `toml:"bearer_token"`
+	BearerToken         string        `toml:"bearer_token"`
+	ResponseBodyField   string        `toml:"response_body_field"`
+	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
 	ResponseStringMatch string
 	Interface           string
 	// HTTP Basic Auth Credentials
@@ -83,6 +92,15 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
+  ## Optional name of the field that will contain the body of the response. 
+  ## By default it is set to an empty String indicating that the body's content won't be added 
+  # response_body_field = ''
+
+  ## Maximum allowed HTTP response body size in bytes.
+  ## 0 means to use the default of 32MiB.
+  ## If the response body size exceeds this limit a "body_read_error" will be raised
+  # response_body_max_size = "32MiB"
+
   ## Optional substring or regex match in body of the response
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
@@ -99,7 +117,7 @@ var sampleConfig = `
   # [inputs.http_response.headers]
   #   Host = "github.com"
 
-  ## Optional setting to map reponse http headers into tags
+  ## Optional setting to map response http headers into tags
   ## If the http header is not present on the request, no corresponding tag will be added
   ## If multiple instances of the http header are present, only the first value will be used
   # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
@@ -310,17 +328,28 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		h.Log.Debugf("Failed to read body of HTTP Response : %s", err.Error())
-		setResult("body_read_error", fields, tags)
-		fields["content_length"] = len(bodyBytes)
-		if h.ResponseStringMatch != "" {
-			fields["response_string_match"] = 0
-		}
+	if h.ResponseBodyMaxSize.Size == 0 {
+		h.ResponseBodyMaxSize.Size = defaultResponseBodyMaxSize
+	}
+	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, h.ResponseBodyMaxSize.Size+1))
+	// Check first if the response body size exceeds the limit.
+	if err == nil && int64(len(bodyBytes)) > h.ResponseBodyMaxSize.Size {
+		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
+		return fields, tags, nil
+	} else if err != nil {
+		h.setBodyReadError(fmt.Sprintf("Failed to read body of HTTP Response : %s", err.Error()), bodyBytes, fields, tags)
 		return fields, tags, nil
 	}
 
+	// Add the body of the response if expected
+	if len(h.ResponseBodyField) > 0 {
+		// Check that the content of response contains only valid utf-8 characters.
+		if !utf8.Valid(bodyBytes) {
+			h.setBodyReadError("The body of the HTTP Response is not a valid utf-8 string", bodyBytes, fields, tags)
+			return fields, tags, nil
+		}
+		fields[h.ResponseBodyField] = string(bodyBytes)
+	}
 	fields["content_length"] = len(bodyBytes)
 
 	// Check the response for a regex match.
@@ -337,6 +366,16 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	}
 
 	return fields, tags, nil
+}
+
+// Set result in case of a body read error
+func (h *HTTPResponse) setBodyReadError(error_msg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
+	h.Log.Debugf(error_msg)
+	setResult("body_read_error", fields, tags)
+	fields["content_length"] = len(bodyBytes)
+	if h.ResponseStringMatch != "" {
+		fields["response_string_match"] = 0
+	}
 }
 
 // Gather gets all metric fields and tags and returns any errors it encounters

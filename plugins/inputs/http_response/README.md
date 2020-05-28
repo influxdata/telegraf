@@ -31,6 +31,15 @@ This input plugin checks HTTP/HTTPS connections.
   # {'fake':'data'}
   # '''
 
+  ## Optional name of the field that will contain the body of the response. 
+  ## By default it is set to an empty String indicating that the body's content won't be added 
+  # response_body_field = ''
+
+  ## Maximum allowed HTTP response body size in bytes.
+  ## 0 means to use the default of 32MiB.
+  ## If the response body size exceeds this limit a "body_read_error" will be raised
+  # response_body_max_size = "32MiB"
+
   ## Optional substring or regex match in body of the response (case sensitive)
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
@@ -47,7 +56,7 @@ This input plugin checks HTTP/HTTPS connections.
   # [inputs.http_response.headers]
   #   Host = "github.com"
 
-  ## Optional setting to map reponse http headers into tags
+  ## Optional setting to map response http headers into tags
   ## If the http header is not present on the request, no corresponding tag will be added
   ## If multiple instances of the http header are present, only the first value will be used
   # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
@@ -82,7 +91,7 @@ This tag is used to expose network and plugin errors. HTTP errors are considered
 --------------------------|-------------------------|-----------|
 |success                  | 0                       |The HTTP request completed, even if the HTTP code represents an error|
 |response_string_mismatch | 1                       |The option `response_string_match` was used, and the body of the response didn't match the regex. HTTP errors with content in their body (like 4xx, 5xx) will trigger this error|
-|body_read_error          | 2                       |The option `response_string_match` was used, but the plugin wasn't able to read the body of the response. Responses with empty bodies (like 3xx, HEAD, etc) will trigger this error|
+|body_read_error          | 2                       |The option `response_string_match` was used, but the plugin wasn't able to read the body of the response. Responses with empty bodies (like 3xx, HEAD, etc) will trigger this error. Or the option `response_body_field` was used and the content of the response body was not a valid uft-8. Or the size of the body of the response exceeded the `response_body_max_size` |
 |connection_failed        | 3                       |Catch all for any network error not specifically handled by the plugin|
 |timeout                  | 4                       |The plugin timed out while awaiting the HTTP connection to complete|
 |dns_error                | 5                       |There was a DNS error while attempting to connect to the host|
