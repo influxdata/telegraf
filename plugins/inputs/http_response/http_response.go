@@ -271,14 +271,6 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	resp, err := h.client.Do(request)
 	response_time := time.Since(start).Seconds()
 
-	// Add the response headers
-	for headerName, tag := range h.HTTPHeaderTags {
-		headerValues, foundHeader := resp.Header[headerName]
-		if foundHeader && len(headerValues) > 0 {
-			tags[tag] = headerValues[0]
-		}
-	}
-
 	// If an error in returned, it means we are dealing with a network error, as
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
@@ -305,6 +297,14 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// This function closes the response body, as
 	// required by the net/http library
 	defer resp.Body.Close()
+
+	// Add the response headers
+	for headerName, tag := range h.HTTPHeaderTags {
+		headerValues, foundHeader := resp.Header[headerName]
+		if foundHeader && len(headerValues) > 0 {
+			tags[tag] = headerValues[0]
+		}
+	}
 
 	// Set log the HTTP response code
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
