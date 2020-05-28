@@ -4,5 +4,6 @@ This is a list of plugins that can be compiled outside of Telegraf and used via 
 
 Pull requests welcome.
 
-## Inputs 
+## Inputs
 - [rand](https://github.com/ssoroka/rand) - Generate random numbers
+- [twitter](https://github.com/inabagumi/twitter-telegraf-plugin) - Gather account information from Twitter accounts
