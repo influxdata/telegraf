@@ -9,6 +9,8 @@ import (
 	"go.starlark.net/starlark"
 )
 
+// FieldDict is a starlark.Value for the metric fields.  It is heavily based on the
+// starlark.Dict.
 type FieldDict struct {
 	*Metric
 }
@@ -188,6 +190,7 @@ type FieldIterator struct {
 	fields []*telegraf.Field
 }
 
+// Next implements the starlark.Iterator interface.
 func (i *FieldIterator) Next(p *starlark.Value) bool {
 	if len(i.fields) == 0 {
 		return false
@@ -200,6 +203,7 @@ func (i *FieldIterator) Next(p *starlark.Value) bool {
 	return true
 }
 
+// Done implements the starlark.Iterator interface.
 func (i *FieldIterator) Done() {
 	i.fieldIterCount--
 }

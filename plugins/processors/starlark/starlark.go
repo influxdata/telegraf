@@ -14,9 +14,17 @@ import (
 const (
 	description  = "Process metrics using a Starlark script"
 	sampleConfig = `
-  source = ""
-  script = ""
-  on_error = "drop"
+  ## Starlark source, only set one of source or script.
+  source = """
+    def apply(metric):
+        pass
+  """
+
+  ## File containing Starlark script, only set one of source or script.
+  # script = ""
+
+  ## Can be set to pass or drop, if 
+  # on_error = "drop"
 `
 
 	defaultOnError = "drop"
@@ -100,11 +108,10 @@ func (s *Starlark) Init() error {
 	// Reusing the same metric wrapper to skip an allocation.  This will cause
 	// any saved references point to the new metric, but due to freezing the
 	// globals none should exist.
-	met := &Metric{}
 	s.args = make(starlark.Tuple, 1)
-	s.args[0] = met
+	s.args[0] = &Metric{}
 
-	// Allocate a slice for return values.  FIXME can we remove?
+	// Preallocate a slice for return values.
 	s.results = make([]telegraf.Metric, 0, 10)
 
 	return nil
@@ -121,7 +128,7 @@ func (s *Starlark) Description() string {
 func (s *Starlark) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	s.results = s.results[:0]
 	for _, m := range metrics {
-		s.args[0].(*Metric).metric = m
+		s.args[0].(*Metric).Wrap(m)
 
 		rv, err := starlark.Call(s.thread, s.applyFunc, s.args, nil)
 		if err != nil {

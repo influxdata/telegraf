@@ -9,6 +9,8 @@ import (
 	"go.starlark.net/starlark"
 )
 
+// TagDict is a starlark.Value for the metric tags.  It is heavily based on the
+// starlark.Dict.
 type TagDict struct {
 	*Metric
 }
@@ -176,6 +178,7 @@ type TagIterator struct {
 	tags []*telegraf.Tag
 }
 
+// Next implements the starlark.Iterator interface.
 func (i *TagIterator) Next(p *starlark.Value) bool {
 	if len(i.tags) == 0 {
 		return false
@@ -188,6 +191,7 @@ func (i *TagIterator) Next(p *starlark.Value) bool {
 	return true
 }
 
+// Done implements the starlark.Iterator interface.
 func (i *TagIterator) Done() {
 	i.tagIterCount--
 }

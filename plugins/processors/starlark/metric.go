@@ -17,13 +17,23 @@ type Metric struct {
 	frozen         bool
 }
 
+// Wrap updates the starlark.Metric to wrap a new telegraf.Metric.
+func (m *Metric) Wrap(metric telegraf.Metric) {
+	m.metric = metric
+	m.tagIterCount = 0
+	m.fieldIterCount = 0
+	m.frozen = false
+}
+
+// Unwrap removes the telegraf.Metric from the startlark.Metric.
 func (m *Metric) Unwrap() telegraf.Metric {
 	return m.metric
 }
 
-// The String function is called by both the repr() and str() functions.  There
-// is a slight difference in how strings are quoted between the two functions,
-// but this type isn't a string so it is irrelevent.
+// String returns the starlark representation of the Metric.
+//
+// The String function is called by both the repr() and str() functions, and so
+// it behaves more like the repr function would in Python.
 func (m *Metric) String() string {
 	buf := new(strings.Builder)
 	buf.WriteString("Metric(")
