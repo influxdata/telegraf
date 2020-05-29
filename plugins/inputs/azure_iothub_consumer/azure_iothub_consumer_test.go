@@ -224,8 +224,6 @@ func TestHasSharedAccessKeyName(t *testing.T) {
 	}
 }
 
-
-
 // These tests have an error in the syntax somewhere. Couldn't find it.
 
 // // #####################
