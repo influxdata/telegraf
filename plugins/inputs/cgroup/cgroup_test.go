@@ -31,17 +31,17 @@ func TestCgroupStatistics_1(t *testing.T) {
 		"path": "testdata/memory",
 	}
 	fields := map[string]interface{}{
-		"memory.stat.cache":           1739362304123123123,
-		"memory.stat.rss":             1775325184,
-		"memory.stat.rss_huge":        778043392,
-		"memory.stat.mapped_file":     421036032,
-		"memory.stat.dirty":           -307200,
-		"memory.max_usage_in_bytes.0": 0,
-		"memory.max_usage_in_bytes.1": -1,
-		"memory.max_usage_in_bytes.2": 2,
-		"memory.limit_in_bytes":       223372036854771712,
+		"memory.stat.cache":           int64(1739362304123123123),
+		"memory.stat.rss":             int64(1775325184),
+		"memory.stat.rss_huge":        int64(778043392),
+		"memory.stat.mapped_file":     int64(421036032),
+		"memory.stat.dirty":           int64(-307200),
+		"memory.max_usage_in_bytes.0": int64(0),
+		"memory.max_usage_in_bytes.1": int64(-1),
+		"memory.max_usage_in_bytes.2": int64(2),
+		"memory.limit_in_bytes":       int64(223372036854771712),
 		"memory.use_hierarchy":        "12-781",
-		"notify_on_release":           0,
+		"notify_on_release":           int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
 }
@@ -63,10 +63,10 @@ func TestCgroupStatistics_2(t *testing.T) {
 		"path": "testdata/cpu",
 	}
 	fields := map[string]interface{}{
-		"cpuacct.usage_percpu.0": -1452543795404,
-		"cpuacct.usage_percpu.1": 1376681271659,
-		"cpuacct.usage_percpu.2": 1450950799997,
-		"cpuacct.usage_percpu.3": -1473113374257,
+		"cpuacct.usage_percpu.0": int64(-1452543795404),
+		"cpuacct.usage_percpu.1": int64(1376681271659),
+		"cpuacct.usage_percpu.2": int64(1450950799997),
+		"cpuacct.usage_percpu.3": int64(-1473113374257),
 	}
 	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
 }
@@ -88,7 +88,7 @@ func TestCgroupStatistics_3(t *testing.T) {
 		"path": "testdata/memory/group_1",
 	}
 	fields := map[string]interface{}{
-		"memory.limit_in_bytes": 223372036854771712,
+		"memory.limit_in_bytes": int64(223372036854771712),
 	}
 	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
 
@@ -115,7 +115,7 @@ func TestCgroupStatistics_4(t *testing.T) {
 		"path": "testdata/memory/group_1/group_1_1",
 	}
 	fields := map[string]interface{}{
-		"memory.limit_in_bytes": 223372036854771712,
+		"memory.limit_in_bytes": int64(223372036854771712),
 	}
 	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
 
@@ -147,7 +147,7 @@ func TestCgroupStatistics_5(t *testing.T) {
 		"path": "testdata/memory/group_1/group_1_1",
 	}
 	fields := map[string]interface{}{
-		"memory.limit_in_bytes": 223372036854771712,
+		"memory.limit_in_bytes": int64(223372036854771712),
 	}
 	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
 
@@ -174,9 +174,9 @@ func TestCgroupStatistics_6(t *testing.T) {
 		"path": "testdata/memory",
 	}
 	fields := map[string]interface{}{
-		"memory.usage_in_bytes":      3513667584,
+		"memory.usage_in_bytes":      int64(3513667584),
 		"memory.use_hierarchy":       "12-781",
-		"memory.kmem.limit_in_bytes": 9223372036854771712,
+		"memory.kmem.limit_in_bytes": int64(9223372036854771712),
 	}
 	acc.AssertContainsTaggedFields(t, "cgroup", fields, tags)
 }

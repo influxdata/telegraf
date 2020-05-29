@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/soniah/gosnmp"
@@ -72,7 +73,7 @@ var tsc = &testSNMPConnection{
 		".1.0.0.0.1.3.1":     "0.456",
 		".1.0.0.0.1.3.2":     "0.000",
 		".1.0.0.0.1.3.3":     "9.999",
-		".1.0.0.0.1.4.0":     123456,
+		".1.0.0.0.1.5.0":     123456,
 		".1.0.0.1.1":         "baz",
 		".1.0.0.1.2":         234,
 		".1.0.0.1.3":         []byte("byte slice"),
@@ -82,45 +83,20 @@ var tsc = &testSNMPConnection{
 }
 
 func TestSampleConfig(t *testing.T) {
-	conf := struct {
-		Inputs struct {
-			Snmp []*Snmp
-		}
-	}{}
-	err := toml.Unmarshal([]byte("[[inputs.snmp]]\n"+(*Snmp)(nil).SampleConfig()), &conf)
-	assert.NoError(t, err)
+	conf := inputs.Inputs["snmp"]()
+	err := toml.Unmarshal([]byte(conf.SampleConfig()), conf)
+	require.NoError(t, err)
 
-	s := Snmp{
-		Agents:         []string{"127.0.0.1:161"},
+	expected := &Snmp{
+		Agents:         []string{"udp://127.0.0.1:161"},
 		Timeout:        internal.Duration{Duration: 5 * time.Second},
 		Version:        2,
 		Community:      "public",
 		MaxRepetitions: 10,
 		Retries:        3,
-
-		Name: "system",
-		Fields: []Field{
-			{Name: "hostname", Oid: ".1.0.0.1.1"},
-			{Name: "uptime", Oid: ".1.0.0.1.2"},
-			{Name: "load", Oid: ".1.0.0.1.3"},
-			{Oid: "HOST-RESOURCES-MIB::hrMemorySize"},
-		},
-		Tables: []Table{
-			{
-				Name:        "remote_servers",
-				InheritTags: []string{"hostname"},
-				Fields: []Field{
-					{Name: "server", Oid: ".1.0.0.0.1.0", IsTag: true},
-					{Name: "connections", Oid: ".1.0.0.0.1.1"},
-					{Name: "latency", Oid: ".1.0.0.0.1.2"},
-				},
-			},
-			{
-				Oid: "HOST-RESOURCES-MIB::hrNetworkTable",
-			},
-		},
+		Name:           "snmp",
 	}
-	assert.Equal(t, s, *conf.Inputs.Snmp[0])
+	require.Equal(t, expected, conf)
 }
 
 func TestFieldInit(t *testing.T) {
@@ -159,19 +135,23 @@ func TestFieldInit(t *testing.T) {
 
 func TestTableInit(t *testing.T) {
 	tbl := Table{
-		Oid:    ".1.0.0.0",
-		Fields: []Field{{Oid: ".999", Name: "foo"}},
+		Oid: ".1.0.0.0",
+		Fields: []Field{
+			{Oid: ".999", Name: "foo"},
+			{Oid: "TEST::description", Name: "description", IsTag: true},
+		},
 	}
 	err := tbl.init()
 	require.NoError(t, err)
 
 	assert.Equal(t, "testTable", tbl.Name)
 
-	assert.Len(t, tbl.Fields, 4)
+	assert.Len(t, tbl.Fields, 5)
 	assert.Contains(t, tbl.Fields, Field{Oid: ".999", Name: "foo", initialized: true})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true})
 	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true})
+	assert.Contains(t, tbl.Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", IsTag: true, initialized: true})
 }
 
 func TestSnmpInit(t *testing.T) {
@@ -187,10 +167,11 @@ func TestSnmpInit(t *testing.T) {
 	err := s.init()
 	require.NoError(t, err)
 
-	assert.Len(t, s.Tables[0].Fields, 3)
+	assert.Len(t, s.Tables[0].Fields, 4)
 	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.1", Name: "server", IsTag: true, initialized: true})
 	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.2", Name: "connections", initialized: true})
 	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.3", Name: "latency", initialized: true})
+	assert.Contains(t, s.Tables[0].Fields, Field{Oid: ".1.0.0.0.1.4", Name: "description", initialized: true})
 
 	assert.Equal(t, Field{
 		Oid:         ".1.0.0.1.1",
@@ -251,29 +232,74 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
+		Agents:    []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
 		Timeout:   internal.Duration{Duration: 3 * time.Second},
 		Retries:   4,
 		Version:   2,
 		Community: "foo",
 	}
+	err := s.init()
+	require.NoError(t, err)
 
-	gsc, err := s.getConnection("1.2.3.4:567")
+	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 567, gs.Port)
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
 	assert.Equal(t, "foo", gs.Community)
+	assert.Equal(t, "udp", gs.Transport)
 
-	gsc, err = s.getConnection("1.2.3.4")
+	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
 	gs = gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
+	assert.Equal(t, "udp", gs.Transport)
+
+	gsc, err = s.getConnection(2)
+	require.NoError(t, err)
+	gs = gsc.(gosnmpWrapper)
+	assert.Equal(t, "127.0.0.1", gs.Target)
+	assert.EqualValues(t, 161, gs.Port)
+	assert.Equal(t, "udp", gs.Transport)
+}
+
+func TestGetSNMPConnectionTCP(t *testing.T) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go stubTCPServer(&wg)
+	wg.Wait()
+
+	s := &Snmp{
+		Agents: []string{"tcp://127.0.0.1:56789"},
+	}
+	err := s.init()
+	require.NoError(t, err)
+
+	wg.Add(1)
+	gsc, err := s.getConnection(0)
+	require.NoError(t, err)
+	gs := gsc.(gosnmpWrapper)
+	assert.Equal(t, "127.0.0.1", gs.Target)
+	assert.EqualValues(t, 56789, gs.Port)
+	assert.Equal(t, "tcp", gs.Transport)
+	wg.Wait()
+}
+
+func stubTCPServer(wg *sync.WaitGroup) {
+	defer wg.Done()
+	tcpAddr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:56789")
+	tcpServer, _ := net.ListenTCP("tcp", tcpAddr)
+	defer tcpServer.Close()
+	wg.Done()
+	conn, _ := tcpServer.AcceptTCP()
+	defer conn.Close()
 }
 
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
+		Agents:         []string{"1.2.3.4"},
 		Version:        3,
 		MaxRepetitions: 20,
 		ContextName:    "mycontext",
@@ -287,8 +313,10 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 		EngineBoots:    1,
 		EngineTime:     2,
 	}
+	err := s.init()
+	require.NoError(t, err)
 
-	gsc, err := s.getConnection("1.2.3.4")
+	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(gosnmpWrapper)
 	assert.Equal(t, gs.Version, gosnmp.Version3)
@@ -308,18 +336,28 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 }
 
 func TestGetSNMPConnection_caching(t *testing.T) {
-	s := &Snmp{}
-	gs1, err := s.getConnection("1.2.3.4")
+	s := &Snmp{
+		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
+	}
+	err := s.init()
 	require.NoError(t, err)
-	gs2, err := s.getConnection("1.2.3.4")
+	gs1, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs3, err := s.getConnection("1.2.3.5")
+	gs2, err := s.getConnection(0)
+	require.NoError(t, err)
+	gs3, err := s.getConnection(1)
+	require.NoError(t, err)
+	gs4, err := s.getConnection(2)
 	require.NoError(t, err)
 	assert.True(t, gs1 == gs2)
 	assert.False(t, gs2 == gs3)
+	assert.False(t, gs3 == gs4)
 }
 
 func TestGosnmpWrapper_walk_retry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to random failures.")
+	}
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
 	defer srvr.Close()
 	require.NoError(t, err)
@@ -366,6 +404,8 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 }
 
 func TestGosnmpWrapper_get_retry(t *testing.T) {
+	// TODO: Fix this test
+	t.Skip("Test failing too often, skip for now and revisit later.")
 	srvr, err := net.ListenUDP("udp4", &net.UDPAddr{})
 	defer srvr.Close()
 	require.NoError(t, err)
@@ -435,6 +475,11 @@ func TestTableBuild_walk(t *testing.T) {
 				Oid:            ".1.0.0.2.1.5",
 				OidIndexSuffix: ".9.9",
 			},
+			{
+				Name:           "myfield5",
+				Oid:            ".1.0.0.2.1.5",
+				OidIndexLength: 1,
+			},
 		},
 	}
 
@@ -451,6 +496,7 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield2": 1,
 			"myfield3": float64(0.123),
 			"myfield4": 11,
+			"myfield5": 11,
 		},
 	}
 	rtr2 := RTableRow{
@@ -462,6 +508,7 @@ func TestTableBuild_walk(t *testing.T) {
 			"myfield2": 2,
 			"myfield3": float64(0.456),
 			"myfield4": 22,
+			"myfield5": 22,
 		},
 	}
 	rtr3 := RTableRow{
@@ -554,17 +601,17 @@ func TestGather(t *testing.T) {
 				Fields: []Field{
 					{
 						Name: "myOtherField",
-						Oid:  ".1.0.0.0.1.4",
+						Oid:  ".1.0.0.0.1.5",
 					},
 				},
 			},
 		},
 
-		connectionCache: map[string]snmpConnection{
-			"TestGather": tsc,
+		connectionCache: []snmpConnection{
+			tsc,
 		},
+		initialized: true,
 	}
-
 	acc := &testutil.Accumulator{}
 
 	tstart := time.Now()
@@ -607,9 +654,10 @@ func TestGather_host(t *testing.T) {
 			},
 		},
 
-		connectionCache: map[string]snmpConnection{
-			"TestGather": tsc,
+		connectionCache: []snmpConnection{
+			tsc,
 		},
+		initialized: true,
 	}
 
 	acc := &testutil.Accumulator{}
@@ -646,6 +694,8 @@ func TestFieldConvert(t *testing.T) {
 		{uint64(123), "float(3)", float64(0.123)},
 		{"123", "int", int64(123)},
 		{[]byte("123"), "int", int64(123)},
+		{"123123123123", "int", int64(123123123123)},
+		{[]byte("123123123123"), "int", int64(123123123123)},
 		{float32(12.3), "int", int64(12)},
 		{float64(12.3), "int", int64(12)},
 		{int(123), "int", int64(123)},
@@ -677,7 +727,7 @@ func TestFieldConvert(t *testing.T) {
 func TestSnmpTranslateCache_miss(t *testing.T) {
 	snmpTranslateCaches = nil
 	oid := "IF-MIB::ifPhysAddress.1"
-	mibName, oidNum, oidText, conversion, err := snmpTranslate(oid)
+	mibName, oidNum, oidText, conversion, err := SnmpTranslate(oid)
 	assert.Len(t, snmpTranslateCaches, 1)
 	stc := snmpTranslateCaches[oid]
 	require.NotNil(t, stc)
@@ -690,7 +740,7 @@ func TestSnmpTranslateCache_miss(t *testing.T) {
 
 func TestSnmpTranslateCache_hit(t *testing.T) {
 	snmpTranslateCaches = map[string]snmpTranslateCache{
-		"foo": snmpTranslateCache{
+		"foo": {
 			mibName:    "a",
 			oidNum:     "b",
 			oidText:    "c",
@@ -698,7 +748,7 @@ func TestSnmpTranslateCache_hit(t *testing.T) {
 			err:        fmt.Errorf("e"),
 		},
 	}
-	mibName, oidNum, oidText, conversion, err := snmpTranslate("foo")
+	mibName, oidNum, oidText, conversion, err := SnmpTranslate("foo")
 	assert.Equal(t, "a", mibName)
 	assert.Equal(t, "b", oidNum)
 	assert.Equal(t, "c", oidText)
@@ -723,7 +773,7 @@ func TestSnmpTableCache_miss(t *testing.T) {
 
 func TestSnmpTableCache_hit(t *testing.T) {
 	snmpTableCaches = map[string]snmpTableCache{
-		"foo": snmpTableCache{
+		"foo": {
 			mibName: "a",
 			oidNum:  "b",
 			oidText: "c",

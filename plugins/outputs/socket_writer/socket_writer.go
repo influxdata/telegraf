@@ -1,6 +1,7 @@
 package socket_writer
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -8,15 +9,20 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type SocketWriter struct {
+	ContentEncoding string `toml:"content_encoding"`
 	Address         string
 	KeepAlivePeriod *internal.Duration
+	tlsint.ClientConfig
 
 	serializers.Serializer
+
+	encoder internal.ContentEncoder
 
 	net.Conn
 }
@@ -39,11 +45,23 @@ func (sw *SocketWriter) SampleConfig() string {
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
 
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.
   ## 0 disables keep alive probes.
   ## Defaults to the OS configuration.
   # keep_alive_period = "5m"
+
+  ## Content encoding for packet-based connections (i.e. UDP, unixgram).
+  ## Can be set to "gzip" or to "identity" to apply no encoding.
+  ##
+  # content_encoding = "identity"
 
   ## Data format to generate.
   ## Each data format has its own unique set of configuration options, read
@@ -63,13 +81,28 @@ func (sw *SocketWriter) Connect() error {
 		return fmt.Errorf("invalid address: %s", sw.Address)
 	}
 
-	c, err := net.Dial(spl[0], spl[1])
+	tlsCfg, err := sw.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	var c net.Conn
+	if tlsCfg == nil {
+		c, err = net.Dial(spl[0], spl[1])
+	} else {
+		c, err = tls.Dial(spl[0], spl[1], tlsCfg)
+	}
 	if err != nil {
 		return err
 	}
 
 	if err := sw.setKeepAlive(c); err != nil {
 		log.Printf("unable to configure keep alive (%s): %s", sw.Address, err)
+	}
+	//set encoder
+	sw.encoder, err = internal.NewContentEncoder(sw.ContentEncoding)
+	if err != nil {
+		return err
 	}
 
 	sw.Conn = c
@@ -107,15 +140,23 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		bs, err := sw.Serialize(m)
 		if err != nil {
-			//TODO log & keep going with remaining metrics
-			return err
+			log.Printf("D! [outputs.socket_writer] Could not serialize metric: %v", err)
+			continue
 		}
+
+		bs, err = sw.encoder.Encode(bs)
+		if err != nil {
+			log.Printf("D! [outputs.socket_writer] Could not encode metric: %v", err)
+			continue
+		}
+
 		if _, err := sw.Conn.Write(bs); err != nil {
 			//TODO log & keep going with remaining strings
 			if err, ok := err.(net.Error); !ok || !err.Temporary() {
 				// permanent error. close the connection
 				sw.Close()
 				sw.Conn = nil
+				return fmt.Errorf("closing connection: %v", err)
 			}
 			return err
 		}

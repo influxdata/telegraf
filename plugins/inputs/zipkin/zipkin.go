@@ -3,7 +3,6 @@ package zipkin
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -27,6 +26,11 @@ const (
 	// DefaultShutdownTimeout is the max amount of time telegraf will wait
 	// for the plugin to shutdown
 	DefaultShutdownTimeout = 5
+)
+
+var (
+	// DefaultNetwork is the network to listen on; use only in tests.
+	DefaultNetwork = "tcp"
 )
 
 // Recorder represents a type which can record zipkin trace data as well as
@@ -54,6 +58,8 @@ type Zipkin struct {
 	ServiceAddress string
 	Port           int
 	Path           string
+
+	Log telegraf.Logger
 
 	address   string
 	handler   Handler
@@ -94,13 +100,13 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	}
 
 	addr := ":" + strconv.Itoa(z.Port)
-	ln, err := net.Listen("tcp", addr)
+	ln, err := net.Listen(DefaultNetwork, addr)
 	if err != nil {
 		return err
 	}
 
 	z.address = ln.Addr().String()
-	log.Printf("I! Started the zipkin listener on %s", z.address)
+	z.Log.Infof("Started the zipkin listener on %s", z.address)
 
 	go func() {
 		wg.Add(1)

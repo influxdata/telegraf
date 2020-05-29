@@ -12,10 +12,13 @@ This plugin collects sensor metrics with the `sensors` executable from the lm-se
   ## Remove numbers from field names.
   ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
   # remove_numbers = true
+
+  ## Timeout is the maximum amount of time that the sensors command can run.
+  # timeout = "5s"
 ```
 
 ### Measurements & Fields:
-Fields are created dynamicaly depending on the sensors. All fields are float.
+Fields are created dynamically depending on the sensors. All fields are float.
 
 ### Tags:
 

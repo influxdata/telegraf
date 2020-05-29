@@ -8,15 +8,23 @@ import (
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
-// bucketTag is the tag, which contains right bucket border
-const bucketTag = "le"
+// bucketRightTag is the tag, which contains right bucket border
+const bucketRightTag = "le"
 
-// bucketInf is the right bucket border for infinite values
-const bucketInf = "+Inf"
+// bucketPosInf is the right bucket border for infinite values
+const bucketPosInf = "+Inf"
+
+// bucketLeftTag is the tag, which contains left bucket border (exclusive)
+const bucketLeftTag = "gt"
+
+// bucketNegInf is the left bucket border for infinite values
+const bucketNegInf = "-Inf"
 
 // HistogramAggregator is aggregator with histogram configs and particular histograms for defined metrics
 type HistogramAggregator struct {
-	Configs []config `toml:"config"`
+	Configs      []config `toml:"config"`
+	ResetBuckets bool     `toml:"reset"`
+	Cumulative   bool     `toml:"cumulative"`
 
 	buckets bucketsByMetrics
 	cache   map[uint64]metricHistogramCollection
@@ -56,8 +64,10 @@ type groupedByCountFields struct {
 }
 
 // NewHistogramAggregator creates new histogram aggregator
-func NewHistogramAggregator() telegraf.Aggregator {
-	h := &HistogramAggregator{}
+func NewHistogramAggregator() *HistogramAggregator {
+	h := &HistogramAggregator{
+		Cumulative: true,
+	}
 	h.buckets = make(bucketsByMetrics)
 	h.resetCache()
 
@@ -72,16 +82,24 @@ var sampleConfig = `
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
 
+  ## If true, the histogram will be reset on flush instead
+  ## of accumulating the results.
+  reset = false
+
+  ## Whether bucket values should be accumulated. If set to false, "gt" tag will be added.
+  ## Defaults to true.
+  cumulative = true
+
   ## Example config that aggregates all fields of the metric.
   # [[aggregators.histogram.config]]
-  #   ## The set of buckets.
+  #   ## Right borders of buckets (with +Inf implicitly added).
   #   buckets = [0.0, 15.6, 34.5, 49.1, 71.5, 80.5, 94.5, 100.0]
   #   ## The name of metric.
   #   measurement_name = "cpu"
 
   ## Example config that aggregates only specific fields of the metric.
   # [[aggregators.histogram.config]]
-  #   ## The set of buckets.
+  #   ## Right borders of buckets (with +Inf implicitly added).
   #   buckets = [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]
   #   ## The name of metric.
   #   measurement_name = "diskio"
@@ -162,18 +180,27 @@ func (h *HistogramAggregator) groupFieldsByBuckets(
 	tags map[string]string,
 	counts []int64,
 ) {
-	count := int64(0)
-	for index, bucket := range h.getBuckets(name, field) {
-		count += counts[index]
+	sum := int64(0)
+	buckets := h.getBuckets(name, field) // note that len(buckets) + 1 == len(counts)
 
-		tags[bucketTag] = strconv.FormatFloat(bucket, 'f', -1, 64)
-		h.groupField(metricsWithGroupedFields, name, field, count, copyTags(tags))
+	for index, count := range counts {
+		if !h.Cumulative {
+			sum = 0 // reset sum -> don't store cumulative counts
+
+			tags[bucketLeftTag] = bucketNegInf
+			if index > 0 {
+				tags[bucketLeftTag] = strconv.FormatFloat(buckets[index-1], 'f', -1, 64)
+			}
+		}
+
+		tags[bucketRightTag] = bucketPosInf
+		if index < len(buckets) {
+			tags[bucketRightTag] = strconv.FormatFloat(buckets[index], 'f', -1, 64)
+		}
+
+		sum += count
+		h.groupField(metricsWithGroupedFields, name, field, sum, copyTags(tags))
 	}
-
-	count += counts[len(counts)-1]
-	tags[bucketTag] = bucketInf
-
-	h.groupField(metricsWithGroupedFields, name, field, count, tags)
 }
 
 // groupField groups field by count value
@@ -201,9 +228,15 @@ func (h *HistogramAggregator) groupField(
 	)
 }
 
-// Reset does nothing, because we need to collect counts for a long time, otherwise if config parameter 'reset' has
-// small value, we will get a histogram with a small amount of the distribution.
-func (h *HistogramAggregator) Reset() {}
+// Reset does nothing by default, because we typically need to collect counts for a long time.
+// Otherwise if config parameter 'reset' has 'true' value, we will get a histogram
+// with a small amount of the distribution. However in some use cases a reset is useful.
+func (h *HistogramAggregator) Reset() {
+	if h.ResetBuckets {
+		h.resetCache()
+		h.buckets = make(bucketsByMetrics)
+	}
+}
 
 // resetCache resets cached counts(hits) in the buckets
 func (h *HistogramAggregator) resetCache() {

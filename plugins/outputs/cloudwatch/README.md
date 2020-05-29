@@ -13,6 +13,8 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 5. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
 6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
+The IAM user needs only the `cloudwatch:PutMetricData` permission.
+
 ## Config
 
 For this output plugin to function correctly the following variables
@@ -34,3 +36,16 @@ Examples include but are not limited to:
 ### namespace
 
 The namespace used for AWS CloudWatch metrics.
+
+### write_statistics
+
+If you have a large amount of metrics, you should consider to send statistic 
+values instead of raw metrics which could not only improve performance but 
+also save AWS API cost. If enable this flag, this plugin would parse the required 
+[CloudWatch statistic fields](https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatch/#StatisticSet) 
+(count, min, max, and sum) and send them to CloudWatch. You could use `basicstats` 
+aggregator to calculate those fields. If not all statistic fields are available, 
+all fields would still be sent as raw metrics.
+
+### high_resolution_metrics
+Enable high resolution metrics (1 second precision) instead of standard ones (60 seconds precision)

@@ -17,13 +17,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error)
 
 // Varnish is used to store configuration values
 type Varnish struct {
-	Stats   []string
-	Binary  string
-	UseSudo bool
+	Stats        []string
+	Binary       string
+	UseSudo      bool
+	InstanceName string
+	Timeout      internal.Duration
 
 	filter filter.Filter
 	run    runner
@@ -31,6 +33,7 @@ type Varnish struct {
 
 var defaultStats = []string{"MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"}
 var defaultBinary = "/usr/bin/varnishstat"
+var defaultTimeout = internal.Duration{Duration: time.Second}
 
 var sampleConfig = `
   ## If running as a restricted user you can prepend sudo for additional access:
@@ -44,6 +47,13 @@ var sampleConfig = `
   ## Glob matching can be used, ie, stats = ["MAIN.*"]
   ## stats may also be set to ["*"], which will collect all stats
   stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
+
+  ## Optional name for the varnish instance (or working directory) to query
+  ## Usually append after -n in varnish cli
+  # instance_name = instanceName
+
+  ## Timeout for varnishstat command
+  # timeout = "1s"
 `
 
 func (s *Varnish) Description() string {
@@ -56,8 +66,13 @@ func (s *Varnish) SampleConfig() string {
 }
 
 // Shell out to varnish_stat and return the output
-func varnishRunner(cmdName string, UseSudo bool) (*bytes.Buffer, error) {
+func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-1"}
+
+	if InstanceName != "" {
+		cmdArgs = append(cmdArgs, []string{"-n", InstanceName}...)
+	}
+
 	cmd := exec.Command(cmdName, cmdArgs...)
 
 	if UseSudo {
@@ -68,7 +83,8 @@ func varnishRunner(cmdName string, UseSudo bool) (*bytes.Buffer, error) {
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Millisecond*200)
+
+	err := internal.RunTimeout(cmd, Timeout.Duration)
 	if err != nil {
 		return &out, fmt.Errorf("error running varnishstat: %s", err)
 	}
@@ -99,7 +115,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	out, err := s.run(s.Binary, s.UseSudo)
+	out, err := s.run(s.Binary, s.UseSudo, s.InstanceName, s.Timeout)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
@@ -155,10 +171,12 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("varnish", func() telegraf.Input {
 		return &Varnish{
-			run:     varnishRunner,
-			Stats:   defaultStats,
-			Binary:  defaultBinary,
-			UseSudo: false,
+			run:          varnishRunner,
+			Stats:        defaultStats,
+			Binary:       defaultBinary,
+			UseSudo:      false,
+			InstanceName: "",
+			Timeout:      defaultTimeout,
 		}
 	})
 }

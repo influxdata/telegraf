@@ -19,7 +19,9 @@ var sampleConfig = `
   ## By default, telegraf gather all zfs stats
   ## If not specified, then default is:
   # kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats"]
-
+  ## For Linux, the default is:
+  # kstatMetrics = ["abdstats", "arcstats", "dnodestats", "dbufcachestats",
+  #   "dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"]
   ## By default, don't gather zpool stats
   # poolMetrics = false
 `

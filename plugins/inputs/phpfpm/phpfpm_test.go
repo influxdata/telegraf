@@ -40,9 +40,11 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  ts.URL,
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),
@@ -62,7 +64,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	// Let OS find an available port
 	tcp, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatal("Cannot initalize test server")
+		t.Fatal("Cannot initialize test server")
 	}
 	defer tcp.Close()
 
@@ -80,9 +82,11 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),
@@ -106,7 +110,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
 	tcp, err := net.Listen("unix", fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer tcp.Close()
@@ -124,9 +128,11 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),
@@ -142,6 +148,71 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "phpfpm", fields, tags)
 }
 
+func TestPhpFpmGeneratesMetrics_From_Multiple_Sockets_With_Glob(t *testing.T) {
+	// Create a socket in /tmp because we always have write permission and if the
+	// removing of socket fail when system restart /tmp is clear so
+	// we don't have junk files around
+	var randomNumber int64
+	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
+	socket1 := fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber)
+	tcp1, err := net.Listen("unix", socket1)
+	if err != nil {
+		t.Fatal("Cannot initialize server on port ")
+	}
+	defer tcp1.Close()
+
+	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
+	socket2 := fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber)
+	tcp2, err := net.Listen("unix", socket2)
+	if err != nil {
+		t.Fatal("Cannot initialize server on port ")
+	}
+	defer tcp2.Close()
+
+	s := statServer{}
+	go fcgi.Serve(tcp1, s)
+	go fcgi.Serve(tcp2, s)
+
+	r := &phpfpm{
+		Urls: []string{"/tmp/test-fpm[\\-0-9]*.sock"},
+	}
+
+	var acc1, acc2 testutil.Accumulator
+
+	err = acc1.GatherError(r.Gather)
+	require.NoError(t, err)
+
+	err = acc2.GatherError(r.Gather)
+	require.NoError(t, err)
+
+	tags1 := map[string]string{
+		"pool": "www",
+		"url":  socket1,
+	}
+
+	tags2 := map[string]string{
+		"pool": "www",
+		"url":  socket2,
+	}
+
+	fields := map[string]interface{}{
+		"start_since":          int64(1991),
+		"accepted_conn":        int64(3),
+		"listen_queue":         int64(1),
+		"max_listen_queue":     int64(0),
+		"listen_queue_len":     int64(0),
+		"idle_processes":       int64(1),
+		"active_processes":     int64(1),
+		"total_processes":      int64(2),
+		"max_active_processes": int64(1),
+		"max_children_reached": int64(2),
+		"slow_requests":        int64(1),
+	}
+
+	acc1.AssertContainsTaggedFields(t, "phpfpm", fields, tags1)
+	acc2.AssertContainsTaggedFields(t, "phpfpm", fields, tags2)
+}
+
 func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 	// Create a socket in /tmp because we always have write permission. If the
 	// removing of socket fail we won't have junk files around. Cuz when system
@@ -150,7 +221,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
 	tcp, err := net.Listen("unix", fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer tcp.Close()
@@ -168,9 +239,11 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
+		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
 		"max_listen_queue":     int64(0),
@@ -207,7 +280,8 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone': Get http://aninvalidone: dial tcp: lookup aninvalidone`)
+	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone'`)
+	assert.Contains(t, err.Error(), `lookup aninvalidone`)
 }
 
 func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testing.T) {
@@ -219,7 +293,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
-	assert.Equal(t, `Socket doesn't exist  '/tmp/invalid.sock': stat /tmp/invalid.sock: no such file or directory`, err.Error())
+	assert.Equal(t, `dial unix /tmp/invalid.sock: connect: no such file or directory`, err.Error())
 
 }
 

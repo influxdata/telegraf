@@ -1,292 +1,262 @@
-package prometheus_client
+package prometheus
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
-	"log"
+	"net"
 	"net/http"
-	"regexp"
-	"sort"
-	"strings"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v1"
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client/v2"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
-
-// SampleID uniquely identifies a Sample
-type SampleID string
-
-// Sample represents the current value of a series.
-type Sample struct {
-	// Labels are the Prometheus labels.
-	Labels map[string]string
-	// Value is the value in the Prometheus output.
-	Value float64
-	// Expiration is the deadline that this Sample is valid until.
-	Expiration time.Time
-}
-
-// MetricFamily contains the data required to build valid prometheus Metrics.
-type MetricFamily struct {
-	// Samples are the Sample belonging to this MetricFamily.
-	Samples map[SampleID]*Sample
-	// Type of the Value.
-	ValueType prometheus.ValueType
-	// LabelSet is the label counts for all Samples.
-	LabelSet map[string]int
-}
-
-type PrometheusClient struct {
-	Listen             string
-	ExpirationInterval internal.Duration `toml:"expiration_interval"`
-
-	server *http.Server
-
-	sync.Mutex
-	// fam is the non-expired MetricFamily by Prometheus metric name.
-	fam map[string]*MetricFamily
-	// now returns the current time.
-	now func() time.Time
-}
+var (
+	defaultListen             = ":9273"
+	defaultPath               = "/metrics"
+	defaultExpirationInterval = internal.Duration{Duration: 60 * time.Second}
+)
 
 var sampleConfig = `
   ## Address to listen on
-  # listen = ":9273"
+  listen = ":9273"
 
-  ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
+  ## Metric version controls the mapping from Telegraf metrics into
+  ## Prometheus format.  When using the prometheus input, use the same value in
+  ## both plugins to ensure metrics are round-tripped without modification.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.13
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
+
+  ## Use HTTP Basic Authentication.
+  # basic_username = "Foo"
+  # basic_password = "Bar"
+
+  ## If set, the IP Ranges which are allowed to access metrics.
+  ##   ex: ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+  # ip_range = []
+
+  ## Path to publish the metrics on.
+  # path = "/metrics"
+
+  ## Expiration interval for each metric. 0 == no expiration
   # expiration_interval = "60s"
+
+  ## Collectors to enable, valid entries are "gocollector" and "process".
+  ## If unset, both are enabled.
+  # collectors_exclude = ["gocollector", "process"]
+
+  ## Send string metrics as Prometheus labels.
+  ## Unless set to false all string metrics will be sent as labels.
+  # string_as_label = true
+
+  ## If set, enable TLS with the given certificate.
+  # tls_cert = "/etc/ssl/telegraf.crt"
+  # tls_key = "/etc/ssl/telegraf.key"
+
+  ## Set one or more allowed client CA certificate file names to
+  ## enable mutually authenticated TLS connections
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Export metric collection time.
+  # export_timestamp = false
 `
 
-func (p *PrometheusClient) Start() error {
-	prometheus.Register(p)
-
-	if p.Listen == "" {
-		p.Listen = "localhost:9273"
-	}
-
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", prometheus.Handler())
-
-	p.server = &http.Server{
-		Addr:    p.Listen,
-		Handler: mux,
-	}
-
-	go func() {
-		if err := p.server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
-					err.Error())
-			}
-		}
-	}()
-	return nil
+type Collector interface {
+	Describe(ch chan<- *prometheus.Desc)
+	Collect(ch chan<- prometheus.Metric)
+	Add(metrics []telegraf.Metric) error
 }
 
-func (p *PrometheusClient) Stop() {
-	// plugin gets cleaned up in Close() already.
-}
+type PrometheusClient struct {
+	Listen             string            `toml:"listen"`
+	MetricVersion      int               `toml:"metric_version"`
+	BasicUsername      string            `toml:"basic_username"`
+	BasicPassword      string            `toml:"basic_password"`
+	IPRange            []string          `toml:"ip_range"`
+	ExpirationInterval internal.Duration `toml:"expiration_interval"`
+	Path               string            `toml:"path"`
+	CollectorsExclude  []string          `toml:"collectors_exclude"`
+	StringAsLabel      bool              `toml:"string_as_label"`
+	ExportTimestamp    bool              `toml:"export_timestamp"`
+	tlsint.ServerConfig
 
-func (p *PrometheusClient) Connect() error {
-	// This service output does not need to make any further connections
-	return nil
-}
+	Log telegraf.Logger `toml:"-"`
 
-func (p *PrometheusClient) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	err := p.server.Shutdown(ctx)
-	prometheus.Unregister(p)
-	return err
-}
-
-func (p *PrometheusClient) SampleConfig() string {
-	return sampleConfig
+	server    *http.Server
+	url       *url.URL
+	collector Collector
+	wg        sync.WaitGroup
 }
 
 func (p *PrometheusClient) Description() string {
 	return "Configuration for the Prometheus client to spawn"
 }
 
-// Implements prometheus.Collector
-func (p *PrometheusClient) Describe(ch chan<- *prometheus.Desc) {
-	prometheus.NewGauge(prometheus.GaugeOpts{Name: "Dummy", Help: "Dummy"}).Describe(ch)
+func (p *PrometheusClient) SampleConfig() string {
+	return sampleConfig
 }
 
-// Expire removes Samples that have expired.
-func (p *PrometheusClient) Expire() {
-	now := p.now()
-	for name, family := range p.fam {
-		for key, sample := range family.Samples {
-			if p.ExpirationInterval.Duration != 0 && now.After(sample.Expiration) {
-				for k, _ := range sample.Labels {
-					family.LabelSet[k]--
-				}
-				delete(family.Samples, key)
+func (p *PrometheusClient) Init() error {
+	defaultCollectors := map[string]bool{
+		"gocollector": true,
+		"process":     true,
+	}
+	for _, collector := range p.CollectorsExclude {
+		delete(defaultCollectors, collector)
+	}
 
-				if len(family.Samples) == 0 {
-					delete(p.fam, name)
-				}
-			}
+	registry := prometheus.NewRegistry()
+	for collector := range defaultCollectors {
+		switch collector {
+		case "gocollector":
+			registry.Register(prometheus.NewGoCollector())
+		case "process":
+			registry.Register(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+		default:
+			return fmt.Errorf("unrecognized collector %s", collector)
 		}
 	}
-}
 
-// Collect implements prometheus.Collector
-func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
-	p.Lock()
-	defer p.Unlock()
-
-	p.Expire()
-
-	for name, family := range p.fam {
-		// Get list of all labels on MetricFamily
-		var labelNames []string
-		for k, v := range family.LabelSet {
-			if v > 0 {
-				labelNames = append(labelNames, k)
-			}
-		}
-		desc := prometheus.NewDesc(name, "Telegraf collected metric", labelNames, nil)
-
-		for _, sample := range family.Samples {
-			// Get labels for this sample; unset labels will be set to the
-			// empty string
-			var labels []string
-			for _, label := range labelNames {
-				v := sample.Labels[label]
-				labels = append(labels, v)
-			}
-
-			metric, err := prometheus.NewConstMetric(desc, family.ValueType, sample.Value, labels...)
-			if err != nil {
-				log.Printf("E! Error creating prometheus metric, "+
-					"key: %s, labels: %v,\nerr: %s\n",
-					name, labels, err.Error())
-			}
-
-			ch <- metric
-		}
-	}
-}
-
-func sanitize(value string) string {
-	return invalidNameCharRE.ReplaceAllString(value, "_")
-}
-
-func valueType(tt telegraf.ValueType) prometheus.ValueType {
-	switch tt {
-	case telegraf.Counter:
-		return prometheus.CounterValue
-	case telegraf.Gauge:
-		return prometheus.GaugeValue
+	switch p.MetricVersion {
 	default:
-		return prometheus.UntypedValue
+		fallthrough
+	case 1:
+		p.Log.Warnf("Use of deprecated configuration: metric_version = 1; please update to metric_version = 2")
+		p.collector = v1.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.Log)
+		err := registry.Register(p.collector)
+		if err != nil {
+			return err
+		}
+	case 2:
+		p.collector = v2.NewCollector(p.ExpirationInterval.Duration, p.StringAsLabel, p.ExportTimestamp)
+		err := registry.Register(p.collector)
+		if err != nil {
+			return err
+		}
+	}
+
+	ipRange := make([]*net.IPNet, 0, len(p.IPRange))
+	for _, cidr := range p.IPRange {
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return fmt.Errorf("error parsing ip_range: %v", err)
+		}
+
+		ipRange = append(ipRange, ipNet)
+	}
+
+	authHandler := internal.AuthHandler(p.BasicUsername, p.BasicPassword, "prometheus", onAuthError)
+	rangeHandler := internal.IPRangeHandler(ipRange, onError)
+	promHandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})
+
+	mux := http.NewServeMux()
+	if p.Path == "" {
+		p.Path = "/"
+	}
+	mux.Handle(p.Path, authHandler(rangeHandler(promHandler)))
+
+	tlsConfig, err := p.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	p.server = &http.Server{
+		Addr:      p.Listen,
+		Handler:   mux,
+		TLSConfig: tlsConfig,
+	}
+
+	return nil
+}
+
+func (p *PrometheusClient) listen() (net.Listener, error) {
+	if p.server.TLSConfig != nil {
+		return tls.Listen("tcp", p.Listen, p.server.TLSConfig)
+	} else {
+		return net.Listen("tcp", p.Listen)
 	}
 }
 
-// CreateSampleID creates a SampleID based on the tags of a telegraf.Metric.
-func CreateSampleID(tags map[string]string) SampleID {
-	pairs := make([]string, 0, len(tags))
-	for k, v := range tags {
-		pairs = append(pairs, fmt.Sprintf("%s=%s", k, v))
+func (p *PrometheusClient) Connect() error {
+	listener, err := p.listen()
+	if err != nil {
+		return err
 	}
-	sort.Strings(pairs)
-	return SampleID(strings.Join(pairs, ","))
+
+	scheme := "http"
+	if p.server.TLSConfig != nil {
+		scheme = "https"
+	}
+
+	p.url = &url.URL{
+		Scheme: scheme,
+		Host:   listener.Addr().String(),
+		Path:   p.Path,
+	}
+
+	p.Log.Infof("Listening on %s", p.URL())
+
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		err := p.server.Serve(listener)
+		if err != nil && err != http.ErrServerClosed {
+			p.Log.Errorf("Server error: %v", err)
+		}
+	}()
+
+	return nil
+}
+
+func onAuthError(_ http.ResponseWriter) {
+}
+
+func onError(rw http.ResponseWriter, code int) {
+	http.Error(rw, http.StatusText(code), code)
+}
+
+// Address returns the address the plugin is listening on.  If not listening
+// an empty string is returned.
+func (p *PrometheusClient) URL() string {
+	if p.url != nil {
+		return p.url.String()
+	}
+	return ""
+}
+
+func (p *PrometheusClient) Close() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := p.server.Shutdown(ctx)
+	p.wg.Wait()
+	p.url = nil
+	prometheus.Unregister(p.collector)
+	return err
 }
 
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
-	p.Lock()
-	defer p.Unlock()
-
-	now := p.now()
-
-	for _, point := range metrics {
-		tags := point.Tags()
-		vt := valueType(point.Type())
-		sampleID := CreateSampleID(tags)
-
-		labels := make(map[string]string)
-		for k, v := range tags {
-			labels[sanitize(k)] = v
-		}
-
-		for fn, fv := range point.Fields() {
-			// Ignore string and bool fields.
-			var value float64
-			switch fv := fv.(type) {
-			case int64:
-				value = float64(fv)
-			case float64:
-				value = fv
-			default:
-				continue
-			}
-
-			sample := &Sample{
-				Labels:     labels,
-				Value:      value,
-				Expiration: now.Add(p.ExpirationInterval.Duration),
-			}
-
-			// Special handling of value field; supports passthrough from
-			// the prometheus input.
-			var mname string
-			if fn == "value" {
-				mname = sanitize(point.Name())
-			} else {
-				mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
-			}
-
-			var fam *MetricFamily
-			var ok bool
-			if fam, ok = p.fam[mname]; !ok {
-				fam = &MetricFamily{
-					Samples:   make(map[SampleID]*Sample),
-					ValueType: vt,
-					LabelSet:  make(map[string]int),
-				}
-				p.fam[mname] = fam
-			} else {
-				// Metrics can be untyped even though the corresponding plugin
-				// creates them with a type.  This happens when the metric was
-				// transferred over the network in a format that does not
-				// preserve value type and received using an input such as a
-				// queue consumer.  To avoid issues we automatically upgrade
-				// value type from untyped to a typed metric.
-				if fam.ValueType == prometheus.UntypedValue {
-					fam.ValueType = vt
-				}
-
-				if vt != prometheus.UntypedValue && fam.ValueType != vt {
-					// Don't return an error since this would be a permanent error
-					log.Printf("Mixed ValueType for measurement %q; dropping point", point.Name())
-					break
-				}
-			}
-
-			for k, _ := range sample.Labels {
-				fam.LabelSet[k]++
-			}
-
-			fam.Samples[sampleID] = sample
-		}
-	}
-	return nil
+	return p.collector.Add(metrics)
 }
 
 func init() {
 	outputs.Add("prometheus_client", func() telegraf.Output {
 		return &PrometheusClient{
-			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
-			fam:                make(map[string]*MetricFamily),
-			now:                time.Now,
+			Listen:             defaultListen,
+			Path:               defaultPath,
+			ExpirationInterval: defaultExpirationInterval,
+			StringAsLabel:      true,
 		}
 	})
 }

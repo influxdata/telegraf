@@ -52,11 +52,11 @@ func TestSpanHandler(t *testing.T) {
 
 	got := mockRecorder.Data
 
-	parentID := strconv.FormatInt(22964302721410078, 10)
+	parentID := strconv.FormatInt(22964302721410078, 16)
 	want := trace.Trace{
 		{
 			Name:        "Child",
-			ID:          "8090652509916334619",
+			ID:          "7047c59776af8a1b",
 			TraceID:     "22c4fc8ab3669045",
 			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360851331*int64(time.Microsecond)).UTC(),
@@ -74,7 +74,7 @@ func TestSpanHandler(t *testing.T) {
 		},
 		{
 			Name:        "Child",
-			ID:          "103618986556047333",
+			ID:          "17020eb55a8bfe5",
 			TraceID:     "22c4fc8ab3669045",
 			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360904552*int64(time.Microsecond)).UTC(),
@@ -92,9 +92,9 @@ func TestSpanHandler(t *testing.T) {
 		},
 		{
 			Name:        "Parent",
-			ID:          "22964302721410078",
+			ID:          "5195e96239641e",
 			TraceID:     "22c4fc8ab3669045",
-			ParentID:    "22964302721410078",
+			ParentID:    parentID,
 			Timestamp:   time.Unix(0, 1498688360851318*int64(time.Microsecond)).UTC(),
 			Duration:    time.Duration(103680) * time.Microsecond,
 			ServiceName: "trivial",

@@ -61,6 +61,8 @@ func NewEvent(dummyEvent *DummyEvent, data []byte) (Event, error) {
 	switch dummyEvent.EventName {
 	case "new_item":
 		return generateEvent(&NewItem{}, data)
+	case "occurrence":
+		return generateEvent(&Occurrence{}, data)
 	case "deploy":
 		return generateEvent(&Deploy{}, data)
 	default:

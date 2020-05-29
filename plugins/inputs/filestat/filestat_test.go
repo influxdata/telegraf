@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,6 +14,7 @@ import (
 func TestGatherNoMd5(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Files = []string{
 		dir + "log1.log",
 		dir + "log2.log",
@@ -24,33 +27,25 @@ func TestGatherNoMd5(t *testing.T) {
 	tags1 := map[string]string{
 		"file": dir + "log1.log",
 	}
-	fields1 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields1, tags1)
+	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
 
 	tags2 := map[string]string{
 		"file": dir + "log2.log",
 	}
-	fields2 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields2, tags2)
+	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
 
 	tags3 := map[string]string{
 		"file": "/non/existant/file",
 	}
-	fields3 := map[string]interface{}{
-		"exists": int64(0),
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields3, tags3)
+	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(0)))
 }
 
 func TestGatherExplicitFiles(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
 		dir + "log1.log",
@@ -64,35 +59,27 @@ func TestGatherExplicitFiles(t *testing.T) {
 	tags1 := map[string]string{
 		"file": dir + "log1.log",
 	}
-	fields1 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-		"md5_sum":    "d41d8cd98f00b204e9800998ecf8427e",
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields1, tags1)
+	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
+	require.True(t, acc.HasPoint("filestat", tags1, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags2 := map[string]string{
 		"file": dir + "log2.log",
 	}
-	fields2 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-		"md5_sum":    "d41d8cd98f00b204e9800998ecf8427e",
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields2, tags2)
+	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
+	require.True(t, acc.HasPoint("filestat", tags2, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags3 := map[string]string{
 		"file": "/non/existant/file",
 	}
-	fields3 := map[string]interface{}{
-		"exists": int64(0),
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields3, tags3)
+	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(0)))
 }
 
 func TestGatherGlob(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
 		dir + "*.log",
@@ -104,27 +91,22 @@ func TestGatherGlob(t *testing.T) {
 	tags1 := map[string]string{
 		"file": dir + "log1.log",
 	}
-	fields1 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-		"md5_sum":    "d41d8cd98f00b204e9800998ecf8427e",
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields1, tags1)
+	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
+	require.True(t, acc.HasPoint("filestat", tags1, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags2 := map[string]string{
 		"file": dir + "log2.log",
 	}
-	fields2 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-		"md5_sum":    "d41d8cd98f00b204e9800998ecf8427e",
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields2, tags2)
+	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
+	require.True(t, acc.HasPoint("filestat", tags2, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 }
 
 func TestGatherSuperAsterisk(t *testing.T) {
 	dir := getTestdataDir()
 	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
 	fs.Md5 = true
 	fs.Files = []string{
 		dir + "**",
@@ -136,32 +118,59 @@ func TestGatherSuperAsterisk(t *testing.T) {
 	tags1 := map[string]string{
 		"file": dir + "log1.log",
 	}
-	fields1 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-		"md5_sum":    "d41d8cd98f00b204e9800998ecf8427e",
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields1, tags1)
+	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
+	require.True(t, acc.HasPoint("filestat", tags1, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags2 := map[string]string{
 		"file": dir + "log2.log",
 	}
-	fields2 := map[string]interface{}{
-		"size_bytes": int64(0),
-		"exists":     int64(1),
-		"md5_sum":    "d41d8cd98f00b204e9800998ecf8427e",
-	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields2, tags2)
+	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags2, "exists", int64(1)))
+	require.True(t, acc.HasPoint("filestat", tags2, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
 	tags3 := map[string]string{
 		"file": dir + "test.conf",
 	}
-	fields3 := map[string]interface{}{
-		"size_bytes": int64(104),
-		"exists":     int64(1),
-		"md5_sum":    "5a7e9b77fa25e7bb411dbd17cf403c1f",
+	require.True(t, acc.HasPoint("filestat", tags3, "size_bytes", int64(104)))
+	require.True(t, acc.HasPoint("filestat", tags3, "exists", int64(1)))
+	require.True(t, acc.HasPoint("filestat", tags3, "md5_sum", "5a7e9b77fa25e7bb411dbd17cf403c1f"))
+}
+
+func TestModificationTime(t *testing.T) {
+	dir := getTestdataDir()
+	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
+	fs.Files = []string{
+		dir + "log1.log",
 	}
-	acc.AssertContainsTaggedFields(t, "filestat", fields3, tags3)
+
+	acc := testutil.Accumulator{}
+	acc.GatherError(fs.Gather)
+
+	tags1 := map[string]string{
+		"file": dir + "log1.log",
+	}
+	require.True(t, acc.HasPoint("filestat", tags1, "size_bytes", int64(0)))
+	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
+	require.True(t, acc.HasInt64Field("filestat", "modification_time"))
+}
+
+func TestNoModificationTime(t *testing.T) {
+	fs := NewFileStat()
+	fs.Log = testutil.Logger{}
+	fs.Files = []string{
+		"/non/existant/file",
+	}
+
+	acc := testutil.Accumulator{}
+	acc.GatherError(fs.Gather)
+
+	tags1 := map[string]string{
+		"file": "/non/existant/file",
+	}
+	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(0)))
+	require.False(t, acc.HasInt64Field("filestat", "modification_time"))
 }
 
 func TestGetMd5(t *testing.T) {

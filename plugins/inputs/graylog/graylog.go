@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -35,15 +35,7 @@ type GrayLog struct {
 	Metrics  []string
 	Username string
 	Password string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client HTTPClient
 }
@@ -55,7 +47,7 @@ type HTTPClient interface {
 	// req: HTTP request object
 	//
 	// Returns:
-	// http.Response:  HTTP respons object
+	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
 
@@ -111,11 +103,11 @@ var sampleConfig = `
   username = ""
   password = ""
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -132,8 +124,7 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
+		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
@@ -244,6 +235,9 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	if err != nil {
 		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
 	}
+	// Add X-Requested-By header
+	headers["X-Requested-By"] = "Telegraf"
+
 	if strings.Contains(requestURL.String(), "multiple") {
 		m := &Messagebody{Metrics: h.Metrics}
 		http_body, err := json.Marshal(m)

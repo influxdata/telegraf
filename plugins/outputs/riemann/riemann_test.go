@@ -1,14 +1,11 @@
 package riemann
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/amir/raidman"
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -161,52 +158,4 @@ func TestStateEvents(t *testing.T) {
 		Attributes:  map[string]string{"measurement": "test"},
 	}
 	require.Equal(t, expectedEvent, events[0])
-}
-
-func TestConnectAndWrite(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	r := &Riemann{
-		URL:                    fmt.Sprintf("tcp://%s:5555", testutil.GetLocalHost()),
-		TTL:                    15.0,
-		Separator:              "/",
-		MeasurementAsAttribute: false,
-		StringAsState:          true,
-		DescriptionText:        "metrics from telegraf",
-		Tags:                   []string{"docker"},
-	}
-
-	err := r.Connect()
-	require.NoError(t, err)
-
-	err = r.Write(testutil.MockMetrics())
-	require.NoError(t, err)
-
-	metrics := make([]telegraf.Metric, 0)
-	metrics = append(metrics, testutil.TestMetric(2))
-	metrics = append(metrics, testutil.TestMetric(3.456789))
-	metrics = append(metrics, testutil.TestMetric(uint(0)))
-	metrics = append(metrics, testutil.TestMetric("ok"))
-	metrics = append(metrics, testutil.TestMetric("running"))
-	err = r.Write(metrics)
-	require.NoError(t, err)
-
-	// are there any "docker" tagged events in Riemann?
-	events, err := r.client.Query(`tagged "docker"`)
-	require.NoError(t, err)
-	require.NotZero(t, len(events))
-
-	// get Riemann events with state = "running", should be 1 event
-	events, err = r.client.Query(`state = "running"`)
-	require.NoError(t, err)
-	require.Len(t, events, 1)
-
-	// is event as expected?
-	require.Equal(t, []string{"docker", "value1"}, events[0].Tags)
-	require.Equal(t, "running", events[0].State)
-	require.Equal(t, "test1/value", events[0].Service)
-	require.Equal(t, "metrics from telegraf", events[0].Description)
-	require.Equal(t, map[string]string{"tag1": "value1"}, events[0].Attributes)
 }

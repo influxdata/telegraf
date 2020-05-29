@@ -30,7 +30,11 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 	if z.PoolMetrics {
 		for _, line := range lines {
 			col := strings.Split(line, "\t")
-			tags := map[string]string{"pool": col[0], "health": col[8]}
+			if len(col) != 8 {
+				continue
+			}
+
+			tags := map[string]string{"pool": col[0], "health": col[1]}
 			fields := map[string]interface{}{}
 
 			if tags["health"] == "UNAVAIL" {
@@ -39,19 +43,19 @@ func (z *Zfs) gatherPoolStats(acc telegraf.Accumulator) (string, error) {
 
 			} else {
 
-				size, err := strconv.ParseInt(col[1], 10, 64)
+				size, err := strconv.ParseInt(col[2], 10, 64)
 				if err != nil {
 					return "", fmt.Errorf("Error parsing size: %s", err)
 				}
 				fields["size"] = size
 
-				alloc, err := strconv.ParseInt(col[2], 10, 64)
+				alloc, err := strconv.ParseInt(col[3], 10, 64)
 				if err != nil {
 					return "", fmt.Errorf("Error parsing allocation: %s", err)
 				}
 				fields["allocated"] = alloc
 
-				free, err := strconv.ParseInt(col[3], 10, 64)
+				free, err := strconv.ParseInt(col[4], 10, 64)
 				if err != nil {
 					return "", fmt.Errorf("Error parsing free: %s", err)
 				}
@@ -130,7 +134,7 @@ func run(command string, args ...string) ([]string, error) {
 }
 
 func zpool() ([]string, error) {
-	return run("zpool", []string{"list", "-Hp"}...)
+	return run("zpool", []string{"list", "-Hp", "-o", "name,health,size,alloc,free,fragmentation,capacity,dedupratio"}...)
 }
 
 func sysctl(metric string) ([]string, error) {

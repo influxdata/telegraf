@@ -1,13 +1,13 @@
 package openldap
 
 import (
-	"gopkg.in/ldap.v2"
 	"strconv"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/ldap.v3"
 )
 
 func TestOpenldapMockResult(t *testing.T) {
@@ -74,7 +74,7 @@ func TestOpenldapStartTLS(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
-		Ssl:                "starttls",
+		SSL:                "starttls",
 		InsecureSkipVerify: true,
 	}
 
@@ -92,7 +92,7 @@ func TestOpenldapLDAPS(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
-		Ssl:                "ldaps",
+		SSL:                "ldaps",
 		InsecureSkipVerify: true,
 	}
 
@@ -110,7 +110,7 @@ func TestOpenldapInvalidSSL(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               636,
-		Ssl:                "invalid",
+		SSL:                "invalid",
 		InsecureSkipVerify: true,
 	}
 
@@ -129,7 +129,7 @@ func TestOpenldapBind(t *testing.T) {
 	o := &Openldap{
 		Host:               testutil.GetLocalHost(),
 		Port:               389,
-		Ssl:                "",
+		SSL:                "",
 		InsecureSkipVerify: true,
 		BindDn:             "cn=manager,cn=config",
 		BindPassword:       "secret",
@@ -147,4 +147,25 @@ func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
 	assert.Equal(t, o.Host, acc.TagValue("openldap", "server"), "Has a tag value of server=o.Host")
 	assert.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"), "Has a tag value of port=o.Port")
 	assert.True(t, acc.HasInt64Field("openldap", "total_connections"), "Has an integer field called total_connections")
+}
+
+func TestOpenldapReverseMetrics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	o := &Openldap{
+		Host:               testutil.GetLocalHost(),
+		Port:               389,
+		SSL:                "",
+		InsecureSkipVerify: true,
+		BindDn:             "cn=manager,cn=config",
+		BindPassword:       "secret",
+		ReverseMetricNames: true,
+	}
+
+	var acc testutil.Accumulator
+	err := o.Gather(&acc)
+	require.NoError(t, err)
+	assert.True(t, acc.HasInt64Field("openldap", "connections_total"), "Has an integer field called connections_total")
 }

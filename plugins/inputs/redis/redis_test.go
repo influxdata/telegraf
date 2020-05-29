@@ -20,6 +20,7 @@ func TestRedisConnect(t *testing.T) {
 	addr := fmt.Sprintf(testutil.GetLocalHost() + ":6379")
 
 	r := &Redis{
+		Log:     testutil.Logger{},
 		Servers: []string{addr},
 	}
 
@@ -49,6 +50,8 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"used_memory_rss":                int64(811008),
 		"used_memory_peak":               int64(1003936),
 		"used_memory_lua":                int64(33792),
+		"used_memory_peak_perc":          float64(93.58),
+		"used_memory_dataset_perc":       float64(20.27),
 		"mem_fragmentation_ratio":        float64(0.81),
 		"loading":                        int64(0),
 		"rdb_changes_since_last_save":    int64(0),
@@ -80,12 +83,13 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"pubsub_channels":                int64(0),
 		"pubsub_patterns":                int64(0),
 		"latest_fork_usec":               int64(0),
-		"connected_slaves":               int64(0),
+		"connected_slaves":               int64(2),
 		"master_repl_offset":             int64(0),
 		"repl_backlog_active":            int64(0),
 		"repl_backlog_size":              int64(1048576),
 		"repl_backlog_first_byte_offset": int64(0),
 		"repl_backlog_histlen":           int64(0),
+		"second_repl_offset":             int64(-1),
 		"used_cpu_sys":                   float64(0.14),
 		"used_cpu_user":                  float64(0.05),
 		"used_cpu_sys_children":          float64(0.00),
@@ -115,6 +119,52 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "redis", fields, tags)
 	acc.AssertContainsTaggedFields(t, "redis_keyspace", keyspaceFields, keyspaceTags)
+
+	cmdstatSetTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "set"}
+	cmdstatSetFields := map[string]interface{}{
+		"calls":         int64(261265),
+		"usec":          int64(1634157),
+		"usec_per_call": float64(6.25),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatSetFields, cmdstatSetTags)
+
+	cmdstatCommandTags := map[string]string{"host": "redis.net", "replication_role": "master", "command": "command"}
+	cmdstatCommandFields := map[string]interface{}{
+		"calls":         int64(1),
+		"usec":          int64(990),
+		"usec_per_call": float64(990.0),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_cmdstat", cmdstatCommandFields, cmdstatCommandTags)
+
+	replicationTags := map[string]string{
+		"host":             "redis.net",
+		"replication_role": "slave",
+		"replica_id":       "0",
+		"replica_ip":       "127.0.0.1",
+		"replica_port":     "7379",
+		"state":            "online",
+	}
+	replicationFields := map[string]interface{}{
+		"lag":    int64(0),
+		"offset": int64(4556468),
+	}
+
+	acc.AssertContainsTaggedFields(t, "redis_replication", replicationFields, replicationTags)
+
+	replicationTags = map[string]string{
+		"host":             "redis.net",
+		"replication_role": "slave",
+		"replica_id":       "1",
+		"replica_ip":       "127.0.0.1",
+		"replica_port":     "8379",
+		"state":            "send_bulk",
+	}
+	replicationFields = map[string]interface{}{
+		"lag":    int64(1),
+		"offset": int64(0),
+	}
+
+	acc.AssertContainsTaggedFields(t, "redis_replication", replicationFields, replicationTags)
 }
 
 const testOutput = `# Server
@@ -151,6 +201,8 @@ used_memory_peak_human:980.41K
 used_memory_lua:33792
 mem_fragmentation_ratio:0.81
 mem_allocator:libc
+used_memory_peak_perc:93.58%
+used_memory_dataset_perc:20.27%
 
 # Persistence
 loading:0
@@ -188,8 +240,13 @@ latest_fork_usec:0
 
 # Replication
 role:master
-connected_slaves:0
+connected_slaves:2
+slave0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
+slave1:ip=127.0.0.1,port=8379,state=send_bulk,offset=0,lag=1
+master_replid:8c4d7b768b26826825ceb20ff4a2c7c54616350b
+master_replid2:0000000000000000000000000000000000000000
 master_repl_offset:0
+second_repl_offset:-1
 repl_backlog_active:0
 repl_backlog_size:1048576
 repl_backlog_first_byte_offset:0
@@ -200,6 +257,10 @@ used_cpu_sys:0.14
 used_cpu_user:0.05
 used_cpu_sys_children:0.00
 used_cpu_user_children:0.00
+
+# Commandstats
+cmdstat_set:calls=261265,usec=1634157,usec_per_call=6.25
+cmdstat_command:calls=1,usec=990,usec_per_call=990.00
 
 # Keyspace
 db0:keys=2,expires=0,avg_ttl=0

@@ -135,7 +135,7 @@ func (c *mockHTTPClient) HTTPClient() *http.Client {
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
 func genMockGrayLog(response string, statusCode int) []*GrayLog {
 	return []*GrayLog{
-		&GrayLog{
+		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://localhost:12900/system/metrics/multiple",

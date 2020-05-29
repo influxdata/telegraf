@@ -1,32 +1,28 @@
 package agent
 
 import (
-	"log"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/selfstat"
-)
-
-var (
-	NErrors = selfstat.Register("agent", "gather_errors", map[string]string{})
+	"github.com/influxdata/telegraf/metric"
 )
 
 type MetricMaker interface {
-	Name() string
-	MakeMetric(
-		measurement string,
-		fields map[string]interface{},
-		tags map[string]string,
-		mType telegraf.ValueType,
-		t time.Time,
-	) telegraf.Metric
+	LogName() string
+	MakeMetric(metric telegraf.Metric) telegraf.Metric
+	Log() telegraf.Logger
+}
+
+type accumulator struct {
+	maker     MetricMaker
+	metrics   chan<- telegraf.Metric
+	precision time.Duration
 }
 
 func NewAccumulator(
 	maker MetricMaker,
-	metrics chan telegraf.Metric,
-) *accumulator {
+	metrics chan<- telegraf.Metric,
+) telegraf.Accumulator {
 	acc := accumulator{
 		maker:     maker,
 		metrics:   metrics,
@@ -35,23 +31,13 @@ func NewAccumulator(
 	return &acc
 }
 
-type accumulator struct {
-	metrics chan telegraf.Metric
-
-	maker MetricMaker
-
-	precision time.Duration
-}
-
 func (ac *accumulator) AddFields(
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Untyped, ac.getTime(t)); m != nil {
-		ac.metrics <- m
-	}
+	ac.addFields(measurement, tags, fields, telegraf.Untyped, t...)
 }
 
 func (ac *accumulator) AddGauge(
@@ -60,9 +46,7 @@ func (ac *accumulator) AddGauge(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Gauge, ac.getTime(t)); m != nil {
-		ac.metrics <- m
-	}
+	ac.addFields(measurement, tags, fields, telegraf.Gauge, t...)
 }
 
 func (ac *accumulator) AddCounter(
@@ -71,7 +55,46 @@ func (ac *accumulator) AddCounter(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Counter, ac.getTime(t)); m != nil {
+	ac.addFields(measurement, tags, fields, telegraf.Counter, t...)
+}
+
+func (ac *accumulator) AddSummary(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	ac.addFields(measurement, tags, fields, telegraf.Summary, t...)
+}
+
+func (ac *accumulator) AddHistogram(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	ac.addFields(measurement, tags, fields, telegraf.Histogram, t...)
+}
+
+func (ac *accumulator) AddMetric(m telegraf.Metric) {
+	m.SetTime(m.Time().Round(ac.precision))
+	if m := ac.maker.MakeMetric(m); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) addFields(
+	measurement string,
+	tags map[string]string,
+	fields map[string]interface{},
+	tp telegraf.ValueType,
+	t ...time.Time,
+) {
+	m, err := metric.New(measurement, tags, fields, ac.getTime(t), tp)
+	if err != nil {
+		return
+	}
+	if m := ac.maker.MakeMetric(m); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -82,33 +105,14 @@ func (ac *accumulator) AddError(err error) {
 	if err == nil {
 		return
 	}
-	NErrors.Incr(1)
-	//TODO suppress/throttle consecutive duplicate errors?
-	log.Printf("E! Error in plugin [%s]: %s", ac.maker.Name(), err)
+	ac.maker.Log().Errorf("Error in plugin: %v", err)
 }
 
-// SetPrecision takes two time.Duration objects. If the first is non-zero,
-// it sets that as the precision. Otherwise, it takes the second argument
-// as the order of time that the metrics should be rounded to, with the
-// maximum being 1s.
-func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
-	if precision > 0 {
-		ac.precision = precision
-		return
-	}
-	switch {
-	case interval >= time.Second:
-		ac.precision = time.Second
-	case interval >= time.Millisecond:
-		ac.precision = time.Millisecond
-	case interval >= time.Microsecond:
-		ac.precision = time.Microsecond
-	default:
-		ac.precision = time.Nanosecond
-	}
+func (ac *accumulator) SetPrecision(precision time.Duration) {
+	ac.precision = precision
 }
 
-func (ac accumulator) getTime(t []time.Time) time.Time {
+func (ac *accumulator) getTime(t []time.Time) time.Time {
 	var timestamp time.Time
 	if len(t) > 0 {
 		timestamp = t[0]
@@ -116,4 +120,44 @@ func (ac accumulator) getTime(t []time.Time) time.Time {
 		timestamp = time.Now()
 	}
 	return timestamp.Round(ac.precision)
+}
+
+func (ac *accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	return &trackingAccumulator{
+		Accumulator: ac,
+		delivered:   make(chan telegraf.DeliveryInfo, maxTracked),
+	}
+}
+
+type trackingAccumulator struct {
+	telegraf.Accumulator
+	delivered chan telegraf.DeliveryInfo
+}
+
+func (a *trackingAccumulator) AddTrackingMetric(m telegraf.Metric) telegraf.TrackingID {
+	dm, id := metric.WithTracking(m, a.onDelivery)
+	a.AddMetric(dm)
+	return id
+}
+
+func (a *trackingAccumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.TrackingID {
+	db, id := metric.WithGroupTracking(group, a.onDelivery)
+	for _, m := range db {
+		a.AddMetric(m)
+	}
+	return id
+}
+
+func (a *trackingAccumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	return a.delivered
+}
+
+func (a *trackingAccumulator) onDelivery(info telegraf.DeliveryInfo) {
+	select {
+	case a.delivered <- info:
+	default:
+		// This is a programming error in the input.  More items were sent for
+		// tracking than space requested.
+		panic("channel is full")
+	}
 }

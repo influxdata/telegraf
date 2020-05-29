@@ -21,7 +21,7 @@ var sampleConfig = `
   ##    http://admin:secret@couchbase-0.example.com:8091/
   ##
   ## If no servers are specified, then localhost is used as the host.
-  ## If no protocol is specifed, HTTP is used.
+  ## If no protocol is specified, HTTP is used.
   ## If no port is specified, 8091 is used.
   servers = ["http://localhost:8091"]
 `
@@ -86,7 +86,7 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 	}
 
 	for bucketName := range pool.BucketMap {
-		tags := map[string]string{"cluster": addr, "bucket": bucketName}
+		tags := map[string]string{"cluster": regexpURI.ReplaceAllString(addr, "${1}"), "bucket": bucketName}
 		bs := pool.BucketMap[bucketName].BasicStats
 		fields := make(map[string]interface{})
 		fields["quota_percent_used"] = bs["quotaPercentUsed"]

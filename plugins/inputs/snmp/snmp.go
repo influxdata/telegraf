@@ -1,10 +1,13 @@
 package snmp
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"math"
 	"net"
+	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -14,67 +17,52 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
+	"github.com/influxdata/wlog"
 	"github.com/soniah/gosnmp"
 )
 
 const description = `Retrieves SNMP values from remote agents`
 const sampleConfig = `
-  agents = [ "127.0.0.1:161" ]
-  ## Timeout for each SNMP query.
-  timeout = "5s"
-  ## Number of retries to attempt within timeout.
-  retries = 3
-  ## SNMP version, values can be 1, 2, or 3
-  version = 2
+  ## Agent addresses to retrieve values from.
+  ##   example: agents = ["udp://127.0.0.1:161"]
+  ##            agents = ["tcp://127.0.0.1:161"]
+  agents = ["udp://127.0.0.1:161"]
+
+  ## Timeout for each request.
+  # timeout = "5s"
+
+  ## SNMP version; can be 1, 2, or 3.
+  # version = 2
 
   ## SNMP community string.
-  community = "public"
+  # community = "public"
 
-  ## The GETBULK max-repetitions parameter
-  max_repetitions = 10
+  ## Number of retries to attempt.
+  # retries = 3
 
-  ## SNMPv3 auth parameters
-  #sec_name = "myuser"
-  #auth_protocol = "md5"      # Values: "MD5", "SHA", ""
-  #auth_password = "pass"
-  #sec_level = "authNoPriv"   # Values: "noAuthNoPriv", "authNoPriv", "authPriv"
-  #context_name = ""
-  #priv_protocol = ""         # Values: "DES", "AES", ""
-  #priv_password = ""
+  ## The GETBULK max-repetitions parameter.
+  # max_repetitions = 10
 
-  ## measurement name
-  name = "system"
-  [[inputs.snmp.field]]
-    name = "hostname"
-    oid = ".1.0.0.1.1"
-  [[inputs.snmp.field]]
-    name = "uptime"
-    oid = ".1.0.0.1.2"
-  [[inputs.snmp.field]]
-    name = "load"
-    oid = ".1.0.0.1.3"
-  [[inputs.snmp.field]]
-    oid = "HOST-RESOURCES-MIB::hrMemorySize"
+  ## SNMPv3 authentication and encryption options.
+  ##
+  ## Security Name.
+  # sec_name = "myuser"
+  ## Authentication protocol; one of "MD5", "SHA", or "".
+  # auth_protocol = "MD5"
+  ## Authentication password.
+  # auth_password = "pass"
+  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
+  # sec_level = "authNoPriv"
+  ## Context Name.
+  # context_name = ""
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
+  # priv_protocol = ""
+  ## Privacy password used for encrypted messages.
+  # priv_password = ""
 
-  [[inputs.snmp.table]]
-    ## measurement name
-    name = "remote_servers"
-    inherit_tags = [ "hostname" ]
-    [[inputs.snmp.table.field]]
-      name = "server"
-      oid = ".1.0.0.0.1.0"
-      is_tag = true
-    [[inputs.snmp.table.field]]
-      name = "connections"
-      oid = ".1.0.0.0.1.1"
-    [[inputs.snmp.table.field]]
-      name = "latency"
-      oid = ".1.0.0.0.1.2"
-
-  [[inputs.snmp.table]]
-    ## auto populate table's fields using the MIB
-    oid = "HOST-RESOURCES-MIB::hrNetworkTable"
+  ## Add fields and tables defining the variables you wish to collect.  This
+  ## example collects the system uptime and interface variables.  Reference the
+  ## full plugin documentation for configuration details.
 `
 
 // execCommand is so tests can mock out exec.Command usage.
@@ -83,12 +71,20 @@ var execCommand = exec.Command
 // execCmd executes the specified command, returning the STDOUT content.
 // If command exits with error status, the output is captured into the returned error.
 func execCmd(arg0 string, args ...string) ([]byte, error) {
+	if wlog.LogLevel() == wlog.DEBUG {
+		quoted := make([]string, 0, len(args))
+		for _, arg := range args {
+			quoted = append(quoted, fmt.Sprintf("%q", arg))
+		}
+		log.Printf("D! [inputs.snmp] executing %q %s", arg0, strings.Join(quoted, " "))
+	}
+
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
 		if err, ok := err.(*exec.ExitError); ok {
 			return nil, NestedError{
 				Err:       err,
-				NestedErr: fmt.Errorf("%s", bytes.TrimRight(err.Stderr, "\n")),
+				NestedErr: fmt.Errorf("%s", bytes.TrimRight(err.Stderr, "\r\n")),
 			}
 		}
 		return nil, err
@@ -98,44 +94,45 @@ func execCmd(arg0 string, args ...string) ([]byte, error) {
 
 // Snmp holds the configuration for the plugin.
 type Snmp struct {
-	// The SNMP agent to query. Format is ADDR[:PORT] (e.g. 1.2.3.4:161).
-	Agents []string
+	// The SNMP agent to query. Format is [SCHEME://]ADDR[:PORT] (e.g.
+	// udp://1.2.3.4:161).  If the scheme is not specified then "udp" is used.
+	Agents []string `toml:"agents"`
 	// Timeout to wait for a response.
-	Timeout internal.Duration
-	Retries int
+	Timeout internal.Duration `toml:"timeout"`
+	Retries int               `toml:"retries"`
 	// Values: 1, 2, 3
-	Version uint8
+	Version uint8 `toml:"version"`
 
 	// Parameters for Version 1 & 2
-	Community string
+	Community string `toml:"community"`
 
 	// Parameters for Version 2 & 3
-	MaxRepetitions uint8
+	MaxRepetitions uint8 `toml:"max_repetitions"`
 
 	// Parameters for Version 3
-	ContextName string
+	ContextName string `toml:"context_name"`
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
-	SecLevel string
-	SecName  string
+	SecLevel string `toml:"sec_level"`
+	SecName  string `toml:"sec_name"`
 	// Values: "MD5", "SHA", "". Default: ""
-	AuthProtocol string
-	AuthPassword string
+	AuthProtocol string `toml:"auth_protocol"`
+	AuthPassword string `toml:"auth_password"`
 	// Values: "DES", "AES", "". Default: ""
-	PrivProtocol string
-	PrivPassword string
-	EngineID     string
-	EngineBoots  uint32
-	EngineTime   uint32
+	PrivProtocol string `toml:"priv_protocol"`
+	PrivPassword string `toml:"priv_password"`
+	EngineID     string `toml:"-"`
+	EngineBoots  uint32 `toml:"-"`
+	EngineTime   uint32 `toml:"-"`
 
 	Tables []Table `toml:"table"`
 
 	// Name & Fields are the elements of a Table.
 	// Telegraf chokes if we try to embed a Table. So instead we have to embed the
 	// fields of a Table, and construct a Table during runtime.
-	Name   string
+	Name   string  // deprecated in 1.14; use name_override
 	Fields []Field `toml:"field"`
 
-	connectionCache map[string]snmpConnection
+	connectionCache []snmpConnection
 	initialized     bool
 }
 
@@ -143,6 +140,8 @@ func (s *Snmp) init() error {
 	if s.initialized {
 		return nil
 	}
+
+	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
 		if err := s.Tables[i].init(); err != nil {
@@ -215,10 +214,20 @@ func (t *Table) initBuild() error {
 	if err != nil {
 		return err
 	}
+
 	if t.Name == "" {
 		t.Name = oidText
 	}
-	t.Fields = append(t.Fields, fields...)
+
+	knownOIDs := map[string]bool{}
+	for _, f := range t.Fields {
+		knownOIDs[f.Oid] = true
+	}
+	for _, f := range fields {
+		if !knownOIDs[f.Oid] {
+			t.Fields = append(t.Fields, f)
+		}
+	}
 
 	return nil
 }
@@ -234,6 +243,8 @@ type Field struct {
 	Oid string
 	// OidIndexSuffix is the trailing sub-identifier on a table record OID that will be stripped off to get the record's index.
 	OidIndexSuffix string
+	// OidIndexLength specifies the length of the index in OID path segments. It can be used to remove sub-identifiers that vary in content or length.
+	OidIndexLength int
 	// IsTag controls whether this OID is output as a tag or a value.
 	IsTag bool
 	// Conversion controls any type conversion that is done on the value.
@@ -253,7 +264,7 @@ func (f *Field) init() error {
 		return nil
 	}
 
-	_, oidNum, oidText, conversion, err := snmpTranslate(f.Oid)
+	_, oidNum, oidText, conversion, err := SnmpTranslate(f.Oid)
 	if err != nil {
 		return Errorf(err, "translating")
 	}
@@ -342,30 +353,36 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	for _, agent := range s.Agents {
-		gs, err := s.getConnection(agent)
-		if err != nil {
-			acc.AddError(Errorf(err, "agent %s", agent))
-			continue
-		}
-
-		// First is the top-level fields. We treat the fields as table prefixes with an empty index.
-		t := Table{
-			Name:   s.Name,
-			Fields: s.Fields,
-		}
-		topTags := map[string]string{}
-		if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
-			acc.AddError(Errorf(err, "agent %s", agent))
-		}
-
-		// Now is the real tables.
-		for _, t := range s.Tables {
-			if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
-				acc.AddError(Errorf(err, "agent %s: gathering table %s", agent, t.Name))
+	var wg sync.WaitGroup
+	for i, agent := range s.Agents {
+		wg.Add(1)
+		go func(i int, agent string) {
+			defer wg.Done()
+			gs, err := s.getConnection(i)
+			if err != nil {
+				acc.AddError(Errorf(err, "agent %s", agent))
+				return
 			}
-		}
+
+			// First is the top-level fields. We treat the fields as table prefixes with an empty index.
+			t := Table{
+				Name:   s.Name,
+				Fields: s.Fields,
+			}
+			topTags := map[string]string{}
+			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
+				acc.AddError(Errorf(err, "agent %s", agent))
+			}
+
+			// Now is the real tables.
+			for _, t := range s.Tables {
+				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
+					acc.AddError(Errorf(err, "agent %s: gathering table %s", agent, t.Name))
+				}
+			}
+		}(i, agent)
 	}
+	wg.Wait()
 
 	return nil
 }
@@ -452,6 +469,18 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 						return nil
 					}
 					idx = idx[:len(idx)-len(f.OidIndexSuffix)]
+				}
+				if f.OidIndexLength != 0 {
+					i := f.OidIndexLength + 1 // leading separator
+					idx = strings.Map(func(r rune) rune {
+						if r == '.' {
+							i -= 1
+						}
+						if i < 1 {
+							return -1
+						}
+						return r
+					}, idx)
 				}
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)
@@ -568,27 +597,43 @@ func (gsw gosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 }
 
 // getConnection creates a snmpConnection (*gosnmp.GoSNMP) object and caches the
-// result using `agent` as the cache key.
-func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
-	if s.connectionCache == nil {
-		s.connectionCache = map[string]snmpConnection{}
-	}
-	if gs, ok := s.connectionCache[agent]; ok {
+// result using `agentIndex` as the cache key.  This is done to allow multiple
+// connections to a single address.  It is an error to use a connection in
+// more than one goroutine.
+func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
+	if gs := s.connectionCache[idx]; gs != nil {
 		return gs, nil
 	}
 
-	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
+	agent := s.Agents[idx]
 
-	host, portStr, err := net.SplitHostPort(agent)
+	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
+	s.connectionCache[idx] = gs
+
+	if !strings.Contains(agent, "://") {
+		agent = "udp://" + agent
+	}
+
+	u, err := url.Parse(agent)
 	if err != nil {
-		if err, ok := err.(*net.AddrError); !ok || err.Err != "missing port in address" {
-			return nil, Errorf(err, "parsing host")
-		}
-		host = agent
+		return nil, err
+	}
+
+	switch u.Scheme {
+	case "tcp":
+		gs.Transport = "tcp"
+	case "", "udp":
+		gs.Transport = "udp"
+	default:
+		return nil, fmt.Errorf("unsupported scheme: %v", u.Scheme)
+	}
+
+	gs.Target = u.Hostname()
+
+	portStr := u.Port()
+	if portStr == "" {
 		portStr = "161"
 	}
-	gs.Target = host
-
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil {
 		return nil, Errorf(err, "parsing port")
@@ -677,7 +722,6 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 		return nil, Errorf(err, "setting up connection")
 	}
 
-	s.connectionCache[agent] = gs
 	return gs, nil
 }
 
@@ -760,9 +804,9 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case uint64:
 			v = int64(vt)
 		case []byte:
-			v, _ = strconv.Atoi(string(vt))
+			v, _ = strconv.ParseInt(string(vt), 10, 64)
 		case string:
-			v, _ = strconv.Atoi(vt)
+			v, _ = strconv.ParseInt(vt, 10, 64)
 		}
 		return v, nil
 	}
@@ -835,7 +879,7 @@ func snmpTable(oid string) (mibName string, oidNum string, oidText string, field
 }
 
 func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, fields []Field, err error) {
-	mibName, oidNum, oidText, _, err = snmpTranslate(oid)
+	mibName, oidNum, oidText, _, err = SnmpTranslate(oid)
 	if err != nil {
 		return "", "", "", nil, Errorf(err, "translating")
 	}
@@ -847,24 +891,26 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	tagOids := map[string]struct{}{}
 	// We have to guess that the "entry" oid is `oid+".1"`. snmptable and snmptranslate don't seem to have a way to provide the info.
 	if out, err := execCmd("snmptranslate", "-Td", oidFullName+".1"); err == nil {
-		lines := bytes.Split(out, []byte{'\n'})
-		for _, line := range lines {
-			if !bytes.HasPrefix(line, []byte("  INDEX")) {
+		scanner := bufio.NewScanner(bytes.NewBuffer(out))
+		for scanner.Scan() {
+			line := scanner.Text()
+
+			if !strings.HasPrefix(line, "  INDEX") {
 				continue
 			}
 
-			i := bytes.Index(line, []byte("{ "))
+			i := strings.Index(line, "{ ")
 			if i == -1 { // parse error
 				continue
 			}
 			line = line[i+2:]
-			i = bytes.Index(line, []byte(" }"))
+			i = strings.Index(line, " }")
 			if i == -1 { // parse error
 				continue
 			}
 			line = line[:i]
-			for _, col := range bytes.Split(line, []byte(", ")) {
-				tagOids[mibPrefix+string(col)] = struct{}{}
+			for _, col := range strings.Split(line, ", ") {
+				tagOids[mibPrefix+col] = struct{}{}
 			}
 		}
 	}
@@ -874,15 +920,16 @@ func snmpTableCall(oid string) (mibName string, oidNum string, oidText string, f
 	if err != nil {
 		return "", "", "", nil, Errorf(err, "getting table columns")
 	}
-	cols := bytes.SplitN(out, []byte{'\n'}, 2)[0]
+	scanner := bufio.NewScanner(bytes.NewBuffer(out))
+	scanner.Scan()
+	cols := scanner.Text()
 	if len(cols) == 0 {
 		return "", "", "", nil, fmt.Errorf("could not find any columns in table")
 	}
-	for _, col := range bytes.Split(cols, []byte{' '}) {
+	for _, col := range strings.Split(cols, " ") {
 		if len(col) == 0 {
 			continue
 		}
-		col := string(col)
 		_, isTag := tagOids[mibPrefix+col]
 		fields = append(fields, Field{Name: col, Oid: mibPrefix + col, IsTag: isTag})
 	}
@@ -902,7 +949,7 @@ var snmpTranslateCachesLock sync.Mutex
 var snmpTranslateCaches map[string]snmpTranslateCache
 
 // snmpTranslate resolves the given OID.
-func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
+func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
 	snmpTranslateCachesLock.Lock()
 	if snmpTranslateCaches == nil {
 		snmpTranslateCaches = map[string]snmpTranslateCache{}
@@ -915,9 +962,9 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 		// We could speed it up by putting a lock in snmpTranslateCache and then
 		// returning it immediately, and multiple callers would then release the
 		// snmpTranslateCachesLock and instead wait on the individual
-		// snmpTranlsation.Lock to release. But I don't know that the extra complexity
+		// snmpTranslation.Lock to release. But I don't know that the extra complexity
 		// is worth it. Especially when it would slam the system pretty hard if lots
-		// of lookups are being perfomed.
+		// of lookups are being performed.
 
 		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
 		snmpTranslateCaches[oid] = stc
@@ -926,6 +973,28 @@ func snmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 	snmpTranslateCachesLock.Unlock()
 
 	return stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err
+}
+
+func SnmpTranslateForce(oid string, mibName string, oidNum string, oidText string, conversion string) {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	if snmpTranslateCaches == nil {
+		snmpTranslateCaches = map[string]snmpTranslateCache{}
+	}
+
+	var stc snmpTranslateCache
+	stc.mibName = mibName
+	stc.oidNum = oidNum
+	stc.oidText = oidText
+	stc.conversion = conversion
+	stc.err = nil
+	snmpTranslateCaches[oid] = stc
+}
+
+func SnmpTranslateClear() {
+	snmpTranslateCachesLock.Lock()
+	defer snmpTranslateCachesLock.Unlock()
+	snmpTranslateCaches = map[string]snmpTranslateCache{}
 }
 
 func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText string, conversion string, err error) {
@@ -944,18 +1013,18 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		return "", "", "", "", err
 	}
 
-	bb := bytes.NewBuffer(out)
-
-	oidText, err = bb.ReadString('\n')
-	if err != nil {
-		return "", "", "", "", Errorf(err, "getting OID text")
+	scanner := bufio.NewScanner(bytes.NewBuffer(out))
+	ok := scanner.Scan()
+	if !ok && scanner.Err() != nil {
+		return "", "", "", "", Errorf(scanner.Err(), "getting OID text")
 	}
-	oidText = oidText[:len(oidText)-1]
+
+	oidText = scanner.Text()
 
 	i := strings.Index(oidText, "::")
 	if i == -1 {
 		// was not found in MIB.
-		if bytes.Index(bb.Bytes(), []byte(" [TRUNCATED]")) >= 0 {
+		if bytes.Contains(out, []byte("[TRUNCATED]")) {
 			return "", oid, oid, "", nil
 		}
 		// not truncated, but not fully found. We still need to parse out numeric OID, so keep going
@@ -965,37 +1034,33 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 		oidText = oidText[i+2:]
 	}
 
-	if i := bytes.Index(bb.Bytes(), []byte("  -- TEXTUAL CONVENTION ")); i != -1 {
-		bb.Next(i + len("  -- TEXTUAL CONVENTION "))
-		tc, err := bb.ReadString('\n')
-		if err != nil {
-			return "", "", "", "", Errorf(err, "getting textual convention")
-		}
-		tc = tc[:len(tc)-1]
-		switch tc {
-		case "MacAddress", "PhysAddress":
-			conversion = "hwaddr"
-		case "InetAddressIPv4", "InetAddressIPv6", "InetAddress":
-			conversion = "ipaddr"
-		}
-	}
+	for scanner.Scan() {
+		line := scanner.Text()
 
-	i = bytes.Index(bb.Bytes(), []byte("::= { "))
-	bb.Next(i + len("::= { "))
-	objs, err := bb.ReadString('}')
-	if err != nil {
-		return "", "", "", "", Errorf(err, "getting numeric oid")
-	}
-	objs = objs[:len(objs)-1]
-	for _, obj := range strings.Split(objs, " ") {
-		if len(obj) == 0 {
-			continue
-		}
-		if i := strings.Index(obj, "("); i != -1 {
-			obj = obj[i+1:]
-			oidNum += "." + obj[:strings.Index(obj, ")")]
-		} else {
-			oidNum += "." + obj
+		if strings.HasPrefix(line, "  -- TEXTUAL CONVENTION ") {
+			tc := strings.TrimPrefix(line, "  -- TEXTUAL CONVENTION ")
+			switch tc {
+			case "MacAddress", "PhysAddress":
+				conversion = "hwaddr"
+			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
+				conversion = "ipaddr"
+			}
+		} else if strings.HasPrefix(line, "::= { ") {
+			objs := strings.TrimPrefix(line, "::= { ")
+			objs = strings.TrimSuffix(objs, " }")
+
+			for _, obj := range strings.Split(objs, " ") {
+				if len(obj) == 0 {
+					continue
+				}
+				if i := strings.Index(obj, "("); i != -1 {
+					obj = obj[i+1:]
+					oidNum += "." + obj[:strings.Index(obj, ")")]
+				} else {
+					oidNum += "." + obj
+				}
+			}
+			break
 		}
 	}
 

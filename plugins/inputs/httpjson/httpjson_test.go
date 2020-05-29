@@ -163,7 +163,7 @@ func (c *mockHTTPClient) HTTPClient() *http.Client {
 //     *HttpJson: Pointer to an HttpJson object that uses the generated mock HTTP client
 func genMockHttpJson(response string, statusCode int) []*HttpJson {
 	return []*HttpJson{
-		&HttpJson{
+		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server1.example.com/metrics/",
@@ -180,7 +180,7 @@ func genMockHttpJson(response string, statusCode int) []*HttpJson {
 				"apiVersion":   "v1",
 			},
 		},
-		&HttpJson{
+		{
 			client: &mockHTTPClient{responseBody: response, statusCode: statusCode},
 			Servers: []string{
 				"http://server3.example.com/metrics/",
@@ -477,15 +477,13 @@ func TestHttpJsonBadJson(t *testing.T) {
 	assert.Equal(t, 0, acc.NFields())
 }
 
-// Test response to empty string as response objectgT
+// Test response to empty string as response object
 func TestHttpJsonEmptyResponse(t *testing.T) {
 	httpjson := genMockHttpJson(empty, 200)
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
-
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	assert.NoError(t, err)
 }
 
 // Test that the proper values are ignored or collected
@@ -557,6 +555,21 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 					assert.FailNow(t, "unknown metric")
 				}
 			}
+		}
+	}
+}
+
+var jsonBOM = []byte("\xef\xbb\xbf[{\"value\":17}]")
+
+// TestHttpJsonBOM tests that UTF-8 JSON with a BOM can be parsed
+func TestHttpJsonBOM(t *testing.T) {
+	httpjson := genMockHttpJson(string(jsonBOM), 200)
+
+	for _, service := range httpjson {
+		if service.Name == "other_webapp" {
+			var acc testutil.Accumulator
+			err := acc.GatherError(service.Gather)
+			require.NoError(t, err)
 		}
 	}
 }

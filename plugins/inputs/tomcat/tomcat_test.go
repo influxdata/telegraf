@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var tomcatStatus = `<?xml version="1.0" encoding="UTF-8"?>
+var tomcatStatus8 = `<?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="/manager/xform.xsl" ?>
 <status>
   <jvm>
@@ -37,10 +37,10 @@ var tomcatStatus = `<?xml version="1.0" encoding="UTF-8"?>
   </connector>
 </status>`
 
-func TestHTTPTomcat(t *testing.T) {
+func TestHTTPTomcat8(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, tomcatStatus)
+		fmt.Fprintln(w, tomcatStatus8)
 	}))
 	defer ts.Close()
 
@@ -91,5 +91,63 @@ func TestHTTPTomcat(t *testing.T) {
 		"name": "http-apr-8080",
 	}
 	acc.AssertContainsTaggedFields(t, "tomcat_connector", connectorFields, connectorTags)
+}
 
+var tomcatStatus6 = `<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="xform.xsl" ?>
+<status>
+  <jvm>
+    <memory free="1942681600" total="2040070144" max="2040070144"/>
+  </jvm>
+  <connector name="http-8080">
+    <threadInfo maxThreads="150" currentThreadCount="2" currentThreadsBusy="2"/>
+    <requestInfo maxTime="1005" processingTime="2465" requestCount="436" errorCount="16" bytesReceived="0" bytesSent="550196"/>
+    <workers>
+      <worker stage="K" requestProcessingTime="526" requestBytesSent="0" requestBytesReceived="0" remoteAddr="127.0.0.1" virtualHost="?" method="?" currentUri="?" currentQueryString="?" protocol="?"/>
+      <worker stage="S" requestProcessingTime="1" requestBytesSent="0" requestBytesReceived="0" remoteAddr="127.0.0.1" virtualHost="127.0.0.1" method="GET" currentUri="/manager/status/all" currentQueryString="XML=true" protocol="HTTP/1.1"/>
+    </workers>
+  </connector>
+</status>`
+
+func TestHTTPTomcat6(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, tomcatStatus6)
+	}))
+	defer ts.Close()
+
+	tc := Tomcat{
+		URL:      ts.URL,
+		Username: "tomcat",
+		Password: "s3cret",
+	}
+
+	var acc testutil.Accumulator
+	err := tc.Gather(&acc)
+	require.NoError(t, err)
+
+	// tomcat_jvm_memory
+	jvmMemoryFields := map[string]interface{}{
+		"free":  int64(1942681600),
+		"total": int64(2040070144),
+		"max":   int64(2040070144),
+	}
+	acc.AssertContainsFields(t, "tomcat_jvm_memory", jvmMemoryFields)
+
+	// tomcat_connector
+	connectorFields := map[string]interface{}{
+		"bytes_received":       int64(0),
+		"bytes_sent":           int64(550196),
+		"current_thread_count": int64(2),
+		"current_threads_busy": int64(2),
+		"error_count":          int(16),
+		"max_threads":          int64(150),
+		"max_time":             int(1005),
+		"processing_time":      int(2465),
+		"request_count":        int(436),
+	}
+	connectorTags := map[string]string{
+		"name": "http-8080",
+	}
+	acc.AssertContainsTaggedFields(t, "tomcat_connector", connectorFields, connectorTags)
 }

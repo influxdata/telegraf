@@ -1,6 +1,7 @@
 package httpjson
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,8 +12,13 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+)
+
+var (
+	utf8BOM = []byte("\xef\xbb\xbf")
 )
 
 // HttpJson struct
@@ -24,15 +30,7 @@ type HttpJson struct {
 	ResponseTimeout internal.Duration
 	Parameters      map[string]string
 	Headers         map[string]string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client HTTPClient
 }
@@ -44,7 +42,7 @@ type HTTPClient interface {
 	// req: HTTP request object
 	//
 	// Returns:
-	// http.Response:  HTTP respons object
+	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
 
@@ -95,6 +93,13 @@ var sampleConfig = `
   #   "my_tag_2"
   # ]
 
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## HTTP parameters (all values must be strings).  For "GET" requests, data
   ## will be included in the query.  For "POST" requests, data will be included
   ## in the request body as "x-www-form-urlencoded".
@@ -106,13 +111,6 @@ var sampleConfig = `
   # [inputs.httpjson.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
-
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
 `
 
 func (h *HttpJson) SampleConfig() string {
@@ -128,8 +126,7 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
+		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
@@ -170,7 +167,6 @@ func (h *HttpJson) gatherServer(
 	serverURL string,
 ) error {
 	resp, responseTime, err := h.sendRequest(serverURL)
-
 	if err != nil {
 		return err
 	}
@@ -185,7 +181,12 @@ func (h *HttpJson) gatherServer(
 		"server": serverURL,
 	}
 
-	parser, err := parsers.NewJSONParser(msrmnt_name, h.TagKeys, tags)
+	parser, err := parsers.NewParser(&parsers.Config{
+		DataFormat:  "json",
+		MetricName:  msrmnt_name,
+		TagKeys:     h.TagKeys,
+		DefaultTags: tags,
+	})
 	if err != nil {
 		return err
 	}
@@ -266,6 +267,7 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	if err != nil {
 		return string(body), responseTime, err
 	}
+	body = bytes.TrimPrefix(body, utf8BOM)
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {

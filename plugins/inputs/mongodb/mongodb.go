@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"log"
 	"net"
 	"net/url"
 	"strings"
@@ -12,25 +11,22 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
 
 type MongoDB struct {
-	Servers          []string
-	Ssl              Ssl
-	mongos           map[string]*Server
-	GatherPerdbStats bool
+	Servers             []string
+	Ssl                 Ssl
+	mongos              map[string]*Server
+	GatherClusterStatus bool
+	GatherPerdbStats    bool
+	GatherColStats      bool
+	ColStatsDbs         []string
+	tlsint.ClientConfig
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	Log telegraf.Logger
 }
 
 type Ssl struct {
@@ -45,13 +41,27 @@ var sampleConfig = `
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
   servers = ["mongodb://127.0.0.1:27017"]
-  gather_perdb_stats = false
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## When true, collect cluster status
+  ## Note that the query that counts jumbo chunks triggers a COLLSCAN, which
+  ## may have an impact on performance.
+  # gather_cluster_status = true
+
+  ## When true, collect per database stats
+  # gather_perdb_stats = false
+
+  ## When true, collect per collection stats
+  # gather_col_stats = false
+
+  ## List of db where collections stats are collected
+  ## If empty, all db are concerned
+  # col_stats_dbs = ["local"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -79,24 +89,27 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 			// Preserve backwards compatibility for hostnames without a
 			// scheme, broken in go 1.8. Remove in Telegraf 2.0
 			serv = "mongodb://" + serv
-			log.Printf("W! [inputs.mongodb] Using %q as connection URL; please update your configuration to use an URL", serv)
+			m.Log.Warnf("Using %q as connection URL; please update your configuration to use an URL", serv)
 			m.Servers[i] = serv
 		}
 
 		u, err := url.Parse(serv)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address %q: %s", serv, err))
+			m.Log.Errorf("Unable to parse address %q: %s", serv, err.Error())
 			continue
 		}
 		if u.Host == "" {
-			acc.AddError(fmt.Errorf("Unable to parse address %q", serv))
+			m.Log.Errorf("Unable to parse address %q", serv)
 			continue
 		}
 
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
-			acc.AddError(m.gatherServer(srv, acc))
+			err := m.gatherServer(srv, acc)
+			if err != nil {
+				m.Log.Errorf("Error in plugin: %v", err)
+			}
 		}(m.getMongoServer(u))
 	}
 
@@ -107,6 +120,7 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 	if _, ok := m.mongos[url.Host]; !ok {
 		m.mongos[url.Host] = &Server{
+			Log: m.Log,
 			Url: url,
 		}
 	}
@@ -123,8 +137,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		}
 		dialInfo, err := mgo.ParseURL(dialAddrs[0])
 		if err != nil {
-			return fmt.Errorf("Unable to parse URL (%s), %s\n",
-				dialAddrs[0], err.Error())
+			return fmt.Errorf("unable to parse URL %q: %s", dialAddrs[0], err.Error())
 		}
 		dialInfo.Direct = true
 		dialInfo.Timeout = 5 * time.Second
@@ -132,7 +145,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		var tlsConfig *tls.Config
 
 		if m.Ssl.Enabled {
-			// Deprecated SSL config
+			// Deprecated TLS config
 			tlsConfig = &tls.Config{}
 			if len(m.Ssl.CaCerts) > 0 {
 				roots := x509.NewCertPool()
@@ -147,8 +160,10 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 				tlsConfig.InsecureSkipVerify = true
 			}
 		} else {
-			tlsConfig, err = internal.GetTLSConfig(
-				m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+			tlsConfig, err = m.ClientConfig.TLSConfig()
+			if err != nil {
+				return err
+			}
 		}
 
 		// If configured to use TLS, add a dial function
@@ -164,17 +179,21 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 
 		sess, err := mgo.DialWithInfo(dialInfo)
 		if err != nil {
-			return fmt.Errorf("Unable to connect to MongoDB, %s\n", err.Error())
+			return fmt.Errorf("unable to connect to MongoDB: %s", err.Error())
 		}
 		server.Session = sess
 	}
-	return server.gatherData(acc, m.GatherPerdbStats)
+	return server.gatherData(acc, m.GatherClusterStatus, m.GatherPerdbStats, m.GatherColStats, m.ColStatsDbs)
 }
 
 func init() {
 	inputs.Add("mongodb", func() telegraf.Input {
 		return &MongoDB{
-			mongos: make(map[string]*Server),
+			mongos:              make(map[string]*Server),
+			GatherClusterStatus: true,
+			GatherPerdbStats:    false,
+			GatherColStats:      false,
+			ColStatsDbs:         []string{"local"},
 		}
 	})
 }
