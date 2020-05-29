@@ -145,21 +145,17 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 
 // OPT FUNCTIONS
 
-func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string, gencert bool, certDuration time.Duration) []opcua.Option {
+func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string) []opcua.Option {
 	opts := []opcua.Option{}
 	appuri := "urn:gopcua:client"
 
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
-	if certFile == "" && !gencert {
-
+	if certFile == "" {
 		opts = append(opts, opcua.ApplicationURI(appuri))
 	}
 
 	var cert []byte
-	if gencert || (certFile != "" && keyFile != "") {
-		if gencert {
-			generateCert(appuri, 2048, certFile, keyFile, certDuration)
-		}
+	if certFile != "" && keyFile != "" {
 		debug.Printf("Loading cert/key from %s/%s", certFile, keyFile)
 		c, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err != nil {

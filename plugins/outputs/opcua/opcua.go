@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"path"
-	"time"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
@@ -15,35 +14,50 @@ import (
 
 // Opcua struct to configure client.
 type Opcua struct {
-	Client                     *opcua.Client     //internally created
-	Endpoint                   string            `toml:"endpoint"`                       //defaults to "opc.tcp://localhost:50000"
-	NodeIDMap                  map[string]string `toml:"node_id_map"`                    //required
-	Policy                     string            `toml:"policy"`                         //defaults to "Auto"
-	Mode                       string            `toml:"mode"`                           //defaults to "Auto"
-	Username                   string            `toml:"username"`                       //defaults to nil
-	Password                   string            `toml:"password"`                       //defaults to nil
-	CertFile                   string            `toml:"cert_file"`                      //defaults to ""
-	KeyFile                    string            `toml:"key_file"`                       //defaults to ""
-	AuthMethod                 string            `toml:"auth_method"`                    //defaults to "Anonymous" - accepts Anonymous, Username, Certificate
-	Debug                      bool              `toml:"debug"`                          //defaults to false
-	CreateSelfSignedCert       bool              `toml:"self_signed_cert"`               //defaults to false
-	SelfSignedCertExpiresAfter time.Duration     `toml:"self_signed_cert_expires_after"` //defaults to 1 year
-	selfSignedCertNextExpires  time.Time         //internally created
-	opts                       []opcua.Option    //internally created
+	Client     *opcua.Client     //internally created
+	Endpoint   string            `toml:"endpoint"`    //defaults to "opc.tcp://localhost:50000"
+	NodeIDMap  map[string]string `toml:"node_id_map"` //required
+	Policy     string            `toml:"policy"`      //defaults to "Auto"
+	Mode       string            `toml:"mode"`        //defaults to "Auto"
+	Username   string            `toml:"username"`    //defaults to nil
+	Password   string            `toml:"password"`    //defaults to nil
+	CertFile   string            `toml:"cert_file"`   //defaults to ""
+	KeyFile    string            `toml:"key_file"`    //defaults to ""
+	AuthMethod string            `toml:"auth_method"` //defaults to "Anonymous" - accepts Anonymous, Username, Certificate
+	opts       []opcua.Option    //internally created
 }
 
 var sampleConfig = `
-  #########
-
-  Sample Config Here
-
-  #########
-
-  #TODO: UPDATE THIS
-  [[[node_id_map]]]
-  height="ns=2;s=HeightData"
-  weight="ns=2;s=WeightData"
-  age="ns=2;s=AgeData"
+  [[outputs.opcua]]
+  endpoint = "opc.tcp://localhost:49320"
+  policy = "None"
+  mode = "None"
+  [outputs.opcua.node_id_map]
+	usage_idle = "ns=2;s=MyPLC.NodeToUpdate"
+	
+  # node_id_map takes the form:
+  #
+  #[outputs.opcua.node_id_map]
+  #  meric_field_name1 = "opcua id 1"
+  #  meric_field_name2 = "opcua id 2"
+  # 
+  # The OPC UA client will iterate over the fields in a receieved metric and update the corresponding opcua node id with the metric field's value.
+  #
+  #
+  # Full list of options:
+  #
+  #
+  #	endpoint = "" #defaults to "opc.tcp://localhost:50000"
+  # [node_id_map] #required
+  #   field = "node id"
+  #
+  # policy = "" #defaults to "Auto"
+  # mode = "" #defaults to "Auto"
+  # username = "" #defaults to nil
+  # password = "" #defaults to nil
+  # cert_file = "" #defaults to "" - path to cert file
+  # key_file = "" #defaults to "" - path to key file
+  # auth_method = "" #defaults to "Anonymous" - accepts Anonymous, Username, Certificate
 `
 
 // SampleConfig returns a sample config
@@ -82,7 +96,7 @@ func (o *Opcua) setupOptions() error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	o.opts = generateClientOpts(endpoints, o.CertFile, o.KeyFile, o.Policy, o.Mode, o.AuthMethod, o.Username, o.Password, o.CreateSelfSignedCert, o.SelfSignedCertExpiresAfter)
+	o.opts = generateClientOpts(endpoints, o.CertFile, o.KeyFile, o.Policy, o.Mode, o.AuthMethod, o.Username, o.Password)
 
 	return nil
 }
@@ -160,6 +174,7 @@ func (o *Opcua) Close() error {
 	return nil
 }
 
+// Init intializes the client
 func (o *Opcua) Init() error {
 
 	if o.CreateSelfSignedCert && o.CertFile == "" && o.KeyFile == "" {
@@ -177,15 +192,12 @@ func (o *Opcua) Init() error {
 func init() {
 	outputs.Add("opcua", func() telegraf.Output {
 		return &Opcua{
-			Endpoint:                   "opc.tcp://localhost:50000",
-			Policy:                     "Auto",
-			Mode:                       "Auto",
-			CertFile:                   "",
-			KeyFile:                    "",
-			AuthMethod:                 "Anonymous",
-			Debug:                      false,
-			CreateSelfSignedCert:       false,
-			SelfSignedCertExpiresAfter: (365 * 24 * time.Hour),
+			Endpoint:   "opc.tcp://localhost:50000",
+			Policy:     "Auto",
+			Mode:       "Auto",
+			CertFile:   "",
+			KeyFile:    "",
+			AuthMethod: "Anonymous",
 		}
 	})
 }
