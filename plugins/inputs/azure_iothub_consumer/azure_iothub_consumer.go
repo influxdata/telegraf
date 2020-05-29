@@ -24,7 +24,7 @@ import (
 
 // IothubConsumer
 type IothubConsumer struct {
-	Client              iothub.ModuleClient
+	Client              *iothub.ModuleClient
 	UseGateway          bool   `toml:"use_gateway"`
 	ConnectionString    string `toml:"connection_string"`
 	HubName             string `toml:"hub_name"`
@@ -307,7 +307,7 @@ func (i *IothubConsumer) Init() error {
 		)
 
 		// set IoT Hub client
-		i.Client = *c
+		i.Client = c
 		return err
 
 	} else {
@@ -318,7 +318,7 @@ func (i *IothubConsumer) Init() error {
 		)
 
 		// set IoT Hub client
-		i.Client = *c
+		i.Client = c
 		return err
 	}
 }
