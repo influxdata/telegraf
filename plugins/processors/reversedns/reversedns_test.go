@@ -49,7 +49,7 @@ func TestSimpleReverseLookup(t *testing.T) {
 
 func TestLoadingConfig(t *testing.T) {
 	c := config.NewConfig()
-	err := c.LoadConfigData([]byte("[[processors.reversedns]]\n" + sampleConfig))
+	err := c.LoadConfigData([]byte("[[processors.reverse_dns]]\n" + sampleConfig))
 	require.NoError(t, err)
 
 	require.Len(t, c.Processors, 1)

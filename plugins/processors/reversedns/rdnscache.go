@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/influxdata/telegraf/plugins/processors/reversedns/parallel"
 )
 
 type IPType uint8
@@ -191,8 +193,8 @@ func (d *ReverseDNSCache) startCleanupWorker() {
 }
 
 func (d *ReverseDNSCache) doLookup(l dnslookup) {
-	d.workerPool.checkout()
-	defer d.workerPool.checkin()
+	d.workerPool.Checkout()
+	defer d.workerPool.Checkin()
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.lookupTimeout)
 	defer cancel()

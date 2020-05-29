@@ -681,11 +681,11 @@ func (c *Config) LoadConfig(path string) error {
 	}
 	data, err := loadConfig(path)
 	if err != nil {
-		return fmt.Errorf("error loading config file %s: %w", path, err)
+		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
 
 	if err = c.LoadConfigData(data); err != nil {
-		return fmt.Errorf("error loading config file %s: %w", path, err)
+		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
 	return nil
 }

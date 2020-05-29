@@ -165,8 +165,9 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			}
 			close(in)
 			acc := testutil.NewTestMetricStreamAccumulator()
-			err := rp.Start(in, acc)
+			err := rp.Start(acc)
 			require.NoError(t, err)
+			rp.Run(in, acc)
 
 			actual := acc.ProcessedMetrics
 			require.Equal(t, tt.expected, actual)
