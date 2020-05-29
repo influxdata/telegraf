@@ -1,7 +1,5 @@
 module github.com/influxdata/telegraf
 
-replace github.com/amenzhinsky/iothub => /go/src/github.com/influxdata/telegraf/plugins/inputs/azure_iothub_consumer/iothub
-
 go 1.12
 
 require (
@@ -18,7 +16,7 @@ require (
 	github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
 	github.com/aerospike/aerospike-client-go v1.27.0
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
-	github.com/amenzhinsky/iothub v0.6.0
+	github.com/amenzhinsky/iothub v0.6.1-0.20200416065226-806ab40ecf43
 	github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9
 	github.com/apache/thrift v0.12.0
 	github.com/armon/go-metrics v0.3.0 // indirect

@@ -4,9 +4,11 @@ package azure_iothub_consumer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -39,12 +41,12 @@ type IothubConsumer struct {
 	parser parsers.Parser
 }
 
-// Description -
+// Description returns plugin description
 func (i *IothubConsumer) Description() string {
 	return "Input plugin for Azure IoT Hub Edge Module"
 }
 
-// SampleConfig -
+// SampleConfig returns a sample config
 func (i *IothubConsumer) SampleConfig() string {
 	return `
 ## One of the following sets required for configuration:
@@ -61,6 +63,7 @@ func (i *IothubConsumer) SampleConfig() string {
 #  use_gateway = true
 #
 #  # 3.
+#  use_gateway = true
 #  Provide no configuration for IoT Edge module, and it will self-configure from environment variables present in edge modules.
 
 `
@@ -202,10 +205,6 @@ func tags(msg *iotcommon.Message) map[string]string {
 		ts["MessageSource"] = msg.MessageSource
 	}
 
-	if msg.Payload != nil && len(string(msg.Payload)) > 0 {
-		ts["Payload"] = string(msg.Payload)
-	}
-
 	for k, v := range msg.Properties {
 		ts[fmt.Sprintf("Properties.%s", k)] = v
 	}
@@ -214,12 +213,72 @@ func tags(msg *iotcommon.Message) map[string]string {
 }
 
 func fields(msg *iotcommon.Message) map[string]interface{} {
-	flds := make(map[string]interface{})
 
-	flds["Source"] = msg.MessageSource
-	flds["Body"] = msg.Payload
-
+	m := map[string]interface{}{}
+	err := json.Unmarshal(msg.Payload, &m)
+	if err != nil {
+		//panic(err)
+	}
+	flds := parseMap(m, "msg")
 	return flds
+}
+
+func parseMap(aMap map[string]interface{}, parent string) map[string]interface{} {
+
+	output := make(map[string]interface{})
+
+	for key, val := range aMap {
+		switch concreteVal := val.(type) {
+		case map[string]interface{}:
+			newKey := parent + "_" + key
+			nested := parseMap(val.(map[string]interface{}), newKey)
+			for k, v := range nested {
+				output[k] = v
+			}
+		case []interface{}:
+			newKey := parent + "_" + key
+			lst := parseArray(val.([]interface{}), newKey)
+			for i, v := range lst {
+				iString := strconv.FormatInt(int64(i), 10)
+				newNewKey := newKey + "_" + iString
+
+				switch nextedVal := v.(type) {
+				case map[string]interface{}:
+					nested := parseMap(v.(map[string]interface{}), newKey)
+					for k, v2 := range nested {
+						output[k] = v2
+					}
+				default:
+					output[newNewKey] = nextedVal
+				}
+			}
+		default:
+			newKey := parent + "_" + key
+			output[newKey] = concreteVal
+		}
+	}
+
+	return output
+
+}
+
+func parseArray(anArray []interface{}, parent string) []interface{} {
+	output := []interface{}{}
+
+	for i, val := range anArray {
+		iString := strconv.FormatInt(int64(i), 10)
+
+		switch concreteVal := val.(type) {
+		case map[string]interface{}:
+			output = append(output, parseMap(val.(map[string]interface{}), iString))
+		case []interface{}:
+			output = append(output, parseArray(val.([]interface{}), iString))
+		default:
+			output = append(output, concreteVal)
+		}
+	}
+
+	return output
 }
 
 // Init IoT Hub

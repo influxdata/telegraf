@@ -60,6 +60,8 @@ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf h1:qet1QNfXsQxTZq
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=
 github.com/amenzhinsky/iothub v0.6.0 h1:wBFdEUqCncVXkjxq4wOorGUbOrLnE/9acYKWyzan4Zs=
 github.com/amenzhinsky/iothub v0.6.0/go.mod h1:wzfUSdHuvxr+J2knJ7PAZkeJJLQj/dZyBQeSHPh9cYE=
+github.com/amenzhinsky/iothub v0.6.1-0.20200416065226-806ab40ecf43 h1:nCgvmfI/GG4MlsycM24H91zE9eqh1JW2EUQiIPe2w48=
+github.com/amenzhinsky/iothub v0.6.1-0.20200416065226-806ab40ecf43/go.mod h1:wzfUSdHuvxr+J2knJ7PAZkeJJLQj/dZyBQeSHPh9cYE=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9 h1:FXrPTd8Rdlc94dKccl7KPmdmIbVh/OjelJ8/vgMRzcQ=
 github.com/amir/raidman v0.0.0-20170415203553-1ccc43bfb9c9/go.mod h1:eliMa/PW+RDr2QLWRmLH1R1ZA4RInpmvOzDDXtaIZkc=
 github.com/apache/thrift v0.12.0 h1:pODnxUFNcjP9UTLZGTdeh+j16A8lJbRvD3rOtrk/7bs=
