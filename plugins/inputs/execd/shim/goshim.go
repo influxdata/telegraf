@@ -2,6 +2,7 @@ package shim
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"regexp"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -23,9 +26,14 @@ import (
 type empty struct{}
 
 var (
-	stdout  io.Writer = os.Stdout
-	stdin   io.Reader = os.Stdin
-	forever           = 100 * 365 * 24 * time.Hour
+	stdout        io.Writer = os.Stdout
+	stdin         io.Reader = os.Stdin
+	forever                 = 100 * 365 * 24 * time.Hour
+	envVarRe                = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
+	envVarEscaper           = strings.NewReplacer(
+		`"`, `\"`,
+		`\`, `\\`,
+	)
 )
 
 const (
@@ -257,6 +265,8 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 		return nil, err
 	}
 
+	b = expandEnvVars(b)
+
 	conf := struct {
 		Inputs map[string][]toml.Primitive
 	}{}
@@ -272,6 +282,30 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 		fmt.Fprintf(stdout, "Some plugins were loaded but not used: %q\n", md.Undecoded())
 	}
 	return loadedInputs, err
+}
+
+func expandEnvVars(contents []byte) []byte {
+	for _, p := range envVarRe.FindAllSubmatch(contents, -1) {
+		if len(p) != 3 {
+			continue
+		}
+
+		var v []byte
+		if p[1] != nil {
+			v = p[1]
+		} else if p[2] != nil {
+			v = p[2]
+		} else {
+			continue
+		}
+
+		if val, ok := os.LookupEnv(strings.TrimPrefix(string(v), "$")); ok {
+			val = envVarEscaper.Replace(val)
+			contents = bytes.Replace(contents, p[0], []byte(val), 1)
+		}
+	}
+
+	return contents
 }
 
 func loadConfigIntoInputs(md toml.MetaData, inputConfigs map[string][]toml.Primitive) ([]telegraf.Input, error) {
