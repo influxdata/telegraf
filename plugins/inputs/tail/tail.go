@@ -5,6 +5,7 @@ package tail
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -168,7 +169,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			var seek *tail.SeekInfo
 			if !t.Pipe && !fromBeginning {
 				if offset, ok := t.offsets[file]; ok {
-					t.Log.Debugf("Using offset %d for %q", offset, file)
+					t.Log.Info("Using offset %d for %q", offset, file)
 					seek = &tail.SeekInfo{
 						Whence: 0,
 						Offset: offset,
@@ -310,6 +311,36 @@ func (t *Tail) Stop() {
 
 func (t *Tail) SetParserFunc(fn parsers.ParserFunc) {
 	t.parserFunc = fn
+}
+
+func (t *Tail) Load(state interface{}) error {
+	offsets := state.(map[string]interface{})
+
+	offsetsMutex.Lock()
+
+	for filename, offset := range offsets {
+		fmt.Printf("D! loading offset %v for file %v", offset, filename)
+		t.offsets[filename] = int64(offset.(float64))
+	}
+
+	offsetsMutex.Unlock()
+	return nil
+}
+
+// Sync does things
+func (t *Tail) Sync() interface{} {
+	state := make(map[string]int64)
+
+	for _, tailer := range t.tailers {
+		offset, err := tailer.Tell()
+		if err != nil {
+			continue
+		}
+
+		state[tailer.Filename] = offset
+	}
+
+	return state
 }
 
 func init() {

@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	jsonStore "github.com/influxdata/telegraf/plugins/state/json"
 )
 
 // Agent runs a set of plugins.
@@ -40,8 +41,14 @@ func (a *Agent) Run(ctx context.Context) error {
 		return ctx.Err()
 	}
 
+	log.Printf("D! [agent] Initializing state")
+	err := a.openStateStore()
+	if err != nil {
+		return err
+	}
+
 	log.Printf("D! [agent] Initializing plugins")
-	err := a.initPlugins()
+	err = a.initPlugins()
 	if err != nil {
 		return err
 	}
@@ -137,6 +144,12 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	log.Printf("D! [agent] Closing outputs")
 	a.closeOutputs()
+
+	log.Printf("D! [agent] Closing state")
+	err = a.closeStateStore()
+	if err != nil {
+		return err
+	}
 
 	log.Printf("D! [agent] Stopped Successfully")
 	return nil
@@ -281,6 +294,19 @@ func (a *Agent) runInputs(
 			defer wg.Done()
 			a.gatherLoop(ctx, acc, input, ticker)
 		}(input)
+
+		syncInterval := a.Config.Agent.FlushInterval.Duration
+		syncJitter := a.Config.Agent.FlushJitter.Duration
+		syncTicker := NewRollingTicker(syncInterval, syncJitter)
+		defer syncTicker.Stop()
+
+		if si, ok := input.Input.(telegraf.StatefulInput); ok {
+			wg.Add(1)
+			go func(input *models.RunningInput) {
+				defer wg.Done()
+				a.syncStateLoop(ctx, input.LogName(), si, syncTicker)
+			}(input)
+		}
 	}
 
 	wg.Wait()
@@ -526,6 +552,48 @@ func (a *Agent) runOutputs(
 	return nil
 }
 
+// syncStateLoop runs an input's sync function periodically until the context is done.
+func (a *Agent) syncStateLoop(ctx context.Context, logName string, input telegraf.StatefulInput, ticker Ticker) {
+	logError := func(err error) {
+		if err != nil {
+			log.Printf("E! [agent] Error syncing state for %s: %v", logName, err)
+		}
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			logError(a.syncStateOnce(logName, input, ticker))
+			return
+		case <-ticker.Elapsed():
+			logError(a.syncStateOnce(logName, input, ticker))
+		}
+	}
+}
+
+// syncStateOnce runs the input's Sync function once, logging a warning each
+// interval it fails to complete before.
+func (a *Agent) syncStateOnce(
+	logName string,
+	input telegraf.StatefulInput,
+	ticker Ticker,
+) error {
+	done := make(chan error)
+	go func() {
+		done <- a.Config.State.Store(logName, input.Sync())
+	}()
+
+	for {
+		select {
+		case err := <-done:
+			return err
+		case <-ticker.Elapsed():
+			log.Printf("W! [agent] [%q] state sync did not complete within the flush interval",
+				logName)
+		}
+	}
+}
+
 // flushLoop runs an output's flush function periodically until the context is
 // done.
 func (a *Agent) flushLoop(
@@ -599,6 +667,30 @@ func (a *Agent) flushOnce(
 
 }
 
+// openStateStore runs the Init function on our state store.
+func (a *Agent) openStateStore() error {
+	switch a.Config.Agent.State {
+	case "json":
+		fmt.Printf("D! [agent] Configuring JSON state store with directory %v\n", a.Config.Agent.StateDirectory)
+		a.Config.State = &jsonStore.JSON{Directory: a.Config.Agent.StateDirectory}
+		return a.Config.State.Open()
+
+	default:
+		fmt.Printf("D! [agent] No state store configured\n")
+	}
+
+	return nil
+}
+
+// closeStateStore runs the Init function on our state store.
+func (a *Agent) closeStateStore() error {
+	if a.Config.State != nil {
+		a.Config.State.Close()
+	}
+
+	return nil
+}
+
 // initPlugins runs the Init function on plugins.
 func (a *Agent) initPlugins() error {
 	for _, input := range a.Config.Inputs {
@@ -606,6 +698,18 @@ func (a *Agent) initPlugins() error {
 		if err != nil {
 			return fmt.Errorf("could not initialize input %s: %v",
 				input.LogName(), err)
+		}
+
+		if si, ok := input.Input.(telegraf.StatefulInput); ok {
+			state, err := a.Config.State.Load(input.LogName())
+			if err != nil {
+				fmt.Printf("Failed to load state for %v, moving on\n", input.LogName())
+				continue
+			}
+
+			fmt.Printf("Sending payload to plugin %v\n", input.LogName())
+
+			si.Load(state)
 		}
 	}
 	for _, processor := range a.Config.Processors {

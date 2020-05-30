@@ -22,3 +22,15 @@ type ServiceInput interface {
 	// Stop stops the services and closes any necessary channels and connections
 	Stop()
 }
+
+// StatefulInput allow a ServiceInput to store any arbitrary information that can be restored
+// in the event that Telegraf or the plugin is restarted
+type StatefulInput interface {
+	ServiceInput
+
+	// Sync writes the state of the plugin to the StateStore
+	Sync() interface{}
+
+	// Load
+	Load(interface{}) error
+}
