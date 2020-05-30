@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"path"
 
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
@@ -118,7 +117,7 @@ func (o *Opcua) Write(metrics []telegraf.Metric) error {
 					allErrs[key] = err
 				}
 			} else {
-				log.Printf("No mapping found for field '%s' (value '%s')", key, &value)
+				log.Printf("No mapping found for field '%s' (value '%s')", key, fmt.Sprint(&value))
 			}
 		}
 	}
@@ -142,7 +141,7 @@ func (o *Opcua) updateNode(nodeID string, newValue interface{}) error {
 
 	req := &ua.WriteRequest{
 		NodesToWrite: []*ua.WriteValue{
-			&ua.WriteValue{
+			{
 				NodeID:      id,
 				AttributeID: ua.AttributeIDValue,
 				Value: &ua.DataValue{
@@ -177,14 +176,14 @@ func (o *Opcua) Close() error {
 // Init intializes the client
 func (o *Opcua) Init() error {
 
-	if o.CreateSelfSignedCert && o.CertFile == "" && o.KeyFile == "" {
-		directory, err := newTempDir()
+	// if o.CreateSelfSignedCert && o.CertFile == "" && o.KeyFile == "" {
+	// 	directory, err := newTempDir()
 
-		o.CertFile = path.Join(directory, "cert.pem")
-		o.KeyFile = path.Join(directory, "key.pem")
+	// 	o.CertFile = path.Join(directory, "cert.pem")
+	// 	o.KeyFile = path.Join(directory, "key.pem")
 
-		return err
-	}
+	// 	return err
+	// }
 
 	return nil
 }
