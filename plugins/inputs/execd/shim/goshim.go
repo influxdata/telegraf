@@ -2,7 +2,6 @@ package shim
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -29,7 +27,6 @@ var (
 	stdout        io.Writer = os.Stdout
 	stdin         io.Reader = os.Stdin
 	forever                 = 100 * 365 * 24 * time.Hour
-	envVarRe                = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 	envVarEscaper           = strings.NewReplacer(
 		`"`, `\"`,
 		`\`, `\\`,
@@ -265,13 +262,13 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 		return nil, err
 	}
 
-	b = expandEnvVars(b)
+	s := expandEnvVars(b)
 
 	conf := struct {
 		Inputs map[string][]toml.Primitive
 	}{}
 
-	md, err := toml.Decode(string(b), &conf)
+	md, err := toml.Decode(s, &conf)
 	if err != nil {
 		return nil, err
 	}
@@ -284,28 +281,14 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 	return loadedInputs, err
 }
 
-func expandEnvVars(contents []byte) []byte {
-	for _, p := range envVarRe.FindAllSubmatch(contents, -1) {
-		if len(p) != 3 {
-			continue
-		}
+func expandEnvVars(contents []byte) string {
+	return os.Expand(string(contents), getEnv)
+}
 
-		var v []byte
-		if p[1] != nil {
-			v = p[1]
-		} else if p[2] != nil {
-			v = p[2]
-		} else {
-			continue
-		}
+func getEnv(key string) string {
+	v := os.Getenv(key)
 
-		if val, ok := os.LookupEnv(strings.TrimPrefix(string(v), "$")); ok {
-			val = envVarEscaper.Replace(val)
-			contents = bytes.Replace(contents, p[0], []byte(val), 1)
-		}
-	}
-
-	return contents
+	return envVarEscaper.Replace(v)
 }
 
 func loadConfigIntoInputs(md toml.MetaData, inputConfigs map[string][]toml.Primitive) ([]telegraf.Input, error) {
