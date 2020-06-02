@@ -2248,6 +2248,35 @@ func TestScript(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "ratio",
+			plugin: &Starlark{
+				Script:  "testdata/ratio.star",
+				OnError: "drop",
+				Log:     testutil.Logger{},
+			},
+			input: []telegraf.Metric{
+				testutil.MustMetric("mem",
+					map[string]string{},
+					map[string]interface{}{
+						"used":  2,
+						"total": 10,
+					},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("mem",
+					map[string]string{},
+					map[string]interface{}{
+						"used":  2,
+						"total": 10,
+						"usage": 20.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 
 	for _, tt := range tests {
