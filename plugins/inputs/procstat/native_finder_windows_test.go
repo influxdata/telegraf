@@ -28,7 +28,7 @@ func TestGather_RealFullPattern(t *testing.T) {
 	}
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
-	pids, err := pg.FullPattern(`%procstat%`)
+	pids, err := pg.FullPattern(`%procstat%`, "")
 	require.NoError(t, err)
 	fmt.Println(pids)
 	assert.Equal(t, len(pids) > 0, true)

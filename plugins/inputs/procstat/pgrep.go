@@ -48,9 +48,26 @@ func (pg *Pgrep) Uid(user string) ([]PID, error) {
 	return find(pg.path, args)
 }
 
-func (pg *Pgrep) FullPattern(pattern string) ([]PID, error) {
+func (pg *Pgrep) FullPattern(pattern string, antipattern string) ([]PID, error) {
 	args := []string{"-f", pattern}
-	return find(pg.path, args)
+	pids, err := find(pg.path, args)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(antipattern) == 0 {
+		return pids, err
+	}
+
+	args = []string{"-f", antipattern}
+	antipids, err := find(pg.path, args)
+	if err != nil {
+		return nil, err
+	}
+
+	diffpids := diffPids(pids, antipids)
+
+	return diffpids, err
 }
 
 func find(path string, args []string) ([]PID, error) {

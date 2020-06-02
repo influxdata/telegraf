@@ -88,7 +88,7 @@ func (pg *testPgrep) Uid(user string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 
-func (pg *testPgrep) FullPattern(pattern string) ([]PID, error) {
+func (pg *testPgrep) FullPattern(pattern string, antipattern string) ([]PID, error) {
 	return pg.pids, pg.err
 }
 

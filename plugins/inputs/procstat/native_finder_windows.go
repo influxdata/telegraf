@@ -47,7 +47,7 @@ func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 }
 
 //FullPattern matches the cmdLine on windows and will find a pattern using a WMI like query
-func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
+func FindFullPattern(pattern string) ([]PID, error) {
 	var pids []PID
 	procs, err := getWin32ProcsByVariable("CommandLine", like, pattern, Timeout)
 	if err != nil {
@@ -57,6 +57,23 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 		pids = append(pids, PID(p.ProcessID))
 	}
 	return pids, nil
+}
+
+//FullPattern matches the cmdLine on windows and will find a pattern using a WMI like query
+func (pg *NativeFinder) FullPattern(pattern string, antipattern string) ([]PID, error) {
+	pids, err := FindFullPattern(pattern)
+	if len(antipattern) == 0 {
+		return pids, err
+	}
+
+	antipids, err := FindFullPattern(antipattern)
+	if err != nil {
+		return antipids, err
+	}
+
+	diffpids := diffPids(pids, antipids)
+
+	return diffpids, err
 }
 
 //GetWin32ProcsByVariable allows you to query any variable with a like query
