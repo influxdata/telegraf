@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 func TestShimWorks(t *testing.T) {
@@ -117,4 +119,56 @@ func (i *testInput) Start(acc telegraf.Accumulator) error {
 }
 
 func (i *testInput) Stop() {
+}
+
+func TestLoadConfig(t *testing.T) {
+	os.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
+	os.Setenv("SECRET_VALUE", `test"\test`)
+
+	inputs.Add("test", func() telegraf.Input {
+		return &serviceInput{}
+	})
+
+	c := "./testdata/plugin.conf"
+	inputs, err := LoadConfig(&c)
+	require.NoError(t, err)
+
+	inp := inputs[0].(*serviceInput)
+
+	require.Equal(t, "awesome name", inp.ServiceName)
+	require.Equal(t, "xxxxxxxxxx", inp.SecretToken)
+	require.Equal(t, `test"\test`, inp.SecretValue)
+}
+
+type serviceInput struct {
+	ServiceName string `toml:"service_name"`
+	SecretToken string `toml:"secret_token"`
+	SecretValue string `toml:"secret_value"`
+}
+
+func (i *serviceInput) SampleConfig() string {
+	return ""
+}
+
+func (i *serviceInput) Description() string {
+	return ""
+}
+
+func (i *serviceInput) Gather(acc telegraf.Accumulator) error {
+	acc.AddFields("measurement",
+		map[string]interface{}{
+			"field": 1,
+		},
+		map[string]string{
+			"tag": "tag",
+		}, time.Unix(1234, 5678))
+
+	return nil
+}
+
+func (i *serviceInput) Start(acc telegraf.Accumulator) error {
+	return nil
+}
+
+func (i *serviceInput) Stop() {
 }
