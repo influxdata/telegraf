@@ -275,7 +275,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputF func(<-cha
 		go func(src, dst chan telegraf.Metric) {
 			defer wg.Done()
 
-			err := a.runProcessors(src, dst)
+			err := a.runProcessors(src, dst, a.Config.Processors)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
