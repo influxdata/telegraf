@@ -12,7 +12,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -47,14 +46,14 @@ type Execd struct {
 	Signal       string
 	RestartDelay config.Duration
 
-	acc    telegraf.Accumulator
-	cmd    *exec.Cmd
-	parser parsers.Parser
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
-	stderr io.ReadCloser
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	acc        telegraf.Accumulator
+	cmd        *exec.Cmd
+	parser     parsers.Parser
+	stdin      io.WriteCloser
+	stdout     io.ReadCloser
+	stderr     io.ReadCloser
+	cancel     context.CancelFunc
+	mainLoopWg sync.WaitGroup
 }
 
 func (e *Execd) SampleConfig() string {
@@ -76,7 +75,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("FATAL no command specified")
 	}
 
-	e.wg.Add(1) // for the main loop
+	e.mainLoopWg.Add(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancel = cancel
@@ -86,16 +85,19 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	}
 
 	go func() {
-		e.cmdLoop(ctx)
-		e.wg.Done()
+		if err := e.cmdLoop(ctx); err != nil {
+			log.Printf("Process quit with message: %s", err.Error())
+		}
+		e.mainLoopWg.Done()
 	}()
 
 	return nil
 }
 
 func (e *Execd) Stop() {
+	// don't try to stop before all stream readers have started.
 	e.cancel()
-	e.wg.Wait()
+	e.mainLoopWg.Wait()
 }
 
 // cmdLoop watches an already running process, restarting it when appropriate.
@@ -112,9 +114,7 @@ func (e *Execd) cmdLoop(ctx context.Context) error {
 		case <-ctx.Done():
 			if e.stdin != nil {
 				e.stdin.Close()
-				// Immediately exit process but with a graceful shutdown
-				// period before killing
-				internal.WaitTimeout(e.cmd, 200*time.Millisecond)
+				gracefulStop(e.cmd, 5*time.Second)
 			}
 			return nil
 		case err := <-done:

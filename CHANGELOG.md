@@ -9,9 +9,19 @@
   `splunkmetric` serializer, if you are making use of these fields they can be
   added back with the `tag` option.
 
+- Telegraf's `--test` mode now runs processors and aggregators before printing
+  metrics.
+
+- Official packages now built with Go 1.14.3.
+
 #### New Processors
 
+- [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+
+#### New Outputs
+
+- [newrelic](/plugins/outputs/newrelic/README.md) - Contributed by @hsinghkalsi
 
 #### Features
 
@@ -37,6 +47,14 @@
 - [#7321](https://github.com/influxdata/telegraf/pull/7321): Add additional fields to mongodb input.
 - [#7491](https://github.com/influxdata/telegraf/pull/7491): Add authentication support to the http_response input plugin.
 - [#7503](https://github.com/influxdata/telegraf/pull/7503): Add truncate_tags setting to wavefront output.
+- [#7545](https://github.com/influxdata/telegraf/pull/7545): Add configurable separator graphite serializer and output.
+- [#7489](https://github.com/influxdata/telegraf/pull/7489): Add cluster state integer to mongodb input.
+- [#7515](https://github.com/influxdata/telegraf/pull/7515): Add option to disable mongodb cluster status.
+- [#7319](https://github.com/influxdata/telegraf/pull/7319): Add support for battery level monitoring to the fibaro input.
+- [#7405](https://github.com/influxdata/telegraf/pull/7405): Allow collection of HTTP Headers in http_response input.
+- [#7540](https://github.com/influxdata/telegraf/pull/7540): Add processor to look up service name by port.
+- [#7474](https://github.com/influxdata/telegraf/pull/7474): Add new once mode that write to outputs and exits.
+- [#7474](https://github.com/influxdata/telegraf/pull/7474): Run processors and aggregators during test mode.
 
 #### Bugfixes
 
@@ -45,6 +63,16 @@
 - [#7448](https://github.com/influxdata/telegraf/issues/7448): Remove debug fields from splunkmetric serializer.
 - [#7446](https://github.com/influxdata/telegraf/issues/7446): Fix gzip support in socket_listener with tcp sockets.
 - [#7390](https://github.com/influxdata/telegraf/issues/7390): Fix interval drift when round_interval is set in agent.
+- [#7524](https://github.com/influxdata/telegraf/pull/7524): Fix typo in total_elapsed_time_ms field of sqlserver input.
+- [#7203](https://github.com/influxdata/telegraf/issues/7203): Exclude csv_timestamp_column and csv_measurement_column from fields.
+
+## v1.14.4 [unreleased]
+
+#### Bugfixes
+
+- [#7325](https://github.com/influxdata/telegraf/issues/7325): Fix "cannot insert the value NULL error" with PerformanceCounters query.
+- [#7579](https://github.com/influxdata/telegraf/pull/7579): Fix numeric to bool conversion in converter processor.
+- [#7551](https://github.com/influxdata/telegraf/issues/7551): Fix typo in name of gc_cpu_fraction field of the influxdb input.
 
 ## v1.14.3 [2020-05-19]
 

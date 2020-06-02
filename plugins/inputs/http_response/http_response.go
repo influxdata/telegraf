@@ -27,6 +27,7 @@ type HTTPResponse struct {
 	Body            string
 	Method          string
 	ResponseTimeout internal.Duration
+	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
 	Headers         map[string]string
 	FollowRedirects bool
 	// Absolute path to file with Bearer token
@@ -97,6 +98,11 @@ var sampleConfig = `
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Optional setting to map reponse http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
 
   ## Interface to use when dialing an address
   # interface = "eth0"
@@ -291,6 +297,14 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// This function closes the response body, as
 	// required by the net/http library
 	defer resp.Body.Close()
+
+	// Add the response headers
+	for headerName, tag := range h.HTTPHeaderTags {
+		headerValues, foundHeader := resp.Header[headerName]
+		if foundHeader && len(headerValues) > 0 {
+			tags[tag] = headerValues[0]
+		}
+	}
 
 	// Set log the HTTP response code
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)

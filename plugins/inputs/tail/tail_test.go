@@ -211,8 +211,7 @@ cpu,42
 				"path": tmpfile.Name(),
 			},
 			map[string]interface{}{
-				"time_idle":   42,
-				"measurement": "cpu",
+				"time_idle": 42,
 			},
 			time.Unix(0, 0)),
 		testutil.MustMetric("cpu",
@@ -220,8 +219,7 @@ cpu,42
 				"path": tmpfile.Name(),
 			},
 			map[string]interface{}{
-				"time_idle":   42,
-				"measurement": "cpu",
+				"time_idle": 42,
 			},
 			time.Unix(0, 0)),
 	}

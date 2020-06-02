@@ -22,7 +22,7 @@ method is used, otherwise the [Template Pattern](templates) is used.
   prefix = "telegraf"
   ## Graphite template pattern
   template = "host.tags.measurement.field"
-  
+
   ## Graphite templates patterns
   ## 1. Template for cpu
   ## 2. Template for disk*
@@ -35,6 +35,8 @@ method is used, otherwise the [Template Pattern](templates) is used.
 
   ## Support Graphite tags, recommended to enable when using Graphite 1.1 or later.
   # graphite_tag_support = false
+  ## Character for separating metric name and field for Graphite tags
+  # graphite_separator = "."
 ```
 
 #### graphite_tag_support
@@ -53,6 +55,13 @@ cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 145532
 =>
 cpu.usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
 cpu.usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
+```
+With set option `graphite_separator` to "_"
+```
+cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
+=>
+cpu_usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
+cpu_usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
 ```
 
 [templates]: /docs/TEMPLATE_PATTERN.md

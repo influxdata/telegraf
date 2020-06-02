@@ -34,6 +34,9 @@ see the [Graphite Data Format](../../../docs/DATA_FORMATS_OUTPUT.md)
   ## Enable Graphite tags support
   # graphite_tag_support = false
 
+  ## Character for separating metric name and field for Graphite tags
+  # graphite_separator = "."
+
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 

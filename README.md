@@ -51,9 +51,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires Go version 1.12 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.12 (1.13 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.13 (1.14 recommended)
 2. Clone the Telegraf repository:
    ```
    cd ~/src
@@ -363,6 +363,7 @@ For documentation on the latest development code see the [documentation index][d
 * [converter](/plugins/processors/converter)
 * [date](/plugins/processors/date)
 * [dedup](/plugins/processors/dedup)
+* [defaults](/plugins/processors/defaults)
 * [enum](/plugins/processors/enum)
 * [filepath](/plugins/processors/filepath)
 * [override](/plugins/processors/override)
@@ -413,6 +414,7 @@ For documentation on the latest development code see the [documentation index][d
 * [librato](./plugins/outputs/librato)
 * [mqtt](./plugins/outputs/mqtt)
 * [nats](./plugins/outputs/nats)
+* [newrelic](./plugins/outputs/newrelic)
 * [nsq](./plugins/outputs/nsq)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
