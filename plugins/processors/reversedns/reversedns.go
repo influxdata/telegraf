@@ -84,33 +84,35 @@ func (r *ReverseDNS) Init() {
 
 func (r *ReverseDNS) Start(acc telegraf.MetricStreamAccumulator) error {
 	r.acc = acc
-	r.parallel = parallel.NewOrdered(acc, 10000)
+	r.parallel = parallel.NewOrdered(acc, r.asyncAdd, 10000, r.MaxParallelLookups)
 	return nil
 }
 
 func (r *ReverseDNS) Stop() error {
-	r.parallel.Wait()
+	r.parallel.Stop()
 	return nil
 }
 
 func (r *ReverseDNS) Add(metric telegraf.Metric) {
-	r.parallel.Do(func(acc telegraf.MetricStreamAccumulator) {
-		for _, lookup := range r.Lookups {
-			if len(lookup.Field) > 0 {
-				if ipField, ok := metric.GetField(lookup.Field); ok {
-					if ip, ok := ipField.(string); ok {
-						metric.AddField(lookup.Dest, first(r.reverseDNSCache.Lookup(ip)))
-					}
-				}
-			}
-			if len(lookup.Tag) > 0 {
-				if ipTag, ok := metric.GetTag(lookup.Tag); ok {
-					metric.AddTag(lookup.Dest, first(r.reverseDNSCache.Lookup(ipTag)))
+	r.parallel.Enqueue(metric)
+}
+
+func (r *ReverseDNS) asyncAdd(metric telegraf.Metric) []telegraf.Metric {
+	for _, lookup := range r.Lookups {
+		if len(lookup.Field) > 0 {
+			if ipField, ok := metric.GetField(lookup.Field); ok {
+				if ip, ok := ipField.(string); ok {
+					metric.AddField(lookup.Dest, first(r.reverseDNSCache.Lookup(ip)))
 				}
 			}
 		}
-		acc.PassMetric(metric)
-	})
+		if len(lookup.Tag) > 0 {
+			if ipTag, ok := metric.GetTag(lookup.Tag); ok {
+				metric.AddTag(lookup.Dest, first(r.reverseDNSCache.Lookup(ipTag)))
+			}
+		}
+	}
+	return []telegraf.Metric{metric}
 }
 
 func first(s []string) string {

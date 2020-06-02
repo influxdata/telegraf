@@ -10,24 +10,14 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/stretchr/testify/require"
 )
 
 func TestExternalProcessorWorks(t *testing.T) {
-	influxParser, err := parsers.NewInfluxParser()
-	require.NoError(t, err)
 
-	influxSerializer, err := serializers.NewInfluxSerializer()
-	require.NoError(t, err)
-
-	e := &Execd{
-		Command:      []string{shell(), fileShellScriptPath()},
-		RestartDelay: config.Duration(5 * time.Second),
-		parser:       influxParser,
-		serializer:   influxSerializer,
-	}
+	e := New()
+	e.Command = []string{shell(), fileShellScriptPath()}
+	e.RestartDelay = config.Duration(5 * time.Second)
 
 	out := make(chan telegraf.Metric, 10)
 	acc := agent.NewMetricStreamAccumulator(out)

@@ -6,65 +6,87 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+// set number of workers
+//
+
 type Ordered struct {
-	wg    sync.WaitGroup
-	acc   telegraf.MetricStreamAccumulator
+	wg sync.WaitGroup
+	fn func(telegraf.Metric) []telegraf.Metric
+
+	// queue of jobs coming in. Workers pick jobs off this queue for processing
+	workerQueue chan job
+
+	// queue of ordered metrics going out
 	queue chan futureMetric
 }
 
-func NewOrdered(acc telegraf.MetricStreamAccumulator, workerCount int) *Ordered {
+func NewOrdered(
+	acc telegraf.MetricStreamAccumulator,
+	fn func(telegraf.Metric) []telegraf.Metric,
+	orderedQueueSize int,
+	workerCount int,
+) *Ordered {
 	p := &Ordered{
-		acc:   acc,
-		queue: make(chan futureMetric, workerCount),
+		fn:          fn,
+		workerQueue: make(chan job, workerCount),
+		queue:       make(chan futureMetric, orderedQueueSize),
 	}
-	go p.readQueue()
+	p.startWorkers(workerCount)
+	p.wg.Add(1)
+	go func() {
+		p.readQueue(acc)
+		p.wg.Done()
+	}()
 	return p
 }
 
-func (p *Ordered) Do(fn func(acc telegraf.MetricStreamAccumulator)) {
-	p.wg.Add(1)
+func (p *Ordered) Enqueue(metric telegraf.Metric) {
+	future := make(futureMetric)
+	p.queue <- future
 
-	oa := orderedAccumulator{
-		fn: fn,
+	// write the future to the worker pool. Order doesn't matter now because the
+	// outgoing p.queue will enforce order regardless of the order the jobs are
+	// completed in
+	p.workerQueue <- job{
+		future: future,
+		metric: metric,
 	}
-	oa.run(p.queue)
 }
 
-func (p *Ordered) readQueue() {
+func (p *Ordered) readQueue(acc telegraf.MetricStreamAccumulator) {
 	// wait for the response from each worker in order
 	for mCh := range p.queue {
 		// allow each worker to write out multiple metrics
-		for m := range mCh {
-			if m != nil {
-				p.acc.PassMetric(m)
+		for metrics := range mCh {
+			for _, m := range metrics {
+				acc.PassMetric(m)
 			}
 		}
-		p.wg.Done()
 	}
 }
 
-func (p *Ordered) Wait() {
+func (p *Ordered) startWorkers(count int) {
+	p.wg.Add(count)
+	for i := 0; i < count; i++ {
+		go func() {
+			for job := range p.workerQueue {
+				job.future <- p.fn(job.metric)
+				close(job.future)
+			}
+			p.wg.Done()
+		}()
+	}
+}
+
+func (p *Ordered) Stop() {
 	close(p.queue)
+	close(p.workerQueue)
 	p.wg.Wait()
 }
 
-type futureMetric chan telegraf.Metric
+type futureMetric chan []telegraf.Metric
 
-type orderedAccumulator struct {
+type job struct {
 	future futureMetric
-	fn     func(acc telegraf.MetricStreamAccumulator)
-}
-
-func (o *orderedAccumulator) PassMetric(m telegraf.Metric) {
-	o.future <- m
-}
-
-func (o *orderedAccumulator) run(queue chan futureMetric) {
-	o.future = make(futureMetric)
-	queue <- o.future // must write future chan to queue before launching goroutine
-
-	go func() {
-		o.fn(o)
-		close(o.future)
-	}()
+	metric telegraf.Metric
 }

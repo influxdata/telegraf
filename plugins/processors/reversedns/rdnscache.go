@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/processors/reversedns/parallel"
+	"golang.org/x/sync/semaphore"
 )
 
 type IPType uint8
@@ -30,8 +30,8 @@ type ReverseDNSCache struct {
 	maxWorkers    int
 
 	// internal
-	rwLock     sync.RWMutex
-	workerPool parallel.WorkerPool
+	rwLock sync.RWMutex
+	sem    *semaphore.Weighted
 
 	cache map[string]*dnslookup
 
@@ -55,7 +55,8 @@ func NewReverseDNSCache(ttl, lookupTimeout time.Duration, workerPoolSize int) *R
 		lookupTimeout: lookupTimeout,
 		cache:         map[string]*dnslookup{},
 		expireList:    []*dnslookup{},
-		workerPool:    parallel.NewWorkerPool(workerPoolSize),
+		maxWorkers:    workerPoolSize,
+		sem:           semaphore.NewWeighted(int64(workerPoolSize)),
 	}
 	d.startCleanupWorker()
 	return d
@@ -193,8 +194,8 @@ func (d *ReverseDNSCache) startCleanupWorker() {
 }
 
 func (d *ReverseDNSCache) doLookup(l dnslookup) {
-	d.workerPool.Checkout()
-	defer d.workerPool.Checkin()
+	d.sem.Acquire(context.TODO(), 1)
+	defer d.sem.Release(1)
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.lookupTimeout)
 	defer cancel()
@@ -268,9 +269,7 @@ func (d *ReverseDNSCache) cleanup() {
 // waitForWorkers is a test function that eats up all the worker pool space to
 // make sure workers are done running.
 func (d *ReverseDNSCache) waitForWorkers() {
-	for i := 0; i < d.maxWorkers; i++ {
-		d.workerPool.Checkout()
-	}
+	d.sem.Acquire(context.TODO(), int64(d.maxWorkers))
 }
 
 func debug(s ...interface{}) {

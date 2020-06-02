@@ -962,21 +962,6 @@ func (c *Config) newRunningProcessor(
 ) (*models.RunningProcessor, error) {
 	processor := creator()
 
-	if p, ok := processor.(parsers.ParserInput); ok {
-		parser, err := buildParser(name, table)
-		if err != nil {
-			return nil, err
-		}
-		p.SetParser(parser)
-	}
-	if p, ok := processor.(serializers.SerializerOutput); ok {
-		serializer, err := buildSerializer(name, table)
-		if err != nil {
-			return nil, err
-		}
-		p.SetSerializer(serializer)
-	}
-
 	if err := toml.UnmarshalTable(table, processor); err != nil {
 		return nil, err
 	}

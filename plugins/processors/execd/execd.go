@@ -25,28 +25,36 @@ const sampleConfig = `
 
   ## Delay before the process is restarted after an unexpected termination
   restart_delay = "10s"
-
-  ## Data format to consume.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "influx"
 `
 
 type Execd struct {
 	Command      []string
 	RestartDelay config.Duration
 
-	acc        telegraf.MetricStreamAccumulator
-	inCh       chan telegraf.Metric
-	cmd        *exec.Cmd
-	parser     parsers.Parser
-	serializer serializers.Serializer
-	stdin      io.WriteCloser
-	stdout     io.ReadCloser
-	stderr     io.ReadCloser
-	cancel     context.CancelFunc
-	wg         sync.WaitGroup
+	parserConfig     *parsers.Config
+	parser           parsers.Parser
+	serializerConfig *serializers.Config
+	serializer       serializers.Serializer
+	acc              telegraf.MetricStreamAccumulator
+	inCh             chan telegraf.Metric
+	cmd              *exec.Cmd
+	stdin            io.WriteCloser
+	stdout           io.ReadCloser
+	stderr           io.ReadCloser
+	cancel           context.CancelFunc
+	wg               sync.WaitGroup
+}
+
+func New() *Execd {
+	return &Execd{
+		RestartDelay: config.Duration(10 * time.Second),
+		parserConfig: &parsers.Config{
+			DataFormat: "influx",
+		},
+		serializerConfig: &serializers.Config{
+			DataFormat: "influx",
+		},
+	}
 }
 
 func (e *Execd) SampleConfig() string {
@@ -57,15 +65,16 @@ func (e *Execd) Description() string {
 	return "Run executable as long-running processor plugin"
 }
 
-func (e *Execd) SetParser(parser parsers.Parser) {
-	e.parser = parser
-}
-
-func (e *Execd) SetSerializer(serializer serializers.Serializer) {
-	e.serializer = serializer
-}
-
 func (e *Execd) Start(acc telegraf.MetricStreamAccumulator) error {
+	var err error
+	e.parser, err = parsers.NewParser(e.parserConfig)
+	if err != nil {
+		return fmt.Errorf("error creating parser: %w", err)
+	}
+	e.serializer, err = serializers.NewSerializer(e.serializerConfig)
+	if err != nil {
+		return fmt.Errorf("error creating serializer: %w", err)
+	}
 	e.acc = acc
 	e.inCh = make(chan telegraf.Metric)
 
@@ -253,8 +262,6 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 
 func init() {
 	processors.AddStreaming("execd", func() telegraf.StreamingProcessor {
-		return &Execd{
-			RestartDelay: config.Duration(10 * time.Second),
-		}
+		return New()
 	})
 }

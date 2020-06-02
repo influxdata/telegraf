@@ -71,46 +71,30 @@ func (r *RunningProcessor) Init() error {
 	return nil
 }
 
-func (r *RunningProcessor) ApplyFilters(metric telegraf.Metric) telegraf.Metric {
-	if ok := r.Config.Filter.Select(metric); !ok {
-		return nil // pass downstream
-	}
-
-	r.Config.Filter.Modify(metric)
-	if len(metric.FieldList()) == 0 {
-		r.metricFiltered(metric)
-		// caller needs to notice there's no fields and that it needs to be dropped
-		// from the stream
-		return metric
-	}
-
-	return metric
-}
-
 func (r *RunningProcessor) Log() telegraf.Logger {
 	return r.log
 }
 
 func (r *RunningProcessor) Start(acc telegraf.MetricStreamAccumulator) error {
-	if err := r.Processor.Start(acc); err != nil {
-		return err
-	}
-
-	return nil
+	return r.Processor.Start(acc)
 }
 
 func (r *RunningProcessor) Run(in <-chan telegraf.Metric, acc telegraf.MetricStreamAccumulator) {
 	for m := range in {
-		filteredMetric := r.ApplyFilters(m)
-		if filteredMetric == nil {
+		if ok := r.Config.Filter.Select(m); !ok {
+			// pass downstream
 			acc.PassMetric(m)
 			continue
 		}
+
+		r.Config.Filter.Modify(m)
 		if len(m.FieldList()) == 0 {
 			// drop metric
+			r.metricFiltered(m)
 			continue
 		}
 
-		r.Processor.Add(filteredMetric)
+		r.Processor.Add(m)
 	}
+	r.Processor.Stop()
 }
