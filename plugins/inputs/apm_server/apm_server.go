@@ -216,7 +216,7 @@ func (s *APMServer) routes() {
 	s.mux.Handle("/config/v1/agents", s.handleAgentConfiguration())
 	s.mux.Handle("/config/v1/rum/agents", s.handleRUM(s.handleAgentConfiguration()))
 	s.mux.Handle("/assets/v1/sourcemaps", s.handleSourceMap())
-	s.mux.Handle("/intake/v2/events", s.handleEventsIntake())
+	s.mux.Handle("/intake/v2/events", s.handleAuthorization(s.handleEventsIntake()))
 	s.mux.Handle("/intake/v2/rum/events", s.handleRUM(s.handleEventsIntake()))
 }
 
@@ -253,18 +253,6 @@ func (s *APMServer) handleSourceMap() http.HandlerFunc {
 
 func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-
-		if len(s.SecretToken) > 0 {
-			reqToken := req.Header.Get("Authorization")
-			if reqToken != "" {
-				splitToken := strings.Split(reqToken, "Bearer")
-				reqToken = strings.TrimSpace(splitToken[1])
-			}
-			if subtle.ConstantTimeCompare([]byte(s.SecretToken), []byte(reqToken)) == 0 {
-				s.errorResponse(res, http.StatusUnauthorized, "Unauthorized")
-				return
-			}
-		}
 
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
@@ -459,6 +447,24 @@ func (s *APMServer) errorResponse(res http.ResponseWriter, statusCode int, messa
 		"error": message,
 	})
 	_, _ = res.Write(b)
+}
+
+func (s *APMServer) handleAuthorization(handler http.HandlerFunc) http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		if len(s.SecretToken) > 0 {
+			reqToken := req.Header.Get("Authorization")
+			if reqToken != "" {
+				splitToken := strings.Split(reqToken, "Bearer")
+				reqToken = strings.TrimSpace(splitToken[1])
+			}
+			if subtle.ConstantTimeCompare([]byte(s.SecretToken), []byte(reqToken)) == 0 {
+				s.errorResponse(res, http.StatusUnauthorized, "Unauthorized")
+				return
+			}
+		}
+		handler.ServeHTTP(res, req)
+	}
+
 }
 
 func init() {
