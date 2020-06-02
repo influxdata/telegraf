@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"context"
 	"crypto/sha1"
+	"crypto/subtle"
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
@@ -27,14 +28,26 @@ import (
 	"time"
 )
 
+const (
+	// defaultMaxBodySize is the default maximum request body size, in bytes.
+	defaultMaxBodySize = 32 * 1024 * 1024
+
+	//default timeouts in seconds
+	defaultIdleTimeout = 45
+	defaultReadTimeout = 30
+	defaultWriteTimout = 30
+)
+
 // APM Server is a input plugin that listens for requests sent by Elastic APM Agents.
 type APMServer struct {
 	ServiceAddress            string            `toml:"service_address"`
 	IdleTimeout               internal.Duration `toml:"idle_timeout"`
 	ReadTimeout               internal.Duration `toml:"read_timeout"`
 	WriteTimeout              internal.Duration `toml:"write_timeout"`
-	EventTypeSeparate         bool              `toml:"event_type_separate"`
 	DropUnsampledTransactions bool              `toml:"drop_unsampled_transactions"`
+	MaxHeaderBytes            int               `toml:"max_header_bytes"`
+	MaxBodySize               internal.Size     `toml:"max_body_size"`
+	SecretToken               string            `toml:"secret_token"`
 
 	ExcludeEventTypes []string `toml:"exclude_events"`
 	//customize json -> line protocol mapping
@@ -51,9 +64,7 @@ type APMServer struct {
 	buildSHA  string
 
 	acc telegraf.Accumulator
-
 	Log telegraf.Logger
-
 	mux http.ServeMux
 
 	eventTypeFilter      filter.Filter
@@ -69,13 +80,19 @@ func (s *APMServer) SampleConfig() string {
 	return `
   ## Address and port to list APM Agents
   service_address = ":8200"
-
+  ## authorization token
+  secret_token = "my-apm-token"	
   ## maximum amount of time to wait for the next request when keep-alives are enabled	
-  # idle_timeout =	"45s"	
+  idle_timeout =	"45s"	
   ## maximum duration before timing out read of the request
-  # read_timeout =	"30s"
+  read_timeout =	"30s"
   ## maximum duration before timing out write of the response
-  # write_timeout = "30s"
+  write_timeout = "30s"
+  ## http server maximum header size
+  # max_header_bytes = 1048576
+  ## http server maximum request body size 	
+  # max_body_size = 33554432
+  #
   ## exclude event types
   exclude_events = ["span"]	
   ## exclude fields matching following patterns
@@ -83,7 +100,7 @@ func (s *APMServer) SampleConfig() string {
   ## store selected fields as tags 
   # tag_keys =["my_tag_1", "my_tag_2" ]
   ## ignore unsampled transactions (affected by "transaction_sample_rate" agent settings) 
-  drop_unsampled_transactions = false
+  # drop_unsampled_transactions = false
 `
 }
 
@@ -92,13 +109,13 @@ func (s *APMServer) Init() error {
 	s.routes()
 
 	if s.IdleTimeout.Duration < time.Second {
-		s.IdleTimeout.Duration = time.Second * 10
+		s.IdleTimeout.Duration = time.Second * defaultIdleTimeout
 	}
 	if s.ReadTimeout.Duration < time.Second {
-		s.ReadTimeout.Duration = time.Second * 10
+		s.ReadTimeout.Duration = time.Second * defaultReadTimeout
 	}
 	if s.WriteTimeout.Duration < time.Second {
-		s.WriteTimeout.Duration = time.Second * 10
+		s.WriteTimeout.Duration = time.Second * defaultWriteTimout
 	}
 
 	// prepare build_sha and build_date for ServerInformation endpoint
@@ -141,13 +158,18 @@ func (s *APMServer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	if s.MaxBodySize.Size == 0 {
+		s.MaxBodySize.Size = defaultMaxBodySize
+	}
+
 	s.server = http.Server{
-		Addr:         s.ServiceAddress,
-		Handler:      s,
-		IdleTimeout:  s.IdleTimeout.Duration,
-		ReadTimeout:  s.ReadTimeout.Duration,
-		WriteTimeout: s.WriteTimeout.Duration,
-		TLSConfig:    tlsConf,
+		Addr:           s.ServiceAddress,
+		Handler:        s,
+		IdleTimeout:    s.IdleTimeout.Duration,
+		ReadTimeout:    s.ReadTimeout.Duration,
+		WriteTimeout:   s.WriteTimeout.Duration,
+		TLSConfig:      tlsConf,
+		MaxHeaderBytes: s.MaxHeaderBytes,
 	}
 
 	var listener net.Listener
@@ -232,6 +254,18 @@ func (s *APMServer) handleSourceMap() http.HandlerFunc {
 func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 
+		if len(s.SecretToken) > 0 {
+			reqToken := req.Header.Get("Authorization")
+			if reqToken != "" {
+				splitToken := strings.Split(reqToken, "Bearer")
+				reqToken = strings.TrimSpace(splitToken[1])
+			}
+			if subtle.ConstantTimeCompare([]byte(s.SecretToken), []byte(reqToken)) == 0 {
+				s.errorResponse(res, http.StatusUnauthorized, "Unauthorized")
+				return
+			}
+		}
+
 		if !strings.Contains(req.Header.Get("Content-Type"), "application/x-ndjson") {
 			message := fmt.Sprintf("invalid content type: '%s'", req.Header.Get("Content-Type"))
 			s.errorResponse(res, http.StatusBadRequest, message)
@@ -239,7 +273,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 		}
 
 		var metadata interface{}
-		reader, err := serverRequestBody(req)
+		reader, err := s.serverRequestBody(res, req)
 		if err != nil {
 			s.errorResponse(res, http.StatusBadRequest, err.Error())
 			return
@@ -275,7 +309,6 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 
 			// Tags
 			tags := make(map[string]string, len(f.Fields))
-			tags["apm_event_type"] = eventType
 			for k := range f.Fields {
 
 				//skip if excluded
@@ -347,10 +380,7 @@ func (s *APMServer) handleEventsIntake() http.HandlerFunc {
 				return
 			}
 
-			var measurementName = "apm_server"
-			if s.EventTypeSeparate {
-				measurementName = "apm_" + eventType
-			}
+			var measurementName = "apm_" + eventType
 			if m, err := metric.New(measurementName, tags, f.Fields, timestamp); err != nil {
 				s.errorResponse(res, http.StatusBadRequest, err.Error())
 				return
@@ -400,8 +430,10 @@ func parseTimestamp(event interface{}, eventType string) (time.Time, error) {
 	return time.Now().UTC(), errors.New(fmt.Sprintf("cannot parse timestamp: '%s'", value))
 }
 
-func serverRequestBody(req *http.Request) (io.ReadCloser, error) {
+func (s *APMServer) serverRequestBody(res http.ResponseWriter, req *http.Request) (io.ReadCloser, error) {
 	reader := req.Body
+	reader = http.MaxBytesReader(res, reader, s.MaxBodySize.Size)
+
 	switch req.Header.Get("Content-Encoding") {
 
 	case "gzip":
