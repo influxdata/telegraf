@@ -9,6 +9,9 @@
   `splunkmetric` serializer, if you are making use of these fields they can be
   added back with the `tag` option.
 
+- Telegraf's `--test` mode now runs processors and aggregators before printing
+  metrics.
+
 - Official packages now built with Go 1.14.3.
 
 #### New Processors
@@ -50,6 +53,8 @@
 - [#7319](https://github.com/influxdata/telegraf/pull/7319): Add support for battery level monitoring to the fibaro input.
 - [#7405](https://github.com/influxdata/telegraf/pull/7405): Allow collection of HTTP Headers in http_response input.
 - [#7540](https://github.com/influxdata/telegraf/pull/7540): Add processor to look up service name by port.
+- [#7474](https://github.com/influxdata/telegraf/pull/7474): Add new once mode that write to outputs and exits.
+- [#7474](https://github.com/influxdata/telegraf/pull/7474): Run processors and aggregators during test mode.
 
 #### Bugfixes
 
