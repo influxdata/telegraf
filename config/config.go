@@ -962,8 +962,14 @@ func (c *Config) newRunningProcessor(
 ) (*models.RunningProcessor, error) {
 	processor := creator()
 
-	if err := toml.UnmarshalTable(table, processor); err != nil {
-		return nil, err
+	if p, ok := processor.(unwrappable); ok {
+		if err := toml.UnmarshalTable(table, p.Unwrap()); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := toml.UnmarshalTable(table, processor); err != nil {
+			return nil, err
+		}
 	}
 
 	rf := models.NewRunningProcessor(processor, processorConfig)
@@ -2218,4 +2224,11 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	delete(tbl.Fields, "name_prefix")
 
 	return oc, nil
+}
+
+// unwrappable lets you retrieve the original telegraf.Processor from the
+// StreamingProcessor. This is necessary because the toml Unmarshaller won't
+// look inside composed types.
+type unwrappable interface {
+	Unwrap() telegraf.Processor
 }

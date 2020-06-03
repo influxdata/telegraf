@@ -38,3 +38,10 @@ func (sp *streamingProcessor) Add(m telegraf.Metric) {
 func (sp *streamingProcessor) Stop() error {
 	return nil
 }
+
+// Unwrap lets you retrieve the original telegraf.Processor from the
+// StreamingProcessor. This is necessary because the toml Unmarshaller won't
+// look inside composed types.
+func (sp *streamingProcessor) Unwrap() telegraf.Processor {
+	return sp.processor
+}
