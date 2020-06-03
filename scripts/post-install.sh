@@ -101,5 +101,8 @@ elif [[ -f /etc/os-release ]]; then
         else
             install_chkconfig
         fi
+    elif [[ "$NAME" = "Solus" ]]; then
+        # Solus logic
+        install_systemd /usr/lib/systemd/system/telegraf.service
     fi
 fi
