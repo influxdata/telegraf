@@ -24,6 +24,8 @@ Processes can be selected for monitoring using one of several methods:
   # exe = "nginx"
   ## pattern as argument for pgrep (ie, pgrep -f <pattern>)
   # pattern = "nginx"
+  ## antipattern as argument for pgrep (ie, pgrep -f <antipattern>) not to include
+  # antipattern = "init"
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
   ## Systemd unit name
