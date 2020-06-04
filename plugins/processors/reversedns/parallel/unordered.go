@@ -10,12 +10,12 @@ import (
 
 type Unordered struct {
 	wg    sync.WaitGroup
-	acc   telegraf.MetricStreamAccumulator
+	acc   telegraf.Accumulator
 	queue chan telegraf.Metric
 	sem   *semaphore.Weighted
 }
 
-func NewUnordered(acc telegraf.MetricStreamAccumulator, workerCount int64) *Unordered {
+func NewUnordered(acc telegraf.Accumulator, workerCount int64) *Unordered {
 	queue := make(chan telegraf.Metric, 10)
 	p := &Unordered{
 		acc:   acc,
@@ -31,10 +31,10 @@ func NewUnordered(acc telegraf.MetricStreamAccumulator, workerCount int64) *Unor
 	return p
 }
 
-func (p *Unordered) Do(fn func(acc telegraf.MetricStreamAccumulator)) {
+func (p *Unordered) Do(fn func(acc telegraf.Accumulator)) {
 	p.sem.Acquire(context.TODO(), 1)
 	go func() {
-		fn(p)
+		fn(p.acc)
 		p.sem.Release(1)
 	}()
 }
@@ -42,7 +42,7 @@ func (p *Unordered) Do(fn func(acc telegraf.MetricStreamAccumulator)) {
 func (p *Unordered) readQueue() {
 	for m := range p.queue {
 		if m != nil {
-			p.acc.PassMetric(m)
+			p.acc.AddMetric(m)
 		}
 	}
 }
