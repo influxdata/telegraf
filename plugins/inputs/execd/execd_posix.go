@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"syscall"
 	"time"
 
@@ -14,22 +13,26 @@ import (
 )
 
 func (e *Execd) Gather(acc telegraf.Accumulator) error {
-	if e.cmd == nil || e.cmd.Process == nil {
+	if e.process == nil || e.process.Cmd == nil {
 		return nil
 	}
 
+	osProcess := e.process.Cmd.Process
+	if osProcess == nil {
+		return nil
+	}
 	switch e.Signal {
 	case "SIGHUP":
-		e.cmd.Process.Signal(syscall.SIGHUP)
+		osProcess.Signal(syscall.SIGHUP)
 	case "SIGUSR1":
-		e.cmd.Process.Signal(syscall.SIGUSR1)
+		osProcess.Signal(syscall.SIGUSR1)
 	case "SIGUSR2":
-		e.cmd.Process.Signal(syscall.SIGUSR2)
+		osProcess.Signal(syscall.SIGUSR2)
 	case "STDIN":
-		if osStdin, ok := e.stdin.(*os.File); ok {
+		if osStdin, ok := e.process.Stdin.(*os.File); ok {
 			osStdin.SetWriteDeadline(time.Now().Add(1 * time.Second))
 		}
-		if _, err := io.WriteString(e.stdin, "\n"); err != nil {
+		if _, err := io.WriteString(e.process.Stdin, "\n"); err != nil {
 			return fmt.Errorf("Error writing to stdin: %s", err)
 		}
 	case "none":
@@ -38,12 +41,4 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
-}
-
-func gracefulStop(cmd *exec.Cmd, timeout time.Duration) {
-	cmd.Process.Signal(syscall.SIGTERM)
-	go func() {
-		<-time.NewTimer(timeout).C
-		cmd.Process.Kill()
-	}()
 }
