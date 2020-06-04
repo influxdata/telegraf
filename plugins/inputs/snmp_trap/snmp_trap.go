@@ -34,7 +34,6 @@ type SnmpTrap struct {
 	Version        string            `toml:"version"`
 
 	// Settings for version 3
-	ContextName string `toml:"context_name"`
 	// Values: "noAuthNoPriv", "authNoPriv", "authPriv"
 	SecLevel string `toml:"sec_level"`
 	SecName  string `toml:"sec_name"`
@@ -44,9 +43,6 @@ type SnmpTrap struct {
 	// Values: "DES", "AES", "". Default: ""
 	PrivProtocol string `toml:"priv_protocol"`
 	PrivPassword string `toml:"priv_password"`
-	EngineID     string `toml:"-"`
-	EngineBoots  uint32 `toml:"-"`
-	EngineTime   uint32 `toml:"-"`
 
 	acc      telegraf.Accumulator
 	listener *gosnmp.TrapListener
@@ -86,8 +82,6 @@ var sampleConfig = `
   # auth_password = "pass"
   ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
   # sec_level = "authNoPriv"
-  ## Context Name.
-  # context_name = ""
   ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C" or "".
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
@@ -152,7 +146,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 	}
 
 	if s.listener.Params.Version == gosnmp.Version3 {
-		s.listener.Params.ContextName = s.ContextName
 		s.listener.Params.SecurityModel = gosnmp.UserSecurityModel
 
 		switch strings.ToLower(s.SecLevel) {
@@ -207,9 +200,6 @@ func (s *SnmpTrap) Start(acc telegraf.Accumulator) error {
 		}
 
 		s.listener.Params.SecurityParameters = &gosnmp.UsmSecurityParameters{
-			AuthoritativeEngineID:    s.EngineID,
-			AuthoritativeEngineBoots: s.EngineBoots,
-			AuthoritativeEngineTime:  s.EngineTime,
 			UserName:                 s.SecName,
 			PrivacyProtocol:          privacyProtocol,
 			PrivacyPassphrase:        s.PrivPassword,
@@ -357,6 +347,16 @@ func makeTrapHandler(s *SnmpTrap) handler {
 			name := e.oidText
 
 			fields[name] = value
+		}
+
+		if packet.Version == gosnmp.Version3 {
+			if packet.ContextName != "" {
+				tags["context_name"] = packet.ContextName
+			}
+			if packet.ContextEngineID != "" {
+				// SNMP RFCs like 3411 and 5343 show engine ID as a hex string
+				tags["engine_id"] = fmt.Sprintf("%x", packet.ContextEngineID)
+			}
 		}
 
 		s.acc.AddFields("snmp_trap", fields, tags, tm)

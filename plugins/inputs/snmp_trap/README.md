@@ -45,8 +45,6 @@ information.
   # auth_password = "pass"
   ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
   # sec_level = "authNoPriv"
-  ## Context Name.
-  # context_name = ""
   ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C" or "".
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
