@@ -19,13 +19,13 @@ import (
 )
 
 func TestExternalInputWorks(t *testing.T) {
-	jsonParser, err := parsers.NewInfluxParser()
+	influxParser, err := parsers.NewInfluxParser()
 	require.NoError(t, err)
 
 	e := &Execd{
 		Command:      []string{shell(), fileShellScriptPath()},
 		RestartDelay: config.Duration(5 * time.Second),
-		parser:       jsonParser,
+		parser:       influxParser,
 		Signal:       "STDIN",
 	}
 

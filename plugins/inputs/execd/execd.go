@@ -2,16 +2,14 @@ package execd
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"log"
-	"os/exec"
-	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal/process"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -46,14 +44,9 @@ type Execd struct {
 	Signal       string
 	RestartDelay config.Duration
 
-	acc        telegraf.Accumulator
-	cmd        *exec.Cmd
-	parser     parsers.Parser
-	stdin      io.WriteCloser
-	stdout     io.ReadCloser
-	stderr     io.ReadCloser
-	cancel     context.CancelFunc
-	mainLoopWg sync.WaitGroup
+	process *process.Process
+	acc     telegraf.Accumulator
+	parser  parsers.Parser
 }
 
 func (e *Execd) SampleConfig() string {
@@ -70,131 +63,29 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
-
 	if len(e.Command) == 0 {
 		return fmt.Errorf("FATAL no command specified")
 	}
 
-	e.mainLoopWg.Add(1)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	e.cancel = cancel
-
-	if err := e.cmdStart(); err != nil {
-		return err
+	var err error
+	e.process, err = process.New(e.Command)
+	if err != nil {
+		return fmt.Errorf("Error creating new process: %w", err)
 	}
 
-	go func() {
-		if err := e.cmdLoop(ctx); err != nil {
-			log.Printf("Process quit with message: %s", err.Error())
-		}
-		e.mainLoopWg.Done()
-	}()
+	e.process.RestartDelay = time.Duration(e.RestartDelay)
+	e.process.ReadStdoutFn = e.cmdReadOut
+	e.process.ReadStderrFn = e.cmdReadErr
+
+	if err = e.process.Start(); err != nil {
+		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
+	}
 
 	return nil
 }
 
 func (e *Execd) Stop() {
-	// don't try to stop before all stream readers have started.
-	e.cancel()
-	e.mainLoopWg.Wait()
-}
-
-// cmdLoop watches an already running process, restarting it when appropriate.
-func (e *Execd) cmdLoop(ctx context.Context) error {
-	for {
-		// Use a buffered channel to ensure goroutine below can exit
-		// if `ctx.Done` is selected and nothing reads on `done` anymore
-		done := make(chan error, 1)
-		go func() {
-			done <- e.cmdWait()
-		}()
-
-		select {
-		case <-ctx.Done():
-			if e.stdin != nil {
-				e.stdin.Close()
-				gracefulStop(e.cmd, 5*time.Second)
-			}
-			return nil
-		case err := <-done:
-			log.Printf("Process %s terminated: %s", e.Command, err)
-			if isQuitting(ctx) {
-				return err
-			}
-		}
-
-		log.Printf("Restarting in %s...", time.Duration(e.RestartDelay))
-
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(time.Duration(e.RestartDelay)):
-			// Continue the loop and restart the process
-			if err := e.cmdStart(); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func isQuitting(ctx context.Context) bool {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return false
-	}
-}
-
-func (e *Execd) cmdStart() (err error) {
-	if len(e.Command) > 1 {
-		e.cmd = exec.Command(e.Command[0], e.Command[1:]...)
-	} else {
-		e.cmd = exec.Command(e.Command[0])
-	}
-
-	e.stdin, err = e.cmd.StdinPipe()
-	if err != nil {
-		return fmt.Errorf("Error opening stdin pipe: %s", err)
-	}
-
-	e.stdout, err = e.cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("Error opening stdout pipe: %s", err)
-	}
-
-	e.stderr, err = e.cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("Error opening stderr pipe: %s", err)
-	}
-
-	log.Printf("Starting process: %s", e.Command)
-
-	err = e.cmd.Start()
-	if err != nil {
-		return fmt.Errorf("Error starting process: %s", err)
-	}
-
-	return nil
-}
-
-func (e *Execd) cmdWait() error {
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		e.cmdReadOut(e.stdout)
-		wg.Done()
-	}()
-
-	go func() {
-		e.cmdReadErr(e.stderr)
-		wg.Done()
-	}()
-
-	wg.Wait()
-	return e.cmd.Wait()
+	e.process.Stop()
 }
 
 func (e *Execd) cmdReadOut(out io.Reader) {
@@ -249,7 +140,7 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("stderr: %q", scanner.Text())
+		log.Printf("[inputs.execd] stderr: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
