@@ -81,7 +81,7 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("FATAL no command specified")
 	}
 
-	e.wg.Add(2)
+	e.wg.Add(1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	e.cancel = cancel

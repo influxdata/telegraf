@@ -1,7 +1,6 @@
 package execd
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -18,7 +17,6 @@ func TestExternalProcessorWorks(t *testing.T) {
 	e.Command = []string{shell(), fileShellScriptPath()}
 	e.RestartDelay = config.Duration(5 * time.Second)
 
-	out := make(chan telegraf.Metric, 10)
 	acc := &testutil.Accumulator{}
 
 	require.NoError(t, e.Start(acc))
@@ -42,38 +40,34 @@ func TestExternalProcessorWorks(t *testing.T) {
 		e.Add(m)
 	}
 
-	m := readChanWithTimeout(t, out, 10*time.Second)
+	acc.Wait(1)
+	m := acc.Metrics[0]
 
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-	go func() {
-		require.NoError(t, e.Stop())
-		wg.Done()
-	}()
+	require.NoError(t, e.Stop())
 
-	require.Equal(t, "test", m.Name())
+	require.Equal(t, "test", m.Measurement)
 
-	city, ok := m.GetTag("city")
+	city, ok := m.Tags["city"]
 	require.True(t, ok)
 	require.EqualValues(t, "Toronto", city)
 
-	val, ok := m.GetField("population")
+	val, ok := m.Fields["population"]
 	require.True(t, ok)
 	require.EqualValues(t, 6000000, val)
 
-	val, ok = m.GetField("count")
+	val, ok = m.Fields["count"]
 	require.True(t, ok)
 	require.EqualValues(t, 2, val)
 
-	metricTime := m.Time().UnixNano()
+	metricTime := m.Time.UnixNano()
 
 	// read the other 9 and make sure they're ordered properly
+	acc.Wait(9)
 	for i := 0; i < 9; i++ {
-		m = readChanWithTimeout(t, out, 10*time.Second)
-		require.EqualValues(t, metricTime+1, m.Time().UnixNano())
-		metricTime = m.Time().UnixNano()
+		m = acc.Metrics[i+1]
+		require.EqualValues(t, metricTime+1, m.Time.UnixNano())
+		metricTime = m.Time.UnixNano()
 	}
-	wg.Done()
 }
 
 func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout time.Duration) telegraf.Metric {
