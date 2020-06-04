@@ -7,7 +7,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -909,7 +908,7 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	metrics := make(chan telegraf.Metric, 2)
 
 	startedAt := time.Now()
-	written := int64(0)
+	written := 0
 	go func() {
 		for i := 0; i < expectedMetrics; i++ {
 			w.Write([]byte(fmt.Sprintf("metric value=%d\nmetric2 value=%d\n", i+1, i+1)))
@@ -927,7 +926,7 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	for i := 0; i < expectedMetrics*2 && !t.Failed(); i++ {
 		select {
 		case m := <-metrics:
-			atomic.AddInt64(&written, 1)
+			written++
 			v, _ := m.GetField("value")
 			// should receive all metrics with <1ms
 			t.Log("received metric", v, time.Since(startedAt))
@@ -936,5 +935,5 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 			t.Errorf("Timed out waiting for metrics. Expected %v, but received %v", expectedMetrics*2, i)
 		}
 	}
-	t.Log("Written", atomic.LoadInt64(&written), "/", expectedMetrics*2)
+	t.Log("Written", written, "/", expectedMetrics*2)
 }
