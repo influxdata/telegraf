@@ -31670,7 +31670,6 @@ func (m *streamMachine) Next() error {
 	m.machine.beginMetric = false
 	m.machine.finishMetric = false
 
-	lastPos := m.machine.p - 1
 	for {
 		// Expand the buffer if it is full
 		if m.machine.pe == len(m.machine.data) {
@@ -31687,13 +31686,6 @@ func (m *streamMachine) Next() error {
 		// If we have successfully parsed a full metric line break out
 		if m.machine.finishMetric {
 			break
-		}
-
-		// if we're successfully processing messages, keep going without doing a
-		// potentially blocking read
-		if lastPos != m.machine.p {
-			lastPos = m.machine.p
-			continue
 		}
 
 		n, err := m.reader.Read(m.machine.data[m.machine.pe:])
