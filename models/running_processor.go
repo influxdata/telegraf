@@ -92,7 +92,7 @@ func (r *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) {
 		return
 	}
 
-	r.Processor.Add(m)
+	r.Processor.Add(m, acc)
 }
 
 func (r *RunningProcessor) Stop() {

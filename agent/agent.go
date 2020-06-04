@@ -258,14 +258,6 @@ func (a *Agent) startInputs(
 				stopServiceInputs(unit.inputs)
 				return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
 			}
-
-			unit.inputs = append(unit.inputs, input)
-		}
-	}
-
-	for _, input := range a.Config.Inputs {
-		if _, ok := input.Input.(telegraf.ServiceInput); ok {
-			continue
 		}
 		unit.inputs = append(unit.inputs, input)
 	}
@@ -680,7 +672,7 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 
 		err = output.Output.Connect()
 		if err != nil {
-			return err
+			return fmt.Errorf("Error connecting to output %q: %w", output.LogName(), err)
 		}
 	}
 	log.Printf("D! [agent] Successfully connected to %s", output.LogName())
