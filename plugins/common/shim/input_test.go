@@ -3,7 +3,7 @@ package shim
 import (
 	"bufio"
 	"io"
-	"os"
+	"io/ioutil"
 	"strings"
 	"testing"
 	"time"
@@ -11,10 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-func TestShimWorks(t *testing.T) {
+func TestInputShimTimer(t *testing.T) {
 	stdoutReader, stdoutWriter := io.Pipe()
 
 	stdin, _ := io.Pipe() // hold the stdin pipe open
@@ -30,7 +29,7 @@ func TestShimWorks(t *testing.T) {
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
 }
 
-func TestShimStdinSignalingWorks(t *testing.T) {
+func TestInputShimStdinSignalingWorks(t *testing.T) {
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 
@@ -46,16 +45,14 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
 	stdinWriter.Close()
-
-	readUntilEmpty(r)
-
+	go ioutil.ReadAll(r)
 	// check that it exits cleanly
 	<-exited
 }
 
 func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdout, stderr io.Writer) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool)
-	exited = make(chan bool)
+	metricProcessed = make(chan bool, 1)
+	exited = make(chan bool, 1)
 	inp := &testInput{
 		metricProcessed: metricProcessed,
 	}
@@ -70,7 +67,6 @@ func runInputPlugin(t *testing.T, interval time.Duration, stdin io.Reader, stdou
 	if stderr != nil {
 		shim.stderr = stderr
 	}
-
 	shim.AddInput(inp)
 	go func() {
 		err := shim.Run(interval)
@@ -111,25 +107,6 @@ func (i *testInput) Start(acc telegraf.Accumulator) error {
 func (i *testInput) Stop() {
 }
 
-func TestLoadConfig(t *testing.T) {
-	os.Setenv("SECRET_TOKEN", "xxxxxxxxxx")
-	os.Setenv("SECRET_VALUE", `test"\test`)
-
-	inputs.Add("test", func() telegraf.Input {
-		return &serviceInput{}
-	})
-
-	c := "./testdata/plugin.conf"
-	inputs, err := LoadConfig(&c)
-	require.NoError(t, err)
-
-	inp := inputs[0].(*serviceInput)
-
-	require.Equal(t, "awesome name", inp.ServiceName)
-	require.Equal(t, "xxxxxxxxxx", inp.SecretToken)
-	require.Equal(t, `test"\test`, inp.SecretValue)
-}
-
 type serviceInput struct {
 	ServiceName string `toml:"service_name"`
 	SecretToken string `toml:"secret_token"`
@@ -161,16 +138,4 @@ func (i *serviceInput) Start(acc telegraf.Accumulator) error {
 }
 
 func (i *serviceInput) Stop() {
-}
-
-// we can get stuck if stdout gets clogged up and nobody's reading from it.
-// make sure we keep it going
-func readUntilEmpty(r *bufio.Reader) {
-	go func() {
-		var err error
-		for err != io.EOF {
-			_, err = r.ReadString('\n')
-			time.Sleep(10 * time.Millisecond)
-		}
-	}()
 }
