@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+
 type MachDB struct {
 	Drivers []string `toml:"drivers"`
 
@@ -26,6 +27,7 @@ type MachDB struct {
 
 	Log telegraf.Logger
 }
+
 
 // queries
 const (
