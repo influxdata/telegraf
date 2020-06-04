@@ -905,35 +905,19 @@ func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
 	parser := NewStreamParser(r)
 	parser.SetTimeFunc(DefaultTime)
 
-	metrics := make(chan telegraf.Metric, 2)
-
 	startedAt := time.Now()
-	written := 0
 	go func() {
 		for i := 0; i < expectedMetrics; i++ {
 			w.Write([]byte(fmt.Sprintf("metric value=%d\nmetric2 value=%d\n", i+1, i+1)))
 		}
 	}()
 
-	go func() {
-		for i := 0; i < 2*expectedMetrics; i++ {
-			m, err := parser.Next()
-			require.NoError(t, err)
-			metrics <- m
-		}
-	}()
-
 	for i := 0; i < expectedMetrics*2 && !t.Failed(); i++ {
-		select {
-		case m := <-metrics:
-			written++
-			v, _ := m.GetField("value")
-			// should receive all metrics with <1ms
-			t.Log("received metric", v, time.Since(startedAt))
-			continue
-		case <-time.After(1 * time.Second):
-			t.Errorf("Timed out waiting for metrics. Expected %v, but received %v", expectedMetrics*2, i)
-		}
+		m, err := parser.Next()
+		require.NoError(t, err)
+
+		v, _ := m.GetField("value")
+		// should receive all metrics with <1ms
+		t.Log("received metric", v, time.Since(startedAt))
 	}
-	t.Log("Written", written, "/", expectedMetrics*2)
 }
