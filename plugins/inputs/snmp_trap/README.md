@@ -85,6 +85,8 @@ On Mac OS, listening on privileged ports is unrestricted on versions
 	- mib (string, MIB from SNMPv2-MIB::snmpTrapOID.0 PDU)
 	- oid (string, OID string from SNMPv2-MIB::snmpTrapOID.0 PDU)
 	- version (string, "1" or "2c" or "3")
+	- context_name (string, value from v3 trap)
+	- engine_id (string, value from v3 trap)
   - fields:
 	- Fields are mapped from variables in the trap. Field names are
       the trap variable names after MIB lookup. Field values are trap
