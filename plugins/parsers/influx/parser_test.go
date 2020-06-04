@@ -3,8 +3,11 @@ package influx
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -894,4 +897,44 @@ func TestStreamParserReaderError(t *testing.T) {
 
 	_, err = parser.Next()
 	require.Equal(t, err, EOF)
+}
+
+func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
+	expectedMetrics := 20
+	r, w := io.Pipe()
+
+	parser := NewStreamParser(r)
+	parser.SetTimeFunc(DefaultTime)
+
+	metrics := make(chan telegraf.Metric, 2)
+
+	startedAt := time.Now()
+	written := int64(0)
+	go func() {
+		for i := 0; i < expectedMetrics; i++ {
+			w.Write([]byte(fmt.Sprintf("metric value=%d\nmetric2 value=%d\n", i+1, i+1)))
+		}
+	}()
+
+	go func() {
+		for i := 0; i < 2*expectedMetrics; i++ {
+			m, err := parser.Next()
+			require.NoError(t, err)
+			metrics <- m
+		}
+	}()
+
+	for i := 0; i < expectedMetrics*2 && !t.Failed(); i++ {
+		select {
+		case m := <-metrics:
+			atomic.AddInt64(&written, 1)
+			v, _ := m.GetField("value")
+			// should receive all metrics with <1ms
+			t.Log("received metric", v, time.Since(startedAt))
+			continue
+		case <-time.After(1 * time.Second):
+			t.Errorf("Timed out waiting for metrics. Expected %v, but received %v", expectedMetrics*2, i)
+		}
+	}
+	t.Log("Written", atomic.LoadInt64(&written), "/", expectedMetrics*2)
 }
