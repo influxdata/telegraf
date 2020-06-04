@@ -26,6 +26,7 @@ type Procstat struct {
 	PidFile     string `toml:"pid_file"`
 	Exe         string
 	Pattern     string
+	AntiPattern string
 	Prefix      string
 	CmdLineTag  bool `toml:"cmdline_tag"`
 	ProcessName string
@@ -126,8 +127,8 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 	procs, err := p.updateProcesses(pids, tags, p.procs)
 	if err != nil {
-		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
-			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
+		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] antipattern: [%s] user: [%s] %s",
+			p.Exe, p.PidFile, p.Pattern, p.AntiPattern, p.User, err.Error()))
 	}
 	p.procs = procs
 
@@ -371,7 +372,7 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 		pids, err = f.Pattern(p.Exe)
 		tags = map[string]string{"exe": p.Exe}
 	} else if p.Pattern != "" {
-		pids, err = f.FullPattern(p.Pattern)
+		pids, err = f.FullPattern(p.Pattern, p.AntiPattern)
 		tags = map[string]string{"pattern": p.Pattern}
 	} else if p.User != "" {
 		pids, err = f.Uid(p.User)
@@ -465,4 +466,18 @@ func init() {
 	inputs.Add("procstat", func() telegraf.Input {
 		return &Procstat{}
 	})
+}
+
+func diffPids(a, b []PID) []PID {
+	mb := make(map[PID]struct{}, len(b))
+	for _, x := range b {
+		mb[x] = struct{}{}
+	}
+	var diff []PID
+	for _, x := range a {
+		if _, found := mb[x]; !found {
+			diff = append(diff, x)
+		}
+	}
+	return diff
 }

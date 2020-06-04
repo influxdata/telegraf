@@ -34,11 +34,19 @@ func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 }
 
 //FullPattern matches on the command line when the process was executed
-func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
+func (pg *NativeFinder) FullPattern(pattern string, antipattern string) ([]PID, error) {
 	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
 		return pids, err
+	}
+
+	var antiregxPattern *regexp.Regexp
+	if len(antipattern) > 0 {
+		antiregxPattern, err = regexp.Compile(antipattern)
+		if err != nil {
+			return pids, err
+		}
 	}
 	procs, err := process.Processes()
 	if err != nil {
@@ -49,6 +57,9 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 		if err != nil {
 			//skip, this can be caused by the pid no longer existing
 			//or you having no permissions to access it
+			continue
+		}
+		if (antiregxPattern != nil) && antiregxPattern.MatchString(cmd) {
 			continue
 		}
 		if regxPattern.MatchString(cmd) {
