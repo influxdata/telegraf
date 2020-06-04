@@ -5,11 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/metric"
-
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,7 +19,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 	e.RestartDelay = config.Duration(5 * time.Second)
 
 	out := make(chan telegraf.Metric, 10)
-	acc := agent.NewMetricStreamAccumulator(out)
+	acc := &testutil.Accumulator{}
 
 	require.NoError(t, e.Start(acc))
 

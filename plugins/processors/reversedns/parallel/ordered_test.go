@@ -8,11 +8,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors/reversedns/parallel"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
 func TestJobsStayOrdered(t *testing.T) {
-	acc := &testAccum{}
+	acc := &testutil.Accumulator{}
 
 	p := parallel.NewOrdered(acc, jobFunc, 10000, 10)
 	now := time.Now()
@@ -31,8 +32,8 @@ func TestJobsStayOrdered(t *testing.T) {
 	p.Stop()
 
 	i := 0
-	require.Len(t, acc.Metrics, 20000, fmt.Sprintf("expected 20k metrics but got %d", len(acc.Metrics)))
-	for _, m := range acc.Metrics {
+	require.Len(t, acc.Metrics, 20000, fmt.Sprintf("expected 20k metrics but got %d", len(acc.GetTelegrafMetrics())))
+	for _, m := range acc.GetTelegrafMetrics() {
 		v, ok := m.GetField("val")
 		require.True(t, ok)
 		require.EqualValues(t, i, v)
@@ -41,7 +42,7 @@ func TestJobsStayOrdered(t *testing.T) {
 }
 
 func BenchmarkJobs(b *testing.B) {
-	acc := &testAccum{}
+	acc := &testutil.Accumulator{}
 
 	p := parallel.NewOrdered(acc, jobFunc, 10000, 10)
 

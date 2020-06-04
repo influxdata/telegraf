@@ -151,7 +151,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		defer wg.Done()
 		err = a.runOutputs(ou)
 		if err != nil {
-			log.Printf("E! [agent] Error running outputs: %w", err)
+			log.Printf("E! [agent] Error running outputs: %v", err)
 		}
 	}()
 
@@ -161,7 +161,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			defer wg.Done()
 			err = a.runProcessors(apu)
 			if err != nil {
-				log.Printf("E! [agent] Error running processors: %w", err)
+				log.Printf("E! [agent] Error running processors: %v", err)
 			}
 		}()
 
@@ -170,7 +170,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			defer wg.Done()
 			err = a.runAggregators(startTime, au)
 			if err != nil {
-				log.Printf("E! [agent] Error running aggregators: %w", err)
+				log.Printf("E! [agent] Error running aggregators: %v", err)
 			}
 		}()
 	}
@@ -181,7 +181,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			defer wg.Done()
 			err = a.runProcessors(pu)
 			if err != nil {
-				log.Printf("E! [agent] Error running processors: %w", err)
+				log.Printf("E! [agent] Error running processors: %v", err)
 			}
 		}()
 	}
@@ -191,7 +191,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		defer wg.Done()
 		err = a.runInputs(ctx, startTime, iu)
 		if err != nil {
-			log.Printf("E! [agent] Error running inputs: %w", err)
+			log.Printf("E! [agent] Error running inputs: %v", err)
 		}
 	}()
 
@@ -345,7 +345,7 @@ func (a *Agent) testStartInputs(
 
 			err := si.Start(acc)
 			if err != nil {
-				log.Printf("E! [agent] Starting input %s: %w", input.LogName(), err)
+				log.Printf("E! [agent] Starting input %s: %v", input.LogName(), err)
 			}
 
 		}
@@ -900,7 +900,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 			defer wg.Done()
 			err = a.runProcessors(apu)
 			if err != nil {
-				log.Printf("E! [agent] Error running processors: %w", err)
+				log.Printf("E! [agent] Error running processors: %v", err)
 			}
 		}()
 
@@ -909,7 +909,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 			defer wg.Done()
 			err = a.runAggregators(startTime, au)
 			if err != nil {
-				log.Printf("E! [agent] Error running aggregators: %w", err)
+				log.Printf("E! [agent] Error running aggregators: %v", err)
 			}
 		}()
 	}
@@ -920,7 +920,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 			defer wg.Done()
 			err = a.runProcessors(pu)
 			if err != nil {
-				log.Printf("E! [agent] Error running processors: %w", err)
+				log.Printf("E! [agent] Error running processors: %v", err)
 			}
 		}()
 	}
@@ -930,14 +930,13 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 		defer wg.Done()
 		err = a.testRunInputs(ctx, wait, iu)
 		if err != nil {
-			log.Printf("E! [agent] Error running inputs: %w", err)
+			log.Printf("E! [agent] Error running inputs: %v", err)
 		}
 	}()
 
 	wg.Wait()
 
 	log.Printf("D! [agent] Stopped Successfully")
-	return err
 
 	return nil
 }
@@ -1017,7 +1016,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 		defer wg.Done()
 		err = a.runOutputs(ou)
 		if err != nil {
-			log.Printf("E! [agent] Error running outputs: %w", err)
+			log.Printf("E! [agent] Error running outputs: %v", err)
 		}
 	}()
 
@@ -1027,7 +1026,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 			defer wg.Done()
 			err = a.runProcessors(apu)
 			if err != nil {
-				log.Printf("E! [agent] Error running processors: %w", err)
+				log.Printf("E! [agent] Error running processors: %v", err)
 			}
 		}()
 
@@ -1036,7 +1035,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 			defer wg.Done()
 			err = a.runAggregators(startTime, au)
 			if err != nil {
-				log.Printf("E! [agent] Error running aggregators: %w", err)
+				log.Printf("E! [agent] Error running aggregators: %v", err)
 			}
 		}()
 	}
@@ -1047,7 +1046,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 			defer wg.Done()
 			err = a.runProcessors(pu)
 			if err != nil {
-				log.Printf("E! [agent] Error running processors: %w", err)
+				log.Printf("E! [agent] Error running processors: %v", err)
 			}
 		}()
 	}
@@ -1057,14 +1056,13 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 		defer wg.Done()
 		err = a.testRunInputs(ctx, wait, iu)
 		if err != nil {
-			log.Printf("E! [agent] Error running inputs: %w", err)
+			log.Printf("E! [agent] Error running inputs: %v", err)
 		}
 	}()
 
 	wg.Wait()
 
 	log.Printf("D! [agent] Stopped Successfully")
-	return err
 
 	return nil
 }

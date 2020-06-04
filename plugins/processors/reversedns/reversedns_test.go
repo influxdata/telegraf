@@ -29,15 +29,15 @@ func TestSimpleReverseLookup(t *testing.T) {
 			Dest: "dest_name",
 		},
 	}
-	acc := testutil.NewTestMetricStreamAccumulator()
+	acc := testutil.Accumulator{}
 	dns.Init()
-	dns.Start(acc)
+	dns.Start(&acc)
 	dns.Add(m)
 	dns.Stop()
 	// should be processed now.
 
-	require.Len(t, acc.ProcessedMetrics, 1)
-	processedMetric := acc.ProcessedMetrics[0]
+	require.Len(t, acc.GetTelegrafMetrics(), 1)
+	processedMetric := acc.GetTelegrafMetrics()[0]
 	f, ok := processedMetric.GetField("source_name")
 	require.True(t, ok)
 	require.EqualValues(t, "localhost", f)

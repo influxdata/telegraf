@@ -8,7 +8,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -159,17 +158,15 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			}
 			rp.Config.Filter.Compile()
 
-			in := make(chan telegraf.Metric, 10)
-			for _, m := range tt.input {
-				in <- m
-			}
-			close(in)
-			acc := testutil.NewTestMetricStreamAccumulator()
-			err := rp.Start(acc)
+			acc := testutil.Accumulator{}
+			err := rp.Start(&acc)
 			require.NoError(t, err)
-			rp.Run(in, acc)
+			for _, m := range tt.input {
+				rp.Add(m, &acc)
+			}
+			rp.Stop()
 
-			actual := acc.ProcessedMetrics
+			actual := acc.GetTelegrafMetrics()
 			require.Equal(t, tt.expected, actual)
 		})
 	}
