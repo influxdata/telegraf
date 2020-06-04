@@ -15,7 +15,7 @@ func NewStreamingProcessorFromProcessor(p telegraf.Processor) telegraf.Streaming
 
 type streamingProcessor struct {
 	processor telegraf.Processor
-	acc       telegraf.MetricStreamAccumulator
+	acc       telegraf.Accumulator
 }
 
 func (sp *streamingProcessor) SampleConfig() string {
@@ -26,15 +26,17 @@ func (sp *streamingProcessor) Description() string {
 	return sp.processor.Description()
 }
 
-func (sp *streamingProcessor) Start(acc telegraf.MetricStreamAccumulator) error {
+func (sp *streamingProcessor) Start(acc telegraf.Accumulator) error {
 	sp.acc = acc
 	return nil
 }
+
 func (sp *streamingProcessor) Add(m telegraf.Metric) {
 	for _, m := range sp.processor.Apply(m) {
-		sp.acc.PassMetric(m)
+		sp.acc.AddMetric(m)
 	}
 }
+
 func (sp *streamingProcessor) Stop() error {
 	return nil
 }

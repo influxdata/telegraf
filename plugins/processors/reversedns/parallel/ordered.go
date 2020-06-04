@@ -21,7 +21,7 @@ type Ordered struct {
 }
 
 func NewOrdered(
-	acc telegraf.MetricStreamAccumulator,
+	acc telegraf.Accumulator,
 	fn func(telegraf.Metric) []telegraf.Metric,
 	orderedQueueSize int,
 	workerCount int,
@@ -53,13 +53,13 @@ func (p *Ordered) Enqueue(metric telegraf.Metric) {
 	}
 }
 
-func (p *Ordered) readQueue(acc telegraf.MetricStreamAccumulator) {
+func (p *Ordered) readQueue(acc telegraf.Accumulator) {
 	// wait for the response from each worker in order
 	for mCh := range p.queue {
 		// allow each worker to write out multiple metrics
 		for metrics := range mCh {
 			for _, m := range metrics {
-				acc.PassMetric(m)
+				acc.AddMetric(m)
 			}
 		}
 	}

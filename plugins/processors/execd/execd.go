@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/serializers"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 const sampleConfig = `
@@ -35,7 +34,7 @@ type Execd struct {
 	parser           parsers.Parser
 	serializerConfig *serializers.Config
 	serializer       serializers.Serializer
-	acc              telegraf.MetricStreamAccumulator
+	acc              telegraf.Accumulator
 	inCh             chan telegraf.Metric
 	cmd              *exec.Cmd
 	stdin            io.WriteCloser
@@ -65,7 +64,7 @@ func (e *Execd) Description() string {
 	return "Run executable as long-running processor plugin"
 }
 
-func (e *Execd) Start(acc telegraf.MetricStreamAccumulator) error {
+func (e *Execd) Start(acc telegraf.Accumulator) error {
 	var err error
 	e.parser, err = parsers.NewParser(e.parserConfig)
 	if err != nil {
@@ -239,7 +238,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 		}
 
 		for _, metric := range metrics {
-			e.acc.PassMetric(metric)
+			e.acc.AddMetric(metric)
 		}
 	}
 

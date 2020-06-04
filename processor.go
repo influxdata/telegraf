@@ -17,7 +17,7 @@ type StreamingProcessor interface {
 	// Start is the initializer for the processor
 	// Start is only called once per plugin instance, and never in parallel.
 	// Start should exit immediately after setup
-	Start(acc MetricStreamAccumulator) error
+	Start(acc Accumulator) error
 
 	// Add is called for each metric to be processed.
 	Add(metric Metric)

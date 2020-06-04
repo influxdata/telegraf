@@ -3,11 +3,10 @@ package reversedns
 import (
 	"time"
 
-	"github.com/influxdata/telegraf/plugins/processors/reversedns/parallel"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/processors/reversedns/parallel"
 )
 
 const sampleConfig = `
@@ -57,7 +56,7 @@ type lookupEntry struct {
 
 type ReverseDNS struct {
 	reverseDNSCache *ReverseDNSCache
-	acc             telegraf.MetricStreamAccumulator
+	acc             telegraf.Accumulator
 	parallel        parallel.Parallel
 
 	Lookups            []lookupEntry   `toml:"lookup"`
@@ -82,7 +81,7 @@ func (r *ReverseDNS) Init() {
 	)
 }
 
-func (r *ReverseDNS) Start(acc telegraf.MetricStreamAccumulator) error {
+func (r *ReverseDNS) Start(acc telegraf.Accumulator) error {
 	r.acc = acc
 	r.parallel = parallel.NewOrdered(acc, r.asyncAdd, 10000, r.MaxParallelLookups)
 	return nil
