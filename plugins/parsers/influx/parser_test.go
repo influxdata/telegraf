@@ -3,7 +3,6 @@ package influx
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -899,25 +898,17 @@ func TestStreamParserReaderError(t *testing.T) {
 }
 
 func TestStreamParserProducesAllAvailableMetrics(t *testing.T) {
-	expectedMetrics := 20
 	r, w := io.Pipe()
 
 	parser := NewStreamParser(r)
 	parser.SetTimeFunc(DefaultTime)
 
-	startedAt := time.Now()
-	go func() {
-		for i := 0; i < expectedMetrics; i++ {
-			w.Write([]byte(fmt.Sprintf("metric value=%d\nmetric2 value=%d\n", i+1, i+1)))
-		}
-	}()
+	go w.Write([]byte("metric value=1\nmetric2 value=1\n"))
 
-	for i := 0; i < expectedMetrics*2 && !t.Failed(); i++ {
-		m, err := parser.Next()
-		require.NoError(t, err)
+	_, err := parser.Next()
+	require.NoError(t, err)
 
-		v, _ := m.GetField("value")
-		// should receive all metrics with <1ms
-		t.Log("received metric", v, time.Since(startedAt))
-	}
+	// should not block on second read
+	_, err = parser.Next()
+	require.NoError(t, err)
 }
