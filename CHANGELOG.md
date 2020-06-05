@@ -25,6 +25,7 @@
 
 #### Features
 
+- [#7634](https://github.com/influxdata/telegraf/pull/7634): Add support for streaming processors.
 - [#6905](https://github.com/influxdata/telegraf/pull/6905): Add commands stats to mongodb input plugin.
 - [#7193](https://github.com/influxdata/telegraf/pull/7193): Add additional concurrent transaction information.
 - [#7223](https://github.com/influxdata/telegraf/pull/7223): Add ability to specify HTTP Headers in http_listener_v2 which will added as tags.
@@ -59,6 +60,7 @@
 
 #### Bugfixes
 
+- [#7631](https://github.com/influxdata/telegraf/issues/7617): Fix issue with influx stream parser blocking when data is in buffer.
 - [#7371](https://github.com/influxdata/telegraf/issues/7371): Fix unable to write metrics to CloudWatch with IMDSv1 disabled.
 - [#7233](https://github.com/influxdata/telegraf/issues/7233): Fix vSphere 6.7 missing data issue.
 - [#7448](https://github.com/influxdata/telegraf/issues/7448): Remove debug fields from splunkmetric serializer.
