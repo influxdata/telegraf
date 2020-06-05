@@ -40,12 +40,12 @@ func fakeExecCmd(_ internal.Duration, x string, y ...string) ([]byte, error) {
 	return nil, fmt.Errorf("mock " + x + " " + strings.Join(y, " "))
 }
 
-func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, version gosnmp.SnmpVersion, seclevel string, username string, authproto string, authpass string, privproto string, privpass string) {
+func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, version gosnmp.SnmpVersion, secLevel string, username string, authProto string, authPass string, privProto string, privPass string, contextName string, engineID string) {
 	var s gosnmp.GoSNMP
 
 	if version == gosnmp.Version3 {
 		var msgFlags gosnmp.SnmpV3MsgFlags
-		switch strings.ToLower(seclevel) {
+		switch strings.ToLower(secLevel) {
 		case "noauthnopriv", "":
 			msgFlags = gosnmp.NoAuthNoPriv
 		case "authnopriv":
@@ -57,7 +57,7 @@ func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, versi
 		}
 
 		var authenticationProtocol gosnmp.SnmpV3AuthProtocol
-		switch strings.ToLower(authproto) {
+		switch strings.ToLower(authProto) {
 		case "md5":
 			authenticationProtocol = gosnmp.MD5
 		case "sha":
@@ -77,7 +77,7 @@ func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, versi
 		}
 
 		var privacyProtocol gosnmp.SnmpV3PrivProtocol
-		switch strings.ToLower(privproto) {
+		switch strings.ToLower(privProto) {
 		case "aes":
 			privacyProtocol = gosnmp.AES
 		case "des":
@@ -102,8 +102,8 @@ func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, versi
 			AuthoritativeEngineTime:  1,
 			UserName:                 username,
 			PrivacyProtocol:          privacyProtocol,
-			PrivacyPassphrase:        privpass,
-			AuthenticationPassphrase: authpass,
+			PrivacyPassphrase:        privPass,
+			AuthenticationPassphrase: authPass,
 			AuthenticationProtocol:   authenticationProtocol,
 		}
 		s = gosnmp.GoSNMP{
@@ -116,6 +116,8 @@ func sendTrap(t *testing.T, port uint16, now uint32, trap gosnmp.SnmpTrap, versi
 			SecurityParameters: sp,
 			SecurityModel:      gosnmp.UserSecurityModel,
 			MsgFlags:           msgFlags,
+			ContextName:        contextName,
+			ContextEngineID:    engineID,
 		}
 	} else {
 		s = gosnmp.GoSNMP{
@@ -162,12 +164,16 @@ func TestReceiveTrap(t *testing.T) {
 		version gosnmp.SnmpVersion
 		trap    gosnmp.SnmpTrap // include pdus
 		// V3 auth and priv parameters
-		secname   string // v3 username
-		seclevel  string // v3 security level
-		authproto string // Auth protocol: "", MD5 or SHA
-		authpass  string // Auth passphrase
-		privproto string // Priv protocol: "", DES or AES
-		privpass  string // Priv passphrase
+		secName   string // v3 username
+		secLevel  string // v3 security level
+		authProto string // Auth protocol: "", MD5 or SHA
+		authPass  string // Auth passphrase
+		privProto string // Priv protocol: "", DES or AES
+		privPass  string // Priv passphrase
+
+		// V3 sender context
+		contextName string
+		engineID    string
 
 		// receive
 		entries []entry
@@ -363,10 +369,12 @@ func TestReceiveTrap(t *testing.T) {
 		},
 		//ordinary v3 coldStart trap no auth and no priv
 		{
-			name:     "v3 coldStart noAuthNoPriv",
-			version:  gosnmp.Version3,
-			secname:  "noAuthNoPriv",
-			seclevel: "noAuthNoPriv",
+			name:        "v3 coldStart noAuthNoPriv",
+			version:     gosnmp.Version3,
+			secName:     "noAuthNoPriv",
+			secLevel:    "noAuthNoPriv",
+			contextName: "foo_context_name",
+			engineID:    "bar_engine_id",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -408,11 +416,13 @@ func TestReceiveTrap(t *testing.T) {
 				testutil.MustMetric(
 					"snmp_trap", // name
 					map[string]string{ // tags
-						"oid":     ".1.3.6.1.6.3.1.1.5.1",
-						"name":    "coldStart",
-						"mib":     "SNMPv2-MIB",
-						"version": "3",
-						"source":  "127.0.0.1",
+						"oid":          ".1.3.6.1.6.3.1.1.5.1",
+						"name":         "coldStart",
+						"mib":          "SNMPv2-MIB",
+						"version":      "3",
+						"source":       "127.0.0.1",
+						"context_name": "foo_context_name",
+						"engine_id":    "6261725f656e67696e655f6964",
 					},
 					map[string]interface{}{ // fields
 						"sysUpTimeInstance": now,
@@ -425,10 +435,10 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authShaNoPriv",
 			version:   gosnmp.Version3,
-			secname:   "authShaNoPriv",
-			seclevel:  "authNoPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
+			secName:   "authShaNoPriv",
+			secLevel:  "authNoPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -488,10 +498,10 @@ func TestReceiveTrap(t *testing.T) {
 			{
 				name:      "v3 coldStart authShaNoPriv",
 				version:   gosnmp.Version3,
-				secname:   "authSha224NoPriv",
-				seclevel:  "authNoPriv",
-				authproto: "SHA224",
-				authpass:  "passpass",
+				secName:   "authSha224NoPriv",
+				secLevel:  "authNoPriv",
+				authProto: "SHA224",
+				authPass:  "passpass",
 				trap: gosnmp.SnmpTrap{
 					Variables: []gosnmp.SnmpPDU{
 						{
@@ -550,10 +560,10 @@ func TestReceiveTrap(t *testing.T) {
 			{
 				name:      "v3 coldStart authSha256NoPriv",
 				version:   gosnmp.Version3,
-				secname:   "authSha256NoPriv",
-				seclevel:  "authNoPriv",
-				authproto: "SHA256",
-				authpass:  "passpass",
+				secName:   "authSha256NoPriv",
+				secLevel:  "authNoPriv",
+				authProto: "SHA256",
+				authPass:  "passpass",
 				trap: gosnmp.SnmpTrap{
 					Variables: []gosnmp.SnmpPDU{
 						{
@@ -612,10 +622,10 @@ func TestReceiveTrap(t *testing.T) {
 			{
 				name:      "v3 coldStart authSha384NoPriv",
 				version:   gosnmp.Version3,
-				secname:   "authSha384NoPriv",
-				seclevel:  "authNoPriv",
-				authproto: "SHA384",
-				authpass:  "passpass",
+				secName:   "authSha384NoPriv",
+				secLevel:  "authNoPriv",
+				authProto: "SHA384",
+				authPass:  "passpass",
 				trap: gosnmp.SnmpTrap{
 					Variables: []gosnmp.SnmpPDU{
 						{
@@ -674,10 +684,10 @@ func TestReceiveTrap(t *testing.T) {
 			{
 				name:      "v3 coldStart authShaNoPriv",
 				version:   gosnmp.Version3,
-				secname:   "authSha512NoPriv",
-				seclevel:  "authNoPriv",
-				authproto: "SHA512",
-				authpass:  "passpass",
+				secName:   "authSha512NoPriv",
+				secLevel:  "authNoPriv",
+				authProto: "SHA512",
+				authPass:  "passpass",
 				trap: gosnmp.SnmpTrap{
 					Variables: []gosnmp.SnmpPDU{
 						{
@@ -736,10 +746,10 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authShaNoPriv",
 			version:   gosnmp.Version3,
-			secname:   "authShaNoPriv",
-			seclevel:  "authNoPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
+			secName:   "authShaNoPriv",
+			secLevel:  "authNoPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -798,10 +808,10 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authMD5NoPriv",
 			version:   gosnmp.Version3,
-			secname:   "authMD5NoPriv",
-			seclevel:  "authNoPriv",
-			authproto: "MD5",
-			authpass:  "passpass",
+			secName:   "authMD5NoPriv",
+			secLevel:  "authNoPriv",
+			authProto: "MD5",
+			authPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -860,12 +870,12 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authSHAPrivAES",
 			version:   gosnmp.Version3,
-			secname:   "authSHAPrivAES",
-			seclevel:  "authPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
-			privproto: "AES",
-			privpass:  "passpass",
+			secName:   "authSHAPrivAES",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES",
+			privPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -924,12 +934,12 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authSHAPrivDES",
 			version:   gosnmp.Version3,
-			secname:   "authSHAPrivDES",
-			seclevel:  "authPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
-			privproto: "DES",
-			privpass:  "passpass",
+			secName:   "authSHAPrivDES",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "DES",
+			privPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -988,12 +998,12 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authSHAPrivAES192",
 			version:   gosnmp.Version3,
-			secname:   "authSHAPrivAES192",
-			seclevel:  "authPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
-			privproto: "AES192",
-			privpass:  "passpass",
+			secName:   "authSHAPrivAES192",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES192",
+			privPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -1052,12 +1062,12 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authSHAPrivAES192C",
 			version:   gosnmp.Version3,
-			secname:   "authSHAPrivAES192C",
-			seclevel:  "authPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
-			privproto: "AES192C",
-			privpass:  "passpass",
+			secName:   "authSHAPrivAES192C",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES192C",
+			privPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -1116,12 +1126,12 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authSHAPrivAES256",
 			version:   gosnmp.Version3,
-			secname:   "authSHAPrivAES256",
-			seclevel:  "authPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
-			privproto: "AES256",
-			privpass:  "passpass",
+			secName:   "authSHAPrivAES256",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES256",
+			privPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -1180,12 +1190,12 @@ func TestReceiveTrap(t *testing.T) {
 		{
 			name:      "v3 coldStart authSHAPrivAES256C",
 			version:   gosnmp.Version3,
-			secname:   "authSHAPrivAES256C",
-			seclevel:  "authPriv",
-			authproto: "SHA",
-			authpass:  "passpass",
-			privproto: "AES256C",
-			privpass:  "passpass",
+			secName:   "authSHAPrivAES256C",
+			secLevel:  "authPriv",
+			authProto: "SHA",
+			authPass:  "passpass",
+			privProto: "AES256C",
+			privPass:  "passpass",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -1269,15 +1279,12 @@ func TestReceiveTrap(t *testing.T) {
 				},
 				Log:          testutil.Logger{},
 				Version:      tt.version.String(),
-				SecName:      tt.secname,
-				SecLevel:     tt.seclevel,
-				AuthProtocol: tt.authproto,
-				AuthPassword: tt.authpass,
-				PrivProtocol: tt.privproto,
-				PrivPassword: tt.privpass,
-				EngineID:     "80001f8880031dd407f608905e00000000",
-				EngineBoots:  1,
-				EngineTime:   1,
+				SecName:      tt.secName,
+				SecLevel:     tt.secLevel,
+				AuthProtocol: tt.authProto,
+				AuthPassword: tt.authPass,
+				PrivProtocol: tt.privProto,
+				PrivPassword: tt.privPass,
 			}
 			require.Nil(t, s.Init())
 			var acc testutil.Accumulator
@@ -1294,7 +1301,7 @@ func TestReceiveTrap(t *testing.T) {
 			s.execCmd = fakeExecCmd
 
 			// Send the trap
-			sendTrap(t, port, now, tt.trap, tt.version, tt.seclevel, tt.secname, tt.authproto, tt.authpass, tt.privproto, tt.privpass)
+			sendTrap(t, port, now, tt.trap, tt.version, tt.secLevel, tt.secName, tt.authProto, tt.authPass, tt.privProto, tt.privPass, tt.contextName, tt.engineID)
 
 			// Wait for trap to be received
 			select {
