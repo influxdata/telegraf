@@ -55,6 +55,7 @@
 - [#7540](https://github.com/influxdata/telegraf/pull/7540): Add processor to look up service name by port.
 - [#7474](https://github.com/influxdata/telegraf/pull/7474): Add new once mode that write to outputs and exits.
 - [#7474](https://github.com/influxdata/telegraf/pull/7474): Run processors and aggregators during test mode.
+- [#7294](https://github.com/influxdata/telegraf/pull/7294): Add SNMPv3 trap support to snmp_trap input.
 
 #### Bugfixes
 
