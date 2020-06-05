@@ -45,8 +45,6 @@ information.
   # auth_password = "pass"
   ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
   # sec_level = "authNoPriv"
-  ## Context Name.
-  # context_name = ""
   ## Privacy protocol used for encrypted messages; one of "DES", "AES", "AES192", "AES192C", "AES256", "AES256C" or "".
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
@@ -87,6 +85,8 @@ On Mac OS, listening on privileged ports is unrestricted on versions
 	- mib (string, MIB from SNMPv2-MIB::snmpTrapOID.0 PDU)
 	- oid (string, OID string from SNMPv2-MIB::snmpTrapOID.0 PDU)
 	- version (string, "1" or "2c" or "3")
+	- context_name (string, value from v3 trap)
+	- engine_id (string, value from v3 trap)
   - fields:
 	- Fields are mapped from variables in the trap. Field names are
       the trap variable names after MIB lookup. Field values are trap
