@@ -116,6 +116,8 @@ func (s *SMI) genTagsFields() []metric {
 		setIfUsed("int", fields, "temperature_gpu", gpu.Temp.GPUTemp)
 		setIfUsed("int", fields, "utilization_gpu", gpu.Utilization.GPU)
 		setIfUsed("int", fields, "utilization_memory", gpu.Utilization.Memory)
+		setIfUsed("int", fields, "utilization_encoder", gpu.Utilization.Encoder)
+		setIfUsed("int", fields, "utilization_decoder", gpu.Utilization.Decoder)
 		setIfUsed("int", fields, "pcie_link_gen_current", gpu.PCI.LinkInfo.PCIEGen.CurrentLinkGen)
 		setIfUsed("int", fields, "pcie_link_width_current", gpu.PCI.LinkInfo.LinkWidth.CurrentLinkWidth)
 		setIfUsed("int", fields, "encoder_stats_session_count", gpu.Encoder.SessionCount)
@@ -202,8 +204,10 @@ type TempStats struct {
 
 // UtilizationStats defines the structure of the utilization portion of the smi output.
 type UtilizationStats struct {
-	GPU    string `xml:"gpu_util"`    // int
-	Memory string `xml:"memory_util"` // int
+	GPU     string `xml:"gpu_util"`     // int
+	Memory  string `xml:"memory_util"`  // int
+	Encoder string `xml:"encoder_util"` // int
+	Decoder string `xml:"decoder_util"` // int
 }
 
 // PowerReadings defines the structure of the power_readings portion of the smi output.
