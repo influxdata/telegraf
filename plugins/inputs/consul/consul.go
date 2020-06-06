@@ -19,7 +19,9 @@ type Consul struct {
 	Datacentre string // deprecated in 1.10; use Datacenter
 	Datacenter string
 	tls.ClientConfig
-	TagDelimiter string
+	TagDelimiter   string
+	DisableTags    bool
+	DisableCheckId bool
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -53,6 +55,17 @@ var sampleConfig = `
   # When tags are formatted like "key:value" with ":" as a delimiter then
   # they will be splitted and reported as proper key:value in Telegraf
   # tag_delimiter = ":"
+
+  ## Disable gathering tags from Consul on health checks
+  # This is very useful on large clusters with a lot of services and tags.
+  # This alleviates the situation of this telegraf running on multiple servers 
+  # for a holistic point of view, and there are thousands of checks with 10+ tags. 
+  # disable_tags = false
+
+  ## Disable gathering check id from Consul on health checks
+  # This is useful in dynamic environments, where check_id is generated,
+  # where most check_id's are some uuid-ish name with low meaning.
+  # disable_check_id = false
 `
 
 func (c *Consul) Description() string {
@@ -121,18 +134,22 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 
 		tags["node"] = check.Node
 		tags["service_name"] = check.ServiceName
-		tags["check_id"] = check.CheckID
+		if c.DisableCheckId == false {
+			tags["check_id"] = check.CheckID
+		}
 
-		for _, checkTag := range check.ServiceTags {
-			if c.TagDelimiter != "" {
-				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
-				if len(splittedTag) == 1 && checkTag != "" {
+		if c.DisableTags == false {
+			for _, checkTag := range check.ServiceTags {
+				if c.TagDelimiter != "" {
+					splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
+					if len(splittedTag) == 1 && checkTag != "" {
+						tags[checkTag] = checkTag
+					} else if len(splittedTag) == 2 && splittedTag[1] != "" {
+						tags[splittedTag[0]] = splittedTag[1]
+					}
+				} else if checkTag != "" {
 					tags[checkTag] = checkTag
-				} else if len(splittedTag) == 2 && splittedTag[1] != "" {
-					tags[splittedTag[0]] = splittedTag[1]
 				}
-			} else if checkTag != "" {
-				tags[checkTag] = checkTag
 			}
 		}
 
