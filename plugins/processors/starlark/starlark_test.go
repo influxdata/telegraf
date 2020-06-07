@@ -207,8 +207,19 @@ def apply(metric):
 			err := plugin.Init()
 			require.NoError(t, err)
 
-			actual := plugin.Apply(tt.input...)
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
+			var acc testutil.Accumulator
+
+			err = plugin.Start(&acc)
+			require.NoError(t, err)
+
+			for _, m := range tt.input {
+				plugin.Add(m, &acc)
+			}
+
+			err = plugin.Stop()
+			require.NoError(t, err)
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }
@@ -1228,6 +1239,7 @@ def apply(metric):
 			source: `
 def apply(metric):
 	if not metric.fields:
+		metric.fields["time_idle"] = 42
 		return metric
 	return None
 `,
@@ -1241,7 +1253,7 @@ def apply(metric):
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{},
+					map[string]interface{}{"time_idle": 42},
 					time.Unix(0, 0),
 				),
 			},
@@ -1257,18 +1269,14 @@ def apply(metric):
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{
-						"time_idle": 42.0,
-					},
+					map[string]interface{}{"time_idle": 42.0},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{
-						"time_idle": 42.0,
-					},
+					map[string]interface{}{"time_idle": 42.0},
 					time.Unix(0, 0),
 				),
 			},
@@ -1556,14 +1564,17 @@ def apply(metric):
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{"time_idle": 0},
+					map[string]interface{}{
+						"time_idle":  0,
+						"time_guest": 0,
+					},
 					time.Unix(0, 0),
 				),
 			},
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{},
+					map[string]interface{}{"time_guest": 0},
 					time.Unix(0, 0),
 				),
 			},
@@ -1575,6 +1586,7 @@ def apply(metric):
 	item = metric.fields.popitem()
 	if item != ("time_idle", 0):
 		return
+	metric.fields['time_guest'] = 0
 	return metric
 `,
 			input: []telegraf.Metric{
@@ -1587,7 +1599,7 @@ def apply(metric):
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{},
+					map[string]interface{}{"time_guest": 0},
 					time.Unix(0, 0),
 				),
 			},
@@ -1987,6 +1999,7 @@ def apply(metric):
 			source: `
 def apply(metric):
 	metric.fields.clear()
+	metric.fields['notempty'] = 0
 	return metric
 `,
 			input: []telegraf.Metric{
@@ -2004,7 +2017,9 @@ def apply(metric):
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{},
+					map[string]interface{}{
+						"notempty": 0,
+					},
 					time.Unix(0, 0),
 				),
 			},
@@ -2084,6 +2099,7 @@ def apply(metric):
 	for k in metric.fields:
 		pass
 	metric.fields.clear()
+	metric.fields['notempty'] = 0
 	return metric
 `,
 			input: []telegraf.Metric{
@@ -2096,7 +2112,9 @@ def apply(metric):
 			expected: []telegraf.Metric{
 				testutil.MustMetric("cpu",
 					map[string]string{},
-					map[string]interface{}{},
+					map[string]interface{}{
+						"notempty": 0,
+					},
 					time.Unix(0, 0),
 				),
 			},
@@ -2185,8 +2203,19 @@ def apply(metric):
 			err := plugin.Init()
 			require.NoError(t, err)
 
-			actual := plugin.Apply(tt.input...)
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
+			var acc testutil.Accumulator
+
+			err = plugin.Start(&acc)
+			require.NoError(t, err)
+
+			for _, m := range tt.input {
+				plugin.Add(m, &acc)
+			}
+
+			err = plugin.Stop()
+			require.NoError(t, err)
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }
@@ -2284,8 +2313,19 @@ func TestScript(t *testing.T) {
 			err := tt.plugin.Init()
 			require.NoError(t, err)
 
-			actual := tt.plugin.Apply(tt.input...)
-			testutil.RequireMetricsEqual(t, tt.expected, actual)
+			var acc testutil.Accumulator
+
+			err = tt.plugin.Start(&acc)
+			require.NoError(t, err)
+
+			for _, m := range tt.input {
+				tt.plugin.Add(m, &acc)
+			}
+
+			err = tt.plugin.Stop()
+			require.NoError(t, err)
+
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics())
 		})
 	}
 }
@@ -2543,10 +2583,20 @@ def apply(metric):
 			err := plugin.Init()
 			require.NoError(b, err)
 
+			var acc testutil.NopAccumulator
+
+			err = plugin.Start(&acc)
+			require.NoError(b, err)
+
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
-				plugin.Apply(tt.input...)
+				for _, m := range tt.input {
+					plugin.Add(m, &acc)
+				}
 			}
+
+			err = plugin.Stop()
+			require.NoError(b, err)
 		})
 	}
 }

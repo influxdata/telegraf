@@ -125,50 +125,71 @@ func (s *Starlark) Description() string {
 	return description
 }
 
-func (s *Starlark) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	s.results = s.results[:0]
-	for _, m := range metrics {
-		s.args[0].(*Metric).Wrap(m)
+func (s *Starlark) Start(acc telegraf.Accumulator) error {
+	return nil
+}
 
-		rv, err := starlark.Call(s.thread, s.applyFunc, s.args, nil)
-		if err != nil {
-			if err, ok := err.(*starlark.EvalError); ok {
-				for _, line := range strings.Split(err.Backtrace(), "\n") {
-					s.Log.Error(line)
-				}
-			} else {
-				s.Log.Error(err)
-			}
-			continue
-		}
+func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) {
+	s.args[0].(*Metric).Wrap(metric)
 
-		switch rv := rv.(type) {
-		case *starlark.List:
-			iter := rv.Iterate()
-			defer iter.Done()
-			var v starlark.Value
-			for iter.Next(&v) {
-				switch v := v.(type) {
-				case *Metric:
-					m := v.Unwrap()
-					if containsMetric(s.results, m) {
-						s.Log.Errorf("Duplicate metric reference detected")
-						continue
-					}
-					s.results = append(s.results, m)
-				default:
-					s.Log.Errorf("Invalid type returned in list: %T", v)
-				}
+	rv, err := starlark.Call(s.thread, s.applyFunc, s.args, nil)
+	if err != nil {
+		if err, ok := err.(*starlark.EvalError); ok {
+			for _, line := range strings.Split(err.Backtrace(), "\n") {
+				s.Log.Error(line)
 			}
-		case *Metric:
-			s.results = append(s.results, rv.Unwrap())
-		case starlark.NoneType:
-			return nil
-		default:
-			s.Log.Errorf("Invalid type returned: %T", rv)
+		} else {
+			s.Log.Errorf("Error calling Starlark: %v", err)
 		}
+		metric.Reject()
+		return
 	}
-	return s.results
+
+	switch rv := rv.(type) {
+	case *starlark.List:
+		iter := rv.Iterate()
+		defer iter.Done()
+		var v starlark.Value
+		for iter.Next(&v) {
+			switch v := v.(type) {
+			case *Metric:
+				m := v.Unwrap()
+				if containsMetric(s.results, m) {
+					s.Log.Errorf("Duplicate metric reference detected")
+					continue
+				}
+				s.results = append(s.results, m)
+				acc.AddMetric(m)
+			case starlark.Value:
+				s.Log.Errorf("Invalid type returned in list: %s", v.Type())
+			}
+		}
+
+		if containsMetric(s.results, metric) {
+			metric.Drop()
+		}
+
+		for i := range s.results {
+			s.results[i] = nil
+		}
+		s.results = s.results[:0]
+	case *Metric:
+		m := rv.Unwrap()
+		if m != metric {
+			metric.Drop()
+		}
+		acc.AddMetric(m)
+	case starlark.NoneType:
+		return
+	default:
+		s.Log.Errorf("Invalid type returned: %T", rv)
+	}
+
+	return
+}
+
+func (s *Starlark) Stop() error {
+	return nil
 }
 
 func containsMetric(metrics []telegraf.Metric, metric telegraf.Metric) bool {
@@ -191,7 +212,7 @@ func init() {
 }
 
 func init() {
-	processors.Add("starlark", func() telegraf.Processor {
+	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
 		return &Starlark{
 			OnError: defaultOnError,
 		}

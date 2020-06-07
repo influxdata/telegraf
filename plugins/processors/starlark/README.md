@@ -85,17 +85,18 @@ error line number
 ### TODO
 
 how to delete a metric?
-- must call Drop?
-- don't return: check returned values and autodrop
+- don't return: we check returned values and autodrop
 
 how to copy a metric?
 - must call deepcopy()
 - returning multiple references is an error
+- you can build a new metric, but this will be treated as a disconnected metric.
 
 how to return multiple metrics?
 - return a list of metric
 
 if an error occurs do we drop the metric tracking?
+- no, the metric is rejected
 
 how to create a new metric?
 
