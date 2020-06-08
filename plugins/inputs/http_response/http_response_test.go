@@ -90,6 +90,9 @@ func setUpTestMux() http.Handler {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		fmt.Fprintf(w, "hit the good page!")
 	})
+	mux.HandleFunc("/invalidUTF8", func(w http.ResponseWriter, req *http.Request) {
+		w.Write([]byte{0xff, 0xfe, 0xfd})
+	})
 	mux.HandleFunc("/noheader", func(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintf(w, "hit the good page!")
 	})
@@ -221,6 +224,109 @@ func TestFields(t *testing.T) {
 	}
 	absentFields := []string{"response_string_match"}
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+}
+
+func TestResponseBodyField(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		Address:         ts.URL + "/good",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		ResponseBodyField: "my_body_field",
+		FollowRedirects:   true,
+	}
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code": http.StatusOK,
+		"result_type":        "success",
+		"result_code":        0,
+		"response_time":      nil,
+		"content_length":     nil,
+		"my_body_field":      "hit the good page!",
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "200",
+		"result":      "success",
+	}
+	absentFields := []string{"response_string_match"}
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+
+	// Invalid UTF-8 String
+	h = &HTTPResponse{
+		Log:             testutil.Logger{},
+		Address:         ts.URL + "/invalidUTF8",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		ResponseBodyField: "my_body_field",
+		FollowRedirects:   true,
+	}
+
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields = map[string]interface{}{
+		"result_type": "body_read_error",
+		"result_code": 2,
+	}
+	expectedTags = map[string]interface{}{
+		"server": nil,
+		"method": "GET",
+		"result": "body_read_error",
+	}
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
+}
+
+func TestResponseBodyMaxSize(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:             testutil.Logger{},
+		Address:         ts.URL + "/good",
+		Body:            "{ 'test': 'data'}",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		ResponseBodyMaxSize: internal.Size{Size: 5},
+		FollowRedirects:     true,
+	}
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"result_type": "body_read_error",
+		"result_code": 2,
+	}
+	expectedTags := map[string]interface{}{
+		"server": nil,
+		"method": "GET",
+		"result": "body_read_error",
+	}
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 }
 
 func TestHTTPHeaderTags(t *testing.T) {
