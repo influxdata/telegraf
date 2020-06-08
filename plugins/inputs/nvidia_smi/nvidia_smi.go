@@ -123,6 +123,9 @@ func (s *SMI) genTagsFields() []metric {
 		setIfUsed("int", fields, "encoder_stats_session_count", gpu.Encoder.SessionCount)
 		setIfUsed("int", fields, "encoder_stats_average_fps", gpu.Encoder.AverageFPS)
 		setIfUsed("int", fields, "encoder_stats_average_latency", gpu.Encoder.AverageLatency)
+		setIfUsed("int", fields, "fbc_stats_session_count", gpu.FBC.SessionCount)
+		setIfUsed("int", fields, "fbc_stats_average_fps", gpu.FBC.AverageFPS)
+		setIfUsed("int", fields, "fbc_stats_average_latency", gpu.FBC.AverageLatency)
 		setIfUsed("int", fields, "clocks_current_graphics", gpu.Clocks.Graphics)
 		setIfUsed("int", fields, "clocks_current_sm", gpu.Clocks.SM)
 		setIfUsed("int", fields, "clocks_current_memory", gpu.Clocks.Memory)
@@ -187,6 +190,7 @@ type GPU []struct {
 	Power       PowerReadings    `xml:"power_readings"`
 	PCI         PCI              `xml:"pci"`
 	Encoder     EncoderStats     `xml:"encoder_stats"`
+	FBC         FBCStats         `xml:"fbc_stats"`
 	Clocks      ClockStats       `xml:"clocks"`
 }
 
@@ -229,6 +233,13 @@ type PCI struct {
 
 // EncoderStats defines the structure of the encoder_stats portion of the smi output.
 type EncoderStats struct {
+	SessionCount   string `xml:"session_count"`   // int
+	AverageFPS     string `xml:"average_fps"`     // int
+	AverageLatency string `xml:"average_latency"` // int
+}
+
+// FBCStats defines the structure of the fbc_stats portion of the smi output.
+type FBCStats struct {
 	SessionCount   string `xml:"session_count"`   // int
 	AverageFPS     string `xml:"average_fps"`     // int
 	AverageLatency string `xml:"average_latency"` // int
