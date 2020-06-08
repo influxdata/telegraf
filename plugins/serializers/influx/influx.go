@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 )
@@ -158,6 +159,14 @@ func (s *Serializer) buildHeader(m telegraf.Metric) error {
 		// those with a trailing '\' or empty strings.
 		if key == "" || value == "" {
 			continue
+		}
+
+		if strings.HasSuffix(key, `\`) {
+			key = strings.TrimRight(key, `\`)
+		}
+
+		if strings.HasSuffix(value, `\`) {
+			value = strings.TrimRight(value, `\`)
 		}
 
 		s.header = append(s.header, ',')
