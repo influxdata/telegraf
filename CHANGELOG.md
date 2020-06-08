@@ -60,6 +60,7 @@
 - [#7646](https://github.com/influxdata/telegraf/pull/7646): Add video codec stats to nvidia-smi.
 - [#7651](https://github.com/influxdata/telegraf/pull/7651): Fix source field for icinga2 plugin and add tag for server hostname.
 - [#7619](https://github.com/influxdata/telegraf/pull/7619): Add timezone configuration to csv input data format.
+- [#7596](https://github.com/influxdata/telegraf/pull/7596): Add ability to collect response body as field with http_response.
 
 #### Bugfixes
 
