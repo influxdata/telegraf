@@ -431,3 +431,23 @@ func TestSkipTimestampColumn(t *testing.T) {
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, metrics)
 }
+
+func TestTimestampTimezone(t *testing.T) {
+	p := Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "02/01/06 03:04:05 PM",
+		TimeFunc:          DefaultTime,
+		Timezone:          "Asia/Jakarta",
+	}
+	testCSV := `line1,line2,line3
+23/05/09 11:05:06 PM,70,test_name
+07/11/09 11:05:06 PM,80,test_name2`
+	metrics, err := p.Parse([]byte(testCSV))
+
+	require.NoError(t, err)
+	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
+	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
+}

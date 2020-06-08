@@ -31,6 +31,7 @@ type Parser struct {
 	TimestampFormat   string
 	DefaultTags       map[string]string
 	TimeFunc          func() time.Time
+	Timezone          string
 }
 
 func (p *Parser) SetTimeFunc(fn TimeFunc) {
@@ -211,7 +212,7 @@ outer:
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
 	}
 
-	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat)
+	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat, p.Timezone)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +232,7 @@ outer:
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
 func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
-	timestampColumn, timestampFormat string,
+	timestampColumn, timestampFormat string, Timezone string,
 ) (time.Time, error) {
 	if timestampColumn != "" {
 		if recordFields[timestampColumn] == nil {
@@ -242,7 +243,7 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		case "":
 			return time.Time{}, fmt.Errorf("timestamp format must be specified")
 		default:
-			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], "UTC")
+			metricTime, err := internal.ParseTimestamp(timestampFormat, recordFields[timestampColumn], Timezone)
 			if err != nil {
 				return time.Time{}, err
 			}

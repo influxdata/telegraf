@@ -68,6 +68,11 @@ values.
   ## The format of time data extracted from `csv_timestamp_column`
   ## this must be specified if `csv_timestamp_column` is specified
   csv_timestamp_format = ""
+
+  ## The timezone of time data extracted from `csv_timestamp_column`
+  ## in case of there is no timezone information.
+  ## It follows the  IANA Time Zone database.
+  csv_timezone = ""
   ```
 #### csv_timestamp_column, csv_timestamp_format
 
