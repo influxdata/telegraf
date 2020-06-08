@@ -155,18 +155,18 @@ func (s *Serializer) buildHeader(m telegraf.Metric) error {
 		key := escape(tag.Key)
 		value := escape(tag.Value)
 
-		// Some keys and values are not encodeable as line protocol, such as
-		// those with a trailing '\' or empty strings.
-		if key == "" || value == "" {
-			continue
-		}
-
+		// Tag keys and values that end with a backslash cannot be encoded by
+		// line protocol.
 		if strings.HasSuffix(key, `\`) {
 			key = strings.TrimRight(key, `\`)
 		}
-
 		if strings.HasSuffix(value, `\`) {
 			value = strings.TrimRight(value, `\`)
+		}
+
+		// Tag keys and values must not be the empty string.
+		if key == "" || value == "" {
+			continue
 		}
 
 		s.header = append(s.header, ',')
