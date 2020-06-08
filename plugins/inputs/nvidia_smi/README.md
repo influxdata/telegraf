@@ -31,6 +31,9 @@ You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
     - `uuid` (A unique identifier for the GPU e.g. `GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665`)
   - fields
     - `fan_speed` (integer, percentage)
+    - `fbc_stats_session_count` (integer)
+    - `fbc_stats_average_fps` (integer)
+    - `fbc_stats_average_latency` (integer)
     - `memory_free` (integer, MiB)
     - `memory_used` (integer, MiB)
     - `memory_total` (integer, MiB)
