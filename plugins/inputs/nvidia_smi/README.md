@@ -38,6 +38,8 @@ You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program
     - `temperature_gpu` (integer, degrees C)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)
+    - `utilization_encoder` (integer, percentage)
+    - `utilization_decoder` (integer, percentage)
     - `pcie_link_gen_current` (integer)
     - `pcie_link_width_current` (integer)
     - `encoder_stats_session_count` (integer)
