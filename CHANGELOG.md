@@ -59,6 +59,7 @@
 - [#7294](https://github.com/influxdata/telegraf/pull/7294): Add SNMPv3 trap support to snmp_trap input.
 - [#7646](https://github.com/influxdata/telegraf/pull/7646): Add video codec stats to nvidia-smi.
 - [#7651](https://github.com/influxdata/telegraf/pull/7651): Fix source field for icinga2 plugin and add tag for server hostname.
+- [#7619](https://github.com/influxdata/telegraf/pull/7619): Add timezone configuration to csv input data format.
 
 #### Bugfixes
 
