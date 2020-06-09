@@ -394,8 +394,6 @@ HAVING
 	SUM(' + @Columns + N') >= 1024
 OPTION(RECOMPILE);
 '
-/*Debug only*/
---SELECT @SqlStatement
 
 EXEC(@SqlStatement)
 `
@@ -472,10 +470,6 @@ BEGIN
 ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
 	END
 	
-	/*Debug only*/
-	--PRINT @Columns
-	--PRINT @Tables
-	
 	SET @SqlStatement = N'
 	SELECT
 		''sqlserver_database_io'' AS [measurement]
@@ -496,9 +490,6 @@ BEGIN
 		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
 	'
 	+ @Tables;
-	
-	/*Debug only*/
-	--PRINT @SqlStatement
 	
 	EXEC sp_executesql @SqlStatement
 
@@ -580,9 +571,6 @@ BEGIN
 		' + @Columns + '
 	FROM sys.[dm_os_sys_info]'
 
-	/*Debug Only*/
-	--SELECT @SqlStatement
-
 	/*Insert the dynamic sql result into the table variable*/
 	INSERT INTO @sys_info ( [cpu_count], [server_memory], [sku], [engine_edition], [uptime], [hardware_type] ) 
 	EXEC sp_executesql @SqlStatement
@@ -656,9 +644,6 @@ SELECT
 	,s.[yield_count]
 	' + @Columns + N'
 FROM sys.dm_os_schedulers AS s'
-
-/*Debug Only*/
---SELECT @SqlStatement
 
 EXEC sp_executesql @SqlStatement
 `
@@ -2000,7 +1985,7 @@ WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
 '
---PRINT @DynamicPivotQuery
+
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
@@ -2135,7 +2120,7 @@ WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(AvgBytesPerWrite) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 '
---PRINT @DynamicPivotQuery
+
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
