@@ -566,14 +566,14 @@ BEGIN
 		 [cpu_count]
 		,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
 		,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR) AS [sku]
-		,CAST(SERVERPROPERTY(''EngineEdition'') AS SMALLINT) AS [engine_edition]
+		,@EngineEdition AS [engine_edition]
 		,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
 		' + @Columns + '
 	FROM sys.[dm_os_sys_info]'
 
 	/*Insert the dynamic sql result into the table variable*/
 	INSERT INTO @sys_info ( [cpu_count], [server_memory], [sku], [engine_edition], [uptime], [hardware_type] ) 
-	EXEC sp_executesql @SqlStatement
+	EXEC sp_executesql @SqlStatement , N'@EngineEdition smallint', @EngineEdition = @EngineEdition
 END
 
 SELECT	'sqlserver_server_properties' AS [measurement],
