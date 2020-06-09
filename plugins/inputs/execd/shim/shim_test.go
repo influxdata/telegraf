@@ -21,22 +21,12 @@ func TestShimWorks(t *testing.T) {
 
 	stdin, _ = io.Pipe() // hold the stdin pipe open
 
-	timeout := time.NewTimer(10 * time.Second)
 	metricProcessed, _ := runInputPlugin(t, 10*time.Millisecond)
 
-	select {
-	case <-metricProcessed:
-	case <-timeout.C:
-		require.Fail(t, "Timeout waiting for metric to arrive")
-	}
+	<-metricProcessed
 	for stdoutBytes.Len() == 0 {
-		select {
-		case <-timeout.C:
-			require.Fail(t, "Timeout waiting to read metric from stdout")
-			return
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
+		t.Log("Waiting for bytes available in stdout")
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	out := string(stdoutBytes.Bytes())
@@ -52,16 +42,11 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	stdin = stdinReader
 	stdout = stdoutWriter
 
-	timeout := time.NewTimer(10 * time.Second)
 	metricProcessed, exited := runInputPlugin(t, 40*time.Second)
 
 	stdinWriter.Write([]byte("\n"))
 
-	select {
-	case <-metricProcessed:
-	case <-timeout.C:
-		require.Fail(t, "Timeout waiting for metric to arrive")
-	}
+	<-metricProcessed
 
 	r := bufio.NewReader(stdoutReader)
 	out, err := r.ReadString('\n')
@@ -69,12 +54,15 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
 	stdinWriter.Close()
+
+	readUntilEmpty(r)
+
 	// check that it exits cleanly
 	<-exited
 }
 
 func runInputPlugin(t *testing.T, interval time.Duration) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool)
+	metricProcessed = make(chan bool, 10)
 	exited = make(chan bool)
 	inp := &testInput{
 		metricProcessed: metricProcessed,
@@ -171,4 +159,16 @@ func (i *serviceInput) Start(acc telegraf.Accumulator) error {
 }
 
 func (i *serviceInput) Stop() {
+}
+
+// we can get stuck if stdout gets clogged up and nobody's reading from it.
+// make sure we keep it going
+func readUntilEmpty(r *bufio.Reader) {
+	go func() {
+		var err error
+		for err != io.EOF {
+			_, err = r.ReadString('\n')
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
 }
