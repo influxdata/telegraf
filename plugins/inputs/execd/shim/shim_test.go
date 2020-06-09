@@ -55,16 +55,14 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 
 	stdinWriter.Close()
 
-	// we can get stuck if stdout gets clogged up and nobody's reading from it.
-	// make sure we try to at least read once from it.
-	go r.ReadString('\n')
+	readUntilEmpty(r)
 
 	// check that it exits cleanly
 	<-exited
 }
 
 func runInputPlugin(t *testing.T, interval time.Duration) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool, 1)
+	metricProcessed = make(chan bool, 10)
 	exited = make(chan bool)
 	inp := &testInput{
 		metricProcessed: metricProcessed,
@@ -161,4 +159,16 @@ func (i *serviceInput) Start(acc telegraf.Accumulator) error {
 }
 
 func (i *serviceInput) Stop() {
+}
+
+// we can get stuck if stdout gets clogged up and nobody's reading from it.
+// make sure we keep it going
+func readUntilEmpty(r *bufio.Reader) {
+	go func() {
+		var err error
+		for err != io.EOF {
+			_, err = r.ReadString('\n')
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
 }
