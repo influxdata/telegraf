@@ -8,9 +8,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
-	"math"
 	"net/http"
-	"strconv"
 )
 
 type Cpu struct {
@@ -81,13 +79,14 @@ type Placement struct {
 	Row  string
 }
 type Redfish struct {
-	Host              string `toml:"host"`
+	Address           string `toml:"address"`
 	BasicAuthUsername string `toml:"username"`
 	BasicAuthPassword string `toml:"password"`
-	Id                string `toml:"id"`
+	ServerSystemId    string `toml:"server_system_id"`
 	client            http.Client
 	tls.ClientConfig
 	Timeout internal.Duration `toml:"timeout"`
+	payload Payload
 }
 
 func (r *Redfish) Description() string {
@@ -95,21 +94,21 @@ func (r *Redfish) Description() string {
 }
 
 var redfishConfig = `
-  ##Server  OOB-IP
-  host = "192.0.0.1"
+  ##Server  url
+  address = "https://192.0.0.1"
 
   ##Username,  Password   for   hardware   server
   username = "test"
   password = "test"
 
   ##Resource  Id   for   redfish   APIs
-  id="System.Embedded.1"
+  server_system_id="System.Embedded.1"
 
-  ##Optional TLS   Config, if not provided insecure skip verifies defaults to true
+  ##Optional TLS Config
   #tls_ca = "/etc/telegraf/ca.pem"
   #tls_cert = "/etc/telegraf/cert.pem"
   #tls_key = "/etc/telegraf/key.pem"
-  
+  #insecure_skip_verify = false
 
   ## Amount   of   time   allowed   to   complete   the   HTTP   request
   # timeout = "5s"
@@ -120,17 +119,15 @@ func (r *Redfish) SampleConfig() string {
 }
 
 func (r *Redfish) Init() error {
+	if len(r.Address) == 0 || len(r.BasicAuthUsername) == 0 || len(r.BasicAuthPassword) == 0 {
+		return fmt.Errorf("Did not provide IP or username and password")
+	}
+	if len(r.ServerSystemId) == 0 {
+		return fmt.Errorf("Did not provide all the ID of the resource")
+	}
 	tlsCfg, err := r.ClientConfig.TLSConfig()
 	if err != nil {
-		return err
-	}
-	if (len(r.ClientConfig.TLSCA) == 0) || (len(r.ClientConfig.TLSCert) == 0 && len(r.ClientConfig.TLSKey) == 0) {
-		var insecuretls tls.ClientConfig
-		insecuretls.InsecureSkipVerify = true
-		tlsCfg, err = insecuretls.TLSConfig()
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("%v", err)
 	}
 	r.client = http.Client{
 		Transport: &http.Transport{
@@ -139,213 +136,198 @@ func (r *Redfish) Init() error {
 		},
 		Timeout: r.Timeout.Duration,
 	}
+
 	return nil
 }
 
-func Severity(critical, fatal, val int) string {
-	severity := "NA"
-	if (critical != 0) || (fatal != 0) {
-		if (val >= fatal) && (fatal != 0) {
-			severity = "Fatal"
-		} else if (val >= critical) && (critical != 0) {
-			severity = "Critical"
-		} else {
-			severity = "OK"
-		}
+func (r *Redfish) GetData(url string) error {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("%v", err)
 	}
-	return severity
+	req.SetBasicAuth(r.BasicAuthUsername, r.BasicAuthPassword)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("%v", err)
+		}
+		err = json.Unmarshal(body, &r.payload)
+		if err != nil {
+			return fmt.Errorf("error parsing input: %v", err)
+		}
+
+	} else {
+		return fmt.Errorf("received status code %d (%s), expected 200",
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode))
+	}
+	return nil
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	var url []string
-	var payload Payload
-	url = append(url, fmt.Sprint("https://", r.Host, "/redfish/v1/Chassis/", r.Id, "/Thermal"), fmt.Sprint("https://", r.Host, "/redfish/v1/Chassis/", r.Id, "/Power"), fmt.Sprint("https://", r.Host, "/redfish/v1/Systems/", r.Id), fmt.Sprint("https://", r.Host, "/redfish/v1/Chassis/", r.Id, "/"))
-
-	if len(r.Host) == 0 || len(r.BasicAuthUsername) == 0 || len(r.BasicAuthPassword) == 0 {
-		return fmt.Errorf("Did not provide IP or username and password")
-	}
-	if len(r.Id) == 0 {
-		return fmt.Errorf("Did not provide all the ID of the resource")
-	}
-
+	url = append(url, fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ServerSystemId, "/Thermal"), fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ServerSystemId, "/Power"), fmt.Sprint(r.Address, "/redfish/v1/Systems/", r.ServerSystemId), fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ServerSystemId, "/"))
 	for _, i := range url {
-		req, err := http.NewRequest("GET", i, nil)
+		err := r.GetData(i)
 		if err != nil {
-			return err
-		}
-		req.SetBasicAuth(r.BasicAuthUsername, r.BasicAuthPassword)
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("Content-Type", "application/json")
-		resp, err := r.client.Do(req)
-		if err != nil {
-			return err
-		}
-		if resp.StatusCode == 200 {
-			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return fmt.Errorf("%v", err)
-			}
-			jsonErr := json.Unmarshal(body, &payload)
-			if jsonErr != nil {
-				return fmt.Errorf("error parsing input: %v", jsonErr)
-			}
-
-		} else {
-			return fmt.Errorf("received status code %d (%s), expected 200",
-				resp.StatusCode,
-				http.StatusText(resp.StatusCode))
+			return fmt.Errorf("%v", err)
 		}
 	}
-	if payload.Location != nil {
-		for _, j := range payload.Temperatures {
+	if r.payload.Location != nil {
+		for _, j := range r.payload.Temperatures {
 			//  Tags
 			tags := map[string]string{}
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
-			tags["room"] = payload.Location.PostalAddress.Room
-			tags["rack"] = payload.Location.Placement.Rack
-			tags["row"] = payload.Location.Placement.Row
-			tags["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.ReadingCelsius)
+			tags["datacenter"] = r.payload.Location.PostalAddress.DataCenter
+			tags["room"] = r.payload.Location.PostalAddress.Room
+			tags["rack"] = r.payload.Location.Placement.Rack
+			tags["row"] = r.payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["temperature"] = j.ReadingCelsius
+			fields["reading_celsius"] = j.ReadingCelsius
 			fields["upper_threshold_critical"] = j.UpperThresholdCritical
 			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
 			acc.AddFields("redfish_thermal_temperatures", fields, tags)
 		}
-		for _, j := range payload.Fans {
+		for _, j := range r.payload.Fans {
 			//  Tags
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
-			tags["room"] = payload.Location.PostalAddress.Room
-			tags["rack"] = payload.Location.Placement.Rack
-			tags["row"] = payload.Location.Placement.Row
+			tags["datacenter"] = r.payload.Location.PostalAddress.DataCenter
+			tags["room"] = r.payload.Location.PostalAddress.Room
+			tags["rack"] = r.payload.Location.Placement.Rack
+			tags["row"] = r.payload.Location.Placement.Row
+
+			//  Fields
 			if j.ReadingUnits == "RPM" {
-				tags["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.Reading)
 				fields["upper_threshold_critical"] = j.UpperThresholdCritical
 				fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+				fields["reading_rpm"] = j.Reading
 
+			} else {
+				fields["reading_percent"] = j.Reading
 			}
-
-			//  Fields
-			fields["fanspeed"] = j.Reading
 			acc.AddFields("redfish_thermal_fans", fields, tags)
 		}
-		for _, j := range payload.PowerSupplies {
+		for _, j := range r.payload.PowerSupplies {
 			//  Tags
 			tags := map[string]string{}
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
-			tags["room"] = payload.Location.PostalAddress.Room
-			tags["rack"] = payload.Location.Placement.Rack
-			tags["row"] = payload.Location.Placement.Row
+			tags["datacenter"] = r.payload.Location.PostalAddress.DataCenter
+			tags["room"] = r.payload.Location.PostalAddress.Room
+			tags["rack"] = r.payload.Location.Placement.Rack
+			tags["row"] = r.payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["power_input_watts"] = math.Round(j.PowerInputWatts*100) / 100
-			fields["power_output_watts"] = math.Round(j.PowerOutputWatts*100) / 100
-			fields["line_input_voltage"] = math.Round(j.LineInputVoltage*100) / 100
-			fields["last_power_output_watts"] = math.Round(j.LastPowerOutputWatts*100) / 100
-			fields["power_capacity_watts"] = math.Round(j.PowerCapacityWatts*100) / 100
+			fields["power_input_watts"] = j.PowerInputWatts
+			fields["power_output_watts"] = j.PowerOutputWatts
+			fields["line_input_voltage"] = j.LineInputVoltage
+			fields["last_power_output_watts"] = j.LastPowerOutputWatts
+			fields["power_capacity_watts"] = j.PowerCapacityWatts
 			acc.AddFields("redfish_power_powersupplies", fields, tags)
 		}
-		for _, j := range payload.Voltages {
+		for _, j := range r.payload.Voltages {
 			//  Tags
 			tags := map[string]string{}
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			tags["datacenter"] = payload.Location.PostalAddress.DataCenter
-			tags["room"] = payload.Location.PostalAddress.Room
-			tags["rack"] = payload.Location.Placement.Rack
-			tags["row"] = payload.Location.Placement.Row
-			tags["severity"] = Severity(int(math.Round(j.UpperThresholdCritical)), int(math.Round(j.UpperThresholdFatal)), int(math.Round(j.ReadingVolts)))
+			tags["datacenter"] = r.payload.Location.PostalAddress.DataCenter
+			tags["room"] = r.payload.Location.PostalAddress.Room
+			tags["rack"] = r.payload.Location.Placement.Rack
+			tags["row"] = r.payload.Location.Placement.Row
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["voltage"] = math.Round(j.ReadingVolts*100) / 100
-			fields["upper_threshold_critical"] = math.Round(j.UpperThresholdCritical*100) / 100
-			fields["upper_threshold_fatal"] = math.Round(j.UpperThresholdFatal*100) / 100
+			fields["reading_volts"] = j.ReadingVolts
+			fields["upper_threshold_critical"] = j.UpperThresholdCritical
+			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
 			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	} else {
-		for _, j := range payload.Temperatures {
+		for _, j := range r.payload.Temperatures {
 			//  Tags
 			tags := map[string]string{}
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			tags["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.ReadingCelsius)
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["temperature"] = j.ReadingCelsius
+			fields["reading_celsius"] = j.ReadingCelsius
 			fields["upper_threshold_critical"] = j.UpperThresholdCritical
 			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
 			acc.AddFields("redfish_thermal_temperatures", fields, tags)
 		}
-		for _, j := range payload.Fans {
+		for _, j := range r.payload.Fans {
 			//  Tags
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			if j.ReadingUnits == "RPM" {
-				tags["upper_threshold_critical"] = strconv.Itoa(j.UpperThresholdCritical)
-				fields["upper_threshold_fatal"] = strconv.Itoa(j.UpperThresholdFatal)
-				fields["severity"] = Severity(j.UpperThresholdCritical, j.UpperThresholdFatal, j.Reading)
-			}
 			//  Fields
-			fields["fanspeed"] = j.Reading
+			if j.ReadingUnits == "RPM" {
+				fields["upper_threshold_critical"] = j.UpperThresholdCritical
+				fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+				fields["reading_rpm"] = j.Reading
+			} else {
+				fields["reading_percent"] = j.Reading
+			}
 			acc.AddFields("redfish_thermal_fans", fields, tags)
 		}
-		for _, j := range payload.PowerSupplies {
+		for _, j := range r.payload.PowerSupplies {
 			//  Tags
 			tags := map[string]string{}
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name //j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["line_input_voltage"] = math.Round(j.LineInputVoltage*100) / 100
-			fields["last_power_output_watts"] = math.Round(j.LastPowerOutputWatts*100) / 100
-			fields["power_capacity_watts"] = math.Round(j.PowerCapacityWatts*100) / 100
+			fields["line_input_voltage"] = j.LineInputVoltage
+			fields["last_power_output_watts"] = j.LastPowerOutputWatts
+			fields["power_capacity_watts"] = j.PowerCapacityWatts
 			acc.AddFields("redfish_power_powersupplies", fields, tags)
 		}
-		for _, j := range payload.Voltages {
+		for _, j := range r.payload.Voltages {
 			//  Tags
 			tags := map[string]string{}
-			tags["source_ip"] = r.Host
+			tags["address"] = r.Address
 			tags["name"] = j.Name
-			tags["source"] = payload.Hostname
+			tags["source"] = r.payload.Hostname
 			tags["state"] = j.Status.State
 			tags["health"] = j.Status.Health
-			tags["severity"] = Severity(int(math.Round(j.UpperThresholdCritical)), int(math.Round(j.UpperThresholdFatal)), int(math.Round(j.ReadingVolts)))
 			//  Fields
 			fields := make(map[string]interface{})
-			fields["voltage"] = math.Round(j.ReadingVolts*100) / 100
-			fields["upper_threshold_critical"] = math.Round(j.UpperThresholdCritical*100) / 100
-			fields["upper_threshold_fatal"] = math.Round(j.UpperThresholdFatal*100) / 100
+			fields["reading_volts"] = j.ReadingVolts
+			fields["upper_threshold_critical"] = j.UpperThresholdCritical
+			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
 			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	}
