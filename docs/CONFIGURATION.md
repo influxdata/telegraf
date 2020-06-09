@@ -412,7 +412,7 @@ excluded from a Processor or Aggregator plugin, it is skips the plugin and is
 sent onwards to the next stage of processing.
 
 - **namepass**:
-An array of glob pattern strings.  Only metrics whose measurement name matches
+An array of [glob pattern][] strings.  Only metrics whose measurement name matches
 a pattern in this list are emitted.
 
 - **namedrop**:
@@ -420,7 +420,7 @@ The inverse of `namepass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `namepass` test.
 
 - **tagpass**:
-A table mapping tag keys to arrays of glob pattern strings.  Only metrics
+A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
 patterns is emitted.
 
@@ -434,7 +434,7 @@ Modifier filters remove tags and fields from a metric.  If all fields are
 removed the metric is removed.
 
 - **fieldpass**:
-An array of glob pattern strings.  Only fields whose field key matches a
+An array of [glob pattern][] strings.  Only fields whose field key matches a
 pattern in this list are emitted.
 
 - **fielddrop**:
@@ -443,7 +443,7 @@ patterns will be discarded from the metric.  This is tested on metrics after
 they have passed the `fieldpass` test.
 
 - **taginclude**:
-An array of glob pattern strings.  Only tags with a tag key matching one of
+An array of [glob pattern][] strings.  Only tags with a tag key matching one of
 the patterns are emitted.  In contrast to `tagpass`, which will pass an entire
 metric based on its tag, `taginclude` removes all non matching tags from the
 metric.  Any tag can be filtered including global tags and the agent `host`
@@ -590,3 +590,4 @@ Reference the detailed [TLS][] documentation.
 [metric filtering]: #metric-filtering
 [telegraf.conf]: /etc/telegraf.conf
 [TLS]: /docs/TLS.md
+[glob pattern]: https://github.com/gobwas/glob#syntax
