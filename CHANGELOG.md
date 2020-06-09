@@ -74,7 +74,7 @@
 - [#7018](https://github.com/influxdata/telegraf/issues/7018): Fix incorrect uptime when clock is adjusted.
 - [#6807](https://github.com/influxdata/telegraf/issues/6807): Fix memory leak when using procstat on Windows.
 
-## v1.14.4 [unreleased]
+## v1.14.4 [2020-06-09]
 
 #### Bugfixes
 
