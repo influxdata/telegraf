@@ -106,7 +106,7 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 		}
 		gatherPromptCh := make(chan empty, 1)
 		s.gatherPromptChans = append(s.gatherPromptChans, gatherPromptCh)
-		wg.Add(1)
+		wg.Add(1) // one per input
 		go func(input telegraf.Input) {
 			startGathering(ctx, input, acc, gatherPromptCh, pollInterval)
 			if serviceInput, ok := input.(telegraf.ServiceInput); ok {
@@ -216,11 +216,7 @@ func startGathering(ctx context.Context, input telegraf.Input, acc telegraf.Accu
 		select {
 		case <-ctx.Done():
 			return
-		case _, open := <-gatherPromptCh:
-			if !open {
-				// stdin has closed.
-				return
-			}
+		case <-gatherPromptCh:
 			if err := input.Gather(acc); err != nil {
 				fmt.Fprintf(os.Stderr, "failed to gather metrics: %s", err)
 			}
