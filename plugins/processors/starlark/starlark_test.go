@@ -18,9 +18,8 @@ func TestInitError(t *testing.T) {
 		{
 			name: "source must define apply",
 			plugin: &Starlark{
-				Source:  "",
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Source: "",
+				Log:    testutil.Logger{},
 			},
 		},
 		{
@@ -29,8 +28,7 @@ func TestInitError(t *testing.T) {
 				Source: `
 apply = 42
 `,
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Log: testutil.Logger{},
 			},
 		},
 		{
@@ -40,8 +38,7 @@ apply = 42
 def apply():
 	pass
 `,
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Log: testutil.Logger{},
 			},
 		},
 		{
@@ -50,19 +47,7 @@ def apply():
 				Source: `
 for
 `,
-				OnError: "drop",
-				Log:     testutil.Logger{},
-			},
-		},
-		{
-			name: "on_error must have valid choice",
-			plugin: &Starlark{
-				Source: `
-def apply(metric):
-	pass
-`,
-				OnError: "foo",
-				Log:     testutil.Logger{},
+				Log: testutil.Logger{},
 			},
 		},
 	}
@@ -200,9 +185,8 @@ def apply(metric):
 	for _, tt := range applyTests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Starlark{
-				Source:  tt.source,
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Source: tt.source,
+				Log:    testutil.Logger{},
 			}
 			err := plugin.Init()
 			require.NoError(t, err)
@@ -2196,9 +2180,8 @@ def apply(metric):
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &Starlark{
-				Source:  tt.source,
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Source: tt.source,
+				Log:    testutil.Logger{},
 			}
 			err := plugin.Init()
 			require.NoError(t, err)
@@ -2230,9 +2213,8 @@ func TestScript(t *testing.T) {
 		{
 			name: "rename",
 			plugin: &Starlark{
-				Script:  "testdata/rename.star",
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Script: "testdata/rename.star",
+				Log:    testutil.Logger{},
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",
@@ -2258,9 +2240,8 @@ func TestScript(t *testing.T) {
 		{
 			name: "scale",
 			plugin: &Starlark{
-				Script:  "testdata/scale.star",
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Script: "testdata/scale.star",
+				Log:    testutil.Logger{},
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("cpu",
@@ -2280,9 +2261,8 @@ func TestScript(t *testing.T) {
 		{
 			name: "ratio",
 			plugin: &Starlark{
-				Script:  "testdata/ratio.star",
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Script: "testdata/ratio.star",
+				Log:    testutil.Logger{},
 			},
 			input: []telegraf.Metric{
 				testutil.MustMetric("mem",
@@ -2575,9 +2555,8 @@ def apply(metric):
 	for _, tt := range tests {
 		b.Run(tt.name, func(b *testing.B) {
 			plugin := &Starlark{
-				Source:  tt.source,
-				OnError: "drop",
-				Log:     testutil.Logger{},
+				Source: tt.source,
+				Log:    testutil.Logger{},
 			}
 
 			err := plugin.Init()

@@ -15,20 +15,25 @@ functions.
 
 ```toml
 [[processors.starlark]]
-  source = """
-  def apply(metric):
-      for k, v in metric.fields.items():
-          if type(v) == "float":
-              metric.fields[k] = v * 10
-      return metric
-  """
+  ## The Starlark source can be set as a string in this configuration file, or
+  ## by referencing a file containing the script.  Only one source or script
+  ## should be set at once.
+  ##
+  ## Source of the Starlark script.
+  source = '''
+def apply(metric):
+	return metric
+'''
+
+  ## File containing a Starlark script.
+  # script = "/usr/local/bin/myscript.star"
 ```
 
 ### Usage
 
-To get started the script should contain a function called `apply` that takes
-one argument.  The function will be called with each metric, and can return a
-single metric or a list of metrics:
+The script should contain a function called `apply` that takes one argument.
+The function will be called with each metric, and can return a single metric or
+a list of metrics:
 ```python
 def apply(metric):
 	return metric
@@ -106,6 +111,8 @@ how to modify while iterating
 
 how to retain metrics/modify globals
 - global scope is froze
+
+test for script not found/permissions denied
 
 ### Example
 

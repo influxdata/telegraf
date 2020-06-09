@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"go.starlark.net/resolve"
 	"go.starlark.net/starlark"
@@ -14,26 +13,24 @@ import (
 const (
 	description  = "Process metrics using a Starlark script"
 	sampleConfig = `
-  ## Starlark source, only set one of source or script.
-  source = """
-    def apply(metric):
-        pass
-  """
+  ## The Starlark source can be set as a string in this configuration file, or
+  ## by referencing a file containing the script.  Only one source or script
+  ## should be set at once.
+  ##
+  ## Source of the Starlark script.
+  source = '''
+def apply(metric):
+	return metric
+'''
 
-  ## File containing Starlark script, only set one of source or script.
-  # script = ""
-
-  ## Can be set to pass or drop, if 
-  # on_error = "drop"
+  ## File containing a Starlark script.
+  # script = "/usr/local/bin/myscript.star"
 `
-
-	defaultOnError = "drop"
 )
 
 type Starlark struct {
-	Source  string `toml:"source"`
-	Script  string `toml:"script"`
-	OnError string `toml:"on_error"`
+	Source string `toml:"source"`
+	Script string `toml:"script"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -44,11 +41,6 @@ type Starlark struct {
 }
 
 func (s *Starlark) Init() error {
-	err := choice.Check(s.OnError, []string{"pass", "drop"})
-	if err != nil {
-		return err
-	}
-
 	if s.Source == "" && s.Script == "" {
 		return errors.New("one of source or script must be set")
 	}
@@ -60,25 +52,17 @@ func (s *Starlark) Init() error {
 		Print: func(_ *starlark.Thread, msg string) { s.Log.Debug(msg) },
 	}
 
-	predeclared := starlark.StringDict{}
-	predeclared["Metric"] = starlark.NewBuiltin("Metric", newMetric)
-	predeclared["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
+	builtins := starlark.StringDict{}
+	builtins["Metric"] = starlark.NewBuiltin("Metric", newMetric)
+	builtins["deepcopy"] = starlark.NewBuiltin("deepcopy", deepcopy)
 
-	var program *starlark.Program
-	if s.Source != "" {
-		_, program, err = starlark.SourceProgram("processor.starlark", s.Source, predeclared.Has)
-		if err != nil {
-			return err
-		}
-	} else if s.Script != "" {
-		_, program, err = starlark.SourceProgram(s.Script, nil, predeclared.Has)
-		if err != nil {
-			return err
-		}
+	program, err := s.sourceProgram(builtins)
+	if err != nil {
+		return err
 	}
 
 	// Execute source
-	globals, err := program.Init(s.thread, predeclared)
+	globals, err := program.Init(s.thread, builtins)
 	if err != nil {
 		return err
 	}
@@ -115,6 +99,15 @@ func (s *Starlark) Init() error {
 	s.results = make([]telegraf.Metric, 0, 10)
 
 	return nil
+}
+
+func (s *Starlark) sourceProgram(builtins starlark.StringDict) (*starlark.Program, error) {
+	if s.Source != "" {
+		_, program, err := starlark.SourceProgram("processor.starlark", s.Source, builtins.Has)
+		return program, err
+	}
+	_, program, err := starlark.SourceProgram(s.Script, nil, builtins.Has)
+	return program, err
 }
 
 func (s *Starlark) SampleConfig() string {
@@ -213,8 +206,6 @@ func init() {
 
 func init() {
 	processors.AddStreaming("starlark", func() telegraf.StreamingProcessor {
-		return &Starlark{
-			OnError: defaultOnError,
-		}
+		return &Starlark{}
 	})
 }
