@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -83,6 +84,7 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 
 	s.metricCh = make(chan telegraf.Metric, 1)
 
+	wg := sync.WaitGroup{}
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -104,17 +106,19 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 		}
 		gatherPromptCh := make(chan empty, 1)
 		s.gatherPromptChans = append(s.gatherPromptChans, gatherPromptCh)
+		wg.Add(1) // one per input
 		go func(input telegraf.Input) {
 			startGathering(ctx, input, acc, gatherPromptCh, pollInterval)
 			if serviceInput, ok := input.(telegraf.ServiceInput); ok {
 				serviceInput.Stop()
 			}
 			close(gatherPromptCh)
-			close(s.metricCh)
+			wg.Done()
 		}(input)
 	}
 
 	go s.stdinCollectMetricsPrompt(ctx, cancel, collectMetricsPrompt)
+	go s.closeMetricChannelWhenInputsFinish(&wg)
 
 loop:
 	for {
@@ -303,4 +307,9 @@ func loadConfigIntoInputs(md toml.MetaData, inputConfigs map[string][]toml.Primi
 		}
 	}
 	return renderedInputs, nil
+}
+
+func (s *Shim) closeMetricChannelWhenInputsFinish(wg *sync.WaitGroup) {
+	wg.Wait()
+	close(s.metricCh)
 }
