@@ -404,7 +404,7 @@ const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10;
 DECLARE 
 	 @SqlStatement AS nvarchar(max)
-	,@EngineEdition AS int = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 
 IF @EngineEdition = 5
 BEGIN
@@ -503,7 +503,7 @@ const sqlServerPropertiesV2 = `
 SET DEADLOCK_PRIORITY -10;
 DECLARE
 	 @SqlStatement AS nvarchar(max)
-	,@EngineEdition AS int = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 
 DECLARE @sys_info TABLE (
 	cpu_count INT,
@@ -653,7 +653,7 @@ SET DEADLOCK_PRIORITY -10;
 
 DECLARE
 	 @SqlStatement AS nvarchar(max)
-	,@EngineEdition AS int = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
 	,@Columns AS nvarchar(MAX) = ''
 	,@PivotColumns AS nvarchar(MAX) = ''
@@ -1631,7 +1631,7 @@ const sqlServerVolumeSpaceV2 string = `
 Gets data about disk space, only for volumes used by SQL Server (data available form sql 2008R2 and later)
 */
 DECLARE
-	 @EngineEdition AS int = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
 	
 IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
