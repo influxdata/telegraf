@@ -21,18 +21,18 @@ func TestShimWorks(t *testing.T) {
 
 	stdin, _ = io.Pipe() // hold the stdin pipe open
 
-	timeout := time.NewTimer(10 * time.Second)
+	timeout := time.NewTimer(30 * time.Second)
 	metricProcessed, _ := runInputPlugin(t, 10*time.Millisecond)
 
 	select {
 	case <-metricProcessed:
 	case <-timeout.C:
-		require.Fail(t, "Timeout waiting for metric to arrive")
+		require.FailNow(t, "Timeout waiting for metric to arrive")
 	}
 	for stdoutBytes.Len() == 0 {
 		select {
 		case <-timeout.C:
-			require.Fail(t, "Timeout waiting to read metric from stdout")
+			require.FailNow(t, "Timeout waiting to read metric from stdout")
 			return
 		default:
 			time.Sleep(10 * time.Millisecond)
@@ -52,7 +52,7 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	stdin = stdinReader
 	stdout = stdoutWriter
 
-	timeout := time.NewTimer(10 * time.Second)
+	timeout := time.NewTimer(30 * time.Second)
 	metricProcessed, exited := runInputPlugin(t, 40*time.Second)
 
 	stdinWriter.Write([]byte("\n"))
@@ -60,7 +60,7 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	select {
 	case <-metricProcessed:
 	case <-timeout.C:
-		require.Fail(t, "Timeout waiting for metric to arrive")
+		require.FailNow(t, "Timeout waiting for metric to arrive")
 	}
 
 	r := bufio.NewReader(stdoutReader)
@@ -69,12 +69,17 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
 	stdinWriter.Close()
+
+	// we can get stuck if stdout gets clogged up and nobody's reading from it.
+	// make sure we try to at least read once from it.
+	go r.ReadString('\n')
+
 	// check that it exits cleanly
 	<-exited
 }
 
 func runInputPlugin(t *testing.T, interval time.Duration) (metricProcessed chan bool, exited chan bool) {
-	metricProcessed = make(chan bool)
+	metricProcessed = make(chan bool, 1)
 	exited = make(chan bool)
 	inp := &testInput{
 		metricProcessed: metricProcessed,
