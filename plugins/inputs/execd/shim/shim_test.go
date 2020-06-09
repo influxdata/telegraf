@@ -21,22 +21,12 @@ func TestShimWorks(t *testing.T) {
 
 	stdin, _ = io.Pipe() // hold the stdin pipe open
 
-	timeout := time.NewTimer(30 * time.Second)
 	metricProcessed, _ := runInputPlugin(t, 10*time.Millisecond)
 
-	select {
-	case <-metricProcessed:
-	case <-timeout.C:
-		require.FailNow(t, "Timeout waiting for metric to arrive")
-	}
+	<-metricProcessed
 	for stdoutBytes.Len() == 0 {
-		select {
-		case <-timeout.C:
-			require.FailNow(t, "Timeout waiting to read metric from stdout")
-			return
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
+		t.Log("Waiting for bytes available in stdout")
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	out := string(stdoutBytes.Bytes())
@@ -52,16 +42,11 @@ func TestShimStdinSignalingWorks(t *testing.T) {
 	stdin = stdinReader
 	stdout = stdoutWriter
 
-	timeout := time.NewTimer(30 * time.Second)
 	metricProcessed, exited := runInputPlugin(t, 40*time.Second)
 
 	stdinWriter.Write([]byte("\n"))
 
-	select {
-	case <-metricProcessed:
-	case <-timeout.C:
-		require.FailNow(t, "Timeout waiting for metric to arrive")
-	}
+	<-metricProcessed
 
 	r := bufio.NewReader(stdoutReader)
 	out, err := r.ReadString('\n')
