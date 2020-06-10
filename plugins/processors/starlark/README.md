@@ -1,12 +1,14 @@
 # Starlark Processor
 
-The `starlark` processor calls a Starlark function for each matched metric, allowing for custom metric processing.
+The `starlark` processor calls a Starlark function for each matched metric,
+allowing for custom programatic metric processing.
 
 The Starlark language is a dialect of Python, and will be familier to those who
 have experience with the Python language.  However, keep in mind that it is not
-Python, and there are syntax [differences][#Python Differences].  Existing
-Python code is unlikley to work unmodified.  The execution environment is
-sandboxed, and it is not possible to do I/O.
+Python and that there are major syntax [differences][#Python Differences].
+Existing Python code is unlikley to work unmodified.  The execution environment
+is sandboxed, and it is not possible to do I/O operations such as reading from
+files or sockets.
 
 The Starlark [specification][] has details about the syntax and available
 functions.
@@ -31,89 +33,118 @@ def apply(metric):
 
 ### Usage
 
-The script should contain a function called `apply` that takes one argument.
-The function will be called with each metric, and can return a single metric or
-a list of metrics:
+The script should contain a function called `apply` that takes the metric as
+its single argument.  The function will be called with each metric, and can
+return `None`, a single metric, or a list of metrics.
 ```python
 def apply(metric):
 	return metric
 ```
 
-In addition to the built-in functionality provided by the Starlark language, Telegraf exposes types and functions.
+Reference the Starlark [specification][] to see the list of available types and
+functions that can be used in the script.  In addition to these the following
+types and functions are exposed to the script.
 
-#### Metric object
+**Metric(*name*)**:
+Create a new metric with the given measurement name.  The metric will have no
+tags or fields and defaults to the current time.
 
-class **Metric(name)**:
+- **name**:
+The name is a [string][string] containing the metric measurement name.
 
-  Create a new metric with the given name.  The metric will have no tags or
-  fields.  The timestamp defaults to the current time.
+- **tags**:
+A [dict-like][dict] object containing the metric's tags.
 
-  **name**
-  	The name is the metric name aka measurement.
 
-  **tags**
-  	A dict-like object containing the metric's tags.
+- **fields**:
+A [dict-like][dict] object containing the metric's fields.  The values may be
+of type int, float, string, or bool.
 
-  **fields**
-  	A dict-like object containing the metric's fields.
+- **time**:
+The timestamp of the metric as an integer in nanoseconds since the Unix
+epoch.
 
-  **time**
-  	The timestamp of the metric as an integer in nanoseconds since the Unix
-  	epoch.
-
-#### Functions
-
-**deepcopy(metric)**
-
-  Make a copy of an existing metric.
+**deepcopy(*metric*)**: Make a copy of an existing metric.
 
 ### Python Differences
 
-While Starlark is similar to Python, it is not the same language.
+While Starlark is similar to Python it is not the same.
 
 - Starlark has limited support for error handling and no exceptions.  If an
-  error occurs the script will immediately exit.  Check the Telegraf logfile
-  for details about the error.
+  error occurs the script will immediately end and Telegraf will drop the
+  metric.  Check the Telegraf logfile for details about the error.
 
 - It is not possible to import other packages and the Python standard library
   is not available.  As such, it is not possible to open files or sockets.
 
+- These common keywords are **not supported** in the Starlark grammar:
+  ```
+  as             finally        nonlocal
+  assert         from           raise
+  class          global         try
+  del            import         with
+  except         is             yield
+  ```
 
-### Gotchas
+### Common Questions
 
-global scope is not modifiable.
+**How can I drop/delete a metric?**
 
-don't return two references to the same metric.
+If you don't return the metric it will be deleted.  Usually this means the
+function should `return None`.
 
-error line number
+**How should I make a copy of a metric?**
 
-### TODO
+Use `deepcopy(metric)` to create a copy of the metric.
 
-how to delete a metric?
-- don't return: we check returned values and autodrop
+**How can I return multiple metrics?**
 
-how to copy a metric?
-- must call deepcopy()
-- returning multiple references is an error
-- you can build a new metric, but this will be treated as a disconnected metric.
+You can return a list of metrics:
+```python
+def apply(metric):
+    m2 = deepcopy(metric)
+    return [metric, m2]
+```
 
-how to return multiple metrics?
-- return a list of metric
+**What happens to a tracking metric if an error occurs in the script?**
 
-if an error occurs do we drop the metric tracking?
-- no, the metric is rejected
+The metric is marked as undelivered.
 
-how to create a new metric?
+**How do I create a new metric?**
 
-fastest way to iterate?
+Use the `Metric(name)` function and set at least one field.
 
-how to modify while iterating
+**What is the fastest way to iterate over tags/fields?**
 
-how to retain metrics/modify globals
-- global scope is froze
+The fastest way to iterate is to use a for-loop on the tags or fields attribute:
+```python
+def apply(metric):
+    for k in metric.tags:
+        pass
+    return metric
+```
 
-test for script not found/permissions denied
+When you use this form, it is not possible to modify the tags inside the loop,
+if this is needed you should use the `.keys()`, `.values()`, or `.items()` forms:
+```python
+def apply(metric):
+    for k, v in metric.tags.items():
+        pass
+    return metric
+```
 
-### Example
+**How can I save values across multiple calls to the script?**
+
+Telegraf freezes the global scope, which prevents it from being modified.
+Attempting to modify the global scope will fail with an error.
+
+
+### Examples
+
+- [ratio](/plugins/processors/starlark/testdata/ratio.star)
+- [rename](/plugins/processors/starlark/testdata/ratio.star)
+- [scale](/plugins/processors/starlark/testdata/ratio.star)
 
 [specification]: https://github.com/google/starlark-go/blob/master/doc/spec.md
+[string]: https://github.com/google/starlark-go/blob/master/doc/spec.md#strings
+[dict]: https://github.com/google/starlark-go/blob/master/doc/spec.md#dictionaries
