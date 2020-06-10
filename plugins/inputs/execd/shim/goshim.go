@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -23,9 +24,13 @@ import (
 type empty struct{}
 
 var (
-	stdout  io.Writer = os.Stdout
-	stdin   io.Reader = os.Stdin
-	forever           = 100 * 365 * 24 * time.Hour
+	stdout        io.Writer = os.Stdout
+	stdin         io.Reader = os.Stdin
+	forever                 = 100 * 365 * 24 * time.Hour
+	envVarEscaper           = strings.NewReplacer(
+		`"`, `\"`,
+		`\`, `\\`,
+	)
 )
 
 const (
@@ -101,7 +106,7 @@ func (s *Shim) Run(pollInterval time.Duration) error {
 		}
 		gatherPromptCh := make(chan empty, 1)
 		s.gatherPromptChans = append(s.gatherPromptChans, gatherPromptCh)
-		wg.Add(1)
+		wg.Add(1) // one per input
 		go func(input telegraf.Input) {
 			startGathering(ctx, input, acc, gatherPromptCh, pollInterval)
 			if serviceInput, ok := input.(telegraf.ServiceInput); ok {
@@ -211,11 +216,7 @@ func startGathering(ctx context.Context, input telegraf.Input, acc telegraf.Accu
 		select {
 		case <-ctx.Done():
 			return
-		case _, open := <-gatherPromptCh:
-			if !open {
-				// stdin has closed.
-				return
-			}
+		case <-gatherPromptCh:
 			if err := input.Gather(acc); err != nil {
 				fmt.Fprintf(os.Stderr, "failed to gather metrics: %s", err)
 			}
@@ -257,11 +258,13 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 		return nil, err
 	}
 
+	s := expandEnvVars(b)
+
 	conf := struct {
 		Inputs map[string][]toml.Primitive
 	}{}
 
-	md, err := toml.Decode(string(b), &conf)
+	md, err := toml.Decode(s, &conf)
 	if err != nil {
 		return nil, err
 	}
@@ -272,6 +275,16 @@ func LoadConfig(filePath *string) ([]telegraf.Input, error) {
 		fmt.Fprintf(stdout, "Some plugins were loaded but not used: %q\n", md.Undecoded())
 	}
 	return loadedInputs, err
+}
+
+func expandEnvVars(contents []byte) string {
+	return os.Expand(string(contents), getEnv)
+}
+
+func getEnv(key string) string {
+	v := os.Getenv(key)
+
+	return envVarEscaper.Replace(v)
 }
 
 func loadConfigIntoInputs(md toml.MetaData, inputConfigs map[string][]toml.Primitive) ([]telegraf.Input, error) {

@@ -281,10 +281,10 @@ hello,80,test_name2`
 
 	expectedFields := map[string]interface{}{
 		"line2": int64(80),
-		"line3": "test_name2",
 	}
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
+	require.Equal(t, "test_name2", metrics[0].Name())
 	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
@@ -364,7 +364,6 @@ func TestTimestampUnixFloatPrecision(t *testing.T) {
 			map[string]string{},
 			map[string]interface{}{
 				"value": 42,
-				"time":  1551129661.954561233,
 			},
 			time.Unix(1551129661, 954561233),
 		),
@@ -373,4 +372,82 @@ func TestTimestampUnixFloatPrecision(t *testing.T) {
 	metrics, err := p.Parse([]byte(data))
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, metrics)
+}
+
+func TestSkipMeasurementColumn(t *testing.T) {
+	p := Parser{
+		MetricName:      "csv",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+		TrimSpace:       true,
+	}
+	data := `id,value,timestamp
+		1,5,1551129661.954561233`
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"id":    1,
+				"value": 5,
+			},
+			time.Unix(1551129661, 954561233),
+		),
+	}
+
+	metrics, err := p.Parse([]byte(data))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
+}
+
+func TestSkipTimestampColumn(t *testing.T) {
+	p := Parser{
+		MetricName:      "csv",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TimeFunc:        DefaultTime,
+		TrimSpace:       true,
+	}
+	data := `id,value,timestamp
+		1,5,1551129661.954561233`
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"csv",
+			map[string]string{},
+			map[string]interface{}{
+				"id":    1,
+				"value": 5,
+			},
+			time.Unix(1551129661, 954561233),
+		),
+	}
+
+	metrics, err := p.Parse([]byte(data))
+	require.NoError(t, err)
+	testutil.RequireMetricsEqual(t, expected, metrics)
+}
+
+func TestTimestampTimezone(t *testing.T) {
+	p := Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "02/01/06 03:04:05 PM",
+		TimeFunc:          DefaultTime,
+		Timezone:          "Asia/Jakarta",
+	}
+	testCSV := `line1,line2,line3
+23/05/09 11:05:06 PM,70,test_name
+07/11/09 11:05:06 PM,80,test_name2`
+	metrics, err := p.Parse([]byte(testCSV))
+
+	require.NoError(t, err)
+	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
+	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
 }

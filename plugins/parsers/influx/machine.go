@@ -31678,6 +31678,16 @@ func (m *streamMachine) Next() error {
 			m.machine.data = expanded
 		}
 
+		err := m.machine.exec()
+		if err != nil {
+			return err
+		}
+
+		// If we have successfully parsed a full metric line break out
+		if m.machine.finishMetric {
+			break
+		}
+
 		n, err := m.reader.Read(m.machine.data[m.machine.pe:])
 		if n == 0 && err == io.EOF {
 			m.machine.eof = m.machine.pe
@@ -31691,16 +31701,6 @@ func (m *streamMachine) Next() error {
 		}
 
 		m.machine.pe += n
-
-		err = m.machine.exec()
-		if err != nil {
-			return err
-		}
-
-		// If we have successfully parsed a full metric line break out
-		if m.machine.finishMetric {
-			break
-		}
 
 	}
 

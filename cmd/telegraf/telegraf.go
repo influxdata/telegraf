@@ -67,6 +67,7 @@ var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Col
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 var fPlugins = flag.String("plugin-directory", "",
 	"path to directory containing external plugins")
+var fRunOnce = flag.Bool("once", false, "run one gather and exit")
 
 var (
 	version string
@@ -169,9 +170,14 @@ func runAgent(ctx context.Context,
 
 	logger.SetupLogging(logConfig)
 
+	if *fRunOnce {
+		wait := time.Duration(*fTestWait) * time.Second
+		return ag.Once(ctx, wait)
+	}
+
 	if *fTest || *fTestWait != 0 {
-		testWaitDuration := time.Duration(*fTestWait) * time.Second
-		return ag.Test(ctx, testWaitDuration)
+		wait := time.Duration(*fTestWait) * time.Second
+		return ag.Test(ctx, wait)
 	}
 
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))

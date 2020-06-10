@@ -38,7 +38,20 @@ func (e *ParseError) Error() string {
 		buffer = buffer[:eol]
 	}
 	if len(buffer) > maxErrorBufferSize {
-		buffer = buffer[:maxErrorBufferSize] + "..."
+		startEllipsis := true
+		offset := e.Offset - e.LineOffset
+		start := offset - maxErrorBufferSize
+		if start < 0 {
+			startEllipsis = false
+			start = 0
+		}
+		// if we trimmed it the column won't line up. it'll always be the last character,
+		// because the parser doesn't continue past it, but point it out anyway so
+		// it's obvious where the issue is.
+		buffer = buffer[start:offset] + "<-- here"
+		if startEllipsis {
+			buffer = "..." + buffer
+		}
 	}
 	return fmt.Sprintf("metric parse error: %s at %d:%d: %q", e.msg, e.LineNumber, e.Column, buffer)
 }

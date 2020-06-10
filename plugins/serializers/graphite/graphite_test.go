@@ -102,6 +102,7 @@ func TestSerializeMetricNoHostWithTagSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -251,6 +252,7 @@ func TestSerializeMetricHostWithTagSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -305,6 +307,7 @@ func TestSerializeValueFieldWithTagSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -380,6 +383,7 @@ func TestSerializeValueStringWithTagSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -433,6 +437,7 @@ func TestSerializeValueBooleanWithTagSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -505,6 +510,7 @@ func TestSerializeFieldWithSpacesWithTagSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -558,6 +564,7 @@ func TestSerializeTagWithSpacesWithTagSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -668,6 +675,7 @@ func TestSerializeMetricPrefixWithTagSupport(t *testing.T) {
 	s := GraphiteSerializer{
 		Prefix:     "prefix",
 		TagSupport: true,
+		Separator:  ".",
 	}
 	buf, _ := s.Serialize(m)
 	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
@@ -973,6 +981,7 @@ func TestCleanWithTagsSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1033,6 +1042,7 @@ func TestSerializeBatchWithTagsSupport(t *testing.T) {
 
 	s := GraphiteSerializer{
 		TagSupport: true,
+		Separator:  ".",
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
