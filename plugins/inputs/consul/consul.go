@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -19,9 +20,11 @@ type Consul struct {
 	Datacentre string // deprecated in 1.10; use Datacenter
 	Datacenter string
 	tls.ClientConfig
-	TagDelimiter   string
-	DisableTags    bool
-	DisableCheckId bool
+	TagDelimiter      string
+	ServiceTagInclude []string
+	ServiceTagExclude []string
+	filtersCreated    bool
+	tagFilter         filter.Filter
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -56,16 +59,19 @@ var sampleConfig = `
   # they will be splitted and reported as proper key:value in Telegraf
   # tag_delimiter = ":"
 
-  ## Disable gathering tags from Consul on health checks
-  # This is very useful on large clusters with a lot of services and tags.
-  # This alleviates the situation of this telegraf running on multiple servers 
-  # for a holistic point of view, and there are thousands of checks with 10+ tags. 
-  # disable_tags = false
+  ## Service Tag filtering
+  # This is very useful on large clusters with a lot of services and tags, where many can be dropped.
+  # e.g.: The following drops all tags containing only numbers.
+  # service_tag_include = []
+  # service_tag_exclude = ["[0-9]*"]
+  # e.g.: The following drops *all* tags.
+  # service_tag_include = []
+  # service_tag_exclude = ["*"] 
 
   ## Disable gathering check id from Consul on health checks
   # This is useful in dynamic environments, where check_id is generated,
-  # where most check_id's are some uuid-ish name with low meaning.
-  # disable_check_id = false
+  # and thus most (or all) check_id's are some uuid-ish name with low meaning.
+  # tagexclude = ["check_id"]
 `
 
 func (c *Consul) Description() string {
@@ -134,12 +140,10 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 
 		tags["node"] = check.Node
 		tags["service_name"] = check.ServiceName
-		if c.DisableCheckId == false {
-			tags["check_id"] = check.CheckID
-		}
+		tags["check_id"] = check.CheckID
 
-		if c.DisableTags == false {
-			for _, checkTag := range check.ServiceTags {
+		for _, checkTag := range check.ServiceTags {
+			if c.tagFilter.Match(checkTag) {
 				if c.TagDelimiter != "" {
 					splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
 					if len(splittedTag) == 1 && checkTag != "" {
@@ -157,7 +161,7 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 	}
 }
 
-func (c *Consul) Gather(acc telegraf.Accumulator) error {
+func initSetup(c *Consul) error {
 	if c.client == nil {
 		newClient, err := c.createAPIClient()
 
@@ -168,6 +172,24 @@ func (c *Consul) Gather(acc telegraf.Accumulator) error {
 		c.client = newClient
 	}
 
+	// Create Filters
+	if !c.filtersCreated {
+		err := c.createTagFilters()
+		if err != nil {
+			return err
+		}
+		c.filtersCreated = true
+	}
+	return nil
+}
+
+func (c *Consul) Gather(acc telegraf.Accumulator) error {
+	if c.client == nil {
+		err := initSetup(c)
+		if err != nil {
+			return err
+		}
+	}
 	checks, _, err := c.client.Health().State("any", nil)
 
 	if err != nil {
@@ -179,8 +201,19 @@ func (c *Consul) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (c *Consul) createTagFilters() error {
+	filter, err := filter.NewIncludeExcludeFilter(c.ServiceTagInclude, c.ServiceTagExclude)
+	if err != nil {
+		return err
+	}
+	c.tagFilter = filter
+	return nil
+}
+
 func init() {
 	inputs.Add("consul", func() telegraf.Input {
-		return &Consul{}
+		return &Consul{
+			filtersCreated: false,
+		}
 	})
 }
