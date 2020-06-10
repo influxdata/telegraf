@@ -854,26 +854,56 @@ func loadConfig(config string) ([]byte, error) {
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
+
+	configHttpRetry := 10 // Default value for number of retry attemps
+	// If environment variable set and is numeric, use this value instead
+	configHttpEnvR := os.Getenv("TELEGRAF_HTTP_RETRIES")
+	if _, err := strconv.Atoi(configHttpEnvR); err == nil {
+		configHttpRetry, _ = strconv.Atoi(configHttpEnvR)
+	}
+
+	configHttpInterval := 60 // Default value to sleep between retries
+	// If environment variable set and is numeric, use this value instead
+	configHttpEnvI := os.Getenv("TELEGRAF_HTTP_INTERVAL")
+	if _, err := strconv.Atoi(configHttpEnvI); err == nil {
+		configHttpInterval, _ = strconv.Atoi(configHttpEnvI)
+	}
+
+	// Build Request object
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
-
 	if v, exists := os.LookupEnv("INFLUX_TOKEN"); exists {
 		req.Header.Add("Authorization", "Token "+v)
 	}
 	req.Header.Add("Accept", "application/toml")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
+
+	// Loop until max tries reached or successful config GET
+	for i := 1; i <= configHttpRetry; i++ {
+
+		// Attempt to get the config
+		resp, err := http.DefaultClient.Do(req)
+		// Can't contact HTTP endpoint
+		if err != nil {
+			log.Printf("Unable to connect to HTTP config server.  Retry %d of %d in %d seconds.  %s", i, configHttpRetry, configHttpInterval, err)
+			time.Sleep(time.Duration(configHttpInterval) * time.Second)
+			continue
+		}
+		// Endpoint contactable but status not OK
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Error getting HTTP config.  Retry %d of %d in %d seconds.  Status=%d", i, configHttpRetry, configHttpInterval, resp.StatusCode)
+			time.Sleep(time.Duration(configHttpInterval) * time.Second)
+			continue
+		}
+
+		// Successful retrieval
+		log.Printf("Successful retrieval of HTTP config.")
+		defer resp.Body.Close()
+		return ioutil.ReadAll(resp.Body)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to retrieve remote config: %s", resp.Status)
-	}
-
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
+	return nil, nil
 }
 
 // parseConfig loads a TOML configuration from a provided path and
