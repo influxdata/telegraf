@@ -158,18 +158,24 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) {
 			}
 		}
 
-		if containsMetric(s.results, metric) {
-			metric.Drop()
+		// If the script didn't return the original metrics, mark it as
+		// successfully handled.
+		if !containsMetric(s.results, metric) {
+			metric.Accept()
 		}
 
+		// clear results
 		for i := range s.results {
 			s.results[i] = nil
 		}
 		s.results = s.results[:0]
 	case *Metric:
 		m := rv.Unwrap()
+
+		// If the script returned a different metric, mark this metric as
+		// successfully handled.
 		if m != metric {
-			metric.Drop()
+			metric.Accept()
 		}
 		acc.AddMetric(m)
 	case starlark.NoneType:

@@ -50,6 +50,30 @@ for
 				Log: testutil.Logger{},
 			},
 		},
+		{
+			name: "no source no script",
+			plugin: &Starlark{
+				Log: testutil.Logger{},
+			},
+		},
+		{
+			name: "source and script",
+			plugin: &Starlark{
+				Source: `
+def apply():
+	pass
+`,
+				Script: "testdata/ratio.star",
+				Log:    testutil.Logger{},
+			},
+		},
+		{
+			name: "script file not found",
+			plugin: &Starlark{
+				Script: "testdata/file_not_found.star",
+				Log:    testutil.Logger{},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
