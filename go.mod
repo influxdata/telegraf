@@ -3,6 +3,7 @@ module github.com/influxdata/telegraf
 go 1.12
 
 require (
+	bou.ke/monkey v1.0.2
 	cloud.google.com/go v0.37.4
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	collectd.org v0.3.0
