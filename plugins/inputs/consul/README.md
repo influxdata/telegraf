@@ -39,16 +39,19 @@ report those stats already using StatsD protocol if needed.
   # they will be splitted and reported as proper key:value in Telegraf
   # tag_delimiter = ":"
 
-  ## Disable gathering tags from Consul on health checks
-  # This is very useful on large clusters with a lot of services and tags.
-  # This alleviates the situation of this telegraf running on multiple servers 
-  # for a holistic point of view, and there are thousands of checks with 10+ tags. 
-  # disable_tags = false
+  ## Service Tag filtering
+  # This is very useful on large clusters with a lot of services and tags, where many can be dropped.
+  # e.g.: The following drops all tags containing only numbers.
+  # service_tag_include = []
+  # service_tag_exclude = ["[0-9]*"]
+  # e.g.: The following drops *all* tags.
+  # service_tag_include = []
+  # service_tag_exclude = ["*"] 
 
   ## Disable gathering check id from Consul on health checks
   # This is useful in dynamic environments, where check_id is generated,
-  # where most check_id's are some uuid-ish name with low meaning.
-  # disable_check_id = false
+  # and thus most (or all) check_id's are some uuid-ish name with low meaning.
+  # tagexclude = ["check_id"]
 ```
 
 ### Metrics:
