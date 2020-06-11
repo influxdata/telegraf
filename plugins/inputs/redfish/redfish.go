@@ -82,7 +82,7 @@ type Redfish struct {
 	Address           string `toml:"address"`
 	BasicAuthUsername string `toml:"username"`
 	BasicAuthPassword string `toml:"password"`
-	ServerSystemId    string `toml:"server_system_id"`
+	ComputerSystemId  string `toml:"computer_system_id"`
 	client            http.Client
 	tls.ClientConfig
 	Timeout internal.Duration `toml:"timeout"`
@@ -90,7 +90,7 @@ type Redfish struct {
 }
 
 func (r *Redfish) Description() string {
-	return "Read CPU, Fans, Powersupply and Voltage metrics of Dell/HP hardware server through redfish APIs"
+	return "Read CPU, Fans, Powersupply and Voltage metrics of hardware server through redfish APIs"
 }
 
 var redfishConfig = `
@@ -102,12 +102,13 @@ var redfishConfig = `
   password = "test"
 
   ##Resource  Id   for   redfish   APIs
-  server_system_id="System.Embedded.1"
+  computer_system_id="System.Embedded.1"
 
   ##Optional TLS Config
   #tls_ca = "/etc/telegraf/ca.pem"
   #tls_cert = "/etc/telegraf/cert.pem"
   #tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   #insecure_skip_verify = false
 
   ## Amount   of   time   allowed   to   complete   the   HTTP   request
@@ -120,14 +121,14 @@ func (r *Redfish) SampleConfig() string {
 
 func (r *Redfish) Init() error {
 	if len(r.Address) == 0 || len(r.BasicAuthUsername) == 0 || len(r.BasicAuthPassword) == 0 {
-		return fmt.Errorf("Did not provide IP or username and password")
+		return fmt.Errorf("did not provide IP or username and password")
 	}
-	if len(r.ServerSystemId) == 0 {
-		return fmt.Errorf("Did not provide all the ID of the resource")
+	if len(r.ComputerSystemId) == 0 {
+		return fmt.Errorf("did not provide the computer system ID of the resource")
 	}
 	tlsCfg, err := r.ClientConfig.TLSConfig()
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 	r.client = http.Client{
 		Transport: &http.Transport{
@@ -143,20 +144,20 @@ func (r *Redfish) Init() error {
 func (r *Redfish) GetData(url string) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 	req.SetBasicAuth(r.BasicAuthUsername, r.BasicAuthPassword)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := r.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("%v", err)
+			return err
 		}
 		err = json.Unmarshal(body, &r.payload)
 		if err != nil {
@@ -173,11 +174,11 @@ func (r *Redfish) GetData(url string) error {
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	var url []string
-	url = append(url, fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ServerSystemId, "/Thermal"), fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ServerSystemId, "/Power"), fmt.Sprint(r.Address, "/redfish/v1/Systems/", r.ServerSystemId), fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ServerSystemId, "/"))
+	url = append(url, fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ComputerSystemId, "/Thermal"), fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ComputerSystemId, "/Power"), fmt.Sprint(r.Address, "/redfish/v1/Systems/", r.ComputerSystemId), fmt.Sprint(r.Address, "/redfish/v1/Chassis/", r.ComputerSystemId, "/"))
 	for _, i := range url {
 		err := r.GetData(i)
 		if err != nil {
-			return fmt.Errorf("%v", err)
+			return err
 		}
 	}
 	if r.payload.Location != nil {

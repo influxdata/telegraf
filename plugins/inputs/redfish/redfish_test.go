@@ -1,7 +1,6 @@
 package redfish
 
 import (
-	//	"net"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -582,7 +581,7 @@ func TestApis(t *testing.T) {
 		Address:           ts.URL,
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
-		ServerSystemId:    "System.Embedded.1",
+		ComputerSystemId:  "System.Embedded.1",
 	}
 	plugin.Init()
 	var acc testutil.Accumulator
@@ -597,7 +596,7 @@ func TestApis(t *testing.T) {
 		Address:           ts.URL,
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
-		ServerSystemId:    "System.Embedded.2",
+		ComputerSystemId:  "System.Embedded.2",
 	}
 	hp_plugin.Init()
 	var hp_acc testutil.Accumulator
@@ -623,7 +622,7 @@ func TestConnection(t *testing.T) {
 		Address:           "http://127.0.0.1",
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
-		ServerSystemId:    "System.Embedded.1",
+		ComputerSystemId:  "System.Embedded.1",
 	}
 
 	var acc testutil.Accumulator
@@ -655,7 +654,7 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 		Address:           ts.URL,
 		BasicAuthUsername: "test",
 		BasicAuthPassword: "test",
-		ServerSystemId:    "System.Embedded.1",
+		ComputerSystemId:  "System.Embedded.1",
 	}
 
 	var acc testutil.Accumulator
@@ -683,13 +682,13 @@ func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	defer ts.Close()
 
 	r := &Redfish{
-		Address:        ts.URL,
-		ServerSystemId: "System.Embedded.1",
+		Address:          ts.URL,
+		ComputerSystemId: "System.Embedded.1",
 	}
 
 	err := r.Init()
 	require.Error(t, err)
-	require.EqualError(t, err, "Did not provide IP or username and password")
+	require.EqualError(t, err, "did not provide IP or username and password")
 }
 
 func TestInvalidDellJSON(t *testing.T) {
@@ -757,7 +756,7 @@ func TestInvalidDellJSON(t *testing.T) {
 			Address:           ts.URL,
 			BasicAuthUsername: "test",
 			BasicAuthPassword: "test",
-			ServerSystemId:    "System.Embedded.1",
+			ComputerSystemId:  "System.Embedded.1",
 		}
 
 		plugin.Init()
@@ -821,7 +820,7 @@ func TestInvalidHPJSON(t *testing.T) {
 			Address:           ts.URL,
 			BasicAuthUsername: "test",
 			BasicAuthPassword: "test",
-			ServerSystemId:    "System.Embedded.2",
+			ComputerSystemId:  "System.Embedded.2",
 		}
 
 		plugin.Init()
