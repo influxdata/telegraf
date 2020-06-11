@@ -7,13 +7,12 @@ import (
 	"time"
 )
 
-func gracefulStop(cmd *exec.Cmd, timeout time.Duration) {
-	time.AfterFunc(timeout, func() {
-		if cmd.ProcessState == nil {
-			return
-		}
-		if !cmd.ProcessState.Exited() {
-			cmd.Process.Kill()
-		}
-	})
+func gracefulStop(cmd *exec.Cmd, timeout time.Duration, processQuit chan struct{}) {
+	select {
+	case <-processQuit:
+		return
+	case <-time.After(timeout):
+	}
+
+	cmd.Process.Kill()
 }

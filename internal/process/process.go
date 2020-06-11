@@ -100,11 +100,12 @@ func (p *Process) cmdStart() error {
 
 // cmdLoop watches an already running process, restarting it when appropriate.
 func (p *Process) cmdLoop(ctx context.Context) error {
+	processShutdownCh := make(chan struct{})
 	go func() {
 		<-ctx.Done()
 		if p.Stdin != nil {
 			p.Stdin.Close()
-			gracefulStop(p.Cmd, 5*time.Second)
+			gracefulStop(p.Cmd, 5*time.Second, processShutdownCh)
 		}
 	}()
 
@@ -112,6 +113,7 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 		err := p.cmdWait()
 		if isQuitting(ctx) {
 			p.Log.Infof("Process %s shut down", p.Cmd.Path)
+			close(processShutdownCh)
 			return nil
 		}
 
@@ -120,6 +122,7 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 
 		select {
 		case <-ctx.Done():
+			close(processShutdownCh)
 			return nil
 		case <-time.After(time.Duration(p.RestartDelay)):
 			// Continue the loop and restart the process

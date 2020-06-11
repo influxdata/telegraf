@@ -12,6 +12,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
 	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/exec"
+	_ "github.com/influxdata/telegraf/plugins/outputs/execd"
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graylog"
