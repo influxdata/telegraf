@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-
 	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -56,6 +55,8 @@ func ParseV2(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 		}
 	}
 
+	// make sure all metrics have a consistent timestamp so that metrics don't straddle two different seconds
+	now := time.Now()
 	// read metrics
 	for metricName, mf := range metricFamilies {
 		for _, m := range mf.Metric {
@@ -64,11 +65,11 @@ func ParseV2(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 
 			if mf.GetType() == dto.MetricType_SUMMARY {
 				// summary metric
-				telegrafMetrics := makeQuantilesV2(m, tags, metricName, mf.GetType())
+				telegrafMetrics := makeQuantilesV2(m, tags, metricName, mf.GetType(), now)
 				metrics = append(metrics, telegrafMetrics...)
 			} else if mf.GetType() == dto.MetricType_HISTOGRAM {
 				// histogram metric
-				telegrafMetrics := makeBucketsV2(m, tags, metricName, mf.GetType())
+				telegrafMetrics := makeBucketsV2(m, tags, metricName, mf.GetType(), now)
 				metrics = append(metrics, telegrafMetrics...)
 			} else {
 				// standard metric
@@ -81,7 +82,7 @@ func ParseV2(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 					if m.TimestampMs != nil && *m.TimestampMs > 0 {
 						t = time.Unix(0, *m.TimestampMs*1000000)
 					} else {
-						t = time.Now()
+						t = now
 					}
 					metric, err := metric.New("prometheus", tags, fields, t, valueType(mf.GetType()))
 					if err == nil {
@@ -96,14 +97,14 @@ func ParseV2(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 }
 
 // Get Quantiles for summary metric & Buckets for histogram
-func makeQuantilesV2(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType) []telegraf.Metric {
+func makeQuantilesV2(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
 	var metrics []telegraf.Metric
 	fields := make(map[string]interface{})
 	var t time.Time
 	if m.TimestampMs != nil && *m.TimestampMs > 0 {
 		t = time.Unix(0, *m.TimestampMs*1000000)
 	} else {
-		t = time.Now()
+		t = now
 	}
 	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetSummary().GetSampleSum())
@@ -115,28 +116,27 @@ func makeQuantilesV2(m *dto.Metric, tags map[string]string, metricName string, m
 	for _, q := range m.GetSummary().Quantile {
 		newTags := tags
 		fields = make(map[string]interface{})
-		if !math.IsNaN(q.GetValue()) {
-			newTags["quantile"] = fmt.Sprint(q.GetQuantile())
-			fields[metricName] = float64(q.GetValue())
 
-			quantileMetric, err := metric.New("prometheus", newTags, fields, t, valueType(metricType))
-			if err == nil {
-				metrics = append(metrics, quantileMetric)
-			}
+		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
+		fields[metricName] = float64(q.GetValue())
+
+		quantileMetric, err := metric.New("prometheus", newTags, fields, t, valueType(metricType))
+		if err == nil {
+			metrics = append(metrics, quantileMetric)
 		}
 	}
 	return metrics
 }
 
 // Get Buckets  from histogram metric
-func makeBucketsV2(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType) []telegraf.Metric {
+func makeBucketsV2(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
 	var metrics []telegraf.Metric
 	fields := make(map[string]interface{})
 	var t time.Time
 	if m.TimestampMs != nil && *m.TimestampMs > 0 {
 		t = time.Unix(0, *m.TimestampMs*1000000)
 	} else {
-		t = time.Now()
+		t = now
 	}
 	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
 	fields[metricName+"_sum"] = float64(m.GetHistogram().GetSampleSum())
@@ -195,6 +195,8 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 		}
 	}
 
+	// make sure all metrics have a consistent timestamp so that metrics don't straddle two different seconds
+	now := time.Now()
 	// read metrics
 	for metricName, mf := range metricFamilies {
 		for _, m := range mf.Metric {
@@ -223,7 +225,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				if m.TimestampMs != nil && *m.TimestampMs > 0 {
 					t = time.Unix(0, *m.TimestampMs*1000000)
 				} else {
-					t = time.Now()
+					t = now
 				}
 				metric, err := metric.New(metricName, tags, fields, t, valueType(mf.GetType()))
 				if err == nil {

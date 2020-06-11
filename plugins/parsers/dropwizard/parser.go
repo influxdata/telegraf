@@ -17,6 +17,8 @@ import (
 var fieldEscaper = strings.NewReplacer("\\", "\\\\", "\"", "\\\"")
 var keyEscaper = strings.NewReplacer(" ", "\\ ", ",", "\\,", "=", "\\=")
 
+type TimeFunc func() time.Time
+
 // Parser parses json inputs containing dropwizard metrics,
 // either top-level or embedded inside a json field.
 // This parser is using gjson for retrieving paths within the json file.
@@ -48,7 +50,7 @@ type parser struct {
 	separator      string
 	templateEngine *templating.Engine
 
-	timeFunc metric.TimeFunc
+	timeFunc TimeFunc
 
 	// seriesParser parses line protocol measurement + tags
 	seriesParser *influx.Parser
@@ -267,6 +269,6 @@ func (p *parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 	return metrics
 }
 
-func (p *parser) SetTimeFunc(f metric.TimeFunc) {
+func (p *parser) SetTimeFunc(f TimeFunc) {
 	p.timeFunc = f
 }

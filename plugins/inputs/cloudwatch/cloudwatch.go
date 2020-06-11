@@ -12,9 +12,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/influxdata/telegraf"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -212,7 +212,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	results := []*cloudwatch.MetricDataResult{}
 
 	// 100 is the maximum number of metric data queries a `GetMetricData` request can contain.
-	batchSize := 100
+	batchSize := 500
 	var batches [][]*cloudwatch.MetricDataQuery
 
 	for batchSize < len(queries) {
@@ -295,7 +295,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 	if c.Metrics != nil {
 		for _, m := range c.Metrics {
 			metrics := []*cloudwatch.Metric{}
-			if !hasWilcard(m.Dimensions) {
+			if !hasWildcard(m.Dimensions) {
 				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
 				for k, d := range m.Dimensions {
 					dimensions[k] = &cloudwatch.Dimension{
@@ -603,7 +603,7 @@ func (f *metricCache) isValid() bool {
 	return f.metrics != nil && time.Since(f.built) < f.ttl
 }
 
-func hasWilcard(dimensions []*Dimension) bool {
+func hasWildcard(dimensions []*Dimension) bool {
 	for _, d := range dimensions {
 		if d.Value == "" || d.Value == "*" {
 			return true

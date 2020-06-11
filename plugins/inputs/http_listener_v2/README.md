@@ -48,6 +48,11 @@ This is a sample configuration for the plugin.
   # basic_username = "foobar"
   # basic_password = "barfoo"
 
+  ## Optional setting to map http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

@@ -37,7 +37,7 @@ var sampleConfig = `
   ## The default location of the smtpctl binary can be overridden with:
   binary = "/usr/sbin/smtpctl"
 
-  ## The default timeout of 1000ms can be overriden with (in milliseconds):
+  ## The default timeout of 1000ms can be overridden with (in milliseconds):
   timeout = 1000
 `
 

@@ -73,7 +73,7 @@ const sampleConfig = `
 
   ## Optional Sub Job Per Layer
   ## In workflow-multibranch-plugin, each branch will be created as a sub job.
-  ## This config will limit to call only the lasted branches in each layer, 
+  ## This config will limit to call only the lasted branches in each layer,
   ## empty will use default value 10
   # max_subjob_per_layer = 10
 
@@ -90,8 +90,9 @@ const sampleConfig = `
 
 // measurement
 const (
-	measurementNode = "jenkins_node"
-	measurementJob  = "jenkins_job"
+	measurementJenkins = "jenkins"
+	measurementNode    = "jenkins_node"
+	measurementJob     = "jenkins_job"
 )
 
 // SampleConfig implements telegraf.Input interface
@@ -136,7 +137,7 @@ func (j *Jenkins) newHTTPClient() (*http.Client, error) {
 	}, nil
 }
 
-// seperate the client as dependency to use httptest Client for mocking
+// separate the client as dependency to use httptest Client for mocking
 func (j *Jenkins) initialize(client *http.Client) error {
 	var err error
 
@@ -244,6 +245,15 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 		acc.AddError(err)
 		return
 	}
+
+	// get total and busy executors
+	tags := map[string]string{"source": j.Source, "port": j.Port}
+	fields := make(map[string]interface{})
+	fields["busy_executors"] = nodeResp.BusyExecutors
+	fields["total_executors"] = nodeResp.TotalExecutors
+
+	acc.AddFields(measurementJenkins, fields, tags)
+
 	// get node data
 	for _, node := range nodeResp.Computers {
 		err = j.gatherNodeData(node, acc)
@@ -353,7 +363,9 @@ func (j *Jenkins) getJobDetail(jr jobRequest, acc telegraf.Accumulator) error {
 }
 
 type nodeResponse struct {
-	Computers []node `json:"computer"`
+	Computers      []node `json:"computer"`
+	BusyExecutors  int    `json:"busyExecutors"`
+	TotalExecutors int    `json:"totalExecutors"`
 }
 
 type node struct {
@@ -430,12 +442,20 @@ func (jr jobRequest) combined() []string {
 	return append(jr.parents, jr.name)
 }
 
+func (jr jobRequest) combinedEscaped() []string {
+	jobs := jr.combined()
+	for index, job := range jobs {
+		jobs[index] = url.PathEscape(job)
+	}
+	return jobs
+}
+
 func (jr jobRequest) URL() string {
-	return "/job/" + strings.Join(jr.combined(), "/job/") + jobPath
+	return "/job/" + strings.Join(jr.combinedEscaped(), "/job/") + jobPath
 }
 
 func (jr jobRequest) buildURL(number int64) string {
-	return "/job/" + strings.Join(jr.combined(), "/job/") + "/" + strconv.Itoa(int(number)) + jobPath
+	return "/job/" + strings.Join(jr.combinedEscaped(), "/job/") + "/" + strconv.Itoa(int(number)) + jobPath
 }
 
 func (jr jobRequest) hierarchyName() string {

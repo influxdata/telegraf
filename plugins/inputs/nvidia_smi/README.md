@@ -17,6 +17,9 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 #### Windows
 
 On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe`
+On Windows 10, you may also find this located here `C:\Windows\System32\nvidia-smi.exe`
+
+You'll need to escape the `\` within the `telegraf.conf` like this: `C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe`
 
 ### Metrics
 - measurement: `nvidia_smi`
@@ -28,6 +31,9 @@ On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corpor
     - `uuid` (A unique identifier for the GPU e.g. `GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665`)
   - fields
     - `fan_speed` (integer, percentage)
+    - `fbc_stats_session_count` (integer)
+    - `fbc_stats_average_fps` (integer)
+    - `fbc_stats_average_latency` (integer)
     - `memory_free` (integer, MiB)
     - `memory_used` (integer, MiB)
     - `memory_total` (integer, MiB)
@@ -35,6 +41,8 @@ On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corpor
     - `temperature_gpu` (integer, degrees C)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)
+    - `utilization_encoder` (integer, percentage)
+    - `utilization_decoder` (integer, percentage)
     - `pcie_link_gen_current` (integer)
     - `pcie_link_width_current` (integer)
     - `encoder_stats_session_count` (integer)

@@ -43,6 +43,22 @@ func TestFileWriter_TimeRotation(t *testing.T) {
 	assert.Equal(t, 2, len(files))
 }
 
+func TestFileWriter_ReopenTimeRotation(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "RotationTime")
+	require.NoError(t, err)
+	interval, _ := time.ParseDuration("1s")
+	filePath := filepath.Join(tempDir, "test.log")
+	err = ioutil.WriteFile(filePath, []byte("Hello World"), 0644)
+	time.Sleep(1 * time.Second)
+	assert.NoError(t, err)
+	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), interval, 0, -1)
+	require.NoError(t, err)
+	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+
+	files, _ := ioutil.ReadDir(tempDir)
+	assert.Equal(t, 2, len(files))
+}
+
 func TestFileWriter_SizeRotation(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "RotationSize")
 	require.NoError(t, err)
@@ -54,6 +70,23 @@ func TestFileWriter_SizeRotation(t *testing.T) {
 	_, err = writer.Write([]byte("Hello World"))
 	require.NoError(t, err)
 	_, err = writer.Write([]byte("World 2"))
+	require.NoError(t, err)
+	files, _ := ioutil.ReadDir(tempDir)
+	assert.Equal(t, 2, len(files))
+}
+
+func TestFileWriter_ReopenSizeRotation(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "RotationSize")
+	require.NoError(t, err)
+	maxSize := int64(12)
+	filePath := filepath.Join(tempDir, "test.log")
+	err = ioutil.WriteFile(filePath, []byte("Hello World"), 0644)
+	assert.NoError(t, err)
+	writer, err := NewFileWriter(filepath.Join(tempDir, "test.log"), 0, maxSize, -1)
+	require.NoError(t, err)
+	defer func() { writer.Close(); os.RemoveAll(tempDir) }()
+
+	_, err = writer.Write([]byte("Hello World Again"))
 	require.NoError(t, err)
 	files, _ := ioutil.ReadDir(tempDir)
 	assert.Equal(t, 2, len(files))

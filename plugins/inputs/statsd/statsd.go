@@ -31,6 +31,8 @@ const (
 	defaultSeparator           = "_"
 	defaultAllowPendingMessage = 10000
 	MaxTCPConnections          = 250
+
+	parserGoRoutines = 5
 )
 
 // Statsd allows the importing of statsd and dogstatsd data.
@@ -398,12 +400,14 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		}()
 	}
 
-	// Start the line parser
-	s.wg.Add(1)
-	go func() {
-		defer s.wg.Done()
-		s.parser()
-	}()
+	for i := 1; i <= parserGoRoutines; i++ {
+		// Start the line parser
+		s.wg.Add(1)
+		go func() {
+			defer s.wg.Done()
+			s.parser()
+		}()
+	}
 	s.Log.Infof("Started the statsd service on %q", s.ServiceAddress)
 	return nil
 }

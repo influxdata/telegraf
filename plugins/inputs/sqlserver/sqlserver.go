@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -15,6 +16,7 @@ type SQLServer struct {
 	Servers       []string `toml:"servers"`
 	QueryVersion  int      `toml:"query_version"`
 	AzureDB       bool     `toml:"azuredb"`
+	IncludeQuery  []string `toml:"include_query"`
 	ExcludeQuery  []string `toml:"exclude_query"`
 	queries       MapQuery
 	isInitialized bool
@@ -33,43 +35,53 @@ type MapQuery map[string]Query
 const defaultServer = "Server=.;app name=telegraf;log=1;"
 
 const sampleConfig = `
-  ## Specify instances to monitor with a list of connection strings.
-  ## All connection parameters are optional.
-  ## By default, the host is localhost, listening on default port, TCP 1433.
-  ##   for Windows, the user is the currently running AD user (SSO).
-  ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-  ##   parameters, in particular, tls connections can be created like so:
-  ##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
-  # servers = [
-  #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
-  # ]
+## Specify instances to monitor with a list of connection strings.
+## All connection parameters are optional.
+## By default, the host is localhost, listening on default port, TCP 1433.
+##   for Windows, the user is the currently running AD user (SSO).
+##   See https://github.com/denisenkom/go-mssqldb for detailed connection
+##   parameters, in particular, tls connections can be created like so:
+##   "encrypt=true;certificate=<cert>;hostNameInCertificate=<SqlServer host fqdn>"
+# servers = [
+#  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
+# ]
 
-  ## Optional parameter, setting this to 2 will use a new version
-  ## of the collection queries that break compatibility with the original
-  ## dashboards.
-  query_version = 2
+## Optional parameter, setting this to 2 will use a new version
+## of the collection queries that break compatibility with the original
+## dashboards.
+## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
+query_version = 2
 
-  ## If you are using AzureDB, setting this to true will gather resource utilization metrics
-  # azuredb = false
+## If you are using AzureDB, setting this to true will gather resource utilization metrics
+# azuredb = false
 
-  ## If you would like to exclude some of the metrics queries, list them here
-  ## Possible choices:
-  ## - PerformanceCounters
-  ## - WaitStatsCategorized
-  ## - DatabaseIO
-  ## - DatabaseProperties
-  ## - CPUHistory
-  ## - DatabaseSize
-  ## - DatabaseStats
-  ## - MemoryClerk
-  ## - VolumeSpace
-  ## - PerformanceMetrics
-  ## - Schedulers
-  ## - AzureDBResourceStats
-  ## - AzureDBResourceGovernance
-  ## - SqlRequests
-  ## - ServerProperties
-  exclude_query = [ 'Schedulers' ]
+## Possible queries
+## Version 2:
+## - PerformanceCounters
+## - WaitStatsCategorized
+## - DatabaseIO
+## - ServerProperties
+## - MemoryClerk
+## - Schedulers
+## - SqlRequests
+## - VolumeSpace
+## Version 1:
+## - PerformanceCounters
+## - WaitStatsCategorized
+## - CPUHistory
+## - DatabaseIO
+## - DatabaseSize
+## - DatabaseStats
+## - DatabaseProperties
+## - MemoryClerk
+## - VolumeSpace
+## - PerformanceMetrics
+
+## A list of queries to include. If not specified, all the above listed queries are used.
+# include_query = []
+
+## A list of queries to explicitly ignore.
+exclude_query = [ 'Schedulers' , 'SqlRequests']
 `
 
 // SampleConfig return the sample configuration
@@ -86,7 +98,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(s *SQLServer) {
+func initQueries(s *SQLServer) error {
 	s.queries = make(MapQuery)
 	queries := s.queries
 	// If this is an AzureDB instance, grab some extra metrics
@@ -104,6 +116,8 @@ func initQueries(s *SQLServer) {
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 		queries["Schedulers"] = Query{Script: sqlServerSchedulersV2, ResultByRow: false}
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
+		queries["VolumeSpace"] = Query{Script: sqlServerVolumeSpaceV2, ResultByRow: false}
+		queries["Cpu"] = Query{Script: sqlServerCpuV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -117,18 +131,29 @@ func initQueries(s *SQLServer) {
 		queries["PerformanceMetrics"] = Query{Script: sqlPerformanceMetrics, ResultByRow: false}
 	}
 
-	for _, query := range s.ExcludeQuery {
-		delete(queries, query)
+	filterQueries, err := filter.NewIncludeExcludeFilter(s.IncludeQuery, s.ExcludeQuery)
+	if err != nil {
+		return err
+	}
+
+	for query := range queries {
+		if !filterQueries.Match(query) {
+			delete(queries, query)
+		}
 	}
 
 	// Set a flag so we know that queries have already been initialized
 	s.isInitialized = true
+	return nil
 }
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	if !s.isInitialized {
-		initQueries(s)
+		if err := initQueries(s); err != nil {
+			acc.AddError(err)
+			return err
+		}
 	}
 
 	if len(s.Servers) == 0 {
@@ -352,53 +377,90 @@ EXEC(@SQL)
 // EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10;
+DECLARE @SqlStatement AS nvarchar(max);
 IF SERVERPROPERTY('EngineEdition') = 5
 BEGIN
-SELECT
-'sqlserver_database_io' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-DB_NAME([vfs].[database_id]) AS [database_name],
-vfs.io_stall_read_ms AS read_latency_ms,
-vfs.num_of_reads AS reads,
-vfs.num_of_bytes_read AS read_bytes,
-vfs.io_stall_write_ms AS write_latency_ms,
-vfs.num_of_writes AS writes,
-vfs.num_of_bytes_written AS write_bytes,
-vfs.io_stall_queued_read_ms as rg_read_stall_ms,
-vfs.io_stall_queued_write_ms as rg_write_stall_ms,
-ISNULL(b.name ,'RBPEX') as logical_filename,
-ISNULL(b.physical_name, 'RBPEX') as physical_filename,
-CASE WHEN vfs.file_id = 2 THEN 'LOG'ELSE 'DATA' END AS file_type
-,ISNULL(size,0)/128 AS current_size_mb
-,ISNULL(FILEPROPERTY(b.name,'SpaceUsed')/128,0) as space_used_mb
-FROM
-[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-LEFT OUTER join sys.database_files b on  b.file_id = vfs.file_id
+	SET @SqlStatement = '
+	SELECT
+		 ''sqlserver_database_io'' As [measurement]
+		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+		,DB_NAME() as database_name
+		,vfs.database_id   -- /*needed as tempdb is different for each Azure SQL DB as grouping has to be by logical server + db_name + database_id*/
+		,vfs.file_id
+		,vfs.io_stall_read_ms AS read_latency_ms
+		,vfs.num_of_reads AS reads
+		,vfs.num_of_bytes_read AS read_bytes
+		,vfs.io_stall_write_ms AS write_latency_ms
+		,vfs.num_of_writes AS writes
+		,vfs.num_of_bytes_written AS write_bytes
+		,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms]
+                ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]
+		 ,CASE
+                        WHEN (vfs.database_id = 0) THEN ''RBPEX''
+                        ELSE b.logical_filename
+                  END as logical_filename
+                 ,CASE
+                        WHEN (vfs.database_id = 0) THEN ''RBPEX''
+                        ELSE b.physical_filename
+                  END as physical_filename
+		,CASE WHEN vfs.file_id = 2 THEN ''LOG'' ELSE ''DATA'' END AS file_type
+		,ISNULL(size,0)/128 AS current_size_mb
+		,ISNULL(FILEPROPERTY(b.logical_filename,''SpaceUsed'')/128,0) as space_used_mb
+	FROM [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+	-- needed to get Tempdb file names  on Azure SQL DB so you can join appropriately. Without this had a bug where join was only on file_id
+        LEFT OUTER join
+        (
+             SELECT DB_ID() as database_id, file_id, logical_filename=name COLLATE SQL_Latin1_General_CP1_CI_AS
+                , physical_filename = physical_name COLLATE SQL_Latin1_General_CP1_CI_AS, size from  sys.database_files
+                where type <> 2
+             UNION ALL
+             SELECT 2 as database_id, file_id, logical_filename = name , physical_filename = physical_name, size
+                from  tempdb.sys.database_files
+         ) b ON b.database_id = vfs.database_id and b.file_id = vfs.file_id
+          where vfs.database_id IN (DB_ID(),0,2)
+	'
+	EXEC sp_executesql @SqlStatement
+
 END
 ELSE
 BEGIN
-SELECT
-'sqlserver_database_io' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-DB_NAME([vfs].[database_id]) [database_name],
-vfs.io_stall_read_ms AS read_latency_ms,
-vfs.num_of_reads AS reads,
-vfs.num_of_bytes_read AS read_bytes,
-vfs.io_stall_write_ms AS write_latency_ms,
-vfs.num_of_writes AS writes,
-vfs.num_of_bytes_written AS write_bytes,
-vfs.io_stall_queued_read_ms as rg_read_stall_ms,
-vfs.io_stall_queued_write_ms as rg_write_stall_ms,
-ISNULL(b.name ,'RBPEX') as logical_filename,
-ISNULL(b.physical_name, 'RBPEX') as physical_filename,
-CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
-,ISNULL(size,0)/128 AS current_size_mb
--- can't easily get space used without switching context to each DB for MI/On-prem making query expensive
-, -1 as space_used_mb
-FROM
-[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-LEFT OUTER join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
+
+	SET @SqlStatement = N'
+	SELECT
+		''sqlserver_database_io'' AS [measurement]
+		,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+		,DB_NAME(vfs.[database_id]) AS [database_name]
+		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
+		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
+		,mf.[type_desc] AS [file_type]
+		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
+			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+			,vs.[volume_mount_point]
+		) AS [volume_mount_point]
+		,vfs.[io_stall_read_ms] AS [read_latency_ms]
+		,vfs.[num_of_reads] AS [reads]
+		,vfs.[num_of_bytes_read] AS [read_bytes]
+		,vfs.[io_stall_write_ms] AS [write_latency_ms]
+		,vfs.[num_of_writes] AS [writes]
+		,vfs.[num_of_bytes_written] AS [write_bytes]
+		'
+		+ 
+		CASE
+			WHEN LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) = '11'
+				/*SQL Server 2012 (ver 11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]*/
+				THEN ''
+				ELSE N',vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
+		END 
+		+
+	N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+	INNER JOIN sys.master_files AS mf WITH (NOLOCK)
+		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
+	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs
+	'
+	EXEC sp_executesql @SqlStatement
+
 END
+
 `
 
 // Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
@@ -496,13 +558,45 @@ FROM	(
 `
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
-const sqlServerSchedulersV2 string = `SET DEADLOCK_PRIORITY -10;
-SELECT  'sqlserver_schedulers' AS [measurement],
-                REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-                DB_NAME() as [database_name],
-  cast(scheduler_id as varchar(4)) as scheduler_id, cast(cpu_id as varchar(4)) as cpu_id,is_online,is_idle,preemptive_switches_count,context_switches_count,current_tasks_count,runnable_tasks_count,current_workers_count
-  , active_workers_count,work_queue_count, pending_disk_io_count,load_factor,yield_count, total_cpu_usage_ms, total_scheduler_delay_ms
-from sys.dm_os_schedulers
+const sqlServerSchedulersV2 string = `
+
+
+
+
+SET DEADLOCK_PRIORITY - 10;
+DECLARE @SqlStatement AS nvarchar(max);
+SET @SqlStatement = N'
+SELECT 
+	 ''sqlserver_schedulers'' AS [measurement]
+	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
+	,DB_NAME() AS [database_name]
+	,cast(s.[scheduler_id] AS VARCHAR(4)) AS [scheduler_id]
+	,cast(s.[cpu_id] AS VARCHAR(4)) AS [cpu_id]
+	,s.[is_online]
+	,s.[is_idle]
+	,s.[preemptive_switches_count]
+	,s.[context_switches_count]
+	,s.[current_tasks_count]
+	,s.[runnable_tasks_count]
+	,s.[current_workers_count]
+	,s.[active_workers_count]
+	,s.[work_queue_count]
+	,s.[pending_disk_io_count]
+	,s.[load_factor]
+	,s.[yield_count]
+	'
+	+ 
+	CASE
+		WHEN CAST(LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) AS int) >= 13
+			/*Only from SQL Server 2016+ (ver 13.x) [total_cpu_usage_ms] and [total_scheduler_delay_ms]*/
+			THEN N',s.[total_cpu_usage_ms], s.[total_scheduler_delay_ms]'
+			ELSE ''
+	END 
+	+
+N'
+FROM sys.dm_os_schedulers AS s
+'
+EXEC sp_executesql @SqlStatement
 `
 
 const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
@@ -515,135 +609,150 @@ DECLARE @PCounters TABLE
 	cntr_type INT,
 	Primary Key(object_name, counter_name, instance_name)
 );
-INSERT	INTO @PCounters
-SELECT	DISTINCT
-		RTrim(spi.object_name) object_name,
-		RTrim(spi.counter_name) counter_name,
-                CASE WHEN (
-                             RTRIM(spi.object_name) LIKE '%:Databases'
-                             OR RTRIM(spi.object_name) LIKE '%:Database Replica'
-                             OR RTRIM(spi.object_name) LIKE '%:Catalog Metadata'
-                             OR RTRIM(spi.object_name) LIKE '%:Query Store'
-                             OR RTRIM(spi.object_name) LIKE '%:Columnstore'
-                             OR RTRIM(spi.object_name) LIKE '%:Advanced Analytics')
-                             AND SERVERPROPERTY ('EngineEdition') IN (5,8)
-                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
-                       THEN d.name
- 			WHEN RTRIM(object_name) LIKE '%:Availability Replica'
-				AND SERVERPROPERTY ('EngineEdition') IN (5,8)
-				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
-			THEN d.name + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
-                       ELSE spi.instance_name
-                END AS instance_name,
-		CAST(spi.cntr_value AS BIGINT) AS cntr_value,
-		spi.cntr_type
-FROM	sys.dm_os_performance_counters AS spi
-LEFT JOIN sys.databases AS d
-ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
-   = CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
-                d.name = 'master' AND TRY_CONVERT(uniqueidentifier, d.physical_database_name) IS NOT NULL
-                THEN d.name
-                ELSE d.physical_database_name
-      END
-WHERE	(
-			counter_name IN (
-				'SQL Compilations/sec',
-				'SQL Re-Compilations/sec',
-				'User Connections',
-				'Batch Requests/sec',
-				'Logouts/sec',
-				'Logins/sec',
-				'Processes blocked',
-				'Latch Waits/sec',
-				'Full Scans/sec',
-				'Index Searches/sec',
-				'Page Splits/sec',
-				'Page lookups/sec',
-				'Page reads/sec',
-				'Page writes/sec',
-				'Readahead pages/sec',
-				'Lazy writes/sec',
-				'Checkpoint pages/sec',
-				'Page life expectancy',
-				'Log File(s) Size (KB)',
-				'Log File(s) Used Size (KB)',
-				'Data File(s) Size (KB)',
-				'Transactions/sec',
-				'Write Transactions/sec',
-				'Active Temp Tables',
-				'Temp Tables Creation Rate',
-				'Temp Tables For Destruction',
-				'Free Space in tempdb (KB)',
-				'Version Store Size (KB)',
-				'Memory Grants Pending',
-				'Memory Grants Outstanding',
-				'Free list stalls/sec',
-				'Buffer cache hit ratio',
-				'Buffer cache hit ratio base',
-				'Backup/Restore Throughput/sec',
-				'Total Server Memory (KB)',
-				'Target Server Memory (KB)',
-				'Log Flushes/sec',
-				'Log Flush Wait Time',
-				'Memory broker clerk size',
-				'Log Bytes Flushed/sec',
-				'Bytes Sent to Replica/sec',
-				'Log Send Queue',
-				'Bytes Sent to Transport/sec',
-				'Sends to Replica/sec',
-				'Bytes Sent to Transport/sec',
-				'Sends to Transport/sec',
-				'Bytes Received from Replica/sec',
-				'Receives from Replica/sec',
-				'Flow Control Time (ms/sec)',
-				'Flow Control/sec',
-				'Resent Messages/sec',
-				'Redone Bytes/sec',
-				'XTP Memory Used (KB)',
-				'Transaction Delay',
-				'Log Bytes Received/sec',
-				'Log Apply Pending Queue',
-				'Redone Bytes/sec',
-				'Recovery Queue',
-				'Log Apply Ready Queue',
-				'CPU usage %',
-				'CPU usage % base',
-				'Queued requests',
-				'Requests completed/sec',
-				'Blocked tasks',
-				'Active memory grant amount (KB)',
-				'Disk Read Bytes/sec',
-				'Disk Read IO Throttled/sec',
-				'Disk Read IO/sec',
-				'Disk Write Bytes/sec',
-				'Disk Write IO Throttled/sec',
-				'Disk Write IO/sec',
-				'Used memory (KB)',
-				'Forwarded Records/sec',
-				'Background Writer pages/sec',
-				'Percent Log Used',
-				'Log Send Queue KB',
-				'Redo Queue KB',
-				'Mirrored Write Transactions/sec',
-				'Group Commit Time',
-				'Group Commits/Sec'
-			)
-		) OR (
-			object_name LIKE '%User Settable%'
-			OR object_name LIKE '%SQL Errors%'
-		) OR (
-			object_name LIKE 'SQLServer:Batch Resp Statistics%'
-		) OR (
-			instance_name IN ('_Total')
-			AND counter_name IN (
-				'Lock Timeouts/sec',
-				'Number of Deadlocks/sec',
-				'Lock Waits/sec',
-				'Latch Waits/sec'
-			)
-		)
 
 DECLARE @SQL NVARCHAR(MAX)
+SET @SQL = N'SELECT	DISTINCT
+		RTrim(spi.object_name) object_name,
+		RTrim(spi.counter_name) counter_name,'
+		+
+		CASE
+		WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
+		THEN N'CASE WHEN (
+                             RTRIM(spi.object_name) LIKE ''%:Databases''
+                             OR RTRIM(spi.object_name) LIKE ''%:Database Replica''
+                             OR RTRIM(spi.object_name) LIKE ''%:Catalog Metadata''
+                             OR RTRIM(spi.object_name) LIKE ''%:Query Store''
+                             OR RTRIM(spi.object_name) LIKE ''%:Columnstore''
+                             OR RTRIM(spi.object_name) LIKE ''%:Advanced Analytics'')
+                             AND TRY_CONVERT(uniqueidentifier, spi.instance_name) 
+							 IS NOT NULL -- for cloud only
+                THEN ISNULL(d.name,RTRIM(spi.instance_name)) -- Elastic Pools counters exist for all databases but sys.databases only has current DB value
+			  WHEN RTRIM(object_name) LIKE ''%:Availability Replica''
+				AND TRY_CONVERT(uniqueidentifier, spi.instance_name) IS NOT NULL -- for cloud only
+			THEN ISNULL(d.name,RTRIM(spi.instance_name)) + RTRIM(SUBSTRING(spi.instance_name, 37, LEN(spi.instance_name)))
+                       ELSE RTRIM(spi.instance_name)
+                END AS instance_name,'
+		ELSE 'RTRIM(spi.instance_name) as instance_name, '
+		END
+		+
+		'CAST(spi.cntr_value AS BIGINT) AS cntr_value,
+		spi.cntr_type
+		FROM	sys.dm_os_performance_counters AS spi '
++
+CASE 
+	WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
+	THEN CAST(N'LEFT JOIN sys.databases AS d
+	ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
+	= CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
+                d.name = ''master'' AND TRY_CONVERT(uniqueidentifier, d.physical_database_name) IS NOT NULL
+                THEN d.name
+                ELSE d.physical_database_name
+	END	' as NVARCHAR(MAX))
+	ELSE N' '
+END
+
+SET @SQL = @SQL + CAST(N' WHERE	(
+			counter_name IN (
+				''SQL Compilations/sec'',
+				''SQL Re-Compilations/sec'',
+				''User Connections'',
+				''Batch Requests/sec'',
+				''Logouts/sec'',
+				''Logins/sec'',
+				''Processes blocked'',
+				''Latch Waits/sec'',
+				''Full Scans/sec'',
+				''Index Searches/sec'',
+				''Page Splits/sec'',
+				''Page lookups/sec'',
+				''Page reads/sec'',
+				''Page writes/sec'',
+				''Readahead pages/sec'',
+				''Lazy writes/sec'',
+				''Checkpoint pages/sec'',
+				''Page life expectancy'',
+				''Log File(s) Size (KB)'',
+				''Log File(s) Used Size (KB)'',
+				''Data File(s) Size (KB)'',
+				''Transactions/sec'',
+				''Write Transactions/sec'',
+				''Active Temp Tables'',
+				''Temp Tables Creation Rate'',
+				''Temp Tables For Destruction'',
+				''Free Space in tempdb (KB)'',
+				''Version Store Size (KB)'',
+				''Memory Grants Pending'',
+				''Memory Grants Outstanding'',
+				''Free list stalls/sec'',
+				''Buffer cache hit ratio'',
+				''Buffer cache hit ratio base'',
+				''Backup/Restore Throughput/sec'',
+				''Total Server Memory (KB)'',
+				''Target Server Memory (KB)'',
+				''Log Flushes/sec'',
+				''Log Flush Wait Time'',
+				''Memory broker clerk size'',
+				''Log Bytes Flushed/sec'',
+				''Bytes Sent to Replica/sec'',
+				''Log Send Queue'',
+				''Bytes Sent to Transport/sec'',
+				''Sends to Replica/sec'',
+				''Bytes Sent to Transport/sec'',
+				''Sends to Transport/sec'',
+				''Bytes Received from Replica/sec'',
+				''Receives from Replica/sec'',
+				''Flow Control Time (ms/sec)'',
+				''Flow Control/sec'',
+				''Resent Messages/sec'',
+				''Redone Bytes/sec'',
+				''XTP Memory Used (KB)'',
+				''Transaction Delay'',
+				''Log Bytes Received/sec'',
+				''Log Apply Pending Queue'',
+				''Redone Bytes/sec'',
+				''Recovery Queue'',
+				''Log Apply Ready Queue'',
+				''CPU usage %'',
+				''CPU usage % base'',
+				''Queued requests'',
+				''Requests completed/sec'',
+				''Blocked tasks'',
+				''Active memory grant amount (KB)'',
+				''Disk Read Bytes/sec'',
+				''Disk Read IO Throttled/sec'',
+				''Disk Read IO/sec'',
+				''Disk Write Bytes/sec'',
+				''Disk Write IO Throttled/sec'',
+				''Disk Write IO/sec'',
+				''Used memory (KB)'',
+				''Forwarded Records/sec'',
+				''Background Writer pages/sec'',
+				''Percent Log Used'',
+				''Log Send Queue KB'',
+				''Redo Queue KB'',
+				''Mirrored Write Transactions/sec'',
+				''Group Commit Time'',
+				''Group Commits/Sec''
+			)
+		) OR (
+			object_name LIKE ''%User Settable%''
+			OR object_name LIKE ''%SQL Errors%''
+		) OR (
+			object_name LIKE ''%Batch Resp Statistics%''
+		) OR (
+			instance_name IN (''_Total'')
+			AND counter_name IN (
+				''Lock Timeouts/sec'',
+				''Number of Deadlocks/sec'',
+				''Lock Waits/sec'',
+				''Latch Waits/sec''
+			)
+		)
+' as NVARCHAR(MAX))
+INSERT	INTO @PCounters
+EXEC (@SQL)
+
+
 SET  @SQL = REPLACE('SELECT
 "SQLServer:Workload Group Stats" AS object,
 counter,
@@ -658,7 +767,7 @@ FROM
     rgwg.total_queued_request_count AS "Queued Request Count",
     rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
     rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
-    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' ELSE '' END + '
+    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Preemptive CPU Usage (time)",' ELSE '' END + '
     rgwg.total_lock_wait_count AS "Lock Wait Count",
     rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
     rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
@@ -667,7 +776,7 @@ FROM
     ON rgwg.pool_id = rgrp.pool_id
 ) AS rg
 UNPIVOT (
-    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Preemptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
 ) AS vs'
 ,'"','''')
 
@@ -690,7 +799,8 @@ FROM	@PCounters AS pc
 			AND pc.object_name = pc1.object_name
 			AND pc.instance_name = pc1.instance_name
 			AND pc1.counter_name LIKE '%base'
-WHERE	pc.counter_name NOT LIKE '% base';
+WHERE	pc.counter_name NOT LIKE '% base'
+OPTION(RECOMPILE);
 `
 
 // Conditional check based on Azure SQL DB v/s the rest aka (Azure SQL Managed instance OR On-prem SQL Server)
@@ -1408,7 +1518,7 @@ SELECT
 	, DB_NAME(s.database_id) as session_db_name
 	, r.status
 	, r.cpu_time as cpu_time_ms
-	, r.total_elapsed_time as total_elasped_time_ms
+	, r.total_elapsed_time as total_elapsed_time_ms
 	, r.logical_reads
 	, r.writes
 	, r.command
@@ -1451,6 +1561,72 @@ SELECT
 	 OR (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
 	 OPTION(MAXDOP 1)
 
+`
+
+const sqlServerVolumeSpaceV2 string = `
+/* Only for on-prem version of SQL Server
+Gets data about disk space, only if the disk is used by SQL Server
+EngineEdition:
+1 = Personal or Desktop Engine
+2 = Standard
+3 = Enterprise
+4 = Express
+5 = SQL Database
+6 = SQL Data Warehouse
+8 = Managed Instance
+*/
+IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
+	BEGIN
+	SELECT DISTINCT
+		'sqlserver_volume_space' AS [measurement]
+		,SERVERPROPERTY('machinename') AS [server_name]
+		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+		,IIF( RIGHT(vs.[volume_mount_point],1) = '\'	/*Tag value cannot end with \ */
+			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
+			,vs.[volume_mount_point]
+		) AS [volume_mount_point]
+		,vs.[total_bytes] AS [total_space_bytes]
+		,vs.[available_bytes] AS [available_space_bytes]
+		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
+	FROM
+		sys.master_files as mf
+		CROSS APPLY sys.dm_os_volume_stats(mf.database_id, mf.file_id) as vs
+	END
+`
+
+const sqlServerCpuV2 string = `
+/*The ring buffer has a new value every minute*/
+IF SERVERPROPERTY('EngineEdition') NOT IN (5,8) /*No azure DB and managed instance*/
+BEGIN
+SELECT 
+	 'sqlserver_cpu' AS [measurement]
+	,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+	,[SQLProcessUtilization] AS [sqlserver_process_cpu]
+	,[SystemIdle] AS [system_idle_cpu]
+	,100 - [SystemIdle] - [SQLProcessUtilization] AS [other_process_cpu]
+FROM (
+	SELECT TOP 1
+		 [record_id]
+		/*,dateadd(ms, (y.[timestamp] - (SELECT CAST([ms_ticks] AS BIGINT) FROM sys.dm_os_sys_info)), GETDATE()) AS [EventTime] --use for check/debug purpose*/
+		,[SQLProcessUtilization]
+		,[SystemIdle]
+	FROM (
+		SELECT record.value('(./Record/@id)[1]', 'int') AS [record_id]
+			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/SystemIdle)[1]', 'int') AS [SystemIdle]
+			,record.value('(./Record/SchedulerMonitorEvent/SystemHealth/ProcessUtilization)[1]', 'int') AS [SQLProcessUtilization]
+			,[TIMESTAMP]
+		FROM (
+			SELECT [TIMESTAMP]
+				,convert(XML, [record]) AS [record]
+			FROM sys.dm_os_ring_buffers
+			WHERE [ring_buffer_type] = N'RING_BUFFER_SCHEDULER_MONITOR'
+				AND [record] LIKE '%<SystemHealth>%'
+			) AS x
+		) AS y
+	ORDER BY record_id DESC
+) as z
+
+END
 `
 
 // Queries V1
@@ -2006,7 +2182,7 @@ SELECT database_name, num_of_writes_persec
 FROM #baselinewritten
 WHERE datafile_type = ''ROWS''
 ) as V
-PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTabl
+PIVOT(SUM(num_of_writes_persec) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
 UNION ALL
 SELECT measurement = ''Log (reads/sec)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database IO''
 , ' + @ColumnName + ', Total = ' + @ColumnName2 + ' FROM
@@ -2302,7 +2478,7 @@ SELECT DISTINCT RTrim(spi.object_name) object_name
 , spi.cntr_value
 , spi.cntr_type
 FROM sys.dm_os_performance_counters spi
-WHERE spi.object_name NOT LIKE 'SQLServer:Backup Device%'
+WHERE spi.object_name NOT LIKE '%Backup Device%'
 	AND NOT EXISTS (SELECT 1 FROM sys.databases WHERE Name = spi.instance_name);
 
 WAITFOR DELAY '00:00:01';
@@ -2324,7 +2500,7 @@ SELECT DISTINCT RTrim(spi.object_name) object_name
 , spi.cntr_value
 , spi.cntr_type
 FROM sys.dm_os_performance_counters spi
-WHERE spi.object_name NOT LIKE 'SQLServer:Backup Device%'
+WHERE spi.object_name NOT LIKE '%Backup Device%'
 	AND NOT EXISTS (SELECT 1 FROM sys.databases WHERE Name = spi.instance_name);
 
 SELECT
@@ -2360,7 +2536,7 @@ INNER JOIN #PCounters pc On cc.object_name = pc.object_name
         And cc.cntr_type = pc.cntr_type
 LEFT JOIN #CCounters cbc On cc.object_name = cbc.object_name
         And (Case When cc.counter_name Like '%(ms)' Then Replace(cc.counter_name, ' (ms)',' Base')
-                  When cc.object_name = 'SQLServer:FileTable' Then Replace(cc.counter_name, 'Avg ','') + ' base'
+                  When cc.object_name like '%FileTable' Then Replace(cc.counter_name, 'Avg ','') + ' base'
                   When cc.counter_name = 'Worktables From Cache Ratio' Then 'Worktables From Cache Base'
                   When cc.counter_name = 'Avg. Length of Batched Writes' Then 'Avg. Length of Batched Writes BS'
                   Else cc.counter_name + ' base'
@@ -2371,7 +2547,7 @@ LEFT JOIN #CCounters cbc On cc.object_name = cbc.object_name
 LEFT JOIN #PCounters pbc On pc.object_name = pbc.object_name
         And pc.instance_name = pbc.instance_name
         And (Case When pc.counter_name Like '%(ms)' Then Replace(pc.counter_name, ' (ms)',' Base')
-                  When pc.object_name = 'SQLServer:FileTable' Then Replace(pc.counter_name, 'Avg ','') + ' base'
+                  When pc.object_name like '%FileTable' Then Replace(pc.counter_name, 'Avg ','') + ' base'
                   When pc.counter_name = 'Worktables From Cache Ratio' Then 'Worktables From Cache Base'
                   When pc.counter_name = 'Avg. Length of Batched Writes' Then 'Avg. Length of Batched Writes BS'
                   Else pc.counter_name + ' base'
@@ -2430,7 +2606,7 @@ VALUES (N'QDS_SHUTDOWN_QUEUE'), (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'DIRTY_PAGE_POLL'),                (N'DISPATCHER_QUEUE_SEMAPHORE'),
 	(N'EXECSYNC'),                       (N'FSAGENT'),
 	(N'FT_IFTS_SCHEDULER_IDLE_WAIT'),    (N'FT_IFTSHC_MUTEX'),
-	(N'HADR_CLUSAPI_CALL'),              (N'HADR_FILESTREAM_IOMGR_IOCOMPLETIO(N'),
+	(N'HADR_CLUSAPI_CALL'),              (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'HADR_LOGCAPTURE_WAIT'),           (N'HADR_NOTIFICATION_DEQUEUE'),
 	(N'HADR_TIMER_TASK'),                (N'HADR_WORK_QUEUE'),
 	(N'KSOURCE_WAKEUP'),                 (N'LAZYWRITER_SLEEP'),

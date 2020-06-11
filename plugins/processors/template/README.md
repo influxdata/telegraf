@@ -46,7 +46,7 @@ Add measurement name as a tag:
 
 ```diff
 - cpu,hostname=localhost time_idle=42
-+ cpu,hostname=localhost,meaurement=cpu time_idle=42
++ cpu,hostname=localhost,measurement=cpu time_idle=42
 ```
 
 Add the year as a tag, similar to the date processor:

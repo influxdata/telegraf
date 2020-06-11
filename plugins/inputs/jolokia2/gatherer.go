@@ -43,7 +43,7 @@ func (g *Gatherer) Gather(client *Client, acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherReponses adds points to an accumulator from the ReadResponse objects
+// gatherResponses adds points to an accumulator from the ReadResponse objects
 // returned by a Jolokia agent.
 func (g *Gatherer) gatherResponses(responses []ReadResponse, tags map[string]string, acc telegraf.Accumulator) {
 	series := make(map[string][]point, 0)
@@ -144,7 +144,7 @@ func metricMatchesResponse(metric Metric, response ReadResponse) bool {
 	return false
 }
 
-// compactPoints attepts to remove points by compacting points
+// compactPoints attempts to remove points by compacting points
 // with matching tag sets. When a match is found, the fields from
 // one point are moved to another, and the empty point is removed.
 func compactPoints(points []point) []point {
