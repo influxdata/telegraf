@@ -60,8 +60,8 @@ report those stats already using StatsD protocol if needed.
   - tags:
   	- node (node that check/service is registered on)
   	- service_name
-  	- check_id (unless disabled)
-    - all service tags attached to a health check (unless disabled)
+  	- check_id 
+    - all service tags attached to a health check (unless filtered)
   - fields:
     - check_name
     - service_id
