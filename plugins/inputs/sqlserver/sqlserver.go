@@ -65,6 +65,7 @@ query_version = 2
 ## - Schedulers
 ## - SqlRequests
 ## - VolumeSpace
+## - Cpu
 ## Version 1:
 ## - PerformanceCounters
 ## - WaitStatsCategorized
@@ -267,118 +268,145 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `SET DEADLOCK_PRIORITY -10;
-DECLARE @SQL NVARCHAR(MAX) = 'SELECT
-"sqlserver_memory_clerks" As [measurement],
-REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
-DB_NAME() as [database_name],
-ISNULL(clerk_names.name,mc.type) AS clerk_type,
-SUM({pages_kb}) AS size_kb
-FROM
-sys.dm_os_memory_clerks AS mc WITH (NOLOCK)
-LEFT OUTER JOIN ( VALUES
-("CACHESTORE_BROKERDSH","Service Broker Dialog Security Header Cache"),
-("CACHESTORE_BROKERKEK","Service Broker Key Exchange Key Cache"),
-("CACHESTORE_BROKERREADONLY","Service Broker (Read-Only)"),
-("CACHESTORE_BROKERRSB","Service Broker Null Remote Service Binding Cache"),
-("CACHESTORE_BROKERTBLACS","Broker dormant rowsets"),
-("CACHESTORE_BROKERTO","Service Broker Transmission Object Cache"),
-("CACHESTORE_BROKERUSERCERTLOOKUP","Service Broker user certificates lookup result cache"),
-("CACHESTORE_CLRPROC","CLR Procedure Cache"),
-("CACHESTORE_CLRUDTINFO","CLR UDT Info"),
-("CACHESTORE_COLUMNSTOREOBJECTPOOL","Column Store Object Pool"),
-("CACHESTORE_CONVPRI","Conversation Priority Cache"),
-("CACHESTORE_EVENTS","Event Notification Cache"),
-("CACHESTORE_FULLTEXTSTOPLIST","Full Text Stoplist Cache"),
-("CACHESTORE_NOTIF","Notification Store"),
-("CACHESTORE_OBJCP","Object Plans"),
-("CACHESTORE_PHDR","Bound Trees"),
-("CACHESTORE_SEARCHPROPERTYLIST","Search Property List Cache"),
-("CACHESTORE_SEHOBTCOLUMNATTRIBUTE","SE Shared Column Metadata Cache"),
-("CACHESTORE_SQLCP","SQL Plans"),
-("CACHESTORE_STACKFRAMES","SOS_StackFramesStore"),
-("CACHESTORE_SYSTEMROWSET","System Rowset Store"),
-("CACHESTORE_TEMPTABLES","Temporary Tables & Table Variables"),
-("CACHESTORE_VIEWDEFINITIONS","View Definition Cache"),
-("CACHESTORE_XML_SELECTIVE_DG","XML DB Cache (Selective)"),
-("CACHESTORE_XMLDBATTRIBUTE","XML DB Cache (Attribute)"),
-("CACHESTORE_XMLDBELEMENT","XML DB Cache (Element)"),
-("CACHESTORE_XMLDBTYPE","XML DB Cache (Type)"),
-("CACHESTORE_XPROC","Extended Stored Procedures"),
-("MEMORYCLERK_FILETABLE","Memory Clerk (File Table)"),
-("MEMORYCLERK_FSCHUNKER","Memory Clerk (FS Chunker)"),
-("MEMORYCLERK_FULLTEXT","Full Text"),
-("MEMORYCLERK_FULLTEXT_SHMEM","Full-text IG"),
-("MEMORYCLERK_HADR","HADR"),
-("MEMORYCLERK_HOST","Host"),
-("MEMORYCLERK_LANGSVC","Language Service"),
-("MEMORYCLERK_LWC","Light Weight Cache"),
-("MEMORYCLERK_QSRANGEPREFETCH","QS Range Prefetch"),
-("MEMORYCLERK_SERIALIZATION","Serialization"),
-("MEMORYCLERK_SNI","SNI"),
-("MEMORYCLERK_SOSMEMMANAGER","SOS Memory Manager"),
-("MEMORYCLERK_SOSNODE","SOS Node"),
-("MEMORYCLERK_SOSOS","SOS Memory Clerk"),
-("MEMORYCLERK_SQLBUFFERPOOL","Buffer Pool"),
-("MEMORYCLERK_SQLCLR","CLR"),
-("MEMORYCLERK_SQLCLRASSEMBLY","CLR Assembly"),
-("MEMORYCLERK_SQLCONNECTIONPOOL","Connection Pool"),
-("MEMORYCLERK_SQLGENERAL","General"),
-("MEMORYCLERK_SQLHTTP","HTTP"),
-("MEMORYCLERK_SQLLOGPOOL","Log Pool"),
-("MEMORYCLERK_SQLOPTIMIZER","SQL Optimizer"),
-("MEMORYCLERK_SQLQERESERVATIONS","SQL Reservations"),
-("MEMORYCLERK_SQLQUERYCOMPILE","SQL Query Compile"),
-("MEMORYCLERK_SQLQUERYEXEC","SQL Query Exec"),
-("MEMORYCLERK_SQLQUERYPLAN","SQL Query Plan"),
-("MEMORYCLERK_SQLSERVICEBROKER","SQL Service Broker"),
-("MEMORYCLERK_SQLSERVICEBROKERTRANSPORT","Unified Communication Stack"),
-("MEMORYCLERK_SQLSOAP","SQL SOAP"),
-("MEMORYCLERK_SQLSOAPSESSIONSTORE","SQL SOAP (Session Store)"),
-("MEMORYCLERK_SQLSTORENG","SQL Storage Engine"),
-("MEMORYCLERK_SQLUTILITIES","SQL Utilities"),
-("MEMORYCLERK_SQLXML","SQL XML"),
-("MEMORYCLERK_SQLXP","SQL XP"),
-("MEMORYCLERK_TRACE_EVTNOTIF","Trace Event Notification"),
-("MEMORYCLERK_XE","XE Engine"),
-("MEMORYCLERK_XE_BUFFER","XE Buffer"),
-("MEMORYCLERK_XTP","In-Memory OLTP"),
-("OBJECTSTORE_LBSS","Lbss Cache (Object Store)"),
-("OBJECTSTORE_LOCK_MANAGER","Lock Manager (Object Store)"),
-("OBJECTSTORE_SECAUDIT_EVENT_BUFFER","Audit Event Buffer (Object Store)"),
-("OBJECTSTORE_SERVICE_BROKER","Service Broker (Object Store)"),
-("OBJECTSTORE_SNI_PACKET","SNI Packet (Object Store)"),
-("OBJECTSTORE_XACT_CACHE","Transactions Cache (Object Store)"),
-("USERSTORE_DBMETADATA","DB Metadata (User Store)"),
-("USERSTORE_OBJPERM","Object Permissions (User Store)"),
-("USERSTORE_SCHEMAMGR","Schema Manager (User Store)"),
-("USERSTORE_SXC","SXC (User Store)"),
-("USERSTORE_TOKENPERM","Token Permissions (User Store)"),
-("USERSTORE_QDSSTMT","QDS Statement Buffer (Pre-persist)"),
-("CACHESTORE_QDSRUNTIMESTATS","QDS Runtime Stats (Pre-persist)"),
-("CACHESTORE_QDSCONTEXTSETTINGS","QDS Unique Context Settings"),
-("MEMORYCLERK_QUERYDISKSTORE","QDS General"),
-("MEMORYCLERK_QUERYDISKSTORE_HASHMAP","QDS Query/Plan Hash Table")
-) AS clerk_names(system_name,name)
-ON mc.type = clerk_names.system_name
-GROUP BY ISNULL(clerk_names.name,mc.type)
-HAVING SUM({pages_kb}) >= 1024
-OPTION( RECOMPILE );'
+/*
+The SQL scripts use a series of IF and CASE statemens to choose the correct query based on edition and version of SQL Server, below the meaning of the numbers:
+EngineEdition:
+1 = Personal or Desktop Engine (Not available in SQL Server 2005 (9.x) and later versions.)
+2 = Standard (This is returned for Standard, Web, and Business Intelligence.)
+3 = Enterprise (This is returned for Evaluation, Developer, and Enterprise editions.)
+4 = Express (This is returned for Express, Express with Tools, and Express with Advanced Services)
+5 = SQL Database
+6 = Microsoft Azure Synapse Analytics (formerly SQL Data Warehouse)
+8 = Managed Instance
 
-IF CAST(LEFT(CAST(SERVERPROPERTY('productversion') as varchar), 2) AS INT) > 10 -- SQL Server 2008 Compat
-    SET @SQL = REPLACE(REPLACE(@SQL,'{pages_kb}','mc.pages_kb'),'"','''')
+ProductVersion:
+see https://sqlserverbuilds.blogspot.com/ for all the details about the version number of SQL Server
+*/
+
+const sqlMemoryClerkV2 = `
+SET DEADLOCK_PRIORITY -10;
+DECLARE
+	 @SqlStatement AS nvarchar(max)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(max) = ''
+
+IF @MajorMinorVersion >= 1100
+	SET @Columns += N'mc.[pages_kb]';
 ELSE
-    SET @SQL = REPLACE(REPLACE(@SQL,'{pages_kb}','mc.single_pages_kb + mc.multi_pages_kb'),'"','''')
+	SET @Columns += N'mc.[single_pages_kb] + mc.[multi_pages_kb]';
 
-EXEC(@SQL)
+SET @SqlStatement = N'
+SELECT
+	 ''sqlserver_memory_clerks'' AS [measurement]
+	,REPLACE(@@SERVERNAME, ''\'', '':'') AS [sql_instance]
+	,DB_NAME() AS [database_name]
+	,ISNULL(clerk_names.[name],mc.[type]) AS [clerk_type]
+	,SUM(' + @Columns + N') AS [size_kb]
+FROM sys.[dm_os_memory_clerks] AS mc WITH (NOLOCK)
+LEFT OUTER JOIN ( VALUES
+	 (''CACHESTORE_BROKERDSH'',''Service Broker Dialog Security Header Cache'')
+	,(''CACHESTORE_BROKERKEK'',''Service Broker Key Exchange Key Cache'')
+	,(''CACHESTORE_BROKERREADONLY'',''Service Broker (Read-Only)'')
+	,(''CACHESTORE_BROKERRSB'',''Service Broker Null Remote Service Binding Cache'')
+	,(''CACHESTORE_BROKERTBLACS'',''Broker dormant rowsets'')
+	,(''CACHESTORE_BROKERTO'',''Service Broker Transmission Object Cache'')
+	,(''CACHESTORE_BROKERUSERCERTLOOKUP'',''Service Broker user certificates lookup result cache'')
+	,(''CACHESTORE_CLRPROC'',''CLR Procedure Cache'')
+	,(''CACHESTORE_CLRUDTINFO'',''CLR UDT Info'')
+	,(''CACHESTORE_COLUMNSTOREOBJECTPOOL'',''Column Store Object Pool'')
+	,(''CACHESTORE_CONVPRI'',''Conversation Priority Cache'')
+	,(''CACHESTORE_EVENTS'',''Event Notification Cache'')
+	,(''CACHESTORE_FULLTEXTSTOPLIST'',''Full Text Stoplist Cache'')
+	,(''CACHESTORE_NOTIF'',''Notification Store'')
+	,(''CACHESTORE_OBJCP'',''Object Plans'')
+	,(''CACHESTORE_PHDR'',''Bound Trees'')
+	,(''CACHESTORE_SEARCHPROPERTYLIST'',''Search Property List Cache'')
+	,(''CACHESTORE_SEHOBTCOLUMNATTRIBUTE'',''SE Shared Column Metadata Cache'')
+	,(''CACHESTORE_SQLCP'',''SQL Plans'')
+	,(''CACHESTORE_STACKFRAMES'',''SOS_StackFramesStore'')
+	,(''CACHESTORE_SYSTEMROWSET'',''System Rowset Store'')
+	,(''CACHESTORE_TEMPTABLES'',''Temporary Tables & Table Variables'')
+	,(''CACHESTORE_VIEWDEFINITIONS'',''View Definition Cache'')
+	,(''CACHESTORE_XML_SELECTIVE_DG'',''XML DB Cache (Selective)'')
+	,(''CACHESTORE_XMLDBATTRIBUTE'',''XML DB Cache (Attribute)'')
+	,(''CACHESTORE_XMLDBELEMENT'',''XML DB Cache (Element)'')
+	,(''CACHESTORE_XMLDBTYPE'',''XML DB Cache (Type)'')
+	,(''CACHESTORE_XPROC'',''Extended Stored Procedures'')
+	,(''MEMORYCLERK_FILETABLE'',''Memory Clerk (File Table)'')
+	,(''MEMORYCLERK_FSCHUNKER'',''Memory Clerk (FS Chunker)'')
+	,(''MEMORYCLERK_FULLTEXT'',''Full Text'')
+	,(''MEMORYCLERK_FULLTEXT_SHMEM'',''Full-text IG'')
+	,(''MEMORYCLERK_HADR'',''HADR'')
+	,(''MEMORYCLERK_HOST'',''Host'')
+	,(''MEMORYCLERK_LANGSVC'',''Language Service'')
+	,(''MEMORYCLERK_LWC'',''Light Weight Cache'')
+	,(''MEMORYCLERK_QSRANGEPREFETCH'',''QS Range Prefetch'')
+	,(''MEMORYCLERK_SERIALIZATION'',''Serialization'')
+	,(''MEMORYCLERK_SNI'',''SNI'')
+	,(''MEMORYCLERK_SOSMEMMANAGER'',''SOS Memory Manager'')
+	,(''MEMORYCLERK_SOSNODE'',''SOS Node'')
+	,(''MEMORYCLERK_SOSOS'',''SOS Memory Clerk'')
+	,(''MEMORYCLERK_SQLBUFFERPOOL'',''Buffer Pool'')
+	,(''MEMORYCLERK_SQLCLR'',''CLR'')
+	,(''MEMORYCLERK_SQLCLRASSEMBLY'',''CLR Assembly'')
+	,(''MEMORYCLERK_SQLCONNECTIONPOOL'',''Connection Pool'')
+	,(''MEMORYCLERK_SQLGENERAL'',''General'')
+	,(''MEMORYCLERK_SQLHTTP'',''HTTP'')
+	,(''MEMORYCLERK_SQLLOGPOOL'',''Log Pool'')
+	,(''MEMORYCLERK_SQLOPTIMIZER'',''SQL Optimizer'')
+	,(''MEMORYCLERK_SQLQERESERVATIONS'',''SQL Reservations'')
+	,(''MEMORYCLERK_SQLQUERYCOMPILE'',''SQL Query Compile'')
+	,(''MEMORYCLERK_SQLQUERYEXEC'',''SQL Query Exec'')
+	,(''MEMORYCLERK_SQLQUERYPLAN'',''SQL Query Plan'')
+	,(''MEMORYCLERK_SQLSERVICEBROKER'',''SQL Service Broker'')
+	,(''MEMORYCLERK_SQLSERVICEBROKERTRANSPORT'',''Unified Communication Stack'')
+	,(''MEMORYCLERK_SQLSOAP'',''SQL SOAP'')
+	,(''MEMORYCLERK_SQLSOAPSESSIONSTORE'',''SQL SOAP (Session Store)'')
+	,(''MEMORYCLERK_SQLSTORENG'',''SQL Storage Engine'')
+	,(''MEMORYCLERK_SQLUTILITIES'',''SQL Utilities'')
+	,(''MEMORYCLERK_SQLXML'',''SQL XML'')
+	,(''MEMORYCLERK_SQLXP'',''SQL XP'')
+	,(''MEMORYCLERK_TRACE_EVTNOTIF'',''Trace Event Notification'')
+	,(''MEMORYCLERK_XE'',''XE Engine'')
+	,(''MEMORYCLERK_XE_BUFFER'',''XE Buffer'')
+	,(''MEMORYCLERK_XTP'',''In-Memory OLTP'')
+	,(''OBJECTSTORE_LBSS'',''Lbss Cache (Object Store)'')
+	,(''OBJECTSTORE_LOCK_MANAGER'',''Lock Manager (Object Store)'')
+	,(''OBJECTSTORE_SECAUDIT_EVENT_BUFFER'',''Audit Event Buffer (Object Store)'')
+	,(''OBJECTSTORE_SERVICE_BROKER'',''Service Broker (Object Store)'')
+	,(''OBJECTSTORE_SNI_PACKET'',''SNI Packet (Object Store)'')
+	,(''OBJECTSTORE_XACT_CACHE'',''Transactions Cache (Object Store)'')
+	,(''USERSTORE_DBMETADATA'',''DB Metadata (User Store)'')
+	,(''USERSTORE_OBJPERM'',''Object Permissions (User Store)'')
+	,(''USERSTORE_SCHEMAMGR'',''Schema Manager (User Store)'')
+	,(''USERSTORE_SXC'',''SXC (User Store)'')
+	,(''USERSTORE_TOKENPERM'',''Token Permissions (User Store)'')
+	,(''USERSTORE_QDSSTMT'',''QDS Statement Buffer (Pre-persist)'')
+	,(''CACHESTORE_QDSRUNTIMESTATS'',''QDS Runtime Stats (Pre-persist)'')
+	,(''CACHESTORE_QDSCONTEXTSETTINGS'',''QDS Unique Context Settings'')
+	,(''MEMORYCLERK_QUERYDISKSTORE'',''QDS General'')
+	,(''MEMORYCLERK_QUERYDISKSTORE_HASHMAP'',''QDS Query/Plan Hash Table'')
+) AS clerk_names([system_name],[name])
+	ON mc.[type] = clerk_names.[system_name]
+GROUP BY 
+	ISNULL(clerk_names.[name], mc.[type])
+HAVING 
+	SUM(' + @Columns + N') >= 1024
+OPTION(RECOMPILE);
+'
+
+EXEC(@SqlStatement)
 `
 
 // Conditional check based on Azure SQL DB OR On-prem SQL Server
 // EngineEdition=5 is Azure SQL DB
 const sqlDatabaseIOV2 = `
 SET DEADLOCK_PRIORITY -10;
-DECLARE @SqlStatement AS nvarchar(max);
-IF SERVERPROPERTY('EngineEdition') = 5
+DECLARE 
+	 @SqlStatement AS nvarchar(max)
+	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+
+IF @EngineEdition = 5
 BEGIN
 	SET @SqlStatement = '
 	SELECT
@@ -422,9 +450,26 @@ BEGIN
 	EXEC sp_executesql @SqlStatement
 
 END
-ELSE
+ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
 BEGIN
 
+	DECLARE @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+
+	DECLARE @Columns as nvarchar(max) = ''
+	DECLARE @Tables as nvarchar(max) = ''
+
+	IF @MajorMinorVersion >= 1050 BEGIN 
+		/* [volume_mount_point] TRIMS trailing "\" which are not allowed in InfluxDB */
+		SET @Columns += N',LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point])-(PATINDEX(''%[^\]%'',REVERSE([volume_mount_point]))-1)) AS [volume_mount_point]'
+		SET @Tables += N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs'
+	END
+		
+	IF @MajorMinorVersion > 1100 BEGIN
+		SET @Columns += N'
+,vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] 
+,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
+	END
+	
 	SET @SqlStatement = N'
 	SELECT
 		''sqlserver_database_io'' AS [measurement]
@@ -433,40 +478,33 @@ BEGIN
 		,COALESCE(mf.[physical_name],''RBPEX'') AS [physical_filename]	--RPBEX = Resilient Buffer Pool Extension
 		,COALESCE(mf.[name],''RBPEX'') AS [logical_filename]	--RPBEX = Resilient Buffer Pool Extension	
 		,mf.[type_desc] AS [file_type]
-		,IIF( RIGHT(vs.[volume_mount_point],1) = ''\''	/*Tag value cannot end with \ */
-			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-			,vs.[volume_mount_point]
-		) AS [volume_mount_point]
 		,vfs.[io_stall_read_ms] AS [read_latency_ms]
 		,vfs.[num_of_reads] AS [reads]
 		,vfs.[num_of_bytes_read] AS [read_bytes]
 		,vfs.[io_stall_write_ms] AS [write_latency_ms]
 		,vfs.[num_of_writes] AS [writes]
-		,vfs.[num_of_bytes_written] AS [write_bytes]
-		'
-		+ 
-		CASE
-			WHEN LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) = '11'
-				/*SQL Server 2012 (ver 11.x) does not have [io_stall_queued_read_ms] and [io_stall_queued_write_ms]*/
-				THEN ''
-				ELSE N',vfs.io_stall_queued_read_ms AS [rg_read_stall_ms] ,vfs.io_stall_queued_write_ms AS [rg_write_stall_ms]'
-		END 
-		+
-	N'FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+		,vfs.[num_of_bytes_written] AS [write_bytes]'
+		+ @Columns + N'
+	FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
 	INNER JOIN sys.master_files AS mf WITH (NOLOCK)
 		ON vfs.[database_id] = mf.[database_id] AND vfs.[file_id] = mf.[file_id]
-	CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs
 	'
+	+ @Tables;
+	
 	EXEC sp_executesql @SqlStatement
 
 END
-
 `
 
 // Conditional check based on Azure SQL DB, Azure SQL Managed instance OR On-prem SQL Server
 // EngineEdition=5 is Azure SQL DB, EngineEdition=8 is Managed instance
 
-const sqlServerPropertiesV2 = `SET DEADLOCK_PRIORITY -10;
+const sqlServerPropertiesV2 = `
+SET DEADLOCK_PRIORITY -10;
+DECLARE
+	 @SqlStatement AS nvarchar(max)
+	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+
 DECLARE @sys_info TABLE (
 	cpu_count INT,
 	server_memory BIGINT,
@@ -478,7 +516,7 @@ DECLARE @sys_info TABLE (
 	uptime INT
 )
 
-IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
+IF @EngineEdition = 8  /*Managed Instance*/
  	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT 	TOP(1)
 			virtual_core_count AS cpu_count,
@@ -492,7 +530,8 @@ IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
 	FROM	sys.server_resource_stats
 	ORDER BY start_time DESC
 
-IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
+IF @EngineEdition = 5  /*Azure SQL DB*/
+
 	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 	SELECT 	TOP(1)
 			(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS cpu_count,
@@ -508,22 +547,35 @@ IF SERVERPROPERTY('EngineEdition') = 5  -- Azure SQL DB
 		CROSS JOIN sys.database_service_objectives slo
 		WHERE d.name = DB_NAME() AND slo.database_id = DB_ID()
 
-ELSE
+ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
 BEGIN
-	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-	SELECT	cpu_count,
-			(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
-			CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
-			CAST(SERVERPROPERTY('EngineEdition') as smallint) as engine_edition,
-			CASE virtual_machine_type_desc
-				WHEN 'NONE' THEN 'PHYSICAL Machine'
-				ELSE virtual_machine_type_desc
-			END AS hardware_type,
-			NULL,
-			NULL,
-			 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
-	FROM	sys.dm_os_sys_info
+
+	DECLARE @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	DECLARE @Columns AS nvarchar(MAX) = ''
+
+	IF @MajorMinorVersion >= 1050
+		SET @Columns = N',CASE [virtual_machine_type_desc] 
+			WHEN ''NONE'' THEN ''PHYSICAL Machine''
+			ELSE [virtual_machine_type_desc]
+		END AS [hardware_type]';
+	ELSE /*data not available*/
+		SET @Columns = N',''<n/a>'' AS [hardware_type]';
+
+	SET @SqlStatement = '
+	SELECT
+		 [cpu_count]
+		,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+		,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR) AS [sku]
+		,@EngineEdition AS [engine_edition]
+		,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
+		' + @Columns + '
+	FROM sys.[dm_os_sys_info]'
+
+	/*Insert the dynamic sql result into the table variable*/
+	INSERT INTO @sys_info ( [cpu_count], [server_memory], [sku], [engine_edition], [uptime], [hardware_type] ) 
+	EXEC sp_executesql @SqlStatement , N'@EngineEdition smallint', @EngineEdition = @EngineEdition
 END
+
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 		DB_NAME() as [database_name],
@@ -559,12 +611,18 @@ FROM	(
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
 const sqlServerSchedulersV2 string = `
-
-
-
-
 SET DEADLOCK_PRIORITY - 10;
-DECLARE @SqlStatement AS nvarchar(max);
+
+DECLARE
+	 @SqlStatement AS nvarchar(max)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(MAX) = ''
+
+	IF @MajorMinorVersion >= 1300 BEGIN
+		SET @Columns += N',s.[total_cpu_usage_ms]
+	,s.[total_scheduler_delay_ms]'
+	END
+
 SET @SqlStatement = N'
 SELECT 
 	 ''sqlserver_schedulers'' AS [measurement]
@@ -584,22 +642,22 @@ SELECT
 	,s.[pending_disk_io_count]
 	,s.[load_factor]
 	,s.[yield_count]
-	'
-	+ 
-	CASE
-		WHEN CAST(LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar) ,2) AS int) >= 13
-			/*Only from SQL Server 2016+ (ver 13.x) [total_cpu_usage_ms] and [total_scheduler_delay_ms]*/
-			THEN N',s.[total_cpu_usage_ms], s.[total_scheduler_delay_ms]'
-			ELSE ''
-	END 
-	+
-N'
-FROM sys.dm_os_schedulers AS s
-'
+	' + @Columns + N'
+FROM sys.dm_os_schedulers AS s'
+
 EXEC sp_executesql @SqlStatement
 `
 
-const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
+const sqlPerformanceCountersV2 string = `
+SET DEADLOCK_PRIORITY -10;
+
+DECLARE
+	 @SqlStatement AS nvarchar(max)
+	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	,@Columns AS nvarchar(MAX) = ''
+	,@PivotColumns AS nvarchar(MAX) = ''
+
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -610,13 +668,12 @@ DECLARE @PCounters TABLE
 	Primary Key(object_name, counter_name, instance_name)
 );
 
-DECLARE @SQL NVARCHAR(MAX)
-SET @SQL = N'SELECT	DISTINCT
+SET @SqlStatement = N'SELECT DISTINCT
 		RTrim(spi.object_name) object_name,
 		RTrim(spi.counter_name) counter_name,'
 		+
 		CASE
-		WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
+		WHEN @EngineEdition IN (5,8)  --- needed to get actual DB Name for SQL DB/ Managed instance
 		THEN N'CASE WHEN (
                              RTRIM(spi.object_name) LIKE ''%:Databases''
                              OR RTRIM(spi.object_name) LIKE ''%:Database Replica''
@@ -640,7 +697,7 @@ SET @SQL = N'SELECT	DISTINCT
 		FROM	sys.dm_os_performance_counters AS spi '
 +
 CASE 
-	WHEN CAST(SERVERPROPERTY('EngineEdition') AS int) IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
+	WHEN @EngineEdition IN (5,8)  --- Join is ONLY for managed instance and SQL DB, not for on-prem
 	THEN CAST(N'LEFT JOIN sys.databases AS d
 	ON LEFT(spi.instance_name, 36) -- some instance_name values have an additional identifier appended after the GUID
 	= CASE WHEN -- in SQL DB standalone, physical_database_name for master is the GUID of the user database
@@ -648,10 +705,10 @@ CASE
                 THEN d.name
                 ELSE d.physical_database_name
 	END	' as NVARCHAR(MAX))
-	ELSE N' '
+	ELSE N''
 END
 
-SET @SQL = @SQL + CAST(N' WHERE	(
+SET @SqlStatement = @SqlStatement + CAST(N' WHERE	(
 			counter_name IN (
 				''SQL Compilations/sec'',
 				''SQL Re-Compilations/sec'',
@@ -750,38 +807,42 @@ SET @SQL = @SQL + CAST(N' WHERE	(
 		)
 ' as NVARCHAR(MAX))
 INSERT	INTO @PCounters
-EXEC (@SQL)
+EXEC (@SqlStatement)
 
+IF @MajorMinorVersion >= 1300 BEGIN
+	SET @Columns += N',rgwg.[total_cpu_usage_preemptive_ms] AS [Preemptive CPU Usage (time)]'
+	SET @PivotColumns += N',[Preemptive CPU Usage (time)]'
+END
 
-SET  @SQL = REPLACE('SELECT
-"SQLServer:Workload Group Stats" AS object,
-counter,
-instance,
-CAST(vs.value AS BIGINT) AS value,
-1
+SET  @SqlStatement = N'
+SELECT
+	 ''SQLServer:Workload Group Stats'' AS [object]
+	,[counter]
+	,[instance]
+	,CAST(vs.[value] AS BIGINT) AS [value]
+	,1
 FROM
 (
     SELECT
-    rgwg.name AS instance,
-    rgwg.total_request_count AS "Request Count",
-    rgwg.total_queued_request_count AS "Queued Request Count",
-    rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
-    rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
-    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Preemptive CPU Usage (time)",' ELSE '' END + '
-    rgwg.total_lock_wait_count AS "Lock Wait Count",
-    rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
-    rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
-    FROM sys.dm_resource_governor_workload_groups AS rgwg
-    INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
-    ON rgwg.pool_id = rgrp.pool_id
+		 rgwg.name AS instance
+		,rgwg.total_request_count AS [Request Count]
+		,rgwg.total_queued_request_count AS [Queued Request Count]
+		,rgwg.total_cpu_limit_violation_count AS [CPU Limit Violation Count]
+		,rgwg.total_cpu_usage_ms AS [CPU Usage (time)]
+		,rgwg.total_lock_wait_count AS [Lock Wait Count]
+		,rgwg.total_lock_wait_time_ms AS [Lock Wait Time]
+		,rgwg.total_reduced_memgrant_count AS [Reduced Memory Grant Count]
+		' + @Columns + N'
+	FROM sys.[dm_resource_governor_workload_groups] AS rgwg
+	INNER JOIN sys.[dm_resource_governor_resource_pools] AS rgrp
+		ON rgwg.[pool_id] = rgrp.[pool_id]
 ) AS rg
 UNPIVOT (
-    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Preemptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], [Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] ' + @PivotColumns + N')
 ) AS vs'
-,'"','''')
 
 INSERT INTO @PCounters
-EXEC( @SQL )
+EXEC( @SqlStatement )
 
 SELECT	'sqlserver_performance' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
@@ -805,7 +866,9 @@ OPTION(RECOMPILE);
 
 // Conditional check based on Azure SQL DB v/s the rest aka (Azure SQL Managed instance OR On-prem SQL Server)
 // EngineEdition=5 is Azure SQL DB
-const sqlWaitStatsCategorizedV2 string = `SET DEADLOCK_PRIORITY -10;
+const sqlWaitStatsCategorizedV2 string = `
+SET DEADLOCK_PRIORITY -10;
+
 IF SERVERPROPERTY('EngineEdition') != 5
 SELECT
 	'sqlserver_waitstats' AS [measurement],
@@ -1515,7 +1578,7 @@ SELECT
     DB_NAME() as [database_name],
 	r.session_id
 	, r.request_id
-	, DB_NAME(s.database_id) as session_db_name
+	, DB_NAME(r.database_id) as session_db_name
 	, r.status
 	, r.cpu_time as cpu_time_ms
 	, r.total_elapsed_time as total_elapsed_time_ms
@@ -1565,26 +1628,20 @@ SELECT
 
 const sqlServerVolumeSpaceV2 string = `
 /* Only for on-prem version of SQL Server
-Gets data about disk space, only if the disk is used by SQL Server
-EngineEdition:
-1 = Personal or Desktop Engine
-2 = Standard
-3 = Enterprise
-4 = Express
-5 = SQL Database
-6 = SQL Data Warehouse
-8 = Managed Instance
+Gets data about disk space, only for volumes used by SQL Server (data available form sql 2008R2 and later)
 */
-IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
+DECLARE
+	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+	
+IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 	BEGIN
 	SELECT DISTINCT
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('machinename') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-		,IIF( RIGHT(vs.[volume_mount_point],1) = '\'	/*Tag value cannot end with \ */
-			,LEFT(vs.[volume_mount_point],LEN(vs.[volume_mount_point])-1)
-			,vs.[volume_mount_point]
-		) AS [volume_mount_point]
+		/* [volume_mount_point] TRIMS trailing "\" which are not allowed in InfluxDB */
+		,LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point])-(PATINDEX('%[^\]%',REVERSE([volume_mount_point]))-1)) AS [volume_mount_point]
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
@@ -1596,7 +1653,7 @@ IF SERVERPROPERTY('EngineEdition') NOT IN (5,8)
 
 const sqlServerCpuV2 string = `
 /*The ring buffer has a new value every minute*/
-IF SERVERPROPERTY('EngineEdition') NOT IN (5,8) /*No azure DB and managed instance*/
+IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 BEGIN
 SELECT 
 	 'sqlserver_cpu' AS [measurement]
@@ -1928,7 +1985,7 @@ WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
 '
---PRINT @DynamicPivotQuery
+
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
@@ -2063,7 +2120,7 @@ WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(AvgBytesPerWrite) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 '
---PRINT @DynamicPivotQuery
+
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
