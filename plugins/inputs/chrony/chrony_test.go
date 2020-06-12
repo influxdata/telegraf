@@ -11,14 +11,30 @@ import (
 
 func TestGather(t *testing.T) {
 	c := Chrony{
-		path: "chronyc",
+		Binary:    defaultBinary,
+		Commands:  defaultCommands,
+		DNSLookup: false,
+		UseSudo:   false,
 	}
+
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
-	defer func() { execCommand = exec.Command }()
+	execLookPath = fakeExecLookPath
+	defer func() {
+		execCommand = exec.Command
+		execLookPath = exec.LookPath
+	}()
+
 	var acc testutil.Accumulator
 
-	err := c.Gather(&acc)
+	var err error
+
+	err = c.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Gather(&acc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,17 +58,25 @@ func TestGather(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
 
-	// test with dns lookup
+	// test with dns lookup - reinitilase with new args
+	c.arguments = nil
 	c.DNSLookup = true
+
+	err = c.Init()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	err = c.Gather(&acc)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	acc.AssertContainsTaggedFields(t, "chrony", fields, tags)
 
 }
 
-// fackeExecCommand is a helper function that mock
+// fakeExecCommand is a helper function that mocks
 // the exec.Command call (and call the test binary)
 func fakeExecCommand(command string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--", command}
@@ -60,6 +84,13 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
 	return cmd
+}
+
+const fakeChronycPath = "/usr/bin/chronyc"
+
+// fakeExecLookPath is a helper that mocks exec.LookPath
+func fakeExecLookPath(command string) (string, error) {
+	return fakeChronycPath, nil
 }
 
 // TestHelperProcess isn't a real test. It's used to mock exec.Command
@@ -93,11 +124,13 @@ Leap status     : Not synchronized
 	// /tmp/go-build970079519/…/_test/integration.test -test.run=TestHelperProcess --
 	cmd, args := args[3], args[4:]
 
-	if cmd == "chronyc" {
-		if args[0] == "tracking" {
-			fmt.Fprint(os.Stdout, lookup+mockData)
-		} else {
+	// Now, args = ["-m", "-n", "tracking"] or ["-m", "tracking"]
+
+	if cmd == fakeChronycPath {
+		if args[1] == "-n" {
 			fmt.Fprint(os.Stdout, noLookup+mockData)
+		} else {
+			fmt.Fprint(os.Stdout, lookup+mockData)
 		}
 	} else {
 		fmt.Fprint(os.Stdout, "command not found")

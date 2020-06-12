@@ -58,11 +58,30 @@ Delete second or Not synchronised.
 [[inputs.chrony]]
   ## If true, chronyc tries to perform a DNS lookup for the time server.
   # dns_lookup = false
+
+  ## Run chronyc binary with sudo.
+  ## Required if chronyd cmdport is disabled, or when running the "serverstats" command.
+  ## Sudo must be configured to allow the telegraf user to run chronyc without a password.
+  ## That configuration may look something like:
+  ## telegraf ALL=(ALL:ALL) NOPASSWD:/usr/bin/chronyc
+  # use_sudo = false
+
+  ## Location of the chronyc binary, if not in PATH
+  # binary = "chronyc"
+
+  ## "tracking" is the default. Some commands with useful fields are "serverstats", "smoothing", "rtcdata", and "ntpdata".
+  ## To run "ntpdata" command for a specific source, append the Name or IP of the source after a space, eg. "ntpdata 10.1.2.3"
+  ## To run "ntpdata" command multiple times for different sources, use multiple instances of this input plugin to allow for adding different tags.
+  # commands = ["tracking"]
+
 ```
 
-### Measurements & Fields:
+### Measurements, Fields and Tags:
+
+If you modify the `commands` list you will return different fields and tags. Numeric values that can be parsed as float will become fields. All other values will be tags. When using the default command `tracking`, you will receive:
 
 - chrony
+  - Fields
     - system_time (float, seconds)
     - last_offset (float, seconds)
     - rms_offset (float, seconds)
@@ -72,10 +91,7 @@ Delete second or Not synchronised.
     - root_delay (float, seconds)
     - root_dispersion (float, seconds)
     - update_interval (float, seconds)
-
-### Tags:
-
-- All measurements have the following tags:
+  - Tags
     - reference_id
     - stratum
     - leap_status
