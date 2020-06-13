@@ -37,7 +37,7 @@ use only the `prometheus_client` output.
 
 ### Metrics
 
-A Prometheus metrics is created for each integer, float, boolean or unsigned
+A Prometheus metric is created for each integer, float, boolean or unsigned
 field.  Boolean values are converted to *1.0* for true and *0.0* for false.
 
 The Prometheus metric names are produced by joining the measurement name with
