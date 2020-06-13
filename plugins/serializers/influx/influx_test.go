@@ -324,6 +324,102 @@ var tests = []struct {
 		output: []byte("cpu,host=x\\ny value=42i 0\n"),
 	},
 	{
+		name: "empty tag value is removed",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{
+					"host": "",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=42i 0\n"),
+	},
+	{
+		name: "empty tag key is removed",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{
+					"": "example.org",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=42i 0\n"),
+	},
+	{
+		name: "tag value ends with backslash is trimmed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					"path": `C:\`,
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk,path=C: value=42i 0\n"),
+	},
+	{
+		name: "tag key ends with backslash is trimmed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					`path\`: "/",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk,path=/ value=42i 0\n"),
+	},
+	{
+		name: "tag key backslash is trimmed and removed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					`\`: "example.org",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk value=42i 0\n"),
+	},
+	{
+		name: "tag value backslash is trimmed and removed",
+		input: MustMetric(
+			metric.New(
+				"disk",
+				map[string]string{
+					"host": `\`,
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("disk value=42i 0\n"),
+	},
+	{
 		name: "string newline",
 		input: MustMetric(
 			metric.New(

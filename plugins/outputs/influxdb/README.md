@@ -84,4 +84,9 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   # influx_uint_support = false
 ```
 
+### Metrics
+￼
+Reference the [influx serializer][] for details about metric production.
+￼
 [InfluxDB v1.x]: https://github.com/influxdata/influxdb
+[influx serializer]: /plugins/serializers/influx/README.md#Metrics
