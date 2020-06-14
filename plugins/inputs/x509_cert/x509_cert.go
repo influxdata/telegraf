@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/smtp"
 	"net/url"
 	"strings"
 	"time"
@@ -21,7 +22,7 @@ import (
 
 const sampleConfig = `
   ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
+  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443", "smtp+starttls://smtp.example.org:587"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -99,6 +100,58 @@ func (c *X509Cert) getCert(u *url.URL, timeout time.Duration) ([]*x509.Certifica
 		}
 
 		certs := conn.ConnectionState().PeerCertificates
+
+		return certs, nil
+	case "smtp+starttls":
+		u.Scheme = "smtp+starttls"
+		// this case is a reimplementation of smtp.StartTLS()
+		// this is required because the smtp package does not expose the underlying connection
+
+		conn, err := net.DialTimeout("tcp", u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+
+		c.tlsCfg.InsecureSkipVerify = true
+
+		if c.ServerName == "" {
+			c.tlsCfg.ServerName = u.Hostname()
+		} else {
+			c.tlsCfg.ServerName = c.ServerName
+		}
+
+		sclient, err := smtp.NewClient(conn, u.Host)
+		if err != nil {
+			return nil, err
+		}
+
+		sclient.Hello(c.tlsCfg.ServerName)
+		if err != nil {
+			return nil, err
+		}
+
+		id, err := sclient.Text.Cmd("STARTTLS")
+		if err != nil {
+			return nil, err
+		}
+
+		sclient.Text.StartResponse(id)
+		defer sclient.Text.EndResponse(id)
+		_, _, err = sclient.Text.ReadResponse(220)
+		if err != nil {
+			return nil, fmt.Errorf("did not get 220 after STARTTLS: %s", err.Error())
+		}
+
+		tlsconn := tls.Client(conn, c.tlsCfg)
+		defer tlsconn.Close()
+
+		hsErr := tlsconn.Handshake()
+		if hsErr != nil {
+			return nil, hsErr
+		}
+
+		certs := tlsconn.ConnectionState().PeerCertificates
 
 		return certs, nil
 	case "file":
