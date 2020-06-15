@@ -64,7 +64,7 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	if err != nil {
 		return pids, err
 	}
-	procs, err := process.Processes()
+	procs, err := pg.FastProcessList()
 	if err != nil {
 		return pids, err
 	}
@@ -80,4 +80,17 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 		}
 	}
 	return pids, err
+}
+
+func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
+	pids, err := process.Pids()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*process.Process, len(pids))
+	for i, pid := range pids {
+		result[i] = &process.Process{Pid: pid}
+	}
+	return result, nil
 }
