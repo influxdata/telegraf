@@ -142,8 +142,8 @@ Attempting to modify the global scope will fail with an error.
 ### Examples
 
 - [ratio](/plugins/processors/starlark/testdata/ratio.star)
-- [rename](/plugins/processors/starlark/testdata/ratio.star)
-- [scale](/plugins/processors/starlark/testdata/ratio.star)
+- [rename](/plugins/processors/starlark/testdata/rename.star)
+- [scale](/plugins/processors/starlark/testdata/scale.star)
 
 [specification]: https://github.com/google/starlark-go/blob/master/doc/spec.md
 [string]: https://github.com/google/starlark-go/blob/master/doc/spec.md#strings
