@@ -1,12 +1,12 @@
 # Starlark Processor
 
 The `starlark` processor calls a Starlark function for each matched metric,
-allowing for custom programatic metric processing.
+allowing for custom programmatic metric processing.
 
-The Starlark language is a dialect of Python, and will be familier to those who
+The Starlark language is a dialect of Python, and will be familiar to those who
 have experience with the Python language.  However, keep in mind that it is not
 Python and that there are major syntax [differences][#Python Differences].
-Existing Python code is unlikley to work unmodified.  The execution environment
+Existing Python code is unlikely to work unmodified.  The execution environment
 is sandboxed, and it is not possible to do I/O operations such as reading from
 files or sockets.
 
