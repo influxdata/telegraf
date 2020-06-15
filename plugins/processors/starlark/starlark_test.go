@@ -86,10 +86,11 @@ def apply():
 func TestApply(t *testing.T) {
 	// Tests for the behavior of the processors Apply function.
 	var applyTests = []struct {
-		name     string
-		source   string
-		input    []telegraf.Metric
-		expected []telegraf.Metric
+		name             string
+		source           string
+		input            []telegraf.Metric
+		expected         []telegraf.Metric
+		expectedErrorStr string
 	}{
 		{
 			name: "drop metric",
@@ -176,7 +177,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "append: cannot append to frozen list",
 		},
 		{
 			name: "cannot return multiple references to same metric",
@@ -221,7 +223,12 @@ def apply(metric):
 			require.NoError(t, err)
 
 			for _, m := range tt.input {
-				plugin.Add(m, &acc)
+				err = plugin.Add(m, &acc)
+				if tt.expectedErrorStr != "" {
+					require.EqualError(t, err, tt.expectedErrorStr)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 
 			err = plugin.Stop()
@@ -235,10 +242,11 @@ def apply(metric):
 // Tests for the behavior of the Metric type.
 func TestMetric(t *testing.T) {
 	var tests = []struct {
-		name     string
-		source   string
-		input    []telegraf.Metric
-		expected []telegraf.Metric
+		name             string
+		source           string
+		input            []telegraf.Metric
+		expected         []telegraf.Metric
+		expectedErrorStr string
 	}{
 		{
 			name: "create new metric",
@@ -336,7 +344,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "type error",
 		},
 		{
 			name: "get name",
@@ -404,7 +413,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot set tags",
 		},
 		{
 			name: "empty tags are false",
@@ -532,7 +542,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: `key "foo" not in Tags`,
 		},
 		{
 			name: "set tag",
@@ -572,7 +583,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "tag value must be of type 'str'",
 		},
 		{
 			name: "pop tag",
@@ -640,7 +652,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "popitem(): tag dictionary is empty",
 		},
 		{
 			name: "tags setdefault key not set",
@@ -1104,7 +1117,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "pop: cannot delete during iteration",
 		},
 		{
 			name: "tags cannot popitem while iterating",
@@ -1126,7 +1140,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
 			name: "tags cannot clear while iterating",
@@ -1148,7 +1163,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
 			name: "tags cannot insert while iterating",
@@ -1170,7 +1186,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot insert during iteration",
 		},
 		{
 			name: "tags can be cleared after iterating",
@@ -1240,7 +1257,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot set fields",
 		},
 		{
 			name: "empty fields are false",
@@ -1446,7 +1464,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: `key "foo" not in Fields`,
 		},
 		{
 			name: "set string field",
@@ -1558,7 +1577,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "invalid starlark type",
 		},
 		{
 			name: "pop field",
@@ -1626,7 +1646,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "popitem(): field dictionary is empty",
 		},
 		{
 			name: "fields setdefault key not set",
@@ -2047,7 +2068,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "pop: cannot delete during iteration",
 		},
 		{
 			name: "fields cannot popitem while iterating",
@@ -2064,7 +2086,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
 			name: "fields cannot clear while iterating",
@@ -2081,7 +2104,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot delete during iteration",
 		},
 		{
 			name: "fields cannot insert while iterating",
@@ -2098,7 +2122,8 @@ def apply(metric):
 					time.Unix(0, 0),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "cannot insert during iteration",
 		},
 		{
 			name: "fields can be cleared after iterating",
@@ -2169,7 +2194,8 @@ def apply(metric):
 					time.Unix(0, 0).UTC(),
 				),
 			},
-			expected: []telegraf.Metric{},
+			expected:         []telegraf.Metric{},
+			expectedErrorStr: "type error",
 		},
 		{
 			name: "get time",
@@ -2216,7 +2242,12 @@ def apply(metric):
 			require.NoError(t, err)
 
 			for _, m := range tt.input {
-				plugin.Add(m, &acc)
+				err = plugin.Add(m, &acc)
+				if tt.expectedErrorStr != "" {
+					require.EqualError(t, err, tt.expectedErrorStr)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 
 			err = plugin.Stop()
@@ -2229,10 +2260,11 @@ def apply(metric):
 
 func TestScript(t *testing.T) {
 	var tests = []struct {
-		name     string
-		plugin   *Starlark
-		input    []telegraf.Metric
-		expected []telegraf.Metric
+		name             string
+		plugin           *Starlark
+		input            []telegraf.Metric
+		expected         []telegraf.Metric
+		expectedErrorStr string
 	}{
 		{
 			name: "rename",
@@ -2323,7 +2355,12 @@ func TestScript(t *testing.T) {
 			require.NoError(t, err)
 
 			for _, m := range tt.input {
-				tt.plugin.Add(m, &acc)
+				err = tt.plugin.Add(m, &acc)
+				if tt.expectedErrorStr != "" {
+					require.EqualError(t, err, tt.expectedErrorStr)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 
 			err = tt.plugin.Stop()

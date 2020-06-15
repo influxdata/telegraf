@@ -2,6 +2,7 @@ package starlark
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -122,7 +123,7 @@ func (s *Starlark) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) {
+func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 	s.args[0].(*Metric).Wrap(metric)
 
 	rv, err := starlark.Call(s.thread, s.applyFunc, s.args, nil)
@@ -131,11 +132,9 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) {
 			for _, line := range strings.Split(err.Backtrace(), "\n") {
 				s.Log.Error(line)
 			}
-		} else {
-			s.Log.Errorf("Error calling Starlark: %v", err)
 		}
 		metric.Reject()
-		return
+		return err
 	}
 
 	switch rv := rv.(type) {
@@ -179,12 +178,11 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) {
 		}
 		acc.AddMetric(m)
 	case starlark.NoneType:
-		return
+		metric.Drop()
 	default:
-		s.Log.Errorf("Invalid type returned: %T", rv)
+		return fmt.Errorf("Invalid type returned: %T", rv)
 	}
-
-	return
+	return nil
 }
 
 func (s *Starlark) Stop() error {
