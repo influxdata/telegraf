@@ -152,7 +152,7 @@ func (s *Starlark) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
 				}
 				s.results = append(s.results, m)
 				acc.AddMetric(m)
-			case starlark.Value:
+			default:
 				s.Log.Errorf("Invalid type returned in list: %s", v.Type())
 			}
 		}
