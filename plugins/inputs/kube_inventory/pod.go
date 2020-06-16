@@ -3,7 +3,7 @@ package kube_inventory
 import (
 	"context"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
+	v1 "github.com/ericchiang/k8s/apis/core/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -37,7 +37,9 @@ func (ki *KubernetesInventory) gatherPod(p v1.Pod, acc telegraf.Accumulator) err
 
 func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.Container, acc telegraf.Accumulator) {
 	stateCode := 3
+	stateReason := ""
 	state := "unknown"
+
 	switch {
 	case cs.State.Running != nil:
 		stateCode = 0
@@ -45,22 +47,32 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 	case cs.State.Terminated != nil:
 		stateCode = 1
 		state = "terminated"
+		stateReason = cs.State.Terminated.GetReason()
 	case cs.State.Waiting != nil:
 		stateCode = 2
 		state = "waiting"
+		stateReason = cs.State.Waiting.GetReason()
+	}
+
+	ready := "unready"
+	if cs.GetReady() {
+		ready = "ready"
 	}
 
 	fields := map[string]interface{}{
 		"restarts_total":    cs.GetRestartCount(),
 		"state_code":        stateCode,
+		"state_reason":      stateReason,
 		"terminated_reason": cs.State.Terminated.GetReason(),
 	}
+
 	tags := map[string]string{
 		"container_name": *c.Name,
 		"namespace":      *p.Metadata.Namespace,
 		"node_name":      *p.Spec.NodeName,
 		"pod_name":       *p.Metadata.Name,
 		"state":          state,
+		"ready":          ready,
 	}
 
 	req := c.Resources.Requests
