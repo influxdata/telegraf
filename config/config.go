@@ -136,12 +136,12 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool
+	FlushBufferWhenFull bool // deprecated in 0.13; has no effect
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	UTC bool `toml:"utc"`
+	UTC bool `toml:"utc"` // deprecated in 1.0.0; has no effect
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
