@@ -1,3 +1,9 @@
+## v1.14.5 [unreleased]
+
+### Bugfixes
+
+- [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve the performance of the procstat input.
+
 ## v1.14.4 [2020-06-09]
 
 #### Bugfixes
