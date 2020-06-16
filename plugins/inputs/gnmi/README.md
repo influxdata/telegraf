@@ -1,4 +1,4 @@
-# Cisco GNMI Telemetry
+# GNMI (gRPC Network Management Interface)
 
 This plugin consumes telemetry data based on the [gNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.  This input plugin is vendor-agnostic and is supported on any platform that supports the gNMI spec. 
 
@@ -9,7 +9,7 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
 ### Configuration
 
 ```toml
-[[inputs.cisco_telemetry_gnmi]]
+[[inputs.gnmi]]
   ## Address and port of the GNMI GRPC server
   addresses = ["10.49.234.114:57777"]
 
@@ -39,10 +39,10 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
   # target = ""
 
   ## Define additional aliases to map telemetry encoding paths to simple measurement names
-  # [inputs.cisco_telemetry_gnmi.aliases]
+  # [inputs.gnmi.aliases]
   #   ifcounters = "openconfig:/interfaces/interface/state/counters"
 
-  [[inputs.cisco_telemetry_gnmi.subscription]]
+  [[inputs.gnmi.subscription]]
     ## Name of the measurement that will be emitted
     name = "ifcounters"
 

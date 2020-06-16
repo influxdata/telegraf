@@ -1,4 +1,4 @@
-package cisco_telemetry_gnmi
+package gnmi
 
 import (
 	"context"
@@ -73,7 +73,7 @@ func TestWaitError(t *testing.T) {
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
-	plugin := &CiscoTelemetryGNMI{
+	plugin := &GNMI{
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
@@ -129,7 +129,7 @@ func TestUsernamePassword(t *testing.T) {
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
-	plugin := &CiscoTelemetryGNMI{
+	plugin := &GNMI{
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Username:  "theusername",
@@ -209,13 +209,13 @@ func mockGNMINotification() *gnmi.Notification {
 func TestNotification(t *testing.T) {
 	tests := []struct {
 		name     string
-		plugin   *CiscoTelemetryGNMI
+		plugin   *GNMI
 		server   *MockServer
 		expected []telegraf.Metric
 	}{
 		{
 			name: "multiple metrics",
-			plugin: &CiscoTelemetryGNMI{
+			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   internal.Duration{Duration: 1 * time.Second},
@@ -299,7 +299,7 @@ func TestNotification(t *testing.T) {
 		},
 		{
 			name: "full path field key",
-			plugin: &CiscoTelemetryGNMI{
+			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   internal.Duration{Duration: 1 * time.Second},
@@ -407,7 +407,7 @@ func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	plugin := &CiscoTelemetryGNMI{
+	plugin := &GNMI{
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",

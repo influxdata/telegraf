@@ -510,6 +510,9 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	// Print Inputs
 	for _, pname := range pnames {
+		if pname == "cisco_telemetry_gnmi" {
+			continue
+		}
 		creator := inputs.Inputs[pname]
 		input := creator()
 
