@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
+	v1 "github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 	"github.com/ericchiang/k8s/apis/resource"
 	"github.com/influxdata/telegraf/testutil"
@@ -44,7 +44,43 @@ func TestPod(t *testing.T) {
 									NodeName: toStrPtr("node1"),
 									Containers: []*v1.Container{
 										{
-											Name:  toStrPtr("forwarder"),
+											Name:  toStrPtr("running"),
+											Image: toStrPtr("image1"),
+											Ports: []*v1.ContainerPort{
+												{
+													ContainerPort: toInt32Ptr(8080),
+													Protocol:      toStrPtr("TCP"),
+												},
+											},
+											Resources: &v1.ResourceRequirements{
+												Limits: map[string]*resource.Quantity{
+													"cpu": {String_: toStrPtr("100m")},
+												},
+												Requests: map[string]*resource.Quantity{
+													"cpu": {String_: toStrPtr("100m")},
+												},
+											},
+										},
+										{
+											Name:  toStrPtr("completed"),
+											Image: toStrPtr("image1"),
+											Ports: []*v1.ContainerPort{
+												{
+													ContainerPort: toInt32Ptr(8080),
+													Protocol:      toStrPtr("TCP"),
+												},
+											},
+											Resources: &v1.ResourceRequirements{
+												Limits: map[string]*resource.Quantity{
+													"cpu": {String_: toStrPtr("100m")},
+												},
+												Requests: map[string]*resource.Quantity{
+													"cpu": {String_: toStrPtr("100m")},
+												},
+											},
+										},
+										{
+											Name:  toStrPtr("waiting"),
 											Image: toStrPtr("image1"),
 											Ports: []*v1.ContainerPort{
 												{
@@ -101,13 +137,41 @@ func TestPod(t *testing.T) {
 									},
 									ContainerStatuses: []*v1.ContainerStatus{
 										{
-											Name: toStrPtr("forwarder"),
+											Name: toStrPtr("running"),
 											State: &v1.ContainerState{
 												Running: &v1.ContainerStateRunning{
 													StartedAt: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
 												},
 											},
 											Ready:        toBoolPtr(true),
+											RestartCount: toInt32Ptr(3),
+											Image:        toStrPtr("image1"),
+											ImageID:      toStrPtr("image_id1"),
+											ContainerID:  toStrPtr("docker://54abe32d0094479d3d"),
+										},
+										{
+											Name: toStrPtr("completed"),
+											State: &v1.ContainerState{
+												Terminated: &v1.ContainerStateTerminated{
+													StartedAt: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
+													ExitCode:  toInt32Ptr(0),
+													Reason:    toStrPtr("Completed"),
+												},
+											},
+											Ready:        toBoolPtr(false),
+											RestartCount: toInt32Ptr(3),
+											Image:        toStrPtr("image1"),
+											ImageID:      toStrPtr("image_id1"),
+											ContainerID:  toStrPtr("docker://54abe32d0094479d3d"),
+										},
+										{
+											Name: toStrPtr("waiting"),
+											State: &v1.ContainerState{
+												Waiting: &v1.ContainerStateWaiting{
+													Reason: toStrPtr("PodUninitialized"),
+												},
+											},
+											Ready:        toBoolPtr(false),
 											RestartCount: toInt32Ptr(3),
 											Image:        toStrPtr("image1"),
 											ImageID:      toStrPtr("image_id1"),
@@ -150,10 +214,47 @@ func TestPod(t *testing.T) {
 						},
 						Tags: map[string]string{
 							"namespace":      "ns1",
-							"container_name": "forwarder",
+							"container_name": "running",
 							"node_name":      "node1",
 							"pod_name":       "pod1",
 							"state":          "running",
+							"readiness":      "ready",
+						},
+					},
+					{
+						Measurement: podContainerMeasurement,
+						Fields: map[string]interface{}{
+							"restarts_total":                   int32(3),
+							"state_code":                       1,
+							"state_reason":                     "Completed",
+							"resource_requests_millicpu_units": int64(100),
+							"resource_limits_millicpu_units":   int64(100),
+						},
+						Tags: map[string]string{
+							"namespace":      "ns1",
+							"container_name": "completed",
+							"node_name":      "node1",
+							"pod_name":       "pod1",
+							"state":          "terminated",
+							"readiness":      "unready",
+						},
+					},
+					{
+						Measurement: podContainerMeasurement,
+						Fields: map[string]interface{}{
+							"restarts_total":                   int32(3),
+							"state_code":                       2,
+							"state_reason":                     "PodUninitialized",
+							"resource_requests_millicpu_units": int64(100),
+							"resource_limits_millicpu_units":   int64(100),
+						},
+						Tags: map[string]string{
+							"namespace":      "ns1",
+							"container_name": "waiting",
+							"node_name":      "node1",
+							"pod_name":       "pod1",
+							"state":          "waiting",
+							"readiness":      "unready",
 						},
 					},
 				},
