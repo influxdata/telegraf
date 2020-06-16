@@ -55,3 +55,16 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	return pids, nil
 
 }
+
+func (pg *NativeFinder) FastProcessList() ([]*process.Process, error) {
+	pids, err := process.Pids()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*process.Process, len(pids))
+	for i, pid := range pids {
+		result[i] = &process.Process{Pid: pid}
+	}
+	return result, nil
+}
