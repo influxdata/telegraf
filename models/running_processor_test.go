@@ -28,6 +28,37 @@ func (p *MockProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return p.ApplyF(in...)
 }
 
+// MockProcessorToInit is a Processor that needs to be initialized.
+type MockProcessorToInit struct {
+	HasBeenInit bool
+}
+
+func (p *MockProcessorToInit) SampleConfig() string {
+	return ""
+}
+
+func (p *MockProcessorToInit) Description() string {
+	return ""
+}
+
+func (p *MockProcessorToInit) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	return in
+}
+
+func (p *MockProcessorToInit) Init() error {
+	p.HasBeenInit = true
+	return nil
+}
+
+func TestRunningProcessor_Init(t *testing.T) {
+	mock := MockProcessorToInit{}
+	rp := &RunningProcessor{
+		Processor: processors.NewStreamingProcessorFromProcessor(&mock),
+	}
+	rp.Init()
+	require.True(t, mock.HasBeenInit)
+}
+
 // TagProcessor returns a Processor whose Apply function adds the tag and
 // value.
 func TagProcessor(key, value string) *MockProcessor {
