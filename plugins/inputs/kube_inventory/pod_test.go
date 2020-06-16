@@ -209,7 +209,6 @@ func TestPod(t *testing.T) {
 						Fields: map[string]interface{}{
 							"restarts_total":                   int32(3),
 							"state_code":                       0,
-							"state_reason":                     "",
 							"resource_requests_millicpu_units": int64(100),
 							"resource_limits_millicpu_units":   int64(100),
 						},
@@ -219,7 +218,7 @@ func TestPod(t *testing.T) {
 							"node_name":      "node1",
 							"pod_name":       "pod1",
 							"state":          "running",
-							"ready":          "ready",
+							"readiness":      "ready",
 						},
 					},
 					{
@@ -237,7 +236,7 @@ func TestPod(t *testing.T) {
 							"node_name":      "node1",
 							"pod_name":       "pod1",
 							"state":          "terminated",
-							"ready":          "unready",
+							"readiness":      "unready",
 						},
 					},
 					{
@@ -255,7 +254,7 @@ func TestPod(t *testing.T) {
 							"node_name":      "node1",
 							"pod_name":       "pod1",
 							"state":          "waiting",
-							"ready":          "unready",
+							"readiness":      "unready",
 						},
 					},
 				},
