@@ -66,6 +66,9 @@ avoid cardinality issues:
   # tls_key = "/path/to/keyfile"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Uncomment to remove deprecated metrics.
+  # fielddrop = ["terminated_reason"]
 ```
 
 #### Kubernetes Permissions
@@ -206,10 +209,13 @@ subjects:
     - namespace
     - node_name
     - pod_name
+    - state
+    - readiness
   - fields:
     - restarts_total
-    - state
-    - terminated_reason
+    - state_code
+    - state_reason
+    - terminated_reason (string, deprecated in 1.15: use `state_reason` instead)
     - resource_requests_cpu_units
     - resource_requests_memory_bytes
     - resource_limits_cpu_units
@@ -267,7 +273,6 @@ The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated 
 | pending   | 2                         |
 | unknown   | 3                         |
 
-
 ### Example Output:
 
 ```
@@ -278,7 +283,7 @@ kubernetes_node,node_name=ip-172-17-0-2.internal allocatable_pods=110i,capacity_
 kubernetes_persistentvolume,phase=Released,pv_name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,storageclass=ebs-1-retain phase_type=3i 1547597616000000000
 kubernetes_persistentvolumeclaim,namespace=default,phase=Bound,pvc_name=data-etcd-0,storageclass=ebs-1-retain phase_type=0i 1547597615000000000
 kubernetes_pod,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1 last_transition_time=1547578322000000000i,ready="false" 1547597616000000000
-kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1,state=running resource_requests_cpu_units=0.1,resource_limits_memory_bytes=524288000,resource_limits_cpu_units=0.5,restarts_total=0i,state_code=0i,terminated_reason="",resource_requests_memory_bytes=524288000 1547597616000000000
+kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1,state=running,readiness=ready resource_requests_cpu_units=0.1,resource_limits_memory_bytes=524288000,resource_limits_cpu_units=0.5,restarts_total=0i,state_code=0i,state_reason="",resource_requests_memory_bytes=524288000 1547597616000000000
 kubernetes_statefulset,namespace=default,statefulset_name=etcd replicas_updated=3i,spec_replicas=3i,observed_generation=1i,created=1544101669000000000i,generation=1i,replicas=3i,replicas_current=3i,replicas_ready=3i 1547597616000000000
 ```
 
