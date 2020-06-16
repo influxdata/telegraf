@@ -66,6 +66,9 @@ avoid cardinality issues:
   # tls_key = "/path/to/keyfile"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Uncomment to remove deprecated metrics.
+  # fielddrop = ["terminated_reason"]
 ```
 
 #### Kubernetes Permissions
@@ -212,6 +215,7 @@ subjects:
     - restarts_total
     - state_code
     - state_reason
+    - terminated_reason (string, deprecated in 1.15: use `state_reason` instead)
     - resource_requests_cpu_units
     - resource_requests_memory_bytes
     - resource_limits_cpu_units

@@ -54,16 +54,19 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		stateReason = cs.State.Waiting.GetReason()
 	}
 
-	ready := "unready"
+	readiness := "unready"
 	if cs.GetReady() {
-		ready = "ready"
+		readiness = "ready"
 	}
 
 	fields := map[string]interface{}{
 		"restarts_total":    cs.GetRestartCount(),
 		"state_code":        stateCode,
-		"state_reason":      stateReason,
 		"terminated_reason": cs.State.Terminated.GetReason(),
+	}
+
+	if stateReason != "" {
+		fields["state_reason"] = stateReason
 	}
 
 	tags := map[string]string{
@@ -72,7 +75,7 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		"node_name":      *p.Spec.NodeName,
 		"pod_name":       *p.Metadata.Name,
 		"state":          state,
-		"ready":          ready,
+		"readiness":      readiness,
 	}
 
 	req := c.Resources.Requests
