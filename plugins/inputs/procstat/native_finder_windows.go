@@ -2,8 +2,6 @@ package procstat
 
 import (
 	"regexp"
-
-	"github.com/shirou/gopsutil/process"
 )
 
 // Pattern matches on the process name
@@ -13,7 +11,7 @@ func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 	if err != nil {
 		return pids, err
 	}
-	procs, err := process.Processes()
+	procs, err := pg.FastProcessList()
 	if err != nil {
 		return pids, err
 	}
