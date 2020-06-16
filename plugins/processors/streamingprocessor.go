@@ -41,6 +41,19 @@ func (sp *streamingProcessor) Stop() error {
 	return nil
 }
 
+// Make the streamingProcessor of type Initializer to be able
+// to call the Init method of the wrapped processor if
+// needed
+func (sp *streamingProcessor) Init() error {
+	if p, ok := sp.processor.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Unwrap lets you retrieve the original telegraf.Processor from the
 // StreamingProcessor. This is necessary because the toml Unmarshaller won't
 // look inside composed types.
