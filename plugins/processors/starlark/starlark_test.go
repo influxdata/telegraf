@@ -546,6 +546,80 @@ def apply(metric):
 			expectedErrorStr: `key "foo" not in Tags`,
 		},
 		{
+			name: "get tag",
+			source: `
+def apply(metric):
+	metric.tags['result'] = metric.tags.get('host')
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host": "example.org",
+					},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"host":   "example.org",
+						"result": "example.org",
+					},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "get tag default",
+			source: `
+def apply(metric):
+	metric.tags['result'] = metric.tags.get('foo', 'example.org')
+	return metric
+		`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{
+						"result": "example.org",
+					},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "get tag not set returns none",
+			source: `
+def apply(metric):
+	if metric.tags.get('foo') != None:
+		return
+	return metric
+		`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
 			name: "set tag",
 			source: `
 def apply(metric):
@@ -1466,6 +1540,79 @@ def apply(metric):
 			},
 			expected:         []telegraf.Metric{},
 			expectedErrorStr: `key "foo" not in Fields`,
+		},
+		{
+			name: "get field",
+			source: `
+def apply(metric):
+	metric.fields['result'] = metric.fields.get('time_idle')
+	return metric
+`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42.0},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42.0,
+						"result":    42.0,
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "get field default",
+			source: `
+def apply(metric):
+	metric.fields['result'] = metric.fields.get('foo', 'example.org')
+	return metric
+		`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"time_idle": 42,
+						"result":    "example.org",
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
+		{
+			name: "get field not set returns none",
+			source: `
+def apply(metric):
+	if metric.fields.get('foo') != None:
+		return
+	return metric
+		`,
+			input: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("cpu",
+					map[string]string{},
+					map[string]interface{}{"time_idle": 42},
+					time.Unix(0, 0),
+				),
+			},
 		},
 		{
 			name: "set string field",

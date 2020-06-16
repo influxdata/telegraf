@@ -91,7 +91,7 @@ func (s *Starlark) Init() error {
 	}
 
 	// Reusing the same metric wrapper to skip an allocation.  This will cause
-	// any saved references point to the new metric, but due to freezing the
+	// any saved references to point to the new metric, but due to freezing the
 	// globals none should exist.
 	s.args = make(starlark.Tuple, 1)
 	s.args[0] = &Metric{}
