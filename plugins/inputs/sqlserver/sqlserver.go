@@ -459,8 +459,8 @@ BEGIN
 	DECLARE @Tables as nvarchar(max) = ''
 
 	IF @MajorMinorVersion >= 1050 BEGIN 
-		/* [volume_mount_point] TRIMS trailing "\" which are not allowed in InfluxDB */
-		SET @Columns += N',LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point])-(PATINDEX(''%[^\]%'',REVERSE([volume_mount_point]))-1)) AS [volume_mount_point]'
+		/*in [volume_mount_point] any trailing "\" char will be removed by telegraf */
+		SET @Columns += N',[volume_mount_point]'
 		SET @Tables += N'CROSS APPLY sys.dm_os_volume_stats(vfs.[database_id], vfs.[file_id]) AS vs'
 	END
 		
@@ -1640,8 +1640,8 @@ IF @EngineEdition IN (2,3,4) AND @MajorMinorVersion >= 1050
 		'sqlserver_volume_space' AS [measurement]
 		,SERVERPROPERTY('machinename') AS [server_name]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
-		/* [volume_mount_point] TRIMS trailing "\" which are not allowed in InfluxDB */
-		,LEFT(vs.[volume_mount_point], LEN(vs.[volume_mount_point])-(PATINDEX('%[^\]%',REVERSE([volume_mount_point]))-1)) AS [volume_mount_point]
+		/*in [volume_mount_point] any trailing "\" char will be removed by telegraf */
+		,[volume_mount_point]
 		,vs.[total_bytes] AS [total_space_bytes]
 		,vs.[available_bytes] AS [available_space_bytes]
 		,vs.[total_bytes] - vs.[available_bytes] AS [used_space_bytes]
