@@ -16,7 +16,7 @@ import (
 	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
-	internaltls "github.com/influxdata/telegraf/internal/tls"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"google.golang.org/grpc"
