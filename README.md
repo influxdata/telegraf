@@ -297,6 +297,7 @@ For documentation on the latest development code see the [documentation index][d
 * [snmp_trap](./plugins/inputs/snmp_trap)
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
+* [spectrum_scale](./plugins/inputs/spectrum_scale)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver) (Google Cloud Monitoring)
 * [statsd](./plugins/inputs/statsd)
