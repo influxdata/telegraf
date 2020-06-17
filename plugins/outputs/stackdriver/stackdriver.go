@@ -61,7 +61,7 @@ var sampleConfig = `
   ## Custom resource type
   # resource_type = "generic_node"
 
-  ## Additonal resource labels
+  ## Additional resource labels
   # [outputs.stackdriver.resource_labels]
   #   node_id = "$HOSTNAME"
   #   namespace = "myapp"

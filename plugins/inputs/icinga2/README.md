@@ -41,12 +41,13 @@ services and hosts. You can read Icinga2's documentation for their remote API
 ### Tags:
 
 - All measurements have the following tags:
-    - check_command
-    - display_name
-    - state
-    - source
-    - port
-    - scheme
+    - check_command - The short name of the check command
+    - display_name - The name of the service or host
+    - state - The state: UP/DOWN for hosts, OK/WARNING/CRITICAL/UNKNOWN for services
+    - source - The icinga2 host
+    - port - The icinga2 port
+    - scheme - The icinga2 protocol (http/https)
+    - server - The server the check_command is running for
 
 ### Sample Queries:
 

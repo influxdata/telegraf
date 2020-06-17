@@ -47,7 +47,7 @@ type HTTPClient interface {
 	// req: HTTP request object
 	//
 	// Returns:
-	// http.Response:  HTTP respons object
+	// http.Response:  HTTP response object
 	// error        :  Any error that may have occurred
 	MakeRequest(req *http.Request) (*http.Response, error)
 

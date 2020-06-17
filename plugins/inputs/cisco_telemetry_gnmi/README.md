@@ -1,8 +1,9 @@
 # Cisco GNMI Telemetry
 
-Cisco GNMI Telemetry is an input plugin that consumes telemetry data based on the [GNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.
+This plugin consumes telemetry data based on the [gNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.  This input plugin is vendor-agnostic and is supported on any platform that supports the gNMI spec. 
 
-It has been optimized to support GNMI telemetry as produced by Cisco IOS XR (64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
+For Cisco devices: 
+It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
 
 
 ### Configuration
@@ -49,7 +50,7 @@ It has been optimized to support GNMI telemetry as produced by Cisco IOS XR (64-
     ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
     ##
     ## origin usually refers to a (YANG) data model implemented by the device
-    ## and path to a specific substructe inside it that should be subscribed to (similar to an XPath)
+    ## and path to a specific substructure inside it that should be subscribed to (similar to an XPath)
     ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
     origin = "openconfig-interfaces"
     path = "/interfaces/interface/state/counters"

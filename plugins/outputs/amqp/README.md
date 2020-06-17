@@ -1,6 +1,6 @@
 # AMQP Output Plugin
 
-This plugin writes to a AMQP 0-9-1 Exchange, a promenent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
+This plugin writes to a AMQP 0-9-1 Exchange, a prominent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
 
 This plugin does not bind the exchange to a queue.
 
@@ -40,7 +40,7 @@ For an introduction to AMQP see:
 
   ## Additional exchange arguments.
   # exchange_arguments = { }
-  # exchange_arguments = {"hash_propery" = "timestamp"}
+  # exchange_arguments = {"hash_property" = "timestamp"}
 
   ## Authentication credentials for the PLAIN auth_method.
   # username = ""

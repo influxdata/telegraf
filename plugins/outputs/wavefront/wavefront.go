@@ -2,7 +2,6 @@ package wavefront
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 
@@ -10,6 +9,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	wavefront "github.com/wavefronthq/wavefront-sdk-go/senders"
 )
+
+const maxTagLength = 254
 
 type Wavefront struct {
 	Url             string
@@ -23,10 +24,12 @@ type Wavefront struct {
 	ConvertBool     bool
 	UseRegex        bool
 	UseStrict       bool
+	TruncateTags    bool
 	SourceOverride  []string
 	StringToNumber  map[string][]map[string]float64
 
 	sender wavefront.Sender
+	Log    telegraf.Logger
 }
 
 // catch many of the invalid chars that could appear in a metric or tag name
@@ -81,7 +84,7 @@ var sampleConfig = `
   #convert_paths = true
 
   ## Use Strict rules to sanitize metric and tag names from invalid characters
-  ## When enabled forward slash (/) and comma (,) will be accpeted
+  ## When enabled forward slash (/) and comma (,) will be accepted
   #use_strict = false
 
   ## Use Regex to sanitize metric and tag names from invalid characters
@@ -93,6 +96,10 @@ var sampleConfig = `
 
   ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0. default is true
   #convert_bool = true
+
+  ## Truncate metric tags to a total of 254 characters for the tag name value. Wavefront will reject any 
+  ## data point exceeding this limit if not truncated. Defaults to 'false' to provide backwards compatibility.
+  #truncate_tags = false
 
   ## Define a mapping, namespaced by metric prefix, from string values to numeric values
   ##   deprecated in 1.9; use the enum processor plugin
@@ -113,11 +120,11 @@ type MetricPoint struct {
 func (w *Wavefront) Connect() error {
 
 	if len(w.StringToNumber) > 0 {
-		log.Print("W! [outputs.wavefront] The string_to_number option is deprecated; please use the enum processor instead")
+		w.Log.Warn("The string_to_number option is deprecated; please use the enum processor instead")
 	}
 
 	if w.Url != "" {
-		log.Printf("D! [outputs.wavefront] connecting over http/https using Url: %s", w.Url)
+		w.Log.Debug("connecting over http/https using Url: %s", w.Url)
 		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
 			Server:               w.Url,
 			Token:                w.Token,
@@ -128,7 +135,7 @@ func (w *Wavefront) Connect() error {
 		}
 		w.sender = sender
 	} else {
-		log.Printf("D! Output [wavefront] connecting over tcp using Host: %s and Port: %d", w.Host, w.Port)
+		w.Log.Debug("connecting over tcp using Host: %s and Port: %d", w.Host, w.Port)
 		sender, err := wavefront.NewProxySender(&wavefront.ProxyConfiguration{
 			Host:                 w.Host,
 			MetricsPort:          w.Port,
@@ -152,18 +159,17 @@ func (w *Wavefront) Connect() error {
 func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
-		for _, point := range buildMetrics(m, w) {
+		for _, point := range w.buildMetrics(m) {
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
 				return fmt.Errorf("Wavefront sending error: %s", err.Error())
 			}
 		}
 	}
-
 	return nil
 }
 
-func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
+func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
 	ret := []*MetricPoint{}
 
 	for fieldName, value := range m.Fields() {
@@ -193,12 +199,12 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)
 		if buildError != nil {
-			log.Printf("D! [outputs.wavefront] %s\n", buildError.Error())
+			w.Log.Debug("Error building tags: %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
 
-		source, tags := buildTags(m.Tags(), w)
+		source, tags := w.buildTags(m.Tags())
 		metric.Source = source
 		metric.Tags = tags
 
@@ -207,7 +213,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 	return ret
 }
 
-func buildTags(mTags map[string]string, w *Wavefront) (string, map[string]string) {
+func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]string) {
 
 	// Remove all empty tags.
 	for k, v := range mTags {
@@ -259,6 +265,16 @@ func buildTags(mTags map[string]string, w *Wavefront) (string, map[string]string
 			key = sanitizedChars.Replace(k)
 		}
 		val := tagValueReplacer.Replace(v)
+		if w.TruncateTags {
+			if len(key) > maxTagLength {
+				w.Log.Warnf("Tag key length > 254. Skipping tag: %s", key)
+				continue
+			}
+			if len(key)+len(val) > maxTagLength {
+				w.Log.Debugf("Key+value length > 254: %s", key)
+				val = val[:maxTagLength-len(key)]
+			}
+		}
 		tags[key] = val
 	}
 
@@ -296,7 +312,6 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 	default:
 		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	}
-
 	return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 }
 
@@ -320,6 +335,7 @@ func init() {
 			MetricSeparator: ".",
 			ConvertPaths:    true,
 			ConvertBool:     true,
+			TruncateTags:    false,
 		}
 	})
 }

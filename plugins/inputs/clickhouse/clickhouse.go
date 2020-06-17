@@ -205,6 +205,10 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	return nil
 }
 
+func (ch *ClickHouse) Stop() {
+	ch.client.CloseIdleConnections()
+}
+
 func (ch *ClickHouse) clusterIncludeExcludeFilter() string {
 	if len(ch.ClusterInclude) == 0 && len(ch.ClusterExclude) == 0 {
 		return ""

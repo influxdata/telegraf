@@ -4,14 +4,12 @@ defaults:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     environment:
       GOFLAGS: -p=8
-  go-1_12: &go-1_12
-    docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.12.17'
-        environment:
-          GO111MODULE: 'on'
   go-1_13: &go-1_13
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.13.8'
+      - image: 'quay.io/influxdb/telegraf-ci:1.13.11'
+  go-1_14: &go-1_14
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.14.3'
   mac: &mac
     macos:
       xcode: 11.3.1
@@ -23,7 +21,7 @@ defaults:
 version: 2
 jobs:
   deps:
-    <<: [ *defaults, *go-1_13 ]
+    <<: [ *defaults, *go-1_14 ]
     steps:
       - checkout
       - restore_cache:
@@ -64,22 +62,22 @@ jobs:
             - 'usr/local/bin/gofmt'
             - 'Users/distiller/go'
 
-  test-go-1.12:
-    <<: [ *defaults, *go-1_12 ]
+  test-go-1.13:
+    <<: [ *defaults, *go-1_13 ]
     steps:
       - attach_workspace:
           at: '/go'
       - run: 'make'
       - run: 'make test'
-  test-go-1.12-386:
-    <<: [ *defaults, *go-1_12 ]
+  test-go-1.13-386:
+    <<: [ *defaults, *go-1_13 ]
     steps:
       - attach_workspace:
           at: '/go'
       - run: 'GOARCH=386 make'
       - run: 'GOARCH=386 make test'
-  test-go-1.13:
-    <<: [ *defaults, *go-1_13 ]
+  test-go-1.14:
+    <<: [ *defaults, *go-1_14 ]
     steps:
       - attach_workspace:
           at: '/go'
@@ -87,8 +85,8 @@ jobs:
       - run: 'make check'
       - run: 'make check-deps'
       - run: 'make test'
-  test-go-1.13-386:
-    <<: [ *defaults, *go-1_13 ]
+  test-go-1.14-386:
+    <<: [ *defaults, *go-1_14 ]
     steps:
       - attach_workspace:
           at: '/go'
@@ -105,7 +103,7 @@ jobs:
       - run: 'make test'
 
   package:
-    <<: [ *defaults, *go-1_13 ]
+    <<: [ *defaults, *go-1_14 ]
     steps:
       - attach_workspace:
           at: '/go'
@@ -114,7 +112,7 @@ jobs:
           path: './build'
           destination: 'build'
   release:
-    <<: [ *defaults, *go-1_13 ]
+    <<: [ *defaults, *go-1_14 ]
     steps:
       - attach_workspace:
           at: '/go'
@@ -123,7 +121,7 @@ jobs:
           path: './build'
           destination: 'build'
   nightly:
-    <<: [ *defaults, *go-1_13 ]
+    <<: [ *defaults, *go-1_14 ]
     steps:
       - attach_workspace:
           at: '/go'
@@ -144,18 +142,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-1.12':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
-      - 'test-go-1.12-386':
-          requires:
-            - 'deps'
-          filters:
-            tags:
-              only: /.*/
       - 'test-go-1.13':
           requires:
             - 'deps'
@@ -163,6 +149,18 @@ workflows:
             tags:
               only: /.*/
       - 'test-go-1.13-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1.14':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1.14-386':
           requires:
             - 'deps'
           filters:
@@ -176,16 +174,16 @@ workflows:
               only: /.*/
       - 'package':
           requires:
-            - 'test-go-1.12'
-            - 'test-go-1.12-386'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
+            - 'test-go-1.14'
+            - 'test-go-1.14-386'
       - 'release':
           requires:
-            - 'test-go-1.12'
-            - 'test-go-1.12-386'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
+            - 'test-go-1.14'
+            - 'test-go-1.14-386'
           filters:
             tags:
               only: /.*/
@@ -194,24 +192,24 @@ workflows:
   nightly:
     jobs:
       - 'deps'
-      - 'test-go-1.12':
-          requires:
-            - 'deps'
-      - 'test-go-1.12-386':
-          requires:
-            - 'deps'
       - 'test-go-1.13':
           requires:
             - 'deps'
       - 'test-go-1.13-386':
           requires:
             - 'deps'
+      - 'test-go-1.14':
+          requires:
+            - 'deps'
+      - 'test-go-1.14-386':
+          requires:
+            - 'deps'
       - 'nightly':
           requires:
-            - 'test-go-1.12'
-            - 'test-go-1.12-386'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
+            - 'test-go-1.14'
+            - 'test-go-1.14-386'
     triggers:
       - schedule:
           cron: "0 7 * * *"

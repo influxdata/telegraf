@@ -7,7 +7,44 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestName(t *testing.T) {
+	plugin := TemplateProcessor{
+		Tag:      "measurement",
+		Template: "{{ .Name }}",
+	}
+
+	err := plugin.Init()
+	require.NoError(t, err)
+
+	input := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	actual := plugin.Apply(input...)
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"cpu",
+			map[string]string{
+				"measurement": "cpu",
+			},
+			map[string]interface{}{
+				"time_idle": 42,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, actual)
+}
 
 func TestTagTemplateConcatenate(t *testing.T) {
 	now := time.Now()

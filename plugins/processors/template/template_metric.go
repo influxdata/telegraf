@@ -1,16 +1,17 @@
 package template
 
 import (
-	"github.com/influxdata/telegraf"
 	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 type TemplateMetric struct {
 	metric telegraf.Metric
 }
 
-func (m *TemplateMetric) Measurement() string {
-	return m.Measurement()
+func (m *TemplateMetric) Name() string {
+	return m.metric.Name()
 }
 
 func (m *TemplateMetric) Tag(key string) string {

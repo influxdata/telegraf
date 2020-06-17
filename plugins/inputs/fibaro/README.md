@@ -30,6 +30,7 @@ Those values could be true (1) or false (0) for switches, percentage for dimmers
     - name (device name)
     - type (device type)
   - fields:
+    - batteryLevel (float, when available from device)
     - energy (float, when available from device)
     - power (float, when available from device)
     - value (float)
@@ -52,4 +53,5 @@ fibaro,deviceId=220,host=vm1,name=CO2\ (ppm),room=Salon,section=Pièces\ commune
 fibaro,deviceId=221,host=vm1,name=Humidité\ (%),room=Salon,section=Pièces\ communes,type=com.fibaro.humiditySensor value=61 1529996807000000000
 fibaro,deviceId=222,host=vm1,name=Pression\ (mb),room=Salon,section=Pièces\ communes,type=com.fibaro.multilevelSensor value=1013.7 1529996807000000000
 fibaro,deviceId=223,host=vm1,name=Bruit\ (db),room=Salon,section=Pièces\ communes,type=com.fibaro.multilevelSensor value=44 1529996807000000000
+fibaro,deviceId=248,host=vm1,name=Température,room=Garage,section=Extérieur,type=com.fibaro.temperatureSensor batteryLevel=85,value=10.8 1529996807000000000
 ```

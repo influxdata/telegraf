@@ -55,7 +55,7 @@ func TestCPUStats(t *testing.T) {
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
-	// Computed values are checked with delta > 0 because of floating point arithmatic
+	// Computed values are checked with delta > 0 because of floating point arithmetic
 	// imprecision
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 8.8, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_system", 8.2, 0, cputags)
@@ -102,7 +102,7 @@ func TestCPUStats(t *testing.T) {
 	assertContainsTaggedFloat(t, &acc, "cpu", "usage_guest_nice", 2.2, 0.0005, cputags)
 }
 
-// Asserts that a given accumulator contains a measurment of type float64 with
+// Asserts that a given accumulator contains a measurement of type float64 with
 // specific tags within a certain distance of a given expected value. Asserts a failure
 // if the measurement is of the wrong type, or if no matching measurements are found
 //
@@ -113,7 +113,7 @@ func TestCPUStats(t *testing.T) {
 //     expectedValue float64   : Value to search for within the measurement
 //     delta float64           : Maximum acceptable distance of an accumulated value
 //                               from the expectedValue parameter. Useful when
-//                               floating-point arithmatic imprecision makes looking
+//                               floating-point arithmetic imprecision makes looking
 //                               for an exact match impractical
 //     tags map[string]string  : Tag set the found measurement must have. Set to nil to
 //                               ignore the tag set.
@@ -225,7 +225,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
-	// Computed values are checked with delta > 0 because of floating point arithmatic
+	// Computed values are checked with delta > 0 because of floating point arithmetic
 	// imprecision
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 18, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 80, 0, cputags)

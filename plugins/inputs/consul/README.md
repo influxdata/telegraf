@@ -44,7 +44,7 @@ report those stats already using StatsD protocol if needed.
 
 - consul_health_checks
   - tags:
-  	- node (node that check/service is registred on)
+  	- node (node that check/service is registered on)
   	- service_name
   	- check_id
   - fields:

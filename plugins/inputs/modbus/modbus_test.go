@@ -494,3 +494,131 @@ func TestHoldingRegisters(t *testing.T) {
 		})
 	}
 }
+
+func TestRetrySuccessful(t *testing.T) {
+	retries := 0
+	maxretries := 2
+	value := 1
+
+	serv := mbserver.NewServer()
+	err := serv.ListenTCP("localhost:1502")
+	assert.NoError(t, err)
+	defer serv.Close()
+
+	// Make read on coil-registers fail for some trials by making the device
+	// to appear busy
+	serv.RegisterFunctionHandler(1,
+		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+			data := make([]byte, 2)
+			data[0] = byte(1)
+			data[1] = byte(value)
+
+			except := &mbserver.SlaveDeviceBusy
+			if retries >= maxretries {
+				except = &mbserver.Success
+			}
+			retries += 1
+
+			return data, except
+		})
+
+	t.Run("retry_success", func(t *testing.T) {
+		modbus := Modbus{
+			Name:       "TestRetry",
+			Controller: "tcp://localhost:1502",
+			SlaveID:    1,
+			Retries:    maxretries,
+			Coils: []fieldContainer{
+				{
+					Name:    "retry_success",
+					Address: []uint16{0},
+				},
+			},
+		}
+
+		err = modbus.Init()
+		assert.NoError(t, err)
+		var acc testutil.Accumulator
+		err = modbus.Gather(&acc)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, modbus.registers)
+
+		for _, coil := range modbus.registers {
+			assert.Equal(t, uint16(value), coil.Fields[0].value)
+		}
+	})
+}
+
+func TestRetryFail(t *testing.T) {
+	maxretries := 2
+
+	serv := mbserver.NewServer()
+	err := serv.ListenTCP("localhost:1502")
+	assert.NoError(t, err)
+	defer serv.Close()
+
+	// Make the read on coils fail with busy
+	serv.RegisterFunctionHandler(1,
+		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+			data := make([]byte, 2)
+			data[0] = byte(1)
+			data[1] = byte(0)
+
+			return data, &mbserver.SlaveDeviceBusy
+		})
+
+	t.Run("retry_fail", func(t *testing.T) {
+		modbus := Modbus{
+			Name:       "TestRetryFail",
+			Controller: "tcp://localhost:1502",
+			SlaveID:    1,
+			Retries:    maxretries,
+			Coils: []fieldContainer{
+				{
+					Name:    "retry_fail",
+					Address: []uint16{0},
+				},
+			},
+		}
+
+		err = modbus.Init()
+		assert.NoError(t, err)
+		var acc testutil.Accumulator
+		err = modbus.Gather(&acc)
+		assert.Error(t, err)
+	})
+
+	// Make the read on coils fail with illegal function preventing retry
+	counter := 0
+	serv.RegisterFunctionHandler(1,
+		func(s *mbserver.Server, frame mbserver.Framer) ([]byte, *mbserver.Exception) {
+			counter += 1
+			data := make([]byte, 2)
+			data[0] = byte(1)
+			data[1] = byte(0)
+
+			return data, &mbserver.IllegalFunction
+		})
+
+	t.Run("retry_fail", func(t *testing.T) {
+		modbus := Modbus{
+			Name:       "TestRetryFail",
+			Controller: "tcp://localhost:1502",
+			SlaveID:    1,
+			Retries:    maxretries,
+			Coils: []fieldContainer{
+				{
+					Name:    "retry_fail",
+					Address: []uint16{0},
+				},
+			},
+		}
+
+		err = modbus.Init()
+		assert.NoError(t, err)
+		var acc testutil.Accumulator
+		err = modbus.Gather(&acc)
+		assert.Error(t, err)
+		assert.Equal(t, counter, 1)
+	})
+}

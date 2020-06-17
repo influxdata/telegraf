@@ -53,11 +53,12 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 ### Optional parameters:
 * `username`: The username to connect MQTT server.
 * `password`: The password to connect MQTT server.
-* `client_id`: The unique client id to connect MQTT server. If this paramater is not set then a random ID is generated.
+* `client_id`: The unique client id to connect MQTT server. If this parameter is not set then a random ID is generated.
 * `timeout`: Timeout for write operations. default: 5s
 * `tls_ca`: TLS CA
 * `tls_cert`: TLS CERT
 * `tls_key`: TLS key
 * `insecure_skip_verify`: Use TLS but skip chain & host verification (default: false)
+* `batch`: When true, metrics will be sent in one MQTT message per flush. Otherwise, metrics are written one metric per MQTT message.
 * `retain`: Set `retain` flag when publishing
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
