@@ -73,11 +73,15 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
 
 #### json_query
 
-The `json_query` is a [GJSON][gjson] path that can be used to limit the
-portion of the overall JSON document that should be parsed.  The result of the
-query should contain a JSON object or an array of objects.
+The `json_query` is a [GJSON][gjson] path that can be used to transform the
+JSON document before being parsed.  The query is performed before any other
+options are applied and the new document produced will be parsed instead of the
+original document, as such, the result of the query should be a JSON object or
+an array of objects.
 
-Consult the GJSON [path syntax][gjson syntax] for details and examples.
+Consult the GJSON [path syntax][gjson syntax] for details and examples, and
+consider using the [GJSON playground][gjson playground] for developing and
+debugging your query.
 
 #### json_time_key, json_time_format, json_timezone
 
@@ -237,5 +241,6 @@ file,first=Jane last="Murphy",age=47
 
 [gjson]:        https://github.com/tidwall/gjson
 [gjson syntax]: https://github.com/tidwall/gjson#path-syntax
+[gjson playground]: https://gjson.dev/
 [json]:         https://www.json.org/
 [time parse]:   https://golang.org/pkg/time/#Parse
