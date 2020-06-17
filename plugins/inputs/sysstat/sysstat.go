@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -178,7 +179,12 @@ func (s *Sysstat) collect() error {
 	for _, act := range s.Activities {
 		options = append(options, "-S", act)
 	}
-	s.tmpFile = path.Join("/tmp", fmt.Sprintf("sysstat-%d", time.Now().Unix()))
+
+	var err error
+	s.tmpFile, err = createTempFile()
+	if err != nil {
+		return err
+	}
 	// collectInterval has to be smaller than the telegraf data collection interval
 	collectInterval := s.interval - parseInterval
 
@@ -197,6 +203,17 @@ func (s *Sysstat) collect() error {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
 	return nil
+}
+
+func createTempFile() (string, error) {
+	tmpPath := path.Join(os.TempDir(), "tg-sysstat")
+	os.Mkdir(tmpPath, os.ModeDir)
+	f, err := ioutil.TempFile(tmpPath, "sysstat")
+	if err != nil {
+		return "", fmt.Errorf("unable to create temp file in path %s: %w", tmpPath, err)
+	}
+	defer f.Close()
+	return f.Name(), nil
 }
 
 func filterEnviron(env []string, prefix string) []string {
