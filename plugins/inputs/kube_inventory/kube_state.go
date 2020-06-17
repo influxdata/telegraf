@@ -125,10 +125,6 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 		return err
 	}
 
-	//err = ki.createSelectorFilters()
-	//if err != nil {
-	//	return err
-	//}
 	ki.selectorFilter, err = filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
 	if err != nil {
 		return err
