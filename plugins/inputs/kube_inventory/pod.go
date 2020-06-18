@@ -29,13 +29,13 @@ func (ki *KubernetesInventory) gatherPod(p v1.Pod, acc telegraf.Accumulator) err
 
 	for i, cs := range p.Status.ContainerStatuses {
 		c := p.Spec.Containers[i]
-		gatherPodContainer(*p.Spec.NodeName, p, *cs, *c, acc)
+		gatherPodContainer(*p.Spec.NodeName, ki, p, *cs, *c, acc)
 	}
 
 	return nil
 }
 
-func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.Container, acc telegraf.Accumulator) {
+func gatherPodContainer(nodeName string, ki *KubernetesInventory, p v1.Pod, cs v1.ContainerStatus, c v1.Container, acc telegraf.Accumulator) {
 	stateCode := 3
 	stateReason := ""
 	state := "unknown"
@@ -76,6 +76,11 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		"pod_name":       *p.Metadata.Name,
 		"state":          state,
 		"readiness":      readiness,
+	}
+	for key, val := range p.GetSpec().GetNodeSelector() {
+		if ki.selectorFilter.Match(key) {
+			tags["node_selector_"+key] = val
+		}
 	}
 
 	req := c.Resources.Requests
