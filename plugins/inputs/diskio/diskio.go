@@ -170,17 +170,17 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddCounter("diskio", fields, tags)
 		if s.DiskIOAggregates {
-			aggFields["reads"] = int64(aggFields["reads"]) + io.ReadCount
-			aggFields["writes"] = int64(aggFields["writes"]) + io.WriteCount
-			aggFields["read_bytes"] = int64(aggFields["reads_bytes"]) + io.ReadBytes
-			aggFields["write_bytes"] = int64(aggFields["write_bytes"]) + io.WriteBytes
-			aggFields["read_time"] = int64(aggFields["read_time"]) + io.ReadTime
-			aggFields["write_time"] = int64(aggFields["write_time"]) + io.WriteTime
-			aggFields["io_time"] = int64(aggFields["io_time"]) + io.IoTime
-			aggFields["weighted_io_time"] = int64(aggFields["weighted_io_time"]) + io.WeightedIO
-			aggFields["iops_in_progress"] = int64(aggFields["iops_in_progress"]) + io.IopsInProgress
-			aggFields["merged_reads"] = int64(aggFields["merged_reads"]) + io.MergedReadCount
-			aggFields["merged_writes"] = int64(aggFields["merged_writes"]) + io.MergedWriteCount
+			aggFields["reads"] = aggFields["reads"].(uint64) + io.ReadCount
+			aggFields["writes"] = aggFields["writes"].(uint64) + io.WriteCount
+			aggFields["read_bytes"] = aggFields["reads_bytes"].(uint64) + io.ReadBytes
+			aggFields["write_bytes"] = aggFields["write_bytes"].(uint64) + io.WriteBytes
+			aggFields["read_time"] = aggFields["read_time"].(uint64) + io.ReadTime
+			aggFields["write_time"] = aggFields["write_time"].(uint64) + io.WriteTime
+			aggFields["io_time"] = aggFields["io_time"].(uint64) + io.IoTime
+			aggFields["weighted_io_time"] = aggFields["weighted_io_time"].(uint64) + io.WeightedIO
+			aggFields["iops_in_progress"] = aggFields["iops_in_progress"].(uint64) + io.IopsInProgress
+			aggFields["merged_reads"] = aggFields["merged_reads"].(uint64) + io.MergedReadCount
+			aggFields["merged_writes"] = aggFields["merged_writes"].(uint64) + io.MergedWriteCount
 		}
 	}
 	if s.DiskIOAggregates {

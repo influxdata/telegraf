@@ -99,17 +99,17 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 			if addAgg {
-				aggFields["total"] = int64(aggFields["total"]) + du.Total
-				aggFields["free"] = int64(aggFields["free"]) + du.Free
-				aggFields["used"] = int64(aggFields["used"]) + du.Used
-				aggFields["inodes_total"] = int64(aggFields["inodes_total"]) + du.InodesTotal
-				aggFields["inodes_free"] = int64(aggFields["indoes_free"]) + du.InodesFree
-				aggFields["inodes_used"] = int64(aggFields["indoes_used"]) + du.InodesUsed
+				aggFields["total"] = aggFields["total"].(uint64) + du.Total
+				aggFields["free"] = aggFields["free"].(uint64) + du.Free
+				aggFields["used"] = aggFields["used"].(uint64) + du.Used
+				aggFields["inodes_total"] = aggFields["inodes_total"].(uint64) + du.InodesTotal
+				aggFields["inodes_free"] = aggFields["indoes_free"].(uint64) + du.InodesFree
+				aggFields["inodes_used"] = aggFields["indoes_used"].(uint64) + du.InodesUsed
 			}
 		}
 	}
 	if s.AggregateCounts {
-		aggFields["used_percent"] = (int64(aggFields["used"]) / (int64(aggFields["used"]) + int64(aggFields["free"]))) * 100
+		aggFields["used_percent"] = (aggFields["used"].(uint64) / (aggFields["used"].(uint64) + aggFields["free"].(uint64))) * 100
 		acc.AddGauge("storage_agg", aggFields, nil)
 	}
 

@@ -119,14 +119,14 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddCounter("net", fields, tags)
 		if s.NetAggregates {
-			aggFields["bytes_sent"] = int64(aggFields["bytes_sent"]) + io.BytesSent
-			aggFields["bytes_recv"] = int64(aggFields["bytes_recv"]) + io.BytesRecv
-			aggFields["packets_sent"] = int64(aggFields["packets_sent"]) + io.PacketsSent
-			aggFields["packets_recv"] = int64(aggFields["packets_recv"]) + io.PacketsRecv
-			aggFields["err_in"] = int64(aggFields["err_in"]) + io.Errin
-			aggFields["err_out"] = int64(aggFields["err_out"]) + io.Errout
-			aggFields["drop_in"] = int64(aggFields["drop_in"]) + io.Dropin
-			aggFields["drop_out"] = int64(aggFields["drop_out"]) + io.Dropout
+			aggFields["bytes_sent"] = aggFields["bytes_sent"].(uint64) + io.BytesSent
+			aggFields["bytes_recv"] = aggFields["bytes_recv"].(uint64) + io.BytesRecv
+			aggFields["packets_sent"] = aggFields["packets_sent"].(uint64) + io.PacketsSent
+			aggFields["packets_recv"] = aggFields["packets_recv"].(uint64) + io.PacketsRecv
+			aggFields["err_in"] = aggFields["err_in"].(uint64) + io.Errin
+			aggFields["err_out"] = aggFields["err_out"].(uint64) + io.Errout
+			aggFields["drop_in"] = aggFields["drop_in"].(uint64) + io.Dropin
+			aggFields["drop_out"] = aggFields["drop_out"].(uint64) + io.Dropout
 		}
 	}
 	if s.NetAggregates {
