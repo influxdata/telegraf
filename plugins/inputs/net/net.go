@@ -18,7 +18,7 @@ type NetIOStats struct {
 	skipChecks          bool
 	IgnoreProtocolStats bool
 	Interfaces          []string
-	NetAggregates	bool	`toml:"network_aggregates"`
+	NetAggregates       bool `toml:"network_aggregates"`
 }
 
 func (_ *NetIOStats) Description() string {
