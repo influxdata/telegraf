@@ -67,14 +67,14 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 		interfacesByName[iface.Name] = iface
 	}
 	aggFields := map[string]interface{}{
-		"bytes_sent":   0,
-		"bytes_recv":   0,
-		"packets_sent": 0,
-		"packets_recv": 0,
-		"err_in":       0,
-		"err_out":      0,
-		"drop_in":      0,
-		"drop_out":     0,
+		"bytes_sent":   uint64(0),
+		"bytes_recv":   uint64(0),
+		"packets_sent": uint64(0),
+		"packets_recv": uint64(0),
+		"err_in":       uint64(0),
+		"err_out":      uint64(0),
+		"drop_in":      uint64(0),
+		"drop_out":     uint64(0),
 	}
 
 	for _, io := range netio {

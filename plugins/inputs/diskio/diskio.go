@@ -108,17 +108,17 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 	}
 
 	aggFields := map[string]interface{}{
-		"reads":            0,
-		"writes":           0,
-		"read_bytes":       0,
-		"write_bytes":      0,
-		"read_time":        0,
-		"write_time":       0,
-		"io_time":          0,
-		"weighted_io_time": 0,
-		"iops_in_progress": 0,
-		"merged_reads":     0,
-		"merged_writes":    0,
+		"reads":            uint64(0),
+		"writes":           uint64(0),
+		"read_bytes":       uint64(0),
+		"write_bytes":      uint64(0),
+		"read_time":        uint64(0),
+		"write_time":       uint64(0),
+		"io_time":          uint64(0),
+		"weighted_io_time": uint64(0),
+		"iops_in_progress": uint64(0),
+		"merged_reads":     uint64(0),
+		"merged_writes":    uint64(0),
 	}
 	for _, io := range diskio {
 
@@ -172,7 +172,7 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 		if s.DiskIOAggregates {
 			aggFields["reads"] = aggFields["reads"].(uint64) + io.ReadCount
 			aggFields["writes"] = aggFields["writes"].(uint64) + io.WriteCount
-			aggFields["read_bytes"] = aggFields["reads_bytes"].(uint64) + io.ReadBytes
+			aggFields["read_bytes"] = aggFields["read_bytes"].(uint64) + io.ReadBytes
 			aggFields["write_bytes"] = aggFields["write_bytes"].(uint64) + io.WriteBytes
 			aggFields["read_time"] = aggFields["read_time"].(uint64) + io.ReadTime
 			aggFields["write_time"] = aggFields["write_time"].(uint64) + io.WriteTime
