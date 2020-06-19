@@ -13,11 +13,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type spectrum_scale struct {
+type Spectrum_Scale struct {
 	Sensors        []string
 	SocketLocation string
-
-	allFields map[string]map[string]interface{}
 }
 
 var sampleConfig = `
@@ -30,21 +28,19 @@ var sampleConfig = `
 
 `
 
-func (s *spectrum_scale) SampleConfig() string {
+func (s *Spectrum_Scale) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *spectrum_scale) Description() string {
+func (s *Spectrum_Scale) Description() string {
 	return "Read metrics of Spectrum Scale"
 }
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (s *spectrum_scale) Gather(acc telegraf.Accumulator) error {
+func (s *Spectrum_Scale) Gather(acc telegraf.Accumulator) error {
 	var sensors []string
 	var socketLocation string
-
-	s.allFields = make(map[string]map[string]interface{})
 
 	sensors = s.Sensors
 	socketLocation = s.SocketLocation
@@ -74,7 +70,7 @@ func isField(t string) bool {
 	return false
 }
 
-func (s *spectrum_scale) getSensor(socketPath string, sensor string, acc telegraf.Accumulator) error {
+func (s *Spectrum_Scale) getSensor(socketPath string, sensor string, acc telegraf.Accumulator) error {
 	conn, err := net.Dial("unix", socketPath)
 
 	if err != nil {
@@ -415,6 +411,6 @@ func (s *spectrum_scale) getSensor(socketPath string, sensor string, acc telegra
 
 func init() {
 	inputs.Add("spectrum_scale", func() telegraf.Input {
-		return &spectrum_scale{}
+		return &Spectrum_Scale{}
 	})
 }
