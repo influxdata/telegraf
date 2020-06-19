@@ -92,7 +92,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		acc.AddGauge("disk", fields, tags)
 		if s.AggregateStats {
 			addAgg := true
-			for possibleMount := range s.AggDropMounts {
+			for _, possibleMount := range s.AggDropMounts {
 				if possibleMount == du.Path {
 					addAgg = false
 					break
@@ -110,7 +110,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	}
 	if s.AggregateStats {
 		aggFields["used_percent"] = (int64(aggFields["used"]) / (int64(aggFields["used"]) + int64(aggFields["free"]))) * 100
-		acc.AddGauge("storage_agg", fields, nil)
+		acc.AddGauge("storage_agg", aggFields, nil)
 	}
 
 	return nil

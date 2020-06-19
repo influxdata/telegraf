@@ -118,7 +118,7 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			"drop_out":     io.Dropout,
 		}
 		acc.AddCounter("net", fields, tags)
-		if NetAggregates {
+		if s.NetAggregates {
 			aggFields["bytes_sent"] = int64(aggFields["bytes_sent"]) + io.BytesSent
 			aggFields["bytes_recv"] = int64(aggFields["bytes_recv"]) + io.BytesRecv
 			aggFields["packets_sent"] = int64(aggFields["packets_sent"]) + io.PacketsSent
@@ -129,8 +129,8 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 			aggFields["drop_out"] = int64(aggFields["drop_out"]) + io.Dropout
 		}
 	}
-	if NetAggregaates {
-		ac.AddCounter("net_agg", aggFields, nil)
+	if s.NetAggregates {
+		acc.AddCounter("net_agg", aggFields, nil)
 	}
 
 	// Get system wide stats for different network protocols

@@ -169,7 +169,7 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"merged_writes":    io.MergedWriteCount,
 		}
 		acc.AddCounter("diskio", fields, tags)
-		if DiskIOAggregates {
+		if s.DiskIOAggregates {
 			aggFields["reads"] = int64(aggFields["reads"]) + io.ReadCount
 			aggFields["writes"] = int64(aggFields["writes"]) + io.WriteCount
 			aggFields["read_bytes"] = int64(aggFields["reads_bytes"]) + io.ReadBytes
@@ -183,7 +183,7 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			aggFields["merged_writes"] = int64(aggFields["merged_writes"]) + io.MergedWriteCount
 		}
 	}
-	if DiskIOAggregates {
+	if s.DiskIOAggregates {
 		acc.AddCounter("diskio_agg", aggFields, nil)
 	}
 
