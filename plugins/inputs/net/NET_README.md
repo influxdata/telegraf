@@ -19,6 +19,8 @@ This plugin gathers metrics about network interface and protocol usage (Linux on
   ##
   # ignore_protocol_stats = false
   ##
+  ## Collect aggregate network stats
+  # network_aggregates = false
 ```
 
 ### Measurements & Fields:
@@ -48,6 +50,10 @@ Explanation of the different metrics exposed by snmp is out of the scope of this
     - interface (the interface from which metrics are gathered)
 
 Under Linux the system wide protocol metrics have the interface=all tag.
+
+### Aggregation
+
+We can optionally collect aggregate stats of our basic `net` measurements for the entire host. This helps address performance as the number of devices increases (say, telegraf is running on a network appliance with 40+ interfaces). The result will be a single set of stats that are the sum of data for _all_ interfaces selected under the `net_agg` measurement.
 
 ### Sample Queries:
 

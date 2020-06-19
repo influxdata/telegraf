@@ -34,9 +34,9 @@ var diskSampleConfig = `
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
 
   ## collect aggregate (summed) stats of all discovered mounts on the host
-  aggregate_counts = false
+  # aggregate_counts = false
   ## drop specified mount points for aggregation
-  aggregate_drops = ["/"]
+  # aggregate_drops = ["/"]
 `
 
 func (_ *DiskStats) SampleConfig() string {

@@ -37,7 +37,6 @@ var netSampleConfig = `
   ##
   # ignore_protocol_stats = false
   ##
-
   ## Collect aggregate network stats
   # network_aggregates = false
 `
