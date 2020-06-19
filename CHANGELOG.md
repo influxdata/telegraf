@@ -14,6 +14,10 @@
 
 - Official packages now built with Go 1.14.3.
 
+#### New Inputs
+
+- [redfish](/plugins/inputs/redfish/README.md) - Contributed by @sarvanikonda
+
 #### New Processors
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
