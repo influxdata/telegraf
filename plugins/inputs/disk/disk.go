@@ -17,7 +17,7 @@ type DiskStats struct {
 
 	MountPoints []string `toml:"mount_points"`
 	IgnoreFS    []string `toml:"ignore_fs"`
-	AggregateStats	bool	`toml:"aggregate_stats"`
+	AggregateCounts	bool	`toml:"aggregate_counts"`
 	AggDropMounts	[]string	`toml:"aggregate_drops"`
 }
 
@@ -90,7 +90,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"inodes_used":  du.InodesUsed,
 		}
 		acc.AddGauge("disk", fields, tags)
-		if s.AggregateStats {
+		if s.AggregateCounts {
 			addAgg := true
 			for _, possibleMount := range s.AggDropMounts {
 				if possibleMount == du.Path {
@@ -108,7 +108,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
-	if s.AggregateStats {
+	if s.AggregateCounts {
 		aggFields["used_percent"] = (int64(aggFields["used"]) / (int64(aggFields["used"]) + int64(aggFields["free"]))) * 100
 		acc.AddGauge("storage_agg", aggFields, nil)
 	}
