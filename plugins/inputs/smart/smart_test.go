@@ -7,19 +7,22 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGatherAttributes(t *testing.T) {
-	s := &Smart{
-		Path:       "smartctl",
-		Attributes: true,
-	}
+	s := NewSmart()
+	s.Path = "smartctl"
+	s.Attributes = true
+
+	assert.Equal(t, time.Second*30, s.Timeout.Duration)
+
 	var acc testutil.Accumulator
 
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		if len(args) > 0 {
 			if args[0] == "--scan" {
 				return []byte(mockScanData), nil
@@ -49,8 +52,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "1",
 				"name":      "Raw_Read_Error_Rate",
 				"flags":     "-O-RC-",
@@ -67,8 +73,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "5",
 				"name":      "Reallocated_Sector_Ct",
 				"flags":     "PO--CK",
@@ -85,8 +94,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "9",
 				"name":      "Power_On_Hours",
 				"flags":     "-O--CK",
@@ -103,8 +115,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "12",
 				"name":      "Power_Cycle_Count",
 				"flags":     "-O--CK",
@@ -121,8 +136,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "169",
 				"name":      "Unknown_Attribute",
 				"flags":     "PO--C-",
@@ -139,8 +157,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "173",
 				"name":      "Wear_Leveling_Count",
 				"flags":     "-O--CK",
@@ -157,8 +178,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "190",
 				"name":      "Airflow_Temperature_Cel",
 				"flags":     "-O---K",
@@ -175,8 +199,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "192",
 				"name":      "Power-Off_Retract_Count",
 				"flags":     "-O--C-",
@@ -193,8 +220,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "194",
 				"name":      "Temperature_Celsius",
 				"flags":     "-O---K",
@@ -211,8 +241,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "197",
 				"name":      "Current_Pending_Sector",
 				"flags":     "-O---K",
@@ -229,8 +262,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "199",
 				"name":      "UDMA_CRC_Error_Count",
 				"flags":     "-O-RC-",
@@ -247,8 +283,11 @@ func TestGatherAttributes(t *testing.T) {
 			},
 			map[string]string{
 				"device":    "ada0",
+				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
+				"enabled":   "Enabled",
+				"capacity":  "251000193024",
 				"id":        "240",
 				"name":      "Head_Flying_Hours",
 				"flags":     "------",
@@ -290,10 +329,12 @@ func TestGatherAttributes(t *testing.T) {
 }
 
 func TestGatherNoAttributes(t *testing.T) {
-	s := &Smart{
-		Path:       "smartctl",
-		Attributes: false,
-	}
+	s := NewSmart()
+	s.Path = "smartctl"
+	s.Attributes = false
+
+	assert.Equal(t, time.Second*30, s.Timeout.Duration)
+
 	// overwriting exec commands with mock commands
 	var acc testutil.Accumulator
 
@@ -338,7 +379,7 @@ func TestExcludedDev(t *testing.T) {
 }
 
 func TestGatherSATAInfo(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData), nil
 	}
 
@@ -348,13 +389,13 @@ func TestGatherSATAInfo(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 101, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(20), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSATAInfo65(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSATAInfoData65), nil
 	}
 
@@ -364,13 +405,13 @@ func TestGatherSATAInfo65(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 91, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(18), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHgstSAS(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
 	}
 
@@ -380,13 +421,13 @@ func TestGatherHgstSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherHtSAS(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(htSASInfoData), nil
 	}
 
@@ -396,13 +437,61 @@ func TestGatherHtSAS(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
-	assert.Equal(t, 5, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(3), acc.NMetrics(), "Wrong number of metrics gathered")
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "194",
+				"model":     "HUC103030CSS600",
+				"name":      "Temperature_Celsius",
+			},
+			map[string]interface{}{
+				"raw_value": 36,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "4",
+				"model":     "HUC103030CSS600",
+				"name":      "Start_Stop_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 47,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_device",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"model":     "HUC103030CSS600",
+			},
+			map[string]interface{}{
+				"exit_status": 0,
+				"health_ok":   true,
+				"temp_c":      36,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func TestGatherSSD(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdInfoData), nil
 	}
 
@@ -412,13 +501,13 @@ func TestGatherSSD(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherSSDRaid(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(ssdRaidInfoData), nil
 	}
 
@@ -428,13 +517,13 @@ func TestGatherSSDRaid(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 
 func TestGatherNvme(t *testing.T) {
-	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout internal.Duration, sudo bool, command string, args ...string) ([]byte, error) {
 		return []byte(nvmeInfoData), nil
 	}
 
@@ -444,7 +533,7 @@ func TestGatherNvme(t *testing.T) {
 	)
 
 	wg.Add(1)
-	gatherDisk(acc, true, true, "", "", "", wg)
+	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
 
 	expected := []telegraf.Metric{
 		testutil.MustMetric("smart_device",
@@ -466,6 +555,7 @@ func TestGatherNvme(t *testing.T) {
 				"id":        "9",
 				"name":      "Power_On_Hours",
 				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
 			},
 			map[string]interface{}{
 				"raw_value": 6038,
@@ -478,6 +568,7 @@ func TestGatherNvme(t *testing.T) {
 				"id":        "12",
 				"name":      "Power_Cycle_Count",
 				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
 			},
 			map[string]interface{}{
 				"raw_value": 472,
@@ -487,12 +578,61 @@ func TestGatherNvme(t *testing.T) {
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
 				"device":    ".",
+				"name":      "Media_and_Data_Integrity_Errors",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": 0,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Error_Information_Log_Entries",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": 119699,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Available_Spare",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": 100,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
 				"id":        "194",
 				"name":      "Temperature_Celsius",
 				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
 			},
 			map[string]interface{}{
 				"raw_value": 38,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Critical_Warning",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(9),
 			},
 			time.Now(),
 		),
@@ -574,7 +714,7 @@ Transport protocol:   SAS (SPL-3)
 Local Time is:        Wed Apr 17 15:01:28 2019 PDT
 SMART support is:     Available - device has SMART capability.
 SMART support is:     Enabled
-Temp$rature Warning:  Disabled or Not Supported
+Temperature Warning:  Disabled or Not Supported
 
 === START OF READ SMART DATA SECTION ===
 SMART Health Status: OK
@@ -934,7 +1074,7 @@ Local Time is: Fri Jun 15 11:41:35 2018 UTC
 SMART overall-health self-assessment test result: PASSED
 
 SMART/Health Information (NVMe Log 0x02, NSID 0xffffffff)
-Critical Warning: 0x00
+Critical Warning: 0x09
 Temperature: 38 Celsius
 Available Spare: 100%
 Available Spare Threshold: 10%

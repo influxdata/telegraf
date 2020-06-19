@@ -148,6 +148,14 @@ func (p *testProc) Percent(interval time.Duration) (float64, error) {
 	return 0, nil
 }
 
+func (p *testProc) MemoryPercent() (float32, error) {
+	return 0, nil
+}
+
+func (p *testProc) CreateTime() (int64, error) {
+	return 0, nil
+}
+
 func (p *testProc) Times() (*cpu.TimesStat, error) {
 	return &cpu.TimesStat{}, nil
 }

@@ -3,7 +3,9 @@
 package ping
 
 import (
+	"context"
 	"errors"
+	"net"
 	"reflect"
 	"sort"
 	"testing"
@@ -180,12 +182,12 @@ func mockHostPinger(binary string, timeout float64, args ...string) (string, err
 func TestPingGather(t *testing.T) {
 	var acc testutil.Accumulator
 	p := Ping{
-		Urls:     []string{"www.google.com", "www.reddit.com"},
+		Urls:     []string{"localhost", "influxdata.com"},
 		pingHost: mockHostPinger,
 	}
 
 	acc.GatherError(p.Gather)
-	tags := map[string]string{"url": "www.google.com"}
+	tags := map[string]string{"url": "localhost"}
 	fields := map[string]interface{}{
 		"packets_transmitted":   5,
 		"packets_received":      5,
@@ -199,7 +201,7 @@ func TestPingGather(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
-	tags = map[string]string{"url": "www.reddit.com"}
+	tags = map[string]string{"url": "influxdata.com"}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
@@ -338,4 +340,51 @@ func TestPingBinary(t *testing.T) {
 		},
 	}
 	acc.GatherError(p.Gather)
+}
+
+func mockHostResolver(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
+	ipaddr := net.IPAddr{}
+	ipaddr.IP = net.IPv4(127, 0, 0, 1)
+	return &ipaddr, nil
+}
+
+// Test that Gather function works using native ping
+func TestPingGatherNative(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to permission requirements.")
+	}
+
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:        []string{"localhost", "127.0.0.2"},
+		Method:      "native",
+		Count:       5,
+		resolveHost: mockHostResolver,
+	}
+
+	assert.NoError(t, acc.GatherError(p.Gather))
+	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_transmitted", 5))
+	assert.True(t, acc.HasPoint("ping", map[string]string{"url": "localhost"}, "packets_received", 5))
+}
+
+func mockHostResolverError(ctx context.Context, ipv6 bool, host string) (*net.IPAddr, error) {
+	return nil, errors.New("myMock error")
+}
+
+// Test failed DNS resolutions
+func TestDNSLookupError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to permission requirements.")
+	}
+
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:        []string{"localhost"},
+		Method:      "native",
+		IPv6:        false,
+		resolveHost: mockHostResolverError,
+	}
+
+	acc.GatherError(p.Gather)
+	assert.True(t, len(acc.Errors) > 0)
 }

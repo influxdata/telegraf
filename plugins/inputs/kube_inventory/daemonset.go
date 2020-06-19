@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta2"
+	"github.com/ericchiang/k8s/apis/apps/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -23,7 +23,7 @@ func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ki *Kubern
 	}
 }
 
-func (ki *KubernetesInventory) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherDaemonSet(d v1.DaemonSet, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
 		"generation":               d.Metadata.GetGeneration(),
 		"current_number_scheduled": d.Status.GetCurrentNumberScheduled(),
@@ -37,6 +37,11 @@ func (ki *KubernetesInventory) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf
 	tags := map[string]string{
 		"daemonset_name": d.Metadata.GetName(),
 		"namespace":      d.Metadata.GetNamespace(),
+	}
+	for key, val := range d.GetSpec().GetSelector().GetMatchLabels() {
+		if ki.selectorFilter.Match(key) {
+			tags["selector_"+key] = val
+		}
 	}
 
 	if d.Metadata.CreationTimestamp.GetSeconds() != 0 {

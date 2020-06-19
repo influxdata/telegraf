@@ -29,7 +29,7 @@ server (RMS of difference of multiple time samples, milliseconds);
 ```toml
 # Get standard NTP query metrics, requires ntpq executable
 [[inputs.ntpq]]
-  ## If false, set the -n ntpq flag. Can reduce metric gather times.
+  ## If false, add -n for ntpq command. Can reduce metric gather times.
   dns_lookup = true
 ```
 

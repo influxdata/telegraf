@@ -1,10 +1,12 @@
 package syslog
 
 import (
+	"time"
+
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	framing "github.com/influxdata/telegraf/internal/syslog"
 	"github.com/influxdata/telegraf/testutil"
-	"time"
 )
 
 var (
@@ -14,16 +16,16 @@ var (
 type testCasePacket struct {
 	name           string
 	data           []byte
-	wantBestEffort *testutil.Metric
-	wantStrict     *testutil.Metric
+	wantBestEffort telegraf.Metric
+	wantStrict     telegraf.Metric
 	werr           bool
 }
 
 type testCaseStream struct {
 	name           string
 	data           []byte
-	wantBestEffort []testutil.Metric
-	wantStrict     []testutil.Metric
+	wantBestEffort []telegraf.Metric
+	wantStrict     []telegraf.Metric
 	werr           int // how many errors we expect in the strict mode?
 }
 

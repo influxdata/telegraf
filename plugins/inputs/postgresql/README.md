@@ -33,11 +33,11 @@ More information about the meaning of these metrics can be found in the [Postgre
 ## Configuration
 Specify address via a postgresql connection string:
 
-  `host=/run/postgresql user=telegraf database=telegraf`
-  
+  `host=localhost port=5432 user=telegraf database=telegraf`
+
 Or via an url matching:
 
-  `postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=[disable|verify-ca|verify-full]`
+  `postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=[disable|verify-ca|verify-full]`
 
 All connection parameters are optional. Without the dbname parameter, the driver will default to a database with the same name as the user. This dbname is just for instantiating a connection with the server and doesn't restrict the databases we are trying to grab metrics for.
 

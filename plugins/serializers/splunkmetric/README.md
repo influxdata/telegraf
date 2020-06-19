@@ -27,6 +27,34 @@ In the above snippet, the following keys are dimensions:
 * dc
 * user
 
+## Using Multimetric output
+
+Starting with Splunk Enterprise and Splunk Cloud 8.0, you can now send multiple metric values in one payload. This means, for example, that
+you can send all of your CPU stats in one JSON struct, an example event looks like:
+
+```javascript
+{
+  "time": 1572469920,
+  "event": "metric",
+  "host": "mono.local",
+  "fields": {
+    "class": "osx",
+    "cpu": "cpu0",
+    "metric_name:telegraf.cpu.usage_guest": 0,
+    "metric_name:telegraf.cpu.usage_guest_nice": 0,
+    "metric_name:telegraf.cpu.usage_idle": 65.1,
+    "metric_name:telegraf.cpu.usage_iowait": 0,
+    "metric_name:telegraf.cpu.usage_irq": 0,
+    "metric_name:telegraf.cpu.usage_nice": 0,
+    "metric_name:telegraf.cpu.usage_softirq": 0,
+    "metric_name:telegraf.cpu.usage_steal": 0,
+    "metric_name:telegraf.cpu.usage_system": 10.2,
+    "metric_name:telegraf.cpu.usage_user": 24.7,
+  }
+}
+```
+In order to enable this mode, there's a new option `splunkmetric_multimetric` that you set in the appropriate output module you plan on using.
+
 ## Using with the HTTP output
 
 To send this data to a Splunk HEC, you can use the HTTP output, there are some custom headers that you need to add
@@ -61,6 +89,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
    data_format = "splunkmetric"
     ## Provides time, index, source overrides for the HEC
    splunkmetric_hec_routing = true
+   # splunkmetric_multimetric = true
 
    ## Additional HTTP headers
     [outputs.http.headers]
@@ -73,7 +102,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 ## Overrides
 You can override the default values for the HEC token you are using by adding additional tags to the config file.
 
-The following aspects of the token can be overriden with tags:
+The following aspects of the token can be overridden with tags:
 * index
 * source
 
@@ -118,7 +147,6 @@ disabled = false
 INDEXED_EXTRACTIONS = json
 KV_MODE = none
 TIMESTAMP_FIELDS = time
-TIME_FORMAT = %s.%3N
 ```
 
 An example configuration of a file based output is:
@@ -134,5 +162,25 @@ An example configuration of a file based output is:
    ## more about them here:
    ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
    data_format = "splunkmetric"
-   hec_routing = false
+   splunkmetric_hec_routing = false
+   splunkmetric_multimetric = true
 ```
+
+## Non-numeric metric values
+
+Splunk supports only numeric field values, so serializer would silently drop metrics with the string values. For some cases it is possible to workaround using ENUM processor. Example, provided below doing this for the `docker_container_health.health_status` metric:
+
+```toml
+# splunkmetric does not support sting values
+[[processors.enum]]
+  namepass = ["docker_container_health"]
+  [[processors.enum.mapping]]
+    ## Name of the field to map
+    field = "health_status"
+    [processors.enum.mapping.value_mappings]
+    starting = 0
+    healthy = 1
+    unhealthy = 2
+    none = 3
+```
+

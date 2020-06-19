@@ -2,7 +2,6 @@ package jti_openconfig_telemetry
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -33,6 +32,8 @@ type OpenConfigTelemetry struct {
 	RetryDelay      internal.Duration `toml:"retry_delay"`
 	EnableTLS       bool              `toml:"enable_tls"`
 	internaltls.ClientConfig
+
+	Log telegraf.Logger
 
 	sensorsConfig   []sensorConfig
 	grpcClientConns []*grpc.ClientConn
@@ -243,7 +244,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			log.Printf("E! No sensors are specified")
+			m.Log.Error("No sensors are specified")
 			continue
 		}
 
@@ -257,7 +258,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			log.Printf("E! No valid sensors are specified")
+			m.Log.Error("No valid sensors are specified")
 			continue
 		}
 
@@ -294,13 +295,13 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					rpcStatus, _ := status.FromError(err)
 					// If service is currently unavailable and may come back later, retry
 					if rpcStatus.Code() != codes.Unavailable {
-						acc.AddError(fmt.Errorf("E! Could not subscribe to %s: %v", grpcServer,
+						acc.AddError(fmt.Errorf("could not subscribe to %s: %v", grpcServer,
 							err))
 						return
 					} else {
 						// Retry with delay. If delay is not provided, use default
 						if m.RetryDelay.Duration > 0 {
-							log.Printf("D! Retrying %s with timeout %v", grpcServer,
+							m.Log.Debugf("Retrying %s with timeout %v", grpcServer,
 								m.RetryDelay.Duration)
 							time.Sleep(m.RetryDelay.Duration)
 							continue
@@ -314,11 +315,11 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					if err != nil {
 						// If we encounter error in the stream, break so we can retry
 						// the connection
-						acc.AddError(fmt.Errorf("E! Failed to read from %s: %v", err, grpcServer))
+						acc.AddError(fmt.Errorf("failed to read from %s: %s", grpcServer, err))
 						break
 					}
 
-					log.Printf("D! Received from %s: %v", grpcServer, r)
+					m.Log.Debugf("Received from %s: %v", grpcServer, r)
 
 					// Create a point and add to batch
 					tags := make(map[string]string)
@@ -329,7 +330,7 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					dgroups := m.extractData(r, grpcServer)
 
 					// Print final data collection
-					log.Printf("D! Available collection for %s is: %v", grpcServer, dgroups)
+					m.Log.Debugf("Available collection for %s is: %v", grpcServer, dgroups)
 
 					tnow := time.Now()
 					// Iterate through data groups and add them
@@ -349,10 +350,9 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-
 	// Build sensors config
 	if m.splitSensorConfig() == 0 {
-		return fmt.Errorf("E! No valid sensor configuration available")
+		return fmt.Errorf("no valid sensor configuration available")
 	}
 
 	// Parse TLS config
@@ -376,15 +376,15 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		// Extract device address and port
 		grpcServer, grpcPort, err := net.SplitHostPort(server)
 		if err != nil {
-			log.Printf("E! Invalid server address: %v", err)
+			m.Log.Errorf("Invalid server address: %s", err.Error())
 			continue
 		}
 
 		grpcClientConn, err = grpc.Dial(server, opts...)
 		if err != nil {
-			log.Printf("E! Failed to connect to %s: %v", server, err)
+			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
 		} else {
-			log.Printf("D! Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
+			m.Log.Debugf("Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
 		}
 
 		// Add to the list of client connections
@@ -396,13 +396,13 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				&authentication.LoginRequest{UserName: m.Username,
 					Password: m.Password, ClientId: m.ClientID})
 			if loginErr != nil {
-				log.Printf("E! Could not initiate login check for %s: %v", server, loginErr)
+				m.Log.Errorf("Could not initiate login check for %s: %v", server, loginErr)
 				continue
 			}
 
 			// Check if the user is authenticated. Bail if auth error
 			if !loginReply.Result {
-				log.Printf("E! Failed to authenticate the user for %s", server)
+				m.Log.Errorf("Failed to authenticate the user for %s", server)
 				continue
 			}
 		}

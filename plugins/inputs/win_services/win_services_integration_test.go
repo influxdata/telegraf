@@ -47,7 +47,11 @@ func TestGatherErrors(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	ws := &WinServices{InvalidServices, &MgProvider{}}
+	ws := &WinServices{
+		Log:          testutil.Logger{},
+		ServiceNames: InvalidServices,
+		mgrProvider:  &MgProvider{},
+	}
 	require.Len(t, ws.ServiceNames, 3, "Different number of services")
 	var acc testutil.Accumulator
 	require.NoError(t, ws.Gather(&acc))

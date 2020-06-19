@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -11,26 +12,27 @@ import (
 )
 
 type File struct {
-	Files  []string `toml:"files"`
-	parser parsers.Parser
+	Files   []string `toml:"files"`
+	FileTag string   `toml:"file_tag"`
+	parser  parsers.Parser
 
 	filenames []string
 }
 
 const sampleConfig = `
-  ## Files to parse each interval.
-  ## These accept standard unix glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   /var/log/**.log     -> recursively find all .log files in /var/log
-  ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
-  ##   /var/log/apache.log -> only read the apache log file
-  files = ["/var/log/apache/access.log"]
+  ## Files to parse each interval.  Accept standard unix glob matching rules,
+  ## as well as ** to match recursive files and directories.
+  files = ["/tmp/metrics.out"]
 
   ## The dataformat to be read from files
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
+  ## to disable.
+  # file_tag = ""
 `
 
 // SampleConfig returns the default configuration of the Input
@@ -39,7 +41,7 @@ func (f *File) SampleConfig() string {
 }
 
 func (f *File) Description() string {
-	return "Reload and gather from file[s] on telegraf's interval."
+	return "Parse a complete file each interval"
 }
 
 func (f *File) Gather(acc telegraf.Accumulator) error {
@@ -54,6 +56,9 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, m := range metrics {
+			if f.FileTag != "" {
+				m.AddTag(f.FileTag, filepath.Base(k))
+			}
 			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}

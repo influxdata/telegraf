@@ -2,14 +2,18 @@ package nginx_upstream_check
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
@@ -148,6 +152,11 @@ func (check *NginxUpstreamCheck) gatherJsonData(url string, value interface{}) e
 	}
 
 	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		// ignore the err here; LimitReader returns io.EOF and we're not interested in read errors.
+		body, _ := ioutil.ReadAll(io.LimitReader(response.Body, 200))
+		return fmt.Errorf("%s returned HTTP status %s: %q", url, response.Status, body)
+	}
 
 	err = json.NewDecoder(response.Body).Decode(value)
 	if err != nil {

@@ -1,7 +1,6 @@
 package snmp_legacy
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -23,6 +22,8 @@ type Snmp struct {
 	Table             []Table
 	Subtable          []Subtable
 	SnmptranslateFile string
+
+	Log telegraf.Logger
 
 	nameToOid   map[string]string
 	initNode    Node
@@ -297,7 +298,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 
 		data, err := ioutil.ReadFile(s.SnmptranslateFile)
 		if err != nil {
-			log.Printf("E! Reading SNMPtranslate file error: %s", err)
+			s.Log.Errorf("Reading SNMPtranslate file error: %s", err.Error())
 			return err
 		} else {
 			for _, line := range strings.Split(string(data), "\n") {
@@ -395,16 +396,16 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		// only if len(s.OidInstanceMapping) == 0
 		if len(host.OidInstanceMapping) >= 0 {
 			if err := host.SNMPMap(acc, s.nameToOid, s.subTableMap); err != nil {
-				acc.AddError(fmt.Errorf("E! SNMP Mapping error for host '%s': %s", host.Address, err))
+				s.Log.Errorf("Mapping error for host %q: %s", host.Address, err.Error())
 				continue
 			}
 		}
 		// Launch Get requests
 		if err := host.SNMPGet(acc, s.initNode); err != nil {
-			acc.AddError(fmt.Errorf("E! SNMP Error for host '%s': %s", host.Address, err))
+			s.Log.Errorf("Error for host %q: %s", host.Address, err.Error())
 		}
 		if err := host.SNMPBulk(acc, s.initNode); err != nil {
-			acc.AddError(fmt.Errorf("E! SNMP Error for host '%s': %s", host.Address, err))
+			s.Log.Errorf("Error for host %q: %s", host.Address, err.Error())
 		}
 	}
 	return nil
@@ -801,7 +802,7 @@ func (h *Host) HandleResponse(
 					acc.AddFields(field_name, fields, tags)
 				case gosnmp.NoSuchObject, gosnmp.NoSuchInstance:
 					// Oid not found
-					log.Printf("E! [snmp input] Oid not found: %s", oid_key)
+					log.Printf("E! [inputs.snmp_legacy] oid %q not found", oid_key)
 				default:
 					// delete other data
 				}

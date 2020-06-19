@@ -50,6 +50,7 @@ You must capture at least one field per line.
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
   - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-epochmilli    (milliseconds since unix epoch)
   - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
 
@@ -156,6 +157,21 @@ Wed Apr 12 13:10:34 PST 2017 value=42
   grok_patterns = ["%{TS_UNIX:timestamp:ts-unix} value=%{NUMBER:value:int}"]
   grok_custom_patterns = '''
     TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
+  '''
+```
+
+This example input and config parses a file using a custom timestamp conversion that doesn't match any specific standard:
+
+```
+21/02/2017 13:10:34 value=42
+```
+
+```toml
+[[inputs.file]]
+  grok_patterns = ['%{MY_TIMESTAMP:timestamp:ts-"02/01/2006 15:04:05"} value=%{NUMBER:value:int}']
+
+  grok_custom_patterns = '''
+    MY_TIMESTAMP (?:\d{2}.\d{2}.\d{4} \d{2}:\d{2}:\d{2})
   '''
 ```
 

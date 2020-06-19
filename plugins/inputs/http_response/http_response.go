@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -20,19 +20,35 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	// defaultResponseBodyMaxSize is the default maximum response body size, in bytes.
+	// if the response body is over this size, we will raise a body_read_error.
+	defaultResponseBodyMaxSize = 32 * 1024 * 1024
+)
+
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address             string   // deprecated in 1.12
-	URLs                []string `toml:"urls"`
-	HTTPProxy           string   `toml:"http_proxy"`
-	Body                string
-	Method              string
-	ResponseTimeout     internal.Duration
-	Headers             map[string]string
-	FollowRedirects     bool
+	Address         string   // deprecated in 1.12
+	URLs            []string `toml:"urls"`
+	HTTPProxy       string   `toml:"http_proxy"`
+	Body            string
+	Method          string
+	ResponseTimeout internal.Duration
+	HTTPHeaderTags  map[string]string `toml:"http_header_tags"`
+	Headers         map[string]string
+	FollowRedirects bool
+	// Absolute path to file with Bearer token
+	BearerToken         string        `toml:"bearer_token"`
+	ResponseBodyField   string        `toml:"response_body_field"`
+	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
 	ResponseStringMatch string
 	Interface           string
+	// HTTP Basic Auth Credentials
+	Username string `toml:"username"`
+	Password string `toml:"password"`
 	tls.ClientConfig
+
+	Log telegraf.Logger
 
 	compiledStringMatch *regexp.Regexp
 	client              *http.Client
@@ -63,10 +79,27 @@ var sampleConfig = `
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
 
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
+
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
+
   ## Optional HTTP Request Body
   # body = '''
   # {'fake':'data'}
   # '''
+
+  ## Optional name of the field that will contain the body of the response. 
+  ## By default it is set to an empty String indicating that the body's content won't be added 
+  # response_body_field = ''
+
+  ## Maximum allowed HTTP response body size in bytes.
+  ## 0 means to use the default of 32MiB.
+  ## If the response body size exceeds this limit a "body_read_error" will be raised
+  # response_body_max_size = "32MiB"
 
   ## Optional substring or regex match in body of the response
   # response_string_match = "\"service_status\": \"up\""
@@ -83,6 +116,11 @@ var sampleConfig = `
   ## HTTP Request Headers (all values must be strings)
   # [inputs.http_response.headers]
   #   Host = "github.com"
+
+  ## Optional setting to map response http headers into tags
+  ## If the http header is not present on the request, no corresponding tag will be added
+  ## If multiple instances of the http header are present, only the first value will be used
+  # http_header_tags = {"HTTP_HEADER" = "TAG_NAME"}
 
   ## Interface to use when dialing an address
   # interface = "eth0"
@@ -141,7 +179,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 
 	if h.FollowRedirects == false {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			return ErrRedirectAttempted
+			return http.ErrUseLastResponse
 		}
 	}
 	return client, nil
@@ -226,11 +264,24 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		return nil, nil, err
 	}
 
+	if h.BearerToken != "" {
+		token, err := ioutil.ReadFile(h.BearerToken)
+		if err != nil {
+			return nil, nil, err
+		}
+		bearer := "Bearer " + strings.Trim(string(token), "\n")
+		request.Header.Add("Authorization", bearer)
+	}
+
 	for key, val := range h.Headers {
 		request.Header.Add(key, val)
 		if key == "Host" {
 			request.Host = val
 		}
+	}
+
+	if h.Username != "" || h.Password != "" {
+		request.SetBasicAuth(h.Username, h.Password)
 	}
 
 	// Start Timer
@@ -242,28 +293,19 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
 		// Log error
-		log.Printf("D! Network error while polling %s: %s", u, err.Error())
+		h.Log.Debugf("Network error while polling %s: %s", u, err.Error())
 
 		// Get error details
 		netErr := setError(err, fields, tags)
 
-		// If recognize the returnded error, get out
+		// If recognize the returned error, get out
 		if netErr != nil {
 			return fields, tags, nil
 		}
 
 		// Any error not recognized by `set_error` is considered a "connection_failed"
 		setResult("connection_failed", fields, tags)
-
-		// If the error is a redirect we continue processing and log the HTTP code
-		urlError, isUrlError := err.(*url.Error)
-		if !h.FollowRedirects && isUrlError && urlError.Err == ErrRedirectAttempted {
-			err = nil
-		} else {
-			// If the error isn't a timeout or a redirect stop
-			// processing the request
-			return fields, tags, nil
-		}
+		return fields, tags, nil
 	}
 
 	if _, ok := fields["response_time"]; !ok {
@@ -272,26 +314,46 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 
 	// This function closes the response body, as
 	// required by the net/http library
-	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
-	}()
+	defer resp.Body.Close()
+
+	// Add the response headers
+	for headerName, tag := range h.HTTPHeaderTags {
+		headerValues, foundHeader := resp.Header[headerName]
+		if foundHeader && len(headerValues) > 0 {
+			tags[tag] = headerValues[0]
+		}
+	}
 
 	// Set log the HTTP response code
 	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
-	// Check the response for a regex match.
-	if h.ResponseStringMatch != "" {
+	if h.ResponseBodyMaxSize.Size == 0 {
+		h.ResponseBodyMaxSize.Size = defaultResponseBodyMaxSize
+	}
+	bodyBytes, err := ioutil.ReadAll(io.LimitReader(resp.Body, h.ResponseBodyMaxSize.Size+1))
+	// Check first if the response body size exceeds the limit.
+	if err == nil && int64(len(bodyBytes)) > h.ResponseBodyMaxSize.Size {
+		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
+		return fields, tags, nil
+	} else if err != nil {
+		h.setBodyReadError(fmt.Sprintf("Failed to read body of HTTP Response : %s", err.Error()), bodyBytes, fields, tags)
+		return fields, tags, nil
+	}
 
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Printf("D! Failed to read body of HTTP Response : %s", err)
-			setResult("body_read_error", fields, tags)
-			fields["response_string_match"] = 0
+	// Add the body of the response if expected
+	if len(h.ResponseBodyField) > 0 {
+		// Check that the content of response contains only valid utf-8 characters.
+		if !utf8.Valid(bodyBytes) {
+			h.setBodyReadError("The body of the HTTP Response is not a valid utf-8 string", bodyBytes, fields, tags)
 			return fields, tags, nil
 		}
+		fields[h.ResponseBodyField] = string(bodyBytes)
+	}
+	fields["content_length"] = len(bodyBytes)
 
+	// Check the response for a regex match.
+	if h.ResponseStringMatch != "" {
 		if h.compiledStringMatch.Match(bodyBytes) {
 			setResult("success", fields, tags)
 			fields["response_string_match"] = 1
@@ -304,6 +366,16 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	}
 
 	return fields, tags, nil
+}
+
+// Set result in case of a body read error
+func (h *HTTPResponse) setBodyReadError(error_msg string, bodyBytes []byte, fields map[string]interface{}, tags map[string]string) {
+	h.Log.Debugf(error_msg)
+	setResult("body_read_error", fields, tags)
+	fields["content_length"] = len(bodyBytes)
+	if h.ResponseStringMatch != "" {
+		fields["response_string_match"] = 0
+	}
 }
 
 // Gather gets all metric fields and tags and returns any errors it encounters
@@ -330,7 +402,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		if h.Address == "" {
 			h.URLs = []string{"http://localhost"}
 		} else {
-			log.Printf("W! [inputs.http_response] 'address' deprecated in telegraf 1.12, please use 'urls'")
+			h.Log.Warn("'address' deprecated in telegraf 1.12, please use 'urls'")
 			h.URLs = []string{h.Address}
 		}
 	}

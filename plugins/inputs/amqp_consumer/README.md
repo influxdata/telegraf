@@ -1,6 +1,6 @@
 # AMQP Consumer Input Plugin
 
-This plugin provides a consumer for use with AMQP 0-9-1, a promenent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
+This plugin provides a consumer for use with AMQP 0-9-1, a prominent implementation of this protocol being [RabbitMQ](https://www.rabbitmq.com/).
 
 Metrics are read from a topic exchange using the configured queue and binding_key.
 
@@ -41,7 +41,7 @@ The following defaults are known to work with RabbitMQ:
 
   ## Additional exchange arguments.
   # exchange_arguments = { }
-  # exchange_arguments = {"hash_propery" = "timestamp"}
+  # exchange_arguments = {"hash_property" = "timestamp"}
 
   ## AMQP queue name
   queue = "telegraf"

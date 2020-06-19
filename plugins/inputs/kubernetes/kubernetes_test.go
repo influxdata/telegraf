@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/influxdata/telegraf/filter"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,13 +13,23 @@ import (
 
 func TestKubernetesStats(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, response)
+		if r.RequestURI == "/stats/summary" {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, responseStatsSummery)
+		}
+		if r.RequestURI == "/pods" {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, responsePods)
+		}
+
 	}))
 	defer ts.Close()
 
+	labelFilter, _ := filter.NewIncludeExcludeFilter([]string{"app", "superkey"}, nil)
+
 	k := &Kubernetes{
-		URL: ts.URL,
+		URL:         ts.URL,
+		labelFilter: labelFilter,
 	}
 
 	var acc testutil.Accumulator
@@ -35,7 +46,7 @@ func TestKubernetesStats(t *testing.T) {
 		"memory_major_page_faults":   int64(13),
 		"rootfs_available_bytes":     int64(84379979776),
 		"rootfs_capacity_bytes":      int64(105553100800),
-		"logsfs_avaialble_bytes":     int64(84379979776),
+		"logsfs_available_bytes":     int64(84379979776),
 		"logsfs_capacity_bytes":      int64(105553100800),
 	}
 	tags := map[string]string{
@@ -80,7 +91,7 @@ func TestKubernetesStats(t *testing.T) {
 		"rootfs_available_bytes":     int64(84379979776),
 		"rootfs_capacity_bytes":      int64(105553100800),
 		"rootfs_used_bytes":          int64(57344),
-		"logsfs_avaialble_bytes":     int64(84379979776),
+		"logsfs_available_bytes":     int64(84379979776),
 		"logsfs_capacity_bytes":      int64(105553100800),
 		"logsfs_used_bytes":          int64(24576),
 	}
@@ -89,6 +100,8 @@ func TestKubernetesStats(t *testing.T) {
 		"container_name": "foocontainer",
 		"namespace":      "foons",
 		"pod_name":       "foopod",
+		"app":            "foo",
+		"superkey":       "foobar",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_container", fields, tags)
 
@@ -103,7 +116,7 @@ func TestKubernetesStats(t *testing.T) {
 		"rootfs_available_bytes":     int64(0),
 		"rootfs_capacity_bytes":      int64(0),
 		"rootfs_used_bytes":          int64(0),
-		"logsfs_avaialble_bytes":     int64(0),
+		"logsfs_available_bytes":     int64(0),
 		"logsfs_capacity_bytes":      int64(0),
 		"logsfs_used_bytes":          int64(0),
 	}
@@ -112,6 +125,8 @@ func TestKubernetesStats(t *testing.T) {
 		"container_name": "stopped-container",
 		"namespace":      "foons",
 		"pod_name":       "stopped-pod",
+		"app":            "foo-stop",
+		"superkey":       "superfoo",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_container", fields, tags)
 
@@ -143,7 +158,39 @@ func TestKubernetesStats(t *testing.T) {
 
 }
 
-var response = `
+var responsePods = `
+{
+  "kind": "PodList",
+  "apiVersion": "v1",
+  "metadata": {},
+  "items": [
+    {
+      "metadata": {
+        "name": "foopod",
+        "namespace": "foons",
+        "labels": {
+          "superkey": "foobar",
+          "app": "foo",
+          "exclude": "exclude0"
+        }
+      }
+    },
+    {
+      "metadata": {
+        "name": "stopped-pod",
+        "namespace": "foons",
+        "labels": {
+          "superkey": "superfoo",
+          "app": "foo-stop",
+          "exclude": "exclude1"
+        }
+      }
+    }
+  ]
+}
+`
+
+var responseStatsSummery = `
 {
   "node": {
    "nodeName": "node1",
