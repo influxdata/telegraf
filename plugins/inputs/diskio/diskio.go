@@ -25,10 +25,10 @@ type DiskIO struct {
 
 	Log telegraf.Logger
 
-	infoCache    map[string]diskInfoCache
-	deviceFilter filter.Filter
-	initialized  bool
-	DiskIOAggregates	bool	`toml:"diskio_aggregates"`
+	infoCache        map[string]diskInfoCache
+	deviceFilter     filter.Filter
+	initialized      bool
+	DiskIOAggregates bool `toml:"diskio_aggregates"`
 }
 
 func (_ *DiskIO) Description() string {
