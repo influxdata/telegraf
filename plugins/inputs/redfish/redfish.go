@@ -3,12 +3,13 @@ package redfish
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"io/ioutil"
-	"net/http"
 )
 
 type Cpu struct {
@@ -94,25 +95,25 @@ func (r *Redfish) Description() string {
 }
 
 var redfishConfig = `
-  ##Server  url
-  address = "https://192.0.0.1"
+  ## Redfish API Base URL.
+  address = "https://127.0.0.1:5000"
 
-  ##Username,  Password   for   hardware   server
-  username = "test"
-  password = "test"
+  ## Credentials for the Redfish API.
+  username = "root"
+  password = "password123456"
 
-  ##Resource  Id   for   redfish   APIs
+  ## System Id to collect data for in Redfish APIs.
   computer_system_id="System.Embedded.1"
 
-  ##Optional TLS Config
-  #tls_ca = "/etc/telegraf/ca.pem"
-  #tls_cert = "/etc/telegraf/cert.pem"
-  #tls_key = "/etc/telegraf/key.pem"
-  ## Use TLS but skip chain & host verification
-  #insecure_skip_verify = false
-
-  ## Amount   of   time   allowed   to   complete   the   HTTP   request
+  ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (r *Redfish) SampleConfig() string {
