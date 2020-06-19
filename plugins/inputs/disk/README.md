@@ -52,7 +52,7 @@ docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/pro
     - inodes_free (integer, files)
     - inodes_total (integer, files)
     - inodes_used (integer, files)
-- storage_agg (optional)
+- disk_agg (optional)
   - fields
     - free (integer, bytes)
     - total (integer, bytes)

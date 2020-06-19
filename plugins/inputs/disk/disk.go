@@ -15,10 +15,10 @@ type DiskStats struct {
 	// Legacy support
 	Mountpoints []string `toml:"mountpoints"`
 
-	MountPoints []string `toml:"mount_points"`
-	IgnoreFS    []string `toml:"ignore_fs"`
-	AggregateCounts	bool	`toml:"aggregate_counts"`
-	AggDropMounts	[]string	`toml:"aggregate_drops"`
+	MountPoints     []string `toml:"mount_points"`
+	IgnoreFS        []string `toml:"ignore_fs"`
+	AggregateCounts bool     `toml:"aggregate_counts"`
+	AggDropMounts   []string `toml:"aggregate_drops"`
 }
 
 func (_ *DiskStats) Description() string {
@@ -54,13 +54,13 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
 	aggFields := map[string]interface{}{
-		"total":	uint64(0),
-		"free":	uint64(0),
-		"used":	uint64(0),
-		"used_percent":	uint64(0),
-		"inodes_total":	uint64(0),
-		"inodes_free":	uint64(0),
-		"inodes_used":	uint64(0),
+		"total":        uint64(0),
+		"free":         uint64(0),
+		"used":         uint64(0),
+		"used_percent": uint64(0),
+		"inodes_total": uint64(0),
+		"inodes_free":  uint64(0),
+		"inodes_used":  uint64(0),
 	}
 	for i, du := range disks {
 		if du.Total == 0 {
@@ -110,7 +110,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	}
 	if s.AggregateCounts {
 		aggFields["used_percent"] = (float64(aggFields["used"].(uint64)) / (float64(aggFields["used"].(uint64)) + float64(aggFields["free"].(uint64)))) * 100
-		acc.AddGauge("storage_agg", aggFields, nil)
+		acc.AddGauge("disk_agg", aggFields, nil)
 	}
 
 	return nil
