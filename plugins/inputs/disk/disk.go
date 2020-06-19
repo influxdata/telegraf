@@ -17,6 +17,8 @@ type DiskStats struct {
 
 	MountPoints []string `toml:"mount_points"`
 	IgnoreFS    []string `toml:"ignore_fs"`
+	AggregateStats	bool	`toml:"aggregate_stats"`
+	AggDropMounts	[]string	`toml:"aggregate_drops"`
 }
 
 func (_ *DiskStats) Description() string {
@@ -30,6 +32,11 @@ var diskSampleConfig = `
 
   ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
+
+  ## collect aggregate (summed) stats of all discovered mounts on the host
+  aggregate_counts = false
+  ## drop specified mount points for aggregation
+  aggregate_drops = ["/"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -46,7 +53,15 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %s", err)
 	}
-
+	aggFields := map[string]interface{}{
+		"total":	0,
+		"free":	0,
+		"used":	0,
+		"used_percent":	0,
+		"inodes_total":	0,
+		"inodes_free":	0,
+		"inodes_used":	0,
+	}
 	for i, du := range disks {
 		if du.Total == 0 {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
@@ -75,6 +90,27 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			"inodes_used":  du.InodesUsed,
 		}
 		acc.AddGauge("disk", fields, tags)
+		if s.AggregateStats {
+			addAgg := true
+			for possibleMount := range s.AggDropMounts {
+				if possibleMount == du.Path {
+					addAgg = false
+					break
+				}
+			}
+			if addAgg {
+				aggFields["total"] = int64(aggFields["total"]) + du.Total
+				aggFields["free"] = int64(aggFields["free"]) + du.Free
+				aggFields["used"] = int64(aggFields["used"]) + du.Used
+				aggFields["inodes_total"] = int64(aggFields["inodes_total"]) + du.InodesTotal
+				aggFields["inodes_free"] = int64(aggFields["indoes_free"]) + du.InodesFree
+				aggFields["inodes_used"] = int64(aggFields["indoes_used"]) + du.InodesUsed
+			}
+		}
+	}
+	if s.AggregateStats {
+		aggFields["used_percent"] = (int64(aggFields["used"]) / (int64(aggFields["used"]) + int64(aggFields["free"]))) * 100
+		acc.AddGauge("storage_agg", fields, nil)
 	}
 
 	return nil
