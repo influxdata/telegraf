@@ -10,13 +10,14 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 )
 
 const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
 var (
 	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
-	hypenChars   = strings.NewReplacer(
+	hyphenChars  = strings.NewReplacer(
 		"/", "-",
 		"@", "-",
 		"*", "-",
@@ -29,10 +30,17 @@ var (
 	fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
 )
 
+type GraphiteTemplate struct {
+	Filter filter.Filter
+	Value  string
+}
+
 type GraphiteSerializer struct {
 	Prefix     string
 	Template   string
 	TagSupport bool
+	Separator  string
+	Templates  []*GraphiteTemplate
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -48,7 +56,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			if fieldValue == "" {
 				continue
 			}
-			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, fieldName)
+			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, s.Separator, fieldName)
 			metricString := fmt.Sprintf("%s %s %d\n",
 				// insert "field" section of template
 				bucket,
@@ -59,7 +67,15 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 			out = append(out, point...)
 		}
 	default:
-		bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
+		template := s.Template
+		for _, graphiteTemplate := range s.Templates {
+			if graphiteTemplate.Filter.Match(metric.Name()) {
+				template = graphiteTemplate.Value
+				break
+			}
+		}
+
+		bucket := SerializeBucketName(metric.Name(), metric.Tags(), template, s.Prefix)
 		if bucket == "" {
 			return out, nil
 		}
@@ -185,6 +201,45 @@ func SerializeBucketName(
 	return prefix + "." + strings.Join(out, ".")
 }
 
+func InitGraphiteTemplates(templates []string) ([]*GraphiteTemplate, string, error) {
+	var graphiteTemplates []*GraphiteTemplate
+	defaultTemplate := ""
+
+	for i, t := range templates {
+		parts := strings.Fields(t)
+
+		if len(parts) == 0 {
+			return nil, "", fmt.Errorf("missing template at position: %d", i)
+		}
+		if len(parts) == 1 {
+			if parts[0] == "" {
+				return nil, "", fmt.Errorf("missing template at position: %d", i)
+			} else {
+				// Override default template
+				defaultTemplate = t
+				continue
+			}
+		}
+
+		if len(parts) > 2 {
+			return nil, "", fmt.Errorf("invalid template format: '%s'", t)
+		}
+
+		tFilter, err := filter.Compile([]string{parts[0]})
+
+		if err != nil {
+			return nil, "", err
+		}
+
+		graphiteTemplates = append(graphiteTemplates, &GraphiteTemplate{
+			Filter: tFilter,
+			Value:  parts[1],
+		})
+	}
+
+	return graphiteTemplates, defaultTemplate, nil
+}
+
 // SerializeBucketNameWithTags will take the given measurement name and tags and
 // produce a graphite bucket. It will use the Graphite11Serializer.
 // http://graphite.readthedocs.io/en/latest/tags.html
@@ -192,6 +247,7 @@ func SerializeBucketNameWithTags(
 	measurement string,
 	tags map[string]string,
 	prefix string,
+	separator string,
 	field string,
 ) string {
 	var out string
@@ -205,13 +261,13 @@ func SerializeBucketNameWithTags(
 	sort.Strings(tagsCopy)
 
 	if prefix != "" {
-		out = prefix + "."
+		out = prefix + separator
 	}
 
 	out += measurement
 
 	if field != "value" {
-		out += "." + field
+		out += separator + field
 	}
 
 	out = sanitize(out)
@@ -254,8 +310,8 @@ func buildTags(tags map[string]string) string {
 }
 
 func sanitize(value string) string {
-	// Apply special hypenation rules to preserve backwards compatibility
-	value = hypenChars.Replace(value)
+	// Apply special hyphenation rules to preserve backwards compatibility
+	value = hyphenChars.Replace(value)
 	// Apply rule to drop some chars to preserve backwards compatibility
 	value = dropChars.Replace(value)
 	// Replace any remaining illegal chars

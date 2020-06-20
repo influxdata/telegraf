@@ -84,7 +84,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = "Telegraf/" + internal.Version()
+		userAgent = internal.ProductToken()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+2)
@@ -210,7 +210,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(*c.url, c.Organization, bucket)
+	loc, err := makeWriteURL(*c.url, c.Organization, bucket)
 	if err != nil {
 		return err
 	}
@@ -221,13 +221,14 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 	}
 	defer reader.Close()
 
-	req, err := c.makeWriteRequest(url, reader)
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
 		return err
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -347,5 +348,5 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }

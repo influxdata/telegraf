@@ -145,6 +145,7 @@ type Config struct {
 	CSVTagColumns        []string `toml:"csv_tag_columns"`
 	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
 	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
+	CSVTimezone          string   `toml:"csv_timezone"`
 	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 
 	// FormData configuration
@@ -234,6 +235,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.CSVMeasurementColumn,
 			config.CSVTimestampColumn,
 			config.CSVTimestampFormat,
+			config.CSVTimezone,
 			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
@@ -262,6 +264,7 @@ func newCSVParser(metricName string,
 	nameColumn string,
 	timestampColumn string,
 	timestampFormat string,
+	timezone string,
 	defaultTags map[string]string) (Parser, error) {
 
 	if headerRowCount == 0 && len(columnNames) == 0 {
@@ -300,6 +303,7 @@ func newCSVParser(metricName string,
 		MeasurementColumn: nameColumn,
 		TimestampColumn:   timestampColumn,
 		TimestampFormat:   timestampFormat,
+		Timezone:          timezone,
 		DefaultTags:       defaultTags,
 		TimeFunc:          time.Now,
 	}

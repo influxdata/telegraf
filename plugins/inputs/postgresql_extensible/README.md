@@ -14,11 +14,11 @@ The example below has two queries are specified, with the following parameters:
 ```
 [[inputs.postgresql_extensible]]
   # specify address via a url matching:
-  # postgres://[pqgotest[:password]]@localhost[/dbname]?sslmode=...
+  # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
   # or a simple string:
-  #   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  #   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
   #
-  # All connection parameters are optional.  
+  # All connection parameters are optional.
   # Without the dbname parameter, the driver will default to a database
   # with the same name as the user. This dbname is just for instantiating a
   # connection with the server and doesn't restrict the databases we are trying
@@ -45,7 +45,7 @@ The example below has two queries are specified, with the following parameters:
   # the where clause (aka with the dbname)
   #
   # The script option can be used to specify the .sql file path.
-  # If script and sqlquery options specified at same time, sqlquery will be used 
+  # If script and sqlquery options specified at same time, sqlquery will be used
   #
   # the tagvalue field is used to define custom tags (separated by comas).
   # the query is expected to return columns which match the names of the
@@ -71,7 +71,7 @@ The example below has two queries are specified, with the following parameters:
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
+using postgresql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
 
 # Sample Queries :
 - telegraf.conf postgresql_extensible queries (assuming that you have configured

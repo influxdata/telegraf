@@ -1,6 +1,8 @@
 package kube_inventory
 
 import (
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +14,8 @@ import (
 
 func TestStatefulSet(t *testing.T) {
 	cli := &client{}
+	selectInclude := []string{}
+	selectExclude := []string{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 	tests := []struct {
@@ -45,6 +49,12 @@ func TestStatefulSet(t *testing.T) {
 								},
 								Spec: &v1.StatefulSetSpec{
 									Replicas: toInt32Ptr(3),
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"select1": "s1",
+											"select2": "s2",
+										},
+									},
 								},
 								Metadata: &metav1.ObjectMeta{
 									Generation: toInt64Ptr(332),
@@ -77,6 +87,8 @@ func TestStatefulSet(t *testing.T) {
 						Tags: map[string]string{
 							"namespace":        "ns1",
 							"statefulset_name": "sts1",
+							"selector_select1": "s1",
+							"selector_select2": "s2",
 						},
 					},
 				},
@@ -87,8 +99,11 @@ func TestStatefulSet(t *testing.T) {
 
 	for _, v := range tests {
 		ks := &KubernetesInventory{
-			client: cli,
+			client:          cli,
+			SelectorInclude: selectInclude,
+			SelectorExclude: selectExclude,
 		}
+		ks.createSelectorFilters()
 		acc := new(testutil.Accumulator)
 		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
 			err := ks.gatherStatefulSet(*ss, acc)
@@ -118,6 +133,172 @@ func TestStatefulSet(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+func TestStatefulSetSelectorFilter(t *testing.T) {
+	cli := &client{}
+	now := time.Now()
+	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
+
+	responseMap := map[string]interface{}{
+		"/statefulsets/": &v1.StatefulSetList{
+			Items: []*v1.StatefulSet{
+				{
+					Status: &v1.StatefulSetStatus{
+						Replicas:           toInt32Ptr(2),
+						CurrentReplicas:    toInt32Ptr(4),
+						ReadyReplicas:      toInt32Ptr(1),
+						UpdatedReplicas:    toInt32Ptr(3),
+						ObservedGeneration: toInt64Ptr(119),
+					},
+					Spec: &v1.StatefulSetSpec{
+						Replicas: toInt32Ptr(3),
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"select1": "s1",
+								"select2": "s2",
+							},
+						},
+					},
+					Metadata: &metav1.ObjectMeta{
+						Generation: toInt64Ptr(332),
+						Namespace:  toStrPtr("ns1"),
+						Name:       toStrPtr("sts1"),
+						Labels: map[string]string{
+							"lab1": "v1",
+							"lab2": "v2",
+						},
+						CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name     string
+		handler  *mockHandler
+		hasError bool
+		include  []string
+		exclude  []string
+		expected map[string]string
+	}{
+		{
+			name: "nil filters equals all selectors",
+			handler: &mockHandler{
+				responseMap: responseMap,
+			},
+			hasError: false,
+			include:  nil,
+			exclude:  nil,
+			expected: map[string]string{
+				"selector_select1": "s1",
+				"selector_select2": "s2",
+			},
+		},
+		{
+			name: "empty filters equals all selectors",
+			handler: &mockHandler{
+				responseMap: responseMap,
+			},
+			hasError: false,
+			include:  []string{},
+			exclude:  []string{},
+			expected: map[string]string{
+				"selector_select1": "s1",
+				"selector_select2": "s2",
+			},
+		},
+		{
+			name: "include filter equals only include-matched selectors",
+			handler: &mockHandler{
+				responseMap: responseMap,
+			},
+			hasError: false,
+			include:  []string{"select1"},
+			exclude:  []string{},
+			expected: map[string]string{
+				"selector_select1": "s1",
+			},
+		},
+		{
+			name: "exclude filter equals only non-excluded selectors (overrides include filter)",
+			handler: &mockHandler{
+				responseMap: responseMap,
+			},
+			hasError: false,
+			include:  []string{},
+			exclude:  []string{"select2"},
+			expected: map[string]string{
+				"selector_select1": "s1",
+			},
+		},
+		{
+			name: "include glob filter equals only include-matched selectors",
+			handler: &mockHandler{
+				responseMap: responseMap,
+			},
+			hasError: false,
+			include:  []string{"*1"},
+			exclude:  []string{},
+			expected: map[string]string{
+				"selector_select1": "s1",
+			},
+		},
+		{
+			name: "exclude glob filter equals only non-excluded selectors",
+			handler: &mockHandler{
+				responseMap: responseMap,
+			},
+			hasError: false,
+			include:  []string{},
+			exclude:  []string{"*2"},
+			expected: map[string]string{
+				"selector_select1": "s1",
+			},
+		},
+		{
+			name: "exclude glob filter equals only non-excluded selectors",
+			handler: &mockHandler{
+				responseMap: responseMap,
+			},
+			hasError: false,
+			include:  []string{},
+			exclude:  []string{"*2"},
+			expected: map[string]string{
+				"selector_select1": "s1",
+			},
+		},
+	}
+	for _, v := range tests {
+		ks := &KubernetesInventory{
+			client: cli,
+		}
+		ks.SelectorInclude = v.include
+		ks.SelectorExclude = v.exclude
+		ks.createSelectorFilters()
+		acc := new(testutil.Accumulator)
+		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1.StatefulSetList)).Items {
+			err := ks.gatherStatefulSet(*ss, acc)
+			if err != nil {
+				t.Errorf("Failed to gather ss - %s", err.Error())
+			}
+		}
+
+		// Grab selector tags
+		actual := map[string]string{}
+		for _, metric := range acc.Metrics {
+			for key, val := range metric.Tags {
+				if strings.Contains(key, "selector_") {
+					actual[key] = val
+				}
+			}
+		}
+
+		if !reflect.DeepEqual(v.expected, actual) {
+			t.Fatalf("actual selector tags (%v) do not match expected selector tags (%v)", actual, v.expected)
 		}
 	}
 }

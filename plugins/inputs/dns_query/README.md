@@ -16,7 +16,7 @@ The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wi
   # domains = ["."]
 
   ## Query record type.
-  ## Posible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
+  ## Possible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
   # record_type = "A"
 
   ## Dns server port.

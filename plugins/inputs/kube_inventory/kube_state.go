@@ -34,8 +34,13 @@ type KubernetesInventory struct {
 	ResourceInclude   []string          `toml:"resource_include"`
 	MaxConfigMapAge   internal.Duration `toml:"max_config_map_age"`
 
+	SelectorInclude []string `toml:"selector_include"`
+	SelectorExclude []string `toml:"selector_exclude"`
+
 	tls.ClientConfig
 	client *client
+
+	selectorFilter filter.Filter
 }
 
 var sampleConfig = `
@@ -64,6 +69,12 @@ var sampleConfig = `
   ## Optional Resources to include when gathering
   ## Overrides resource_exclude if both set.
   # resource_include = [ "deployments", "nodes", "statefulsets" ]
+
+  ## selectors to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all selectors as tags
+  ## selector_exclude overrides selector_include if both set.
+  # selector_include = []
+  # selector_exclude = ["*"]
 
   ## Optional TLS Config
   # tls_ca = "/path/to/cafile"
@@ -110,6 +121,11 @@ func (ki *KubernetesInventory) Init() error {
 // Gather collects kubernetes metrics from a given URL.
 func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 	resourceFilter, err := filter.NewIncludeExcludeFilter(ki.ResourceInclude, ki.ResourceExclude)
+	if err != nil {
+		return err
+	}
+
+	ki.selectorFilter, err = filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
 	if err != nil {
 		return err
 	}
@@ -170,6 +186,15 @@ func convertQuantity(s string, m float64) int64 {
 	return int64(f * m)
 }
 
+func (ki *KubernetesInventory) createSelectorFilters() error {
+	filter, err := filter.NewIncludeExcludeFilter(ki.SelectorInclude, ki.SelectorExclude)
+	if err != nil {
+		return err
+	}
+	ki.selectorFilter = filter
+	return nil
+}
+
 var (
 	daemonSetMeasurement             = "kubernetes_daemonset"
 	deploymentMeasurement            = "kubernetes_deployment"
@@ -188,6 +213,8 @@ func init() {
 		return &KubernetesInventory{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
 			Namespace:       "default",
+			SelectorInclude: []string{},
+			SelectorExclude: []string{"*"},
 		}
 	})
 }

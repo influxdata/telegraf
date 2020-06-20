@@ -27,6 +27,7 @@ type Instrumental struct {
 	Prefix     string
 	DataFormat string
 	Template   string
+	Templates  []string
 	Timeout    internal.Duration
 	Debug      bool
 
@@ -50,7 +51,7 @@ var sampleConfig = `
   template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
-  ## Display Communcation to Instrumental
+  ## Display Communication to Instrumental
   debug = false
 `
 
@@ -85,7 +86,7 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
-	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false)
+	s, err := serializers.NewGraphiteSerializer(i.Prefix, i.Template, false, ".", i.Templates)
 	if err != nil {
 		return err
 	}

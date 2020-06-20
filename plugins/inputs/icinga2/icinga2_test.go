@@ -16,6 +16,7 @@ func TestGatherServicesStatus(t *testing.T) {
             "attrs": {
                 "check_command": "check-bgp-juniper-netconf",
                 "display_name": "eq-par.dc2.fr",
+                "host_name": "someserverfqdn.net",
                 "name": "ef017af8-c684-4f3f-bb20-0dfe9fcd3dbe",
                 "state": 0
             },
@@ -46,7 +47,8 @@ func TestGatherServicesStatus(t *testing.T) {
 				"display_name":  "eq-par.dc2.fr",
 				"check_command": "check-bgp-juniper-netconf",
 				"state":         "ok",
-				"source":        "localhost",
+				"source":        "someserverfqdn.net",
+				"server":        "localhost",
 				"port":          "5665",
 				"scheme":        "https",
 			},
@@ -100,7 +102,8 @@ func TestGatherHostsStatus(t *testing.T) {
 				"display_name":  "apache",
 				"check_command": "ping",
 				"state":         "critical",
-				"source":        "localhost",
+				"source":        "webserver",
+				"server":        "localhost",
 				"port":          "5665",
 				"scheme":        "https",
 			},

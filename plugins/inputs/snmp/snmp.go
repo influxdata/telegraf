@@ -804,9 +804,9 @@ func fieldConvert(conv string, v interface{}) (interface{}, error) {
 		case uint64:
 			v = int64(vt)
 		case []byte:
-			v, _ = strconv.Atoi(string(vt))
+			v, _ = strconv.ParseInt(string(vt), 10, 64)
 		case string:
-			v, _ = strconv.Atoi(vt)
+			v, _ = strconv.ParseInt(vt, 10, 64)
 		}
 		return v, nil
 	}
@@ -962,9 +962,9 @@ func SnmpTranslate(oid string) (mibName string, oidNum string, oidText string, c
 		// We could speed it up by putting a lock in snmpTranslateCache and then
 		// returning it immediately, and multiple callers would then release the
 		// snmpTranslateCachesLock and instead wait on the individual
-		// snmpTranlsation.Lock to release. But I don't know that the extra complexity
+		// snmpTranslation.Lock to release. But I don't know that the extra complexity
 		// is worth it. Especially when it would slam the system pretty hard if lots
-		// of lookups are being perfomed.
+		// of lookups are being performed.
 
 		stc.mibName, stc.oidNum, stc.oidText, stc.conversion, stc.err = snmpTranslateCall(oid)
 		snmpTranslateCaches[oid] = stc

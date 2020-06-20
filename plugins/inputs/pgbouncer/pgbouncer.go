@@ -24,7 +24,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   ##
   ## All connection parameters are optional.
   ##

@@ -32,6 +32,11 @@ It can output data in any of the [supported output formats](https://github.com/i
   ## Defaults to the OS configuration.
   # keep_alive_period = "5m"
 
+  ## Content encoding for message payloads, can be set to "gzip" or to
+  ## "identity" to apply no encoding.
+  ##
+  # content_encoding = "identity"
+
   ## Data format to generate.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:

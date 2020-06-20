@@ -136,7 +136,7 @@ func (h *Health) Init() error {
 
 // Connect starts the HTTP server.
 func (h *Health) Connect() error {
-	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, onAuthError)
+	authHandler := internal.AuthHandler(h.BasicUsername, h.BasicPassword, "health", onAuthError)
 
 	h.server = &http.Server{
 		Addr:         h.ServiceAddress,
@@ -168,8 +168,7 @@ func (h *Health) Connect() error {
 	return nil
 }
 
-func onAuthError(rw http.ResponseWriter, code int) {
-	http.Error(rw, http.StatusText(code), code)
+func onAuthError(_ http.ResponseWriter) {
 }
 
 func (h *Health) listen() (net.Listener, error) {
