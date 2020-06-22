@@ -86,6 +86,7 @@
 #### Bugfixes
 
 - [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve the performance of the procstat input.
+- [#7658](https://github.com/influxdata/telegraf/pull/7658): Fix ping exit code handling on non-Linux.
 
 ## v1.14.4 [2020-06-09]
 
