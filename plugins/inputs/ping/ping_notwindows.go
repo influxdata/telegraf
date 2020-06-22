@@ -21,9 +21,10 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 
 	out, err := p.pingHost(p.Binary, 60.0, p.args(u, runtime.GOOS)...)
 	if err != nil {
-		// Some implementations of ping return a 1 exit code on
+		// Some implementations of ping return a non-zero exit code on
 		// timeout, if this occurs we will not exit and try to parse
 		// the output.
+		// Linux iputils-ping returns 1, BSD-derived ping returns 2.
 		status := -1
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
@@ -32,7 +33,17 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 			}
 		}
 
-		if status != 1 {
+		var timeoutExitCode int
+		switch runtime.GOOS {
+		case "freebsd", "netbsd", "openbsd", "darwin":
+			timeoutExitCode = 2
+		case "linux":
+			timeoutExitCode = 1
+		default:
+			timeoutExitCode = 1
+		}
+
+		if status != timeoutExitCode {
 			// Combine go err + stderr output
 			out = strings.TrimSpace(out)
 			if len(out) > 0 {
