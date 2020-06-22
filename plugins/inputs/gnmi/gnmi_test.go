@@ -36,7 +36,7 @@ func TestParsePath(t *testing.T) {
 
 	parsed, err = parsePath("", "/foo[[", "")
 	assert.Nil(t, parsed)
-	assert.Equal(t, errors.New("Invalid GNMI path: /foo[[/"), err)
+	assert.Equal(t, errors.New("Invalid gNMI path: /foo[[/"), err)
 }
 
 type MockServer struct {
@@ -98,7 +98,7 @@ func TestWaitError(t *testing.T) {
 	wg.Wait()
 
 	require.Contains(t, acc.Errors,
-		errors.New("aborted GNMI subscription: rpc error: code = Unknown desc = testerror"))
+		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = testerror"))
 }
 
 func TestUsernamePassword(t *testing.T) {
@@ -156,7 +156,7 @@ func TestUsernamePassword(t *testing.T) {
 	wg.Wait()
 
 	require.Contains(t, acc.Errors,
-		errors.New("aborted GNMI subscription: rpc error: code = Unknown desc = success"))
+		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = success"))
 }
 
 func mockGNMINotification() *gnmi.Notification {
@@ -441,7 +441,7 @@ func TestRedial(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 
-	// Restart GNMI server at the same address
+	// Restart gNMI server at the same address
 	listener, err = net.Listen("tcp", listener.Addr().String())
 	require.NoError(t, err)
 
