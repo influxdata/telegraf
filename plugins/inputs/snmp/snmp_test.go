@@ -141,7 +141,7 @@ func TestTableInit(t *testing.T) {
 			{Oid: "TEST::description", Name: "description", IsTag: true},
 		},
 	}
-	err := tbl.init()
+	err := tbl.Init()
 	require.NoError(t, err)
 
 	assert.Equal(t, "testTable", tbl.Name)
@@ -243,7 +243,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 567, gs.Port)
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
@@ -252,14 +252,14 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
-	gs = gsc.(gosnmpWrapper)
+	gs = gsc.(GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
 
 	gsc, err = s.getConnection(2)
 	require.NoError(t, err)
-	gs = gsc.(gosnmpWrapper)
+	gs = gsc.(GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
@@ -280,7 +280,7 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 	wg.Add(1)
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 56789, gs.Port)
 	assert.Equal(t, "tcp", gs.Transport)
@@ -318,7 +318,7 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(GosnmpWrapper)
 	assert.Equal(t, gs.Version, gosnmp.Version3)
 	sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 	assert.Equal(t, "1.2.3.4", gsc.Host())
@@ -394,7 +394,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := gosnmpWrapper{gs}
+	gsw := GosnmpWrapper{gs}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
 	srvr.Close()
 	wg.Wait()
@@ -442,7 +442,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := gosnmpWrapper{gs}
+	gsw := GosnmpWrapper{gs}
 	_, err = gsw.Get([]string{".1.0.0"})
 	srvr.Close()
 	wg.Wait()

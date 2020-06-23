@@ -144,7 +144,7 @@ func (s *Snmp) init() error {
 	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
-		if err := s.Tables[i].init(); err != nil {
+		if err := s.Tables[i].Init(); err != nil {
 			return Errorf(err, "initializing table %s", s.Tables[i].Name)
 		}
 	}
@@ -181,8 +181,8 @@ type Table struct {
 	initialized bool
 }
 
-// init() builds & initializes the nested fields.
-func (t *Table) init() error {
+// Init() builds & initializes the nested fields.
+func (t *Table) Init() error {
 	if t.initialized {
 		return nil
 	}
@@ -546,20 +546,20 @@ type snmpConnection interface {
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
 }
 
-// gosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
-type gosnmpWrapper struct {
+// GosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.
+type GosnmpWrapper struct {
 	*gosnmp.GoSNMP
 }
 
 // Host returns the value of GoSNMP.Target.
-func (gsw gosnmpWrapper) Host() string {
+func (gsw GosnmpWrapper) Host() string {
 	return gsw.Target
 }
 
 // Walk wraps GoSNMP.Walk() or GoSNMP.BulkWalk(), depending on whether the
 // connection is using SNMPv1 or newer.
 // Also, if any error is encountered, it will just once reconnect and try again.
-func (gsw gosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
+func (gsw GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 	var err error
 	// On error, retry once.
 	// Unfortunately we can't distinguish between an error returned by gosnmp, and one returned by the walk function.
@@ -581,7 +581,7 @@ func (gsw gosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
 
 // Get wraps GoSNMP.GET().
 // If any error is encountered, it will just once reconnect and try again.
-func (gsw gosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
+func (gsw GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 	var err error
 	var pkt *gosnmp.SnmpPacket
 	for i := 0; i < 2; i++ {
@@ -607,7 +607,7 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 
 	agent := s.Agents[idx]
 
-	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
+	gs := GosnmpWrapper{&gosnmp.GoSNMP{}}
 	s.connectionCache[idx] = gs
 
 	if !strings.Contains(agent, "://") {
