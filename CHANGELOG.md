@@ -67,6 +67,7 @@
 - [#7596](https://github.com/influxdata/telegraf/pull/7596): Add ability to collect response body as field with http_response.
 - [#7267](https://github.com/influxdata/telegraf/pull/7267): Add ability to add selectors as tags in kube_inventory.
 - [#7712](https://github.com/influxdata/telegraf/pull/7712): Add counter type to sqlserver perfmon collector.
+- [#7575](https://github.com/influxdata/telegraf/pull/7575): Add missing nvme attributes to smart plugin.
 
 #### Bugfixes
 
