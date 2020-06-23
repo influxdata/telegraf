@@ -714,7 +714,7 @@ Transport protocol:   SAS (SPL-3)
 Local Time is:        Wed Apr 17 15:01:28 2019 PDT
 SMART support is:     Available - device has SMART capability.
 SMART support is:     Enabled
-Temp$rature Warning:  Disabled or Not Supported
+Temperature Warning:  Disabled or Not Supported
 
 === START OF READ SMART DATA SECTION ===
 SMART Health Status: OK

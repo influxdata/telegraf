@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"path"
 	"strings"
@@ -332,7 +333,7 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 	case *gnmi.TypedValue_BytesVal:
 		value = val.BytesVal
 	case *gnmi.TypedValue_DecimalVal:
-		value = val.DecimalVal
+		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
 	case *gnmi.TypedValue_FloatVal:
 		value = val.FloatVal
 	case *gnmi.TypedValue_IntVal:
@@ -514,7 +515,7 @@ const sampleConfig = `
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
   ##
   ## origin usually refers to a (YANG) data model implemented by the device
-  ## and path to a specific substructe inside it that should be subscribed to (similar to an XPath)
+  ## and path to a specific substructure inside it that should be subscribed to (similar to an XPath)
   ## YANG models can be found e.g. here: https://github.com/YangModels/yang/tree/master/vendor/cisco/xr
   origin = "openconfig-interfaces"
   path = "/interfaces/interface/state/counters"

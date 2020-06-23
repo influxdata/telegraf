@@ -17,43 +17,93 @@ const (
 	Histogram
 )
 
+// Tag represents a single tag key and value.
 type Tag struct {
 	Key   string
 	Value string
 }
 
+// Field represents a single field key and value.
 type Field struct {
 	Key   string
 	Value interface{}
 }
 
+// Metric is the type of data that is processed by Telegraf.  Input plugins,
+// and to a lesser degree, Processor and Aggregator plugins create new Metrics
+// and Output plugins write them.
 type Metric interface {
-	// Getting data structure functions
+	// Name is the primary identifier for the Metric and corresponds to the
+	// measurement in the InfluxDB data model.
 	Name() string
+
+	// Tags returns the tags as a map.  This method is deprecated, use TagList instead.
 	Tags() map[string]string
+
+	// TagList returns the tags as a slice ordered by the tag key in lexical
+	// bytewise ascending order.  The returned value should not be modified,
+	// use the AddTag or RemoveTag methods instead.
 	TagList() []*Tag
+
+	// Fields returns the fields as a map.  This method is deprecated, use FieldList instead.
 	Fields() map[string]interface{}
+
+	// FieldList returns the fields as a slice in an undefined order.  The
+	// returned value should not be modified, use the AddField or RemoveField
+	// methods instead.
 	FieldList() []*Field
+
+	// Time returns the timestamp of the metric.
 	Time() time.Time
+
+	// Type returns a general type for the entire metric that describes how you
+	// might interpret, aggregate the values.
+	//
+	// This method may be removed in the future and its use is discouraged.
 	Type() ValueType
 
-	// Name functions
+	// SetName sets the metric name.
 	SetName(name string)
+
+	// AddPrefix adds a string to the front of the metric name.  It is
+	// equivalent to m.SetName(prefix + m.Name()).
+	//
+	// This method is deprecated, use SetName instead.
 	AddPrefix(prefix string)
+
+	// AddSuffix appends a string to the back of the metric name.  It is
+	// equivalent to m.SetName(m.Name() + suffix).
+	//
+	// This method is deprecated, use SetName instead.
 	AddSuffix(suffix string)
 
-	// Tag functions
+	// GetTag returns the value of a tag and a boolean to indicate if it was set.
 	GetTag(key string) (string, bool)
+
+	// HasTag returns true if the tag is set on the Metric.
 	HasTag(key string) bool
+
+	// AddTag sets the tag on the Metric.  If the Metric already has the tag
+	// set then the current value is replaced.
 	AddTag(key, value string)
+
+	// RemoveTag removes the tag if it is set.
 	RemoveTag(key string)
 
-	// Field functions
+	// GetField returns the value of a field and a boolean to indicate if it was set.
 	GetField(key string) (interface{}, bool)
+
+	// HasField returns true if the field is set on the Metric.
 	HasField(key string) bool
+
+	// AddField sets the field on the Metric.  If the Metric already has the field
+	// set then the current value is replaced.
 	AddField(key string, value interface{})
+
+	// RemoveField removes the tag if it is set.
 	RemoveField(key string)
 
+	// SetTime sets the timestamp of the Metric.
 	SetTime(t time.Time)
 
 	// HashID returns an unique identifier for the series.
@@ -73,7 +123,13 @@ type Metric interface {
 	// to any output.
 	Drop()
 
-	// Mark Metric as an aggregate
+	// SetAggregate indicates the metric is an aggregated value.
+	//
+	// This method may be removed in the future and its use is discouraged.
 	SetAggregate(bool)
+
+	// IsAggregate returns true if the Metric is an aggregate.
+	//
+	// This method may be removed in the future and its use is discouraged.
 	IsAggregate() bool
 }

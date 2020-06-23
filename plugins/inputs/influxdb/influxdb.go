@@ -242,7 +242,7 @@ func (i *InfluxDB) gatherURL(
 						"pause_total_ns":  m.PauseTotalNs,
 						"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
 						"num_gc":          m.NumGC,
-						"gcc_pu_fraction": m.GCCPUFraction,
+						"gc_cpu_fraction": m.GCCPUFraction,
 					},
 					map[string]string{
 						"url": url,

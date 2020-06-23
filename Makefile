@@ -1,5 +1,5 @@
 ifeq ($(OS), Windows_NT)
-	VERSION := $(shell git describe --exact-match --tags 2>nil)
+	VERSION := $(shell git describe --exact-match --tags 2>nul)
 	HOME := $(HOMEPATH)
 	CGO_ENABLED ?= 0
 	export CGO_ENABLED
@@ -72,6 +72,7 @@ test-windows:
 	go test -short ./plugins/inputs/win_services/...
 	go test -short ./plugins/inputs/procstat/...
 	go test -short ./plugins/inputs/ntpq/...
+	go test -short ./plugins/processors/port_name/...
 
 .PHONY: vet
 vet:
@@ -99,6 +100,10 @@ check: fmtcheck vet
 .PHONY: test-all
 test-all: fmtcheck vet
 	go test ./...
+
+.PHONY: check-deps
+check-deps:
+	./scripts/check-deps.sh
 
 .PHONY: package
 package:

@@ -41,7 +41,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   #
   ## All connection parameters are optional.  #
   ## Without the dbname parameter, the driver will default to a database
@@ -153,7 +153,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		columns     []string
 	)
 
-	// Retreiving the database version
+	// Retrieving the database version
 	query = `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
 	if err = p.DB.QueryRow(query).Scan(&db_version); err != nil {
 		db_version = 0

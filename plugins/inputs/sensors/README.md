@@ -18,7 +18,7 @@ This plugin collects sensor metrics with the `sensors` executable from the lm-se
 ```
 
 ### Measurements & Fields:
-Fields are created dynamicaly depending on the sensors. All fields are float.
+Fields are created dynamically depending on the sensors. All fields are float.
 
 ### Tags:
 

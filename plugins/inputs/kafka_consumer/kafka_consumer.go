@@ -6,9 +6,11 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -83,6 +85,7 @@ const (
 	defaultMaxUndeliveredMessages = 1000
 	defaultMaxMessageLen          = 1000000
 	defaultConsumerGroup          = "telegraf_metrics_consumers"
+	reconnectDelay                = 5 * time.Second
 )
 
 type empty struct{}
@@ -259,6 +262,7 @@ func (k *KafkaConsumer) Start(acc telegraf.Accumulator) error {
 			err := k.consumer.Consume(ctx, k.Topics, handler)
 			if err != nil {
 				acc.AddError(err)
+				internal.SleepContext(ctx, reconnectDelay)
 			}
 		}
 		err = k.consumer.Close()
