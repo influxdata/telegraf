@@ -1,8 +1,10 @@
 package redfish
 
 import (
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -36,13 +38,18 @@ func TestDellApis(t *testing.T) {
 
 	defer ts.Close()
 
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
 	expected_metrics := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":       "CPU1 Temp",
 				"source":     "tpa-hostname",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -62,7 +69,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan1A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -80,7 +87,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan1B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -98,7 +105,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan2A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -116,7 +123,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan2B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -134,7 +141,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan3A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -152,7 +159,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan3B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -170,7 +177,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan4A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -188,7 +195,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan4B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -206,7 +213,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan5A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -224,7 +231,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan5B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -242,7 +249,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan6A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -260,7 +267,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan6B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -278,7 +285,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan7A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -296,7 +303,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan7B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -314,7 +321,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan8A",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -332,7 +339,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board Fan8B",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -350,7 +357,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "PS1 Status",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -371,7 +378,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board DIMM PG",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -389,7 +396,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board NDC PG",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -408,7 +415,7 @@ func TestDellApis(t *testing.T) {
 			map[string]string{
 				"source":     "tpa-hostname",
 				"name":       "System Board PS1 PG FAIL",
-				"address":    ts.URL,
+				"address":    address,
 				"datacenter": "",
 				"health":     "OK",
 				"rack":       "",
@@ -431,7 +438,7 @@ func TestDellApis(t *testing.T) {
 	plugin.Init()
 	var acc testutil.Accumulator
 
-	err := plugin.Gather(&acc)
+	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("redfish_thermal_temperatures"))
 	testutil.RequireMetricsEqual(t, expected_metrics, acc.GetTelegrafMetrics(),
@@ -463,13 +470,18 @@ func TestHPApis(t *testing.T) {
 
 	defer ts.Close()
 
+	u, err := url.Parse(ts.URL)
+	require.NoError(t, err)
+	address, _, err := net.SplitHostPort(u.Host)
+	require.NoError(t, err)
+
 	expected_metrics_hp := []telegraf.Metric{
 		testutil.MustMetric(
 			"redfish_thermal_temperatures",
 			map[string]string{
 				"name":    "01-Inlet Ambient",
 				"source":  "tpa-hostname",
-				"address": ts.URL,
+				"address": address,
 				"health":  "OK",
 				"state":   "Enabled",
 			},
@@ -485,7 +497,7 @@ func TestHPApis(t *testing.T) {
 			map[string]string{
 				"name":    "44-P/S 2 Zone",
 				"source":  "tpa-hostname",
-				"address": ts.URL,
+				"address": address,
 				"health":  "OK",
 				"state":   "Enabled",
 			},
@@ -501,7 +513,7 @@ func TestHPApis(t *testing.T) {
 			map[string]string{
 				"source":  "tpa-hostname",
 				"name":    "Fan 1",
-				"address": ts.URL,
+				"address": address,
 				"health":  "OK",
 				"state":   "Enabled",
 			},
@@ -515,7 +527,7 @@ func TestHPApis(t *testing.T) {
 			map[string]string{
 				"source":  "tpa-hostname",
 				"name":    "Fan 2",
-				"address": ts.URL,
+				"address": address,
 				"health":  "OK",
 				"state":   "Enabled",
 			},
@@ -529,7 +541,7 @@ func TestHPApis(t *testing.T) {
 			map[string]string{
 				"source":  "tpa-hostname",
 				"name":    "Fan 3",
-				"address": ts.URL,
+				"address": address,
 				"health":  "OK",
 				"state":   "Enabled",
 			},
@@ -543,7 +555,7 @@ func TestHPApis(t *testing.T) {
 			map[string]string{
 				"source":  "tpa-hostname",
 				"name":    "HpeServerPowerSupply",
-				"address": ts.URL,
+				"address": address,
 				"health":  "OK",
 				"state":   "Enabled",
 			},
@@ -559,7 +571,7 @@ func TestHPApis(t *testing.T) {
 			map[string]string{
 				"source":  "tpa-hostname",
 				"name":    "HpeServerPowerSupply",
-				"address": ts.URL,
+				"address": address,
 				"health":  "OK",
 				"state":   "Enabled",
 			},
@@ -581,7 +593,7 @@ func TestHPApis(t *testing.T) {
 	hp_plugin.Init()
 	var hp_acc testutil.Accumulator
 
-	err := hp_plugin.Gather(&hp_acc)
+	err = hp_plugin.Gather(&hp_acc)
 	require.NoError(t, err)
 	require.True(t, hp_acc.HasMeasurement("redfish_thermal_temperatures"))
 	testutil.RequireMetricsEqual(t, expected_metrics_hp, hp_acc.GetTelegrafMetrics(),

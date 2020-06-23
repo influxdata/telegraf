@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -240,6 +241,11 @@ func (r *Redfish) getThermal(ref string) (*Thermal, error) {
 }
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
+	address, _, err := net.SplitHostPort(r.baseURL.Host)
+	if err != nil {
+		address = r.baseURL.Host
+	}
+
 	system, err := r.getComputerSystem(r.ComputerSystemId)
 	if err != nil {
 		return err
@@ -258,7 +264,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range thermal.Temperatures {
 			tags := map[string]string{}
-			tags["address"] = r.Address
+			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
@@ -280,7 +286,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		for _, j := range thermal.Fans {
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
-			tags["address"] = r.Address
+			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
@@ -309,7 +315,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.PowerSupplies {
 			tags := map[string]string{}
-			tags["address"] = r.Address
+			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
@@ -332,7 +338,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 
 		for _, j := range power.Voltages {
 			tags := map[string]string{}
-			tags["address"] = r.Address
+			tags["address"] = address
 			tags["name"] = j.Name
 			tags["source"] = system.Hostname
 			tags["state"] = j.Status.State
