@@ -22,6 +22,7 @@
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+- [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
 
 #### New Outputs
 

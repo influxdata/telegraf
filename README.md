@@ -374,6 +374,7 @@ For documentation on the latest development code see the [documentation index][d
 * [regex](/plugins/processors/regex)
 * [rename](/plugins/processors/rename)
 * [s2geo](/plugins/processors/s2geo)
+* [starlark](/plugins/processors/starlark)
 * [strings](/plugins/processors/strings)
 * [tag_limit](/plugins/processors/tag_limit)
 * [template](/plugins/processors/template)
