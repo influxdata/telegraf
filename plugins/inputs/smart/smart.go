@@ -103,10 +103,48 @@ var (
 			},
 		},
 		"Available Spare": {
-			Name: "Available_Spare",
-			Parse: func(fields, deviceFields map[string]interface{}, str string) error {
-				return parseCommaSeparatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
-			},
+			Name:  "Available_Spare",
+			Parse: parsePercentageInt,
+		},
+		"Available Spare Threshold": {
+			Name:  "Available_Spare_Threshold",
+			Parse: parsePercentageInt,
+		},
+		"Percentage Used": {
+			Name:  "Percentage_Used",
+			Parse: parsePercentageInt,
+		},
+		"Data Units Read": {
+			Name:  "Data_Units_Read",
+			Parse: parseDataUnits,
+		},
+		"Data Units Written": {
+			Name:  "Data_Units_Written",
+			Parse: parseDataUnits,
+		},
+		"Host Read Commands": {
+			Name:  "Host_Read_Commands",
+			Parse: parseCommaSeparatedInt,
+		},
+		"Host Write Commands": {
+			Name:  "Host_Write_Commands",
+			Parse: parseCommaSeparatedInt,
+		},
+		"Controller Busy Time": {
+			Name:  "Controller_Busy_Time",
+			Parse: parseCommaSeparatedInt,
+		},
+		"Unsafe Shutdowns": {
+			Name:  "Unsafe_Shutdowns",
+			Parse: parseCommaSeparatedInt,
+		},
+		"Warning  Comp. Temperature Time": {
+			Name:  "Warning_Temperature_Time",
+			Parse: parseCommaSeparatedInt,
+		},
+		"Critical Comp. Temperature Time": {
+			Name:  "Critical_Temperature_Time",
+			Parse: parseCommaSeparatedInt,
 		},
 	}
 )
@@ -430,6 +468,15 @@ func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error 
 	fields["raw_value"] = i
 
 	return nil
+}
+
+func parsePercentageInt(fields, deviceFields map[string]interface{}, str string) error {
+	return parseCommaSeparatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
+}
+
+func parseDataUnits(fields, deviceFields map[string]interface{}, str string) error {
+	units := strings.Fields(str)[0]
+	return parseCommaSeparatedInt(fields, deviceFields, units)
 }
 
 func parseTemperature(fields, deviceFields map[string]interface{}, str string) error {
