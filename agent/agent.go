@@ -508,7 +508,9 @@ func (a *Agent) runProcessors(
 
 			acc := NewAccumulator(unit.processor, unit.dst)
 			for m := range unit.src {
-				unit.processor.Add(m, acc)
+				if err := unit.processor.Add(m, acc); err != nil {
+					acc.AddError(err)
+				}
 			}
 			unit.processor.Stop()
 			close(unit.dst)

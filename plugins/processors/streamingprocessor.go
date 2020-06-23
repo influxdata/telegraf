@@ -31,10 +31,11 @@ func (sp *streamingProcessor) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (sp *streamingProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) {
+func (sp *streamingProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	for _, m := range sp.processor.Apply(m) {
 		acc.AddMetric(m)
 	}
+	return nil
 }
 
 func (sp *streamingProcessor) Stop() error {

@@ -78,21 +78,21 @@ func (r *RunningProcessor) Start(acc telegraf.Accumulator) error {
 	return r.Processor.Start(acc)
 }
 
-func (r *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) {
+func (r *RunningProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	if ok := r.Config.Filter.Select(m); !ok {
 		// pass downstream
 		acc.AddMetric(m)
-		return
+		return nil
 	}
 
 	r.Config.Filter.Modify(m)
 	if len(m.FieldList()) == 0 {
 		// drop metric
 		r.metricFiltered(m)
-		return
+		return nil
 	}
 
-	r.Processor.Add(m, acc)
+	return r.Processor.Add(m, acc)
 }
 
 func (r *RunningProcessor) Stop() {

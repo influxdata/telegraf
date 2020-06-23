@@ -20,7 +20,7 @@ type StreamingProcessor interface {
 	Start(acc Accumulator) error
 
 	// Add is called for each metric to be processed.
-	Add(metric Metric, acc Accumulator)
+	Add(metric Metric, acc Accumulator) error
 
 	// Stop gives you a callback to free resources.
 	// by the time Stop is called, the input stream will have already been closed
