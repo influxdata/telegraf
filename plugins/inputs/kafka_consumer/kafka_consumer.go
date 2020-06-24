@@ -74,6 +74,15 @@ const sampleConfig = `
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
 
+  ## The maximum amount of time the consumer expects a message takes to
+  ## process for the user. If writing to the Messages channel takes longer
+  ## than this, that partition will stop fetching more messages until it
+  ## can proceed again.
+  ##
+  ## Note that, since the Messages channel is buffered, the actual grace time is
+  ## (MaxProcessingTime * ChannelBufferSize). Defaults - MaxProcessingTime: 100ms, ChannelBufferSize: 256.
+  # max_processing_time = 100
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -97,6 +106,7 @@ type KafkaConsumer struct {
 	ConsumerGroup          string   `toml:"consumer_group"`
 	MaxMessageLen          int      `toml:"max_message_len"`
 	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
+	MaxProcessingTime      int      `toml:"max_processing_time"`
 	Offset                 string   `toml:"offset"`
 	BalanceStrategy        string   `toml:"balance_strategy"`
 	Topics                 []string `toml:"topics"`
@@ -227,6 +237,12 @@ func (k *KafkaConsumer) Init() error {
 		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 	default:
 		return fmt.Errorf("invalid balance strategy %q", k.BalanceStrategy)
+	}
+
+	if k.MaxProcessingTime < 0 {
+		return fmt.Errorf("invalid MaxProcessingTime - negative number: %v", k.MaxProcessingTime)
+	} else if k.MaxProcessingTime > 0 {
+		config.Consumer.MaxProcessingTime = time.Duration(k.MaxProcessingTime) * time.Millisecond
 	}
 
 	if k.ConsumerCreator == nil {

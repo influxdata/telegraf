@@ -155,6 +155,14 @@ func TestInit(t *testing.T) {
 				require.True(t, plugin.config.Net.TLS.Enable)
 			},
 		},
+		{
+			name: "negative MaxProcessingTime",
+			plugin: &KafkaConsumer{
+				MaxProcessingTime: -1,
+				Log:               testutil.Logger{},
+			},
+			initError: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
