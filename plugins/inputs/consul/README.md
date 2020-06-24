@@ -38,6 +38,20 @@ report those stats already using StatsD protocol if needed.
   # When tags are formatted like "key:value" with ":" as a delimiter then
   # they will be splitted and reported as proper key:value in Telegraf
   # tag_delimiter = ":"
+
+  ## Service Tag filtering
+  # This is very useful on large clusters with a lot of services and tags, where many can be dropped.
+  # e.g.: The following drops all tags containing only numbers.
+  # service_tag_include = []
+  # service_tag_exclude = ["[0-9]*"]
+  # e.g.: The following drops *all* tags.
+  # service_tag_include = []
+  # service_tag_exclude = ["*"] 
+
+  ## Disable gathering check id from Consul on health checks
+  # This is useful in dynamic environments, where check_id is generated,
+  # and thus most (or all) check_id's are some uuid-ish name with low meaning.
+  # tagexclude = ["check_id"]
 ```
 
 ### Metrics:
@@ -46,7 +60,8 @@ report those stats already using StatsD protocol if needed.
   - tags:
   	- node (node that check/service is registered on)
   	- service_name
-  	- check_id
+  	- check_id 
+    - all service tags attached to a health check (unless filtered)
   - fields:
     - check_name
     - service_id

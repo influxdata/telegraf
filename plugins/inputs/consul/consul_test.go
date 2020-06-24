@@ -43,6 +43,7 @@ func TestGatherHealthCheck(t *testing.T) {
 	var acc testutil.Accumulator
 
 	consul := &Consul{}
+	initSetup(consul)
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
@@ -72,6 +73,65 @@ func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
 	consul := &Consul{
 		TagDelimiter: ":",
 	}
+	initSetup(consul)
+	consul.GatherHealthCheck(&acc, sampleChecks)
+
+	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
+}
+
+func TestGatherHealthCheckWithServiceCheckInclude(t *testing.T) {
+	expectedFields := map[string]interface{}{
+		"check_name": "foo.health",
+		"status":     "passing",
+		"passing":    1,
+		"critical":   0,
+		"warning":    0,
+		"service_id": "foo.123",
+	}
+
+	expectedTags := map[string]string{
+		"node":         "localhost",
+		"service_name": "foo",
+		"check_id":     "foo.health123",
+		"bar":          "bar",
+		"env:sandbox":  "env:sandbox",
+	}
+
+	var acc testutil.Accumulator
+
+	consul := &Consul{
+		ServiceTagInclude: []string{"env*", "bar"},
+		ServiceTagExclude: []string{""},
+	}
+	initSetup(consul)
+	consul.GatherHealthCheck(&acc, sampleChecks)
+
+	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
+}
+
+func TestGatherHealthCheckWithServiceCheckExcludeAll(t *testing.T) {
+	expectedFields := map[string]interface{}{
+		"check_name": "foo.health",
+		"status":     "passing",
+		"passing":    1,
+		"critical":   0,
+		"warning":    0,
+		"service_id": "foo.123",
+	}
+
+	expectedTags := map[string]string{
+		"node":         "localhost",
+		"service_name": "foo",
+		"check_id":     "foo.health123",
+	}
+
+	var acc testutil.Accumulator
+
+	consul := &Consul{
+		ServiceTagInclude: []string{},
+		ServiceTagExclude: []string{"*"},
+	}
+	initSetup(consul)
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
 	acc.AssertContainsTaggedFields(t, "consul_health_checks", expectedFields, expectedTags)
