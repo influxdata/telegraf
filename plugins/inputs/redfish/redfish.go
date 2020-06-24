@@ -85,6 +85,8 @@ type Power struct {
 		ReadingVolts           *float64
 		UpperThresholdCritical *float64
 		UpperThresholdFatal    *float64
+		LowerThresholdCritical *float64
+		LowerThresholdFatal    *float64
 		Status                 Status
 	}
 }
@@ -92,17 +94,21 @@ type Power struct {
 type Thermal struct {
 	Fans []struct {
 		Name                   string
-		Reading                *int
+		Reading                *int64
 		ReadingUnits           *string
-		UpperThresholdCritical *int
-		UpperThresholdFatal    *int
+		UpperThresholdCritical *int64
+		UpperThresholdFatal    *int64
+		LowerThresholdCritical *int64
+		LowerThresholdFatal    *int64
 		Status                 Status
 	}
 	Temperatures []struct {
 		Name                   string
-		ReadingCelsius         *int
-		UpperThresholdCritical *int
-		UpperThresholdFatal    *int
+		ReadingCelsius         *float64
+		UpperThresholdCritical *float64
+		UpperThresholdFatal    *float64
+		LowerThresholdCritical *float64
+		LowerThresholdFatal    *float64
 		Status                 Status
 	}
 }
