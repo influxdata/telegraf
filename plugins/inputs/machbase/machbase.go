@@ -63,7 +63,7 @@ const (
 	gStmtQuery    = `SELECT * FROM V$STMT`
 )
 
-// sampleConfig
+// sample Config
 const sampleConfig = `
     ## An array of server connect server of the form:
     ## host:port
