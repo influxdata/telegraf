@@ -286,6 +286,8 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			fields["reading_celsius"] = j.ReadingCelsius
 			fields["upper_threshold_critical"] = j.UpperThresholdCritical
 			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+			fields["lower_threshold_critical"] = j.LowerThresholdCritical
+			fields["lower_threshold_fatal"] = j.LowerThresholdFatal
 			acc.AddFields("redfish_thermal_temperatures", fields, tags)
 		}
 
@@ -307,6 +309,8 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			if j.ReadingUnits != nil && *j.ReadingUnits == "RPM" {
 				fields["upper_threshold_critical"] = j.UpperThresholdCritical
 				fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+				fields["lower_threshold_critical"] = j.LowerThresholdCritical
+				fields["lower_threshold_fatal"] = j.LowerThresholdFatal
 				fields["reading_rpm"] = j.Reading
 			} else {
 				fields["reading_percent"] = j.Reading
@@ -360,6 +364,8 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 			fields["reading_volts"] = j.ReadingVolts
 			fields["upper_threshold_critical"] = j.UpperThresholdCritical
 			fields["upper_threshold_fatal"] = j.UpperThresholdFatal
+			fields["lower_threshold_critical"] = j.LowerThresholdCritical
+			fields["lower_threshold_fatal"] = j.LowerThresholdFatal
 			acc.AddFields("redfish_power_voltages", fields, tags)
 		}
 	}
