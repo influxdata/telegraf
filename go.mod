@@ -62,6 +62,7 @@ require (
 	github.com/google/go-cmp v0.4.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-querystring v1.0.0 // indirect
+	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.6.2
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -145,6 +146,7 @@ require (
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/ldap.v3 v3.1.0
+	gopkg.in/linkedin/goavro.v1 v1.0.5 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/yaml.v2 v2.2.5
