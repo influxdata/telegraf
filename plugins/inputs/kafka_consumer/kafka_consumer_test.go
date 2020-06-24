@@ -289,7 +289,7 @@ func TestConsumerGroupHandler_ConsumeClaim(t *testing.T) {
 	}
 
 	go func() {
-		err = cg.ConsumeClaim(session, claim)
+		err := cg.ConsumeClaim(session, claim)
 		require.NoError(t, err)
 	}()
 
