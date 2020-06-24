@@ -3,12 +3,13 @@ package avro
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/linkedin/goavro"
-	"log"
-	"time"
 )
 
 type Parser struct {
@@ -25,9 +26,9 @@ type Parser struct {
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	schemaRegistry := NewSchemaRegistry(p.SchemaRegistry)
 
-	schemaId := int(binary.BigEndian.Uint32(buf[1:5]))
+	schemaID := int(binary.BigEndian.Uint32(buf[1:5]))
 
-	schema, err := schemaRegistry.getSchema(schemaId)
+	schema, err := schemaRegistry.getSchema(schemaID)
 
 	if err != nil {
 		log.Printf("E! AvroParser: %s", err)
@@ -99,7 +100,7 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("Cannot cast native to map[string]interface{}!")
 	}
 
-	metricTime, err := p.parseTimestamp(flatten(deep[p.Timestamp]))
+	metricTime, err := p.parseTimestamp(nestedValue(deep[p.Timestamp]))
 	if err != nil {
 		log.Printf("E! AvroParser: %s", err)
 		return nil, err
@@ -114,7 +115,7 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 
 	for _, tag := range p.Tags {
 		if value, ok := deep[tag]; ok {
-			tags[tag] = fmt.Sprintf("%v", flatten(value))
+			tags[tag] = fmt.Sprintf("%v", nestedValue(value))
 		} else {
 			log.Printf("I! AvroParser: tag %s null", tag)
 		}
@@ -122,7 +123,7 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 
 	for _, field := range p.Fields {
 		if value, ok := deep[field]; ok {
-			fields[field] = flatten(value)
+			fields[field] = nestedValue(value)
 		} else {
 			log.Printf("I! AvroParser: field %s null", field)
 		}
@@ -143,10 +144,10 @@ func (p *Parser) createMetric(native interface{}) (telegraf.Metric, error) {
 	}
 }
 
-func flatten(deep interface{}) interface{} {
+func nestedValue(deep interface{}) interface{} {
 	if m, ok := deep.(map[string]interface{}); ok {
 		for _, value := range m {
-			return flatten(value)
+			return nestedValue(value)
 		}
 	}
 	return deep
