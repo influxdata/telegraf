@@ -68,7 +68,7 @@ _response_ end
 
 const nsddsExample = `_response_ begin mmpmon nsd_ds
 _mmpmon::nsd_ds_ _n_ 10.10.10.1 _nn_ node1.example.com _rc_ 0 _t_ 1427920124 _tu_ 292780 _dev_ rg_node1_rg1 _d_ rg_node1_rg1
-_r_ _ops_ 138448 _b_ 70563132928 _tw_ 2219.600760 _qt_ 2219.714397 _stw_ 0.000002 _sqt_ 0.000002 _ltw_ 0.230000 _lqt_ 0.230000 _stwpb_ 0.000017 _sqtpb_ 0.000017 _ltwpb_ 0.000021 _lqtpb_ 0.000021
+_r_ _ops_ 138448 _b_ 563132928 _tw_ 2219.600760 _qt_ 2219.714397 _stw_ 0.000002 _sqt_ 0.000002 _ltw_ 0.230000 _lqt_ 0.230000 _stwpb_ 0.000017 _sqtpb_ 0.000017 _ltwpb_ 0.000021 _lqtpb_ 0.000021
 _w_ _ops_ 9406 _b_ 202620928 _tw_ 3.652243 _qt_ 3.652243 _stw_ 0.000145 _sqt_ 0.000145 _ltw_ 0.141563 _lqt_ 0.141563 _stwpb_ 0.000211 _sqtpb_ 0.000211 _ltwpb_ 0.000609 _lqtpb_ 0.000609
 _response_ end
 `
@@ -193,7 +193,7 @@ func verifySensorNsdds(t *testing.T, socketPath string) {
 		"lqtpb":                float64(0.000609),
 		"ltwpb":                float64(0.000609),
 		"rc":                   int(0),
-		"read_bytes":           int(70563132928),
+		"read_bytes":           int(563132928),
 		"read_calls":           int(138448),
 		"shortest_queued_time": float64(0.000145),
 		"shortest_wait_time":   float64(0.000145),
