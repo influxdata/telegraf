@@ -256,7 +256,7 @@ func (a *Agent) startInputs(
 			err := si.Start(acc)
 			if err != nil {
 				stopServiceInputs(unit.inputs)
-				return nil, fmt.Errorf("starting input %s: %w", input.LogName(), err)
+				return nil, fmt.Errorf("starting input %s: %v", input.LogName(), err)
 			}
 		}
 		unit.inputs = append(unit.inputs, input)
@@ -480,7 +480,7 @@ func (a *Agent) startProcessors(
 				u.processor.Stop()
 				close(u.dst)
 			}
-			return nil, nil, fmt.Errorf("starting processor %s: %w", processor.LogName(), err)
+			return nil, nil, fmt.Errorf("starting processor %s: %v", processor.LogName(), err)
 		}
 
 		units = append(units, &processorUnit{
@@ -650,7 +650,7 @@ func (a *Agent) startOutputs(
 			for _, output := range unit.outputs {
 				output.Close()
 			}
-			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
+			return nil, nil, fmt.Errorf("connecting output %s: %v", output.LogName(), err)
 		}
 
 		unit.outputs = append(unit.outputs, output)
@@ -674,7 +674,7 @@ func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput)
 
 		err = output.Output.Connect()
 		if err != nil {
-			return fmt.Errorf("Error connecting to output %q: %w", output.LogName(), err)
+			return fmt.Errorf("Error connecting to output %q: %v", output.LogName(), err)
 		}
 	}
 	log.Printf("D! [agent] Successfully connected to %s", output.LogName())

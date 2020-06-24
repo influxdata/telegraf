@@ -681,11 +681,11 @@ func (c *Config) LoadConfig(path string) error {
 	}
 	data, err := loadConfig(path)
 	if err != nil {
-		return fmt.Errorf("Error loading config file %s: %w", path, err)
+		return fmt.Errorf("Error loading config file %s: %v", path, err)
 	}
 
 	if err = c.LoadConfigData(data); err != nil {
-		return fmt.Errorf("Error loading config file %s: %w", path, err)
+		return fmt.Errorf("Error loading config file %s: %v", path, err)
 	}
 	return nil
 }
@@ -705,7 +705,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 				return fmt.Errorf("invalid configuration, bad table name %q", tableName)
 			}
 			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
-				return fmt.Errorf("error parsing table name %q: %w", tableName, err)
+				return fmt.Errorf("error parsing table name %q: %v", tableName, err)
 			}
 		}
 	}
@@ -717,7 +717,7 @@ func (c *Config) LoadConfigData(data []byte) error {
 			return fmt.Errorf("invalid configuration, error parsing agent table")
 		}
 		if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
-			return fmt.Errorf("error parsing agent table: %w", err)
+			return fmt.Errorf("error parsing agent table: %v", err)
 		}
 	}
 
