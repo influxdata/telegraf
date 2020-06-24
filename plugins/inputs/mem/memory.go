@@ -2,6 +2,7 @@ package mem
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -61,6 +62,11 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		"write_back":        vm.Writeback,
 		"write_back_tmp":    vm.WritebackTmp,
 	}
+
+	if runtime.GOOS == "freebsd" {
+		fields["laundry"] = vm.Laundry
+	}
+
 	acc.AddGauge("mem", fields, nil)
 
 	return nil
