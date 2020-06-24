@@ -91,6 +91,7 @@ following works:
 - github.com/konsorten/go-windows-terminal-sequences [MIT License](https://github.com/konsorten/go-windows-terminal-sequences/blob/master/LICENSE)
 - github.com/kubernetes/apimachinery [Apache License 2.0](https://github.com/kubernetes/apimachinery/blob/master/LICENSE)
 - github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
+- github.com/linkedin/goavro [Apache License 2.0](https://github.com/linkedin/goavro/blob/master/LICENSE)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)
 - github.com/matttproud/golang_protobuf_extensions [Apache License 2.0](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/mdlayher/apcupsd [MIT License](https://github.com/mdlayher/apcupsd/blob/master/LICENSE.md)
