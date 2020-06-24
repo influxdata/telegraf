@@ -502,111 +502,109 @@ END
 const sqlServerPropertiesV2 = `
 SET DEADLOCK_PRIORITY -10;
 DECLARE
-	 @SqlStatement AS nvarchar(max)
-	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-
-DECLARE @sys_info TABLE (
-	cpu_count INT,
-	server_memory BIGINT,
-	sku NVARCHAR(64),
-	engine_edition SMALLINT,
-	hardware_type VARCHAR(16),
-	total_storage_mb BIGINT,
-	available_storage_mb BIGINT,
-	uptime INT
-)
-
+       @SqlStatement AS nvarchar(max) = ''
+       ,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+		
 IF @EngineEdition = 8  /*Managed Instance*/
- 	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-	SELECT 	TOP(1)
-			virtual_core_count AS cpu_count,
-			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
-			sku,
-			cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
-			hardware_generation AS hardware_type,
-			reserved_storage_mb AS total_storage_mb,
-			(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
-			(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
-	FROM	sys.server_resource_stats
-	ORDER BY start_time DESC
+      SET @SqlStatement =  'SELECT TOP 1 ''sqlserver_server_properties'' AS [measurement],
+			REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance],
+			DB_NAME() as [database_name],
+		        virtual_core_count AS cpu_count,
+                        (SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
+                        sku,
+                        @EngineEdition AS engine_edition,
+                        hardware_generation AS hardware_type,
+                        reserved_storage_mb AS total_storage_mb,
+                        (reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
+                        (select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime,
+			SERVERPROPERTY(''ProductVersion'') AS sql_version,
+			db_online,
+			db_restoring,
+			db_recovering,
+			db_recoveryPending,
+			db_suspect
+			FROM    sys.server_resource_stats
+			CROSS APPLY
+			(SELECT  SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
+                                 SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
+                                 SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
+                                 SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
+                                 SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
+                                 SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
+                        FROM    sys.databases
+			) AS dbs	
+			ORDER BY start_time DESC';
 
 IF @EngineEdition = 5  /*Azure SQL DB*/
-
-	INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
-	SELECT 	TOP(1)
-			(SELECT count(*) FROM sys.dm_os_schedulers WHERE status = 'VISIBLE ONLINE') AS cpu_count,
-			(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
-			slo.edition as sku,
-			cast(SERVERPROPERTY('EngineEdition') as smallint)  AS engine_edition,
-			slo.service_objective AS hardware_type,
-                        cast(DATABASEPROPERTYEX(DB_NAME(),'MaxSizeInBytes') as bigint)/(1024*1024)  AS total_storage_mb,
-			NULL AS available_storage_mb,  -- Can we find out storage?
-			NULL as uptime
-	FROM	 sys.databases d   
-		-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
-		CROSS JOIN sys.database_service_objectives slo
-		WHERE d.name = DB_NAME() AND slo.database_id = DB_ID()
+   SET @SqlStatement =  'SELECT	''sqlserver_server_properties'' AS [measurement],
+			REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance],
+			DB_NAME() as [database_name],
+                        (SELECT count(*) FROM sys.dm_os_schedulers WHERE status = ''VISIBLE ONLINE'') AS cpu_count,
+                        (SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
+                        slo.edition as sku,
+                        @EngineEdition  AS engine_edition,
+                        slo.service_objective AS hardware_type,
+			CASE 
+				 WHEN slo.edition = ''Hyperscale'' then NULL 
+				 ELSE  cast(DATABASEPROPERTYEX(DB_NAME(),''MaxSizeInBytes'') as bigint)/(1024*1024)  
+			END AS total_storage_mb,
+			CASE
+				 WHEN slo.edition = ''Hyperscale'' then NULL
+				 ELSE
+				(cast(DATABASEPROPERTYEX(DB_NAME(),''MaxSizeInBytes'') as bigint)/(1024*1024)-
+					(select  SUM(size/128 - CAST(FILEPROPERTY(name, ''SpaceUsed'') AS int)/128)	FROM sys.database_files )
+				)	
+			END AS available_storage_mb,   
+                        (select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info)  as uptime
+			FROM     sys.databases d
+			-- sys.databases.database_id may not match current DB_ID on Azure SQL DB
+			CROSS JOIN sys.database_service_objectives slo
+			WHERE d.name = DB_NAME() AND slo.database_id = DB_ID()';
 
 ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
 BEGIN
 
-	DECLARE @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
-	DECLARE @Columns AS nvarchar(MAX) = ''
+        DECLARE @MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+        DECLARE @Columns AS nvarchar(MAX) = ''
 
-	IF @MajorMinorVersion >= 1050
-		SET @Columns = N',CASE [virtual_machine_type_desc] 
-			WHEN ''NONE'' THEN ''PHYSICAL Machine''
-			ELSE [virtual_machine_type_desc]
-		END AS [hardware_type]';
-	ELSE /*data not available*/
-		SET @Columns = N',''<n/a>'' AS [hardware_type]';
+        IF @MajorMinorVersion >= 1050
+                SET @Columns = N',CASE [virtual_machine_type_desc]
+                        WHEN ''NONE'' THEN ''PHYSICAL Machine''
+                        ELSE [virtual_machine_type_desc]
+                END AS [hardware_type]';
+        ELSE /*data not available*/
+                SET @Columns = N',''<n/a>'' AS [hardware_type]';
+  
+        SET @SqlStatement =  'SELECT	''sqlserver_server_properties'' AS [measurement],
+			REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance],
+			DB_NAME() as [database_name],
+		        [cpu_count]
+        	        ,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
+	                ,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR) AS [sku]
+        	        ,@EngineEdition AS [engine_edition]
+                	,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
+	                ' + @Columns + ',
+			SERVERPROPERTY(''ProductVersion'') AS sql_version,
+        	        db_online,
+	                db_restoring,
+        	        db_recovering,
+	                db_recoveryPending,
+        	        db_suspect,
+	                db_offline
+		   	FROM sys.[dm_os_sys_info]
+			CROSS APPLY
+	                (        SELECT  SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
+                                        SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
+                                        SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
+                                        SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
+                                        SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
+                                        SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
+        	                FROM    sys.databases
+                	) AS dbs';
+       
+ END
+ EXEC sp_executesql @SqlStatement , N'@EngineEdition smallint', @EngineEdition = @EngineEdition;
 
-	SET @SqlStatement = '
-	SELECT
-		 [cpu_count]
-		,(SELECT [total_physical_memory_kb] FROM sys.[dm_os_sys_memory]) AS [server_memory]
-		,CAST(SERVERPROPERTY(''Edition'') AS NVARCHAR) AS [sku]
-		,@EngineEdition AS [engine_edition]
-		,DATEDIFF(MINUTE,[sqlserver_start_time],GETDATE()) AS [uptime]
-		' + @Columns + '
-	FROM sys.[dm_os_sys_info]'
-
-	/*Insert the dynamic sql result into the table variable*/
-	INSERT INTO @sys_info ( [cpu_count], [server_memory], [sku], [engine_edition], [uptime], [hardware_type] ) 
-	EXEC sp_executesql @SqlStatement , N'@EngineEdition smallint', @EngineEdition = @EngineEdition
-END
-
-SELECT	'sqlserver_server_properties' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		DB_NAME() as [database_name],
-		s.cpu_count,
-		s.server_memory,
-		s.sku,
-		s.engine_edition,
-		s.hardware_type,
-		s.total_storage_mb,
-		s.available_storage_mb,
-		s.uptime,
-		SERVERPROPERTY('ProductVersion') AS sql_version,
-		db_online,
-		db_restoring,
-		db_recovering,
-		db_recoveryPending,
-		db_suspect,
-		db_offline
-FROM	(
-			SELECT	SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
-					SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
-					SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
-					SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
-					SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-					SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
-			FROM	sys.databases
-		) AS dbs
-		CROSS APPLY (
-			SELECT	cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime
-			FROM	@sys_info
-		) AS s
 `
 
 //Recommend disabling this by default, but is useful to detect single CPU spikes/bottlenecks
