@@ -87,23 +87,22 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (e *Execd) Add(m telegraf.Metric, acc telegraf.Accumulator) {
+func (e *Execd) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	b, err := e.serializer.Serialize(m)
 	if err != nil {
-		acc.AddError(fmt.Errorf("metric serializing error: %w", err))
-		return
+		return fmt.Errorf("metric serializing error: %w", err)
 	}
 
 	_, err = e.process.Stdin.Write(b)
 	if err != nil {
-		acc.AddError(fmt.Errorf("error writing to process stdin: %w", err))
-		return
+		return fmt.Errorf("error writing to process stdin: %w", err)
 	}
 
 	// We cannot maintain tracking metrics at the moment because input/output
 	// is done asynchronously and we don't have any metric metadata to tie the
 	// output metric back to the original input metric.
 	m.Drop()
+	return nil
 }
 
 func (e *Execd) Stop() error {
