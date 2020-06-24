@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/parsers/avro"
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
@@ -149,6 +150,14 @@ type Config struct {
 
 	// FormData configuration
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
+
+	// avro configuration
+	AVROSchemaRegistry  string   `toml:"arvo_schema_registry"`
+	AVROMeasurement     string   `toml:"arvo_measurement"`
+	AVROTags            []string `toml:"arvo_tags"`
+	AVROFields          []string `toml:"arvo_fields"`
+	AVROTimestamp       string   `toml:"arvo_timestamp"`
+	AVROTimestampFormat string   `toml:"arvo_timestamp_format"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -221,6 +230,14 @@ func NewParser(config *Config) (Parser, error) {
 			config.CSVTimestampFormat,
 			config.CSVTimezone,
 			config.DefaultTags)
+	case "avro":
+		parser, err = newAvroParser(config.AVROSchemaRegistry,
+			config.AVROMeasurement,
+			config.AVROTags,
+			config.AVROFields,
+			config.AVROTimestamp,
+			config.AVROTimestampFormat,
+			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	case "form_urlencoded":
@@ -233,6 +250,29 @@ func NewParser(config *Config) (Parser, error) {
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return parser, err
+}
+
+func newAvroParser(
+	schemaRegistry string,
+	measurement string,
+	tags []string,
+	fields []string,
+	timestamp string,
+	timestampFormat string,
+	defaultTags map[string]string) (Parser, error) {
+
+	parser := &avro.Parser{
+		SchemaRegistry:  schemaRegistry,
+		Measurement:     measurement,
+		Tags:            tags,
+		Fields:          fields,
+		Timestamp:       timestamp,
+		TimestampFormat: timestampFormat,
+		DefaultTags:     defaultTags,
+		TimeFunc:        time.Now,
+	}
+
+	return parser, nil
 }
 
 func newCSVParser(metricName string,
