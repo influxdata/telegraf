@@ -10,7 +10,8 @@ import (
 )
 
 type MemStats struct {
-	ps system.PS
+	ps       system.PS
+	platform string
 }
 
 func (_ *MemStats) Description() string {
@@ -18,6 +19,11 @@ func (_ *MemStats) Description() string {
 }
 
 func (_ *MemStats) SampleConfig() string { return "" }
+
+func (m *MemStats) Init() error {
+	m.platform = runtime.GOOS
+	return nil
+}
 
 func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 	vm, err := s.ps.VMStat()
@@ -33,7 +39,7 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		"available_percent": 100 * float64(vm.Available) / float64(vm.Total),
 	}
 
-	switch runtime.GOOS {
+	switch s.platform {
 	case "darwin":
 		fields["active"] = vm.Active
 		fields["free"] = vm.Free
