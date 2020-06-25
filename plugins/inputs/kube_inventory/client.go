@@ -9,7 +9,7 @@ import (
 	v1 "github.com/ericchiang/k8s/apis/core/v1"
 	v1beta1EXT "github.com/ericchiang/k8s/apis/extensions/v1beta1"
 
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 type client struct {

@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-var pki = testutil.NewPKI("../../testutil/pki")
+var pki = testutil.NewPKI("../../../testutil/pki")
 
 func TestClientConfig(t *testing.T) {
 	tests := []struct {
