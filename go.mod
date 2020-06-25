@@ -85,7 +85,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leesper/go_rng v0.0.0-20190531154944-a612b043e353 // indirect
 	github.com/lib/pq v1.3.0 // indirect
-	github.com/linkedin/goavro v2.1.0+incompatible
+	github.com/linkedin/goavro/v2 v2.9.7
 	github.com/mailru/easyjson v0.0.0-20180717111219-efc7eb8984d6 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1
 	github.com/mdlayher/apcupsd v0.0.0-20190314144147-eb3dd99a75fe
@@ -144,7 +144,6 @@ require (
 	gopkg.in/gorethink/gorethink.v3 v3.0.5
 	gopkg.in/jcmturner/gokrb5.v7 v7.3.0 // indirect
 	gopkg.in/ldap.v3 v3.1.0
-	gopkg.in/linkedin/goavro.v1 v1.0.5 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/olivere/elastic.v5 v5.0.70
 	gopkg.in/yaml.v2 v2.2.5
