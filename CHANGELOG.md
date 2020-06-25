@@ -69,6 +69,7 @@
 - [#7267](https://github.com/influxdata/telegraf/pull/7267): Add ability to add selectors as tags in kube_inventory.
 - [#7712](https://github.com/influxdata/telegraf/pull/7712): Add counter type to sqlserver perfmon collector.
 - [#7575](https://github.com/influxdata/telegraf/pull/7575): Add missing nvme attributes to smart plugin.
+- [#7726](https://github.com/influxdata/telegraf/pull/7726): Add laundry to mem plugin on FreeBSD.
 
 #### Bugfixes
 
