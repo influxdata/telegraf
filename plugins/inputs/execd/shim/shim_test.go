@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,13 +16,44 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type concBuffer struct {
+	b bytes.Buffer
+	sync.RWMutex
+}
+
+func (b *concBuffer) Read(p []byte) (n int, err error) {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.Read(p)
+}
+func (b *concBuffer) Write(p []byte) (n int, err error) {
+	b.Lock()
+	defer b.Unlock()
+	return b.b.Write(p)
+}
+func (b *concBuffer) String() string {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.String()
+}
+func (b *concBuffer) Len() int {
+	b.RLock()
+	defer b.RUnlock()
+	return b.b.Len()
+}
+
 func TestShimWorks(t *testing.T) {
-	stdoutBytes := bytes.NewBufferString("")
+	stdoutBytes := &concBuffer{}
 	stdout = stdoutBytes
+	var stdinWriter *io.PipeWriter
+	stdin, stdinWriter = io.Pipe() // Hold the stdin pipe open.
 
-	stdin, _ = io.Pipe() // hold the stdin pipe open
-
-	metricProcessed, _ := runInputPlugin(t, 10*time.Millisecond)
+	metricProcessed, exited := runInputPlugin(t, 10*time.Millisecond)
+	// Close everything after the finish to not interfere with the next tests.
+	defer func() {
+		stdinWriter.Close()
+		<-exited
+	}()
 
 	<-metricProcessed
 	for stdoutBytes.Len() == 0 {
@@ -29,7 +61,7 @@ func TestShimWorks(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	out := string(stdoutBytes.Bytes())
+	out := stdoutBytes.String()
 	require.Contains(t, out, "\n")
 	metricLine := strings.Split(out, "\n")[0]
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678", metricLine)
