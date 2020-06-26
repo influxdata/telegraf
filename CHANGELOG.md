@@ -93,6 +93,7 @@
 - [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve the performance of the procstat input.
 - [#7658](https://github.com/influxdata/telegraf/pull/7658): Fix ping exit code handling on non-Linux.
 - [#7718](https://github.com/influxdata/telegraf/pull/7718): Skip overs errors in the output of the sensors command.
+- [#7748](https://github.com/influxdata/telegraf/issues/7748): Prevent startup when tags have incorrect type in configuration file.
 
 ## v1.14.4 [2020-06-09]
 
