@@ -15,6 +15,7 @@ import (
 )
 
 func _TestTable(t *testing.T) {
+
 	tab, err := makeTable("IF-MIB::ifTable")
 	require.NoError(t, err)
 
@@ -32,7 +33,7 @@ func _TestTable(t *testing.T) {
 	m, err := buildMap(&gs, tab, "ifDescr")
 	require.NoError(t, err)
 
-	for index, name := range m {
+	for index, name := range *m {
 		fmt.Println(index, name)
 	}
 }
@@ -54,7 +55,7 @@ func _TestXTable(t *testing.T) {
 	m, err := buildMap(&gs, tab, "ifName")
 	require.NoError(t, err)
 
-	for index, name := range m {
+	for index, name := range *m {
 		fmt.Println(index, name)
 	}
 }
@@ -64,6 +65,7 @@ func TestIfName(t *testing.T) {
 		SourceTag: "ifIndex",
 		DestTag:   "ifName",
 		AgentTag:  "agent",
+		CacheSize: 1000,
 		ClientConfig: snmp.ClientConfig{
 			Version: 2,
 			Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout

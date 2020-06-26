@@ -28,13 +28,19 @@ type IfName struct {
 	DestTag   string `toml:"dest"`
 	AgentTag  string `toml:"agent"`
 
+	CacheSize uint `toml:"max_cache_entries"`
+
 	Log telegraf.Logger `toml:"-"`
 
 	ifTable  *si.Table `toml:"-"`
 	ifXTable *si.Table `toml:"-"`
 
 	snmp.ClientConfig
+
+	cache *LRUCache `toml:"-"`
 }
+
+type nameMap map[uint64]string
 
 func (d *IfName) SampleConfig() string {
 	return sampleConfig
@@ -55,6 +61,9 @@ func (h *IfName) Init() error {
 		return err
 	}
 
+	c := NewLRUCache(h.CacheSize)
+	h.cache = &c
+
 	return nil
 }
 
@@ -62,6 +71,12 @@ func (d *IfName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	var out []telegraf.Metric
 	for _, metric := range metrics {
 		out = append(out, metric)
+
+		agent, ok := metric.GetTag(d.AgentTag)
+		if !ok {
+			//agent tag missing
+			continue
+		}
 
 		num_s, ok := metric.GetTag(d.SourceTag)
 		if !ok {
@@ -72,44 +87,19 @@ func (d *IfName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		num, err := strconv.ParseUint(num_s, 10, 64)
 		if err != nil {
 			//source tag not a uint
+			d.Log.Infof("couldn't parse source tag as uint")
 			continue
 		}
 
-		agent, ok := metric.GetTag(d.AgentTag)
-		if !ok {
-			//agent tag missing
-			continue
-		}
-
-		//todo: cache gs by agent
-		gs, err := snmp.NewWrapper(d.ClientConfig, agent)
+		m, err := d.getMap(agent)
 		if err != nil {
-			//can't translate toml to gosnmp.GoSNMP
-			continue
+			d.Log.Infof("couldn't retrieve the table of interface names: %w", err)
 		}
 
-		err = gs.Connect()
-		if err != nil {
-			//can't connect (if tcp)
-			continue
-		}
-
-		var m map[uint64]string
-
-		//try ifXtable and ifName first.  if that fails, fall back to
-		//ifTable and ifDescr
-		m, err = buildMap(&gs, d.ifXTable, "ifName")
-		if err != nil {
-			m, err = buildMap(&gs, d.ifTable, "ifDescr")
-			if err != nil {
-				//couldn't get either table
-				continue
-			}
-		}
-
-		name, found := m[num]
+		name, found := (*m)[num]
 		if !found {
 			//interface num isn't in table
+			d.Log.Infof("interface number %d isn't in the table of interface names", num)
 			continue
 		}
 		metric.AddTag(d.DestTag, name)
@@ -119,12 +109,58 @@ func (d *IfName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	return out
 }
 
+// getMap gets the interface names map either from cache or from the SNMP
+// agent
+func (d *IfName) getMap(agent string) (*nameMap, error) {
+	m, ok := d.cache.Get(agent)
+	if ok {
+		return m, nil
+	}
+
+	var err error
+	m, err = d.getMapRemote(agent)
+	if err != nil {
+		return nil, err
+	}
+
+	d.cache.Put(agent, m)
+	return m, err
+}
+
+func (d *IfName) getMapRemote(agent string) (*nameMap, error) {
+	gs, err := snmp.NewWrapper(d.ClientConfig, agent)
+	if err != nil {
+		//can't translate toml to gosnmp.GoSNMP
+		return nil, err
+	}
+
+	err = gs.Connect()
+	if err != nil {
+		//can't connect (if tcp)
+		return nil, err
+	}
+
+	//try ifXtable and ifName first.  if that fails, fall back to
+	//ifTable and ifDescr
+	var m *nameMap
+	m, err = buildMap(&gs, d.ifXTable, "ifName")
+	if err != nil {
+		var err2 error
+		m, err2 = buildMap(&gs, d.ifTable, "ifDescr")
+		if err2 != nil {
+			return nil, err2
+		}
+	}
+	return m, nil
+}
+
 func init() {
 	processors.Add("port_name", func() telegraf.Processor {
 		return &IfName{
 			SourceTag: "ifIndex",
 			DestTag:   "ifName",
 			AgentTag:  "agent",
+			CacheSize: 1000,
 		}
 	})
 }
@@ -144,7 +180,7 @@ func makeTable(tableName string) (*si.Table, error) {
 	return &tab, nil
 }
 
-func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (map[uint64]string, error) {
+func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (*nameMap, error) {
 	var err error
 
 	rtab, err := tab.Build(gs, true)
@@ -156,7 +192,7 @@ func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (map[uint64]
 		return nil, fmt.Errorf("empty table")
 	}
 
-	t := make(map[uint64]string)
+	t := make(nameMap)
 	for _, v := range rtab.Rows {
 		//fmt.Printf("tags: %v, fields: %v\n", v.Tags, v.Fields)
 		i_str, ok := v.Tags["index"]
@@ -183,5 +219,5 @@ func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (map[uint64]
 
 		t[i] = name
 	}
-	return t, nil
+	return &t, nil
 }
