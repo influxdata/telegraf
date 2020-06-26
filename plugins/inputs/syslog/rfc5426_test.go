@@ -235,10 +235,6 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 			require.NoError(t, receiver.Start(acc))
 			defer receiver.Stop()
 
-			// Clear
-			acc.ClearMetrics()
-			acc.Errors = make([]error, 0)
-
 			// Connect
 			conn, err := net.Dial(protocol, address)
 			require.NotNil(t, conn)
