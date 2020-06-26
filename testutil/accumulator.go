@@ -323,13 +323,13 @@ func (a *Accumulator) NFields() int {
 // Wait waits for the given number of metrics to be added to the accumulator.
 func (a *Accumulator) Wait(n int) {
 	a.Lock()
+	defer a.Unlock()
 	if a.Cond == nil {
 		a.Cond = sync.NewCond(&a.Mutex)
 	}
 	for int(a.NMetrics()) < n {
 		a.Cond.Wait()
 	}
-	a.Unlock()
 }
 
 // WaitError waits for the given number of errors to be added to the accumulator.
