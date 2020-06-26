@@ -68,10 +68,7 @@ func (h *IfName) Init() error {
 }
 
 func (d *IfName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	var out []telegraf.Metric
 	for _, metric := range metrics {
-		out = append(out, metric)
-
 		agent, ok := metric.GetTag(d.AgentTag)
 		if !ok {
 			//agent tag missing
@@ -105,8 +102,7 @@ func (d *IfName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		metric.AddTag(d.DestTag, name)
 
 	}
-
-	return out
+	return metrics
 }
 
 // getMap gets the interface names map either from cache or from the SNMP
