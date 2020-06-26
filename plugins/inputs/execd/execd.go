@@ -2,9 +2,9 @@ package execd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -43,6 +43,7 @@ type Execd struct {
 	Command      []string
 	Signal       string
 	RestartDelay config.Duration
+	Log          telegraf.Logger
 
 	process *process.Process
 	acc     telegraf.Accumulator
@@ -63,16 +64,12 @@ func (e *Execd) SetParser(parser parsers.Parser) {
 
 func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.acc = acc
-	if len(e.Command) == 0 {
-		return fmt.Errorf("FATAL no command specified")
-	}
-
 	var err error
 	e.process, err = process.New(e.Command)
 	if err != nil {
-		return fmt.Errorf("Error creating new process: %w", err)
+		return fmt.Errorf("error creating new process: %w", err)
 	}
-
+	e.process.Log = e.Log
 	e.process.RestartDelay = time.Duration(e.RestartDelay)
 	e.process.ReadStdoutFn = e.cmdReadOut
 	e.process.ReadStderrFn = e.cmdReadErr
@@ -100,7 +97,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
-			e.acc.AddError(fmt.Errorf("Parse error: %s", err))
+			e.acc.AddError(fmt.Errorf("parse error: %w", err))
 		}
 
 		for _, metric := range metrics {
@@ -109,7 +106,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("Error reading stdout: %s", err))
+		e.acc.AddError(fmt.Errorf("error reading stdout: %w", err))
 	}
 }
 
@@ -140,12 +137,19 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("[inputs.execd] stderr: %q", scanner.Text())
+		e.Log.Errorf("stderr: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		e.acc.AddError(fmt.Errorf("Error reading stderr: %s", err))
+		e.acc.AddError(fmt.Errorf("error reading stderr: %w", err))
 	}
+}
+
+func (e *Execd) Init() error {
+	if len(e.Command) == 0 {
+		return errors.New("no command specified")
+	}
+	return nil
 }
 
 func init() {

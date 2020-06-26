@@ -18,6 +18,8 @@ import (
 
 func TestExternalProcessorWorks(t *testing.T) {
 	e := New()
+	e.Log = testutil.Logger{}
+
 	exe, err := os.Executable()
 	require.NoError(t, err)
 	t.Log(exe)
@@ -29,6 +31,7 @@ func TestExternalProcessorWorks(t *testing.T) {
 	require.NoError(t, e.Start(acc))
 
 	now := time.Now()
+	orig := now
 	metrics := []telegraf.Metric{}
 	for i := 0; i < 10; i++ {
 		m, err := metric.New("test",
@@ -52,19 +55,17 @@ func TestExternalProcessorWorks(t *testing.T) {
 
 	require.NoError(t, e.Stop())
 
-	require.Equal(t, "test", m.Name())
-
-	city, ok := m.Tags()["city"]
-	require.True(t, ok)
-	require.EqualValues(t, "Toronto", city)
-
-	val, ok := m.Fields()["population"]
-	require.True(t, ok)
-	require.EqualValues(t, 6000000, val)
-
-	val, ok = m.Fields()["count"]
-	require.True(t, ok)
-	require.EqualValues(t, 2, val)
+	expected := testutil.MustMetric("test",
+		map[string]string{
+			"city": "Toronto",
+		},
+		map[string]interface{}{
+			"population": 6000000,
+			"count":      2,
+		},
+		orig,
+	)
+	testutil.RequireMetricEqual(t, expected, m)
 
 	metricTime := m.Time().UnixNano()
 

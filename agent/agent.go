@@ -510,6 +510,7 @@ func (a *Agent) runProcessors(
 			for m := range unit.src {
 				if err := unit.processor.Add(m, acc); err != nil {
 					acc.AddError(err)
+					m.Drop()
 				}
 			}
 			unit.processor.Stop()

@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -28,6 +29,7 @@ func TestExternalInputWorks(t *testing.T) {
 		parser:       influxParser,
 		Signal:       "STDIN",
 	}
+	e.Log = testutil.Logger{}
 
 	metrics := make(chan telegraf.Metric, 10)
 	defer close(metrics)
@@ -64,6 +66,7 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 		Signal:       "STDIN",
 		acc:          acc,
 	}
+	e.Log = testutil.Logger{}
 
 	cases := []struct {
 		Name  string

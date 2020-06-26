@@ -2,13 +2,15 @@ package process
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os/exec"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
 )
 
 // Process is a long-running process manager that will restart processes if they stop.
@@ -20,6 +22,7 @@ type Process struct {
 	ReadStdoutFn func(io.Reader)
 	ReadStderrFn func(io.Reader)
 	RestartDelay time.Duration
+	Log          telegraf.Logger
 
 	cancel     context.CancelFunc
 	mainLoopWg sync.WaitGroup
@@ -27,6 +30,10 @@ type Process struct {
 
 // New creates a new process wrapper
 func New(command []string) (*Process, error) {
+	if len(command) == 0 {
+		return nil, errors.New("no command")
+	}
+
 	p := &Process{
 		RestartDelay: 5 * time.Second,
 	}
@@ -56,8 +63,6 @@ func New(command []string) (*Process, error) {
 
 // Start the process
 func (p *Process) Start() error {
-	p.mainLoopWg.Add(1)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
 
@@ -65,9 +70,10 @@ func (p *Process) Start() error {
 		return err
 	}
 
+	p.mainLoopWg.Add(1)
 	go func() {
 		if err := p.cmdLoop(ctx); err != nil {
-			log.Printf("E! [agent] Process quit with message: %v", err)
+			p.Log.Errorf("Process quit with message: %v", err)
 		}
 		p.mainLoopWg.Done()
 	}()
@@ -83,10 +89,10 @@ func (p *Process) Stop() {
 }
 
 func (p *Process) cmdStart() error {
-	log.Printf("Starting process: %s %s", p.Cmd.Path, p.Cmd.Args)
+	p.Log.Infof("Starting process: %s %s", p.Cmd.Path, p.Cmd.Args)
 
 	if err := p.Cmd.Start(); err != nil {
-		return fmt.Errorf("Error starting process: %s", err)
+		return fmt.Errorf("error starting process: %s", err)
 	}
 
 	return nil
@@ -105,12 +111,12 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 	for {
 		err := p.cmdWait()
 		if isQuitting(ctx) {
-			log.Printf("Process %s shut down", p.Cmd.Path)
+			p.Log.Infof("Process %s shut down", p.Cmd.Path)
 			return nil
 		}
 
-		log.Printf("Process %s terminated: %v", p.Cmd.Path, err)
-		log.Printf("Restarting in %s...", time.Duration(p.RestartDelay))
+		p.Log.Errorf("Process %s exited: %v", p.Cmd.Path, err)
+		p.Log.Infof("Restarting in %s...", time.Duration(p.RestartDelay))
 
 		select {
 		case <-ctx.Done():
