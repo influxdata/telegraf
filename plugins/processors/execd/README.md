@@ -23,7 +23,8 @@ Program output on standard error is mirrored to the telegraf log.
 ```toml
 [[processor.execd]]
   ## Program to run as daemon
-  command = ["/path/to/your_program", "arg1", "arg2"]
+  ## eg: command = ["/path/to/your_program", "arg1", "arg2"]
+  command = ["cat"]
 
   ## Delay before the process is restarted after an unexpected termination
   # restart_delay = "10s"

@@ -2,9 +2,9 @@ package execd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -16,8 +16,9 @@ import (
 )
 
 const sampleConfig = `
-  ## Program to run as daemon
-  command = ["telegraf-smartctl", "-d", "/dev/sda"]
+	## Program to run as daemon
+	## eg: command = ["/path/to/your_program", "arg1", "arg2"]
+	command = ["cat"]
 
   ## Delay before the process is restarted after an unexpected termination
   restart_delay = "10s"
@@ -26,6 +27,7 @@ const sampleConfig = `
 type Execd struct {
 	Command      []string        `toml:"command"`
 	RestartDelay config.Duration `toml:"restart_delay"`
+	Log          telegraf.Logger
 
 	parserConfig     *parsers.Config
 	parser           parsers.Parser
@@ -67,15 +69,11 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	}
 	e.acc = acc
 
-	if len(e.Command) == 0 {
-		return fmt.Errorf("no command specified")
-	}
-
 	e.process, err = process.New(e.Command)
 	if err != nil {
 		return fmt.Errorf("error creating new process: %w", err)
 	}
-
+	e.process.Log = e.Log
 	e.process.RestartDelay = time.Duration(e.RestartDelay)
 	e.process.ReadStdoutFn = e.cmdReadOut
 	e.process.ReadStderrFn = e.cmdReadErr
@@ -116,7 +114,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	for scanner.Scan() {
 		metrics, err := e.parser.Parse(scanner.Bytes())
 		if err != nil {
-			log.Println(fmt.Errorf("Parse error: %s", err))
+			e.Log.Errorf("Parse error: %s", err)
 		}
 
 		for _, metric := range metrics {
@@ -125,7 +123,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Println(fmt.Errorf("Error reading stdout: %s", err))
+		e.Log.Errorf("Error reading stdout: %s", err)
 	}
 }
 
@@ -133,12 +131,19 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Printf("stderr: %q", scanner.Text())
+		e.Log.Errorf("stderr: %q", scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Println(fmt.Errorf("Error reading stderr: %s", err))
+		e.Log.Errorf("Error reading stderr: %s", err)
 	}
+}
+
+func (e *Execd) Init() error {
+	if len(e.Command) == 0 {
+		return errors.New("no command specified")
+	}
+	return nil
 }
 
 func init() {
