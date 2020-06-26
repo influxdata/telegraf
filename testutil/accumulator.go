@@ -55,8 +55,6 @@ func (a *Accumulator) NMetrics() uint64 {
 }
 
 func (a *Accumulator) GetTelegrafMetrics() []telegraf.Metric {
-	a.Lock()
-	defer a.Unlock()
 	metrics := []telegraf.Metric{}
 	for _, m := range a.Metrics {
 		metrics = append(metrics, FromTestMetric(m))
@@ -253,8 +251,6 @@ func (a *Accumulator) SetDebug(debug bool) {
 
 // Get gets the specified measurement point from the accumulator
 func (a *Accumulator) Get(measurement string) (*Metric, bool) {
-	a.Lock()
-	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			return p, true
@@ -265,8 +261,6 @@ func (a *Accumulator) Get(measurement string) (*Metric, bool) {
 }
 
 func (a *Accumulator) HasTag(measurement string, key string) bool {
-	a.Lock()
-	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			_, ok := p.Tags[key]
@@ -277,8 +271,6 @@ func (a *Accumulator) HasTag(measurement string, key string) bool {
 }
 
 func (a *Accumulator) TagSetValue(measurement string, key string) string {
-	a.Lock()
-	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			v, ok := p.Tags[key]
@@ -291,8 +283,6 @@ func (a *Accumulator) TagSetValue(measurement string, key string) string {
 }
 
 func (a *Accumulator) TagValue(measurement string, key string) string {
-	a.Lock()
-	defer a.Unlock()
 	for _, p := range a.Metrics {
 		if p.Measurement == measurement {
 			v, ok := p.Tags[key]
