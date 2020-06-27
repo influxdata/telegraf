@@ -664,13 +664,12 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 	}
 
 	gs.MaxRepetitions = s.MaxRepetitions
-
 	if s.Version == 3 {
-		gs.ContextName = s.ContextName
+		gs.GoSNMP.ContextName = s.ContextName
 
 		sp := &gosnmp.UsmSecurityParameters{}
-		gs.SecurityParameters = sp
-		gs.SecurityModel = gosnmp.UserSecurityModel
+		gs.GoSNMP.SecurityParameters = sp
+		gs.GoSNMP.SecurityModel = gosnmp.UserSecurityModel
 
 		switch strings.ToLower(s.SecLevel) {
 		case "noauthnopriv", "":
