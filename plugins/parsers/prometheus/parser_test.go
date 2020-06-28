@@ -1,11 +1,12 @@
 package prometheus
 
 import (
-	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/influxdata/telegraf"
 )
 
 var exptime = time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
@@ -101,9 +102,16 @@ cpu,cpu=cpu4 , usage_idle=99,usage_busy=1
 cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 `
 
+func Parse(buf []byte) ([]telegraf.Metric, error) {
+	parser := Parser {
+		MetricVersion: 1,
+	}
+	return parser.Parse(buf)
+}
+
 func TestParseValidPrometheus(t *testing.T) {
 	// Gauge value
-	metrics, err := Parse([]byte(validUniqueGauge), http.Header{})
+	metrics, err := Parse([]byte(validUniqueGauge))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "cadvisor_version_info", metrics[0].Name())
@@ -119,7 +127,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	}, metrics[0].Tags())
 
 	// Counter value
-	metrics, err = Parse([]byte(validUniqueCounter), http.Header{})
+	metrics, err = Parse([]byte(validUniqueCounter))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "get_token_fail_count", metrics[0].Name())
@@ -130,7 +138,7 @@ func TestParseValidPrometheus(t *testing.T) {
 
 	// Summary data
 	//SetDefaultTags(map[string]string{})
-	metrics, err = Parse([]byte(validUniqueSummary), http.Header{})
+	metrics, err = Parse([]byte(validUniqueSummary))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "http_request_duration_microseconds", metrics[0].Name())
@@ -144,7 +152,7 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
 
 	// histogram data
-	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{})
+	metrics, err = Parse([]byte(validUniqueHistogram))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "apiserver_request_latencies", metrics[0].Name())
