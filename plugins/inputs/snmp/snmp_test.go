@@ -402,7 +402,9 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := snmp.GosnmpWrapper{gs}
+	gsw := snmp.GosnmpWrapper{
+		GoSNMP: gs,
+	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
 	srvr.Close()
 	wg.Wait()
@@ -450,7 +452,9 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := snmp.GosnmpWrapper{gs}
+	gsw := snmp.GosnmpWrapper{
+		GoSNMP: gs,
+	}
 	_, err = gsw.Get([]string{".1.0.0"})
 	srvr.Close()
 	wg.Wait()
