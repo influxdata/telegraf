@@ -1373,6 +1373,30 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 			}
 		}
 	}
+	if node, ok := tbl.Fields["precision"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				cp.Precision = dur
+			}
+		}
+	}
+	if node, ok := tbl.Fields["collection_jitter"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				cp.CollectionJitter = dur
+			}
+		}
+	}
 
 	if node, ok := tbl.Fields["name_prefix"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1420,6 +1444,8 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "name_override")
 	delete(tbl.Fields, "alias")
 	delete(tbl.Fields, "interval")
+	delete(tbl.Fields, "collection_jitter")
+	delete(tbl.Fields, "precision")
 	delete(tbl.Fields, "tags")
 	var err error
 	cp.Filter, err = buildFilter(tbl)

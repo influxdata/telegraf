@@ -132,7 +132,6 @@ The agent table configures Telegraf and the defaults used across all plugins.
   running a large number of telegraf instances. ie, a jitter of 5s and interval
   10s means flushes will happen every 10-15s.
 
-
 - **precision**:
   Collected metrics are rounded to the precision specified as an [interval][].
 
@@ -194,13 +193,32 @@ driven operation.
 Parameters that can be used with any input plugin:
 
 - **alias**: Name an instance of a plugin.
-- **interval**: How often to gather this metric. Normal plugins use a single
-  global interval, but if one particular input should be run less or more
-  often, you can configure that here.
+
+- **interval**:
+  Overrides the `interval` setting of the [agent][Agent] for the plugin.  How
+  often to gather this metric. Normal plugins use a single global interval, but
+  if one particular input should be run less or more often, you can configure
+  that here.
+
+- **precision**:
+  Overrides the `precision` setting of the [agent][Agent] for the plugin.
+  Collected metrics are rounded to the precision specified as an [interval][].
+
+  When this value is set on a service input, multiple events occuring at the
+  same timestamp may be merged by the output database.
+
+- **collection_jitter**:
+  Overrides the `collection_jitter` setting of the [agent][Agent] for the
+  plugin.  Collection jitter is used to jitter the collection by a random
+  [interval][].
+
 - **name_override**: Override the base name of the measurement.  (Default is
   the name of the input).
+
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
+
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
+
 - **tags**: A map of tags to apply to a specific input's measurements.
 
 The [metric filtering][] parameters can be used to limit what metrics are
