@@ -70,6 +70,6 @@ Example config:
 ```
 
 ```diff
-- foo,ifIndex=1,agent=127.0.0.1 field=123 1502489900000000000
+- foo,ifIndex=2,agent=127.0.0.1 field=123 1502489900000000000
 + foo,ifIndex=2,agent=127.0.0.1,ifName=eth0 field=123 1502489900000000000
 ```
