@@ -1,4 +1,4 @@
-# Reverse DNS Processor Plugin
+# Network Interface Name Processor Plugin
 
 The `ifname` plugin looks up network interface names using SNMP.
 
@@ -64,7 +64,7 @@ The `ifname` plugin looks up network interface names using SNMP.
 Example config:
 
 ```toml
-[[processors.reverse_dns]]
+[[processors.ifname]]
   tag = "ifIndex"
   dest = "ifName"
 ```
