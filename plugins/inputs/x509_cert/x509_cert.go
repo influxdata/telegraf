@@ -211,6 +211,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			// name validation against the URL hostname.
 			opts := x509.VerifyOptions{
 				Intermediates: x509.NewCertPool(),
+				KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 			}
 			if i == 0 {
 				if c.ServerName == "" {
