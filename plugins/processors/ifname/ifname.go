@@ -3,15 +3,18 @@ package ifname
 import (
 	"fmt"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/plugins/processors/reverse_dns/parallel"
 )
 
 var sampleConfig = `
-[[processors.ifname]]
   ## Name of tag holding the interface number
   # tag = "ifIndex"
 
@@ -21,6 +24,48 @@ var sampleConfig = `
   ## Name of tag of the SNMP agent to request the interface name from
   # agent = "agent"
 
+  ## Timeout for each request.
+  # timeout = "5s"
+
+  ## SNMP version; can be 1, 2, or 3.
+  # version = 2
+
+  ## SNMP community string.
+  # community = "public"
+
+  ## Number of retries to attempt.
+  # retries = 3
+
+  ## The GETBULK max-repetitions parameter.
+  # max_repetitions = 10
+
+  ## SNMPv3 authentication and encryption options.
+  ##
+  ## Security Name.
+  # sec_name = "myuser"
+  ## Authentication protocol; one of "MD5", "SHA", or "".
+  # auth_protocol = "MD5"
+  ## Authentication password.
+  # auth_password = "pass"
+  ## Security Level; one of "noAuthNoPriv", "authNoPriv", or "authPriv".
+  # sec_level = "authNoPriv"
+  ## Context Name.
+  # context_name = ""
+  ## Privacy protocol used for encrypted messages; one of "DES", "AES" or "".
+  # priv_protocol = ""
+  ## Privacy password used for encrypted messages.
+  # priv_password = ""
+
+  ## max_parallel_lookups is the maximum number of SNMP requests to
+  ## make at the same time.
+  # max_parallel_lookups = 100
+
+  ## ordered controls whether or not the metrics need to stay in the
+  ## same order this plugin received them in. If false, this plugin
+  ## may change the order when data is cached.  If you need metrics to
+  ## stay in order set this to true.  keeping the metrics ordered may
+  ## be slightly slower
+  #ordered = false
 `
 
 type IfName struct {
@@ -28,16 +73,22 @@ type IfName struct {
 	DestTag   string `toml:"dest"`
 	AgentTag  string `toml:"agent"`
 
-	CacheSize uint `toml:"max_cache_entries"`
+	snmp.ClientConfig
+
+	CacheSize          uint `toml:"max_cache_entries"`
+	MaxParallelLookups int  `toml:"max_parallel_lookups"`
+	Ordered            bool `toml:"ordered"`
 
 	Log telegraf.Logger `toml:"-"`
 
 	ifTable  *si.Table `toml:"-"`
 	ifXTable *si.Table `toml:"-"`
 
-	snmp.ClientConfig
+	rwLock sync.RWMutex `toml:"-"`
+	cache  *LRUCache    `toml:"-"`
 
-	cache *LRUCache `toml:"-"`
+	parallel parallel.Parallel    `toml:"-"`
+	acc      telegraf.Accumulator `toml:"-"`
 }
 
 type nameMap map[uint64]string
@@ -67,60 +118,110 @@ func (h *IfName) Init() error {
 	return nil
 }
 
+func (d *IfName) addTag(metric telegraf.Metric) {
+	//this is called by the pool but locking is handled inside getMap
+	// if metric == nil {
+	// 	return
+	// }
+
+	agent, ok := metric.GetTag(d.AgentTag)
+	if !ok {
+		//agent tag missing
+		return
+	}
+
+	num_s, ok := metric.GetTag(d.SourceTag)
+	if !ok {
+		//source tag missing
+		return
+	}
+
+	num, err := strconv.ParseUint(num_s, 10, 64)
+	if err != nil {
+		//source tag not a uint
+		d.Log.Infof("couldn't parse source tag as uint")
+		return
+	}
+
+	m, err := d.getMap(agent)
+	if err != nil {
+		d.Log.Infof("couldn't retrieve the table of interface names: %w", err)
+		return
+	}
+
+	name, found := (*m)[num]
+	if !found {
+		//interface num isn't in table
+		d.Log.Infof("interface number %d isn't in the table of interface names", num)
+		return
+	}
+	metric.AddTag(d.DestTag, name)
+}
+
 func (d *IfName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range metrics {
-		agent, ok := metric.GetTag(d.AgentTag)
-		if !ok {
-			//agent tag missing
-			continue
-		}
-
-		num_s, ok := metric.GetTag(d.SourceTag)
-		if !ok {
-			//source tag missing
-			continue
-		}
-
-		num, err := strconv.ParseUint(num_s, 10, 64)
-		if err != nil {
-			//source tag not a uint
-			d.Log.Infof("couldn't parse source tag as uint")
-			continue
-		}
-
-		m, err := d.getMap(agent)
-		if err != nil {
-			d.Log.Infof("couldn't retrieve the table of interface names: %w", err)
-		}
-
-		name, found := (*m)[num]
-		if !found {
-			//interface num isn't in table
-			d.Log.Infof("interface number %d isn't in the table of interface names", num)
-			continue
-		}
-		metric.AddTag(d.DestTag, name)
-
+		d.addTag(metric)
 	}
 	return metrics
+}
+
+func (d *IfName) Start(acc telegraf.Accumulator) error {
+	d.acc = acc
+
+	fn := func(m telegraf.Metric) []telegraf.Metric {
+		d.addTag(m)
+		return []telegraf.Metric{m}
+	}
+
+	if d.Ordered {
+		d.parallel = parallel.NewOrdered(acc, fn, 10000, d.MaxParallelLookups)
+	} else {
+		d.parallel = parallel.NewUnordered(acc, fn, d.MaxParallelLookups)
+	}
+	return nil
+}
+
+func (d *IfName) Add(metric telegraf.Metric, acc telegraf.Accumulator) error {
+	d.parallel.Enqueue(metric)
+	return nil
+}
+
+func (d *IfName) Stop() error {
+	d.parallel.Stop()
+	return nil
 }
 
 // getMap gets the interface names map either from cache or from the SNMP
 // agent
 func (d *IfName) getMap(agent string) (*nameMap, error) {
+	// Check cache first
+	d.rwLock.RLock()
 	m, ok := d.cache.Get(agent)
+	d.rwLock.RUnlock()
 	if ok {
 		return m, nil
 	}
 
+	// The cache missed so make an SNMP request.  Write the response
+	// to cache and return it
+	d.rwLock.Lock()
+	defer d.rwLock.Unlock()
+
+	// Check cache again while holding write lock to prevent duplicate
+	// SNMP requests.
 	var err error
+	m, ok = d.cache.Get(agent)
+	if ok {
+		return m, nil
+	}
+
 	m, err = d.getMapRemote(agent)
 	if err != nil {
 		return nil, err
 	}
 
 	d.cache.Put(agent, m)
-	return m, err
+	return m, nil
 }
 
 func (d *IfName) getMapRemote(agent string) (*nameMap, error) {
@@ -132,7 +233,7 @@ func (d *IfName) getMapRemote(agent string) (*nameMap, error) {
 
 	err = gs.Connect()
 	if err != nil {
-		//can't connect (if tcp)
+		//can't connect
 		return nil, err
 	}
 
@@ -151,12 +252,20 @@ func (d *IfName) getMapRemote(agent string) (*nameMap, error) {
 }
 
 func init() {
-	processors.Add("port_name", func() telegraf.Processor {
+	processors.AddStreaming("ifname", func() telegraf.StreamingProcessor {
 		return &IfName{
-			SourceTag: "ifIndex",
-			DestTag:   "ifName",
-			AgentTag:  "agent",
-			CacheSize: 1000,
+			SourceTag:          "ifIndex",
+			DestTag:            "ifName",
+			AgentTag:           "agent",
+			CacheSize:          100,
+			MaxParallelLookups: 100,
+			ClientConfig: snmp.ClientConfig{
+				Retries:        3,
+				MaxRepetitions: 10,
+				Timeout:        internal.Duration{Duration: 5 * time.Second},
+				Version:        2,
+				Community:      "public",
+			},
 		}
 	})
 }
