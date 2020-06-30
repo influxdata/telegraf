@@ -1,3 +1,4 @@
+// +build !windows
 package process
 
 import (
@@ -6,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"sync/atomic"
 	"syscall"
 	"testing"
@@ -64,11 +64,10 @@ func TestMain(m *testing.M) {
 }
 
 // externalProcess is an external "misbehaving" process that won't exit
-// cleanly, and crashes on SIGUSR1.
+// cleanly.
 func externalProcess() {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGUSR1)
+	wait := make(chan int, 0)
 	fmt.Fprintln(os.Stdout, "started")
-	<-sigs
+	<-wait
 	os.Exit(2)
 }
