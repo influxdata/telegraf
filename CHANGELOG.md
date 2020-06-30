@@ -12,7 +12,12 @@
 - Telegraf's `--test` mode now runs processors and aggregators before printing
   metrics.
 
-- Official packages now built with Go 1.14.3.
+- Official packages now built with Go 1.14.4.
+
+- When updating the Debian package you will no longer be prompted to merge the
+  telegraf.conf file, instead the new version will be installed to
+  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages no include
+  the version in the top level directory.
 
 #### New Inputs
 
