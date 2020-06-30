@@ -28,24 +28,6 @@ if [[ -f /etc/redhat-release ]] || [[ -f /etc/SuSE-release ]]; then
             disable_chkconfig
         fi
     fi
-elif [[ -f /etc/debian_version ]]; then
-    # Debian/Ubuntu logic
-    if [ "$1" == "remove" -o "$1" == "purge" ]; then
-        # Remove/purge
-        rm -f /etc/default/telegraf
-
-        if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
-            disable_systemd /lib/systemd/system/telegraf.service
-        else
-            # Assuming sysv
-            # Run update-rc.d or fallback to chkconfig if not available
-            if which update-rc.d &>/dev/null; then
-                disable_update_rcd
-            else
-                disable_chkconfig
-            fi
-        fi
-    fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
     if [[ "$ID" = "amzn" ]] && [[ "$1" = "0" ]]; then

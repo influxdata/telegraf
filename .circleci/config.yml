@@ -6,10 +6,10 @@ defaults:
       GOFLAGS: -p=8
   go-1_13: &go-1_13
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.13.11'
+      - image: 'quay.io/influxdb/telegraf-ci:1.13.12'
   go-1_14: &go-1_14
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.14.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.14.4'
   mac: &mac
     macos:
       xcode: 11.3.1
@@ -109,26 +109,28 @@ jobs:
           at: '/go'
       - run: 'make package'
       - store_artifacts:
-          path: './build'
-          destination: 'build'
+          path: './build/dist'
+          destination: 'build/dist'
+
   release:
     <<: [ *defaults, *go-1_14 ]
     steps:
       - attach_workspace:
           at: '/go'
-      - run: 'make package-release'
+      - run: 'make package'
       - store_artifacts:
-          path: './build'
-          destination: 'build'
+          path: './build/dist'
+          destination: 'build/dist'
   nightly:
     <<: [ *defaults, *go-1_14 ]
     steps:
       - attach_workspace:
           at: '/go'
-      - run: 'make package-nightly'
+      - run: 'NIGHTLY=1 make package'
+      - run: 'make upload-nightly'
       - store_artifacts:
-          path: './build'
-          destination: 'build'
+          path: './build/dist'
+          destination: 'build/dist'
 
 workflows:
   version: 2
