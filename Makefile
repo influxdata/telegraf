@@ -44,7 +44,12 @@ MAKEFLAGS += --no-print-directory
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 HOSTGO := env -u GOOS -u GOARCH -u GOARM -- go
-LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch) -X main.version=$(version)
+
+LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch)
+ifneq ($(tag),)
+	LDFLAGS += -X main.version=$(version)
+endif
+
 GOFILES ?= $(shell git ls-files '*.go')
 GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
 
