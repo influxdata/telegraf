@@ -100,6 +100,7 @@
 - [#7718](https://github.com/influxdata/telegraf/pull/7718): Skip overs errors in the output of the sensors command.
 - [#7748](https://github.com/influxdata/telegraf/issues/7748): Prevent startup when tags have incorrect type in configuration file.
 - [#7699](https://github.com/influxdata/telegraf/issues/7699): Fix panic with GJSON multiselect query in json parser.
+- [#7754](https://github.com/influxdata/telegraf/issues/7754): Allow any key usage type on x509 certificate.
 
 ## v1.14.4 [2020-06-09]
 
