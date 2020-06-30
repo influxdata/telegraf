@@ -51,6 +51,34 @@ cpu_time_idle{host="example.org"} 42
 `),
 		},
 		{
+			name: "summary no quantiles",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     2,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				Log:               Logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"rpc_duration_seconds_sum":   1.7560473e+07,
+						"rpc_duration_seconds_count": 2693,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+			},
+			expected: []byte(`
+# HELP rpc_duration_seconds Telegraf collected metric
+# TYPE rpc_duration_seconds summary
+rpc_duration_seconds_sum 1.7560473e+07
+rpc_duration_seconds_count 2693
+`),
+		},
+		{
 			name: "when export timestamp is true timestamp is present in the metric",
 			output: &PrometheusClient{
 				Listen:            ":0",
@@ -236,6 +264,37 @@ cpu_time_idle{host="example.org"} 42
 cpu_usage_idle_bucket{cpu="cpu1",le="0"} 0
 cpu_usage_idle_bucket{cpu="cpu1",le="50"} 7
 cpu_usage_idle_bucket{cpu="cpu1",le="100"} 20
+cpu_usage_idle_bucket{cpu="cpu1",le="+Inf"} 20
+cpu_usage_idle_sum{cpu="cpu1"} 2000
+cpu_usage_idle_count{cpu="cpu1"} 20
+`),
+		},
+		{
+			name: "histogram no buckets",
+			output: &PrometheusClient{
+				Listen:            ":0",
+				MetricVersion:     2,
+				CollectorsExclude: []string{"gocollector", "process"},
+				Path:              "/metrics",
+				Log:               Logger,
+			},
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"cpu",
+					map[string]string{
+						"cpu": "cpu1",
+					},
+					map[string]interface{}{
+						"usage_idle_sum":   2000.0,
+						"usage_idle_count": 20.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+			},
+			expected: []byte(`
+# HELP cpu_usage_idle Telegraf collected metric
+# TYPE cpu_usage_idle histogram
 cpu_usage_idle_bucket{cpu="cpu1",le="+Inf"} 20
 cpu_usage_idle_sum{cpu="cpu1"} 2000
 cpu_usage_idle_count{cpu="cpu1"} 20
