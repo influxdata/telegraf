@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -47,7 +48,9 @@ func TestExternalOutputWorks(t *testing.T) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			t.Errorf("error reading stderr: %v", err)
+			if !strings.HasSuffix(err.Error(), "already closed") {
+				t.Errorf("error reading stderr: %v", err)
+			}
 		}
 		wg.Done()
 	}
