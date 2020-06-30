@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -111,7 +110,7 @@ func (e *Execd) cmdReadOut(out io.Reader) {
 	scanner := bufio.NewScanner(out)
 
 	for scanner.Scan() {
-		log.Println(scanner.Text())
+		e.Log.Info(scanner.Text())
 	}
 }
 

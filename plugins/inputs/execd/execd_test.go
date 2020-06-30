@@ -147,7 +147,11 @@ func TestMain(m *testing.M) {
 
 func runCounterProgram() {
 	i := 0
-	serializer, _ := serializers.NewInfluxSerializer()
+	serializer, err := serializers.NewInfluxSerializer()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ERR InfluxSerializer failed to load")
+		os.Exit(1)
+	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {

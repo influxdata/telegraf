@@ -1,5 +1,3 @@
-// +build !windows
-
 package execd
 
 import (
@@ -18,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,7 +23,7 @@ var now = time.Date(2020, 6, 30, 16, 16, 0, 0, time.UTC)
 
 func TestExternalOutputWorks(t *testing.T) {
 	influxSerializer, err := serializers.NewInfluxSerializer()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	exe, err := os.Executable()
 	require.NoError(t, err)
@@ -38,7 +35,7 @@ func TestExternalOutputWorks(t *testing.T) {
 		Log:          testutil.Logger{},
 	}
 
-	e.Init()
+	require.NoError(t, e.Init())
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -61,11 +58,11 @@ func TestExternalOutputWorks(t *testing.T) {
 		map[string]interface{}{"idle": 50, "sys": 30},
 		now,
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NoError(t, e.Connect())
-	assert.NoError(t, e.Write([]telegraf.Metric{m}))
-	assert.NoError(t, e.Close())
+	require.NoError(t, e.Connect())
+	require.NoError(t, e.Write([]telegraf.Metric{m}))
+	require.NoError(t, e.Close())
 	wg.Wait()
 }
 

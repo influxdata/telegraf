@@ -83,8 +83,11 @@ func (p *Process) Start() error {
 
 func (p *Process) Stop() {
 	if p.cancel != nil {
+		// signal our intent not to restart the process
 		p.cancel()
 	}
+	// close stdin so the app can shut down gracefully.
+	p.Stdin.Close()
 	p.mainLoopWg.Wait()
 }
 
@@ -103,10 +106,7 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 	processShutdownCh := make(chan struct{})
 	go func() {
 		<-ctx.Done()
-		if p.Stdin != nil {
-			p.Stdin.Close()
-			gracefulStop(p.Cmd, 5*time.Second, processShutdownCh)
-		}
+		gracefulStop(p.Cmd, 5*time.Second, processShutdownCh)
 	}()
 
 	for {
@@ -122,6 +122,9 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 
 		select {
 		case <-ctx.Done():
+			// we are shutting down while the external process isn't running,
+			// signal that the external process is not running so we don't
+			// try to kill it.
 			close(processShutdownCh)
 			return nil
 		case <-time.After(time.Duration(p.RestartDelay)):
