@@ -3,16 +3,15 @@
 package process
 
 import (
+	"context"
 	"os/exec"
 	"time"
 )
 
-func gracefulStop(cmd *exec.Cmd, timeout time.Duration, processQuit chan struct{}) {
+func gracefulStop(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) {
 	select {
-	case <-processQuit:
-		return
 	case <-time.After(timeout):
+		cmd.Process.Kill()
+	case <-ctx.Done():
 	}
-
-	cmd.Process.Kill()
 }
