@@ -117,7 +117,7 @@ Emitted when `cluster_health = true` and `cluster_health_level = "indices"`:
     - status_code (integer, green = 1, yellow = 2, red = 3),
     - unassigned_shards (integer)
 
-Emitted when `cluster__stats = true`:
+Emitted when `cluster_stats = true`:
 
 - elasticsearch_clusterstats_indices
   - tags:
