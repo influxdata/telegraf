@@ -79,24 +79,39 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
-func (r *phpfpm) SampleConfig() string {
+func (p *phpfpm) SampleConfig() string {
 	return sampleConfig
 }
 
-func (r *phpfpm) Description() string {
+func (p *phpfpm) Description() string {
 	return "Read metrics of phpfpm, via HTTP status page or socket"
+}
+
+func (p *phpfpm) Init() error {
+	tlsCfg, err := p.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	p.client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: p.Timeout.Duration,
+	}
+	return nil
 }
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
-func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
-	if len(g.Urls) == 0 {
-		return g.gatherServer("http://127.0.0.1/status", acc)
+func (p *phpfpm) Gather(acc telegraf.Accumulator) error {
+	if len(p.Urls) == 0 {
+		return p.gatherServer("http://127.0.0.1/status", acc)
 	}
 
 	var wg sync.WaitGroup
 
-	urls, err := expandUrls(g.Urls)
+	urls, err := expandUrls(p.Urls)
 	if err != nil {
 		return err
 	}
@@ -105,7 +120,7 @@ func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			acc.AddError(g.gatherServer(serv, acc))
+			acc.AddError(p.gatherServer(serv, acc))
 		}(serv)
 	}
 
@@ -115,23 +130,9 @@ func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
 }
 
 // Request status page to get stat raw data and import it
-func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
-	if g.client == nil {
-		tlsCfg, err := g.ClientConfig.TLSConfig()
-		if err != nil {
-			return err
-		}
-		tr := &http.Transport{
-			TLSClientConfig: tlsCfg,
-		}
-		g.client = &http.Client{
-			Transport: tr,
-			Timeout:   g.Timeout.Duration,
-		}
-	}
-
+func (p *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 	if strings.HasPrefix(addr, "http://") || strings.HasPrefix(addr, "https://") {
-		return g.gatherHttp(addr, acc)
+		return p.gatherHttp(addr, acc)
 	}
 
 	var (
@@ -170,11 +171,11 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		return err
 	}
 
-	return g.gatherFcgi(fcgi, statusPath, acc, addr)
+	return p.gatherFcgi(fcgi, statusPath, acc, addr)
 }
 
 // Gather stat using fcgi protocol
-func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumulator, addr string) error {
+func (p *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumulator, addr string) error {
 	fpmOutput, fpmErr, err := fcgi.Request(map[string]string{
 		"SCRIPT_NAME":     "/" + statusPath,
 		"SCRIPT_FILENAME": statusPath,
@@ -194,7 +195,7 @@ func (g *phpfpm) gatherFcgi(fcgi *conn, statusPath string, acc telegraf.Accumula
 }
 
 // Gather stat using http protocol
-func (g *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
+func (p *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 	u, err := url.Parse(addr)
 	if err != nil {
 		return fmt.Errorf("Unable parse server address '%s': %s", addr, err)
@@ -202,7 +203,7 @@ func (g *phpfpm) gatherHttp(addr string, acc telegraf.Accumulator) error {
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s%s", u.Scheme,
 		u.Host, u.Path), nil)
-	res, err := g.client.Do(req)
+	res, err := p.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("Unable to connect to phpfpm status page '%s': %v",
 			addr, err)
