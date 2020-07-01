@@ -1,4 +1,4 @@
-package cisco_telemetry_gnmi
+package gnmi
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// CiscoTelemetryGNMI plugin instance
-type CiscoTelemetryGNMI struct {
+// gNMI plugin instance
+type GNMI struct {
 	Addresses     []string          `toml:"addresses"`
 	Subscriptions []Subscription    `toml:"subscription"`
 	Aliases       map[string]string `toml:"aliases"`
@@ -39,7 +39,7 @@ type CiscoTelemetryGNMI struct {
 	Target      string
 	UpdatesOnly bool `toml:"updates_only"`
 
-	// Cisco IOS XR credentials
+	// gNMI target credentials
 	Username string
 	Password string
 
@@ -59,7 +59,7 @@ type CiscoTelemetryGNMI struct {
 	Log telegraf.Logger
 }
 
-// Subscription for a GNMI client
+// Subscription for a gNMI client
 type Subscription struct {
 	Name   string
 	Origin string
@@ -75,7 +75,7 @@ type Subscription struct {
 }
 
 // Start the http listener service
-func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
+func (c *GNMI) Start(acc telegraf.Accumulator) error {
 	var err error
 	var ctx context.Context
 	var tlscfg *tls.Config
@@ -151,8 +151,8 @@ func (c *CiscoTelemetryGNMI) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Create a new GNMI SubscribeRequest
-func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
+// Create a new gNMI SubscribeRequest
+func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 	// Create subscription objects
 	subscriptions := make([]*gnmi.Subscription, len(c.Subscriptions))
 	for i, subscription := range c.Subscriptions {
@@ -197,7 +197,7 @@ func (c *CiscoTelemetryGNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, erro
 }
 
 // SubscribeGNMI and extract telemetry data
-func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmi.SubscribeRequest) error {
+func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Config, request *gnmi.SubscribeRequest) error {
 	var opt grpc.DialOption
 	if tlscfg != nil {
 		opt = grpc.WithTransportCredentials(credentials.NewTLS(tlscfg))
@@ -220,13 +220,13 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, 
 		return fmt.Errorf("failed to send subscription request: %v", err)
 	}
 
-	c.Log.Debugf("Connection to GNMI device %s established", address)
-	defer c.Log.Debugf("Connection to GNMI device %s closed", address)
+	c.Log.Debugf("Connection to gNMI device %s established", address)
+	defer c.Log.Debugf("Connection to gNMI device %s closed", address)
 	for ctx.Err() == nil {
 		var reply *gnmi.SubscribeResponse
 		if reply, err = subscribeClient.Recv(); err != nil {
 			if err != io.EOF && ctx.Err() == nil {
-				return fmt.Errorf("aborted GNMI subscription: %v", err)
+				return fmt.Errorf("aborted gNMI subscription: %v", err)
 			}
 			break
 		}
@@ -236,9 +236,9 @@ func (c *CiscoTelemetryGNMI) subscribeGNMI(ctx context.Context, address string, 
 	return nil
 }
 
-// HandleSubscribeResponse message from GNMI and parse contained telemetry data
-func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
-	// Check if response is a GNMI Update and if we have a prefix to derive the measurement name
+// HandleSubscribeResponse message from gNMI and parse contained telemetry data
+func (c *GNMI) handleSubscribeResponse(address string, reply *gnmi.SubscribeResponse) {
+	// Check if response is a gNMI Update and if we have a prefix to derive the measurement name
 	response, ok := reply.Response.(*gnmi.SubscribeResponse_Update)
 	if !ok {
 		return
@@ -276,7 +276,7 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 			if alias, ok := c.aliases[aliasPath]; ok {
 				name = alias
 			} else {
-				c.Log.Debugf("No measurement alias for GNMI path: %s", name)
+				c.Log.Debugf("No measurement alias for gNMI path: %s", name)
 			}
 		}
 
@@ -313,7 +313,7 @@ func (c *CiscoTelemetryGNMI) handleSubscribeResponse(address string, reply *gnmi
 }
 
 // HandleTelemetryField and add it to a measurement
-func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
+func (c *GNMI) handleTelemetryField(update *gnmi.Update, tags map[string]string, prefix string) (string, map[string]interface{}) {
 	path, aliasPath := c.handlePath(update.Path, tags, prefix)
 
 	var value interface{}
@@ -364,7 +364,7 @@ func (c *CiscoTelemetryGNMI) handleTelemetryField(update *gnmi.Update, tags map[
 }
 
 // Parse path to path-buffer and tag-field
-func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string, string) {
+func (c *GNMI) handlePath(path *gnmi.Path, tags map[string]string, prefix string) (string, string) {
 	var aliasPath string
 	builder := bytes.NewBufferString(prefix)
 
@@ -404,7 +404,7 @@ func (c *CiscoTelemetryGNMI) handlePath(path *gnmi.Path, tags map[string]string,
 	return builder.String(), aliasPath
 }
 
-//ParsePath from XPath-like string to GNMI path structure
+//ParsePath from XPath-like string to gNMI path structure
 func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 	var err error
 	gnmiPath := gnmi.Path{Origin: origin, Target: target}
@@ -458,7 +458,7 @@ func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 	}
 
 	if name >= 0 || value >= 0 {
-		err = fmt.Errorf("Invalid GNMI path: %s", path)
+		err = fmt.Errorf("Invalid gNMI path: %s", path)
 	}
 
 	if err != nil {
@@ -469,20 +469,20 @@ func parsePath(origin string, path string, target string) (*gnmi.Path, error) {
 }
 
 // Stop listener and cleanup
-func (c *CiscoTelemetryGNMI) Stop() {
+func (c *GNMI) Stop() {
 	c.cancel()
 	c.wg.Wait()
 }
 
 const sampleConfig = `
- ## Address and port of the GNMI GRPC server
+ ## Address and port of the gNMI GRPC server
  addresses = ["10.49.234.114:57777"]
 
  ## define credentials
  username = "cisco"
  password = "cisco"
 
- ## GNMI encoding requested (one of: "proto", "json", "json_ietf")
+ ## gNMI encoding requested (one of: "proto", "json", "json_ietf")
  # encoding = "proto"
 
  ## redial in case of failures after
@@ -497,17 +497,17 @@ const sampleConfig = `
  # tls_cert = "/etc/telegraf/cert.pem"
  # tls_key = "/etc/telegraf/key.pem"
 
- ## GNMI subscription prefix (optional, can usually be left empty)
+ ## gNMI subscription prefix (optional, can usually be left empty)
  ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
  # origin = ""
  # prefix = ""
  # target = ""
 
  ## Define additional aliases to map telemetry encoding paths to simple measurement names
- #[inputs.cisco_telemetry_gnmi.aliases]
+ #[inputs.gnmi.aliases]
  #  ifcounters = "openconfig:/interfaces/interface/state/counters"
 
- [[inputs.cisco_telemetry_gnmi.subscription]]
+ [[inputs.gnmi.subscription]]
   ## Name of the measurement that will be emitted
   name = "ifcounters"
 
@@ -532,25 +532,29 @@ const sampleConfig = `
 `
 
 // SampleConfig of plugin
-func (c *CiscoTelemetryGNMI) SampleConfig() string {
+func (c *GNMI) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description of plugin
-func (c *CiscoTelemetryGNMI) Description() string {
-	return "Cisco GNMI telemetry input plugin based on GNMI telemetry data produced in IOS XR"
+func (c *GNMI) Description() string {
+	return "gNMI telemetry input plugin"
 }
 
 // Gather plugin measurements (unused)
-func (c *CiscoTelemetryGNMI) Gather(_ telegraf.Accumulator) error {
+func (c *GNMI) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
+func New() telegraf.Input {
+	return &GNMI{
+		Encoding: "proto",
+		Redial:   internal.Duration{Duration: 10 * time.Second},
+	}
+}
+
 func init() {
-	inputs.Add("cisco_telemetry_gnmi", func() telegraf.Input {
-		return &CiscoTelemetryGNMI{
-			Encoding: "proto",
-			Redial:   internal.Duration{Duration: 10 * time.Second},
-		}
-	})
+	inputs.Add("gnmi", New)
+	// Backwards compatible alias:
+	inputs.Add("cisco_telemetry_gnmi", New)
 }

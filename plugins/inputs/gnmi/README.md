@@ -1,6 +1,6 @@
-# Cisco GNMI Telemetry
+# gNMI (gRPC Network Management Interface)
 
-This plugin consumes telemetry data based on the [gNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.  This input plugin is vendor-agnostic and is supported on any platform that supports the gNMI spec. 
+This plugin consumes telemetry data based on the [gNMI](https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md) Subscribe method. TLS is supported for authentication and encryption.  This input plugin is vendor-agnostic and is supported on any platform that supports the gNMI spec.
 
 For Cisco devices: 
 It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-bit) version 6.5.1, Cisco NX-OS 9.3 and Cisco IOS XE 16.12 and later.
@@ -9,15 +9,15 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
 ### Configuration
 
 ```toml
-[[inputs.cisco_telemetry_gnmi]]
-  ## Address and port of the GNMI GRPC server
+[[inputs.gnmi]]
+  ## Address and port of the gNMI GRPC server
   addresses = ["10.49.234.114:57777"]
 
   ## define credentials
   username = "cisco"
   password = "cisco"
 
-  ## GNMI encoding requested (one of: "proto", "json", "json_ietf")
+  ## gNMI encoding requested (one of: "proto", "json", "json_ietf")
   # encoding = "proto"
 
   ## redial in case of failures after
@@ -32,17 +32,17 @@ It has been optimized to support gNMI telemetry as produced by Cisco IOS XR (64-
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
 
-  ## GNMI subscription prefix (optional, can usually be left empty)
+  ## gNMI subscription prefix (optional, can usually be left empty)
   ## See: https://github.com/openconfig/reference/blob/master/rpc/gnmi/gnmi-specification.md#222-paths
   # origin = ""
   # prefix = ""
   # target = ""
 
   ## Define additional aliases to map telemetry encoding paths to simple measurement names
-  # [inputs.cisco_telemetry_gnmi.aliases]
+  # [inputs.gnmi.aliases]
   #   ifcounters = "openconfig:/interfaces/interface/state/counters"
 
-  [[inputs.cisco_telemetry_gnmi.subscription]]
+  [[inputs.gnmi.subscription]]
     ## Name of the measurement that will be emitted
     name = "ifcounters"
 
