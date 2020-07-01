@@ -24,7 +24,7 @@ type OutputConfig struct {
 	Filter Filter
 
 	FlushInterval     time.Duration
-	FlushJitter       *time.Duration
+	FlushJitter       time.Duration
 	MetricBufferLimit int
 	MetricBatchSize   int
 
