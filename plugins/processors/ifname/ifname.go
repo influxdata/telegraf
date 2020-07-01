@@ -160,7 +160,7 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	fn := func(m telegraf.Metric) []telegraf.Metric {
 		err := d.addTag(m)
 		if err != nil {
-			d.Log.Debugf("error adding tag %v", err)
+			d.Log.Debugf("Error adding tag %v", err)
 		}
 		return []telegraf.Metric{m}
 	}
