@@ -7,6 +7,7 @@ require (
 	cloud.google.com/go/datastore v1.1.0 // indirect
 	cloud.google.com/go/pubsub v1.2.0
 	code.cloudfoundry.org/clock v1.0.0 // indirect
+	code.cloudfoundry.org/go-loggregator/v8 v8.0.1
 	collectd.org v0.3.0
 	github.com/Azure/azure-event-hubs-go/v3 v3.2.0
 	github.com/Azure/azure-storage-queue-go v0.0.0-20181215014128-6ed74e755687
@@ -32,6 +33,7 @@ require (
 	github.com/caio/go-tdigest v2.3.0+incompatible // indirect
 	github.com/cenkalti/backoff v2.0.0+incompatible // indirect
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
+	github.com/cloudfoundry-community/go-cfclient v0.0.0-20200413172050-18981bf12b4b
 	github.com/cockroachdb/apd v1.1.0 // indirect
 	github.com/couchbase/go-couchbase v0.0.0-20180501122049-16db1f1fe037
 	github.com/couchbase/gomemcached v0.0.0-20180502221210-0da75df14530 // indirect
@@ -85,7 +87,6 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leesper/go_rng v0.0.0-20190531154944-a612b043e353 // indirect
 	github.com/lib/pq v1.3.0 // indirect
-	github.com/mailru/easyjson v0.0.0-20180717111219-efc7eb8984d6 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1
 	github.com/mdlayher/apcupsd v0.0.0-20190314144147-eb3dd99a75fe
 	github.com/miekg/dns v1.0.14
