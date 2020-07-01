@@ -24,6 +24,7 @@
 
 #### New Inputs
 
+- [nginx_sts](/plugins/inputs/nginx_sts/README.md) - Contributed by @zdmytriv
 - [redfish](/plugins/inputs/redfish/README.md) - Contributed by @sarvanikonda
 
 #### New Processors
