@@ -12,12 +12,22 @@
 - Telegraf's `--test` mode now runs processors and aggregators before printing
   metrics.
 
-- Official packages now built with Go 1.14.3.
+- Official packages now built with Go 1.14.4.
+
+- When updating the Debian package you will no longer be prompted to merge the
+  telegraf.conf file, instead the new version will be installed to
+  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages no include
+  the version in the top level directory.
+
+#### New Inputs
+
+- [redfish](/plugins/inputs/redfish/README.md) - Contributed by @sarvanikonda
 
 #### New Processors
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+- [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
 
 #### New Outputs
 
@@ -61,6 +71,10 @@
 - [#7651](https://github.com/influxdata/telegraf/pull/7651): Fix source field for icinga2 plugin and add tag for server hostname.
 - [#7619](https://github.com/influxdata/telegraf/pull/7619): Add timezone configuration to csv input data format.
 - [#7596](https://github.com/influxdata/telegraf/pull/7596): Add ability to collect response body as field with http_response.
+- [#7267](https://github.com/influxdata/telegraf/pull/7267): Add ability to add selectors as tags in kube_inventory.
+- [#7712](https://github.com/influxdata/telegraf/pull/7712): Add counter type to sqlserver perfmon collector.
+- [#7575](https://github.com/influxdata/telegraf/pull/7575): Add missing nvme attributes to smart plugin.
+- [#7726](https://github.com/influxdata/telegraf/pull/7726): Add laundry to mem plugin on FreeBSD.
 
 #### Bugfixes
 
@@ -73,6 +87,21 @@
 - [#7203](https://github.com/influxdata/telegraf/issues/7203): Exclude csv_timestamp_column and csv_measurement_column from fields.
 - [#7018](https://github.com/influxdata/telegraf/issues/7018): Fix incorrect uptime when clock is adjusted.
 - [#6807](https://github.com/influxdata/telegraf/issues/6807): Fix memory leak when using procstat on Windows.
+- [#7495](https://github.com/influxdata/telegraf/issues/7495): Improve sqlserver input compatibility with older server versions.
+- [#7558](https://github.com/influxdata/telegraf/issues/7558): Remove trailing backslash from tag keys/values in influx serializer.
+- [#7715](https://github.com/influxdata/telegraf/issues/7715): Fix incorrect Azure SQL DB server properties.
+
+## v1.14.5 [2020-06-30]
+
+#### Bugfixes
+
+- [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve the performance of the procstat input.
+- [#7658](https://github.com/influxdata/telegraf/pull/7658): Fix ping exit code handling on non-Linux.
+- [#7718](https://github.com/influxdata/telegraf/pull/7718): Skip overs errors in the output of the sensors command.
+- [#7748](https://github.com/influxdata/telegraf/issues/7748): Prevent startup when tags have incorrect type in configuration file.
+- [#7699](https://github.com/influxdata/telegraf/issues/7699): Fix panic with GJSON multiselect query in json parser.
+- [#7754](https://github.com/influxdata/telegraf/issues/7754): Allow any key usage type on x509 certificate.
+- [#7705](https://github.com/influxdata/telegraf/issues/7705): Allow histograms and summary types without buckets or quantiles in prometheus_client output.
 
 ## v1.14.4 [2020-06-09]
 

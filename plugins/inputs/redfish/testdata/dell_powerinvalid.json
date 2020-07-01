@@ -1,0 +1,207 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Power.Power",
+  "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Power",
+  "@odata.type": "#Power.v1_5_0.Power",
+  "Description": "Power",
+  "Id": "Power",
+  "Name": "Power",
+  "PowerControl": [
+    {
+      "@odata.context": "/redfish/v1/$metadata#Power.Power",
+      "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Power/PowerControl",
+      "@odata.type": "#Power.v1_4_0.PowerControl",
+      "MemberId": "PowerControl",
+      "Name": "System Power Control",
+      "PowerAllocatedWatts": 1628,
+      "PowerAvailableWatts": 0,
+      "PowerCapacityWatts": 1628,
+      "PowerConsumedWatts": 429,
+      "PowerLimit": {
+        "CorrectionInMs": 0,
+        "LimitException": "HardPowerOff",
+        "LimitInWatts": 348
+      },
+      "PowerMetrics": {
+        "AverageConsumedWatts": 426,
+        "IntervalInMin": 1,
+        "MaxConsumedWatts": 436,
+        "MinConsumedWatts": 425
+      },
+      "PowerRequestedWatts": 704,
+      "RelatedItem": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/System.Embedded.1"
+        },
+        {
+          "@odata.id": "/redfish/v1/Systems/System.Embedded.1"
+        }
+      ],
+      "RelatedItem@odata.count": 2
+    }
+  ],
+  "PowerControl@odata.count": 1,
+  "PowerSupplies": [
+    {
+      "@odata.context": "/redfish/v1/$metadata#Power.Power",
+      "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Power/PowerSupplies/PSU.Slot.1",
+      "@odata.type": "#Power.v1_5_0.PowerSupply",
+      "Assembly": {
+        "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Assembly"
+      },
+      "EfficiencyPercent": 0.9100000262260437,
+      "FirmwareVersion": "00.1B.53",
+      "HotPluggable": true,
+      "InputRanges": [
+        {
+          "InputType": "AC",
+          "MaximumFrequencyHz": 63,
+          "MaximumVoltage": 264,
+          "MinimumFrequencyHz": 47,
+          "MinimumVoltage": 90,
+          "OutputWattage": 750
+        }
+      ],
+      "InputRanges@odata.count": 1,
+      "LastPowerOutputWatts": null,
+      "LineInputVoltage": 206,
+      "LineInputVoltageType": "AC240V",
+      "Manufacturer": "Dell",
+      "MemberId": "PSU.Slot.1",
+      "Model": "PWR SPLY,750W,RDNT,ARTESYN    ",
+      "Name": PS1 Status,
+      "Oem": {
+        "Dell": {
+          "DellPowerSupply": {
+            "@odata.context": "/redfish/v1/$metadata#DellPowerSupply.DellPowerSupply",
+            "@odata.id": "/redfish/v1/Dell/Chassis/System.Embedded.1/Power/PowerSupplies/DellPowerSupply/PSU.Slot.1",
+            "@odata.type": "#DellPowerSupply.v1_0_0.DellPowerSupply",
+            "IsSwitchingSupply": true,
+            "Links": {
+              "DellPSNumericSensorCollection": [
+                {
+                  "@odata.id": "/redfish/v1/Dell/Systems/System.Embedded.1/DellPSNumericSensor/iDRAC.Embedded.1%23PS1Current1"
+                }
+              ]
+            }
+          },
+          "DellPowerSupplyView": {
+            "@odata.context": "/redfish/v1/$metadata#DellPowerSupplyView.DellPowerSupplyView",
+            "@odata.id": "/redfish/v1/Dell/Chassis/System.Embedded.1/Power/PowerSupplies/DellPowerSupplyView/PSU.Slot.1",
+            "@odata.type": "#DellPowerSupplyView.v1_0_0.DellPowerSupplyView",
+            "DetailedState": "Presence Detected",
+            "Range1MaxInputPowerWatts": 900
+          }
+        }
+      },
+      "PartNumber": "0PJMDNA01",
+      "PowerCapacityWatts": 750,
+      "PowerInputWatts": 900,
+      "PowerOutputWatts": 203,
+      "PowerSupplyType": "AC",
+      "Redundancy": [],
+      "Redundancy@odata.count": 0,
+      "RelatedItem": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/System.Embedded.1"
+        }
+      ],
+      "RelatedItem@odata.count": 1,
+      "SerialNumber": "PHARP0079G0049",
+      "SparePartNumber": "0PJMDNA01",
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      }
+    }
+  ],
+  "PowerSupplies@odata.count": 1,
+  "Redundancy": [],
+  "Redundancy@odata.count": 0,
+  "Voltages": [
+    {
+      "@odata.context": "/redfish/v1/$metadata#Power.Power",
+      "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardDIMMPG",
+      "@odata.type": "#Power.v1_3_0.Voltage",
+      "LowerThresholdCritical": null,
+      "LowerThresholdFatal": null,
+      "LowerThresholdNonCritical": null,
+      "MaxReadingRange": 0,
+      "MemberId": "iDRAC.Embedded.1#SystemBoardDIMMPG",
+      "MinReadingRange": 0,
+      "Name": "System Board DIMM PG",
+      "PhysicalContext": "SystemBoard",
+      "ReadingVolts": 1,
+      "RelatedItem": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/System.Embedded.1"
+        }
+      ],
+      "RelatedItem@odata.count": 1,
+      "SensorNumber": 7,
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      },
+      "UpperThresholdCritical": null,
+      "UpperThresholdFatal": null,
+      "UpperThresholdNonCritical": null
+    },
+    {
+      "@odata.context": "/redfish/v1/$metadata#Power.Power",
+      "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardNDCPG",
+      "@odata.type": "#Power.v1_3_0.Voltage",
+      "LowerThresholdCritical": null,
+      "LowerThresholdFatal": null,
+      "LowerThresholdNonCritical": null,
+      "MaxReadingRange": 197,
+      "MemberId": "iDRAC.Embedded.1#SystemBoardNDCPG",
+      "MinReadingRange": 139,
+      "Name": "System Board NDC PG",
+      "PhysicalContext": "SystemBoard",
+      "ReadingVolts": 1,
+      "RelatedItem": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/System.Embedded.1"
+        }
+      ],
+      "RelatedItem@odata.count": 1,
+      "SensorNumber": 8,
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      },
+      "UpperThresholdCritical": null,
+      "UpperThresholdFatal": null,
+      "UpperThresholdNonCritical": null
+    },
+    {
+      "@odata.context": "/redfish/v1/$metadata#Power.Power",
+      "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Sensors/Voltages/iDRAC.Embedded.1%23SystemBoardPS1PGFAIL",
+      "@odata.type": "#Power.v1_3_0.Voltage",
+      "LowerThresholdCritical": null,
+      "LowerThresholdFatal": null,
+      "LowerThresholdNonCritical": null,
+      "MaxReadingRange": 197,
+      "MemberId": "iDRAC.Embedded.1#SystemBoardPS1PGFAIL",
+      "MinReadingRange": 139,
+      "Name": "System Board PS1 PG FAIL",
+      "PhysicalContext": "SystemBoard",
+      "ReadingVolts": 1,
+      "RelatedItem": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/System.Embedded.1"
+        }
+      ],
+      "RelatedItem@odata.count": 1,
+      "SensorNumber": 9,
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      },
+      "UpperThresholdCritical": null,
+      "UpperThresholdFatal": null,
+      "UpperThresholdNonCritical": null
+    }
+  ],
+  "Voltages@odata.count": 4
+}

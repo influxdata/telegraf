@@ -136,12 +136,12 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool
+	FlushBufferWhenFull bool // deprecated in 0.13; has no effect
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	UTC bool `toml:"utc"`
+	UTC bool `toml:"utc"` // deprecated in 1.0.0; has no effect
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -1119,7 +1119,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 				var err error
 				conf.DropOriginal, err = strconv.ParseBool(b.Value)
 				if err != nil {
-					log.Printf("Error parsing boolean value for %s: %s\n", name, err)
+					return nil, fmt.Errorf("error parsing boolean value for %s: %s", name, err)
 				}
 			}
 		}
@@ -1161,7 +1161,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
-				log.Printf("Could not parse tags for input %s\n", name)
+				return nil, fmt.Errorf("could not parse tags for input %s", name)
 			}
 		}
 	}
@@ -1195,7 +1195,7 @@ func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error
 				var err error
 				conf.Order, err = strconv.ParseInt(b.Value, 10, 64)
 				if err != nil {
-					log.Printf("Error parsing int value for %s: %s\n", name, err)
+					return nil, fmt.Errorf("error parsing int value for %s: %s", name, err)
 				}
 			}
 		}
@@ -1410,7 +1410,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
-				log.Printf("E! Could not parse tags for input %s\n", name)
+				return nil, fmt.Errorf("could not parse tags for input %s\n", name)
 			}
 		}
 	}

@@ -5,6 +5,7 @@ protocol].  This is the recommended format unless another format is required
 for interoperability.
 
 ### Configuration
+
 ```toml
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.
@@ -30,5 +31,14 @@ for interoperability.
   ## existing data has been written.
   influx_uint_support = false
 ```
+
+### Metrics
+
+Conversion is direct taking into account some limitations of the Line Protocol
+format:
+- Float fields that are `NaN` or `Inf` are skipped.
+- Trailing backslash `\` characters are removed from tag keys and values.
+- Tags with a key or value that is the empty string are skipped.
+- When not using `influx_uint_support`, unsigned integers are capped at the max int64.
 
 [line protocol]: https://docs.influxdata.com/influxdb/latest/write_protocols/line_protocol_tutorial/

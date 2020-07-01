@@ -31,13 +31,27 @@ func (sp *streamingProcessor) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (sp *streamingProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) {
+func (sp *streamingProcessor) Add(m telegraf.Metric, acc telegraf.Accumulator) error {
 	for _, m := range sp.processor.Apply(m) {
 		acc.AddMetric(m)
 	}
+	return nil
 }
 
 func (sp *streamingProcessor) Stop() error {
+	return nil
+}
+
+// Make the streamingProcessor of type Initializer to be able
+// to call the Init method of the wrapped processor if
+// needed
+func (sp *streamingProcessor) Init() error {
+	if p, ok := sp.processor.(telegraf.Initializer); ok {
+		err := p.Init()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

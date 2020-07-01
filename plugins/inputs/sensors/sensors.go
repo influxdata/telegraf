@@ -60,7 +60,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	chip := ""
 	cmd := execCommand(s.path, "-A", "-u")
-	out, err := internal.CombinedOutputTimeout(cmd, s.Timeout.Duration)
+	out, err := internal.StdOutputTimeout(cmd, s.Timeout.Duration)
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
