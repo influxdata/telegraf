@@ -256,6 +256,7 @@ For documentation on the latest development code see the [documentation index][d
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus_api](./plugins/inputs/nginx_plus_api)
 * [nginx_plus](./plugins/inputs/nginx_plus)
+* [nginx_sts](./plugins/inputs/nginx_sts)
 * [nginx_upstream_check](./plugins/inputs/nginx_upstream_check)
 * [nginx_vts](./plugins/inputs/nginx_vts)
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
