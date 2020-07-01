@@ -866,6 +866,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 		req.Header.Add("Authorization", "Token "+v)
 	}
 	req.Header.Add("Accept", "application/toml")
+	req.Header.Set("User-Agent", internal.ProductToken())
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
