@@ -68,6 +68,8 @@ var sampleConfig = `
   #ordered = false
 `
 
+type mapFunc func(agent string) (nameMap, error)
+
 type IfName struct {
 	SourceTag string `toml:"tag"`
 	DestTag   string `toml:"dest"`
@@ -89,6 +91,8 @@ type IfName struct {
 
 	parallel parallel.Parallel    `toml:"-"`
 	acc      telegraf.Accumulator `toml:"-"`
+
+	getMap mapFunc `toml:"-"`
 }
 
 type nameMap map[uint64]string
@@ -101,75 +105,63 @@ func (d *IfName) Description() string {
 	return "Add a tag of the network interface name looked up over SNMP by interface number"
 }
 
-func (h *IfName) Init() error {
-	var err error
-	h.ifTable, err = makeTable("IF-MIB::ifTable")
-	if err != nil {
-		return err
-	}
-	h.ifXTable, err = makeTable("IF-MIB::ifXTable")
-	if err != nil {
-		return err
-	}
-
-	c := NewLRUCache(h.CacheSize)
-	h.cache = &c
+func (d *IfName) Init() error {
+	d.getMap = d.getMapNoMock
+	c := NewLRUCache(d.CacheSize)
+	d.cache = &c
 
 	return nil
 }
 
-func (d *IfName) addTag(metric telegraf.Metric) {
-	//this is called by the pool but locking is handled inside getMap
-	// if metric == nil {
-	// 	return
-	// }
-
+func (d *IfName) addTag(metric telegraf.Metric) error {
 	agent, ok := metric.GetTag(d.AgentTag)
 	if !ok {
 		//agent tag missing
-		return
+		return nil
 	}
 
 	num_s, ok := metric.GetTag(d.SourceTag)
 	if !ok {
 		//source tag missing
-		return
+		return nil
 	}
 
 	num, err := strconv.ParseUint(num_s, 10, 64)
 	if err != nil {
-		//source tag not a uint
-		d.Log.Infof("couldn't parse source tag as uint")
-		return
+		return fmt.Errorf("couldn't parse source tag as uint")
 	}
 
 	m, err := d.getMap(agent)
 	if err != nil {
-		d.Log.Infof("couldn't retrieve the table of interface names: %w", err)
-		return
+		return fmt.Errorf("couldn't retrieve the table of interface names: %w", err)
 	}
 
-	name, found := (*m)[num]
+	name, found := m[num]
 	if !found {
-		//interface num isn't in table
-		d.Log.Infof("interface number %d isn't in the table of interface names", num)
-		return
+		return fmt.Errorf("interface number %d isn't in the table of interface names", num)
 	}
 	metric.AddTag(d.DestTag, name)
-}
-
-func (d *IfName) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	for _, metric := range metrics {
-		d.addTag(metric)
-	}
-	return metrics
+	return nil
 }
 
 func (d *IfName) Start(acc telegraf.Accumulator) error {
 	d.acc = acc
 
+	var err error
+	d.ifTable, err = makeTable("IF-MIB::ifTable")
+	if err != nil {
+		return err
+	}
+	d.ifXTable, err = makeTable("IF-MIB::ifXTable")
+	if err != nil {
+		return err
+	}
+
 	fn := func(m telegraf.Metric) []telegraf.Metric {
-		d.addTag(m)
+		err := d.addTag(m)
+		if err != nil {
+			d.Log.Debugf("error adding tag %v", err)
+		}
 		return []telegraf.Metric{m}
 	}
 
@@ -193,7 +185,7 @@ func (d *IfName) Stop() error {
 
 // getMap gets the interface names map either from cache or from the SNMP
 // agent
-func (d *IfName) getMap(agent string) (*nameMap, error) {
+func (d *IfName) getMapNoMock(agent string) (nameMap, error) {
 	// Check cache first
 	d.rwLock.RLock()
 	m, ok := d.cache.Get(agent)
@@ -224,8 +216,8 @@ func (d *IfName) getMap(agent string) (*nameMap, error) {
 	return m, nil
 }
 
-func (d *IfName) getMapRemote(agent string) (*nameMap, error) {
-	gs, err := snmp.NewWrapper(d.ClientConfig, agent)
+func (d *IfName) getMapRemote(agent string) (nameMap, error) {
+	gs, err := snmp.NewWrapper(d.ClientConfig, agent) //todo parse client config in start
 	if err != nil {
 		//can't translate toml to gosnmp.GoSNMP
 		return nil, err
@@ -239,16 +231,17 @@ func (d *IfName) getMapRemote(agent string) (*nameMap, error) {
 
 	//try ifXtable and ifName first.  if that fails, fall back to
 	//ifTable and ifDescr
-	var m *nameMap
+	var m nameMap
 	m, err = buildMap(&gs, d.ifXTable, "ifName")
-	if err != nil {
-		var err2 error
-		m, err2 = buildMap(&gs, d.ifTable, "ifDescr")
-		if err2 != nil {
-			return nil, err2
-		}
+	if err == nil {
+		return m, nil
 	}
-	return m, nil
+
+	m, err = buildMap(&gs, d.ifTable, "ifDescr")
+	if err == nil {
+		return m, nil
+	}
+	return nil, err
 }
 
 func init() {
@@ -285,7 +278,7 @@ func makeTable(tableName string) (*si.Table, error) {
 	return &tab, nil
 }
 
-func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (*nameMap, error) {
+func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, error) {
 	var err error
 
 	rtab, err := tab.Build(gs, true)
@@ -299,7 +292,6 @@ func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (*nameMap, e
 
 	t := make(nameMap)
 	for _, v := range rtab.Rows {
-		//fmt.Printf("tags: %v, fields: %v\n", v.Tags, v.Fields)
 		i_str, ok := v.Tags["index"]
 		if !ok {
 			//should always have an index tag because the table should
@@ -324,5 +316,5 @@ func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (*nameMap, e
 
 		t[i] = name
 	}
-	return &t, nil
+	return t, nil
 }

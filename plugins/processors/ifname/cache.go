@@ -21,7 +21,7 @@ type LRUCache struct {
 // Pair is the value of a list node.
 type Pair struct {
 	key   keyType
-	value *valType // Values are stored as pointers to avoid copying
+	value valType
 }
 
 // initializes a new LRUCache.
@@ -34,7 +34,7 @@ func NewLRUCache(capacity uint) LRUCache {
 }
 
 // Get a list node from the hash map.
-func (c *LRUCache) Get(key keyType) (*valType, bool) {
+func (c *LRUCache) Get(key keyType) (valType, bool) {
 	// check if list node exists
 	if node, ok := c.m[key]; ok {
 		val := node.Value.(*list.Element).Value.(Pair).value
@@ -42,11 +42,11 @@ func (c *LRUCache) Get(key keyType) (*valType, bool) {
 		c.l.MoveToFront(node)
 		return val, true
 	}
-	return &valType{}, false
+	return valType{}, false
 }
 
 // Put key and value in the LRUCache
-func (c *LRUCache) Put(key keyType, value *valType) {
+func (c *LRUCache) Put(key keyType, value valType) {
 	// check if list node exists
 	if node, ok := c.m[key]; ok {
 		// move the node to front

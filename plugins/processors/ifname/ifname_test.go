@@ -1,20 +1,19 @@
-//+build localsnmp
-
 package ifname
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
-func _TestTable(t *testing.T) {
+func TestTable(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	tab, err := makeTable("IF-MIB::ifTable")
 	require.NoError(t, err)
@@ -32,13 +31,13 @@ func _TestTable(t *testing.T) {
 	//could use ifIndex but oid index is always the same
 	m, err := buildMap(&gs, tab, "ifDescr")
 	require.NoError(t, err)
-
-	for index, name := range *m {
-		fmt.Println(index, name)
-	}
+	require.NotEmpty(t, m)
 }
 
-func _TestXTable(t *testing.T) {
+func TestXTable(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	tab, err := makeTable("IF-MIB::ifXTable")
 	require.NoError(t, err)
 
@@ -54,10 +53,7 @@ func _TestXTable(t *testing.T) {
 
 	m, err := buildMap(&gs, tab, "ifName")
 	require.NoError(t, err)
-
-	for index, name := range *m {
-		fmt.Println(index, name)
-	}
+	require.NotEmpty(t, m)
 }
 
 func TestIfName(t *testing.T) {
@@ -73,34 +69,40 @@ func TestIfName(t *testing.T) {
 	}
 	err := d.Init()
 	require.NoError(t, err)
-
-	in := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{
-				"ifIndex": "1",
-				"agent":   "127.0.0.1",
-			},
-			map[string]interface{}{},
-			time.Unix(0, 0),
-		),
+	d.getMap = func(agent string) (nameMap, error) {
+		return map[uint64]string{
+			1: "lo",
+		}, nil
 	}
 
-	expected := []telegraf.Metric{
-		testutil.MustMetric(
-			"cpu",
-			map[string]string{
-				"ifIndex": "1",
-				"agent":   "127.0.0.1",
-				"ifName":  "lo",
-			},
-			map[string]interface{}{},
-			time.Unix(0, 0),
-		),
-	}
+	acc := testutil.Accumulator{}
+	err = d.Start(&acc)
 
-	out := d.Apply(in...)
-	require.Len(t, out, 1)
+	require.NoError(t, err)
 
-	testutil.RequireMetricsEqual(t, expected, out)
+	m := testutil.MustMetric(
+		"cpu",
+		map[string]string{
+			"ifIndex": "1",
+			"agent":   "127.0.0.1",
+		},
+		map[string]interface{}{},
+		time.Unix(0, 0),
+	)
+
+	expected := testutil.MustMetric(
+		"cpu",
+		map[string]string{
+			"ifIndex": "1",
+			"agent":   "127.0.0.1",
+			"ifName":  "lo",
+		},
+		map[string]interface{}{},
+		time.Unix(0, 0),
+	)
+
+	err = d.addTag(m)
+	require.NoError(t, err)
+
+	testutil.RequireMetricEqual(t, expected, m)
 }
