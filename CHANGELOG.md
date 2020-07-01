@@ -95,6 +95,7 @@
 - [#7495](https://github.com/influxdata/telegraf/issues/7495): Improve sqlserver input compatibility with older server versions.
 - [#7558](https://github.com/influxdata/telegraf/issues/7558): Remove trailing backslash from tag keys/values in influx serializer.
 - [#7715](https://github.com/influxdata/telegraf/issues/7715): Fix incorrect Azure SQL DB server properties.
+- [#7431](https://github.com/influxdata/telegraf/issues/7431): Fix json unmarshal error in the kibana input.
 
 ## v1.14.5 [2020-06-30]
 
