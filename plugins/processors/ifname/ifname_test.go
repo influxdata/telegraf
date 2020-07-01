@@ -57,6 +57,9 @@ func TestXTable(t *testing.T) {
 }
 
 func TestIfName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	d := IfName{
 		SourceTag: "ifIndex",
 		DestTag:   "ifName",
