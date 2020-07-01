@@ -5,6 +5,9 @@
 - The `logparser` input is deprecated, use the `tail` input with `data_format =
   "grok"` as a replacement.
 
+- The `cisco_telemetry_gnmi` input has been renamed to `gnmi` to better reflect
+  its general support for gNMI devices.
+
 - Several fields used primarily for debugging have been removed from the
   `splunkmetric` serializer, if you are making use of these fields they can be
   added back with the `tag` option.
