@@ -1,4 +1,4 @@
-package cisco_telemetry_gnmi
+package gnmi
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func TestParsePath(t *testing.T) {
 
 	parsed, err = parsePath("", "/foo[[", "")
 	assert.Nil(t, parsed)
-	assert.Equal(t, errors.New("Invalid GNMI path: /foo[[/"), err)
+	assert.Equal(t, errors.New("Invalid gNMI path: /foo[[/"), err)
 }
 
 type MockServer struct {
@@ -73,7 +73,7 @@ func TestWaitError(t *testing.T) {
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
-	plugin := &CiscoTelemetryGNMI{
+	plugin := &GNMI{
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
@@ -98,7 +98,7 @@ func TestWaitError(t *testing.T) {
 	wg.Wait()
 
 	require.Contains(t, acc.Errors,
-		errors.New("aborted GNMI subscription: rpc error: code = Unknown desc = testerror"))
+		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = testerror"))
 }
 
 func TestUsernamePassword(t *testing.T) {
@@ -129,7 +129,7 @@ func TestUsernamePassword(t *testing.T) {
 	}
 	gnmi.RegisterGNMIServer(grpcServer, gnmiServer)
 
-	plugin := &CiscoTelemetryGNMI{
+	plugin := &GNMI{
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Username:  "theusername",
@@ -156,7 +156,7 @@ func TestUsernamePassword(t *testing.T) {
 	wg.Wait()
 
 	require.Contains(t, acc.Errors,
-		errors.New("aborted GNMI subscription: rpc error: code = Unknown desc = success"))
+		errors.New("aborted gNMI subscription: rpc error: code = Unknown desc = success"))
 }
 
 func mockGNMINotification() *gnmi.Notification {
@@ -209,13 +209,13 @@ func mockGNMINotification() *gnmi.Notification {
 func TestNotification(t *testing.T) {
 	tests := []struct {
 		name     string
-		plugin   *CiscoTelemetryGNMI
+		plugin   *GNMI
 		server   *MockServer
 		expected []telegraf.Metric
 	}{
 		{
 			name: "multiple metrics",
-			plugin: &CiscoTelemetryGNMI{
+			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   internal.Duration{Duration: 1 * time.Second},
@@ -299,7 +299,7 @@ func TestNotification(t *testing.T) {
 		},
 		{
 			name: "full path field key",
-			plugin: &CiscoTelemetryGNMI{
+			plugin: &GNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   internal.Duration{Duration: 1 * time.Second},
@@ -407,7 +407,7 @@ func TestRedial(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	plugin := &CiscoTelemetryGNMI{
+	plugin := &GNMI{
 		Log:       testutil.Logger{},
 		Addresses: []string{listener.Addr().String()},
 		Encoding:  "proto",
@@ -441,7 +441,7 @@ func TestRedial(t *testing.T) {
 	grpcServer.Stop()
 	wg.Wait()
 
-	// Restart GNMI server at the same address
+	// Restart gNMI server at the same address
 	listener, err = net.Listen("tcp", listener.Addr().String())
 	require.NoError(t, err)
 
