@@ -246,12 +246,20 @@ func (a *Agent) startInputs(
 
 	for _, input := range inputs {
 		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			// Service input plugins are not subject to timestamp rounding.
+			// Service input plugins are not normally subject to timestamp
+			// rounding except for when precision is set on the input plugin.
+			//
 			// This only applies to the accumulator passed to Start(), the
 			// Gather() accumulator does apply rounding according to the
-			// precision agent setting.
+			// precision and interval agent/plugin settings.
+			var interval time.Duration
+			var precision time.Duration
+			if input.Config.Precision != 0 {
+				precision = input.Config.Precision
+			}
+
 			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(time.Nanosecond)
+			acc.SetPrecision(getPrecision(precision, interval))
 
 			err := si.Start(acc)
 			if err != nil {
@@ -276,12 +284,22 @@ func (a *Agent) runInputs(
 ) error {
 	var wg sync.WaitGroup
 	for _, input := range unit.inputs {
-		interval := a.Config.Agent.Interval.Duration
-		jitter := a.Config.Agent.CollectionJitter.Duration
-
 		// Overwrite agent interval if this plugin has its own.
+		interval := a.Config.Agent.Interval.Duration
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
+		}
+
+		// Overwrite agent precision if this plugin has its own.
+		precision := a.Config.Agent.Precision.Duration
+		if input.Config.Precision != 0 {
+			precision = input.Config.Precision
+		}
+
+		// Overwrite agent collection_jitter if this plugin has its own.
+		jitter := a.Config.Agent.CollectionJitter.Duration
+		if input.Config.CollectionJitter != 0 {
+			jitter = input.Config.CollectionJitter
 		}
 
 		var ticker Ticker
@@ -293,7 +311,7 @@ func (a *Agent) runInputs(
 		defer ticker.Stop()
 
 		acc := NewAccumulator(input, unit.dst)
-		acc.SetPrecision(a.Precision())
+		acc.SetPrecision(getPrecision(precision, interval))
 
 		wg.Add(1)
 		go func(input *models.RunningInput) {
@@ -368,12 +386,24 @@ func (a *Agent) testRunInputs(
 		go func(input *models.RunningInput) {
 			defer wg.Done()
 
+			// Overwrite agent interval if this plugin has its own.
+			interval := a.Config.Agent.Interval.Duration
+			if input.Config.Interval != 0 {
+				interval = input.Config.Interval
+			}
+
+			// Overwrite agent precision if this plugin has its own.
+			precision := a.Config.Agent.Precision.Duration
+			if input.Config.Precision != 0 {
+				precision = input.Config.Precision
+			}
+
 			// Run plugins that require multiple gathers to calculate rate
 			// and delta metrics twice.
 			switch input.Config.Name {
 			case "cpu", "mongodb", "procstat":
 				nulAcc := NewAccumulator(input, nul)
-				nulAcc.SetPrecision(a.Precision())
+				nulAcc.SetPrecision(getPrecision(precision, interval))
 				if err := input.Input.Gather(nulAcc); err != nil {
 					nulAcc.AddError(err)
 				}
@@ -382,7 +412,7 @@ func (a *Agent) testRunInputs(
 			}
 
 			acc := NewAccumulator(input, unit.dst)
-			acc.SetPrecision(a.Precision())
+			acc.SetPrecision(getPrecision(precision, interval))
 
 			if err := input.Input.Gather(acc); err != nil {
 				acc.AddError(err)
@@ -580,8 +610,11 @@ func (a *Agent) runAggregators(
 		go func(agg *models.RunningAggregator) {
 			defer wg.Done()
 
+			interval := a.Config.Agent.Interval.Duration
+			precision := a.Config.Agent.Precision.Duration
+
 			acc := NewAccumulator(agg, unit.aggC)
-			acc.SetPrecision(a.Precision())
+			acc.SetPrecision(getPrecision(precision, interval))
 			a.push(ctx, agg, acc)
 		}(agg)
 	}
@@ -705,8 +738,8 @@ func (a *Agent) runOutputs(
 
 		jitter := jitter
 		// Overwrite agent flush_jitter if this plugin has its own.
-		if output.Config.FlushJitter != nil {
-			jitter = *output.Config.FlushJitter
+		if output.Config.FlushJitter != 0 {
+			jitter = output.Config.FlushJitter
 		}
 
 		wg.Add(1)
@@ -1063,10 +1096,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 }
 
 // Returns the rounding precision for metrics.
-func (a *Agent) Precision() time.Duration {
-	precision := a.Config.Agent.Precision.Duration
-	interval := a.Config.Agent.Interval.Duration
-
+func getPrecision(precision, interval time.Duration) time.Duration {
 	if precision > 0 {
 		return precision
 	}
