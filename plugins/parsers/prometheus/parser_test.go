@@ -103,7 +103,7 @@ cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 `
 
 func Parse(buf []byte) ([]telegraf.Metric, error) {
-	parser := Parser {
+	parser := Parser{
 		MetricVersion: 1,
 	}
 	return parser.Parse(buf)

@@ -404,6 +404,6 @@ func NewPrometheusParser(defaultTags map[string]string) (Parser, error) {
 	return &prometheus.Parser{
 		DefaultTags:   defaultTags,
 		MetricVersion: 2,
-		Protobuf:    false,
+		Protobuf:      false,
 	}, nil
 }
