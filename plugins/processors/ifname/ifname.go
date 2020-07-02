@@ -152,16 +152,16 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	var err error
 	d.gsBase, err = snmp.NewWrapper(d.ClientConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
 	d.ifTable, err = makeTable("IF-MIB::ifTable")
 	if err != nil {
-		return err
+		return fmt.Errorf("looking up ifTable in local MIB: %w", err)
 	}
 	d.ifXTable, err = makeTable("IF-MIB::ifXTable")
 	if err != nil {
-		return err
+		return fmt.Errorf("looking up ifXTable in local MIB: %w", err)
 	}
 
 	fn := func(m telegraf.Metric) []telegraf.Metric {
@@ -216,7 +216,7 @@ func (d *IfName) getMapNoMock(agent string) (nameMap, error) {
 
 	m, err = d.getMapRemote(agent)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting remote table: %w", err)
 	}
 
 	d.cache.Put(agent, m)
@@ -227,13 +227,12 @@ func (d *IfName) getMapRemote(agent string) (nameMap, error) {
 	gs := d.gsBase
 	err := gs.SetAgent(agent)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing agent tag: %w", err)
 	}
 
 	err = gs.Connect()
 	if err != nil {
-		//can't connect
-		return nil, err
+		return nil, fmt.Errorf("connecting when fetching interface names: %w", err)
 	}
 
 	//try ifXtable and ifName first.  if that fails, fall back to
@@ -248,7 +247,8 @@ func (d *IfName) getMapRemote(agent string) (nameMap, error) {
 	if err == nil {
 		return m, nil
 	}
-	return nil, err
+
+	return nil, fmt.Errorf("fetching interface names: %w", err)
 }
 
 func init() {
@@ -279,6 +279,7 @@ func makeTable(tableName string) (*si.Table, error) {
 
 	err = tab.Init()
 	if err != nil {
+		//Init already wraps
 		return nil, err
 	}
 
@@ -290,6 +291,7 @@ func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, er
 
 	rtab, err := tab.Build(gs, true)
 	if err != nil {
+		//Build already wraps
 		return nil, err
 	}
 
@@ -303,21 +305,22 @@ func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, er
 		if !ok {
 			//should always have an index tag because the table should
 			//always have IndexAsTag true
+			return nil, fmt.Errorf("no index tag")
 			continue
 		}
 		i, err := strconv.ParseUint(i_str, 10, 64)
 		if err != nil {
-			//index value isn't a uint?
+			return nil, fmt.Errorf("index tag isn't a uint")
 			continue
 		}
 		name_if, ok := v.Fields[column]
 		if !ok {
-			//column isn't present
+			return nil, fmt.Errorf("field %s is missing", column)
 			continue
 		}
 		name, ok := name_if.(string)
 		if !ok {
-			//column isn't a string
+			return nil, fmt.Errorf("field %s isn't a string", column)
 			continue
 		}
 
