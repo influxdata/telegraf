@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -24,6 +25,9 @@ type Process struct {
 	RestartDelay time.Duration
 	Log          telegraf.Logger
 
+	name       string
+	args       []string
+	pid        int32
 	cancel     context.CancelFunc
 	mainLoopWg sync.WaitGroup
 }
@@ -36,32 +40,19 @@ func New(command []string) (*Process, error) {
 
 	p := &Process{
 		RestartDelay: 5 * time.Second,
+		name:         command[0],
+		args:         []string{},
 	}
+
 	if len(command) > 1 {
-		p.Cmd = exec.Command(command[0], command[1:]...)
-	} else {
-		p.Cmd = exec.Command(command[0])
-	}
-	var err error
-	p.Stdin, err = p.Cmd.StdinPipe()
-	if err != nil {
-		return nil, fmt.Errorf("error opening stdin pipe: %w", err)
-	}
-
-	p.Stdout, err = p.Cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("error opening stdout pipe: %w", err)
-	}
-
-	p.Stderr, err = p.Cmd.StderrPipe()
-	if err != nil {
-		return nil, fmt.Errorf("error opening stderr pipe: %w", err)
+		p.args = command[1:]
 	}
 
 	return p, nil
 }
 
-// Start the process
+// Start the process. A &Process can only be started once. It will restart itself
+// as necessary.
 func (p *Process) Start() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
@@ -81,35 +72,54 @@ func (p *Process) Start() error {
 	return nil
 }
 
+// Stop is called when the process isn't needed anymore
 func (p *Process) Stop() {
 	if p.cancel != nil {
+		// signal our intent to shutdown and not restart the process
 		p.cancel()
 	}
+	// close stdin so the app can shut down gracefully.
+	p.Stdin.Close()
 	p.mainLoopWg.Wait()
 }
 
 func (p *Process) cmdStart() error {
-	p.Log.Infof("Starting process: %s %s", p.Cmd.Path, p.Cmd.Args)
+	p.Cmd = exec.Command(p.name, p.args...)
+
+	var err error
+	p.Stdin, err = p.Cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("error opening stdin pipe: %w", err)
+	}
+
+	p.Stdout, err = p.Cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("error opening stdout pipe: %w", err)
+	}
+
+	p.Stderr, err = p.Cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("error opening stderr pipe: %w", err)
+	}
+
+	p.Log.Infof("Starting process: %s %s", p.name, p.args)
 
 	if err := p.Cmd.Start(); err != nil {
 		return fmt.Errorf("error starting process: %s", err)
 	}
-
+	atomic.StoreInt32(&p.pid, int32(p.Cmd.Process.Pid))
 	return nil
+}
+
+func (p *Process) Pid() int {
+	pid := atomic.LoadInt32(&p.pid)
+	return int(pid)
 }
 
 // cmdLoop watches an already running process, restarting it when appropriate.
 func (p *Process) cmdLoop(ctx context.Context) error {
-	go func() {
-		<-ctx.Done()
-		if p.Stdin != nil {
-			p.Stdin.Close()
-			gracefulStop(p.Cmd, 5*time.Second)
-		}
-	}()
-
 	for {
-		err := p.cmdWait()
+		err := p.cmdWait(ctx)
 		if isQuitting(ctx) {
 			p.Log.Infof("Process %s shut down", p.Cmd.Path)
 			return nil
@@ -130,7 +140,8 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 	}
 }
 
-func (p *Process) cmdWait() error {
+// cmdWait waits for the process to finish.
+func (p *Process) cmdWait(ctx context.Context) error {
 	var wg sync.WaitGroup
 
 	if p.ReadStdoutFn == nil {
@@ -139,6 +150,9 @@ func (p *Process) cmdWait() error {
 	if p.ReadStderrFn == nil {
 		p.ReadStderrFn = defaultReadPipe
 	}
+
+	processCtx, processCancel := context.WithCancel(context.Background())
+	defer processCancel()
 
 	wg.Add(1)
 	go func() {
@@ -152,8 +166,20 @@ func (p *Process) cmdWait() error {
 		wg.Done()
 	}()
 
+	wg.Add(1)
+	go func() {
+		select {
+		case <-ctx.Done():
+			gracefulStop(processCtx, p.Cmd, 5*time.Second)
+		case <-processCtx.Done():
+		}
+		wg.Done()
+	}()
+
+	err := p.Cmd.Wait()
+	processCancel()
 	wg.Wait()
-	return p.Cmd.Wait()
+	return err
 }
 
 func isQuitting(ctx context.Context) bool {
