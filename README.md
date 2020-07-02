@@ -376,6 +376,7 @@ For documentation on the latest development code see the [documentation index][d
 * [printer](/plugins/processors/printer)
 * [regex](/plugins/processors/regex)
 * [rename](/plugins/processors/rename)
+* [reverse_dns](/plugins/processors/reverse_dns)
 * [s2geo](/plugins/processors/s2geo)
 * [starlark](/plugins/processors/starlark)
 * [strings](/plugins/processors/strings)
