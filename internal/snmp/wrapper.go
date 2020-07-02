@@ -59,38 +59,8 @@ func (gsw GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 	return nil, err
 }
 
-func NewWrapper(s ClientConfig, agent string) (GosnmpWrapper, error) {
+func NewWrapper(s ClientConfig) (GosnmpWrapper, error) {
 	gs := GosnmpWrapper{&gosnmp.GoSNMP{}}
-
-	if !strings.Contains(agent, "://") {
-		agent = "udp://" + agent
-	}
-
-	u, err := url.Parse(agent)
-	if err != nil {
-		return GosnmpWrapper{}, err
-	}
-
-	switch u.Scheme {
-	case "tcp":
-		gs.Transport = "tcp"
-	case "", "udp":
-		gs.Transport = "udp"
-	default:
-		return GosnmpWrapper{}, fmt.Errorf("unsupported scheme: %v", u.Scheme)
-	}
-
-	gs.Target = u.Hostname()
-
-	portStr := u.Port()
-	if portStr == "" {
-		portStr = "161"
-	}
-	port, err := strconv.ParseUint(portStr, 10, 16)
-	if err != nil {
-		return GosnmpWrapper{}, fmt.Errorf("parsing port: %w", err)
-	}
-	gs.Port = uint16(port)
 
 	gs.Timeout = s.Timeout.Duration
 
@@ -170,4 +140,41 @@ func NewWrapper(s ClientConfig, agent string) (GosnmpWrapper, error) {
 		sp.AuthoritativeEngineTime = s.EngineTime
 	}
 	return gs, nil
+}
+
+// SetAgent takes a url (scheme://host:port) and sets the wrapped
+// GoSNMP struct's corresponding fields.  This shouldn't be called
+// after using the wrapped GoSNMP struct, for example after
+// connecting.
+func (gs *GosnmpWrapper) SetAgent(agent string) error {
+	if !strings.Contains(agent, "://") {
+		agent = "udp://" + agent
+	}
+
+	u, err := url.Parse(agent)
+	if err != nil {
+		return err
+	}
+
+	switch u.Scheme {
+	case "tcp":
+		gs.Transport = "tcp"
+	case "", "udp":
+		gs.Transport = "udp"
+	default:
+		return fmt.Errorf("unsupported scheme: %v", u.Scheme)
+	}
+
+	gs.Target = u.Hostname()
+
+	portStr := u.Port()
+	if portStr == "" {
+		portStr = "161"
+	}
+	port, err := strconv.ParseUint(portStr, 10, 16)
+	if err != nil {
+		return fmt.Errorf("parsing port: %w", err)
+	}
+	gs.Port = uint16(port)
+	return nil
 }

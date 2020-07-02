@@ -532,7 +532,11 @@ func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
 
 	var err error
 	var gs snmp.GosnmpWrapper
-	gs, err = snmp.NewWrapper(s.ClientConfig, agent)
+	gs, err = snmp.NewWrapper(s.ClientConfig)
+	if err != nil {
+		return nil, err
+	}
+	gs.SetAgent(agent)
 	if err != nil {
 		return nil, err
 	}

@@ -22,7 +22,9 @@ func TestTable(t *testing.T) {
 		Version: 2,
 		Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout
 	}
-	gs, err := snmp.NewWrapper(config, "127.0.0.1")
+	gs, err := snmp.NewWrapper(config)
+	require.NoError(t, err)
+	err = gs.SetAgent("127.0.0.1")
 	require.NoError(t, err)
 
 	err = gs.Connect()
@@ -45,7 +47,9 @@ func TestXTable(t *testing.T) {
 		Version: 2,
 		Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout
 	}
-	gs, err := snmp.NewWrapper(config, "127.0.0.1")
+	gs, err := snmp.NewWrapper(config)
+	require.NoError(t, err)
+	err = gs.SetAgent("127.0.0.1")
 	require.NoError(t, err)
 
 	err = gs.Connect()

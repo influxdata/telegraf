@@ -93,6 +93,8 @@ type IfName struct {
 	acc      telegraf.Accumulator `toml:"-"`
 
 	getMap mapFunc `toml:"-"`
+
+	gsBase snmp.GosnmpWrapper `toml:"-"`
 }
 
 type nameMap map[uint64]string
@@ -148,6 +150,11 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 	d.acc = acc
 
 	var err error
+	d.gsBase, err = snmp.NewWrapper(d.ClientConfig)
+	if err != nil {
+		return err
+	}
+
 	d.ifTable, err = makeTable("IF-MIB::ifTable")
 	if err != nil {
 		return err
@@ -217,9 +224,9 @@ func (d *IfName) getMapNoMock(agent string) (nameMap, error) {
 }
 
 func (d *IfName) getMapRemote(agent string) (nameMap, error) {
-	gs, err := snmp.NewWrapper(d.ClientConfig, agent) //todo parse client config in start
+	gs := d.gsBase
+	err := gs.SetAgent(agent)
 	if err != nil {
-		//can't translate toml to gosnmp.GoSNMP
 		return nil, err
 	}
 
