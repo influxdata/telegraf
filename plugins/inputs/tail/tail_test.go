@@ -118,7 +118,6 @@ func TestTailBadLine(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-	defer tt.Stop()
 
 	buf := &bytes.Buffer{}
 	log.SetOutput(buf)
@@ -129,6 +128,7 @@ func TestTailBadLine(t *testing.T) {
 	require.NoError(t, err)
 
 	time.Sleep(500 * time.Millisecond)
+	tt.Stop()
 	assert.Contains(t, buf.String(), "Malformed log line")
 }
 
