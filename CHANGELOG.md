@@ -30,12 +30,15 @@
 #### New Processors
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
+- [execd](/plugins/processors/execd/README.md) - Contributed by @influxdata
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+- [reverse_dns](/plugins/processors/reverse_dns/README.md) - Contributed by @influxdata
 - [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
 
 #### New Outputs
 
 - [newrelic](/plugins/outputs/newrelic/README.md) - Contributed by @hsinghkalsi
+- [execd](/plugins/outputs/execd/README.md) - Contributed by @influxdata
 
 #### Features
 
@@ -80,6 +83,7 @@
 - [#7575](https://github.com/influxdata/telegraf/pull/7575): Add missing nvme attributes to smart plugin.
 - [#7726](https://github.com/influxdata/telegraf/pull/7726): Add laundry to mem plugin on FreeBSD.
 - [#7762](https://github.com/influxdata/telegraf/pull/7762): Allow per input overriding of collection_jitter and precision.
+- [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve performance of procstat: Up to 40/120x better performance.
 
 #### Bugfixes
 
