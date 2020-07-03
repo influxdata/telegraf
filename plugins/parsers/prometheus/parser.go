@@ -4,41 +4,24 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
-	"mime"
-	"net/http"
+	"math"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	. "github.com/influxdata/telegraf/plugins/parsers/prometheus/common"
 
-	v1 "github.com/influxdata/telegraf/plugins/parsers/prometheus/v1"
-	v2 "github.com/influxdata/telegraf/plugins/parsers/prometheus/v2"
-
-	"github.com/matttproud/golang_protobuf_extensions/pbutil"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 )
 
 type Parser struct {
-	MetricVersion int
-	DefaultTags   map[string]string
-	Protobuf      bool
-}
-
-func IsProtobuf(header http.Header) (bool, error) {
-	mediatype, params, error := mime.ParseMediaType(header.Get("Content-Type"))
-
-	if error != nil {
-		return false, error
-	}
-
-	return mediatype == "application/vnd.google.protobuf" &&
-		params["encoding"] == "delimited" &&
-		params["proto"] == "io.prometheus.client.MetricFamily", nil
+	DefaultTags map[string]string
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	var parser expfmt.TextParser
+	var metrics []telegraf.Metric
 	var err error
 	// parse even if the buffer begins with a newline
 	buf = bytes.TrimPrefix(buf, []byte("\n"))
@@ -48,30 +31,50 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	// Prepare output
 	metricFamilies := make(map[string]*dto.MetricFamily)
+	metricFamilies, err = parser.TextToMetricFamilies(reader)
+	if err != nil {
+		return nil, fmt.Errorf("reading text format failed: %s", err)
+	}
 
-	if p.Protobuf {
-		for {
-			mf := &dto.MetricFamily{}
-			if _, ierr := pbutil.ReadDelimited(reader, mf); ierr != nil {
-				if ierr == io.EOF {
-					break
+	now := time.Now()
+
+	// read metrics
+	for metricName, mf := range metricFamilies {
+		for _, m := range mf.Metric {
+			// reading tags
+			tags := MakeLabels(m, p.DefaultTags)
+
+			if mf.GetType() == dto.MetricType_SUMMARY {
+				// summary metric
+				telegrafMetrics := makeQuantiles(m, tags, metricName, mf.GetType(), now)
+				metrics = append(metrics, telegrafMetrics...)
+			} else if mf.GetType() == dto.MetricType_HISTOGRAM {
+				// histogram metric
+				telegrafMetrics := makeBuckets(m, tags, metricName, mf.GetType(), now)
+				metrics = append(metrics, telegrafMetrics...)
+			} else {
+				// standard metric
+				// reading fields
+				fields := make(map[string]interface{})
+				fields = getNameAndValue(m, metricName)
+				// converting to telegraf metric
+				if len(fields) > 0 {
+					var t time.Time
+					if m.TimestampMs != nil && *m.TimestampMs > 0 {
+						t = time.Unix(0, *m.TimestampMs*1000000)
+					} else {
+						t = now
+					}
+					metric, err := metric.New("prometheus", tags, fields, t, ValueType(mf.GetType()))
+					if err == nil {
+						metrics = append(metrics, metric)
+					}
 				}
-				return nil, fmt.Errorf("reading metric family protocol buffer failed: %s", ierr)
 			}
-			metricFamilies[mf.GetName()] = mf
-		}
-	} else {
-		metricFamilies, err = parser.TextToMetricFamilies(reader)
-		if err != nil {
-			return nil, fmt.Errorf("reading text format failed: %s", err)
 		}
 	}
 
-	if p.MetricVersion == 2 {
-		return v2.Parse(metricFamilies, p.DefaultTags, time.Now())
-	} else {
-		return v1.Parse(metricFamilies, p.DefaultTags, time.Now())
-	}
+	return metrics, err
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
@@ -93,4 +96,87 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+// Get Quantiles for summary metric & Buckets for histogram
+func makeQuantiles(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
+	var metrics []telegraf.Metric
+	fields := make(map[string]interface{})
+	var t time.Time
+	if m.TimestampMs != nil && *m.TimestampMs > 0 {
+		t = time.Unix(0, *m.TimestampMs*1000000)
+	} else {
+		t = now
+	}
+	fields[metricName+"_count"] = float64(m.GetSummary().GetSampleCount())
+	fields[metricName+"_sum"] = float64(m.GetSummary().GetSampleSum())
+	met, err := metric.New("prometheus", tags, fields, t, ValueType(metricType))
+	if err == nil {
+		metrics = append(metrics, met)
+	}
+
+	for _, q := range m.GetSummary().Quantile {
+		newTags := tags
+		fields = make(map[string]interface{})
+
+		newTags["quantile"] = fmt.Sprint(q.GetQuantile())
+		fields[metricName] = float64(q.GetValue())
+
+		quantileMetric, err := metric.New("prometheus", newTags, fields, t, ValueType(metricType))
+		if err == nil {
+			metrics = append(metrics, quantileMetric)
+		}
+	}
+	return metrics
+}
+
+// Get Buckets  from histogram metric
+func makeBuckets(m *dto.Metric, tags map[string]string, metricName string, metricType dto.MetricType, now time.Time) []telegraf.Metric {
+	var metrics []telegraf.Metric
+	fields := make(map[string]interface{})
+	var t time.Time
+	if m.TimestampMs != nil && *m.TimestampMs > 0 {
+		t = time.Unix(0, *m.TimestampMs*1000000)
+	} else {
+		t = now
+	}
+	fields[metricName+"_count"] = float64(m.GetHistogram().GetSampleCount())
+	fields[metricName+"_sum"] = float64(m.GetHistogram().GetSampleSum())
+
+	met, err := metric.New("prometheus", tags, fields, t, ValueType(metricType))
+	if err == nil {
+		metrics = append(metrics, met)
+	}
+
+	for _, b := range m.GetHistogram().Bucket {
+		newTags := tags
+		fields = make(map[string]interface{})
+		newTags["le"] = fmt.Sprint(b.GetUpperBound())
+		fields[metricName+"_bucket"] = float64(b.GetCumulativeCount())
+
+		histogramMetric, err := metric.New("prometheus", newTags, fields, t, ValueType(metricType))
+		if err == nil {
+			metrics = append(metrics, histogramMetric)
+		}
+	}
+	return metrics
+}
+
+// Get name and value from metric
+func getNameAndValue(m *dto.Metric, metricName string) map[string]interface{} {
+	fields := make(map[string]interface{})
+	if m.Gauge != nil {
+		if !math.IsNaN(m.GetGauge().GetValue()) {
+			fields[metricName] = float64(m.GetGauge().GetValue())
+		}
+	} else if m.Counter != nil {
+		if !math.IsNaN(m.GetCounter().GetValue()) {
+			fields[metricName] = float64(m.GetCounter().GetValue())
+		}
+	} else if m.Untyped != nil {
+		if !math.IsNaN(m.GetUntyped().GetValue()) {
+			fields[metricName] = float64(m.GetUntyped().GetValue())
+		}
+	}
+	return fields
 }
