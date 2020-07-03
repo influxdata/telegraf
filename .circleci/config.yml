@@ -43,7 +43,7 @@ jobs:
       - checkout
       - restore_cache:
           key: mac-go-mod-v1-{{ checksum "go.sum" }}
-      - run: 'brew install go@1.13'
+      - run: 'brew install go' # latest
       - run: 'make deps'
       - run: 'make tidy'
       - save_cache:
@@ -93,7 +93,7 @@ jobs:
       - run: 'GOARCH=386 make'
       - run: 'GOARCH=386 make check'
       - run: 'GOARCH=386 make test'
-  test-go-1.13-darwin:
+  test-go-darwin:
     <<: [ *mac ]
     steps:
       - attach_workspace:
@@ -168,7 +168,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - 'test-go-1.13-darwin':
+      - 'test-go-darwin':
           requires:
             - 'macdeps'
           filters:
