@@ -128,6 +128,7 @@ vet:
 tidy:
 	go mod verify
 	go mod tidy
+	git diff go.mod go.sum
 	@if ! git diff --quiet go.mod go.sum; then \
 		echo "please run go mod tidy and check in changes"; \
 		exit 1; \
