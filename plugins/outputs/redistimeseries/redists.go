@@ -1,7 +1,7 @@
 package redistimeseries
 
 import (
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -28,7 +28,7 @@ func (i *RedisTimeSeries) Connect() error {
 		DB:       0, // use default DB
 	})
 
-	_, err := client.Ping().Result()
+	err := client.Ping().Err()
 	i.client = client
 	return err
 }
@@ -57,14 +57,14 @@ func (i *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 
 		for fieldName, value := range m.Fields() {
 			key := name + "_" + fieldName
-			_, err := i.client.Do("TS.ADD", key, now, value).Result()
+			err := i.client.Do("TS.ADD", key, now, value).Err()
 			if err != nil {
 				// TODO add tags
-				_, err2 := i.client.Do("TS.CREATE", key).Result()
+				err2 := i.client.Do("TS.CREATE", key).Err()
 				if err2 != nil {
 					return err
 				}
-				_, err3 := i.client.Do("TS.ADD", key, now, value).Result()
+				err3 := i.client.Do("TS.ADD", key, now, value).Err()
 				if err3 != nil {
 					return err
 				}
