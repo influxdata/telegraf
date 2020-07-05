@@ -12,7 +12,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"golang.org/x/oauth2"
@@ -176,10 +176,12 @@ func (h *HTTP) write(reqBody []byte) error {
 
 	var err error
 	if h.ContentEncoding == "gzip" {
-		reqBodyBuffer, err = internal.CompressWithGzip(reqBodyBuffer)
+		rc, err := internal.CompressWithGzip(reqBodyBuffer)
 		if err != nil {
 			return err
 		}
+		defer rc.Close()
+		reqBodyBuffer = rc
 	}
 
 	req, err := http.NewRequest(h.Method, h.URL, reqBodyBuffer)
@@ -191,7 +193,7 @@ func (h *HTTP) write(reqBody []byte) error {
 		req.SetBasicAuth(h.Username, h.Password)
 	}
 
-	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+	req.Header.Set("User-Agent", internal.ProductToken())
 	req.Header.Set("Content-Type", defaultContentType)
 	if h.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")

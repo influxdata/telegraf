@@ -12,14 +12,19 @@ instances of telegraf can read from a NATS cluster in parallel.
 [[inputs.nats_consumer]]
   ## urls of NATS servers
   servers = ["nats://localhost:4222"]
+
   ## subject(s) to consume
   subjects = ["telegraf"]
+
   ## name a queue group
   queue_group = "telegraf_consumers"
 
   ## Optional credentials
   # username = ""
   # password = ""
+
+  ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  # credentials = "/etc/telegraf/nats.creds"
 
   ## Use Transport Layer Security
   # secure = false

@@ -438,8 +438,56 @@ func TestGatherHtSAS(t *testing.T) {
 
 	wg.Add(1)
 	gatherDisk(acc, internal.Duration{Duration: time.Second * 30}, true, true, "", "", "", wg)
-	assert.Equal(t, 5, acc.NFields(), "Wrong number of fields gathered")
-	assert.Equal(t, uint64(3), acc.NMetrics(), "Wrong number of metrics gathered")
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "194",
+				"model":     "HUC103030CSS600",
+				"name":      "Temperature_Celsius",
+			},
+			map[string]interface{}{
+				"raw_value": 36,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"id":        "4",
+				"model":     "HUC103030CSS600",
+				"name":      "Start_Stop_Count",
+			},
+			map[string]interface{}{
+				"raw_value": 47,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric(
+			"smart_device",
+			map[string]string{
+				"device":    ".",
+				"serial_no": "PDWAR9GE",
+				"enabled":   "Enabled",
+				"model":     "HUC103030CSS600",
+			},
+			map[string]interface{}{
+				"exit_status": 0,
+				"health_ok":   true,
+				"temp_c":      36,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics(), testutil.IgnoreTime())
 }
 
 func TestGatherSSD(t *testing.T) {
@@ -566,6 +614,18 @@ func TestGatherNvme(t *testing.T) {
 		testutil.MustMetric("smart_attribute",
 			map[string]string{
 				"device":    ".",
+				"name":      "Available_Spare_Threshold",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": 10,
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
 				"id":        "194",
 				"name":      "Temperature_Celsius",
 				"serial_no": "D704940282?",
@@ -585,6 +645,114 @@ func TestGatherNvme(t *testing.T) {
 			},
 			map[string]interface{}{
 				"raw_value": int64(9),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Percentage_Used",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(16),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Data_Units_Read",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(11836935),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Data_Units_Written",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(62288091),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Host_Read_Commands",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(135924188),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Host_Write_Commands",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(7715573429),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Controller_Busy_Time",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(4042),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Unsafe_Shutdowns",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(355),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Warning_Temperature_Time",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(11),
+			},
+			time.Now(),
+		),
+		testutil.MustMetric("smart_attribute",
+			map[string]string{
+				"device":    ".",
+				"name":      "Critical_Temperature_Time",
+				"serial_no": "D704940282?",
+				"model":     "TS128GMTE850",
+			},
+			map[string]interface{}{
+				"raw_value": int64(7),
 			},
 			time.Now(),
 		),
@@ -666,7 +834,7 @@ Transport protocol:   SAS (SPL-3)
 Local Time is:        Wed Apr 17 15:01:28 2019 PDT
 SMART support is:     Available - device has SMART capability.
 SMART support is:     Enabled
-Temp$rature Warning:  Disabled or Not Supported
+Temperature Warning:  Disabled or Not Supported
 
 === START OF READ SMART DATA SECTION ===
 SMART Health Status: OK
@@ -1041,7 +1209,7 @@ Power On Hours: 6,038
 Unsafe Shutdowns: 355
 Media and Data Integrity Errors: 0
 Error Information Log Entries: 119,699
-Warning Comp. Temperature Time: 0
-Critical Comp. Temperature Time: 0
+Warning  Comp. Temperature Time: 11
+Critical Comp. Temperature Time: 7
 `
 )

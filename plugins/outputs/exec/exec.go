@@ -26,7 +26,7 @@ type Exec struct {
 }
 
 var sampleConfig = `
-  ## Command to injest metrics via stdin.
+  ## Command to ingest metrics via stdin.
   command = ["tee", "-a", "/dev/null"]
 
   ## Timeout for command to complete.
@@ -44,12 +44,12 @@ func (e *Exec) SetSerializer(serializer serializers.Serializer) {
 	e.serializer = serializer
 }
 
-// Connect satisfies the Ouput interface.
+// Connect satisfies the Output interface.
 func (e *Exec) Connect() error {
 	return nil
 }
 
-// Close satisfies the Ouput interface.
+// Close satisfies the Output interface.
 func (e *Exec) Close() error {
 	return nil
 }
@@ -67,13 +67,11 @@ func (e *Exec) SampleConfig() string {
 // Write writes the metrics to the configured command.
 func (e *Exec) Write(metrics []telegraf.Metric) error {
 	var buffer bytes.Buffer
-	for _, metric := range metrics {
-		value, err := e.serializer.Serialize(metric)
-		if err != nil {
-			return err
-		}
-		buffer.Write(value)
+	serializedMetrics, err := e.serializer.SerializeBatch(metrics)
+	if err != nil {
+		return err
 	}
+	buffer.Write(serializedMetrics)
 
 	if buffer.Len() <= 0 {
 		return nil

@@ -1,22 +1,42 @@
 package influxdb
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const (
+	maxErrorResponseBodyLength = 1024
+)
+
+type APIError struct {
+	StatusCode  int
+	Reason      string
+	Description string `json:"error"`
+}
+
+func (e *APIError) Error() string {
+	if e.Description != "" {
+		return e.Reason + ": " + e.Description
+	}
+	return e.Reason
+}
+
 type InfluxDB struct {
-	URLs    []string `toml:"urls"`
-	Timeout internal.Duration
+	URLs     []string          `toml:"urls"`
+	Username string            `toml:"username"`
+	Password string            `toml:"password"`
+	Timeout  internal.Duration `toml:"timeout"`
 	tls.ClientConfig
 
 	client *http.Client
@@ -37,6 +57,10 @@ func (*InfluxDB) SampleConfig() string {
   urls = [
     "http://localhost:8086/debug/vars"
   ]
+
+  ## Username and password to send using HTTP Basic Authentication.
+  # username = ""
+  # password = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -75,7 +99,7 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 		go func(url string) {
 			defer wg.Done()
 			if err := i.gatherURL(acc, url); err != nil {
-				acc.AddError(fmt.Errorf("[url=%s]: %s", url, err))
+				acc.AddError(err)
 			}
 		}(u)
 	}
@@ -135,11 +159,26 @@ func (i *InfluxDB) gatherURL(
 	shardCounter := 0
 	now := time.Now()
 
-	resp, err := i.client.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+
+	if i.Username != "" || i.Password != "" {
+		req.SetBasicAuth(i.Username, i.Password)
+	}
+
+	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
+
+	resp, err := i.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return readResponseError(resp)
+	}
 
 	// It would be nice to be able to decode into a map[string]point, but
 	// we'll get a decoder error like:
@@ -203,7 +242,7 @@ func (i *InfluxDB) gatherURL(
 						"pause_total_ns":  m.PauseTotalNs,
 						"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
 						"num_gc":          m.NumGC,
-						"gcc_pu_fraction": m.GCCPUFraction,
+						"gc_cpu_fraction": m.GCCPUFraction,
 					},
 					map[string]string{
 						"url": url,
@@ -253,6 +292,27 @@ func (i *InfluxDB) gatherURL(
 	)
 
 	return nil
+}
+
+func readResponseError(resp *http.Response) error {
+	apiError := &APIError{
+		StatusCode: resp.StatusCode,
+		Reason:     resp.Status,
+	}
+
+	var buf bytes.Buffer
+	r := io.LimitReader(resp.Body, maxErrorResponseBodyLength)
+	_, err := buf.ReadFrom(r)
+	if err != nil {
+		return apiError
+	}
+
+	err = json.Unmarshal(buf.Bytes(), apiError)
+	if err != nil {
+		return apiError
+	}
+
+	return apiError
 }
 
 func init() {

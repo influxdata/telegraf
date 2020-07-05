@@ -47,7 +47,7 @@ func NewWavefrontElements() []ElementParser {
 	var elements []ElementParser
 	wsParser := WhiteSpaceParser{}
 	wsParserNextOpt := WhiteSpaceParser{nextOptional: true}
-	repeatParser := LoopedParser{wrappedParser: &TagParser{}, wsPaser: &wsParser}
+	repeatParser := LoopedParser{wrappedParser: &TagParser{}, wsParser: &wsParser}
 	elements = append(elements, &NameParser{}, &wsParser, &ValueParser{}, &wsParserNextOpt,
 		&TimestampParser{optional: true}, &wsParserNextOpt, &repeatParser)
 	return elements

@@ -9,7 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -31,10 +31,13 @@ const (
 	connectionsPath = "connections"
 	sslPath         = "ssl"
 
-	httpRequestsPath    = "http/requests"
-	httpServerZonesPath = "http/server_zones"
-	httpUpstreamsPath   = "http/upstreams"
-	httpCachesPath      = "http/caches"
+	httpRequestsPath      = "http/requests"
+	httpServerZonesPath   = "http/server_zones"
+	httpLocationZonesPath = "http/location_zones"
+	httpUpstreamsPath     = "http/upstreams"
+	httpCachesPath        = "http/caches"
+
+	resolverZonesPath = "resolvers"
 
 	streamServerZonesPath = "stream/server_zones"
 	streamUpstreamsPath   = "stream/upstreams"

@@ -12,14 +12,14 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/influxdata/go-syslog"
-	"github.com/influxdata/go-syslog/nontransparent"
-	"github.com/influxdata/go-syslog/octetcounting"
-	"github.com/influxdata/go-syslog/rfc5424"
+	"github.com/influxdata/go-syslog/v2"
+	"github.com/influxdata/go-syslog/v2/nontransparent"
+	"github.com/influxdata/go-syslog/v2/octetcounting"
+	"github.com/influxdata/go-syslog/v2/rfc5424"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	framing "github.com/influxdata/telegraf/internal/syslog"
-	tlsConfig "github.com/influxdata/telegraf/internal/tls"
+	tlsConfig "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -87,7 +87,7 @@ var sampleConfig = `
   ## Must be one of "octet-counting", "non-transparent".
   # framing = "octet-counting"
 
-  ## The trailer to be expected in case of non-trasparent framing (default = "LF").
+  ## The trailer to be expected in case of non-transparent framing (default = "LF").
   ## Must be one of "LF", or "NUL".
   # trailer = "LF"
 
@@ -313,7 +313,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		opts = append(opts, syslog.WithBestEffort())
 	}
 
-	// Select the parser to use depeding on transport framing
+	// Select the parser to use depending on transport framing
 	if s.Framing == framing.OctetCounting {
 		// Octet counting transparent framing
 		p = octetcounting.NewParser(opts...)

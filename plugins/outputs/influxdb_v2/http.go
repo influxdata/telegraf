@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -83,7 +84,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = "Telegraf/" + internal.Version()
+		userAgent = internal.ProductToken()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+2)
@@ -189,6 +190,9 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			}
 
 			if c.ExcludeBucketTag {
+				// Avoid modifying the metric in case we need to retry the request.
+				metric = metric.Copy()
+				metric.Accept()
 				metric.RemoveTag(c.BucketTag)
 			}
 
@@ -206,19 +210,25 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(*c.url, c.Organization, bucket)
+	loc, err := makeWriteURL(*c.url, c.Organization, bucket)
 	if err != nil {
 		return err
 	}
 
-	reader := influx.NewReader(metrics, c.serializer)
-	req, err := c.makeWriteRequest(url, reader)
+	reader, err := c.requestBodyReader(metrics)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
 		return err
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -240,17 +250,28 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 		return nil
 	case http.StatusUnauthorized, http.StatusForbidden:
 		return fmt.Errorf("failed to write metric: %s", desc)
-	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
+	case http.StatusTooManyRequests:
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
 		if err != nil {
-			retry = 0
+			return errors.New("rate limit exceeded")
 		}
 		if retry > defaultMaxWait {
 			retry = defaultMaxWait
 		}
 		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
-		return fmt.Errorf("Waiting %ds for server before sending metric again", retry)
+		return fmt.Errorf("waiting %ds for server before sending metric again", retry)
+	case http.StatusServiceUnavailable:
+		retryAfter := resp.Header.Get("Retry-After")
+		retry, err := strconv.Atoi(retryAfter)
+		if err != nil {
+			return errors.New("server responded: service unavailable")
+		}
+		if retry > defaultMaxWait {
+			retry = defaultMaxWait
+		}
+		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
+		return fmt.Errorf("waiting %ds for server before sending metric again", retry)
 	}
 
 	// This is only until platform spec is fully implemented. As of the
@@ -268,12 +289,6 @@ func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []te
 
 func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request, error) {
 	var err error
-	if c.ContentEncoding == "gzip" {
-		body, err = internal.CompressWithGzip(body)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
@@ -288,6 +303,23 @@ func (c *httpClient) makeWriteRequest(url string, body io.Reader) (*http.Request
 	}
 
 	return req, nil
+}
+
+// requestBodyReader warp io.Reader from influx.NewReader to io.ReadCloser, which is usefully to fast close the write
+// side of the connection in case of error
+func (c *httpClient) requestBodyReader(metrics []telegraf.Metric) (io.ReadCloser, error) {
+	reader := influx.NewReader(metrics, c.serializer)
+
+	if c.ContentEncoding == "gzip" {
+		rc, err := internal.CompressWithGzip(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		return rc, nil
+	}
+
+	return ioutil.NopCloser(reader), nil
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {
@@ -316,5 +348,5 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }

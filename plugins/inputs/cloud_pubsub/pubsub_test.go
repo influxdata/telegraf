@@ -3,10 +3,11 @@ package cloud_pubsub
 import (
 	"encoding/base64"
 	"errors"
+	"testing"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
@@ -26,6 +27,7 @@ func TestRunParse(t *testing.T) {
 	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
+		Log:                    testutil.Logger{},
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
@@ -69,6 +71,7 @@ func TestRunBase64(t *testing.T) {
 	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
+		Log:                    testutil.Logger{},
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
@@ -112,6 +115,7 @@ func TestRunInvalidMessages(t *testing.T) {
 	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
+		Log:                    testutil.Logger{},
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
@@ -158,6 +162,7 @@ func TestRunOverlongMessages(t *testing.T) {
 	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
+		Log:                    testutil.Logger{},
 		parser:                 testParser,
 		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
@@ -205,6 +210,7 @@ func TestRunErrorInSubscriber(t *testing.T) {
 	sub.receiver = testMessagesError(sub, errors.New("a fake error"))
 
 	ps := &PubSub{
+		Log:                      testutil.Logger{},
 		parser:                   testParser,
 		stubSub:                  func() subscription { return sub },
 		Project:                  "projectIDontMatterForTests",

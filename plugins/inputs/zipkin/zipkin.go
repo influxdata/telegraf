@@ -3,7 +3,6 @@ package zipkin
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -60,6 +59,8 @@ type Zipkin struct {
 	Port           int
 	Path           string
 
+	Log telegraf.Logger
+
 	address   string
 	handler   Handler
 	server    *http.Server
@@ -105,7 +106,7 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	}
 
 	z.address = ln.Addr().String()
-	log.Printf("I! Started the zipkin listener on %s", z.address)
+	z.Log.Infof("Started the zipkin listener on %s", z.address)
 
 	go func() {
 		wg.Add(1)

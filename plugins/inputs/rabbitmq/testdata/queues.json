@@ -109,6 +109,12 @@
     "exclusive_consumer_tag": null,
     "effective_policy_definition": [],
     "operator_policy": null,
-    "policy": null
+    "policy": null,
+    "slave_nodes":[
+      "rabbit@ip-10-1-2-118"
+    ],
+    "synchronised_slave_nodes":[
+      "rabbit@ip-10-1-2-118"
+    ]
   }
 ]

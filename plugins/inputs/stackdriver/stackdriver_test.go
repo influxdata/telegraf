@@ -2,6 +2,7 @@ package stackdriver
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,6 +28,7 @@ type MockStackdriverClient struct {
 	CloseF                 func() error
 
 	calls []*Call
+	sync.Mutex
 }
 
 func (m *MockStackdriverClient) ListMetricDescriptors(
@@ -34,7 +36,9 @@ func (m *MockStackdriverClient) ListMetricDescriptors(
 	req *monitoringpb.ListMetricDescriptorsRequest,
 ) (<-chan *metricpb.MetricDescriptor, error) {
 	call := &Call{name: "ListMetricDescriptors", args: []interface{}{ctx, req}}
+	m.Lock()
 	m.calls = append(m.calls, call)
+	m.Unlock()
 	return m.ListMetricDescriptorsF(ctx, req)
 }
 
@@ -43,13 +47,17 @@ func (m *MockStackdriverClient) ListTimeSeries(
 	req *monitoringpb.ListTimeSeriesRequest,
 ) (<-chan *monitoringpb.TimeSeries, error) {
 	call := &Call{name: "ListTimeSeries", args: []interface{}{ctx, req}}
+	m.Lock()
 	m.calls = append(m.calls, call)
+	m.Unlock()
 	return m.ListTimeSeriesF(ctx, req)
 }
 
 func (m *MockStackdriverClient) Close() error {
 	call := &Call{name: "Close", args: []interface{}{}}
+	m.Lock()
 	m.calls = append(m.calls, call)
+	m.Unlock()
 	return m.CloseF()
 }
 
@@ -640,6 +648,7 @@ func TestGather(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 			s := &Stackdriver{
+				Log:                          testutil.Logger{},
 				Project:                      "test",
 				RateLimit:                    10,
 				GatherRawDistributionBuckets: true,
@@ -751,9 +760,8 @@ func TestGatherAlign(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
+	for listCall, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			listCall := 0
 			var acc testutil.Accumulator
 			client := &MockStackdriverClient{
 				ListMetricDescriptorsF: func(ctx context.Context, req *monitoringpb.ListMetricDescriptorsRequest) (<-chan *metricpb.MetricDescriptor, error) {
@@ -765,7 +773,6 @@ func TestGatherAlign(t *testing.T) {
 				ListTimeSeriesF: func(ctx context.Context, req *monitoringpb.ListTimeSeriesRequest) (<-chan *monitoringpb.TimeSeries, error) {
 					ch := make(chan *monitoringpb.TimeSeries, 1)
 					ch <- tt.timeseries[listCall]
-					listCall++
 					close(ch)
 					return ch, nil
 				},
@@ -775,6 +782,7 @@ func TestGatherAlign(t *testing.T) {
 			}
 
 			s := &Stackdriver{
+				Log:                          testutil.Logger{},
 				Project:                      "test",
 				RateLimit:                    10,
 				GatherRawDistributionBuckets: false,

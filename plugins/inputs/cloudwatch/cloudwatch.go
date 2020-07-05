@@ -1,8 +1,9 @@
 package cloudwatch
 
 import (
-	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -10,11 +11,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-
 	"github.com/influxdata/telegraf"
+	internalaws "github.com/influxdata/telegraf/config/aws"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -23,16 +23,17 @@ import (
 type (
 	// CloudWatch contains the configuration and cache for the cloudwatch plugin.
 	CloudWatch struct {
-		Region           string   `toml:"region"`
-		AccessKey        string   `toml:"access_key"`
-		SecretKey        string   `toml:"secret_key"`
-		RoleARN          string   `toml:"role_arn"`
-		Profile          string   `toml:"profile"`
-		CredentialPath   string   `toml:"shared_credential_file"`
-		Token            string   `toml:"token"`
-		EndpointURL      string   `toml:"endpoint_url"`
-		StatisticExclude []string `toml:"statistic_exclude"`
-		StatisticInclude []string `toml:"statistic_include"`
+		Region           string            `toml:"region"`
+		AccessKey        string            `toml:"access_key"`
+		SecretKey        string            `toml:"secret_key"`
+		RoleARN          string            `toml:"role_arn"`
+		Profile          string            `toml:"profile"`
+		CredentialPath   string            `toml:"shared_credential_file"`
+		Token            string            `toml:"token"`
+		EndpointURL      string            `toml:"endpoint_url"`
+		StatisticExclude []string          `toml:"statistic_exclude"`
+		StatisticInclude []string          `toml:"statistic_include"`
+		Timeout          internal.Duration `toml:"timeout"`
 
 		Period    internal.Duration `toml:"period"`
 		Delay     internal.Duration `toml:"delay"`
@@ -40,6 +41,8 @@ type (
 		Metrics   []*Metric         `toml:"metrics"`
 		CacheTTL  internal.Duration `toml:"cache_ttl"`
 		RateLimit int               `toml:"ratelimit"`
+
+		Log telegraf.Logger `toml:"-"`
 
 		client          cloudwatchClient
 		statFilter      filter.Filter
@@ -133,6 +136,9 @@ func (c *CloudWatch) SampleConfig() string {
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   # ratelimit = 25
 
+  ## Timeout for http requests made by the cloudwatch client.
+  # timeout = "5s"
+
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
   # statistic_include = [ "average", "sum", "minimum", "maximum", sample_count" ]
@@ -183,15 +189,16 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	err = c.updateWindow(time.Now())
-	if err != nil {
-		return err
-	}
+	c.updateWindow(time.Now())
 
 	// Get all of the possible queries so we can send groups of 100.
 	queries, err := c.getDataQueries(filteredMetrics)
 	if err != nil {
 		return err
+	}
+
+	if len(queries) == 0 {
+		return nil
 	}
 
 	// Limit concurrency or we can easily exhaust user connection limit.
@@ -205,7 +212,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	results := []*cloudwatch.MetricDataResult{}
 
 	// 100 is the maximum number of metric data queries a `GetMetricData` request can contain.
-	batchSize := 100
+	batchSize := 500
 	var batches [][]*cloudwatch.MetricDataQuery
 
 	for batchSize < len(queries) {
@@ -235,7 +242,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	return c.aggregateMetrics(acc, results)
 }
 
-func (c *CloudWatch) initializeCloudWatch() error {
+func (c *CloudWatch) initializeCloudWatch() {
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      c.Region,
 		AccessKey:   c.AccessKey,
@@ -248,10 +255,27 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 	configProvider := credentialConfig.Credentials()
 
-	cfg := &aws.Config{}
+	cfg := &aws.Config{
+		HTTPClient: &http.Client{
+			// use values from DefaultTransport
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+					DualStack: true,
+				}).DialContext,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+			Timeout: c.Timeout.Duration,
+		},
+	}
+
 	loglevel := aws.LogOff
 	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
-	return nil
 }
 
 type filteredMetric struct {
@@ -271,7 +295,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 	if c.Metrics != nil {
 		for _, m := range c.Metrics {
 			metrics := []*cloudwatch.Metric{}
-			if !hasWilcard(m.Dimensions) {
+			if !hasWildcard(m.Dimensions) {
 				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
 				for k, d := range m.Dimensions {
 					dimensions[k] = &cloudwatch.Dimension{
@@ -370,7 +394,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 	return metrics, nil
 }
 
-func (c *CloudWatch) updateWindow(relativeTo time.Time) error {
+func (c *CloudWatch) updateWindow(relativeTo time.Time) {
 	windowEnd := relativeTo.Add(-c.Delay.Duration)
 
 	if c.windowEnd.IsZero() {
@@ -382,8 +406,6 @@ func (c *CloudWatch) updateWindow(relativeTo time.Time) error {
 	}
 
 	c.windowEnd = windowEnd
-
-	return nil
 }
 
 // getDataQueries gets all of the possible queries so we can maximize the request payload.
@@ -463,7 +485,8 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 	}
 
 	if len(dataQueries) == 0 {
-		return nil, errors.New("no metrics found to collect")
+		c.Log.Debug("no metrics found to collect")
+		return nil, nil
 	}
 
 	if c.metricCache == nil {
@@ -535,6 +558,7 @@ func init() {
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: time.Hour},
 			RateLimit: 25,
+			Timeout:   internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }
@@ -579,7 +603,7 @@ func (f *metricCache) isValid() bool {
 	return f.metrics != nil && time.Since(f.built) < f.ttl
 }
 
-func hasWilcard(dimensions []*Dimension) bool {
+func hasWildcard(dimensions []*Dimension) bool {
 	for _, d := range dimensions {
 		if d.Value == "" || d.Value == "*" {
 			return true
