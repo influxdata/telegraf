@@ -344,22 +344,18 @@ func buildMap(gs snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, err
 			//should always have an index tag because the table should
 			//always have IndexAsTag true
 			return nil, fmt.Errorf("no index tag")
-			continue
 		}
 		i, err := strconv.ParseUint(i_str, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("index tag isn't a uint")
-			continue
 		}
 		name_if, ok := v.Fields[column]
 		if !ok {
 			return nil, fmt.Errorf("field %s is missing", column)
-			continue
 		}
 		name, ok := name_if.(string)
 		if !ok {
 			return nil, fmt.Errorf("field %s isn't a string", column)
-			continue
 		}
 
 		t[i] = name
