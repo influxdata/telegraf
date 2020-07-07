@@ -45,6 +45,8 @@ The `redfish` plugin gathers  metrics and status information about CPU temperatu
     - reading_celsius
     - upper_threshold_critical
     - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
 
 
 + redfish_thermal_fans
@@ -62,6 +64,8 @@ The `redfish` plugin gathers  metrics and status information about CPU temperatu
     - reading_rpm (or) reading_percent
     - upper_threshold_critical
     - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
 
 
 - redfish_power_powersupplies
@@ -98,6 +102,8 @@ The `redfish` plugin gathers  metrics and status information about CPU temperatu
     - reading_volts
     - upper_threshold_critical
     - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
 
 
 ### Example Output
