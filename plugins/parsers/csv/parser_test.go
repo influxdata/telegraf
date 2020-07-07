@@ -512,3 +512,84 @@ func TestTimestampTimezone(t *testing.T) {
 	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
 	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
 }
+
+func TestEmptyMeasurementName(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:        "csv",
+			HeaderRowCount:    1,
+			ColumnNames:       []string{"", "b"},
+			MeasurementColumn: "",
+		},
+	)
+	require.NoError(t, err)
+	testCSV := `,b
+1,2`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("csv",
+			map[string]string{},
+			map[string]interface{}{
+				"b": 2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}
+
+func TestNumericMeasurementName(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:        "csv",
+			HeaderRowCount:    1,
+			ColumnNames:       []string{"a", "b"},
+			MeasurementColumn: "a",
+		},
+	)
+	require.NoError(t, err)
+	testCSV := `a,b
+1,2`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("1",
+			map[string]string{},
+			map[string]interface{}{
+				"b": 2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}
+
+func TestStaticMeasurementName(t *testing.T) {
+	p, err := NewParser(
+		&Config{
+			MetricName:     "csv",
+			HeaderRowCount: 1,
+			ColumnNames:    []string{"a", "b"},
+		},
+	)
+	require.NoError(t, err)
+	testCSV := `a,b
+1,2`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expected := []telegraf.Metric{
+		testutil.MustMetric("csv",
+			map[string]string{},
+			map[string]interface{}{
+				"a": 1,
+				"b": 2,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, metrics, testutil.IgnoreTime())
+}
