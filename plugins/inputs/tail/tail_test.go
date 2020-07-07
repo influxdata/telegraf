@@ -44,7 +44,12 @@ func TestTailBadLine(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
 	require.NoError(t, err)
 
-	time.Sleep(500 * time.Millisecond)
+	// good metric for syncronization
+	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
+	require.NoError(t, err)
+
+	acc.Wait(1)
+
 	tt.Stop()
 	assert.Contains(t, buf.String(), "Malformed log line")
 }
