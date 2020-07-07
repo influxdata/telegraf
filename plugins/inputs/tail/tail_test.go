@@ -186,11 +186,11 @@ cpu,42
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return &csv.Parser{
+		return csv.NewParser(&csv.Config{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
-		}, nil
+		})
 	})
 
 	err = plugin.Init()
