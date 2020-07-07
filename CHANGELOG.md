@@ -85,6 +85,7 @@
 - [#7762](https://github.com/influxdata/telegraf/pull/7762): Allow per input overriding of collection_jitter and precision.
 - [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve performance of procstat: Up to 40/120x better performance.
 - [#7677](https://github.com/influxdata/telegraf/pull/7677): Expand execd shim support for processor and outputs.
+- [#7154](https://github.com/influxdata/telegraf/pull/7154): Add v3 metadata support to ecs input.
 
 #### Bugfixes
 
