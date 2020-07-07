@@ -5,107 +5,31 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestTailFromBeginning(t *testing.T) {
-	if os.Getenv("CIRCLE_PROJECT_REPONAME") != "" {
-		t.Skip("Skipping CI testing due to race conditions")
-	}
-
-	tmpfile, err := ioutil.TempFile("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-	defer tmpfile.Close()
-	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
-	require.NoError(t, err)
-
-	tt := NewTail()
-	tt.Log = testutil.Logger{}
-	tt.FromBeginning = true
-	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
-
-	err = tt.Init()
-	require.NoError(t, err)
-
-	acc := testutil.Accumulator{}
-	require.NoError(t, tt.Start(&acc))
-	defer tt.Stop()
-	require.NoError(t, acc.GatherError(tt.Gather))
-
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu",
-		map[string]interface{}{
-			"usage_idle": float64(100),
-		},
-		map[string]string{
-			"mytag": "foo",
-			"path":  tmpfile.Name(),
-		})
-}
-
-func TestTailFromEnd(t *testing.T) {
-	if os.Getenv("CIRCLE_PROJECT_REPONAME") != "" {
-		t.Skip("Skipping CI testing due to race conditions")
-	}
-
-	tmpfile, err := ioutil.TempFile("", "")
-	require.NoError(t, err)
-	defer os.Remove(tmpfile.Name())
-	defer tmpfile.Close()
-	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
-	require.NoError(t, err)
-
-	tt := NewTail()
-	tt.Log = testutil.Logger{}
-	tt.Files = []string{tmpfile.Name()}
-	tt.SetParserFunc(parsers.NewInfluxParser)
-
-	err = tt.Init()
-	require.NoError(t, err)
-
-	acc := testutil.Accumulator{}
-	require.NoError(t, tt.Start(&acc))
-	defer tt.Stop()
-	for _, tailer := range tt.tailers {
-		for n, err := tailer.Tell(); err == nil && n == 0; n, err = tailer.Tell() {
-			// wait for tailer to jump to end
-			runtime.Gosched()
-		}
-	}
-
-	_, err = tmpfile.WriteString("cpu,othertag=foo usage_idle=100\n")
-	require.NoError(t, err)
-	require.NoError(t, acc.GatherError(tt.Gather))
-
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu",
-		map[string]interface{}{
-			"usage_idle": float64(100),
-		},
-		map[string]string{
-			"othertag": "foo",
-			"path":     tmpfile.Name(),
-		})
-	assert.Len(t, acc.Metrics, 1)
-}
-
 func TestTailBadLine(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 	defer tmpfile.Close()
+
+	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
+	require.NoError(t, err)
+
+	// Write good metric so we can detect when processing is complete
+	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
+	require.NoError(t, err)
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
@@ -124,10 +48,8 @@ func TestTailBadLine(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(tt.Gather))
 
-	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
-	require.NoError(t, err)
+	acc.Wait(1)
 
-	time.Sleep(500 * time.Millisecond)
 	tt.Stop()
 	assert.Contains(t, buf.String(), "Malformed log line")
 }
@@ -186,11 +108,11 @@ cpu,42
 	plugin.FromBeginning = true
 	plugin.Files = []string{tmpfile.Name()}
 	plugin.SetParserFunc(func() (parsers.Parser, error) {
-		return &csv.Parser{
+		return csv.NewParser(&csv.Config{
 			MeasurementColumn: "measurement",
 			HeaderRowCount:    1,
 			TimeFunc:          func() time.Time { return time.Unix(0, 0) },
-		}, nil
+		})
 	})
 
 	err = plugin.Init()
@@ -283,4 +205,147 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
+}
+
+func TestCharacterEncoding(t *testing.T) {
+	full := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu0",
+			},
+			map[string]interface{}{
+				"usage_active": 11.9,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu1",
+			},
+			map[string]interface{}{
+				"usage_active": 26.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu2",
+			},
+			map[string]interface{}{
+				"usage_active": 14.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu3",
+			},
+			map[string]interface{}{
+				"usage_active": 20.4,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu-total",
+			},
+			map[string]interface{}{
+				"usage_active": 18.4,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	tests := []struct {
+		name     string
+		plugin   *Tail
+		offset   int64
+		expected []telegraf.Metric
+	}{
+		{
+			name: "utf-8",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-8.influx"},
+				FromBeginning:       true,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-8",
+			},
+			expected: full,
+		},
+		{
+			name: "utf-8 seek",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-8.influx"},
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-8",
+			},
+			offset:   0x33,
+			expected: full[1:],
+		},
+		{
+			name: "utf-16le",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-16le.influx"},
+				FromBeginning:       true,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-16le",
+			},
+			expected: full,
+		},
+		{
+			name: "utf-16le seek",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-16le.influx"},
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-16le",
+			},
+			offset:   0x68,
+			expected: full[1:],
+		},
+		{
+			name: "utf-16be",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-16be.influx"},
+				FromBeginning:       true,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-16be",
+			},
+			expected: full,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.SetParserFunc(func() (parsers.Parser, error) {
+				handler := influx.NewMetricHandler()
+				return influx.NewParser(handler), nil
+			})
+
+			if tt.offset != 0 {
+				tt.plugin.offsets = map[string]int64{
+					tt.plugin.Files[0]: tt.offset,
+				}
+			}
+
+			err := tt.plugin.Init()
+			require.NoError(t, err)
+
+			var acc testutil.Accumulator
+			err = tt.plugin.Start(&acc)
+			require.NoError(t, err)
+			acc.Wait(len(tt.expected))
+			tt.plugin.Stop()
+
+			actual := acc.GetTelegrafMetrics()
+			for _, m := range actual {
+				m.RemoveTag("path")
+			}
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
 }
