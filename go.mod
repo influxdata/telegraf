@@ -38,6 +38,7 @@ require (
 	github.com/couchbase/goutils v0.0.0-20180530154633-e865a1461c8a // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20190707035753-2be1aa521ff4
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/dimchansky/utfbom v1.1.0
 	github.com/docker/distribution v2.6.0-rc.1.0.20170726174610-edc3ab29cdff+incompatible // indirect
 	github.com/docker/docker v1.4.2-0.20180327123150-ed7b6428c133
 	github.com/docker/go-connections v0.3.0 // indirect
@@ -133,6 +134,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 	golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4
+	golang.org/x/text v0.3.3
 	golang.org/x/tools v0.0.0-20200317043434-63da46f3035e // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20200205215550-e35592f146e4
 	gonum.org/v1/gonum v0.6.2 // indirect
