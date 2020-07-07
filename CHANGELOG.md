@@ -34,6 +34,7 @@
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
 - [reverse_dns](/plugins/processors/reverse_dns/README.md) - Contributed by @influxdata
 - [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
+- [ifname](/plugins/processors/ifname/README.md) - Contributed by @influxdata
 
 #### New Outputs
 
