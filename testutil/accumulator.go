@@ -212,9 +212,11 @@ func (a *Accumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.T
 }
 
 func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	a.Lock()
 	if a.delivered == nil {
 		a.delivered = make(chan telegraf.DeliveryInfo)
 	}
+	a.Unlock()
 	return a.delivered
 }
 
