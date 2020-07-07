@@ -244,6 +244,12 @@ func (d *IfName) getMap(agent string) (nameMap, error) {
 	// Make the SNMP request
 	m, err := d.getMapRemote(agent)
 	if err != nil {
+		//failure.  signal without saving to cache
+		d.sigsLock.Lock()
+		close(sig)
+		delete(d.sigs, agent)
+		d.sigsLock.Unlock()
+
 		return nil, fmt.Errorf("getting remote table: %w", err)
 	}
 
