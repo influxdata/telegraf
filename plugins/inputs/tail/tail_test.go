@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -283,4 +284,147 @@ func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime())
+}
+
+func TestCharacterEncoding(t *testing.T) {
+	full := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu0",
+			},
+			map[string]interface{}{
+				"usage_active": 11.9,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu1",
+			},
+			map[string]interface{}{
+				"usage_active": 26.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu2",
+			},
+			map[string]interface{}{
+				"usage_active": 14.0,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu3",
+			},
+			map[string]interface{}{
+				"usage_active": 20.4,
+			},
+			time.Unix(0, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"cpu": "cpu-total",
+			},
+			map[string]interface{}{
+				"usage_active": 18.4,
+			},
+			time.Unix(0, 0),
+		),
+	}
+
+	tests := []struct {
+		name     string
+		plugin   *Tail
+		offset   int64
+		expected []telegraf.Metric
+	}{
+		{
+			name: "utf-8",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-8.influx"},
+				FromBeginning:       true,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-8",
+			},
+			expected: full,
+		},
+		{
+			name: "utf-8 seek",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-8.influx"},
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-8",
+			},
+			offset:   0x33,
+			expected: full[1:],
+		},
+		{
+			name: "utf-16le",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-16le.influx"},
+				FromBeginning:       true,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-16le",
+			},
+			expected: full,
+		},
+		{
+			name: "utf-16le seek",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-16le.influx"},
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-16le",
+			},
+			offset:   0x68,
+			expected: full[1:],
+		},
+		{
+			name: "utf-16be",
+			plugin: &Tail{
+				Files:               []string{"testdata/cpu-utf-16be.influx"},
+				FromBeginning:       true,
+				MaxUndeliveredLines: 1000,
+				Log:                 testutil.Logger{},
+				CharacterEncoding:   "utf-16be",
+			},
+			expected: full,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.plugin.SetParserFunc(func() (parsers.Parser, error) {
+				handler := influx.NewMetricHandler()
+				return influx.NewParser(handler), nil
+			})
+
+			if tt.offset != 0 {
+				tt.plugin.offsets = map[string]int64{
+					tt.plugin.Files[0]: tt.offset,
+				}
+			}
+
+			err := tt.plugin.Init()
+			require.NoError(t, err)
+
+			var acc testutil.Accumulator
+			err = tt.plugin.Start(&acc)
+			require.NoError(t, err)
+			acc.Wait(len(tt.expected))
+			tt.plugin.Stop()
+
+			actual := acc.GetTelegrafMetrics()
+			for _, m := range actual {
+				m.RemoveTag("path")
+			}
+
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
 }
