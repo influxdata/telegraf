@@ -56,7 +56,7 @@ The `ifname` plugin looks up network interface names using SNMP.
   ## may change the order when data is cached.  If you need metrics to
   ## stay in order set this to true.  keeping the metrics ordered may
   ## be slightly slower
-  #ordered = false
+  # ordered = false
 ```
 
 ### Example processing:
