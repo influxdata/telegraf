@@ -24,6 +24,13 @@ func TestTailBadLine(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 	defer tmpfile.Close()
 
+	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
+	require.NoError(t, err)
+
+	// Write good metric so we can detect when processing is complete
+	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
+	require.NoError(t, err)
+
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
@@ -40,13 +47,6 @@ func TestTailBadLine(t *testing.T) {
 	log.SetOutput(buf)
 
 	require.NoError(t, acc.GatherError(tt.Gather))
-
-	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
-	require.NoError(t, err)
-
-	// good metric for syncronization
-	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
-	require.NoError(t, err)
 
 	acc.Wait(1)
 
