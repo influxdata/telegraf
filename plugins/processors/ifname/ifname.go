@@ -68,7 +68,12 @@ var sampleConfig = `
   #ordered = false
 `
 
+type nameMap map[uint64]string
 type mapFunc func(agent string) (nameMap, error)
+
+type makeTableFunc func(string) (*si.Table, error)
+
+type sigMap map[string](chan struct{})
 
 type IfName struct {
 	SourceTag string `toml:"tag"`
@@ -92,12 +97,14 @@ type IfName struct {
 	parallel parallel.Parallel    `toml:"-"`
 	acc      telegraf.Accumulator `toml:"-"`
 
-	getMap mapFunc `toml:"-"`
+	getMapRemote mapFunc       `toml:"-"`
+	makeTable    makeTableFunc `toml:"-"`
 
 	gsBase snmp.GosnmpWrapper `toml:"-"`
-}
 
-type nameMap map[uint64]string
+	sigs     sigMap     `toml:"-"`
+	sigsLock sync.Mutex `toml:"-"`
+}
 
 func (d *IfName) SampleConfig() string {
 	return sampleConfig
@@ -108,9 +115,13 @@ func (d *IfName) Description() string {
 }
 
 func (d *IfName) Init() error {
-	d.getMap = d.getMapNoMock
+	d.getMapRemote = d.getMapRemoteNoMock
+	d.makeTable = makeTableNoMock
+
 	c := NewLRUCache(d.CacheSize)
 	d.cache = &c
+
+	d.sigs = make(sigMap)
 
 	return nil
 }
@@ -155,11 +166,11 @@ func (d *IfName) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("parsing SNMP client config: %w", err)
 	}
 
-	d.ifTable, err = makeTable("IF-MIB::ifTable")
+	d.ifTable, err = d.makeTable("IF-MIB::ifTable")
 	if err != nil {
 		return fmt.Errorf("looking up ifTable in local MIB: %w", err)
 	}
-	d.ifXTable, err = makeTable("IF-MIB::ifXTable")
+	d.ifXTable, err = d.makeTable("IF-MIB::ifXTable")
 	if err != nil {
 		return fmt.Errorf("looking up ifXTable in local MIB: %w", err)
 	}
@@ -192,8 +203,10 @@ func (d *IfName) Stop() error {
 
 // getMap gets the interface names map either from cache or from the SNMP
 // agent
-func (d *IfName) getMapNoMock(agent string) (nameMap, error) {
-	// Check cache first
+func (d *IfName) getMap(agent string) (nameMap, error) {
+	var sig chan struct{}
+
+	// Check cache
 	d.rwLock.RLock()
 	m, ok := d.cache.Get(agent)
 	d.rwLock.RUnlock()
@@ -201,29 +214,54 @@ func (d *IfName) getMapNoMock(agent string) (nameMap, error) {
 		return m, nil
 	}
 
-	// The cache missed so make an SNMP request.  Write the response
-	// to cache and return it
-	d.rwLock.Lock()
-	defer d.rwLock.Unlock()
+	// Is this the first request for this agent?
+	d.sigsLock.Lock()
+	sig, found := d.sigs[agent]
+	if !found {
+		s := make(chan struct{})
+		d.sigs[agent] = s
+		sig = s
+	}
+	d.sigsLock.Unlock()
 
-	// Check cache again while holding write lock to prevent duplicate
-	// SNMP requests.
-	var err error
-	m, ok = d.cache.Get(agent)
-	if ok {
-		return m, nil
+	if found {
+		// This is not the first request.  Wait for first to finish.
+		<-sig
+		// Check cache again
+		d.rwLock.RLock()
+		m, ok := d.cache.Get(agent)
+		d.rwLock.RUnlock()
+		if ok {
+			return m, nil
+		} else {
+			return nil, fmt.Errorf("getting remote table from cache")
+		}
 	}
 
-	m, err = d.getMapRemote(agent)
+	// The cache missed and this is the first request for this
+	// agent.
+
+	// Make the SNMP request
+	m, err := d.getMapRemote(agent)
 	if err != nil {
 		return nil, fmt.Errorf("getting remote table: %w", err)
 	}
 
+	// Cache it
+	d.rwLock.Lock()
 	d.cache.Put(agent, m)
+	d.rwLock.Unlock()
+
+	// Signal any other waiting requests for this agent and clean up
+	d.sigsLock.Lock()
+	close(sig)
+	delete(d.sigs, agent)
+	d.sigsLock.Unlock()
+
 	return m, nil
 }
 
-func (d *IfName) getMapRemote(agent string) (nameMap, error) {
+func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
 	gs := d.gsBase
 	err := gs.SetAgent(agent)
 	if err != nil {
@@ -238,12 +276,12 @@ func (d *IfName) getMapRemote(agent string) (nameMap, error) {
 	//try ifXtable and ifName first.  if that fails, fall back to
 	//ifTable and ifDescr
 	var m nameMap
-	m, err = buildMap(&gs, d.ifXTable, "ifName")
+	m, err = buildMap(gs, d.ifXTable, "ifName")
 	if err == nil {
 		return m, nil
 	}
 
-	m, err = buildMap(&gs, d.ifTable, "ifDescr")
+	m, err = buildMap(gs, d.ifTable, "ifDescr")
 	if err == nil {
 		return m, nil
 	}
@@ -270,7 +308,7 @@ func init() {
 	})
 }
 
-func makeTable(tableName string) (*si.Table, error) {
+func makeTableNoMock(tableName string) (*si.Table, error) {
 	var err error
 	tab := si.Table{
 		Oid:        tableName,
@@ -286,7 +324,7 @@ func makeTable(tableName string) (*si.Table, error) {
 	return &tab, nil
 }
 
-func buildMap(gs *snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, error) {
+func buildMap(gs snmp.GosnmpWrapper, tab *si.Table, column string) (nameMap, error) {
 	var err error
 
 	rtab, err := tab.Build(gs, true)
