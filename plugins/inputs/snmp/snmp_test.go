@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/snmp"
+	config "github.com/influxdata/telegraf/internal/snmp"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
@@ -88,13 +90,15 @@ func TestSampleConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := &Snmp{
-		Agents:         []string{"udp://127.0.0.1:161"},
-		Timeout:        internal.Duration{Duration: 5 * time.Second},
-		Version:        2,
-		Community:      "public",
-		MaxRepetitions: 10,
-		Retries:        3,
-		Name:           "snmp",
+		Agents: []string{"udp://127.0.0.1:161"},
+		ClientConfig: config.ClientConfig{
+			Timeout:        internal.Duration{Duration: 5 * time.Second},
+			Version:        2,
+			Community:      "public",
+			MaxRepetitions: 10,
+			Retries:        3,
+		},
+		Name: "snmp",
 	}
 	require.Equal(t, expected, conf)
 }
@@ -141,7 +145,7 @@ func TestTableInit(t *testing.T) {
 			{Oid: "TEST::description", Name: "description", IsTag: true},
 		},
 	}
-	err := tbl.init()
+	err := tbl.Init()
 	require.NoError(t, err)
 
 	assert.Equal(t, "testTable", tbl.Name)
@@ -232,18 +236,20 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
-		Agents:    []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
-		Timeout:   internal.Duration{Duration: 3 * time.Second},
-		Retries:   4,
-		Version:   2,
-		Community: "foo",
+		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
+		ClientConfig: config.ClientConfig{
+			Timeout:   internal.Duration{Duration: 3 * time.Second},
+			Retries:   4,
+			Version:   2,
+			Community: "foo",
+		},
 	}
 	err := s.init()
 	require.NoError(t, err)
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 567, gs.Port)
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
@@ -252,14 +258,14 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
-	gs = gsc.(gosnmpWrapper)
+	gs = gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
 
 	gsc, err = s.getConnection(2)
 	require.NoError(t, err)
-	gs = gsc.(gosnmpWrapper)
+	gs = gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 161, gs.Port)
 	assert.Equal(t, "udp", gs.Transport)
@@ -280,7 +286,7 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 	wg.Add(1)
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, "127.0.0.1", gs.Target)
 	assert.EqualValues(t, 56789, gs.Port)
 	assert.Equal(t, "tcp", gs.Transport)
@@ -299,26 +305,28 @@ func stubTCPServer(wg *sync.WaitGroup) {
 
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
-		Agents:         []string{"1.2.3.4"},
-		Version:        3,
-		MaxRepetitions: 20,
-		ContextName:    "mycontext",
-		SecLevel:       "authPriv",
-		SecName:        "myuser",
-		AuthProtocol:   "md5",
-		AuthPassword:   "password123",
-		PrivProtocol:   "des",
-		PrivPassword:   "321drowssap",
-		EngineID:       "myengineid",
-		EngineBoots:    1,
-		EngineTime:     2,
+		Agents: []string{"1.2.3.4"},
+		ClientConfig: config.ClientConfig{
+			Version:        3,
+			MaxRepetitions: 20,
+			ContextName:    "mycontext",
+			SecLevel:       "authPriv",
+			SecName:        "myuser",
+			AuthProtocol:   "md5",
+			AuthPassword:   "password123",
+			PrivProtocol:   "des",
+			PrivPassword:   "321drowssap",
+			EngineID:       "myengineid",
+			EngineBoots:    1,
+			EngineTime:     2,
+		},
 	}
 	err := s.init()
 	require.NoError(t, err)
 
 	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs := gsc.(gosnmpWrapper)
+	gs := gsc.(snmp.GosnmpWrapper)
 	assert.Equal(t, gs.Version, gosnmp.Version3)
 	sp := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
 	assert.Equal(t, "1.2.3.4", gsc.Host())
@@ -394,7 +402,9 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := gosnmpWrapper{gs}
+	gsw := snmp.GosnmpWrapper{
+		GoSNMP: gs,
+	}
 	err = gsw.Walk(".1.0.0", func(_ gosnmp.SnmpPDU) error { return nil })
 	srvr.Close()
 	wg.Wait()
@@ -442,7 +452,9 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	require.NoError(t, err)
 	conn := gs.Conn
 
-	gsw := gosnmpWrapper{gs}
+	gsw := snmp.GosnmpWrapper{
+		GoSNMP: gs,
+	}
 	_, err = gsw.Get([]string{".1.0.0"})
 	srvr.Close()
 	wg.Wait()
@@ -787,17 +799,4 @@ func TestSnmpTableCache_hit(t *testing.T) {
 	assert.Equal(t, "c", oidText)
 	assert.Equal(t, []Field{{Name: "d"}}, fields)
 	assert.Equal(t, fmt.Errorf("e"), err)
-}
-
-func TestError(t *testing.T) {
-	e := fmt.Errorf("nested error")
-	err := Errorf(e, "top error %d", 123)
-	require.Error(t, err)
-
-	ne, ok := err.(NestedError)
-	require.True(t, ok)
-	assert.Equal(t, e, ne.NestedErr)
-
-	assert.Contains(t, err.Error(), "top error 123")
-	assert.Contains(t, err.Error(), "nested error")
 }
