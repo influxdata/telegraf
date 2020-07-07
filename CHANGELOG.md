@@ -32,9 +32,10 @@
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
 - [execd](/plugins/processors/execd/README.md) - Contributed by @influxdata
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+- [ifname](/plugins/processors/ifname/README.md) - Contributed by @influxdata
+- [port_name](/plugins/processors/port_name/README.md) - Contributed by @influxdata
 - [reverse_dns](/plugins/processors/reverse_dns/README.md) - Contributed by @influxdata
 - [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
-- [ifname](/plugins/processors/ifname/README.md) - Contributed by @influxdata
 
 #### New Outputs
 
