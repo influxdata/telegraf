@@ -38,6 +38,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/dovecot"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ecs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
+	_ "github.com/influxdata/telegraf/plugins/inputs/etherscan"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ethtool"
 	_ "github.com/influxdata/telegraf/plugins/inputs/eventhub_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
