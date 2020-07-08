@@ -19,7 +19,7 @@
 
 - When updating the Debian package you will no longer be prompted to merge the
   telegraf.conf file, instead the new version will be installed to
-  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages no include
+  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages now include
   the version in the top level directory.
 
 #### New Inputs
