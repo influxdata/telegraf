@@ -30,7 +30,7 @@ trap on_exit EXIT
 echo "${tmpdir}"
 cd "${tmpdir}" || exit 1
 
-curl -s -S -H Circle-Token:${CIRCLE_TOKEN} \
+curl -s -S -L -H Circle-Token:${CIRCLE_TOKEN} \
 	"https://circleci.com/api/v2/project/gh/influxdata/telegraf/${BUILD_NUM}/artifacts" \
 	-o artifacts || exit 1
 
@@ -39,7 +39,7 @@ cat artifacts | jq -r '.items[] | "\(.url) \(.path|ltrimstr("build/dist/"))"' > 
 while read url path;
 do
 	echo $url
-	curl -s -S -o "$path" "$url" &&
+	curl -s -S -L -o "$path" "$url" &&
 	sha256sum "$path" > "$path.DIGESTS" &&
 	gpg --armor --detach-sign "$path.DIGESTS" &&
 	gpg --armor --detach-sign "$path" || exit 1
