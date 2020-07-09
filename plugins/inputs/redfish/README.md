@@ -2,6 +2,7 @@
 
 The `redfish` plugin gathers  metrics and status information about CPU temperature, fanspeed, Powersupply, voltage, hostname and Location details(datacenter,placement,rack and room) of hardware servers for which redfish is enabled.
 
+Telegraf minimum version: Telegraf 1.15.0
 
 ### Configuration
 

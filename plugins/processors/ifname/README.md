@@ -2,6 +2,8 @@
 
 The `ifname` plugin looks up network interface names using SNMP.
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Configuration:
 
 ```toml

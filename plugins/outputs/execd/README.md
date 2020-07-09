@@ -2,6 +2,8 @@
 
 The `execd` plugin runs an external program as a daemon.
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Configuration:
 
 ```toml

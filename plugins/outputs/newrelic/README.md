@@ -4,6 +4,8 @@ This plugins writes to New Relic Insights using the [Metrics API][].
 
 To use this plugin you must first obtain an [Insights API Key][].
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Configuration
 ```toml
 [[outputs.newrelic]]

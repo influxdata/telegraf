@@ -4,6 +4,8 @@ Use the `port_name` processor to convert a tag containing a well-known port numb
 
 Tag can contain a number ("80") or number and protocol separated by slash ("443/tcp"). If protocol is not provided it defaults to tcp but can be changed with the default_protocol setting.
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Configuration
 
 ```toml

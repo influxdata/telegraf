@@ -3,6 +3,8 @@
 The `reverse_dns` processor does a reverse-dns lookup on tags (or fields) with
 IPs in them.
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Configuration:
 
 ```toml
