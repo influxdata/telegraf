@@ -13,6 +13,8 @@ files or sockets.
 The Starlark [specification][] has details about the syntax and available
 functions.
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Configuration
 
 ```toml
