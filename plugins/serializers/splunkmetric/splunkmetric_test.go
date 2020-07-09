@@ -52,7 +52,7 @@ func TestSerializeMetricFloatHec(t *testing.T) {
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
-	expS := `{"time":1529875740.819,"event":"metric","fields":{"_value":91.5,"cpu":"cpu0","metric_name":"cpu.usage_idle"}}`
+	expS := `{"time":1529875740.819,"fields":{"_value":91.5,"cpu":"cpu0","metric_name":"cpu.usage_idle"}}`
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -92,7 +92,7 @@ func TestSerializeMetricIntHec(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := `{"time":0,"event":"metric","fields":{"_value":90,"cpu":"cpu0","metric_name":"cpu.usage_idle"}}`
+	expS := `{"time":0,"fields":{"_value":90,"cpu":"cpu0","metric_name":"cpu.usage_idle"}}`
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -132,7 +132,7 @@ func TestSerializeMetricBoolHec(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := `{"time":0,"event":"metric","fields":{"_value":0,"container-name":"telegraf-test","metric_name":"docker.oomkiller"}}`
+	expS := `{"time":0,"fields":{"_value":0,"container-name":"telegraf-test","metric_name":"docker.oomkiller"}}`
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -238,7 +238,7 @@ func TestSerializeBatchHec(t *testing.T) {
 	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
 
-	expS := `{"time":0,"event":"metric","fields":{"_value":42,"metric_name":"cpu.value"}}{"time":0,"event":"metric","fields":{"_value":92,"metric_name":"cpu.value"}}`
+	expS := `{"time":0,"fields":{"_value":42,"metric_name":"cpu.value"}}{"time":0,"fields":{"_value":92,"metric_name":"cpu.value"}}`
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -260,6 +260,6 @@ func TestSerializeMultiHec(t *testing.T) {
 	buf, err := s.SerializeBatch(metrics)
 	assert.NoError(t, err)
 
-	expS := `{"time":0,"event":"metric","fields":{"metric_name:cpu.system":8,"metric_name:cpu.usage":42}}`
+	expS := `{"time":0,"fields":{"metric_name:cpu.system":8,"metric_name:cpu.usage":42}}`
 	assert.Equal(t, string(expS), string(buf))
 }
