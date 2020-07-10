@@ -85,7 +85,7 @@ func (i *testInput) SampleConfig() string {
 }
 
 func (i *testInput) Description() string {
-	return ""
+	return "test"
 }
 
 func (i *testInput) Gather(acc telegraf.Accumulator) error {
