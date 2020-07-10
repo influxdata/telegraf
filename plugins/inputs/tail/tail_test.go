@@ -22,7 +22,6 @@ func TestTailBadLine(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
-	defer tmpfile.Close()
 
 	_, err = tmpfile.WriteString("cpu mytag= foo usage_idle= 100\n")
 	require.NoError(t, err)
@@ -30,6 +29,8 @@ func TestTailBadLine(t *testing.T) {
 	// Write good metric so we can detect when processing is complete
 	_, err = tmpfile.WriteString("cpu usage_idle=100\n")
 	require.NoError(t, err)
+
+	tmpfile.Close()
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
@@ -58,9 +59,9 @@ func TestTailDosLineendings(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
-	defer tmpfile.Close()
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\ncpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
+	tmpfile.Close()
 
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
@@ -91,10 +92,7 @@ func TestTailDosLineendings(t *testing.T) {
 func TestCSVHeadersParsedOnce(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
-	defer func() {
-		tmpfile.Close()
-		os.Remove(tmpfile.Name())
-	}()
+	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.WriteString(`
 measurement,time_idle
@@ -102,6 +100,7 @@ cpu,42
 cpu,42
 `)
 	require.NoError(t, err)
+	tmpfile.Close()
 
 	plugin := NewTail()
 	plugin.Log = testutil.Logger{}
@@ -152,15 +151,13 @@ cpu,42
 func TestMultipleMetricsOnFirstLine(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	require.NoError(t, err)
-	defer func() {
-		tmpfile.Close()
-		os.Remove(tmpfile.Name())
-	}()
+	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.WriteString(`
 [{"time_idle": 42}, {"time_idle": 42}]
 `)
 	require.NoError(t, err)
+	tmpfile.Close()
 
 	plugin := NewTail()
 	plugin.Log = testutil.Logger{}
