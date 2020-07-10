@@ -32,6 +32,9 @@ func TestTailBadLine(t *testing.T) {
 
 	tmpfile.Close()
 
+	buf := &bytes.Buffer{}
+	log.SetOutput(buf)
+
 	tt := NewTail()
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
@@ -43,9 +46,6 @@ func TestTailBadLine(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-
-	buf := &bytes.Buffer{}
-	log.SetOutput(buf)
 
 	require.NoError(t, acc.GatherError(tt.Gather))
 
