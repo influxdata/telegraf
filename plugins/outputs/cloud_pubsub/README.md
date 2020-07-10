@@ -56,7 +56,7 @@ generate it using `telegraf --usage cloud_pubsub`.
   # base64_data = false
 
   ## Optional. PubSub attributes to add to metrics.
-  # [[outputs.cloud_pubsub.attributes]]
+  # [outputs.cloud_pubsub.attributes]
   #   my_attr = "tag_value"
 ```
 
