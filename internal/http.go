@@ -74,7 +74,7 @@ type schemeAuthHandler struct {
 }
 
 func (h *schemeAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if h.scheme != "" || h.credentials != "" {
+	if h.credentials != "" {
 		// Scheme checking
 		authHeader := req.Header.Get("Authorization")
 		authParts := strings.SplitN(authHeader, " ", 2)

@@ -2,15 +2,11 @@
 
 InfluxDB V2 Listener is a service input plugin that listens for requests sent
 according to the [InfluxDB HTTP API][influxdb_http_api].  The intent of the
-plugin is to allow Telegraf to serve as a proxy/router for the `/write`
+plugin is to allow Telegraf to serve as a proxy/router for the `/api/v2/write`
 endpoint of the InfluxDB HTTP API.
 
-**Note:** This plugin was previously known as `http_listener`.  If you wish to
-send general metrics via HTTP it is recommended to use the
-[`http_listener_v2`][http_listener_v2] instead.
-
-The `/write` endpoint supports the `precision` query parameter and can be set
-to one of `ns`, `u`, `ms`, `s`, `m`, `h`.  All other parameters are ignored and
+The `/api/v2/write` endpoint supports the `precision` query parameter and can be set
+to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and
 defer to the output plugins configuration.
 
 When chaining Telegraf instances using this plugin, CREATE DATABASE requests
@@ -22,7 +18,7 @@ submits data to InfluxDB determines the destination database.
 
 ```toml
 [[inputs.influxdb_v2_listener]]
-  ## Address and port to host HTTP listener on
+  ## Address and port to host InfluxDB listener on
   service_address = ":8186"
 
   ## maximum duration before timing out read of the request
@@ -32,11 +28,13 @@ submits data to InfluxDB determines the destination database.
 
   ## Maximum allowed HTTP request body size in bytes.
   ## 0 means to use the default of 32MiB.
-  max_body_size = 0
+  max_body_size = "32MiB"
 
-  ## Maximum line size allowed to be sent in bytes.
-  ##   deprecated in 1.14; parser now handles lines of unlimited length and option is ignored
-  # max_line_size = 0
+  ## Optional tag to determine the bucket. 
+  ## If the write has a bucket in the query string then it will be kept in this tag name.
+  ## This tag can be used in downstream outputs.
+  ## The default value of nothing means it will be off and the database will not be recorded.
+  # bucket_tag = ""
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -45,18 +43,6 @@ submits data to InfluxDB determines the destination database.
   ## Add service certificate and key
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
-
-  ## Optional tag name used to store the database name.
-  ## If the write has a database in the query string then it will be kept in this tag name.
-  ## This tag can be used in downstream outputs.
-  ## The default value of nothing means it will be off and the database will not be recorded.
-  ## If you have a tag that is the same as the one specified below, and supply a database,
-  ## the tag will be overwritten with the database supplied.
-  # database_tag = ""
-
-  ## If set the retention policy specified in the write query will be added as
-  ## the value of this tag name.
-  # retention_policy_tag = ""
 
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
@@ -71,8 +57,7 @@ Metrics are created from InfluxDB Line Protocol in the request body.
 
 **Example Query:**
 ```
-curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
+curl -i -XPOST 'http://localhost:8186/api/v2/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 
-[influxdb_http_api]: https://docs.influxdata.com/influxdb/latest/guides/writing_data/
-[http_listener_v2]: /plugins/inputs/http_listener_v2/README.md
+[influxdb_http_api]: https://v2.docs.influxdata.com/v2.0/api/

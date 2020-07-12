@@ -29,13 +29,12 @@ type InfluxDBV2Listener struct {
 	port           int
 	tlsint.ServerConfig
 
-	ReadTimeout        internal.Duration `toml:"read_timeout"`
-	WriteTimeout       internal.Duration `toml:"write_timeout"`
-	MaxBodySize        internal.Size     `toml:"max_body_size"`
-	MaxLineSize        internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
-	Token              string            `toml:"token"`
-	DatabaseTag        string            `toml:"database_tag"`
-	RetentionPolicyTag string            `toml:"retention_policy_tag"`
+	ReadTimeout  internal.Duration `toml:"read_timeout"`
+	WriteTimeout internal.Duration `toml:"write_timeout"`
+	MaxBodySize  internal.Size     `toml:"max_body_size"`
+	MaxLineSize  internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
+	Token        string            `toml:"token"`
+	BucketTag    string            `toml:"bucket_tag"`
 
 	timeFunc influx.TimeFunc
 
@@ -47,7 +46,6 @@ type InfluxDBV2Listener struct {
 	bytesRecv       selfstat.Stat
 	requestsServed  selfstat.Stat
 	writesServed    selfstat.Stat
-	queriesServed   selfstat.Stat
 	readysServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
@@ -74,15 +72,11 @@ const sampleConfig = `
   ## 0 means to use the default of 32MiB.
   max_body_size = "32MiB"
 
-  ## Optional tag name used to store the database.
-  ## If the write has a database in the query string then it will be kept in this tag name.
+  ## Optional tag to determine the bucket. 
+  ## If the write has a bucket in the query string then it will be kept in this tag name.
   ## This tag can be used in downstream outputs.
   ## The default value of nothing means it will be off and the database will not be recorded.
-  # database_tag = ""
-
-  ## If set the retention policy specified in the write query will be added as
-  ## the value of this tag name.
-  # retention_policy_tag = ""
+  # bucket_tag = ""
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -117,7 +111,6 @@ func (h *InfluxDBV2Listener) routes() {
 	)
 
 	h.mux.Handle("/api/v2/write", authHandler(h.handleWrite()))
-	h.mux.Handle("/api/v2/query", authHandler(h.handleQuery()))
 	h.mux.Handle("/api/v2/ready", h.handleReady())
 	h.mux.Handle("/", authHandler(h.handleDefault()))
 }
@@ -129,7 +122,6 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.bytesRecv = selfstat.Register("influxdb_v2_listener", "bytes_received", tags)
 	h.requestsServed = selfstat.Register("influxdb_v2_listener", "requests_served", tags)
 	h.writesServed = selfstat.Register("influxdb_v2_listener", "writes_served", tags)
-	h.queriesServed = selfstat.Register("influxdb_v2_listener", "queries_served", tags)
 	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
@@ -194,7 +186,7 @@ func (h *InfluxDBV2Listener) Start(acc telegraf.Accumulator) error {
 		}
 	}()
 
-	h.startTime = time.Now()
+	h.startTime = h.timeFunc()
 
 	h.Log.Infof("Started HTTP listener service on %s", h.ServiceAddress)
 
@@ -215,18 +207,6 @@ func (h *InfluxDBV2Listener) ServeHTTP(res http.ResponseWriter, req *http.Reques
 	h.requestsServed.Incr(1)
 }
 
-func (h *InfluxDBV2Listener) handleQuery() http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
-		defer h.queriesServed.Incr(1)
-		// Deliver a dummy response to the query endpoint, as some InfluxDB
-		// clients test endpoint availability with a query
-		res.Header().Set("Content-Type", "application/json")
-		res.Header().Set("X-Influxdb-Version", "1.0")
-		res.WriteHeader(http.StatusOK)
-		res.Write([]byte("{\"results\":[]}"))
-	}
-}
-
 func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.readysServed.Incr(1)
@@ -235,10 +215,9 @@ func (h *InfluxDBV2Listener) handleReady() http.HandlerFunc {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(http.StatusOK)
 		b, _ := json.Marshal(map[string]string{
-			// "2019-03-13T10:09:33.891196-04:00"
 			"started": h.startTime.Format(time.RFC3339Nano),
 			"status":  "ready",
-			"up":      string(h.startTime.Sub(time.Now()))}) // based on header set above
+			"up":      h.timeFunc().Sub(h.startTime).String()})
 		res.Write(b)
 	}
 }
@@ -255,12 +234,11 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		defer h.writesServed.Incr(1)
 		// Check that the content length is not too large for us to handle.
 		if req.ContentLength > h.MaxBodySize.Size {
-			tooLarge(res)
+			tooLarge(res, h.MaxBodySize.Size)
 			return
 		}
 
-		db := req.URL.Query().Get("db")
-		rp := req.URL.Query().Get("rp")
+		bucket := req.URL.Query().Get("bucket")
 
 		body := req.Body
 		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
@@ -306,7 +284,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 			// Continue parsing metrics even if some are malformed
 			if parseErr, ok := err.(*influx.ParseError); ok {
-				parseErrorCount += 1
+				parseErrorCount++
 				errStr := parseErr.Error()
 				if firstParseErrorStr == "" {
 					firstParseErrorStr = errStr
@@ -318,12 +296,8 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 				break
 			}
 
-			if h.DatabaseTag != "" && db != "" {
-				m.AddTag(h.DatabaseTag, db)
-			}
-
-			if h.RetentionPolicyTag != "" && rp != "" {
-				m.AddTag(h.RetentionPolicyTag, rp)
+			if h.BucketTag != "" && bucket != "" {
+				m.AddTag(h.BucketTag, bucket)
 			}
 
 			h.acc.AddMetric(m)
@@ -353,31 +327,46 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 	}
 }
 
-func tooLarge(res http.ResponseWriter) {
+func tooLarge(res http.ResponseWriter, maxLength int64) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
-	res.Write([]byte(`{"error":"http: request body too large"}`))
+	b, _ := json.Marshal(map[string]string{
+		"code":      "invalid",
+		"message":   "http: request body too large",
+		"maxLength": fmt.Sprint(maxLength)})
+	res.Write(b)
 }
 
 func badRequest(res http.ResponseWriter, errString string) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
 	if errString == "" {
 		errString = "http: bad request"
 	}
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	b, _ := json.Marshal(map[string]string{
+		"code":    "internal error",
+		"message": errString,
+		"op":      "",
+		"err":     errString,
+		"line":    "0",
+	})
+	res.Write(b)
 }
 
 func partialWrite(res http.ResponseWriter, errString string) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	b, _ := json.Marshal(map[string]string{
+		"code":    "internal error",
+		"message": errString,
+		"op":      "",
+		"err":     errString,
+		"line":    "0",
+	})
+	res.Write(b)
 }
 
 func getPrecisionMultiplier(precision string) time.Duration {
@@ -385,16 +374,12 @@ func getPrecisionMultiplier(precision string) time.Duration {
 	// one of the following:
 	var d time.Duration
 	switch precision {
-	case "u":
+	case "us":
 		d = time.Microsecond
 	case "ms":
 		d = time.Millisecond
 	case "s":
 		d = time.Second
-	case "m":
-		d = time.Minute
-	case "h":
-		d = time.Hour
 	default:
 		d = time.Nanosecond
 	}

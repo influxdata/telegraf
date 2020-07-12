@@ -29,7 +29,7 @@ func newListener() *InfluxDBV2Listener {
 
 func BenchmarkInfluxDBV2Listener_serveWrite(b *testing.B) {
 	res := httptest.NewRecorder()
-	addr := "http://localhost/write?db=mydb"
+	addr := "http://localhost/api/v2/write?bucket=mybucket"
 
 	benchmarks := []struct {
 		name  string
