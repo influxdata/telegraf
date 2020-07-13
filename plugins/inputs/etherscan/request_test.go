@@ -7,8 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf/plugins/inputs/etherscan/mocks"
-
 	"github.com/stretchr/testify/suite"
 )
 
@@ -18,9 +16,9 @@ func TestEtherscanRequestSuites(t *testing.T) {
 
 type RequestListSuite struct {
 	suite.Suite
-	requestA *mocks.Request
-	requestB *mocks.Request
-	requestC *mocks.Request
+	requestA *MockRequest
+	requestB *MockRequest
+	requestC *MockRequest
 
 	testRequestList requestList
 }
@@ -28,9 +26,9 @@ type RequestListSuite struct {
 type _ suite.SetupTestSuite
 
 func (suite *RequestListSuite) SetupTest() {
-	suite.requestA = &mocks.Request{}
-	suite.requestB = &mocks.Request{}
-	suite.requestC = &mocks.Request{}
+	suite.requestA = &MockRequest{}
+	suite.requestB = &MockRequest{}
+	suite.requestC = &MockRequest{}
 
 	suite.testRequestList = requestList{
 		suite.requestA,

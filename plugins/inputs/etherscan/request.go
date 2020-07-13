@@ -7,11 +7,15 @@ import (
 	"time"
 )
 
+type HTTPClient interface {
+	Get(url string) (resp *http.Response, err error)
+}
+
 type Request interface {
 	URL() *url.URL
 	LastRequest() time.Time
 	MarkTriggered()
-	Send(client *http.Client) (map[string]interface{}, error)
+	Send(client HTTPClient) (map[string]interface{}, error)
 	Tags() map[string]string
 }
 
@@ -19,16 +23,20 @@ type requestList []Request
 
 type requestQueue map[Network]requestList
 
-type _ sort.Interface
-
-func (rq requestList) Len() int {
+func (rq requestQueue) Len() int {
 	return len(rq)
 }
 
-func (rq requestList) Swap(i, j int) {
-	rq[i], rq[j] = rq[j], rq[i]
+type _ sort.Interface
+
+func (rl requestList) Len() int {
+	return len(rl)
 }
 
-func (rq requestList) Less(i, j int) bool {
-	return rq[i].LastRequest().After(rq[j].LastRequest())
+func (rl requestList) Swap(i, j int) {
+	rl[i], rl[j] = rl[j], rl[i]
+}
+
+func (rl requestList) Less(i, j int) bool {
+	return rl[i].LastRequest().After(rl[j].LastRequest())
 }

@@ -7,18 +7,26 @@ import (
 	"io/ioutil"
 	"math"
 	"math/big"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var (
 	ErrBalanceAddressCountExhausted = errors.New("maximum address limit reached for batch request")
+	ErrReturnCodeNotOK              = errors.New("return code was not OK")
+	ErrNotValidEthAddress           = errors.New("invalid Ethereum address")
 )
+
+type ValidatingBalanceResponder interface {
+	ValidateResponseStatus() error
+	Result() []AccountBalance
+}
 
 type balance struct {
 	Network string `toml:"network"`
@@ -27,15 +35,62 @@ type balance struct {
 }
 
 type MultiBalanceResponse struct {
-	Status  int              `json:"status"`
+	Status  string           `json:"status"`
 	Message string           `json:"message"`
 	Results []AccountBalance `json:"result"`
 }
 
+func (mbr *MultiBalanceResponse) ValidateResponseStatus() error {
+	status, err := strconv.ParseInt(mbr.Status, 10, 64)
+	if err != nil {
+		return fmt.Errorf("error processing response status [%w]", err)
+	}
+
+	if err := validateReturnCode(status); err != nil {
+		if mbr.Message == "OK" {
+			return nil
+		}
+
+		return fmt.Errorf("%s error: [%s]", err.Error(), mbr.Message)
+	}
+
+	return nil
+}
+
+func (mbr *MultiBalanceResponse) Result() []AccountBalance {
+	return mbr.Results
+}
+
 type SingleBalanceResponse struct {
-	Status  int    `json:"status"`
+	Status  string `json:"status"`
 	Message string `json:"message"`
-	Result  string `json:"result"`
+	Results string `json:"result"`
+}
+
+func (sbr *SingleBalanceResponse) ValidateResponseStatus() error {
+	status, err := strconv.ParseInt(sbr.Status, 10, 64)
+	if err != nil {
+		return fmt.Errorf("error processing response status [%w]", err)
+	}
+
+	if err := validateReturnCode(status); err != nil {
+		if sbr.Message == "OK" {
+			return nil
+		}
+
+		return fmt.Errorf("%s error: [%s]", err.Error(), sbr.Message)
+	}
+
+	return nil
+}
+
+func (sbr *SingleBalanceResponse) Result() []AccountBalance {
+	return []AccountBalance{
+		{
+			Account: "",
+			Balance: sbr.Results,
+		},
+	}
 }
 
 type AccountBalance struct {
@@ -68,6 +123,10 @@ func NewBalanceRequest(requestURL *url.URL, apiKey string, log telegraf.Logger) 
 }
 
 func (br *BalanceRequest) AddAddress(addr string) error {
+	if ok := common.IsHexAddress(addr); !ok {
+		return ErrNotValidEthAddress
+	}
+
 	query := br.URL().Query()
 	action := query.Get("action")
 	switch action {
@@ -134,90 +193,67 @@ func (br *BalanceRequest) Tags() map[string]string {
 	return br.tags
 }
 
-func (br *BalanceRequest) Send(client *http.Client) (map[string]interface{}, error) {
+func (br *BalanceRequest) Send(client HTTPClient) (map[string]interface{}, error) {
 	resp, err := client.Get(br.URL().String())
 	if err != nil {
-		return nil, fmt.Errorf(
-			"get request [%s] error: %w", br.URL().String(), err,
-		)
+		return nil, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			br.log.Errorf("response body close error: %s", err.Error())
+			br.log.Errorf("response body close error: [%s]", err.Error())
 		}
 	}()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"request [%s] read body error: %w", br.URL().String(), err,
-		)
+		return nil, err
 	}
 
-	balances := make(map[string]interface{})
 	reqType := br.URL().Query().Get("action")
 	switch reqType {
 	case "balance":
-		address := br.URL().Query().Get("address")
-		singleBalance := &SingleBalanceResponse{}
-
-		err = json.Unmarshal(body, &singleBalance)
-		if err != nil {
-			return nil, fmt.Errorf("request [%s] error unmarshaling: %w", br.URL().String(), err)
-		}
-		if singleBalance.Status != 0 {
-			return nil, fmt.Errorf(
-				"request [%s] error returned: [%s]",
-				br.URL().String(),
-				singleBalance.Message,
-			)
-		}
-
-		br.log.Debugf("request [%s] response [%+v]", br.URL().String(), singleBalance)
-
-		floatEth, err := parseEthSum(singleBalance.Result)
-		if err != nil {
-			br.log.Errorf("error in response [%s]", err.Error())
-			return nil, fmt.Errorf(
-				"request [%s] parsing balance [%s] error: [%w]",
-				br.URL().String(),
-				singleBalance.Result,
-				err,
-			)
-		}
-		balances[address] = floatEth
+		balanceResponse := &SingleBalanceResponse{}
+		return br.assignBalances(body, balanceResponse)
 
 	case "balancemulti":
-		multiBalance := &MultiBalanceResponse{}
-		err = json.Unmarshal(body, &multiBalance)
-		if err != nil {
-			return nil, fmt.Errorf("request [%s] error unmarshaling: %w", br.URL().String(), err)
-		}
-		if multiBalance.Status != 0 {
-			return nil, fmt.Errorf(
-				"request [%s] error returned: [%s]",
-				br.URL().String(),
-				multiBalance.Message,
-			)
-		}
-
-		br.log.Debugf("request [%s] response [%+v]", br.URL().String(), multiBalance)
-
-		for _, account := range multiBalance.Results {
-			floatEth, err := parseEthSum(account.Balance)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"request [%s] parsing balance [%s] error: [%w]",
-					br.URL().String(),
-					account.Balance,
-					err,
-				)
-			}
-			balances[account.Account] = floatEth
-		}
+		balanceResponse := &MultiBalanceResponse{}
+		return br.assignBalances(body, balanceResponse)
 
 	default:
 		return nil, fmt.Errorf("unknown request [%s] action [%s]", br.URL().String(), reqType)
+	}
+}
+
+func (br *BalanceRequest) assignBalances(
+	body []byte,
+	responder ValidatingBalanceResponder,
+) (map[string]interface{}, error) {
+	err := json.Unmarshal(body, &responder)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling: [%w]", err)
+	}
+
+	err = responder.ValidateResponseStatus()
+	if err != nil {
+		return nil, fmt.Errorf("error parsing status: [%w]", err)
+	}
+
+	balances := make(map[string]interface{})
+	for _, account := range responder.Result() {
+		if br.URL().Query().Get("action") == "balance" {
+			account.Account = br.URL().Query().Get("address")
+		}
+
+		floatEth, err := parseEthSum(account.Balance)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"parsing balance [%s] error: [%w]",
+				account.Balance,
+				err,
+			)
+		}
+
+		balances[account.Account] = floatEth
 	}
 
 	return balances, nil
@@ -235,4 +271,12 @@ func parseEthSum(balance string) (float64, error) {
 	floatEth, _ := ethValue.Float64()
 
 	return floatEth, nil
+}
+
+func validateReturnCode(code int64) error {
+	if code != 0 {
+		return ErrReturnCodeNotOK
+	}
+
+	return nil
 }
