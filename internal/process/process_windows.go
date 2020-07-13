@@ -3,17 +3,15 @@
 package process
 
 import (
+	"context"
 	"os/exec"
 	"time"
 )
 
-func gracefulStop(cmd *exec.Cmd, timeout time.Duration) {
-	time.AfterFunc(timeout, func() {
-		if cmd.ProcessState == nil {
-			return
-		}
-		if !cmd.ProcessState.Exited() {
-			cmd.Process.Kill()
-		}
-	})
+func gracefulStop(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) {
+	select {
+	case <-time.After(timeout):
+		cmd.Process.Kill()
+	case <-ctx.Done():
+	}
 }

@@ -51,12 +51,12 @@ generate it using `telegraf --usage cloud_pubsub`.
 
   ## Optional. Specifies a timeout for requests to the PubSub API.
   # publish_timeout = "30s"
-  
+
   ## Optional. If true, published PubSub message data will be base64-encoded.
   # base64_data = false
-  
+
   ## Optional. PubSub attributes to add to metrics.
-  # [[inputs.pubsub.attributes]]
+  # [outputs.cloud_pubsub.attributes]
   #   my_attr = "tag_value"
 ```
 

@@ -19,7 +19,7 @@
 
 - When updating the Debian package you will no longer be prompted to merge the
   telegraf.conf file, instead the new version will be installed to
-  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages no include
+  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages now include
   the version in the top level directory.
 
 #### New Inputs
@@ -30,12 +30,17 @@
 #### New Processors
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
+- [execd](/plugins/processors/execd/README.md) - Contributed by @influxdata
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+- [ifname](/plugins/processors/ifname/README.md) - Contributed by @influxdata
+- [port_name](/plugins/processors/port_name/README.md) - Contributed by @influxdata
+- [reverse_dns](/plugins/processors/reverse_dns/README.md) - Contributed by @influxdata
 - [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
 
 #### New Outputs
 
 - [newrelic](/plugins/outputs/newrelic/README.md) - Contributed by @hsinghkalsi
+- [execd](/plugins/outputs/execd/README.md) - Contributed by @influxdata
 
 #### Features
 
@@ -80,6 +85,10 @@
 - [#7575](https://github.com/influxdata/telegraf/pull/7575): Add missing nvme attributes to smart plugin.
 - [#7726](https://github.com/influxdata/telegraf/pull/7726): Add laundry to mem plugin on FreeBSD.
 - [#7762](https://github.com/influxdata/telegraf/pull/7762): Allow per input overriding of collection_jitter and precision.
+- [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve performance of procstat: Up to 40/120x better performance.
+- [#7677](https://github.com/influxdata/telegraf/pull/7677): Expand execd shim support for processor and outputs.
+- [#7154](https://github.com/influxdata/telegraf/pull/7154): Add v3 metadata support to ecs input.
+- [#7792](https://github.com/influxdata/telegraf/pull/7792): Support utf-16 in file and tail inputs.
 
 #### Bugfixes
 

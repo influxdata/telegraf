@@ -4,7 +4,7 @@ else
 	devnull := /dev/null
 endif
 
-next_version := 1.15.0
+next_version := 1.16.0
 tag := $(shell git describe --exact-match --tags 2>$(devnull))
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
@@ -24,7 +24,8 @@ else ifeq ($(tag),)
 	deb_iteration := 0
 	tar_version := $(version)~$(commit)
 else ifneq ($(findstring -rc,$(tag)),)
-	version := $(word 1,$(subst -, ,$(tag)):v%=%)
+	version := $(word 1,$(subst -, ,$(tag)))
+	version := $(version:v%=%)
 	rc := $(word 2,$(subst -, ,$(tag)))
 	rpm_version := $(version)-0.$(rc)
 	rpm_iteration := 0.$(subst rc,,$(rc))
@@ -49,6 +50,12 @@ LDFLAGS := $(LDFLAGS) -X main.commit=$(commit) -X main.branch=$(branch)
 ifneq ($(tag),)
 	LDFLAGS += -X main.version=$(version)
 endif
+
+# Go built-in race detector works only for 64 bits architectures.
+ifneq ($(GOARCH), 386)
+	race_detector := -race
+endif
+
 
 GOFILES ?= $(shell git ls-files '*.go')
 GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
@@ -89,7 +96,7 @@ telegraf:
 
 .PHONY: test
 test:
-	go test -short ./...
+	go test -short $(race_detector) ./...
 
 .PHONY: fmt
 fmt:
@@ -107,12 +114,12 @@ fmtcheck:
 
 .PHONY: test-windows
 test-windows:
-	go test -short ./plugins/inputs/ping/...
-	go test -short ./plugins/inputs/win_perf_counters/...
-	go test -short ./plugins/inputs/win_services/...
-	go test -short ./plugins/inputs/procstat/...
-	go test -short ./plugins/inputs/ntpq/...
-	go test -short ./plugins/processors/port_name/...
+	go test -short $(race_detector) ./plugins/inputs/ping/...
+	go test -short $(race_detector) ./plugins/inputs/win_perf_counters/...
+	go test -short $(race_detector) ./plugins/inputs/win_services/...
+	go test -short $(race_detector) ./plugins/inputs/procstat/...
+	go test -short $(race_detector) ./plugins/inputs/ntpq/...
+	go test -short $(race_detector) ./plugins/processors/port_name/...
 
 .PHONY: vet
 vet:
@@ -139,7 +146,7 @@ check: fmtcheck vet
 
 .PHONY: test-all
 test-all: fmtcheck vet
-	go test ./...
+	go test $(race_detector) ./...
 
 .PHONY: check-deps
 check-deps:
@@ -363,6 +370,9 @@ upload-nightly:
 
 %windows_amd64.zip: export GOOS := windows
 %windows_amd64.zip: export GOARCH := amd64
+
+%darwin_amd64.tar.gz: export GOOS := darwin
+%darwin_amd64.tar.gz: export GOARCH := amd64
 
 %windows_i386.zip: export GOOS := windows
 %windows_i386.zip: export GOARCH := 386

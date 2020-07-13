@@ -7,6 +7,8 @@ status such as servers, upstreams, caches. This is similar to the live activity
 monitoring of Nginx plus.  For module configuration details please see its
 [documentation](https://github.com/vozlt/nginx-module-sts#synopsis).
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Configuration
 
 ```toml

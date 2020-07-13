@@ -5,12 +5,15 @@ package tail
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"sync"
 
+	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/tail"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
@@ -35,6 +38,7 @@ type Tail struct {
 	Pipe                bool     `toml:"pipe"`
 	WatchMethod         string   `toml:"watch_method"`
 	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
+	CharacterEncoding   string   `toml:"character_encoding"`
 
 	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
@@ -45,6 +49,7 @@ type Tail struct {
 	cancel     context.CancelFunc
 	acc        telegraf.TrackingAccumulator
 	sem        semaphore
+	decoder    *encoding.Decoder
 }
 
 func NewTail() *Tail {
@@ -88,6 +93,15 @@ const sampleConfig = `
   ## line and the size of the output's metric_batch_size.
   # max_undelivered_lines = 1000
 
+  ## Character encoding to use when interpreting the file contents.  Invalid
+  ## characters are replaced using the unicode replacement character.  When set
+  ## to the empty string the data is not decoded to text.
+  ##   ex: character_encoding = "utf-8"
+  ##       character_encoding = "utf-16le"
+  ##       character_encoding = "utf-16be"
+  ##       character_encoding = ""
+  # character_encoding = ""
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -108,7 +122,10 @@ func (t *Tail) Init() error {
 		return errors.New("max_undelivered_lines must be positive")
 	}
 	t.sem = make(semaphore, t.MaxUndeliveredLines)
-	return nil
+
+	var err error
+	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
+	return err
 }
 
 func (t *Tail) Gather(acc telegraf.Accumulator) error {
@@ -190,6 +207,10 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					Poll:      poll,
 					Pipe:      t.Pipe,
 					Logger:    tail.DiscardingLogger,
+					OpenReaderFunc: func(rd io.Reader) io.Reader {
+						r, _ := utfbom.Skip(t.decoder.Reader(rd))
+						return r
+					},
 				})
 			if err != nil {
 				t.Log.Debugf("Failed to open file (%s): %v", file, err)
@@ -201,6 +222,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			parser, err := t.parserFunc()
 			if err != nil {
 				t.Log.Errorf("Creating parser: %s", err.Error())
+				continue
 			}
 
 			// create a goroutine for each "tailer"
