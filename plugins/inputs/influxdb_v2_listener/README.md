@@ -26,10 +26,6 @@ submits data to InfluxDB determines the destination database.
   ## maximum duration before timing out write of the response
   write_timeout = "10s"
 
-  ## Maximum allowed HTTP request body size in bytes.
-  ## 0 means to use the default of 32MiB.
-  max_body_size = "32MiB"
-
   ## Optional tag to determine the bucket. 
   ## If the write has a bucket in the query string then it will be kept in this tag name.
   ## This tag can be used in downstream outputs.

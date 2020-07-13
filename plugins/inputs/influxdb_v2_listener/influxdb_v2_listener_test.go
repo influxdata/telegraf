@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -269,25 +268,6 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-}
-
-func TestWriteVerySmallMaxBody(t *testing.T) {
-	listener := &InfluxDBV2Listener{
-		Log:            testutil.Logger{},
-		ServiceAddress: "localhost:0",
-		MaxBodySize:    internal.Size{Size: 4096},
-		timeFunc:       time.Now,
-	}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Init())
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 413, resp.StatusCode)
 }
 
 func TestWriteLargeLine(t *testing.T) {

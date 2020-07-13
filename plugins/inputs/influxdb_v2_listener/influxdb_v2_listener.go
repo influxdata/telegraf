@@ -18,12 +18,6 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
-const (
-	// defaultMaxBodySize is the default maximum request body size, in bytes.
-	// if the request body is over this size, we will return an HTTP 413 error.
-	defaultMaxBodySize = 32 * 1024 * 1024
-)
-
 type InfluxDBV2Listener struct {
 	ServiceAddress string `toml:"service_address"`
 	port           int
@@ -31,8 +25,6 @@ type InfluxDBV2Listener struct {
 
 	ReadTimeout  internal.Duration `toml:"read_timeout"`
 	WriteTimeout internal.Duration `toml:"write_timeout"`
-	MaxBodySize  internal.Size     `toml:"max_body_size"`
-	MaxLineSize  internal.Size     `toml:"max_line_size"` // deprecated in 1.14; ignored
 	Token        string            `toml:"token"`
 	BucketTag    string            `toml:"bucket_tag"`
 
@@ -67,10 +59,6 @@ const sampleConfig = `
   read_timeout = "10s"
   ## maximum duration before timing out write of the response
   write_timeout = "10s"
-
-  ## Maximum allowed HTTP request body size in bytes.
-  ## 0 means to use the default of 32MiB.
-  max_body_size = "32MiB"
 
   ## Optional tag to determine the bucket. 
   ## If the write has a bucket in the query string then it will be kept in this tag name.
@@ -128,14 +116,6 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.buffersCreated = selfstat.Register("influxdb_v2_listener", "buffers_created", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
 	h.routes()
-
-	if h.MaxBodySize.Size == 0 {
-		h.MaxBodySize.Size = defaultMaxBodySize
-	}
-
-	if h.MaxLineSize.Size != 0 {
-		h.Log.Warnf("Use of deprecated configuration: 'max_line_size'; parser now handles lines of unlimited length and option is ignored")
-	}
 
 	if h.ReadTimeout.Duration < time.Second {
 		h.ReadTimeout.Duration = time.Second * 10
@@ -232,16 +212,10 @@ func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.writesServed.Incr(1)
-		// Check that the content length is not too large for us to handle.
-		if req.ContentLength > h.MaxBodySize.Size {
-			tooLarge(res, h.MaxBodySize.Size)
-			return
-		}
 
 		bucket := req.URL.Query().Get("bucket")
 
 		body := req.Body
-		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
 		// Handle gzip request bodies
 		if req.Header.Get("Content-Encoding") == "gzip" {
 			var err error
@@ -325,17 +299,6 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		// http request success
 		res.WriteHeader(http.StatusNoContent)
 	}
-}
-
-func tooLarge(res http.ResponseWriter, maxLength int64) {
-	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Error", "http: request body too large")
-	res.WriteHeader(http.StatusRequestEntityTooLarge)
-	b, _ := json.Marshal(map[string]string{
-		"code":      "invalid",
-		"message":   "http: request body too large",
-		"maxLength": fmt.Sprint(maxLength)})
-	res.Write(b)
 }
 
 func badRequest(res http.ResponseWriter, errString string) {
