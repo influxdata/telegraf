@@ -41,7 +41,6 @@ type InfluxDBV2Listener struct {
 	readysServed    selfstat.Stat
 	requestsRecv    selfstat.Stat
 	notFoundsServed selfstat.Stat
-	buffersCreated  selfstat.Stat
 	authFailures    selfstat.Stat
 
 	startTime time.Time
@@ -53,7 +52,7 @@ type InfluxDBV2Listener struct {
 
 const sampleConfig = `
   ## Address and port to host InfluxDB listener on
-  service_address = ":8186"
+  service_address = ":9999"
 
   ## maximum duration before timing out read of the request
   read_timeout = "10s"
@@ -84,7 +83,7 @@ func (h *InfluxDBV2Listener) SampleConfig() string {
 }
 
 func (h *InfluxDBV2Listener) Description() string {
-	return "Accept metrics over InfluxDB 1.8+ / 2.x HTTP API"
+	return "Accept metrics over InfluxDB 2.x HTTP API"
 }
 
 func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
@@ -113,7 +112,6 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.readysServed = selfstat.Register("influxdb_v2_listener", "readys_served", tags)
 	h.requestsRecv = selfstat.Register("influxdb_v2_listener", "requests_received", tags)
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
-	h.buffersCreated = selfstat.Register("influxdb_v2_listener", "buffers_created", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
 	h.routes()
 

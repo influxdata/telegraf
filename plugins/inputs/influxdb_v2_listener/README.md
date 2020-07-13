@@ -9,17 +9,12 @@ The `/api/v2/write` endpoint supports the `precision` query parameter and can be
 to one of `ns`, `us`, `ms`, `s`.  All other parameters are ignored and
 defer to the output plugins configuration.
 
-When chaining Telegraf instances using this plugin, CREATE DATABASE requests
-receive a 200 OK response with message body `{"results":[]}` but they are not
-relayed. The output configuration of the Telegraf instance which ultimately
-submits data to InfluxDB determines the destination database.
-
 ### Configuration:
 
 ```toml
 [[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on
-  service_address = ":8186"
+  service_address = ":9999"
 
   ## maximum duration before timing out read of the request
   read_timeout = "10s"
