@@ -84,7 +84,7 @@ func (h *InfluxDBV2Listener) SampleConfig() string {
 }
 
 func (h *InfluxDBV2Listener) Description() string {
-	return "Accept metrics over InfluxDB 1.x HTTP API"
+	return "Accept metrics over InfluxDB 1.8+ / 2.x HTTP API"
 }
 
 func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
