@@ -1,18 +1,10 @@
-# APM Server
+# Elastic APM telegraf plugin
 
-APM Server is a input plugin that listens for requests sent by Elastic APM Agents. 
-These type of events are supported to transform to metrics:
+The `apm-server` Telegraf input collects data from [Elastic APM agents][apm_agents].
 
-* [Metadata][datamodel_metadata]
-* [Spans][datamodel_spans]
-* [Transactions][datamodel_transactions]
-* [Metrics][datamodel_metrics]
-* [Errors][datamodel_errors]
-
-### Supported APM HTTP endpoints
-The [APM server specification][apm_endpoints] exposes endpoints for events intake, sourcemap upload, agent configuration and server information. 
-
-The table below describe how this plugin conforms with them:
+#### Supported APM HTTP endpoints
+The [APM server][apm_endpoints] exposes endpoints for events intake, sourcemap upload, agent configuration and server information. 
+The table below describes how this plugin handle them:
 
 | APM Endpoint                                          | Path                                          | Response                                              |
 |-------------------------------------------------------|-----------------------------------------------|-------------------------------------------------------|
@@ -21,7 +13,12 @@ The table below describe how this plugin conforms with them:
 | [Agent configuration][endpoint_agent_configuration]   | `/config/v1/agents`, `/config/v1/rum/agents`  | Configuration via APM Server is disabled              |
 | [Server information][endpoint_server_information]     | `/`                                           | Returns Telegraf APM Server information               |
 
-### Example configuration:
+
+### Demo
+Here is the demo how to use Elastic APM agents (Ruby, Java, JS RUM..) and send application metrics using telegraf-apm plugin into InfluxDB.
+* [https://github.com/bonitoo-io/telegraf-apm](https://github.com/bonitoo-io/telegraf-apm)
+
+### Example telegraf configuration:
 
 ```toml
 [[inputs.apm_server]]
@@ -44,6 +41,7 @@ The table below describe how this plugin conforms with them:
 
   drop_unsampled_transactions = false
  
+  ## fields excluded from intake event
   exclude_fields = [
         "exception_stacktrace*", "stacktrace*", "log_stacktrace*",
         "process_*",
@@ -66,23 +64,31 @@ The table below describe how this plugin conforms with them:
         "transaction_id",
         "sampled"
         ]
+  ## list of fields that will be stored as tags
   tag_keys = ["result", "name", "transaction_type", "transaction_name", "type", "span_type", "span_subtype"]
 ```
 ### Metrics
 
 Each incoming event from APM Agent contains two parts: `metadata` and `eventdata`. 
-By default The `metadata` are mapped to LineProtocol's as tags and `eventdata` are mapped to LineProtocol's fields.
+By default, The `metadata` are mapped to LineProtocol's as tags and `eventdata` are mapped to LineProtocol's fields.
+
+These type of events are supported to transform to metrics:
+
+* [Metadata][datamodel_metadata]
+* [Metrics][datamodel_metrics]
+* [Transactions][datamodel_transactions]
+* [Spans][datamodel_spans]
+* [Errors][datamodel_errors]
 
 It is possible to specify which event fields should be stored as tags using `tag_keys` configuration. You can filter 
 data to exclude specific fields using `exclude_fields` configuration.
 
 #### common tags
-
 * service_agent_name
 * service_name
 * system_hostname
 
-#### `apm_metricset`
+#### apm_metricset
 * samples_system.cpu.total.norm.pct
 * samples_system.memory.actual.free
 * samples_system.memory.total
@@ -95,29 +101,31 @@ data to exclude specific fields using `exclude_fields` configuration.
         * samples_jvm.memory.non_heap.max
         * samples_jvm.memory.non_heap.used
         * samples_jvm.thread.count
-    * _Ruby_  
-        * samples_ruby.heap.allocations.total
-        * samples_ruby.heap.slots.free
-        * samples_ruby.heap.slots.live
-        * samples_ruby.threads
-        * samples_ruby.gc.count
-        * samples_ruby.heap.allocations.total
-        * samples_ruby.heap.slots.free
-        * samples_ruby.heap.slots.live
-        * samples_ruby.threads
-* _Transactions/Span samples_
-    * transaction_name (tag)
-    * transaction_type (tag)
-    * samples_transaction.breakdown.count
-    * samples_transaction.duration.count
-    * samples_transaction.duration.sum.us
-    * samples_span.self_time.count
-    * samples_span.self_time.sum.us
-    * span_subtype
+        
+#### _Ruby_
+* samples_ruby.heap.allocations.total
+* samples_ruby.heap.slots.free
+* samples_ruby.heap.slots.live
+* samples_ruby.threads
+* samples_ruby.gc.count
+* samples_ruby.heap.allocations.total
+* samples_ruby.heap.slots.free
+* samples_ruby.heap.slots.live
+* samples_ruby.threads
+
+#### Transactions/Span samples
+
+* transaction_name (tag)
+* transaction_type (tag)
+* span_subtype (tag)
+* samples_transaction.breakdown.count
+* samples_transaction.duration.count
+* samples_transaction.duration.sum.us
+* samples_span.self_time.count
+* samples_span.self_time.sum.us
     
 #### `apm_transaction`, `apm_span`
 Transaction / span duration is stored in `duration` field.
-
 Tags:
 * name - name of transaction/span
 * type - type of transaction/span
@@ -133,3 +141,4 @@ Tags:
 [endpoint_sourcemap_upload]: https://www.elastic.co/guide/en/apm/server/current/sourcemap-api.html
 [endpoint_agent_configuration]: https://www.elastic.co/guide/en/apm/server/current/agent-configuration-api.html
 [endpoint_server_information]: https://www.elastic.co/guide/en/apm/server/current/server-info.html
+[apm_agents]: https://www.elastic.co/guide/en/apm/agent/index.html
