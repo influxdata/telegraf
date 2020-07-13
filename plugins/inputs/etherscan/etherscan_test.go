@@ -236,7 +236,7 @@ func (suite *EtherscanSuite) TestSetupNewBalanceReqAddAddressError() {
 func (suite *EtherscanSuite) TestPrepareInterval() {
 	testRequestCount := 5
 	suite.inputPlugin.requestCount = testRequestCount
-	suite.mockLogger.On("Warnf", mock.Anything, testRequestCount).Return(nil)
+	suite.mockLogger.On("Warn", mock.Anything).Return(nil)
 	err := suite.inputPlugin.PrepareInterval()
 	assert.Nil(suite.T(), err)
 }
