@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 )
 
 type BasicAuthErrorFunc func(rw http.ResponseWriter)
@@ -49,40 +48,31 @@ func (h *basicAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 	h.next.ServeHTTP(rw, req)
 }
 
-type TokenAuthErrorFunc func(rw http.ResponseWriter)
+type GenericAuthErrorFunc func(rw http.ResponseWriter)
 
-// TokenAuthHandler returns a http handler that requires `Authorization: Token <token>`
-// Introduced to support InfluxDB 2.x style authentication
-// https://v2.docs.influxdata.com/v2.0/reference/api/#authentication
-func TokenAuthHandler(token string, onError TokenAuthErrorFunc) func(h http.Handler) http.Handler {
+// GenericAuthHandler returns a http handler that requires `Authorization: <credentials>`
+func GenericAuthHandler(credentials string, onError GenericAuthErrorFunc) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		return &schemeAuthHandler{
-			scheme:      "Token",
-			credentials: token,
+		return &genericAuthHandler{
+			credentials: credentials,
 			onError:     onError,
 			next:        h,
 		}
 	}
 }
 
-// General auth scheme handler - match `Authorization: <scheme> <credentials>`
-type schemeAuthHandler struct {
-	scheme      string
+// Generic auth scheme handler - exact match on `Authorization: <credentials>`
+type genericAuthHandler struct {
 	credentials string
-	onError     TokenAuthErrorFunc
+	onError     GenericAuthErrorFunc
 	next        http.Handler
 }
 
-func (h *schemeAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+func (h *genericAuthHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if h.credentials != "" {
 		// Scheme checking
-		authHeader := req.Header.Get("Authorization")
-		authParts := strings.SplitN(authHeader, " ", 2)
-		if len(authParts) != 2 ||
-			subtle.ConstantTimeCompare(
-				[]byte(strings.ToLower(strings.TrimSpace(authParts[0]))),
-				[]byte(strings.ToLower(h.scheme))) != 1 ||
-			subtle.ConstantTimeCompare([]byte(strings.TrimSpace(authParts[1])), []byte(h.credentials)) != 1 {
+		authorization := req.Header.Get("Authorization")
+		if subtle.ConstantTimeCompare([]byte(authorization), []byte(h.credentials)) != 1 {
 
 			h.onError(rw)
 			http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)

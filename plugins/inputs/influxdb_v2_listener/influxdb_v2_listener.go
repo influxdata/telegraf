@@ -91,7 +91,11 @@ func (h *InfluxDBV2Listener) Gather(_ telegraf.Accumulator) error {
 }
 
 func (h *InfluxDBV2Listener) routes() {
-	authHandler := internal.TokenAuthHandler(h.Token,
+	credentials := ""
+	if h.Token != "" {
+		credentials = fmt.Sprintf("Token %s", h.Token)
+	}
+	authHandler := internal.GenericAuthHandler(credentials,
 		func(_ http.ResponseWriter) {
 			h.authFailures.Incr(1)
 		},
