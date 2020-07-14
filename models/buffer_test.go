@@ -161,7 +161,7 @@ func TestBuffer_BatchLatest(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(3),
+			MetricTime(1),
 			MetricTime(2),
 		}, batch)
 }
@@ -177,8 +177,8 @@ func TestBuffer_BatchLatestWrap(t *testing.T) {
 
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(5),
-			MetricTime(4),
+			MetricTime(2),
+			MetricTime(3),
 		}, batch)
 }
 
@@ -193,17 +193,17 @@ func TestBuffer_MultipleBatch(t *testing.T) {
 	batch := b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(6),
-			MetricTime(5),
-			MetricTime(4),
-			MetricTime(3),
+			MetricTime(1),
 			MetricTime(2),
+			MetricTime(3),
+			MetricTime(4),
+			MetricTime(5),
 		}, batch)
 	b.Accept(batch)
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(1),
+			MetricTime(6),
 		}, batch)
 	b.Accept(batch)
 }
@@ -223,11 +223,11 @@ func TestBuffer_RejectWithRoom(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(5),
-			MetricTime(4),
-			MetricTime(3),
-			MetricTime(2),
 			MetricTime(1),
+			MetricTime(2),
+			MetricTime(3),
+			MetricTime(4),
+			MetricTime(5),
 		}, batch)
 }
 
@@ -246,11 +246,11 @@ func TestBuffer_RejectNothingNewFull(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(5),
-			MetricTime(4),
-			MetricTime(3),
-			MetricTime(2),
 			MetricTime(1),
+			MetricTime(2),
+			MetricTime(3),
+			MetricTime(4),
+			MetricTime(5),
 		}, batch)
 }
 
@@ -275,11 +275,11 @@ func TestBuffer_RejectNoRoom(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(8),
-			MetricTime(7),
-			MetricTime(6),
-			MetricTime(5),
 			MetricTime(4),
+			MetricTime(5),
+			MetricTime(6),
+			MetricTime(7),
+			MetricTime(8),
 		}, batch)
 }
 
@@ -299,11 +299,11 @@ func TestBuffer_RejectRoomExact(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(5),
-			MetricTime(4),
-			MetricTime(3),
-			MetricTime(2),
 			MetricTime(1),
+			MetricTime(2),
+			MetricTime(3),
+			MetricTime(4),
+			MetricTime(5),
 		}, batch)
 }
 
@@ -324,11 +324,11 @@ func TestBuffer_RejectRoomOverwriteOld(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(6),
-			MetricTime(5),
-			MetricTime(4),
-			MetricTime(3),
 			MetricTime(2),
+			MetricTime(3),
+			MetricTime(4),
+			MetricTime(5),
+			MetricTime(6),
 		}, batch)
 }
 
@@ -351,11 +351,11 @@ func TestBuffer_RejectPartialRoom(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(7),
-			MetricTime(6),
-			MetricTime(5),
-			MetricTime(4),
 			MetricTime(3),
+			MetricTime(4),
+			MetricTime(5),
+			MetricTime(6),
+			MetricTime(7),
 		}, batch)
 }
 
@@ -394,11 +394,11 @@ func TestBuffer_RejectNewMetricsWrapped(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(15),
-			MetricTime(14),
-			MetricTime(13),
-			MetricTime(12),
 			MetricTime(11),
+			MetricTime(12),
+			MetricTime(13),
+			MetricTime(14),
+			MetricTime(15),
 		}, batch)
 }
 
@@ -425,11 +425,11 @@ func TestBuffer_RejectWrapped(t *testing.T) {
 	batch = b.Batch(5)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(12),
-			MetricTime(11),
-			MetricTime(10),
-			MetricTime(9),
 			MetricTime(8),
+			MetricTime(9),
+			MetricTime(10),
+			MetricTime(11),
+			MetricTime(12),
 		}, batch)
 }
 
@@ -467,16 +467,16 @@ func TestBuffer_RejectAdjustFirst(t *testing.T) {
 	batch = b.Batch(10)
 	testutil.RequireMetricsEqual(t,
 		[]telegraf.Metric{
-			MetricTime(19),
-			MetricTime(18),
-			MetricTime(17),
-			MetricTime(16),
-			MetricTime(15),
-			MetricTime(14),
-			MetricTime(13),
-			MetricTime(12),
-			MetricTime(11),
 			MetricTime(10),
+			MetricTime(11),
+			MetricTime(12),
+			MetricTime(13),
+			MetricTime(14),
+			MetricTime(15),
+			MetricTime(16),
+			MetricTime(17),
+			MetricTime(18),
+			MetricTime(19),
 		}, batch)
 }
 
