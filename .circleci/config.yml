@@ -196,6 +196,7 @@ workflows:
   nightly:
     jobs:
       - 'deps'
+      - 'macdeps'
       - 'test-go-1.13':
           requires:
             - 'deps'
@@ -208,6 +209,9 @@ workflows:
       - 'test-go-1.14-386':
           requires:
             - 'deps'
+      - 'test-go-darwin':
+        requires:
+          - 'macdeps'
       - 'nightly':
           requires:
             - 'test-go-darwin'
