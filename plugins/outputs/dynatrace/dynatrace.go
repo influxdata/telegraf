@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -73,14 +74,33 @@ func (d *Dynatrace) Description() string {
 	return "Send telegraf metrics to a Dynatrace environment"
 }
 
-func (d *Dynatrace) convertKey(v string) string {
-	kEs := strings.ToLower(v)
-	sEs := strings.ReplaceAll(kEs, " ", "_")
-	return sEs
+var reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.]+")
+
+const maxDimKeyLen = 100
+const maxMetricKeyLen = 250
+
+// Normalizes a metric keys or metric dimension identifiers
+// according to Dynatrace format.
+func (d *Dynatrace) normalize(s string, max int) string {
+	result := reNameAllowedCharList.ReplaceAllString(s, "_")
+	// trunc to max size
+	if len(result) > max {
+		result = result[:max]
+	}
+	// remove trailing and ending '_' char
+	if len(result) > 1 {
+		if strings.HasPrefix(s, "_") {
+			result = result[1:]
+		}
+		if strings.HasSuffix(s, "_") {
+			result = result[:len(result)-1]
+		}
+	}
+	return result
 }
 
 func (d *Dynatrace) escape(v string) string {
-	vEs := strings.ReplaceAll(v, "\\","\\\\")
+	vEs := strings.ReplaceAll(v, "\\", "\\\\")
 	return "\"" + vEs + "\""
 }
 
@@ -96,7 +116,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 		tagb.Reset()
 		if len(metric.Tags()) > 0 {
 			for tk, tv := range metric.Tags() {
-				fmt.Fprintf(&tagb, ",%s=%s", d.convertKey(tk), d.escape(tv))
+				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(d.normalize(tk, maxDimKeyLen)), d.escape(tv))
 			}
 		}
 		if len(metric.Fields()) > 0 {
@@ -127,8 +147,10 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 
+				// metric name
+				metricID := metric.Name() + "." + k
 				// write metric name combined with its field
-				fmt.Fprintf(&buf, "%s.%s", metric.Name(), k)
+				fmt.Fprintf(&buf, "%s", d.normalize(metricID, maxMetricKeyLen))
 				// add the tag string
 				if len(tagb.String()) > 0 {
 					fmt.Fprintf(&buf, "%s", tagb.String())
