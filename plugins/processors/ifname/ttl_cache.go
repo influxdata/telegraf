@@ -5,8 +5,8 @@ import (
 )
 
 type TTLValType struct {
-	expireTime time.Time
-	val        valType
+	time time.Time // when entry was added
+	val  valType
 }
 
 type timeFunc func() time.Time
@@ -17,31 +17,36 @@ type TTLCache struct {
 	now           timeFunc
 }
 
-func NewTTLCache(expire time.Duration, capacity uint) TTLCache {
+func NewTTLCache(valid time.Duration, capacity uint) TTLCache {
 	return TTLCache{
 		lru:           NewLRUCache(capacity),
-		validDuration: expire,
+		validDuration: valid,
 		now:           time.Now,
 	}
 }
 
-func (c *TTLCache) Get(key keyType) (valType, bool) {
+func (c *TTLCache) Get(key keyType) (valType, bool, time.Duration) {
 	v, ok := c.lru.Get(key)
 	if !ok {
-		return valType{}, false
+		return valType{}, false, 0
 	}
-	if c.now().Before(v.expireTime) {
-		return v.val, ok
+	age := c.now().Sub(v.time)
+	if age < c.validDuration {
+		return v.val, ok, age
 	} else {
 		c.lru.Delete(key)
-		return valType{}, false
+		return valType{}, false, 0
 	}
 }
 
 func (c *TTLCache) Put(key keyType, value valType) {
 	v := TTLValType{
-		val:        value,
-		expireTime: c.now().Add(c.validDuration),
+		val:  value,
+		time: c.now(),
 	}
 	c.lru.Put(key, v)
+}
+
+func (c *TTLCache) Delete(key keyType) {
+	c.lru.Delete(key)
 }

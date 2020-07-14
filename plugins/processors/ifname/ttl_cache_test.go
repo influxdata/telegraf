@@ -21,7 +21,7 @@ func TestTTLCacheExpire(t *testing.T) {
 		return time.Unix(1, 0)
 	}
 
-	_, ok := c.Get("ones")
+	_, ok, _ := c.Get("ones")
 	require.False(t, ok)
 	require.Len(t, c.lru.m, 0)
 	require.Equal(t, c.lru.l.Len(), 0)
@@ -37,7 +37,7 @@ func TestTTLCache(t *testing.T) {
 	expected := nameMap{1: "one"}
 	c.Put("ones", expected)
 
-	actual, ok := c.Get("ones")
+	actual, ok, _ := c.Get("ones")
 	require.True(t, ok)
 	require.Equal(t, expected, actual)
 }

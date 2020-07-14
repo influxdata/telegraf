@@ -139,7 +139,7 @@ func TestGetMap(t *testing.T) {
 		wgReq.Add(1)
 		go func() {
 			defer wgReq.Done()
-			m, err := d.getMap("agent")
+			m, _, err := d.getMap("agent")
 			require.NoError(t, err)
 			require.Equal(t, expected, m)
 		}()
