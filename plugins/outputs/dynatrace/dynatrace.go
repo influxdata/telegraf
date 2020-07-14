@@ -100,8 +100,7 @@ func (d *Dynatrace) normalize(s string, max int) string {
 }
 
 func (d *Dynatrace) escape(v string) string {
-	vEs := strings.ReplaceAll(v, "\\", "\\\\")
-	return "\"" + vEs + "\""
+	return strconv.Quote(v)
 }
 
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
