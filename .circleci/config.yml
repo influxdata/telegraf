@@ -176,12 +176,14 @@ workflows:
               only: /.*/
       - 'package':
           requires:
+            - 'test-go-darwin'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
             - 'test-go-1.14'
             - 'test-go-1.14-386'
       - 'release':
           requires:
+            - 'test-go-darwin'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
             - 'test-go-1.14'
@@ -208,6 +210,7 @@ workflows:
             - 'deps'
       - 'nightly':
           requires:
+            - 'test-go-darwin'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
             - 'test-go-1.14'
