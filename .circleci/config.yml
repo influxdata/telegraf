@@ -210,8 +210,8 @@ workflows:
           requires:
             - 'deps'
       - 'test-go-darwin':
-        requires:
-          - 'macdeps'
+          requires:
+            - 'macdeps'
       - 'nightly':
           requires:
             - 'test-go-darwin'
