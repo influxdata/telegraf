@@ -25,7 +25,7 @@ type Dynatrace struct {
 	client *http.Client
 }
 
-var sampleConfig = `
+const sampleConfig = `
   ## Your Dynatrace environment URL. 
   ## For Dynatrace SaaS environments the URL scheme is "https://{your-environment-id}.live.dynatrace.com"
   ## For Dynatrace Managed environments the URL scheme is "https://{your-domain}/e/{your-environment-id}"
@@ -60,9 +60,7 @@ func (d *Dynatrace) Connect() error {
 
 // Close Closes the Dynatrace output plugin
 func (d *Dynatrace) Close() error {
-	var err error
-
-	return err
+	return nil
 }
 
 // SampleConfig Returns a sample configuration for the Dynatrace output plugin
@@ -77,21 +75,20 @@ func (d *Dynatrace) Description() string {
 
 func (d *Dynatrace) convertKey(v string) string {
 	kEs := strings.ToLower(v)
-	sEs := strings.Replace(kEs, " ", "_", -1)
+	sEs := strings.ReplaceAll(kEs, " ", "_")
 	return sEs
 }
 
 func (d *Dynatrace) escape(v string) string {
-	vEs := strings.Replace(v, "\\", "\\\\", -1)
+	vEs := strings.ReplaceAll(v, "\\","\\\\")
 	return "\"" + vEs + "\""
 }
 
 func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
-	var err error
 	var buf bytes.Buffer
 	var tagb bytes.Buffer
 	if len(metrics) == 0 {
-		return err
+		return nil
 	}
 
 	for _, metric := range metrics {
@@ -142,10 +139,8 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 			}
 		}
 	}
-	//d.Log.Infof("%s", buf.String())
-	// send it
-	d.send(buf.Bytes())
-	return err
+
+	return d.send(buf.Bytes())
 }
 
 func (d *Dynatrace) send(msg []byte) error {
@@ -179,7 +174,7 @@ func (d *Dynatrace) send(msg []byte) error {
 		return fmt.Errorf("Dynatrace request failed with response code:, %d", resp.StatusCode)
 	}
 
-	return err
+	return nil
 }
 
 func init() {
