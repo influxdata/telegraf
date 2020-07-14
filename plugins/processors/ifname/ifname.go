@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
@@ -66,11 +67,18 @@ var sampleConfig = `
   ## stay in order set this to true.  keeping the metrics ordered may
   ## be slightly slower
   # ordered = false
+
+  ## cache_ttl is the amount of time interface names are cached for a
+  ## given agent.  After this period elapses if names are needed they
+  ## will be retrieved again.
+  # cache_ttl = "8h"
 `
 
 type nameMap map[uint64]string
-type mapFunc func(agent string) (nameMap, error)
+type keyType = string
+type valType = nameMap
 
+type mapFunc func(agent string) (nameMap, error)
 type makeTableFunc func(string) (*si.Table, error)
 
 type sigMap map[string](chan struct{})
@@ -82,9 +90,10 @@ type IfName struct {
 
 	snmp.ClientConfig
 
-	CacheSize          uint `toml:"max_cache_entries"`
-	MaxParallelLookups int  `toml:"max_parallel_lookups"`
-	Ordered            bool `toml:"ordered"`
+	CacheSize          uint            `toml:"max_cache_entries"`
+	MaxParallelLookups int             `toml:"max_parallel_lookups"`
+	Ordered            bool            `toml:"ordered"`
+	CacheTtl           config.Duration `toml:"cache_ttl"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -92,7 +101,7 @@ type IfName struct {
 	ifXTable *si.Table `toml:"-"`
 
 	rwLock sync.RWMutex `toml:"-"`
-	cache  *LRUCache    `toml:"-"`
+	cache  *TTLCache    `toml:"-"`
 
 	parallel parallel.Parallel    `toml:"-"`
 	acc      telegraf.Accumulator `toml:"-"`
@@ -118,7 +127,7 @@ func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
 	d.makeTable = makeTableNoMock
 
-	c := NewLRUCache(d.CacheSize)
+	c := NewTTLCache(time.Duration(d.CacheTtl), d.CacheSize)
 	d.cache = &c
 
 	d.sigs = make(sigMap)
@@ -310,6 +319,7 @@ func init() {
 				Version:        2,
 				Community:      "public",
 			},
+			CacheTtl: config.Duration(8 * time.Hour),
 		}
 	})
 }
