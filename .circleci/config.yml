@@ -6,10 +6,10 @@ defaults:
       GOFLAGS: -p=8
   go-1_13: &go-1_13
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.13.12'
+      - image: 'quay.io/influxdb/telegraf-ci:1.13.13'
   go-1_14: &go-1_14
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.14.4'
+      - image: 'quay.io/influxdb/telegraf-ci:1.14.5'
   mac: &mac
     macos:
       xcode: 11.3.1
@@ -176,12 +176,14 @@ workflows:
               only: /.*/
       - 'package':
           requires:
+            - 'test-go-darwin'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
             - 'test-go-1.14'
             - 'test-go-1.14-386'
       - 'release':
           requires:
+            - 'test-go-darwin'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
             - 'test-go-1.14'
@@ -194,6 +196,7 @@ workflows:
   nightly:
     jobs:
       - 'deps'
+      - 'macdeps'
       - 'test-go-1.13':
           requires:
             - 'deps'
@@ -206,8 +209,12 @@ workflows:
       - 'test-go-1.14-386':
           requires:
             - 'deps'
+      - 'test-go-darwin':
+          requires:
+            - 'macdeps'
       - 'nightly':
           requires:
+            - 'test-go-darwin'
             - 'test-go-1.13'
             - 'test-go-1.13-386'
             - 'test-go-1.14'
