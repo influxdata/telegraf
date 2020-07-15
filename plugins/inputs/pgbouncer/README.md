@@ -15,7 +15,7 @@ More information about the meaning of these metrics can be found in the
   ##   postgres://[pqgotest[:password]]@host:port[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost port=5432 user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
   ##
   ## All connection parameters are optional.
   ##

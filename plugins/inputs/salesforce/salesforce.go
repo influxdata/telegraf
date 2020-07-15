@@ -166,7 +166,7 @@ func (s *Salesforce) getLoginEndpoint() (string, error) {
 	}
 }
 
-// Authenticate with Salesfroce
+// Authenticate with Salesforce
 func (s *Salesforce) login() error {
 	if s.Username == "" || s.Password == "" {
 		return errors.New("missing username or password")

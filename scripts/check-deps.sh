@@ -53,7 +53,7 @@ done
 
 grep '^-' docs/LICENSE_OF_DEPENDENCIES.md | grep -v github.com/DataDog/datadog-agent | cut -f 2 -d' ' > "${tmpdir}/LICENSE_OF_DEPENDENCIES.md"
 
-diff -U0 "${tmpdir}/LICENSE_OF_DEPENDENCIES.md" "${tmpdir}/HEAD" ||
+diff -U0 "${tmpdir}/LICENSE_OF_DEPENDENCIES.md" "${tmpdir}/HEAD" || {
 cat - <<EOF
 
 
@@ -64,3 +64,5 @@ lines should be removed.
 
 Include a link to the appropriate licenses for any additions.
 EOF
+exit 1
+}

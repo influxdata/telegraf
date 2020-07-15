@@ -108,6 +108,11 @@ http_requests_total{code="400",method="post"} 3
 				telegraf.Histogram,
 			),
 			expected: []byte(`
+# HELP http_request_duration_seconds Telegraf collected metric
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{le="+Inf"} 144320
+http_request_duration_seconds_sum 53423
+http_request_duration_seconds_count 144320
 `),
 		},
 		{
@@ -645,6 +650,27 @@ cpu_time_user{cpu="cpu0"} 92904.33
 cpu_time_user{cpu="cpu1"} 96912.57
 cpu_time_user{cpu="cpu2"} 96034.08
 cpu_time_user{cpu="cpu3"} 94148
+`),
+		},
+		{
+			name: "summary with no quantile",
+			metrics: []telegraf.Metric{
+				testutil.MustMetric(
+					"prometheus",
+					map[string]string{},
+					map[string]interface{}{
+						"rpc_duration_seconds_sum":   1.7560473e+07,
+						"rpc_duration_seconds_count": 2693,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+			},
+			expected: []byte(`
+# HELP rpc_duration_seconds Telegraf collected metric
+# TYPE rpc_duration_seconds summary
+rpc_duration_seconds_sum 1.7560473e+07
+rpc_duration_seconds_count 2693
 `),
 		},
 	}

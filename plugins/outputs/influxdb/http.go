@@ -107,9 +107,13 @@ type HTTPConfig struct {
 }
 
 type httpClient struct {
-	client           *http.Client
-	config           HTTPConfig
-	createdDatabases map[string]bool
+	client *http.Client
+	config HTTPConfig
+	// Tracks that the 'create database` statement was executed for the
+	// database.  An attempt to create the database is made each time a new
+	// database is encountered in the database_tag and after a "database not
+	// found" error occurs.
+	createDatabaseExecuted map[string]bool
 
 	log telegraf.Logger
 }
@@ -129,7 +133,7 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = "Telegraf/" + internal.Version()
+		userAgent = internal.ProductToken()
 	}
 
 	if config.Headers == nil {
@@ -177,9 +181,9 @@ func NewHTTPClient(config HTTPConfig) (*httpClient, error) {
 			Timeout:   config.Timeout,
 			Transport: transport,
 		},
-		createdDatabases: make(map[string]bool),
-		config:           config,
-		log:              config.Log,
+		createDatabaseExecuted: make(map[string]bool),
+		config:                 config,
+		log:                    config.Log,
 	}
 	return client, nil
 }
@@ -205,6 +209,7 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -215,7 +220,6 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 
 	if err != nil {
 		if resp.StatusCode == 200 {
-			c.createdDatabases[database] = true
 			return nil
 		}
 
@@ -225,10 +229,17 @@ func (c *httpClient) CreateDatabase(ctx context.Context, database string) error 
 		}
 	}
 
-	// Even with a 200 response there can be an error
+	// Even with a 200 status code there can be an error in the response body.
+	// If there is also no error string then the operation was successful.
 	if resp.StatusCode == http.StatusOK && queryResp.Error() == "" {
-		c.createdDatabases[database] = true
+		c.createDatabaseExecuted[database] = true
 		return nil
+	}
+
+	// Don't attempt to recreate the database after a 403 Forbidden error.
+	// This behavior exists only to maintain backwards compatibility.
+	if resp.StatusCode == http.StatusForbidden {
+		c.createDatabaseExecuted[database] = true
 	}
 
 	return &APIError{
@@ -272,15 +283,19 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			// Avoid modifying the metric in case we need to retry the request.
 			metric = metric.Copy()
 			metric.Accept()
-			metric.RemoveTag(c.config.DatabaseTag)
-			metric.RemoveTag(c.config.RetentionPolicyTag)
+			if c.config.ExcludeDatabaseTag {
+				metric.RemoveTag(c.config.DatabaseTag)
+			}
+			if c.config.ExcludeRetentionPolicyTag {
+				metric.RemoveTag(c.config.RetentionPolicyTag)
+			}
 		}
 
 		batches[dbrp] = append(batches[dbrp], metric)
 	}
 
 	for dbrp, batch := range batches {
-		if !c.config.SkipDatabaseCreation && !c.createdDatabases[dbrp.Database] {
+		if !c.config.SkipDatabaseCreation && !c.createDatabaseExecuted[dbrp.Database] {
 			err := c.CreateDatabase(ctx, dbrp.Database)
 			if err != nil {
 				c.log.Warnf("When writing to [%s]: database %q creation failed: %v",
@@ -297,7 +312,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
+	loc, err := makeWriteURL(c.config.URL, db, rp, c.config.Consistency)
 	if err != nil {
 		return err
 	}
@@ -308,13 +323,14 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 	}
 	defer reader.Close()
 
-	req, err := c.makeWriteRequest(url, reader)
+	req, err := c.makeWriteRequest(loc, reader)
 	if err != nil {
 		return err
 	}
 
 	resp, err := c.client.Do(req.WithContext(ctx))
 	if err != nil {
+		internal.OnClientError(c.client, err)
 		return err
 	}
 	defer resp.Body.Close()
@@ -491,5 +507,5 @@ func makeQueryURL(loc *url.URL) (string, error) {
 }
 
 func (c *httpClient) Close() {
-	internal.CloseIdleConnections(c.client)
+	c.client.CloseIdleConnections()
 }

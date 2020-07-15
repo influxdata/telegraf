@@ -32,8 +32,8 @@ const (
 
 // Rcon package errors.
 var (
-	ErrInvalidWrite        = errors.New("Failed to write the payload corretly to remote connection.")
-	ErrInvalidRead         = errors.New("Failed to read the response corretly from remote connection.")
+	ErrInvalidWrite        = errors.New("Failed to write the payload correctly to remote connection.")
+	ErrInvalidRead         = errors.New("Failed to read the response correctly from remote connection.")
 	ErrInvalidChallenge    = errors.New("Server failed to mirror request challenge.")
 	ErrUnauthorizedRequest = errors.New("Client not authorized to remote server.")
 	ErrFailedAuthorization = errors.New("Failed to authorize to the remote server.")
@@ -57,7 +57,7 @@ type Packet struct {
 	Body   string // Body of packet.
 }
 
-// Compile converts a packets header and body into its approriate
+// Compile converts a packets header and body into its appropriate
 // byte array payload, returning an error if the binary packages
 // Write method fails to write the header bytes in their little
 // endian byte order.
@@ -112,7 +112,7 @@ func (c *Client) Execute(command string) (response *Packet, err error) {
 
 // Sends accepts the commands type and its string to execute to the clients server,
 // creating a packet with a random challenge id for the server to mirror,
-// and compiling its payload bytes in the appropriate order. The resonse is
+// and compiling its payload bytes in the appropriate order. The response is
 // decompiled from its bytes into a Packet type for return. An error is returned
 // if send fails.
 func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
@@ -152,7 +152,7 @@ func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
 	}
 
 	if packet.Header.Type == Auth && header.Type == ResponseValue {
-		// Discard, empty SERVERDATA_RESPOSE_VALUE from authorization.
+		// Discard, empty SERVERDATA_RESPONSE_VALUE from authorization.
 		c.Connection.Read(make([]byte, header.Size-int32(PacketHeaderSize)))
 
 		// Reread the packet header.

@@ -79,7 +79,7 @@ func (pa *PuppetAgent) SampleConfig() string {
 
 // Description returns description of PuppetAgent plugin
 func (pa *PuppetAgent) Description() string {
-	return `Reads last_run_summary.yaml file and converts to measurments`
+	return `Reads last_run_summary.yaml file and converts to measurements`
 }
 
 // Gather reads stats from all configured servers accumulates stats

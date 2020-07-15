@@ -32,6 +32,11 @@ func (ki *KubernetesInventory) gatherDeployment(d v1.Deployment, acc telegraf.Ac
 		"deployment_name": d.Metadata.GetName(),
 		"namespace":       d.Metadata.GetNamespace(),
 	}
+	for key, val := range d.GetSpec().GetSelector().GetMatchLabels() {
+		if ki.selectorFilter.Match(key) {
+			tags["selector_"+key] = val
+		}
+	}
 
 	acc.AddFields(deploymentMeasurement, fields, tags)
 

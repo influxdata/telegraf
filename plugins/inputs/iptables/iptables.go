@@ -102,8 +102,8 @@ const measurement = "iptables"
 
 var errParse = errors.New("Cannot parse iptables list information")
 var chainNameRe = regexp.MustCompile(`^Chain\s+(\S+)`)
-var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+`)
-var valuesRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+.*?/\*\s*(.+?)\s*\*/\s*`)
+var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+target`)
+var valuesRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+(\w+).*?/\*\s*(.+?)\s*\*/\s*`)
 
 func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error {
 	lines := strings.Split(data, "\n")
@@ -119,15 +119,16 @@ func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error
 	}
 	for _, line := range lines[2:] {
 		matches := valuesRe.FindStringSubmatch(line)
-		if len(matches) != 4 {
+		if len(matches) != 5 {
 			continue
 		}
 
 		pkts := matches[1]
 		bytes := matches[2]
-		comment := matches[3]
+		target := matches[3]
+		comment := matches[4]
 
-		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "ruleid": comment}
+		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "target": target, "ruleid": comment}
 		fields := make(map[string]interface{})
 
 		var err error

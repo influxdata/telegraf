@@ -10,7 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/influxdata/telegraf/internal"
-	itls "github.com/influxdata/telegraf/internal/tls"
+	itls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
@@ -135,7 +135,7 @@ func defaultVSphere() *VSphere {
 		VMInclude:       []string{"/**"},
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
-			"disk.provsioned.*"},
+			"disk.provisioned.*"},
 		DatastoreMetricExclude:  nil,
 		DatastoreInclude:        []string{"/**"},
 		DatacenterMetricInclude: nil,
@@ -182,7 +182,8 @@ func testAlignUniform(t *testing.T, n int) {
 		}
 		values[i] = 1
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
@@ -207,7 +208,8 @@ func TestAlignMetrics(t *testing.T) {
 		}
 		values[i] = int64(i%3 + 1)
 	}
-	newInfo, newValues := alignSamples(info, values, 60*time.Second)
+	e := Endpoint{log: testutil.Logger{}}
+	newInfo, newValues := e.alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {

@@ -132,7 +132,6 @@ The agent table configures Telegraf and the defaults used across all plugins.
   running a large number of telegraf instances. ie, a jitter of 5s and interval
   10s means flushes will happen every 10-15s.
 
-
 - **precision**:
   Collected metrics are rounded to the precision specified as an [interval][].
 
@@ -178,7 +177,7 @@ Telegraf plugins are divided into 4 types: [inputs][], [outputs][],
 [processors][], and [aggregators][].
 
 Unlike the `global_tags` and `agent` tables, any plugin can be defined
-multiple times and each instance will run independantly.  This allows you to
+multiple times and each instance will run independently.  This allows you to
 have plugins defined with differing configurations as needed within a single
 Telegraf process.
 
@@ -194,13 +193,32 @@ driven operation.
 Parameters that can be used with any input plugin:
 
 - **alias**: Name an instance of a plugin.
-- **interval**: How often to gather this metric. Normal plugins use a single
-  global interval, but if one particular input should be run less or more
-  often, you can configure that here.
+
+- **interval**:
+  Overrides the `interval` setting of the [agent][Agent] for the plugin.  How
+  often to gather this metric. Normal plugins use a single global interval, but
+  if one particular input should be run less or more often, you can configure
+  that here.
+
+- **precision**:
+  Overrides the `precision` setting of the [agent][Agent] for the plugin.
+  Collected metrics are rounded to the precision specified as an [interval][].
+
+  When this value is set on a service input, multiple events occuring at the
+  same timestamp may be merged by the output database.
+
+- **collection_jitter**:
+  Overrides the `collection_jitter` setting of the [agent][Agent] for the
+  plugin.  Collection jitter is used to jitter the collection by a random
+  [interval][].
+
 - **name_override**: Override the base name of the measurement.  (Default is
   the name of the input).
+
 - **name_prefix**: Specifies a prefix to attach to the measurement name.
+
 - **name_suffix**: Specifies a suffix to attach to the measurement name.
+
 - **tags**: A map of tags to apply to a specific input's measurements.
 
 The [metric filtering][] parameters can be used to limit what metrics are
@@ -412,7 +430,7 @@ excluded from a Processor or Aggregator plugin, it is skips the plugin and is
 sent onwards to the next stage of processing.
 
 - **namepass**:
-An array of glob pattern strings.  Only metrics whose measurement name matches
+An array of [glob pattern][] strings.  Only metrics whose measurement name matches
 a pattern in this list are emitted.
 
 - **namedrop**:
@@ -420,7 +438,7 @@ The inverse of `namepass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `namepass` test.
 
 - **tagpass**:
-A table mapping tag keys to arrays of glob pattern strings.  Only metrics
+A table mapping tag keys to arrays of [glob pattern][] strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
 patterns is emitted.
 
@@ -434,7 +452,7 @@ Modifier filters remove tags and fields from a metric.  If all fields are
 removed the metric is removed.
 
 - **fieldpass**:
-An array of glob pattern strings.  Only fields whose field key matches a
+An array of [glob pattern][] strings.  Only fields whose field key matches a
 pattern in this list are emitted.
 
 - **fielddrop**:
@@ -443,7 +461,7 @@ patterns will be discarded from the metric.  This is tested on metrics after
 they have passed the `fieldpass` test.
 
 - **taginclude**:
-An array of glob pattern strings.  Only tags with a tag key matching one of
+An array of [glob pattern][] strings.  Only tags with a tag key matching one of
 the patterns are emitted.  In contrast to `tagpass`, which will pass an entire
 metric based on its tag, `taginclude` removes all non matching tags from the
 metric.  Any tag can be filtered including global tags and the agent `host`
@@ -454,9 +472,9 @@ The inverse of `taginclude`. Tags with a tag key matching one of the patterns
 will be discarded from the metric.  Any tag can be filtered including global
 tags and the agent `host` tag.
 
-##### Filtering Examples
+#### Filtering Examples
 
-Using tagpass and tagdrop:
+##### Using tagpass and tagdrop:
 ```toml
 [[inputs.cpu]]
   percpu = true
@@ -489,7 +507,7 @@ Using tagpass and tagdrop:
     instance = ["isatap*", "Local*"]
 ```
 
-Using fieldpass and fielddrop:
+##### Using fieldpass and fielddrop:
 ```toml
 # Drop all metrics for guest & steal CPU usage
 [[inputs.cpu]]
@@ -502,7 +520,7 @@ Using fieldpass and fielddrop:
   fieldpass = ["inodes*"]
 ```
 
-Using namepass and namedrop:
+##### Using namepass and namedrop:
 ```toml
 # Drop all metrics about containers for kubelet
 [[inputs.prometheus]]
@@ -515,7 +533,7 @@ Using namepass and namedrop:
   namepass = ["rest_client_*"]
 ```
 
-Using taginclude and tagexclude:
+##### Using taginclude and tagexclude:
 ```toml
 # Only include the "cpu" tag in the measurements for the cpu plugin.
 [[inputs.cpu]]
@@ -528,7 +546,7 @@ Using taginclude and tagexclude:
   tagexclude = ["fstype"]
 ```
 
-Metrics can be routed to different outputs using the metric name and tags:
+##### Metrics can be routed to different outputs using the metric name and tags:
 ```toml
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
@@ -550,9 +568,11 @@ Metrics can be routed to different outputs using the metric name and tags:
     cpu = ["cpu0"]
 ```
 
-Routing metrics to different outputs based on the input.  Metrics are tagged
-with `influxdb_database` in the input, which is then used to select the
-output.  The tag is removed in the outputs before writing.
+##### Routing metrics to different outputs based on the input.
+
+Metrics are tagged with `influxdb_database` in the input, which is then used to
+select the output.  The tag is removed in the outputs before writing.
+
 ```toml
 [[outputs.influxdb]]
   urls = ["http://influxdb.example.com"]
@@ -588,3 +608,4 @@ Reference the detailed [TLS][] documentation.
 [metric filtering]: #metric-filtering
 [telegraf.conf]: /etc/telegraf.conf
 [TLS]: /docs/TLS.md
+[glob pattern]: https://github.com/gobwas/glob#syntax

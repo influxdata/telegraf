@@ -28,6 +28,7 @@ There are many ways to contribute:
 - [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
 - Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
+- [Contribute external plugins](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/execd/shim) *(experimental)*
 
 ## Minimum Requirements
 
@@ -50,9 +51,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires Go version 1.12 or newer, the Makefile requires GNU make.
+Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.12 (1.13 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.13 (1.14 recommended)
 2. Clone the Telegraf repository:
    ```
    cd ~/src
@@ -117,7 +118,7 @@ telegraf config > telegraf.conf
 telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filter influxdb config
 ```
 
-#### Run a single telegraf collection, outputing metrics to stdout:
+#### Run a single telegraf collection, outputting metrics to stdout:
 
 ```
 telegraf --config telegraf.conf --test
@@ -163,7 +164,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
-* [cisco_telemetry_gnmi](./plugins/inputs/cisco_telemetry_gnmi)
+* [cisco_telemetry_gnmi](./plugins/inputs/cisco_telemetry_gnmi) (deprecated, renamed to [gnmi](/plugins/inputs/gnmi))
 * [cisco_telemetry_mdt](./plugins/inputs/cisco_telemetry_mdt)
 * [clickhouse](./plugins/inputs/clickhouse)
 * [cloud_pubsub](./plugins/inputs/cloud_pubsub) Google Cloud Pub/Sub
@@ -187,7 +188,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ethtool](./plugins/inputs/ethtool)
 * [eventhub_consumer](./plugins/inputs/eventhub_consumer) (Azure Event Hubs \& Azure IoT Hub)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
-* [execd](./plugins/inputs/execd)
+* [execd](./plugins/inputs/execd) (generic executable "daemon" processes)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
 * [file](./plugins/inputs/file)
@@ -196,6 +197,7 @@ For documentation on the latest development code see the [documentation index][d
 * [fireboard](/plugins/inputs/fireboard)
 * [fluentd](./plugins/inputs/fluentd)
 * [github](./plugins/inputs/github)
+* [gnmi](./plugins/inputs/gnmi)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
@@ -229,7 +231,7 @@ For documentation on the latest development code see the [documentation index][d
 * [lanz](./plugins/inputs/lanz)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
-* [logparser](./plugins/inputs/logparser)
+* [logparser](./plugins/inputs/logparser) (deprecated, use [tail](/plugins/inputs/tail))
 * [logstash](./plugins/inputs/logstash)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
@@ -254,6 +256,7 @@ For documentation on the latest development code see the [documentation index][d
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus_api](./plugins/inputs/nginx_plus_api)
 * [nginx_plus](./plugins/inputs/nginx_plus)
+* [nginx_sts](./plugins/inputs/nginx_sts)
 * [nginx_upstream_check](./plugins/inputs/nginx_upstream_check)
 * [nginx_vts](./plugins/inputs/nginx_vts)
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
@@ -281,6 +284,7 @@ For documentation on the latest development code see the [documentation index][d
 * [puppetagent](./plugins/inputs/puppetagent)
 * [rabbitmq](./plugins/inputs/rabbitmq)
 * [raindrops](./plugins/inputs/raindrops)
+* [redfish](./plugins/inputs/redfish)
 * [redis](./plugins/inputs/redis)
 * [rethinkdb](./plugins/inputs/rethinkdb)
 * [riak](./plugins/inputs/riak)
@@ -362,14 +366,21 @@ For documentation on the latest development code see the [documentation index][d
 * [converter](/plugins/processors/converter)
 * [date](/plugins/processors/date)
 * [dedup](/plugins/processors/dedup)
+* [defaults](/plugins/processors/defaults)
 * [enum](/plugins/processors/enum)
+* [execd](/plugins/processors/execd)
+* [ifname](/plugins/processors/ifname)
+* [filepath](/plugins/processors/filepath)
 * [override](/plugins/processors/override)
 * [parser](/plugins/processors/parser)
 * [pivot](/plugins/processors/pivot)
+* [port_name](/plugins/processors/port_name)
 * [printer](/plugins/processors/printer)
 * [regex](/plugins/processors/regex)
 * [rename](/plugins/processors/rename)
+* [reverse_dns](/plugins/processors/reverse_dns)
 * [s2geo](/plugins/processors/s2geo)
+* [starlark](/plugins/processors/starlark)
 * [strings](/plugins/processors/strings)
 * [tag_limit](/plugins/processors/tag_limit)
 * [template](/plugins/processors/template)
@@ -401,6 +412,7 @@ For documentation on the latest development code see the [documentation index][d
 * [discard](./plugins/outputs/discard)
 * [elasticsearch](./plugins/outputs/elasticsearch)
 * [exec](./plugins/outputs/exec)
+* [execd](./plugins/outputs/execd)
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
@@ -411,6 +423,7 @@ For documentation on the latest development code see the [documentation index][d
 * [librato](./plugins/outputs/librato)
 * [mqtt](./plugins/outputs/mqtt)
 * [nats](./plugins/outputs/nats)
+* [newrelic](./plugins/outputs/newrelic)
 * [nsq](./plugins/outputs/nsq)
 * [opentsdb](./plugins/outputs/opentsdb)
 * [prometheus](./plugins/outputs/prometheus_client)
