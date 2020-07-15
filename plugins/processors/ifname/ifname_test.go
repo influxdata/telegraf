@@ -101,7 +101,7 @@ func TestGetMap(t *testing.T) {
 			Version: 2,
 			Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout
 		},
-		CacheTtl: config.Duration(10 * time.Second),
+		CacheTTL: config.Duration(10 * time.Second),
 	}
 
 	// This test mocks the snmp transaction so don't run net-snmp

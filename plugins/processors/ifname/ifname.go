@@ -93,7 +93,7 @@ type IfName struct {
 	CacheSize          uint            `toml:"max_cache_entries"`
 	MaxParallelLookups int             `toml:"max_parallel_lookups"`
 	Ordered            bool            `toml:"ordered"`
-	CacheTtl           config.Duration `toml:"cache_ttl"`
+	CacheTTL           config.Duration `toml:"cache_ttl"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -129,7 +129,7 @@ func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
 	d.makeTable = makeTableNoMock
 
-	c := NewTTLCache(time.Duration(d.CacheTtl), d.CacheSize)
+	c := NewTTLCache(time.Duration(d.CacheTTL), d.CacheSize)
 	d.cache = &c
 
 	d.sigs = make(sigMap)
@@ -346,7 +346,7 @@ func init() {
 				Version:        2,
 				Community:      "public",
 			},
-			CacheTtl: config.Duration(8 * time.Hour),
+			CacheTTL: config.Duration(8 * time.Hour),
 		}
 	})
 }
