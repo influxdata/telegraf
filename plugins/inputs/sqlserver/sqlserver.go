@@ -1579,11 +1579,11 @@ SELECT
     , s.session_id
     , ISNULL(r.request_id,0) as request_id
     , DB_NAME(s.database_id) as session_db_name
-    , s.status
-    , s.cpu_time as cpu_time_ms
-    , s.total_elapsed_time as total_elapsed_time_ms
-    , s.logical_reads
-    , s.writes
+    , COALESCE(r.status,s.status) AS status
+    , COALESCE(r.cpu_time,s.cpu_time) AS cpu_time_ms
+    , COALESCE(r.total_elapsed_time,s.total_elapsed_time) AS total_elapsed_time_ms
+    , COALESCE(r.logical_reads,s.logical_reads) AS logical_reads
+    , COALESCE(r.writes,s.writes) AS writes
     , r.command
     , r.wait_time as wait_time_ms
     , r.wait_type
