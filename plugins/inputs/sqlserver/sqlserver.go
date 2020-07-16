@@ -3320,7 +3320,7 @@ BEGIN
         'sqlserver_jobsinfo' AS [measurement],
         REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
         j.name ,
-        j.job_id,
+        CONVERT(VARCHAR(100), j.job_id) AS [job_id],
         j.is_enabled ,
         j.owner_name ,
         COALESCE(j2.shortest_duration, 'N/A') AS shortest_duration ,
