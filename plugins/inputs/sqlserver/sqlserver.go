@@ -1736,7 +1736,8 @@ OUTER APPLY sys.dm_exec_sql_text(qs.[sql_handle]) AS qt
 ORDER BY
 	[total_elapsed_time] DESC
 '
-	EXEC sp_executesql @SqlStatement
+
+EXEC sp_executesql @SqlStatement
 
 END
 
@@ -1799,7 +1800,7 @@ ORDER BY
 	[total_elapsed_time] DESC
 '
 
-	EXEC sp_executesql @SqlStatement
+EXEC sp_executesql @SqlStatement
 	
 END
 `
