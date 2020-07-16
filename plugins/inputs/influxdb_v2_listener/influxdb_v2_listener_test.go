@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -226,7 +227,7 @@ func TestWriteNoNewline(t *testing.T) {
 	)
 }
 
-func TestPartialWrite(t *testing.T) {
+func TestAllOrNothing(t *testing.T) {
 	listener := newTestListener()
 
 	acc := &testutil.Accumulator{}
@@ -239,16 +240,6 @@ func TestPartialWrite(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
-
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu",
-		map[string]interface{}{"value1": float64(1)},
-		map[string]string{"host": "a"},
-	)
-	acc.AssertContainsTaggedFields(t, "cpu",
-		map[string]interface{}{"value1": float64(1)},
-		map[string]string{"host": "c"},
-	)
 }
 
 func TestWriteMaxLineSizeIncrease(t *testing.T) {
@@ -268,6 +259,25 @@ func TestWriteMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
+}
+
+func TestWriteVerySmallMaxBody(t *testing.T) {
+	listener := &InfluxDBV2Listener{
+		Log:            testutil.Logger{},
+		ServiceAddress: "localhost:0",
+		MaxBodySize:    internal.Size{Size: 4096},
+		timeFunc:       time.Now,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Init())
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(hugeMetric)))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, 413, resp.StatusCode)
 }
 
 func TestWriteLargeLine(t *testing.T) {
@@ -501,48 +511,6 @@ func TestWriteWithPrecisionNoTimestamp(t *testing.T) {
 	// specifies the precision.  The timestamp is set to the greatest
 	// integer unit less than the provided timestamp (floor).
 	require.Equal(t, time.Unix(42, 0), acc.Metrics[0].Time)
-}
-
-func TestWriteParseErrors(t *testing.T) {
-	var tests = []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "one parse error",
-			input:    "foo value=1.0\nfoo value=2asdf2.0\nfoo value=3.0\nfoo value=4.0",
-			expected: `metric parse error: expected field at 2:12: "foo value=2"`,
-		},
-		{
-			name:     "two parse errors",
-			input:    "foo value=1asdf2.0\nfoo value=2.0\nfoo value=3asdf2.0\nfoo value=4.0",
-			expected: `metric parse error: expected field at 1:12: "foo value=1" (and 1 other parse error)`,
-		},
-		{
-			name:     "three or more parse errors",
-			input:    "foo value=1asdf2.0\nfoo value=2.0\nfoo value=3asdf2.0\nfoo value=4asdf2.0",
-			expected: `metric parse error: expected field at 1:12: "foo value=1" (and 2 other parse errors)`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			listener := newTestListener()
-
-			acc := &testutil.NopAccumulator{}
-			require.NoError(t, listener.Init())
-			require.NoError(t, listener.Start(acc))
-			defer listener.Stop()
-
-			// post single message to listener
-			resp, err := http.Post(createURL(listener, "http", "/api/v2/write", "bucket=mybucket"), "", bytes.NewBuffer([]byte(tt.input)))
-			require.NoError(t, err)
-			resp.Body.Close()
-			require.EqualValues(t, 400, resp.StatusCode)
-			require.Equal(t, tt.expected, resp.Header["X-Influxdb-Error"][0])
-		})
-	}
 }
 
 // The term 'master_repl' used here is archaic language from redis

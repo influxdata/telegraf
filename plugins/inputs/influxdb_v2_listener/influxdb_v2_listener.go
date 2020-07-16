@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
@@ -18,6 +19,12 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+const (
+	// defaultMaxBodySize is the default maximum request body size, in bytes.
+	// if the request body is over this size, we will return an HTTP 413 error.
+	defaultMaxBodySize = 32 * 1024 * 1024
+)
+
 type InfluxDBV2Listener struct {
 	ServiceAddress string `toml:"service_address"`
 	port           int
@@ -25,6 +32,7 @@ type InfluxDBV2Listener struct {
 
 	ReadTimeout  internal.Duration `toml:"read_timeout"`
 	WriteTimeout internal.Duration `toml:"write_timeout"`
+	MaxBodySize  internal.Size     `toml:"max_body_size"`
 	Token        string            `toml:"token"`
 	BucketTag    string            `toml:"bucket_tag"`
 
@@ -57,6 +65,10 @@ const sampleConfig = `
   read_timeout = "10s"
   ## maximum duration before timing out write of the response
   write_timeout = "10s"
+
+  ## Maximum allowed HTTP request body size in bytes.
+  ## 0 means to use the default of 32MiB.
+  max_body_size = "32MiB"
 
   ## Optional tag to determine the bucket. 
   ## If the write has a bucket in the query string then it will be kept in this tag name.
@@ -115,6 +127,10 @@ func (h *InfluxDBV2Listener) Init() error {
 	h.notFoundsServed = selfstat.Register("influxdb_v2_listener", "not_founds_served", tags)
 	h.authFailures = selfstat.Register("influxdb_v2_listener", "auth_failures", tags)
 	h.routes()
+
+	if h.MaxBodySize.Size == 0 {
+		h.MaxBodySize.Size = defaultMaxBodySize
+	}
 
 	if h.ReadTimeout.Duration < time.Second {
 		h.ReadTimeout.Duration = time.Second * 10
@@ -196,10 +212,16 @@ func (h *InfluxDBV2Listener) handleDefault() http.HandlerFunc {
 func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		defer h.writesServed.Incr(1)
+		// Check that the content length is not too large for us to handle.
+		if req.ContentLength > h.MaxBodySize.Size {
+			tooLarge(res, h.MaxBodySize.Size)
+			return
+		}
 
 		bucket := req.URL.Query().Get("bucket")
 
 		body := req.Body
+		body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
 		// Handle gzip request bodies
 		if req.Header.Get("Content-Encoding") == "gzip" {
 			var err error
@@ -212,72 +234,43 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			defer body.Close()
 		}
 
-		parser := influx.NewStreamParser(body)
+		var readErr error
+		var bytes []byte
+		//body = http.MaxBytesReader(res, req.Body, 1000000) //p.MaxBodySize.Size)
+		bytes, readErr = ioutil.ReadAll(body)
+		if readErr != nil {
+			h.Log.Debugf("Error parsing the request body: %v", readErr.Error())
+			badRequest(res, readErr.Error())
+			return
+		}
+		metricHandler := influx.NewMetricHandler()
+		parser := influx.NewParser(metricHandler)
 		parser.SetTimeFunc(h.timeFunc)
 
 		precisionStr := req.URL.Query().Get("precision")
 		if precisionStr != "" {
 			precision := getPrecisionMultiplier(precisionStr)
-			parser.SetTimePrecision(precision)
+			metricHandler.SetTimePrecision(precision)
 		}
 
-		var m telegraf.Metric
+		var metrics []telegraf.Metric
 		var err error
-		var parseErrorCount int
-		var lastPos int = 0
-		var firstParseErrorStr string
-		for {
-			select {
-			case <-req.Context().Done():
-				// Shutting down before parsing is finished.
-				res.WriteHeader(http.StatusServiceUnavailable)
-				return
-			default:
-			}
 
-			m, err = parser.Next()
-			pos := parser.Position()
-			h.bytesRecv.Incr(int64(pos - lastPos))
-			lastPos = pos
+		metrics, err = parser.Parse(bytes)
 
-			// Continue parsing metrics even if some are malformed
-			if parseErr, ok := err.(*influx.ParseError); ok {
-				parseErrorCount++
-				errStr := parseErr.Error()
-				if firstParseErrorStr == "" {
-					firstParseErrorStr = errStr
-				}
-				continue
-			} else if err != nil {
-				// Either we're exiting cleanly (err ==
-				// influx.EOF) or there's an unexpected error
-				break
-			}
+		if err != influx.EOF && err != nil {
+			h.Log.Debugf("Error parsing the request body: %v", err.Error())
+			badRequest(res, err.Error())
+			return
+		}
 
+		for _, m := range metrics {
+			// Handle bucket_tag override
 			if h.BucketTag != "" && bucket != "" {
 				m.AddTag(h.BucketTag, bucket)
 			}
 
 			h.acc.AddMetric(m)
-
-		}
-		if err != influx.EOF {
-			h.Log.Debugf("Error parsing the request body: %v", err.Error())
-			badRequest(res, err.Error())
-			return
-		}
-		if parseErrorCount > 0 {
-			var partialErrorString string
-			switch parseErrorCount {
-			case 1:
-				partialErrorString = fmt.Sprintf("%s", firstParseErrorStr)
-			case 2:
-				partialErrorString = fmt.Sprintf("%s (and 1 other parse error)", firstParseErrorStr)
-			default:
-				partialErrorString = fmt.Sprintf("%s (and %d other parse errors)", firstParseErrorStr, parseErrorCount-1)
-			}
-			partialWrite(res, partialErrorString)
-			return
 		}
 
 		// http request success
@@ -285,25 +278,22 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 	}
 }
 
+func tooLarge(res http.ResponseWriter, maxLength int64) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Header().Set("X-Influxdb-Error", "http: request body too large")
+	res.WriteHeader(http.StatusRequestEntityTooLarge)
+	b, _ := json.Marshal(map[string]string{
+		"code":      "invalid",
+		"message":   "http: request body too large",
+		"maxLength": fmt.Sprint(maxLength)})
+	res.Write(b)
+}
+
 func badRequest(res http.ResponseWriter, errString string) {
 	res.Header().Set("Content-Type", "application/json")
 	if errString == "" {
 		errString = "http: bad request"
 	}
-	res.Header().Set("X-Influxdb-Error", errString)
-	res.WriteHeader(http.StatusBadRequest)
-	b, _ := json.Marshal(map[string]string{
-		"code":    "internal error",
-		"message": errString,
-		"op":      "",
-		"err":     errString,
-		"line":    "0",
-	})
-	res.Write(b)
-}
-
-func partialWrite(res http.ResponseWriter, errString string) {
-	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
 	b, _ := json.Marshal(map[string]string{
@@ -336,7 +326,7 @@ func getPrecisionMultiplier(precision string) time.Duration {
 func init() {
 	inputs.Add("influxdb_v2_listener", func() telegraf.Input {
 		return &InfluxDBV2Listener{
-			ServiceAddress: ":8186",
+			ServiceAddress: ":9999",
 			timeFunc:       time.Now,
 		}
 	})
