@@ -3100,7 +3100,9 @@ SET STATISTICS IO OFF;
 SET STATISTICS TIME OFF;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 SET NOCOUNT ON;
+
 BEGIN
+    SET @SqlStatement = N'
     SELECT
         sjh.job_id ,
         SUM(CASE WHEN sjh.run_status = 1
@@ -3355,5 +3357,7 @@ BEGIN
         LEFT JOIN #jobsched AS j3
         ON j3.job_id = j.job_id
     ORDER BY CASE WHEN j.is_enabled = 'Enabled' THEN 9999999 ELSE 0 END
+    '
+    EXEC sp_executesql @SqlStatement
 END
 `
