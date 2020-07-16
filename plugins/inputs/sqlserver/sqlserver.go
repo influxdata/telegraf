@@ -119,6 +119,8 @@ func initQueries(s *SQLServer) error {
 		queries["SqlRequests"] = Query{Script: sqlServerRequestsV2, ResultByRow: false}
 		queries["VolumeSpace"] = Query{Script: sqlServerVolumeSpaceV2, ResultByRow: false}
 		queries["Cpu"] = Query{Script: sqlServerCpuV2, ResultByRow: false}
+		queries["QueryStats"] = Query{Script: sqlServerQueryStatsV2, ResultByRow: false}
+
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -1684,6 +1686,113 @@ FROM (
 	ORDER BY record_id DESC
 ) as z
 
+END
+`
+
+const sqlServerQueryStatsV2 string = `
+SET DEADLOCK_PRIORITY -10;
+DECLARE
+	@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+
+IF @EngineEdition IN (5,8) /*Azure SQL DB, Managed Instance*/
+	SELECT TOP 50
+		'sqlserver_query_stats' AS [measurement]
+		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+		,DB_NAME() as [database_name]
+		,qs.[query_hash]
+		,qs.[query_plan_hash]
+		,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + '.' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
+		,(SUBSTRING(qt.text, qs.[statement_start_offset] / 2 + 1,
+			(CASE WHEN qs.[statement_end_offset] = -1
+				THEN LEN(CONVERT(NVARCHAR(MAX), qt.text)) * 2
+				ELSE qs.[statement_end_offset]
+			END - qs.[statement_start_offset]) / 2)
+		) AS statement_text
+		,DB_NAME(qt.[dbid]) stmt_db_name
+		,qs.[plan_generation_num]
+		,qs.[execution_count]
+		,qs.[total_worker_time]/1000 AS [total_worker_time_ms]
+		,qs.[total_physical_reads]
+		,qs.[total_logical_writes]
+		,qs.[total_logical_reads]
+		,qs.[total_clr_time]/1000 AS [total_clr_time_ms]
+		,qs.[total_elapsed_time]/1000 AS [total_elapsed_time_ms]
+		,qs.[total_rows]
+		,qs.[total_dop]
+		,qs.[total_grant_kb]
+		,qs.[total_used_grant_kb]
+		,qs.[total_ideal_grant_kb]
+		,qs.[total_reserved_threads]
+		,qs.[total_used_threads]
+		,qs.[total_columnstore_segment_reads]
+		,qs.[total_columnstore_segment_skips]
+		,qs.[total_spills]
+	FROM sys.dm_exec_query_stats as qs
+	OUTER APPLY sys.dm_exec_sql_text(qs.[sql_handle]) AS qt
+	ORDER BY
+		[total_elapsed_time] DESC
+
+ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
+	BEGIN
+
+	DECLARE
+		 @SqlStatement AS nvarchar(max)
+		,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int)*100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+		,@Columns AS nvarchar(MAX) = ''
+
+IF @MajorMinorVersion >= 1050 BEGIN
+	SET @Columns += N',qs.[total_rows]'
+END
+IF @MajorMinorVersion >= 1200 BEGIN
+	SET @Columns += N'
+	,qs.[total_dop]
+	,qs.[total_grant_kb]
+	,qs.[total_used_grant_kb]
+	,qs.[total_ideal_grant_kb]
+	,qs.[total_reserved_threads]
+	,qs.[total_used_threads]'
+END
+IF @MajorMinorVersion >= 1300 BEGIN
+	SET @Columns += N'
+	,qs.[total_columnstore_segment_reads]
+	,qs.[total_columnstore_segment_skips]'
+END
+IF @MajorMinorVersion >= 1500 BEGIN
+	SET @Columns += N'
+	,qs.[total_spills]'
+END
+
+SET @SqlStatement = N'
+SELECT TOP 50
+	''sqlserver_query_stats'' AS [measurement]
+	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+	,DB_NAME() as [database_name]
+	,qs.[query_hash]
+	,qs.[query_plan_hash]
+	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
+	,(SUBSTRING(qt.text, qs.[statement_start_offset] / 2 + 1,
+		(CASE WHEN qs.[statement_end_offset] = -1
+			THEN LEN(CONVERT(NVARCHAR(MAX), qt.text)) * 2
+			ELSE qs.[statement_end_offset]
+		END - qs.[statement_start_offset]) / 2)
+	) AS statement_text
+	,DB_NAME(qt.[dbid]) stmt_db_name
+	,qs.[plan_generation_num]
+	,qs.[execution_count]
+	,qs.[total_worker_time]/1000 AS [total_worker_time_ms]
+	,qs.[total_physical_reads]
+	,qs.[total_logical_writes]
+	,qs.[total_logical_reads]
+	,qs.[total_clr_time]/1000 AS [total_clr_time_ms]
+	,qs.[total_elapsed_time]/1000 AS [total_elapsed_time_ms]
+	' + @Columns + N'
+FROM sys.dm_exec_query_stats as qs
+OUTER APPLY sys.dm_exec_sql_text(qs.[sql_handle]) AS qt
+ORDER BY
+	[total_elapsed_time] DESC
+'
+
+	EXEC sp_executesql @SqlStatement
 END
 `
 
