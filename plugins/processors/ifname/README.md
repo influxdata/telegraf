@@ -59,6 +59,11 @@ Telegraf minimum version: Telegraf 1.15.0
   ## stay in order set this to true.  keeping the metrics ordered may
   ## be slightly slower
   # ordered = false
+
+  ## cache_ttl is the amount of time interface names are cached for a
+  ## given agent.  After this period elapses if names are needed they
+  ## will be retrieved again.
+  # cache_ttl = "8h"
 ```
 
 ### Example processing:

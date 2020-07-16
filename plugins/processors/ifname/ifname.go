@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
@@ -66,11 +67,18 @@ var sampleConfig = `
   ## stay in order set this to true.  keeping the metrics ordered may
   ## be slightly slower
   # ordered = false
+
+  ## cache_ttl is the amount of time interface names are cached for a
+  ## given agent.  After this period elapses if names are needed they
+  ## will be retrieved again.
+  # cache_ttl = "8h"
 `
 
 type nameMap map[uint64]string
-type mapFunc func(agent string) (nameMap, error)
+type keyType = string
+type valType = nameMap
 
+type mapFunc func(agent string) (nameMap, error)
 type makeTableFunc func(string) (*si.Table, error)
 
 type sigMap map[string](chan struct{})
@@ -82,9 +90,10 @@ type IfName struct {
 
 	snmp.ClientConfig
 
-	CacheSize          uint `toml:"max_cache_entries"`
-	MaxParallelLookups int  `toml:"max_parallel_lookups"`
-	Ordered            bool `toml:"ordered"`
+	CacheSize          uint            `toml:"max_cache_entries"`
+	MaxParallelLookups int             `toml:"max_parallel_lookups"`
+	Ordered            bool            `toml:"ordered"`
+	CacheTTL           config.Duration `toml:"cache_ttl"`
 
 	Log telegraf.Logger `toml:"-"`
 
@@ -92,7 +101,7 @@ type IfName struct {
 	ifXTable *si.Table `toml:"-"`
 
 	rwLock sync.RWMutex `toml:"-"`
-	cache  *LRUCache    `toml:"-"`
+	cache  *TTLCache    `toml:"-"`
 
 	parallel parallel.Parallel    `toml:"-"`
 	acc      telegraf.Accumulator `toml:"-"`
@@ -106,6 +115,8 @@ type IfName struct {
 	sigsLock sync.Mutex `toml:"-"`
 }
 
+const minRetry time.Duration = 5 * time.Minute
+
 func (d *IfName) SampleConfig() string {
 	return sampleConfig
 }
@@ -118,7 +129,7 @@ func (d *IfName) Init() error {
 	d.getMapRemote = d.getMapRemoteNoMock
 	d.makeTable = makeTableNoMock
 
-	c := NewLRUCache(d.CacheSize)
+	c := NewTTLCache(time.Duration(d.CacheTTL), d.CacheSize)
 	d.cache = &c
 
 	d.sigs = make(sigMap)
@@ -144,17 +155,42 @@ func (d *IfName) addTag(metric telegraf.Metric) error {
 		return fmt.Errorf("couldn't parse source tag as uint")
 	}
 
-	m, err := d.getMap(agent)
-	if err != nil {
-		return fmt.Errorf("couldn't retrieve the table of interface names: %w", err)
-	}
+	firstTime := true
+	for {
+		m, age, err := d.getMap(agent)
+		if err != nil {
+			return fmt.Errorf("couldn't retrieve the table of interface names: %w", err)
+		}
 
-	name, found := m[num]
-	if !found {
-		return fmt.Errorf("interface number %d isn't in the table of interface names", num)
+		name, found := m[num]
+		if found {
+			// success
+			metric.AddTag(d.DestTag, name)
+			return nil
+		}
+
+		// We have the agent's interface map but it doesn't contain
+		// the interface we're interested in.  If the entry is old
+		// enough, retrieve it from the agent once more.
+		if age < minRetry {
+			return fmt.Errorf("interface number %d isn't in the table of interface names", num)
+		}
+
+		if firstTime {
+			d.invalidate(agent)
+			firstTime = false
+			continue
+		}
+
+		// not found, cache hit, retrying
+		return fmt.Errorf("missing interface but couldn't retrieve table")
 	}
-	metric.AddTag(d.DestTag, name)
-	return nil
+}
+
+func (d *IfName) invalidate(agent string) {
+	d.rwLock.RLock()
+	d.cache.Delete(agent)
+	d.rwLock.RUnlock()
 }
 
 func (d *IfName) Start(acc telegraf.Accumulator) error {
@@ -203,15 +239,15 @@ func (d *IfName) Stop() error {
 
 // getMap gets the interface names map either from cache or from the SNMP
 // agent
-func (d *IfName) getMap(agent string) (nameMap, error) {
+func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err error) {
 	var sig chan struct{}
 
 	// Check cache
 	d.rwLock.RLock()
-	m, ok := d.cache.Get(agent)
+	m, ok, age := d.cache.Get(agent)
 	d.rwLock.RUnlock()
 	if ok {
-		return m, nil
+		return m, age, nil
 	}
 
 	// Is this the first request for this agent?
@@ -229,12 +265,12 @@ func (d *IfName) getMap(agent string) (nameMap, error) {
 		<-sig
 		// Check cache again
 		d.rwLock.RLock()
-		m, ok := d.cache.Get(agent)
+		m, ok, age := d.cache.Get(agent)
 		d.rwLock.RUnlock()
 		if ok {
-			return m, nil
+			return m, age, nil
 		} else {
-			return nil, fmt.Errorf("getting remote table from cache")
+			return nil, 0, fmt.Errorf("getting remote table from cache")
 		}
 	}
 
@@ -242,7 +278,7 @@ func (d *IfName) getMap(agent string) (nameMap, error) {
 	// agent.
 
 	// Make the SNMP request
-	m, err := d.getMapRemote(agent)
+	m, err = d.getMapRemote(agent)
 	if err != nil {
 		//failure.  signal without saving to cache
 		d.sigsLock.Lock()
@@ -250,7 +286,7 @@ func (d *IfName) getMap(agent string) (nameMap, error) {
 		delete(d.sigs, agent)
 		d.sigsLock.Unlock()
 
-		return nil, fmt.Errorf("getting remote table: %w", err)
+		return nil, 0, fmt.Errorf("getting remote table: %w", err)
 	}
 
 	// Cache it
@@ -264,7 +300,7 @@ func (d *IfName) getMap(agent string) (nameMap, error) {
 	delete(d.sigs, agent)
 	d.sigsLock.Unlock()
 
-	return m, nil
+	return m, 0, nil
 }
 
 func (d *IfName) getMapRemoteNoMock(agent string) (nameMap, error) {
@@ -310,6 +346,7 @@ func init() {
 				Version:        2,
 				Community:      "public",
 			},
+			CacheTTL: config.Duration(8 * time.Hour),
 		}
 	})
 }

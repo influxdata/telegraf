@@ -172,13 +172,13 @@ plugin-%:
 
 .PHONY: ci-1.14
 ci-1.14:
-	docker build -t quay.io/influxdb/telegraf-ci:1.14.3 - < scripts/ci-1.14.docker
-	docker push quay.io/influxdb/telegraf-ci:1.14.3
+	docker build -t quay.io/influxdb/telegraf-ci:1.14.5 - < scripts/ci-1.14.docker
+	docker push quay.io/influxdb/telegraf-ci:1.14.5
 
 .PHONY: ci-1.13
 ci-1.13:
-	docker build -t quay.io/influxdb/telegraf-ci:1.13.11 - < scripts/ci-1.13.docker
-	docker push quay.io/influxdb/telegraf-ci:1.13.11
+	docker build -t quay.io/influxdb/telegraf-ci:1.13.13 - < scripts/ci-1.13.docker
+	docker push quay.io/influxdb/telegraf-ci:1.13.13
 
 .PHONY: install
 install: $(buildbin)
@@ -370,6 +370,9 @@ upload-nightly:
 
 %windows_amd64.zip: export GOOS := windows
 %windows_amd64.zip: export GOARCH := amd64
+
+%darwin_amd64.tar.gz: export GOOS := darwin
+%darwin_amd64.tar.gz: export GOARCH := amd64
 
 %windows_i386.zip: export GOOS := windows
 %windows_i386.zip: export GOARCH := 386
