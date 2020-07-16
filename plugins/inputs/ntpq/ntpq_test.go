@@ -31,6 +31,7 @@ func TestSingleNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -59,6 +60,7 @@ func TestBadIntNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -87,6 +89,7 @@ func TestBadFloatNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -116,6 +119,7 @@ func TestDaysNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -145,6 +149,7 @@ func TestHoursNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -174,6 +179,7 @@ func TestMinutesNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -202,6 +208,7 @@ func TestBadWhenNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -233,6 +240,7 @@ func TestParserNTPQ(t *testing.T) {
 		"jitter": float64(1.012),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "SHM(0)",
 		"state_prefix": "*",
 		"refid":        ".PPS.",
@@ -250,6 +258,7 @@ func TestParserNTPQ(t *testing.T) {
 		"jitter": float64(2.012),
 	}
 	tags = map[string]string{
+		"server":       "localhost",
 		"remote":       "SHM(1)",
 		"state_prefix": "-",
 		"refid":        ".GPS.",
@@ -267,6 +276,7 @@ func TestParserNTPQ(t *testing.T) {
 		"jitter": float64(0.101),
 	}
 	tags = map[string]string{
+		"server":       "localhost",
 		"remote":       "37.58.57.238",
 		"state_prefix": "+",
 		"refid":        "192.53.103.103",
@@ -296,6 +306,7 @@ func TestMultiNTPQ(t *testing.T) {
 		"when":   int64(740),
 	}
 	tags := map[string]string{
+		"server":  "localhost",
 		"refid":   "10.177.80.37",
 		"remote":  "83.137.98.96",
 		"stratum": "2",
@@ -312,6 +323,7 @@ func TestMultiNTPQ(t *testing.T) {
 		"when":   int64(739),
 	}
 	tags = map[string]string{
+		"server":  "localhost",
 		"refid":   "10.177.80.37",
 		"remote":  "81.7.16.52",
 		"stratum": "2",
@@ -340,6 +352,7 @@ func TestBadHeaderNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -367,6 +380,7 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -395,6 +409,7 @@ func TestNoRefID(t *testing.T) {
 	expected := []telegraf.Metric{
 		testutil.MustMetric("ntpq",
 			map[string]string{
+				"server":  "localhost",
 				"refid":   "10.177.80.37",
 				"remote":  "83.137.98.96",
 				"stratum": "2",
@@ -411,6 +426,7 @@ func TestNoRefID(t *testing.T) {
 			now),
 		testutil.MustMetric("ntpq",
 			map[string]string{
+				"server":  "localhost",
 				"refid":   "10.177.80.37",
 				"remote":  "131.188.3.221",
 				"stratum": "2",
@@ -441,13 +457,273 @@ func TestNoRefID(t *testing.T) {
 	require.NoError(t, acc.GatherError(n.Gather))
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
+func TestMultipleServersNTPQ(t *testing.T) {
+	tt := tester{
+		ret: []byte(singleNTPQ),
+		err: nil,
+	}
+	n := newNTPQ()
+	n.DecimalReach = true
+	n.runQ = tt.runqTest
+	n.Servers = []string{ "test-server.example.com", "192.0.2.127" }
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, acc.GatherError(n.Gather))
+
+	fields := map[string]interface{}{
+		"when":   int64(101),
+		"poll":   int64(256),
+		"reach":  int64(31),
+		"delay":  float64(51.016),
+		"offset": float64(233.010),
+		"jitter": float64(17.462),
+	}
+	tags := map[string]string{
+		"server":       "",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
+	}
+
+	for _, server := range n.Servers {
+		tags["server"] = server
+		acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+	}
+}
+
+func TestWideModeNTPQ(t *testing.T) {
+	now := time.Now()
+	expected := []telegraf.Metric{
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"remote":       "0.se.pool.ntp.org",
+				"refid":        ".POOL.",
+				"stratum":      "16",
+				"type":         "p",
+			},
+			map[string]interface{}{
+				"poll":   int64(64),
+				"reach":  int64(0),
+				"delay":  float64(0.000),
+				"offset": float64(0.000),
+				"jitter": float64(0.002),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"remote":       "1.se.pool.ntp.org",
+				"refid":        ".POOL.",
+				"stratum":      "16",
+				"type":         "p",
+			},
+			map[string]interface{}{
+				"poll":   int64(64),
+				"reach":  int64(0),
+				"delay":  float64(0.000),
+				"offset": float64(0.000),
+				"jitter": float64(0.002),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"remote":       "2.se.pool.ntp.org",
+				"refid":        ".POOL.",
+				"stratum":      "16",
+				"type":         "p",
+			},
+			map[string]interface{}{
+				"poll":   int64(64),
+				"reach":  int64(0),
+				"delay":  float64(0.000),
+				"offset": float64(0.000),
+				"jitter": float64(0.002),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"remote":       "3.se.pool.ntp.org",
+				"refid":        ".POOL.",
+				"stratum":      "16",
+				"type":         "p",
+			},
+			map[string]interface{}{
+				"poll":   int64(64),
+				"reach":  int64(0),
+				"delay":  float64(0.000),
+				"offset": float64(0.000),
+				"jitter": float64(0.002),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"remote":       "LOCAL(0)",
+				"refid":        ".LOCL.",
+				"stratum":      "10",
+				"type":         "l",
+			},
+			map[string]interface{}{
+				"when":   int64(9849600),
+				"poll":   int64(64),
+				"reach":  int64(0),
+				"delay":  float64(0.000),
+				"offset": float64(0.000),
+				"jitter": float64(0.000),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"state_prefix": "+",
+				"remote":       "193.11.166.8",
+				"refid":        ".PPS.",
+				"stratum":      "1",
+				"type":         "u",
+			},
+			map[string]interface{}{
+				"when":   int64(230),
+				"poll":   int64(1024),
+				"reach":  int64(377),
+				"delay":  float64(23.804),
+				"offset": float64(-0.368),
+				"jitter": float64(0.225),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"remote":       "193.11.166.20",
+				"refid":        ".XFAC.",
+				"stratum":      "16",
+				"type":         "u",
+			},
+			map[string]interface{}{
+				"poll":   int64(1024),
+				"reach":  int64(0),
+				"delay":  float64(0.000),
+				"offset": float64(0.000),
+				"jitter": float64(0.000),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"state_prefix": "*",
+				"remote":       "svl1.ntp.se",
+				"refid":        ".PPS.",
+				"stratum":      "1",
+				"type":         "u",
+			},
+			map[string]interface{}{
+				"when":   int64(880),
+				"poll":   int64(1024),
+				"reach":  int64(377),
+				"delay":  float64(10.049),
+				"offset": float64(0.415),
+				"jitter": float64(0.144),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
+				"state_prefix": "+",
+				"remote":       "time.cloudflare.com",
+				"refid":        "10.128.9.5",
+				"stratum":      "3",
+				"type":         "u",
+			},
+			map[string]interface{}{
+				"when":   int64(511),
+				"poll":   int64(1024),
+				"reach":  int64(377),
+				"delay":  float64(15.930),
+				"offset": float64(0.679),
+				"jitter": float64(0.123),
+			},
+			now,
+		),
+	}
+
+	tt := tester{
+		ret: []byte(wideModeNTPQ),
+		err: nil,
+	}
+	n := newNTPQ()
+	n.WideMode = true
+	n.DNSLookup = true
+	n.runQ = tt.runqTest
+
+	acc := testutil.Accumulator{
+		TimeFunc: func() time.Time { return now },
+	}
+
+	require.NoError(t, acc.GatherError(n.Gather))
+
+
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
+}
+
+func TestDecimalReachNTPQ(t *testing.T) {
+	tt := tester{
+		ret: []byte(singleNTPQ),
+		err: nil,
+	}
+	n := newNTPQ()
+	n.DecimalReach = true
+	n.runQ = tt.runqTest
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, acc.GatherError(n.Gather))
+
+	fields := map[string]interface{}{
+		"when":   int64(101),
+		"poll":   int64(256),
+		"reach":  int64(31),
+		"delay":  float64(51.016),
+		"offset": float64(233.010),
+		"jitter": float64(17.462),
+	}
+	tags := map[string]string{
+		"server":				"localhost",
+		"remote":       "uschi5-ntp-002.",
+		"state_prefix": "*",
+		"refid":        "10.177.80.46",
+		"stratum":      "2",
+		"type":         "u",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+}
+
 
 type tester struct {
 	ret []byte
 	err error
 }
 
-func (t *tester) runqTest() ([]byte, error) {
+func (t *tester) runqTest(server string) ([]byte, error) {
 	return t.ret, t.err
 }
 
@@ -519,4 +795,22 @@ var noRefID = `     remote           refid      st t when poll reach   delay   o
  83.137.98.96    10.177.80.37     2 u  740 1024  377   54.033  243.426 449514.
  91.189.94.4                      2 u  673 1024  377  143.047  274.726 449445.
  131.188.3.221   10.177.80.37     2 u  783 1024  377  111.820  261.921 449528.
+`
+// real-world output with a mixed bag of fun
+var wideModeNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+ 0.se.pool.ntp.org
+                 .POOL.          16 p    -   64    0    0.000    0.000   0.002
+ 1.se.pool.ntp.org
+                 .POOL.          16 p    -   64    0    0.000    0.000   0.002
+ 2.se.pool.ntp.org
+                 .POOL.          16 p    -   64    0    0.000    0.000   0.002
+ 3.se.pool.ntp.org
+                 .POOL.          16 p    -   64    0    0.000    0.000   0.002
+ LOCAL(0)        .LOCL.          10 l 114d   64    0    0.000    0.000   0.000
++193.11.166.8    .PPS.            1 u  230 1024  377   23.804   -0.368   0.225
+ 193.11.166.20   .XFAC.          16 u    - 1024    0    0.000    0.000   0.000
+*svl1.ntp.se     .PPS.            1 u  880 1024  377   10.049    0.415   0.144
++time.cloudflare.com
+                 10.128.9.5       3 u  511 1024  377   15.930    0.679   0.123
 `
