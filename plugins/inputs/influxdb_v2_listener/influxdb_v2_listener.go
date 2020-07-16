@@ -30,11 +30,9 @@ type InfluxDBV2Listener struct {
 	port           int
 	tlsint.ServerConfig
 
-	ReadTimeout  internal.Duration `toml:"read_timeout"`
-	WriteTimeout internal.Duration `toml:"write_timeout"`
-	MaxBodySize  internal.Size     `toml:"max_body_size"`
-	Token        string            `toml:"token"`
-	BucketTag    string            `toml:"bucket_tag"`
+	MaxBodySize internal.Size `toml:"max_body_size"`
+	Token       string        `toml:"token"`
+	BucketTag   string        `toml:"bucket_tag"`
 
 	timeFunc influx.TimeFunc
 
@@ -61,14 +59,9 @@ const sampleConfig = `
   ## Address and port to host InfluxDB listener on
   service_address = ":9999"
 
-  ## maximum duration before timing out read of the request
-  read_timeout = "10s"
-  ## maximum duration before timing out write of the response
-  write_timeout = "10s"
-
   ## Maximum allowed HTTP request body size in bytes.
   ## 0 means to use the default of 32MiB.
-  max_body_size = "32MiB"
+  # max_body_size = "32MiB"
 
   ## Optional tag to determine the bucket. 
   ## If the write has a bucket in the query string then it will be kept in this tag name.
@@ -78,15 +71,15 @@ const sampleConfig = `
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
-  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Add service certificate and key
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
-  # token = "foobar"
+  # token = "some-long-shared-secret-token"
 `
 
 func (h *InfluxDBV2Listener) SampleConfig() string {
@@ -132,13 +125,6 @@ func (h *InfluxDBV2Listener) Init() error {
 		h.MaxBodySize.Size = defaultMaxBodySize
 	}
 
-	if h.ReadTimeout.Duration < time.Second {
-		h.ReadTimeout.Duration = time.Second * 10
-	}
-	if h.WriteTimeout.Duration < time.Second {
-		h.WriteTimeout.Duration = time.Second * 10
-	}
-
 	return nil
 }
 
@@ -152,11 +138,9 @@ func (h *InfluxDBV2Listener) Start(acc telegraf.Accumulator) error {
 	}
 
 	h.server = http.Server{
-		Addr:         h.ServiceAddress,
-		Handler:      h,
-		ReadTimeout:  h.ReadTimeout.Duration,
-		WriteTimeout: h.WriteTimeout.Duration,
-		TLSConfig:    tlsConf,
+		Addr:      h.ServiceAddress,
+		Handler:   h,
+		TLSConfig: tlsConf,
 	}
 
 	var listener net.Listener

@@ -12,18 +12,12 @@ defer to the output plugins configuration.
 ### Configuration:
 
 ```toml
-[[inputs.influxdb_v2_listener]]
   ## Address and port to host InfluxDB listener on
   service_address = ":9999"
 
-  ## maximum duration before timing out read of the request
-  read_timeout = "10s"
-  ## maximum duration before timing out write of the response
-  write_timeout = "10s"
-
   ## Maximum allowed HTTP request body size in bytes.
   ## 0 means to use the default of 32MiB.
-  max_body_size = "32MiB"
+  # max_body_size = "32MiB"
 
   ## Optional tag to determine the bucket. 
   ## If the write has a bucket in the query string then it will be kept in this tag name.
@@ -33,15 +27,15 @@ defer to the output plugins configuration.
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
-  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Add service certificate and key
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 
   ## Optional token to accept for HTTP authentication.
   ## You probably want to make sure you have TLS configured above for this.
-  # token = "foobar"
+  # token = "some-long-shared-secret-token"
 ```
 
 ### Metrics:
