@@ -67,6 +67,11 @@ func TestNode(t *testing.T) {
 										{Type: toStrPtr("Ready"), Status: toStrPtr("true"), LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(now.Unix())}},
 										{Type: toStrPtr("OutOfDisk"), Status: toStrPtr("false"), LastTransitionTime: &metav1.Time{Seconds: toInt64Ptr(created.Unix())}},
 									},
+									Addresses: []*v1.NodeAddress{
+										{Type: toStrPtr("Hostname"), Address: toStrPtr("node1")},
+										{Type: toStrPtr("InternalIP"), Address: toStrPtr("1.2.3.4")},
+										{Type: toStrPtr("ExternalIP"), Address: toStrPtr("5.6.7.8")},
+									},
 								},
 								Spec: &v1.NodeSpec{
 									ProviderID: toStrPtr("aws:///us-east-1c/i-0c00"),
@@ -111,7 +116,10 @@ func TestNode(t *testing.T) {
 							"allocatable_pods":         int64(110),
 						},
 						Tags: map[string]string{
-							"node_name": "node1",
+							"node_name":        "node1",
+							"node_hostname":    "node1",
+							"node_internal_ip": "1.2.3.4",
+							"node_external_ip": "5.6.7.8",
 						},
 					},
 				},

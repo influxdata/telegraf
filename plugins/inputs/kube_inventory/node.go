@@ -28,6 +28,17 @@ func (ki *KubernetesInventory) gatherNode(n v1.Node, acc telegraf.Accumulator) e
 		"node_name": *n.Metadata.Name,
 	}
 
+	for _, address := range n.Status.Addresses {
+		switch *address.Type {
+		case "Hostname":
+			tags["node_hostname"] = *address.Address
+		case "InternalIP":
+			tags["node_internal_ip"] = *address.Address
+		case "ExternalIP":
+			tags["node_external_ip"] = *address.Address
+		}
+	}
+
 	for resourceName, val := range n.Status.Capacity {
 		switch resourceName {
 		case "cpu":
