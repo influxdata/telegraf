@@ -3295,7 +3295,7 @@ BEGIN
                                              6), 5, 0, ':'), 3, 0, ':')
           ELSE NULL
         END AS schedule_detail,
-        ss.Name as schedule_name,
+        ss.name as schedule_name,
         CASE 
         WHEN ss.enabled =1 THEN 'Yes'
         ELSE 'No'
