@@ -146,7 +146,11 @@ func createPluginsWithTomlConfig(md toml.MetaData, conf config) (loadedConfig, e
 // have registered themselves with the registry. This makes loading plugins
 // without having to define a config dead easy.
 func DefaultImportedPlugins() (config, error) {
-	conf := config{}
+	conf := config{
+		Inputs:     map[string][]toml.Primitive{},
+		Processors: map[string][]toml.Primitive{},
+		Outputs:    map[string][]toml.Primitive{},
+	}
 	for name := range inputs.Inputs {
 		conf.Inputs[name] = []toml.Primitive{}
 		return conf, nil

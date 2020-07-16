@@ -15,7 +15,7 @@
 - Telegraf's `--test` mode now runs processors and aggregators before printing
   metrics.
 
-- Official packages now built with Go 1.14.4.
+- Official packages now built with Go 1.14.5.
 
 - When updating the Debian package you will no longer be prompted to merge the
   telegraf.conf file, instead the new version will be installed to
@@ -105,6 +105,7 @@
 - [#7558](https://github.com/influxdata/telegraf/issues/7558): Remove trailing backslash from tag keys/values in influx serializer.
 - [#7715](https://github.com/influxdata/telegraf/issues/7715): Fix incorrect Azure SQL DB server properties.
 - [#7431](https://github.com/influxdata/telegraf/issues/7431): Fix json unmarshal error in the kibana input.
+- [#5633](https://github.com/influxdata/telegraf/issues/5633): Send metrics in FIFO order.
 
 ## v1.14.5 [2020-06-30]
 
