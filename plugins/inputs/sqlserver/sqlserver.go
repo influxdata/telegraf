@@ -3317,7 +3317,7 @@ BEGIN
     FROM jobsched
 
     SELECT
-        'sqlserver_server_properties' AS [measurement],
+        'sqlserver_jobsinfo' AS [measurement],
         REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
         j.name ,
         j.job_id,
