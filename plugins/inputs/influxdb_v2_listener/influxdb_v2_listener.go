@@ -25,6 +25,15 @@ const (
 	defaultMaxBodySize = 32 * 1024 * 1024
 )
 
+// The BadRequestCode constants keep standard error messages
+// see: https://v2.docs.influxdata.com/v2.0/api/#operation/PostWrite
+type BadRequestCode string
+
+const (
+	InternalError BadRequestCode = "internal error"
+	Invalid       BadRequestCode = "invalid"
+)
+
 type InfluxDBV2Listener struct {
 	ServiceAddress string `toml:"service_address"`
 	port           int
@@ -212,7 +221,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 			body, err = gzip.NewReader(body)
 			if err != nil {
 				h.Log.Debugf("Error decompressing request body: %v", err.Error())
-				badRequest(res, err.Error())
+				badRequest(res, Invalid, err.Error())
 				return
 			}
 			defer body.Close()
@@ -224,7 +233,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 		bytes, readErr = ioutil.ReadAll(body)
 		if readErr != nil {
 			h.Log.Debugf("Error parsing the request body: %v", readErr.Error())
-			badRequest(res, readErr.Error())
+			badRequest(res, InternalError, readErr.Error())
 			return
 		}
 		metricHandler := influx.NewMetricHandler()
@@ -244,7 +253,7 @@ func (h *InfluxDBV2Listener) handleWrite() http.HandlerFunc {
 
 		if err != influx.EOF && err != nil {
 			h.Log.Debugf("Error parsing the request body: %v", err.Error())
-			badRequest(res, err.Error())
+			badRequest(res, Invalid, err.Error())
 			return
 		}
 
@@ -267,13 +276,13 @@ func tooLarge(res http.ResponseWriter, maxLength int64) {
 	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
 	b, _ := json.Marshal(map[string]string{
-		"code":      "invalid",
+		"code":      fmt.Sprint(Invalid),
 		"message":   "http: request body too large",
 		"maxLength": fmt.Sprint(maxLength)})
 	res.Write(b)
 }
 
-func badRequest(res http.ResponseWriter, errString string) {
+func badRequest(res http.ResponseWriter, code BadRequestCode, errString string) {
 	res.Header().Set("Content-Type", "application/json")
 	if errString == "" {
 		errString = "http: bad request"
@@ -281,11 +290,10 @@ func badRequest(res http.ResponseWriter, errString string) {
 	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
 	b, _ := json.Marshal(map[string]string{
-		"code":    "internal error",
+		"code":    fmt.Sprint(code),
 		"message": errString,
 		"op":      "",
 		"err":     errString,
-		"line":    "0",
 	})
 	res.Write(b)
 }
