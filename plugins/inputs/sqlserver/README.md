@@ -126,6 +126,7 @@ The new (version 2) metrics provide:
   blocking sessions.
 - *VolumeSpace* - uses sys.dm_os_volume_stats to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
 - *Cpu* - uses the buffer ring (sys.dm_os_ring_buffers) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
+- *QueryStats* - Gets the top 50 queries by [total_elapsed_time] from sys.dm_exec_query_stats. (it's pointelss to run this every few seconds, run it every few minutes)
 
   In order to allow tracking on a per statement basis this query produces a
   unique tag for each query.  Depending on the database workload, this may

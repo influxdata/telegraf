@@ -66,6 +66,7 @@ query_version = 2
 ## - SqlRequests
 ## - VolumeSpace
 ## - Cpu
+## - QueryStats
 ## Version 1:
 ## - PerformanceCounters
 ## - WaitStatsCategorized
@@ -82,7 +83,7 @@ query_version = 2
 # include_query = []
 
 ## A list of queries to explicitly ignore.
-exclude_query = [ 'Schedulers' , 'SqlRequests']
+exclude_query = [ 'Schedulers' , 'SqlRequests','QueryStats']
 `
 
 // SampleConfig return the sample configuration
