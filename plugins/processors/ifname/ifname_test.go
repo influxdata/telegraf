@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/snmp"
 	si "github.com/influxdata/telegraf/plugins/inputs/snmp"
@@ -100,6 +101,7 @@ func TestGetMap(t *testing.T) {
 			Version: 2,
 			Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout
 		},
+		CacheTTL: config.Duration(10 * time.Second),
 	}
 
 	// This test mocks the snmp transaction so don't run net-snmp
@@ -137,7 +139,7 @@ func TestGetMap(t *testing.T) {
 		wgReq.Add(1)
 		go func() {
 			defer wgReq.Done()
-			m, err := d.getMap("agent")
+			m, _, err := d.getMap("agent")
 			require.NoError(t, err)
 			require.Equal(t, expected, m)
 		}()
