@@ -465,7 +465,7 @@ func TestMultipleServersNTPQ(t *testing.T) {
 	n := newNTPQ()
 	n.DecimalReach = true
 	n.runQ = tt.runqTest
-	n.Servers = []string{ "test-server.example.com", "192.0.2.127" }
+	n.Servers = []string{"test-server.example.com", "192.0.2.127"}
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -499,11 +499,11 @@ func TestWideModeNTPQ(t *testing.T) {
 		testutil.MustMetric(
 			"ntpq",
 			map[string]string{
-				"server":       "localhost",
-				"remote":       "0.se.pool.ntp.org",
-				"refid":        ".POOL.",
-				"stratum":      "16",
-				"type":         "p",
+				"server":  "localhost",
+				"remote":  "0.se.pool.ntp.org",
+				"refid":   ".POOL.",
+				"stratum": "16",
+				"type":    "p",
 			},
 			map[string]interface{}{
 				"poll":   int64(64),
@@ -517,11 +517,11 @@ func TestWideModeNTPQ(t *testing.T) {
 		testutil.MustMetric(
 			"ntpq",
 			map[string]string{
-				"server":       "localhost",
-				"remote":       "1.se.pool.ntp.org",
-				"refid":        ".POOL.",
-				"stratum":      "16",
-				"type":         "p",
+				"server":  "localhost",
+				"remote":  "1.se.pool.ntp.org",
+				"refid":   ".POOL.",
+				"stratum": "16",
+				"type":    "p",
 			},
 			map[string]interface{}{
 				"poll":   int64(64),
@@ -535,11 +535,11 @@ func TestWideModeNTPQ(t *testing.T) {
 		testutil.MustMetric(
 			"ntpq",
 			map[string]string{
-				"server":       "localhost",
-				"remote":       "2.se.pool.ntp.org",
-				"refid":        ".POOL.",
-				"stratum":      "16",
-				"type":         "p",
+				"server":  "localhost",
+				"remote":  "2.se.pool.ntp.org",
+				"refid":   ".POOL.",
+				"stratum": "16",
+				"type":    "p",
 			},
 			map[string]interface{}{
 				"poll":   int64(64),
@@ -553,11 +553,11 @@ func TestWideModeNTPQ(t *testing.T) {
 		testutil.MustMetric(
 			"ntpq",
 			map[string]string{
-				"server":       "localhost",
-				"remote":       "3.se.pool.ntp.org",
-				"refid":        ".POOL.",
-				"stratum":      "16",
-				"type":         "p",
+				"server":  "localhost",
+				"remote":  "3.se.pool.ntp.org",
+				"refid":   ".POOL.",
+				"stratum": "16",
+				"type":    "p",
 			},
 			map[string]interface{}{
 				"poll":   int64(64),
@@ -571,11 +571,11 @@ func TestWideModeNTPQ(t *testing.T) {
 		testutil.MustMetric(
 			"ntpq",
 			map[string]string{
-				"server":       "localhost",
-				"remote":       "LOCAL(0)",
-				"refid":        ".LOCL.",
-				"stratum":      "10",
-				"type":         "l",
+				"server":  "localhost",
+				"remote":  "LOCAL(0)",
+				"refid":   ".LOCL.",
+				"stratum": "10",
+				"type":    "l",
 			},
 			map[string]interface{}{
 				"when":   int64(9849600),
@@ -610,11 +610,11 @@ func TestWideModeNTPQ(t *testing.T) {
 		testutil.MustMetric(
 			"ntpq",
 			map[string]string{
-				"server":       "localhost",
-				"remote":       "193.11.166.20",
-				"refid":        ".XFAC.",
-				"stratum":      "16",
-				"type":         "u",
+				"server":  "localhost",
+				"remote":  "193.11.166.20",
+				"refid":   ".XFAC.",
+				"stratum": "16",
+				"type":    "u",
 			},
 			map[string]interface{}{
 				"poll":   int64(1024),
@@ -682,7 +682,6 @@ func TestWideModeNTPQ(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(n.Gather))
 
-
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
@@ -707,7 +706,7 @@ func TestDecimalReachNTPQ(t *testing.T) {
 		"jitter": float64(17.462),
 	}
 	tags := map[string]string{
-		"server":				"localhost",
+		"server":       "localhost",
 		"remote":       "uschi5-ntp-002.",
 		"state_prefix": "*",
 		"refid":        "10.177.80.46",
@@ -716,7 +715,6 @@ func TestDecimalReachNTPQ(t *testing.T) {
 	}
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
-
 
 type tester struct {
 	ret []byte
@@ -796,6 +794,7 @@ var noRefID = `     remote           refid      st t when poll reach   delay   o
  91.189.94.4                      2 u  673 1024  377  143.047  274.726 449445.
  131.188.3.221   10.177.80.37     2 u  783 1024  377  111.820  261.921 449528.
 `
+
 // real-world output with a mixed bag of fun
 var wideModeNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
 ==============================================================================

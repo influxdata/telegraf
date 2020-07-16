@@ -23,9 +23,9 @@ var tagHeaders map[string]string = map[string]string{
 
 // Mapping of ntpq header names to integer fields
 var fieldIHeaders map[string]string = map[string]string{
-	"when":   "when",
-	"poll":   "poll",
-	"reach":  "reach",
+	"when":  "when",
+	"poll":  "poll",
+	"reach": "reach",
 }
 
 // Mapping of ntpq header names to float fields
@@ -36,12 +36,12 @@ var fieldFHeaders map[string]string = map[string]string{
 }
 
 type NTPQ struct {
-	runQ         func(string) ([]byte, error)
-	tagI         map[string]int
-	floatI       map[string]int
-	intI         map[string]int
+	runQ   func(string) ([]byte, error)
+	tagI   map[string]int
+	floatI map[string]int
+	intI   map[string]int
 
-	binary       string
+	binary string
 
 	Servers      []string `toml:"servers"`
 	DecimalReach bool     `toml:"decimal_reach"`
@@ -85,7 +85,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, server := range n.Servers {
-		out, err := n.runQ(server);
+		out, err := n.runQ(server)
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					scanner.Scan()
 					line := scanner.Text()
 					line = reg.ReplaceAllString(line, "")
-					fields = append(fields, strings.Fields(line)...) 
+					fields = append(fields, strings.Fields(line)...)
 					lineCounter++
 				}
 			} else {
@@ -272,7 +272,7 @@ func (n *NTPQ) runq(server string) ([]byte, error) {
 	var cmd *exec.Cmd
 
 	// build args
-	cmd_args := []string{ "-p" }
+	cmd_args := []string{"-p"}
 
 	// is wide mode supported?
 	if n.WideMode {
@@ -281,7 +281,7 @@ func (n *NTPQ) runq(server string) ([]byte, error) {
 
 	// should we not use dns lookups?
 	if !n.DNSLookup {
-	  cmd_args = append(cmd_args, "-n")
+		cmd_args = append(cmd_args, "-n")
 	}
 
 	// append server to argument list
@@ -309,9 +309,9 @@ func newNTPQ() *NTPQ {
 
 	// Mapping of int metrics to their index in the command output
 	intI := map[string]int{
-		"when":    -1,
-		"poll":    -1,
-		"reach":   -1,
+		"when":  -1,
+		"poll":  -1,
+		"reach": -1,
 	}
 
 	n := &NTPQ{
@@ -334,7 +334,7 @@ func newNTPQ() *NTPQ {
 		n.binary = bin
 
 		if n.WideMode {
-	    // we wish to use wide mode so let's check if binary supports it
+			// we wish to use wide mode so let's check if binary supports it
 			if _, err := exec.Command(n.binary, "-w", "-c quit").Output(); err == nil {
 				// GREAT SUCCESS
 				n.WideMode = true
