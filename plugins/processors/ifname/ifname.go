@@ -111,8 +111,7 @@ type IfName struct {
 
 	gsBase snmp.GosnmpWrapper `toml:"-"`
 
-	sigs     sigMap     `toml:"-"`
-	sigsLock sync.Mutex `toml:"-"`
+	sigs sigMap `toml:"-"`
 }
 
 const minRetry time.Duration = 5 * time.Minute
@@ -251,14 +250,14 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 	}
 
 	// Is this the first request for this agent?
-	d.sigsLock.Lock()
+	d.rwLock.Lock()
 	sig, found := d.sigs[agent]
 	if !found {
 		s := make(chan struct{})
 		d.sigs[agent] = s
 		sig = s
 	}
-	d.sigsLock.Unlock()
+	d.rwLock.Unlock()
 
 	if found {
 		// This is not the first request.  Wait for first to finish.
@@ -281,24 +280,21 @@ func (d *IfName) getMap(agent string) (entry nameMap, age time.Duration, err err
 	m, err = d.getMapRemote(agent)
 	if err != nil {
 		//failure.  signal without saving to cache
-		d.sigsLock.Lock()
+		d.rwLock.Lock()
 		close(sig)
 		delete(d.sigs, agent)
-		d.sigsLock.Unlock()
+		d.rwLock.Unlock()
 
 		return nil, 0, fmt.Errorf("getting remote table: %w", err)
 	}
 
-	// Cache it
+	// Cache it, then signal any other waiting requests for this agent
+	// and clean up
 	d.rwLock.Lock()
 	d.cache.Put(agent, m)
-	d.rwLock.Unlock()
-
-	// Signal any other waiting requests for this agent and clean up
-	d.sigsLock.Lock()
 	close(sig)
 	delete(d.sigs, agent)
-	d.sigsLock.Unlock()
+	d.rwLock.Unlock()
 
 	return m, 0, nil
 }

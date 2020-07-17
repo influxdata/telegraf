@@ -26,7 +26,7 @@ func TestTable(t *testing.T) {
 
 	config := snmp.ClientConfig{
 		Version: 2,
-		Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout
+		Timeout: internal.Duration{Duration: 5 * time.Second}, // Doesn't work with 0 timeout
 	}
 	gs, err := snmp.NewWrapper(config)
 	require.NoError(t, err)
@@ -36,7 +36,7 @@ func TestTable(t *testing.T) {
 	err = gs.Connect()
 	require.NoError(t, err)
 
-	//could use ifIndex but oid index is always the same
+	// Could use ifIndex but oid index is always the same
 	m, err := buildMap(gs, tab, "ifDescr")
 	require.NoError(t, err)
 	require.NotEmpty(t, m)
@@ -53,7 +53,7 @@ func TestIfName(t *testing.T) {
 		CacheSize: 1000,
 		ClientConfig: snmp.ClientConfig{
 			Version: 2,
-			Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout
+			Timeout: internal.Duration{Duration: 5 * time.Second}, // Doesn't work with 0 timeout
 		},
 	}
 	err := d.Init()
@@ -93,65 +93,52 @@ func TestIfName(t *testing.T) {
 
 func TestGetMap(t *testing.T) {
 	d := IfName{
-		SourceTag: "ifIndex",
-		DestTag:   "ifName",
-		AgentTag:  "agent",
 		CacheSize: 1000,
-		ClientConfig: snmp.ClientConfig{
-			Version: 2,
-			Timeout: internal.Duration{Duration: 5 * time.Second}, // doesn't work with 0 timeout
-		},
-		CacheTTL: config.Duration(10 * time.Second),
+		CacheTTL:  config.Duration(10 * time.Second),
 	}
 
-	// This test mocks the snmp transaction so don't run net-snmp
-	// commands to look up table names.
+	// Don't run net-snmp commands to look up table names.
 	d.makeTable = func(agent string) (*si.Table, error) {
 		return &si.Table{}, nil
 	}
 	err := d.Init()
 	require.NoError(t, err)
 
-	// Request the same agent multiple times in goroutines. The first
-	// request should make the mocked remote call and the others
-	// should block until the response is cached, then return the
-	// cached response.
-
 	expected := nameMap{
 		1: "ifname1",
 		2: "ifname2",
 	}
 
-	var wgRemote sync.WaitGroup
 	var remoteCalls int32
 
-	wgRemote.Add(1)
+	// Mock the snmp transaction
 	d.getMapRemote = func(agent string) (nameMap, error) {
 		atomic.AddInt32(&remoteCalls, 1)
-		wgRemote.Wait() //don't return until all requests are made
 		return expected, nil
 	}
+	m, age, err := d.getMap("agent")
+	require.NoError(t, err)
+	require.Zero(t, age) // Age is zero when map comes from getMapRemote
+	require.Equal(t, expected, m)
 
+	// Remote call should happen the first time getMap runs
+	require.Equal(t, int32(1), remoteCalls)
+
+	var wg sync.WaitGroup
 	const thMax = 3
-	var wgReq sync.WaitGroup
-
 	for th := 0; th < thMax; th++ {
-		wgReq.Add(1)
+		wg.Add(1)
 		go func() {
-			defer wgReq.Done()
-			m, _, err := d.getMap("agent")
+			defer wg.Done()
+			m, age, err := d.getMap("agent")
 			require.NoError(t, err)
+			require.NotZero(t, age) // Age is nonzero when map comes from cache
 			require.Equal(t, expected, m)
 		}()
 	}
 
-	//signal mocked remote call to finish
-	wgRemote.Done()
+	wg.Wait()
 
-	//wait for requests to finish
-	wgReq.Wait()
-
-	//remote call should only happen once
+	// Remote call should not happen subsequent times getMap runs
 	require.Equal(t, int32(1), remoteCalls)
-
 }
