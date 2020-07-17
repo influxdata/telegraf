@@ -1,6 +1,7 @@
 package ifname
 
 import (
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -123,15 +124,20 @@ func TestGetMap(t *testing.T) {
 	// Remote call should happen the first time getMap runs
 	require.Equal(t, int32(1), remoteCalls)
 
+	var wg sync.WaitGroup
 	const thMax = 3
 	for th := 0; th < thMax; th++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			m, age, err := d.getMap("agent")
 			require.NoError(t, err)
 			require.NotZero(t, age) // Age is nonzero when map comes from cache
 			require.Equal(t, expected, m)
 		}()
 	}
+
+	wg.Wait()
 
 	// Remote call should not happen subsequent times getMap runs
 	require.Equal(t, int32(1), remoteCalls)
