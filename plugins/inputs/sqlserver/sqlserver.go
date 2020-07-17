@@ -3321,7 +3321,7 @@ BEGIN
         REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
         j.name ,
         -- CONVERT(VARCHAR(36), j.job_id) AS job_id ,
-        job_id ,
+        j.job_id ,
         j.is_enabled ,
         j.owner_name ,
         COALESCE(j2.shortest_duration, 'N/A') AS shortest_duration ,
