@@ -323,7 +323,7 @@ func (a *Agent) runInputs(
 		wg.Add(1)
 		go func(input *models.RunningInput) {
 			defer wg.Done()
-			a.gatherLoop(ctx, acc, input, ticker)
+			a.gatherLoop(ctx, acc, input, ticker, interval)
 		}(input)
 	}
 
@@ -454,13 +454,14 @@ func (a *Agent) gatherLoop(
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
 	ticker Ticker,
+	interval time.Duration,
 ) {
 	defer panicRecover(input)
 
 	for {
 		select {
 		case <-ticker.Elapsed():
-			err := a.gatherOnce(acc, input, ticker)
+			err := a.gatherOnce(acc, input, ticker, interval)
 			if err != nil {
 				acc.AddError(err)
 			}
@@ -476,18 +477,28 @@ func (a *Agent) gatherOnce(
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
 	ticker Ticker,
+	interval time.Duration,
 ) error {
 	done := make(chan error)
 	go func() {
 		done <- input.Gather(acc)
 	}()
 
+	// Only warn after interval seconds, even if the interval is started late.
+	// Intervals can start late if the previous interval went over or due to
+	// clock changes.
+	slowWarning := time.NewTicker(interval)
+	defer slowWarning.Stop()
+
 	for {
 		select {
 		case err := <-done:
 			return err
+		case <-slowWarning.C:
+			log.Printf("W! [%s] Collection took longer than expected; not complete after interval of %s",
+				input.LogName(), interval)
 		case <-ticker.Elapsed():
-			log.Printf("W! [agent] [%s] did not complete within its interval",
+			log.Printf("D! [%s] Previous collection has not completed; scheduled collection skipped",
 				input.LogName())
 		}
 	}
