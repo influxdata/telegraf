@@ -31,11 +31,12 @@ type Ticker interface {
 // no maximum sleep, when using large intervals alignment is not corrected
 // until the next tick.
 type AlignedTicker struct {
-	interval time.Duration
-	jitter   time.Duration
-	ch       chan time.Time
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
+	interval    time.Duration
+	jitter      time.Duration
+	minInterval time.Duration
+	ch          chan time.Time
+	cancel      context.CancelFunc
+	wg          sync.WaitGroup
 }
 
 func NewAlignedTicker(now time.Time, interval, jitter time.Duration) *AlignedTicker {
@@ -45,10 +46,11 @@ func NewAlignedTicker(now time.Time, interval, jitter time.Duration) *AlignedTic
 func newAlignedTicker(now time.Time, interval, jitter time.Duration, clock clock.Clock) *AlignedTicker {
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &AlignedTicker{
-		interval: interval,
-		jitter:   jitter,
-		ch:       make(chan time.Time, 1),
-		cancel:   cancel,
+		interval:    interval,
+		jitter:      jitter,
+		minInterval: interval / 100,
+		ch:          make(chan time.Time, 1),
+		cancel:      cancel,
 	}
 
 	d := t.next(now)
@@ -64,7 +66,12 @@ func newAlignedTicker(now time.Time, interval, jitter time.Duration, clock clock
 }
 
 func (t *AlignedTicker) next(now time.Time) time.Duration {
-	next := internal.AlignTime(now, t.interval)
+	// Add minimum interval size to avoid scheduling an interval that is
+	// exceptionally short.  This avoids an issue that can occur where the
+	// previous interval ends slightly early due to very minor clock changes.
+	next := now.Add(t.minInterval)
+
+	next = internal.AlignTime(next, t.interval)
 	d := next.Sub(now)
 	if d == 0 {
 		d = t.interval
