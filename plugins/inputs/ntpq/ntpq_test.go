@@ -649,6 +649,26 @@ func TestWideModeNTPQ(t *testing.T) {
 			"ntpq",
 			map[string]string{
 				"server":       "localhost",
+				"state_prefix": "#",
+				"remote":       "193.235.20.156",
+				"refid":        "194.58.202.148",
+				"stratum":      "2",
+				"type":         "u",
+			},
+			map[string]interface{}{
+				"when":   int64(13),
+				"poll":   int64(64),
+				"reach":  int64(377),
+				"delay":  float64(21.853),
+				"offset": float64(0.168),
+				"jitter": float64(0.129),
+			},
+			now,
+		),
+		testutil.MustMetric(
+			"ntpq",
+			map[string]string{
+				"server":       "localhost",
 				"state_prefix": "+",
 				"remote":       "time.cloudflare.com",
 				"refid":        "10.128.9.5",
@@ -796,6 +816,10 @@ var noRefID = `     remote           refid      st t when poll reach   delay   o
 `
 
 // real-world output with a mixed bag of fun
+// the following row:
+// #193.235.20.156 (ww193-235-20-156.cust.wintherwireless.se)
+// occurs when an PTR record for an IP points to an A record that doesn't point back
+// ex: 192.0.2.100 -- PTR --> foo.example.com -- A -->  192.0.2.200
 var wideModeNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
 ==============================================================================
  0.se.pool.ntp.org
@@ -810,6 +834,8 @@ var wideModeNTPQ = `     remote           refid      st t when poll reach   dela
 +193.11.166.8    .PPS.            1 u  230 1024  377   23.804   -0.368   0.225
  193.11.166.20   .XFAC.          16 u    - 1024    0    0.000    0.000   0.000
 *svl1.ntp.se     .PPS.            1 u  880 1024  377   10.049    0.415   0.144
+#193.235.20.156 (ww193-235-20-156.cust.wintherwireless.se)
+                 194.58.202.148   2 u   13   64  377   21.853    0.168   0.129
 +time.cloudflare.com
                  10.128.9.5       3 u  511 1024  377   15.930    0.679   0.123
 `
