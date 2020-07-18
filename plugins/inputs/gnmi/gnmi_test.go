@@ -23,7 +23,7 @@ func TestParsePath(t *testing.T) {
 	path := "/foo/bar/bla[shoo=woo][shoop=/woop/]/z"
 	parsed, err := parsePath("theorigin", path, "thetarget")
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, parsed.Origin, "theorigin")
 	assert.Equal(t, parsed.Target, "thetarget")
 	assert.Equal(t, parsed.Element, []string{"foo", "bar", "bla[shoo=woo][shoop=/woop/]", "z"})
@@ -31,7 +31,7 @@ func TestParsePath(t *testing.T) {
 		{Name: "bla", Key: map[string]string{"shoo": "woo", "shoop": "/woop/"}}, {Name: "z"}})
 
 	parsed, err = parsePath("", "", "")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *parsed, gnmi.Path{})
 
 	parsed, err = parsePath("", "/foo[[", "")
