@@ -602,7 +602,7 @@ const sampleConfig = `
   ## If suppression is enabled, send updates at least every X seconds anyway
   # heartbeat_interval = "60s"
 
-  [[inputs.cisco_telemetry_gnmi.subscription]]
+  [[inputs.sonic_telemetry_gnmi.subscription]]
    name = "descr"
    origin = "openconfig-interfaces"
    path = "/interfaces/interface/state/description"
