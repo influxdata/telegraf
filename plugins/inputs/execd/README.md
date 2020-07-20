@@ -17,7 +17,8 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
 
 ```toml
 [[inputs.execd]]
-  ## Program to run as daemon
+  ## One program to run as daemon.
+  ## NOTE: process and each argument should each be their own string
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.

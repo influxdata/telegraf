@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -69,6 +70,11 @@ func (e *Execd) Init() error {
 
 func (e *Execd) Connect() error {
 	if err := e.process.Start(); err != nil {
+		// if there was only one argument, and it contained spaces, warn the user
+		// that they may have configured it wrong.
+		if len(e.Command) == 1 && strings.Contains(e.Command[0], " ") {
+			e.Log.Warn("Command contained spaces but no arguments. Check docs to make sure you've configured outputs.execd Command correctly.")
+		}
 		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
 	}
 
