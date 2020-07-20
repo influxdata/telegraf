@@ -26,10 +26,13 @@ type Dynatrace struct {
 	client *http.Client
 }
 
+const oneAgentMetricsUrl = "http://127.0.0.1:14499/metrics/ingest"
+
 const sampleConfig = `
   ## Your Dynatrace environment URL. 
-  ## For Dynatrace SaaS environments the URL scheme is "https://{your-environment-id}.live.dynatrace.com"
-  ## For Dynatrace Managed environments the URL scheme is "https://{your-domain}/e/{your-environment-id}"
+  ## For Dynatrace SaaS environments the URL scheme is "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
+  ## For Dynatrace Managed environments the URL scheme is "https://{your-domain}/e/{your-environment-id}/api/v2/metrics/ingest"
+  ## For Dynatrace OneAgent the URL scheme is "http://127.0.0.1:14499/metrics/ingest"
   environmentURL = ""
 
   ## Your Dynatrace API token. 
@@ -41,10 +44,10 @@ const sampleConfig = `
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
 func (d *Dynatrace) Connect() error {
 	if len(d.EnvironmentURL) == 0 {
-		d.Log.Errorf("Dynatrace environmentURL is a required field for Dynatrace output")
-		return fmt.Errorf("environmentURL is a required field for Dynatrace output")
+		d.Log.Infof("Dynatrace environmentURL is empty, defaulting to OneAgent URL")
+		d.EnvironmentURL = oneAgentMetricsUrl
 	}
-	if len(d.EnvironmentAPIToken) == 0 {
+	if d.EnvironmentURL != oneAgentMetricsUrl && len(d.EnvironmentAPIToken) == 0 {
 		d.Log.Errorf("Dynatrace environmentApiToken is a required field for Dynatrace output")
 		return fmt.Errorf("environmentApiToken is a required field for Dynatrace output")
 	}
@@ -184,7 +187,7 @@ func (d *Dynatrace) send(msg []byte) error {
 	}
 	defer resp.Body.Close()
 	// print metric line results as info log
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			d.Log.Errorf("Dynatrace error reading response")
