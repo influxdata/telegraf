@@ -79,7 +79,9 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 		// if there was only one argument, and it contained spaces, warn the user
 		// that they may have configured it wrong.
 		if len(e.Command) == 1 && strings.Contains(e.Command[0], " ") {
-			e.Log.Warn("Command contained spaces but no arguments. Check docs to make sure you've configured inputs.execd Command correctly.")
+			e.Log.Warn("The inputs.execd Command contained spaces but no arguments. " +
+				"This setting expects the program and arguments as an array of strings, " +
+				"not as a space-delimited string. See the plugin readme for an example.")
 		}
 		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
 	}
