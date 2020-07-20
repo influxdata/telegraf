@@ -269,11 +269,11 @@ func TestCompressWithGzipEarlyClose(t *testing.T) {
 
 func TestVersionAlreadySet(t *testing.T) {
 	err := SetVersion("foo")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = SetVersion("bar")
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.IsType(t, VersionAlreadySetError, err)
 
 	assert.Equal(t, "foo", Version())

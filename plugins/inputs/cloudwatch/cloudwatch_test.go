@@ -218,7 +218,7 @@ func TestSelectMetrics(t *testing.T) {
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
 	assert.Equal(t, 12, len(filtered[0].metrics))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestGenerateStatisticsInputParams(t *testing.T) {
