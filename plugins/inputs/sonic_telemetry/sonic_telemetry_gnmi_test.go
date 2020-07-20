@@ -369,7 +369,7 @@ func TestNotification(t *testing.T) {
 		},
 		{
 			name: "tagged update pair",
-			plugin: &CiscoTelemetryGNMI{
+			plugin: &SONiCTelemetryGNMI{
 				Log:      testutil.Logger{},
 				Encoding: "proto",
 				Redial:   internal.Duration{Duration: 1 * time.Second},
