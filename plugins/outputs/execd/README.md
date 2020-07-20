@@ -8,7 +8,8 @@ Telegraf minimum version: Telegraf 1.15.0
 
 ```toml
 [[outputs.execd]]
-  ## Program to run as daemon
+  ## One program to run as daemon.
+  ## NOTE: process and each argument should each be their own string
   command = ["my-telegraf-output", "--some-flag", "value"]
 
   ## Delay before the process is restarted after an unexpected termination
