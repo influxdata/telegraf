@@ -7,6 +7,8 @@ metrics in influx line protocol to standard output (STDOUT).
 
 Program output on standard error is mirrored to the telegraf log.
 
+Telegraf minimum version: Telegraf 1.15.0
+
 ### Caveats
 
 - Metrics with tracking will be considered "delivered" as soon as they are passed
@@ -22,7 +24,8 @@ Program output on standard error is mirrored to the telegraf log.
 
 ```toml
 [[processor.execd]]
-  ## Program to run as daemon
+  ## One program to run as daemon.
+  ## NOTE: process and each argument should each be their own string
   ## eg: command = ["/path/to/your_program", "arg1", "arg2"]
   command = ["cat"]
 

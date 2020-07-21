@@ -22,7 +22,9 @@ stored in a new tag or field.
 
 If you plan to apply multiple transformations to the same `tag`/`field`, bear in mind the processing order stated above.
 
-## Configuration
+Telegraf minimum version: Telegraf 1.15.0
+
+### Configuration
 
 ```toml
 [[processors.filepath]]
@@ -56,9 +58,9 @@ If you plan to apply multiple transformations to the same `tag`/`field`, bear in
   #   tag = "path"
 ```
 
-## Considerations
+### Considerations
 
-### Clean
+#### Clean
 
 Even though `clean` is provided a standalone function, it is also invoked when using the `rel` and `dirname` functions,
 so there is no need to use it along with them.
@@ -81,13 +83,13 @@ Is equivalent to:
      tag = "path"
  ```
 
-### ToSlash
+#### ToSlash
 
 The effects of this function are only noticeable on Windows platforms, because of the underlying golang implementation.
 
-## Examples
+### Examples
 
-### Basename
+#### Basename
  
 ```toml
 [[processors.filepath]]
@@ -100,7 +102,7 @@ The effects of this function are only noticeable on Windows platforms, because o
 + my_metric,path="ajob.log" duration_seconds=134 1587920425000000000
 ```
 
-### Dirname
+#### Dirname
 
 ```toml
 [[processors.filepath]]
@@ -114,7 +116,7 @@ The effects of this function are only noticeable on Windows platforms, because o
 + my_metric path="/var/log/batch/ajob.log",folder="/var/log/batch",duration_seconds=134 1587920425000000000
 ```
 
-### Stem
+#### Stem
 
 ```toml
 [[processors.filepath]]
@@ -127,7 +129,7 @@ The effects of this function are only noticeable on Windows platforms, because o
 + my_metric,path="ajob" duration_seconds=134 1587920425000000000
 ```
 
-### Clean
+#### Clean
 
 ```toml
 [[processors.filepath]]
@@ -140,7 +142,7 @@ The effects of this function are only noticeable on Windows platforms, because o
 + my_metric,path="/var/log/batch/ajob.log" duration_seconds=134 1587920425000000000
 ```
 
-### Rel
+#### Rel
 
 ```toml
 [[processors.filepath]]
@@ -154,7 +156,7 @@ The effects of this function are only noticeable on Windows platforms, because o
 + my_metric,path="batch/ajob.log" duration_seconds=134 1587920425000000000
 ```
 
-### ToSlash
+#### ToSlash
 
 ```toml
 [[processors.filepath]]
