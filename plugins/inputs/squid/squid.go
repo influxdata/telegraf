@@ -3,15 +3,16 @@ package squid
 import (
 	"bufio"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Squid struct {
@@ -76,7 +77,6 @@ func (s *Squid) Gather(acc telegraf.Accumulator) error {
 
 // gather counters
 func (s *Squid) gatherCounters(url string, acc telegraf.Accumulator) error {
-	url += "/squid-internal-mgr/counters"
 	resp, err := s.client.Get(url)
 	if err != nil {
 		return fmt.Errorf("unable to GET \"%s\": %s", url, err)
