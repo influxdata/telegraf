@@ -2,13 +2,14 @@ package squid
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
-	"time"
 )
 
 const sampleBody = `
@@ -72,7 +73,7 @@ func TestGatherTimeout(t *testing.T) {
 
 	// dummy config to a url that should timeout
 	s := &Squid{
-		Url:             "http://localhost:1021/squid-internal-mgr/counters",
+		Url:             "http://localhost:1021",
 		ResponseTimeout: internal.Duration{Duration: time.Millisecond * 100},
 	}
 
@@ -90,7 +91,7 @@ func TestGatherFull(t *testing.T) {
 	}
 
 	s := &Squid{
-		Url:             fmt.Sprintf("http://%s:3128/squid-internal-mgr/counters", testutil.GetLocalHost()),
+		Url:             fmt.Sprintf("http://%s:3128", testutil.GetLocalHost()),
 		ResponseTimeout: internal.Duration{Duration: time.Second * 5},
 	}
 
@@ -100,7 +101,7 @@ func TestGatherFull(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, acc.Errors, "accumulator had no errors")
 	assert.True(t, acc.HasMeasurement("squid"), "Has a measurement called 'squid'")
-	assert.Equal(t, s.Url, acc.TagValue("squid", "source"), "Has a tag value for squid equal to localhost")
+	assert.Equal(t, s.Url+"/squid-internal-mgr/counters", acc.TagValue("squid", "source"), "Has a tag value for squid equal to localhost")
 	assert.True(t, acc.HasFloatField("squid", "client_http_requests"), "Has a float field called client_http.requests")
 }
 
