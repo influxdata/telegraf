@@ -24,6 +24,24 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+func TestSettingConfigWorks(t *testing.T) {
+	cfg := `
+	[[inputs.execd]]
+		command = ["a", "b", "c"]
+		restart_delay = "1m"
+		signal = "SIGHUP"
+	`
+	conf := config.NewConfig()
+	require.NoError(t, conf.LoadConfigData([]byte(cfg)))
+
+	require.Len(t, conf.Inputs, 1)
+	inp, ok := conf.Inputs[0].Input.(*Execd)
+	require.True(t, ok)
+	require.EqualValues(t, []string{"a", "b", "c"}, inp.Command)
+	require.EqualValues(t, 1*time.Minute, inp.RestartDelay)
+	require.EqualValues(t, "SIGHUP", inp.Signal)
+}
+
 func TestExternalInputWorks(t *testing.T) {
 	influxParser, err := parsers.NewInfluxParser()
 	require.NoError(t, err)

@@ -41,10 +41,10 @@ const sampleConfig = `
 `
 
 type Execd struct {
-	Command      []string
-	Signal       string
-	RestartDelay config.Duration
-	Log          telegraf.Logger
+	Command      []string        `toml:"command"`
+	Signal       string          `toml:"signal"`
+	RestartDelay config.Duration `toml:"restart_delay"`
+	Log          telegraf.Logger `toml:"-"`
 
 	process *process.Process
 	acc     telegraf.Accumulator
