@@ -101,7 +101,7 @@ func TestGatherFull(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, acc.Errors, "accumulator had no errors")
 	assert.True(t, acc.HasMeasurement("squid"), "Has a measurement called 'squid'")
-	assert.Equal(t, s.Url+"/squid-internal-mgr/counters", acc.TagValue("squid", "source"), "Has a tag value for squid equal to localhost")
+	assert.Equal(t, s.Url, acc.TagValue("squid", "source"), "Has a tag value for squid equal to localhost")
 	assert.True(t, acc.HasFloatField("squid", "client_http_requests"), "Has a float field called client_http.requests")
 }
 

@@ -79,22 +79,22 @@ func (s *Squid) Gather(acc telegraf.Accumulator) error {
 func (s *Squid) gatherCounters(url string, acc telegraf.Accumulator) error {
 	resp, err := s.client.Get(url)
 	if err != nil {
-		return fmt.Errorf("unable to GET \"%s\": %s", url+"/squid-internal-mgr/counters", err)
+		return fmt.Errorf("unable to GET \"%s\": %s", url, err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("non-OK status code returned from \"%s\": %d", url+"/squid-internal-mgr/counters", resp.StatusCode)
+		return fmt.Errorf("non-OK status code returned from \"%s\": %d", url, resp.StatusCode)
 	}
 
 	fields := parseBody(resp.Body)
 	if err != nil {
-		return fmt.Errorf("unable to parse body from \"%s\": %s", url+"/squid-internal-mgr/counters", err)
+		return fmt.Errorf("unable to parse body from \"%s\": %s", url, err)
 	}
 
 	tags := map[string]string{
-		"source": s.Url + "/squid-internal-mgr/counters",
+		"source": s.Url,
 	}
 
 	acc.AddFields("squid", fields, tags)
