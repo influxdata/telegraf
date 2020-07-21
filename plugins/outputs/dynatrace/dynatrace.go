@@ -182,7 +182,6 @@ func (d *Dynatrace) send(msg []byte) error {
 	// add user-agent header to identify metric source
 	req.Header.Add("User-Agent", "telegraf")
 
-	fmt.Println(req)
 	resp, err := d.client.Do(req)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
