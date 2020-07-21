@@ -132,17 +132,18 @@ const sampleConfig = `
   ##  |---BA, DCBA   - Little Endian
   ##  |---BADC       - Mid-Big Endian
   ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32, FLOAT, UFLOAT, FLOAT32-IEEE (the IEEE 754 binary representation)
+  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
+  ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
   ## scale      - the final numeric variable representation
   ## address    - variable address
 
   holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FLOAT", scale=0.01,  address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FLOAT", scale=0.1,   address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FLOAT", scale=0.001, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FLOAT", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFLOAT", scale=0.1,  address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "UFLOAT", scale=0.1,  address = [3,4]},
+    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
+    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
+    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
+    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
+    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
+    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
   ]
   input_registers = [
     { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
@@ -354,7 +355,7 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 
 			// search data type
 			switch item.DataType {
-			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT32", "FLOAT", "UFLOAT":
+			case "UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64", "FLOAT32-IEEE", "FLOAT32", "FIXED", "UFIXED":
 				break
 			default:
 				return fmt.Errorf("invalid data type '%s' in '%s' - '%s'", item.DataType, n, item.Name)
@@ -511,7 +512,7 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		f32 := math.Float32frombits(e32)
 		return scaleFloat32(t.Scale, f32)
-	case "FLOAT32", "FLOAT":
+	case "FLOAT32", "FIXED":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
 			f16 := int16(e16)
@@ -525,7 +526,7 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 			f64 := int64(e64)
 			return scale64toFloat(t.Scale, f64)
 		}
-	case "UFLOAT":
+	case "UFIXED":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
 			return scale16UtoFloat(t.Scale, e16)
