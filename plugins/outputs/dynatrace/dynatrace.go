@@ -32,7 +32,7 @@ const sampleConfig = `
   ## Your Dynatrace environment URL. 
   ## For Dynatrace SaaS environments the URL scheme is "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
   ## For Dynatrace Managed environments the URL scheme is "https://{your-domain}/e/{your-environment-id}/api/v2/metrics/ingest"
-  ## For Dynatrace OneAgent the URL scheme is "http://127.0.0.1:14499/metrics/ingest"
+  ## For Dynatrace OneAgent the URL scheme is "http://127.0.0.1:14499/metrics/ingest" (default)
   environmentURL = ""
 
   ## Your Dynatrace API token. 
@@ -44,7 +44,7 @@ const sampleConfig = `
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
 func (d *Dynatrace) Connect() error {
 	if len(d.EnvironmentURL) == 0 {
-		d.Log.Infof("Dynatrace environmentURL is empty, defaulting to OneAgent URL")
+		d.Log.Infof("Dynatrace environmentURL is empty, defaulting to OneAgent metrics interface")
 		d.EnvironmentURL = oneAgentMetricsUrl
 	}
 	if d.EnvironmentURL != oneAgentMetricsUrl && len(d.EnvironmentAPIToken) == 0 {
@@ -169,16 +169,20 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 
 func (d *Dynatrace) send(msg []byte) error {
 	var err error
-	req, err := http.NewRequest("POST", d.EnvironmentURL+"/api/v2/metrics/ingest", bytes.NewBuffer(msg))
+	req, err := http.NewRequest("POST", d.EnvironmentURL, bytes.NewBuffer(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
 		return fmt.Errorf("Dynatrace error while creating HTTP request:, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "text/plain; charset=UTF-8")
-	req.Header.Add("Authorization", "Api-Token "+d.EnvironmentAPIToken)
+
+	if len(d.EnvironmentAPIToken) != 0 {
+		req.Header.Add("Authorization", "Api-Token "+d.EnvironmentAPIToken)
+	}
 	// add user-agent header to identify metric source
 	req.Header.Add("User-Agent", "telegraf")
 
+	fmt.Println(req)
 	resp, err := d.client.Do(req)
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
@@ -186,6 +190,7 @@ func (d *Dynatrace) send(msg []byte) error {
 		return fmt.Errorf("Dynatrace error while sending HTTP request:, %s", err.Error())
 	}
 	defer resp.Body.Close()
+
 	// print metric line results as info log
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusAccepted {
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
