@@ -152,6 +152,9 @@ Attempting to modify the global scope will fail with an error.
 - [ratio](/plugins/processors/starlark/testdata/ratio.star)
 - [rename](/plugins/processors/starlark/testdata/rename.star)
 - [scale](/plugins/processors/starlark/testdata/scale.star)
+- [number logic](/plugins/processors/starlark/testdata/number_logic.star)
+
+Open a [PR](https://github.com/influxdata/telegraf/compare) to add any other useful Starlark examples. 
 
 [specification]: https://github.com/google/starlark-go/blob/master/doc/spec.md
 [string]: https://github.com/google/starlark-go/blob/master/doc/spec.md#strings
