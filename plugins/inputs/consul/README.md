@@ -17,6 +17,13 @@ report those stats already using StatsD protocol if needed.
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
 
+  ## Metric version controls the mapping from Consul metrics into
+  ## Telegraf metrics.
+  ##
+  ##   example: metric_version = 1; deprecated in 1.15
+  ##            metric_version = 2; recommended version
+  # metric_version = 1
+
   ## ACL token used in every request
   # token = ""
 
