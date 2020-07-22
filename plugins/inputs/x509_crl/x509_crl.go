@@ -86,8 +86,9 @@ func (configuration *X509CRL) getCRL(crlURL *url.URL) ([]*pkix.CertificateList, 
 
 func getFields(crl *pkix.CertificateList) map[string]interface{} {
 	return map[string]interface{}{
-		"start_date":           crl.TBSCertList.ThisUpdate.Unix() * 1000, // EPOCH in ms
-		"end_date":             crl.TBSCertList.NextUpdate.Unix() * 1000, // EPOCH in ms
+		"startdate":            crl.TBSCertList.ThisUpdate.Unix() * 1000, // EPOCH in ms
+		"enddate":              crl.TBSCertList.NextUpdate.Unix() * 1000, // EPOCH in ms
+		"expiry":               crl.TBSCertList.NextUpdate.Unix() - time.Now().Unix(),
 		"has_expired":          crl.HasExpired(time.Now()),
 		"revoked_certificates": len(crl.TBSCertList.RevokedCertificates),
 	}

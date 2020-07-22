@@ -152,8 +152,8 @@ func TestFields(test *testing.T) {
 	require.NoError(test, err)
 
 	assert.True(test, acc.HasMeasurement(x509CrlMeasurement))
-	thenFieldIsPresentAndEquals(test, &acc, "start_date", 1580917523000)
-	thenFieldIsPresentAndEquals(test, &acc, "end_date", 1583509523000)
+	thenFieldIsPresentAndEquals(test, &acc, "startdate", 1580917523000)
+	thenFieldIsPresentAndEquals(test, &acc, "enddate", 1583509523000)
 	thenFieldIsPresentAndEquals(test, &acc, "revoked_certificates", 0)
 }
 
@@ -162,9 +162,10 @@ func TestHasExpired(test *testing.T) {
 		testName   string
 		now        string
 		hasExpired bool
+		expiry     int64
 	}{
-		{testName: "1 minute before expiration", now: "2020-03-06T15:44:23.000Z", hasExpired: false},
-		{testName: "1 minute after expiration", now: "2020-03-06T15:46:23.000Z", hasExpired: true},
+		{testName: "1 minute before expiration", now: "2020-03-06T15:44:23.000Z", hasExpired: false, expiry: 60},
+		{testName: "1 minute after expiration", now: "2020-03-06T15:46:23.000Z", hasExpired: true, expiry: -60},
 	}
 
 	for _, parametrizedTest := range parametrizedTests {
@@ -185,6 +186,8 @@ func TestHasExpired(test *testing.T) {
 
 			assert.True(test, acc.HasMeasurement(x509CrlMeasurement))
 			thenBooleanFieldIsPresentAndEquals(test, &acc, "has_expired", parametrizedTest.hasExpired)
+			thenFieldIsPresentAndEquals(test, &acc, "expiry", parametrizedTest.expiry)
+
 		})
 	}
 }
