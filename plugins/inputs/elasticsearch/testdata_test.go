@@ -118,12 +118,12 @@ const nodeStatsResponse = `
         "NONE"
       ],
       "roles": [
-        "master",
+        "main",
         "data",
         "ingest"
       ],
       "attributes": {
-        "master": "true"
+        "main": "true"
       },
       "indices": {
         "docs": {
@@ -533,7 +533,7 @@ const nodeStatsResponse = `
         "NONE"
       ],
       "attributes": {
-        "master": "true"
+        "main": "true"
       },
       "indices": {
         "docs": {
@@ -951,12 +951,12 @@ const nodeStatsResponseJVMProcess = `
         "NONE"
       ],
       "roles": [
-        "master",
+        "main",
         "data",
         "ingest"
       ],
       "attributes": {
-        "master": "true"
+        "main": "true"
       },
       "process": {
         "timestamp": 1436460392945,
@@ -1393,9 +1393,9 @@ const clusterStatsResponse = `
    "nodes":{
       "count":{
          "total":1,
-         "master_only":0,
+         "main_only":0,
          "data_only":0,
-         "master_data":1,
+         "main_data":1,
          "client":0
       },
       "versions":[
@@ -1530,8 +1530,8 @@ var clusterstatsIndicesExpected = map[string]interface{}{
 var clusterstatsNodesExpected = map[string]interface{}{
 	"count_client":                      float64(0),
 	"count_data_only":                   float64(0),
-	"count_master_data":                 float64(1),
-	"count_master_only":                 float64(0),
+	"count_main_data":                 float64(1),
+	"count_main_only":                 float64(0),
 	"count_total":                       float64(1),
 	"fs_available_in_bytes":             float64(6.34478592e+09),
 	"fs_free_in_bytes":                  float64(6.447439872e+09),
@@ -1577,9 +1577,9 @@ var clusterstatsNodesExpected = map[string]interface{}{
 	"plugins_2_version":                 "7bd5b4b",
 }
 
-const IsMasterResult = "SDFsfSDFsdfFSDSDfSFDSDF 10.206.124.66 10.206.124.66 test.host.com "
+const IsMainResult = "SDFsfSDFsdfFSDSDfSFDSDF 10.206.124.66 10.206.124.66 test.host.com "
 
-const IsNotMasterResult = "junk 10.206.124.66 10.206.124.66 test.junk.com "
+const IsNotMainResult = "junk 10.206.124.66 10.206.124.66 test.junk.com "
 
 const clusterIndicesResponse = `
 {

@@ -236,7 +236,7 @@ func TestAddContainerMetrics(t *testing.T) {
 					"framework_id":        "ab2f3a8b-06db-4e8c-95b6-fb1940874a30-0001",
 					"framework_name":      "marathon",
 					"framework_principal": "dcos_marathon",
-					"framework_role":      "slave_public",
+					"framework_role":      "subordinate_public",
 					"hostname":            "192.168.122.18",
 					"labels": map[string]string{
 						"DCOS_SPACE": "/telegraf",
@@ -366,7 +366,7 @@ func TestGatherFilterNode(t *testing.T) {
 				GetSummaryF: func(ctx context.Context) (*Summary, error) {
 					return &Summary{
 						Cluster: "a",
-						Slaves:  []Slave{},
+						Subordinates:  []Subordinate{},
 					}, nil
 				},
 			},
@@ -384,7 +384,7 @@ func TestGatherFilterNode(t *testing.T) {
 				GetSummaryF: func(ctx context.Context) (*Summary, error) {
 					return &Summary{
 						Cluster: "a",
-						Slaves: []Slave{
+						Subordinates: []Subordinate{
 							{ID: "x"},
 							{ID: "y"},
 						},

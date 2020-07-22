@@ -141,8 +141,8 @@ func (s *Server) getOplogReplLag(collection string) (*OplogStats, error) {
 
 // The "oplog.rs" collection is stored on all replica set members.
 //
-// The "oplog.$main" collection is created on the master node of a
-// master-slave replicated deployment.  As of MongoDB 3.2, master-slave
+// The "oplog.$main" collection is created on the main node of a
+// main-subordinate replicated deployment.  As of MongoDB 3.2, main-subordinate
 // replication has been deprecated.
 func (s *Server) gatherOplogStats() (*OplogStats, error) {
 	stats, err := s.getOplogReplLag("oplog.rs")

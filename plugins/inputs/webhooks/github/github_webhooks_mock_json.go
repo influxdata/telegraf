@@ -119,7 +119,7 @@ func CommitCommentEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -147,7 +147,7 @@ func CreateEventJSON() string {
 	return `{
   "ref": "0.0.1",
   "ref_type": "tag",
-  "master_branch": "master",
+  "main_branch": "main",
   "description": "",
   "pusher_type": "user",
   "repository": {
@@ -235,7 +235,7 @@ func CreateEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -349,7 +349,7 @@ func DeleteEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -379,7 +379,7 @@ func DeploymentEventJSON() string {
     "url": "https://api.github.com/repos/baxterthehacker/public-repo/deployments/710692",
     "id": 710692,
     "sha": "9049f1265b7d61be4a8904a9a27120d2064dab3b",
-    "ref": "master",
+    "ref": "main",
     "task": "deploy",
     "payload": {
     },
@@ -494,7 +494,7 @@ func DeploymentEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -524,7 +524,7 @@ func DeploymentStatusEventJSON() string {
     "url": "https://api.github.com/repos/baxterthehacker/public-repo/deployments/710692",
     "id": 710692,
     "sha": "9049f1265b7d61be4a8904a9a27120d2064dab3b",
-    "ref": "master",
+    "ref": "main",
     "task": "deploy",
     "payload": {
     },
@@ -669,7 +669,7 @@ func DeploymentStatusEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -781,7 +781,7 @@ func ForkEventJSON() string {
     "forks": 0,
     "open_issues": 0,
     "watchers": 0,
-    "default_branch": "master",
+    "default_branch": "main",
     "public": true
   },
   "repository": {
@@ -869,7 +869,7 @@ func ForkEventJSON() string {
     "forks": 1,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterandthehackers",
@@ -990,7 +990,7 @@ func GollumEventJSON() string {
     "forks": 0,
     "open_issues": 0,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "jasonrudolph",
@@ -1175,7 +1175,7 @@ func IssueCommentEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -1332,7 +1332,7 @@ func IssuesEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -1463,7 +1463,7 @@ func MemberEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -1669,7 +1669,7 @@ func PageBuildEventJSON() string {
     "forks": 0,
     "open_issues": 0,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -1780,7 +1780,7 @@ func PublicEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -1882,7 +1882,7 @@ func PullRequestReviewCommentEventJSON() string {
       "type": "User",
       "site_admin": false
     },
-    "body": "This is a pretty simple change that we need to pull into master.",
+    "body": "This is a pretty simple change that we need to pull into main.",
     "created_at": "2015-05-05T23:40:27Z",
     "updated_at": "2015-05-05T23:40:27Z",
     "closed_at": null,
@@ -2003,12 +2003,12 @@ func PullRequestReviewCommentEventJSON() string {
         "forks": 0,
         "open_issues": 1,
         "watchers": 0,
-        "default_branch": "master"
+        "default_branch": "main"
       }
     },
     "base": {
-      "label": "baxterthehacker:master",
-      "ref": "master",
+      "label": "baxterthehacker:main",
+      "ref": "main",
       "sha": "9049f1265b7d61be4a8904a9a27120d2064dab3b",
       "user": {
         "login": "baxterthehacker",
@@ -2114,7 +2114,7 @@ func PullRequestReviewCommentEventJSON() string {
         "forks": 0,
         "open_issues": 1,
         "watchers": 0,
-        "default_branch": "master"
+        "default_branch": "main"
       }
     },
     "_links": {
@@ -2229,7 +2229,7 @@ func PullRequestReviewCommentEventJSON() string {
     "forks": 0,
     "open_issues": 1,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -2287,7 +2287,7 @@ func PullRequestEventJSON() string {
       "type": "User",
       "site_admin": false
     },
-    "body": "This is a pretty simple change that we need to pull into master.",
+    "body": "This is a pretty simple change that we need to pull into main.",
     "created_at": "2015-05-05T23:40:27Z",
     "updated_at": "2015-05-05T23:40:27Z",
     "closed_at": null,
@@ -2408,12 +2408,12 @@ func PullRequestEventJSON() string {
         "forks": 0,
         "open_issues": 1,
         "watchers": 0,
-        "default_branch": "master"
+        "default_branch": "main"
       }
     },
     "base": {
-      "label": "baxterthehacker:master",
-      "ref": "master",
+      "label": "baxterthehacker:main",
+      "ref": "main",
       "sha": "9049f1265b7d61be4a8904a9a27120d2064dab3b",
       "user": {
         "login": "baxterthehacker",
@@ -2519,7 +2519,7 @@ func PullRequestEventJSON() string {
         "forks": 0,
         "open_issues": 1,
         "watchers": 0,
-        "default_branch": "master"
+        "default_branch": "main"
       }
     },
     "_links": {
@@ -2644,7 +2644,7 @@ func PullRequestEventJSON() string {
     "forks": 0,
     "open_issues": 1,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -2802,9 +2802,9 @@ func PushEventJSON() string {
     "forks": 0,
     "open_issues": 0,
     "watchers": 0,
-    "default_branch": "master",
+    "default_branch": "main",
     "stargazers": 0,
-    "master_branch": "master"
+    "main_branch": "main"
   },
   "pusher": {
     "name": "baxterthehacker",
@@ -2920,7 +2920,7 @@ func RepositoryEventJSON() string {
     "forks": 0,
     "open_issues": 0,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "organization": {
     "login": "baxterandthehackers",
@@ -2964,7 +2964,7 @@ func ReleaseEventJSON() string {
     "html_url": "https://github.com/baxterthehacker/public-repo/releases/tag/0.0.1",
     "id": 1261438,
     "tag_name": "0.0.1",
-    "target_commitish": "master",
+    "target_commitish": "main",
     "name": null,
     "draft": false,
     "author": {
@@ -3081,7 +3081,7 @@ func ReleaseEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -3182,7 +3182,7 @@ func StatusEventJSON() string {
   },
   "branches": [
     {
-      "name": "master",
+      "name": "main",
       "commit": {
         "sha": "9049f1265b7d61be4a8904a9a27120d2064dab3b",
         "url": "https://api.github.com/repos/baxterthehacker/public-repo/commits/9049f1265b7d61be4a8904a9a27120d2064dab3b"
@@ -3290,7 +3290,7 @@ func StatusEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",
@@ -3411,7 +3411,7 @@ func TeamAddEventJSON() string {
     "forks": 0,
     "open_issues": 0,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "organization": {
     "login": "baxterandthehackers",
@@ -3534,7 +3534,7 @@ func WatchEventJSON() string {
     "forks": 0,
     "open_issues": 2,
     "watchers": 0,
-    "default_branch": "master"
+    "default_branch": "main"
   },
   "sender": {
     "login": "baxterthehacker",

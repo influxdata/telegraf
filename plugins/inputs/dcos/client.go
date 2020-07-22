@@ -55,15 +55,15 @@ type LoginAuth struct {
 	Token string `json:"token"`
 }
 
-// Slave is a node in the cluster.
-type Slave struct {
+// Subordinate is a node in the cluster.
+type Subordinate struct {
 	ID string `json:"id"`
 }
 
 // Summary provides high level cluster wide information.
 type Summary struct {
 	Cluster string
-	Slaves  []Slave
+	Subordinates  []Subordinate
 }
 
 // Container is a container on a node.
@@ -209,7 +209,7 @@ func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthTok
 
 func (c *ClusterClient) GetSummary(ctx context.Context) (*Summary, error) {
 	summary := &Summary{}
-	err := c.doGet(ctx, c.url("/mesos/master/state-summary"), summary)
+	err := c.doGet(ctx, c.url("/mesos/main/state-summary"), summary)
 	if err != nil {
 		return nil, err
 	}

@@ -181,7 +181,7 @@ Wait tasks;WIN8-DEV;Wait stats;0;0;0;0;0;0;0;0;0;1;1`
 const mockCPUHistory = `measurement;servername;type;SQL process;External process;SystemIdle
 CPU (%);WIN8-DEV;CPU;0;2;98`
 
-const mockDatabaseIO = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;master;model;msdb;ngMon;ResumeCloud;tempdb;Total
+const mockDatabaseIO = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;main;model;msdb;ngMon;ResumeCloud;tempdb;Total
 Log writes (bytes/sec);WIN8-DEV;Database IO;0;0;0;0;0;0;0;0;159744;159744
 Rows writes (bytes/sec);WIN8-DEV;Database IO;0;0;0;0;0;0;0;0;0;0
 Log reads (bytes/sec);WIN8-DEV;Database IO;0;0;0;0;0;0;0;0;0;0
@@ -191,11 +191,11 @@ Rows (writes/sec);WIN8-DEV;Database IO;0;0;0;0;0;0;0;0;0;0
 Log (reads/sec);WIN8-DEV;Database IO;0;0;0;0;0;0;0;0;0;0
 Rows (reads/sec);WIN8-DEV;Database IO;0;0;0;0;0;0;0;0;0;0`
 
-const mockDatabaseSize = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;master;model;msdb;ngMon;ResumeCloud;tempdb
+const mockDatabaseSize = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;main;model;msdb;ngMon;ResumeCloud;tempdb
 Log size (bytes);WIN8-DEV;Database size;538968064;1048576;786432;2359296;4325376;30212096;1048576;786432;4194304
 Rows size (bytes);WIN8-DEV;Database size;2362703872;3211264;26083328;5111808;3342336;24051712;46137344;10551296;1073741824`
 
-const mockDatabaseProperties string = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;master;model;msdb;ngMon;ResumeCloud;tempdb;total
+const mockDatabaseProperties string = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;main;model;msdb;ngMon;ResumeCloud;tempdb;total
 Recovery Model FULL;WIN8-DEV;Database properties;1;0;0;0;1;0;0;0;0;2
 Recovery Model BULK_LOGGED;WIN8-DEV;Database properties;0;0;0;0;0;0;0;0;0;0
 Recovery Model SIMPLE;WIN8-DEV;Database properties;0;1;1;1;0;1;1;1;1;7
@@ -211,7 +211,7 @@ const mockMemoryClerk = `measurement;servername;type;Buffer pool;Cache (objects)
 Memory breakdown (%);WIN8-DEV;Memory clerk;31.30;0.30;14.00;54.50
 Memory breakdown (bytes);WIN8-DEV;Memory clerk;51986432.00;409600.00;23166976.00;90365952.00`
 
-const mockDatabaseStats = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;master;model;msdb;ngMon;ResumeCloud;tempdb
+const mockDatabaseStats = `measurement;servername;type;AdventureWorks2014;Australian;DOC.Azure;main;model;msdb;ngMon;ResumeCloud;tempdb
 Log read latency (ms);WIN8-DEV;Database stats;24;20;11;15;20;46;0;0;3
 Log write latency (ms);WIN8-DEV;Database stats;3;0;0;2;0;1;0;0;0
 Rows read latency (ms);WIN8-DEV;Database stats;42;23;52;31;19;29;59;50;71
@@ -726,7 +726,7 @@ Usage | sp_configure 'open objects' | SQLServer:Deprecated Features;WIN8-DEV;Per
 Usage | sp_configure 'priority boost' | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0
 Usage | sp_configure 'remote proc trans' | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0
 Usage | sp_configure 'set working set size' | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0
-Usage | sp_control_dbmasterkey_password | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0
+Usage | sp_control_dbmainkey_password | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0
 Usage | sp_create_removable | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0
 Usage | sp_db_increased_partitions | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0
 Usage | sp_db_selective_xml_index | SQLServer:Deprecated Features;WIN8-DEV;Performance counters;0

@@ -93,8 +93,8 @@ func TestGetSummary(t *testing.T) {
 		{
 			name:          "No nodes",
 			responseCode:  http.StatusOK,
-			responseBody:  `{"cluster": "a", "slaves": []}`,
-			expectedValue: &Summary{Cluster: "a", Slaves: []Slave{}},
+			responseBody:  `{"cluster": "a", "subordinates": []}`,
+			expectedValue: &Summary{Cluster: "a", Subordinates: []Subordinate{}},
 			expectedError: nil,
 		},
 		{
@@ -103,7 +103,7 @@ func TestGetSummary(t *testing.T) {
 			responseBody:  `<html></html>`,
 			expectedValue: nil,
 			expectedError: &APIError{
-				URL:        ts.URL + "/mesos/master/state-summary",
+				URL:        ts.URL + "/mesos/main/state-summary",
 				StatusCode: http.StatusUnauthorized,
 				Title:      "401 Unauthorized",
 			},
@@ -111,10 +111,10 @@ func TestGetSummary(t *testing.T) {
 		{
 			name:         "Has nodes",
 			responseCode: http.StatusOK,
-			responseBody: `{"cluster": "a", "slaves": [{"id": "a"}, {"id": "b"}]}`,
+			responseBody: `{"cluster": "a", "subordinates": [{"id": "a"}, {"id": "b"}]}`,
 			expectedValue: &Summary{
 				Cluster: "a",
-				Slaves: []Slave{
+				Subordinates: []Subordinate{
 					{ID: "a"},
 					{ID: "b"},
 				},

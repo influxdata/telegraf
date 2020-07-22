@@ -132,8 +132,8 @@ type Queue struct {
 	Durable                bool
 	AutoDelete             bool     `json:"auto_delete"`
 	IdleSince              string   `json:"idle_since"`
-	SlaveNodes             []string `json:"slave_nodes"`
-	SynchronisedSlaveNodes []string `json:"synchronised_slave_nodes"`
+	SubordinateNodes             []string `json:"subordinate_nodes"`
+	SynchronisedSubordinateNodes []string `json:"synchronised_subordinate_nodes"`
 }
 
 // Node ...
@@ -231,7 +231,7 @@ type Memory struct {
 	ConnectionChannels  int64 `json:"connection_channels"`
 	ConnectionOther     int64 `json:"connection_other"`
 	QueueProcs          int64 `json:"queue_procs"`
-	QueueSlaveProcs     int64 `json:"queue_slave_procs"`
+	QueueSubordinateProcs     int64 `json:"queue_subordinate_procs"`
 	Plugins             int64 `json:"plugins"`
 	OtherProc           int64 `json:"other_proc"`
 	Metrics             int64 `json:"metrics"`
@@ -534,7 +534,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				fields["mem_connection_channels"] = memory.Memory.ConnectionChannels
 				fields["mem_connection_other"] = memory.Memory.ConnectionOther
 				fields["mem_queue_procs"] = memory.Memory.QueueProcs
-				fields["mem_queue_slave_procs"] = memory.Memory.QueueSlaveProcs
+				fields["mem_queue_subordinate_procs"] = memory.Memory.QueueSubordinateProcs
 				fields["mem_plugins"] = memory.Memory.Plugins
 				fields["mem_other_proc"] = memory.Memory.OtherProc
 				fields["mem_metrics"] = memory.Memory.Metrics
@@ -590,8 +590,8 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 				"consumers":                queue.Consumers,
 				"consumer_utilisation":     queue.ConsumerUtilisation,
 				"idle_since":               queue.IdleSince,
-				"slave_nodes":              len(queue.SlaveNodes),
-				"synchronised_slave_nodes": len(queue.SynchronisedSlaveNodes),
+				"subordinate_nodes":              len(queue.SubordinateNodes),
+				"synchronised_subordinate_nodes": len(queue.SynchronisedSubordinateNodes),
 				"memory":                   queue.Memory,
 				// messages information
 				"message_bytes":             queue.MessageBytes,

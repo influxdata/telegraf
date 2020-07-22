@@ -915,7 +915,7 @@ var mdsPerfDump = `
         "dispatch_server_request": 0,
         "handle_client_request": 2167457412,
         "handle_client_session": 10929454,
-        "handle_slave_request": 0,
+        "handle_subordinate_request": 0,
         "req_create_latency": {
             "avgcount": 30590326,
             "sum": 23887.274170412,

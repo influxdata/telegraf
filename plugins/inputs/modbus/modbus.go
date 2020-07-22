@@ -26,7 +26,7 @@ type Modbus struct {
 	DataBits         int               `toml:"data_bits"`
 	Parity           string            `toml:"parity"`
 	StopBits         int               `toml:"stop_bits"`
-	SlaveID          int               `toml:"slave_id"`
+	SubordinateID          int               `toml:"subordinate_id"`
 	Timeout          internal.Duration `toml:"timeout"`
 	Retries          int               `toml:"busy_retries"`
 	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
@@ -70,7 +70,7 @@ const (
 	cInputRegisters   = "input_register"
 )
 
-const description = `Retrieve data from MODBUS slave devices`
+const description = `Retrieve data from MODBUS subordinate devices`
 const sampleConfig = `
   ## Connection Configuration
   ##
@@ -80,15 +80,15 @@ const sampleConfig = `
   ## Device name
   name = "Device"
 
-  ## Slave ID - addresses a MODBUS device on the bus
+  ## Subordinate ID - addresses a MODBUS device on the bus
   ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
-  slave_id = 1
+  subordinate_id = 1
 
   ## Timeout for each request
   timeout = "1s"
 
   ## Maximum number of retries and the time to wait between retries
-  ## when a slave-device is busy.
+  ## when a subordinate-device is busy.
   # busy_retries = 0
   # busy_retries_wait = "100ms"
 
@@ -239,7 +239,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 	return nil
 }
 
-// Connect to a MODBUS Slave device via Modbus/[TCP|RTU|ASCII]
+// Connect to a MODBUS Subordinate device via Modbus/[TCP|RTU|ASCII]
 func connect(m *Modbus) error {
 	u, err := url.Parse(m.Controller)
 	if err != nil {
@@ -255,7 +255,7 @@ func connect(m *Modbus) error {
 		}
 		m.tcpHandler = mb.NewTCPClientHandler(host + ":" + port)
 		m.tcpHandler.Timeout = m.Timeout.Duration
-		m.tcpHandler.SlaveId = byte(m.SlaveID)
+		m.tcpHandler.SubordinateId = byte(m.SubordinateID)
 		m.client = mb.NewClient(m.tcpHandler)
 		err := m.tcpHandler.Connect()
 		if err != nil {
@@ -267,7 +267,7 @@ func connect(m *Modbus) error {
 		if m.TransmissionMode == "RTU" {
 			m.rtuHandler = mb.NewRTUClientHandler(u.Path)
 			m.rtuHandler.Timeout = m.Timeout.Duration
-			m.rtuHandler.SlaveId = byte(m.SlaveID)
+			m.rtuHandler.SubordinateId = byte(m.SubordinateID)
 			m.rtuHandler.BaudRate = m.BaudRate
 			m.rtuHandler.DataBits = m.DataBits
 			m.rtuHandler.Parity = m.Parity
@@ -282,7 +282,7 @@ func connect(m *Modbus) error {
 		} else if m.TransmissionMode == "ASCII" {
 			m.asciiHandler = mb.NewASCIIClientHandler(u.Path)
 			m.asciiHandler.Timeout = m.Timeout.Duration
-			m.asciiHandler.SlaveId = byte(m.SlaveID)
+			m.asciiHandler.SubordinateId = byte(m.SubordinateID)
 			m.asciiHandler.BaudRate = m.BaudRate
 			m.asciiHandler.DataBits = m.DataBits
 			m.asciiHandler.Parity = m.Parity

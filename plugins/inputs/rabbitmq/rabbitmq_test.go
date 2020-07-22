@@ -98,8 +98,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"messages_redeliver":        33,
 		"messages_redeliver_rate":   2.5,
 		"idle_since":                "2015-11-01 8:22:14",
-		"slave_nodes":               1,
-		"synchronised_slave_nodes":  1,
+		"subordinate_nodes":               1,
+		"synchronised_subordinate_nodes":  1,
 	}
 	compareMetrics(t, queuesMetrics, acc, "rabbitmq_queue")
 
@@ -141,7 +141,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"mem_connection_channels":   1133,
 		"mem_connection_other":      2840,
 		"mem_queue_procs":           2840,
-		"mem_queue_slave_procs":     0,
+		"mem_queue_subordinate_procs":     0,
 		"mem_plugins":               1755976,
 		"mem_other_proc":            23056584,
 		"mem_metrics":               196536,

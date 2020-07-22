@@ -143,7 +143,7 @@ func TestGatherNodeData(t *testing.T) {
 					"/api/json": struct{}{},
 					"/computer/api/json": nodeResponse{
 						Computers: []node{
-							{DisplayName: "master"},
+							{DisplayName: "main"},
 							{DisplayName: "node1"},
 						},
 					},
@@ -192,7 +192,7 @@ func TestGatherNodeData(t *testing.T) {
 						TotalExecutors: 8,
 						Computers: []node{
 							{
-								DisplayName: "master",
+								DisplayName: "main",
 								MonitorData: monitorData{
 									HudsonNodeMonitorsArchitectureMonitor: "linux",
 									HudsonNodeMonitorsResponseTimeMonitor: &responseTimeMonitor{
@@ -232,7 +232,7 @@ func TestGatherNodeData(t *testing.T) {
 					},
 					{
 						Tags: map[string]string{
-							"node_name": "master",
+							"node_name": "main",
 							"arch":      "linux",
 							"status":    "online",
 							"disk_path": "/path/1",
@@ -253,7 +253,7 @@ func TestGatherNodeData(t *testing.T) {
 			},
 		},
 		{
-			name: "slave is offline",
+			name: "subordinate is offline",
 			input: mockHandler{
 				responseMap: map[string]interface{}{
 					"/api/json": struct{}{},
@@ -262,7 +262,7 @@ func TestGatherNodeData(t *testing.T) {
 						TotalExecutors: 8,
 						Computers: []node{
 							{
-								DisplayName:  "slave",
+								DisplayName:  "subordinate",
 								MonitorData:  monitorData{},
 								NumExecutors: 1,
 								Offline:      true,
@@ -284,7 +284,7 @@ func TestGatherNodeData(t *testing.T) {
 					},
 					{
 						Tags: map[string]string{
-							"node_name": "slave",
+							"node_name": "subordinate",
 							"status":    "offline",
 						},
 						Fields: map[string]interface{}{

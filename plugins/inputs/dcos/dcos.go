@@ -75,7 +75,7 @@ func (d *DCOS) Description() string {
 
 var sampleConfig = `
   ## The DC/OS cluster URL.
-  cluster_url = "https://dcos-ee-master-1"
+  cluster_url = "https://dcos-ee-main-1"
 
   ## The ID of the service account.
   service_account_id = "telegraf"
@@ -113,7 +113,7 @@ var sampleConfig = `
 
   ## Recommended filtering to reduce series cardinality.
   # [inputs.dcos.tagdrop]
-  #   path = ["/var/lib/mesos/slave/slaves/*"]
+  #   path = ["/var/lib/mesos/subordinate/subordinates/*"]
 `
 
 func (d *DCOS) SampleConfig() string {
@@ -140,7 +140,7 @@ func (d *DCOS) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	for _, node := range summary.Slaves {
+	for _, node := range summary.Subordinates {
 		wg.Add(1)
 		go func(node string) {
 			defer wg.Done()

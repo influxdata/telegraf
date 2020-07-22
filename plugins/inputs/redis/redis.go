@@ -50,7 +50,7 @@ func (r *RedisClient) BaseTags() map[string]string {
 	return tags
 }
 
-var replicationSlaveMetricPrefix = regexp.MustCompile(`^slave\d+`)
+var replicationSubordinateMetricPrefix = regexp.MustCompile(`^subordinate\d+`)
 
 var sampleConfig = `
   ## specify servers via a url matching:
@@ -233,7 +233,7 @@ func gatherInfoOutput(
 			}
 		}
 
-		if strings.HasPrefix(name, "master_replid") {
+		if strings.HasPrefix(name, "main_replid") {
 			continue
 		}
 
@@ -257,7 +257,7 @@ func gatherInfoOutput(
 				gatherCommandstateLine(name, kline, acc, tags)
 				continue
 			}
-			if section == "Replication" && replicationSlaveMetricPrefix.MatchString(name) {
+			if section == "Replication" && replicationSubordinateMetricPrefix.MatchString(name) {
 				kline := strings.TrimSpace(parts[1])
 				gatherReplicationLine(name, kline, acc, tags)
 				continue
@@ -386,7 +386,7 @@ func gatherCommandstateLine(
 
 // Parse the special Replication line
 // Example:
-//     slave0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
+//     subordinate0:ip=127.0.0.1,port=7379,state=online,offset=4556468,lag=0
 // This line will only be visible when a node has a replica attached.
 func gatherReplicationLine(
 	name string,
@@ -400,8 +400,8 @@ func gatherReplicationLine(
 		tags[k] = v
 	}
 
-	tags["replica_id"] = strings.TrimLeft(name, "slave")
-	tags["replication_role"] = "slave"
+	tags["replica_id"] = strings.TrimLeft(name, "subordinate")
+	tags["replication_role"] = "subordinate"
 
 	parts := strings.Split(line, ",")
 	for _, part := range parts {

@@ -113,8 +113,8 @@ var Mappings = []*Mapping{
 		InExport: "last_",
 	},
 	{
-		OnServer: "Master_",
-		InExport: "master_",
+		OnServer: "Main_",
+		InExport: "main_",
 	},
 	{
 		OnServer: "Max_",
@@ -149,8 +149,8 @@ var Mappings = []*Mapping{
 		InExport: "select_",
 	},
 	{
-		OnServer: "Slave_",
-		InExport: "slave_",
+		OnServer: "Subordinate_",
+		InExport: "subordinate_",
 	},
 	{
 		OnServer: "Slow_",

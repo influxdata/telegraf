@@ -22,28 +22,28 @@ import (
 type Role string
 
 const (
-	MASTER Role = "master"
-	SLAVE       = "slave"
+	MASTER Role = "main"
+	SLAVE       = "subordinate"
 )
 
 type Mesos struct {
 	Timeout    int
-	Masters    []string
-	MasterCols []string `toml:"master_collections"`
-	Slaves     []string
-	SlaveCols  []string `toml:"slave_collections"`
+	Mains    []string
+	MainCols []string `toml:"main_collections"`
+	Subordinates     []string
+	SubordinateCols  []string `toml:"subordinate_collections"`
 	tls.ClientConfig
 
 	Log telegraf.Logger
 
 	initialized bool
 	client      *http.Client
-	masterURLs  []*url.URL
-	slaveURLs   []*url.URL
+	mainURLs  []*url.URL
+	subordinateURLs   []*url.URL
 }
 
 var allMetrics = map[Role][]string{
-	MASTER: {"resources", "master", "system", "agents", "frameworks", "framework_offers", "tasks", "messages", "evqueue", "registrar", "allocator"},
+	MASTER: {"resources", "main", "system", "agents", "frameworks", "framework_offers", "tasks", "messages", "evqueue", "registrar", "allocator"},
 	SLAVE:  {"resources", "agent", "system", "executors", "tasks", "messages"},
 }
 
@@ -51,13 +51,13 @@ var sampleConfig = `
   ## Timeout, in ms.
   timeout = 100
 
-  ## A list of Mesos masters.
-  masters = ["http://localhost:5050"]
+  ## A list of Mesos mains.
+  mains = ["http://localhost:5050"]
 
-  ## Master metrics groups to be collected, by default, all enabled.
-  master_collections = [
+  ## Main metrics groups to be collected, by default, all enabled.
+  main_collections = [
     "resources",
-    "master",
+    "main",
     "system",
     "agents",
     "frameworks",
@@ -69,11 +69,11 @@ var sampleConfig = `
     "allocator",
   ]
 
-  ## A list of Mesos slaves, default is []
-  # slaves = []
+  ## A list of Mesos subordinates, default is []
+  # subordinates = []
 
-  ## Slave metrics groups to be collected, by default, all enabled.
-  # slave_collections = [
+  ## Subordinate metrics groups to be collected, by default, all enabled.
+  # subordinate_collections = [
   #   "resources",
   #   "agent",
   #   "system",
@@ -97,7 +97,7 @@ func (m *Mesos) SampleConfig() string {
 
 // Description just returns a short description of the Mesos plugin
 func (m *Mesos) Description() string {
-	return "Telegraf plugin for gathering metrics from N Mesos masters"
+	return "Telegraf plugin for gathering metrics from N Mesos mains"
 }
 
 func parseURL(s string, role Role) (*url.URL, error) {
@@ -122,12 +122,12 @@ func parseURL(s string, role Role) (*url.URL, error) {
 }
 
 func (m *Mesos) initialize() error {
-	if len(m.MasterCols) == 0 {
-		m.MasterCols = allMetrics[MASTER]
+	if len(m.MainCols) == 0 {
+		m.MainCols = allMetrics[MASTER]
 	}
 
-	if len(m.SlaveCols) == 0 {
-		m.SlaveCols = allMetrics[SLAVE]
+	if len(m.SubordinateCols) == 0 {
+		m.SubordinateCols = allMetrics[SLAVE]
 	}
 
 	if m.Timeout == 0 {
@@ -137,26 +137,26 @@ func (m *Mesos) initialize() error {
 
 	rawQuery := "timeout=" + strconv.Itoa(m.Timeout) + "ms"
 
-	m.masterURLs = make([]*url.URL, 0, len(m.Masters))
-	for _, master := range m.Masters {
-		u, err := parseURL(master, MASTER)
+	m.mainURLs = make([]*url.URL, 0, len(m.Mains))
+	for _, main := range m.Mains {
+		u, err := parseURL(main, MASTER)
 		if err != nil {
 			return err
 		}
 
 		u.RawQuery = rawQuery
-		m.masterURLs = append(m.masterURLs, u)
+		m.mainURLs = append(m.mainURLs, u)
 	}
 
-	m.slaveURLs = make([]*url.URL, 0, len(m.Slaves))
-	for _, slave := range m.Slaves {
-		u, err := parseURL(slave, SLAVE)
+	m.subordinateURLs = make([]*url.URL, 0, len(m.Subordinates))
+	for _, subordinate := range m.Subordinates {
+		u, err := parseURL(subordinate, SLAVE)
 		if err != nil {
 			return err
 		}
 
 		u.RawQuery = rawQuery
-		m.slaveURLs = append(m.slaveURLs, u)
+		m.subordinateURLs = append(m.subordinateURLs, u)
 	}
 
 	client, err := m.createHttpClient()
@@ -168,7 +168,7 @@ func (m *Mesos) initialize() error {
 	return nil
 }
 
-// Gather() metrics from given list of Mesos Masters
+// Gather() metrics from given list of Mesos Mains
 func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 	if !m.initialized {
 		err := m.initialize()
@@ -180,22 +180,22 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	for _, master := range m.masterURLs {
+	for _, main := range m.mainURLs {
 		wg.Add(1)
-		go func(master *url.URL) {
-			acc.AddError(m.gatherMainMetrics(master, MASTER, acc))
+		go func(main *url.URL) {
+			acc.AddError(m.gatherMainMetrics(main, MASTER, acc))
 			wg.Done()
 			return
-		}(master)
+		}(main)
 	}
 
-	for _, slave := range m.slaveURLs {
+	for _, subordinate := range m.subordinateURLs {
 		wg.Add(1)
-		go func(slave *url.URL) {
-			acc.AddError(m.gatherMainMetrics(slave, SLAVE, acc))
+		go func(subordinate *url.URL) {
+			acc.AddError(m.gatherMainMetrics(subordinate, SLAVE, acc))
 			wg.Done()
 			return
-		}(slave)
+		}(subordinate)
 	}
 
 	wg.Wait()
@@ -242,7 +242,7 @@ func metricsDiff(role Role, w []string) []string {
 	return b
 }
 
-// masterBlocks serves as kind of metrics registry grouping them in sets
+// mainBlocks serves as kind of metrics registry grouping them in sets
 func getMetrics(role Role, group string) []string {
 	var m map[string][]string
 
@@ -250,35 +250,35 @@ func getMetrics(role Role, group string) []string {
 
 	if role == MASTER {
 		m["resources"] = []string{
-			"master/cpus_percent",
-			"master/cpus_used",
-			"master/cpus_total",
-			"master/cpus_revocable_percent",
-			"master/cpus_revocable_total",
-			"master/cpus_revocable_used",
-			"master/disk_percent",
-			"master/disk_used",
-			"master/disk_total",
-			"master/disk_revocable_percent",
-			"master/disk_revocable_total",
-			"master/disk_revocable_used",
-			"master/gpus_percent",
-			"master/gpus_used",
-			"master/gpus_total",
-			"master/gpus_revocable_percent",
-			"master/gpus_revocable_total",
-			"master/gpus_revocable_used",
-			"master/mem_percent",
-			"master/mem_used",
-			"master/mem_total",
-			"master/mem_revocable_percent",
-			"master/mem_revocable_total",
-			"master/mem_revocable_used",
+			"main/cpus_percent",
+			"main/cpus_used",
+			"main/cpus_total",
+			"main/cpus_revocable_percent",
+			"main/cpus_revocable_total",
+			"main/cpus_revocable_used",
+			"main/disk_percent",
+			"main/disk_used",
+			"main/disk_total",
+			"main/disk_revocable_percent",
+			"main/disk_revocable_total",
+			"main/disk_revocable_used",
+			"main/gpus_percent",
+			"main/gpus_used",
+			"main/gpus_total",
+			"main/gpus_revocable_percent",
+			"main/gpus_revocable_total",
+			"main/gpus_revocable_used",
+			"main/mem_percent",
+			"main/mem_used",
+			"main/mem_total",
+			"main/mem_revocable_percent",
+			"main/mem_revocable_total",
+			"main/mem_revocable_used",
 		}
 
-		m["master"] = []string{
-			"master/elected",
-			"master/uptime_secs",
+		m["main"] = []string{
+			"main/elected",
+			"main/uptime_secs",
 		}
 
 		m["system"] = []string{
@@ -291,28 +291,28 @@ func getMetrics(role Role, group string) []string {
 		}
 
 		m["agents"] = []string{
-			"master/slave_registrations",
-			"master/slave_removals",
-			"master/slave_reregistrations",
-			"master/slave_shutdowns_scheduled",
-			"master/slave_shutdowns_canceled",
-			"master/slave_shutdowns_completed",
-			"master/slaves_active",
-			"master/slaves_connected",
-			"master/slaves_disconnected",
-			"master/slaves_inactive",
-			"master/slave_unreachable_canceled",
-			"master/slave_unreachable_completed",
-			"master/slave_unreachable_scheduled",
-			"master/slaves_unreachable",
+			"main/subordinate_registrations",
+			"main/subordinate_removals",
+			"main/subordinate_reregistrations",
+			"main/subordinate_shutdowns_scheduled",
+			"main/subordinate_shutdowns_canceled",
+			"main/subordinate_shutdowns_completed",
+			"main/subordinates_active",
+			"main/subordinates_connected",
+			"main/subordinates_disconnected",
+			"main/subordinates_inactive",
+			"main/subordinate_unreachable_canceled",
+			"main/subordinate_unreachable_completed",
+			"main/subordinate_unreachable_scheduled",
+			"main/subordinates_unreachable",
 		}
 
 		m["frameworks"] = []string{
-			"master/frameworks_active",
-			"master/frameworks_connected",
-			"master/frameworks_disconnected",
-			"master/frameworks_inactive",
-			"master/outstanding_offers",
+			"main/frameworks_active",
+			"main/frameworks_connected",
+			"main/frameworks_disconnected",
+			"main/frameworks_inactive",
+			"main/outstanding_offers",
 		}
 
 		// framework_offers and allocator metrics have unpredictable names, so they can't be listed here.
@@ -322,70 +322,70 @@ func getMetrics(role Role, group string) []string {
 		m["allocator"] = []string{}
 
 		m["tasks"] = []string{
-			"master/tasks_error",
-			"master/tasks_failed",
-			"master/tasks_finished",
-			"master/tasks_killed",
-			"master/tasks_lost",
-			"master/tasks_running",
-			"master/tasks_staging",
-			"master/tasks_starting",
-			"master/tasks_dropped",
-			"master/tasks_gone",
-			"master/tasks_gone_by_operator",
-			"master/tasks_killing",
-			"master/tasks_unreachable",
+			"main/tasks_error",
+			"main/tasks_failed",
+			"main/tasks_finished",
+			"main/tasks_killed",
+			"main/tasks_lost",
+			"main/tasks_running",
+			"main/tasks_staging",
+			"main/tasks_starting",
+			"main/tasks_dropped",
+			"main/tasks_gone",
+			"main/tasks_gone_by_operator",
+			"main/tasks_killing",
+			"main/tasks_unreachable",
 		}
 
 		m["messages"] = []string{
-			"master/invalid_executor_to_framework_messages",
-			"master/invalid_framework_to_executor_messages",
-			"master/invalid_status_update_acknowledgements",
-			"master/invalid_status_updates",
-			"master/dropped_messages",
-			"master/messages_authenticate",
-			"master/messages_deactivate_framework",
-			"master/messages_decline_offers",
-			"master/messages_executor_to_framework",
-			"master/messages_exited_executor",
-			"master/messages_framework_to_executor",
-			"master/messages_kill_task",
-			"master/messages_launch_tasks",
-			"master/messages_reconcile_tasks",
-			"master/messages_register_framework",
-			"master/messages_register_slave",
-			"master/messages_reregister_framework",
-			"master/messages_reregister_slave",
-			"master/messages_resource_request",
-			"master/messages_revive_offers",
-			"master/messages_status_update",
-			"master/messages_status_update_acknowledgement",
-			"master/messages_unregister_framework",
-			"master/messages_unregister_slave",
-			"master/messages_update_slave",
-			"master/recovery_slave_removals",
-			"master/slave_removals/reason_registered",
-			"master/slave_removals/reason_unhealthy",
-			"master/slave_removals/reason_unregistered",
-			"master/valid_framework_to_executor_messages",
-			"master/valid_status_update_acknowledgements",
-			"master/valid_status_updates",
-			"master/task_lost/source_master/reason_invalid_offers",
-			"master/task_lost/source_master/reason_slave_removed",
-			"master/task_lost/source_slave/reason_executor_terminated",
-			"master/valid_executor_to_framework_messages",
-			"master/invalid_operation_status_update_acknowledgements",
-			"master/messages_operation_status_update_acknowledgement",
-			"master/messages_reconcile_operations",
-			"master/messages_suppress_offers",
-			"master/valid_operation_status_update_acknowledgements",
+			"main/invalid_executor_to_framework_messages",
+			"main/invalid_framework_to_executor_messages",
+			"main/invalid_status_update_acknowledgements",
+			"main/invalid_status_updates",
+			"main/dropped_messages",
+			"main/messages_authenticate",
+			"main/messages_deactivate_framework",
+			"main/messages_decline_offers",
+			"main/messages_executor_to_framework",
+			"main/messages_exited_executor",
+			"main/messages_framework_to_executor",
+			"main/messages_kill_task",
+			"main/messages_launch_tasks",
+			"main/messages_reconcile_tasks",
+			"main/messages_register_framework",
+			"main/messages_register_subordinate",
+			"main/messages_reregister_framework",
+			"main/messages_reregister_subordinate",
+			"main/messages_resource_request",
+			"main/messages_revive_offers",
+			"main/messages_status_update",
+			"main/messages_status_update_acknowledgement",
+			"main/messages_unregister_framework",
+			"main/messages_unregister_subordinate",
+			"main/messages_update_subordinate",
+			"main/recovery_subordinate_removals",
+			"main/subordinate_removals/reason_registered",
+			"main/subordinate_removals/reason_unhealthy",
+			"main/subordinate_removals/reason_unregistered",
+			"main/valid_framework_to_executor_messages",
+			"main/valid_status_update_acknowledgements",
+			"main/valid_status_updates",
+			"main/task_lost/source_main/reason_invalid_offers",
+			"main/task_lost/source_main/reason_subordinate_removed",
+			"main/task_lost/source_subordinate/reason_executor_terminated",
+			"main/valid_executor_to_framework_messages",
+			"main/invalid_operation_status_update_acknowledgements",
+			"main/messages_operation_status_update_acknowledgement",
+			"main/messages_reconcile_operations",
+			"main/messages_suppress_offers",
+			"main/valid_operation_status_update_acknowledgements",
 		}
 
 		m["evqueue"] = []string{
-			"master/event_queue_dispatches",
-			"master/event_queue_http_requests",
-			"master/event_queue_messages",
-			"master/operator_event_stream_subscribers",
+			"main/event_queue_dispatches",
+			"main/event_queue_http_requests",
+			"main/event_queue_messages",
+			"main/operator_event_stream_subscribers",
 		}
 
 		m["registrar"] = []string{
@@ -407,35 +407,35 @@ func getMetrics(role Role, group string) []string {
 		}
 	} else if role == SLAVE {
 		m["resources"] = []string{
-			"slave/cpus_percent",
-			"slave/cpus_used",
-			"slave/cpus_total",
-			"slave/cpus_revocable_percent",
-			"slave/cpus_revocable_total",
-			"slave/cpus_revocable_used",
-			"slave/disk_percent",
-			"slave/disk_used",
-			"slave/disk_total",
-			"slave/disk_revocable_percent",
-			"slave/disk_revocable_total",
-			"slave/disk_revocable_used",
-			"slave/gpus_percent",
-			"slave/gpus_used",
-			"slave/gpus_total",
-			"slave/gpus_revocable_percent",
-			"slave/gpus_revocable_total",
-			"slave/gpus_revocable_used",
-			"slave/mem_percent",
-			"slave/mem_used",
-			"slave/mem_total",
-			"slave/mem_revocable_percent",
-			"slave/mem_revocable_total",
-			"slave/mem_revocable_used",
+			"subordinate/cpus_percent",
+			"subordinate/cpus_used",
+			"subordinate/cpus_total",
+			"subordinate/cpus_revocable_percent",
+			"subordinate/cpus_revocable_total",
+			"subordinate/cpus_revocable_used",
+			"subordinate/disk_percent",
+			"subordinate/disk_used",
+			"subordinate/disk_total",
+			"subordinate/disk_revocable_percent",
+			"subordinate/disk_revocable_total",
+			"subordinate/disk_revocable_used",
+			"subordinate/gpus_percent",
+			"subordinate/gpus_used",
+			"subordinate/gpus_total",
+			"subordinate/gpus_revocable_percent",
+			"subordinate/gpus_revocable_total",
+			"subordinate/gpus_revocable_used",
+			"subordinate/mem_percent",
+			"subordinate/mem_used",
+			"subordinate/mem_total",
+			"subordinate/mem_revocable_percent",
+			"subordinate/mem_revocable_total",
+			"subordinate/mem_revocable_used",
 		}
 
 		m["agent"] = []string{
-			"slave/registered",
-			"slave/uptime_secs",
+			"subordinate/registered",
+			"subordinate/uptime_secs",
 		}
 
 		m["system"] = []string{
@@ -449,32 +449,32 @@ func getMetrics(role Role, group string) []string {
 
 		m["executors"] = []string{
 			"containerizer/mesos/container_destroy_errors",
-			"slave/container_launch_errors",
-			"slave/executors_preempted",
-			"slave/frameworks_active",
-			"slave/executor_directory_max_allowed_age_secs",
-			"slave/executors_registering",
-			"slave/executors_running",
-			"slave/executors_terminated",
-			"slave/executors_terminating",
-			"slave/recovery_errors",
+			"subordinate/container_launch_errors",
+			"subordinate/executors_preempted",
+			"subordinate/frameworks_active",
+			"subordinate/executor_directory_max_allowed_age_secs",
+			"subordinate/executors_registering",
+			"subordinate/executors_running",
+			"subordinate/executors_terminated",
+			"subordinate/executors_terminating",
+			"subordinate/recovery_errors",
 		}
 
 		m["tasks"] = []string{
-			"slave/tasks_failed",
-			"slave/tasks_finished",
-			"slave/tasks_killed",
-			"slave/tasks_lost",
-			"slave/tasks_running",
-			"slave/tasks_staging",
-			"slave/tasks_starting",
+			"subordinate/tasks_failed",
+			"subordinate/tasks_finished",
+			"subordinate/tasks_killed",
+			"subordinate/tasks_lost",
+			"subordinate/tasks_running",
+			"subordinate/tasks_staging",
+			"subordinate/tasks_starting",
 		}
 
 		m["messages"] = []string{
-			"slave/invalid_framework_messages",
-			"slave/invalid_status_updates",
-			"slave/valid_framework_messages",
-			"slave/valid_status_updates",
+			"subordinate/invalid_framework_messages",
+			"subordinate/invalid_status_updates",
+			"subordinate/valid_framework_messages",
+			"subordinate/valid_status_updates",
 		}
 	}
 
@@ -493,9 +493,9 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 	var selectedMetrics []string
 
 	if role == MASTER {
-		selectedMetrics = m.MasterCols
+		selectedMetrics = m.MainCols
 	} else if role == SLAVE {
-		selectedMetrics = m.SlaveCols
+		selectedMetrics = m.SubordinateCols
 	}
 
 	for _, k := range metricsDiff(role, selectedMetrics) {
@@ -509,7 +509,7 @@ func (m *Mesos) filterMetrics(role Role, metrics *map[string]interface{}) {
 			}
 		case "framework_offers":
 			for m := range *metrics {
-				if strings.HasPrefix(m, "master/frameworks/") || strings.HasPrefix(m, "frameworks/") {
+				if strings.HasPrefix(m, "main/frameworks/") || strings.HasPrefix(m, "frameworks/") {
 					delete((*metrics), m)
 				}
 			}
@@ -532,7 +532,7 @@ type TaskStats struct {
 	Statistics  map[string]interface{} `json:"statistics"`
 }
 
-func (m *Mesos) gatherSlaveTaskMetrics(u *url.URL, acc telegraf.Accumulator) error {
+func (m *Mesos) gatherSubordinateTaskMetrics(u *url.URL, acc telegraf.Accumulator) error {
 	var metrics []TaskStats
 
 	tags := map[string]string{
@@ -626,7 +626,7 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 	}
 
 	if role == MASTER {
-		if jf.Fields["master/elected"] != 0.0 {
+		if jf.Fields["main/elected"] != 0.0 {
 			tags["state"] = "leader"
 		} else {
 			tags["state"] = "standby"

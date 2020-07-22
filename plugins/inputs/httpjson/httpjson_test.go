@@ -101,7 +101,7 @@ const validJSON2 = `{
 const validJSONTags = `
 	{
 		"value": 15,
-		"role": "master",
+		"role": "main",
 		"build": "123"
 	}`
 
@@ -501,7 +501,7 @@ func TestHttpJson200Tags(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, 4, acc.NFields())
 			for _, srv := range service.Servers {
-				tags := map[string]string{"server": srv, "role": "master", "build": "123"}
+				tags := map[string]string{"server": srv, "role": "main", "build": "123"}
 				fields := map[string]interface{}{"value": float64(15), "response_time": float64(1)}
 				mname := "httpjson_" + service.Name
 				acc.AssertContainsTaggedFields(t, mname, fields, tags)
@@ -514,12 +514,12 @@ const validJSONArrayTags = `
 [
 	{
 		"value": 15,
-		"role": "master",
+		"role": "main",
 		"build": "123"
 	},
 	{
 		"value": 17,
-		"role": "slave",
+		"role": "subordinate",
 		"build": "456"
 	}
 ]`
@@ -541,12 +541,12 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 			assert.Equal(t, uint64(4), acc.NMetrics())
 
 			for _, m := range acc.Metrics {
-				if m.Tags["role"] == "master" {
+				if m.Tags["role"] == "main" {
 					assert.Equal(t, "123", m.Tags["build"])
 					assert.Equal(t, float64(15), m.Fields["value"])
 					assert.Equal(t, float64(1), m.Fields["response_time"])
 					assert.Equal(t, "httpjson_"+service.Name, m.Measurement)
-				} else if m.Tags["role"] == "slave" {
+				} else if m.Tags["role"] == "subordinate" {
 					assert.Equal(t, "456", m.Tags["build"])
 					assert.Equal(t, float64(17), m.Fields["value"])
 					assert.Equal(t, float64(1), m.Fields["response_time"])

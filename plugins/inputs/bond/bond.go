@@ -36,7 +36,7 @@ var sampleConfig = `
 `
 
 func (bond *Bond) Description() string {
-	return "Collect bond interface status, slaves statuses and failures count"
+	return "Collect bond interface status, subordinates statuses and failures count"
 }
 
 func (bond *Bond) SampleConfig() string {
@@ -68,18 +68,18 @@ func (bond *Bond) Gather(acc telegraf.Accumulator) error {
 }
 
 func (bond *Bond) gatherBondInterface(bondName string, rawFile string, acc telegraf.Accumulator) error {
-	splitIndex := strings.Index(rawFile, "Slave Interface:")
+	splitIndex := strings.Index(rawFile, "Subordinate Interface:")
 	if splitIndex == -1 {
 		splitIndex = len(rawFile)
 	}
 	bondPart := rawFile[:splitIndex]
-	slavePart := rawFile[splitIndex:]
+	subordinatePart := rawFile[splitIndex:]
 
 	err := bond.gatherBondPart(bondName, bondPart, acc)
 	if err != nil {
 		return err
 	}
-	err = bond.gatherSlavePart(bondName, slavePart, acc)
+	err = bond.gatherSubordinatePart(bondName, subordinatePart, acc)
 	if err != nil {
 		return err
 	}
@@ -101,8 +101,8 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 		}
 		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
-		if strings.Contains(name, "Currently Active Slave") {
-			fields["active_slave"] = value
+		if strings.Contains(name, "Currently Active Subordinate") {
+			fields["active_subordinate"] = value
 		}
 		if strings.Contains(name, "MII Status") {
 			fields["status"] = 0
@@ -119,8 +119,8 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 	return fmt.Errorf("Couldn't find status info for '%s' ", bondName)
 }
 
-func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
-	var slave string
+func (bond *Bond) gatherSubordinatePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
+	var subordinate string
 	var status int
 
 	scanner := bufio.NewScanner(strings.NewReader(rawFile))
@@ -132,8 +132,8 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 		}
 		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
-		if strings.Contains(name, "Slave Interface") {
-			slave = value
+		if strings.Contains(name, "Subordinate Interface") {
+			subordinate = value
 		}
 		if strings.Contains(name, "MII Status") {
 			status = 0
@@ -152,9 +152,9 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 			}
 			tags := map[string]string{
 				"bond":      bondName,
-				"interface": slave,
+				"interface": subordinate,
 			}
-			acc.AddFields("bond_slave", fields, tags)
+			acc.AddFields("bond_subordinate", fields, tags)
 		}
 	}
 	if err := scanner.Err(); err != nil {

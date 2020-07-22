@@ -220,7 +220,7 @@ type TransactionStats struct {
 // ReplStatus stores data related to replica sets.
 type ReplStatus struct {
 	SetName      interface{} `bson:"setName"`
-	IsMaster     interface{} `bson:"ismaster"`
+	IsMain     interface{} `bson:"ismain"`
 	Secondary    interface{} `bson:"secondary"`
 	IsReplicaSet interface{} `bson:"isreplicaset"`
 	ArbiterOnly  interface{} `bson:"arbiterOnly"`
@@ -1120,7 +1120,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			returnVal.ReplSetName = setName
 		}
 		// BEGIN code modification
-		if newStat.Repl.IsMaster.(bool) {
+		if newStat.Repl.IsMain.(bool) {
 			returnVal.NodeType = "PRI"
 		} else if newStat.Repl.Secondary != nil && newStat.Repl.Secondary.(bool) {
 			returnVal.NodeType = "SEC"
@@ -1252,8 +1252,8 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 		if newReplStat.Members != nil {
 			myName := newStat.Repl.Me
-			// Find the master and myself
-			master := ReplSetMember{}
+			// Find the main and myself
+			main := ReplSetMember{}
 			me := ReplSetMember{}
 			for _, member := range newReplStat.Members {
 				if member.Name == myName {
@@ -1263,7 +1263,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 					returnVal.NodeStateInt = member.State
 
 					if member.State == 1 {
-						// I'm the master
+						// I'm the main
 						returnVal.ReplLag = 0
 						break
 					} else {
@@ -1271,14 +1271,14 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 						me = member
 					}
 				} else if member.State == 1 {
-					// Master found
-					master = member
+					// Main found
+					main = member
 				}
 			}
 
 			if me.State == 2 {
 				// OptimeDate.Unix() type is int64
-				lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
+				lag := main.OptimeDate.Unix() - me.OptimeDate.Unix()
 				if lag < 0 {
 					returnVal.ReplLag = 0
 				} else {
