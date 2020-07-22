@@ -282,6 +282,8 @@ deb_s390x := s390x
 deb_arm5 := armel
 deb_arm6 := armhf
 deb_arm647 := arm64
+deb_mips := mips
+deb_mipsle := mipsel
 deb_arch = $(deb_$(GOARCH)$(GOARM))
 
 .PHONY: $(debs)
