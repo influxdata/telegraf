@@ -70,7 +70,7 @@ loop:
 				map[string]interface{}{
 					"record_id":   event.EventRecordID,
 					"event_id":    event.EventID,
-					"description": strings.Join(event.Data, "\n"),
+					"description": strings.Join(event.Data, " "),
 					"source":      event.Provider,
 					"created":     event.TimeCreated,
 				}, map[string]string{
