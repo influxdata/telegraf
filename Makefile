@@ -246,7 +246,7 @@ rpm_s390x := s390x
 rpm_arm5 := armel
 rpm_arm6 := armv6hl
 rpm_arm647 := aarch64
-rpm_arch := $(rpm_$(GOARCH)$(GOARM))
+rpm_arch = $(rpm_$(GOARCH)$(GOARM))
 
 .PHONY: $(rpms)
 $(rpms):
@@ -282,7 +282,9 @@ deb_s390x := s390x
 deb_arm5 := armel
 deb_arm6 := armhf
 deb_arm647 := arm64
-deb_arch := $(deb_$(GOARCH)$(GOARM))
+deb_mips := mips
+deb_mipsle := mipsel
+deb_arch = $(deb_$(GOARCH)$(GOARM))
 
 .PHONY: $(debs)
 $(debs):
