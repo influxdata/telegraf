@@ -512,7 +512,7 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 		e32 := convertEndianness32(t.ByteOrder, bytes)
 		f32 := math.Float32frombits(e32)
 		return scaleFloat32(t.Scale, f32)
-	case "FLOAT32", "FIXED":
+	case "FIXED":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
 			f16 := int16(e16)
@@ -526,7 +526,7 @@ func convertDataType(t fieldContainer, bytes []byte) interface{} {
 			f64 := int64(e64)
 			return scale64toFloat(t.Scale, f64)
 		}
-	case "UFIXED":
+	case "FLOAT32", "UFIXED":
 		if len(bytes) == 2 {
 			e16 := convertEndianness16(t.ByteOrder, bytes)
 			return scale16UtoFloat(t.Scale, e16)
