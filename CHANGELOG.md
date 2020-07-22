@@ -1,3 +1,9 @@
+## v1.15.1 [2020-07-22]
+
+#### Bugfixes
+
+- [#7877](https://github.com/influxdata/telegraf/pull/7877): Fix architecture in non-amd64 deb and rpm packages.
+
 ## v1.15.0 [2020-07-22]
 
 #### Release Notes
