@@ -39,7 +39,7 @@ func NewRunningProcessor(processor telegraf.StreamingProcessor, config *Processo
 	logger.OnErr(func() {
 		processErrorsRegister.Incr(1)
 	})
-	setLogIfExist(processor, logger)
+	setLoggerOnPlugin(processor, logger)
 
 	return &RunningProcessor{
 		Processor: processor,

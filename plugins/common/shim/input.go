@@ -13,6 +13,7 @@ import (
 
 // AddInput adds the input to the shim. Later calls to Run() will run this input.
 func (s *Shim) AddInput(input telegraf.Input) error {
+	setLoggerOnPlugin(input, NewLogger())
 	if p, ok := input.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {
@@ -57,13 +58,16 @@ func (s *Shim) RunInput(pollInterval time.Duration) error {
 		wg.Done()
 	}()
 
-	scanner := bufio.NewScanner(s.stdin)
-	for scanner.Scan() {
-		// push a non-blocking message to trigger metric collection.
-		s.pushCollectMetricsRequest()
-	}
+	go func() {
+		scanner := bufio.NewScanner(s.stdin)
+		for scanner.Scan() {
+			// push a non-blocking message to trigger metric collection.
+			s.pushCollectMetricsRequest()
+		}
 
-	cancel()  // cancel gracefully stops gathering
+		cancel() // cancel gracefully stops gathering
+	}()
+
 	wg.Wait() // wait for writing to stdout to finish
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -152,14 +153,17 @@ func DefaultImportedPlugins() (config, error) {
 		Outputs:    map[string][]toml.Primitive{},
 	}
 	for name := range inputs.Inputs {
+		log.Println("No config found. Loading default config for plugin", name)
 		conf.Inputs[name] = []toml.Primitive{}
 		return conf, nil
 	}
 	for name := range processors.Processors {
+		log.Println("No config found. Loading default config for plugin", name)
 		conf.Processors[name] = []toml.Primitive{}
 		return conf, nil
 	}
 	for name := range outputs.Outputs {
+		log.Println("No config found. Loading default config for plugin", name)
 		conf.Outputs[name] = []toml.Primitive{}
 		return conf, nil
 	}
