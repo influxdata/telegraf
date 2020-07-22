@@ -79,9 +79,9 @@ func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
 
 func TestGatherHealthCheckV2(t *testing.T) {
 	expectedFields := map[string]interface{}{
-		"passing":    1,
-		"critical":   0,
-		"warning":    0,
+		"passing":  1,
+		"critical": 0,
+		"warning":  0,
 	}
 
 	expectedTags := map[string]string{
@@ -108,9 +108,9 @@ func TestGatherHealthCheckV2(t *testing.T) {
 
 func TestGatherHealthCheckWithDelimitedTagsV2(t *testing.T) {
 	expectedFields := map[string]interface{}{
-		"passing":    1,
-		"critical":   0,
-		"warning":    0,
+		"passing":  1,
+		"critical": 0,
+		"warning":  0,
 	}
 
 	expectedTags := map[string]string{
@@ -129,7 +129,7 @@ func TestGatherHealthCheckWithDelimitedTagsV2(t *testing.T) {
 
 	consul := &Consul{
 		MetricVersion: 2,
-		TagDelimiter: ":",
+		TagDelimiter:  ":",
 	}
 	consul.GatherHealthCheck(&acc, sampleChecks)
 

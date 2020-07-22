@@ -19,9 +19,9 @@ type Consul struct {
 	Datacentre string // deprecated in 1.10; use Datacenter
 	Datacenter string
 	tls.ClientConfig
-	TagDelimiter string
+	TagDelimiter  string
 	MetricVersion int
-	Log telegraf.Logger
+	Log           telegraf.Logger
 
 	// client used to connect to Consul agnet
 	client *api.Client
