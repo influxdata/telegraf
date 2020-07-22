@@ -21,8 +21,9 @@ This plugin provides information about X509 CRL accessible via file.
     - issuer - the CA's DN that generated the CRL
     - version
   - fields:
-    - start_date (int, seconds) - when the CRL was generated 
-    - end_date (int, seconds) - when the CRL has to be renewed
+    - startdate (int, seconds) - when the CRL was generated 
+    - enddate (int, seconds) - when the CRL has to be renewed
+    - expiry (int, seconds) - time to expiration - can be negative when expired
     - has_expired (boolean) - is it still valid
     - revoked_certificates (int) - number of revoked certificated 
 
