@@ -1,84 +1,71 @@
-package models
+package shim
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"reflect"
 
 	"github.com/influxdata/telegraf"
 )
 
-// Logger defines a logging structure for plugins.
-type Logger struct {
-	OnErrs []func()
-	Name   string // Name is the plugin name, will be printed in the `[]`.
+func init() {
+	log.SetOutput(os.Stderr)
 }
+
+// Logger defines a logging structure for plugins.
+// external plugins can only ever write to stderr and writing to stdout
+// would interfere with input/processor writing out of metrics.
+type Logger struct{}
 
 // NewLogger creates a new logger instance
-func NewLogger(pluginType, name, alias string) *Logger {
-	return &Logger{
-		Name: logName(pluginType, name, alias),
-	}
-}
-
-// OnErr defines a callback that triggers only when errors are about to be written to the log
-func (l *Logger) OnErr(f func()) {
-	l.OnErrs = append(l.OnErrs, f)
+func NewLogger() *Logger {
+	return &Logger{}
 }
 
 // Errorf logs an error message, patterned after log.Printf.
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	for _, f := range l.OnErrs {
-		f()
-	}
-	log.Printf("E! ["+l.Name+"] "+format, args...)
+	log.Printf("E! "+format, args...)
 }
 
 // Error logs an error message, patterned after log.Print.
 func (l *Logger) Error(args ...interface{}) {
-	for _, f := range l.OnErrs {
-		f()
-	}
-	log.Print(append([]interface{}{"E! [" + l.Name + "] "}, args...)...)
+	log.Print("E! ", fmt.Sprint(args...))
 }
 
 // Debugf logs a debug message, patterned after log.Printf.
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	log.Printf("D! ["+l.Name+"] "+format, args...)
+	log.Printf("D! "+format, args...)
 }
 
 // Debug logs a debug message, patterned after log.Print.
 func (l *Logger) Debug(args ...interface{}) {
-	log.Print(append([]interface{}{"D! [" + l.Name + "] "}, args...)...)
+	log.Print("D! ", fmt.Sprint(args...))
 }
 
 // Warnf logs a warning message, patterned after log.Printf.
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	log.Printf("W! ["+l.Name+"] "+format, args...)
+	log.Printf("W! "+format, args...)
 }
 
 // Warn logs a warning message, patterned after log.Print.
 func (l *Logger) Warn(args ...interface{}) {
-	log.Print(append([]interface{}{"W! [" + l.Name + "] "}, args...)...)
+	log.Print("W! ", fmt.Sprint(args...))
 }
 
 // Infof logs an information message, patterned after log.Printf.
 func (l *Logger) Infof(format string, args ...interface{}) {
-	log.Printf("I! ["+l.Name+"] "+format, args...)
+	log.Printf("I! "+format, args...)
 }
 
 // Info logs an information message, patterned after log.Print.
 func (l *Logger) Info(args ...interface{}) {
-	log.Print(append([]interface{}{"I! [" + l.Name + "] "}, args...)...)
+	log.Print("I! ", fmt.Sprint(args...))
 }
 
-// logName returns the log-friendly name/type.
-func logName(pluginType, name, alias string) string {
-	if alias == "" {
-		return pluginType + "." + name
-	}
-	return pluginType + "." + name + "::" + alias
-}
-
+// setLoggerOnPlugin injects the logger into the plugin,
+// if it defines Log telegraf.Logger. This is sort of like SetLogger but using
+// reflection instead of forcing the plugin author to define the function for it
 func setLoggerOnPlugin(i interface{}, log telegraf.Logger) {
 	valI := reflect.ValueOf(i)
 
