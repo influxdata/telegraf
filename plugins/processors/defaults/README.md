@@ -23,7 +23,7 @@ Telegraf minimum version: Telegraf 1.15.0
 ```
 
 ### Example
-Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one it's not set in the metric be default:
+Ensure a _status\_code_ field with _N/A_ is inserted in the metric when one is not set in the metric by default:
 
 ```toml
 [[processors.defaults]]
