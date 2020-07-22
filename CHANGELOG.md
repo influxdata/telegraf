@@ -1,4 +1,4 @@
-## v1.15 [unreleased]
+## v1.15.0 [2020-07-22]
 
 #### Release Notes
 
