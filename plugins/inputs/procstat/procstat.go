@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+	"os"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -429,23 +430,44 @@ func (p *Procstat) cgroupPIDs() ([]PID, error) {
 	if procsPath[0] != '/' {
 		procsPath = "/sys/fs/cgroup/" + procsPath
 	}
-	procsPath = filepath.Join(procsPath, "cgroup.procs")
-	out, err := ioutil.ReadFile(procsPath)
+	items, err := filepath.Glob(procsPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("glob failed '%s'", err)
 	}
-	for _, pidBS := range bytes.Split(out, []byte{'\n'}) {
-		if len(pidBS) == 0 {
+	for _, item := range items {
+		ok, err := isDir(item)
+		if err != nil {
 			continue
 		}
-		pid, err := strconv.Atoi(string(pidBS))
-		if err != nil {
-			return nil, fmt.Errorf("invalid pid '%s'", pidBS)
+		if !ok {
+			continue
 		}
-		pids = append(pids, PID(pid))
+		procsPath = filepath.Join(item, "cgroup.procs")
+		out, err := ioutil.ReadFile(procsPath)
+		if err != nil {
+			return nil, err
+		}
+		for _, pidBS := range bytes.Split(out, []byte{'\n'}) {
+			if len(pidBS) == 0 {
+				continue
+			}
+			pid, err := strconv.Atoi(string(pidBS))
+			if err != nil {
+				return nil, fmt.Errorf("invalid pid '%s'", pidBS)
+			}
+			pids = append(pids, PID(pid))
+		}
 	}
 
 	return pids, nil
+}
+
+func isDir(path string) (bool, error) {
+	result, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+	return result.IsDir(), nil
 }
 
 func (p *Procstat) winServicePIDs() ([]PID, error) {
