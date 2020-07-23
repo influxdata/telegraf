@@ -32,6 +32,7 @@ type Procstat struct {
 	ProcessName string
 	User        string
 	SystemdUnit string
+	SystemdAll  bool `toml:"systemd_all"`
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
 	WinService  string `toml:"win_service"`
@@ -54,6 +55,7 @@ var sampleConfig = `
   # user = "nginx"
   ## Systemd unit name
   # systemd_unit = "nginx.service"
+  # systemd_all = true
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
@@ -398,28 +400,34 @@ var execCommand = exec.Command
 
 func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 	var pids []PID
-	cmd := execCommand("systemctl", "show", p.SystemdUnit)
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-	for _, line := range bytes.Split(out, []byte{'\n'}) {
-		kv := bytes.SplitN(line, []byte{'='}, 2)
-		if len(kv) != 2 {
-			continue
-		}
-		if !bytes.Equal(kv[0], []byte("MainPID")) {
-			continue
-		}
-		if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
-			return nil, nil
-		}
-		pid, err := strconv.Atoi(string(kv[1]))
+	if p.SystemdAll {
+		p.CGroup = fmt.Sprintf("systemd/system.slice/%s", p.SystemdUnit)
+		return p.cgroupPIDs()
+	} else {
+		cmd := execCommand("systemctl", "show", p.SystemdUnit)
+		out, err := cmd.Output()
 		if err != nil {
-			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
+			return nil, err
 		}
-		pids = append(pids, PID(pid))
+		for _, line := range bytes.Split(out, []byte{'\n'}) {
+			kv := bytes.SplitN(line, []byte{'='}, 2)
+			if len(kv) != 2 {
+				continue
+			}
+			if !bytes.Equal(kv[0], []byte("MainPID")) {
+				continue
+			}
+			if len(kv[1]) == 0 || bytes.Equal(kv[1], []byte("0")) {
+				return nil, nil
+			}
+			pid, err := strconv.Atoi(string(kv[1]))
+			if err != nil {
+				return nil, fmt.Errorf("invalid pid '%s'", kv[1])
+			}
+			pids = append(pids, PID(pid))
+		}
 	}
+
 	return pids, nil
 }
 
