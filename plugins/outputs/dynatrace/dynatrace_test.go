@@ -68,10 +68,18 @@ func TestMockURL(t *testing.T) {
 
 func TestMissingURL(t *testing.T) {
 	d := &Dynatrace{}
-	d.EnvironmentAPIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
-	require.Error(t, err)
+	require.Equal(t, oneAgentMetricsUrl, d.EnvironmentURL)
+	require.NoError(t, err)
+}
+
+func TestMissingAPITokenMissingURL(t *testing.T) {
+	d := &Dynatrace{}
+	d.Log = testutil.Logger{}
+	err := d.Connect()
+	require.Equal(t, oneAgentMetricsUrl, d.EnvironmentURL)
+	require.NoError(t, err)
 }
 
 func TestMissingAPIToken(t *testing.T) {
