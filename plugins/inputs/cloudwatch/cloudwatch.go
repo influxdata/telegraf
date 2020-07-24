@@ -35,12 +35,13 @@ type (
 		StatisticInclude []string          `toml:"statistic_include"`
 		Timeout          internal.Duration `toml:"timeout"`
 
-		Period    internal.Duration `toml:"period"`
-		Delay     internal.Duration `toml:"delay"`
-		Namespace string            `toml:"namespace"`
-		Metrics   []*Metric         `toml:"metrics"`
-		CacheTTL  internal.Duration `toml:"cache_ttl"`
-		RateLimit int               `toml:"ratelimit"`
+		Period         internal.Duration `toml:"period"`
+		Delay          internal.Duration `toml:"delay"`
+		Namespace      string            `toml:"namespace"`
+		Metrics        []*Metric         `toml:"metrics"`
+		CacheTTL       internal.Duration `toml:"cache_ttl"`
+		RateLimit      int               `toml:"ratelimit"`
+		RecentlyActive string            `toml:"recently_active"`
 
 		Log telegraf.Logger `toml:"-"`
 
@@ -123,6 +124,10 @@ func (c *CloudWatch) SampleConfig() string {
   ## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = "5m"
+
+  ## Recommended if "delay" and "period" are both within 3 hours of request time. Invalid values will be ignored.
+  ## See https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_ListMetrics.html
+  #recently_active = "PT3H"
 
   ## Configure the TTL for the internal cache of metrics.
   # cache_ttl = "1h"
@@ -211,7 +216,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 	results := []*cloudwatch.MetricDataResult{}
 
-	// 100 is the maximum number of metric data queries a `GetMetricData` request can contain.
+	// 500 is the maximum number of metric data queries a `GetMetricData` request can contain.
 	batchSize := 500
 	var batches [][]*cloudwatch.MetricDataQuery
 
@@ -370,13 +375,22 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 	metrics := []*cloudwatch.Metric{}
 
 	var token *string
-	params := &cloudwatch.ListMetricsInput{
-		Namespace:  aws.String(c.Namespace),
-		Dimensions: []*cloudwatch.DimensionFilter{},
-		NextToken:  token,
-		MetricName: nil,
-	}
+	var params *cloudwatch.ListMetricsInput
+	var recentlyActive *string = nil
 
+	switch c.RecentlyActive {
+	case "PT3H":
+		recentlyActive = &c.RecentlyActive
+	default:
+		recentlyActive = nil
+	}
+	params = &cloudwatch.ListMetricsInput{
+		Namespace:      aws.String(c.Namespace),
+		Dimensions:     []*cloudwatch.DimensionFilter{},
+		NextToken:      token,
+		MetricName:     nil,
+		RecentlyActive: recentlyActive,
+	}
 	for {
 		resp, err := c.client.ListMetrics(params)
 		if err != nil {
