@@ -94,7 +94,7 @@ Metric are custom and configured using the `discrete_inputs`, `coils`,
 
 ### Usage of `data_type`
 
-The field `data_type` defines the representation of the data value on input from the modbus registeres.
+The field `data_type` defines the representation of the data value on input from the modbus registers.
 The input values are then converted from the given `data_type` to a type that is apropriate when
 sending the value to the output plugin. These output types are usually one of string, 
 integer or floating-point-number. The size of the output type is assumed to be large enough
