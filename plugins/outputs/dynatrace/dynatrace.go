@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -11,9 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"unicode"
 )
 
 // Dynatrace Configuration for the Dynatrace output plugin
@@ -99,6 +99,11 @@ func (d *Dynatrace) normalize(s string, max int) string {
 			result = result[:len(result)-1]
 		}
 	}
+
+	// append "generic" when it starts with a digit
+	if unicode.IsDigit(rune(s[0])) {
+		result = "generic_" + result
+	}
 	return result
 }
 
@@ -150,7 +155,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				}
 
 				// metric name
-				metricID := metric.Name() + "." + k
+				metricID := metric.Name() + "." + (d.normalize(k, maxMetricKeyLen))
 				// write metric name combined with its field
 				fmt.Fprintf(&buf, "%s", d.normalize(metricID, maxMetricKeyLen))
 				// add the tag string
