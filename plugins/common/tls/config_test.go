@@ -15,10 +15,11 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 
 func TestClientConfig(t *testing.T) {
 	tests := []struct {
-		name   string
-		client tls.ClientConfig
-		expNil bool
-		expErr bool
+		name       string
+		client     tls.ClientConfig
+		expNil     bool
+		expErr     bool
+		serverName string
 	}{
 		{
 			name:   "unset",
@@ -85,6 +86,14 @@ func TestClientConfig(t *testing.T) {
 				SSLCert: pki.ClientCertPath(),
 				SSLKey:  pki.ClientKeyPath(),
 			},
+		},
+		{
+			name: "set SNI server name",
+			client: tls.ClientConfig{
+				ServerName: "foo.example.com",
+			},
+			expNil: false,
+			expErr: false,
 		},
 	}
 	for _, tt := range tests {
