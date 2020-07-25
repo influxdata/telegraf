@@ -214,6 +214,14 @@ var WiredTigerExtStats = map[string]string{
 	"wtcache_unmodified_pages_evicted":     "UnmodifiedPagesEvicted",
 }
 
+var WiredTigerConnectionStats = map[string]string{
+	"wt_connection_files_currently_open": "FilesCurrentlyOpen",
+}
+
+var WiredTigerDataHandleStats = map[string]string{
+	"wt_data_handles_currently_active": "DataHandlesCurrentlyActive",
+}
+
 var DefaultTCMallocStats = map[string]string{
 	"tcmalloc_current_allocated_bytes":          "TCMallocCurrentAllocatedBytes",
 	"tcmalloc_heap_size":                        "TCMallocHeapSize",
@@ -353,6 +361,8 @@ func (d *MongodbData) AddDefaultStats() {
 			d.add(key, floatVal)
 		}
 		d.addStat(statLine, WiredTigerExtStats)
+		d.addStat(statLine, WiredTigerConnectionStats)
+		d.addStat(statLine, WiredTigerDataHandleStats)
 		d.add("page_faults", d.StatLine.FaultsCnt)
 	}
 }

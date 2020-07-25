@@ -144,6 +144,8 @@ type WiredTiger struct {
 	Transaction TransactionStats       `bson:"transaction"`
 	Concurrent  ConcurrentTransactions `bson:"concurrentTransactions"`
 	Cache       CacheStats             `bson:"cache"`
+	Connection  WTConnectionStats      `bson:"connection"`
+	DataHandle  DataHandleStats        `bson:"data-handle"`
 }
 
 // ShardStats stores information from shardConnPoolStats.
@@ -215,6 +217,16 @@ type CacheStats struct {
 type TransactionStats struct {
 	TransCheckpointsTotalTimeMsecs int64 `bson:"transaction checkpoint total time (msecs)"`
 	TransCheckpoints               int64 `bson:"transaction checkpoints"`
+}
+
+// WTConnectionStats stores statistices on wiredTiger connections
+type WTConnectionStats struct {
+	FilesCurrentlyOpen int64 `bson:"files currently open"`
+}
+
+// DataHandleStats stores statistics for wiredTiger data-handles
+type DataHandleStats struct {
+	DataHandlesCurrentlyActive int64 `bson:"connection data handles currently active"`
 }
 
 // ReplStatus stores data related to replica sets.
@@ -710,6 +722,12 @@ type StatLine struct {
 	ModifiedPagesEvicted      int64
 	UnmodifiedPagesEvicted    int64
 
+	// Connection statistics (wiredtiger only)
+	FilesCurrentlyOpen int64
+
+	// Data handles statistics (wiredtiger only)
+	DataHandlesCurrentlyActive int64
+
 	// Replicated Opcounter fields
 	InsertR, InsertRCnt                      int64
 	QueryR, QueryRCnt                        int64
@@ -1089,6 +1107,10 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.UnmodifiedPagesEvicted = newStat.WiredTiger.Cache.UnmodifiedPagesEvicted
 
 		returnVal.FlushesTotalTime = newStat.WiredTiger.Transaction.TransCheckpointsTotalTimeMsecs * int64(time.Millisecond)
+
+		returnVal.FilesCurrentlyOpen = newStat.WiredTiger.Connection.FilesCurrentlyOpen
+
+		returnVal.DataHandlesCurrentlyActive = newStat.WiredTiger.DataHandle.DataHandlesCurrentlyActive
 	}
 	if newStat.WiredTiger != nil && oldStat.WiredTiger != nil {
 		returnVal.Flushes, returnVal.FlushesCnt = diff(newStat.WiredTiger.Transaction.TransCheckpoints, oldStat.WiredTiger.Transaction.TransCheckpoints, sampleSecs)
