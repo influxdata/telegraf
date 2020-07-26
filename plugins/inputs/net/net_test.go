@@ -58,11 +58,14 @@ func TestNetStats(t *testing.T) {
 
 	mps.On("NetConnections").Return(netstats, nil)
 
-	err = (&NetIOStats{ps: &mps, skipChecks: true}).Gather(&acc)
+	err = (&NetIOStats{ps: &mps}).Gather(&acc)
 	require.NoError(t, err)
 
 	ntags := map[string]string{
 		"interface": "eth0",
+		"carrier":   "up",
+		"state":     "up",
+		"duplex":    "full",
 	}
 
 	fields1 := map[string]interface{}{
@@ -74,6 +77,8 @@ func TestNetStats(t *testing.T) {
 		"err_out":      uint64(8),
 		"drop_in":      uint64(7),
 		"drop_out":     uint64(1),
+		"speed":        uint64(10000),
+		"mtu":          uint64(1500),
 	}
 	acc.AssertContainsTaggedFields(t, "net", fields1, ntags)
 

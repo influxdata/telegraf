@@ -35,11 +35,17 @@ Fields (all platforms):
 * err_out - The total number of transmit errors detected by the interface
 * drop_in - The total number of received packets dropped by the interface
 * drop_out - The total number of transmitted packets dropped by the interface
+* operational - Whether or not the link is currently operationally enabled
+* link_mtu - The current MTU for the underlying link
 
 Different platforms gather the data above with different mechanisms. Telegraf uses the ([gopsutil](https://github.com/shirou/gopsutil)) package, which under Linux reads the /proc/net/dev file.
 Under freebsd/openbsd and darwin the plugin uses netstat.
 
-Additionally, for the time being _only under Linux_, the plugin gathers system wide stats for different network protocols using /proc/net/snmp (tcp, udp, icmp, etc.).
+Additionally, for the time being _only under Linux_, the plugin gathers system wide stats for different network protocols using /proc/net/snmp (tcp, udp, icmp, etc.), as well as the following metrics -
+
+* link_speed - The currently negotiated link speed
+* link_carrier - Whether or not the interface currently has established a physical link
+* link_duplex - The currently negotiated duplex for the underlying link
 Explanation of the different metrics exposed by snmp is out of the scope of this document. The best way to find information would be tracing the constants in the Linux kernel source [here](http://lxr.free-electrons.com/source/net/ipv4/proc.c) and their usage. If /proc/net/snmp cannot be read for some reason, telegraf ignores the error silently.
 
 ### Tags:
