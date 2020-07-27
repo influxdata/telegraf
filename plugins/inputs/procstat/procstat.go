@@ -102,6 +102,7 @@ type PIDS_TAGS_ERR_GROUP struct {
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
+
 	if p.createPIDFinder == nil {
 		switch p.PidFinder {
 		case "native":
@@ -118,11 +119,14 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		p.createProcess = defaultProcess
 	}
 
+	pid_count := 0
+	new_procs := make(map[PID]Process, len(p.procs))
 	pid_tag_groups := p.findPids()
 	for _, pid_tag_group := range pid_tag_groups {
 		pids := pid_tag_group.PIDS
 		tags := pid_tag_group.Tags
 		err := pid_tag_group.Err
+		pid_count += len(pids)
 		if err != nil {
 			fields := map[string]interface{}{
 				"pid_count":   0,
@@ -137,26 +141,28 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		procs, err := p.updateProcesses(pids, tags, p.procs)
+		err = p.updateProcesses(pids, tags, p.procs, new_procs)
 		if err != nil {
 			acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 				p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
 		}
-		p.procs = procs
-
-		for _, proc := range p.procs {
-			p.addMetric(proc, acc)
-		}
-
-		fields := map[string]interface{}{
-			"pid_count":   len(pids),
-			"running":     len(procs),
-			"result_code": 0,
-		}
-		tags["pid_finder"] = p.PidFinder
-		tags["result"] = "success"
-		acc.AddFields("procstat_lookup", fields, tags)
 	}
+
+	p.procs = new_procs
+
+	for _, proc := range p.procs {
+		p.addMetric(proc, acc)
+	}
+
+	fields := map[string]interface{}{
+		"pid_count":   pid_count,
+		"running":     len(p.procs),
+		"result_code": 0,
+	}
+	tags := make(map[string]string)
+	tags["pid_finder"] = p.PidFinder
+	tags["result"] = "success"
+	acc.AddFields("procstat_lookup", fields, tags)
 
 	return nil
 }
@@ -315,9 +321,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process) (map[PID]Process, error) {
-	procs := make(map[PID]Process, len(prevInfo))
-
+func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process, procs map[PID]Process) error {
 	for _, pid := range pids {
 		info, ok := prevInfo[pid]
 		if ok {
@@ -352,7 +356,7 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 			}
 		}
 	}
-	return procs, nil
+	return nil
 }
 
 // Create and return PIDGatherer lazily
