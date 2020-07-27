@@ -109,6 +109,41 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
     - parts
     - rows
 
+- clickhouse_zookeeper
+  - tags:
+    - source (ClickHouse server hostname)
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
+  - fields:
+    - root_nodes (count of node from [system.zookeeper][] where path=/)   
+
++ clickhouse_replication_queue
+  - tags:
+    - source (ClickHouse server hostname)
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
+  - fields:
+    - num_tries (sum of num_tries for each item in `system.replication_queue`)
+
+- clickhouse_detached_parts
+  - tags:
+    - source (ClickHouse server hostname)
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
+  - fields:
+    - detached_parts (total detached parts for all tables and databases from [system.detached_parts][])
+    
++ clickhouse_dictionaries
+  - tags:
+    - source (ClickHouse server hostname)
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
+    - dict_name (Name of dictionary)
+    - dict_status (Status of data loading for a dictionary)
+    - dict_exception (Last exception during data loading for a dictionary [optional])
+  - fields:
+    - is_loaded (0 - when dictionary data not successful load, 1 - when dictionary data loading fail, see [system.dictionaries][] for details)
+       
 ### Example Output
 
 ```
@@ -119,6 +154,10 @@ clickhouse_tables,cluster=test_cluster_two_shards_localhost,database=system,host
 clickhouse_tables,cluster=test_cluster_two_shards_localhost,database=default,host=kshvakov,source=localhost,shard_num=1,table=example bytes=326i,parts=2i,rows=2i 1569421000000000000
 ```
 
-[system.events]: https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-events
-[system.metrics]: https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-metrics
-[system.asynchronous_metrics]: https://clickhouse.tech/docs/en/operations/system_tables/#system_tables-asynchronous_metrics
+[system.events]: https://clickhouse.tech/docs/en/operations/system-tables/events/
+[system.metrics]: https://clickhouse.tech/docs/en/operations/system-tables/metrics/
+[system.asynchronous_metrics]: https://clickhouse.tech/docs/en/operations/system-tables/asynchronous_metrics/
+[system.zookeeper] https://clickhouse.tech/docs/en/operations/system-tables/zookeeper/ 
+[system.detached_parts] https://clickhouse.tech/docs/en/operations/system-tables/detached_parts/
+[system.detached_parts] https://clickhouse.tech/docs/en/operations/system-tables/detached_parts/
+[system.dictionaries] https://clickhouse.tech/docs/en/operations/system-tables/dictionaries/  
