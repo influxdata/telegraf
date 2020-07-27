@@ -510,6 +510,9 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	// Print Inputs
 	for _, pname := range pnames {
+		if pname == "cisco_telemetry_gnmi" {
+			continue
+		}
 		creator := inputs.Inputs[pname]
 		input := creator()
 
@@ -863,6 +866,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 		req.Header.Add("Authorization", "Token "+v)
 	}
 	req.Header.Add("Accept", "application/toml")
+	req.Header.Set("User-Agent", internal.ProductToken())
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -1075,44 +1079,18 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		Grace:  time.Second * 0,
 	}
 
-	if node, ok := tbl.Fields["period"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Period = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "period", &conf.Period); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["delay"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Delay = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "delay", &conf.Delay); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["grace"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Grace = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "grace", &conf.Grace); err != nil {
+		return nil, err
 	}
+
 	if node, ok := tbl.Fields["drop_original"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if b, ok := kv.Value.(*ast.Boolean); ok {
@@ -1166,9 +1144,6 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
-	delete(tbl.Fields, "period")
-	delete(tbl.Fields, "delay")
-	delete(tbl.Fields, "grace")
 	delete(tbl.Fields, "drop_original")
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
@@ -1361,17 +1336,17 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 // models.InputConfig to be inserted into models.RunningInput
 func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp := &models.InputConfig{Name: name}
-	if node, ok := tbl.Fields["interval"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
 
-				cp.Interval = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "interval", &cp.Interval); err != nil {
+		return nil, err
+	}
+
+	if err := getConfigDuration(tbl, "precision", &cp.Precision); err != nil {
+		return nil, err
+	}
+
+	if err := getConfigDuration(tbl, "collection_jitter", &cp.CollectionJitter); err != nil {
+		return nil, err
 	}
 
 	if node, ok := tbl.Fields["name_prefix"]; ok {
@@ -1419,7 +1394,6 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
 	delete(tbl.Fields, "alias")
-	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
 	var err error
 	cp.Filter, err = buildFilter(tbl)
@@ -2141,30 +2115,12 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		oc.Filter.NamePass = oc.Filter.FieldPass
 	}
 
-	if node, ok := tbl.Fields["flush_interval"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				oc.FlushInterval = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "flush_interval", &oc.FlushInterval); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["flush_jitter"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-				oc.FlushJitter = new(time.Duration)
-				*oc.FlushJitter = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "flush_jitter", &oc.FlushJitter); err != nil {
+		return nil, err
 	}
 
 	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
@@ -2223,8 +2179,6 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
-	delete(tbl.Fields, "flush_interval")
-	delete(tbl.Fields, "flush_jitter")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")
@@ -2240,4 +2194,20 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 // look inside composed types.
 type unwrappable interface {
 	Unwrap() telegraf.Processor
+}
+
+func getConfigDuration(tbl *ast.Table, key string, target *time.Duration) error {
+	if node, ok := tbl.Fields[key]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				d, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return err
+				}
+				delete(tbl.Fields, key)
+				*target = d
+			}
+		}
+	}
+	return nil
 }

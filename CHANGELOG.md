@@ -1,9 +1,18 @@
-## v1.15 [unreleased]
+## v1.15.1 [2020-07-22]
+
+#### Bugfixes
+
+- [#7877](https://github.com/influxdata/telegraf/pull/7877): Fix architecture in non-amd64 deb and rpm packages.
+
+## v1.15.0 [2020-07-22]
 
 #### Release Notes
 
 - The `logparser` input is deprecated, use the `tail` input with `data_format =
   "grok"` as a replacement.
+
+- The `cisco_telemetry_gnmi` input has been renamed to `gnmi` to better reflect
+  its general support for gNMI devices.
 
 - Several fields used primarily for debugging have been removed from the
   `splunkmetric` serializer, if you are making use of these fields they can be
@@ -12,26 +21,32 @@
 - Telegraf's `--test` mode now runs processors and aggregators before printing
   metrics.
 
-- Official packages now built with Go 1.14.4.
+- Official packages now built with Go 1.14.5.
 
 - When updating the Debian package you will no longer be prompted to merge the
   telegraf.conf file, instead the new version will be installed to
-  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages no include
+  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages now include
   the version in the top level directory.
 
 #### New Inputs
 
+- [nginx_sts](/plugins/inputs/nginx_sts/README.md) - Contributed by @zdmytriv
 - [redfish](/plugins/inputs/redfish/README.md) - Contributed by @sarvanikonda
 
 #### New Processors
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
+- [execd](/plugins/processors/execd/README.md) - Contributed by @influxdata
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+- [ifname](/plugins/processors/ifname/README.md) - Contributed by @influxdata
+- [port_name](/plugins/processors/port_name/README.md) - Contributed by @influxdata
+- [reverse_dns](/plugins/processors/reverse_dns/README.md) - Contributed by @influxdata
 - [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
 
 #### New Outputs
 
 - [newrelic](/plugins/outputs/newrelic/README.md) - Contributed by @hsinghkalsi
+- [execd](/plugins/outputs/execd/README.md) - Contributed by @influxdata
 
 #### Features
 
@@ -75,6 +90,11 @@
 - [#7712](https://github.com/influxdata/telegraf/pull/7712): Add counter type to sqlserver perfmon collector.
 - [#7575](https://github.com/influxdata/telegraf/pull/7575): Add missing nvme attributes to smart plugin.
 - [#7726](https://github.com/influxdata/telegraf/pull/7726): Add laundry to mem plugin on FreeBSD.
+- [#7762](https://github.com/influxdata/telegraf/pull/7762): Allow per input overriding of collection_jitter and precision.
+- [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve performance of procstat: Up to 40/120x better performance.
+- [#7677](https://github.com/influxdata/telegraf/pull/7677): Expand execd shim support for processor and outputs.
+- [#7154](https://github.com/influxdata/telegraf/pull/7154): Add v3 metadata support to ecs input.
+- [#7792](https://github.com/influxdata/telegraf/pull/7792): Support utf-16 in file and tail inputs.
 
 #### Bugfixes
 
@@ -90,6 +110,8 @@
 - [#7495](https://github.com/influxdata/telegraf/issues/7495): Improve sqlserver input compatibility with older server versions.
 - [#7558](https://github.com/influxdata/telegraf/issues/7558): Remove trailing backslash from tag keys/values in influx serializer.
 - [#7715](https://github.com/influxdata/telegraf/issues/7715): Fix incorrect Azure SQL DB server properties.
+- [#7431](https://github.com/influxdata/telegraf/issues/7431): Fix json unmarshal error in the kibana input.
+- [#5633](https://github.com/influxdata/telegraf/issues/5633): Send metrics in FIFO order.
 
 ## v1.14.5 [2020-06-30]
 

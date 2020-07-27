@@ -1,7 +1,8 @@
 # Redfish Input Plugin
 
-The `redfish` plugin gathers  metrics and status information about CPU temperature, fanspeed, Powersupply, voltage, hostname and Location details(datacenter,placement,rack and room) of hardware servers for which redfish is enabled.
+The `redfish` plugin gathers metrics and status information about CPU temperature, fanspeed, Powersupply, voltage, hostname and Location details (datacenter, placement, rack and room) of hardware servers for which [DMTF's Redfish](https://redfish.dmtf.org/) is enabled.
 
+Telegraf minimum version: Telegraf 1.15.0
 
 ### Configuration
 
@@ -45,6 +46,8 @@ The `redfish` plugin gathers  metrics and status information about CPU temperatu
     - reading_celsius
     - upper_threshold_critical
     - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
 
 
 + redfish_thermal_fans
@@ -62,6 +65,8 @@ The `redfish` plugin gathers  metrics and status information about CPU temperatu
     - reading_rpm (or) reading_percent
     - upper_threshold_critical
     - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
 
 
 - redfish_power_powersupplies
@@ -98,6 +103,8 @@ The `redfish` plugin gathers  metrics and status information about CPU temperatu
     - reading_volts
     - upper_threshold_critical
     - upper_threshold_fatal
+    - lower_threshold_critical
+    - lower_threshold_fatal
 
 
 ### Example Output

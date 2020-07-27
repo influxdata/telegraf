@@ -30,7 +30,7 @@ trap on_exit EXIT
 echo "${tmpdir}"
 cd "${tmpdir}" || exit 1
 
-curl -s -S -H Circle-Token:${CIRCLE_TOKEN} \
+curl -s -S -L -H Circle-Token:${CIRCLE_TOKEN} \
 	"https://circleci.com/api/v2/project/gh/influxdata/telegraf/${BUILD_NUM}/artifacts" \
 	-o artifacts || exit 1
 
@@ -39,7 +39,7 @@ cat artifacts | jq -r '.items[] | "\(.url) \(.path|ltrimstr("build/dist/"))"' > 
 while read url path;
 do
 	echo $url
-	curl -s -S -o "$path" "$url" &&
+	curl -s -S -L -o "$path" "$url" &&
 	sha256sum "$path" > "$path.DIGESTS" &&
 	gpg --armor --detach-sign "$path.DIGESTS" &&
 	gpg --armor --detach-sign "$path" || exit 1
@@ -101,11 +101,79 @@ do
 done < manifest
 echo ""
 
+package="$(grep *_amd64.deb manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "Ubuntu &amp; Debian",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "sudo dpkg -i $package"
+        ]
+      },
+EOF
+package="$(grep *.x86_64.rpm manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "RedHat &amp; CentOS",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "sudo yum localinstall $package"
+        ]
+      },
+EOF
+package="$(grep *windows_amd64.zip manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "Windows Binaries (64-bit)",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "unzip $package"
+        ]
+      },
+EOF
+package="$(grep *_linux_amd64.tar.gz manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "Linux Binaries (64-bit)",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "tar xf $package"
+        ]
+      },
+EOF
+package="$(grep *linux_i386.tar.gz manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "Linux Binaries (32-bit)",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "tar xf $package"
+        ]
+      },
+EOF
+package="$(grep *linux_armhf.tar.gz manifest | cut -f2 -d' ')"
+cat -<<EOF
+      {
+        "platform": "Linux Binaries (ARM)",
+        "sha256":"$(sha256sum $package | cut -f1 -d' ')",
+        "code":[
+          "wget https://dl.influxdata.com/telegraf/releases/$package",
+          "tar xf $package"
+        ]
+      }
+EOF
+
 aws s3 sync ./ "s3://$BUCKET/" \
 	--exclude "*" \
 	--include "*.tar.gz" \
 	--include "*.deb" \
 	--include "*.rpm" \
 	--include "*.zip" \
+	--include "*.DIGESTS" \
 	--include "*.asc" \
 	--acl public-read
