@@ -2,10 +2,11 @@ version: '3'
 
 services:
   clickhouse:
-    image: yandex/clickhouse-server:latest
+    image: docker.io/yandex/clickhouse-server:latest
     volumes:
+      - ./zookeeper.xml:/etc/clickhouse-server/config.d/00-zookeeper.xml
+      - ./tls_settings.xml:/etc/clickhouse-server/config.d/01-tls_settings.xml
       - ./dhparam.pem:/etc/clickhouse-server/dhparam.pem
-      - ./tls_settings.xml:/etc/clickhouse-server/config.d/00-tls_settings.xml
       - ../../../../testutil/pki/serverkey.pem:/etc/clickhouse-server/server.key
       - ../../../../testutil/pki/servercert.pem:/etc/clickhouse-server/server.crt
     restart: always
@@ -14,3 +15,10 @@ services:
       - 8443:8443
       - 9000:9000
       - 9009:9009
+  zookeeper:
+    image: docker.io/zookeeper:3.5.6
+    restart: always
+    volumes:
+    - /var/lib/zookeeper
+    ports:
+      - 2181:2181

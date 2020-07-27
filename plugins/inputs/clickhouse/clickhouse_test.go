@@ -121,6 +121,70 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
+			case strings.Contains(query, "zk_exists"):
+				enc.Encode(result{
+					Data: []struct {
+						ZkExists uint64 `json:"zk_exists"`
+					}{
+						{
+							ZkExists: 1,
+						},
+					},
+				})
+			case strings.Contains(query, "zk_root_nodes"):
+				enc.Encode(result{
+					Data: []struct {
+						ZkRootNodes uint64 `json:"zk_root_nodes"`
+					}{
+						{
+							ZkRootNodes: 2,
+						},
+					},
+				})
+			case strings.Contains(query, "replication_queue_exists"):
+				enc.Encode(result{
+					Data: []struct {
+						ReplicationQueueExists uint64 `json:"replication_queue_exists"`
+					}{
+						{
+							ReplicationQueueExists: 1,
+						},
+					},
+				})
+			case strings.Contains(query, "replication_num_tries"):
+				enc.Encode(result{
+					Data: []struct {
+						ReplicationNumTries uint64 `json:"replication_num_tries"`
+					}{
+						{
+							ReplicationNumTries: 10,
+						},
+					},
+				})
+			case strings.Contains(query, "system.detached_parts"):
+				enc.Encode(result{
+					Data: []struct {
+						DetachedParts uint64 `json:"detached_parts"`
+					}{
+						{
+							DetachedParts: 10,
+						},
+					},
+				})
+			case strings.Contains(query, "system.dictionaries"):
+				enc.Encode(result{
+					Data: []struct {
+						Name          string `json:"name"`
+						Status        string `json:"status"`
+						LastException string `json:"last_exception"`
+					}{
+						{
+							Name:          "default.test_dict",
+							Status:        "NOT_LOADED",
+							LastException: "",
+						},
+					},
+				})
 			}
 		}))
 		ch = &ClickHouse{
@@ -158,4 +222,91 @@ func TestGather(t *testing.T) {
 			"test_system_asynchronous_metric2": uint64(2000),
 		},
 	)
+	acc.AssertContainsFields(t, "clickhouse_zookeeper",
+		map[string]interface{}{
+			"root_nodes": uint64(2),
+		},
+	)
+	acc.AssertContainsFields(t, "clickhouse_replication_queue",
+		map[string]interface{}{
+			"num_tries": uint64(10),
+		},
+	)
+	acc.AssertContainsFields(t, "clickhouse_detached_parts",
+		map[string]interface{}{
+			"detached_parts": uint64(10),
+		},
+	)
+	acc.AssertContainsFields(t, "clickhouse_dictionaries",
+		map[string]interface{}{
+			"is_loaded": uint64(0),
+		},
+	)
+
+}
+
+func TestGatherZookeeperNotExists(t *testing.T) {
+	var (
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			type result struct {
+				Data interface{} `json:"data"`
+			}
+			enc := json.NewEncoder(w)
+			switch query := r.URL.Query().Get("query"); {
+			case strings.Contains(query, "zk_exists"):
+				enc.Encode(result{
+					Data: []struct {
+						ZkExists uint64 `json:"zk_exists"`
+					}{
+						{
+							ZkExists: 0,
+						},
+					},
+				})
+			}
+		}))
+		ch = &ClickHouse{
+			Servers: []string{
+				ts.URL,
+			},
+		}
+		acc = &testutil.Accumulator{}
+	)
+	defer ts.Close()
+	ch.Gather(acc)
+
+	acc.AssertDoesNotContainMeasurement(t, "clickhouse_zookeeper")
+}
+
+func TestGatherReplicationQueueNotExists(t *testing.T) {
+	var (
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			type result struct {
+				Data interface{} `json:"data"`
+			}
+			enc := json.NewEncoder(w)
+			switch query := r.URL.Query().Get("query"); {
+			case strings.Contains(query, "replication_queue_exists"):
+				enc.Encode(result{
+					Data: []struct {
+						ReplicationQueueExists uint64 `json:"replication_queue_exists"`
+					}{
+						{
+							ReplicationQueueExists: 0,
+						},
+					},
+				})
+			}
+		}))
+		ch = &ClickHouse{
+			Servers: []string{
+				ts.URL,
+			},
+		}
+		acc = &testutil.Accumulator{}
+	)
+	defer ts.Close()
+	ch.Gather(acc)
+
+	acc.AssertDoesNotContainMeasurement(t, "clickhouse_replication_queue")
 }

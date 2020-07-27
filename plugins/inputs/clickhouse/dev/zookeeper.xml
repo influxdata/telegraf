@@ -1,0 +1,19 @@
+<yandex>
+    <zookeeper>
+        <node>
+            <host>zookeeper</host>
+            <port>2181</port>
+        </node>
+    </zookeeper>
+    <remote_servers replace="1">
+        <test>
+            <shard>
+                <internal_replication>1</internal_replication>
+                <replica>
+                    <host>localhost</host>
+                    <port>9000</port>
+                </replica>
+            </shard>
+        </test>
+    </remote_servers>
+</yandex>

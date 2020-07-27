@@ -196,6 +196,18 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 		if err := ch.tables(acc, &conn); err != nil {
 			acc.AddError(err)
 		}
+		if err := ch.zookeeper(acc, &conn); err != nil {
+			acc.AddError(err)
+		}
+		if err := ch.replicationQueue(acc, &conn); err != nil {
+			acc.AddError(err)
+		}
+		if err := ch.detachedParts(acc, &conn); err != nil {
+			acc.AddError(err)
+		}
+		if err := ch.dictionaries(acc, &conn); err != nil {
+			acc.AddError(err)
+		}
 		for metric := range commonMetrics {
 			if err := ch.commonMetrics(acc, &conn, metric); err != nil {
 				acc.AddError(err)
@@ -274,6 +286,155 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 	return nil
 }
 
+func (ch *ClickHouse) zookeeper(acc telegraf.Accumulator, conn *connect) error {
+	var zkExists []struct {
+		ZkExists uint64 `json:"zk_exists"`
+	}
+
+	if err := ch.execQuery(conn.url, systemZookeeperExistsSQL, &zkExists); err != nil {
+		return err
+	}
+
+	tags := map[string]string{
+		"source": conn.Hostname,
+	}
+	if len(conn.Cluster) != 0 {
+		tags["cluster"] = conn.Cluster
+	}
+	if conn.ShardNum != 0 {
+		tags["shard_num"] = strconv.Itoa(conn.ShardNum)
+	}
+
+	if zkExists[0].ZkExists > 0 {
+		var zkRootNodes []struct {
+			ZkRootNodes uint64 `json:"zk_root_nodes"`
+		}
+		if err := ch.execQuery(conn.url, systemZookeeperRootNodesSQL, &zkRootNodes); err != nil {
+			return err
+		}
+
+		acc.AddFields("clickhouse_zookeeper",
+			map[string]interface{}{
+				"root_nodes": zkRootNodes[0].ZkRootNodes,
+			},
+			tags,
+		)
+	}
+	return nil
+}
+
+func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) error {
+	var replicationQueueExists []struct {
+		ReplicationQueueExists uint64 `json:"replication_queue_exists"`
+	}
+
+	if err := ch.execQuery(conn.url, systemReplicationExistsSQL, &replicationQueueExists); err != nil {
+		return err
+	}
+
+	tags := map[string]string{
+		"source": conn.Hostname,
+	}
+	if len(conn.Cluster) != 0 {
+		tags["cluster"] = conn.Cluster
+	}
+	if conn.ShardNum != 0 {
+		tags["shard_num"] = strconv.Itoa(conn.ShardNum)
+	}
+
+	if replicationQueueExists[0].ReplicationQueueExists > 0 {
+		var replicationNumTries []struct {
+			ReplicationNumTries uint64 `json:"replication_num_tries"`
+		}
+		if err := ch.execQuery(conn.url, systemReplicationNumTriesSQL, &replicationNumTries); err != nil {
+			return err
+		}
+
+		acc.AddFields("clickhouse_replication_queue",
+			map[string]interface{}{
+				"num_tries": replicationNumTries[0].ReplicationNumTries,
+			},
+			tags,
+		)
+	}
+	return nil
+}
+
+func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) error {
+
+	tags := map[string]string{
+		"source": conn.Hostname,
+	}
+	if len(conn.Cluster) != 0 {
+		tags["cluster"] = conn.Cluster
+	}
+	if conn.ShardNum != 0 {
+		tags["shard_num"] = strconv.Itoa(conn.ShardNum)
+	}
+
+	var detachedParts []struct {
+		DetachedParts uint64 `json:"detached_parts"`
+	}
+	if err := ch.execQuery(conn.url, systemDetachedPartsSQL, &detachedParts); err != nil {
+		return err
+	}
+
+	acc.AddFields("clickhouse_detached_parts",
+		map[string]interface{}{
+			"detached_parts": detachedParts[0].DetachedParts,
+		},
+		tags,
+	)
+	return nil
+}
+
+func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) error {
+
+	var brokenDictionaries []struct {
+		Name          string `json:"name"`
+		LastException string `json:"last_exception"`
+		Status        string `json:"status"`
+	}
+	if err := ch.execQuery(conn.url, systemDictionariesSQL, &brokenDictionaries); err != nil {
+		return err
+	}
+
+	for _, dict := range brokenDictionaries {
+		tags := map[string]string{
+			"source": conn.Hostname,
+		}
+		if len(conn.Cluster) != 0 {
+			tags["cluster"] = conn.Cluster
+		}
+		if conn.ShardNum != 0 {
+			tags["shard_num"] = strconv.Itoa(conn.ShardNum)
+		}
+
+		if dict.LastException != "" {
+			tags["dict_exception"] = dict.LastException
+		}
+		if dict.Status != "" {
+			tags["dict_status"] = dict.Status
+		}
+		isLoaded := uint64(1)
+		if dict.Status != "LOADED" {
+			isLoaded = 0
+		}
+
+		if dict.Name != "" {
+			tags["dict_name"] = dict.Name
+			acc.AddFields("clickhouse_dictionaries",
+				map[string]interface{}{
+					"is_loaded": isLoaded,
+				},
+				tags,
+			)
+		}
+	}
+
+	return nil
+}
+
 func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 	var parts []struct {
 		Database string   `json:"database"`
@@ -283,7 +444,7 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		Rows     chUInt64 `json:"rows"`
 	}
 
-	if err := ch.execQuery(conn.url, systemParts, &parts); err != nil {
+	if err := ch.execQuery(conn.url, systemPartsSQL, &parts); err != nil {
 		return err
 	}
 	tags := map[string]string{
@@ -369,7 +530,7 @@ const (
 	systemEventsSQL       = "SELECT event AS metric, CAST(value AS UInt64) AS value FROM system.events"
 	systemMetricsSQL      = "SELECT          metric, CAST(value AS UInt64) AS value FROM system.metrics"
 	systemAsyncMetricsSQL = "SELECT          metric, CAST(value AS UInt64) AS value FROM system.asynchronous_metrics"
-	systemParts           = `
+	systemPartsSQL        = `
 		SELECT
 			database,
 			table,
@@ -383,6 +544,14 @@ const (
 		ORDER BY
 			database, table
 	`
+	systemZookeeperExistsSQL    = "SELECT count() AS zk_exists FROM system.tables WHERE database='system' AND name='zookeeper'"
+	systemZookeeperRootNodesSQL = "SELECT count() AS zk_root_nodes FROM system.zookeeper WHERE path='/'"
+
+	systemReplicationExistsSQL   = "SELECT count() AS replication_queue_exists FROM system.tables WHERE database='system' AND name='replication_queue'"
+	systemReplicationNumTriesSQL = "SELECT sum(num_tries) AS replication_num_tries FROM system.replication_queue"
+
+	systemDetachedPartsSQL = "SELECT count() FROM system.detached_parts"
+	systemDictionariesSQL  = "SELECT name, status, last_exception FROM system.dictionaries WHERE status != 'LOADED'"
 )
 
 var commonMetrics = map[string]string{
