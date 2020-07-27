@@ -25,7 +25,7 @@ func TestBindJsonStats(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -195,7 +195,7 @@ func TestBindXmlStatsV2(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {
@@ -397,7 +397,7 @@ func TestBindXmlStatsV3(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(b.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	// Use subtests for counters, since they are similar structure
 	type fieldSet struct {

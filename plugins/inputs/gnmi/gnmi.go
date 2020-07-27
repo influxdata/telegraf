@@ -217,7 +217,11 @@ func (c *GNMI) subscribeGNMI(ctx context.Context, address string, tlscfg *tls.Co
 	}
 
 	if err = subscribeClient.Send(request); err != nil {
-		return fmt.Errorf("failed to send subscription request: %v", err)
+		// If io.EOF is returned, the stream may have ended and stream status
+		// can be determined by calling Recv.
+		if err != io.EOF {
+			return fmt.Errorf("failed to send subscription request: %v", err)
+		}
 	}
 
 	c.Log.Debugf("Connection to gNMI device %s established", address)

@@ -62,7 +62,7 @@ const sampleConfig = `
   # base64_data = false
 
   ## Optional. PubSub attributes to add to metrics.
-  # [[inputs.pubsub.attributes]]
+  # [outputs.cloud_pubsub.attributes]
   #   my_attr = "tag_value"
 `
 

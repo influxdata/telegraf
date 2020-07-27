@@ -153,7 +153,7 @@ func TestHttpJsonJavaMultiValue(t *testing.T) {
 	acc.SetDebug(true)
 	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -182,7 +182,7 @@ func TestHttpJsonJavaMultiType(t *testing.T) {
 	acc.SetDebug(true)
 	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -217,7 +217,7 @@ func TestHttpJsonCassandraMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -249,7 +249,7 @@ func TestHttpJsonCassandraNestedMultiValue(t *testing.T) {
 	acc.SetDebug(true)
 	err := acc.GatherError(cassandra.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 2, len(acc.Metrics))
 
 	fields1 := map[string]interface{}{
