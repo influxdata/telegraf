@@ -123,7 +123,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
   - fields:
-    - too_many_tries_replicas (count of replicas which have  num_tries > 10 in `system.replication_queue`)
+    - too_many_tries_replicas (count of replicas which have  num_tries > 100 in `system.replication_queue`)
 
 - clickhouse_detached_parts
   - tags:
