@@ -75,7 +75,7 @@ loop:
 					"created":     event.TimeCreated,
 				}, map[string]string{
 					"level":         strconv.Itoa(int(event.Level)),
-					"eventlog_name": w.EventlogName,
+					"eventlog_name": event.Channel,
 				})
 		}
 	}

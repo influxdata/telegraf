@@ -6,6 +6,7 @@ package win_eventlog
 type Event struct {
 	EventRecordID int         `xml:"System>EventRecordID"`
 	Provider      Provider    `xml:"System>Provider"`
+	Channel       string      `xml:"System>Channel"`
 	EventID       int         `xml:"System>EventID"`
 	Level         int         `xml:"System>Level"`
 	Data          []string    `xml:"EventData>Data"`
