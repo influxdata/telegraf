@@ -343,16 +343,16 @@ func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) 
 	}
 
 	if replicationQueueExists[0].ReplicationQueueExists > 0 {
-		var replicationNumTries []struct {
-			ReplicationNumTries uint64 `json:"replication_num_tries"`
+		var replicationTooManyTries []struct {
+			TooManyTriesReplicas uint64 `json:"replication_too_many_tries_replicas"`
 		}
-		if err := ch.execQuery(conn.url, systemReplicationNumTriesSQL, &replicationNumTries); err != nil {
+		if err := ch.execQuery(conn.url, systemReplicationTooManyTriesSQL, &replicationTooManyTries); err != nil {
 			return err
 		}
 
 		acc.AddFields("clickhouse_replication_queue",
 			map[string]interface{}{
-				"num_tries": replicationNumTries[0].ReplicationNumTries,
+				"too_many_tries_replicas": replicationTooManyTries[0].TooManyTriesReplicas,
 			},
 			tags,
 		)
@@ -547,8 +547,9 @@ const (
 	systemZookeeperExistsSQL    = "SELECT count() AS zk_exists FROM system.tables WHERE database='system' AND name='zookeeper'"
 	systemZookeeperRootNodesSQL = "SELECT count() AS zk_root_nodes FROM system.zookeeper WHERE path='/'"
 
-	systemReplicationExistsSQL   = "SELECT count() AS replication_queue_exists FROM system.tables WHERE database='system' AND name='replication_queue'"
-	systemReplicationNumTriesSQL = "SELECT sum(num_tries) AS replication_num_tries FROM system.replication_queue"
+	systemReplicationExistsSQL = "SELECT count() AS replication_queue_exists FROM system.tables WHERE database='system' AND name='replication_queue'"
+	// TODO think about why we choose 100 as threshold?
+	systemReplicationTooManyTriesSQL = "SELECT count() AS replication_too_many_tries_replicas FROM system.replication_queue WHERE num_tries > 100"
 
 	systemDetachedPartsSQL = "SELECT count() FROM system.detached_parts"
 	systemDictionariesSQL  = "SELECT name, status, last_exception FROM system.dictionaries WHERE status != 'LOADED'"

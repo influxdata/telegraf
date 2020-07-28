@@ -151,13 +151,13 @@ func TestGather(t *testing.T) {
 						},
 					},
 				})
-			case strings.Contains(query, "replication_num_tries"):
+			case strings.Contains(query, "replication_too_many_tries_replicas"):
 				enc.Encode(result{
 					Data: []struct {
-						ReplicationNumTries uint64 `json:"replication_num_tries"`
+						ReplicationTooManyTriesReplicas uint64 `json:"replication_too_many_tries_replicas"`
 					}{
 						{
-							ReplicationNumTries: 10,
+							ReplicationTooManyTriesReplicas: 10,
 						},
 					},
 				})
@@ -229,7 +229,7 @@ func TestGather(t *testing.T) {
 	)
 	acc.AssertContainsFields(t, "clickhouse_replication_queue",
 		map[string]interface{}{
-			"num_tries": uint64(10),
+			"too_many_tries_replicas": uint64(10),
 		},
 	)
 	acc.AssertContainsFields(t, "clickhouse_detached_parts",
