@@ -18,14 +18,14 @@ type Size int64
 type Number float64
 
 // UnmarshalTOML parses the duration from the TOML config file
-func (d Duration) UnmarshalTOML(b []byte) error {
+func (d *Duration) UnmarshalTOML(b []byte) error {
 	var err error
 	b = bytes.Trim(b, `'`)
 
 	// see if we can directly convert it
 	dur, err := time.ParseDuration(string(b))
 	if err == nil {
-		d = Duration(dur)
+		*d = Duration(dur)
 		return nil
 	}
 
@@ -33,7 +33,7 @@ func (d Duration) UnmarshalTOML(b []byte) error {
 	if uq, err := strconv.Unquote(string(b)); err == nil && len(uq) > 0 {
 		dur, err := time.ParseDuration(uq)
 		if err == nil {
-			d = Duration(dur)
+			*d = Duration(dur)
 			return nil
 		}
 	}
@@ -42,27 +42,27 @@ func (d Duration) UnmarshalTOML(b []byte) error {
 	sI, err := strconv.ParseInt(string(b), 10, 64)
 	if err == nil {
 		dur := time.Second * time.Duration(sI)
-		d = Duration(dur)
+		*d = Duration(dur)
 		return nil
 	}
 	// Second try parsing as float seconds
 	sF, err := strconv.ParseFloat(string(b), 64)
 	if err == nil {
 		dur := time.Second * time.Duration(sF)
-		d = Duration(dur)
+		*d = Duration(dur)
 		return nil
 	}
 
 	return nil
 }
 
-func (s Size) UnmarshalTOML(b []byte) error {
+func (s *Size) UnmarshalTOML(b []byte) error {
 	var err error
 	b = bytes.Trim(b, `'`)
 
 	val, err := strconv.ParseInt(string(b), 10, 64)
 	if err == nil {
-		s = Size(val)
+		*s = Size(val)
 		return nil
 	}
 	uq, err := strconv.Unquote(string(b))
@@ -73,16 +73,16 @@ func (s Size) UnmarshalTOML(b []byte) error {
 	if err != nil {
 		return err
 	}
-	s = Size(val)
+	*s = Size(val)
 	return nil
 }
 
-func (n Number) UnmarshalTOML(b []byte) error {
+func (n *Number) UnmarshalTOML(b []byte) error {
 	value, err := strconv.ParseFloat(string(b), 64)
 	if err != nil {
 		return err
 	}
 
-	n = Number(value)
+	*n = Number(value)
 	return nil
 }

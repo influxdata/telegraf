@@ -2,20 +2,23 @@
 
 The `execd` plugin runs an external program as a long-running daemon. 
 The programs must output metrics in any one of the accepted 
-[Input Data Formats](input_formats) on the process's STDOUT, and is expected to
+[Input Data Formats][] on the process's STDOUT, and is expected to
 stay running. If you'd instead like the process to collect metrics and then exit,
-check out the [inputs.exec](exec_plugin) plugin.
+check out the [inputs.exec][] plugin.
 
 The `signal` can be configured to send a signal the running daemon on each
-collection interval.
+collection interval. This is used for when you want to have Telegraf notify the
+plugin when it's time to run collection. STDIN is recommended, which writes a
+new line to the process's STDIN.
 
-Program output on standard error is mirrored to the telegraf log.
+STDERR from the process will be relayed to Telegraf as errors in the logs.
 
 ### Configuration:
 
 ```toml
 [[inputs.execd]]
-  ## Program to run as daemon
+  ## One program to run as daemon.
+  ## NOTE: process and each argument should each be their own string
   command = ["telegraf-smartctl", "-d", "/dev/sda"]
 
   ## Define how the process is signaled on each collection interval.
@@ -115,5 +118,5 @@ end
   signal = "none"
 ```
 
-[input_formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-[exec_plugin]: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/exec/README.md
+[Input Data Formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+[inputs.exec]: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/exec/README.md

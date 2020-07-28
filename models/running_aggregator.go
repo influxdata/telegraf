@@ -35,7 +35,7 @@ func NewRunningAggregator(aggregator telegraf.Aggregator, config *AggregatorConf
 		aggErrorsRegister.Incr(1)
 	})
 
-	setLogIfExist(aggregator, logger)
+	setLoggerOnPlugin(aggregator, logger)
 
 	return &RunningAggregator{
 		Aggregator: aggregator,
