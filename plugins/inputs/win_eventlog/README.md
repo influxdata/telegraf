@@ -11,6 +11,8 @@ Supports Windows Vista and higher.
   xpath_query = "Event/System[EventID=999]"
 ```
 
+Alternatively it is possible to use special XML query documented [here](https://docs.microsoft.com/en-us/windows/win32/wes/consuming-events), in this case eventlog_name field will be ignored (use triple quote for xml in telegraf config file).
+
 ### Measurements & Fields:
 
 - win_eventlog
