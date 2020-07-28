@@ -15,7 +15,7 @@ The guidelines of writing external plugins would follow those for our general [i
 Please reference the documentation on how to create these plugins written in Go.
 
 
-## Execd Go Shim
+#### Execd Go Shim
 For Go plugins, there is a [Execd Go Shim](plugins/common/shim) that will make it trivial to extract an internal input, processor, or output plugin from the main Telegraf repo out to a stand-alone repo.  This shim This allows anyone to build and run it as a separate app using one of the `execd`plugins:
 - [inputs.execd](/plugins/inputs/execd)
 - [processors.execd](/plugins/processors/execd)

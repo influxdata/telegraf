@@ -18,7 +18,7 @@ Input, output, and processor plugins written for internal Telegraf can be run as
 
 Follow the guidelines of how to integrate your plugin with the [Execd Go Shim](/plugins/common/shim) to easily compile it as a separate app and run it with the respective `execd` plugin. 
 
-Check out some guidelines on how to build and set up your external plugins to run with `execd`.
+Check out our [guidelines](docs/EXTERNAL_PLUGINS.md#external-plugin-guidelines) on how to build and set up your external plugins to run with `execd`.
 
 #### Security Vulnerability Reporting
 InfluxData takes security and our users' trust very seriously. If you believe you have found a security issue in any of our
