@@ -1731,6 +1731,7 @@ SELECT TOP 50
 	,qs.[total_columnstore_segment_reads]
 	,qs.[total_columnstore_segment_skips]
 	,qs.[total_spills]
+	,qs.[total_page_server_reads]
 FROM sys.dm_exec_query_stats as qs
 OUTER APPLY sys.dm_exec_sql_text(qs.[sql_handle]) AS qt
 ORDER BY
