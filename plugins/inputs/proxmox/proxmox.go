@@ -38,7 +38,6 @@ func (px *Proxmox) Description() string {
 
 func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 	hostname, err := os.Hostname()
-	hostname = "pxnode01"
 	if err != nil {
 		return err
 	}
@@ -56,12 +55,15 @@ func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("proxmox", func() telegraf.Input { return &Proxmox{} })
+	px := Proxmox{
+		requestFunction: performRequest,
+	}
+	inputs.Add("proxmox", func() telegraf.Input { return &px })
 }
 
 func getNodeSearchDomain(px *Proxmox) error {
 	apiUrl := "/nodes/" + px.hostname + "/dns"
-	jsonData, err := performRequest(px, apiUrl, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 
 	var nodeDns NodeDns
 	err = json.Unmarshal(jsonData, &nodeDns)
@@ -143,7 +145,7 @@ func getVmStats(px *Proxmox, lxc bool) (VmStats, error) {
 		vmPath = "/lxc"
 	}
 	apiUrl := "/nodes/" + px.hostname + vmPath
-	jsonData, err := performRequest(px, apiUrl, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 	if err != nil {
 		return VmStats{}, err
 	}
@@ -163,7 +165,7 @@ func getVmConfig(px *Proxmox, vmId string, lxc bool) (VmConfig, error) {
 		vmPath = "/lxc/"
 	}
 	apiUrl := "/nodes/" + px.hostname + vmPath + vmId + "/config"
-	jsonData, err := performRequest(px, apiUrl, http.MethodGet, nil)
+	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 	if err != nil {
 		return VmConfig{}, err
 	}
@@ -207,7 +209,7 @@ func getByteMetrics(total json.Number, used json.Number) (int64, int64, int64, f
 	int64Free := int64Total - int64Used
 	usedPercentage := 0.0
 	if int64Total != 0 {
-		usedPercentage = float64(int64Used * 100 / int64Total)
+		usedPercentage = float64(int64Used) * 100 / float64(int64Total)
 	}
 
 	return int64Total, int64Used, int64Free, usedPercentage

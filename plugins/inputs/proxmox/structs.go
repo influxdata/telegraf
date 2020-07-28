@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"net/url"
 )
 
 type Proxmox struct {
@@ -14,6 +15,8 @@ type Proxmox struct {
 
 	hostname         string
 	nodeSearchDomain string
+
+	requestFunction func(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error)
 }
 
 type VmStats struct {
