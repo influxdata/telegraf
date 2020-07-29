@@ -504,7 +504,7 @@ func gatherVhosts(r *RabbitMQ, acc telegraf.Accumulator) {
 			tags["vhost"] = vhost.Name
 
 			fields := map[string]interface{}{
-				"tracing":                              vhost.Tracing,
+				"tracing":                              boolToInt(vhost.Tracing),
 				"send_oct":                             vhost.SendOct,
 				"send_oct_rate":                        vhost.SendOctDetails.Rate,
 				"recv_oct":                             vhost.RecvOct,

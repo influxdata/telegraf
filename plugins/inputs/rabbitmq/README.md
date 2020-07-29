@@ -212,6 +212,43 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
     - messages_publish (int, count)
     - messages_return_unroutable (int, count)
 
+- rabbitmq_vhost
+  - tags:
+    - url
+    - vhost
+  - fields:
+    - message_stats_ack (int, count)
+    - message_stats_ack_rate (int, messages per second)
+    - message_stats_confirm (int, count)
+    - message_stats_confirm_rate (int, messages per second)
+    - message_stats_deliver (int, count)
+    - message_stats_deliver_rate (int, messages per second)
+    - message_stats_deliver_get (int, count)
+    - message_stats_deliver_get_rate (int, messages per second)
+    - message_stats_deliver_no_ack (int, count)
+    - message_stats_deliver_no_ack_rate (int, messages per second)
+    - message_stats_get (int, count)
+    - message_stats_get_rate (int, messages per second)
+    - message_stats_get_no_ack (int, count)
+    - message_stats_get_no_ack_rate (int, messages per second)
+    - message_stats_publish (int, count)
+    - message_stats_publish_rate (int, messages per second)
+    - message_stats_redeliver (int, count)
+    - message_stats_redeliver_rate (int, messages per second)
+    - message_stats_return_unroutable (int, count)
+    - message_stats_return_unroutable_rate (int, messages per second)
+    - messages (int, count)
+    - messages_rate (int, messages per second)
+    - messages_ready (int, count)
+    - messages_ready_rate (int, messages per second)
+    - messages_unacknowledged (int, count)
+    - messages_unacknowledged_rate (int, messages per second)
+    - recv_oct (int, count)
+    - recv_oct_rate (int, messages per second)
+    - send_oct (int, count)
+    - end_oct_rate (int, messages per second)
+    - tracing (int, 1 or 0)
+
 ### Sample Queries
 
 Message rates for the entire node can be calculated from total message counts. For instance, to get the rate of messages published per minute, use this query:
@@ -227,4 +264,5 @@ rabbitmq_queue,url=http://amqp.example.org:15672,queue=telegraf,vhost=influxdb,n
 rabbitmq_overview,url=http://amqp.example.org:15672,host=amqp.example.org channels=2i,consumers=1i,exchanges=17i,messages_acked=329i,messages=0i,messages_ready=0i,messages_unacked=0i,connections=2i,queues=1i,messages_delivered=329i,messages_published=329i,clustering_listeners=2i,amqp_listeners=1i 1493684035000000000
 rabbitmq_node,url=http://amqp.example.org:15672,node=rabbit@amqp.example.org,host=amqp.example.org fd_total=1024i,fd_used=32i,mem_limit=8363329126i,sockets_total=829i,disk_free=8175935488i,disk_free_limit=50000000i,mem_used=58771080i,proc_total=1048576i,proc_used=267i,run_queue=0i,sockets_used=2i,running=1i 149368403500000000
 rabbitmq_exchange,url=http://amqp.example.org:15672,exchange=telegraf,type=fanout,vhost=influxdb,internal=false,durable=true,auto_delete=false,host=amqp.example.org messages_publish_in=2i,messages_publish_out=1i 149368403500000000
+rabbitmq_vhost,host=amqp.example.org,url=http://amqp.example.org:15672,vhost=test-vhost message_stats_ack=8519i,message_stats_ack_rate=0,message_stats_confirm=8519i,message_stats_confirm_rate=0,message_stats_deliver=8938i,message_stats_deliver_get=8938i,message_stats_deliver_get_rate=0,message_stats_deliver_no_ack=0i,message_stats_deliver_no_ack_rate=0,message_stats_deliver_rate=0,message_stats_get=0i,message_stats_get_no_ack=0i,message_stats_get_no_ack_rate=0,message_stats_get_rate=0,message_stats_publish=18608i,message_stats_publish_rate=0,message_stats_redeliver=0i,message_stats_redeliver_rate=0,message_stats_return_unroutable=0i,message_stats_return_unroutable_rate=0,messages=0i,messages_rate=0,messages_ready=0i,messages_ready_rate=0,messages_unacknowledged=0i,messages_unacknowledged_rate=0,recv_oct=27000876i,recv_oct_rate=4.8,send_oct=20255042i,send_oct_rate=8,tracing=false 1596023027000000000
 ```
