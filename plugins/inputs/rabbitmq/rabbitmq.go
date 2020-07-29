@@ -46,6 +46,7 @@ type RabbitMQ struct {
 	Nodes     []string `toml:"nodes"`
 	Queues    []string `toml:"queues"`
 	Exchanges []string `toml:"exchanges"`
+	Vhosts    []string `toml:"vhosts"`
 
 	QueueInclude              []string `toml:"queue_name_include"`
 	QueueExclude              []string `toml:"queue_name_exclude"`
@@ -96,6 +97,16 @@ type MessageStats struct {
 	PublishOutDetails       Details `json:"publish_out_details"`
 	ReturnUnroutable        int64   `json:"return_unroutable"`
 	ReturnUnroutableDetails Details `json:"return_unroutable_details"`
+	Get                     int64   `json:"get"`
+	GetDetails              Details `json:"get_details"`
+	GetNoAck                int64   `json:"get_no_ack"`
+	GetNoAckDetails         Details `json:"get_no_ack_details"`
+	Confirm                 int64   `json:"confirm"`
+	ConfirmDetails          Details `json:"confirm_details"`
+	DeliverNoAck            int64   `json:"deliver_no_ack"`
+	DeliverNoAckDetails     Details `json:"deliver_no_ack_details"`
+	Rededeliver             int64   `json:"redeliver"`
+	RededeliverDetails      Details `json:"redeliver_details"`
 }
 
 // ObjectTotals ...
@@ -134,6 +145,23 @@ type Queue struct {
 	IdleSince              string   `json:"idle_since"`
 	SlaveNodes             []string `json:"slave_nodes"`
 	SynchronisedSlaveNodes []string `json:"synchronised_slave_nodes"`
+}
+
+// Vhost ...
+type Vhost struct {
+	Name                          string  `json:"name"`
+	Tracing                       bool    `json:"tracing"`
+	SendOct                       int64   `json:"send_oct"`
+	SendOctDetails                Details `json:"send_oct_details"`
+	RecvOct                       int64   `json:"recv_oct"`
+	RecvOctDetails                Details `json:"recv_oct_details"`
+	MessagesReady                 int64   `json:"messages_ready"`
+	MessagesReadyDetails          Details `json:"messages_ready_details"`
+	MessagesUnacknowledged        int64   `json:"messages_unacknowledged"`
+	MessagesUnacknowledgedDetails Details `json:"messages_unacknowledged_details"`
+	Messages                      int64   `json:"messages"`
+	MessagesDetails               Details `json:"messages_details"`
+	MessageStats                  `json:"message_stats"`
 }
 
 // Node ...
@@ -251,7 +279,7 @@ type Memory struct {
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
-var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges, gatherFederationLinks}
+var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges, gatherVhosts, gatherFederationLinks}
 
 var sampleConfig = `
   ## Management Plugin url. (default: http://localhost:15672)
@@ -291,6 +319,9 @@ var sampleConfig = `
   ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
 
+  ## A list of vhosts to gather as the rabbitmq_vhost measurement. If not
+  ## specified, metrics for all vhosts are gathered.
+  # vhosts = ["telegraf"]
   ## Queues to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all queues
   queue_name_include = []
@@ -447,6 +478,73 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		"return_unroutable_rate": overview.MessageStats.ReturnUnroutableDetails.Rate,
 	}
 	acc.AddFields("rabbitmq_overview", fields, tags)
+}
+
+func gatherVhosts(r *RabbitMQ, acc telegraf.Accumulator) {
+	allVhosts := make([]*Vhost, 0)
+
+	err := r.requestJSON("/api/vhosts", &allVhosts)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	vhosts := allVhosts[:0]
+	for _, vhost := range allVhosts {
+		if r.shouldGatherVhost(vhost.Name) {
+			vhosts = append(vhosts, vhost)
+		}
+	}
+
+	var wg sync.WaitGroup
+	for _, vhost := range vhosts {
+		wg.Add(1)
+		go func(vhost *Vhost) {
+			defer wg.Done()
+
+			tags := map[string]string{"url": r.URL}
+			tags["vhost"] = vhost.Name
+
+			fields := map[string]interface{}{
+				"tracing":                              vhost.Tracing,
+				"send_oct":                             vhost.SendOct,
+				"send_oct_rate":                        vhost.SendOctDetails.Rate,
+				"recv_oct":                             vhost.RecvOct,
+				"recv_oct_rate":                        vhost.RecvOctDetails.Rate,
+				"messages_ready":                       vhost.MessagesReady,
+				"messages_ready_rate":                  vhost.MessagesReadyDetails.Rate,
+				"messages_unacknowledged":              vhost.MessagesUnacknowledged,
+				"messages_unacknowledged_rate":         vhost.MessagesUnacknowledgedDetails.Rate,
+				"messages":                             vhost.Messages,
+				"messages_rate":                        vhost.MessagesDetails.Rate,
+				"message_stats_confirm":                vhost.MessageStats.Confirm,
+				"message_stats_confirm_rate":           vhost.MessageStats.ConfirmDetails.Rate,
+				"message_stats_deliver_no_ack":         vhost.MessageStats.DeliverNoAck,
+				"message_stats_deliver_no_ack_rate":    vhost.MessageStats.DeliverNoAckDetails.Rate,
+				"message_stats_get_no_ack":             vhost.MessageStats.GetNoAck,
+				"message_stats_get_no_ack_rate":        vhost.MessageStats.GetNoAckDetails.Rate,
+				"message_stats_get":                    vhost.MessageStats.Get,
+				"message_stats_get_rate":               vhost.MessageStats.GetDetails.Rate,
+				"message_stats_return_unroutable":      vhost.MessageStats.ReturnUnroutable,
+				"message_stats_return_unroutable_rate": vhost.MessageStats.ReturnUnroutableDetails.Rate,
+				"message_stats_publish":                vhost.MessageStats.Publish,
+				"message_stats_publish_rate":           vhost.MessageStats.PublishDetails.Rate,
+				"message_stats_deliver":                vhost.MessageStats.Deliver,
+				"message_stats_deliver_rate":           vhost.MessageStats.DeliverDetails.Rate,
+				"message_stats_deliver_get":            vhost.MessageStats.DeliverGet,
+				"message_stats_deliver_get_rate":       vhost.MessageStats.DeliverGetDetails.Rate,
+				"message_stats_redeliver":              vhost.MessageStats.Rededeliver,
+				"message_stats_redeliver_rate":         vhost.MessageStats.RedeliverDetails.Rate,
+				"message_stats_ack":                    vhost.MessageStats.Ack,
+				"message_stats_ack_rate":               vhost.MessageStats.AckDetails.Rate,
+			}
+
+			acc.AddFields("rabbitmq_vhost", fields, tags)
+		}(vhost)
+	}
+
+	wg.Wait()
+
 }
 
 func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
@@ -743,6 +841,20 @@ func (r *RabbitMQ) createUpstreamFilter() error {
 	r.upstreamFilter = upstreamFilter
 
 	return nil
+}
+
+func (r *RabbitMQ) shouldGatherVhost(vhostName string) bool {
+	if len(r.Vhosts) == 0 {
+		return true
+	}
+
+	for _, name := range r.Vhosts {
+		if name == vhostName {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *RabbitMQ) shouldGatherExchange(exchangeName string) bool {
