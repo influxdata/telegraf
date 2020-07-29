@@ -105,8 +105,6 @@ type MessageStats struct {
 	ConfirmDetails          Details `json:"confirm_details"`
 	DeliverNoAck            int64   `json:"deliver_no_ack"`
 	DeliverNoAckDetails     Details `json:"deliver_no_ack_details"`
-	Rededeliver             int64   `json:"redeliver"`
-	RededeliverDetails      Details `json:"redeliver_details"`
 }
 
 // ObjectTotals ...
