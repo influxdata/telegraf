@@ -148,7 +148,7 @@ type Queue struct {
 // Vhost ...
 type Vhost struct {
 	Name                          string  `json:"name"`
-	Tracing                       bool    `json:"tracing"`
+	Tracing                       int64   `json:"tracing"`
 	SendOct                       int64   `json:"send_oct"`
 	SendOctDetails                Details `json:"send_oct_details"`
 	RecvOct                       int64   `json:"recv_oct"`
