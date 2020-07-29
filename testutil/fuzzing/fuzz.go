@@ -5,7 +5,7 @@ package fuzz
 // https://github.com/dvyukov/go-fuzz
 
 // To run the fuzzer locally, follow these steps:
-// 1) go get github.com/google/zoekt
+// 1) go get github.com/influxdata/telegraf
 // 2) go get -u github.com/dvyukov/go-fuzz/go-fuzz
 // 3) go get -u github.com/dvyukov/go-fuzz/go-fuzz-build
 // 4) cd into dir of fuzz.go
