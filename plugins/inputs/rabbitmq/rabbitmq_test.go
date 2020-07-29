@@ -202,7 +202,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"message_stats_redeliver_rate":         0,
 		"message_stats_return_unroutable":      0,
 		"message_stats_return_unroutable_rate": 0,
-		"messages":                             0,
+		"messages":                             16,
 		"messages_rate":                        0,
 		"messages_ready":                       0,
 		"messages_ready_rate":                  0,
