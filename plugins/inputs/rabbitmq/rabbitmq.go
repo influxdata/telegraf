@@ -148,7 +148,7 @@ type Queue struct {
 // Vhost ...
 type Vhost struct {
 	Name                          string  `json:"name"`
-	Tracing                       int64   `json:"tracing"`
+	Tracing                       bool    `json:"tracing"`
 	SendOct                       int64   `json:"send_oct"`
 	SendOctDetails                Details `json:"send_oct_details"`
 	RecvOct                       int64   `json:"recv_oct"`
@@ -500,11 +500,13 @@ func gatherVhosts(r *RabbitMQ, acc telegraf.Accumulator) {
 		go func(vhost *Vhost) {
 			defer wg.Done()
 
-			tags := map[string]string{"url": r.URL}
-			tags["vhost"] = vhost.Name
+			tags := map[string]string{
+				"url":     r.URL,
+				"vhost":   vhost.Name,
+				"tracing": strconv.FormatBool(vhost.Tracing),
+			}
 
 			fields := map[string]interface{}{
-				"tracing":                              boolToInt(vhost.Tracing),
 				"send_oct":                             vhost.SendOct,
 				"send_oct_rate":                        vhost.SendOctDetails.Rate,
 				"recv_oct":                             vhost.RecvOct,
@@ -531,7 +533,7 @@ func gatherVhosts(r *RabbitMQ, acc telegraf.Accumulator) {
 				"message_stats_deliver_rate":           vhost.MessageStats.DeliverDetails.Rate,
 				"message_stats_deliver_get":            vhost.MessageStats.DeliverGet,
 				"message_stats_deliver_get_rate":       vhost.MessageStats.DeliverGetDetails.Rate,
-				"message_stats_redeliver":              vhost.MessageStats.Rededeliver,
+				"message_stats_redeliver":              vhost.MessageStats.Redeliver,
 				"message_stats_redeliver_rate":         vhost.MessageStats.RedeliverDetails.Rate,
 				"message_stats_ack":                    vhost.MessageStats.Ack,
 				"message_stats_ack_rate":               vhost.MessageStats.AckDetails.Rate,

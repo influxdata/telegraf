@@ -212,7 +212,6 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"recv_oct_rate":                        4.8,
 		"send_oct":                             20255042,
 		"send_oct_rate":                        8,
-		"tracing":                              0,
 	}
 	compareMetrics(t, vhostMetrics, acc, "rabbitmq_vhost")
 }

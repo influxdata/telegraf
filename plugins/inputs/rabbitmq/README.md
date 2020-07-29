@@ -216,6 +216,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
   - tags:
     - url
     - vhost
+    - tracing
   - fields:
     - message_stats_ack (int, count)
     - message_stats_ack_rate (int, messages per second)
@@ -246,8 +247,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats][management
     - recv_oct (int, count)
     - recv_oct_rate (int, messages per second)
     - send_oct (int, count)
-    - end_oct_rate (int, messages per second)
-    - tracing (int, 1 or 0)
+    - send_oct_rate (int, messages per second)
 
 ### Sample Queries
 
