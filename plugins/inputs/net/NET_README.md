@@ -40,7 +40,7 @@ Different platforms gather the data above with different mechanisms. Telegraf us
 Under freebsd/openbsd and darwin the plugin uses netstat.
 
 Additionally, for the time being _only under Linux_, the plugin gathers system wide stats for different network protocols using /proc/net/snmp (tcp, udp, icmp, etc.).
-Explanation of the different metrics exposed by snmp is out of the scope of this document. The best way to find information would be tracing the constants in the Linux kernel source [here](http://lxr.free-electrons.com/source/net/ipv4/proc.c) and their usage. If /proc/net/snmp cannot be read for some reason, telegraf ignores the error silently.
+Explanation of the different metrics exposed by snmp is out of the scope of this document. The best way to find information would be tracing the constants in the Linux kernel source [here](https://elixir.bootlin.com/linux/latest/source/net/ipv4/proc.c) and their usage. If /proc/net/snmp cannot be read for some reason, telegraf ignores the error silently.
 
 ### Tags:
 
