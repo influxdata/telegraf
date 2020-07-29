@@ -2,10 +2,12 @@ version: '3'
 
 services:
   clickhouse:
-    image: docker.io/yandex/clickhouse-server:latest
+# choose `:latest` after resolve https://github.com/ClickHouse/ClickHouse/issues/13057
+    image: docker.io/yandex/clickhouse-server:${CLICKHOUSE_VERSION:-latest}
     volumes:
       - ./zookeeper.xml:/etc/clickhouse-server/config.d/00-zookeeper.xml
       - ./tls_settings.xml:/etc/clickhouse-server/config.d/01-tls_settings.xml
+      - ./text_log.xml:/etc/clickhouse-server/config.d/02-text_log.xml
       - ./dhparam.pem:/etc/clickhouse-server/dhparam.pem
       - ../../../../testutil/pki/serverkey.pem:/etc/clickhouse-server/server.key
       - ../../../../testutil/pki/servercert.pem:/etc/clickhouse-server/server.crt

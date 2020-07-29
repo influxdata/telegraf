@@ -154,10 +154,12 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "replication_too_many_tries_replicas"):
 				enc.Encode(result{
 					Data: []struct {
-						ReplicationTooManyTriesReplicas uint64 `json:"replication_too_many_tries_replicas"`
+						TooManyTriesReplicas uint64 `json:"replication_too_many_tries_replicas"`
+						NumTriesReplicas     uint64 `json:"replication_num_tries_replicas"`
 					}{
 						{
-							ReplicationTooManyTriesReplicas: 10,
+							TooManyTriesReplicas: 10,
+							NumTriesReplicas:     100,
 						},
 					},
 				})
@@ -174,14 +176,112 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "system.dictionaries"):
 				enc.Encode(result{
 					Data: []struct {
-						Name          string `json:"name"`
-						Status        string `json:"status"`
-						LastException string `json:"last_exception"`
+						Name           string `json:"name"`
+						Database       string `json:"database"`
+						Status         string `json:"status"`
+						BytesAllocated uint64 `json:"bytes_allocated"`
 					}{
 						{
-							Name:          "default.test_dict",
-							Status:        "NOT_LOADED",
-							LastException: "",
+							Name:           "test_dict",
+							Database:       "default",
+							Status:         "NOT_LOADED",
+							BytesAllocated: 100,
+						},
+					},
+				})
+			case strings.Contains(query, "system.mutations"):
+				enc.Encode(result{
+					Data: []struct {
+						Failed    uint64 `json:"failed"`
+						Completed uint64 `json:"completed"`
+						Running   uint64 `json:"running"`
+					}{
+						{
+							Failed:    10,
+							Running:   1,
+							Completed: 100,
+						},
+					},
+				})
+			case strings.Contains(query, "system.disks"):
+				enc.Encode(result{
+					Data: []struct {
+						Name            string `json:"name"`
+						Path            string `json:"path"`
+						FreePercent     uint64 `json:"free_space_percent"`
+						KeepFreePercent uint64 `json:"keep_free_space_percent"`
+					}{
+						{
+							Name:            "default",
+							Path:            "/var/lib/clickhouse",
+							FreePercent:     1,
+							KeepFreePercent: 10,
+						},
+					},
+				})
+			case strings.Contains(query, "system.processes"):
+				enc.Encode(result{
+					Data: []struct {
+						QueryType      string  `json:"query_type"`
+						Percentile50   float64 `json:"p50"`
+						Percentile90   float64 `json:"p90"`
+						LongestRunning float64 `json:"longest_running"`
+					}{
+						{
+							QueryType:      "select",
+							Percentile50:   0.1,
+							Percentile90:   0.5,
+							LongestRunning: 10,
+						},
+						{
+							QueryType:      "insert",
+							Percentile50:   0.2,
+							Percentile90:   1.5,
+							LongestRunning: 100,
+						},
+						{
+							QueryType:      "other",
+							Percentile50:   0.4,
+							Percentile90:   4.5,
+							LongestRunning: 1000,
+						},
+					},
+				})
+			case strings.Contains(query, "text_log_exists"):
+				enc.Encode(result{
+					Data: []struct {
+						TextLogExists uint64 `json:"text_log_exists"`
+					}{
+						{
+							TextLogExists: 1,
+						},
+					},
+				})
+			case strings.Contains(query, "system.text_log"):
+				enc.Encode(result{
+					Data: []struct {
+						Level                 string `json:"level"`
+						LastMessagesLast10Min uint64 `json:"messages_last_10_min"`
+					}{
+						{
+							Level:                 "Fatal",
+							LastMessagesLast10Min: 0,
+						},
+						{
+							Level:                 "Critical",
+							LastMessagesLast10Min: 10,
+						},
+						{
+							Level:                 "Error",
+							LastMessagesLast10Min: 20,
+						},
+						{
+							Level:                 "Warning",
+							LastMessagesLast10Min: 30,
+						},
+						{
+							Level:                 "Notice",
+							LastMessagesLast10Min: 40,
 						},
 					},
 				})
@@ -197,11 +297,16 @@ func TestGather(t *testing.T) {
 	defer ts.Close()
 	ch.Gather(acc)
 
-	acc.AssertContainsFields(t, "clickhouse_tables",
+	acc.AssertContainsTaggedFields(t, "clickhouse_tables",
 		map[string]interface{}{
 			"bytes": uint64(1),
 			"parts": uint64(10),
 			"rows":  uint64(100),
+		},
+		map[string]string{
+			"source":   "127.0.0.1",
+			"table":    "test_table",
+			"database": "test_database",
 		},
 	)
 	acc.AssertContainsFields(t, "clickhouse_events",
@@ -230,6 +335,7 @@ func TestGather(t *testing.T) {
 	acc.AssertContainsFields(t, "clickhouse_replication_queue",
 		map[string]interface{}{
 			"too_many_tries_replicas": uint64(10),
+			"num_tries_replicas":      uint64(100),
 		},
 	)
 	acc.AssertContainsFields(t, "clickhouse_detached_parts",
@@ -237,15 +343,84 @@ func TestGather(t *testing.T) {
 			"detached_parts": uint64(10),
 		},
 	)
-	acc.AssertContainsFields(t, "clickhouse_dictionaries",
+	acc.AssertContainsTaggedFields(t, "clickhouse_dictionaries",
 		map[string]interface{}{
-			"is_loaded": uint64(0),
+			"is_loaded":       uint64(0),
+			"bytes_allocated": uint64(100),
+		},
+		map[string]string{
+			"source":        "127.0.0.1",
+			"dict_name":     "test_dict",
+			"dict_database": "default",
+		},
+	)
+	acc.AssertContainsFields(t, "clickhouse_mutations",
+		map[string]interface{}{
+			"running":   uint64(1),
+			"failed":    uint64(10),
+			"completed": uint64(100),
+		},
+	)
+	acc.AssertContainsTaggedFields(t, "clickhouse_disks",
+		map[string]interface{}{
+			"free_space_percent":      uint64(1),
+			"keep_free_space_percent": uint64(10),
+		},
+		map[string]string{
+			"source": "127.0.0.1",
+			"name":   "default",
+			"path":   "/var/lib/clickhouse",
+		},
+	)
+	acc.AssertContainsTaggedFields(t, "clickhouse_processes",
+		map[string]interface{}{
+			"percentile_50":   0.1,
+			"percentile_90":   0.5,
+			"longest_running": float64(10),
+		},
+		map[string]string{
+			"source":     "127.0.0.1",
+			"query_type": "select",
 		},
 	)
 
+	acc.AssertContainsTaggedFields(t, "clickhouse_processes",
+		map[string]interface{}{
+			"percentile_50":   0.2,
+			"percentile_90":   1.5,
+			"longest_running": float64(100),
+		},
+		map[string]string{
+			"source":     "127.0.0.1",
+			"query_type": "insert",
+		},
+	)
+	acc.AssertContainsTaggedFields(t, "clickhouse_processes",
+		map[string]interface{}{
+			"percentile_50":   0.4,
+			"percentile_90":   4.5,
+			"longest_running": float64(1000),
+		},
+		map[string]string{
+			"source":     "127.0.0.1",
+			"query_type": "other",
+		},
+	)
+
+	for i, level := range []string{"Fatal", "Critical", "Error", "Warning", "Notice"} {
+		acc.AssertContainsTaggedFields(t, "clickhouse_text_log",
+			map[string]interface{}{
+				"messages_last_10_min": uint64(i * 10),
+			},
+			map[string]string{
+				"source": "127.0.0.1",
+				"level":  level,
+			},
+		)
+	}
 }
 
-func TestGatherZookeeperNotExists(t *testing.T) {
+func TestGatherWithSomeTablesNotExists(t *testing.T) {
 	var (
 		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			type result struct {
@@ -263,29 +438,6 @@ func TestGatherZookeeperNotExists(t *testing.T) {
 						},
 					},
 				})
-			}
-		}))
-		ch = &ClickHouse{
-			Servers: []string{
-				ts.URL,
-			},
-		}
-		acc = &testutil.Accumulator{}
-	)
-	defer ts.Close()
-	ch.Gather(acc)
-
-	acc.AssertDoesNotContainMeasurement(t, "clickhouse_zookeeper")
-}
-
-func TestGatherReplicationQueueNotExists(t *testing.T) {
-	var (
-		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			type result struct {
-				Data interface{} `json:"data"`
-			}
-			enc := json.NewEncoder(w)
-			switch query := r.URL.Query().Get("query"); {
 			case strings.Contains(query, "replication_queue_exists"):
 				enc.Encode(result{
 					Data: []struct {
@@ -293,6 +445,16 @@ func TestGatherReplicationQueueNotExists(t *testing.T) {
 					}{
 						{
 							ReplicationQueueExists: 0,
+						},
+					},
+				})
+			case strings.Contains(query, "text_log_exists"):
+				enc.Encode(result{
+					Data: []struct {
+						TextLogExists uint64 `json:"text_log_exists"`
+					}{
+						{
+							TextLogExists: 0,
 						},
 					},
 				})
@@ -308,5 +470,7 @@ func TestGatherReplicationQueueNotExists(t *testing.T) {
 	defer ts.Close()
 	ch.Gather(acc)
 
+	acc.AssertDoesNotContainMeasurement(t, "clickhouse_zookeeper")
 	acc.AssertDoesNotContainMeasurement(t, "clickhouse_replication_queue")
+	acc.AssertDoesNotContainMeasurement(t, "clickhouse_text_log")
 }
