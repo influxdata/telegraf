@@ -11,19 +11,19 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DefaultUsername will set a default value that corrasponds to the default
+// DefaultUsername will set a default value that corresponds to the default
 // value used by Rabbitmq
 const DefaultUsername = "guest"
 
-// DefaultPassword will set a default value that corrasponds to the default
+// DefaultPassword will set a default value that corresponds to the default
 // value used by Rabbitmq
 const DefaultPassword = "guest"
 
-// DefaultURL will set a default value that corrasponds to the default value
+// DefaultURL will set a default value that corresponds to the default value
 // used by Rabbitmq
 const DefaultURL = "http://localhost:15672"
 

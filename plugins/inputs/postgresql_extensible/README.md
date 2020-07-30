@@ -16,7 +16,7 @@ The example below has two queries are specified, with the following parameters:
   # specify address via a url matching:
   # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
   # or a simple string:
-  #   host=localhost port=5432 user=pqotest password=... sslmode=... dbname=app_production
+  #   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
   #
   # All connection parameters are optional.
   # Without the dbname parameter, the driver will default to a database
@@ -71,7 +71,7 @@ The example below has two queries are specified, with the following parameters:
 ```
 
 The system can be easily extended using homemade metrics collection tools or
-using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
+using postgresql extensions ([pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html), [pg_proctab](https://github.com/markwkm/pg_proctab) or [powa](http://dalibo.github.io/powa/))
 
 # Sample Queries :
 - telegraf.conf postgresql_extensible queries (assuming that you have configured

@@ -44,12 +44,12 @@ func (e *Exec) SetSerializer(serializer serializers.Serializer) {
 	e.serializer = serializer
 }
 
-// Connect satisfies the Ouput interface.
+// Connect satisfies the Output interface.
 func (e *Exec) Connect() error {
 	return nil
 }
 
-// Close satisfies the Ouput interface.
+// Close satisfies the Output interface.
 func (e *Exec) Close() error {
 	return nil
 }

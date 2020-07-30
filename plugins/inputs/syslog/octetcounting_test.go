@@ -280,7 +280,7 @@ func getTestCasesForOctetCounting() []testCaseStream {
 			werr: 1,
 		},
 		// {
-		// 	name: "1st/of/ko", // overflow (msglen greather then max allowed octets)
+		// 	name: "1st/of/ko", // overflow (msglen greater than max allowed octets)
 		// 	data: []byte(fmt.Sprintf("8193 <%d>%d %s %s %s %s %s 12 %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
 		// 	want: []testutil.Metric{},
 		// },

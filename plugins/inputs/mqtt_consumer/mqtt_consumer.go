@@ -10,7 +10,7 @@ import (
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -76,8 +76,11 @@ type MQTTConsumer struct {
 }
 
 var sampleConfig = `
-  ## MQTT broker URLs to be used. The format should be scheme://host:port,
-  ## schema can be tcp, ssl, or ws.
+  ## Broker URLs for the MQTT server or cluster.  To connect to multiple
+  ## clusters or standalone servers, use a seperate plugin instance.
+  ##   example: servers = ["tcp://localhost:1883"]
+  ##            servers = ["ssl://localhost:1883"]
+  ##            servers = ["ws://localhost:1883"]
   servers = ["tcp://127.0.0.1:1883"]
 
   ## Topics that will be subscribed to.
@@ -194,7 +197,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 
 	// AddRoute sets up the function for handling messages.  These need to be
 	// added in case we find a persistent session containing subscriptions so we
-	// know where to dispatch presisted and new messages to.  In the alternate
+	// know where to dispatch persisted and new messages to.  In the alternate
 	// case that we need to create the subscriptions these will be replaced.
 	for _, topic := range m.Topics {
 		m.client.AddRoute(topic, m.recvMessage)
@@ -218,7 +221,7 @@ func (m *MQTTConsumer) connect() error {
 	m.state = Connected
 	m.messages = make(map[telegraf.TrackingID]bool)
 
-	// Presistent sessions should skip subscription if a session is present, as
+	// Persistent sessions should skip subscription if a session is present, as
 	// the subscriptions are stored by the server.
 	type sessionPresent interface {
 		SessionPresent() bool
@@ -341,7 +344,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	}
 
 	if len(m.Servers) == 0 {
-		return opts, fmt.Errorf("could not get host infomations")
+		return opts, fmt.Errorf("could not get host informations")
 	}
 
 	for _, server := range m.Servers {

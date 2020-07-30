@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 )
 
-// MockProcessor is a Processor with an overrideable Apply implementation.
+// MockProcessor is a Processor with an overridable Apply implementation.
 type MockProcessor struct {
 	ApplyF func(in ...telegraf.Metric) []telegraf.Metric
 }
@@ -26,6 +26,37 @@ func (p *MockProcessor) Description() string {
 
 func (p *MockProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return p.ApplyF(in...)
+}
+
+// MockProcessorToInit is a Processor that needs to be initialized.
+type MockProcessorToInit struct {
+	HasBeenInit bool
+}
+
+func (p *MockProcessorToInit) SampleConfig() string {
+	return ""
+}
+
+func (p *MockProcessorToInit) Description() string {
+	return ""
+}
+
+func (p *MockProcessorToInit) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	return in
+}
+
+func (p *MockProcessorToInit) Init() error {
+	p.HasBeenInit = true
+	return nil
+}
+
+func TestRunningProcessor_Init(t *testing.T) {
+	mock := MockProcessorToInit{}
+	rp := &RunningProcessor{
+		Processor: processors.NewStreamingProcessorFromProcessor(&mock),
+	}
+	rp.Init()
+	require.True(t, mock.HasBeenInit)
 }
 
 // TagProcessor returns a Processor whose Apply function adds the tag and
@@ -43,7 +74,7 @@ func TagProcessor(key, value string) *MockProcessor {
 
 func TestRunningProcessor_Apply(t *testing.T) {
 	type args struct {
-		Processor telegraf.Processor
+		Processor telegraf.StreamingProcessor
 		Config    *ProcessorConfig
 	}
 
@@ -56,7 +87,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 		{
 			name: "inactive filter applies metrics",
 			args: args{
-				Processor: TagProcessor("apply", "true"),
+				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
 				Config: &ProcessorConfig{
 					Filter: Filter{},
 				},
@@ -87,7 +118,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 		{
 			name: "filter applies",
 			args: args{
-				Processor: TagProcessor("apply", "true"),
+				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
 				Config: &ProcessorConfig{
 					Filter: Filter{
 						NamePass: []string{"cpu"},
@@ -120,7 +151,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 		{
 			name: "filter doesn't apply",
 			args: args{
-				Processor: TagProcessor("apply", "true"),
+				Processor: processors.NewStreamingProcessorFromProcessor(TagProcessor("apply", "true")),
 				Config: &ProcessorConfig{
 					Filter: Filter{
 						NameDrop: []string{"cpu"},
@@ -158,7 +189,15 @@ func TestRunningProcessor_Apply(t *testing.T) {
 			}
 			rp.Config.Filter.Compile()
 
-			actual := rp.Apply(tt.input...)
+			acc := testutil.Accumulator{}
+			err := rp.Start(&acc)
+			require.NoError(t, err)
+			for _, m := range tt.input {
+				rp.Add(m, &acc)
+			}
+			rp.Stop()
+
+			actual := acc.GetTelegrafMetrics()
 			require.Equal(t, tt.expected, actual)
 		})
 	}

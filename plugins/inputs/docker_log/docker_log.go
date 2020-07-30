@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/docker"
-	tlsint "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -73,7 +73,7 @@ const (
 
 var (
 	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
-	// ensure *DockerLogs implements telegaf.ServiceInput
+	// ensure *DockerLogs implements telegraf.ServiceInput
 	_ telegraf.ServiceInput = (*DockerLogs)(nil)
 )
 

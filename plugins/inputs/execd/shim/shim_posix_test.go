@@ -23,12 +23,9 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 
-	stdin = stdinReader
-	stdout = stdoutWriter
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	metricProcessed, exited := runInputPlugin(t, 20*time.Minute)
+	metricProcessed, exited := runInputPlugin(t, 20*time.Minute, stdinReader, stdoutWriter, nil)
 
 	// signal USR1 to yourself.
 	pid := os.Getpid()
@@ -51,13 +48,7 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 		}
 	}()
 
-	timeout := time.NewTimer(10 * time.Second)
-
-	select {
-	case <-metricProcessed:
-	case <-timeout.C:
-		require.Fail(t, "Timeout waiting for metric to arrive")
-	}
+	<-metricProcessed
 	cancel()
 
 	r := bufio.NewReader(stdoutReader)
@@ -66,5 +57,7 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 	require.Equal(t, "measurement,tag=tag field=1i 1234000005678\n", out)
 
 	stdinWriter.Close()
+	readUntilEmpty(r)
+
 	<-exited
 }

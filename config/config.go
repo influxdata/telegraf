@@ -65,7 +65,8 @@ type Config struct {
 	Outputs     []*models.RunningOutput
 	Aggregators []*models.RunningAggregator
 	// Processors have a slice wrapper type because they need to be sorted
-	Processors models.RunningProcessors
+	Processors    models.RunningProcessors
+	AggProcessors models.RunningProcessors
 }
 
 func NewConfig() *Config {
@@ -83,6 +84,7 @@ func NewConfig() *Config {
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
 		Processors:    make([]*models.RunningProcessor, 0),
+		AggProcessors: make([]*models.RunningProcessor, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -134,12 +136,12 @@ type AgentConfig struct {
 	// FlushBufferWhenFull tells Telegraf to flush the metric buffer whenever
 	// it fills up, regardless of FlushInterval. Setting this option to true
 	// does _not_ deactivate FlushInterval.
-	FlushBufferWhenFull bool
+	FlushBufferWhenFull bool // deprecated in 0.13; has no effect
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
 	// compatibility
-	UTC bool `toml:"utc"`
+	UTC bool `toml:"utc"` // deprecated in 1.0.0; has no effect
 
 	// Debug is the option for running in debug mode
 	Debug bool `toml:"debug"`
@@ -508,6 +510,9 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 
 	// Print Inputs
 	for _, pname := range pnames {
+		if pname == "cisco_telemetry_gnmi" {
+			continue
+		}
 		creator := inputs.Inputs[pname]
 		input := creator()
 
@@ -561,12 +566,7 @@ func printFilteredGlobalSections(sectionFilters []string) {
 	}
 }
 
-type printer interface {
-	Description() string
-	SampleConfig() string
-}
-
-func printConfig(name string, p printer, op string, commented bool) {
+func printConfig(name string, p telegraf.PluginDescriber, op string, commented bool) {
 	comment := ""
 	if commented {
 		comment = "# "
@@ -684,12 +684,20 @@ func (c *Config) LoadConfig(path string) error {
 	}
 	data, err := loadConfig(path)
 	if err != nil {
-		return fmt.Errorf("Error loading %s, %s", path, err)
+		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}
 
+	if err = c.LoadConfigData(data); err != nil {
+		return fmt.Errorf("Error loading config file %s: %w", path, err)
+	}
+	return nil
+}
+
+// LoadConfigData loads TOML-formatted config data
+func (c *Config) LoadConfigData(data []byte) error {
 	tbl, err := parseConfig(data)
 	if err != nil {
-		return fmt.Errorf("Error parsing %s, %s", path, err)
+		return fmt.Errorf("Error parsing data: %s", err)
 	}
 
 	// Parse tags tables first:
@@ -697,11 +705,10 @@ func (c *Config) LoadConfig(path string) error {
 		if val, ok := tbl.Fields[tableName]; ok {
 			subTable, ok := val.(*ast.Table)
 			if !ok {
-				return fmt.Errorf("%s: invalid configuration", path)
+				return fmt.Errorf("invalid configuration, bad table name %q", tableName)
 			}
 			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
-				log.Printf("E! Could not parse [global_tags] config\n")
-				return fmt.Errorf("Error parsing %s, %s", path, err)
+				return fmt.Errorf("error parsing table name %q: %w", tableName, err)
 			}
 		}
 	}
@@ -710,11 +717,10 @@ func (c *Config) LoadConfig(path string) error {
 	if val, ok := tbl.Fields["agent"]; ok {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return fmt.Errorf("%s: invalid configuration", path)
+			return fmt.Errorf("invalid configuration, error parsing agent table")
 		}
 		if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
-			log.Printf("E! Could not parse [agent] config\n")
-			return fmt.Errorf("Error parsing %s, %s", path, err)
+			return fmt.Errorf("error parsing agent table: %w", err)
 		}
 	}
 
@@ -735,7 +741,7 @@ func (c *Config) LoadConfig(path string) error {
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
 		if !ok {
-			return fmt.Errorf("%s: invalid configuration", path)
+			return fmt.Errorf("invalid configuration, error parsing field %q as table", name)
 		}
 
 		switch name {
@@ -746,17 +752,17 @@ func (c *Config) LoadConfig(path string) error {
 				// legacy [outputs.influxdb] support
 				case *ast.Table:
 					if err = c.addOutput(pluginName, pluginSubTable); err != nil {
-						return fmt.Errorf("Error parsing %s, %s", path, err)
+						return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addOutput(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s array, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		case "inputs", "plugins":
@@ -765,17 +771,17 @@ func (c *Config) LoadConfig(path string) error {
 				// legacy [inputs.cpu] support
 				case *ast.Table:
 					if err = c.addInput(pluginName, pluginSubTable); err != nil {
-						return fmt.Errorf("Error parsing %s, %s", path, err)
+						return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 					}
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addInput(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		case "processors":
@@ -784,12 +790,12 @@ func (c *Config) LoadConfig(path string) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addProcessor(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		case "aggregators":
@@ -798,19 +804,19 @@ func (c *Config) LoadConfig(path string) error {
 				case []*ast.Table:
 					for _, t := range pluginSubTable {
 						if err = c.addAggregator(pluginName, t); err != nil {
-							return fmt.Errorf("Error parsing %s, %s", path, err)
+							return fmt.Errorf("Error parsing %s, %s", pluginName, err)
 						}
 					}
 				default:
-					return fmt.Errorf("Unsupported config format: %s, file %s",
-						pluginName, path)
+					return fmt.Errorf("Unsupported config format: %s",
+						pluginName)
 				}
 			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
 			if err = c.addInput(name, subTable); err != nil {
-				return fmt.Errorf("Error parsing %s, %s", path, err)
+				return fmt.Errorf("Error parsing %s, %s", name, err)
 			}
 		}
 	}
@@ -860,6 +866,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 		req.Header.Add("Authorization", "Token "+v)
 	}
 	req.Header.Add("Accept", "application/toml")
+	req.Header.Set("User-Agent", internal.ProductToken())
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -929,21 +936,48 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if !ok {
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
-	processor := creator()
 
 	processorConfig, err := buildProcessor(name, table)
 	if err != nil {
 		return err
 	}
 
-	if err := toml.UnmarshalTable(table, processor); err != nil {
+	rf, err := c.newRunningProcessor(creator, processorConfig, name, table)
+	if err != nil {
 		return err
+	}
+	c.Processors = append(c.Processors, rf)
+
+	// save a copy for the aggregator
+	rf, err = c.newRunningProcessor(creator, processorConfig, name, table)
+	if err != nil {
+		return err
+	}
+	c.AggProcessors = append(c.AggProcessors, rf)
+
+	return nil
+}
+
+func (c *Config) newRunningProcessor(
+	creator processors.StreamingCreator,
+	processorConfig *models.ProcessorConfig,
+	name string,
+	table *ast.Table,
+) (*models.RunningProcessor, error) {
+	processor := creator()
+
+	if p, ok := processor.(unwrappable); ok {
+		if err := toml.UnmarshalTable(table, p.Unwrap()); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := toml.UnmarshalTable(table, processor); err != nil {
+			return nil, err
+		}
 	}
 
 	rf := models.NewRunningProcessor(processor, processorConfig)
-
-	c.Processors = append(c.Processors, rf)
-	return nil
+	return rf, nil
 }
 
 func (c *Config) addOutput(name string, table *ast.Table) error {
@@ -1045,51 +1079,25 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		Grace:  time.Second * 0,
 	}
 
-	if node, ok := tbl.Fields["period"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Period = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "period", &conf.Period); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["delay"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Delay = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "delay", &conf.Delay); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["grace"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				conf.Grace = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "grace", &conf.Grace); err != nil {
+		return nil, err
 	}
+
 	if node, ok := tbl.Fields["drop_original"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if b, ok := kv.Value.(*ast.Boolean); ok {
 				var err error
 				conf.DropOriginal, err = strconv.ParseBool(b.Value)
 				if err != nil {
-					log.Printf("Error parsing boolean value for %s: %s\n", name, err)
+					return nil, fmt.Errorf("error parsing boolean value for %s: %s", name, err)
 				}
 			}
 		}
@@ -1131,14 +1139,11 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
-				log.Printf("Could not parse tags for input %s\n", name)
+				return nil, fmt.Errorf("could not parse tags for input %s", name)
 			}
 		}
 	}
 
-	delete(tbl.Fields, "period")
-	delete(tbl.Fields, "delay")
-	delete(tbl.Fields, "grace")
 	delete(tbl.Fields, "drop_original")
 	delete(tbl.Fields, "name_prefix")
 	delete(tbl.Fields, "name_suffix")
@@ -1165,7 +1170,7 @@ func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error
 				var err error
 				conf.Order, err = strconv.ParseInt(b.Value, 10, 64)
 				if err != nil {
-					log.Printf("Error parsing int value for %s: %s\n", name, err)
+					return nil, fmt.Errorf("error parsing int value for %s: %s", name, err)
 				}
 			}
 		}
@@ -1331,17 +1336,17 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 // models.InputConfig to be inserted into models.RunningInput
 func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp := &models.InputConfig{Name: name}
-	if node, ok := tbl.Fields["interval"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
 
-				cp.Interval = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "interval", &cp.Interval); err != nil {
+		return nil, err
+	}
+
+	if err := getConfigDuration(tbl, "precision", &cp.Precision); err != nil {
+		return nil, err
+	}
+
+	if err := getConfigDuration(tbl, "collection_jitter", &cp.CollectionJitter); err != nil {
+		return nil, err
 	}
 
 	if node, ok := tbl.Fields["name_prefix"]; ok {
@@ -1380,7 +1385,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
 			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
-				log.Printf("E! Could not parse tags for input %s\n", name)
+				return nil, fmt.Errorf("could not parse tags for input %s\n", name)
 			}
 		}
 	}
@@ -1389,7 +1394,6 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	delete(tbl.Fields, "name_suffix")
 	delete(tbl.Fields, "name_override")
 	delete(tbl.Fields, "alias")
-	delete(tbl.Fields, "interval")
 	delete(tbl.Fields, "tags")
 	var err error
 	cp.Filter, err = buildFilter(tbl)
@@ -1749,6 +1753,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["csv_timezone"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVTimezone = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["csv_header_row_count"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if integer, ok := kv.Value.(*ast.Integer); ok {
@@ -1884,6 +1896,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_tag_columns")
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
+	delete(tbl.Fields, "csv_timezone")
 	delete(tbl.Fields, "csv_trim_space")
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
 	delete(tbl.Fields, "xml_merge_nodes")
@@ -1983,6 +1996,14 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 				if err != nil {
 					return nil, err
 				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["graphite_separator"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GraphiteSeparator = str.Value
 			}
 		}
 	}
@@ -2091,6 +2112,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
 	delete(tbl.Fields, "graphite_tag_support")
+	delete(tbl.Fields, "graphite_separator")
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
@@ -2129,30 +2151,12 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		oc.Filter.NamePass = oc.Filter.FieldPass
 	}
 
-	if node, ok := tbl.Fields["flush_interval"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-
-				oc.FlushInterval = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "flush_interval", &oc.FlushInterval); err != nil {
+		return nil, err
 	}
 
-	if node, ok := tbl.Fields["flush_jitter"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				dur, err := time.ParseDuration(str.Value)
-				if err != nil {
-					return nil, err
-				}
-				oc.FlushJitter = new(time.Duration)
-				*oc.FlushJitter = dur
-			}
-		}
+	if err := getConfigDuration(tbl, "flush_jitter", &oc.FlushJitter); err != nil {
+		return nil, err
 	}
 
 	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
@@ -2211,8 +2215,6 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		}
 	}
 
-	delete(tbl.Fields, "flush_interval")
-	delete(tbl.Fields, "flush_jitter")
 	delete(tbl.Fields, "metric_buffer_limit")
 	delete(tbl.Fields, "metric_batch_size")
 	delete(tbl.Fields, "alias")
@@ -2221,4 +2223,27 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	delete(tbl.Fields, "name_prefix")
 
 	return oc, nil
+}
+
+// unwrappable lets you retrieve the original telegraf.Processor from the
+// StreamingProcessor. This is necessary because the toml Unmarshaller won't
+// look inside composed types.
+type unwrappable interface {
+	Unwrap() telegraf.Processor
+}
+
+func getConfigDuration(tbl *ast.Table, key string, target *time.Duration) error {
+	if node, ok := tbl.Fields[key]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				d, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return err
+				}
+				delete(tbl.Fields, key)
+				*target = d
+			}
+		}
+	}
+	return nil
 }

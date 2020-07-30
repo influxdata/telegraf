@@ -3,30 +3,58 @@
 package execd
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/influxdata/telegraf"
 )
 
+func TestSettingConfigWorks(t *testing.T) {
+	cfg := `
+	[[inputs.execd]]
+		command = ["a", "b", "c"]
+		restart_delay = "1m"
+		signal = "SIGHUP"
+	`
+	conf := config.NewConfig()
+	require.NoError(t, conf.LoadConfigData([]byte(cfg)))
+
+	require.Len(t, conf.Inputs, 1)
+	inp, ok := conf.Inputs[0].Input.(*Execd)
+	require.True(t, ok)
+	require.EqualValues(t, []string{"a", "b", "c"}, inp.Command)
+	require.EqualValues(t, 1*time.Minute, inp.RestartDelay)
+	require.EqualValues(t, "SIGHUP", inp.Signal)
+}
+
 func TestExternalInputWorks(t *testing.T) {
-	jsonParser, err := parsers.NewInfluxParser()
+	influxParser, err := parsers.NewInfluxParser()
+	require.NoError(t, err)
+
+	exe, err := os.Executable()
 	require.NoError(t, err)
 
 	e := &Execd{
-		Command:      []string{shell(), fileShellScriptPath()},
+		Command:      []string{exe, "-counter"},
 		RestartDelay: config.Duration(5 * time.Second),
-		parser:       jsonParser,
+		parser:       influxParser,
 		Signal:       "STDIN",
+		Log:          testutil.Logger{},
 	}
 
 	metrics := make(chan telegraf.Metric, 10)
@@ -41,12 +69,10 @@ func TestExternalInputWorks(t *testing.T) {
 
 	e.Stop()
 
-	require.Equal(t, "counter_bash", m.Name())
+	require.Equal(t, "counter", m.Name())
 	val, ok := m.GetField("count")
 	require.True(t, ok)
-	require.Equal(t, float64(0), val)
-	// test that a later gather will not panic
-	e.Gather(acc)
+	require.EqualValues(t, 0, val)
 }
 
 func TestParsesLinesContainingNewline(t *testing.T) {
@@ -58,11 +84,11 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 	acc := agent.NewAccumulator(&TestMetricMaker{}, metrics)
 
 	e := &Execd{
-		Command:      []string{shell(), fileShellScriptPath()},
 		RestartDelay: config.Duration(5 * time.Second),
 		parser:       parser,
 		Signal:       "STDIN",
 		acc:          acc,
+		Log:          testutil.Logger{},
 	}
 
 	cases := []struct {
@@ -106,14 +132,6 @@ func readChanWithTimeout(t *testing.T, metrics chan telegraf.Metric, timeout tim
 	return nil
 }
 
-func fileShellScriptPath() string {
-	return "./examples/count.sh"
-}
-
-func shell() string {
-	return "sh"
-}
-
 type TestMetricMaker struct{}
 
 func (tm *TestMetricMaker) Name() string {
@@ -130,4 +148,46 @@ func (tm *TestMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 
 func (tm *TestMetricMaker) Log() telegraf.Logger {
 	return models.NewLogger("TestPlugin", "test", "")
+}
+
+var counter = flag.Bool("counter", false,
+	"if true, act like line input program instead of test")
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if *counter {
+		runCounterProgram()
+		os.Exit(0)
+	}
+	code := m.Run()
+	os.Exit(code)
+}
+
+func runCounterProgram() {
+	i := 0
+	serializer, err := serializers.NewInfluxSerializer()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ERR InfluxSerializer failed to load")
+		os.Exit(1)
+	}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		metric, _ := metric.New("counter",
+			map[string]string{},
+			map[string]interface{}{
+				"count": i,
+			},
+			time.Now(),
+		)
+		i++
+
+		b, err := serializer.Serialize(metric)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprint(os.Stdout, string(b))
+	}
+
 }

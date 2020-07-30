@@ -1,0 +1,144 @@
+{
+  "@odata.context": "/redfish/v1/$metadata#Power.Power",
+  "@odata.etag": "W/\"2E43EED0\"",
+  "@odata.id": "/redfish/v1/Chassis/1/Power",
+  "@odata.type": "#Power.v1_3_0.Power",
+  "Id": "Power",
+  "Name": "PowerMetrics",
+  "Oem": {
+    "Hpe": {
+      "@odata.context": "/redfish/v1/$metadata#HpePowerMetricsExt.HpePowerMetricsExt",
+      "@odata.type": "#HpePowerMetricsExt.v2_2_0.HpePowerMetricsExt",
+      "BrownoutRecoveryEnabled": true,
+      "HasCpuPowerMetering": true,
+      "HasDimmPowerMetering": true,
+      "HasGpuPowerMetering": false,
+      "HasPowerMetering": true,
+      "HighEfficiencyMode": "Balanced",
+      "Links": {
+        "PowerMeter": {
+          "@odata.id": "/redfish/v1/Chassis/1/Power/PowerMeter"
+        },
+        "FastPowerMeter": {
+          "@odata.id": "/redfish/v1/Chassis/1/Power/FastPowerMeter"
+        },
+        "FederatedGroupCapping": {
+          "@odata.id": "/redfish/v1/Chassis/1/Power/FederatedGroupCapping"
+        }
+      },
+      "MinimumSafelyAchievableCap": null,
+      "MinimumSafelyAchievableCapValid": false,
+      "SNMPPowerThresholdAlert": {
+        "DurationInMin": 0,
+        "ThresholdWatts": 0,
+        "Trigger": "Disabled"
+      }
+    }
+  },
+  "PowerControl": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Power#PowerControl/0",
+      "MemberId": "0",
+      "PowerCapacityWatts": 1600,
+      "PowerConsumedWatts": 221,
+      "PowerMetrics": {
+        "AverageConsumedWatts": 221,
+        "IntervalInMin": 20,
+        "MaxConsumedWatts": 252,
+        "MinConsumedWatts": 220
+      }
+    }
+  ],
+  "PowerSupplies": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Power#PowerSupplies/0",
+      "FirmwareVersion": "1.02",
+      "LastPowerOutputWatts": 0,
+      "LineInputVoltage": 205,
+      "LineInputVoltageType": "ACHighLine",
+      "Manufacturer": "CHCNY",
+      "MemberId": "0",
+      "Model": "865414-B21",
+      "Name": "HpeServerPowerSupply",
+      "Oem": {
+        "Hpe": {
+          "@odata.context": "/redfish/v1/$metadata#HpeServerPowerSupply.HpeServerPowerSupply",
+          "@odata.type": "#HpeServerPowerSupply.v2_0_0.HpeServerPowerSupply",
+          "AveragePowerOutputWatts": 0,
+          "BayNumber": 1,
+          "HotplugCapable": true,
+          "MaxPowerOutputWatts": 143,
+          "Mismatched": false,
+          "PowerSupplyStatus": {
+            "State": "Ok"
+          },
+          "iPDUCapable": false
+        }
+      },
+      "PowerCapacityWatts": 800,
+      "PowerSupplyType": "AC",
+      "SerialNumber": "5WEBP0B8JAQ2K9",
+      "SparePartNumber": "866730-001",
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      }
+    },
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Power#PowerSupplies/1",
+      "FirmwareVersion": "1.02",
+      "LastPowerOutputWatts": 90,
+      "LineInputVoltage": 205,
+      "LineInputVoltageType": "ACHighLine",
+      "Manufacturer": "CHCNY",
+      "MemberId": "1",
+      "Model": "865414-B21",
+      "Name": "HpeServerPowerSupply",
+      "Oem": {
+        "Hpe": {
+          "@odata.context": "/redfish/v1/$metadata#HpeServerPowerSupply.HpeServerPowerSupply",
+          "@odata.type": "#HpeServerPowerSupply.v2_0_0.HpeServerPowerSupply",
+          "AveragePowerOutputWatts": 90,
+          "BayNumber": 2,
+          "HotplugCapable": true,
+          "MaxPowerOutputWatts": 99,
+          "Mismatched": false,
+          "PowerSupplyStatus": {
+            "State": "Ok"
+          },
+          "iPDUCapable": false
+        }
+      },
+      "PowerCapacityWatts": 800,
+      "PowerSupplyType": "AC",
+      "SerialNumber": "5WEBP0B8JAQ2KL",
+      "SparePartNumber": "866730-001",
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      }
+    }
+  ],
+  "Redundancy": [
+    {
+      "@odata.id": "/redfish/v1/Chassis/1/Power#Redundancy/0",
+      "MaxNumSupported": 2,
+      "MemberId": "0",
+      "MinNumNeeded": 2,
+      "Mode": "Failover",
+      "Name": "PowerSupply Redundancy Group 1",
+      "RedundancySet": [
+        {
+          "@odata.id": "/redfish/v1/Chassis/1/Power#PowerSupplies/0"
+        },
+        {
+          "@odata.id": "/redfish/v1/Chassis/1/Power#PowerSupplies/1"
+        }
+      ],
+      "Status": {
+        "Health": "OK",
+        "State": "Enabled"
+      }
+    }
+  ]
+}

@@ -21,6 +21,7 @@ func TestAlignedTicker(t *testing.T) {
 	until := since.Add(60 * time.Second)
 
 	ticker := newAlignedTicker(since, interval, jitter, clock)
+	defer ticker.Stop()
 
 	expected := []time.Time{
 		time.Unix(10, 0).UTC(),
@@ -32,11 +33,12 @@ func TestAlignedTicker(t *testing.T) {
 	}
 
 	actual := []time.Time{}
+
+	clock.Add(10 * time.Second)
 	for !clock.Now().After(until) {
 		select {
 		case tm := <-ticker.Elapsed():
 			actual = append(actual, tm.UTC())
-		default:
 		}
 		clock.Add(10 * time.Second)
 	}
@@ -53,6 +55,7 @@ func TestAlignedTickerJitter(t *testing.T) {
 	until := since.Add(60 * time.Second)
 
 	ticker := newAlignedTicker(since, interval, jitter, clock)
+	defer ticker.Stop()
 
 	last := since
 	for !clock.Now().After(until) {
@@ -75,6 +78,7 @@ func TestAlignedTickerMissedTick(t *testing.T) {
 	since := clock.Now()
 
 	ticker := newAlignedTicker(since, interval, jitter, clock)
+	defer ticker.Stop()
 
 	clock.Add(25 * time.Second)
 	tm := <-ticker.Elapsed()
@@ -94,6 +98,7 @@ func TestUnalignedTicker(t *testing.T) {
 	until := since.Add(60 * time.Second)
 
 	ticker := newUnalignedTicker(interval, jitter, clock)
+	defer ticker.Stop()
 
 	expected := []time.Time{
 		time.Unix(1, 0).UTC(),
@@ -128,6 +133,7 @@ func TestRollingTicker(t *testing.T) {
 	until := since.Add(60 * time.Second)
 
 	ticker := newUnalignedTicker(interval, jitter, clock)
+	defer ticker.Stop()
 
 	expected := []time.Time{
 		time.Unix(1, 0).UTC(),
@@ -166,6 +172,7 @@ func TestAlignedTickerDistribution(t *testing.T) {
 	since := clock.Now()
 
 	ticker := newAlignedTicker(since, interval, jitter, clock)
+	defer ticker.Stop()
 	dist := simulatedDist(ticker, clock)
 	printDist(dist)
 	require.True(t, 350 < dist.Count)
@@ -185,6 +192,7 @@ func TestUnalignedTickerDistribution(t *testing.T) {
 	clock := clock.NewMock()
 
 	ticker := newUnalignedTicker(interval, jitter, clock)
+	defer ticker.Stop()
 	dist := simulatedDist(ticker, clock)
 	printDist(dist)
 	require.True(t, 350 < dist.Count)
@@ -204,6 +212,7 @@ func TestRollingTickerDistribution(t *testing.T) {
 	clock := clock.NewMock()
 
 	ticker := newRollingTicker(interval, jitter, clock)
+	defer ticker.Stop()
 	dist := simulatedDist(ticker, clock)
 	printDist(dist)
 	require.True(t, 275 < dist.Count)

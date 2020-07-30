@@ -18,7 +18,7 @@ var (
 
 // testCleanup resets the global registry for test cleanup & unlocks the test lock
 func testCleanup() {
-	registry = &rgstry{
+	registry = &Registry{
 		stats: make(map[uint64]map[string]Stat),
 	}
 	testLock.Unlock()

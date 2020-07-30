@@ -32,7 +32,7 @@ type Librato struct {
 var reUnacceptedChar = regexp.MustCompile("[^.a-zA-Z0-9_-]")
 
 var sampleConfig = `
-  ## Librator API Docs
+  ## Librato API Docs
   ## http://dev.librato.com/v1/metrics-authentication
   ## Librato API user
   api_user = "telegraf@influxdb.com" # required.

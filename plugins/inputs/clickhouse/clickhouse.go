@@ -15,7 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -203,6 +203,10 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 		}
 	}
 	return nil
+}
+
+func (ch *ClickHouse) Stop() {
+	ch.client.CloseIdleConnections()
 }
 
 func (ch *ClickHouse) clusterIncludeExcludeFilter() string {

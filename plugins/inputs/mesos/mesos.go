@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -242,7 +242,7 @@ func metricsDiff(role Role, w []string) []string {
 	return b
 }
 
-// masterBlocks serves as kind of metrics registry groupping them in sets
+// masterBlocks serves as kind of metrics registry grouping them in sets
 func getMetrics(role Role, group string) []string {
 	var m map[string][]string
 
