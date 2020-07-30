@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -124,7 +125,7 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "zk_exists"):
 				enc.Encode(result{
 					Data: []struct {
-						ZkExists uint64 `json:"zk_exists"`
+						ZkExists chUInt64 `json:"zk_exists"`
 					}{
 						{
 							ZkExists: 1,
@@ -134,7 +135,7 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "zk_root_nodes"):
 				enc.Encode(result{
 					Data: []struct {
-						ZkRootNodes uint64 `json:"zk_root_nodes"`
+						ZkRootNodes chUInt64 `json:"zk_root_nodes"`
 					}{
 						{
 							ZkRootNodes: 2,
@@ -144,7 +145,7 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "replication_queue_exists"):
 				enc.Encode(result{
 					Data: []struct {
-						ReplicationQueueExists uint64 `json:"replication_queue_exists"`
+						ReplicationQueueExists chUInt64 `json:"replication_queue_exists"`
 					}{
 						{
 							ReplicationQueueExists: 1,
@@ -154,8 +155,8 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "replication_too_many_tries_replicas"):
 				enc.Encode(result{
 					Data: []struct {
-						TooManyTriesReplicas uint64 `json:"replication_too_many_tries_replicas"`
-						NumTriesReplicas     uint64 `json:"replication_num_tries_replicas"`
+						TooManyTriesReplicas chUInt64 `json:"replication_too_many_tries_replicas"`
+						NumTriesReplicas     chUInt64 `json:"replication_num_tries_replicas"`
 					}{
 						{
 							TooManyTriesReplicas: 10,
@@ -166,7 +167,7 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "system.detached_parts"):
 				enc.Encode(result{
 					Data: []struct {
-						DetachedParts uint64 `json:"detached_parts"`
+						DetachedParts chUInt64 `json:"detached_parts"`
 					}{
 						{
 							DetachedParts: 10,
@@ -176,14 +177,12 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "system.dictionaries"):
 				enc.Encode(result{
 					Data: []struct {
-						Name           string `json:"name"`
-						Database       string `json:"database"`
-						Status         string `json:"status"`
-						BytesAllocated uint64 `json:"bytes_allocated"`
+						Origin         string   `json:"origin"`
+						Status         string   `json:"status"`
+						BytesAllocated chUInt64 `json:"bytes_allocated"`
 					}{
 						{
-							Name:           "test_dict",
-							Database:       "default",
+							Origin:         "default.test_dict",
 							Status:         "NOT_LOADED",
 							BytesAllocated: 100,
 						},
@@ -192,9 +191,9 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "system.mutations"):
 				enc.Encode(result{
 					Data: []struct {
-						Failed    uint64 `json:"failed"`
-						Completed uint64 `json:"completed"`
-						Running   uint64 `json:"running"`
+						Failed    chUInt64 `json:"failed"`
+						Completed chUInt64 `json:"completed"`
+						Running   chUInt64 `json:"running"`
 					}{
 						{
 							Failed:    10,
@@ -206,10 +205,10 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "system.disks"):
 				enc.Encode(result{
 					Data: []struct {
-						Name            string `json:"name"`
-						Path            string `json:"path"`
-						FreePercent     uint64 `json:"free_space_percent"`
-						KeepFreePercent uint64 `json:"keep_free_space_percent"`
+						Name            string   `json:"name"`
+						Path            string   `json:"path"`
+						FreePercent     chUInt64 `json:"free_space_percent"`
+						KeepFreePercent chUInt64 `json:"keep_free_space_percent"`
 					}{
 						{
 							Name:            "default",
@@ -250,7 +249,7 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "text_log_exists"):
 				enc.Encode(result{
 					Data: []struct {
-						TextLogExists uint64 `json:"text_log_exists"`
+						TextLogExists chUInt64 `json:"text_log_exists"`
 					}{
 						{
 							TextLogExists: 1,
@@ -260,8 +259,8 @@ func TestGather(t *testing.T) {
 			case strings.Contains(query, "system.text_log"):
 				enc.Encode(result{
 					Data: []struct {
-						Level                 string `json:"level"`
-						LastMessagesLast10Min uint64 `json:"messages_last_10_min"`
+						Level                 string   `json:"level"`
+						LastMessagesLast10Min chUInt64 `json:"messages_last_10_min"`
 					}{
 						{
 							Level:                 "Fatal",
@@ -349,9 +348,8 @@ func TestGather(t *testing.T) {
 			"bytes_allocated": uint64(100),
 		},
 		map[string]string{
-			"source":        "127.0.0.1",
-			"dict_name":     "test_dict",
-			"dict_database": "default",
+			"source":      "127.0.0.1",
+			"dict_origin": "default.test_dict",
 		},
 	)
 	acc.AssertContainsFields(t, "clickhouse_mutations",
@@ -431,7 +429,7 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 			case strings.Contains(query, "zk_exists"):
 				enc.Encode(result{
 					Data: []struct {
-						ZkExists uint64 `json:"zk_exists"`
+						ZkExists chUInt64 `json:"zk_exists"`
 					}{
 						{
 							ZkExists: 0,
@@ -441,7 +439,7 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 			case strings.Contains(query, "replication_queue_exists"):
 				enc.Encode(result{
 					Data: []struct {
-						ReplicationQueueExists uint64 `json:"replication_queue_exists"`
+						ReplicationQueueExists chUInt64 `json:"replication_queue_exists"`
 					}{
 						{
 							ReplicationQueueExists: 0,
@@ -451,7 +449,7 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 			case strings.Contains(query, "text_log_exists"):
 				enc.Encode(result{
 					Data: []struct {
-						TextLogExists uint64 `json:"text_log_exists"`
+						TextLogExists chUInt64 `json:"text_log_exists"`
 					}{
 						{
 							TextLogExists: 0,
@@ -464,6 +462,7 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 			Servers: []string{
 				ts.URL,
 			},
+			Username: "default",
 		}
 		acc = &testutil.Accumulator{}
 	)
@@ -473,4 +472,116 @@ func TestGatherWithSomeTablesNotExists(t *testing.T) {
 	acc.AssertDoesNotContainMeasurement(t, "clickhouse_zookeeper")
 	acc.AssertDoesNotContainMeasurement(t, "clickhouse_replication_queue")
 	acc.AssertDoesNotContainMeasurement(t, "clickhouse_text_log")
+}
+
+func TestWrongJSONMarshalling(t *testing.T) {
+	var (
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			type result struct {
+				Data interface{} `json:"data"`
+			}
+			enc := json.NewEncoder(w)
+			//wrong data section json
+			enc.Encode(result{
+				Data: []struct{}{},
+			})
+		}))
+		ch = &ClickHouse{
+			Servers: []string{
+				ts.URL,
+			},
+			Username: "default",
+		}
+		acc = &testutil.Accumulator{}
+	)
+	defer ts.Close()
+	ch.Gather(acc)
+
+	assert.Equal(t, 0, len(acc.Metrics))
+	allMeasurements := []string{
+		"clickhouse_events",
+		"clickhouse_metrics",
+		"clickhouse_asynchronous_metrics",
+		"clickhouse_tables",
+		"clickhouse_zookeeper",
+		"clickhouse_replication_queue",
+		"clickhouse_detached_parts",
+		"clickhouse_dictionaries",
+		"clickhouse_mutations",
+		"clickhouse_disks",
+		"clickhouse_processes",
+		"clickhouse_text_log",
+	}
+	assert.GreaterOrEqual(t, len(allMeasurements), len(acc.Errors))
+}
+
+func TestOfflineServer(t *testing.T) {
+	var (
+		acc = &testutil.Accumulator{}
+		ch  = &ClickHouse{
+			Servers: []string{
+				"http://wrong-domain.local:8123",
+			},
+			Username: "default",
+			HTTPClient: http.Client{
+				Timeout: 1 * time.Millisecond,
+			},
+		}
+	)
+	ch.Gather(acc)
+
+	assert.Equal(t, 0, len(acc.Metrics))
+	allMeasurements := []string{
+		"clickhouse_events",
+		"clickhouse_metrics",
+		"clickhouse_asynchronous_metrics",
+		"clickhouse_tables",
+		"clickhouse_zookeeper",
+		"clickhouse_replication_queue",
+		"clickhouse_detached_parts",
+		"clickhouse_dictionaries",
+		"clickhouse_mutations",
+		"clickhouse_disks",
+		"clickhouse_processes",
+		"clickhouse_text_log",
+	}
+	assert.GreaterOrEqual(t, len(allMeasurements), len(acc.Errors))
+}
+
+func TestAutoDiscovery(t *testing.T) {
+	var (
+		ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			type result struct {
+				Data interface{} `json:"data"`
+			}
+			enc := json.NewEncoder(w)
+			switch query := r.URL.Query().Get("query"); {
+			case strings.Contains(query, "system.clusters"):
+				enc.Encode(result{
+					Data: []struct {
+						Cluster  string   `json:"test"`
+						Hostname string   `json:"localhost"`
+						ShardNum chUInt64 `json:"shard_num"`
+					}{
+						{
+							Cluster:  "test_database",
+							Hostname: "test_table",
+							ShardNum: 1,
+						},
+					},
+				})
+			}
+		}))
+		ch = &ClickHouse{
+			Servers: []string{
+				ts.URL,
+			},
+			Username:      "default",
+			AutoDiscovery: true,
+		}
+		acc = &testutil.Accumulator{}
+	)
+	defer ts.Close()
+	ch.Gather(acc)
+
 }

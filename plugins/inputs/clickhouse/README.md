@@ -138,8 +138,7 @@ This plugin gathers the statistic data from [ClickHouse](https://github.com/Clic
     - source (ClickHouse server hostname)
     - cluster (Name of the cluster [optional])
     - shard_num (Shard number in the cluster [optional])
-    - dict_database (Database of dictionary)
-    - dict_name (Name of dictionary)
+    - dict_origin (xml Filename when dictionary created from *_dictionary.xml, database.table when dictionary created from DDL)
   - fields:
     - is_loaded (0 - when dictionary data not successful load, 1 - when dictionary data loading fail, see [system.dictionaries][] for details)
     - bytes_allocated (how many bytes allocated in RAM after a dictionary loaded)
