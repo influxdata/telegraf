@@ -23,7 +23,7 @@ var defaultTimeout = 5 * time.Second
 
 var sampleConfig = `
   ## Username for authorization on ClickHouse server
-  ## example: user = "default""
+  ## example: username = "default""
   username = "default"
 
   ## Password for authorization on ClickHouse server
