@@ -360,7 +360,6 @@ func TestTailEOF(t *testing.T) {
 	tt.Log = testutil.Logger{}
 	tt.FromBeginning = true
 	tt.Files = []string{tmpfile.Name()}
-	//tt.WatchMethod = "inotify"
 	tt.SetParserFunc(parsers.NewInfluxParser)
 
 	err = tt.Init()
