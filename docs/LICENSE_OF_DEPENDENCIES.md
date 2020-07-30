@@ -25,6 +25,7 @@ following works:
 - github.com/aristanetworks/glog [Apache License 2.0](https://github.com/aristanetworks/glog/blob/master/LICENSE)
 - github.com/aristanetworks/goarista [Apache License 2.0](https://github.com/aristanetworks/goarista/blob/master/COPYING)
 - github.com/aws/aws-sdk-go [Apache License 2.0](https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)
+- github.com/beevik/etree [BSD 2-Clause "Simplified" License](https://github.com/beevik/etree/blob/master/LICENSE)
 - github.com/benbjohnson/clock [MIT License](https://github.com/benbjohnson/clock/blob/master/LICENSE)
 - github.com/beorn7/perks [MIT License](https://github.com/beorn7/perks/blob/master/LICENSE)
 - github.com/caio/go-tdigest [MIT License](https://github.com/caio/go-tdigest/blob/master/LICENSE)
@@ -168,7 +169,6 @@ following works:
 - gopkg.in/olivere/elastic.v5 [MIT License](https://github.com/olivere/elastic/blob/v5.0.76/LICENSE)
 - gopkg.in/tomb.v1 [BSD 3-Clause Clear License](https://github.com/go-tomb/tomb/blob/v1/LICENSE)
 - gopkg.in/yaml.v2 [Apache License 2.0](https://github.com/go-yaml/yaml/blob/v2.2.2/LICENSE)
-- github.com/beevik/etree [BSD 2-Clause "Simplified" License](https://github.com/beevik/etree/blob/master/LICENSE)
 
 ## telegraf used and modified code from these projects
 - github.com/DataDog/datadog-agent [Apache License 2.0](https://github.com/DataDog/datadog-agent/LICENSE)
