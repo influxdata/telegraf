@@ -16,6 +16,16 @@ import (
 	"unicode"
 )
 
+const (
+	oneAgentMetricsUrl = "http://127.0.0.1:14499/metrics/ingest"
+)
+
+var (
+	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.]+")
+	maxDimKeyLen          = 100
+	maxMetricKeyLen       = 250
+)
+
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
 	EnvironmentURL       string          `toml:"environmentURL"`
@@ -25,8 +35,6 @@ type Dynatrace struct {
 
 	client *http.Client
 }
-
-const oneAgentMetricsUrl = "http://127.0.0.1:14499/metrics/ingest"
 
 const sampleConfig = `
   ## Your Dynatrace environment URL. 
@@ -64,6 +72,7 @@ func (d *Dynatrace) Connect() error {
 
 // Close Closes the Dynatrace output plugin
 func (d *Dynatrace) Close() error {
+	d.client = nil
 	return nil
 }
 
@@ -77,34 +86,40 @@ func (d *Dynatrace) Description() string {
 	return "Send telegraf metrics to a Dynatrace environment"
 }
 
-var reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.]+")
-
-const maxDimKeyLen = 100
-const maxMetricKeyLen = 250
-
 // Normalizes a metric keys or metric dimension identifiers
 // according to Dynatrace format.
-func (d *Dynatrace) normalize(s string, max int) string {
-	result := reNameAllowedCharList.ReplaceAllString(s, "_")
-	// trunc to max size
-	if len(result) > max {
-		result = result[:max]
-	}
-	// remove trailing and ending '_' char
-	if len(result) > 1 {
-		if strings.HasPrefix(s, "_") {
-			result = result[1:]
+func (d *Dynatrace) normalize(s string, max int) (string, error) {
+	s = reNameAllowedCharList.ReplaceAllString(s, "_")
+
+	// Strip Digits if they are at the beginning of the string
+	normalizedString := ""
+	firstChars := true
+
+	for _, char := range s {
+		if firstChars && (unicode.IsDigit(char) || char == '_') {
+			continue
+		} else {
+			firstChars = false
 		}
-		if strings.HasSuffix(s, "_") {
-			result = result[:len(result)-1]
-		}
+		normalizedString += string(char)
 	}
 
-	// append "generic" when it starts with a digit
-	if unicode.IsDigit(rune(s[0])) {
-		result = "generic_" + result
+	for strings.HasPrefix(normalizedString, "_") {
+		normalizedString = normalizedString[1:]
 	}
-	return result
+
+	if len(normalizedString) > max {
+		normalizedString = normalizedString[:max]
+	}
+
+	for strings.HasSuffix(normalizedString, "_") {
+		normalizedString = normalizedString[:len(normalizedString)-1]
+	}
+
+	if len(normalizedString) == 0 {
+		return "", fmt.Errorf("error normalizing the string: %s", s)
+	}
+	return normalizedString, nil
 }
 
 func (d *Dynatrace) escape(v string) string {
@@ -123,13 +138,17 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 		tagb.Reset()
 		if len(metric.Tags()) > 0 {
 			for tk, tv := range metric.Tags() {
-				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(d.normalize(tk, maxDimKeyLen)), d.escape(tv))
+				tagKey, err := d.normalize(tk, maxDimKeyLen)
+				if err != nil {
+					continue
+				}
+				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(tv))
+
 			}
 		}
 		if len(metric.Fields()) > 0 {
 			for k, v := range metric.Fields() {
 				var value string
-				// first check if value type is supported
 				switch v := v.(type) {
 				case string:
 					continue
@@ -155,9 +174,17 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				}
 
 				// metric name
-				metricID := metric.Name() + "." + (d.normalize(k, maxMetricKeyLen))
+				metricKey, err := d.normalize(k, maxMetricKeyLen)
+				if err != nil {
+					continue
+				}
+
+				metricID, err := d.normalize(metric.Name()+"."+metricKey, maxMetricKeyLen)
 				// write metric name combined with its field
-				fmt.Fprintf(&buf, "%s", d.normalize(metricID, maxMetricKeyLen))
+				if err != nil {
+					continue
+				}
+				fmt.Fprintf(&buf, "%s", metricID)
 				// add the tag string
 				if len(tagb.String()) > 0 {
 					fmt.Fprintf(&buf, "%s", tagb.String())

@@ -1,4 +1,4 @@
-package dynatrace
+package dynatrace_weg
 
 import (
 	"encoding/json"
