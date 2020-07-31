@@ -346,3 +346,47 @@ func TestCharacterEncoding(t *testing.T) {
 		})
 	}
 }
+
+func TestTailEOF(t *testing.T) {
+	tmpfile, err := ioutil.TempFile("", "")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+	_, err = tmpfile.WriteString("cpu usage_idle=100\r\n")
+	require.NoError(t, err)
+	err = tmpfile.Sync()
+	require.NoError(t, err)
+
+	tt := NewTail()
+	tt.Log = testutil.Logger{}
+	tt.FromBeginning = true
+	tt.Files = []string{tmpfile.Name()}
+	tt.SetParserFunc(parsers.NewInfluxParser)
+
+	err = tt.Init()
+	require.NoError(t, err)
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, tt.Start(&acc))
+	defer tt.Stop()
+	require.NoError(t, acc.GatherError(tt.Gather))
+	acc.Wait(1) // input hits eof
+
+	_, err = tmpfile.WriteString("cpu2 usage_idle=200\r\n")
+	require.NoError(t, err)
+	err = tmpfile.Sync()
+	require.NoError(t, err)
+
+	acc.Wait(2)
+	require.NoError(t, acc.GatherError(tt.Gather))
+	acc.AssertContainsFields(t, "cpu",
+		map[string]interface{}{
+			"usage_idle": float64(100),
+		})
+	acc.AssertContainsFields(t, "cpu2",
+		map[string]interface{}{
+			"usage_idle": float64(200),
+		})
+
+	err = tmpfile.Close()
+	require.NoError(t, err)
+}
