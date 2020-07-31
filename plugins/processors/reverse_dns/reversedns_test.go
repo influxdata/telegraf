@@ -19,6 +19,7 @@ func TestSimpleReverseLookup(t *testing.T) {
 	}, now)
 
 	dns := newReverseDNS()
+	dns.Log = &testutil.Logger{}
 	dns.Lookups = []lookupEntry{
 		{
 			Field: "source_ip",
