@@ -5,7 +5,9 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -29,6 +31,11 @@ var sampleConfig = `
   #UseWildcardsExpansion = false
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
+  # Names or ip addresses of remote computers to gather counters from, including local computer.
+  # Telegraf's user must be already authenticated to the remote computers.
+  # It can be overridden at the object level
+  # Sources = ["localhost"]
+
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -137,7 +144,7 @@ var sampleConfig = `
     Measurement = "win_swap"
 `
 
-type Win_PerfCounters struct {
+type WinPerfCounters struct {
 	PrintValid bool
 	//deprecated: determined dynamically
 	PreVistaSupport         bool
@@ -145,15 +152,29 @@ type Win_PerfCounters struct {
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
 	UseWildcardsExpansion   bool
+	Sources                 []string
 
 	Log telegraf.Logger
 
 	lastRefreshed time.Time
-	counters      []*counter
-	query         PerformanceQuery
+	queryCreator  PerformanceQueryCreator
+	hostCounters  map[string]*hostCountersInfo
+	// cached os.Hostname()
+	cachedHostname string
+}
+
+type hostCountersInfo struct {
+	// computer name used as key and for printing
+	computer string
+	// computer name used in tag
+	tag       string
+	counters  []*counter
+	query     PerformanceQuery
+	timestamp time.Time
 }
 
 type perfobject struct {
+	Sources       []string
 	ObjectName    string
 	Counters      []string
 	Instances     []string
@@ -165,6 +186,7 @@ type perfobject struct {
 
 type counter struct {
 	counterPath   string
+	computer      string
 	objectName    string
 	counter       string
 	instance      string
@@ -179,14 +201,17 @@ type instanceGrouping struct {
 	objectname string
 }
 
+type fieldGrouping map[instanceGrouping]map[string]interface{}
+
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
 // extractCounterInfoFromCounterPath gets object name, instance name (if available) and counter name from counter path
 // General Counter path pattern is: \\computer\object(parent/instance#index)\counter
 // parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
-func extractCounterInfoFromCounterPath(counterPath string) (object string, instance string, counter string, err error) {
-
+func extractCounterInfoFromCounterPath(counterPath string) (computer, object, instance, counter string, err error) {
+	computer = ""
+	leftComputerBorderIndex := -1
 	rightObjectBorderIndex := -1
 	leftObjectBorderIndex := -1
 	leftCounterBorderIndex := -1
@@ -202,6 +227,8 @@ func extractCounterInfoFromCounterPath(counterPath string) (object string, insta
 					leftCounterBorderIndex = i
 				} else if leftObjectBorderIndex == -1 {
 					leftObjectBorderIndex = i
+				} else if leftComputerBorderIndex == -1 {
+					leftComputerBorderIndex = i
 				}
 			}
 		case '(':
@@ -224,6 +251,15 @@ func extractCounterInfoFromCounterPath(counterPath string) (object string, insta
 		err = errors.New("cannot parse object from: " + counterPath)
 		return
 	}
+	if leftComputerBorderIndex > -1 {
+		// validate there is leading \\ and not empty computer (\\\O)
+		if leftComputerBorderIndex != 1 || leftComputerBorderIndex == leftObjectBorderIndex-1 {
+			err = errors.New("cannot parse computer from: " + counterPath)
+			return
+		} else {
+			computer = counterPath[leftComputerBorderIndex+1 : leftObjectBorderIndex]
+		}
+	}
 
 	if leftInstanceBorderIndex > -1 && rightInstanceBorderIndex > -1 {
 		instance = counterPath[leftInstanceBorderIndex+1 : rightInstanceBorderIndex]
@@ -236,25 +272,56 @@ func extractCounterInfoFromCounterPath(counterPath string) (object string, insta
 	return
 }
 
-func (m *Win_PerfCounters) Description() string {
+func (m *WinPerfCounters) Description() string {
 	return "Input plugin to counterPath Performance Counters on Windows operating systems"
 }
 
-func (m *Win_PerfCounters) SampleConfig() string {
+func (m *WinPerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
+func (m *WinPerfCounters) hostname() string {
+	if m.cachedHostname == "" {
+		hostname, err := os.Hostname()
+		if err == nil {
+			m.cachedHostname = hostname
+		} else {
+			m.cachedHostname = "localhost"
+		}
+	}
+	return m.cachedHostname
+}
+
 //objectName string, counter string, instance string, measurement string, include_total bool
-func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
+func (m *WinPerfCounters) AddItem(counterPath, computer, objectName, instance, counterName, measurement string, includeTotal bool) error {
 	var err error
 	var counterHandle PDH_HCOUNTER
-	if !m.query.IsVistaOrNewer() {
-		counterHandle, err = m.query.AddCounterToQuery(counterPath)
+	var hostCounter *hostCountersInfo
+	var ok bool
+	sourceTag := computer
+	if computer == "localhost" {
+		sourceTag = m.hostname()
+	}
+	if m.hostCounters == nil {
+		m.hostCounters = make(map[string]*hostCountersInfo)
+	}
+	if hostCounter, ok = m.hostCounters[computer]; !ok {
+		hostCounter = &hostCountersInfo{computer: computer, tag: sourceTag}
+		m.hostCounters[computer] = hostCounter
+		hostCounter.query = m.queryCreator.NewPerformanceQuery(computer)
+		if err = hostCounter.query.Open(); err != nil {
+			return err
+		}
+		hostCounter.counters = make([]*counter, 0, 0)
+	}
+
+	if !hostCounter.query.IsVistaOrNewer() {
+		counterHandle, err = hostCounter.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
 	} else {
-		counterHandle, err = m.query.AddEnglishCounterToQuery(counterPath)
+		counterHandle, err = hostCounter.query.AddEnglishCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
@@ -263,20 +330,20 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 
 	if m.UseWildcardsExpansion {
 		origInstance := instance
-		counterPath, err = m.query.GetCounterPath(counterHandle)
+		counterPath, err = hostCounter.query.GetCounterPath(counterHandle)
 		if err != nil {
 			return err
 		}
-		counters, err := m.query.ExpandWildCardPath(counterPath)
+		counters, err := hostCounter.query.ExpandWildCardPath(counterPath)
 		if err != nil {
 			return err
 		}
 
 		for _, counterPath := range counters {
 			var err error
-			counterHandle, err := m.query.AddCounterToQuery(counterPath)
+			counterHandle, err := hostCounter.query.AddCounterToQuery(counterPath)
 
-			objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
+			computer, objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
 			if err != nil {
 				return err
 			}
@@ -285,18 +352,18 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 				continue
 			}
 
-			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
+			newItem := &counter{counterPath, computer, objectName, counterName, instance, measurement,
 				includeTotal, counterHandle}
-			m.counters = append(m.counters, newItem)
+			hostCounter.counters = append(hostCounter.counters, newItem)
 
 			if m.PrintValid {
 				m.Log.Infof("Valid: %s", counterPath)
 			}
 		}
 	} else {
-		newItem := &counter{counterPath, objectName, counterName, instance, measurement,
+		newItem := &counter{counterPath, computer, objectName, counterName, instance, measurement,
 			includeTotal, counterHandle}
-		m.counters = append(m.counters, newItem)
+		hostCounter.counters = append(hostCounter.counters, newItem)
 		if m.PrintValid {
 			m.Log.Infof("Valid: %s", counterPath)
 		}
@@ -305,29 +372,48 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 	return nil
 }
 
-func (m *Win_PerfCounters) ParseConfig() error {
+func (m *WinPerfCounters) ParseConfig() error {
 	var counterPath string
+
+	if len(m.Sources) == 0 {
+		m.Sources = []string{"localhost"}
+	}
 
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
-			for _, counter := range PerfObject.Counters {
-				for _, instance := range PerfObject.Instances {
-					objectname := PerfObject.ObjectName
+			computers := PerfObject.Sources
+			if len(computers) == 0 {
+				computers = m.Sources
+			}
+			for _, computer := range computers {
+				computerName := ""
+				if computer == "" {
+					// localhost as a computer name in counter path doesn't work
+					computer = "localhost"
+				}
+				if computer != "localhost" {
+					computerName = "\\\\" + computer
+				}
+				for _, counter := range PerfObject.Counters {
+					for _, instance := range PerfObject.Instances {
 
-					if instance == "------" {
-						counterPath = "\\" + objectname + "\\" + counter
-					} else {
-						counterPath = "\\" + objectname + "(" + instance + ")\\" + counter
-					}
+						objectname := PerfObject.ObjectName
 
-					err := m.AddItem(counterPath, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal)
-
-					if err != nil {
-						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							m.Log.Errorf("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+						if instance == "------" {
+							counterPath = computerName + "\\" + objectname + "\\" + counter
+						} else {
+							counterPath = computerName + "\\" + objectname + "(" + instance + ")\\" + counter
 						}
-						if PerfObject.FailOnMissing {
-							return err
+
+						err := m.AddItem(counterPath, computer, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal)
+
+						if err != nil {
+							if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+								m.Log.Errorf("invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+							}
+							if PerfObject.FailOnMissing {
+								return err
+							}
 						}
 					}
 				}
@@ -341,53 +427,71 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 }
 
-func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
+func (m *WinPerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
 
 	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshInterval.Duration).Before(time.Now())) {
-		if m.counters != nil {
-			m.counters = m.counters[:0]
-		}
-
-		if err = m.query.Open(); err != nil {
+		if err = m.cleanQueries(); err != nil {
 			return err
 		}
 
 		if err = m.ParseConfig(); err != nil {
 			return err
 		}
-		//some counters need two data samples before computing a value
-		if err = m.query.CollectData(); err != nil {
-			return err
+		for _, hostCounterSet := range m.hostCounters {
+			//some counters need two data samples before computing a value
+			if err = hostCounterSet.query.CollectData(); err != nil {
+				return err
+			}
 		}
 		m.lastRefreshed = time.Now()
-
+		// minimum time between collecting two samples
 		time.Sleep(time.Second)
 	}
 
-	var collectFields = make(map[instanceGrouping]map[string]interface{})
-
-	var timestamp time.Time
-	if m.UsePerfCounterTime && m.query.IsVistaOrNewer() {
-		timestamp, err = m.query.CollectDataWithTime()
-		if err != nil {
-			return err
-		}
-	} else {
-		timestamp = time.Now()
-		if err = m.query.CollectData(); err != nil {
-			return err
+	for _, hostCounterSet := range m.hostCounters {
+		if m.UsePerfCounterTime && hostCounterSet.query.IsVistaOrNewer() {
+			hostCounterSet.timestamp, err = hostCounterSet.query.CollectDataWithTime()
+			if err != nil {
+				return err
+			}
+		} else {
+			hostCounterSet.timestamp = time.Now()
+			if err = hostCounterSet.query.CollectData(); err != nil {
+				return err
+			}
 		}
 	}
+	var wg sync.WaitGroup
+	//iterate over computers
+	for _, hostCounterInfo := range m.hostCounters {
+		wg.Add(1)
+		go func(hostInfo *hostCountersInfo) {
+			m.Log.Debugf("gathering from %s", hostInfo.computer)
+			start := time.Now()
+			err = m.gatherComputerCounters(hostInfo, acc)
+			m.Log.Debugf("gathering from %s finished in %.3fs", hostInfo.computer, time.Now().Sub(start).Seconds())
+			if err != nil {
+				acc.AddError(fmt.Errorf("error during collecting data on host '%s': %s", hostInfo.computer, err.Error()))
+			}
+			wg.Done()
+		}(hostCounterInfo)
+	}
 
+	wg.Wait()
+	return nil
+}
+
+func (m *WinPerfCounters) gatherComputerCounters(hostCounterInfo *hostCountersInfo, acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
-	for _, metric := range m.counters {
+	collectedFields := make(fieldGrouping)
+	for _, metric := range hostCounterInfo.counters {
 		// collect
 		if m.UseWildcardsExpansion {
-			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
+			value, err := hostCounterInfo.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			if err == nil {
-				addCounterMeasurement(metric, metric.instance, value, collectFields)
+				addCounterMeasurement(metric, metric.instance, value, collectedFields)
 			} else {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
@@ -395,7 +499,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
-			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+			counterValues, err := hostCounterInfo.query.GetFormattedCounterArrayDouble(metric.counterHandle)
 			if err == nil {
 				for _, cValue := range counterValues {
 					var add bool
@@ -418,7 +522,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 					}
 
 					if add {
-						addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
+						addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectedFields)
 					}
 				}
 			} else {
@@ -429,21 +533,33 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
-
-	for instance, fields := range collectFields {
+	for instance, fields := range collectedFields {
 		var tags = map[string]string{
 			"objectname": instance.objectname,
 		}
 		if len(instance.instance) > 0 {
 			tags["instance"] = instance.instance
 		}
-		acc.AddFields(instance.name, fields, tags, timestamp)
+		if len(hostCounterInfo.tag) > 0 {
+			tags["source"] = hostCounterInfo.tag
+		}
+		acc.AddFields(instance.name, fields, tags, hostCounterInfo.timestamp)
 	}
+	return nil
 
+}
+
+func (m *WinPerfCounters) cleanQueries() error {
+	for _, hostCounterInfo := range m.hostCounters {
+		if err := hostCounterInfo.query.Close(); err != nil {
+			return err
+		}
+	}
+	m.hostCounters = nil
 	return nil
 }
 
-func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
+func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields fieldGrouping) {
 	measurement := sanitizedChars.Replace(metric.measurement)
 	if measurement == "" {
 		measurement = "win_perf_counters"
@@ -467,6 +583,6 @@ func isKnownCounterDataError(err error) bool {
 
 func init() {
 	inputs.Add("win_perf_counters", func() telegraf.Input {
-		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: internal.Duration{Duration: time.Second * 60}}
+		return &WinPerfCounters{CountersRefreshInterval: internal.Duration{Duration: time.Second * 60}, queryCreator: &PerformanceQueryCreatorImpl{}}
 	})
 }
