@@ -1,0 +1,50 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+  admin_credentials="admin:admin;radmin:rpass"
+  mysql_ifaces="0.0.0.0:6032;/tmp/proxysql_admin.sock"
+  refresh_interval=200
+  debug=true
+}
+
+mysql_variables=
+{
+  threads=1
+  max_connections=100
+  default_query_delay=0
+  interfaces="0.0.0.0:6033;/tmp/proxysql.sock"
+}
+
+mysql_servers =
+(
+  {
+    address = "172.20.1.2"
+    port = 3306
+    hostgroup = 0
+    status = "ONLINE"
+    weight = 1
+    compression = 0
+    max_connections=200
+    max_replication_lag = 10
+  },
+  {
+    address = "172.20.1.2"
+    port = 3306
+    hostgroup = 1
+    status = "ONLINE"
+    weight = 1
+    compression = 0
+    max_connections=200
+    max_replication_lag = 10
+  }
+)
+
+mysql_replication_hostgroups =
+(
+  {
+    reader_hostgroup=1
+    writer_hostgroup=0
+    comment="Cluster"
+  }
+)
