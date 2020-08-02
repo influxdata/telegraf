@@ -29,6 +29,8 @@ var sampleConfig = `
   #UseWildcardsExpansion = false
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
+  # Fail on unknown errors
+  # IgnoreUnknownCounterReadErrors = false
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -145,6 +147,7 @@ type Win_PerfCounters struct {
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
 	UseWildcardsExpansion   bool
+	IgnoreUnknownCounterReadErrors     bool
 
 	Log telegraf.Logger
 
@@ -390,7 +393,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				addCounterMeasurement(metric, metric.instance, value, collectFields)
 			} else {
 				//ignore invalid data  as some counters from process instances returns this sometimes
-				if !isKnownCounterDataError(err) {
+				if !m.IgnoreUnknownCounterReadErrors && !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
 			}
@@ -423,7 +426,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				}
 			} else {
 				//ignore invalid data as some counters from process instances returns this sometimes
-				if !isKnownCounterDataError(err) {
+				if !m.IgnoreUnknownCounterReadErrors && !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
 			}
@@ -459,7 +462,8 @@ func isKnownCounterDataError(err error) bool {
 	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
 		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA ||
-		pdhErr.ErrorCode == PDH_NO_DATA) {
+		pdhErr.ErrorCode == PDH_NO_DATA ||
+		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_DENOMINATOR) {
 		return true
 	}
 	return false

@@ -81,6 +81,15 @@ Supported on Windows Vista/Windows Server 2008 and newer
 Example:
 `UsePerfCounterTime=true`
 
+#### IgnoreUnknownCounterReadErrors
+
+Allows to ignore counter read errors when they are not considered as `known`ones.
+This option is disabled by default and will silently ignore the error without eny log output.
+
+Supported on Windows Vista/Windows Server 2008 and newer
+Example:
+`IgnoreUnknownCounterReadErrors=false`
+
 ### Object
 
 See Entry below.

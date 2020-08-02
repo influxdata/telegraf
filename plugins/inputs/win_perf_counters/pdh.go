@@ -63,7 +63,7 @@ const (
 	PDH_CSTATUS_ITEM_NOT_VALIDATED             = 0x800007D3
 	PDH_RETRY                                  = 0x800007D4
 	PDH_NO_DATA                                = 0x800007D5 // The query does not currently contain any counters (for example, limited access)
-	PDH_CALC_NEGATIVE_DENOMINATOR              = 0x800007D6
+	PDH_CALC_NEGATIVE_DENOMINATOR              = 0x800007D6 // A counter with a negative denominator value was detected
 	PDH_CALC_NEGATIVE_TIMEBASE                 = 0x800007D7
 	PDH_CALC_NEGATIVE_VALUE                    = 0x800007D8
 	PDH_DIALOG_CANCELLED                       = 0x800007D9
