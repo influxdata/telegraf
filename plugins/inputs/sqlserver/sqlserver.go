@@ -128,17 +128,17 @@ func initQueries(s *SQLServer) error {
 		queries["AzureDBWaitStats"] = Query{ScriptName: "AzureDBWaitStats", Script: sqlAzureDBWaitStats, ResultByRow: false}
 		queries["AzureDBDatabaseIO"] = Query{ScriptName: "AzureDBDatabaseIO", Script: sqlAzureDBDatabaseIO, ResultByRow: false}
 		queries["AzureDBServerProperties"] = Query{ScriptName: "AzureDBServerProperties", Script: sqlAzureDBProperties, ResultByRow: false}
-		queries["AzureDBOsWaitstats"] = Query{ScriptName: "AzureDBOsWaitstats", Script: sqlAzureDBOsWaitStats, ResultByRow: false}
-		queries["AzureDBMemoryClerks"] = Query{ScriptName: "AzureDBMemoryClerks", Script: sqlAzureMemoryClerks, ResultByRow: false}
+		queries["AzureSQLDBOsWaitstats"] = Query{ScriptName: "AzureSQLOsWaitstats", Script: sqlAzureDBOsWaitStats, ResultByRow: false}
+		queries["AzureDBMemoryClerks"] = Query{ScriptName: "AzureDBMemoryClerks", Script: sqlAzureDBMemoryClerks, ResultByRow: false}
 		queries["AzureDBPerformanceCounters"] = Query{ScriptName: "AzureDBPerformanceCounters", Script: sqlAzurePerformanceCounters, ResultByRow: false}
 	} else if s.DatabaseType == "AzureSQLManagedInstance" {
-		queries["AzureDBResourceStats"] = Query{ScriptName: "AzureDBResourceStats", Script: sqlAzureDBResourceStats, ResultByRow: false}
-		queries["AzureDBResourceGovernance"] = Query{ScriptName: "AzureAzureDBResourceGovernanceDBPerformanceCounters", Script: sqlAzureDBResourceGovernance, ResultByRow: false}
-		queries["AzureDBDatabaseIO"] = Query{ScriptName: "AzureDBDatabaseIO", Script: sqlAzureDBDatabaseIO, ResultByRow: false}
-		queries["AzureDBServerProperties"] = Query{ScriptName: "AzureDBServerProperties", Script: sqlAzureManagedInstanceProperties, ResultByRow: false}
-		queries["AzureDBOsWaitstats"] = Query{ScriptName: "AzureDBOsWaitstats", Script: sqlAzureDBOsWaitStats, ResultByRow: false}
-		queries["AzureDBMemoryClerks"] = Query{ScriptName: "AzureDBMemoryClerks", Script: sqlAzureMemoryClerks, ResultByRow: false}
-		queries["AzureDBPerformanceCounters"] = Query{ScriptName: "AzureDBPerformanceCounters", Script: sqlAzurePerformanceCounters, ResultByRow: false}
+		queries["AzureSQLMIResourceStats"] = Query{ScriptName: "AzureSQLMIResourceStats", Script: sqlAzureMIResourceStats, ResultByRow: false}
+		queries["AzureSQLMIResourceGovernance"] = Query{ScriptName: "AzureSQLMIResourceGovernance", Script: sqlAzureMIResourceGovernance, ResultByRow: false}
+		queries["AzureSQLMIDatabaseIO"] = Query{ScriptName: "AzureSQLMIDatabaseIO", Script: sqlAzureMIDatabaseIO, ResultByRow: false}
+		queries["AzureSQLMIServerProperties"] = Query{ScriptName: "AzureSQLMIServerProperties", Script: sqlAzureMIProperties, ResultByRow: false}
+		queries["AzureSQLMIOsWaitstats"] = Query{ScriptName: "AzureSQLMIOsWaitstats", Script: sqlAzureMIOsWaitStats, ResultByRow: false}
+		queries["AzureMIMemoryClerks"] = Query{ScriptName: "AzureMIMemoryClerks", Script: sqlAzureMIMemoryClerks, ResultByRow: false}
+		queries["AzureMIPerformanceCounters"] = Query{ScriptName: "AzureMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
 	} else {
 		// If this is an AzureDB instance, grab some extra metrics
 		if s.AzureDB {

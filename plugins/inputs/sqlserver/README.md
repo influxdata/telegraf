@@ -6,7 +6,7 @@ lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ### Additional Setup:
 
-You have to create a login on every instance you want to monitor, with following script:
+You have to create a login on every SQL Server instance  or Azure SQL Managed instance you want to monitor, with following script:
 ```sql
 USE master;
 GO
@@ -46,6 +46,11 @@ GO
   #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
   # ]
 
+  ## This enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
+  ## In the config file, the sql server plugin section should be repeated multiple times each with a set of servers for a specific database_type
+  ## possible values for database_type are  "AzureSQLDB" or  "SQLServer" or "AzureSQLManagedInstance"
+  database_type = "AzureSQLDB"
+
   ## Optional parameter, setting this to 2 will use a new version
   ## of the collection queries that break compatibility with the original
   ## dashboards.
@@ -56,6 +61,27 @@ GO
   # azuredb = false
 
   ## Possible queries
+  ## Queries enabled by default for specific Database Type
+  
+  ## database_type =  AzureSQLDB
+  ## - AzureDBWaitStats
+  ## - AzureDBResourceStats 
+  ## - AzureDBResourceGovernance
+  ## - AzureDBDatabaseIO
+  ## - AzureDBServerProperties
+  ## - AzureDBSQLOsWaitstats
+  ## - AzureDBMemoryClerks
+  ## - AzureDBPerformanceCounters
+
+   ## database_type =  AzureSQLManagedInstance
+   ## - AzureMIResourceStats 
+   ## - AzureMIResourceGovernance 
+   ## - AzureMIDatabaseIO 
+   ## - AzureMIServerProperties 
+   ## - AzureSQLMIOsWaitstats 
+   ## - AzureMIMemoryClerks
+   ## - AzureMIPerformanceCounters
+
   ## Version 2:
   ## - PerformanceCounters
   ## - WaitStatsCategorized
@@ -66,6 +92,7 @@ GO
   ## - SqlRequests
   ## - VolumeSpace
   ## - Cpu
+
   ## Version 1:
   ## - PerformanceCounters
   ## - WaitStatsCategorized
@@ -78,11 +105,16 @@ GO
   ## - VolumeSpace
   ## - PerformanceMetrics
 
+
+
   ## A list of queries to include. If not specified, all the above listed queries are used.
   # include_query = []
 
   ## A list of queries to explicitly ignore.
   exclude_query = [ 'Schedulers' , 'SqlRequests' ]
+
+
+
 ```
 
 ### Metrics:
@@ -120,34 +152,59 @@ The new (version 2) metrics provide:
   - *Resource Governor*: CPU Usage, Requests/sec, Queued Requests, and Blocked tasks per workload group + more
 - *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version. In the case of Azure SQL relevent properties such as Tier, #Vcores, Memory etc.
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
-- *Schedulers* - This captures sys.dm_os_schedulers.
-- *SqlRequests* - This captures a snapshot of dm_exec_requests and
+- *Schedulers* - This captures `sys.dm_os_schedulers`.
+- *SqlRequests* - This captures a snapshot of `sys.dm_exec_requests` and
   dm_exec_sessions that gives you running requests as well as wait types and
   blocking sessions.
-- *VolumeSpace* - uses sys.dm_os_volume_stats to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
-- *Cpu* - uses the buffer ring (sys.dm_os_ring_buffers) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
+- *VolumeSpace* - uses `sys.dm_os_volume_stats` to get total, used and occupied space on every disk that contains a data or log file. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance). It is pointless to run this with high frequency (ie: every 10s), but it won't cause any problem.
+- *Cpu* - uses the buffer ring (`sys.dm_os_ring_buffers`) to get CPU data, the table is updated once per minute. (Note that even if enabled it won't get any data from Azure SQL Database or SQL Managed Instance).
 
   In order to allow tracking on a per statement basis this query produces a
   unique tag for each query.  Depending on the database workload, this may
   result in a high cardinality series.  Reference the FAQ for tips on
   [managing series cardinality][cardinality].
-- *Azure Managed Instances*
-  - Stats from `sys.server_resource_stats`:
-    - cpu_count
-    - server_memory
-    - sku
-    - engine_edition
-    - hardware_type
-    - total_storage_mb
-    - available_storage_mb
-    - uptime
-  - Resource governance stats from sys.dm_instance_resource_governance
-- *Azure SQL Database*
-  - Stats from sys.dm_db_wait_stats
-  - Resource governance stats from sys.dm_user_db_resource_governance
-  - Stats from sys.dm_db_resource_stats
 
-The following metrics can be used directly, with no delta calculations:
+- *Azure Managed Instances*
+  - Stats from `sys.server_resource_stats`
+  - Resource governance stats from `sys.dm_instance_resource_governance`
+- *Azure SQL Database* in addition to other stats
+  - Stats from `sys.dm_db_wait_stats`
+  - Resource governance stats from `sys.dm_user_db_resource_governance`
+  - Stats from `sys.dm_db_resource_stats`
+  
+
+
+#### database_type = "AzureSQLDB 
+These are metrics for Azure SQL Database (single database) and are very similar to version 2 but split out for maintenance reasons, better ability to test,differences in DMVs:
+- *AzureDBDatabaseIO*: IO stats from `sys.dm_io_virtual_file_stats` including resource governance time, RBPEX, IO for Hyperscale.
+- *AzureDBMemoryClerks*: Memory clerk breakdown from `sys.dm_os_memory_clerks`.
+= *AzureDBResourceGovernance*: Relevant properties indicatign resource limits from `sys.dm_user_db_resource_governance`
+- *AzureDBPerformanceCounters*: A select list of performance counters from `sys.dm_os_performance_counters` including cloud specific counters for SQL Hyperscale.
+- *AzureDBServerProperties*: Relevant Azure SQL relevent properties from  such as Tier, #Vcores, Memory etc, storage, etc.
+- *AzureDBWaitstats*: Wait time in ms from `sys.dm_db_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected only as of the end of the a statement. and for a specific database only.
+- *AzureSQLOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
+
+
+#### database_type = "AzureSQLDB 
+These are metrics for Azure SQL Managed instance, are very similar to version 2 but split out for maintenance reasons, better ability to test, differences in DMVs:
+- *AzureDBDatabaseIO*: IO stats from `sys.dm_io_virtual_file_stats` including resource governance time, RBPEX, IO for Hyperscale.
+- *AzureDBMemoryClerks*: Memory clerk breakdown from `sys.dm_os_memory_clerks`.
+- *AzureDBResourceGovernance*: Relevant properties indicatign resource limits from `sys.dm_instance_resource_governance`
+- *AzureDBPerformanceCounters*: A select list of performance counters from `sys.dm_os_performance_counters` including cloud specific counters for SQL Hyperscale.
+- *AzureDBServerProperties*: Relevant Azure SQL relevent properties such as Tier, #Vcores, Memory etc, storage, etc.
+- *AzureSQLOsWaitstats*: Wait time in ms from `sys.dm_os_wait_stats`, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store. These waits are collected as they occur and instance wide
+
+
+#### Output Measures
+The guiding principal is that all data collected from the same primary DMV ends up in the same measure.
+`sqlserver_database_io` - Used by DatabaseIO , AzureDBDatabaseIO, AzureMIDatabaseIO given the data is from `sys.dm_io_virtual_file_stats`
+`sqlserver_waitstats` - Used by  WaitStatsCategorized,AzureSQLDBOsWaitstats,AzureSQLMIOsWaitstats
+`sqlserver_server_properties` - Used by  ServerProperties, AzureDBServerProperties , AzureMIServerProperties
+`sqlserver_memory_clerks` - Used by MemoryClerk, AzureDBMemoryClerks, AzureMIMemoryClerks
+`sqlserver_performance` - Used by  PerformanceCounters, AzureDBPerformanceCounters, AzureMIPerformanceCounters
+
+
+The following Performance counter metrics can be used directly, with no delta calculations:
  - SQLServer:Buffer Manager\Buffer cache hit ratio
  - SQLServer:Buffer Manager\Page life expectancy
  - SQLServer:Buffer Node\Page life expectancy
@@ -185,6 +242,6 @@ The following metrics can be used directly, with no delta calculations:
 
 Version 2 queries have the following tags:
 - `sql_instance`: Physical host and instance name (hostname:instance)
-- database_name:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
+- `database_name`:  For Azure SQLDB, database_name denotes the name of the Azure SQL Database as server name is a logical construct.
 
 [cardinality]: /docs/FAQ.md#user-content-q-how-can-i-manage-series-cardinality
