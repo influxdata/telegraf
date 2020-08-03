@@ -57,16 +57,6 @@ func TestSqlServer_ParseMetrics(t *testing.T) {
 	queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: mockVolumeSpace, ResultByRow: false}
 	queries["MemoryClerk"] = Query{ScriptName: "MemoryClerk", Script: mockMemoryClerk, ResultByRow: false}
 	queries["PerformanceMetrics"] = Query{ScriptName: "PerformanceMetrics", Script: mockPerformanceMetrics, ResultByRow: false}
-	queries["AzureDBWaitStats"] = Query{ScriptName: "AzureDBWaitStats", Script: mockWaitStatsCategorized, ResultByRow: false}
-	queries["AzureDBDatabaseIO"] = Query{ScriptName: "AzureDBDatabaseIO", Script: mockDatabaseIO, ResultByRow: false}
-	queries["AzureSQLDBOsWaitstats"] = Query{ScriptName: "AzureSQLDBOsWaitstats", Script: mockWaitStatsCategorized, ResultByRow: false}
-	queries["AzureDBMemoryClerks"] = Query{ScriptName: "AzureDBMemoryClerks", Script: mockMemoryClerk, ResultByRow: false}
-	queries["AzureDBPerformanceCounters"] = Query{ScriptName: "AzureDBPerformanceCounters", Script: mockPerformanceCounters, ResultByRow: false}
-	queries["AzureSQLMIDatabaseIO"] = Query{ScriptName: "AzureSQLMIDatabaseIO", Script: mockDatabaseIO, ResultByRow: false}
-	queries["AzureSQLMIServerProperties"] = Query{ScriptName: "AzureSQLMIServerProperties", Script: mockDatabaseProperties, ResultByRow: false}
-	queries["AzureSQLMIOsWaitstats"] = Query{ScriptName: "AzureSQLMIOsWaitstats", Script: sqlAzureMIOsWaitStats, ResultByRow: false}
-	queries["AzureMIMemoryClerks"] = Query{ScriptName: "AzureMIMemoryClerks", Script: mockMemoryClerk, ResultByRow: false}
-	queries["AzureMIPerformanceCounters"] = Query{ScriptName: "AzureMIPerformanceCounters", Script: mockPerformanceCounters, ResultByRow: false}
 
 	var headers, mock, row []string
 	var tags = make(map[string]string)
