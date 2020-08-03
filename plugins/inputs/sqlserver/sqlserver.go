@@ -139,6 +139,16 @@ func initQueries(s *SQLServer) error {
 		queries["AzureSQLMIOsWaitstats"] = Query{ScriptName: "AzureSQLMIOsWaitstats", Script: sqlAzureMIOsWaitStats, ResultByRow: false}
 		queries["AzureMIMemoryClerks"] = Query{ScriptName: "AzureMIMemoryClerks", Script: sqlAzureMIMemoryClerks, ResultByRow: false}
 		queries["AzureMIPerformanceCounters"] = Query{ScriptName: "AzureMIPerformanceCounters", Script: sqlAzureMIPerformanceCounters, ResultByRow: false}
+	} else if s.DatabaseType == "SQLServer" { //These are still V2 queries and have not been refactored yet.
+		queries["PerformanceCounters"] = Query{ScriptName: "PerformanceCounters", Script: sqlPerformanceCountersV2, ResultByRow: false}
+		queries["WaitStatsCategorized"] = Query{ScriptName: "WaitStatsCategorized", Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
+		queries["DatabaseIO"] = Query{ScriptName: "DatabaseIO", Script: sqlDatabaseIOV2, ResultByRow: false}
+		queries["ServerProperties"] = Query{ScriptName: "ServerProperties", Script: sqlServerPropertiesV2, ResultByRow: false}
+		queries["MemoryClerk"] = Query{ScriptName: "MemoryClerk", Script: sqlMemoryClerkV2, ResultByRow: false}
+		queries["Schedulers"] = Query{ScriptName: "Schedulers", Script: sqlServerSchedulersV2, ResultByRow: false}
+		queries["SqlRequests"] = Query{ScriptName: "SqlRequests", Script: sqlServerRequestsV2, ResultByRow: false}
+		queries["VolumeSpace"] = Query{ScriptName: "VolumeSpace", Script: sqlServerVolumeSpaceV2, ResultByRow: false}
+		queries["Cpu"] = Query{ScriptName: "Cpu", Script: sqlServerCpuV2, ResultByRow: false}
 	} else {
 		// If this is an AzureDB instance, grab some extra metrics
 		if s.AzureDB {
