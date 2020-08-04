@@ -29,14 +29,10 @@ type Modbus struct {
 	SlaveID          int               `toml:"slave_id"`
 	Timeout          internal.Duration `toml:"timeout"`
 	Retries          int               `toml:"busy_retries"`
+	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
 	OmitDeviceName   bool              `toml:"omit_device_name"`
 	OmitRegisterType bool              `toml:"omit_register_type"`
-	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
-	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
-	Coils            []fieldContainer  `toml:"coils"`
-	HoldingRegisters []fieldContainer  `toml:"holding_registers"`
-	InputRegisters   []fieldContainer  `toml:"input_registers"`
-	registers        []register
+	Measurements     []measurement     `toml:"measurement"`
 	isConnected      bool
 	tcpHandler       *mb.TCPClientHandler
 	rtuHandler       *mb.RTUClientHandler
@@ -51,13 +47,12 @@ type register struct {
 }
 
 type fieldContainer struct {
-	Measurement string   `toml:"measurement"`
-	Name        string   `toml:"name"`
-	ByteOrder   string   `toml:"byte_order"`
-	DataType    string   `toml:"data_type"`
-	Scale       float64  `toml:"scale"`
-	Address     []uint16 `toml:"address"`
-	value       interface{}
+	Name      string   `toml:"name"`
+	ByteOrder string   `toml:"byte_order"`
+	DataType  string   `toml:"data_type"`
+	Scale     float64  `toml:"scale"`
+	Address   []uint16 `toml:"address"`
+	value     interface{}
 }
 
 type registerRange struct {
@@ -71,6 +66,21 @@ const (
 	cHoldingRegisters = "holding_register"
 	cInputRegisters   = "input_register"
 )
+
+type tag struct {
+	Key   string `toml:"key"`
+	Value string `toml:"value"`
+}
+
+type measurement struct {
+	Name             string           `toml:"name"`
+	Tags             []tag            `toml:"tags"`
+	DiscreteInputs   []fieldContainer `toml:"discrete_inputs"`
+	Coils            []fieldContainer `toml:"coils"`
+	HoldingRegisters []fieldContainer `toml:"holding_registers"`
+	InputRegisters   []fieldContainer `toml:"input_registers"`
+	registers        []register
+}
 
 const description = `Retrieve data from MODBUS slave devices`
 const sampleConfig = `
@@ -115,49 +125,54 @@ const sampleConfig = `
   ## Measurements
   ##
 
-  ## Digital Variables, Discrete Inputs and Coils
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## address     - variable address
+  [[inputs.modbus.measurement]]
+    name = "power"
+    tags = [
+      {key = "system", value = "solar"},
+      {key = "location", value = "roof"},
+    ]
 
-  discrete_inputs = [
-    { name = "start",          address = [0]},
-    { name = "stop",           address = [1]},
-    { name = "reset",          address = [2]},
-    { name = "emergency_stop", address = [3]},
-  ]
-  coils = [
-    { name = "motor1_run",     address = [0]},
-    { name = "motor1_jog",     address = [1]},
-    { name = "motor1_stop",    address = [2]},
-  ]
+    ## Digital Variables, Discrete Inputs and Coils
+    ## name        - the variable name
+    ## address     - variable address
 
-  ## Analog Variables, Input Registers and Holding Registers
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## byte_order  - the ordering of bytes
-  ##  |---AB, ABCD   - Big Endian
-  ##  |---BA, DCBA   - Little Endian
-  ##  |---BADC       - Mid-Big Endian
-  ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
-  ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
-  ## scale      - the final numeric variable representation
-  ## address    - variable address
+    discrete_inputs = [
+      { name = "start",          address = [0]},
+      { name = "stop",           address = [1]},
+      { name = "reset",          address = [2]},
+      { name = "emergency_stop", address = [3]},
+    ]
+    coils = [
+      { name = "motor1_run",     address = [0]},
+      { name = "motor1_jog",     address = [1]},
+      { name = "motor1_stop",    address = [2]},
+    ]
 
-  holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
-  ]
-  input_registers = [
-    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
-    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
-  ]
+    ## Analog Variables, Input Registers and Holding Registers
+    ## name        - the variable name
+    ## byte_order  - the ordering of bytes
+    ##  |---AB, ABCD   - Big Endian
+    ##  |---BA, DCBA   - Little Endian
+    ##  |---BADC       - Mid-Big Endian
+    ##  |---CDAB       - Mid-Little Endian
+    ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
+    ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
+    ## scale      - the final numeric variable representation
+    ## address    - variable address
+
+    holding_registers = [
+      { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
+      { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
+      { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
+      { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
+      { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
+      { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
+    ]
+    input_registers = [
+      { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
+      { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
+      { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
+    ]
 `
 
 // SampleConfig returns a basic configuration for the plugin
@@ -180,30 +195,46 @@ func (m *Modbus) Init() error {
 		return fmt.Errorf("retries cannot be negative")
 	}
 
-	err := m.InitRegister(m.DiscreteInputs, cDiscreteInputs)
+	err := validateMeasurements(m.Measurements)
 	if err != nil {
 		return err
 	}
 
-	err = m.InitRegister(m.Coils, cCoils)
-	if err != nil {
-		return err
-	}
-
-	err = m.InitRegister(m.HoldingRegisters, cHoldingRegisters)
-	if err != nil {
-		return err
-	}
-
-	err = m.InitRegister(m.InputRegisters, cInputRegisters)
-	if err != nil {
-		return err
+	for idx, _ := range m.Measurements {
+		err := m.Measurements[idx].InitMeasurement()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
+func (meas *measurement) InitMeasurement() error {
+	err := meas.InitRegister(meas.DiscreteInputs, cDiscreteInputs)
+	if err != nil {
+		return fmt.Errorf("%s: %s", meas.Name, err)
+	}
+
+	err = meas.InitRegister(meas.Coils, cCoils)
+	if err != nil {
+		return fmt.Errorf("%s: %s", meas.Name, err)
+	}
+
+	err = meas.InitRegister(meas.HoldingRegisters, cHoldingRegisters)
+	if err != nil {
+		return fmt.Errorf("%s: %s", meas.Name, err)
+	}
+
+	err = meas.InitRegister(meas.InputRegisters, cInputRegisters)
+	if err != nil {
+		return fmt.Errorf("%s: %s", meas.Name, err)
+	}
+
+	return nil
+}
+
+func (meas *measurement) InitRegister(fields []fieldContainer, name string) error {
 	if len(fields) == 0 {
 		return nil
 	}
@@ -243,7 +274,7 @@ func (m *Modbus) InitRegister(fields []fieldContainer, name string) error {
 		}
 	}
 
-	m.registers = append(m.registers, register{name, registersRange, fields})
+	meas.registers = append(meas.registers, register{name, registersRange, fields})
 
 	return nil
 }
@@ -336,6 +367,17 @@ func disconnect(m *Modbus) error {
 	}
 }
 
+func validateMeasurements(m []measurement) error {
+	for _, item := range m {
+		//check empty name
+		if item.Name == "" {
+			return fmt.Errorf("unnamed measurement found")
+		}
+	}
+
+	return nil
+}
+
 func validateFieldContainers(t []fieldContainer, n string) error {
 	nameEncountered := map[string]bool{}
 	for _, item := range t {
@@ -345,11 +387,10 @@ func validateFieldContainers(t []fieldContainer, n string) error {
 		}
 
 		//search name duplicate
-		canonical_name := item.Measurement + "." + item.Name
-		if nameEncountered[canonical_name] {
-			return fmt.Errorf("name '%s' is duplicated in measurement '%s' '%s' - '%s'", item.Name, item.Measurement, n, item.Name)
+		if nameEncountered[item.Name] {
+			return fmt.Errorf("name '%s' is duplicated '%s' - '%s'", item.Name, n, item.Name)
 		} else {
-			nameEncountered[canonical_name] = true
+			nameEncountered[item.Name] = true
 		}
 
 		if n == cInputRegisters || n == cHoldingRegisters {
@@ -426,62 +467,64 @@ func readRegisterValues(m *Modbus, rt string, rr registerRange) ([]byte, error) 
 }
 
 func (m *Modbus) getFields() error {
-	for _, register := range m.registers {
-		rawValues := make(map[uint16][]byte)
-		bitRawValues := make(map[uint16]uint16)
-		for _, rr := range register.RegistersRange {
-			address := rr.address
-			readValues, err := readRegisterValues(m, register.Type, rr)
-			if err != nil {
-				return err
-			}
+	for _, meas := range m.Measurements {
+		for _, register := range meas.registers {
+			rawValues := make(map[uint16][]byte)
+			bitRawValues := make(map[uint16]uint16)
+			for _, rr := range register.RegistersRange {
+				address := rr.address
+				readValues, err := readRegisterValues(m, register.Type, rr)
+				if err != nil {
+					return err
+				}
 
-			// Raw Values
-			if register.Type == cDiscreteInputs || register.Type == cCoils {
-				for _, readValue := range readValues {
-					for bitPosition := 0; bitPosition < 8; bitPosition++ {
-						bitRawValues[address] = getBitValue(readValue, bitPosition)
-						address = address + 1
-						if address+1 > rr.length {
-							break
+				// Raw Values
+				if register.Type == cDiscreteInputs || register.Type == cCoils {
+					for _, readValue := range readValues {
+						for bitPosition := 0; bitPosition < 8; bitPosition++ {
+							bitRawValues[address] = getBitValue(readValue, bitPosition)
+							address = address + 1
+							if address+1 > rr.length {
+								break
+							}
 						}
 					}
 				}
-			}
 
-			// Raw Values
-			if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
-				batchSize := 2
-				for batchSize < len(readValues) {
-					rawValues[address] = readValues[0:batchSize:batchSize]
-					address = address + 1
-					readValues = readValues[batchSize:]
-				}
-
-				rawValues[address] = readValues[0:batchSize:batchSize]
-			}
-		}
-
-		if register.Type == cDiscreteInputs || register.Type == cCoils {
-			for i := 0; i < len(register.Fields); i++ {
-				register.Fields[i].value = bitRawValues[register.Fields[i].Address[0]]
-			}
-		}
-
-		if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
-			for i := 0; i < len(register.Fields); i++ {
-				var values_t []byte
-
-				for j := 0; j < len(register.Fields[i].Address); j++ {
-					tempArray := rawValues[register.Fields[i].Address[j]]
-					for x := 0; x < len(tempArray); x++ {
-						values_t = append(values_t, tempArray[x])
+				// Raw Values
+				if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
+					batchSize := 2
+					for batchSize < len(readValues) {
+						rawValues[address] = readValues[0:batchSize:batchSize]
+						address = address + 1
+						readValues = readValues[batchSize:]
 					}
-				}
 
-				register.Fields[i].value = convertDataType(register.Fields[i], values_t)
+					rawValues[address] = readValues[0:batchSize:batchSize]
+				}
 			}
 
+			if register.Type == cDiscreteInputs || register.Type == cCoils {
+				for i := 0; i < len(register.Fields); i++ {
+					register.Fields[i].value = bitRawValues[register.Fields[i].Address[0]]
+				}
+			}
+
+			if register.Type == cInputRegisters || register.Type == cHoldingRegisters {
+				for i := 0; i < len(register.Fields); i++ {
+					var values_t []byte
+
+					for j := 0; j < len(register.Fields[i].Address); j++ {
+						tempArray := rawValues[register.Fields[i].Address[j]]
+						for x := 0; x < len(tempArray); x++ {
+							values_t = append(values_t, tempArray[x])
+						}
+					}
+
+					register.Fields[i].value = convertDataType(register.Fields[i], values_t)
+				}
+
+			}
 		}
 	}
 
@@ -707,30 +750,29 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 		break
 	}
 
-	grouper := metric.NewSeriesGrouper()
-	for _, reg := range m.registers {
-		tags := map[string]string{}
-		if !m.OmitDeviceName {
-			tags["device_name"] = m.Name
-		}
-		if !m.OmitRegisterType {
-			tags["type"] = reg.Type
-		}
-
-		for _, field := range reg.Fields {
-			// In case no measurement was specified we use "modbus" as default
-			measurement := "modbus"
-			if field.Measurement != "" {
-				measurement = field.Measurement
+	for _, meas := range m.Measurements {
+		grouper := metric.NewSeriesGrouper()
+		for _, reg := range meas.registers {
+			tags := map[string]string{}
+			for _, tag := range meas.Tags {
+				tags[tag.Key] = tag.Value
+			}
+			if !m.OmitDeviceName {
+				tags["device_name"] = m.Name
+			}
+			if !m.OmitRegisterType {
+				tags["type"] = reg.Type
 			}
 
-			// Group the data by series
-			grouper.Add(measurement, tags, timestamp, field.Name, field.value)
-		}
+			for _, field := range reg.Fields {
+				// Group the data by series
+				grouper.Add(meas.Name, tags, timestamp, field.Name, field.value)
+			}
 
-		// Add the metrics grouped by series to the accumulator
-		for _, metric := range grouper.Metrics() {
-			acc.AddMetric(metric)
+			// Add the metrics grouped by series to the accumulator
+			for _, metric := range grouper.Metrics() {
+				acc.AddMetric(metric)
+			}
 		}
 	}
 

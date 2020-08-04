@@ -12,6 +12,7 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## The plugin supports connections to PLCs via MODBUS/TCP or
   ## via serial line communication in binary (RTU) or readable (ASCII) encoding
   ##
+
   ## Name of the MODBUS device to read from
   device_name = "Device"
 
@@ -48,49 +49,54 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## Measurements
   ##
 
-  ## Digital Variables, Discrete Inputs and Coils
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## address     - variable address
+  [[inputs.modbus.measurement]]
+    name = "power"
+    tags = [
+      {key = "system", value = "solar"},
+      {key = "location", value = "roof"},
+    ]
 
-  discrete_inputs = [
-    { name = "start",          address = [0]},
-    { name = "stop",           address = [1]},
-    { name = "reset",          address = [2]},
-    { name = "emergency_stop", address = [3]},
-  ]
-  coils = [
-    { name = "motor1_run",     address = [0]},
-    { name = "motor1_jog",     address = [1]},
-    { name = "motor1_stop",    address = [2]},
-  ]
+    ## Digital Variables, Discrete Inputs and Coils
+    ## name        - the variable name
+    ## address     - variable address
 
-  ## Analog Variables, Input Registers and Holding Registers
-  ## measurement - the (optional) measurement name, defaults to "modbus"
-  ## name        - the variable name
-  ## byte_order  - the ordering of bytes
-  ##  |---AB, ABCD   - Big Endian
-  ##  |---BA, DCBA   - Little Endian
-  ##  |---BADC       - Mid-Big Endian
-  ##  |---CDAB       - Mid-Little Endian
-  ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
-  ##              FLOAT32 (deprecated), FIXED, UFIXED (fixed-point representation on input)
-  ## scale      - the final numeric variable representation
-  ## address    - variable address
+    discrete_inputs = [
+      { name = "start",          address = [0]},
+      { name = "stop",           address = [1]},
+      { name = "reset",          address = [2]},
+      { name = "emergency_stop", address = [3]},
+    ]
+    coils = [
+      { name = "motor1_run",     address = [0]},
+      { name = "motor1_jog",     address = [1]},
+      { name = "motor1_stop",    address = [2]},
+    ]
 
-  holding_registers = [
-    { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
-    { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
-    { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
-    { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
-    { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
-    { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
-  ]
-  input_registers = [
-    { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
-    { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
-    { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
-  ]
+    ## Analog Variables, Input Registers and Holding Registers
+    ## name        - the variable name
+    ## byte_order  - the ordering of bytes
+    ##  |---AB, ABCD   - Big Endian
+    ##  |---BA, DCBA   - Little Endian
+    ##  |---BADC       - Mid-Big Endian
+    ##  |---CDAB       - Mid-Little Endian
+    ## data_type  - INT16, UINT16, INT32, UINT32, INT64, UINT64, FLOAT32-IEEE (the IEEE 754 binary representation)
+    ##              FLOAT32, FIXED, UFIXED (fixed-point representation on input)
+    ## scale      - the final numeric variable representation
+    ## address    - variable address
+
+    holding_registers = [
+      { name = "power_factor", byte_order = "AB",   data_type = "FIXED", scale=0.01,  address = [8]},
+      { name = "voltage",      byte_order = "AB",   data_type = "FIXED", scale=0.1,   address = [0]},
+      { name = "energy",       byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [5,6]},
+      { name = "current",      byte_order = "ABCD", data_type = "FIXED", scale=0.001, address = [1,2]},
+      { name = "frequency",    byte_order = "AB",   data_type = "UFIXED", scale=0.1,  address = [7]},
+      { name = "power",        byte_order = "ABCD", data_type = "UFIXED", scale=0.1,  address = [3,4]},
+    ]
+    input_registers = [
+      { name = "tank_level",   byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [0]},
+      { name = "tank_ph",      byte_order = "AB",   data_type = "INT16",   scale=1.0,     address = [1]},
+      { name = "pump1_speed",  byte_order = "ABCD", data_type = "INT32",   scale=1.0,     address = [3,4]},
+    ]
 ```
 
 ### Metrics
@@ -137,5 +143,5 @@ from unsigned values).
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter modbus -test
-modbus,device_name=OpenPLC,host=orangepizero,type=holding_register current=0,energy=0,frecuency=60,power=0,power_factor=0,voltage=123.9000015258789 1554079521000000000
+power,device_name=Device,host=orangepizero,type=holding_register,system=solar,location=roof current=0,energy=0,frecuency=60,power=0,power_factor=0,voltage=123.9000015258789 1554079521000000000
 ```

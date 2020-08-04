@@ -96,10 +96,15 @@ func TestCoils(t *testing.T) {
 				Name:       "TestCoils",
 				Controller: "tcp://localhost:1502",
 				SlaveID:    1,
-				Coils: []fieldContainer{
+				Measurements: []measurement{
 					{
-						Name:    ct.name,
-						Address: []uint16{ct.address},
+						Name: "TestCoils",
+						Coils: []fieldContainer{
+							{
+								Name:    ct.name,
+								Address: []uint16{ct.address},
+							},
+						},
 					},
 				},
 			}
@@ -109,9 +114,9 @@ func TestCoils(t *testing.T) {
 			var acc testutil.Accumulator
 			err = modbus.Gather(&acc)
 			assert.NoError(t, err)
-			assert.NotEmpty(t, modbus.registers)
+			assert.NotEmpty(t, modbus.Measurements[0].registers)
 
-			for _, coil := range modbus.registers {
+			for _, coil := range modbus.Measurements[0].registers {
 				assert.Equal(t, ct.read, coil.Fields[0].value)
 			}
 		})
@@ -571,13 +576,18 @@ func TestHoldingRegisters(t *testing.T) {
 				Name:       "TestHoldingRegisters",
 				Controller: "tcp://localhost:1502",
 				SlaveID:    1,
-				HoldingRegisters: []fieldContainer{
+				Measurements: []measurement{
 					{
-						Name:      hrt.name,
-						ByteOrder: hrt.byteOrder,
-						DataType:  hrt.dataType,
-						Scale:     hrt.scale,
-						Address:   hrt.address,
+						Name: "TestHoldingRegisters",
+						HoldingRegisters: []fieldContainer{
+							{
+								Name:      hrt.name,
+								ByteOrder: hrt.byteOrder,
+								DataType:  hrt.dataType,
+								Scale:     hrt.scale,
+								Address:   hrt.address,
+							},
+						},
 					},
 				},
 			}
@@ -586,9 +596,9 @@ func TestHoldingRegisters(t *testing.T) {
 			assert.NoError(t, err)
 			var acc testutil.Accumulator
 			modbus.Gather(&acc)
-			assert.NotEmpty(t, modbus.registers)
+			assert.NotEmpty(t, modbus.Measurements[0].registers)
 
-			for _, coil := range modbus.registers {
+			for _, coil := range modbus.Measurements[0].registers {
 				assert.Equal(t, hrt.read, coil.Fields[0].value)
 			}
 		})
@@ -628,10 +638,15 @@ func TestRetrySuccessful(t *testing.T) {
 			Controller: "tcp://localhost:1502",
 			SlaveID:    1,
 			Retries:    maxretries,
-			Coils: []fieldContainer{
+			Measurements: []measurement{
 				{
-					Name:    "retry_success",
-					Address: []uint16{0},
+					Name: "TestRetry",
+					Coils: []fieldContainer{
+						{
+							Name:    "retry_success",
+							Address: []uint16{0},
+						},
+					},
 				},
 			},
 		}
@@ -641,9 +656,9 @@ func TestRetrySuccessful(t *testing.T) {
 		var acc testutil.Accumulator
 		err = modbus.Gather(&acc)
 		assert.NoError(t, err)
-		assert.NotEmpty(t, modbus.registers)
+		assert.NotEmpty(t, modbus.Measurements[0].registers)
 
-		for _, coil := range modbus.registers {
+		for _, coil := range modbus.Measurements[0].registers {
 			assert.Equal(t, uint16(value), coil.Fields[0].value)
 		}
 	})
@@ -673,10 +688,15 @@ func TestRetryFail(t *testing.T) {
 			Controller: "tcp://localhost:1502",
 			SlaveID:    1,
 			Retries:    maxretries,
-			Coils: []fieldContainer{
+			Measurements: []measurement{
 				{
-					Name:    "retry_fail",
-					Address: []uint16{0},
+					Name: "TestRetryFail",
+					Coils: []fieldContainer{
+						{
+							Name:    "retry_fail",
+							Address: []uint16{0},
+						},
+					},
 				},
 			},
 		}
@@ -706,10 +726,15 @@ func TestRetryFail(t *testing.T) {
 			Controller: "tcp://localhost:1502",
 			SlaveID:    1,
 			Retries:    maxretries,
-			Coils: []fieldContainer{
+			Measurements: []measurement{
 				{
-					Name:    "retry_fail",
-					Address: []uint16{0},
+					Name: "TestRetryFail",
+					Coils: []fieldContainer{
+						{
+							Name:    "retry_fail",
+							Address: []uint16{0},
+						},
+					},
 				},
 			},
 		}
