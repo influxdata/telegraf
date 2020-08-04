@@ -19,7 +19,7 @@ import (
 
 // Modbus holds all data relevant to the plugin
 type Modbus struct {
-	Name             string            `toml:"name"`
+	Name             string            `toml:"device_name"`
 	Controller       string            `toml:"controller"`
 	TransmissionMode string            `toml:"transmission_mode"`
 	BaudRate         int               `toml:"baud_rate"`
@@ -29,6 +29,7 @@ type Modbus struct {
 	SlaveID          int               `toml:"slave_id"`
 	Timeout          internal.Duration `toml:"timeout"`
 	Retries          int               `toml:"busy_retries"`
+	OmitDeviceName   bool              `toml:"omit_device_name"`
 	OmitRegisterType bool              `toml:"omit_register_type"`
 	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
 	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
@@ -78,8 +79,8 @@ const sampleConfig = `
   ## The plugin supports connections to PLCs via MODBUS/TCP or
   ## via serial line communication in binary (RTU) or readable (ASCII) encoding
   ##
-  ## Device name
-  name = "Device"
+  ## Name of the MODBUS device to read from
+  device_name = "Device"
 
   ## Slave ID - addresses a MODBUS device on the bus
   ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
@@ -87,6 +88,9 @@ const sampleConfig = `
 
   ## Timeout for each request
   timeout = "1s"
+
+  ## Do not add Device Name as Tag
+  omit_device_name = false
 
   ## Do not add Register Type as Tag
   omit_register_type = false
@@ -705,7 +709,10 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 	grouper := metric.NewSeriesGrouper()
 	for _, reg := range m.registers {
-		tags := map[string]string{"name": m.Name}
+		tags := map[string]string{}
+		if !m.OmitDeviceName {
+			tags["device_name"] = m.Name
+		}
 		if !m.OmitRegisterType {
 			tags["type"] = reg.Type
 		}
