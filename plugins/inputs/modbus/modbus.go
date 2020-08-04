@@ -29,6 +29,7 @@ type Modbus struct {
 	SlaveID          int               `toml:"slave_id"`
 	Timeout          internal.Duration `toml:"timeout"`
 	Retries          int               `toml:"busy_retries"`
+	OmitRegisterType bool              `toml:"omit_register_type"`
 	RetriesWaitTime  internal.Duration `toml:"busy_retries_wait"`
 	DiscreteInputs   []fieldContainer  `toml:"discrete_inputs"`
 	Coils            []fieldContainer  `toml:"coils"`
@@ -86,6 +87,9 @@ const sampleConfig = `
 
   ## Timeout for each request
   timeout = "1s"
+
+  ## Do not add Register Type as Tag
+  omit_register_type = false
 
   ## Maximum number of retries and the time to wait between retries
   ## when a slave-device is busy.
@@ -701,9 +705,9 @@ func (m *Modbus) Gather(acc telegraf.Accumulator) error {
 
 	grouper := metric.NewSeriesGrouper()
 	for _, reg := range m.registers {
-		tags := map[string]string{
-			"name": m.Name,
-			"type": reg.Type,
+		tags := map[string]string{"name": m.Name}
+		if !m.OmitRegisterType {
+			tags["type"] = reg.Type
 		}
 
 		for _, field := range reg.Fields {
