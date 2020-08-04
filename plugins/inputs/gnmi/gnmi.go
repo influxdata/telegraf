@@ -179,7 +179,7 @@ func (c *GNMI) newSubscribeRequest() (*gnmi.SubscribeRequest, error) {
 		return nil, err
 	}
 
-	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" {
+	if c.Encoding != "proto" && c.Encoding != "json" && c.Encoding != "json_ietf" && c.Encoding != "bytes" {
 		return nil, fmt.Errorf("unsupported encoding %s", c.Encoding)
 	}
 
@@ -486,7 +486,7 @@ const sampleConfig = `
  username = "cisco"
  password = "cisco"
 
- ## gNMI encoding requested (one of: "proto", "json", "json_ietf")
+ ## gNMI encoding requested (one of: "proto", "json", "json_ietf", "bytes")
  # encoding = "proto"
 
  ## redial in case of failures after
