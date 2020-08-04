@@ -12,8 +12,8 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
   ## The plugin supports connections to PLCs via MODBUS/TCP or
   ## via serial line communication in binary (RTU) or readable (ASCII) encoding
   ##
-  ## Device name
-  name = "Device"
+  ## Name of the MODBUS device to read from
+  device_name = "Device"
 
   ## Slave ID - addresses a MODBUS device on the bus
   ## Range: 0 - 255 [0 = broadcast; 248 - 255 = reserved]
@@ -21,6 +21,12 @@ Registers via Modbus TCP or Modbus RTU/ASCII.
 
   ## Timeout for each request
   timeout = "1s"
+
+  ## Do not add Device Name as Tag
+  omit_device_name = false
+
+  ## Do not add Register Type as Tag
+  omit_register_type = false
 
   ## Maximum number of retries and the time to wait between retries
   ## when a slave-device is busy.
@@ -131,5 +137,5 @@ from unsigned values).
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter modbus -test
-modbus.InputRegisters,host=orangepizero Current=0,Energy=0,Frecuency=60,Power=0,PowerFactor=0,Voltage=123.9000015258789 1554079521000000000
+modbus,device_name=OpenPLC,host=orangepizero,type=holding_register current=0,energy=0,frecuency=60,power=0,power_factor=0,voltage=123.9000015258789 1554079521000000000
 ```
