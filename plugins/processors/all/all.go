@@ -1,6 +1,7 @@
 package all
 
 import (
+	// stupid comment on golint stops barking
 	_ "github.com/influxdata/telegraf/plugins/processors/clone"
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
 	_ "github.com/influxdata/telegraf/plugins/processors/date"
@@ -17,6 +18,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/printer"
 	_ "github.com/influxdata/telegraf/plugins/processors/regex"
 	_ "github.com/influxdata/telegraf/plugins/processors/rename"
+	_ "github.com/influxdata/telegraf/plugins/processors/rename_eval"
 	_ "github.com/influxdata/telegraf/plugins/processors/reverse_dns"
 	_ "github.com/influxdata/telegraf/plugins/processors/s2geo"
 	_ "github.com/influxdata/telegraf/plugins/processors/starlark"

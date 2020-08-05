@@ -22,6 +22,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb_v2"
 	_ "github.com/influxdata/telegraf/plugins/outputs/instrumental"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
+	_ "github.com/influxdata/telegraf/plugins/outputs/kafka_avro"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kinesis"
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
 	_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"
