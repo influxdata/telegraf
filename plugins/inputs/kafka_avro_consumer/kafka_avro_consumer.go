@@ -78,7 +78,8 @@ const sampleConfig = `
   # schema_registry_certificate = "/tmp/client.crt"
   # schema_registry_key = "/tmp/client.key"
   # schema_registry_ca = "/tmp/ca.pem"
-  # schema_registry = "https://prod-kafka-schema-registry.prodksr.wbx2.com:8082/subjects/LmaEventSchema/versions/1"  ## Data format to output.
+	# schema_registry = "https://my-kafka-schema-registry.example.com/subjects/LmaEventSchema/versions/1"
+	## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md

@@ -98,7 +98,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   # avro_certificate = "/tmp/client.crt"
   # avro_key = "/tmp/client.key"
   # avro_ca = "/tmp/ca.pem"
-  # avro_registry = "https://prod-kafka-schema-registry.prodksr.wbx2.com:8082/subjects/LmaEventSchema/versions/1"
+  # avro_registry = "https://my-kafka-schema-registry.example.com/subjects/LmaEventSchema/versions/1"
   ## additonal avro fields
   data_format = "influx"
   datacenter = "local"
