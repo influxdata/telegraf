@@ -200,7 +200,7 @@ func (m *Modbus) Init() error {
 		return err
 	}
 
-	for idx, _ := range m.Measurements {
+	for idx := range m.Measurements {
 		err := m.Measurements[idx].InitMeasurement()
 		if err != nil {
 			return err
