@@ -9,29 +9,32 @@ import (
 const sampleConfig = `
 `
 
+// Rename - renames
 type Rename struct {
 	Tag          string `toml:"tag"`
 	Dest         string `toml:"dest"`
 	DropOriginal bool   `toml:"drop_original"`
-	Position     int    `toml: prefix=1 , postfix=2, 0=replace`
+	Position     int    `toml:"prefix=1 , postfix=2, 0=replace"`
 	init         bool
 	evaluate     func(string, string, telegraf.Metric) string
 }
 
+// SampleConfig - SampleConfig
 func (r *Rename) SampleConfig() string {
 	return sampleConfig
 }
 
+//Description - Description
 func (r *Rename) Description() string {
 	return "Rename measurements, tags, and fields that pass through this filter."
 }
 
-func (s *Rename) initOnce() {
-	if s.init {
+func (r *Rename) initOnce() {
+	if r.init {
 		return
 	}
-	s.evaluate = suffixPrefixEvaluator(s.Position)
-	s.init = true
+	r.evaluate = suffixPrefixEvaluator(r.Position)
+	r.init = true
 }
 
 func suffixPrefixEvaluator(s int) func(string, string, telegraf.Metric) string {
@@ -58,6 +61,7 @@ func suffixPrefixEvaluator(s int) func(string, string, telegraf.Metric) string {
 	}
 }
 
+//Apply - Apply
 func (r *Rename) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	r.initOnce()
 	results := []telegraf.Metric{}
