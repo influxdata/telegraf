@@ -45,12 +45,26 @@ in the `/etc/default/telegraf` file.
 **Example**:
 
 `/etc/default/telegraf`:
+For InfluxDB 1.x:
 ```
 USER="alice"
 INFLUX_URL="http://localhost:8086"
 INFLUX_SKIP_DATABASE_CREATION="true"
 INFLUX_PASSWORD="monkey123"
 ```
+For InfluxDB OSS 2:
+INFLUX_HOST="http://localhost:9999"
+INFLUX_TOKEN=”replace_with_your_token”
+INFLUX_ORG="your_username"
+INFLUX_BUCKET="replace_with_your_bucket_name"
+
+For InfluxDB Cloud 2:
+# For AWS Oregon:
+INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
+# Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
+INFLUX_TOKEN=”replace_with_your_token”
+INFLUX_ORG="yourname@yourcompany.com"
+INFLUX_BUCKET="replace_with_your_bucket_name"
 
 `/etc/telegraf.conf`:
 ```toml
@@ -71,10 +85,27 @@ parsed:
 [global_tags]
   user = "alice"
 
+# For InfluxDB 1.x:
 [[outputs.influxdb]]
   urls = "http://localhost:8086"
   skip_database_creation = true
   password = "monkey123"
+  
+# For InfluxDB OSS 2:
+[[outputs.influxdb_v2]]
+urls = ["http://127.0.0.1:9999"]
+token = "replace_with_your_token"
+org = "your_username"
+bucket = "replace_with_your_bucket_name"
+
+# For InfluxDB Cloud 2:
+[[outputs.influxdb_v2]]
+# For AWS Oregon:
+urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
+# Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
+token = "replace_with_your_token"
+org = "yourname@yourcompany.com"
+bucket = "replace_with_your_bucket_name"
 ```
 
 ### Intervals
