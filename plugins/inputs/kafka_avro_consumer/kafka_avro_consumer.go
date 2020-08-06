@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/linkedin/goavro"
+	"github.com/linkedin/goavro/v2"
 )
 
 const sampleConfig = `

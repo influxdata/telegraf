@@ -15,7 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 
 	"github.com/Shopify/sarama"
-	"github.com/linkedin/goavro"
+	"github.com/linkedin/goavro/v2"
 )
 
 // ValidTopicSuffixMethods - Valid topic suffice methods
