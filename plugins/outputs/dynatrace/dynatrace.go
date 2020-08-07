@@ -28,10 +28,11 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	EnvironmentURL       string          `toml:"environmentURL"`
-	EnvironmentAPIToken  string          `toml:"environmentApiToken"`
-	SkipCertificateCheck bool            `toml:"skipCertificateCheck"`
-	Log                  telegraf.Logger `toml:"log"`
+	EnvironmentURL       	string          `toml:"environmentURL"`
+	EnvironmentAPIToken  	string          `toml:"environmentApiToken"`
+	SkipCertificateCheck 	bool            `toml:"skipCertificateCheck"`
+	Prefix  				string          `toml:"prefix"`
+	Log                  	telegraf.Logger `toml:"log"`
 
 	client *http.Client
 }
@@ -47,6 +48,12 @@ const sampleConfig = `
   ## Create an API token within your Dynatrace environment, by navigating to Settings > Integration > Dynatrace API
   ## The API token needs data ingest scope permission.
   environmentApiToken = "" 
+
+  ## Optional prefix for metric names (e.g.: "telegraf.")
+  prefix = "telegraf."
+  
+  ## Optional flag for ignoring tls certificate check
+  skipCertificateCheck = false
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
@@ -179,7 +186,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 
-				metricID, err := d.normalize(metric.Name()+"."+metricKey, maxMetricKeyLen)
+				metricID, err := d.normalize(d.Prefix + metric.Name() + "." + metricKey, maxMetricKeyLen)
 				// write metric name combined with its field
 				if err != nil {
 					continue
