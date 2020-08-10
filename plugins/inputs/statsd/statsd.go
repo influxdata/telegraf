@@ -293,15 +293,15 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 
 	for _, m := range s.counters {
 		if m.firstInit {
-			zeroCounter := cachedcounter{
-				fields: make(map[string]interface{}),
-			}
+			zeroFields := make(map[string]interface{})
 			for k := range m.fields {
-				zeroCounter.fields[k] = int64(0)
+				zeroFields[k] = int64(0)
 			}
-			acc.AddCounter(m.name, zeroCounter.fields, m.tags, now)
+			s.Log.Warn("firstInit")
+			acc.AddCounter(m.name, zeroFields, m.tags, now)
 			m.firstInit = false
 		} else {
+			s.Log.Warn("noFirstInit")
 			acc.AddCounter(m.name, m.fields, m.tags, now)
 		}
 	}
