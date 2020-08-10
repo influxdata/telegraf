@@ -156,11 +156,6 @@ func (h *HTTP) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
 ) error {
-	//body, err := makeRequestBodyReader(h.ContentEncoding, h.Body)
-	//if err != nil {
-	//	return err
-	//}
-	//defer body.Close()
 
 	var body io.Reader
 	if h.Body != "" {
@@ -168,7 +163,6 @@ func (h *HTTP) gatherURL(
 	}
 	request, err := http.NewRequest(h.Method, url, body)
 
-	//request, err := http.NewRequest(h.Method, url, body)
 	if err != nil {
 		return err
 	}
