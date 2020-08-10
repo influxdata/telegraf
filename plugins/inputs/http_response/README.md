@@ -26,6 +26,14 @@ This input plugin checks HTTP/HTTPS connections.
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
 
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
+
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
+
   ## Optional HTTP Request Body
   # body = '''
   # {'fake':'data'}
