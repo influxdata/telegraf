@@ -28,11 +28,11 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	EnvironmentURL       	string          `toml:"environmentURL"`
-	EnvironmentAPIToken  	string          `toml:"environmentApiToken"`
-	SkipCertificateCheck 	bool            `toml:"skipCertificateCheck"`
-	Prefix  				string          `toml:"prefix"`
-	Log                  	telegraf.Logger `toml:"log"`
+	EnvironmentURL       string          `toml:"environmentURL"`
+	EnvironmentAPIToken  string          `toml:"environmentApiToken"`
+	SkipCertificateCheck bool            `toml:"skipCertificateCheck"`
+	Prefix               string          `toml:"prefix"`
+	Log                  telegraf.Logger `toml:"log"`
 
 	client *http.Client
 }
@@ -186,7 +186,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 					continue
 				}
 
-				metricID, err := d.normalize(d.Prefix + metric.Name() + "." + metricKey, maxMetricKeyLen)
+				metricID, err := d.normalize(d.Prefix+metric.Name()+"."+metricKey, maxMetricKeyLen)
 				// write metric name combined with its field
 				if err != nil {
 					continue
