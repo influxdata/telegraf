@@ -456,6 +456,7 @@ WITH PerfCounters AS
 			instance_name IN ('_Total')
 			AND counter_name IN (
 				'Lock Timeouts/sec',
+				'Lock Timeouts (timeout > 0)/sec',
 				'Number of Deadlocks/sec',
 				'Lock Waits/sec',
 				'Latch Waits/sec'
