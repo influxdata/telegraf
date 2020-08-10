@@ -178,7 +178,7 @@ type cachedcounter struct {
 	firstInit bool
 }
 
-func (c *cachedcounter) counterTouched() {
+func (c cachedcounter) counterTouched() {
 	c.firstInit = false
 }
 
