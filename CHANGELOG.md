@@ -1,3 +1,10 @@
+## v1.15.2 [2020-07-31]
+
+#### Bugfixes
+
+- [#7905](https://github.com/influxdata/telegraf/issues/7905): Fix RPM /var/log/telegraf permissions
+- [#7880](https://github.com/influxdata/telegraf/issues/7880): Fix tail following on EOF
+
 ## v1.15.1 [2020-07-22]
 
 #### Bugfixes
