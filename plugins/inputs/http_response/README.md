@@ -26,6 +26,14 @@ This input plugin checks HTTP/HTTPS connections.
   ## Whether to follow redirects from the server (defaults to false)
   # follow_redirects = false
 
+  ## Optional file with Bearer token
+  ## file content is added as an Authorization header
+  # bearer_token = "/path/to/file"
+
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
+
   ## Optional HTTP Request Body
   # body = '''
   # {'fake':'data'}
@@ -40,7 +48,7 @@ This input plugin checks HTTP/HTTPS connections.
   ## If the response body size exceeds this limit a "body_read_error" will be raised
   # response_body_max_size = "32MiB"
 
-  ## Optional substring or regex match in body of the response (case sensitive)
+  ## Optional substring or regex match in body of the response
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
