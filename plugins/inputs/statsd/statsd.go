@@ -99,8 +99,9 @@ type Statsd struct {
 	// sets and timings map measurement/tags hash -> metrics
 	gauges   map[string]cachedgauge
 	counters map[string]cachedcounter
-	sets     map[string]cachedset
-	timings  map[string]cachedtimings
+
+	sets    map[string]cachedset
+	timings map[string]cachedtimings
 
 	// bucket -> influx templates
 	Templates []string
@@ -171,9 +172,10 @@ type cachedgauge struct {
 }
 
 type cachedcounter struct {
-	name   string
-	fields map[string]interface{}
-	tags   map[string]string
+	name      string
+	fields    map[string]interface{}
+	tags      map[string]string
+	firstInit bool
 }
 
 type cachedtimings struct {
@@ -290,8 +292,20 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, m := range s.counters {
-		acc.AddCounter(m.name, m.fields, m.tags, now)
+		if m.firstInit {
+			zeroCounter := cachedcounter{
+				fields: make(map[string]interface{}),
+			}
+			for k := range m.fields {
+				zeroCounter.fields[k] = int64(0)
+			}
+			acc.AddCounter(m.name, zeroCounter.fields, m.tags, now)
+			m.firstInit = false
+		} else {
+			acc.AddCounter(m.name, m.fields, m.tags, now)
+		}
 	}
+
 	if s.DeleteCounters {
 		s.counters = make(map[string]cachedcounter)
 	}
@@ -767,9 +781,10 @@ func (s *Statsd) aggregate(m metric) {
 		_, ok := s.counters[m.hash]
 		if !ok {
 			s.counters[m.hash] = cachedcounter{
-				name:   m.name,
-				fields: make(map[string]interface{}),
-				tags:   m.tags,
+				name:      m.name,
+				fields:    make(map[string]interface{}),
+				tags:      m.tags,
+				firstInit: true,
 			}
 		}
 		// check if the field exists
