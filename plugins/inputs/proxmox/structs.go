@@ -4,27 +4,36 @@ import (
 	"encoding/json"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"net/http"
 	"net/url"
 )
 
 type Proxmox struct {
-	BaseUrl         string            `toml:"base_url"`
-	ApiToken        string            `toml:"api_token"`
+	BaseURL         string            `toml:"base_url"`
+	APIToken        string            `toml:"api_token"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 	tls.ClientConfig
 
 	hostname         string
+	httpClient       *http.Client
 	nodeSearchDomain string
 
 	requestFunction func(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error)
 }
+
+type ResourceType string
+
+var (
+	QEMU ResourceType = "qemu"
+	LXC  ResourceType = "lxc"
+)
 
 type VmStats struct {
 	Data []VmStat `json:"data"`
 }
 
 type VmStat struct {
-	Id        string      `json:"vmid"`
+	ID        string      `json:"vmid"`
 	Name      string      `json:"name"`
 	Status    string      `json:"status"`
 	UsedMem   json.Number `json:"mem"`

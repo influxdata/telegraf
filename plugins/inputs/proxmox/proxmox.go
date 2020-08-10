@@ -37,13 +37,7 @@ func (px *Proxmox) Description() string {
 }
 
 func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-	px.hostname = hostname
-
-	err = getNodeSearchDomain(px)
+	err := getNodeSearchDomain(px)
 	if err != nil {
 		return err
 	}
@@ -54,10 +48,32 @@ func (px *Proxmox) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (px *Proxmox) Init() error {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	px.hostname = hostname
+
+	tlsCfg, err := px.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+	px.httpClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: px.ResponseTimeout.Duration,
+	}
+
+	return nil
+}
+
 func init() {
 	px := Proxmox{
 		requestFunction: performRequest,
 	}
+
 	inputs.Add("proxmox", func() telegraf.Input { return &px })
 }
 
@@ -76,24 +92,13 @@ func getNodeSearchDomain(px *Proxmox) error {
 }
 
 func performRequest(px *Proxmox, apiUrl string, method string, data url.Values) ([]byte, error) {
-	tlsCfg, err := px.ClientConfig.TLSConfig()
+	request, err := http.NewRequest(method, px.BaseURL+apiUrl, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, err
 	}
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-		},
-		Timeout: px.ResponseTimeout.Duration,
-	}
+	request.Header.Add("Authorization", "PVEAPIToken="+px.APIToken)
 
-	request, err := http.NewRequest(method, px.BaseUrl+apiUrl, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	request.Header.Add("Authorization", "PVEAPIToken="+px.ApiToken)
-
-	resp, err := client.Do(request)
+	resp, err := px.httpClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -108,15 +113,15 @@ func performRequest(px *Proxmox, apiUrl string, method string, data url.Values) 
 }
 
 func gatherLxcData(px *Proxmox, acc telegraf.Accumulator) {
-	gatherVmData(px, acc, true)
+	gatherVmData(px, acc, LXC)
 }
 
 func gatherQemuData(px *Proxmox, acc telegraf.Accumulator) {
-	gatherVmData(px, acc, false)
+	gatherVmData(px, acc, QEMU)
 }
 
-func gatherVmData(px *Proxmox, acc telegraf.Accumulator, lxc bool) {
-	vmStats, err := getVmStats(px, lxc)
+func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
+	vmStats, err := getVmStats(px, rt)
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -124,12 +129,12 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, lxc bool) {
 
 	// For each VM add metrics to Accumulator
 	for _, vmStat := range vmStats.Data {
-		vmConfig, err := getVmConfig(px, vmStat.Id, lxc)
+		vmConfig, err := getVmConfig(px, vmStat.ID, rt)
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
-		tags := getTags(px, vmStat.Name, vmConfig, lxc)
+		tags := getTags(px, vmStat.Name, vmConfig, rt)
 		fields, err := getFields(vmStat)
 		if err != nil {
 			log.Fatal(err)
@@ -139,12 +144,8 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, lxc bool) {
 	}
 }
 
-func getVmStats(px *Proxmox, lxc bool) (VmStats, error) {
-	vmPath := "/qemu"
-	if lxc {
-		vmPath = "/lxc"
-	}
-	apiUrl := "/nodes/" + px.hostname + vmPath
+func getVmStats(px *Proxmox, rt ResourceType) (VmStats, error) {
+	apiUrl := "/nodes/" + px.hostname + "/" + string(rt)
 	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 	if err != nil {
 		return VmStats{}, err
@@ -159,12 +160,8 @@ func getVmStats(px *Proxmox, lxc bool) (VmStats, error) {
 	return vmStats, nil
 }
 
-func getVmConfig(px *Proxmox, vmId string, lxc bool) (VmConfig, error) {
-	vmPath := "/qemu/"
-	if lxc {
-		vmPath = "/lxc/"
-	}
-	apiUrl := "/nodes/" + px.hostname + vmPath + vmId + "/config"
+func getVmConfig(px *Proxmox, vmId string, rt ResourceType) (VmConfig, error) {
+	apiUrl := "/nodes/" + px.hostname + "/" + string(rt) + "/" + vmId + "/config"
 	jsonData, err := px.requestFunction(px, apiUrl, http.MethodGet, nil)
 	if err != nil {
 		return VmConfig{}, err
@@ -233,7 +230,7 @@ func jsonNumberToFloat64(value json.Number) float64 {
 	return float64Value
 }
 
-func getTags(px *Proxmox, name string, vmConfig VmConfig, lxc bool) map[string]string {
+func getTags(px *Proxmox, name string, vmConfig VmConfig, rt ResourceType) map[string]string {
 	domain := vmConfig.Data.Searchdomain
 	if len(domain) == 0 {
 		domain = px.nodeSearchDomain
@@ -245,15 +242,10 @@ func getTags(px *Proxmox, name string, vmConfig VmConfig, lxc bool) map[string]s
 	}
 	fqdn := hostname + "." + domain
 
-	var vmType = "qemu"
-	if lxc {
-		vmType = "lxc"
-	}
-
 	return map[string]string{
 		"node_fqdn": px.hostname + "." + px.nodeSearchDomain,
 		"vm_name":   name,
 		"vm_fqdn":   fqdn,
-		"vm_type":   vmType,
+		"vm_type":   string(rt),
 	}
 }

@@ -33,15 +33,20 @@ func performTestRequest(px *Proxmox, apiUrl string, method string, data url.Valu
 	return bytedata, nil
 }
 
-func setUp() *Proxmox {
-	return &Proxmox{
+func setUp(t *testing.T) *Proxmox {
+	px := &Proxmox{
 		requestFunction: performTestRequest,
-		hostname:        "testnode",
 	}
+
+	require.NoError(t, px.Init())
+
+	// Override hostname for test
+	px.hostname = "testnode"
+	return px
 }
 
 func TestGetNodeSearchDomain(t *testing.T) {
-	px := setUp()
+	px := setUp(t)
 
 	err := getNodeSearchDomain(px)
 
@@ -50,7 +55,7 @@ func TestGetNodeSearchDomain(t *testing.T) {
 }
 
 func TestGatherLxcData(t *testing.T) {
-	px := setUp()
+	px := setUp(t)
 	px.nodeSearchDomain = "test.example.com"
 
 	acc := &testutil.Accumulator{}
@@ -84,7 +89,7 @@ func TestGatherLxcData(t *testing.T) {
 }
 
 func TestGatherQemuData(t *testing.T) {
-	px := setUp()
+	px := setUp(t)
 	px.nodeSearchDomain = "test.example.com"
 
 	acc := &testutil.Accumulator{}
@@ -118,7 +123,7 @@ func TestGatherQemuData(t *testing.T) {
 }
 
 func TestGather(t *testing.T) {
-	px := setUp()
+	px := setUp(t)
 	px.nodeSearchDomain = "test.example.com"
 
 	acc := &testutil.Accumulator{}
