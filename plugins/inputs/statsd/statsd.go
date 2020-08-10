@@ -178,6 +178,10 @@ type cachedcounter struct {
 	firstInit bool
 }
 
+func (c *cachedcounter) counterTouched() {
+	c.firstInit = false
+}
+
 type cachedtimings struct {
 	name   string
 	fields map[string]RunningStats
@@ -291,7 +295,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		s.gauges = make(map[string]cachedgauge)
 	}
 
-	for _, m := range s.counters {
+	for key, m := range s.counters {
 		if m.firstInit {
 			zeroFields := make(map[string]interface{})
 			for k := range m.fields {
@@ -299,7 +303,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			}
 			s.Log.Warn("firstInit")
 			acc.AddCounter(m.name, zeroFields, m.tags, now)
-			m.firstInit = false
+			s.counters[key].counterTouched()
 		} else {
 			s.Log.Warn("noFirstInit")
 			acc.AddCounter(m.name, m.fields, m.tags, now)
