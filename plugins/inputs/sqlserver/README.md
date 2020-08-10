@@ -1,8 +1,14 @@
 # SQL Server Input Plugin
-
 The `sqlserver` plugin provides metrics for your SQL Server instance. It
 currently works with SQL Server 2008 SP3 and newer. Recorded metrics are
 lightweight and use Dynamic Management Views supplied by SQL Server.
+
+### THe SQL Server plugin supports the following editions/versions of SQL Server
+- SQL Server
+  - 2008 SP3 (with CU3)
+  - SQL Server 2008 R2 SP3 and newer versions
+- Azure SQL Database (Single)
+- Azure SQL Managed Instance
 
 ### Additional Setup:
 
@@ -47,23 +53,26 @@ GO
   # ]
 
   ## This enables a specific set of queries depending on the database type. If specified, it replaces azuredb = true/false and query_version = 2
-  ## In the config file, the sql server plugin section should be repeated multiple times each with a set of servers for a specific database_type
-  ## possible values for database_type are  "AzureSQLDB" or  "SQLServer" or "AzureSQLManagedInstance"
-  database_type = "AzureSQLDB"
+  ## In the config file, the sql server plugin section should be repeated  each with a set of servers for a specific database_type.
+  ## Possible values for database_type are  
+  ## "AzureSQLDB" 
+  ## "SQLServer"
+  ## "AzureSQLManagedInstance"
+  # database_type = "AzureSQLDB"
 
   ## Optional parameter, setting this to 2 will use a new version
-  ## of the collection queries that break compatibility with the original
-  ## dashboards.
+  ## of the collection queries that break compatibility with the original dashboards.
   ## Version 2 - is compatible from SQL Server 2012 and later versions and also for SQL Azure DB
-  query_version = 2
+  ## Version 2 is in the process of being deprecated, please consider using database_type.
+  # query_version = 2
 
   ## If you are using AzureDB, setting this to true will gather resource utilization metrics
   # azuredb = false
 
-  ## Possible queries
+  ## Possible queries accross different versions of the collectors
   ## Queries enabled by default for specific Database Type
   
-  ## database_type =  AzureSQLDB
+  ## database_type =  AzureSQLDB  by default collects the following queries
   ## - AzureDBWaitStats
   ## - AzureDBResourceStats 
   ## - AzureDBResourceGovernance
@@ -73,7 +82,7 @@ GO
   ## - AzureDBMemoryClerks
   ## - AzureDBPerformanceCounters
 
-   ## database_type =  AzureSQLManagedInstance
+   ## database_type =  AzureSQLManagedInstance by default collects the following queries
    ## - AzureMIResourceStats 
    ## - AzureMIResourceGovernance 
    ## - AzureMIDatabaseIO 
@@ -82,7 +91,8 @@ GO
    ## - AzureMIMemoryClerks
    ## - AzureMIPerformanceCounters
 
-  ## Version 2:
+  ## Version 2 by default collects the following queries
+  ## Version 1 is being deprecated, please consider using database_type.
   ## - PerformanceCounters
   ## - WaitStatsCategorized
   ## - DatabaseIO
@@ -93,7 +103,8 @@ GO
   ## - VolumeSpace
   ## - Cpu
 
-  ## Version 1:
+  ## Version 1 by default collects the following queries
+  ## Version 1 is deprecated, please consider using database_type.
   ## - PerformanceCounters
   ## - WaitStatsCategorized
   ## - CPUHistory
@@ -122,7 +133,7 @@ To provide backwards compatibility, this plugin support two versions of metrics 
 
 **Note**: Version 2 queries are not backwards compatible with the old queries. Any dashboards or queries based on the old query format will not work with the new format. The version 2 queries only report raw metrics, no math has been done to calculate deltas. To graph this data you must calculate deltas in your dashboarding software.
 
-#### Version 1 (deprecated in 1.6):
+#### Version 1 (query_version=1): This is Deprecated in 1.6, all future development will be under configuration option database_type.
 The original metrics queries provide:
 - *Performance counters*: 1000+ metrics from `sys.dm_os_performance_counters`
 - *Performance metrics*: special performance and ratio metrics
@@ -139,7 +150,7 @@ If you are using the original queries all stats have the following tags:
 - `servername`:  hostname:instance
 - `type`: type of stats to easily filter measurements
 
-#### Version 2:
+#### Version 2 (query_version=2): Being deprecated, All future development will be under configuration option database_type.
 The new (version 2) metrics provide:
 - *Database IO*: IO stats from `sys.dm_io_virtual_file_stats`
 - *Memory Clerk*: Memory clerk breakdown from `sys.dm_os_memory_clerks`, most clerks have been given a friendly name.
