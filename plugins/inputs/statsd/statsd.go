@@ -175,11 +175,7 @@ type cachedcounter struct {
 	name      string
 	fields    map[string]interface{}
 	tags      map[string]string
-	firstInit bool
-}
-
-func (c cachedcounter) counterTouched() {
-	c.firstInit = false
+	firstInit map[string]interface{}
 }
 
 type cachedtimings struct {
@@ -296,14 +292,15 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for key, m := range s.counters {
-		if m.firstInit {
+		_, ok := s.counters[key].firstInit["d"]
+		if !ok {
 			zeroFields := make(map[string]interface{})
 			for k := range m.fields {
 				zeroFields[k] = int64(0)
 			}
 			s.Log.Warn("firstInit")
 			acc.AddCounter(m.name, zeroFields, m.tags, now)
-			s.counters[key].counterTouched()
+			s.counters[key].firstInit["d"] = 'y'
 		} else {
 			s.Log.Warn("noFirstInit")
 			acc.AddCounter(m.name, m.fields, m.tags, now)
@@ -788,7 +785,7 @@ func (s *Statsd) aggregate(m metric) {
 				name:      m.name,
 				fields:    make(map[string]interface{}),
 				tags:      m.tags,
-				firstInit: true,
+				firstInit: make(map[string]interface{}),
 			}
 		}
 		// check if the field exists
