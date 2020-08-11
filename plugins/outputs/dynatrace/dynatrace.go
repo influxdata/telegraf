@@ -38,15 +38,19 @@ type Dynatrace struct {
 }
 
 const sampleConfig = `
-  ## Your Dynatrace environment URL. 
+  ## For usage with the Dynatrace OneAgent you can omit any configuration,
+  ## the only requirement is that the OneAgent is running on the same host.
+  ## Only setup environment url and token if you want to monitor a Host without the OneAgent present.
+  ##
+  ## Your Dynatrace environment URL.
+  ## For Dynatrace OneAgent you can leave this empty or set it to "http://127.0.0.1:14499/metrics/ingest" (default)
   ## For Dynatrace SaaS environments the URL scheme is "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
   ## For Dynatrace Managed environments the URL scheme is "https://{your-domain}/e/{your-environment-id}/api/v2/metrics/ingest"
-  ## For Dynatrace OneAgent the URL scheme is "http://127.0.0.1:14499/metrics/ingest" (default)
   environmentURL = ""
 
   ## Your Dynatrace API token. 
   ## Create an API token within your Dynatrace environment, by navigating to Settings > Integration > Dynatrace API
-  ## The API token needs data ingest scope permission.
+  ## The API token needs data ingest scope permission. When using OneAgent, no API token is required.
   environmentApiToken = "" 
 
   ## Optional prefix for metric names (e.g.: "telegraf.")
