@@ -216,7 +216,7 @@ func PluginNameCounts(plugins []string) []string {
 	for _, plugin := range plugins {
 		names[plugin]++
 	}
-	
+
 	var namecount []string
 	for name, count := range names {
 		if count == 1 {
@@ -225,7 +225,7 @@ func PluginNameCounts(plugins []string) []string {
 			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
 		}
 	}
-	
+
 	return namecount
 }
 
