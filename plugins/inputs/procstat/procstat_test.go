@@ -21,12 +21,14 @@ import (
 func init() {
 	execCommand = mockExecCommand
 }
+
 func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
 	args = append([]string{"-test.run=TestMockExecCommand", "--", arg0}, args...)
 	cmd := exec.Command(os.Args[0], args...)
 	cmd.Stderr = os.Stderr
 	return cmd
 }
+
 func TestMockExecCommand(t *testing.T) {
 	var cmd []string
 	for _, arg := range os.Args {
@@ -164,8 +166,8 @@ func (p *testProc) RlimitUsage(gatherUsage bool) ([]process.RlimitStat, error) {
 	return []process.RlimitStat{}, nil
 }
 
-var pid PID = PID(42)
-var exe string = "foo"
+var pid PID = 42
+var exe = "foo"
 
 func TestGather_CreateProcessErrorOk(t *testing.T) {
 	var acc testutil.Accumulator

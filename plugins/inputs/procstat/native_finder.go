@@ -11,8 +11,7 @@ import (
 )
 
 //NativeFinder uses gopsutil to find processes
-type NativeFinder struct {
-}
+type NativeFinder struct{}
 
 //NewNativeFinder ...
 func NewNativeFinder() (PIDFinder, error) {
@@ -59,17 +58,19 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 
 //FullPattern matches on the command line when the process was executed
 func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
-	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)
 	if err != nil {
-		return pids, err
+		return nil, err
 	}
+
 	procs, err := pg.FastProcessList()
 	if err != nil {
-		return pids, err
+		return nil, err
 	}
+
+	var pids []PID
 	for _, p := range procs {
-		cmd, err := p.Cmdline()
+		cmd, err := p.Exe()
 		if err != nil {
 			//skip, this can be caused by the pid no longer existing
 			//or you having no permissions to access it
