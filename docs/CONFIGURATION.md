@@ -122,7 +122,9 @@ parsed:
 
 # For InfluxDB Cloud 2:
 [[outputs.influxdb_v2]]
-  urls = ["https://us-west-2-1.aws.cloud2.influxdata.com"]
+  # For AWS West (Oregon)
+  INFLUX_HOST="https://us-west-2-1.aws.cloud2.influxdata.com"
+  # Other Cloud URLs at https://v2.docs.influxdata.com/v2.0/reference/urls/#influxdb-cloud-urls
   token = "replace_with_your_token"
   org = "yourname@yourcompany.com"
   bucket = "replace_with_your_bucket_name"
