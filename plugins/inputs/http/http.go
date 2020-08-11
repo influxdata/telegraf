@@ -157,10 +157,11 @@ func (h *HTTP) gatherURL(
 	url string,
 ) error {
 
-	var body io.Reader
-	if h.Body != "" {
-		body = strings.NewReader(h.Body)
+	body, err := makeRequestBodyReader(h.ContentEncoding, h.Body)
+	if err != nil {
+		return err
 	}
+
 	request, err := http.NewRequest(h.Method, url, body)
 
 	if err != nil {
@@ -233,7 +234,7 @@ func (h *HTTP) gatherURL(
 	return nil
 }
 
-func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) {
+func makeRequestBodyReader(contentEncoding, body string) (io.Reader, error) {
 	var reader io.Reader = strings.NewReader(body)
 	if contentEncoding == "gzip" {
 		rc, err := internal.CompressWithGzip(reader)
@@ -242,7 +243,7 @@ func makeRequestBodyReader(contentEncoding, body string) (io.ReadCloser, error) 
 		}
 		return rc, nil
 	}
-	return ioutil.NopCloser(reader), nil
+	return reader, nil
 }
 
 func init() {
