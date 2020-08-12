@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"io/ioutil"
 )
 
 func TestNilMetrics(t *testing.T) {
@@ -114,6 +115,16 @@ func TestMissingAPIToken(t *testing.T) {
 
 func TestSendMetric(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			require.NoError(t, err)
+		}    
+		bodyString := string(bodyBytes)
+		expected := "mymeasurement.myfield,host=\"192.168.0.1\",nix=\"nix\" 3.140000\nmymeasurement.value,host=\"192.168.0.1\" 3.140000\n"
+		if bodyString != expected {
+			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
+		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
 	}))
@@ -151,10 +162,20 @@ func TestSendMetric(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestSendSingleMetric(t *testing.T) {
+func TestSendSingleMetricWithUnorderedTags(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			require.NoError(t, err)
+		}
+		bodyString := string(bodyBytes)
+		expected := "mymeasurement.myfield,a=\"test\",b=\"test\",c=\"test\" 3.140000\n"
+		if bodyString != expected {
+			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
+		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
 	}))
 	defer ts.Close()
 
@@ -172,7 +193,7 @@ func TestSendSingleMetric(t *testing.T) {
 
 	m1, _ := metric.New(
 		"mymeasurement",
-		map[string]string{"host": "192.168.0.1", "nix": "nix"},
+		map[string]string{"a": "test", "c": "test", "b": "test"},
 		map[string]interface{}{"myfield": float64(3.14)},
 		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
@@ -186,7 +207,17 @@ func TestSendSingleMetric(t *testing.T) {
 func TestSendMetricWithoutTags(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			require.NoError(t, err)
+		}
+		bodyString := string(bodyBytes)
+		expected := "mymeasurement.myfield 3.140000\n"
+		if bodyString != expected {
+			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
+		}
+		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
 	}))
 	defer ts.Close()
 
@@ -215,10 +246,63 @@ func TestSendMetricWithoutTags(t *testing.T) {
 	require.NoError(t, err)
 }
 
+
+func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			require.NoError(t, err)
+		}
+		bodyString := string(bodyBytes)
+		expected := "mymeasurement.myfield,aaa=\"test\",b_b=\"test\",ccc=\"test\" 3.140000\n"
+		if bodyString != expected {
+			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
+		}
+		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
+	}))
+	defer ts.Close()
+
+	d := &Dynatrace{}
+
+	d.URL = ts.URL
+	d.APIToken = "123"
+	d.Log = testutil.Logger{}
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
+
+	// Init metrics
+
+	m1, _ := metric.New(
+		"mymeasurement",
+		map[string]string{"AAA": "test", "CcC": "test", "B B": "test"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	metrics := []telegraf.Metric{m1}
+
+	err = d.Write(metrics)
+	require.NoError(t, err)
+}
+
 func TestSendBooleanMetricWithoutTags(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(`{"linesOk":10,"linesInvalid":0,"error":null}`)
+		// check the encoded result
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			require.NoError(t, err)
+		}
+		bodyString := string(bodyBytes)
+		expected := "mymeasurement.myfield 1\n"
+		if bodyString != expected {
+			t.Errorf("Metric encoding failed. expected: %s but got: %s", expected, bodyString)
+		}
+		json.NewEncoder(w).Encode(`{"linesOk":1,"linesInvalid":0,"error":null}`)
 	}))
 	defer ts.Close()
 

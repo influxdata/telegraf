@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sort"
 )
 
 const (
@@ -134,12 +135,19 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 		// first write the tags into a buffer
 		tagb.Reset()
 		if len(metric.Tags()) > 0 {
-			for tk, tv := range metric.Tags() {
-				tagKey, err := d.normalize(tk, maxDimKeyLen)
+			keys := make([]string, 0, len(metric.Tags()))
+			for k := range metric.Tags() {
+				keys = append(keys, k)
+			}
+			// sort tag keys to expect the same order in ech run
+			sort.Strings(keys)
+
+			for _, k := range keys {
+				tagKey, err := d.normalize(k, maxDimKeyLen)
 				if err != nil {
 					continue
 				}
-				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(tv))
+				fmt.Fprintf(&tagb, ",%s=%s", strings.ToLower(tagKey), d.escape(metric.Tags()[k]))
 
 			}
 		}
