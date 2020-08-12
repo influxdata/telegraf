@@ -30,9 +30,9 @@ var (
 type Dynatrace struct {
 	EnvironmentURL       string          `toml:"environment_url"`
 	EnvironmentAPIToken  string          `toml:"environmentApiToken"`
-	SkipCertificateCheck bool            `toml:"skipCertificateCheck"`
+	InsecureSkipVerify bool            `toml:"insecure_skip_verify"`
 	Prefix               string          `toml:"prefix"`
-	Log                  telegraf.Logger `toml:"log"`
+	Log                  telegraf.Logger `toml:"-"`
 
 	client *http.Client
 }
