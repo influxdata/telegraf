@@ -1,5 +1,5 @@
 '''
-Pivots a key value to be the key for another key.
+Pivots a key's value to be the key for another key.
 In this example it pivots the value of key `sensor`
 to be the key of the value in key `value`
 
