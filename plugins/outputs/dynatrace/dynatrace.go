@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 	"math"
@@ -13,7 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 )
 
 const (
@@ -28,11 +28,12 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	EnvironmentURL       string          `toml:"environment_url"`
-	EnvironmentAPIToken  string          `toml:"environmentApiToken"`
+	URL                string          `toml:"url"`
+	APIToken           string          `toml:"api_token"`
 	InsecureSkipVerify bool            `toml:"insecure_skip_verify"`
-	Prefix               string          `toml:"prefix"`
-	Log                  telegraf.Logger `toml:"-"`
+	Prefix             string          `toml:"prefix"`
+	Log                telegraf.Logger `toml:"-"`
+	Timeout            internal.Duration `toml:"timeout"`
 
 	client *http.Client
 }
@@ -46,38 +47,25 @@ const sampleConfig = `
   ## For Dynatrace OneAgent you can leave this empty or set it to "http://127.0.0.1:14499/metrics/ingest" (default)
   ## For Dynatrace SaaS environments the URL scheme is "https://{your-environment-id}.live.dynatrace.com/api/v2/metrics/ingest"
   ## For Dynatrace Managed environments the URL scheme is "https://{your-domain}/e/{your-environment-id}/api/v2/metrics/ingest"
-  environmentURL = ""
+  url = ""
 
   ## Your Dynatrace API token. 
   ## Create an API token within your Dynatrace environment, by navigating to Settings > Integration > Dynatrace API
   ## The API token needs data ingest scope permission. When using OneAgent, no API token is required.
-  environmentApiToken = "" 
+  api_token = "" 
 
   ## Optional prefix for metric names (e.g.: "telegraf.")
   prefix = "telegraf."
   
   ## Optional flag for ignoring tls certificate check
-  skipCertificateCheck = false
+  insecure_skip_verify = false
+
+  ## Connection timeout, defaults to "5s" if not set.
+  timeout = "5s"
 `
 
 // Connect Connects the Dynatrace output plugin to the Telegraf stream
 func (d *Dynatrace) Connect() error {
-	if len(d.EnvironmentURL) == 0 {
-		d.Log.Infof("Dynatrace environmentURL is empty, defaulting to OneAgent metrics interface")
-		d.EnvironmentURL = oneAgentMetricsUrl
-	}
-	if d.EnvironmentURL != oneAgentMetricsUrl && len(d.EnvironmentAPIToken) == 0 {
-		d.Log.Errorf("Dynatrace environmentApiToken is a required field for Dynatrace output")
-		return fmt.Errorf("environmentApiToken is a required field for Dynatrace output")
-	}
-
-	d.client = &http.Client{
-		Transport: &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: d.SkipCertificateCheck},
-		},
-		Timeout: 5 * time.Second,
-	}
 	return nil
 }
 
@@ -102,18 +90,8 @@ func (d *Dynatrace) Description() string {
 func (d *Dynatrace) normalize(s string, max int) (string, error) {
 	s = reNameAllowedCharList.ReplaceAllString(s, "_")
 
-	// Strip Digits if they are at the beginning of the string
-	normalizedString := ""
-	firstChars := true
-
-	for _, char := range s {
-		if firstChars && (unicode.IsDigit(char) || char == '_') {
-			continue
-		} else {
-			firstChars = false
-		}
-		normalizedString += string(char)
-	}
+	// Strip Digits and underscores if they are at the beginning of the string
+	normalizedString := strings.TrimLeft(s, "_0123456789")
 
 	for strings.HasPrefix(normalizedString, "_") {
 		normalizedString = normalizedString[1:]
@@ -197,9 +175,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 				}
 				fmt.Fprintf(&buf, "%s", metricID)
 				// add the tag string
-				if len(tagb.String()) > 0 {
-					fmt.Fprintf(&buf, "%s", tagb.String())
-				}
+				fmt.Fprintf(&buf, "%s", tagb.String())
 
 				// write measured value
 				fmt.Fprintf(&buf, " %v\n", value)
@@ -212,15 +188,15 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 
 func (d *Dynatrace) send(msg []byte) error {
 	var err error
-	req, err := http.NewRequest("POST", d.EnvironmentURL, bytes.NewBuffer(msg))
+	req, err := http.NewRequest("POST", d.URL, bytes.NewBuffer(msg))
 	if err != nil {
 		d.Log.Errorf("Dynatrace error: %s", err.Error())
 		return fmt.Errorf("Dynatrace error while creating HTTP request:, %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "text/plain; charset=UTF-8")
 
-	if len(d.EnvironmentAPIToken) != 0 {
-		req.Header.Add("Authorization", "Api-Token "+d.EnvironmentAPIToken)
+	if len(d.APIToken) != 0 {
+		req.Header.Add("Authorization", "Api-Token "+d.APIToken)
 	}
 	// add user-agent header to identify metric source
 	req.Header.Add("User-Agent", "telegraf")
@@ -248,8 +224,30 @@ func (d *Dynatrace) send(msg []byte) error {
 	return nil
 }
 
+func (d *Dynatrace) Init() error {
+	if len(d.URL) == 0 {
+		d.Log.Infof("Dynatrace URL is empty, defaulting to OneAgent metrics interface")
+		d.URL = oneAgentMetricsUrl
+	}
+	if d.URL != oneAgentMetricsUrl && len(d.APIToken) == 0 {
+		d.Log.Errorf("Dynatrace api_token is a required field for Dynatrace output")
+		return fmt.Errorf("api_token is a required field for Dynatrace output")
+	}
+
+	d.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: d.InsecureSkipVerify},
+		},
+		Timeout: d.Timeout.Duration,
+	}
+	return nil
+}
+
 func init() {
 	outputs.Add("dynatrace", func() telegraf.Output {
-		return &Dynatrace{}
+		return &Dynatrace{
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }
