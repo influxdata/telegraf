@@ -7,11 +7,11 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-	"io/ioutil"
 )
 
 func TestNilMetrics(t *testing.T) {
@@ -119,7 +119,7 @@ func TestSendMetric(t *testing.T) {
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			require.NoError(t, err)
-		}    
+		}
 		bodyString := string(bodyBytes)
 		expected := "mymeasurement.myfield,host=\"192.168.0.1\",nix=\"nix\" 3.140000\nmymeasurement.value,host=\"192.168.0.1\" 3.140000\n"
 		if bodyString != expected {
@@ -245,7 +245,6 @@ func TestSendMetricWithoutTags(t *testing.T) {
 	err = d.Write(metrics)
 	require.NoError(t, err)
 }
-
 
 func TestSendMetricWithUpperCaseTagKeys(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
