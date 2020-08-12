@@ -3,8 +3,11 @@ Pivots a key's value to be the key for another key.
 In this example it pivots the value of key `sensor`
 to be the key of the value in key `value`
 
-Input: temperature sensor=001A0,value=111.48
-Output: temperature 001A0=111.48
+Input: 
+temperature sensor=001A0,value=111.48
+
+Output: 
+temperature 001A0=111.48
 '''
  
  def apply(metric):
