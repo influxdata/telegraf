@@ -158,7 +158,7 @@ func (d *Dynatrace) Write(metrics []telegraf.Metric) error {
 						value = "0"
 					}
 				default:
-					d.Log.Infof("Dynatrace type not supported! %s", v)
+					d.Log.Debugf("Dynatrace type not supported! %s", v)
 					continue
 				}
 
@@ -216,7 +216,7 @@ func (d *Dynatrace) send(msg []byte) error {
 			d.Log.Errorf("Dynatrace error reading response")
 		}
 		bodyString := string(bodyBytes)
-		d.Log.Infof("Dynatrace returned: %s", bodyString)
+		d.Log.Debugf("Dynatrace returned: %s", bodyString)
 	} else {
 		return fmt.Errorf("Dynatrace request failed with response code:, %d", resp.StatusCode)
 	}
