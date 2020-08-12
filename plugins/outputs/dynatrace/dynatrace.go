@@ -2,11 +2,11 @@ package dynatrace
 
 import (
 	"bytes"
-	"crypto/tls"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -35,6 +35,8 @@ type Dynatrace struct {
 	Log                telegraf.Logger `toml:"-"`
 	Timeout            internal.Duration `toml:"timeout"`
 
+	tls.ClientConfig
+
 	client *http.Client
 }
 
@@ -56,9 +58,15 @@ const sampleConfig = `
 
   ## Optional prefix for metric names (e.g.: "telegraf.")
   prefix = "telegraf."
-  
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+
   ## Optional flag for ignoring tls certificate check
-  insecure_skip_verify = false
+  # insecure_skip_verify = false
+
 
   ## Connection timeout, defaults to "5s" if not set.
   timeout = "5s"
@@ -234,10 +242,15 @@ func (d *Dynatrace) Init() error {
 		return fmt.Errorf("api_token is a required field for Dynatrace output")
 	}
 
+	tlsCfg, err := d.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
 	d.client = &http.Client{
 		Transport: &http.Transport{
 			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: d.InsecureSkipVerify},
+			TLSClientConfig: tlsCfg,
 		},
 		Timeout: d.Timeout.Duration,
 	}
