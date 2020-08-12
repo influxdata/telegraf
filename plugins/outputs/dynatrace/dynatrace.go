@@ -28,7 +28,7 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	EnvironmentURL       string          `toml:"environmentURL"`
+	EnvironmentURL       string          `toml:"environment_url"`
 	EnvironmentAPIToken  string          `toml:"environmentApiToken"`
 	SkipCertificateCheck bool            `toml:"skipCertificateCheck"`
 	Prefix               string          `toml:"prefix"`
