@@ -20,8 +20,8 @@ func TestNilMetrics(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
-	d.EnvironmentURL = ts.URL
-	d.EnvironmentAPIToken = "123"
+	d.URL = ts.URL
+	d.APIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.NoError(t, err)
@@ -38,8 +38,8 @@ func TestEmptyMetricsSlice(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
-	d.EnvironmentURL = ts.URL
-	d.EnvironmentAPIToken = "123"
+	d.URL = ts.URL
+	d.APIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.NoError(t, err)
@@ -56,8 +56,8 @@ func TestMockURL(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
-	d.EnvironmentURL = ts.URL
-	d.EnvironmentAPIToken = "123"
+	d.URL = ts.URL
+	d.APIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestMissingURL(t *testing.T) {
 	d := &Dynatrace{}
 	d.Log = testutil.Logger{}
 	err := d.Connect()
-	require.Equal(t, oneAgentMetricsUrl, d.EnvironmentURL)
+	require.Equal(t, oneAgentMetricsUrl, d.URL)
 	require.NoError(t, err)
 }
 
@@ -78,13 +78,13 @@ func TestMissingAPITokenMissingURL(t *testing.T) {
 	d := &Dynatrace{}
 	d.Log = testutil.Logger{}
 	err := d.Connect()
-	require.Equal(t, oneAgentMetricsUrl, d.EnvironmentURL)
+	require.Equal(t, oneAgentMetricsUrl, d.URL)
 	require.NoError(t, err)
 }
 
 func TestMissingAPIToken(t *testing.T) {
 	d := &Dynatrace{}
-	d.EnvironmentURL = "test"
+	d.URL = "test"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.Error(t, err)
@@ -98,8 +98,8 @@ func TestSendMetric(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
-	d.EnvironmentURL = ts.URL
-	d.EnvironmentAPIToken = "123"
+	d.URL = ts.URL
+	d.APIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.NoError(t, err)
@@ -134,8 +134,8 @@ func TestSendSingleMetric(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
-	d.EnvironmentURL = ts.URL
-	d.EnvironmentAPIToken = "123"
+	d.URL = ts.URL
+	d.APIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.NoError(t, err)
@@ -163,8 +163,8 @@ func TestSendMetricWithoutTags(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
-	d.EnvironmentURL = ts.URL
-	d.EnvironmentAPIToken = "123"
+	d.URL = ts.URL
+	d.APIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.NoError(t, err)
@@ -192,8 +192,8 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
-	d.EnvironmentURL = ts.URL
-	d.EnvironmentAPIToken = "123"
+	d.URL = ts.URL
+	d.APIToken = "123"
 	d.Log = testutil.Logger{}
 	err := d.Connect()
 	require.NoError(t, err)
