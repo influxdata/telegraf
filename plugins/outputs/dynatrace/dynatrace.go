@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/common/tls"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -28,11 +28,11 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL                string          `toml:"url"`
-	APIToken           string          `toml:"api_token"`
-	InsecureSkipVerify bool            `toml:"insecure_skip_verify"`
-	Prefix             string          `toml:"prefix"`
-	Log                telegraf.Logger `toml:"-"`
+	URL                string            `toml:"url"`
+	APIToken           string            `toml:"api_token"`
+	InsecureSkipVerify bool              `toml:"insecure_skip_verify"`
+	Prefix             string            `toml:"prefix"`
+	Log                telegraf.Logger   `toml:"-"`
 	Timeout            internal.Duration `toml:"timeout"`
 
 	tls.ClientConfig
