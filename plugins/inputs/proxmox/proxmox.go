@@ -5,7 +5,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -123,7 +122,7 @@ func gatherQemuData(px *Proxmox, acc telegraf.Accumulator) {
 func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 	vmStats, err := getVmStats(px, rt)
 	if err != nil {
-		log.Fatal(err)
+		px.Log.Error("Error getting VM stats: %v", err)
 		return
 	}
 
@@ -131,13 +130,13 @@ func gatherVmData(px *Proxmox, acc telegraf.Accumulator, rt ResourceType) {
 	for _, vmStat := range vmStats.Data {
 		vmConfig, err := getVmConfig(px, vmStat.ID, rt)
 		if err != nil {
-			log.Fatal(err)
+			px.Log.Error("Error getting VM config: %v", err)
 			return
 		}
 		tags := getTags(px, vmStat.Name, vmConfig, rt)
 		fields, err := getFields(vmStat)
 		if err != nil {
-			log.Fatal(err)
+			px.Log.Error("Error getting VM measurements: %v", err)
 			return
 		}
 		acc.AddFields("proxmox", fields, tags)

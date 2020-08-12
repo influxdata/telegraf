@@ -40,8 +40,9 @@ func setUp(t *testing.T) *Proxmox {
 
 	require.NoError(t, px.Init())
 
-	// Override hostname for test
+	// Override hostname and logger for test
 	px.hostname = "testnode"
+	px.Log = testutil.Logger{}
 	return px
 }
 
