@@ -3,6 +3,7 @@ package dynatrace
 import (
 	"encoding/json"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -19,11 +20,17 @@ func TestNilMetrics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	d := &Dynatrace{}
+	d := &Dynatrace{
+		Timeout: internal.Duration{Duration: time.Second * 5},
+	}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
+	require.NoError(t, err)
+
+	err = d.Connect()
 	require.NoError(t, err)
 
 	err = d.Write(nil)
@@ -38,10 +45,15 @@ func TestEmptyMetricsSlice(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+
+	err := d.Init()
+	require.NoError(t, err)
+
+	err = d.Connect()
 	require.NoError(t, err)
 	empty := []telegraf.Metric{}
 	err = d.Write(empty)
@@ -56,37 +68,47 @@ func TestMockURL(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
-	require.NoError(t, err)
 
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
+	require.NoError(t, err)
 	err = d.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }
 
 func TestMissingURL(t *testing.T) {
 	d := &Dynatrace{}
+
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
+	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	err = d.Connect()
 	require.Equal(t, oneAgentMetricsUrl, d.URL)
 	require.NoError(t, err)
 }
 
 func TestMissingAPITokenMissingURL(t *testing.T) {
 	d := &Dynatrace{}
+
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
+	require.Equal(t, oneAgentMetricsUrl, d.URL)
+	err = d.Connect()
 	require.Equal(t, oneAgentMetricsUrl, d.URL)
 	require.NoError(t, err)
 }
 
 func TestMissingAPIToken(t *testing.T) {
 	d := &Dynatrace{}
+
 	d.URL = "test"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
 	require.Error(t, err)
 }
 
@@ -98,10 +120,13 @@ func TestSendMetric(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
 	require.NoError(t, err)
 
 	// Init metrics
@@ -134,10 +159,13 @@ func TestSendSingleMetric(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
 	require.NoError(t, err)
 
 	// Init metrics
@@ -163,10 +191,13 @@ func TestSendMetricWithoutTags(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
 	require.NoError(t, err)
 
 	// Init metrics
@@ -192,10 +223,13 @@ func TestSendBooleanMetricWithoutTags(t *testing.T) {
 	defer ts.Close()
 
 	d := &Dynatrace{}
+
 	d.URL = ts.URL
 	d.APIToken = "123"
 	d.Log = testutil.Logger{}
-	err := d.Connect()
+	err := d.Init()
+	require.NoError(t, err)
+	err = d.Connect()
 	require.NoError(t, err)
 
 	// Init metrics
