@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// Skipping integration test in short mode
+//Skipping integration test in short mode
 func TestGatherInfo(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

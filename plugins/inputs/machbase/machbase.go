@@ -478,7 +478,13 @@ func (m *MachDB) GetData(aUrl string, aQuery string) (interface{}, error) {
 			defer res.Body.Close()
 
 			sBytes, _ := ioutil.ReadAll(res.Body)
-			sConvertData := "[" + string(sBytes) + "]"
+			sConvertData := ""
+			if string(sBytes[0]) != "[" {
+				sConvertData = "[" + string(sBytes) + "]"
+			} else {
+				sConvertData = string(sBytes)
+			}
+			
 			sError = json.Unmarshal([]byte(sConvertData), &sData)
 			if sError != nil {
 				m.Log.Debugf("json unmarshal error > " + sError.Error())
