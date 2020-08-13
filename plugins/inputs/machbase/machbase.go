@@ -484,7 +484,7 @@ func (m *MachDB) GetData(aUrl string, aQuery string) (interface{}, error) {
 			} else {
 				sConvertData = string(sBytes)
 			}
-			
+
 			sError = json.Unmarshal([]byte(sConvertData), &sData)
 			if sError != nil {
 				m.Log.Debugf("json unmarshal error > " + sError.Error())
