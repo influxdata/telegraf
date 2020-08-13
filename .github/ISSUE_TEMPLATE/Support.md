@@ -1,6 +1,7 @@
 ---
 name: Support request
 labels: support
+about: Open a support request
 
 ---
 
