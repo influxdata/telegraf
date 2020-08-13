@@ -130,6 +130,7 @@ IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 
 const sqlAzureDBDatabaseIO = `
 SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
 		 'sqlserver_database_io' As [measurement]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -171,7 +172,7 @@ SELECT
 
 const sqlAzureDBProperties = `
 DECLARE @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-IF @EngineEdition = 5 
+IF @EngineEdition = 5  -- Is this Azure SQL DB?
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 		DB_NAME() as [database_name],
@@ -200,6 +201,7 @@ SELECT	'sqlserver_server_properties' AS [measurement],
 
 const sqlAzureDBOsWaitStats = `
 SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
 'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
@@ -306,6 +308,7 @@ AND wait_time_ms > 100;
 
 const sqlAzureDBMemoryClerks = `
 SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
@@ -322,6 +325,8 @@ OPTION(RECOMPILE);
 
 const sqlAzurePerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5  -- Is this Azure SQL DB?
+BEGIN
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -489,11 +494,12 @@ from @PCounters pc
 			AND pc1.counter_name LIKE '%base'
 WHERE	pc.counter_name NOT LIKE '% base'
 OPTION (RECOMPILE)
+END
 `
 
 const sqlAzureMIProperties = `
 DECLARE @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-IF @EngineEdition = 8  /*Managed Instance*/
+IF  @EngineEdition = 8  /*Managed Instance*/
       SELECT TOP 1 'sqlserver_server_properties' AS [measurement],
 			REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 			virtual_core_count AS cpu_count,
@@ -524,8 +530,7 @@ IF @EngineEdition = 8  /*Managed Instance*/
 `
 
 const sqlAzureMIResourceStats = `
-DECLARE @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
-IF @EngineEdition = 8  /*Managed Instance*/
+IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
         SELECT TOP(1)
                 'sqlserver_azure_db_resource_stats' AS [measurement],
                 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
@@ -556,8 +561,7 @@ IF SERVERPROPERTY('EngineEdition') = 8  -- Is this Azure SQL Managed Instance?
 
 const sqlAzureMIDatabaseIO = `
 SET DEADLOCK_PRIORITY -10;
-IF  SERVERPROPERTY('EngineEdition') = 8  /*Standard,Enterprise,Express*/
-
+IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
 	SELECT
 		'sqlserver_database_io' AS [measurement]
 		,REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
@@ -580,6 +584,7 @@ IF  SERVERPROPERTY('EngineEdition') = 8  /*Standard,Enterprise,Express*/
 
 const sqlAzureMIMemoryClerks = `
 SET DEADLOCK_PRIORITY -10;
+IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
 SELECT
 	 'sqlserver_memory_clerks' AS [measurement]
 	,REPLACE(@@SERVERNAME, '\', ':') AS [sql_instance]
@@ -595,6 +600,7 @@ OPTION(RECOMPILE);
 
 const sqlAzureMIOsWaitStats = `
 SET DEADLOCK_PRIORITY -10;
+IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
 SELECT
 'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
@@ -700,6 +706,7 @@ AND wait_time_ms > 100;
 
 const sqlAzureMIPerformanceCounters = `
 SET DEADLOCK_PRIORITY -10;
+IF  SERVERPROPERTY('EngineEdition') = 8  /*Managed Instance*/
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
