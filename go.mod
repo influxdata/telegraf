@@ -79,7 +79,7 @@ require (
 	github.com/jackc/pgx v3.6.0+incompatible
 	github.com/jcmturner/gofork v1.0.0 // indirect
 	github.com/kardianos/service v1.0.0
-	github.com/karrick/godirwalk v1.12.0
+	github.com/karrick/godirwalk v1.16.1
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/klauspost/compress v1.9.2 // indirect
 	github.com/kubernetes/apimachinery v0.0.0-20190119020841-d41becfba9ee
