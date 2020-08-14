@@ -4,7 +4,7 @@ The proxmox plugin gathers metrics about containers and VMs using the Proxmox AP
 
 ### Configuration:
 
-```
+```toml
 [[inputs.proxmox]]
   ## API connection configuration. The API token was introduced in Proxmox v6.2. Required permissions for user and token: PVEAuditor role on /.
   base_url = "https://localhost:8006/api2/json"
