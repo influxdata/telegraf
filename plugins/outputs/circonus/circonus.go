@@ -39,6 +39,14 @@ type Circonus struct {
 
 // Init performs initialization of a Circonus client.
 func (c *Circonus) Init() error {
+	if c.APIURL == "" {
+		c.APIURL = "https://api.circonus.com/"
+	}
+
+	if c.APIApp == "" {
+		c.APIApp == "telegraf"
+	}
+
 	return c.getAPIClient()
 }
 
@@ -71,13 +79,16 @@ var sampleConfig = `
   # insecure_skip_verify = false
 
   ## Circonus API Configuration, this is required for automatic check creation
-  ## and automatic check lookup, and retrieving broker CA information:
+  ## and automatic check lookup, and retrieving broker CA information.
+  ## An API token must be provided to use this plugin:
+  api_token = "11223344-5566-7788-9900-aabbccddeeff"
+  ## If not provided, the api URL will default to the Circonus SaaS API URL:
   # api_url = "https://api.circonus.com/"
-  # api_token = "11223344-5566-7788-9900-aabbccddeeff"
+  ## If not provided, the API application used will default to telegraf:
   # api_app = "telegraf"
   ## Optional API TLS Configuration: 
   # api_tls_ca = "/etc/telegraf/api_ca.pem"
-  ## Use TLS but skip chain & host verification:
+  ## Use TLS for API requests but skip chain & host verification:
   # api_insecure_skip_verify = false
 `
 

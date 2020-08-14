@@ -55,14 +55,14 @@ check configuration click [here][docs].
 |`timeout`|The timeout to use when connecting to the Circonus broker.|
 |`broker`|The CID of a Circonus broker to use when automatically creating a check. If omitted or set to `"auto"`, then a random eligible broker will be selected.|
 |`exclude_brokers`|A list of broker CID's that will be excluded from automatic broker selection.|
-|`checks`|A map of regexp patterns to Circonus check submission URL's. The regexp pattern will match to the name of the metric that will be populated in the Circonus system, and this can include tag matching (i.e. category:value). The submission URL should match the submission URL of an HTTPTrap check as shown in the Circonus UI. If the submission check is set to `"auto"` an HTTPTrap check named `telegraf-httptrap` will be used on the broker specified in the previous settings. This check will be created if it does not exist.|
+|`checks`|A map of regexp patterns to Circonus check submission URL's. The regexp pattern will match to the name of the metric that will be populated in the Circonus system, and this can include tag matching (i.e. category:value). The submission URL should match the submission URL of an HTTPTrap check as shown in the Circonus UI. If the submission check is set to `"auto"` an HTTPTrap check named `telegraf-httptrap` will be used on the broker specified in the previous settings. This check will be created if it does not exist. This setting is required.|
 |`tls_ca`|The certificate authority file to use when connecting to the Circonus broker. If this is not provided, the CA information will be retrieved from the Circonus API.|
 |`tls_cert`|A TLS certificate file to use when connecting to the Circonus broker. This is optional.|
 |`tls_key`|A TLS key file to use when connecting to the Circonus broker. This is optional.|
 |`insecure_skip_verify`|This will skip TLS verification when connecting to the Circonus broker. This should only be set to `true` for testing purposes.|
-|`api_url`|The URL that can be used to connect to the Circonus API. This is required.|
 |`api_token`|The authentication token to used when connecting to the Circonus API. It is recommended to create a token/application combination specifically for use with this Telegraf plugin. This is required.|
-|`api_app`|The API token application to use when connecting to the Circonus API. This is required.|
+|`api_url`|The URL that can be used to connect to the Circonus API. This will default to the Circonus SaaS API URL if not provided.|
+|`api_app`|The API token application to use when connecting to the Circonus API. This will default to `telegraf` if not provided.|
 |`api_tls_ca`|The certificate authority file to use when connecting to the Circonus API, if needed.|
 |`api_insecure_skip_verify`|This will skip TLS verification when conneciting to the Circonus API. This should only be set to `true` for testing purposes.|
 
