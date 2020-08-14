@@ -44,7 +44,7 @@ func (c *Circonus) Init() error {
 	}
 
 	if c.APIApp == "" {
-		c.APIApp == "telegraf"
+		c.APIApp = "telegraf"
 	}
 
 	return c.getAPIClient()
