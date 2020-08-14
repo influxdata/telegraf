@@ -383,7 +383,7 @@ func TestWriteHTTPEmpty(t *testing.T) {
 
 func TestWriteHTTPTransformHeaderValuesToTagsSingleWrite(t *testing.T) {
 	listener := newTestHTTPListenerV2()
-	listener.HTTPHeaderTags = map[string]string{"Present_http_header_1": "presentMeasurementKey1", "Present_http_header_2": "presentMeasurementKey2", "NOT_PRESENT_HEADER": "notPresentMeasurementKey"}
+	listener.HTTPHeaderTags = map[string]string{"Present_http_header_1": "presentMeasurementKey1", "present_http_header_2": "presentMeasurementKey2", "NOT_PRESENT_HEADER": "notPresentMeasurementKey"}
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
