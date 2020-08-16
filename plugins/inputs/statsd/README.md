@@ -34,6 +34,15 @@
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
+  ## When resetting counter or the telegraf daemon, first gather will put a 0
+  ## This is useful for metric collectors systems like prometheus
+  ## where the transition from none to X value results in "none". 
+  ## With this option activated you will send first a 0 and 
+  ## then the incremented value in the next gather resulting in the 
+  ## real incremental from 0 to the current value
+  ## will push in the series: [0,value,0,value,0,value...]
+  first_counter_metric_gather_fill_with_zero = true (default=false)
+
   ## Percentiles to calculate for timing & histogram stats.
   percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
 

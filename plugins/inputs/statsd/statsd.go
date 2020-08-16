@@ -58,6 +58,8 @@ type Statsd struct {
 	DeleteTimings  bool
 	ConvertNames   bool
 
+	FirstCounterMetricGatherFillWithZero bool `toml:"first_counter_metric_gather_fill_with_zero"`
+
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
 	// This flag enables parsing of tags in the dogstatsd extension to the
@@ -175,7 +177,7 @@ type cachedcounter struct {
 	name      string
 	fields    map[string]interface{}
 	tags      map[string]string
-	firstInit map[string]interface{}
+	firstInit bool
 }
 
 type cachedtimings struct {
@@ -217,6 +219,16 @@ const sampleConfig = `
   delete_sets = true
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
+
+  ## When resetting counter or the telegraf daemon, first gather will put a 0
+  ## This is useful for metric collectors systems like prometheus
+  ## where the transition from none to X value results in "none". 
+  ## With this option activated you will send first a 0 and 
+  ## then the incremented value in the next gather resulting in the 
+  ## real incremental from 0 to the current value
+  ## Note: Using this with Delete Counters enabled
+  ## will push in the series: [0,value,0,value,0,value...]
+  first_counter_metric_gather_fill_with_zero = true (default=false)
 
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [50.0, 90.0, 99.0, 99.9, 99.95, 100.0]
@@ -292,23 +304,24 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for key, m := range s.counters {
-		_, ok := s.counters[key].firstInit["d"]
-		if !ok {
+		if s.FirstCounterMetricGatherFillWithZero && m.firstInit {
 			zeroFields := make(map[string]interface{})
 			for k := range m.fields {
 				zeroFields[k] = int64(0)
 			}
-			s.Log.Warn("firstInit")
 			acc.AddCounter(m.name, zeroFields, m.tags, now)
-			s.counters[key].firstInit["d"] = 'y'
+			s.counters[key] = cachedcounter{
+				name:      m.name,
+				fields:    m.fields,
+				tags:      m.tags,
+				firstInit: false,
+			}
 		} else {
-			s.Log.Warn("noFirstInit")
 			acc.AddCounter(m.name, m.fields, m.tags, now)
+			if s.DeleteCounters {
+				delete(s.counters, key)
+			}
 		}
-	}
-
-	if s.DeleteCounters {
-		s.counters = make(map[string]cachedcounter)
 	}
 
 	for _, m := range s.sets {
@@ -785,7 +798,7 @@ func (s *Statsd) aggregate(m metric) {
 				name:      m.name,
 				fields:    make(map[string]interface{}),
 				tags:      m.tags,
-				firstInit: make(map[string]interface{}),
+				firstInit: true,
 			}
 		}
 		// check if the field exists
