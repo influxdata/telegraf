@@ -1033,8 +1033,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
-	switch t := input.(type) {
-	case parsers.ParserInput:
+	if t, ok := input.(parsers.ParserInput); ok {
 		parser, err := buildParser(name, table)
 		if err != nil {
 			return err
@@ -1042,8 +1041,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
-	switch t := input.(type) {
-	case parsers.ParserFuncInput:
+	if t, ok := input.(parsers.ParserFuncInput); ok {
 		config, err := getParserConfig(name, table)
 		if err != nil {
 			return err
