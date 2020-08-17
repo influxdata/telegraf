@@ -52,7 +52,7 @@ func TestAlignedTickerJitter(t *testing.T) {
 
 	clock := clock.NewMock()
 	since := clock.Now()
-	until := since.Add(60 * time.Second)
+	until := since.Add(61 * time.Second)
 
 	ticker := newAlignedTicker(since, interval, jitter, clock)
 	defer ticker.Stop()
@@ -61,12 +61,14 @@ func TestAlignedTickerJitter(t *testing.T) {
 	for !clock.Now().After(until) {
 		select {
 		case tm := <-ticker.Elapsed():
-			require.True(t, tm.Sub(last) <= 15*time.Second)
-			require.True(t, tm.Sub(last) >= 5*time.Second)
+			dur := tm.Sub(last)
+			// 10s interval + 5s jitter + up to 1s late firing.
+			require.True(t, dur <= 16*time.Second, "expected elapsed time to be less than 16 seconds, but was %s", dur)
+			require.True(t, dur >= 5*time.Second, "expected elapsed time to be more than 5 seconds, but was %s", dur)
 			last = last.Add(interval)
 		default:
 		}
-		clock.Add(5 * time.Second)
+		clock.Add(1 * time.Second)
 	}
 }
 
