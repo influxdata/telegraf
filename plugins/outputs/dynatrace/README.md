@@ -26,12 +26,12 @@ You will also need to configure an API token for secure access. Find out how to 
 [[outputs.dynatrace]]
   ## Leave empty or use the local ingest endpoint of your OneAgent monitored host (e.g.: http://127.0.0.1:14499/metrics/ingest).
   ## Set Dynatrace environment URL (e.g.: https://YOUR_DOMAIN/api/v2/metrics/ingest) if you do not use a OneAgent
-  environmentURL = ""
-  environmentApiToken = ""
+  url = ""
+  api_token = ""
   ## Optional prefix for metric names (e.g.: "telegraf.")
   prefix = "telegraf."
   ## Flag for skipping the tls certificate check, just for testing purposes, should be false by default
-  skipCertificateCheck = false
+  insecure_skip_verify = false
 
 ```
 
