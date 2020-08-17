@@ -8,7 +8,7 @@ if you run the Telegraf agent on a host or VM that is monitored by the Dynatrace
 
 ## Running standalone
 
-If you run the Telegraf agent on a host or VM without a OneAgent you will need to configure the environment API endpoint to send the metrics to and a an API token for security.
+If you run the Telegraf agent on a host or VM without a OneAgent you will need to configure the environment API endpoint to send the metrics to and an API token for security.
 
 The endpoint for the Dynatrace Metrics API is 
 
