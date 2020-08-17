@@ -9,7 +9,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/influxdata/telegraf"
-	tgConfig "github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -26,9 +25,6 @@ type loadedConfig struct {
 	Processor telegraf.StreamingProcessor
 	Output    telegraf.Output
 }
-
-// make sure config.Duration parser is loaded, as the shim will require it.
-var _ tgConfig.Duration = 0
 
 // LoadConfig Adds plugins to the shim
 func (s *Shim) LoadConfig(filePath *string) error {
