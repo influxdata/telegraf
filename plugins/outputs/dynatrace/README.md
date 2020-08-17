@@ -18,7 +18,7 @@ The endpoint for the Dynatrace Metrics API is
 You can learn more about how to use the Dynatrace API [here](https://www.dynatrace.com/support/help/dynatrace-api/)
 
 You will also need to configure an API token for secure access. Find out how to create a token [here](https://www.dynatrace.com/support/help/dynatrace-api/environment-api/tokens/) or simply navigate to **Settings > Integration > Dynatrace API** in your Dynatrace environment and create a token with Dynatrace API and create a new token with 
-'Data ingest' access scope enabled. 
+'Ingest metrics data points' access scope enabled. 
 
 ## Configuration
 
