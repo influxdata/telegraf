@@ -37,7 +37,7 @@ You will also need to configure an API token for secure access. Find out how to 
 
 ## Requirements
 
-This plugin requires Dynatrace version 1.202 or higher. You will either need a Dynatrace OneAgent installed on the same host or vm as Telegraf with version 1.202 or higher; or a Dynatrace environment with version 1.202 or higher  
+This plugin requires Dynatrace version 1.202 or higher. You will either need a Dynatrace OneAgent (version 1.202 or higher) installed on the same host as Telegraf; or a Dynatrace environment with version 1.202 or higher  
 
 ## Limitations
 Telegraf measurements which can't be converted to a float64 are skipped.
