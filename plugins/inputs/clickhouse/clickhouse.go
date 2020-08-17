@@ -23,7 +23,7 @@ var defaultTimeout = 5 * time.Second
 
 var sampleConfig = `
   ## Username for authorization on ClickHouse server
-  ## example: user = "default""
+  ## example: username = "default""
   username = "default"
 
   ## Password for authorization on ClickHouse server
@@ -115,7 +115,7 @@ type ClickHouse struct {
 	ClusterInclude []string          `toml:"cluster_include"`
 	ClusterExclude []string          `toml:"cluster_exclude"`
 	Timeout        internal.Duration `toml:"timeout"`
-	client         http.Client
+	HTTPClient     http.Client
 	tls.ClientConfig
 }
 
@@ -140,11 +140,12 @@ func (ch *ClickHouse) Start(telegraf.Accumulator) error {
 		return err
 	}
 
-	ch.client = http.Client{
+	ch.HTTPClient = http.Client{
 		Timeout: timeout,
 		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig:     tlsCfg,
+			Proxy:               http.ProxyFromEnvironment,
+			MaxIdleConnsPerHost: 1,
 		},
 	}
 	return nil
@@ -187,15 +188,33 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 			}
 		default:
 			connects = append(connects, connect{
-				url: u,
+				Hostname: u.Hostname(),
+				url:      u,
 			})
 		}
 	}
 
 	for _, conn := range connects {
-		if err := ch.tables(acc, &conn); err != nil {
-			acc.AddError(err)
+
+		metricsFuncs := []func(acc telegraf.Accumulator, conn *connect) error{
+			ch.tables,
+			ch.zookeeper,
+			ch.replicationQueue,
+			ch.detachedParts,
+			ch.dictionaries,
+			ch.mutations,
+			ch.disks,
+			ch.processes,
+			ch.textLog,
 		}
+
+		for _, metricFunc := range metricsFuncs {
+			if err := metricFunc(acc, &conn); err != nil {
+				acc.AddError(err)
+			}
+
+		}
+
 		for metric := range commonMetrics {
 			if err := ch.commonMetrics(acc, &conn, metric); err != nil {
 				acc.AddError(err)
@@ -206,7 +225,7 @@ func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 }
 
 func (ch *ClickHouse) Stop() {
-	ch.client.CloseIdleConnections()
+	ch.HTTPClient.CloseIdleConnections()
 }
 
 func (ch *ClickHouse) clusterIncludeExcludeFilter() string {
@@ -239,10 +258,7 @@ func (ch *ClickHouse) clusterIncludeExcludeFilter() string {
 	if includeFilter == "" && excludeFilter != "" {
 		return "WHERE " + excludeFilter
 	}
-	if includeFilter != "" && excludeFilter == "" {
-		return "WHERE " + includeFilter
-	}
-	return ""
+	return "WHERE " + includeFilter
 }
 
 func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, metric string) error {
@@ -254,15 +270,7 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 		return err
 	}
 
-	tags := map[string]string{
-		"source": conn.Hostname,
-	}
-	if len(conn.Cluster) != 0 {
-		tags["cluster"] = conn.Cluster
-	}
-	if conn.ShardNum != 0 {
-		tags["shard_num"] = strconv.Itoa(conn.ShardNum)
-	}
+	tags := ch.makeDefaultTags(conn)
 
 	fields := make(map[string]interface{})
 	for _, r := range result {
@@ -271,6 +279,241 @@ func (ch *ClickHouse) commonMetrics(acc telegraf.Accumulator, conn *connect, met
 
 	acc.AddFields("clickhouse_"+metric, fields, tags)
 
+	return nil
+}
+
+func (ch *ClickHouse) zookeeper(acc telegraf.Accumulator, conn *connect) error {
+	var zkExists []struct {
+		ZkExists chUInt64 `json:"zk_exists"`
+	}
+
+	if err := ch.execQuery(conn.url, systemZookeeperExistsSQL, &zkExists); err != nil {
+		return err
+	}
+	tags := ch.makeDefaultTags(conn)
+
+	if len(zkExists) > 0 && zkExists[0].ZkExists > 0 {
+		var zkRootNodes []struct {
+			ZkRootNodes chUInt64 `json:"zk_root_nodes"`
+		}
+		if err := ch.execQuery(conn.url, systemZookeeperRootNodesSQL, &zkRootNodes); err != nil {
+			return err
+		}
+
+		acc.AddFields("clickhouse_zookeeper",
+			map[string]interface{}{
+				"root_nodes": uint64(zkRootNodes[0].ZkRootNodes),
+			},
+			tags,
+		)
+	}
+	return nil
+}
+
+func (ch *ClickHouse) replicationQueue(acc telegraf.Accumulator, conn *connect) error {
+	var replicationQueueExists []struct {
+		ReplicationQueueExists chUInt64 `json:"replication_queue_exists"`
+	}
+
+	if err := ch.execQuery(conn.url, systemReplicationExistsSQL, &replicationQueueExists); err != nil {
+		return err
+	}
+
+	tags := ch.makeDefaultTags(conn)
+
+	if len(replicationQueueExists) > 0 && replicationQueueExists[0].ReplicationQueueExists > 0 {
+		var replicationTooManyTries []struct {
+			NumTriesReplicas     chUInt64 `json:"replication_num_tries_replicas"`
+			TooManyTriesReplicas chUInt64 `json:"replication_too_many_tries_replicas"`
+		}
+		if err := ch.execQuery(conn.url, systemReplicationNumTriesSQL, &replicationTooManyTries); err != nil {
+			return err
+		}
+
+		acc.AddFields("clickhouse_replication_queue",
+			map[string]interface{}{
+				"too_many_tries_replicas": uint64(replicationTooManyTries[0].TooManyTriesReplicas),
+				"num_tries_replicas":      uint64(replicationTooManyTries[0].NumTriesReplicas),
+			},
+			tags,
+		)
+	}
+	return nil
+}
+
+func (ch *ClickHouse) detachedParts(acc telegraf.Accumulator, conn *connect) error {
+
+	var detachedParts []struct {
+		DetachedParts chUInt64 `json:"detached_parts"`
+	}
+	if err := ch.execQuery(conn.url, systemDetachedPartsSQL, &detachedParts); err != nil {
+		return err
+	}
+
+	if len(detachedParts) > 0 {
+		tags := ch.makeDefaultTags(conn)
+		acc.AddFields("clickhouse_detached_parts",
+			map[string]interface{}{
+				"detached_parts": uint64(detachedParts[0].DetachedParts),
+			},
+			tags,
+		)
+	}
+	return nil
+}
+
+func (ch *ClickHouse) dictionaries(acc telegraf.Accumulator, conn *connect) error {
+
+	var brokenDictionaries []struct {
+		Origin         string   `json:"origin"`
+		BytesAllocated chUInt64 `json:"bytes_allocated"`
+		Status         string   `json:"status"`
+	}
+	if err := ch.execQuery(conn.url, systemDictionariesSQL, &brokenDictionaries); err != nil {
+		return err
+	}
+
+	for _, dict := range brokenDictionaries {
+		tags := ch.makeDefaultTags(conn)
+
+		isLoaded := uint64(1)
+		if dict.Status != "LOADED" {
+			isLoaded = 0
+		}
+
+		if dict.Origin != "" {
+			tags["dict_origin"] = dict.Origin
+			acc.AddFields("clickhouse_dictionaries",
+				map[string]interface{}{
+					"is_loaded":       isLoaded,
+					"bytes_allocated": uint64(dict.BytesAllocated),
+				},
+				tags,
+			)
+		}
+	}
+
+	return nil
+}
+
+func (ch *ClickHouse) mutations(acc telegraf.Accumulator, conn *connect) error {
+
+	var mutationsStatus []struct {
+		Failed    chUInt64 `json:"failed"`
+		Running   chUInt64 `json:"running"`
+		Completed chUInt64 `json:"completed"`
+	}
+	if err := ch.execQuery(conn.url, systemMutationSQL, &mutationsStatus); err != nil {
+		return err
+	}
+
+	if len(mutationsStatus) > 0 {
+		tags := ch.makeDefaultTags(conn)
+
+		acc.AddFields("clickhouse_mutations",
+			map[string]interface{}{
+				"failed":    uint64(mutationsStatus[0].Failed),
+				"running":   uint64(mutationsStatus[0].Running),
+				"completed": uint64(mutationsStatus[0].Completed),
+			},
+			tags,
+		)
+	}
+
+	return nil
+}
+
+func (ch *ClickHouse) disks(acc telegraf.Accumulator, conn *connect) error {
+
+	var disksStatus []struct {
+		Name            string   `json:"name"`
+		Path            string   `json:"path"`
+		FreePercent     chUInt64 `json:"free_space_percent"`
+		KeepFreePercent chUInt64 `json:"keep_free_space_percent"`
+	}
+
+	if err := ch.execQuery(conn.url, systemDisksSQL, &disksStatus); err != nil {
+		return err
+	}
+
+	for _, disk := range disksStatus {
+		tags := ch.makeDefaultTags(conn)
+		tags["name"] = disk.Name
+		tags["path"] = disk.Path
+
+		acc.AddFields("clickhouse_disks",
+			map[string]interface{}{
+				"free_space_percent":      uint64(disk.FreePercent),
+				"keep_free_space_percent": uint64(disk.KeepFreePercent),
+			},
+			tags,
+		)
+
+	}
+
+	return nil
+}
+
+func (ch *ClickHouse) processes(acc telegraf.Accumulator, conn *connect) error {
+
+	var processesStats []struct {
+		QueryType      string  `json:"query_type"`
+		Percentile50   float64 `json:"p50"`
+		Percentile90   float64 `json:"p90"`
+		LongestRunning float64 `json:"longest_running"`
+	}
+
+	if err := ch.execQuery(conn.url, systemProcessesSQL, &processesStats); err != nil {
+		return err
+	}
+
+	for _, process := range processesStats {
+		tags := ch.makeDefaultTags(conn)
+		tags["query_type"] = process.QueryType
+
+		acc.AddFields("clickhouse_processes",
+			map[string]interface{}{
+				"percentile_50":   process.Percentile50,
+				"percentile_90":   process.Percentile90,
+				"longest_running": process.LongestRunning,
+			},
+			tags,
+		)
+
+	}
+
+	return nil
+}
+
+func (ch *ClickHouse) textLog(acc telegraf.Accumulator, conn *connect) error {
+	var textLogExists []struct {
+		TextLogExists chUInt64 `json:"text_log_exists"`
+	}
+
+	if err := ch.execQuery(conn.url, systemTextLogExistsSQL, &textLogExists); err != nil {
+		return err
+	}
+
+	if len(textLogExists) > 0 && textLogExists[0].TextLogExists > 0 {
+		var textLogLast10MinMessages []struct {
+			Level             string   `json:"level"`
+			MessagesLast10Min chUInt64 `json:"messages_last_10_min"`
+		}
+		if err := ch.execQuery(conn.url, systemTextLogSQL, &textLogLast10MinMessages); err != nil {
+			return err
+		}
+
+		for _, textLogItem := range textLogLast10MinMessages {
+			tags := ch.makeDefaultTags(conn)
+			tags["level"] = textLogItem.Level
+			acc.AddFields("clickhouse_text_log",
+				map[string]interface{}{
+					"messages_last_10_min": uint64(textLogItem.MessagesLast10Min),
+				},
+				tags,
+			)
+		}
+	}
 	return nil
 }
 
@@ -283,18 +526,11 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		Rows     chUInt64 `json:"rows"`
 	}
 
-	if err := ch.execQuery(conn.url, systemParts, &parts); err != nil {
+	if err := ch.execQuery(conn.url, systemPartsSQL, &parts); err != nil {
 		return err
 	}
-	tags := map[string]string{
-		"source": conn.Hostname,
-	}
-	if len(conn.Cluster) != 0 {
-		tags["cluster"] = conn.Cluster
-	}
-	if conn.ShardNum != 0 {
-		tags["shard_num"] = strconv.Itoa(conn.ShardNum)
-	}
+	tags := ch.makeDefaultTags(conn)
+
 	for _, part := range parts {
 		tags["table"] = part.Table
 		tags["database"] = part.Database
@@ -308,6 +544,19 @@ func (ch *ClickHouse) tables(acc telegraf.Accumulator, conn *connect) error {
 		)
 	}
 	return nil
+}
+
+func (ch *ClickHouse) makeDefaultTags(conn *connect) map[string]string {
+	tags := map[string]string{
+		"source": conn.Hostname,
+	}
+	if len(conn.Cluster) != 0 {
+		tags["cluster"] = conn.Cluster
+	}
+	if conn.ShardNum != 0 {
+		tags["shard_num"] = strconv.Itoa(conn.ShardNum)
+	}
+	return tags
 }
 
 type clickhouseError struct {
@@ -330,7 +579,7 @@ func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error
 	if ch.Password != "" {
 		req.Header.Add("X-ClickHouse-Key", ch.Password)
 	}
-	resp, err := ch.client.Do(req)
+	resp, err := ch.HTTPClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -348,7 +597,14 @@ func (ch *ClickHouse) execQuery(url *url.URL, query string, i interface{}) error
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return err
 	}
-	return json.Unmarshal(response.Data, i)
+	if err := json.Unmarshal(response.Data, i); err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(ioutil.Discard, resp.Body); err != nil {
+		return err
+	}
+	return nil
 }
 
 // see https://clickhouse.yandex/docs/en/operations/settings/settings/#session_settings-output_format_json_quote_64bit_integers
@@ -369,7 +625,7 @@ const (
 	systemEventsSQL       = "SELECT event AS metric, CAST(value AS UInt64) AS value FROM system.events"
 	systemMetricsSQL      = "SELECT          metric, CAST(value AS UInt64) AS value FROM system.metrics"
 	systemAsyncMetricsSQL = "SELECT          metric, CAST(value AS UInt64) AS value FROM system.asynchronous_metrics"
-	systemParts           = `
+	systemPartsSQL        = `
 		SELECT
 			database,
 			table,
@@ -383,6 +639,22 @@ const (
 		ORDER BY
 			database, table
 	`
+	systemZookeeperExistsSQL    = "SELECT count() AS zk_exists FROM system.tables WHERE database='system' AND name='zookeeper'"
+	systemZookeeperRootNodesSQL = "SELECT count() AS zk_root_nodes FROM system.zookeeper WHERE path='/'"
+
+	systemReplicationExistsSQL   = "SELECT count() AS replication_queue_exists FROM system.tables WHERE database='system' AND name='replication_queue'"
+	systemReplicationNumTriesSQL = "SELECT countIf(num_tries>1) AS replication_num_tries_replicas, countIf(num_tries>100) AS replication_too_many_tries_replicas FROM system.replication_queue"
+
+	systemDetachedPartsSQL = "SELECT count() AS detached_parts FROM system.detached_parts"
+
+	systemDictionariesSQL = "SELECT origin, status, bytes_allocated FROM system.dictionaries"
+
+	systemMutationSQL  = "SELECT countIf(latest_fail_time>toDateTime('0000-00-00 00:00:00') AND is_done=0) AS failed, countIf(latest_fail_time=toDateTime('0000-00-00 00:00:00') AND is_done=0) AS running, countIf(is_done=1) AS completed FROM system.mutations"
+	systemDisksSQL     = "SELECT name, path, toUInt64(100*free_space / total_space) AS free_space_percent, toUInt64( 100 * keep_free_space / total_space) AS keep_free_space_percent FROM system.disks"
+	systemProcessesSQL = "SELECT multiIf(positionCaseInsensitive(query,'select')=1,'select',positionCaseInsensitive(query,'insert')=1,'insert','other') AS query_type, quantile\n(0.5)(elapsed) AS p50, quantile(0.9)(elapsed) AS p90, max(elapsed) AS longest_running FROM system.processes GROUP BY query_type"
+
+	systemTextLogExistsSQL = "SELECT count() AS text_log_exists FROM system.tables WHERE database='system' AND name='text_log'"
+	systemTextLogSQL       = "SELECT count() AS messages_last_10_min, level FROM system.text_log WHERE level <= 'Notice' AND event_time >= now() - INTERVAL 600 SECOND GROUP BY level"
 )
 
 var commonMetrics = map[string]string{
