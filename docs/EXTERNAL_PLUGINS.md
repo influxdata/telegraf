@@ -26,17 +26,17 @@ Follow the [Steps to externalize a plugin](plugins/common/shim#steps-to-external
 #### Step-by-Step guidelines
 This is a guide to help you set up your plugin to use it with `execd`
 1. Write your Telegraf plugin.  Depending on the plugin, follow the guidelines on how to create the plugin itself using InfluxData's best practices:
-   - [Input Plugins][inputs]
-   - [Processor Plugins][processors]
-   - [Aggregator Plugins][aggregators]
-   - [Output Plugins][outputs]
+   - [Input Plugins](/docs/INPUTS.md)
+   - [Processor Plugins](/docs/PROCESSORS.md)
+   - [Aggregator Plugins](/docs/AGGREGATORS.md)
+   - [Output Plugins](docs/OUTPUTS.md)
 2. If your plugin is written in Go, include the steps for the [Execd Go Shim](plugins/common/shim#steps-to-build-and-run-your-plugin)
   1. Move the project to an external repo, it's recommended to preserve the path
   structure, (but not strictly necessary). eg if your plugin was at
   `plugins/inputs/cpu`, it's recommended that it also be under `plugins/inputs/cpu`
   in the new repo. For a further example of what this might look like, take a
   look at [ssoroka/rand](https://github.com/ssoroka/rand) or
-  [danielnelson/telegraf-plugins](https://github.com/danielnelson//telegraf-execd-openvpn)
+  [danielnelson/telegraf-execd-openvpn](https://github.com/danielnelson//telegraf-execd-openvpn)
   1. Copy [main.go](./example/cmd/main.go) into your project under the `cmd` folder.
   This will be the entrypoint to the plugin when run as a stand-alone program, and
   it will call the shim code for you to make that happen. It's recommended to
