@@ -14,16 +14,52 @@ import (
 // default config used by Tests
 func defaultWavefront() *Wavefront {
 	return &Wavefront{
-		Host:            "localhost",
-		Port:            2878,
-		Prefix:          "testWF.",
-		SimpleFields:    false,
-		MetricSeparator: ".",
-		ConvertPaths:    true,
-		ConvertBool:     true,
-		UseRegex:        false,
-		Log:             testutil.Logger{},
+		Host:                 "localhost",
+		Port:                 2878,
+		FlushIntervalSeconds: 10,
+		Prefix:               "testWF.",
+		SimpleFields:         false,
+		MetricSeparator:      ".",
+		ConvertPaths:         true,
+		ConvertBool:          true,
+		UseRegex:             false,
+		Log:                  testutil.Logger{},
 	}
+}
+
+func defaultWavefrontDirect() *Wavefront {
+	return &Wavefront{
+		Url:                  "http://localhost:2878",
+		Token:                "123",
+		MaxBufferSize:        100000,
+		BatchSize:            20000,
+		FlushIntervalSeconds: 10,
+		Prefix:               "testWF.",
+		SimpleFields:         false,
+		MetricSeparator:      ".",
+		ConvertPaths:         true,
+		ConvertBool:          true,
+		UseRegex:             false,
+		Log:                  testutil.Logger{},
+	}
+}
+
+func TestBuildDirectConfig(t *testing.T) {
+	w := defaultWavefrontDirect()
+	directConfig := w.buildDirectConfig()
+	require.Equal(t, w.Url, directConfig.Server)
+	require.Equal(t, w.Token, directConfig.Token)
+	require.Equal(t, w.MaxBufferSize, directConfig.MaxBufferSize)
+	require.Equal(t, w.BatchSize, directConfig.BatchSize)
+	require.Equal(t, w.FlushIntervalSeconds, directConfig.FlushIntervalSeconds)
+}
+
+func TestBuildProxyConfig(t *testing.T) {
+	w := defaultWavefront()
+	proxyConfig := w.buildProxyConfig()
+	require.Equal(t, w.Host, proxyConfig.Host)
+	require.Equal(t, w.Port, proxyConfig.MetricsPort)
+	require.Equal(t, w.FlushIntervalSeconds, proxyConfig.FlushIntervalSeconds)
 }
 
 func TestBuildMetrics(t *testing.T) {

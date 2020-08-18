@@ -140,36 +140,14 @@ func (w *Wavefront) Connect() error {
 
 	if w.Url != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.Url)
-		directCfg := &wavefront.DirectConfiguration{
-			Server:               w.Url,
-			Token:                w.Token,
-			FlushIntervalSeconds: 5,
-		}
-		if w.BatchSize != 0 {
-			directCfg.BatchSize = w.BatchSize
-		}
-		if w.MaxBufferSize != 0 {
-			directCfg.MaxBufferSize = w.MaxBufferSize
-		}
-		if w.FlushIntervalSeconds != 0 {
-			directCfg.FlushIntervalSeconds = w.FlushIntervalSeconds
-		}
-		sender, err := wavefront.NewDirectSender(directCfg)
+		sender, err := wavefront.NewDirectSender(w.buildDirectConfig())
 		if err != nil {
 			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Url: %s", w.Url)
 		}
 		w.sender = sender
 	} else {
 		w.Log.Debugf("connecting over tcp using Host: %q and Port: %d", w.Host, w.Port)
-		proxyCfg := &wavefront.ProxyConfiguration{
-			Host:                 w.Host,
-			MetricsPort:          w.Port,
-			FlushIntervalSeconds: 5,
-		}
-		if w.FlushIntervalSeconds != 0 {
-			proxyCfg.FlushIntervalSeconds = w.FlushIntervalSeconds
-		}
-		sender, err := wavefront.NewProxySender(proxyCfg)
+		sender, err := wavefront.NewProxySender(w.buildProxyConfig())
 		if err != nil {
 			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
 		}
@@ -183,6 +161,36 @@ func (w *Wavefront) Connect() error {
 		pathReplacer = strings.NewReplacer("_", w.MetricSeparator)
 	}
 	return nil
+}
+
+func (w *Wavefront) buildDirectConfig() *wavefront.DirectConfiguration {
+	config := &wavefront.DirectConfiguration{
+		Server:               w.Url,
+		Token:                w.Token,
+		FlushIntervalSeconds: 5,
+	}
+	if w.BatchSize != 0 {
+		config.BatchSize = w.BatchSize
+	}
+	if w.MaxBufferSize != 0 {
+		config.MaxBufferSize = w.MaxBufferSize
+	}
+	if w.FlushIntervalSeconds != 0 {
+		config.FlushIntervalSeconds = w.FlushIntervalSeconds
+	}
+	return config
+}
+
+func (w *Wavefront) buildProxyConfig() *wavefront.ProxyConfiguration {
+	config := &wavefront.ProxyConfiguration{
+		Host:                 w.Host,
+		MetricsPort:          w.Port,
+		FlushIntervalSeconds: 5,
+	}
+	if w.FlushIntervalSeconds != 0 {
+		config.FlushIntervalSeconds = w.FlushIntervalSeconds
+	}
+	return config
 }
 
 func (w *Wavefront) Write(metrics []telegraf.Metric) error {
