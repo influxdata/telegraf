@@ -43,11 +43,16 @@ type Collector struct {
 	coll           *serializer.Collection
 }
 
-func NewCollector(expire time.Duration, stringsAsLabel bool) *Collector {
+func NewCollector(expire time.Duration, stringsAsLabel bool, exportTimestamp bool) *Collector {
 	config := serializer.FormatConfig{}
 	if stringsAsLabel {
 		config.StringHandling = serializer.StringAsLabel
 	}
+
+	if exportTimestamp {
+		config.TimestampExport = serializer.ExportTimestamp
+	}
+
 	return &Collector{
 		expireDuration: expire,
 		coll:           serializer.NewCollection(config),
@@ -83,7 +88,7 @@ func (c *Collector) Add(metrics []telegraf.Metric) error {
 	defer c.Unlock()
 
 	for _, metric := range metrics {
-		c.coll.Add(metric)
+		c.coll.Add(metric, time.Now())
 	}
 
 	// Expire metrics, doing this on Add ensure metrics are removed even if no

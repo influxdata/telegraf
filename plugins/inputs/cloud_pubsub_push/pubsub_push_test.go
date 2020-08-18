@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/models"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -191,6 +191,10 @@ func (tm *testMetricMaker) LogName() string {
 
 func (tm *testMetricMaker) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return metric
+}
+
+func (tm *testMetricMaker) Log() telegraf.Logger {
+	return models.NewLogger("test", "test", "")
 }
 
 type testOutput struct {

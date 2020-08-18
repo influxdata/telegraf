@@ -3,19 +3,25 @@
 package tail
 
 import (
+	"context"
+	"errors"
+	"io"
 	"strings"
 	"sync"
 
+	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/tail"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 )
 
 const (
-	defaultWatchMethod = "inotify"
+	defaultWatchMethod         = "inotify"
+	defaultMaxUndeliveredLines = 1000
 )
 
 var (
@@ -23,21 +29,27 @@ var (
 	offsetsMutex = new(sync.Mutex)
 )
 
+type empty struct{}
+type semaphore chan empty
+
 type Tail struct {
-	Files         []string
-	FromBeginning bool
-	Pipe          bool
-	WatchMethod   string
+	Files               []string `toml:"files"`
+	FromBeginning       bool     `toml:"from_beginning"`
+	Pipe                bool     `toml:"pipe"`
+	WatchMethod         string   `toml:"watch_method"`
+	MaxUndeliveredLines int      `toml:"max_undelivered_lines"`
+	CharacterEncoding   string   `toml:"character_encoding"`
 
-	Log telegraf.Logger
-
+	Log        telegraf.Logger `toml:"-"`
 	tailers    map[string]*tail.Tail
 	offsets    map[string]int64
 	parserFunc parsers.ParserFunc
 	wg         sync.WaitGroup
-	acc        telegraf.Accumulator
-
-	sync.Mutex
+	ctx        context.Context
+	cancel     context.CancelFunc
+	acc        telegraf.TrackingAccumulator
+	sem        semaphore
+	decoder    *encoding.Decoder
 }
 
 func NewTail() *Tail {
@@ -49,13 +61,14 @@ func NewTail() *Tail {
 	offsetsMutex.Unlock()
 
 	return &Tail{
-		FromBeginning: false,
-		offsets:       offsetsCopy,
+		FromBeginning:       false,
+		MaxUndeliveredLines: 1000,
+		offsets:             offsetsCopy,
 	}
 }
 
 const sampleConfig = `
-  ## files to tail.
+  ## File names or a pattern to tail.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
   ##   "/var/log/**.log"  -> recursively find all .log files in /var/log
@@ -65,13 +78,29 @@ const sampleConfig = `
   ## See https://github.com/gobwas/glob for more examples
   ##
   files = ["/var/mymetrics.out"]
+
   ## Read file from beginning.
-  from_beginning = false
+  # from_beginning = false
+
   ## Whether file is a named pipe
-  pipe = false
+  # pipe = false
 
   ## Method used to watch for file updates.  Can be either "inotify" or "poll".
   # watch_method = "inotify"
+
+  ## Maximum lines of the file to process that have not yet be written by the
+  ## output.  For best throughput set based on the number of metrics on each
+  ## line and the size of the output's metric_batch_size.
+  # max_undelivered_lines = 1000
+
+  ## Character encoding to use when interpreting the file contents.  Invalid
+  ## characters are replaced using the unicode replacement character.  When set
+  ## to the empty string the data is not decoded to text.
+  ##   ex: character_encoding = "utf-8"
+  ##       character_encoding = "utf-16le"
+  ##       character_encoding = "utf-16be"
+  ##       character_encoding = ""
+  # character_encoding = ""
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -85,21 +114,42 @@ func (t *Tail) SampleConfig() string {
 }
 
 func (t *Tail) Description() string {
-	return "Stream a log file, like the tail -f command"
+	return "Parse the new lines appended to a file"
+}
+
+func (t *Tail) Init() error {
+	if t.MaxUndeliveredLines == 0 {
+		return errors.New("max_undelivered_lines must be positive")
+	}
+	t.sem = make(semaphore, t.MaxUndeliveredLines)
+
+	var err error
+	t.decoder, err = encoding.NewDecoder(t.CharacterEncoding)
+	return err
 }
 
 func (t *Tail) Gather(acc telegraf.Accumulator) error {
-	t.Lock()
-	defer t.Unlock()
-
 	return t.tailNewFiles(true)
 }
 
 func (t *Tail) Start(acc telegraf.Accumulator) error {
-	t.Lock()
-	defer t.Unlock()
+	t.acc = acc.WithTracking(t.MaxUndeliveredLines)
 
-	t.acc = acc
+	t.ctx, t.cancel = context.WithCancel(context.Background())
+
+	t.wg.Add(1)
+	go func() {
+		defer t.wg.Done()
+		for {
+			select {
+			case <-t.ctx.Done():
+				return
+			case <-t.acc.Delivered():
+				<-t.sem
+			}
+		}
+	}()
+
 	t.tailers = make(map[string]*tail.Tail)
 
 	err := t.tailNewFiles(t.FromBeginning)
@@ -157,6 +207,10 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 					Poll:      poll,
 					Pipe:      t.Pipe,
 					Logger:    tail.DiscardingLogger,
+					OpenReaderFunc: func(rd io.Reader) io.Reader {
+						r, _ := utfbom.Skip(t.decoder.Reader(rd))
+						return r
+					},
 				})
 			if err != nil {
 				t.Log.Debugf("Failed to open file (%s): %v", file, err)
@@ -168,6 +222,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			parser, err := t.parserFunc()
 			if err != nil {
 				t.Log.Errorf("Creating parser: %s", err.Error())
+				continue
 			}
 
 			// create a goroutine for each "tailer"
@@ -175,6 +230,12 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			go func() {
 				defer t.wg.Done()
 				t.receiver(parser, tailer)
+
+				t.Log.Debugf("Tail removed for %q", tailer.Filename)
+
+				if err := tailer.Err(); err != nil {
+					t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+				}
 			}()
 			t.tailers[tailer.Filename] = tailer
 		}
@@ -229,21 +290,19 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 
 		for _, metric := range metrics {
 			metric.AddTag("path", tailer.Filename)
-			t.acc.AddMetric(metric)
 		}
-	}
 
-	t.Log.Debugf("Tail removed for %q", tailer.Filename)
-
-	if err := tailer.Err(); err != nil {
-		t.Log.Errorf("Tailing %q: %s", tailer.Filename, err.Error())
+		// Block until plugin is stopping or room is available to add metrics.
+		select {
+		case <-t.ctx.Done():
+			return
+		case t.sem <- empty{}:
+			t.acc.AddTrackingMetricGroup(metrics)
+		}
 	}
 }
 
 func (t *Tail) Stop() {
-	t.Lock()
-	defer t.Unlock()
-
 	for _, tailer := range t.tailers {
 		if !t.Pipe && !t.FromBeginning {
 			// store offset for resume
@@ -260,6 +319,7 @@ func (t *Tail) Stop() {
 		}
 	}
 
+	t.cancel()
 	t.wg.Wait()
 
 	// persist offsets

@@ -1,5 +1,7 @@
 version: "{build}"
 
+image: Visual Studio 2019
+
 cache:
  - C:\gopath\pkg\mod -> go.sum
  - C:\ProgramData\chocolatey\bin -> appveyor.yml
@@ -8,13 +10,13 @@ cache:
 clone_folder: C:\gopath\src\github.com\influxdata\telegraf
 
 environment:
-  GOVERSION: 1.13.5
   GOPATH: C:\gopath
+
+stack: go 1.14
 
 platform: x64
 
 install:
-  - choco install golang --version "%GOVERSION%"
   - choco install make
   - cd "%GOPATH%\src\github.com\influxdata\telegraf"
   - git config --system core.longpaths true

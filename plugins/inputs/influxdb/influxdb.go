@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -242,7 +242,7 @@ func (i *InfluxDB) gatherURL(
 						"pause_total_ns":  m.PauseTotalNs,
 						"pause_ns":        m.PauseNs[(m.NumGC+255)%256],
 						"num_gc":          m.NumGC,
-						"gcc_pu_fraction": m.GCCPUFraction,
+						"gc_cpu_fraction": m.GCCPUFraction,
 					},
 					map[string]string{
 						"url": url,

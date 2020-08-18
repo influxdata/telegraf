@@ -2,7 +2,6 @@ package socket_writer
 
 import (
 	"bufio"
-	"bytes"
 	"io/ioutil"
 	"net"
 	"os"
@@ -88,8 +87,10 @@ func testSocketWriter_stream(t *testing.T, sw *SocketWriter, lconn net.Conn) {
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
 	mbs1out, _ := sw.Serialize(metrics[0])
+	mbs1out, _ = sw.encoder.Encode(mbs1out)
 	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, _ := sw.Serialize(metrics[1])
+	mbs2out, _ = sw.encoder.Encode(mbs2out)
 
 	err := sw.Write(metrics)
 	require.NoError(t, err)
@@ -108,8 +109,12 @@ func testSocketWriter_packet(t *testing.T, sw *SocketWriter, lconn net.PacketCon
 	metrics := []telegraf.Metric{}
 	metrics = append(metrics, testutil.TestMetric(1, "test"))
 	mbs1out, _ := sw.Serialize(metrics[0])
+	mbs1out, _ = sw.encoder.Encode(mbs1out)
+	mbs1str := string(mbs1out)
 	metrics = append(metrics, testutil.TestMetric(2, "test"))
 	mbs2out, _ := sw.Serialize(metrics[1])
+	mbs2out, _ = sw.encoder.Encode(mbs2out)
+	mbs2str := string(mbs2out)
 
 	err := sw.Write(metrics)
 	require.NoError(t, err)
@@ -119,17 +124,12 @@ func testSocketWriter_packet(t *testing.T, sw *SocketWriter, lconn net.PacketCon
 	for len(mstrins) < 2 {
 		n, _, err := lconn.ReadFrom(buf)
 		require.NoError(t, err)
-		for _, bs := range bytes.Split(buf[:n], []byte{'\n'}) {
-			if len(bs) == 0 {
-				continue
-			}
-			mstrins = append(mstrins, string(bs)+"\n")
-		}
+		mstrins = append(mstrins, string(buf[:n]))
 	}
 	require.Len(t, mstrins, 2)
 
-	assert.Equal(t, string(mbs1out), mstrins[0])
-	assert.Equal(t, string(mbs2out), mstrins[1])
+	assert.Equal(t, mbs1str, mstrins[0])
+	assert.Equal(t, mbs2str, mstrins[1])
 }
 
 func TestSocketWriter_Write_err(t *testing.T) {
@@ -194,4 +194,18 @@ func TestSocketWriter_Write_reconnect(t *testing.T) {
 	n, err := lconn.Read(buf)
 	require.NoError(t, err)
 	assert.Equal(t, string(mbsout), string(buf[:n]))
+}
+
+func TestSocketWriter_udp_gzip(t *testing.T) {
+	listener, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	sw := newSocketWriter()
+	sw.Address = "udp://" + listener.LocalAddr().String()
+	sw.ContentEncoding = "gzip"
+
+	err = sw.Connect()
+	require.NoError(t, err)
+
+	testSocketWriter_packet(t, sw, listener)
 }

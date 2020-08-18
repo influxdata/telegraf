@@ -9,6 +9,10 @@ This plugin writes to a (list of) specified NATS instance(s).
   ## Optional credentials
   # username = ""
   # password = ""
+
+  ## Optional NATS 2.0 and NATS NGS compatible user credentials
+  # credentials = "/etc/telegraf/nats.creds"
+
   ## NATS subject for producer messages
   subject = "telegraf"
 

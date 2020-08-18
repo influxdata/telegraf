@@ -1,0 +1,5 @@
+cpu,cpu=cpu0 usage_active=11.9 1594084375000000000
+cpu,cpu=cpu1 usage_active=26.0 1594084375000000000
+cpu,cpu=cpu2 usage_active=14.0 1594084375000000000
+cpu,cpu=cpu3 usage_active=20.4 1594084375000000000
+cpu,cpu=cpu-total usage_active=18.4 1594084375000000000

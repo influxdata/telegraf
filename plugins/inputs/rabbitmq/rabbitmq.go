@@ -11,19 +11,19 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// DefaultUsername will set a default value that corrasponds to the default
+// DefaultUsername will set a default value that corresponds to the default
 // value used by Rabbitmq
 const DefaultUsername = "guest"
 
-// DefaultPassword will set a default value that corrasponds to the default
+// DefaultPassword will set a default value that corresponds to the default
 // value used by Rabbitmq
 const DefaultPassword = "guest"
 
-// DefaultURL will set a default value that corrasponds to the default value
+// DefaultURL will set a default value that corresponds to the default value
 // used by Rabbitmq
 const DefaultURL = "http://localhost:15672"
 
@@ -121,17 +121,19 @@ type QueueTotals struct {
 
 // Queue ...
 type Queue struct {
-	QueueTotals         // just to not repeat the same code
-	MessageStats        `json:"message_stats"`
-	Memory              int64
-	Consumers           int64
-	ConsumerUtilisation float64 `json:"consumer_utilisation"`
-	Name                string
-	Node                string
-	Vhost               string
-	Durable             bool
-	AutoDelete          bool   `json:"auto_delete"`
-	IdleSince           string `json:"idle_since"`
+	QueueTotals            // just to not repeat the same code
+	MessageStats           `json:"message_stats"`
+	Memory                 int64
+	Consumers              int64
+	ConsumerUtilisation    float64 `json:"consumer_utilisation"`
+	Name                   string
+	Node                   string
+	Vhost                  string
+	Durable                bool
+	AutoDelete             bool     `json:"auto_delete"`
+	IdleSince              string   `json:"idle_since"`
+	SlaveNodes             []string `json:"slave_nodes"`
+	SynchronisedSlaveNodes []string `json:"synchronised_slave_nodes"`
 }
 
 // Node ...
@@ -506,19 +508,6 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 				"running":                   boolToInt(node.Running),
 			}
 
-			var health HealthCheck
-			err := r.requestJSON("/api/healthchecks/node/"+node.Name, &health)
-			if err != nil {
-				acc.AddError(err)
-				return
-			}
-
-			if health.Status == "ok" {
-				fields["health_check_status"] = int64(1)
-			} else {
-				fields["health_check_status"] = int64(0)
-			}
-
 			var memory MemoryResponse
 			err = r.requestJSON("/api/nodes/"+node.Name+"/memory", &memory)
 			if err != nil {
@@ -585,10 +574,12 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 			"rabbitmq_queue",
 			map[string]interface{}{
 				// common information
-				"consumers":            queue.Consumers,
-				"consumer_utilisation": queue.ConsumerUtilisation,
-				"idle_since":           queue.IdleSince,
-				"memory":               queue.Memory,
+				"consumers":                queue.Consumers,
+				"consumer_utilisation":     queue.ConsumerUtilisation,
+				"idle_since":               queue.IdleSince,
+				"slave_nodes":              len(queue.SlaveNodes),
+				"synchronised_slave_nodes": len(queue.SynchronisedSlaveNodes),
+				"memory":                   queue.Memory,
 				// messages information
 				"message_bytes":             queue.MessageBytes,
 				"message_bytes_ready":       queue.MessageBytesReady,

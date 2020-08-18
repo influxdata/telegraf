@@ -327,17 +327,26 @@ func TestGatherClusterIndiceShardsStats(t *testing.T) {
 		clusterIndicesExpected,
 		map[string]string{"index_name": "twitter"})
 
-	tags := map[string]string{
+	primaryTags := map[string]string{
+		"index_name": "twitter",
+		"node_id":    "oqvR8I1dTpONvwRM30etww",
+		"shard_name": "0",
+		"type":       "primary",
+	}
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_shards",
+		clusterIndicesPrimaryShardsExpected,
+		primaryTags)
+
+	replicaTags := map[string]string{
 		"index_name": "twitter",
 		"node_id":    "oqvR8I1dTpONvwRM30etww",
 		"shard_name": "1",
 		"type":       "replica",
 	}
-
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_shards",
-		clusterIndicesShardsExpected,
-		tags)
-
+		clusterIndicesReplicaShardsExpected,
+		replicaTags)
 }
 
 func newElasticsearchWithClient() *Elasticsearch {

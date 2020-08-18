@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  clickhouse:
+# choose `:latest` after resolve https://github.com/ClickHouse/ClickHouse/issues/13057
+    image: docker.io/yandex/clickhouse-server:${CLICKHOUSE_VERSION:-latest}
+    volumes:
+      - ./test_dictionary.xml:/etc/clickhouse-server/01-test_dictionary.xml
+      - ./zookeeper.xml:/etc/clickhouse-server/config.d/00-zookeeper.xml
+      - ./tls_settings.xml:/etc/clickhouse-server/config.d/01-tls_settings.xml
+      # please comment text_log.xml when CLICKHOUSE_VERSION = 19.16
+      - ./text_log.xml:/etc/clickhouse-server/config.d/02-text_log.xml
+      - ./part_log.xml:/etc/clickhouse-server/config.d/03-part_log.xml
+      - ./dhparam.pem:/etc/clickhouse-server/dhparam.pem
+      - ../../../../testutil/pki/serverkey.pem:/etc/clickhouse-server/server.key
+      - ../../../../testutil/pki/servercert.pem:/etc/clickhouse-server/server.crt
+    ports:
+      - 8123:8123
+      - 8443:8443
+      - 9000:9000
+      - 9009:9009
+  zookeeper:
+    image: docker.io/zookeeper:3.5.6
+    volumes:
+    - /var/lib/zookeeper
+    ports:
+      - 2181:2181

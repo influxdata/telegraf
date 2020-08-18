@@ -1,8 +1,8 @@
-# Telegraf Plugin: Redis
+# Redis Input Plugin
 
 ### Configuration:
 
-```
+```toml
 # Read Redis's basic status information
 [[inputs.redis]]
   ## specify servers via a url matching:
@@ -80,8 +80,8 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - instantaneous_ops_per_sec(int, number)
     - total_net_input_bytes(int, bytes)
     - total_net_output_bytes(int, bytes)
-    - instantaneous_input_kbps(float, bytes)
-    - instantaneous_output_kbps(float, bytes)
+    - instantaneous_input_kbps(float, KB/sec)
+    - instantaneous_output_kbps(float, KB/sec)
     - rejected_connections(int, number)
     - sync_full(int, number)
     - sync_partial_ok(int, number)
@@ -153,7 +153,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
 ### Example Output:
 
 Using this configuration:
-```
+```toml
 [[inputs.redis]]
   ## specify servers via a url matching:
   ##  [protocol://][:password]@address[:port]

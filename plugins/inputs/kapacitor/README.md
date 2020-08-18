@@ -1,6 +1,6 @@
-# Kapacitor Plugin
+# Kapacitor Input Plugin
 
-The Kapacitor plugin will collect metrics from the given Kapacitor instances.
+The Kapacitor plugin collects metrics from the given Kapacitor instances.
 
 ### Configuration:
 
@@ -23,12 +23,20 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
   # insecure_skip_verify = false
 ```
 
-### Measurements & Fields
+### Measurements and fields
 
 - [kapacitor](#kapacitor)
     - [num_enabled_tasks](#num_enabled_tasks) _(integer)_
     - [num_subscriptions](#num_subscriptions) _(integer)_
     - [num_tasks](#num_tasks) _(integer)_
+- [kapacitor_alert](#kapacitor_alert)
+	- [notification_dropped](#notification_dropped) _(integer)_
+	- [primary-handle-count](#primary-handle-count) _(integer)_
+	- [secondary-handle-count](#secondary-handle-count) _(integer)_
+- (Kapacitor Enterprise only) [kapacitor_cluster](#kapacitor_cluster) _(integer)_
+	- [dropped_member_events](#dropped_member_events) _(integer)_
+	- [dropped_user_events](#dropped_user_events) _(integer)_
+	- [query_handler_errors](#query_handler_errors) _(integer)_
 - [kapacitor_edges](#kapacitor_edges)
     - [collected](#collected) _(integer)_
     - [emitted](#emitted) _(integer)_
@@ -41,7 +49,7 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
     - [buck_hash_sys_bytes](#buck_hash_sys_bytes) _(integer)_
     - [frees](#frees) _(integer)_
     - [gc_sys_bytes](#gc_sys_bytes) _(integer)_
-    - [gcc_pu_fraction](#gcc_pu_fraction) _(float)_
+    - [gc_cpu_fraction](#gc_cpu_fraction) _(float)_
     - [heap_alloc_bytes](#heap_alloc_bytes) _(integer)_
     - [heap_idle_bytes](#heap_idle_bytes) _(integer)_
     - [heap_in_use_bytes](#heap_in_use_bytes) _(integer)_
@@ -96,6 +104,34 @@ The total number of Kapacitor tasks.
 
 ---
 
+### kapacitor_alert
+The `kapacitor_alert` measurement stores fields with information related to
+[Kapacitor alerts](https://docs.influxdata.com/kapacitor/v1.5/working/alerts/).
+
+#### notification-dropped
+The number of internal notifications dropped because they arrive too late from another Kapacitor node.
+If this count is increasing, Kapacitor Enterprise nodes aren't able to communicate fast enough
+to keep up with the volume of alerts.
+
+#### primary-handle-count
+The number of times this node handled an alert as the primary. This count should increase under normal conditions.
+
+#### secondary-handle-count
+The number of times this node handled an alert as the secondary. An increase in this counter indicates that the primary is failing to handle alerts in a timely manner.
+
+---
+
+### kapacitor_cluster
+The `kapacitor_cluster` measurement reflects the ability of [Kapacitor nodes to communicate](https://docs.influxdata.com/enterprise_kapacitor/v1.5/administration/configuration/#cluster-communications) with one another. Specifically, these metrics track the gossip communication between the Kapacitor nodes.
+
+#### dropped_member_events
+The number of gossip member events that were dropped.
+
+#### dropped_user_events
+The number of gossip user events that were dropped.
+
+---
+
 ### kapacitor_edges
 The `kapacitor_edges` measurement stores fields with information related to
 [edges](https://docs.influxdata.com/kapacitor/latest/tick/introduction/#pipelines)
@@ -142,7 +178,7 @@ The number of heap objects freed.
 #### gc_sys_bytes
 The number of bytes of memory used for garbage collection system metadata.
 
-#### gcc_pu_fraction
+#### gc_cpu_fraction
 The fraction of Kapacitor's available CPU time used by garbage collection since
 Kapacitor started.
 
@@ -163,7 +199,7 @@ The number of allocated objects.
 The number of heap bytes released to the operating system.
 
 #### heap_sys_bytes
-The number of heap bytes obtained from `system`.  
+The number of heap bytes obtained from `system`.
 
 #### last_gc_ns
 The nanosecond epoch time of the last garbage collection.
@@ -257,7 +293,7 @@ The `kapacitor_topics` measurement stores fields related to
 Kapacitor topics](https://docs.influxdata.com/kapacitor/latest/working/using_alert_topics/).
 
 #### collected
-The number of events collected by Kapacitor topics.  
+The number of events collected by Kapacitor topics.
 
 ---
 
@@ -270,7 +306,7 @@ these values.
 ```
 $ telegraf --config /etc/telegraf.conf --input-filter kapacitor --test
 * Plugin: inputs.kapacitor, Collection 1
-> kapacitor_memstats,host=hostname.local,kap_version=1.1.0~rc2,url=http://localhost:9092/kapacitor/v1/debug/vars alloc_bytes=6974808i,buck_hash_sys_bytes=1452609i,frees=207281i,gc_sys_bytes=802816i,gcc_pu_fraction=0.00004693548939673313,heap_alloc_bytes=6974808i,heap_idle_bytes=6742016i,heap_in_use_bytes=9183232i,heap_objects=23216i,heap_released_bytes=0i,heap_sys_bytes=15925248i,last_gc_ns=1478791460012676997i,lookups=88i,mallocs=230497i,mcache_in_use_bytes=9600i,mcache_sys_bytes=16384i,mspan_in_use_bytes=98560i,mspan_sys_bytes=131072i,next_gc_ns=11467528i,num_gc=8i,other_sys_bytes=2236087i,pause_total_ns=2994110i,stack_in_use_bytes=1900544i,stack_sys_bytes=1900544i,sys_bytes=22464760i,total_alloc_bytes=35023600i 1478791462000000000
+> kapacitor_memstats,host=hostname.local,kap_version=1.1.0~rc2,url=http://localhost:9092/kapacitor/v1/debug/vars alloc_bytes=6974808i,buck_hash_sys_bytes=1452609i,frees=207281i,gc_sys_bytes=802816i,gc_cpu_fraction=0.00004693548939673313,heap_alloc_bytes=6974808i,heap_idle_bytes=6742016i,heap_in_use_bytes=9183232i,heap_objects=23216i,heap_released_bytes=0i,heap_sys_bytes=15925248i,last_gc_ns=1478791460012676997i,lookups=88i,mallocs=230497i,mcache_in_use_bytes=9600i,mcache_sys_bytes=16384i,mspan_in_use_bytes=98560i,mspan_sys_bytes=131072i,next_gc_ns=11467528i,num_gc=8i,other_sys_bytes=2236087i,pause_total_ns=2994110i,stack_in_use_bytes=1900544i,stack_sys_bytes=1900544i,sys_bytes=22464760i,total_alloc_bytes=35023600i 1478791462000000000
 > kapacitor,host=hostname.local,kap_version=1.1.0~rc2,url=http://localhost:9092/kapacitor/v1/debug/vars num_enabled_tasks=5i,num_subscriptions=5i,num_tasks=5i 1478791462000000000
 > kapacitor_edges,child=stream0,host=hostname.local,parent=stream,task=deadman-test,type=stream collected=0,emitted=0 1478791462000000000
 > kapacitor_ingress,database=_internal,host=hostname.local,measurement=shard,retention_policy=monitor,task_master=main points_received=120 1478791462000000000

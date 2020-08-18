@@ -1,13 +1,16 @@
-# Kube_Inventory Plugin
+# Kubernetes Inventory Input Plugin
 
 This plugin generates metrics derived from the state of the following Kubernetes resources:
 
 - daemonsets
 - deployments
+- endpoints
+- ingress
 - nodes
 - persistentvolumes
 - persistentvolumeclaims
 - pods (containers)
+- services
 - statefulsets
 
 Kubernetes is a fast moving project, with a new minor release every 3 months. As
@@ -60,12 +63,21 @@ avoid cardinality issues:
   ## Overrides resource_exclude if both set.
   # resource_include = [ "deployments", "nodes", "statefulsets" ]
 
+  ## selectors to include and exclude as tags.  Globs accepted.
+  ## Note that an empty array for both will include all selectors as tags
+  ## selector_exclude overrides selector_include if both set.
+  selector_include = []
+  selector_exclude = ["*"]
+
   ## Optional TLS Config
   # tls_ca = "/path/to/cafile"
   # tls_cert = "/path/to/certfile"
   # tls_key = "/path/to/keyfile"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## Uncomment to remove deprecated metrics.
+  # fielddrop = ["terminated_reason"]
 ```
 
 #### Kubernetes Permissions
@@ -123,6 +135,7 @@ subjects:
   - tags:
     - daemonset_name
     - namespace
+    - selector (\*varies)
   - fields:
     - generation
     - current_number_scheduled
@@ -137,6 +150,7 @@ subjects:
   - tags:
     - deployment_name
     - namespace
+    - selector (\*varies)
   - fields:
     - replicas_available
     - replicas_unavailable
@@ -197,6 +211,7 @@ subjects:
     - namespace
     - phase
     - storageclass
+    - selector (\*varies)
   - fields:
     - phase_type (int, [see below](#pvc-phase_type))
 
@@ -206,10 +221,14 @@ subjects:
     - namespace
     - node_name
     - pod_name
+    - node_selector (\*varies)
+    - state
+    - readiness
   - fields:
     - restarts_total
-    - state
-    - terminated_reason
+    - state_code
+    - state_reason
+    - terminated_reason (string, deprecated in 1.15: use `state_reason` instead)
     - resource_requests_cpu_units
     - resource_requests_memory_bytes
     - resource_limits_cpu_units
@@ -223,6 +242,7 @@ subjects:
     - port_protocol
     - external_name
     - cluster_ip
+    - selector (\*varies)
   - fields
     - created
     - generation
@@ -233,6 +253,7 @@ subjects:
   - tags:
     - statefulset_name
     - namespace
+    - selector (\*varies)
   - fields:
     - created
     - generation
@@ -267,19 +288,19 @@ The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated 
 | pending   | 2                         |
 | unknown   | 3                         |
 
-
 ### Example Output:
 
 ```
 kubernetes_configmap,configmap_name=envoy-config,namespace=default,resource_version=56593031 created=1544103867000000000i 1547597616000000000
-kubernetes_daemonset,daemonset_name=telegraf,namespace=logging number_unavailable=0i,desired_number_scheduled=11i,number_available=11i,number_misscheduled=8i,number_ready=11i,updated_number_scheduled=11i,created=1527758699000000000i,generation=16i,current_number_scheduled=11i 1547597616000000000
-kubernetes_deployment,deployment_name=deployd,namespace=default replicas_unavailable=0i,created=1544103082000000000i,replicas_available=1i 1547597616000000000
+kubernetes_daemonset,daemonset_name=telegraf,selector_select1=s1,namespace=logging number_unavailable=0i,desired_number_scheduled=11i,number_available=11i,number_misscheduled=8i,number_ready=11i,updated_number_scheduled=11i,created=1527758699000000000i,generation=16i,current_number_scheduled=11i 1547597616000000000
+kubernetes_deployment,deployment_name=deployd,selector_select1=s1,namespace=default replicas_unavailable=0i,created=1544103082000000000i,replicas_available=1i 1547597616000000000
 kubernetes_node,node_name=ip-172-17-0-2.internal allocatable_pods=110i,capacity_memory_bytes=128837533696,capacity_pods=110i,capacity_cpu_cores=16i,allocatable_cpu_cores=16i,allocatable_memory_bytes=128732676096 1547597616000000000
 kubernetes_persistentvolume,phase=Released,pv_name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,storageclass=ebs-1-retain phase_type=3i 1547597616000000000
-kubernetes_persistentvolumeclaim,namespace=default,phase=Bound,pvc_name=data-etcd-0,storageclass=ebs-1-retain phase_type=0i 1547597615000000000
+kubernetes_persistentvolumeclaim,namespace=default,phase=Bound,pvc_name=data-etcd-0,selector_select1=s1,storageclass=ebs-1-retain phase_type=0i 1547597615000000000
 kubernetes_pod,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1 last_transition_time=1547578322000000000i,ready="false" 1547597616000000000
-kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1,state=running resource_requests_cpu_units=0.1,resource_limits_memory_bytes=524288000,resource_limits_cpu_units=0.5,restarts_total=0i,state_code=0i,terminated_reason="",resource_requests_memory_bytes=524288000 1547597616000000000
-kubernetes_statefulset,namespace=default,statefulset_name=etcd replicas_updated=3i,spec_replicas=3i,observed_generation=1i,created=1544101669000000000i,generation=1i,replicas=3i,replicas_current=3i,replicas_ready=3i 1547597616000000000
+kubernetes_service,cluster_ip=172.29.61.80,namespace=redis-cache-0001,port_name=redis,port_protocol=TCP,selector_app=myapp,selector_io.kompose.service=redis,selector_role=slave,service_name=redis-slave created=1588690034000000000i,generation=0i,port=6379i,target_port=0i 1547597616000000000
+kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,node_selector_node-role.kubernetes.io/compute=true,pod_name=tick1,state=running,readiness=ready resource_requests_cpu_units=0.1,resource_limits_memory_bytes=524288000,resource_limits_cpu_units=0.5,restarts_total=0i,state_code=0i,state_reason="",resource_requests_memory_bytes=524288000 1547597616000000000
+kubernetes_statefulset,namespace=default,selector_select1=s1,statefulset_name=etcd replicas_updated=3i,spec_replicas=3i,observed_generation=1i,created=1544101669000000000i,generation=1i,replicas=3i,replicas_current=3i,replicas_ready=3i 1547597616000000000
 ```
 
 [metric filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering

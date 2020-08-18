@@ -41,7 +41,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -62,7 +62,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -77,7 +77,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -93,7 +93,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -117,7 +117,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -136,7 +136,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -160,7 +160,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -175,7 +175,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -189,7 +189,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -203,7 +203,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode
@@ -217,7 +217,7 @@ Minimum Version of Monit tested with is 5.16.
     - address
     - version
     - service
-    - paltform_name
+    - platform_name
     - status
     - monitoring_status
     - monitoring_mode

@@ -9,7 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -43,6 +43,7 @@ type Attribute struct {
 	DisplayName  string  `json:"display_name"`
 	Name         string  `json:"name"`
 	State        float64 `json:"state"`
+	HostName     string  `json:"host_name"`
 }
 
 var levels = []string{"ok", "warning", "critical", "unknown"}
@@ -94,11 +95,18 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 			"state_code": state,
 		}
 
+		// source is dependent on 'services' or 'hosts' check
+		source := check.Attrs.Name
+		if i.ObjectType == "services" {
+			source = check.Attrs.HostName
+		}
+
 		tags := map[string]string{
 			"display_name":  check.Attrs.DisplayName,
 			"check_command": check.Attrs.CheckCommand,
+			"source":        source,
 			"state":         levels[state],
-			"source":        url.Hostname(),
+			"server":        url.Hostname(),
 			"scheme":        url.Scheme,
 			"port":          url.Port(),
 		}
@@ -136,7 +144,15 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 		i.client = client
 	}
 
-	url := fmt.Sprintf("%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command", i.Server, i.ObjectType)
+	requestUrl := "%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command"
+
+	// Note: attrs=host_name is only valid for 'services' requests, using check.Attrs.HostName for the host
+	//       'hosts' requests will need to use attrs=name only, using check.Attrs.Name for the host
+	if i.ObjectType == "services" {
+		requestUrl += "&attrs=host_name"
+	}
+
+	url := fmt.Sprintf(requestUrl, i.Server, i.ObjectType)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

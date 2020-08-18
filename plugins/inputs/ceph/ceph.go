@@ -18,8 +18,12 @@ const (
 	measurement = "ceph"
 	typeMon     = "monitor"
 	typeOsd     = "osd"
+	typeMds     = "mds"
+	typeRgw     = "rgw"
 	osdPrefix   = "ceph-osd"
 	monPrefix   = "ceph-mon"
+	mdsPrefix   = "ceph-mds"
+	rgwPrefix   = "ceph-client"
 	sockSuffix  = "asok"
 )
 
@@ -27,6 +31,8 @@ type Ceph struct {
 	CephBinary             string
 	OsdPrefix              string
 	MonPrefix              string
+	MdsPrefix              string
+	RgwPrefix              string
 	SocketDir              string
 	SocketSuffix           string
 	CephUser               string
@@ -36,7 +42,7 @@ type Ceph struct {
 }
 
 func (c *Ceph) Description() string {
-	return "Collects performance metrics from the MON and OSD nodes in a Ceph storage cluster."
+	return "Collects performance metrics from the MON, OSD, MDS and RGW nodes in a Ceph storage cluster."
 }
 
 var sampleConfig = `
@@ -55,6 +61,8 @@ var sampleConfig = `
   ## prefix of MON and OSD socket files, used to determine socket type
   mon_prefix = "ceph-mon"
   osd_prefix = "ceph-osd"
+  mds_prefix = "ceph-mds"
+  rgw_prefix = "ceph-client"
 
   ## suffix used to identify socket files
   socket_suffix = "asok"
@@ -148,6 +156,8 @@ func init() {
 		CephBinary:             "/usr/bin/ceph",
 		OsdPrefix:              osdPrefix,
 		MonPrefix:              monPrefix,
+		MdsPrefix:              mdsPrefix,
+		RgwPrefix:              rgwPrefix,
 		SocketDir:              "/var/run/ceph",
 		SocketSuffix:           sockSuffix,
 		CephUser:               "client.admin",
@@ -165,6 +175,10 @@ var perfDump = func(binary string, socket *socket) (string, error) {
 		cmdArgs = append(cmdArgs, "perf", "dump")
 	} else if socket.sockType == typeMon {
 		cmdArgs = append(cmdArgs, "perfcounters_dump")
+	} else if socket.sockType == typeMds {
+		cmdArgs = append(cmdArgs, "perf", "dump")
+	} else if socket.sockType == typeRgw {
+		cmdArgs = append(cmdArgs, "perf", "dump")
 	} else {
 		return "", fmt.Errorf("ignoring unknown socket type: %s", socket.sockType)
 	}
@@ -199,7 +213,18 @@ var findSockets = func(c *Ceph) ([]*socket, error) {
 			sockPrefix = osdPrefix
 
 		}
-		if sockType == typeOsd || sockType == typeMon {
+		if strings.HasPrefix(f, c.MdsPrefix) {
+			sockType = typeMds
+			sockPrefix = mdsPrefix
+
+		}
+		if strings.HasPrefix(f, c.RgwPrefix) {
+			sockType = typeRgw
+			sockPrefix = rgwPrefix
+
+		}
+
+		if sockType == typeOsd || sockType == typeMon || sockType == typeMds || sockType == typeRgw {
 			path := filepath.Join(c.SocketDir, f)
 			sockets = append(sockets, &socket{parseSockId(f, sockPrefix, c.SocketSuffix), sockType, path})
 		}

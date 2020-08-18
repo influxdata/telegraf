@@ -1,4 +1,4 @@
-# ZFS plugin
+# ZFS Input Plugin
 
 This ZFS plugin provides metrics from your ZFS filesystems. It supports ZFS on
 Linux and FreeBSD. It gets ZFS stat from `/proc/spl/kstat/zfs` on Linux and
@@ -268,7 +268,7 @@ A short description for some of the metrics.
 
 `arcstats_evict_l2_ineligible` We evicted something which cannot be stored in the l2.
  Reasons could be:
- - We have multiple pools, we evicted something from a pool whithout an l2 device.
+ - We have multiple pools, we evicted something from a pool without an l2 device.
  - The zfs property secondary cache.
 
 `arcstats_c` Arc target size, this is the size the system thinks the arc should have.

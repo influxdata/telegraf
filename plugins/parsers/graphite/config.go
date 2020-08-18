@@ -7,7 +7,7 @@ import (
 
 const (
 	// DefaultSeparator is the default join character to use when joining multiple
-	// measurment parts in a template.
+	// measurement parts in a template.
 	DefaultSeparator = "."
 )
 

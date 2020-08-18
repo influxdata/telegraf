@@ -18,7 +18,7 @@ Specific Elasticsearch endpoints that are queried:
 - Indices Stats:  /_all/_stats
 - Shard Stats:  /_all/_stats?level=shards
 
-Note that specific statistics information can change between Elassticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
+Note that specific statistics information can change between Elasticsearch versions. In general, this plugin attempts to stay as version-generic as possible by tagging high-level categories only and using a generic json parser to make unique field names of whatever statistics names are provided at the mid-low level.
 
 ### Configuration
 
@@ -117,7 +117,7 @@ Emitted when `cluster_health = true` and `cluster_health_level = "indices"`:
     - status_code (integer, green = 1, yellow = 2, red = 3),
     - unassigned_shards (integer)
 
-Emitted when `cluster__stats = true`:
+Emitted when `cluster_stats = true`:
 
 - elasticsearch_clusterstats_indices
   - tags:

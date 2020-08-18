@@ -13,7 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -28,6 +28,12 @@ type Prometheus struct {
 
 	// Location of kubernetes config file
 	KubeConfig string
+
+	// Label Selector/s for Kubernetes
+	KubernetesLabelSelector string `toml:"kubernetes_label_selector"`
+
+	// Field Selector/s for Kubernetes
+	KubernetesFieldSelector string `toml:"kubernetes_field_selector"`
 
 	// Bearer Token authorization file path
 	BearerToken       string `toml:"bearer_token"`
@@ -90,6 +96,11 @@ var sampleConfig = `
   ## Restricts Kubernetes monitoring to a single namespace
   ##   ex: monitor_kubernetes_pods_namespace = "default"
   # monitor_kubernetes_pods_namespace = ""
+  # label selector to target pods which have the label
+  # kubernetes_label_selector = "env=dev,app=nginx"
+  # field selector to target pods
+  # eg. To scrape pods on a specific node
+  # kubernetes_field_selector = "spec.nodeName=$HOSTNAME"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
@@ -124,6 +135,7 @@ func (p *Prometheus) Init() error {
 	if p.MetricVersion != 2 {
 		p.Log.Warnf("Use of deprecated configuration: 'metric_version = 1'; please update to 'metric_version = 2'")
 	}
+
 	return nil
 }
 

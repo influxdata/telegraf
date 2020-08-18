@@ -1,4 +1,4 @@
-# Solr input plugin
+# Solr Input Plugin
 
 The [solr](http://lucene.apache.org/solr/) plugin collects stats via the
 [MBean Request Handler](https://cwiki.apache.org/confluence/display/solr/MBean+Request+Handler)
@@ -9,7 +9,7 @@ Tested from 3.5 to 7.*
 
 ### Configuration:
 
-```
+```toml
 [[inputs.solr]]
   ## specify a list of one or more Solr servers
   servers = ["http://localhost:8983"]

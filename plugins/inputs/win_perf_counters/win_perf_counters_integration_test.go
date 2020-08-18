@@ -27,15 +27,15 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 
 	_, err = query.AddCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialized"))
 
 	_, err = query.AddEnglishCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialized"))
 
 	err = query.CollectData()
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialized"))
 
 	err = query.Open()
 	require.NoError(t, err)

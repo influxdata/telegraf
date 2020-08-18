@@ -1,4 +1,4 @@
-# sensors Input Plugin
+# LM Sensors Input Plugin
 
 Collect [lm-sensors](https://en.wikipedia.org/wiki/Lm_sensors) metrics - requires the lm-sensors
 package installed.
@@ -6,7 +6,7 @@ package installed.
 This plugin collects sensor metrics with the `sensors` executable from the lm-sensor package.
 
 ### Configuration:
-```
+```toml
 # Monitor sensors, requires lm-sensors package
 [[inputs.sensors]]
   ## Remove numbers from field names.
@@ -18,7 +18,7 @@ This plugin collects sensor metrics with the `sensors` executable from the lm-se
 ```
 
 ### Measurements & Fields:
-Fields are created dynamicaly depending on the sensors. All fields are float.
+Fields are created dynamically depending on the sensors. All fields are float.
 
 ### Tags:
 

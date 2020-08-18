@@ -1,8 +1,8 @@
-# PF Plugin
+# PF Input Plugin
 
-The pf plugin gathers information from the FreeBSD/OpenBSD pf firewall. Currently it can retrive information about the state table: the number of current entries in the table, and counters for the number of searches, inserts, and removals to the table.
+The pf plugin gathers information from the FreeBSD/OpenBSD pf firewall. Currently it can retrieve information about the state table: the number of current entries in the table, and counters for the number of searches, inserts, and removals to the table.
 
-The pf plugin retrives this information by invoking the `pfstat` command. The `pfstat` command requires read access to the device file `/dev/pf`. You have several options to permit telegraf to run `pfctl`:
+The pf plugin retrieves this information by invoking the `pfstat` command. The `pfstat` command requires read access to the device file `/dev/pf`. You have several options to permit telegraf to run `pfctl`:
 
 * Run telegraf as root. This is strongly discouraged.
 * Change the ownership and permissions for /dev/pf such that the user telegraf runs at can read the /dev/pf device file. This is probably not that good of an idea either.
