@@ -9,6 +9,7 @@ import (
 
 var _ unsafe.Pointer
 
+// EvtHandle uintptr
 type EvtHandle uintptr
 
 // Do the interface allocations only once for common
@@ -19,6 +20,40 @@ const (
 
 var (
 	errERROR_IO_PENDING error = syscall.Errno(errnoERROR_IO_PENDING)
+)
+
+// EvtFormatMessageFlag defines the values that specify the message string from
+// the event to format.
+type EvtFormatMessageFlag uint32
+
+// EVT_FORMAT_MESSAGE_FLAGS enumeration
+// https://msdn.microsoft.com/en-us/library/windows/desktop/aa385525(v=vs.85).aspx
+const (
+	// Format the event's message string.
+	EvtFormatMessageEvent EvtFormatMessageFlag = iota + 1
+	// Format the message string of the level specified in the event.
+	EvtFormatMessageLevel
+	// Format the message string of the task specified in the event.
+	EvtFormatMessageTask
+	// Format the message string of the task specified in the event.
+	EvtFormatMessageOpcode
+	// Format the message string of the keywords specified in the event. If the
+	// event specifies multiple keywords, the formatted string is a list of
+	// null-terminated strings. Increment through the strings until your pointer
+	// points past the end of the used buffer.
+	EvtFormatMessageKeyword
+	// Format the message string of the channel specified in the event.
+	EvtFormatMessageChannel
+	// Format the provider's message string.
+	EvtFormatMessageProvider
+	// Format the message string associated with a resource identifier. The
+	// provider's metadata contains the resource identifiers; the message
+	// compiler assigns a resource identifier to each string when it compiles
+	// the manifest.
+	EvtFormatMessageId
+	// Format all the message strings in the event. The formatted message is an
+	// XML string that contains the event details and the message strings.
+	EvtFormatMessageXml
 )
 
 // errnoErr returns common boxed Errno values, to prevent
@@ -37,10 +72,12 @@ func errnoErr(e syscall.Errno) error {
 var (
 	modwevtapi = windows.NewLazySystemDLL("wevtapi.dll")
 
-	procEvtSubscribe = modwevtapi.NewProc("EvtSubscribe")
-	procEvtRender    = modwevtapi.NewProc("EvtRender")
-	procEvtClose     = modwevtapi.NewProc("EvtClose")
-	procEvtNext      = modwevtapi.NewProc("EvtNext")
+	procEvtSubscribe             = modwevtapi.NewProc("EvtSubscribe")
+	procEvtRender                = modwevtapi.NewProc("EvtRender")
+	procEvtClose                 = modwevtapi.NewProc("EvtClose")
+	procEvtNext                  = modwevtapi.NewProc("EvtNext")
+	procEvtFormatMessage         = modwevtapi.NewProc("EvtFormatMessage")
+	procEvtOpenPublisherMetadata = modwevtapi.NewProc("EvtOpenPublisherMetadata")
 )
 
 func _EvtSubscribe(session EvtHandle, signalEvent uintptr, channelPath *uint16, query *uint16, bookmark EvtHandle, context uintptr, callback syscall.Handle, flags EvtSubscribeFlag) (handle EvtHandle, err error) {
@@ -83,6 +120,31 @@ func _EvtClose(object EvtHandle) (err error) {
 func _EvtNext(resultSet EvtHandle, eventArraySize uint32, eventArray *EvtHandle, timeout uint32, flags uint32, numReturned *uint32) (err error) {
 	r1, _, e1 := syscall.Syscall6(procEvtNext.Addr(), 6, uintptr(resultSet), uintptr(eventArraySize), uintptr(unsafe.Pointer(eventArray)), uintptr(timeout), uintptr(flags), uintptr(unsafe.Pointer(numReturned)))
 	if r1 == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func _EvtFormatMessage(publisherMetadata EvtHandle, event EvtHandle, messageID uint32, valueCount uint32, values uintptr, flags EvtFormatMessageFlag, bufferSize uint32, buffer *byte, bufferUsed *uint32) (err error) {
+	r1, _, e1 := syscall.Syscall9(procEvtFormatMessage.Addr(), 9, uintptr(publisherMetadata), uintptr(event), uintptr(messageID), uintptr(valueCount), uintptr(values), uintptr(flags), uintptr(bufferSize), uintptr(unsafe.Pointer(buffer)), uintptr(unsafe.Pointer(bufferUsed)))
+	if r1 == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func _EvtOpenPublisherMetadata(session EvtHandle, publisherIdentity *uint16, logFilePath *uint16, locale uint32, flags uint32) (handle EvtHandle, err error) {
+	r0, _, e1 := syscall.Syscall6(procEvtOpenPublisherMetadata.Addr(), 5, uintptr(session), uintptr(unsafe.Pointer(publisherIdentity)), uintptr(unsafe.Pointer(logFilePath)), uintptr(locale), uintptr(flags), 0)
+	handle = EvtHandle(r0)
+	if handle == 0 {
 		if e1 != 0 {
 			err = errnoErr(e1)
 		} else {
