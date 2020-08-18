@@ -1,6 +1,7 @@
 # Wavefront Output Plugin
 
-This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefront data format over TCP.
+This plugin writes in [Wavefront](https://www.wavefront.com) data format to a Wavefront proxy 
+(over HTTP or TCP) or directly to the Wavefront service (over HTTP).
 
 
 ### Configuration:
@@ -18,6 +19,18 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
 
   ## Port that the Wavefront proxy server listens on. Do not use if url is specified
   #port = 2878
+
+  ## Size of internal buffers beyond which received data is dropped. Applicable only if url is specified.
+  ## Buffers are not pre-allocated to max size and vary based on actual usage.
+  ## Defaults to 50,000. Higher values could use more memory.
+  #max_buffer_size = 50000
+
+  ## Max batch of data sent per flush interval. Applicable only if url is specified.
+  ## Defaults to 10,000. Recommended not to exceed 40,000. 
+  #batch_size = 10000
+
+  ## Interval (in seconds) at which to flush data. Defaults to 5 seconds.
+  #flush_interval_seconds = 5
 
   ## prefix for metrics keys
   #prefix = "my.specific.prefix."

@@ -13,20 +13,23 @@ import (
 const maxTagLength = 254
 
 type Wavefront struct {
-	Url             string
-	Token           string
-	Host            string
-	Port            int
-	Prefix          string
-	SimpleFields    bool
-	MetricSeparator string
-	ConvertPaths    bool
-	ConvertBool     bool
-	UseRegex        bool
-	UseStrict       bool
-	TruncateTags    bool
-	SourceOverride  []string
-	StringToNumber  map[string][]map[string]float64
+	Url                  string
+	Token                string
+	Host                 string
+	Port                 int
+	MaxBufferSize        int
+	BatchSize            int
+	FlushIntervalSeconds int
+	Prefix               string
+	SimpleFields         bool
+	MetricSeparator      string
+	ConvertPaths         bool
+	ConvertBool          bool
+	UseRegex             bool
+	UseStrict            bool
+	TruncateTags         bool
+	SourceOverride       []string
+	StringToNumber       map[string][]map[string]float64
 
 	sender wavefront.Sender
 	Log    telegraf.Logger
@@ -69,6 +72,18 @@ var sampleConfig = `
 
   ## Port that the Wavefront proxy server listens on. Do not use if url is specified
   #port = 2878
+
+  ## Size of internal buffers beyond which received data is dropped. Applicable only if url is specified.
+  ## Buffers are not pre-allocated to max size and vary based on actual usage.
+  ## Defaults to 50,000. Higher values could use more memory.
+  #max_buffer_size = 50000
+
+  ## Max batch of data sent per flush interval. Applicable only if url is specified.
+  ## Defaults to 10,000. Recommended not to exceed 40,000. 
+  #batch_size = 10000
+
+  ## Interval (in seconds) at which to flush data. Defaults to 5 seconds.
+  #flush_interval_seconds = 5
 
   ## prefix for metrics keys
   #prefix = "my.specific.prefix."
@@ -125,22 +140,36 @@ func (w *Wavefront) Connect() error {
 
 	if w.Url != "" {
 		w.Log.Debug("connecting over http/https using Url: %s", w.Url)
-		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
+		directCfg := &wavefront.DirectConfiguration{
 			Server:               w.Url,
 			Token:                w.Token,
 			FlushIntervalSeconds: 5,
-		})
+		}
+		if w.BatchSize != 0 {
+			directCfg.BatchSize = w.BatchSize
+		}
+		if w.MaxBufferSize != 0 {
+			directCfg.MaxBufferSize = w.MaxBufferSize
+		}
+		if w.FlushIntervalSeconds != 0 {
+			directCfg.FlushIntervalSeconds = w.FlushIntervalSeconds
+		}
+		sender, err := wavefront.NewDirectSender(directCfg)
 		if err != nil {
 			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Url: %s", w.Url)
 		}
 		w.sender = sender
 	} else {
 		w.Log.Debugf("connecting over tcp using Host: %q and Port: %d", w.Host, w.Port)
-		sender, err := wavefront.NewProxySender(&wavefront.ProxyConfiguration{
+		proxyCfg := &wavefront.ProxyConfiguration{
 			Host:                 w.Host,
 			MetricsPort:          w.Port,
 			FlushIntervalSeconds: 5,
-		})
+		}
+		if w.FlushIntervalSeconds != 0 {
+			proxyCfg.FlushIntervalSeconds = w.FlushIntervalSeconds
+		}
+		sender, err := wavefront.NewProxySender(proxyCfg)
 		if err != nil {
 			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
 		}
