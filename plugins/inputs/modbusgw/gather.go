@@ -43,22 +43,22 @@ func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 				case "UINT16":
 					var value uint16
 					binary.Read(reader, binary.BigEndian, &value)
-					m.writeInt(grouper, &req, &f, int64(value), now)
+					writeInt(grouper, &req, &f, int64(value), now)
 					break
 				case "INT16":
 					var value int16
 					binary.Read(reader, binary.BigEndian, &value)
-					m.writeInt(grouper, &req, &f, int64(value), now)
+					writeInt(grouper, &req, &f, int64(value), now)
 					break
 				case "UINT32":
 					var value uint32
 					binary.Read(reader, binary.BigEndian, &value)
-					m.writeInt(grouper, &req, &f, int64(value), now)
+					writeInt(grouper, &req, &f, int64(value), now)
 					break
 				case "INT32":
 					var value int32
 					binary.Read(reader, binary.BigEndian, &value)
-					m.writeInt(grouper, &req, &f, int64(value), now)
+					writeInt(grouper, &req, &f, int64(value), now)
 
 					break
 

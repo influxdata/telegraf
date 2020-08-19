@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func (__ *ModbusGateway) writeInt(grouper *metric.SeriesGrouper, req *Request, f *FieldDef, value int64, timestamp time.Time) {
+func writeInt(grouper *metric.SeriesGrouper, req *Request, f *FieldDef, value int64, timestamp time.Time) {
 
 	if !f.Omit {
 		if f.Scale == 1.0 && f.Offset == 0.0 {
