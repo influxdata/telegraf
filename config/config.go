@@ -174,40 +174,59 @@ type AgentConfig struct {
 	OmitHostname bool
 }
 
-// Inputs returns a list of strings of the configured inputs.
+// InputNames returns a list of strings of the configured inputs.
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
 		name = append(name, input.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
 }
 
-// Outputs returns a list of strings of the configured aggregators.
+// AggregatorNames returns a list of strings of the configured aggregators.
 func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
 		name = append(name, aggregator.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
 }
 
-// Outputs returns a list of strings of the configured processors.
+// ProcessorNames returns a list of strings of the configured processors.
 func (c *Config) ProcessorNames() []string {
 	var name []string
 	for _, processor := range c.Processors {
 		name = append(name, processor.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
 }
 
-// Outputs returns a list of strings of the configured outputs.
+// OutputNames returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
 		name = append(name, output.Config.Name)
 	}
-	return name
+	return PluginNameCounts(name)
+}
+
+// PluginNameCounts returns a list of plugin names and their count
+func PluginNameCounts(plugins []string) []string {
+	names := make(map[string]int)
+	for _, plugin := range plugins {
+		names[plugin]++
+	}
+
+	var namecount []string
+	for name, count := range names {
+		if count == 1 {
+			namecount = append(namecount, name)
+		} else {
+			namecount = append(namecount, fmt.Sprintf("%s (%dx)", name, count))
+		}
+	}
+
+	return namecount
 }
 
 // ListTags returns a string of tags specified in the config,
