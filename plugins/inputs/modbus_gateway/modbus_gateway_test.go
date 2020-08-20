@@ -1,4 +1,4 @@
-package modbusgw
+package modbus_gateway
 
 import (
 	"github.com/influxdata/telegraf/metric"

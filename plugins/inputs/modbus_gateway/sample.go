@@ -1,7 +1,6 @@
-package modbusgw
+package modbus_gateway
 
 const sampleConfig = `
-[[inputs.modbusgw]]
     #
     # Name of this input - should be unique
     #

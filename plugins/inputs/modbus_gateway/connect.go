@@ -1,4 +1,4 @@
-package modbusgw
+package modbus_gateway
 
 import (
 	mb "github.com/goburrow/modbus"

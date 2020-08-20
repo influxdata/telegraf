@@ -4,7 +4,7 @@
  * August, 2020
  */
 
-package modbusgw
+package modbus_gateway
 
 import (
 	mb "github.com/goburrow/modbus"
@@ -52,5 +52,5 @@ func (m *ModbusGateway) Description() string {
 
 // Add this plugin to telegraf
 func init() {
-	inputs.Add("modbusgw", func() telegraf.Input { return &ModbusGateway{} })
+	inputs.Add("modbus_gateway", func() telegraf.Input { return &ModbusGateway{} })
 }
