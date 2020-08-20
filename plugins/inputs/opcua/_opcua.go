@@ -1,3 +1,0 @@
-package opcua
-
-// placeholder

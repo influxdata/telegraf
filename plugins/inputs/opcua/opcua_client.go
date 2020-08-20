@@ -15,21 +15,18 @@ import (
 
 // OpcUA type
 type OpcUA struct {
-	Name           string         `toml:"name"`
-	Endpoint       string         `toml:"endpoint"`
-	SecurityPolicy string         `toml:"security_policy"`
-	SecurityMode   string         `toml:"security_mode"`
-	Certificate    string         `toml:"certificate"`
-	PrivateKey     string         `toml:"private_key"`
-	Username       string         `toml:"username"`    //defaults to nil
-	Password       string         `toml:"password"`    //defaults to nil
-	CertFile       string         `toml:"cert_file"`   //defaults to ""
-	KeyFile        string         `toml:"key_file"`    //defaults to ""
-	AuthMethod     string         `toml:"auth_method"` //defaults to "Anonymous" - accepts Anonymous, Username, Certificate
-	opts           []opcua.Option //internally created
-	Interval       string         `toml:"time_interval"`
-	TimeOut        int            `toml:"timeout"`
-	NodeList       []OPCTag       `toml:"nodes"`
+	Name           string   `toml:"name"`
+	Endpoint       string   `toml:"endpoint"`
+	SecurityPolicy string   `toml:"security_policy"`
+	SecurityMode   string   `toml:"security_mode"`
+	Certificate    string   `toml:"certificate"`
+	PrivateKey     string   `toml:"private_key"`
+	Username       string   `toml:"username"`
+	Password       string   `toml:"password"`
+	AuthMethod     string   `toml:"auth_method"`
+	Interval       string   `toml:"time_interval"`
+	TimeOut        int      `toml:"timeout"`
+	NodeList       []OPCTag `toml:"nodes"`
 	Nodes          []string
 	NodeData       []OPCData
 	NodeIDs        []*ua.NodeID
@@ -44,12 +41,8 @@ type OpcUA struct {
 	// internal values
 	client *opcua.Client
 	req    *ua.ReadRequest
-	// nodeMonitor       *monitor.NodeMonitor
-	// nodesData         *monitor.DataChangeMessage
-	// nodesSubscription *monitor.Subscription
-
-	ctx context.Context
-	// cancel context.CancelFunc
+	ctx    context.Context
+	opts   []opcua.Option
 }
 
 // OPCTag type
@@ -84,7 +77,7 @@ const (
 	Connected
 )
 
-const description = `Retrieve data from OPCUA slave devices`
+const description = `Retrieve data from OPCUA devices`
 const sampleConfig = `
 # ## Connection Configuration
 #  ##
@@ -102,7 +95,7 @@ endpoint = "opc.tcp://opcua.rocks:4840"
 timeout = 30
 #
 #  # Time Inteval, default = 10s
-interval = "1s"
+time_interval = "5s"
 #
 #  # Security policy: None, Basic128Rsa15, Basic256, Basic256Sha256. Default: auto
 security_policy = "None"
@@ -110,11 +103,20 @@ security_policy = "None"
 #  # Security mode: None, Sign, SignAndEncrypt. Default: auto
 security_mode = "None"
 #
-#  # Path to cert.pem. Required for security mode/policy != None
-#  # cert = "/etc/telegraf/cert.pem"
+#  # Path to cert.pem. Required for security mode/policy != None. If cert path is not supplied, self-signed cert and key will be generated.
+#  # certificate = "/etc/telegraf/cert.pem"
 #
-#  # Path to private key.pem. Required for security mode/policy != None
-#  # key = "/etc/telegraf/key.pem"
+#  # Path to private key.pem. Required for security mode/policy != None. If key path is not supplied, self-signed cert and key will be generated.
+#  # private_key = "/etc/telegraf/key.pem"
+#
+#  # To authenticate using a specific ID, select chosen method from 'Certificate' or 'UserName'. Else use 'Anonymous.' Defaults to 'Anonymous' if not provided.
+#  # auth_method = "Anonymous"
+#
+#  # Required for auth_method = "UserName"
+#  # username = "myusername"
+#
+#  # Required for auth_method = "UserName"
+#  # password = "mypassword"
 #
 #  ## Measurements
 #  ## node id to subscribe to
@@ -129,6 +131,15 @@ nodes = [
 		{name="ProductUri", namespace="0", identifier_type="i", identifier="2262", data_type="string", description="http://open62541.org"},
 		{name="ManufacturerName", namespace="0", identifier_type="i", identifier="2263", data_type="string", description="open62541"},
 ]
+
+## Guide:
+## An OPC UA node ID may resemble: "n=3,s=Temperature"
+## In this example, n=3 is indicating the namespace is '3'.
+## s=Temperature is indicting that the identifier type is a 'string' and the indentifier value is 'Temperature'
+## This temperature node may have a current value of 79.0, which would possibly make the value a 'float'.
+## To gather data from this node you would need to enter the following line into 'nodes' property above:
+##     {name="SomeLabel", namespace="3", identifier_type="s", identifier="Temperature", data_type="float", description="Some description."},
+
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -263,7 +274,7 @@ func BuildNodeID(tag OPCTag) string {
 	return "ns=" + tag.Namespace + ";" + tag.IdentifierType + "=" + tag.Identifier
 }
 
-// Connect to a OPCUA Slave device
+// Connect to a OPCUA device
 func Connect(o *OpcUA) error {
 	u, err := url.Parse(o.Endpoint)
 	if err != nil {
@@ -279,24 +290,6 @@ func Connect(o *OpcUA) error {
 		}
 
 		o.setupOptions()
-
-		// endpoints, err := opcua.GetEndpoints(o.Endpoint)
-		// if err != nil {
-		// 	return fmt.Errorf("Endpoint Error: %s", err)
-		// }
-
-		// ep := opcua.SelectEndpoint(endpoints, o.SecurityPolicy, ua.MessageSecurityModeFromString(o.SecurityMode))
-		// if ep == nil {
-		// 	return fmt.Errorf("Failed to find suitable endpoint")
-		// }
-		// opts := []opcua.Option{
-		// 	opcua.SecurityPolicy(o.SecurityPolicy),
-		// 	opcua.SecurityModeString(o.SecurityMode),
-		// 	opcua.CertificateFile(o.Certificate),
-		// 	opcua.PrivateKeyFile(o.PrivateKey),
-		// 	opcua.AuthAnonymous(),
-		// 	opcua.SecurityFromEndpoint(ep, ua.UserTokenTypeAnonymous),
-		// }
 
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
 		if err := o.client.Connect(o.ctx); err != nil {
@@ -335,13 +328,13 @@ func (o *OpcUA) setupOptions() error {
 		log.Fatal(err)
 	}
 
-	if o.CertFile == "" && o.KeyFile == "" {
+	if o.Certificate == "" && o.PrivateKey == "" {
 		if o.SecurityPolicy != "None" || o.SecurityMode != "None" {
-			o.CertFile, o.KeyFile = generateCert("urn:gopcua:client", 2048, o.CertFile, o.KeyFile, (365 * 24 * time.Hour))
+			o.Certificate, o.PrivateKey = generateCert("urn:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
 		}
 	}
 
-	o.opts = generateClientOpts(endpoints, o.CertFile, o.KeyFile, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password)
+	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password)
 
 	return nil
 }
@@ -400,7 +393,6 @@ func disconnect(o *OpcUA) error {
 func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 	if o.state == Disconnected {
 		o.state = Connecting
-		//o.Log.Debugf("Connecting %v", o.Servers)
 		err := Connect(o)
 		if err != nil {
 			o.state = Disconnected
