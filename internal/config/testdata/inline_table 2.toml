@@ -1,7 +1,0 @@
-[[outputs.http]]
-    headers = { Authorization = "Token $TOKEN",Content-Type = "application/json" }
-    taginclude = ["org_id"]
-
-[[outputs.http]]
-    headers = { Authorization = "Token $TOKEN",Content-Type = "application/json" }
-    taginclude = ["org_id"]
