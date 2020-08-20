@@ -31,6 +31,11 @@ func (m *ModbusGateway) Init() error {
 				field.Scale = 1.0
 			}
 
+			field.Type = strings.ToUpper(field.Type)
+			if field.Type == "" {
+				field.Type = "UINT16"
+			}
+
 		}
 	}
 

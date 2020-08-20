@@ -41,7 +41,7 @@ type FieldDef struct {
 	Omit   bool    `toml:"omit"`
 	Scale  float32 `toml:"scale"`
 	Offset float32 `toml:"offset"`
-	Type   string  `toml:"type",default:"UINT16"`
+	Type   string  `toml:"type"`
 }
 
 const description = `Expert mode MODBUS telegraf input`
