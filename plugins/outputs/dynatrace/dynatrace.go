@@ -29,11 +29,11 @@ var (
 
 // Dynatrace Configuration for the Dynatrace output plugin
 type Dynatrace struct {
-	URL                string            `toml:"url"`
-	APIToken           string            `toml:"api_token"`
-	Prefix             string            `toml:"prefix"`
-	Log                telegraf.Logger   `toml:"-"`
-	Timeout            internal.Duration `toml:"timeout"`
+	URL      string            `toml:"url"`
+	APIToken string            `toml:"api_token"`
+	Prefix   string            `toml:"prefix"`
+	Log      telegraf.Logger   `toml:"-"`
+	Timeout  internal.Duration `toml:"timeout"`
 
 	tls.ClientConfig
 
