@@ -79,7 +79,7 @@ response is received but not stored as a field of the measurement.
 
 ## Sample Configuration
 ```toml
-[[inputs.modbusgw]]
+[[inputs.modbus_gateway]]
     #
     # Name of this input - should be unique
     #
