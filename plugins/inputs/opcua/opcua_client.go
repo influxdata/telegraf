@@ -315,7 +315,7 @@ func Connect(o *OpcUA) error {
 		}
 
 	default:
-		return fmt.Errorf("invalid opc.tcp endpoint")
+		return fmt.Errorf("unsupported scheme %q in endpoint. Expected opc.tcp", u.Scheme)
 	}
 	return nil
 }
