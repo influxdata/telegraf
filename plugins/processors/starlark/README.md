@@ -44,7 +44,7 @@ def apply(metric):
 ```
 
 For a list of available types and functions that can be used in the code, see
-the Starlark [specification][].
+the [Starlark specification][].
 
 In addition to these, the following InfluxDB-specific
 types and functions are exposed to the script.
