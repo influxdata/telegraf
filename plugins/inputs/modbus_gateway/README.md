@@ -110,19 +110,19 @@ response is received but not stored as a field of the measurement.
     # address - the register address of the first register being requested.  This address is zero-based.
     #    For example, the first holding register is address 0.  Be aware that some documentation
     #
-    # count - how mant 16-bit registers to request
+    # count - how many 16-bit registers to request
     #
-    # type - defines the register type, which maps internally to the function code used ub the
+    # type - defines the register type, which maps internally to the function code used to the
     #   PDU (request).  Must be "holding" or "input", if unspecified defaults to "holding"
     #
-    # measurement - the nameof the measurement, for example when stored in influx
+    # measurement - the name of the measurement, for example when stored in influx
     #
     # fields - defines how the response PDU is mapped to fields of the measurement.  Attributes
     # of each field are:
     #
     # name - name of the field
     #
-    # type - must be INT32, UINT32, INT16, or UINT16.  More tyoes will be added in the future.
+    # type - must be INT32, UINT32, INT16, or UINT16.  More types will be added in the future.
     #
     # scale, offset - math performed on the raw modbus value before storing.
     #    stored field value = (modbus value * scale) + offset

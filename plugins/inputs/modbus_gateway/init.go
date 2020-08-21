@@ -6,19 +6,22 @@ import (
 )
 
 func (m *ModbusGateway) Init() error {
-
 	for i := range m.Requests {
 		request := &m.Requests[i]
+
 		/*
-		 * Check register type is valid
+		 * If no register type was specified, default to "holding
 		 */
 		if request.Type == "" {
 			request.Type = "holding"
-		}
-
-		request.Type = strings.ToLower(request.Type)
-		if request.Type != "holding" && request.Type != "input" {
-			return fmt.Errorf("Request type must be \"holding\" or \"input\"")
+		} else {
+			/*
+			 * User specified the register type - make sure they made a valid selection
+			 */
+			request.Type = strings.ToLower(request.Type)
+			if request.Type != "holding" && request.Type != "input" {
+				return fmt.Errorf("Request type must be \"holding\" or \"input\"")
+			}
 		}
 
 		/*
@@ -35,9 +38,7 @@ func (m *ModbusGateway) Init() error {
 			if field.Type == "" {
 				field.Type = "UINT16"
 			}
-
 		}
 	}
-
 	return nil
 }
