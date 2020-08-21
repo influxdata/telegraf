@@ -157,7 +157,7 @@ The content of **Event Data** and **User Data** XML Nodes can be added as additi
 
 For the fields from additional XML Nodes the `Name` attribute is taken as the name, and inner text is the value. Type of those fields is always string.
 
-Name of the field is formed from XML Path by adding _ inbetween levels. For example. if UserData XML looks like this:
+Name of the field is formed from XML Path by adding _ inbetween levels. For example, if UserData XML looks like this:
 
 ```xml
 <UserData>

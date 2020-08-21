@@ -245,7 +245,7 @@ loop:
 				xmlFields = append(xmlFields, fieldsUserData...)
 				fieldsUsage = xmlFieldsUsage
 			}
-			if w.ProcessUserData {
+			if w.ProcessEventData {
 				fieldsEventData, xmlFieldsUsage := UnrollXMLFields(event.EventData.InnerXML, fieldsUsage, w.Separator)
 				xmlFields = append(xmlFields, fieldsEventData...)
 				fieldsUsage = xmlFieldsUsage
