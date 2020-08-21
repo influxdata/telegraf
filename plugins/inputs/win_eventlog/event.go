@@ -1,10 +1,15 @@
-// +build windows
+//+build windows
 
+//revive:disable-next-line:var-naming
+// Package win_eventlog Input plugin to collect Windows Event Log messages
 package win_eventlog
 
 // Event is the event entry representation
+// Only the most common elements are processed, human-readable data is rendered in Message
+// More info on schema, if there will be need to add more:
+// https://docs.microsoft.com/en-us/windows/win32/wes/eventschema-elements
 type Event struct {
-	Provider      Provider    `xml:"System>Provider"`
+	Source        Provider    `xml:"System>Provider"`
 	EventID       int         `xml:"System>EventID"`
 	Version       int         `xml:"System>Version"`
 	Level         int         `xml:"System>Level"`
@@ -18,7 +23,22 @@ type Event struct {
 	Channel       string      `xml:"System>Channel"`
 	Computer      string      `xml:"System>Computer"`
 	Security      Security    `xml:"System>Security"`
-	Data          []EventData `xml:"EventData>Data"`
+	UserData      UserData    `xml:"UserData"`
+	EventData     EventData   `xml:"EventData"`
+	Message       string
+	LevelText     string
+	TaskText      string
+	OpcodeText    string
+}
+
+// UserData Application-provided XML data
+type UserData struct {
+	InnerXML []byte `xml:",innerxml"`
+}
+
+// EventData Application-provided XML data
+type EventData struct {
+	InnerXML []byte `xml:",innerxml"`
 }
 
 // Provider is the Event provider information
@@ -28,19 +48,15 @@ type Provider struct {
 
 // Correlation is used for the event grouping
 type Correlation struct {
-	ActivityID string `xml:"ActivityID,attr"`
-}
-
-// EventData is a field with optional name
-type EventData struct {
-	Name  string `xml:"Name,attr"`
-	Value string `xml:",chardata"`
+	ActivityID        string `xml:"ActivityID,attr"`
+	RelatedActivityID string `xml:"RelatedActivityID,attr"`
 }
 
 // Execution Info for Event
 type Execution struct {
-	ProcessID int32 `xml:"ProcessID,attr"`
-	ThreadID  int32 `xml:"ThreadID,attr"`
+	ProcessID   uint32 `xml:"ProcessID,attr"`
+	ThreadID    uint32 `xml:"ThreadID,attr"`
+	ProcessName string
 }
 
 // Security Data for Event

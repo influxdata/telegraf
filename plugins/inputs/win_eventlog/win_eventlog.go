@@ -1,11 +1,16 @@
-// +build windows
+//+build windows
 
+//revive:disable-next-line:var-naming
+// Package win_eventlog Input plugin to collect Windows Event Log messages
 package win_eventlog
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/xml"
 	"fmt"
-	"strconv"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"syscall"
 
@@ -15,7 +20,8 @@ import (
 )
 
 var sampleConfig = `
-  ## Telegraf should have Administrator permissions to subscribe for Windows Events
+  ## Telegraf should have Administrator permissions to subscribe for some Windows Events channels
+  ## (System log, for example)
 
   ## LCID (Locale ID) for event rendering
   ## 1033 to force English language
@@ -24,11 +30,14 @@ var sampleConfig = `
 
   ## Name of eventlog, used only if xpath_query is empty
   ## Example: "Application"
-  eventlog_name = ""
+  # eventlog_name = ""
 
   ## xpath_query can be in defined short form like "Event/System[EventID=999]"
-  ## or you can form a xml query. Refer to the Consuming Events article:
+  ## or you can form a XML Query. Refer to the Consuming Events article:
   ## https://docs.microsoft.com/en-us/windows/win32/wes/consuming-events
+  ## XML query is the recommended form, because it is most flexible
+  ## You can create or debug XML Query by creating Custom View in Windows Event Viewer
+  ## and then copying resulting XML here
   xpath_query = '''
   <QueryList>
     <Query Id="0" Path="Security">
@@ -37,10 +46,6 @@ var sampleConfig = `
     </Query>
     <Query Id="1" Path="Application">
       <Select Path="Application">*[System[(Level &lt; 4)]]</Select>
-      <Select Path="OpenSSH/Admin">*[System[(Level &lt; 4)]]</Select>
-      <Select Path="Windows PowerShell">*[System[(Level &lt; 4)]]</Select>
-      <Select Path="Key Management Service">*[System[(Level &lt; 4)]]</Select>
-      <Select Path="HardwareEvents">*[System[(Level &lt; 4)]]</Select>
     </Query>
     <Query Id="2" Path="Windows PowerShell">
       <Select Path="Windows PowerShell">*[System[(Level &lt; 4)]]</Select>
@@ -53,16 +58,57 @@ var sampleConfig = `
     </Query>
   </QueryList>
   '''
+
+  ## System field names:
+  ##   "Source", "EventID", "Version", "Level", "Task", "Opcode", "Keywords", "TimeCreated",
+  ##   "EventRecordID", "ActivityID", "RelatedActivityID", "ProcessID", "ThreadID", "ProcessName",
+  ##   "Channel", "Computer", "UserID", "UserName", "Message", "LevelText", "TaskText", "OpcodeText"
+
+  ## In addition to System, Data fields can be unrolled from additional XML nodes in event.
+  ## Human-readable representation of those nodes is formatted into event Message field,
+  ## but XML is more machine-parsable
+
+  # Process UserData XML to fields, if this node exists in Event XML
+  process_userdata = true
+
+  # Process EventData XML to fields, if this node exists in Event XML
+  process_eventdata = true
+
+  ## Separator character to use for unrolled XML Data field names
+  separator = "_"
+
+  ## Get only first line of Message field. For most events first line is usually more than enough
+  only_first_line_of_message = true
+
+  ## Fields to include as tags. Globbing supported ("Level*" for both "Level" and "LevelText")
+  event_tags = ["Source", "EventID", "Level", "LevelText", "Task", "TaskText", "Opcode", "OpcodeText", "Keywords", "Channel", "Computer"]
+
+  ## Default list of fields to send. All fields are sent by default. Globbing supported
+  event_fields = ["*"]
+
+  ## Fields to exclude. Also applied to data fields. Globbing supported
+  exclude_fields = ["Binary", "Data_Address*"]
+
+  ## Skip those tags or fields if their value is empty or equals to zero. Globbing supported
+  exclude_empty = ["*ActivityID", "UserID"]
 `
 
 // WinEventLog config
 type WinEventLog struct {
-	Locale       uint32 `toml:"locale"`
-	EventlogName string `toml:"eventlog_name"`
-	Query        string `toml:"xpath_query"`
-	subscription EvtHandle
-	buf          []byte
-	Log          telegraf.Logger
+	Locale                 uint32   `toml:"locale"`
+	EventlogName           string   `toml:"eventlog_name"`
+	Query                  string   `toml:"xpath_query"`
+	ProcessUserData        bool     `toml:"process_userdata"`
+	ProcessEventData       bool     `toml:"process_eventdata"`
+	Separator              string   `toml:"separator"`
+	OnlyFirstLineOfMessage bool     `toml:"only_first_line_of_message"`
+	EventTags              []string `toml:"event_tags"`
+	EventFields            []string `toml:"event_fields"`
+	ExcludeFields          []string `toml:"exclude_fields"`
+	ExcludeEmpty           []string `toml:"exclude_empty"`
+	subscription           EvtHandle
+	buf                    []byte
+	Log                    telegraf.Logger
 }
 
 var bufferSize = 1 << 14
@@ -105,67 +151,110 @@ loop:
 		}
 
 		for _, event := range events {
-			tags := map[string]string{
-				"source":        event.Provider.Name,
-				"event_id":      strconv.Itoa(int(event.EventID)),
-				"level":         strconv.Itoa(int(event.Level)),
-				"keywords":      event.Keywords,
-				"eventlog_name": event.Channel,
-			}
+			// Prepare fields names usage counter
+			var fieldsUsage = map[string]int{}
 
-			// Events, forwarded from another computer
-			if event.Channel == "ForwardedEvents" {
-				tags["computer"] = event.Computer
-			}
-
-			fields := map[string]interface{}{
-				"version":      event.Version,
-				"task":         event.Task,
-				"record_id":    event.EventRecordID,
-				"time_created": event.TimeCreated,
-			}
-
-			if event.Execution.ProcessID != 0 {
-				fields["process_id"] = event.Execution.ProcessID
-				fields["thread_id"] = event.Execution.ThreadID
-				_, _, processName, err := GetFromSnapProcess(event.Execution.ProcessID)
-				if err == nil {
-					fields["process_name"] = processName
+			tags := map[string]string{}
+			fields := map[string]interface{}{}
+			evt := reflect.ValueOf(&event).Elem()
+			// Walk through all fields of Event struct to process System tags or fields
+			for i := 0; i < evt.NumField(); i++ {
+				fieldName := evt.Type().Field(i).Name
+				fieldType := evt.Field(i).Type().String()
+				fieldValue := evt.Field(i).Interface()
+				computedValues := map[string]interface{}{}
+				switch fieldName {
+				case "Source":
+					fieldValue = event.Source.Name
+					fieldType = reflect.TypeOf(fieldValue).String()
+				case "Execution":
+					fieldValue := event.Execution.ProcessID
+					fieldType = reflect.TypeOf(fieldValue).String()
+					fieldName = "ProcessID"
+					// Look up Process Name from pid
+					if should, _ := w.shouldProcessField("ProcessName"); should {
+						_, _, processName, err := GetFromSnapProcess(fieldValue)
+						if err == nil {
+							computedValues["ProcessName"] = processName
+						}
+					}
+				case "TimeCreated":
+					fieldValue = event.TimeCreated.SystemTime
+					fieldType = reflect.TypeOf(fieldValue).String()
+				case "Correlation":
+					if should, _ := w.shouldProcessField("ActivityID"); should {
+						activityID := event.Correlation.ActivityID
+						if len(activityID) > 0 {
+							computedValues["ActivityID"] = activityID
+						}
+					}
+					if should, _ := w.shouldProcessField("RelatedActivityID"); should {
+						relatedActivityID := event.Correlation.RelatedActivityID
+						if len(relatedActivityID) > 0 {
+							computedValues["RelatedActivityID"] = relatedActivityID
+						}
+					}
+				case "Security":
+					computedValues["UserID"] = event.Security.UserID
+					// Look up UserName and Domain from SID
+					if should, _ := w.shouldProcessField("UserName"); should {
+						sid := event.Security.UserID
+						usid, err := syscall.StringToSid(sid)
+						if err == nil {
+							username, domain, _, err := usid.LookupAccount("")
+							if err == nil {
+								computedValues["UserName"] = fmt.Sprint(domain, "\\", username)
+							}
+						}
+					}
+				default:
 				}
-			}
-
-			if event.Opcode != 0 {
-				fields["opcode"] = event.Opcode
-			}
-
-			if event.Correlation.ActivityID != "" {
-				fields["activity_id"] = event.Correlation.ActivityID
-			}
-
-			if event.Security.UserID != "" {
-				fields["user_id"] = event.Security.UserID
-			}
-
-			count := 1
-			// Walk EventData values
-			for _, data := range event.Data {
-				var key string
-				if len(data.Name) < 1 {
-					// Use data_<count> name format for entries without the Name attribute
-					key = fmt.Sprint("data_", count)
-				} else {
-					if _, exists := fields[strings.ToLower(data.Name)]; exists {
-						// Add "data_" prefix for field names that can override existing values
-						key = fmt.Sprint("data_", data.Name)
-					} else {
-						key = data.Name
+				if should, where := w.shouldProcessField(fieldName); should {
+					if where == "tags" {
+						strValue := fmt.Sprintf("%v", fieldValue)
+						if !w.shouldExcludeEmptyField(fieldName, "string", strValue) {
+							tags[fieldName] = strValue
+							fieldsUsage[fieldName]++
+						}
+					} else if where == "fields" {
+						if !w.shouldExcludeEmptyField(fieldName, fieldType, fieldValue) {
+							fields[fieldName] = fieldValue
+							fieldsUsage[fieldName]++
+						}
 					}
 				}
-				count++
-				// Values can be an array of a zero-terminated strings
-				splitZero := func(c rune) bool { return c == '\x00' }
-				valueArray := strings.FieldsFunc(data.Value, splitZero)
-				fields[key] = strings.Join(valueArray, ",")
+
+				// Insert computed fields
+				for computedKey, computedValue := range computedValues {
+					if should, where := w.shouldProcessField(computedKey); should {
+						if where == "tags" {
+							tags[computedKey] = fmt.Sprintf("%v", computedValue)
+							fieldsUsage[computedKey]++
+						} else if where == "fields" {
+							fields[computedKey] = computedValue
+							fieldsUsage[computedKey]++
+						}
+					}
+				}
+			}
+
+			// Unroll additional XML
+			var xmlFields []EventField
+			if w.ProcessUserData {
+				fieldsUserData, xmlFieldsUsage := UnrollXMLFields(event.UserData.InnerXML, fieldsUsage, w.Separator)
+				xmlFields = append(xmlFields, fieldsUserData...)
+				fieldsUsage = xmlFieldsUsage
+			}
+			if w.ProcessUserData {
+				fieldsEventData, xmlFieldsUsage := UnrollXMLFields(event.EventData.InnerXML, fieldsUsage, w.Separator)
+				xmlFields = append(xmlFields, fieldsEventData...)
+				fieldsUsage = xmlFieldsUsage
+			}
+			uniqueXMLFields := UniqueFieldNames(xmlFields, fieldsUsage, w.Separator)
+			for _, xmlField := range uniqueXMLFields {
+				if !w.shouldExclude(xmlField.Name) {
+					fields[xmlField.Name] = xmlField.Value
+				}
 			}
 
 			// Pass collected metrics
@@ -174,6 +263,51 @@ loop:
 	}
 
 	return nil
+}
+
+func (w *WinEventLog) shouldExclude(field string) (should bool) {
+	for _, excludePattern := range w.ExcludeFields {
+		// Check if field name matches excluded list
+		if matched, _ := filepath.Match(excludePattern, field); matched {
+			return true
+		}
+	}
+	return false
+}
+
+func (w *WinEventLog) shouldProcessField(field string) (should bool, list string) {
+	for _, pattern := range w.EventTags {
+		if matched, _ := filepath.Match(pattern, field); matched {
+			// Tags are not excluded
+			return true, "tags"
+		}
+	}
+
+	for _, pattern := range w.EventFields {
+		if matched, _ := filepath.Match(pattern, field); matched {
+			if w.shouldExclude(field) {
+				return false, "excluded"
+			}
+			return true, "fields"
+		}
+	}
+	return false, "excluded"
+}
+
+func (w *WinEventLog) shouldExcludeEmptyField(field string, fieldType string, fieldValue interface{}) (should bool) {
+	for _, pattern := range w.ExcludeEmpty {
+		if matched, _ := filepath.Match(pattern, field); matched {
+			switch fieldType {
+			case "string":
+				return len(fieldValue.(string)) < 1
+			case "int":
+				return fieldValue.(int) == 0
+			case "uint32":
+				return fieldValue.(uint32) == 0
+			}
+		}
+	}
+	return false
 }
 
 func (w *WinEventLog) evtSubscribe(logName, xquery string) (EvtHandle, error) {
@@ -233,30 +367,16 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 
 	for _, eventHandle := range eventHandles {
 		if eventHandle != 0 {
-			eventXML, err := w.renderEvent(eventHandle)
-			if err != nil {
-				return nil, err
+			event, err := w.renderEvent(eventHandle)
+			if err == nil {
+				// w.Log.Debugf("Got event: %v", event)
+				events = append(events, event)
 			}
-
-			event := Event{}
-			xml.Unmarshal([]byte(eventXML), &event)
-			keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle,
-				event.Provider.Name, w.Locale)
-			if err != nil {
-				// We will keep hex Keywords value just in case
-				w.Log.Warnf("Error formatting keyword %s: %v", event.Keywords, err)
-			} else {
-				// Add comma-separated keyword strings
-				event.Keywords = keywords
-			}
-			// w.Log.Debugf("Got event: %v", event)
-
-			events = append(events, event)
 		}
 	}
 
 	for i := 0; i < len(eventHandles); i++ {
-		err := closeEvent(eventHandles[i])
+		err := _EvtClose(eventHandles[i])
 		if err != nil {
 			return events, err
 		}
@@ -264,32 +384,72 @@ func (w *WinEventLog) fetchEvents(subsHandle EvtHandle) ([]Event, error) {
 	return events, nil
 }
 
-func (w *WinEventLog) renderEvent(e EvtHandle) ([]byte, error) {
+func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	var bufferUsed, propertyCount uint32
 
-	err := _EvtRender(0, e, EvtRenderEventXml,
-		uint32(len(w.buf)), &w.buf[0], &bufferUsed, &propertyCount)
+	event := Event{}
+	err := _EvtRender(0, eventHandle, EvtRenderEventXml, uint32(len(w.buf)), &w.buf[0], &bufferUsed, &propertyCount)
 	if err != nil {
-		return nil, err
+		return event, err
 	}
 
-	return DecodeUTF16(w.buf[:bufferUsed])
+	eventXML, err := DecodeUTF16(w.buf[:bufferUsed])
+	if err != nil {
+		return event, err
+	}
+	xml.Unmarshal([]byte(eventXML), &event)
+
+	publisherHandle, err := openPublisherMetadata(0, event.Source.Name, w.Locale)
+	if err != nil {
+		// We can return event without most text values,
+		// that way we will not loose information
+		// This can happen when processing Forwarded Events
+		return event, nil
+	}
+	defer _EvtClose(publisherHandle)
+
+	// Populating text values
+	keywords, err := formatEventString(EvtFormatMessageKeyword, eventHandle, publisherHandle)
+	if err == nil {
+		event.Keywords = keywords
+	}
+	message, err := formatEventString(EvtFormatMessageEvent, eventHandle, publisherHandle)
+	if err == nil {
+		if w.OnlyFirstLineOfMessage {
+			scanner := bufio.NewScanner(strings.NewReader(message))
+			scanner.Scan()
+			message = scanner.Text()
+		}
+		event.Message = message
+	}
+	level, err := formatEventString(EvtFormatMessageLevel, eventHandle, publisherHandle)
+	if err == nil {
+		event.LevelText = level
+	}
+	task, err := formatEventString(EvtFormatMessageTask, eventHandle, publisherHandle)
+	if err == nil {
+		event.TaskText = task
+	}
+	opcode, err := formatEventString(EvtFormatMessageOpcode, eventHandle, publisherHandle)
+	if err == nil {
+		event.OpcodeText = opcode
+	}
+	if event.Execution.ProcessID != 0 {
+		_, _, processName, err := GetFromSnapProcess(event.Execution.ProcessID)
+		if err == nil {
+			event.Execution.ProcessName = processName
+		}
+	}
+	return event, nil
 }
 
 func formatEventString(
 	messageFlag EvtFormatMessageFlag,
 	eventHandle EvtHandle,
-	publisher string,
-	lang uint32,
+	publisherHandle EvtHandle,
 ) (string, error) {
-	ph, err := openPublisherMetadata(0, publisher, lang)
-	if err != nil {
-		return "", err
-	}
-	defer _EvtClose(ph)
-
 	var bufferUsed uint32
-	err = _EvtFormatMessage(ph, eventHandle, 0, 0, 0, messageFlag,
+	err := _EvtFormatMessage(publisherHandle, eventHandle, 0, 0, 0, messageFlag,
 		0, nil, &bufferUsed)
 	if err != nil && err != ERROR_INSUFFICIENT_BUFFER {
 		return "", err
@@ -297,10 +457,9 @@ func formatEventString(
 
 	bufferUsed *= 2
 	buffer := make([]byte, bufferUsed)
-	// buffer[bufferUsed-1] = 0
 	bufferUsed = 0
 
-	err = _EvtFormatMessage(ph, eventHandle, 0, 0, 0, messageFlag,
+	err = _EvtFormatMessage(publisherHandle, eventHandle, 0, 0, 0, messageFlag,
 		uint32(len(buffer)/2), &buffer[0], &bufferUsed)
 	bufferUsed *= 2
 	if err != nil {
@@ -317,8 +476,10 @@ func formatEventString(
 		// Keywords are returned as array of a zero-terminated strings
 		splitZero := func(c rune) bool { return c == '\x00' }
 		eventKeywords := strings.FieldsFunc(string(result), splitZero)
+		// So convert them to comma-separated string
 		out = strings.Join(eventKeywords, ",")
 	} else {
+		result := bytes.Trim(result, "\x00")
 		out = string(result)
 	}
 	return out, nil
@@ -344,16 +505,17 @@ func openPublisherMetadata(
 	return h, nil
 }
 
-func closeEvent(e EvtHandle) error {
-	err := _EvtClose(e)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func init() {
 	inputs.Add("win_eventlog", func() telegraf.Input {
-		return &WinEventLog{buf: make([]byte, bufferSize)}
+		return &WinEventLog{
+			buf:                    make([]byte, bufferSize),
+			ProcessUserData:        true,
+			ProcessEventData:       true,
+			Separator:              "_",
+			OnlyFirstLineOfMessage: true,
+			EventTags:              []string{"Source", "EventID", "Level", "LevelText", "Keywords", "Channel", "Computer"},
+			EventFields:            []string{"*"},
+			ExcludeEmpty:           []string{"Task", "Opcode", "*ActivityID", "UserID"},
+		}
 	})
 }

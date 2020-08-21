@@ -1,3 +1,7 @@
+//+build windows
+
+//revive:disable-next-line:var-naming
+// Package win_eventlog Input plugin to collect Windows Event Log messages
 package win_eventlog
 
 import (
@@ -15,10 +19,12 @@ type EvtHandle uintptr
 // Do the interface allocations only once for common
 // Errno values.
 const (
+	//revive:disable-next-line:var-naming
 	errnoERROR_IO_PENDING = 997
 )
 
 var (
+	//revive:disable-next-line:var-naming
 	errERROR_IO_PENDING error = syscall.Errno(errnoERROR_IO_PENDING)
 )
 
@@ -29,6 +35,7 @@ type EvtFormatMessageFlag uint32
 // EVT_FORMAT_MESSAGE_FLAGS enumeration
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa385525(v=vs.85).aspx
 const (
+	//revive:disable:var-naming
 	// Format the event's message string.
 	EvtFormatMessageEvent EvtFormatMessageFlag = iota + 1
 	// Format the message string of the level specified in the event.
@@ -50,10 +57,12 @@ const (
 	// provider's metadata contains the resource identifiers; the message
 	// compiler assigns a resource identifier to each string when it compiles
 	// the manifest.
+	//revive:disable-next-line:confusing-naming
 	EvtFormatMessageId
 	// Format all the message strings in the event. The formatted message is an
 	// XML string that contains the event details and the message strings.
 	EvtFormatMessageXml
+	//revive:enable:var-naming
 )
 
 // errnoErr returns common boxed Errno values, to prevent
