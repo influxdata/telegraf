@@ -10,7 +10,7 @@ func (m *ModbusGateway) Init() error {
 		request := &m.Requests[i]
 
 		/*
-		 * If no register type was specified, default to "holding
+		 * If no register type was specified, default to "holding"
 		 */
 		if request.Type == "" {
 			request.Type = "holding"
