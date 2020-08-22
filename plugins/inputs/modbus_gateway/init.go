@@ -12,14 +12,14 @@ func (m *ModbusGateway) Init() error {
 		/*
 		 * If no register type was specified, default to "holding"
 		 */
-		if request.Type == "" {
-			request.Type = "holding"
+		if request.RequestType == "" {
+			request.RequestType = "holding"
 		} else {
 			/*
 			 * User specified the register type - make sure they made a valid selection
 			 */
-			request.Type = strings.ToLower(request.Type)
-			if request.Type != "holding" && request.Type != "input" {
+			request.RequestType = strings.ToLower(request.RequestType)
+			if request.RequestType != "holding" && request.RequestType != "input" {
 				return fmt.Errorf("Request type must be \"holding\" or \"input\"")
 			}
 		}
@@ -34,10 +34,24 @@ func (m *ModbusGateway) Init() error {
 				field.Scale = 1.0
 			}
 
-			field.Type = strings.ToUpper(field.Type)
-			if field.Type == "" {
-				field.Type = "UINT16"
+			field.InputType = strings.ToUpper(field.InputType)
+			if field.InputType == "" {
+				field.InputType = "UINT16"
 			}
+
+			field.OutputFormat = strings.ToUpper(field.OutputFormat)
+			if field.OutputFormat == "" {
+				field.OutputFormat = "FLOAT64"
+			} else {
+				switch field.OutputFormat {
+				case "INT", "UINT", "INT64", "UINT64", "FLOAT", "FLOAT32", "FLOAT64":
+					break
+				default:
+					return fmt.Errorf("Invalid output format")
+
+				}
+			}
+
 		}
 	}
 	return nil

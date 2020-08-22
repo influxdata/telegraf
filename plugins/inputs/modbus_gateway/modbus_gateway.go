@@ -27,21 +27,22 @@ type ModbusGateway struct {
 }
 
 type Request struct {
-	Unit        uint8      `toml:"unit"`
-	Address     uint16     `toml:"address"`
-	Count       uint16     `toml:"count"`
-	Type        string     `toml:"type"`
-	Measurement string     `toml:"measurement"`
-	Tags        []string   `toml:"tags"`
-	Fields      []FieldDef `toml:"fields"`
+	Unit            uint8      `toml:"unit"`
+	Address         uint16     `toml:"address"`
+	Count           uint16     `toml:"count"`
+	RequestType     string     `toml:"type"`
+	MeasurementName string     `toml:"measurement"`
+	Tags            []string   `toml:"tags"`
+	Fields          []FieldDef `toml:"fields"`
 }
 
 type FieldDef struct {
-	Name   string  `toml:"name"`
-	Omit   bool    `toml:"omit"`
-	Scale  float32 `toml:"scale"`
-	Offset float32 `toml:"offset"`
-	Type   string  `toml:"type"`
+	Name         string  `toml:"name"`
+	Omit         bool    `toml:"omit"`
+	Scale        float64 `toml:"scale"`
+	Offset       float64 `toml:"offset"`
+	InputType    string  `toml:"type"`
+	OutputFormat string  `toml:"outfmt"`
 }
 
 const description = `Expert mode MODBUS telegraf input`

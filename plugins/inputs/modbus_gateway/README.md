@@ -131,6 +131,16 @@ response is received but not stored as a field of the measurement.
     #   skip fields not of interest that are part of the response because they are within the
     #   requested register range.
     #
+    # outfmt - the output format.  Defaults to FLOAT64, but may be set to INT32, INT64,
+    #    INT (alias for INT64), FLOAT32, FLOAT64, or FLOAT (alias for FLOAT64).  Note
+    #    that the scale and offset are applied using float64 math, but you may specify
+    #    an integer output format for a variety of reasons including to save space and
+    #    to avoid floating point imprecision (the value is -399 but it is written as -398.9999 ...)
+    #    When converting to an integer format, the float value will be rounded to the nearest
+    #    integer.  In most cases, it's best to leave the output format at the default (float64)
+    #    especially if you are outputting to InfluxDB and using flux, as having fields of
+    #    mixed types might make you have to use typecasts in your queries.
+    #
     requests = [
         { unit=3, address=30769, count=8, type="holding", measurement="pv1", fields = [
             {name="Ipv", type="INT32", scale=0.001},

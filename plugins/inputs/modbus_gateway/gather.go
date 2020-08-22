@@ -26,12 +26,12 @@ func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 		var resp []byte
 		var err error
 
-		if req.Type == "holding" {
+		if req.RequestType == "holding" {
 			resp, err = m.client.ReadHoldingRegisters(req.Address, req.Count)
-		} else if req.Type == "input" {
+		} else if req.RequestType == "input" {
 			resp, err = m.client.ReadInputRegisters(req.Address, req.Count)
 		} else {
-			return fmt.Errorf("Don't know how to poll register type \"%s\"", req.Type)
+			return fmt.Errorf("Don't know how to poll register type \"%s\"", req.RequestType)
 		}
 
 		if err == nil {
@@ -39,26 +39,26 @@ func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 			reader := bytes.NewReader(resp)
 
 			for _, f := range req.Fields {
-				switch f.Type {
+				switch f.InputType {
 				case "UINT16":
 					var value uint16
 					binary.Read(reader, binary.BigEndian, &value)
-					writeInt(grouper, &req, &f, int64(value), now)
+					outputToGroup(grouper, &req, &f, int64(value), now)
 					break
 				case "INT16":
 					var value int16
 					binary.Read(reader, binary.BigEndian, &value)
-					writeInt(grouper, &req, &f, int64(value), now)
+					outputToGroup(grouper, &req, &f, int64(value), now)
 					break
 				case "UINT32":
 					var value uint32
 					binary.Read(reader, binary.BigEndian, &value)
-					writeInt(grouper, &req, &f, int64(value), now)
+					outputToGroup(grouper, &req, &f, int64(value), now)
 					break
 				case "INT32":
 					var value int32
 					binary.Read(reader, binary.BigEndian, &value)
-					writeInt(grouper, &req, &f, int64(value), now)
+					outputToGroup(grouper, &req, &f, int64(value), now)
 
 					break
 
