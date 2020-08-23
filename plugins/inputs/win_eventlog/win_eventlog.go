@@ -434,12 +434,6 @@ func (w *WinEventLog) renderEvent(eventHandle EvtHandle) (Event, error) {
 	if err == nil {
 		event.OpcodeText = opcode
 	}
-	if event.Execution.ProcessID != 0 {
-		_, _, processName, err := GetFromSnapProcess(event.Execution.ProcessID)
-		if err == nil {
-			event.Execution.ProcessName = processName
-		}
-	}
 	return event, nil
 }
 
