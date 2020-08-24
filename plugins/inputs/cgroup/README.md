@@ -1,4 +1,4 @@
-# CGroup Input Plugin For Telegraf Agent
+# CGroup Input Plugin
 
 This input plugin will capture specific statistics per cgroup.
 
@@ -43,20 +43,30 @@ All measurements have the following tags:
 
 ### Configuration:
 
-```
+```toml
 # [[inputs.cgroup]]
   # paths = [
-  #   "/cgroup/memory",           # root cgroup
-  #   "/cgroup/memory/child1",    # container cgroup
-  #   "/cgroup/memory/child2/*",  # all children cgroups under child2, but not child2 itself
+  #   "/sys/fs/cgroup/memory",           # root cgroup
+  #   "/sys/fs/cgroup/memory/child1",    # container cgroup
+  #   "/sys/fs/cgroup/memory/child2/*",  # all children cgroups under child2, but not child2 itself
   # ]
   # files = ["memory.*usage*", "memory.limit_in_bytes"]
+```
+
+### usage examples:
+
+```toml
+# [[inputs.cgroup]]
+  # paths = [
+  #   "/sys/fs/cgroup/cpu",              # root cgroup
+  #   "/sys/fs/cgroup/cpu/*",            # all container cgroups
+  #   "/sys/fs/cgroup/cpu/*/*",          # all children cgroups under each container cgroup
+  # ]
+  # files = ["cpuacct.usage", "cpu.cfs_period_us", "cpu.cfs_quota_us"]
 
 # [[inputs.cgroup]]
   # paths = [
-  #   "/cgroup/cpu",              # root cgroup
-  #   "/cgroup/cpu/*",            # all container cgroups
-  #   "/cgroup/cpu/*/*",          # all children cgroups under each container cgroup
+  #   "/sys/fs/cgroup/unified/*",        # root cgroup
   # ]
-  # files = ["cpuacct.usage", "cpu.cfs_period_us", "cpu.cfs_quota_us"]
+  # files = ["*"]
 ```

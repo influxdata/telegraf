@@ -203,6 +203,7 @@ type CacheStats struct {
 	PagesEvictedByAppThread   int64 `bson:"pages evicted by application threads"`
 	PagesQueuedForEviction    int64 `bson:"pages queued for eviction"`
 	PagesReadIntoCache        int64 `bson:"pages read into cache"`
+	PagesWrittenFromCache     int64 `bson:"pages written from cache"`
 	PagesRequestedFromCache   int64 `bson:"pages requested from the cache"`
 	ServerEvictingPages       int64 `bson:"eviction server evicting pages"`
 	WorkerThreadEvictingPages int64 `bson:"eviction worker thread evicting pages"`
@@ -703,6 +704,7 @@ type StatLine struct {
 	PagesEvictedByAppThread   int64
 	PagesQueuedForEviction    int64
 	PagesReadIntoCache        int64
+	PagesWrittenFromCache     int64
 	PagesRequestedFromCache   int64
 	ServerEvictingPages       int64
 	WorkerThreadEvictingPages int64
@@ -1080,6 +1082,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.PagesEvictedByAppThread = newStat.WiredTiger.Cache.PagesEvictedByAppThread
 		returnVal.PagesQueuedForEviction = newStat.WiredTiger.Cache.PagesQueuedForEviction
 		returnVal.PagesReadIntoCache = newStat.WiredTiger.Cache.PagesReadIntoCache
+		returnVal.PagesWrittenFromCache = newStat.WiredTiger.Cache.PagesWrittenFromCache
 		returnVal.PagesRequestedFromCache = newStat.WiredTiger.Cache.PagesRequestedFromCache
 		returnVal.ServerEvictingPages = newStat.WiredTiger.Cache.ServerEvictingPages
 		returnVal.WorkerThreadEvictingPages = newStat.WiredTiger.Cache.WorkerThreadEvictingPages

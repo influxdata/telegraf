@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -102,9 +102,7 @@ func TestSnakeCase(t *testing.T) {
 
 func TestGather(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
-	internalDuration := internal.Duration{
-		Duration: duration,
-	}
+	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
 		Region:    "us-east-1",
 		Namespace: "AWS/ELB",
@@ -188,9 +186,7 @@ func (m *mockSelectMetricsCloudWatchClient) GetMetricData(params *cloudwatch.Get
 
 func TestSelectMetrics(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
-	internalDuration := internal.Duration{
-		Duration: duration,
-	}
+	internalDuration := config.Duration(duration)
 	c := &CloudWatch{
 		Region:    "us-east-1",
 		Namespace: "AWS/ELB",
@@ -218,7 +214,7 @@ func TestSelectMetrics(t *testing.T) {
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
 	assert.Equal(t, 12, len(filtered[0].metrics))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestGenerateStatisticsInputParams(t *testing.T) {
@@ -233,9 +229,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 	}
 
 	duration, _ := time.ParseDuration("1m")
-	internalDuration := internal.Duration{
-		Duration: duration,
-	}
+	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
 		Namespace: "AWS/ELB",
@@ -253,8 +247,8 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
-	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
-	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
+	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
+	assert.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
 	require.Len(t, params.MetricDataQueries, 5)
 	assert.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
 	assert.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
@@ -272,9 +266,7 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 	}
 
 	duration, _ := time.ParseDuration("1m")
-	internalDuration := internal.Duration{
-		Duration: duration,
-	}
+	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
 		Namespace: "AWS/ELB",
@@ -292,8 +284,8 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
 	params := c.getDataInputs(queries)
 
-	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
-	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
+	assert.EqualValues(t, *params.EndTime, now.Add(-time.Duration(c.Delay)))
+	assert.EqualValues(t, *params.StartTime, now.Add(-time.Duration(c.Period)).Add(-time.Duration(c.Delay)))
 	require.Len(t, params.MetricDataQueries, 2)
 	assert.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
 	assert.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
@@ -313,9 +305,7 @@ func TestMetricsCacheTimeout(t *testing.T) {
 
 func TestUpdateWindow(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
-	internalDuration := internal.Duration{
-		Duration: duration,
-	}
+	internalDuration := config.Duration(duration)
 
 	c := &CloudWatch{
 		Namespace: "AWS/ELB",
@@ -333,13 +323,13 @@ func TestUpdateWindow(t *testing.T) {
 	newStartTime := c.windowEnd
 
 	// initial window just has a single period
-	assert.EqualValues(t, c.windowEnd, now.Add(-c.Delay.Duration))
-	assert.EqualValues(t, c.windowStart, now.Add(-c.Delay.Duration).Add(-c.Period.Duration))
+	assert.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
+	assert.EqualValues(t, c.windowStart, now.Add(-time.Duration(c.Delay)).Add(-time.Duration(c.Period)))
 
 	now = time.Now()
 	c.updateWindow(now)
 
 	// subsequent window uses previous end time as start time
-	assert.EqualValues(t, c.windowEnd, now.Add(-c.Delay.Duration))
+	assert.EqualValues(t, c.windowEnd, now.Add(-time.Duration(c.Delay)))
 	assert.EqualValues(t, c.windowStart, newStartTime)
 }

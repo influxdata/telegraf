@@ -149,7 +149,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.runOutputs(ou)
+		err := a.runOutputs(ou)
 		if err != nil {
 			log.Printf("E! [agent] Error running outputs: %v", err)
 		}
@@ -159,7 +159,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(apu)
+			err := a.runProcessors(apu)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
@@ -168,7 +168,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runAggregators(startTime, au)
+			err := a.runAggregators(startTime, au)
 			if err != nil {
 				log.Printf("E! [agent] Error running aggregators: %v", err)
 			}
@@ -179,7 +179,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(pu)
+			err := a.runProcessors(pu)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
@@ -189,7 +189,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.runInputs(ctx, startTime, iu)
+		err := a.runInputs(ctx, startTime, iu)
 		if err != nil {
 			log.Printf("E! [agent] Error running inputs: %v", err)
 		}
@@ -222,6 +222,13 @@ func (a *Agent) initPlugins() error {
 		if err != nil {
 			return fmt.Errorf("could not initialize aggregator %s: %v",
 				aggregator.Config.Name, err)
+		}
+	}
+	for _, processor := range a.Config.AggProcessors {
+		err := processor.Init()
+		if err != nil {
+			return fmt.Errorf("could not initialize processor %s: %v",
+				processor.Config.Name, err)
 		}
 	}
 	for _, output := range a.Config.Outputs {
@@ -316,7 +323,7 @@ func (a *Agent) runInputs(
 		wg.Add(1)
 		go func(input *models.RunningInput) {
 			defer wg.Done()
-			a.gatherLoop(ctx, acc, input, ticker)
+			a.gatherLoop(ctx, acc, input, ticker, interval)
 		}(input)
 	}
 
@@ -447,13 +454,14 @@ func (a *Agent) gatherLoop(
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
 	ticker Ticker,
+	interval time.Duration,
 ) {
 	defer panicRecover(input)
 
 	for {
 		select {
 		case <-ticker.Elapsed():
-			err := a.gatherOnce(acc, input, ticker)
+			err := a.gatherOnce(acc, input, ticker, interval)
 			if err != nil {
 				acc.AddError(err)
 			}
@@ -469,18 +477,28 @@ func (a *Agent) gatherOnce(
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
 	ticker Ticker,
+	interval time.Duration,
 ) error {
 	done := make(chan error)
 	go func() {
 		done <- input.Gather(acc)
 	}()
 
+	// Only warn after interval seconds, even if the interval is started late.
+	// Intervals can start late if the previous interval went over or due to
+	// clock changes.
+	slowWarning := time.NewTicker(interval)
+	defer slowWarning.Stop()
+
 	for {
 		select {
 		case err := <-done:
 			return err
+		case <-slowWarning.C:
+			log.Printf("W! [%s] Collection took longer than expected; not complete after interval of %s",
+				input.LogName(), interval)
 		case <-ticker.Elapsed():
-			log.Printf("W! [agent] [%s] did not complete within its interval",
+			log.Printf("D! [%s] Previous collection has not completed; scheduled collection skipped",
 				input.LogName())
 		}
 	}
@@ -926,7 +944,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(apu)
+			err := a.runProcessors(apu)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
@@ -935,7 +953,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runAggregators(startTime, au)
+			err := a.runAggregators(startTime, au)
 			if err != nil {
 				log.Printf("E! [agent] Error running aggregators: %v", err)
 			}
@@ -946,7 +964,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(pu)
+			err := a.runProcessors(pu)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
@@ -956,7 +974,7 @@ func (a *Agent) test(ctx context.Context, wait time.Duration, outputC chan<- tel
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.testRunInputs(ctx, wait, iu)
+		err := a.testRunInputs(ctx, wait, iu)
 		if err != nil {
 			log.Printf("E! [agent] Error running inputs: %v", err)
 		}
@@ -1042,7 +1060,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.runOutputs(ou)
+		err := a.runOutputs(ou)
 		if err != nil {
 			log.Printf("E! [agent] Error running outputs: %v", err)
 		}
@@ -1052,7 +1070,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(apu)
+			err := a.runProcessors(apu)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
@@ -1061,7 +1079,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runAggregators(startTime, au)
+			err := a.runAggregators(startTime, au)
 			if err != nil {
 				log.Printf("E! [agent] Error running aggregators: %v", err)
 			}
@@ -1072,7 +1090,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = a.runProcessors(pu)
+			err := a.runProcessors(pu)
 			if err != nil {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
@@ -1082,7 +1100,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = a.testRunInputs(ctx, wait, iu)
+		err := a.testRunInputs(ctx, wait, iu)
 		if err != nil {
 			log.Printf("E! [agent] Error running inputs: %v", err)
 		}

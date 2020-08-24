@@ -79,7 +79,7 @@ func logName(pluginType, name, alias string) string {
 	return pluginType + "." + name + "::" + alias
 }
 
-func setLogIfExist(i interface{}, log telegraf.Logger) {
+func setLoggerOnPlugin(i interface{}, log telegraf.Logger) {
 	valI := reflect.ValueOf(i)
 
 	if valI.Type().Kind() != reflect.Ptr {

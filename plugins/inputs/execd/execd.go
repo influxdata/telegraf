@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -40,10 +41,10 @@ const sampleConfig = `
 `
 
 type Execd struct {
-	Command      []string
-	Signal       string
-	RestartDelay config.Duration
-	Log          telegraf.Logger
+	Command      []string        `toml:"command"`
+	Signal       string          `toml:"signal"`
+	RestartDelay config.Duration `toml:"restart_delay"`
+	Log          telegraf.Logger `toml:"-"`
 
 	process *process.Process
 	acc     telegraf.Accumulator
@@ -75,6 +76,13 @@ func (e *Execd) Start(acc telegraf.Accumulator) error {
 	e.process.ReadStderrFn = e.cmdReadErr
 
 	if err = e.process.Start(); err != nil {
+		// if there was only one argument, and it contained spaces, warn the user
+		// that they may have configured it wrong.
+		if len(e.Command) == 1 && strings.Contains(e.Command[0], " ") {
+			e.Log.Warn("The inputs.execd Command contained spaces but no arguments. " +
+				"This setting expects the program and arguments as an array of strings, " +
+				"not as a space-delimited string. See the plugin readme for an example.")
+		}
 		return fmt.Errorf("failed to start process %s: %w", e.Command, err)
 	}
 

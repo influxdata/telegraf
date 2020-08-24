@@ -24,6 +24,7 @@ type DiagnosticsMessageSubscriber interface {
 
 type ApplicationInsights struct {
 	InstrumentationKey      string
+	EndpointURL             string
 	Timeout                 internal.Duration
 	EnableDiagnosticLogging bool
 	ContextTagSources       map[string]string
@@ -43,6 +44,9 @@ var (
 	sampleConfig = `
   ## Instrumentation key of the Application Insights resource.
   instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+  
+  ## Regions that require endpoint modification https://docs.microsoft.com/en-us/azure/azure-monitor/app/custom-endpoints
+  # endpoint_url = "https://dc.services.visualstudio.com/v2/track"
 
   ## Timeout for closing (default: 5s).
   # timeout = "5s"
@@ -76,7 +80,7 @@ func (a *ApplicationInsights) Connect() error {
 	}
 
 	if a.transmitter == nil {
-		a.transmitter = NewTransmitter(a.InstrumentationKey)
+		a.transmitter = NewTransmitter(a.InstrumentationKey, a.EndpointURL)
 	}
 
 	if a.EnableDiagnosticLogging && a.diagMsgSubscriber != nil {
