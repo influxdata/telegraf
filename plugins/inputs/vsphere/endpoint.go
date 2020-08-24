@@ -349,7 +349,7 @@ func (e *Endpoint) getMetadata(ctx context.Context, obj *objectRef, sampling int
 }
 
 func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
-	return e.getAncestorName(ctx, client, "Datacenter", cache, r);
+	return e.getAncestorName(ctx, client, "Datacenter", cache, r)
 }
 
 func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resourceType string, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
@@ -617,7 +617,6 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 	}
 	cache := make(map[string]*types.ManagedObjectReference)
 	m := make(objectMap, len(resources))
-	e.log.Debugf("About to process %d clusters", len(resources))
 	for _, r := range resources {
 		// Wrap in a function to make defer work correctly.
 		err := func() error {
@@ -656,7 +655,6 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 			return nil, err
 		}
 	}
-	e.log.Debugf("Object map for cluster contains %d entries", len(m))
 	return m, nil
 }
 

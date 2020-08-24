@@ -453,12 +453,21 @@ func TestCollectionNoClusterMetrics(t *testing.T) {
 }
 
 func testCollection(t *testing.T, excludeClusters bool) {
+	mustHaveMetrics := map[string]struct{}{
+		"vsphere.vm.cpu":         {},
+		"vsphere.vm.mem":         {},
+		"vsphere.vm.net":         {},
+		"vsphere.host.cpu":       {},
+		"vsphere.host.mem":       {},
+		"vsphere.host.net":       {},
+		"vsphere.datastore.disk": {},
+	}
 	vCenter := os.Getenv("VCENTER_URL")
 	username := os.Getenv("VCENTER_USER")
 	password := os.Getenv("VCENTER_PASSWORD")
 	v := defaultVSphere()
 	if vCenter != "" {
-		v.Vcenters = []string { vCenter }
+		v.Vcenters = []string{vCenter}
 		v.Username = username
 		v.Password = password
 	} else {
@@ -479,7 +488,7 @@ func testCollection(t *testing.T, excludeClusters bool) {
 		v.Vcenters = []string{s.URL.String()}
 	}
 	if excludeClusters {
-		v.ClusterMetricExclude = []string {"*"}
+		v.ClusterMetricExclude = []string{"*"}
 	}
 
 	var acc testutil.Accumulator
@@ -494,6 +503,8 @@ func testCollection(t *testing.T, excludeClusters bool) {
 	require.NoError(t, err)
 	hostCache := make(map[string]string)
 	for _, m := range acc.Metrics {
+		delete(mustHaveMetrics, m.Measurement)
+
 		if strings.HasPrefix(m.Measurement, "vsphere.vm.") {
 			mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "vmname", "guest", "dcname", "uuid", "vmname"})
 			hostName := m.Tags["esxhostname"]
@@ -511,17 +522,18 @@ func testCollection(t *testing.T, excludeClusters bool) {
 				mustContainAll(t, m.Tags, []string{"clustername"})
 			}
 		} else if strings.HasPrefix(m.Measurement, "vsphere.host.") {
-			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]){ // If the host lives in a cluster
+			if isInCluster(t, v, client, cache, "HostSystem", m.Tags["moid"]) { // If the host lives in a cluster
 				mustContainAll(t, m.Tags, []string{"esxhostname", "clustername", "moid", "dcname"})
 			} else {
 				mustContainAll(t, m.Tags, []string{"esxhostname", "moid", "dcname"})
 			}
 		} else if strings.HasPrefix(m.Measurement, "vsphere.cluster.") {
-			mustContainAll(t, m.Tags, []string { "clustername", "moid", "dcname" })
+			mustContainAll(t, m.Tags, []string{"clustername", "moid", "dcname"})
 		} else {
-			mustContainAll(t, m.Tags, []string { "moid", "dcname" })
+			mustContainAll(t, m.Tags, []string{"moid", "dcname"})
 		}
 	}
+	require.Empty(t, mustHaveMetrics, "Some metrics were not found")
 }
 
 func isInCluster(t *testing.T, v *VSphere, client *Client, cache map[string]string, resourceKind, moid string) bool {
