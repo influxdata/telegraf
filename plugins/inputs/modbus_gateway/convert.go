@@ -38,12 +38,11 @@ func CreateCustomByteOrder(orderSpec string) (CustomByteOrder, error) {
 		order: orderSpecUC,
 	}
 
-	i := 0
-	for ; i < orderSpecLen; i++ {
+	for i := 0; i < orderSpecLen; i++ {
 		converter.positions[i] = int(orderSpecBytes[i] - 'A')
 	}
 
-	for ; i < 8; i++ {
+	for i := orderSpecLen; i < 8; i++ {
 		position := int(orderSpecBytes[i%orderSpecLen] - 'A')
 		block := i / orderSpecLen
 		position = position + (block * orderSpecLen)
