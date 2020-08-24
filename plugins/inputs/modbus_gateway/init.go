@@ -54,5 +54,10 @@ func (m *ModbusGateway) Init() error {
 
 		}
 	}
+
+	/* Default order is ABCD */
+	if m.Order == "" {
+		m.Order = "ABCD"
+	}
 	return nil
 }

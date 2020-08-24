@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestGrouping(t *testing.T) {
+func TestModbusGroupings(t *testing.T) {
 
 	/*
 	 * For this plugin to work, it has to be able to put together multiple

@@ -17,8 +17,10 @@ type ModbusGateway struct {
 	Name     string    `toml:"name"`
 	Gateway  string    `toml:"gateway"`
 	Requests []Request `toml:"requests"`
+	Order    string    `toml:"order"`
 
-	Timeout     internal.Duration `toml:"timeout"`
+	Timeout internal.Duration `toml:"timeout"`
+
 	tcpHandler  *mb.TCPClientHandler
 	isConnected bool
 	client      mb.Client
@@ -32,6 +34,7 @@ type Request struct {
 	Count           uint16     `toml:"count"`
 	RequestType     string     `toml:"type"`
 	MeasurementName string     `toml:"measurement"`
+	Order           string     `toml:"order"`
 	Tags            []string   `toml:"tags"`
 	Fields          []FieldDef `toml:"fields"`
 }
@@ -42,6 +45,7 @@ type FieldDef struct {
 	Scale        float64 `toml:"scale"`
 	Offset       float64 `toml:"offset"`
 	InputType    string  `toml:"type"`
+	Order        string  `toml:"order"`
 	OutputFormat string  `toml:"outfmt"`
 }
 

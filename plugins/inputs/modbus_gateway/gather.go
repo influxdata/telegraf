@@ -35,42 +35,52 @@ func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if err == nil {
-
 			reader := bytes.NewReader(resp)
 
 			for _, f := range req.Fields {
+
+				/*
+				 * Look up the byte ordering for this request, with higher level overrides
+				 */
+				var orderSpec string
+				if f.Order != "" {
+					orderSpec = f.Order
+				} else if req.Order != "" {
+					orderSpec = req.Order
+				} else if m.Order != "" {
+					orderSpec = m.Order
+				} else {
+					orderSpec = "ABCD"
+				}
+				var byteOrder binary.ByteOrder = getOrCreateByteOrder(orderSpec)
+
 				switch f.InputType {
 				case "UINT16":
 					var value uint16
-					binary.Read(reader, binary.BigEndian, &value)
+					binary.Read(reader, byteOrder, &value)
 					outputToGroup(grouper, &req, &f, int64(value), now)
 					break
 				case "INT16":
 					var value int16
-					binary.Read(reader, binary.BigEndian, &value)
+					binary.Read(reader, byteOrder, &value)
 					outputToGroup(grouper, &req, &f, int64(value), now)
 					break
 				case "UINT32":
 					var value uint32
-					binary.Read(reader, binary.BigEndian, &value)
+					binary.Read(reader, byteOrder, &value)
 					outputToGroup(grouper, &req, &f, int64(value), now)
 					break
 				case "INT32":
 					var value int32
-					binary.Read(reader, binary.BigEndian, &value)
+					binary.Read(reader, byteOrder, &value)
 					outputToGroup(grouper, &req, &f, int64(value), now)
 
 					break
-
 				}
-
 			}
-
 		} else {
-
 			m.Log.Info("Modbus Error: ", err)
 		}
-
 	}
 
 	for _, metric := range grouper.Metrics() {
