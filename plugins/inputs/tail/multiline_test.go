@@ -171,11 +171,11 @@ func TestMultiLineProcessLineNext(t *testing.T) {
 	assert.Zero(t, buffer.Len())
 }
 
-func TestMultiLineMatchStringWithNegateFalse(t *testing.T) {
+func TestMultiLineMatchStringWithInvertMatchFalse(t *testing.T) {
 	c := &MultilineConfig{
 		Pattern:        "=>$",
 		MatchWhichLine: Next,
-		Negate:         false,
+		InvertMatch:    false,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
@@ -187,11 +187,11 @@ func TestMultiLineMatchStringWithNegateFalse(t *testing.T) {
 	assert.False(t, matches2)
 }
 
-func TestMultiLineMatchStringWithNegateTrue(t *testing.T) {
+func TestMultiLineMatchStringWithInvertTrue(t *testing.T) {
 	c := &MultilineConfig{
 		Pattern:        "=>$",
 		MatchWhichLine: Next,
-		Negate:         true,
+		InvertMatch:    true,
 	}
 	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")

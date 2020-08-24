@@ -103,7 +103,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
-		Negate:         false,
+		InvertMatch:    false,
 		Timeout:        &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)
@@ -166,7 +166,7 @@ func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
-		Negate:         false,
+		InvertMatch:    false,
 		Timeout:        &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)
@@ -220,7 +220,7 @@ func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *test
 	tt.MultilineConfig = MultilineConfig{
 		Pattern:        `^[^\[]`,
 		MatchWhichLine: Previous,
-		Negate:         false,
+		InvertMatch:    false,
 		Timeout:        &internal.Duration{Duration: duration},
 	}
 	tt.SetParserFunc(createGrokParser)

@@ -127,10 +127,10 @@ const sampleConfig = `
 	## whereas "next" indicates that the line belongs to the next one.
     #match_which_line = "previous"
 
-    ## The negate field can be true or false (defaults to false). 
+    ## The invert_match field can be true or false (defaults to false). 
     ## If true, a message not matching the pattern will constitute a match of the multiline 
 	## filter and the what will be applied. (vice-versa is also true)
-    #negate = false
+    #invert_match = false
 
     ## After the specified timeout, this plugin sends a multiline event even if no new pattern
 	## is found to start a new event. The default timeout is 5s.
@@ -325,9 +325,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	}
 
 	channelOpen := true
+	var line *tail.Line
 
 	for {
-		var line *tail.Line
+		line = nil
 
 		if timer != nil {
 			timer.Reset(t.MultilineConfig.Timeout.Duration)
@@ -378,8 +379,10 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 			metric.AddTag("path", tailer.Filename)
 		}
 
-		// Block until room is available to add metrics.
+		// Block until plugin is stopping or room is available to add metrics.
 		select {
+		case <-t.ctx.Done():
+			return
 		case t.sem <- empty{}:
 			t.acc.AddTrackingMetricGroup(metrics)
 		}

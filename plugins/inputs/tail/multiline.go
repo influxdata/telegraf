@@ -22,7 +22,7 @@ type Multiline struct {
 type MultilineConfig struct {
 	Pattern        string
 	MatchWhichLine MultilineMatchWhichLine `toml:"match_which_line"`
-	Negate         bool
+	InvertMatch    bool
 	Timeout        *internal.Duration
 }
 
@@ -91,7 +91,7 @@ func (m *Multiline) Flush(buffer *bytes.Buffer) string {
 }
 
 func (m *Multiline) matchString(text string) bool {
-	return m.patternRegexp.MatchString(text) != m.config.Negate
+	return m.patternRegexp.MatchString(text) != m.config.InvertMatch
 }
 
 func (w MultilineMatchWhichLine) String() string {
@@ -113,19 +113,11 @@ func (w *MultilineMatchWhichLine) UnmarshalTOML(data []byte) (err error) {
 func (w *MultilineMatchWhichLine) UnmarshalText(data []byte) (err error) {
 	s := string(data)
 	switch strings.ToUpper(s) {
-	case `PREVIOUS`:
-		fallthrough
-	case `"PREVIOUS"`:
-		fallthrough
-	case `'PREVIOUS'`:
+	case `PREVIOUS`, `"PREVIOUS"`, `'PREVIOUS'`:
 		*w = Previous
 		return
 
-	case `NEXT`:
-		fallthrough
-	case `"NEXT"`:
-		fallthrough
-	case `'NEXT'`:
+	case `NEXT`, `"NEXT"`, `'NEXT'`:
 		*w = Next
 		return
 	}
