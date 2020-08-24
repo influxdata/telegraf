@@ -844,7 +844,6 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 	if e.Parent.ObjectDiscoveryInterval.Duration == 0 {
 		err := e.discover(ctx)
 		if err != nil {
-			acc.AddError(err)
 			return err
 		}
 	}
