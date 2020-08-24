@@ -65,7 +65,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"Telegraf Client Self-Signed"},
+			Organization: []string{"Gopcua Test Client"},
 		},
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
@@ -153,12 +153,10 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 	opts := []opcua.Option{}
 	appuri := "urn:gopcua:client"
 
-	opts = append(opts, opcua.ApplicationURI(appuri))
-	opts = append(opts, opcua.ApplicationName("Telegraf"))
-	// opts = append(opts, opcua.ProductURI("urn:telegraf:client"))
-	// opts = append(opts, opcua.Lifetime(time.Hour*1))
-	// opts = append(opts, opcua.SessionName("telegraf-opcua"))
-	log.Printf("opts appuri: %d", len(opts))
+	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
+	if certFile == "" {
+		opts = append(opts, opcua.ApplicationURI(appuri))
+	}
 
 	if certFile == "" && keyFile == "" {
 		if policy != "None" || mode != "None" {
@@ -179,7 +177,6 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 			}
 			cert = c.Certificate[0]
 			opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
-			log.Printf("opts cert: %d", len(opts))
 		}
 	}
 
@@ -200,7 +197,6 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 	// Select the most appropriate authentication mode from server capabilities and user input
 	authMode, authOption := generateAuth(auth, cert, username, password)
 	opts = append(opts, authOption)
-	log.Printf("opts authOption: %d", len(opts))
 
 	var secMode ua.MessageSecurityMode
 	switch strings.ToLower(mode) {
@@ -272,9 +268,8 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 	}
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
-	log.Printf("opts security: %d", len(opts))
 
-	log.Printf("Using config:\nEndpoint: %s\nSecurity mode: %s, %s\nAuth mode: %s\n", serverEndpoint.EndpointURL, serverEndpoint.SecurityPolicyURI, serverEndpoint.SecurityMode, authMode)
+	log.Printf("Using config:\nEndpoint: %s\nSecurity mode: %s, %s\nAuth mode : %s\n", serverEndpoint.EndpointURL, serverEndpoint.SecurityPolicyURI, serverEndpoint.SecurityMode, authMode)
 	return opts
 }
 

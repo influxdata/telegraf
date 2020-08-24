@@ -291,8 +291,6 @@ func Connect(o *OpcUA) error {
 
 		o.setupOptions()
 
-		log.Printf("opts: \n%d", len(o.opts))
-
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
 		if err := o.client.Connect(o.ctx); err != nil {
 			return fmt.Errorf("Error in Client Connection: %s", err)
