@@ -366,7 +366,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 			setResult("response_string_mismatch", fields, tags)
 			fields["response_string_match"] = 0
 		}
-	} else if h.ResponseStatusCodeMatch >= http.StatusContinue && h.ResponseStatusCodeMatch <= http.StatusNetworkAuthenticationRequired {
+	} else if h.ResponseStatusCodeMatch > 0 {
 		if resp.StatusCode == h.ResponseStatusCodeMatch {
 			setResult("success", fields, tags)
 			fields["response_status_code_match"] = 1
