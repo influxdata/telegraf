@@ -231,14 +231,14 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				for i, t := range xprttcpFields {
 					fields[t] = nline[i+2]
 				}
-				acc.AddFields("nfs_xprttcp", fields, tags)
+				acc.AddFields("nfs_xprt_tcp", fields, tags)
 			}
 		case "udp":
 			if len(nline)+2 >= len(xprtudpFields) {
 				for i, t := range xprtudpFields {
 					fields[t] = nline[i+2]
 				}
-				acc.AddFields("nfs_xprtudp", fields, tags)
+				acc.AddFields("nfs_xprt_udp", fields, tags)
 			}
 		}
 	} else if version == "3" || version == "4" {
