@@ -69,7 +69,7 @@ func _assert(t *testing.T, order *CustomByteOrder, err error, success bool, expe
 		t.Errorf("Test %s (%s) expected 0x%08X, got 0x%08X", order.order, reflect.TypeOf(expected), expected, got)
 		t.Logf("  order should have been %v", order.positions)
 	} else {
-		t.Logf("Test %s (%s) PASSED", order.order, reflect.TypeOf(expected))
+		//t.Logf("Test %s (%s) PASSED", order.order, reflect.TypeOf(expected))
 	}
 
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/prometheus/common/log"
 	"math"
+	"reflect"
 	"time"
 )
 
@@ -135,7 +136,7 @@ func scale(f *FieldDef, value interface{}) interface{} {
 			return nil
 		}
 
-	case "INT", "INT64":
+	case "INT", "INT32", "INT64":
 		switch v := value.(type) {
 		case int:
 			return int64(math.Round((float64(v) * f.Scale) + f.Offset))
@@ -151,7 +152,7 @@ func scale(f *FieldDef, value interface{}) interface{} {
 			return nil
 		}
 
-	case "UINT", "UINT64":
+	case "UINT", "UINT32", "UINT64":
 		switch v := value.(type) {
 		case int:
 			return uint64(math.Round((float64(v) * f.Scale) + f.Offset))
@@ -168,7 +169,7 @@ func scale(f *FieldDef, value interface{}) interface{} {
 		}
 
 	default:
-		log.Warn("Invalid output format")
+		log.Warnf("Invalid output format %s", reflect.TypeOf(value))
 		return nil
 	}
 }

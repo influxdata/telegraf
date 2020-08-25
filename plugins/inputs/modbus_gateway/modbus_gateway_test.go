@@ -16,30 +16,35 @@ func TestModbusGroupings(t *testing.T) {
 	g := metric.NewSeriesGrouper()
 
 	tm := time.Now()
-	r := Request{}
+
 	f1 := FieldDef{
 		Name:         "f1",
 		Scale:        1.0,
 		Offset:       0.0,
-		OutputFormat: "INT64",
+		OutputFormat: "UINT32",
 		Omit:         false,
 	}
 	f2 := FieldDef{
 		Name:         "f2",
 		Scale:        1.0,
 		Offset:       0.0,
-		OutputFormat: "FLOAT",
+		OutputFormat: "UINT32",
 		Omit:         false,
 	}
 
-	outputToGroup(g, &r, &f1, 1, tm)
-	outputToGroup(g, &r, &f2, 1, tm)
+	e := g.Add("m", nil, tm, f1.Name, scale(&f1, uint32(1)))
+	if e != nil {
+		t.Errorf("Could not add field %s", f1.Name)
+	}
+
+	e = g.Add("m", nil, tm, f2.Name, scale(&f2, uint32(1)))
+	if e != nil {
+		t.Errorf("Could not add field %s", f2.Name)
+	}
 
 	if len(g.Metrics()) != 1 {
 		t.Errorf("Grouping failed - should have generated 1 metric, but generated %d\n", len(g.Metrics()))
 	}
-
-	t.Logf("Metrics: %++v", g.Metrics())
 
 	firstMetric := g.Metrics()[0]
 
@@ -49,7 +54,7 @@ func TestModbusGroupings(t *testing.T) {
 		return
 	}
 
-	_, ok = rf1.(int64)
+	_, ok = rf1.(uint64)
 	if !ok {
 		t.Errorf("Metric did not match field type specificier, type was %s", reflect.TypeOf(rf1))
 	}
@@ -60,7 +65,7 @@ func TestModbusGroupings(t *testing.T) {
 		return
 	}
 
-	_, ok = rf2.(float64)
+	_, ok = rf2.(uint64)
 	if !ok {
 		t.Errorf("Metric did not match field type specificier, type was %s", reflect.TypeOf(rf1))
 	}
