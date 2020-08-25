@@ -65,7 +65,7 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"Gopcua Test Client"},
+			Organization: []string{"Telegraf OPC UA client"},
 		},
 		NotBefore: notBefore,
 		NotAfter:  notAfter,
@@ -102,7 +102,6 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	if err := certOut.Close(); err != nil {
 		log.Fatalf("error closing %s: %s", certFile, err)
 	}
-	log.Printf("wrote %s\n", certFile)
 
 	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -115,7 +114,6 @@ func generateCert(host string, rsaBits int, certFile, keyFile string, dur time.D
 	if err := keyOut.Close(); err != nil {
 		log.Fatalf("error closing %s: %s", keyFile, err)
 	}
-	log.Printf("wrote %s\n", keyFile)
 
 	return certFile, keyFile
 }
@@ -151,12 +149,12 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 
 func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, policy, mode, auth, username, password string) []opcua.Option {
 	opts := []opcua.Option{}
-	appuri := "urn:gopcua:client"
+	appuri := "urn:telegraf:gopcua:client"
+	appname := "Telegraf"
 
 	// ApplicationURI is automatically read from the cert so is not required if a cert if provided
-	if certFile == "" {
-		opts = append(opts, opcua.ApplicationURI(appuri))
-	}
+	opts = append(opts, opcua.ApplicationURI(appuri))
+	opts = append(opts, opcua.ApplicationName(appname))
 
 	if certFile == "" && keyFile == "" {
 		if policy != "None" || mode != "None" {
@@ -245,7 +243,6 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 		}
 
 	default: // User cares about both
-		fmt.Println("secMode: ", secMode, "secPolicy:", secPolicy)
 		for _, e := range endpoints {
 			if e.SecurityPolicyURI == secPolicy && e.SecurityMode == secMode && (serverEndpoint == nil || e.SecurityLevel >= serverEndpoint.SecurityLevel) {
 				serverEndpoint = e
@@ -268,8 +265,6 @@ func generateClientOpts(endpoints []*ua.EndpointDescription, certFile, keyFile, 
 	}
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
-
-	log.Printf("Using config:\nEndpoint: %s\nSecurity mode: %s, %s\nAuth mode : %s\n", serverEndpoint.EndpointURL, serverEndpoint.SecurityPolicyURI, serverEndpoint.SecurityMode, authMode)
 	return opts
 }
 

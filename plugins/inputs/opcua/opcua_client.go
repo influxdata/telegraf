@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gopcua/opcua"
@@ -168,6 +169,9 @@ func (o *OpcUA) Init() error {
 		return err
 	}
 	o.NumberOfTags = len(o.NodeList)
+
+	o.setupOptions()
+
 	return nil
 
 }
@@ -289,8 +293,6 @@ func Connect(o *OpcUA) error {
 			o.client.CloseSession()
 		}
 
-		o.setupOptions()
-
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
 		if err := o.client.Connect(o.ctx); err != nil {
 			return fmt.Errorf("Error in Client Connection: %s", err)
@@ -330,7 +332,7 @@ func (o *OpcUA) setupOptions() error {
 
 	if o.Certificate == "" && o.PrivateKey == "" {
 		if o.SecurityPolicy != "None" || o.SecurityMode != "None" {
-			o.Certificate, o.PrivateKey = generateCert("urn:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
+			o.Certificate, o.PrivateKey = generateCert("urn:telegraf:gopcua:client", 2048, o.Certificate, o.PrivateKey, (365 * 24 * time.Hour))
 		}
 	}
 
@@ -413,10 +415,11 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 		fields := make(map[string]interface{})
 		tags := map[string]string{
 			"name": n.Name,
-			"type": n.DataType,
+			"id":   BuildNodeID(n),
 		}
 
 		fields[o.NodeData[i].TagName] = o.NodeData[i].Value
+		fields["Quality"] = strings.TrimSpace(fmt.Sprint(o.NodeData[i].Quality))
 		acc.AddFields(o.Name, fields, tags)
 	}
 	return nil
