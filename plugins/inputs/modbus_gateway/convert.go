@@ -12,13 +12,12 @@
 package modbus_gateway
 
 import (
-	"encoding/binary"
 	"strings"
 )
 
-var byteOrderCache map[string]binary.ByteOrder
+var byteOrderCache map[string]*CustomByteOrder = make(map[string]*CustomByteOrder)
 
-func getOrCreateByteOrder(orderSpec string) binary.ByteOrder {
+func getOrCreateByteOrder(orderSpec string) *CustomByteOrder {
 	key := strings.ToUpper(orderSpec)
 	if byteOrderCache[key] != nil {
 		return byteOrderCache[key]
@@ -29,12 +28,12 @@ func getOrCreateByteOrder(orderSpec string) binary.ByteOrder {
 	}
 }
 
-func CreateCustomByteOrder(orderSpec string) (CustomByteOrder, error) {
+func CreateCustomByteOrder(orderSpec string) (*CustomByteOrder, error) {
 	orderSpecUC := strings.ToUpper(orderSpec)
 	orderSpecLen := len(orderSpecUC)
 	orderSpecBytes := []byte(orderSpecUC)
 
-	converter := CustomByteOrder{
+	converter := &CustomByteOrder{
 		order: orderSpecUC,
 	}
 
@@ -58,20 +57,20 @@ type CustomByteOrder struct {
 	positions [8]int
 }
 
-func (o CustomByteOrder) Uint16(b []byte) uint16 {
+func (o *CustomByteOrder) Uint16(b []byte) uint16 {
 	_ = b[1] // bounds check hint to compiler; see golang.org/issue/14808
 	const mod = 2
 	return uint16(b[o.positions[1]%mod]) | uint16(b[o.positions[0]%mod])<<8
 }
 
-func (o CustomByteOrder) PutUint16(b []byte, v uint16) {
+func (o *CustomByteOrder) PutUint16(b []byte, v uint16) {
 	_ = b[1] // early bounds check to guarantee safety of writes below
 	const mod = 2
 	b[o.positions[0]%mod] = byte(v >> 8)
 	b[o.positions[1]%mod] = byte(v)
 }
 
-func (o CustomByteOrder) Uint32(b []byte) uint32 {
+func (o *CustomByteOrder) Uint32(b []byte) uint32 {
 	_ = b[3] // bounds check hint to compiler; see golang.org/issue/14808
 	const mod = 4
 	return uint32(b[o.positions[0]%mod])<<24 |
@@ -80,7 +79,7 @@ func (o CustomByteOrder) Uint32(b []byte) uint32 {
 		uint32(b[o.positions[3]%mod])<<0
 }
 
-func (o CustomByteOrder) PutUint32(b []byte, v uint32) {
+func (o *CustomByteOrder) PutUint32(b []byte, v uint32) {
 	_ = b[3] // early bounds check to guarantee safety of writes below
 	const mod = 4
 	b[0] = byte(v >> 24)
@@ -89,7 +88,7 @@ func (o CustomByteOrder) PutUint32(b []byte, v uint32) {
 	b[3] = byte(v >> 0)
 }
 
-func (o CustomByteOrder) Uint64(b []byte) uint64 {
+func (o *CustomByteOrder) Uint64(b []byte) uint64 {
 	_ = b[7] // bounds check hint to compiler; see golang.org/issue/14808
 	return uint64(b[o.positions[7]]) |
 		uint64(b[o.positions[6]])<<8 |
@@ -101,7 +100,7 @@ func (o CustomByteOrder) Uint64(b []byte) uint64 {
 		uint64(b[o.positions[0]])<<56
 }
 
-func (o CustomByteOrder) PutUint64(b []byte, v uint64) {
+func (o *CustomByteOrder) PutUint64(b []byte, v uint64) {
 	_ = b[7] // early bounds check to guarantee safety of writes below
 	b[0] = byte(v >> 56)
 	b[1] = byte(v >> 48)
@@ -113,4 +112,4 @@ func (o CustomByteOrder) PutUint64(b []byte, v uint64) {
 	b[7] = byte(v)
 }
 
-func (o CustomByteOrder) String() string { return "CustomByteOrder" + o.order }
+func (o *CustomByteOrder) String() string { return "CustomByteOrder" + o.order }
