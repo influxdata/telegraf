@@ -62,7 +62,7 @@ func TestModbusConvertFormats(t *testing.T) {
 	}
 }
 
-func _assert(t *testing.T, order CustomByteOrder, err error, success bool, expected interface{}, got interface{}) {
+func _assert(t *testing.T, order *CustomByteOrder, err error, success bool, expected interface{}, got interface{}) {
 	if err != nil {
 		t.Errorf("Test %s (%s) Error reading from stream: %s", order.order, reflect.TypeOf(expected), err)
 	} else if !success {
