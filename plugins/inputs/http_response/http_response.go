@@ -38,11 +38,12 @@ type HTTPResponse struct {
 	Headers         map[string]string
 	FollowRedirects bool
 	// Absolute path to file with Bearer token
-	BearerToken         string        `toml:"bearer_token"`
-	ResponseBodyField   string        `toml:"response_body_field"`
-	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
-	ResponseStringMatch string
-	Interface           string
+	BearerToken             string        `toml:"bearer_token"`
+	ResponseBodyField       string        `toml:"response_body_field"`
+	ResponseBodyMaxSize     internal.Size `toml:"response_body_max_size"`
+	ResponseStringMatch     string
+	ResponseStatusCodeMatch int
+	Interface               string
 	// HTTP Basic Auth Credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
@@ -105,6 +106,9 @@ var sampleConfig = `
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
+
+  ## Optional status code match of the response
+  # response_status_code_match = 204
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -208,12 +212,13 @@ func localAddress(interfaceName string) (net.Addr, error) {
 
 func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
 	result_codes := map[string]int{
-		"success":                  0,
-		"response_string_mismatch": 1,
-		"body_read_error":          2,
-		"connection_failed":        3,
-		"timeout":                  4,
-		"dns_error":                5,
+		"success":                       0,
+		"response_string_mismatch":      1,
+		"body_read_error":               2,
+		"connection_failed":             3,
+		"timeout":                       4,
+		"dns_error":                     5,
+		"response_status_code_mismatch": 6,
 	}
 
 	tags["result"] = result_string
@@ -352,7 +357,7 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	}
 	fields["content_length"] = len(bodyBytes)
 
-	// Check the response for a regex match.
+	// Check the response for a regex or status code match.
 	if h.ResponseStringMatch != "" {
 		if h.compiledStringMatch.Match(bodyBytes) {
 			setResult("success", fields, tags)
@@ -360,6 +365,14 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 		} else {
 			setResult("response_string_mismatch", fields, tags)
 			fields["response_string_match"] = 0
+		}
+	} else if h.ResponseStatusCodeMatch >= http.StatusContinue && h.ResponseStatusCodeMatch <= http.StatusNetworkAuthenticationRequired {
+		if resp.StatusCode == h.ResponseStatusCodeMatch {
+			setResult("success", fields, tags)
+			fields["response_status_code_match"] = 1
+		} else {
+			setResult("response_status_code_mismatch", fields, tags)
+			fields["response_status_code_match"] = 0
 		}
 	} else {
 		setResult("success", fields, tags)
