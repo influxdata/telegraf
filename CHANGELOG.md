@@ -1,9 +1,71 @@
-## v1.15 [unreleased]
+## v1.16.0 [unreleased]
+
+#### Release Notes
+
+  - Many documentation updates
+  - New [code examples](https://github.com/influxdata/telegraf/tree/master/plugins/processors/starlark/testdata) for the [Starlark processor](https://github.com/influxdata/telegraf/blob/master/plugins/processors/starlark/README.md)
+  - [#7837](https://github.com/influxdata/telegraf/pull/7837) `build` update Go versions: 1.14.5, 1.13.13
+  - [#7920](https://github.com/influxdata/telegraf/pull/7920) `inputs.rabbitmq` remove deprecated healthcheck
+
+#### Features
+
+  - [#7814](https://github.com/influxdata/telegraf/pull/7814) `agent` Send metrics in FIFO order
+  - [#7869](https://github.com/influxdata/telegraf/pull/7869) `inputs.modbus` extend support of fixed point values on input
+  - [#7870](https://github.com/influxdata/telegraf/pull/7870) `inputs.mongodb` Added new metric "pages written from cache"
+  - [#7808](https://github.com/influxdata/telegraf/pull/7808) `inputs.sqlserver` added new counter - Lock Timeouts (timeout > 0)/sec
+  - [#7904](https://github.com/influxdata/telegraf/pull/7904) `inputs.clickhouse` add additional metrics to clickhouse input plugin
+  - [#7986](https://github.com/influxdata/telegraf/pull/7986) `inputs.http_listener_v2` make http header tags case insensitive
+
+#### Bugfixes
+
+  - [#7819](https://github.com/influxdata/telegraf/pull/7819) `inputs.tail` Close file to ensure it has been flushed
+  - [#7818](https://github.com/influxdata/telegraf/pull/7818) `build` Fix darwin package build flags
+  - [#7816](https://github.com/influxdata/telegraf/pull/7816) `shim` fix bug with loading plugins in shim with no config
+  - [#7867](https://github.com/influxdata/telegraf/pull/7867) `agent` fix issue with execd restart_delay being ignored
+  - [#7908](https://github.com/influxdata/telegraf/pull/7908) `outputs.opentsdb` now skips NaN and Inf JSON values
+
+#### New Input Plugins
+
+- [proxmox](https://github.com/influxdata/telegraf/blob/master/plugins/inputs/proxmox/README.md) - Contributed by @effitient
+
+#### New Output Plugins
+
+- [dynatrace](https://github.com/influxdata/telegraf/blob/master/plugins/outputs/dynatrace/README.md) - Contributed by @thschue
+
+<!--
+#### New Processor Plugins
+#### New Aggregator Plugins
+-->
+
+#### New External Plugins
+
+  See [EXTERNAL_PLUGINS.md](https://github.com/influxdata/telegraf/blob/master/EXTERNAL_PLUGINS.md) for a full list of external plugins
+
+  - [awsalarms](https://github.com/vipinvkmenon/awsalarms) - Simple plugin to gather/monitor alarms generated  in AWS.
+  - [youtube-telegraf-plugin](https://github.com/inabagumi/youtube-telegraf-plugin) - Gather view and subscriber stats from your youtube videos
+
+## v1.15.2 [2020-07-31]
+
+#### Bugfixes
+
+- [#7905](https://github.com/influxdata/telegraf/issues/7905): Fix RPM /var/log/telegraf permissions
+- [#7880](https://github.com/influxdata/telegraf/issues/7880): Fix tail following on EOF
+
+## v1.15.1 [2020-07-22]
+
+#### Bugfixes
+
+- [#7877](https://github.com/influxdata/telegraf/pull/7877): Fix architecture in non-amd64 deb and rpm packages.
+
+## v1.15.0 [2020-07-22]
 
 #### Release Notes
 
 - The `logparser` input is deprecated, use the `tail` input with `data_format =
   "grok"` as a replacement.
+
+- The `cisco_telemetry_gnmi` input has been renamed to `gnmi` to better reflect
+  its general support for gNMI devices.
 
 - Several fields used primarily for debugging have been removed from the
   `splunkmetric` serializer, if you are making use of these fields they can be
@@ -12,21 +74,32 @@
 - Telegraf's `--test` mode now runs processors and aggregators before printing
   metrics.
 
-- Official packages now built with Go 1.14.3.
+- Official packages now built with Go 1.14.5.
+
+- When updating the Debian package you will no longer be prompted to merge the
+  telegraf.conf file, instead the new version will be installed to
+  `/etc/telegraf/telegraf.conf.sample`.  The tar and zip packages now include
+  the version in the top level directory.
 
 #### New Inputs
 
+- [nginx_sts](/plugins/inputs/nginx_sts/README.md) - Contributed by @zdmytriv
 - [redfish](/plugins/inputs/redfish/README.md) - Contributed by @sarvanikonda
 
 #### New Processors
 
 - [defaults](/plugins/processors/defaults/README.md) - Contributed by @jregistr
+- [execd](/plugins/processors/execd/README.md) - Contributed by @influxdata
 - [filepath](/plugins/processors/filepath/README.md) - Contributed by @kir4h
+- [ifname](/plugins/processors/ifname/README.md) - Contributed by @influxdata
+- [port_name](/plugins/processors/port_name/README.md) - Contributed by @influxdata
+- [reverse_dns](/plugins/processors/reverse_dns/README.md) - Contributed by @influxdata
 - [starlark](/plugins/processors/starlark/README.md) - Contributed by @influxdata
 
 #### New Outputs
 
 - [newrelic](/plugins/outputs/newrelic/README.md) - Contributed by @hsinghkalsi
+- [execd](/plugins/outputs/execd/README.md) - Contributed by @influxdata
 
 #### Features
 
@@ -69,6 +142,12 @@
 - [#7267](https://github.com/influxdata/telegraf/pull/7267): Add ability to add selectors as tags in kube_inventory.
 - [#7712](https://github.com/influxdata/telegraf/pull/7712): Add counter type to sqlserver perfmon collector.
 - [#7575](https://github.com/influxdata/telegraf/pull/7575): Add missing nvme attributes to smart plugin.
+- [#7726](https://github.com/influxdata/telegraf/pull/7726): Add laundry to mem plugin on FreeBSD.
+- [#7762](https://github.com/influxdata/telegraf/pull/7762): Allow per input overriding of collection_jitter and precision.
+- [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve performance of procstat: Up to 40/120x better performance.
+- [#7677](https://github.com/influxdata/telegraf/pull/7677): Expand execd shim support for processor and outputs.
+- [#7154](https://github.com/influxdata/telegraf/pull/7154): Add v3 metadata support to ecs input.
+- [#7792](https://github.com/influxdata/telegraf/pull/7792): Support utf-16 in file and tail inputs.
 
 #### Bugfixes
 
@@ -83,14 +162,21 @@
 - [#6807](https://github.com/influxdata/telegraf/issues/6807): Fix memory leak when using procstat on Windows.
 - [#7495](https://github.com/influxdata/telegraf/issues/7495): Improve sqlserver input compatibility with older server versions.
 - [#7558](https://github.com/influxdata/telegraf/issues/7558): Remove trailing backslash from tag keys/values in influx serializer.
+- [#7715](https://github.com/influxdata/telegraf/issues/7715): Fix incorrect Azure SQL DB server properties.
+- [#7431](https://github.com/influxdata/telegraf/issues/7431): Fix json unmarshal error in the kibana input.
+- [#5633](https://github.com/influxdata/telegraf/issues/5633): Send metrics in FIFO order.
 
-## v1.14.5 [unreleased]
+## v1.14.5 [2020-06-30]
 
 #### Bugfixes
 
 - [#7686](https://github.com/influxdata/telegraf/pull/7686): Improve the performance of the procstat input.
 - [#7658](https://github.com/influxdata/telegraf/pull/7658): Fix ping exit code handling on non-Linux.
 - [#7718](https://github.com/influxdata/telegraf/pull/7718): Skip overs errors in the output of the sensors command.
+- [#7748](https://github.com/influxdata/telegraf/issues/7748): Prevent startup when tags have incorrect type in configuration file.
+- [#7699](https://github.com/influxdata/telegraf/issues/7699): Fix panic with GJSON multiselect query in json parser.
+- [#7754](https://github.com/influxdata/telegraf/issues/7754): Allow any key usage type on x509 certificate.
+- [#7705](https://github.com/influxdata/telegraf/issues/7705): Allow histograms and summary types without buckets or quantiles in prometheus_client output.
 
 ## v1.14.4 [2020-06-09]
 

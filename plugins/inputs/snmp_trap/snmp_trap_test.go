@@ -1287,6 +1287,8 @@ func TestReceiveTrap(t *testing.T) {
 				PrivPassword: tt.privPass,
 			}
 			require.Nil(t, s.Init())
+			// Don't look up oid with snmptranslate.
+			s.execCmd = fakeExecCmd
 			var acc testutil.Accumulator
 			require.Nil(t, s.Start(&acc))
 			defer s.Stop()
@@ -1296,9 +1298,6 @@ func TestReceiveTrap(t *testing.T) {
 			for _, entry := range tt.entries {
 				s.load(entry.oid, entry.e)
 			}
-
-			// Don't look up oid with snmptranslate.
-			s.execCmd = fakeExecCmd
 
 			// Send the trap
 			sendTrap(t, port, now, tt.trap, tt.version, tt.secLevel, tt.secName, tt.authProto, tt.authPass, tt.privProto, tt.privPass, tt.contextName, tt.engineID)

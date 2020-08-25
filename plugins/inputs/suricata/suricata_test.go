@@ -74,14 +74,6 @@ func TestSuricata(t *testing.T) {
 
 	acc.Wait(1)
 
-	s = Suricata{
-		Source:    tmpfn,
-		Delimiter: ".",
-		Log: testutil.Logger{
-			Name: "inputs.suricata",
-		},
-	}
-
 	expected := []telegraf.Metric{
 		testutil.MustMetric(
 			"suricata",

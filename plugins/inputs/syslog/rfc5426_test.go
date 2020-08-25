@@ -235,14 +235,10 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 			require.NoError(t, receiver.Start(acc))
 			defer receiver.Stop()
 
-			// Clear
-			acc.ClearMetrics()
-			acc.Errors = make([]error, 0)
-
 			// Connect
 			conn, err := net.Dial(protocol, address)
 			require.NotNil(t, conn)
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			// Write
 			_, err = conn.Write(tc.data)
@@ -330,7 +326,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 	conn, err := net.Dial("udp", address)
 	require.NotNil(t, conn)
 	defer conn.Close()
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Write
 	_, e := conn.Write([]byte("<1>1 - - - - - -"))

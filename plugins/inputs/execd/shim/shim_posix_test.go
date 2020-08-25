@@ -23,12 +23,9 @@ func TestShimUSR1SignalingWorks(t *testing.T) {
 	stdinReader, stdinWriter := io.Pipe()
 	stdoutReader, stdoutWriter := io.Pipe()
 
-	stdin = stdinReader
-	stdout = stdoutWriter
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	metricProcessed, exited := runInputPlugin(t, 20*time.Minute)
+	metricProcessed, exited := runInputPlugin(t, 20*time.Minute, stdinReader, stdoutWriter, nil)
 
 	// signal USR1 to yourself.
 	pid := os.Getpid()

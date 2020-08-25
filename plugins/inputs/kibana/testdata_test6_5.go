@@ -166,7 +166,7 @@ const kibanaStatusResponse6_5 = `
       				},
       			"event_loop_delay": 0.5314235687255859,
       			"pid": 6,
-      			"uptime_in_millis": 2173595336
+      			"uptime_in_millis": 2173595336.9999999998
     		},
     		"os": {
       			"load": {
@@ -219,7 +219,7 @@ var kibanaStatusExpected6_5 = map[string]interface{}{
 	"heap_total_bytes":       int64(149954560),
 	"heap_max_bytes":         int64(149954560),
 	"heap_used_bytes":        int64(126274392),
-	"uptime_ms":              int64(2173595336),
+	"uptime_ms":              int64(2173595337),
 	"response_time_avg_ms":   float64(12.5),
 	"response_time_max_ms":   int64(123),
 	"concurrent_connections": int64(10),

@@ -16,7 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -101,7 +101,7 @@ var sampleConfig = `
   ## If the response body size exceeds this limit a "body_read_error" will be raised
   # response_body_max_size = "32MiB"
 
-  ## Optional substring or regex match in body of the response
+  ## Optional substring or regex match in body of the response (case sensitive)
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
