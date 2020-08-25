@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers/avro"
