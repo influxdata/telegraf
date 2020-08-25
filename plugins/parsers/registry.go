@@ -152,12 +152,12 @@ type Config struct {
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
 	// avro configuration
-	AVROSchemaRegistry  string   `toml:"arvo_schema_registry"`
-	AVROMeasurement     string   `toml:"arvo_measurement"`
-	AVROTags            []string `toml:"arvo_tags"`
-	AVROFields          []string `toml:"arvo_fields"`
-	AVROTimestamp       string   `toml:"arvo_timestamp"`
-	AVROTimestampFormat string   `toml:"arvo_timestamp_format"`
+	AVROSchemaRegistry  string   `toml:"avro_schema_registry"`
+	AVROMeasurement     string   `toml:"avro_measurement"`
+	AVROTags            []string `toml:"avro_tags"`
+	AVROFields          []string `toml:"avro_fields"`
+	AVROTimestamp       string   `toml:"avro_timestamp"`
+	AVROTimestampFormat string   `toml:"avro_timestamp_format"`
 }
 
 // NewParser returns a Parser interface based on the given config.
