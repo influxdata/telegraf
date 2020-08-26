@@ -348,7 +348,11 @@ func (e *Endpoint) getMetadata(ctx context.Context, obj *objectRef, sampling int
 	return metrics, nil
 }
 
-func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache map[string]string, r types.ManagedObjectReference) string {
+func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
+	return e.getAncestorName(ctx, client, "Datacenter", cache, r)
+}
+
+func (e *Endpoint) getAncestorName(ctx context.Context, client *Client, resourceType string, cache map[string]string, r types.ManagedObjectReference) (string, bool) {
 	path := make([]string, 0)
 	returnVal := ""
 	here := r
@@ -370,7 +374,7 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 				e.Parent.Log.Warnf("Error while resolving parent. Assuming no parent exists. Error: %s", err.Error())
 				return true
 			}
-			if result.Reference().Type == "Datacenter" {
+			if result.Reference().Type == resourceType {
 				// Populate cache for the entire chain of objects leading here.
 				returnVal = result.Name
 				return true
@@ -386,7 +390,7 @@ func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache 
 	for _, s := range path {
 		cache[s] = returnVal
 	}
-	return returnVal
+	return returnVal, returnVal != ""
 }
 
 func (e *Endpoint) discover(ctx context.Context) error {
@@ -436,7 +440,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			if res.name != "Datacenter" {
 				for k, obj := range objects {
 					if obj.parentRef != nil {
-						obj.dcname = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
+						obj.dcname, _ = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
 						objects[k] = obj
 					}
 				}
@@ -449,11 +453,11 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				} else {
 					e.complexMetadataSelect(ctx, res, objects)
 				}
-				newObjects[k] = objects
-
-				SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
-				numRes += int64(len(objects))
 			}
+			newObjects[k] = objects
+
+			SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
+			numRes += int64(len(objects))
 		}
 		if err != nil {
 			e.log.Error(err)
@@ -638,6 +642,12 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 					p = &pp
 					cache[r.Parent.Value] = p
 				}
+			}
+			m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
+				name:         r.Name,
+				ref:          r.ExtensibleManagedObject.Reference(),
+				parentRef:    p,
+				customValues: e.loadCustomAttributes(&r.ManagedEntity),
 			}
 			return nil
 		}()
