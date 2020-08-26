@@ -2,22 +2,9 @@
 
 set -e
 
-CMD=""
-
-case $1 in
-    build)
-        CMD="./scripts/reflex-build.sh"
-        ;;
-
-    test)
-        CMD="./scripts/reflex-test.sh"
-        ;;
-
-    *)
-        echo "Usage: $0 {test|build}"
-        exit 2
-        ;;
-esac
+GO_IMAGE=golang:1.15
+printf "Building for GOOS=%s and GOARCH=%s\n" "${GOOS}" "${GOARCH}"
+printf "After the build is done you should have 'telegraf' binary built in repository root\n"
 
 if [[ $(which go) ]] ; then
     GOMODCACHE="$(go env GOMODCACHE)"
@@ -30,9 +17,10 @@ if [[ $(which go) ]] ; then
     fi
 fi
 
-docker run --rm -ti \
+docker run --rm -it \
     -v $(pwd):/telegraf \
+    --env GOOS=${GOOS} \
+    --env GOARCH=${GOARCH} \
     ${GOMODCACHE_MOUNT_OPTION} \
     --workdir /telegraf \
-    --entrypoint reflex \
-    telegraf-reflex:latest --decoration=fancy -r '(\.go$|go\.mod)' --start-service -- ${CMD}
+    "${GO_IMAGE}" make telegraf

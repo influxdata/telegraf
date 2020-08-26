@@ -162,14 +162,29 @@ clean:
 docker-image:
 	docker build -f scripts/stretch.docker -t "telegraf:$(commit)" .
 
+## This builds the telegraf binary for the host system's architecture in a docker container.
+## This avoids the need for go toolchain to be installed on the host and produces the binary
+## in repository's root directory.
+.PHONY: telegraf-in-docker
+telegraf-in-docker:
+	@GOOS=$(GOOS) GOARCH=$(GOARCH) ./scripts/telegraf-build-in-docker.sh
+
 .PHONY: reflex-docker-build-image
 reflex-docker-build-image:
 	docker build -t telegraf-reflex -f ./scripts/reflex.docker ./scripts
 
+## This target will repeatedly run tests when any of the .go source files or go.mod files change.
+##
+## The tests themselves are run in a docker container so go toolchain on the host machine
+## is not required.
 .PHONY: reflex-test
 reflex-test: reflex-docker-build-image
 	@./scripts/reflex.sh test
 
+## This target will repeatedly build telegraf when any of the .go source files or go.mod files change.
+##
+## The build itself is run in a docker container so go toolchain on the host machine
+## is not required.
 .PHONY: reflex-build
 reflex-build: reflex-docker-build-image
 	@./scripts/reflex.sh build
