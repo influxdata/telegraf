@@ -287,6 +287,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var export string
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
+
 		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) && len(line) > 4 {
 			device = line[4]
 			export = line[1]
@@ -300,10 +301,20 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	return nil
 }
 
+
+func getMountStatsPath() string {
+	path := "/proc/self/mountstats"
+	if os.Getenv("MOUNT_PROC") != "" {
+		path = os.Getenv("MOUNT_PROC")
+	}
+	return path
+}
+
+
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	var outerr error
 
-	file, err := os.Open("/proc/self/mountstats")
+	file, err := os.Open(getMountStatsPath())
 	if err != nil {
 		log.Fatal(err)
 	}
