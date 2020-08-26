@@ -5,6 +5,8 @@
  * Users of this class pass it to a bytes.Reader which should do the rest of the work, including
  * filling in all the types that are not part of binary.ByteOrder
  *
+ * For test data, see https://www.scadacore.com/tools/programming-calculators/online-hex-converter/
+ *
  * Written by Christopher Piggott with the hope it will become standard in a replacement modbus
  * library (some time in the future)
  */

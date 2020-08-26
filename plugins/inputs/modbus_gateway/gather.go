@@ -85,6 +85,14 @@ func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 						grouper.Add(req.MeasurementName, nil, now, f.Name, scale(&f, value))
 					}
 					break
+
+				case "FLOAT32", "FLOAT32-IEEE":
+					var value float32
+					binary.Read(reader, byteOrder, &value)
+					if f.Omit == false {
+						grouper.Add(req.MeasurementName, nil, now, f.Name, scale(&f, value))
+					}
+					break
 				default:
 					m.Log.Warnf("Invalid conversion type %s", f.InputType)
 				}
@@ -107,14 +115,18 @@ func scale(f *FieldDef, value interface{}) interface{} {
 	case "FLOAT", "FLOAT64":
 		switch v := value.(type) {
 		case int:
-			return (float64(v) * f.Scale) + f.Offset
+			return int((float64(v) * f.Scale) + f.Offset)
 		case int16:
-			return (float64(v) * f.Scale) + f.Offset
+			return int16((float64(v) * f.Scale) + f.Offset)
 		case uint16:
-			return (float64(v) * f.Scale) + f.Offset
+			return uint16((float64(v) * f.Scale) + f.Offset)
 		case int32:
-			return (float64(v) * f.Scale) + f.Offset
+			return int32((float64(v) * f.Scale) + f.Offset)
 		case uint32:
+			return uint32((float64(v) * f.Scale) + f.Offset)
+		case float32:
+			return float32((float64(v) * f.Scale) + f.Offset)
+		case float64:
 			return (float64(v) * f.Scale) + f.Offset
 		default:
 			return nil
