@@ -1,7 +1,7 @@
 package modbus_gateway
 
 import (
-	mb "github.com/goburrow/modbus"
+	mb "github.com/wz2b/modbus"
 	"net"
 	"net/url"
 )
