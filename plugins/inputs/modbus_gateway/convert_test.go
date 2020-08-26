@@ -8,12 +8,12 @@ import (
 )
 
 func TestByteOrderIn(t *testing.T) {
-	testInput := []byte{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11}
+	defaultTestInput := []byte{0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x00, 0x11}
 
 	var tests = []struct {
 		format   string
 		expected []interface{}
-		input    []byte
+		input    []byte /* if not specified, default test byte stream is used */
 	}{
 		{
 			format:   "AB", /* implies ABCD, ABCDEFGH */
@@ -36,7 +36,7 @@ func TestByteOrderIn(t *testing.T) {
 
 		/*
 		 * Note: floating point comparisons are pretty sketchy.  Comparing floats correctly requires
-		 * you take ULPS into consideration.  There is a trick to doing this fairly easily in go
+		 * you take ULPs into consideration.  There is a trick to doing this fairly easily in go
 		 * using math.Nextafter() but you still have to be careful about it.  For these tests, the
 		 * approach here is to choose test data where the resulting floating point format can be
 		 * represented exactly, so that a simple == comparison still works.  Future developers
@@ -46,6 +46,9 @@ func TestByteOrderIn(t *testing.T) {
 		 * Don't choose something like -100 which is 0xC8C20000 because there are two
 		 * 0x00 bytes in a row, meaning if the conversion swapped those incorrectly
 		 * the test would still pass
+		 *
+		 * Note 2: as far as I can tell, nobody uses IEEE 16-bit or 64-bit floats in the Modbus
+		 * world.  If somebody knows differently, please e-mail me.
 		 */
 		{
 			format:   "ABCD",
@@ -83,7 +86,7 @@ func TestByteOrderIn(t *testing.T) {
 			if test.input != nil {
 				reader = bytes.NewReader(test.input)
 			} else {
-				reader = bytes.NewReader(testInput)
+				reader = bytes.NewReader(defaultTestInput)
 			}
 
 			switch expected.(type) {
