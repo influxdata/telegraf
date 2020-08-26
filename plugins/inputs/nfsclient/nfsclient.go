@@ -316,7 +316,8 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 
 	file, err := os.Open(getMountStatsPath())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed opening the /proc/self/mountstats file:  ", err)
+		return err
 	}
 	defer file.Close()
 
@@ -325,6 +326,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
+		return err
 	}
 
 	return outerr
