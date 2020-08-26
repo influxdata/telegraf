@@ -66,8 +66,8 @@ func (o *CustomByteOrder) Uint16(b []byte) uint16 {
 func (o *CustomByteOrder) PutUint16(b []byte, v uint16) {
 	_ = b[1] // early bounds check to guarantee safety of writes below
 	const mod = 2
+	b[o.positions[1]%mod] = byte(v >> 0)
 	b[o.positions[0]%mod] = byte(v >> 8)
-	b[o.positions[1]%mod] = byte(v)
 }
 
 func (o *CustomByteOrder) Uint32(b []byte) uint32 {
@@ -82,10 +82,10 @@ func (o *CustomByteOrder) Uint32(b []byte) uint32 {
 func (o *CustomByteOrder) PutUint32(b []byte, v uint32) {
 	_ = b[3] // early bounds check to guarantee safety of writes below
 	const mod = 4
-	b[0] = byte(v >> 24)
-	b[1] = byte(v >> 16)
-	b[2] = byte(v >> 8)
-	b[3] = byte(v >> 0)
+	b[o.positions[3]] = byte(v >> 0)
+	b[o.positions[2]] = byte(v >> 8)
+	b[o.positions[1]] = byte(v >> 16)
+	b[o.positions[0]] = byte(v >> 24)
 }
 
 func (o *CustomByteOrder) Uint64(b []byte) uint64 {
@@ -102,14 +102,14 @@ func (o *CustomByteOrder) Uint64(b []byte) uint64 {
 
 func (o *CustomByteOrder) PutUint64(b []byte, v uint64) {
 	_ = b[7] // early bounds check to guarantee safety of writes below
-	b[0] = byte(v >> 56)
-	b[1] = byte(v >> 48)
-	b[2] = byte(v >> 40)
-	b[3] = byte(v >> 32)
-	b[4] = byte(v >> 24)
-	b[5] = byte(v >> 16)
-	b[6] = byte(v >> 8)
-	b[7] = byte(v)
+	b[o.positions[7]] = byte(v >> 0)
+	b[o.positions[6]] = byte(v >> 8)
+	b[o.positions[5]] = byte(v >> 16)
+	b[o.positions[4]] = byte(v >> 24)
+	b[o.positions[3]] = byte(v >> 32)
+	b[o.positions[2]] = byte(v >> 40)
+	b[o.positions[1]] = byte(v >> 48)
+	b[o.positions[0]] = byte(v >> 56)
 }
 
 func (o *CustomByteOrder) String() string { return "CustomByteOrder" + o.order }

@@ -107,15 +107,15 @@ func scale(f *FieldDef, value interface{}) interface{} {
 	case "FLOAT", "FLOAT64":
 		switch v := value.(type) {
 		case int:
-			return float64((float64(v) * f.Scale) + f.Offset)
+			return (float64(v) * f.Scale) + f.Offset
 		case int16:
-			return float64((float64(v) * f.Scale) + f.Offset)
+			return (float64(v) * f.Scale) + f.Offset
 		case uint16:
-			return float64((float64(v) * f.Scale) + f.Offset)
+			return (float64(v) * f.Scale) + f.Offset
 		case int32:
-			return float64((float64(v) * f.Scale) + f.Offset)
+			return (float64(v) * f.Scale) + f.Offset
 		case uint32:
-			return float64((float64(v) * f.Scale) + f.Offset)
+			return (float64(v) * f.Scale) + f.Offset
 		default:
 			return nil
 		}
