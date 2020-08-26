@@ -247,7 +247,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"readpages":        int64(85749323),
 		"writepages":       int64(30784819),
 	}
-	fields_xprttcp := map[string]interface{}{
+	fields_xprt_tcp := map[string]interface{}{
 		"bind_count":    int64(1),
 		"connect_count": int64(1),
 		"connect_time":  int64(0),
@@ -261,5 +261,5 @@ func TestNFSClientProcessFull(t *testing.T) {
 
 	acc.AssertContainsFields(t, "nfs_events", fields_events)
 	acc.AssertContainsFields(t, "nfs_bytes", fields_bytes)
-	acc.AssertContainsFields(t, "nfs_xprttcp", fields_xprttcp)
+	acc.AssertContainsFields(t, "nfs_xprt_tcp", fields_xprt_tcp)
 }
