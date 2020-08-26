@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"regexp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -14,11 +15,21 @@ import (
 
 type NFSClient struct {
 	Fullstat bool
+	IncludeMounts []string
+	ExcludeMounts []string
 }
 
 var sampleConfig = `
-  # Read more low-level metrics
+  # Read more low-level metrics (optional, defaults to false)
   fullstat = false
+
+  # List of mounts to explictly include or exclude (optional)
+  # The pattern (Go regexp) is matched against the mount point (not the
+  # device being mounted).  If include_mounts is set, all mounts are ignored
+  # unless present in the list. If a mount is listed in both include_mounts
+  # and exclude_monuts, it is excluded.  Go regexp patterns can be used.
+  include_mounts = []
+  exclude_mounts = []
 `
 
 func (n *NFSClient) SampleConfig() string {
@@ -285,16 +296,42 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var device string
 	var version string
 	var export string
+	var skip bool
+
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
 
 		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) && len(line) > 4 {
 			device = line[4]
 			export = line[1]
+			skip = false
 		} else if (in(line, "(nfs)") || in(line, "(nfs4)")) && len(line) > 5 {
 			version = strings.Split(line[5], "/")[1]
 		}
-		if len(line) > 0 {
+
+		if (len(n.IncludeMounts) > 0) {
+			skip = true
+			for _, RE := range n.IncludeMounts {
+				matched, _ := regexp.MatchString(RE, device)
+				if matched {
+					skip = false
+					break
+				}
+			}
+		}
+
+		if (len(n.ExcludeMounts) > 0) {
+			for _, RE := range n.ExcludeMounts {
+				matched, _ := regexp.MatchString(RE, device)
+				if matched {
+					skip = true
+					break
+				}
+			}
+		}
+
+
+		if !skip && len(line) > 0 {
 			n.parseStat(device, export, version, line, n.Fullstat, acc)
 		}
 	}
