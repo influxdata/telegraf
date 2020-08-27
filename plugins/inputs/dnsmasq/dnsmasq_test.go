@@ -1,7 +1,6 @@
 package dnsmasq
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -32,7 +31,6 @@ func TestGathering(t *testing.T) {
 
 	err := acc.GatherError(dnsmasqConfig.Gather)
 	assert.NoError(t, err)
-	fmt.Println(acc)
 	metric, ok := acc.Get("dnsmasq")
 	require.True(t, ok)
 
