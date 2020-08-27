@@ -38,12 +38,12 @@ type HTTPResponse struct {
 	Headers         map[string]string
 	FollowRedirects bool
 	// Absolute path to file with Bearer token
-	BearerToken             string        `toml:"bearer_token"`
-	ResponseBodyField       string        `toml:"response_body_field"`
-	ResponseBodyMaxSize     internal.Size `toml:"response_body_max_size"`
-	ResponseStringMatch     string
-	ResponseStatusCodeMatch int
-	Interface               string
+	BearerToken         string        `toml:"bearer_token"`
+	ResponseBodyField   string        `toml:"response_body_field"`
+	ResponseBodyMaxSize internal.Size `toml:"response_body_max_size"`
+	ResponseStringMatch string
+	ResponseStatusCode  int
+	Interface           string
 	// HTTP Basic Auth Credentials
 	Username string `toml:"username"`
 	Password string `toml:"password"`
@@ -107,8 +107,11 @@ var sampleConfig = `
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
 
-  ## Optional status code match of the response
-  # response_status_code_match = 204
+  ## Expected response status code.
+  ## The status code of the response is compared to this value. If they match, the field
+  ## "response_status_code_match" will be 1, otherwise it will be 0. If the
+  ## expected status code is 0, the check is disabled and the field won't be added.
+  # response_status_code = 0
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -357,24 +360,31 @@ func (h *HTTPResponse) httpGather(u string) (map[string]interface{}, map[string]
 	}
 	fields["content_length"] = len(bodyBytes)
 
-	// Check the response for a regex or status code match.
+	var success = true
+
+	// Check the response for a regex
 	if h.ResponseStringMatch != "" {
 		if h.compiledStringMatch.Match(bodyBytes) {
-			setResult("success", fields, tags)
 			fields["response_string_match"] = 1
 		} else {
+			success = false
 			setResult("response_string_mismatch", fields, tags)
 			fields["response_string_match"] = 0
 		}
-	} else if h.ResponseStatusCodeMatch > 0 {
-		if resp.StatusCode == h.ResponseStatusCodeMatch {
-			setResult("success", fields, tags)
+	}
+
+	// Check the response status code
+	if h.ResponseStatusCode > 0 {
+		if resp.StatusCode == h.ResponseStatusCode {
 			fields["response_status_code_match"] = 1
 		} else {
+			success = false
 			setResult("response_status_code_mismatch", fields, tags)
 			fields["response_status_code_match"] = 0
 		}
-	} else {
+	}
+
+	if success {
 		setResult("success", fields, tags)
 	}
 

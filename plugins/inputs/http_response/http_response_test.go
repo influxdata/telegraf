@@ -1120,10 +1120,10 @@ func TestStatusCodeMatchFail(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
-		Log:                     testutil.Logger{},
-		Address:                 ts.URL + "/nocontent",
-		ResponseStatusCodeMatch: http.StatusOK,
-		ResponseTimeout:         internal.Duration{Duration: time.Second * 20},
+		Log:                testutil.Logger{},
+		Address:            ts.URL + "/nocontent",
+		ResponseStatusCode: http.StatusOK,
+		ResponseTimeout:    internal.Duration{Duration: time.Second * 20},
 	}
 
 	var acc testutil.Accumulator
@@ -1153,10 +1153,10 @@ func TestStatusCodeMatch(t *testing.T) {
 	defer ts.Close()
 
 	h := &HTTPResponse{
-		Log:                     testutil.Logger{},
-		Address:                 ts.URL + "/nocontent",
-		ResponseStatusCodeMatch: http.StatusNoContent,
-		ResponseTimeout:         internal.Duration{Duration: time.Second * 20},
+		Log:                testutil.Logger{},
+		Address:            ts.URL + "/nocontent",
+		ResponseStatusCode: http.StatusNoContent,
+		ResponseTimeout:    internal.Duration{Duration: time.Second * 20},
 	}
 
 	var acc testutil.Accumulator
@@ -1176,6 +1176,76 @@ func TestStatusCodeMatch(t *testing.T) {
 		"method":      http.MethodGet,
 		"status_code": "204",
 		"result":      "success",
+	}
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
+}
+
+func TestStatusCodeAndStringMatch(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:                 testutil.Logger{},
+		Address:             ts.URL + "/good",
+		ResponseStatusCode:  http.StatusOK,
+		ResponseStringMatch: "hit the good page",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+	}
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code":         http.StatusOK,
+		"response_status_code_match": 1,
+		"response_string_match":      1,
+		"result_type":                "success",
+		"result_code":                0,
+		"response_time":              nil,
+		"content_length":             nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      http.MethodGet,
+		"status_code": "200",
+		"result":      "success",
+	}
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
+}
+
+func TestStatusCodeAndStringMatchFail(t *testing.T) {
+	mux := setUpTestMux()
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	h := &HTTPResponse{
+		Log:                 testutil.Logger{},
+		Address:             ts.URL + "/nocontent",
+		ResponseStatusCode:  http.StatusOK,
+		ResponseStringMatch: "hit the good page",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+	}
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code":         http.StatusNoContent,
+		"response_status_code_match": 0,
+		"response_string_match":      0,
+		"result_type":                "response_status_code_mismatch",
+		"result_code":                6,
+		"response_time":              nil,
+		"content_length":             nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      http.MethodGet,
+		"status_code": "204",
+		"result":      "response_status_code_mismatch",
 	}
 	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 }

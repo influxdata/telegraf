@@ -45,8 +45,11 @@ This input plugin checks HTTP/HTTPS connections.
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
 
-  ## Optional status code match of the response
-  # response_status_code_match = 204
+  ## Expected response status code.
+  ## The status code of the response is compared to this value. If they match, the field
+  ## "response_status_code_match" will be 1, otherwise it will be 0. If the
+  ## expected status code is 0, the check is disabled and the field won't be added.
+  # response_status_code = 0
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
