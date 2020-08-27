@@ -32,4 +32,4 @@ jobs:
 
             [1]: https://github.com/peter-evans/create-pull-request
           branch: upstream-changes
-          team-reviewers: SumoLogic/opensource-collection-team
+          team-reviewers: opensource-collection-team
