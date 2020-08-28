@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type NFSClient struct {
-	Fullstat bool
+	Fullstat      bool
 	IncludeMounts []string
 	ExcludeMounts []string
 }
@@ -309,7 +309,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			version = strings.Split(line[5], "/")[1]
 		}
 
-		if (len(n.IncludeMounts) > 0) {
+		if len(n.IncludeMounts) > 0 {
 			skip = true
 			for _, RE := range n.IncludeMounts {
 				matched, _ := regexp.MatchString(RE, device)
@@ -320,7 +320,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			}
 		}
 
-		if (len(n.ExcludeMounts) > 0) {
+		if len(n.ExcludeMounts) > 0 {
 			for _, RE := range n.ExcludeMounts {
 				matched, _ := regexp.MatchString(RE, device)
 				if matched {
@@ -330,14 +330,12 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			}
 		}
 
-
 		if !skip && len(line) > 0 {
 			n.parseStat(device, export, version, line, n.Fullstat, acc)
 		}
 	}
 	return nil
 }
-
 
 func getMountStatsPath() string {
 	path := "/proc/self/mountstats"
@@ -346,7 +344,6 @@ func getMountStatsPath() string {
 	}
 	return path
 }
-
 
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	var outerr error
