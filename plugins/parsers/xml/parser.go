@@ -50,13 +50,9 @@ func NewXMLParser(
 }
 
 func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
-	measurementName := p.MetricName
 	timestamp := time.Now().UTC()
 	xmlDocument := etree.NewDocument()
 	xmlDocument.ReadFromBytes(b)
-	metrics := make([]telegraf.Metric, 0)
-	xmlTags := make(map[string]string)
-	xmlFields := make(map[string]interface{})
 
 	path, err := etree.CompilePath(p.Query)
 	if err != nil {
@@ -67,56 +63,13 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 	if len := len(root); len > 0 {
 		if p.ParseArray == true {
-			for _, e := range root {
-				for _, t := range e.FindElements(".//") {
-					tags, fields := p.ParseXmlNode(t)
-					xmlTags = mergeTwoTagMaps(xmlTags, tags)
-					xmlFields = mergeTwoFieldMaps(xmlFields, fields)
-				}
-
-				if p.TagNode == true {
-					xmlTags["xml_node_name"] = e.Tag
-				}
-
-				metric, err := metric.New(measurementName, xmlTags, xmlFields, timestamp)
-				if err != nil {
-					return nil, err
-				}
-				metrics = append(metrics, metric)
-
-				xmlTags = make(map[string]string)
-				xmlFields = make(map[string]interface{})
-			}
+			return p.ParseXmlArray(root, timestamp)
 		} else {
-			for _, e := range root {
-				tags, fields := p.ParseXmlNode(e)
-
-				if p.TagNode == true {
-					tags["xml_node_name"] = e.Tag
-				}
-
-				if p.MergeNodes == true {
-					xmlTags = mergeTwoTagMaps(xmlTags, tags)
-					xmlFields = mergeTwoFieldMaps(xmlFields, fields)
-				} else {
-					metric, err := metric.New(measurementName, tags, fields, timestamp)
-					if err != nil {
-						return nil, err
-					}
-					metrics = append(metrics, metric)
-				}
-			}
-
-			if p.MergeNodes == true {
-				metric, err := metric.New(measurementName, xmlTags, xmlFields, timestamp)
-				if err != nil {
-					return nil, err
-				}
-				metrics = append(metrics, metric)
-			}
+			return p.ParseXmlRegular(root, timestamp)
 		}
 	}
-	return metrics, nil
+
+	return make([]telegraf.Metric, 0), nil
 }
 
 func (p *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
@@ -129,6 +82,70 @@ func (p *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, ErrNoMetric
 	}
 	return metrics[0], nil
+}
+
+func (p *XMLParser) ParseXmlArray(nodes []*etree.Element, timestamp time.Time) ([]telegraf.Metric, error) {
+	results := make([]telegraf.Metric, 0)
+	xmlTags := make(map[string]string)
+	xmlFields := make(map[string]interface{})
+
+	for _, e := range nodes {
+		for _, t := range e.FindElements(".//") {
+			tags, fields := p.ParseXmlNode(t)
+			xmlTags = mergeTwoTagMaps(xmlTags, tags)
+			xmlFields = mergeTwoFieldMaps(xmlFields, fields)
+		}
+
+		if p.TagNode == true {
+			xmlTags["xml_node_name"] = e.Tag
+		}
+
+		metric, err := metric.New(p.MetricName, xmlTags, xmlFields, timestamp)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, metric)
+
+		xmlTags = make(map[string]string)
+		xmlFields = make(map[string]interface{})
+	}
+
+	return results, nil
+}
+
+func (p *XMLParser) ParseXmlRegular(nodes []*etree.Element, timestamp time.Time) ([]telegraf.Metric, error) {
+	results := make([]telegraf.Metric, 0)
+	xmlTags := make(map[string]string)
+	xmlFields := make(map[string]interface{})
+
+	for _, e := range nodes {
+		tags, fields := p.ParseXmlNode(e)
+
+		if p.TagNode == true {
+			tags["xml_node_name"] = e.Tag
+		}
+
+		if p.MergeNodes == true {
+			xmlTags = mergeTwoTagMaps(xmlTags, tags)
+			xmlFields = mergeTwoFieldMaps(xmlFields, fields)
+		} else {
+			metric, err := metric.New(p.MetricName, tags, fields, timestamp)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, metric)
+		}
+	}
+
+	if p.MergeNodes == true {
+		metric, err := metric.New(p.MetricName, xmlTags, xmlFields, timestamp)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, metric)
+	}
+
+	return results, nil
 }
 
 func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, fields map[string]interface{}) {
