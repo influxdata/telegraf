@@ -19,14 +19,14 @@ import (
 
 var byteOrderCache map[string]*CustomByteOrder = make(map[string]*CustomByteOrder)
 
-func getOrCreateByteOrder(orderSpec string) *CustomByteOrder {
+func getOrCreateByteOrder(orderSpec string) (*CustomByteOrder, bool) {
 	key := strings.ToUpper(orderSpec)
 	if byteOrderCache[key] != nil {
-		return byteOrderCache[key]
+		return byteOrderCache[key], false
 	} else {
 		formatter, _ := CreateCustomByteOrder(key)
 		byteOrderCache[key] = formatter
-		return formatter
+		return formatter, true
 	}
 }
 

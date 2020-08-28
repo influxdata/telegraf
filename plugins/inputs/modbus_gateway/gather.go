@@ -14,10 +14,13 @@ import (
 
 func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 	if !m.isConnected {
+		m.Log.Debugf("Connecting to %s", m.Gateway)
 		err := connect(m)
 		if err != nil {
 			m.isConnected = false
 			return err
+		} else {
+			m.Log.Debug("Connection successful")
 		}
 	}
 
@@ -54,7 +57,12 @@ func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 				} else {
 					orderSpec = "ABCD"
 				}
-				var byteOrder *CustomByteOrder = getOrCreateByteOrder(orderSpec)
+
+				byteOrder, wasNew := getOrCreateByteOrder(orderSpec)
+				if wasNew {
+					/* First time this byte ordering has been used, dump its configuration */
+					m.Log.Debugf("Created a new byte order %s with ordering %v", byteOrder.order, byteOrder.positions)
+				}
 
 				switch f.InputType {
 				case "UINT16":
@@ -98,7 +106,7 @@ func (m *ModbusGateway) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
-			m.Log.Info("Modbus Error: ", err)
+			m.Log.Warn("Modbus Error: ", err)
 		}
 	}
 
