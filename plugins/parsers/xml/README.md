@@ -72,7 +72,7 @@ file,xml_node_name=Host_2 Name="Server",ConnectionsCurrent=0i,ConnectionsTotal=0
 ```
 
 #### xml_array
-This parameter overrides the parser behavior.  
+This parameter changes the parsing logic.  
 When **xml_array = true**, parser will parse content and generate metric of each node separately.  
 It\`s important that the XPath query must return an array of top-level nodes.  
   
