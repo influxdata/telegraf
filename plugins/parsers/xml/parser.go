@@ -63,9 +63,9 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 	if len := len(root); len > 0 {
 		if p.ParseArray == true {
-			return p.ParseXmlArray(root, timestamp)
+			return p.ParseAsArray(root, timestamp)
 		} else {
-			return p.ParseXmlRegular(root, timestamp)
+			return p.ParseAsObject(root, timestamp)
 		}
 	}
 
@@ -84,7 +84,7 @@ func (p *XMLParser) ParseLine(line string) (telegraf.Metric, error) {
 	return metrics[0], nil
 }
 
-func (p *XMLParser) ParseXmlArray(nodes []*etree.Element, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *XMLParser) ParseAsArray(nodes []*etree.Element, timestamp time.Time) ([]telegraf.Metric, error) {
 	results := make([]telegraf.Metric, 0)
 	xmlTags := make(map[string]string)
 	xmlFields := make(map[string]interface{})
@@ -113,7 +113,7 @@ func (p *XMLParser) ParseXmlArray(nodes []*etree.Element, timestamp time.Time) (
 	return results, nil
 }
 
-func (p *XMLParser) ParseXmlRegular(nodes []*etree.Element, timestamp time.Time) ([]telegraf.Metric, error) {
+func (p *XMLParser) ParseAsObject(nodes []*etree.Element, timestamp time.Time) ([]telegraf.Metric, error) {
 	results := make([]telegraf.Metric, 0)
 	xmlTags := make(map[string]string)
 	xmlFields := make(map[string]interface{})
