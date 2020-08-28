@@ -96,12 +96,12 @@ func TestMultiplueNodes(t *testing.T) {
 	require.Len(t, metrics[1].Fields(), 2)
 
 	require.Equal(t, metrics[0].Tags(), map[string]string{
-		"node_name": "Host_1",
-		"Name":      "Host",
+		"xml_node_name": "Host_1",
+		"Name":          "Host",
 	})
 	require.Equal(t, metrics[1].Tags(), map[string]string{
-		"node_name": "Host_2",
-		"Name":      "Server",
+		"xml_node_name": "Host_2",
+		"Name":          "Server",
 	})
 
 	require.Equal(t, metrics[0].Fields(), map[string]interface{}{
