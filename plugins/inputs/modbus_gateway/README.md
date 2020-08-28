@@ -39,7 +39,7 @@ we are adopting the following terminology:
 
  - The Modbus/TCP device answers to multiple unit addresses and you
    do not want the plugin to make separate, concurrent TCP connections to each  
- - There are multiple modbus devices attached to the gateway (typically serial),
+ - There are multiple modbus devices attached to the gateway,
    each with it's own distinct unit address
  - You want more control over how register fetches are grouped into
    bulk modbus requests (even when the registers you want to fetch are not
@@ -51,10 +51,17 @@ we are adopting the following terminology:
  - The request is for modbus functions other than _READ INPUT_ and
    _READ MULTIPLE HOLDING REGISTERS_.  This plugin does not support discretes
    (digital inputs and outputs) at this time (planned to be added later)
- - The data types being retrieved are other than INT16, UINT16, INT32, UINT32
  - The device uses ASCII mode (rare these days)
+
+
+### Contact Information
+This input plugin was contributed by Christopher Piggott.  I have quite a few Modbus devices
+that I test this plugin against, but not many of the less-common configurations (especially
+weird byte ordering).  Feedback and experiences (positive or negative) are welcome, as I plan
+on maintaining (and personally using) this input for quite a while.
+
   
- ## Configuration
+## Configuration
 
 Each `[[input]]` communicates to one gateway and one or more devices.  It is
 perfectly reasonable to have only one device on the gateway - in fact, this
@@ -95,6 +102,19 @@ response is received but not stored as a field of the measurement.
     # Usually can be set pretty low
     #
     timeout="5s"
+    
+    #
+    # order - a string of the form "ABCD", "DCBA", or similar.  Specifies the default byte
+    #   ordering used by this input.  Note that this order can be overridden for a specific
+    #   request or field mapping, but in most cases it's only necessary to specify it once.
+    #   If unspecified, the default is ABCDEFGH (basically, big-endien everything)
+    #    
+    #   Note on these trings: A, B, C, etc. represent 16-bit words.  This order is really
+    #   saying how to put together multiple 16-bit registers to assemble them into bigger types
+    #   like FLOAT and INT32.  For 64-bit values, you can specify all the way out to ABCDEFGH,
+    #   but it's not really necessary - ABCD implies ABCDEFGH.   
+    #
+    order="ABCD"
 
     #
     # Request (poll) definitions
@@ -117,6 +137,8 @@ response is received but not stored as a field of the measurement.
     #
     # measurement - the name of the measurement, for example when stored in influx
     #
+    # order - if present in a request definition, order overrides the input-level order
+    #
     # fields - defines how the response PDU is mapped to fields of the measurement.  Attributes
     # of each field are:
     #
@@ -130,6 +152,10 @@ response is received but not stored as a field of the measurement.
     # omit - if true, don't store this field at all.  you must still set a 'type'.  Use this to
     #   skip fields not of interest that are part of the response because they are within the
     #   requested register range.
+    #
+    # order - if present in a field definition, order overrides the request or input-level order
+    #
+
     #
     # outfmt - the output format.  Defaults to FLOAT64, but may be set to INT32, INT64,
     #    INT (alias for INT64), FLOAT32, FLOAT64, or FLOAT (alias for FLOAT64).  Note
