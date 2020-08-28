@@ -49,6 +49,8 @@ All metrics are attempted to be cast to integers, then booleans, then strings.
   # by default, aerospike produces a 100 bucket histogram
   # this is not great for most graphing tools, this will allow
   # the ability to squash this to a smaller number of buckets 
+  # To have a balanced histogram, the number of buckets chosen 
+  # should divide evenly into 100.
   # num_histogram_buckets = 100 # default: 10
 
 
