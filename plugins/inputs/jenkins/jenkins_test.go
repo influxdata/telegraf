@@ -643,9 +643,9 @@ func TestGatherJobs(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Tags: map[string]string{
-							"name":   "job 2",
+							"name":    "job 2",
 							"parents": "l1/l2/job 1",
-							"result": "SUCCESS",
+							"result":  "SUCCESS",
 						},
 						Fields: map[string]interface{}{
 							"duration":    int64(25558),
