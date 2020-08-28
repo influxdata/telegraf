@@ -29,7 +29,7 @@ func NewXMLParser(
 	metricName string,
 	xmlMergeNodes bool,
 	xmlTagNode bool,
-        xmlParseArray bool,
+	xmlParseArray bool,
 	xmlQuery string,
 	defaultTags map[string]string,
 	tagKeys []string,
@@ -67,7 +67,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 	if len := len(root); len > 0 {
 		if p.ParseArray == true {
-			for _, e := range root { 
+			for _, e := range root {
 				for _, t := range e.FindElements(".//") {
 					tags, fields := p.ParseXmlNode(t)
 					xmlTags = mergeTwoTagMaps(xmlTags, tags)
@@ -84,17 +84,17 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 				}
 				metrics = append(metrics, metric)
 
-				xmlTags =  make(map[string]string)
+				xmlTags = make(map[string]string)
 				xmlFields = make(map[string]interface{})
 			}
 		} else {
 			for _, e := range root {
 				tags, fields := p.ParseXmlNode(e)
-	
+
 				if p.TagNode == true {
 					tags["xml_node_name"] = e.Tag
 				}
-	
+
 				if p.MergeNodes == true {
 					xmlTags = mergeTwoTagMaps(xmlTags, tags)
 					xmlFields = mergeTwoFieldMaps(xmlFields, fields)
@@ -106,7 +106,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 					metrics = append(metrics, metric)
 				}
 			}
-	
+
 			if p.MergeNodes == true {
 				metric, err := metric.New(measurementName, xmlTags, xmlFields, timestamp)
 				if err != nil {

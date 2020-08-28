@@ -1847,17 +1847,17 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
-        if node, ok := tbl.Fields["xml_array"]; ok {
-                if kv, ok := node.(*ast.KeyValue); ok {
-                        if str, ok := kv.Value.(*ast.Boolean); ok {
-                                val, err := strconv.ParseBool(str.Value)
-                                c.XMLParseArray = val
-                                if err != nil {
-                                        return nil, fmt.Errorf("E! parsing to bool: %v", err)
-                                }
-                        }
-                }
-        }
+	if node, ok := tbl.Fields["xml_array"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				val, err := strconv.ParseBool(str.Value)
+				c.XMLParseArray = val
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to bool: %v", err)
+				}
+			}
+		}
+	}
 
 	if node, ok := tbl.Fields["xml_query"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1913,7 +1913,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "form_urlencoded_tag_keys")
 	delete(tbl.Fields, "xml_merge_nodes")
 	delete(tbl.Fields, "xml_node_to_tag")
-        delete(tbl.Fields, "xml_array")
+	delete(tbl.Fields, "xml_array")
 	delete(tbl.Fields, "xml_query")
 
 	return c, nil
