@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"regexp"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -14,11 +15,21 @@ import (
 
 type NFSClient struct {
 	Fullstat bool
+	IncludeMounts []string
+	ExcludeMounts []string
 }
 
 var sampleConfig = `
-  # Read more low-level metrics
+  # Read more low-level metrics (optional, defaults to false)
   fullstat = false
+
+  # List of mounts to explictly include or exclude (optional)
+  # The pattern (Go regexp) is matched against the mount point (not the
+  # device being mounted).  If include_mounts is set, all mounts are ignored
+  # unless present in the list. If a mount is listed in both include_mounts
+  # and exclude_monuts, it is excluded.  Go regexp patterns can be used.
+  include_mounts = []
+  exclude_mounts = []
 `
 
 func (n *NFSClient) SampleConfig() string {
@@ -231,14 +242,14 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				for i, t := range xprttcpFields {
 					fields[t] = nline[i+2]
 				}
-				acc.AddFields("nfs_xprttcp", fields, tags)
+				acc.AddFields("nfs_xprt_tcp", fields, tags)
 			}
 		case "udp":
 			if len(nline)+2 >= len(xprtudpFields) {
 				for i, t := range xprtudpFields {
 					fields[t] = nline[i+2]
 				}
-				acc.AddFields("nfs_xprtudp", fields, tags)
+				acc.AddFields("nfs_xprt_udp", fields, tags)
 			}
 		}
 	} else if version == "3" || version == "4" {
@@ -285,27 +296,65 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var device string
 	var version string
 	var export string
+	var skip bool
+
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
+
 		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) && len(line) > 4 {
 			device = line[4]
 			export = line[1]
+			skip = false
 		} else if (in(line, "(nfs)") || in(line, "(nfs4)")) && len(line) > 5 {
 			version = strings.Split(line[5], "/")[1]
 		}
-		if len(line) > 0 {
+
+		if (len(n.IncludeMounts) > 0) {
+			skip = true
+			for _, RE := range n.IncludeMounts {
+				matched, _ := regexp.MatchString(RE, device)
+				if matched {
+					skip = false
+					break
+				}
+			}
+		}
+
+		if (len(n.ExcludeMounts) > 0) {
+			for _, RE := range n.ExcludeMounts {
+				matched, _ := regexp.MatchString(RE, device)
+				if matched {
+					skip = true
+					break
+				}
+			}
+		}
+
+
+		if !skip && len(line) > 0 {
 			n.parseStat(device, export, version, line, n.Fullstat, acc)
 		}
 	}
 	return nil
 }
 
+
+func getMountStatsPath() string {
+	path := "/proc/self/mountstats"
+	if os.Getenv("MOUNT_PROC") != "" {
+		path = os.Getenv("MOUNT_PROC")
+	}
+	return path
+}
+
+
 func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	var outerr error
 
-	file, err := os.Open("/proc/self/mountstats")
+	file, err := os.Open(getMountStatsPath())
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed opening the /proc/self/mountstats file:  ", err)
+		return err
 	}
 	defer file.Close()
 
@@ -314,6 +363,7 @@ func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
+		return err
 	}
 
 	return outerr
