@@ -152,6 +152,7 @@ type Config struct {
 
 	// xml configuration
 	XMLMergeNodes bool   `toml:"xml_merge_nodes"`
+	XMLParseArray bool   `toml:"xml_array"`
 	XMLTagNode    bool   `toml:"xml_node_to_tag"`
 	XMLQuery      string `toml:"xml_query"`
 }
@@ -243,6 +244,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.MetricName,
 			config.XMLMergeNodes,
 			config.XMLTagNode,
+			config.XMLParseArray,
 			config.XMLQuery,
 			config.DefaultTags,
 			config.TagKeys)
@@ -358,6 +360,7 @@ func NewXMLParser(
 	metricName string,
 	xmlMergeNodes bool,
 	xmlTagNode bool,
+	xmlParseArray bool,
 	xmlQuery string,
 	defaultTags map[string]string,
 	tagKeys []string,
@@ -365,6 +368,7 @@ func NewXMLParser(
 	return xml.NewXMLParser(metricName,
 		xmlMergeNodes,
 		xmlTagNode,
+		xmlParseArray,
 		xmlQuery,
 		defaultTags,
 		tagKeys), nil

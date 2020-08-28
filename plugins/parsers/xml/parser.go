@@ -19,6 +19,7 @@ type XMLParser struct {
 	MetricName  string
 	TagKeys     []string
 	MergeNodes  bool
+	ParseArray  bool
 	TagNode     bool
 	Query       string
 	DefaultTags map[string]string
@@ -28,11 +29,11 @@ func NewXMLParser(
 	metricName string,
 	xmlMergeNodes bool,
 	xmlTagNode bool,
+        xmlParseArray bool,
 	xmlQuery string,
 	defaultTags map[string]string,
 	tagKeys []string,
 ) *XMLParser {
-
 	if xmlQuery == "" {
 		xmlQuery = "//"
 	}
@@ -42,6 +43,7 @@ func NewXMLParser(
 		TagKeys:     tagKeys,
 		MergeNodes:  xmlMergeNodes,
 		TagNode:     xmlTagNode,
+		ParseArray:  xmlParseArray,
 		Query:       xmlQuery,
 		DefaultTags: defaultTags,
 	}
@@ -56,33 +58,62 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	xmlTags := make(map[string]string)
 	xmlFields := make(map[string]interface{})
 
-	root := xmlDocument.FindElements(p.Query)
+	path, err := etree.CompilePath(p.Query)
+	if err != nil {
+		return nil, err
+	}
+
+	root := xmlDocument.FindElementsPath(path)
+
 	if len := len(root); len > 0 {
-		for _, e := range root {
+		if p.ParseArray == true {
+			for _, e := range root { 
+				for _, t := range e.FindElements(".//") {
+					tags, fields := p.ParseXmlNode(t)
+					xmlTags = mergeTwoTagMaps(xmlTags, tags)
+					xmlFields = mergeTwoFieldMaps(xmlFields, fields)
+				}
 
-			tags, fields := p.ParseXmlNode(e)
-			if p.TagNode == true {
-				tags["node_name"] = e.Tag
-			}
+				if p.TagNode == true {
+					xmlTags["xml_node_name"] = e.Tag
+				}
 
-			if p.MergeNodes == false {
-				metric, err := metric.New(measurementName, tags, fields, timestamp)
+				metric, err := metric.New(measurementName, xmlTags, xmlFields, timestamp)
 				if err != nil {
 					return nil, err
 				}
 				metrics = append(metrics, metric)
-			} else {
-				xmlTags = mergeTwoTagMaps(xmlTags, tags)
-				xmlFields = mergeTwoFieldMaps(xmlFields, fields)
-			}
-		}
 
-		if p.MergeNodes == true {
-			metric, err := metric.New(measurementName, xmlTags, xmlFields, timestamp)
-			if err != nil {
-				return nil, err
+				xmlTags =  make(map[string]string)
+				xmlFields = make(map[string]interface{})
 			}
-			metrics = append(metrics, metric)
+		} else {
+			for _, e := range root {
+				tags, fields := p.ParseXmlNode(e)
+	
+				if p.TagNode == true {
+					tags["xml_node_name"] = e.Tag
+				}
+	
+				if p.MergeNodes == true {
+					xmlTags = mergeTwoTagMaps(xmlTags, tags)
+					xmlFields = mergeTwoFieldMaps(xmlFields, fields)
+				} else {
+					metric, err := metric.New(measurementName, tags, fields, timestamp)
+					if err != nil {
+						return nil, err
+					}
+					metrics = append(metrics, metric)
+				}
+			}
+	
+			if p.MergeNodes == true {
+				metric, err := metric.New(measurementName, xmlTags, xmlFields, timestamp)
+				if err != nil {
+					return nil, err
+				}
+				metrics = append(metrics, metric)
+			}
 		}
 	}
 	return metrics, nil
