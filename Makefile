@@ -94,6 +94,11 @@ deps:
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
+# Used by dockerfile builds
+.PHONY: go-install
+go-install:
+	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+
 .PHONY: test
 test:
 	go test -short $(race_detector) ./...
