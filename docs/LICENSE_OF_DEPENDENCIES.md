@@ -21,6 +21,8 @@ following works:
 - github.com/aerospike/aerospike-client-go [Apache License 2.0](https://github.com/aerospike/aerospike-client-go/blob/master/LICENSE)
 - github.com/alecthomas/units [MIT License](https://github.com/alecthomas/units/blob/master/COPYING)
 - github.com/amir/raidman [The Unlicense](https://github.com/amir/raidman/blob/master/UNLICENSE)
+- github.com/antchfx/xmlquery [MIT License](https://github.com/antchfx/xmlquery/blob/master/LICENSE)
+- github.com/antchfx/xpath [MIT License](https://github.com/antchfx/xpath/blob/master/LICENSE)
 - github.com/apache/thrift [Apache License 2.0](https://github.com/apache/thrift/blob/master/LICENSE)
 - github.com/aristanetworks/glog [Apache License 2.0](https://github.com/aristanetworks/glog/blob/master/LICENSE)
 - github.com/aristanetworks/goarista [Apache License 2.0](https://github.com/aristanetworks/goarista/blob/master/COPYING)
