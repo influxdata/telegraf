@@ -26,6 +26,29 @@ const dataInAttrs = `
 </VHost>
 `
 
+const dataArray = `
+<Document>
+  <Data>
+    <Host_1>
+      <Name>Host_1</Name>
+      <Uptime>1000</Uptime>
+      <Connections>
+        <Total>15</Total>
+        <Current>2</Current>
+      </Connections>
+    </Host_1>
+    <Host_2>
+      <Name>Host_2</Name>
+      <Uptime>1240</Uptime>
+      <Connections>
+        <Total>33</Total>
+        <Current>4</Current>
+      </Connections>
+    </Host_2>
+  </Data>
+</Document>
+`
+
 // Must return no metrics
 func TestWrongQuery(t *testing.T) {
 	p := XMLParser{
@@ -112,5 +135,45 @@ func TestMultiplueNodes(t *testing.T) {
 	require.Equal(t, metrics[1].Fields(), map[string]interface{}{
 		"ConnectionsCurrent": int64(5),
 		"ConnectionsTotal":   int64(18),
+	})
+}
+
+// Must return two metrics - one per selected top-level node
+func TestArrayParsing(t *testing.T) {
+	p := XMLParser{
+		MetricName: "xml_test",
+		ParseArray: true,
+		TagNode:    true,
+		Query:      "//Data/*",
+		TagKeys:    []string{"Name"},
+	}
+
+	metrics, err := p.Parse([]byte(dataArray))
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+
+	require.Len(t, metrics[0].Tags(), 2)
+	require.Len(t, metrics[1].Tags(), 2)
+	require.Len(t, metrics[0].Fields(), 3)
+	require.Len(t, metrics[1].Fields(), 3)
+
+	require.Equal(t, metrics[0].Tags(), map[string]string{
+		"xml_node_name": "Host_1",
+		"Name":          "Host_1",
+	})
+	require.Equal(t, metrics[1].Tags(), map[string]string{
+		"xml_node_name": "Host_2",
+		"Name":          "Host_2",
+	})
+
+	require.Equal(t, metrics[0].Fields(), map[string]interface{}{
+		"Uptime":  int64(1000),
+		"Total":   int64(15),
+		"Current": int64(2),
+	})
+	require.Equal(t, metrics[1].Fields(), map[string]interface{}{
+		"Uptime":  int64(1240),
+		"Total":   int64(33),
+		"Current": int64(4),
 	})
 }
