@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	//	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -32,8 +31,10 @@ var sampleConfig = `
   ##
   ## If no servers are specified, then localhost is used as the host.
   servers = ["localhost:24242"]
+
   ## Type is one of "user", "domain", "ip", or "global"
   type = "global"
+
   ## Wildcard matches like "*.com". An empty string "" is same as "*"
   ## If type = "ip" filters should be <IP/network>
   filters = [""]
@@ -82,12 +83,12 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype string, filter string) error {
 	_, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		return fmt.Errorf("Error: %s on url %s\n", err, addr)
+		return fmt.Errorf("%q on url %s", err.Error(), addr)
 	}
 
 	c, err := net.DialTimeout("tcp", addr, defaultTimeout)
 	if err != nil {
-		return fmt.Errorf("Unable to connect to dovecot server '%s': %s", addr, err)
+		return fmt.Errorf("enable to connect to dovecot server '%s': %s", addr, err)
 	}
 	defer c.Close()
 

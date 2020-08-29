@@ -117,7 +117,7 @@ const invalidJSON = "I don't think this is JSON"
 
 const empty = ""
 
-var Servers = []Server{Server{Name: "as1", Host: "127.0.0.1", Port: "8080"}}
+var Servers = []Server{{Name: "as1", Host: "127.0.0.1", Port: "8080"}}
 var HeapMetric = Metric{Name: "heap_memory_usage",
 	Mbean: "java.lang:type=Memory", Attribute: "HeapMemoryUsage"}
 var UsedHeapMetric = Metric{Name: "heap_memory_usage",
@@ -160,7 +160,7 @@ func TestHttpJsonMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -184,7 +184,7 @@ func TestHttpJsonBulkResponse(t *testing.T) {
 	var acc testutil.Accumulator
 	err := jolokia.Gather(&acc)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{
@@ -212,7 +212,7 @@ func TestHttpJsonThreeLevelMultiValue(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(jolokia.Gather)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(acc.Metrics))
 
 	fields := map[string]interface{}{

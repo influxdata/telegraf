@@ -7,12 +7,15 @@ This plugin writes telegraf metrics to [Azure Application Insights](https://azur
 [[outputs.application_insights]]
   ## Instrumentation key of the Application Insights resource.
   instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+  
+  ## Regions that require endpoint modification https://docs.microsoft.com/en-us/azure/azure-monitor/app/custom-endpoints
+  # endpoint_url = "https://dc.services.visualstudio.com/v2/track"
 
   ## Timeout for closing (default: 5s).
   # timeout = "5s"
 
   ## Enable additional diagnostic logging.
-  # enable_diagnosic_logging = false
+  # enable_diagnostic_logging = false
 
   ## Context Tag Sources add Application Insights context tags to a tag value.
   ##
@@ -37,7 +40,7 @@ foo,host=a first=42,second=43 1525293034000000000
 
 In the special case of a single field named `value`, a single telemetry record is created named using only the measurement name
 
-**Example:** Create a telemetry record `foo`:
+**Example:** Create a telemetry record `bar`:
 ```
 bar,host=a value=42 1525293034000000000
 ```

@@ -1,4 +1,4 @@
-# Telegraf plugin: bcache
+# bcache Input Plugin
 
 Get bcache stat from stats_total directory and dirty_data file.
 
@@ -55,7 +55,7 @@ cache_readaheads
 
 Using this configuration:
 
-```
+```toml
 [bcache]
   # Bcache sets path
   # If not specified, then default is:

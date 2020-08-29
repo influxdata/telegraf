@@ -18,6 +18,7 @@ const (
 	SLASH
 	BACKSLASH
 	COMMA
+	DELTA
 	literal_end
 
 	// Misc characters
@@ -36,6 +37,10 @@ func isLetter(ch rune) bool {
 
 func isNumber(ch rune) bool {
 	return ch >= '0' && ch <= '9'
+}
+
+func isDelta(ch rune) bool {
+	return ch == '\u2206' || ch == '\u0394'
 }
 
 var eof = rune(0)

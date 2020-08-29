@@ -19,6 +19,8 @@ Get phpfpm stats using either HTTP status page or fpm socket.
   ##       "/var/run/php5-fpm.sock"
   ##      or using a custom fpm status path:
   ##       "/var/run/php5-fpm.sock:fpm-custom-status-path"
+  ##      glob patterns are also supported:
+  ##       "/var/run/php*.sock"
   ##
   ##   - fcgi: the URL must start with fcgi:// or cgi://, and port must be present, ie:
   ##       "fcgi://10.0.0.12:9000/status"
@@ -27,6 +29,16 @@ Get phpfpm stats using either HTTP status page or fpm socket.
   ## Example of multiple gathering from local socket and remote host
   ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
+
+  ## Duration allowed to complete HTTP requests.
+  # timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 When using `unixsocket`, you have to ensure that telegraf runs on same

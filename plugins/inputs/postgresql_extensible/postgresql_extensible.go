@@ -3,10 +3,10 @@ package postgresql_extensible
 import (
 	"bytes"
 	"fmt"
-	"log"
+	"io/ioutil"
+	"os"
 	"strings"
 
-	// register in driver.
 	_ "github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
@@ -19,18 +19,15 @@ type Postgresql struct {
 	postgresql.Service
 	Databases      []string
 	AdditionalTags []string
-	Query          []struct {
-		Sqlquery    string
-		Version     int
-		Withdbname  bool
-		Tagvalue    string
-		Measurement string
-	}
-	Debug bool
+	Query          query
+	Debug          bool
+
+	Log telegraf.Logger
 }
 
 type query []struct {
 	Sqlquery    string
+	Script      string
 	Version     int
 	Withdbname  bool
 	Tagvalue    string
@@ -44,7 +41,7 @@ var sampleConfig = `
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
   ##       ?sslmode=[disable|verify-ca|verify-full]
   ## or a simple string:
-  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##   host=localhost user=pqgotest password=... sslmode=... dbname=app_production
   #
   ## All connection parameters are optional.  #
   ## Without the dbname parameter, the driver will default to a database
@@ -81,7 +78,10 @@ var sampleConfig = `
   ## field is used to define custom tags (separated by commas)
   ## The optional "measurement" value can be used to override the default
   ## output measurement name ("postgresql").
-  #
+  ##
+  ## The script option can be used to specify the .sql file path.
+  ## If script and sqlquery options specified at same time, sqlquery will be used 
+  ##
   ## Structure :
   ## [[inputs.postgresql_extensible.query]]
   ##   sqlquery string
@@ -102,6 +102,19 @@ var sampleConfig = `
     tagvalue="postgresql.stats"
 `
 
+func (p *Postgresql) Init() error {
+	var err error
+	for i := range p.Query {
+		if p.Query[i].Sqlquery == "" {
+			p.Query[i].Sqlquery, err = ReadQueryFromFile(p.Query[i].Script)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (p *Postgresql) SampleConfig() string {
 	return sampleConfig
 }
@@ -112,6 +125,20 @@ func (p *Postgresql) Description() string {
 
 func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
+}
+
+func ReadQueryFromFile(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	query, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+	return string(query), err
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
@@ -126,19 +153,18 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		columns     []string
 	)
 
-	// Retreiving the database version
-
-	query = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
+	// Retrieving the database version
+	query = `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
 	if err = p.DB.QueryRow(query).Scan(&db_version); err != nil {
 		db_version = 0
 	}
 
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
-
 	for i := range p.Query {
 		sql_query = p.Query[i].Sqlquery
 		tag_value = p.Query[i].Tagvalue
+
 		if p.Query[i].Measurement != "" {
 			meas_name = p.Query[i].Measurement
 		} else {
@@ -160,7 +186,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		if p.Query[i].Version <= db_version {
 			rows, err := p.DB.Query(sql_query)
 			if err != nil {
-				acc.AddError(err)
+				p.Log.Error(err.Error())
 				continue
 			}
 
@@ -168,7 +194,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 			// grab the column information from the result
 			if columns, err = rows.Columns(); err != nil {
-				acc.AddError(err)
+				p.Log.Error(err.Error())
 				continue
 			}
 
@@ -183,7 +209,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			for rows.Next() {
 				err = p.accRow(meas_name, rows, acc, columns)
 				if err != nil {
-					acc.AddError(err)
+					p.Log.Error(err.Error())
 					break
 				}
 			}
@@ -221,9 +247,14 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 		return err
 	}
 
-	if columnMap["datname"] != nil {
+	if c, ok := columnMap["datname"]; ok && *c != nil {
 		// extract the database name from the column map
-		dbname.WriteString((*columnMap["datname"]).(string))
+		switch datname := (*c).(type) {
+		case string:
+			dbname.WriteString(datname)
+		default:
+			dbname.WriteString("postgres")
+		}
 	} else {
 		dbname.WriteString("postgres")
 	}
@@ -241,7 +272,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	fields := make(map[string]interface{})
 COLUMN:
 	for col, val := range columnMap {
-		log.Printf("D! postgresql_extensible: column: %s = %T: %v\n", col, *val, *val)
+		p.Log.Debugf("Column: %s = %T: %v\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]
 		if ignore || *val == nil {
 			continue
@@ -259,7 +290,7 @@ COLUMN:
 			case int64, int32, int:
 				tags[col] = fmt.Sprintf("%d", v)
 			default:
-				log.Println("failed to add additional tag", col)
+				p.Log.Debugf("Failed to add %q as additional tag", col)
 			}
 			continue COLUMN
 		}

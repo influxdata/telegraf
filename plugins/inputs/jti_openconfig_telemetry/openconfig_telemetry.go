@@ -2,7 +2,6 @@ package jti_openconfig_telemetry
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"regexp"
 	"strings"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	internaltls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
@@ -22,15 +22,18 @@ import (
 )
 
 type OpenConfigTelemetry struct {
-	Servers         []string
-	Sensors         []string
-	Username        string
-	Password        string
+	Servers         []string          `toml:"servers"`
+	Sensors         []string          `toml:"sensors"`
+	Username        string            `toml:"username"`
+	Password        string            `toml:"password"`
 	ClientID        string            `toml:"client_id"`
 	SampleFrequency internal.Duration `toml:"sample_frequency"`
-	SSLCert         string            `toml:"ssl_cert"`
 	StrAsTags       bool              `toml:"str_as_tags"`
 	RetryDelay      internal.Duration `toml:"retry_delay"`
+	EnableTLS       bool              `toml:"enable_tls"`
+	internaltls.ClientConfig
+
+	Log telegraf.Logger
 
 	sensorsConfig   []sensorConfig
 	grpcClientConns []*grpc.ClientConn
@@ -44,8 +47,8 @@ var (
   ## List of device addresses to collect telemetry from
   servers = ["localhost:1883"]
 
-  ## Authentication details. Username and password are must if device expects 
-  ## authentication. Client ID must be unique when connecting from multiple instances 
+  ## Authentication details. Username and password are must if device expects
+  ## authentication. Client ID must be unique when connecting from multiple instances
   ## of telegraf to the same device
   username = "user"
   password = "pass"
@@ -57,16 +60,16 @@ var (
   ## Sensors to subscribe for
   ## A identifier for each sensor can be provided in path by separating with space
   ## Else sensor path will be used as identifier
-  ## When identifier is used, we can provide a list of space separated sensors. 
-  ## A single subscription will be created with all these sensors and data will 
+  ## When identifier is used, we can provide a list of space separated sensors.
+  ## A single subscription will be created with all these sensors and data will
   ## be saved to measurement with this identifier name
   sensors = [
    "/interfaces/",
    "collection /components/ /lldp",
   ]
 
-  ## We allow specifying sensor group level reporting rate. To do this, specify the 
-  ## reporting rate in Duration at the beginning of sensor paths / collection 
+  ## We allow specifying sensor group level reporting rate. To do this, specify the
+  ## reporting rate in Duration at the beginning of sensor paths / collection
   ## name. For entries without reporting rate, we use configured sample frequency
   sensors = [
    "1000ms customReporting /interfaces /lldp",
@@ -74,9 +77,13 @@ var (
    "/interfaces",
   ]
 
-  ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
-  ## channel will be opened with server
-  ssl_cert = "/etc/telegraf/cert.pem"
+  ## Optional TLS Config
+  # enable_tls = true
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
   ## Failed streams/calls will not be retried if 0 is provided
@@ -237,7 +244,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			log.Printf("E! No sensors are specified")
+			m.Log.Error("No sensors are specified")
 			continue
 		}
 
@@ -251,7 +258,7 @@ func (m *OpenConfigTelemetry) splitSensorConfig() int {
 		}
 
 		if len(spathSplit) == 0 {
-			log.Printf("E! No valid sensors are specified")
+			m.Log.Error("No valid sensors are specified")
 			continue
 		}
 
@@ -288,13 +295,13 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					rpcStatus, _ := status.FromError(err)
 					// If service is currently unavailable and may come back later, retry
 					if rpcStatus.Code() != codes.Unavailable {
-						acc.AddError(fmt.Errorf("E! Could not subscribe to %s: %v", grpcServer,
+						acc.AddError(fmt.Errorf("could not subscribe to %s: %v", grpcServer,
 							err))
 						return
 					} else {
 						// Retry with delay. If delay is not provided, use default
 						if m.RetryDelay.Duration > 0 {
-							log.Printf("D! Retrying %s with timeout %v", grpcServer,
+							m.Log.Debugf("Retrying %s with timeout %v", grpcServer,
 								m.RetryDelay.Duration)
 							time.Sleep(m.RetryDelay.Duration)
 							continue
@@ -308,11 +315,11 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					if err != nil {
 						// If we encounter error in the stream, break so we can retry
 						// the connection
-						acc.AddError(fmt.Errorf("E! Failed to read from %s: %v", err, grpcServer))
+						acc.AddError(fmt.Errorf("failed to read from %s: %s", grpcServer, err))
 						break
 					}
 
-					log.Printf("D! Received from %s: %v", grpcServer, r)
+					m.Log.Debugf("Received from %s: %v", grpcServer, r)
 
 					// Create a point and add to batch
 					tags := make(map[string]string)
@@ -323,7 +330,7 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 					dgroups := m.extractData(r, grpcServer)
 
 					// Print final data collection
-					log.Printf("D! Available collection for %s is: %v", grpcServer, dgroups)
+					m.Log.Debugf("Available collection for %s is: %v", grpcServer, dgroups)
 
 					tnow := time.Now()
 					// Iterate through data groups and add them
@@ -345,19 +352,19 @@ func (m *OpenConfigTelemetry) collectData(ctx context.Context,
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	// Build sensors config
 	if m.splitSensorConfig() == 0 {
-		return fmt.Errorf("E! No valid sensor configuration available")
+		return fmt.Errorf("no valid sensor configuration available")
 	}
 
-	// If SSL certificate is provided, use transport credentials
-	var err error
-	var transportCredentials credentials.TransportCredentials
-	if m.SSLCert != "" {
-		transportCredentials, err = credentials.NewClientTLSFromFile(m.SSLCert, "")
+	// Parse TLS config
+	var opts []grpc.DialOption
+	if m.EnableTLS {
+		tlscfg, err := m.ClientConfig.TLSConfig()
 		if err != nil {
-			return fmt.Errorf("E! Failed to read certificate: %v", err)
+			return err
 		}
+		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlscfg)))
 	} else {
-		transportCredentials = nil
+		opts = append(opts, grpc.WithInsecure())
 	}
 
 	// Connect to given list of servers and start collecting data
@@ -369,20 +376,15 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		// Extract device address and port
 		grpcServer, grpcPort, err := net.SplitHostPort(server)
 		if err != nil {
-			log.Printf("E! Invalid server address: %v", err)
+			m.Log.Errorf("Invalid server address: %s", err.Error())
 			continue
 		}
 
-		// If a certificate is provided, open a secure channel. Else open insecure one
-		if transportCredentials != nil {
-			grpcClientConn, err = grpc.Dial(server, grpc.WithTransportCredentials(transportCredentials))
-		} else {
-			grpcClientConn, err = grpc.Dial(server, grpc.WithInsecure())
-		}
+		grpcClientConn, err = grpc.Dial(server, opts...)
 		if err != nil {
-			log.Printf("E! Failed to connect to %s: %v", server, err)
+			m.Log.Errorf("Failed to connect to %s: %s", server, err.Error())
 		} else {
-			log.Printf("D! Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
+			m.Log.Debugf("Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
 		}
 
 		// Add to the list of client connections
@@ -394,13 +396,13 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				&authentication.LoginRequest{UserName: m.Username,
 					Password: m.Password, ClientId: m.ClientID})
 			if loginErr != nil {
-				log.Printf("E! Could not initiate login check for %s: %v", server, err)
+				m.Log.Errorf("Could not initiate login check for %s: %v", server, loginErr)
 				continue
 			}
 
 			// Check if the user is authenticated. Bail if auth error
 			if !loginReply.Result {
-				log.Printf("E! Failed to authenticate the user for %s", server)
+				m.Log.Errorf("Failed to authenticate the user for %s", server)
 				continue
 			}
 		}

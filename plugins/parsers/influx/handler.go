@@ -2,105 +2,131 @@ package influx
 
 import (
 	"bytes"
+	"errors"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/prometheus/common/log"
 )
 
+// MetricHandler implements the Handler interface and produces telegraf.Metric.
 type MetricHandler struct {
-	builder   *metric.Builder
-	metrics   []telegraf.Metric
-	precision time.Duration
+	err           error
+	timePrecision time.Duration
+	timeFunc      TimeFunc
+	metric        telegraf.Metric
 }
 
 func NewMetricHandler() *MetricHandler {
 	return &MetricHandler{
-		builder:   metric.NewBuilder(),
-		precision: time.Nanosecond,
+		timePrecision: time.Nanosecond,
+		timeFunc:      time.Now,
 	}
 }
 
-func (h *MetricHandler) SetTimeFunc(f metric.TimeFunc) {
-	h.builder.TimeFunc = f
+func (h *MetricHandler) SetTimePrecision(p time.Duration) {
+	h.timePrecision = p
+	// When the timestamp is omitted from the metric, the timestamp
+	// comes from the server clock, truncated to the nearest unit of
+	// measurement provided in precision.
+	//
+	// When a timestamp is provided in the metric, precision is
+	// overloaded to hold the unit of measurement of the timestamp.
 }
 
-func (h *MetricHandler) SetTimePrecision(precision time.Duration) {
-	h.builder.TimePrecision = precision
-	h.precision = precision
+func (h *MetricHandler) SetTimeFunc(f TimeFunc) {
+	h.timeFunc = f
 }
 
 func (h *MetricHandler) Metric() (telegraf.Metric, error) {
-	return h.builder.Metric()
+	if h.metric.Time().IsZero() {
+		h.metric.SetTime(h.timeFunc().Truncate(h.timePrecision))
+	}
+	return h.metric, nil
 }
 
-func (h *MetricHandler) SetMeasurement(name []byte) {
-	h.builder.SetName(nameUnescape(name))
+func (h *MetricHandler) SetMeasurement(name []byte) error {
+	var err error
+	h.metric, err = metric.New(nameUnescape(name),
+		nil, nil, time.Time{})
+	return err
 }
 
-func (h *MetricHandler) AddTag(key []byte, value []byte) {
+func (h *MetricHandler) AddTag(key []byte, value []byte) error {
 	tk := unescape(key)
 	tv := unescape(value)
-	h.builder.AddTag(tk, tv)
+	h.metric.AddTag(tk, tv)
+	return nil
 }
 
-func (h *MetricHandler) AddInt(key []byte, value []byte) {
+func (h *MetricHandler) AddInt(key []byte, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseIntBytes(bytes.TrimSuffix(value, []byte("i")), 10, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable int value: %q: %v", value, err)
-		return
+		if numerr, ok := err.(*strconv.NumError); ok {
+			return numerr.Err
+		}
+		return err
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
+	return nil
 }
 
-func (h *MetricHandler) AddUint(key []byte, value []byte) {
+func (h *MetricHandler) AddUint(key []byte, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseUintBytes(bytes.TrimSuffix(value, []byte("u")), 10, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable uint value: %q: %v", value, err)
-		return
+		if numerr, ok := err.(*strconv.NumError); ok {
+			return numerr.Err
+		}
+		return err
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
+	return nil
 }
 
-func (h *MetricHandler) AddFloat(key []byte, value []byte) {
+func (h *MetricHandler) AddFloat(key []byte, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseFloatBytes(value, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable float value: %q: %v", value, err)
-		return
+		if numerr, ok := err.(*strconv.NumError); ok {
+			return numerr.Err
+		}
+		return err
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
+	return nil
 }
 
-func (h *MetricHandler) AddString(key []byte, value []byte) {
+func (h *MetricHandler) AddString(key []byte, value []byte) error {
 	fk := unescape(key)
 	fv := stringFieldUnescape(value)
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
+	return nil
 }
 
-func (h *MetricHandler) AddBool(key []byte, value []byte) {
+func (h *MetricHandler) AddBool(key []byte, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseBoolBytes(value)
 	if err != nil {
-		log.Errorf("E! Received unparseable boolean value: %q: %v", value, err)
-		return
+		return errors.New("unparseable bool")
 	}
-	h.builder.AddField(fk, fv)
+	h.metric.AddField(fk, fv)
+	return nil
 }
 
-func (h *MetricHandler) SetTimestamp(tm []byte) {
+func (h *MetricHandler) SetTimestamp(tm []byte) error {
 	v, err := parseIntBytes(tm, 10, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable timestamp: %q: %v", tm, err)
-		return
+		if numerr, ok := err.(*strconv.NumError); ok {
+			return numerr.Err
+		}
+		return err
 	}
-	ns := v * int64(h.precision)
-	h.builder.SetTime(time.Unix(0, ns))
-}
 
-func (h *MetricHandler) Reset() {
-	h.builder.Reset()
+	//time precision is overloaded to mean time unit here
+	ns := v * int64(h.timePrecision)
+	h.metric.SetTime(time.Unix(0, ns))
+	return nil
 }

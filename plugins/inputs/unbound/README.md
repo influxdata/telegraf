@@ -18,12 +18,15 @@ a validating, recursive, and caching DNS resolver.
   ## The default location of the unbound-control binary can be overridden with:
   # binary = "/usr/sbin/unbound-control"
 
-  ## The default timeout of 1s can be overriden with:
+  ## The default location of the unbound config file can be overridden with:
+  # config_file = "/etc/unbound/unbound.conf"
+
+  ## The default timeout of 1s can be overridden with:
   # timeout = "1s"
 
   ## When set to true, thread metrics are tagged with the thread id.
   ##
-  ## The default is false for backwards compatibility, and will be change to
+  ## The default is false for backwards compatibility, and will be changed to
   ## true in a future version.  It is recommended to set to true on new
   ## deployments.
   thread_as_tag = false
@@ -56,7 +59,9 @@ You will also need to update your sudoers file:
 ```bash
 $ visudo
 # Add the following line:
-telegraf ALL=(ALL) NOPASSWD: /usr/sbin/unbound-control
+Cmnd_Alias UNBOUNDCTL = /usr/sbin/unbound-control
+telegraf  ALL=(ALL) NOPASSWD: UNBOUNDCTL
+Defaults!UNBOUNDCTL !logfile, !syslog, !pam_session
 ```
 
 Please use the solution you see as most appropriate.

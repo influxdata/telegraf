@@ -1,7 +1,7 @@
 # Procstat Input Plugin
 
 The procstat plugin can be used to monitor the system resource usage of one or more processes.
-The procstat_lookup metric displays the query information, 
+The procstat_lookup metric displays the query information,
 specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
@@ -11,6 +11,7 @@ Processes can be selected for monitoring using one of several methods:
 - user
 - systemd_unit
 - cgroup
+- win_service
 
 ### Configuration:
 
@@ -30,6 +31,9 @@ Processes can be selected for monitoring using one of several methods:
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
+  ## Windows service name
+  # win_service = ""
+
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
   # process_name = "bar"
@@ -37,9 +41,15 @@ Processes can be selected for monitoring using one of several methods:
   ## Field name prefix
   # prefix = ""
 
-  ## Add PID as a tag instead of a field; useful to differentiate between
-  ## processes whose tags are otherwise the same.  Can create a large number
-  ## of series, use judiciously.
+  ## When true add the full cmdline as a tag.
+  # cmdline_tag = false
+
+  ## Add the PID as a tag instead of as a field.  When collecting multiple
+  ## processes with otherwise matching tags this setting should be enabled to
+  ## ensure each process has a unique identity.
+  ##
+  ## Enabling this option may result in a large number of series, especially
+  ## when processes have a short lifetime.
   # pid_tag = false
 
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
@@ -68,6 +78,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
 - procstat
   - tags:
     - pid (when `pid_tag` is true)
+    - cmdline (when 'cmdline_tag' is true)
     - process_name
     - pidfile (when defined)
     - exe (when defined)
@@ -75,7 +86,11 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - user (when selected)
     - systemd_unit (when defined)
     - cgroup (when defined)
+    - win_service (when defined)
   - fields:
+    - child_major_faults (int)
+    - child_minor_faults (int)
+    - created_at (int) [epoch in nanoseconds]
     - cpu_time (int)
     - cpu_time_guest (float)
     - cpu_time_guest_nice (float)
@@ -85,17 +100,19 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - cpu_time_nice (float)
     - cpu_time_soft_irq (float)
     - cpu_time_steal (float)
-    - cpu_time_stolen (float)
     - cpu_time_system (float)
     - cpu_time_user (float)
     - cpu_usage (float)
     - involuntary_context_switches (int)
+    - major_faults (int)
     - memory_data (int)
     - memory_locked (int)
     - memory_rss (int)
     - memory_stack (int)
     - memory_swap (int)
+    - memory_usage (float)
     - memory_vms (int)
+    - minor_faults (int)
     - nice_priority (int)
     - num_fds (int, *telegraf* may need to be ran as **root**)
     - num_threads (int)
@@ -131,21 +148,26 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - write_count (int, *telegraf* may need to be ran as **root**)
 - procstat_lookup
   - tags:
-    - exe (string)
-    - pid_finder (string)
-    - pid_file (string)
-    - pattern (string)
-    - prefix (string)
-    - user (string)
-    - systemd_unit (string)
-    - cgroup (string)
+    - exe
+    - pid_finder
+    - pid_file
+    - pattern
+    - prefix
+    - user
+    - systemd_unit
+    - cgroup
+    - win_service
+    - result
   - fields:
     - pid_count (int)
+    - running (int)
+    - result_code (int, success = 0, lookup_error = 1)
+
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
 ### Example Output:
 
 ```
-procstat,pidfile=/var/run/lxc/dnsmasq.pid,process_name=dnsmasq rlimit_file_locks_soft=2147483647i,rlimit_signals_pending_hard=1758i,voluntary_context_switches=478i,read_bytes=307200i,cpu_time_user=0.01,cpu_time_guest=0,memory_swap=0i,memory_locked=0i,rlimit_num_fds_hard=4096i,rlimit_nice_priority_hard=0i,num_fds=11i,involuntary_context_switches=20i,read_count=23i,memory_rss=1388544i,rlimit_memory_rss_soft=2147483647i,rlimit_memory_rss_hard=2147483647i,nice_priority=20i,rlimit_cpu_time_hard=2147483647i,cpu_time=0i,write_bytes=0i,cpu_time_idle=0,cpu_time_nice=0,memory_data=229376i,memory_stack=135168i,rlimit_cpu_time_soft=2147483647i,rlimit_memory_data_hard=2147483647i,rlimit_memory_locked_hard=65536i,rlimit_signals_pending_soft=1758i,write_count=11i,cpu_time_iowait=0,cpu_time_steal=0,cpu_time_stolen=0,rlimit_memory_stack_soft=8388608i,cpu_time_system=0.02,cpu_time_guest_nice=0,rlimit_memory_locked_soft=65536i,rlimit_memory_vms_soft=2147483647i,rlimit_file_locks_hard=2147483647i,rlimit_realtime_priority_hard=0i,pid=828i,num_threads=1i,cpu_time_soft_irq=0,rlimit_memory_vms_hard=2147483647i,rlimit_realtime_priority_soft=0i,memory_vms=15884288i,rlimit_memory_stack_hard=2147483647i,cpu_time_irq=0,rlimit_memory_data_soft=2147483647i,rlimit_num_fds_soft=1024i,signals_pending=0i,rlimit_nice_priority_soft=0i,realtime_priority=0i
-procstat,exe=influxd,process_name=influxd rlimit_num_fds_hard=16384i,rlimit_signals_pending_hard=1758i,realtime_priority=0i,rlimit_memory_vms_hard=2147483647i,rlimit_signals_pending_soft=1758i,cpu_time_stolen=0,rlimit_memory_stack_hard=2147483647i,rlimit_realtime_priority_hard=0i,cpu_time=0i,pid=500i,voluntary_context_switches=975i,cpu_time_idle=0,memory_rss=3072000i,memory_locked=0i,rlimit_nice_priority_soft=0i,signals_pending=0i,nice_priority=20i,read_bytes=823296i,cpu_time_soft_irq=0,rlimit_memory_data_hard=2147483647i,rlimit_memory_locked_soft=65536i,write_count=8i,cpu_time_irq=0,memory_vms=33501184i,rlimit_memory_stack_soft=8388608i,cpu_time_iowait=0,rlimit_memory_vms_soft=2147483647i,rlimit_nice_priority_hard=0i,num_fds=29i,memory_data=229376i,rlimit_cpu_time_soft=2147483647i,rlimit_file_locks_soft=2147483647i,num_threads=1i,write_bytes=0i,cpu_time_steal=0,rlimit_memory_rss_hard=2147483647i,cpu_time_guest=0,cpu_time_guest_nice=0,cpu_usage=0,rlimit_memory_locked_hard=65536i,rlimit_file_locks_hard=2147483647i,involuntary_context_switches=38i,read_count=16851i,memory_swap=0i,rlimit_memory_data_soft=2147483647i,cpu_time_user=0.11,rlimit_cpu_time_hard=2147483647i,rlimit_num_fds_soft=16384i,rlimit_realtime_priority_soft=0i,cpu_time_system=0.27,cpu_time_nice=0,memory_stack=135168i,rlimit_memory_rss_soft=2147483647i
+procstat_lookup,host=prash-laptop,pattern=influxd,pid_finder=pgrep,result=success pid_count=1i,running=1i,result_code=0i 1582089700000000000
+procstat,host=prash-laptop,pattern=influxd,process_name=influxd,user=root involuntary_context_switches=151496i,child_minor_faults=1061i,child_major_faults=8i,cpu_time_user=2564.81,cpu_time_idle=0,cpu_time_irq=0,cpu_time_guest=0,pid=32025i,major_faults=8609i,created_at=1580107536000000000i,voluntary_context_switches=1058996i,cpu_time_system=616.98,cpu_time_steal=0,cpu_time_guest_nice=0,memory_swap=0i,memory_locked=0i,memory_usage=1.7797634601593018,num_threads=18i,cpu_time_nice=0,cpu_time_iowait=0,cpu_time_soft_irq=0,memory_rss=148643840i,memory_vms=1435688960i,memory_data=0i,memory_stack=0i,minor_faults=1856550i 1582089700000000000
 ```

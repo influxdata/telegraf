@@ -12,7 +12,7 @@ report those stats already using StatsD protocol if needed.
 # Gather health check statuses from services registered in Consul
 [[inputs.consul]]
   ## Consul server address
-  # address = "localhost"
+  # address = "localhost:8500"
 
   ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
@@ -24,8 +24,8 @@ report those stats already using StatsD protocol if needed.
   # username = ""
   # password = ""
 
-  ## Data centre to query the health checks from
-  # datacentre = ""
+  ## Data center to query the health checks from
+  # datacenter = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -44,7 +44,7 @@ report those stats already using StatsD protocol if needed.
 
 - consul_health_checks
   - tags:
-  	- node (node that check/service is registred on)
+  	- node (node that check/service is registered on)
   	- service_name
   	- check_id
   - fields:

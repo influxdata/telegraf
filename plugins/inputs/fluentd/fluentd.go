@@ -53,7 +53,7 @@ type pluginData struct {
 
 // parse JSON from fluentd Endpoint
 // Parameters:
-// 		data: unprocessed json recivied from endpoint
+// 		data: unprocessed json received from endpoint
 //
 // Returns:
 //		pluginData:		slice that contains parsed plugins
@@ -76,7 +76,7 @@ func parse(data []byte) (datapointArray []pluginData, err error) {
 // Description - display description
 func (h *Fluentd) Description() string { return description }
 
-// SampleConfig - generate configuretion
+// SampleConfig - generate configuration
 func (h *Fluentd) SampleConfig() string { return sampleConfig }
 
 // Gather - Main code responsible for gathering, processing and creating metrics

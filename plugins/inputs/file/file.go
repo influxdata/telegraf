@@ -3,28 +3,44 @@ package file
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
+	"github.com/dimchansky/utfbom"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/common/encoding"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
 type File struct {
-	Files  []string `toml:"files"`
-	parser parsers.Parser
+	Files             []string `toml:"files"`
+	FileTag           string   `toml:"file_tag"`
+	CharacterEncoding string   `toml:"character_encoding"`
+	parser            parsers.Parser
 
 	filenames []string
+	decoder   *encoding.Decoder
 }
 
 const sampleConfig = `
-  ## Files to parse each interval.
-  ## These accept standard unix glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   /var/log/**.log     -> recursively find all .log files in /var/log
-  ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
-  ##   /var/log/apache.log -> only read the apache log file
-  files = ["/var/log/apache/access.log"]
+  ## Files to parse each interval.  Accept standard unix glob matching rules,
+  ## as well as ** to match recursive files and directories.
+  files = ["/tmp/metrics.out"]
+
+  ## Name a tag containing the name of the file the data was parsed from.  Leave empty
+  ## to disable.
+  # file_tag = ""
+
+  ## Character encoding to use when interpreting the file contents.  Invalid
+  ## characters are replaced using the unicode replacement character.  When set
+  ## to the empty string the data is not decoded to text.
+  ##   ex: character_encoding = "utf-8"
+  ##       character_encoding = "utf-16le"
+  ##       character_encoding = "utf-16be"
+  ##       character_encoding = ""
+  # character_encoding = ""
 
   ## The dataformat to be read from files
   ## Each data format has its own unique set of configuration options, read
@@ -39,7 +55,13 @@ func (f *File) SampleConfig() string {
 }
 
 func (f *File) Description() string {
-	return "Reload and gather from file[s] on telegraf's interval."
+	return "Parse a complete file each interval"
+}
+
+func (f *File) Init() error {
+	var err error
+	f.decoder, err = encoding.NewDecoder(f.CharacterEncoding)
+	return err
 }
 
 func (f *File) Gather(acc telegraf.Accumulator) error {
@@ -54,7 +76,10 @@ func (f *File) Gather(acc telegraf.Accumulator) error {
 		}
 
 		for _, m := range metrics {
-			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			if f.FileTag != "" {
+				m.AddTag(f.FileTag, filepath.Base(k))
+			}
+			acc.AddMetric(m)
 		}
 	}
 	return nil
@@ -75,10 +100,7 @@ func (f *File) refreshFilePaths() error {
 		if len(files) <= 0 {
 			return fmt.Errorf("could not find file: %v", file)
 		}
-
-		for k := range files {
-			allFiles = append(allFiles, k)
-		}
+		allFiles = append(allFiles, files...)
 	}
 
 	f.filenames = allFiles
@@ -86,12 +108,18 @@ func (f *File) refreshFilePaths() error {
 }
 
 func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
-	fileContents, err := ioutil.ReadFile(filename)
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	r, _ := utfbom.Skip(f.decoder.Reader(file))
+	fileContents, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}
 	return f.parser.Parse(fileContents)
-
 }
 
 func init() {

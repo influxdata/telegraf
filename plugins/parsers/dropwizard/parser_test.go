@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var TimeFunc = func() time.Time {
+var testTimeFunc = func() time.Time {
 	return time.Unix(0, 0)
 }
 
@@ -106,9 +106,9 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 		"count": float64(1),
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{
-		"metric_type": "counter",
-		"tag1":        "green",
-		"tag2":        "yellow",
+		"metric_type":             "counter",
+		"tag1":                    "green",
+		"tag2":                    "yellow",
 		"tag3 space,comma=equals": "red ,=",
 	}, metrics[0].Tags())
 	assert.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
@@ -528,7 +528,7 @@ func TestDropWizard(t *testing.T) {
 						map[string]interface{}{
 							"value": 42.0,
 						},
-						TimeFunc(),
+						testTimeFunc(),
 					),
 				),
 			},
@@ -547,7 +547,7 @@ func TestDropWizard(t *testing.T) {
 						map[string]interface{}{
 							"value": 42.0,
 						},
-						TimeFunc(),
+						testTimeFunc(),
 					),
 				),
 			},
@@ -573,7 +573,7 @@ func TestDropWizard(t *testing.T) {
 						map[string]interface{}{
 							"value": 42.0,
 						},
-						TimeFunc(),
+						testTimeFunc(),
 					),
 				),
 			},
@@ -584,7 +584,7 @@ func TestDropWizard(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parser := NewParser()
-			parser.SetTimeFunc(TimeFunc)
+			parser.SetTimeFunc(testTimeFunc)
 			metrics, err := parser.Parse(tt.input)
 			tt.errFunc(t, err)
 

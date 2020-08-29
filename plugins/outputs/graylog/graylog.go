@@ -150,13 +150,19 @@ func (g *Gelf) send(b []byte) (n int, err error) {
 }
 
 type Graylog struct {
-	Servers []string
-	writer  io.Writer
+	Servers           []string `toml:"servers"`
+	ShortMessageField string   `toml:"short_message_field"`
+	writer            io.Writer
 }
 
 var sampleConfig = `
   ## UDP endpoint for your graylog instance.
-  servers = ["127.0.0.1:12201", "192.168.1.1:12201"]
+  servers = ["127.0.0.1:12201"]
+
+  ## The field to use as the GELF short_message, if unset the static string
+  ## "telegraf" will be used.
+  ##   example: short_message_field = "message"
+  # short_message_field = ""
 `
 
 func (g *Graylog) Connect() error {
@@ -184,16 +190,12 @@ func (g *Graylog) SampleConfig() string {
 }
 
 func (g *Graylog) Description() string {
-	return "Send telegraf metrics to graylog(s)"
+	return "Send telegraf metrics to graylog"
 }
 
 func (g *Graylog) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
-
 	for _, metric := range metrics {
-		values, err := serialize(metric)
+		values, err := g.serialize(metric)
 		if err != nil {
 			return err
 		}
@@ -201,14 +203,14 @@ func (g *Graylog) Write(metrics []telegraf.Metric) error {
 		for _, value := range values {
 			_, err := g.writer.Write([]byte(value))
 			if err != nil {
-				return fmt.Errorf("FAILED to write message: %s, %s", value, err)
+				return fmt.Errorf("error writing message: %q, %v", value, err)
 			}
 		}
 	}
 	return nil
 }
 
-func serialize(metric telegraf.Metric) ([]string, error) {
+func (g *Graylog) serialize(metric telegraf.Metric) ([]string, error) {
 	out := []string{}
 
 	m := make(map[string]interface{})
@@ -217,7 +219,7 @@ func serialize(metric telegraf.Metric) ([]string, error) {
 	m["short_message"] = "telegraf"
 	m["name"] = metric.Name()
 
-	if host, ok := metric.Tags()["host"]; ok {
+	if host, ok := metric.GetTag("host"); ok {
 		m["host"] = host
 	} else {
 		host, err := os.Hostname()
@@ -227,14 +229,18 @@ func serialize(metric telegraf.Metric) ([]string, error) {
 		m["host"] = host
 	}
 
-	for key, value := range metric.Tags() {
-		if key != "host" {
-			m["_"+key] = value
+	for _, tag := range metric.TagList() {
+		if tag.Key != "host" {
+			m["_"+tag.Key] = tag.Value
 		}
 	}
 
-	for key, value := range metric.Fields() {
-		m["_"+key] = value
+	for _, field := range metric.FieldList() {
+		if field.Key == g.ShortMessageField {
+			m["short_message"] = field.Value
+		} else {
+			m["_"+field.Key] = field.Value
+		}
 	}
 
 	serialized, err := ejson.Marshal(m)

@@ -1,4 +1,4 @@
-# Conntrack Plugin
+# Conntrack Input Plugin
 
 Collects stats from Netfilter's conntrack-tools.
 
@@ -34,7 +34,7 @@ For more information on conntrack-tools, see the
             "nf_conntrack_count","nf_conntrack_max"]
 
    ## Directories to search within for the conntrack files above.
-   ## Missing directrories will be ignored.
+   ## Missing directories will be ignored.
    dirs = ["/proc/sys/net/ipv4/netfilter","/proc/sys/net/netfilter"]
 ```
 

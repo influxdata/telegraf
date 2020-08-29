@@ -108,7 +108,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				},
 			},
 			want: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "8090652509916334619",
@@ -121,8 +121,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851331000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":             "8090652509916334619",
@@ -138,8 +139,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(53106) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851331000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "103618986556047333",
@@ -152,8 +154,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":             "103618986556047333",
@@ -169,8 +172,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(50410) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360904552000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "22964302721410078",
@@ -183,8 +187,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"service_name":  "trivial",
@@ -199,8 +204,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"service_name":  "trivial",
@@ -215,8 +221,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"parent_id":     "22964302721410078",
@@ -231,8 +238,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"trace_id":       "2505404965370368069",
@@ -248,6 +256,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(103680) * time.Microsecond).Nanoseconds(),
 					},
 					Time: time.Unix(0, 1498688360851318000).UTC(),
+					Type: telegraf.Untyped,
 				},
 			},
 			wantErr: false,
@@ -283,7 +292,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 				},
 			},
 			want: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"id":           "6802735349851856000",
@@ -296,8 +305,9 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(1) * time.Nanosecond).Nanoseconds(),
 					},
 					Time: time.Unix(1, 0).UTC(),
+					Type: telegraf.Untyped,
 				},
-				testutil.Metric{
+				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
 						"annotation":    "cs",
@@ -312,6 +322,7 @@ func TestLineProtocolConverter_Record(t *testing.T) {
 						"duration_ns": (time.Duration(1) * time.Nanosecond).Nanoseconds(),
 					},
 					Time: time.Unix(1, 0).UTC(),
+					Type: telegraf.Untyped,
 				},
 			},
 		},

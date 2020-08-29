@@ -1,0 +1,120 @@
+[
+  {
+    "messages_details": {
+      "rate": 0.0
+    },
+    "messages": 44,
+    "messages_unacknowledged_details": {
+      "rate": 0.0
+    },
+    "messages_unacknowledged": 44,
+    "messages_ready_details": {
+      "rate": 0.0
+    },
+    "messages_ready": 32,
+    "reductions_details": {
+      "rate": 223.0
+    },
+    "reductions": 15875433,
+    "message_stats": {
+      "deliver_get_details": {
+        "rate": 0.2
+      },
+      "deliver_get": 3457,
+      "ack_details": {
+        "rate": 9.9
+      },
+      "ack": 3457,
+      "redeliver_details": {
+        "rate": 2.5
+      },
+      "redeliver": 33,
+      "deliver_no_ack_details": {
+        "rate": 0.0
+      },
+      "deliver_no_ack": 0,
+      "deliver_details": {
+        "rate": 333.4
+      },
+      "deliver": 22222,
+      "get_no_ack_details": {
+        "rate": 0.0
+      },
+      "get_no_ack": 0,
+      "get_details": {
+        "rate": 0.0
+      },
+      "get": 0,
+      "publish_details": {
+        "rate": 11.2
+      },
+      "publish": 3457
+    },
+    "node": "rabbit@rmqlocal-0.rmqlocal.ankorabbitstatefulset3.svc.cluster.local",
+    "arguments": {
+      "x-expires": 1800000,
+      "x-ha-policy": "all"
+    },
+    "exclusive": false,
+    "auto_delete": false,
+    "durable": false,
+    "vhost": "sorandomsorandom",
+    "name": "reply_a716f0523cd44941ad2ea6ce4a3869c3",
+    "message_bytes_paged_out": 0,
+    "messages_paged_out": 0,
+    "idle_since": "2015-11-01 8:22:14",
+    "backing_queue_status": {
+      "avg_ack_egress_rate": 0.2374460025857711,
+      "avg_ack_ingress_rate": 0.2374460025857711,
+      "avg_egress_rate": 0.2374460025857711,
+      "avg_ingress_rate": 0.2374460025857711,
+      "delta": [
+        "delta",
+        "undefined",
+        0,
+        0,
+        "undefined"
+      ],
+      "len": 0,
+      "mode": "default",
+      "next_seq_id": 3457,
+      "q1": 0,
+      "q2": 0,
+      "q3": 0,
+      "q4": 0,
+      "target_ram_count": 0
+    },
+    "head_message_timestamp": null,
+    "message_bytes_persistent": 7,
+    "message_bytes_ram": 6,
+    "message_bytes_unacknowledged": 5,
+    "message_bytes_ready": 4,
+    "message_bytes": 3,
+    "messages_persistent": 0,
+    "messages_unacknowledged_ram": 0,
+    "messages_ready_ram": 0,
+    "messages_ram": 0,
+    "garbage_collection": {
+      "minor_gcs": 314,
+      "fullsweep_after": 65535,
+      "min_heap_size": 233,
+      "min_bin_vheap_size": 46422,
+      "max_heap_size": 0
+    },
+    "state": "running",
+    "recoverable_slaves": null,
+    "memory": 143776,
+    "consumer_utilisation": 1.0,
+    "consumers": 3,
+    "exclusive_consumer_tag": null,
+    "effective_policy_definition": [],
+    "operator_policy": null,
+    "policy": null,
+    "slave_nodes":[
+      "rabbit@ip-10-1-2-118"
+    ],
+    "synchronised_slave_nodes":[
+      "rabbit@ip-10-1-2-118"
+    ]
+  }
+]

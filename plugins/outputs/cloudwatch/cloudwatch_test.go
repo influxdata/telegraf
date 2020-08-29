@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test that each tag becomes one dimension
@@ -28,7 +29,7 @@ func TestBuildDimensions(t *testing.T) {
 
 	tagKeys := make([]string, len(testPoint.Tags()))
 	i := 0
-	for k, _ := range testPoint.Tags() {
+	for k := range testPoint.Tags() {
 		tagKeys[i] = k
 		i += 1
 	}
@@ -74,11 +75,11 @@ func TestBuildMetricDatums(t *testing.T) {
 		testutil.TestMetric(float64(1.174272e+108)), // largest should be 1.174271e+108
 	}
 	for _, point := range validMetrics {
-		datums := BuildMetricDatum(false, point)
+		datums := BuildMetricDatum(false, false, point)
 		assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", point))
 	}
 	for _, point := range invalidMetrics {
-		datums := BuildMetricDatum(false, point)
+		datums := BuildMetricDatum(false, false, point)
 		assert.Equal(0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
 	}
 
@@ -88,7 +89,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		map[string]interface{}{"value_max": float64(10), "value_min": float64(0), "value_sum": float64(100), "value_count": float64(20)},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	datums := BuildMetricDatum(true, statisticMetric)
+	datums := BuildMetricDatum(true, false, statisticMetric)
 	assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
 
 	multiFieldsMetric, _ := metric.New(
@@ -97,7 +98,7 @@ func TestBuildMetricDatums(t *testing.T) {
 		map[string]interface{}{"valueA": float64(10), "valueB": float64(0), "valueC": float64(100), "valueD": float64(20)},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	datums = BuildMetricDatum(true, multiFieldsMetric)
+	datums = BuildMetricDatum(true, false, multiFieldsMetric)
 	assert.Equal(4, len(datums), fmt.Sprintf("Each field should create a Datum {value: %v}", multiFieldsMetric))
 
 	multiStatisticMetric, _ := metric.New(
@@ -111,8 +112,42 @@ func TestBuildMetricDatums(t *testing.T) {
 		},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
-	datums = BuildMetricDatum(true, multiStatisticMetric)
+	datums = BuildMetricDatum(true, false, multiStatisticMetric)
 	assert.Equal(7, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", multiStatisticMetric))
+}
+
+func TestMetricDatumResolution(t *testing.T) {
+	const expectedStandardResolutionValue = int64(60)
+	const expectedHighResolutionValue = int64(1)
+
+	assert := assert.New(t)
+
+	metric := testutil.TestMetric(1)
+
+	standardResolutionDatum := BuildMetricDatum(false, false, metric)
+	actualStandardResolutionValue := *standardResolutionDatum[0].StorageResolution
+	assert.Equal(expectedStandardResolutionValue, actualStandardResolutionValue)
+
+	highResolutionDatum := BuildMetricDatum(false, true, metric)
+	actualHighResolutionValue := *highResolutionDatum[0].StorageResolution
+	assert.Equal(expectedHighResolutionValue, actualHighResolutionValue)
+}
+
+func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
+	input := testutil.MustMetric(
+		"cpu",
+		map[string]string{
+			"host": "example.org",
+			"foo":  "",
+		},
+		map[string]interface{}{
+			"value": int64(42),
+		},
+		time.Unix(0, 0),
+	)
+
+	datums := BuildMetricDatum(true, false, input)
+	require.Len(t, datums[0].Dimensions, 1)
 }
 
 func TestPartitionDatums(t *testing.T) {

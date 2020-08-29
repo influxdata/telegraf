@@ -4,7 +4,7 @@ The powerdns plugin gathers metrics about PowerDNS using unix socket.
 
 ### Configuration:
 
-```
+```toml
 # Description
 [[inputs.powerdns]]
   # An array of sockets to gather stats about.
@@ -12,6 +12,16 @@ The powerdns plugin gathers metrics about PowerDNS using unix socket.
   #
   # If no servers are specified, then '/var/run/pdns.controlsocket' is used as the path.
   unix_sockets = ["/var/run/pdns.controlsocket"]
+```
+
+#### Permissions
+
+Telegraf will need read access to the powerdns control socket.
+
+On many systems this can be accomplished by adding the `telegraf` user to the
+`pdns` group:
+```
+usermod telegraf -a -G pdns
 ```
 
 ### Measurements & Fields:

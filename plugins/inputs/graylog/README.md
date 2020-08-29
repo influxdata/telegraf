@@ -1,4 +1,4 @@
-# GrayLog plugin
+# GrayLog Input Plugin
 
 The Graylog plugin can collect data from remote Graylog service URLs.
 
@@ -7,7 +7,7 @@ Plugin currently support two type of end points:-
 - multiple  (Ex http://[graylog-server-ip]:12900/system/metrics/multiple)
 - namespace (Ex http://[graylog-server-ip]:12900/system/metrics/namespace/{namespace})
 
-End Point can be a mixe of one  multiple end point  and several namespaces end points
+End Point can be a mix of one  multiple end point  and several namespaces end points
 
 
 Note: if namespace end point specified metrics array will be ignored for that call.
@@ -33,7 +33,7 @@ Note: if namespace end point specified metrics array will be ignored for that ca
 
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
-  ## Or by hitting the the web service api at:
+  ## Or by hitting the web service api at:
   ##   http://[graylog-host]:12900/system/metrics
   metrics = [
     "jvm.cl.loaded",

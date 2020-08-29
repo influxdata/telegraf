@@ -3,10 +3,12 @@ package ntpq
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSingleNTPQ(t *testing.T) {
@@ -14,9 +16,8 @@ func TestSingleNTPQ(t *testing.T) {
 		ret: []byte(singleNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -39,43 +40,13 @@ func TestSingleNTPQ(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
 
-func TestMissingJitterField(t *testing.T) {
-	tt := tester{
-		ret: []byte(missingJitterField),
-		err: nil,
-	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
-
-	acc := testutil.Accumulator{}
-	assert.NoError(t, acc.GatherError(n.Gather))
-
-	fields := map[string]interface{}{
-		"when":   int64(101),
-		"poll":   int64(256),
-		"reach":  int64(37),
-		"delay":  float64(51.016),
-		"offset": float64(233.010),
-	}
-	tags := map[string]string{
-		"remote":       "uschi5-ntp-002.",
-		"state_prefix": "*",
-		"refid":        "10.177.80.46",
-		"stratum":      "2",
-		"type":         "u",
-	}
-	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
-}
-
 func TestBadIntNTPQ(t *testing.T) {
 	tt := tester{
 		ret: []byte(badIntParseNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.Error(t, acc.GatherError(n.Gather))
@@ -102,9 +73,8 @@ func TestBadFloatNTPQ(t *testing.T) {
 		ret: []byte(badFloatParseNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.Error(t, acc.GatherError(n.Gather))
@@ -131,9 +101,8 @@ func TestDaysNTPQ(t *testing.T) {
 		ret: []byte(whenDaysNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -161,9 +130,8 @@ func TestHoursNTPQ(t *testing.T) {
 		ret: []byte(whenHoursNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -191,9 +159,8 @@ func TestMinutesNTPQ(t *testing.T) {
 		ret: []byte(whenMinutesNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -221,9 +188,8 @@ func TestBadWhenNTPQ(t *testing.T) {
 		ret: []byte(whenBadNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.Error(t, acc.GatherError(n.Gather))
@@ -253,9 +219,8 @@ func TestParserNTPQ(t *testing.T) {
 		err: nil,
 	}
 
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
 
@@ -316,9 +281,8 @@ func TestMultiNTPQ(t *testing.T) {
 		ret: []byte(multiNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -357,14 +321,12 @@ func TestMultiNTPQ(t *testing.T) {
 }
 
 func TestBadHeaderNTPQ(t *testing.T) {
-	resetVars()
 	tt := tester{
 		ret: []byte(badHeaderNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -387,14 +349,12 @@ func TestBadHeaderNTPQ(t *testing.T) {
 }
 
 func TestMissingDelayColumnNTPQ(t *testing.T) {
-	resetVars()
 	tt := tester{
 		ret: []byte(missingDelayNTPQ),
 		err: nil,
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, acc.GatherError(n.Gather))
@@ -420,12 +380,66 @@ func TestFailedNTPQ(t *testing.T) {
 		ret: []byte(singleNTPQ),
 		err: fmt.Errorf("Test failure"),
 	}
-	n := &NTPQ{
-		runQ: tt.runqTest,
-	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
 
 	acc := testutil.Accumulator{}
 	assert.Error(t, acc.GatherError(n.Gather))
+}
+
+// It is possible for the output of ntqp to be missing the refid column.  This
+// is believed to be http://bugs.ntp.org/show_bug.cgi?id=3484 which is fixed
+// in ntp-4.2.8p12 (included first in Debian Buster).
+func TestNoRefID(t *testing.T) {
+	now := time.Now()
+	expected := []telegraf.Metric{
+		testutil.MustMetric("ntpq",
+			map[string]string{
+				"refid":   "10.177.80.37",
+				"remote":  "83.137.98.96",
+				"stratum": "2",
+				"type":    "u",
+			},
+			map[string]interface{}{
+				"delay":  float64(54.033),
+				"jitter": float64(449514),
+				"offset": float64(243.426),
+				"poll":   int64(1024),
+				"reach":  int64(377),
+				"when":   int64(740),
+			},
+			now),
+		testutil.MustMetric("ntpq",
+			map[string]string{
+				"refid":   "10.177.80.37",
+				"remote":  "131.188.3.221",
+				"stratum": "2",
+				"type":    "u",
+			},
+			map[string]interface{}{
+				"delay":  float64(111.820),
+				"jitter": float64(449528),
+				"offset": float64(261.921),
+				"poll":   int64(1024),
+				"reach":  int64(377),
+				"when":   int64(783),
+			},
+			now),
+	}
+
+	tt := tester{
+		ret: []byte(noRefID),
+		err: nil,
+	}
+	n := newNTPQ()
+	n.runQ = tt.runqTest
+
+	acc := testutil.Accumulator{
+		TimeFunc: func() time.Time { return now },
+	}
+
+	require.NoError(t, acc.GatherError(n.Gather))
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
 type tester struct {
@@ -437,46 +451,9 @@ func (t *tester) runqTest() ([]byte, error) {
 	return t.ret, t.err
 }
 
-func resetVars() {
-	// Mapping of ntpq header names to tag keys
-	tagHeaders = map[string]string{
-		"remote": "remote",
-		"refid":  "refid",
-		"st":     "stratum",
-		"t":      "type",
-	}
-
-	// Mapping of the ntpq tag key to the index in the command output
-	tagI = map[string]int{
-		"remote":  -1,
-		"refid":   -1,
-		"stratum": -1,
-		"type":    -1,
-	}
-
-	// Mapping of float metrics to their index in the command output
-	floatI = map[string]int{
-		"delay":  -1,
-		"offset": -1,
-		"jitter": -1,
-	}
-
-	// Mapping of int metrics to their index in the command output
-	intI = map[string]int{
-		"when":  -1,
-		"poll":  -1,
-		"reach": -1,
-	}
-}
-
 var singleNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
 ==============================================================================
 *uschi5-ntp-002. 10.177.80.46     2 u  101  256   37   51.016  233.010  17.462
-`
-
-var missingJitterField = `     remote           refid      st t when poll reach   delay   offset  jitter
-==============================================================================
-*uschi5-ntp-002. 10.177.80.46     2 u  101  256   37   51.016  233.010
 `
 
 var badHeaderNTPQ = `remote      refid   foobar t when poll reach   delay   offset  jitter
@@ -527,6 +504,7 @@ var multiNTPQ = `     remote           refid      st t when poll reach   delay  
  5.9.29.107      10.177.80.37     2 u  703 1024  377  205.704  160.406 449602.
  91.189.94.4     10.177.80.37     2 u  673 1024  377  143.047  274.726 449445.
 `
+
 var multiParserNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
 ==============================================================================
 *SHM(0)          .PPS.                          1 u   60  64   377    0.000    0.045   1.012
@@ -534,4 +512,11 @@ var multiParserNTPQ = `     remote           refid      st t when poll reach   d
 +37.58.57.238 (domain) 192.53.103.103   2 u   10 1024  377    1.748    0.373   0.101
 +37.58.57.238 ( 192.53.103.103			2 u   10 1024  377    1.748    0.373   0.101
 -SHM(1)          .GPS.                          1 u   121 128  377    0.000   10.105   2.012
+`
+
+var noRefID = `     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+ 83.137.98.96    10.177.80.37     2 u  740 1024  377   54.033  243.426 449514.
+ 91.189.94.4                      2 u  673 1024  377  143.047  274.726 449445.
+ 131.188.3.221   10.177.80.37     2 u  783 1024  377  111.820  261.921 449528.
 `

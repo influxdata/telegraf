@@ -1,0 +1,11 @@
+[[inputs.memcached]]
+  servers = ["$MY_TEST_SERVER"]
+  namepass = ["metricname1", "ip_${MY_TEST_SERVER}_name"]
+  namedrop = ["metricname2"]
+  fieldpass = ["some", "strings"]
+  fielddrop = ["other", "stuff"]
+  interval = "$TEST_INTERVAL"
+  [inputs.memcached.tagpass]
+    goodtag = ["mytag"]
+  [inputs.memcached.tagdrop]
+    badtag = ["othertag"]

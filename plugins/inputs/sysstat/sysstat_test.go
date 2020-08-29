@@ -13,6 +13,7 @@ import (
 )
 
 var s = Sysstat{
+	Log:        testutil.Logger{},
 	interval:   10,
 	Sadc:       "/usr/lib/sa/sadc",
 	Sadf:       "/usr/bin/sadf",
@@ -223,6 +224,10 @@ func TestEscape(t *testing.T) {
 	}{
 		{
 			"%util",
+			"pct_util",
+		},
+		{
+			"%%util",
 			"pct_util",
 		},
 		{
