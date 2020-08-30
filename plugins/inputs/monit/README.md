@@ -128,6 +128,7 @@ Minimum Version of Monit tested with is 5.16.
     - hostname
     - port_number
     - request
+    - response_time
     - protocol
     - type
 
