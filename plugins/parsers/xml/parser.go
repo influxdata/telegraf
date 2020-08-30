@@ -52,7 +52,11 @@ func NewXMLParser(
 func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	timestamp := time.Now().UTC()
 	xmlDocument := etree.NewDocument()
-	xmlDocument.ReadFromBytes(b)
+
+	err := xmlDocument.ReadFromBytes(b)
+	if err != nil {
+		return nil, err
+	}
 
 	path, err := etree.CompilePath(p.Query)
 	if err != nil {
