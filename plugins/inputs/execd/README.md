@@ -70,6 +70,7 @@ telegraf's configuration has been refreshed via a SIGHUP.
   write_on_start=""
 
   ## String to trigger periodic Gather (metric updates) from daemon
+  ## String on gather
   ##
   ## !IMPORTANT! These settings are ignored unless signal="STDIN".
   ## !IMPORTANT! Newlines are not automatic - add \n if you want one.  
