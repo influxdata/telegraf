@@ -189,8 +189,8 @@ func (e *Execd) Init() error {
 func init() {
 	inputs.Add("execd", func() telegraf.Input {
 		return &Execd{
-			Signal:       "none",
-			RestartDelay: config.Duration(10 * time.Second),
+			Signal:        "none",
+			RestartDelay:  config.Duration(10 * time.Second),
 			WriteOnGather: "\n",
 		}
 	})
