@@ -16,14 +16,15 @@ import (
 
 // Process is a long-running process manager that will restart processes if they stop.
 type Process struct {
-	Cmd          *exec.Cmd
-	Stdin        io.WriteCloser
-	Stdout       io.ReadCloser
-	Stderr       io.ReadCloser
-	ReadStdoutFn func(io.Reader)
-	ReadStderrFn func(io.Reader)
-	RestartDelay time.Duration
-	Log          telegraf.Logger
+	Cmd                   *exec.Cmd
+	Stdin                 io.WriteCloser
+	Stdout                io.ReadCloser
+	Stderr                io.ReadCloser
+	ReadStdoutFn          func(io.Reader)
+	ReadStderrFn          func(io.Reader)
+	RestartDelay          time.Duration
+	RestartNotificationFn func(p *Process)
+	Log                   telegraf.Logger
 
 	name       string
 	args       []string
@@ -135,6 +136,14 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 			// Continue the loop and restart the process
 			if err := p.cmdStart(); err != nil {
 				return err
+			} else {
+				/*
+				 * Restart appears to have been successful.  If the caller
+				 * has requested they be notified on restart do so here.
+				 */
+				if p.RestartNotificationFn != nil {
+					p.RestartNotificationFn(p)
+				}
 			}
 		}
 	}
