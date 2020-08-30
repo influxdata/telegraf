@@ -191,6 +191,7 @@ func init() {
 		return &Execd{
 			Signal:       "none",
 			RestartDelay: config.Duration(10 * time.Second),
+			WriteOnGather: "\n",
 		}
 	})
 }
