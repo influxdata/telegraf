@@ -50,11 +50,12 @@ func TestExternalInputWorks(t *testing.T) {
 	require.NoError(t, err)
 
 	e := &Execd{
-		Command:      []string{exe, "-counter"},
-		RestartDelay: config.Duration(5 * time.Second),
-		parser:       influxParser,
-		Signal:       "STDIN",
-		Log:          testutil.Logger{},
+		Command:       []string{exe, "-counter"},
+		RestartDelay:  config.Duration(5 * time.Second),
+		WriteOnGather: "\n",
+		parser:        influxParser,
+		Signal:        "STDIN",
+		Log:           testutil.Logger{},
 	}
 
 	metrics := make(chan telegraf.Metric, 10)
