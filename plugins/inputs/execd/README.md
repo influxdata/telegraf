@@ -25,11 +25,44 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
   ## Valid values are:
   ##   "none"    : Do not signal anything. (Recommended for service inputs)
   ##               The process must output metrics by itself.
-  ##   "STDIN"   : Send a newline on STDIN. (Recommended for gather inputs)
+  ##   "STDIN"   : Send a newline on STDIN. (Recommended for gather inputs).
+  ##               Note that it is standard input from the perspective of the
+  #                daemon, not telegraf
   ##   "SIGHUP"  : Send a HUP signal. Not available on Windows. (not recommended)
   ##   "SIGUSR1" : Send a USR1 signal. Not available on Windows.
   ##   "SIGUSR2" : Send a USR2 signal. Not available on Windows.
   signal = "none"
+
+  ## Startup string
+  ##
+  ## The standard way of configuring a daemon is through the command line.
+  ## If the daemon requires additional configuratin, this is normally done
+  ## through its own configuration file.  In some cases, the command line
+  ## might provide the daemon with a path to such a configuration.
+  ##
+  ## As an alternative, some daemons may allow configuration through their
+  ## standard input, as if a user had typed them or redirected them from
+  ## a file.  Exed allows this by setting a write_on_start parameter.
+  ## 
+  ## !IMPORTANT! This setting is ignored unless signal="STDIN".
+  ## !IMPORTANT! Newlines are not automatic - add \n if you want one.  
+  ##
+  ## write_on_start is sent ONCE when the daemon is started.  If this string is
+  ## not specified or is zero-length, nothing is sent.  Note that TOM supports
+  ## multi-line string inputs.
+  write_on_start=""
+
+  ## String on gather
+  ##
+  ## !IMPORTANT! These settings are ignored unless signal="STDIN".
+  ## !IMPORTANT! Newlines are not automatic - add \n if you want one.  
+  ##
+  ## write_on_gather is sent on every collection interval, as a mechanism for
+  ## signaling the daemon that telegraf wants it to collect and transmit one or
+  ## more metrics.  If signal="STDIN" but this string is not specified, then
+  ## a single newline (\n) is used.  Also note that TOML accepts multi-line
+  ## inputs.  Newlines are not automatic - end strings with \n if they are required.
+  write_on_gather="\n"
 
   ## Delay before the process is restarted after an unexpected termination
   restart_delay = "10s"
