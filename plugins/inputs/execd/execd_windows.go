@@ -21,7 +21,8 @@ func (e *Execd) Gather(acc telegraf.Accumulator) error {
 		if osStdin, ok := e.process.Stdin.(*os.File); ok {
 			osStdin.SetWriteDeadline(time.Now().Add(1 * time.Second))
 		}
-		if _, err := io.WriteString(e.process.Stdin, "\n"); err != nil {
+
+		if _, err := io.WriteString(e.process.Stdin, e.WriteOnGather); err != nil {
 			return fmt.Errorf("Error writing to stdin: %s", err)
 		}
 	case "none":
