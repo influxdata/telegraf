@@ -136,6 +136,14 @@ func (p *Process) cmdLoop(ctx context.Context) error {
 			// Continue the loop and restart the process
 			if err := p.cmdStart(); err != nil {
 				return err
+			} else {
+				/*
+				 * Restart appears to have been successful.  If the caller
+				 * has requested they be notified on restart do so here.
+				 */
+				if p.RestartNotificationFn != nil {
+					p.RestartNotificationFn(p)
+				}
 			}
 
 			/*
