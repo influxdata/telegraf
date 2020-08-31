@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"sync"
 	"time"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
