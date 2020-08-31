@@ -48,7 +48,7 @@ put nine.telegraf.ping_average_response_ms 1441910366 24.006000 dc=homeoffice ho
 
 The OpenTSDB telnet interface can be simulated with this reader:
 
-```
+```go
 // opentsdb_telnet_mode_mock.go
 package main
 
