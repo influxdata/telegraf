@@ -51,6 +51,11 @@ in Prometheus format.
   ## 'bearer_token_string' take priority)
   # username = ""
   # password = ""
+  
+  ## HTTP Headers (all values must be strings)
+  # [inputs.prometheus.headers]
+  #   X-Auth-Token = "my-xauth-token"
+  #   apiVersion = "v1"
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
