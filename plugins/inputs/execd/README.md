@@ -13,6 +13,10 @@ new line to the process's STDIN.
 
 STDERR from the process will be relayed to Telegraf as errors in the logs.
 
+STDIN (the daemon process's standard input) will be closed to indicate when
+to shut down.  This can happen due to a normal telegraf shutdown, or when
+telegraf's configuration has been refreshed via a SIGHUP.
+
 ### Configuration:
 
 ```toml
@@ -62,6 +66,10 @@ STDERR from the process will be relayed to Telegraf as errors in the logs.
   ## more metrics.  If signal="STDIN" but this string is not specified, then
   ## a single newline (\n) is used.  Also note that TOML accepts multi-line
   ## inputs.  Newlines are not automatic - end strings with \n if they are required.
+  ##
+  ## Note that regardless of this setting the daemon proesses's stdin is closed
+  ## just prior to terminating the process (when telegraf shuts down)
+  ##
   write_on_gather="\n"
 
   ## Delay before the process is restarted after an unexpected termination
