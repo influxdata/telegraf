@@ -310,7 +310,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 	
 	// Add header parameters
-	for k, v := range h.Headers {
+	for k, v := range p.Headers {
 		if strings.ToLower(k) == "host" {
 			req.Host = v
 		} else {
