@@ -100,6 +100,10 @@ func (p *XMLParser) ParseAsArray(nodes []*etree.Element, timestamp time.Time) ([
 			xmlFields = mergeTwoFieldMaps(xmlFields, fields)
 		}
 
+		tags, fields := p.ParseXmlNode(e)
+		xmlTags = mergeTwoTagMaps(xmlTags, tags)
+		xmlFields = mergeTwoFieldMaps(xmlFields, fields)
+
 		if p.TagNode == true {
 			xmlTags["xml_node_name"] = e.Tag
 		}
