@@ -63,7 +63,7 @@ This is a guide to help you set up your plugin to use it with `execd`
      1. Location to edit your `telegraf.conf`
      1. Configuration to run your external plugin with [inputs.execd](/plugins/inputs/execd), 
      [processors.execd](/plugins/processors/execd) or [outputs.execd](/plugins/outputs/execd)
-     1. Note if restart of reload of Telegraf is required
+     1. Note that restart or reload of Telegraf is required
      
      
      
