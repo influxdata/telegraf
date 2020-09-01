@@ -23,6 +23,7 @@ This plugin can be used to poll for custom metrics from any source.
   tags = [
     [ ],
     [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+    [ [ "tag_3", "value_tag_3" ] ]
   ]
  
   ## Timeout for each command to complete.
