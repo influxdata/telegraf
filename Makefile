@@ -1,11 +1,5 @@
-ifeq ($(OS), Windows_NT)
-	devnull := nul
-else
-	devnull := /dev/null
-endif
-
-next_version := 1.15.0
-tag := $(shell git describe --exact-match --tags 2>$(devnull))
+next_version := 1.15.3
+tag := $(shell git describe --exact-match --tags 2>git_describe_error.tmp; rm -f git_describe_error.tmp)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 
