@@ -26,6 +26,14 @@ const sampleConfig = `
     "/tmp/collect_*.sh"
   ]
 
+  ## additional parameters that will be added to the metrics as tags
+  ## Lines correspond to the command lines, so first line of parameters are 
+  ## added to metrics of first command and so on
+  tags = [
+    [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+    [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+  ]
+
   ## Timeout for each command to complete.
   timeout = "5s"
 
@@ -45,6 +53,7 @@ type Exec struct {
 	Commands []string
 	Command  string
 	Timeout  internal.Duration
+	Tags [][][]string
 
 	parser parsers.Parser
 
@@ -140,7 +149,7 @@ func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
 
 }
 
-func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
+func (e *Exec) ProcessCommand(command string, tags [][]string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
 	_, isNagios := e.parser.(*nagios.NagiosParser)
 
@@ -165,6 +174,9 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	}
 
 	for _, m := range metrics {
+		for _, t := range tags {
+			m.AddTag(t[0], t[1])
+		}
 		acc.AddMetric(m)
 	}
 }
@@ -221,8 +233,8 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Add(len(commands))
-	for _, command := range commands {
-		go e.ProcessCommand(command, acc, &wg)
+	for idx, command := range commands {
+		go e.ProcessCommand(command, e.Tags[idx], acc, &wg)
 	}
 	wg.Wait()
 	return nil
