@@ -1,5 +1,5 @@
 next_version := 1.16.0
-tag := $(shell git describe --exact-match --tags 2>tags_err; rm tags_err)
+tag := $(shell git describe --exact-match --tags 2>tags_err; rm -f tags_err)
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
 
