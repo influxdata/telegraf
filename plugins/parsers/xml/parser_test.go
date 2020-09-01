@@ -28,6 +28,7 @@ const dataInAttrs = `
 
 const dataArray = `
 <Document>
+  <Name>measurement_name<Name>
   <Data>
     <Host_1>
       <Name>Host_1</Name>
@@ -139,13 +140,15 @@ func TestMultiplueNodes(t *testing.T) {
 }
 
 // Must return two metrics - one per selected top-level node
+// With name "measurement_name"
 func TestArrayParsing(t *testing.T) {
 	p := XMLParser{
-		MetricName: "xml_test",
-		ParseArray: true,
-		TagNode:    true,
-		Query:      "//Data/*",
-		TagKeys:    []string{"Name"},
+		MetricName:  "xml_test",
+		ParseArray:  true,
+		TagNode:     true,
+		Query:       "//Data/*",
+		Measurement: "//Name",
+		TagKeys:     []string{"Name"},
 	}
 
 	metrics, err := p.Parse([]byte(dataArray))
@@ -156,6 +159,9 @@ func TestArrayParsing(t *testing.T) {
 	require.Len(t, metrics[1].Tags(), 2)
 	require.Len(t, metrics[0].Fields(), 3)
 	require.Len(t, metrics[1].Fields(), 3)
+
+	require.Equal(t, metrics[0].Name(), "measurement_name")
+	require.Equal(t, metrics[1].Name(), "measurement_name")
 
 	require.Equal(t, metrics[0].Tags(), map[string]string{
 		"xml_node_name": "Host_1",

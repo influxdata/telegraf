@@ -2,6 +2,8 @@ package xml
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +14,8 @@ import (
 )
 
 var (
-	ErrNoMetric = errors.New("no metric in line")
+	ErrNoMetric  = errors.New("no metric in line")
+	AttrSelector = regexp.MustCompile(`.*\/@(?P<AttrName>.+)$`)
 )
 
 type XMLParser struct {
@@ -22,6 +25,7 @@ type XMLParser struct {
 	ParseArray  bool
 	TagNode     bool
 	Query       string
+	Measurement string
 	DefaultTags map[string]string
 }
 
@@ -31,6 +35,7 @@ func NewXMLParser(
 	xmlTagNode bool,
 	xmlParseArray bool,
 	xmlQuery string,
+	xmlMeasurement string,
 	defaultTags map[string]string,
 	tagKeys []string,
 ) *XMLParser {
@@ -45,6 +50,7 @@ func NewXMLParser(
 		TagNode:     xmlTagNode,
 		ParseArray:  xmlParseArray,
 		Query:       xmlQuery,
+		Measurement: xmlMeasurement,
 		DefaultTags: defaultTags,
 	}
 }
@@ -64,6 +70,14 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	}
 
 	root := xmlDocument.FindElementsPath(path)
+
+	if len(p.Measurement) > 0 {
+		name, err := selectSingleValue(xmlDocument, p.Measurement)
+		if err != nil {
+			return nil, err
+		}
+		p.MetricName = name
+	}
 
 	if len := len(root); len > 0 {
 		if p.ParseArray == true {
@@ -183,6 +197,47 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 		}
 	}
 	return tags, fields
+}
+
+func selectSingleValue(doc *etree.Document, query string) (string, error) {
+	if AttrSelector.MatchString(query) {
+		attrName := AttrSelector.FindStringSubmatch(query)[1]
+		nodePath := strings.TrimSuffix(query, fmt.Sprintf("/@%v", attrName))
+
+		path, err := etree.CompilePath(nodePath)
+		if err != nil {
+			return "", err
+		}
+
+		node := doc.FindElementPath(path)
+		if node == nil {
+			return "", fmt.Errorf("Query %q must return XML object, but returns Nil", query)
+		}
+
+		attr := node.SelectAttrValue(attrName, "")
+		if trimEmptyChars(attr) == "" {
+			return "", fmt.Errorf("Query %q must return value, but returns empty string", query)
+		}
+
+		return attr, nil
+
+	} else {
+		path, err := etree.CompilePath(query)
+		if err != nil {
+			return "", err
+		}
+
+		node := doc.FindElementPath(path)
+		if node == nil {
+			return "", fmt.Errorf("Query %q must return XML object, but returns Nil", query)
+		}
+
+		if trimEmptyChars(node.Text()) == "" {
+			return "", fmt.Errorf("Query %q must return value, but returns empty string", query)
+		}
+
+		return node.Text(), nil
+	}
 }
 
 func (p *XMLParser) isTag(str string) bool {

@@ -1884,6 +1884,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["xml_measurement"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.XMLMeasurement = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1932,6 +1940,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "xml_node_to_tag")
 	delete(tbl.Fields, "xml_array")
 	delete(tbl.Fields, "xml_query")
+	delete(tbl.Fields, "xml_measurement")
 
 	return c, nil
 }
