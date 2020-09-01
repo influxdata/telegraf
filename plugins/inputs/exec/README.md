@@ -16,6 +16,15 @@ This plugin can be used to poll for custom metrics from any source.
     "/tmp/collect_*.sh"
   ]
 
+  ## additional parameters that will be added to the metrics as tags
+  ## Lines correspond to the command lines, so first line of parameters are 
+  ## added to metrics of first command and so on. 
+  ## If one command should not have additional tags, add an empty array.
+  tags = [
+    [ ],
+    [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+  ]
+ 
   ## Timeout for each command to complete.
   timeout = "5s"
 
