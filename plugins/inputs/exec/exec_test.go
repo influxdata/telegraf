@@ -279,3 +279,24 @@ func TestRemoveCarriageReturns(t *testing.T) {
 		}
 	}
 }
+
+func TestAddAdditionalTags(t *testing.T) {
+	parser, _ := parsers.NewValueParser("metric", "string", nil)
+	e := NewExec()
+	e.Commands = []string{"echo metric_value"}
+	e.Tags = [][][]string{{{"tag_1", "value_tag_1"}}}
+	e.SetParser(parser)
+
+	var acc testutil.Accumulator
+	err := acc.GatherError(e.Gather)
+	require.NoError(t, err)
+
+	fields := map[string]interface{}{
+		"value": "metric_value",
+	}
+	tags := map[string]string{
+		"tag_1": "value_tag_1",
+	}
+	acc.AssertContainsFields(t, "metric", fields)
+	acc.AssertContainsTaggedFields(t, "metric", fields, tags)
+}
