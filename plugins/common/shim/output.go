@@ -10,7 +10,11 @@ import (
 
 // AddOutput adds the input to the shim. Later calls to Run() will run this.
 func (s *Shim) AddOutput(output telegraf.Output) error {
+<<<<<<< HEAD
 	setLoggerOnPlugin(output, NewLogger())
+=======
+	setLoggerOnPlugin(output, s.Log())
+>>>>>>> master
 	if p, ok := output.(telegraf.Initializer); ok {
 		err := p.Init()
 		if err != nil {

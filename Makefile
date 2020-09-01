@@ -4,7 +4,7 @@ else
 	devnull := /dev/null
 endif
 
-next_version := 1.15.0
+next_version := 1.16.0
 tag := $(shell git describe --exact-match --tags 2>$(devnull))
 branch := $(shell git rev-parse --abbrev-ref HEAD)
 commit := $(shell git rev-parse --short=8 HEAD)
@@ -93,6 +93,11 @@ deps:
 .PHONY: telegraf
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+# Used by dockerfile builds
+.PHONY: go-install
+go-install:
+	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 .PHONY: test
 test:

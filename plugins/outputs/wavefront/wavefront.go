@@ -135,14 +135,14 @@ func (w *Wavefront) Connect() error {
 		}
 		w.sender = sender
 	} else {
-		w.Log.Debug("connecting over tcp using Host: %s and Port: %d", w.Host, w.Port)
+		w.Log.Debugf("connecting over tcp using Host: %q and Port: %d", w.Host, w.Port)
 		sender, err := wavefront.NewProxySender(&wavefront.ProxyConfiguration{
 			Host:                 w.Host,
 			MetricsPort:          w.Port,
 			FlushIntervalSeconds: 5,
 		})
 		if err != nil {
-			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %s and Port: %d", w.Host, w.Port)
+			return fmt.Errorf("Wavefront: Could not create Wavefront Sender for Host: %q and Port: %d", w.Host, w.Port)
 		}
 		w.sender = sender
 	}
@@ -199,7 +199,7 @@ func (w *Wavefront) buildMetrics(m telegraf.Metric) []*MetricPoint {
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)
 		if buildError != nil {
-			w.Log.Debug("Error building tags: %s\n", buildError.Error())
+			w.Log.Debugf("Error building tags: %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue

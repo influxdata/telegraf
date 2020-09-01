@@ -106,6 +106,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 			BytesReadInto:             0,
 			PagesEvictedByAppThread:   0,
 			PagesQueuedForEviction:    0,
+			PagesWrittenFromCache:     1247,
 			ServerEvictingPages:       0,
 			WorkerThreadEvictingPages: 0,
 			FaultsCnt:                 204,
