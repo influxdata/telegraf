@@ -69,7 +69,7 @@ telegraf's configuration has been refreshed via a SIGHUP.
   ## multi-line string inputs.
   write_on_start=""
 
-  ## String on gather
+  ## String to trigger periodic Gather (metric updates) from daemon
   ##
   ## !IMPORTANT! These settings are ignored unless signal="STDIN".
   ## !IMPORTANT! Newlines are not automatic - add \n if you want one.  
