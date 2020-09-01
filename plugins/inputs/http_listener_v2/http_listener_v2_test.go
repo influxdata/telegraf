@@ -449,7 +449,7 @@ func TestWriteHTTPTransformHeaderValuesToTagsBulkWrite(t *testing.T) {
 }
 
 func TestWriteHTTPQueryParams(t *testing.T) {
-	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
+	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"}, false)
 	listener := newTestHTTPListenerV2()
 	listener.DataSource = "query"
 	listener.Parser = parser
@@ -471,7 +471,7 @@ func TestWriteHTTPQueryParams(t *testing.T) {
 }
 
 func TestWriteHTTPFormData(t *testing.T) {
-	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"})
+	parser, _ := parsers.NewFormUrlencodedParser("query_measurement", nil, []string{"tagKey"}, false)
 	listener := newTestHTTPListenerV2()
 	listener.Parser = parser
 

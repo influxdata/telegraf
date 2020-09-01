@@ -41,6 +41,7 @@ Config:
   data_source = "query"
   data_format = "form_urlencoded"
   form_urlencoded_tag_keys = ["tag1"]
+  # trim_field_data_space = true
 ```
 
 Request:
@@ -51,6 +52,30 @@ curl -i -XGET 'http://localhost:8080/telegraf?tag1=foo&field1=0.42&field2=42'
 Output:
 ```
 mymetric,tag1=foo field1=0.42,field2=42
+```
+
+URL-encoded white space characters can be trimmed for field values first (but
+no such trimming is done for tag keys).
+
+Config:
+```toml
+[[inputs.http_listener_v2]]
+  name_override = "mymetric"
+  service_address = ":8080"
+  data_source = "query"
+  data_format = "form_urlencoded"
+  form_urlencoded_tag_keys = ["tag1"]
+  trim_field_data_space = true
+```
+
+Request:
+```bash
+curl -i -XGET 'http://localhost:8080/telegraf?tag1=%20%20foo%20%20&field1=%20%20%200.42&field2=42%20%20'
+```
+
+Output:
+```
+mymetric,tag1=\ \ foo\ \  field1=0.42,field2=42
 ```
 
 [query string]: https://en.wikipedia.org/wiki/Query_string

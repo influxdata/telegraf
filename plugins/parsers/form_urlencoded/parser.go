@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -18,10 +19,11 @@ var (
 
 // Parser decodes "application/x-www-form-urlencoded" data into metrics
 type Parser struct {
-	MetricName  string
-	DefaultTags map[string]string
-	TagKeys     []string
-	AllowedKeys []string
+	MetricName         string
+	DefaultTags        map[string]string
+	TagKeys            []string
+	AllowedKeys        []string
+	TrimFieldDataSpace bool `toml:"trim_field_data_space"`
 }
 
 // Parse converts a slice of bytes in "application/x-www-form-urlencoded" format into metrics
@@ -110,6 +112,17 @@ func (p Parser) parseFields(values url.Values) map[string]interface{} {
 
 	for key, value := range values {
 		if len(key) == 0 || len(value) == 0 {
+			continue
+		}
+
+		if p.TrimFieldDataSpace {
+			field, err := strconv.ParseFloat(strings.TrimSpace(value[0]), 64)
+			if err != nil {
+				continue
+			}
+
+			fields[key] = field
+
 			continue
 		}
 

@@ -11,6 +11,7 @@ const (
 	encodedFormData            = "tag1=%24%24%24&field1=1e%2B3"
 	notEscapedProperlyFormData = "invalid=%Y5"
 	blankKeyFormData           = "=42&field2=69"
+	trimableSpaceFormData = "tag1=foo%20%20&tag2=%20%20bar&tag3=%20%20baz%20%20&field1=1.234%20%20&field2=%20%2012.34&field3=%20%20123.4%20%20"
 	emptyFormData              = ""
 )
 
@@ -158,6 +159,29 @@ func TestParseInvalidFormDataEmptyKey(t *testing.T) {
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
 	require.Equal(t, map[string]interface{}{
 		"field2": float64(69),
+	}, metrics[0].Fields())
+}
+
+func TestParseTrimableFormDataWithTags(t *testing.T) {
+	parser := Parser{
+		MetricName: "form_urlencoded_test",
+		TagKeys:    []string{"tag1", "tag2", "tag3"},
+		TrimFieldDataSpace: bool(true),
+	}
+
+	metrics, err := parser.Parse([]byte(trimableSpaceFormData))
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "form_urlencoded_test", metrics[0].Name())
+	require.Equal(t, map[string]string{
+		"tag1": "foo  ",
+		"tag2": "  bar",
+		"tag3": "  baz  ",
+	}, metrics[0].Tags())
+	require.Equal(t, map[string]interface{}{
+		"field1": float64(1.234),
+		"field2": float64(12.34),
+		"field3": float64(123.4),
 	}, metrics[0].Fields())
 }
 
