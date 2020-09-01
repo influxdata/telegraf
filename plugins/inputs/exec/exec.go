@@ -32,7 +32,8 @@ const sampleConfig = `
   ## add an empty array.
   tags = [
     [ ],
-    [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+	[ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+	[ [ "tag_3", "value_tag_3" ] ]
   ]
 
   ## Timeout for each command to complete.
