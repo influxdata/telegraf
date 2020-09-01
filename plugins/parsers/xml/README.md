@@ -12,6 +12,8 @@ This plugin using [etree package](https://github.com/beevik/etree)
   ##  xml_query parameter using XPath-like query for limits the list of 
   ##  analyzed nodes. Default - "//"
   xml_query = "//Node/"
+  ##  allows you to get the name for metrics from the document
+  xml_measurement = "//Node/Name"
   ##  xml_merge_nodes determines whether all extracted keys will be 
   ## merged into one metric. Default - false
   xml_merge_nodes = true
@@ -79,6 +81,7 @@ It\`s important that the XPath query must return an array of top-level nodes.
 The first situation is when your document looks like this:
 ```xml
 <Document>
+  <Name custom="custom_name">regular_name<Name>
   <Data>
     <Host>
       <Name>Host_1</Name>
@@ -117,6 +120,7 @@ file,Name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598637420000000000
 Another possible situation where the node names are different, but it is still an array:
 ```xml
 <Document>
+  <Name custom="custom_name">regular_name<Name>
   <Data>
     <Host_1>
       <Name>Host_1</Name>
@@ -152,7 +156,45 @@ Result:
 file,Name=Host_1,xml_node_name=Host_1 Uptime=1000i,Total=15i,Current=2i 1598638060000000000
 file,Name=Host_2,xml_node_name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598638060000000000
 ```
-  
+
+#### xml_measurement
+This parameter allows you to get the name for the metrics from the text of the node or attribute  
+For the previous example, if we want to get the name from the `Name` node:
+```toml
+[[inputs.file]]
+  files = [ "data.xml" ]
+  data_format = "xml"
+  xml_query = "//Data/*"
+  xml_measurement = "//Name"
+  xml_node_to_tag = true
+  xml_array = true
+  tag_keys = [ "Name" ]
+```
+Result:
+```
+regular_name,Name=Host_1,xml_node_name=Host_1 Uptime=1000i,Total=15i,Current=2i 1598638060000000000
+regular_name,Name=Host_2,xml_node_name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598638060000000000
+```
+Or from `custom` attribute:
+```toml
+[[inputs.file]]
+  files = [ "data.xml" ]
+  data_format = "xml"
+  xml_query = "//Data/*"
+  xml_measurement = "//Name/@custom"
+  xml_node_to_tag = true
+  xml_array = true
+  tag_keys = [ "Name" ]
+```
+```
+custom_name,Name=Host_1,xml_node_name=Host_1 Uptime=1000i,Total=15i,Current=2i 1598638060000000000
+custom_name,Name=Host_2,xml_node_name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598638060000000000
+```
+Note:
+ - even if the request returns multiple nodes, the value is fetched only from the first
+ - the syntax for getting the attribute value given in the example (`//Name/@custom`) is unique and works only in this parameter
+
+
 You can find more information about XPath queries in the [documentation for the etree package](https://pkg.go.dev/github.com/beevik/etree?tab=doc#Path).  
   
 If your XML document is complex, you can try using [execd processor plugin](../../../plugins/processors/execd). Get your document through the [value parser](../value), and then use custom processor to retrieve data.
