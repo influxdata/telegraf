@@ -283,8 +283,8 @@ func TestRemoveCarriageReturns(t *testing.T) {
 func TestAddAdditionalTags(t *testing.T) {
 	parser, _ := parsers.NewValueParser("metric", "string", nil)
 	e := NewExec()
-	e.Commands = []string{"echo metric_value"}
-	e.Tags = [][][]string{{{"tag_1", "value_tag_1"}}}
+	e.Commands = []string{"echo metric_value", "echo metric_value"}
+	e.Tags = [][][]string{{}, {{"tag_1", "value_tag_1"}}}
 	e.SetParser(parser)
 
 	var acc testutil.Accumulator

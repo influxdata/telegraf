@@ -28,9 +28,10 @@ const sampleConfig = `
 
   ## additional parameters that will be added to the metrics as tags
   ## Lines correspond to the command lines, so first line of parameters are 
-  ## added to metrics of first command and so on
+  ## added to metrics of first command and so on. If one command should not have additional tags,
+  ## add an empty array.
   tags = [
-    [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
+    [ ],
     [ [ "tag_1", "value_tag_1" ], [ "tag_2", "value_tag_2" ] ],
   ]
 
@@ -53,7 +54,7 @@ type Exec struct {
 	Commands []string
 	Command  string
 	Timeout  internal.Duration
-	Tags [][][]string
+	Tags     [][][]string
 
 	parser parsers.Parser
 
@@ -175,7 +176,9 @@ func (e *Exec) ProcessCommand(command string, tags [][]string, acc telegraf.Accu
 
 	for _, m := range metrics {
 		for _, t := range tags {
-			m.AddTag(t[0], t[1])
+			if len(t) == 2 {
+				m.AddTag(t[0], t[1])
+			}
 		}
 		acc.AddMetric(m)
 	}
@@ -231,10 +234,14 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
-
+	lenTags := len(e.Tags) - 1
 	wg.Add(len(commands))
 	for idx, command := range commands {
-		go e.ProcessCommand(command, e.Tags[idx], acc, &wg)
+		var tags [][]string
+		if lenTags >= idx {
+			tags = e.Tags[idx]
+		}
+		go e.ProcessCommand(command, tags, acc, &wg)
 	}
 	wg.Wait()
 	return nil
