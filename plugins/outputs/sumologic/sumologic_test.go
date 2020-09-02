@@ -383,11 +383,6 @@ func TestTOMLConfig(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "correct sample config",
-			configBytes:   []byte(sampleConfig),
-			expectedError: false,
-		},
-		{
 			name: "carbon2 content type is supported",
 			configBytes: []byte(`
 [[outputs.sumologic]]
