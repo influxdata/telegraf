@@ -419,7 +419,7 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 
 // Add this plugin to telegraf
 func init() {
-	inputs.Add("opcua_client", func() telegraf.Input {
+	inputs.Add("opcua", func() telegraf.Input {
 		return &OpcUA{
 			AuthMethod: "Anonymous",
 		}
