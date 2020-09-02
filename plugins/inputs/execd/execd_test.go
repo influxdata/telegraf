@@ -49,6 +49,12 @@ func TestExternalInputWorks(t *testing.T) {
 	exe, err := os.Executable()
 	require.NoError(t, err)
 
+	/*
+	 * Note: because we're instantiating this directly, we have to be sure
+	 * to fill in defaults for any optional fields that would have been
+	 * set by Init().  When using STDIN signaling, WriteOnGather might
+	 * be an empty string, so it has to be set to "\n" for this test to pass.
+	 */
 	e := &Execd{
 		Command:       []string{exe, "-counter"},
 		RestartDelay:  config.Duration(5 * time.Second),
