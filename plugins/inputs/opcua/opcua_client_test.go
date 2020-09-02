@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/influxdata/telegraf/config"
 )
 
 type OPCTags struct {
@@ -27,7 +30,7 @@ func TestClient1(t *testing.T) {
 
 	o.Name = "testing"
 	o.Endpoint = "opc.tcp://opcua.rocks:4840"
-	o.Interval = "10ms"
+	o.Interval = config.Duration(10 * time.Millisecond)
 	o.TimeOut = 30
 	o.SecurityPolicy = "None"
 	o.SecurityMode = "None"

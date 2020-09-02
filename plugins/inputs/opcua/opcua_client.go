@@ -11,23 +11,24 @@ import (
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // OpcUA type
 type OpcUA struct {
-	Name           string   `toml:"name"`
-	Endpoint       string   `toml:"endpoint"`
-	SecurityPolicy string   `toml:"security_policy"`
-	SecurityMode   string   `toml:"security_mode"`
-	Certificate    string   `toml:"certificate"`
-	PrivateKey     string   `toml:"private_key"`
-	Username       string   `toml:"username"`
-	Password       string   `toml:"password"`
-	AuthMethod     string   `toml:"auth_method"`
-	Interval       string   `toml:"time_interval"`
-	TimeOut        int      `toml:"timeout"`
-	NodeList       []OPCTag `toml:"nodes"`
+	Name           string          `toml:"name"`
+	Endpoint       string          `toml:"endpoint"`
+	SecurityPolicy string          `toml:"security_policy"`
+	SecurityMode   string          `toml:"security_mode"`
+	Certificate    string          `toml:"certificate"`
+	PrivateKey     string          `toml:"private_key"`
+	Username       string          `toml:"username"`
+	Password       string          `toml:"password"`
+	AuthMethod     string          `toml:"auth_method"`
+	Interval       config.Duration `toml:"time_interval"`
+	TimeOut        config.Duration `toml:"timeout"`
+	NodeList       []OPCTag        `toml:"nodes"`
 	Nodes          []string
 	NodeData       []OPCData
 	NodeIDs        []*ua.NodeID
@@ -189,15 +190,6 @@ func (o *OpcUA) validateEndpoint() error {
 	_, err := url.Parse(o.Endpoint)
 	if err != nil {
 		return fmt.Errorf("endpoint url is invalid")
-	}
-
-	if o.Interval == "" {
-		o.Interval = opcua.DefaultSubscriptionInterval.String()
-	}
-
-	_, err = time.ParseDuration(o.Interval)
-	if err != nil {
-		return fmt.Errorf("fatal error with time interval")
 	}
 
 	//search security policy type
