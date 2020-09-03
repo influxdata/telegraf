@@ -34,8 +34,10 @@ func TestClient1(t *testing.T) {
 
 	o.Name = "testing"
 	o.Endpoint = "opc.tcp://opcua.rocks:4840"
+	o.AuthMethod = "Anonymous"
 	o.Interval = config.Duration(10 * time.Millisecond)
-	o.TimeOut = 30
+	o.ConnectTimeout = config.Duration(10 * time.Second)
+	o.RequestTimeout = config.Duration(1 * time.Second)
 	o.SecurityPolicy = "None"
 	o.SecurityMode = "None"
 	for _, tags := range testopctags {
@@ -47,7 +49,7 @@ func TestClient1(t *testing.T) {
 	}
 	err = Connect(&o)
 	if err != nil {
-		t.Logf("Connect Error: %s", err)
+		t.Fatalf("Connect Error: %s", err)
 	}
 
 	for i, v := range o.NodeData {

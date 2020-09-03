@@ -26,24 +26,25 @@ type OpcUA struct {
 	Username       string          `toml:"username"`
 	Password       string          `toml:"password"`
 	AuthMethod     string          `toml:"auth_method"`
-	Interval       config.Duration `toml:"time_interval"`
-	TimeOut        config.Duration `toml:"timeout"`
+	Interval       config.Duration `toml:"time_interval"` //todo: this is not used.  connect or remove
+	RequestTimeout config.Duration `toml:"request_timeout"`
+	ConnectTimeout config.Duration `toml:"connect_timeout"`
 	NodeList       []OPCTag        `toml:"nodes"`
-	Nodes          []string
-	NodeData       []OPCData
-	NodeIDs        []*ua.NodeID
-	NodeIDerror    []error
-	state          ConnectionState
+
+	Nodes       []string     `toml:"-"`
+	NodeData    []OPCData    `toml:"-"`
+	NodeIDs     []*ua.NodeID `toml:"-"`
+	NodeIDerror []error      `toml:"-"`
+	state       ConnectionState
 
 	// status
-	ReadSuccess  int
-	ReadError    int
-	NumberOfTags int
+	ReadSuccess  int `toml:"-"`
+	ReadError    int `toml:"-"`
+	NumberOfTags int `toml:"-"`
 
 	// internal values
 	client *opcua.Client
 	req    *ua.ReadRequest
-	ctx    context.Context
 	opts   []opcua.Option
 }
 
@@ -157,8 +158,6 @@ func (o *OpcUA) SampleConfig() string {
 // Init will initialize all tags
 func (o *OpcUA) Init() error {
 	o.state = Disconnected
-
-	o.ctx = context.Background()
 
 	err := o.validateEndpoint()
 	if err != nil {
@@ -286,7 +285,9 @@ func Connect(o *OpcUA) error {
 		}
 
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
-		if err := o.client.Connect(o.ctx); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.ConnectTimeout))
+		defer cancel()
+		if err := o.client.Connect(ctx); err != nil {
 			return fmt.Errorf("Error in Client Connection: %s", err)
 		}
 
@@ -328,7 +329,7 @@ func (o *OpcUA) setupOptions() error {
 		}
 	}
 
-	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password)
+	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
 
 	return nil
 }
@@ -421,7 +422,9 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("opcua", func() telegraf.Input {
 		return &OpcUA{
-			AuthMethod: "Anonymous",
+			AuthMethod:     "Anonymous",
+			RequestTimeout: config.Duration(5 * time.Second),
+			ConnectTimeout: config.Duration(10 * time.Second),
 		}
 	})
 }
