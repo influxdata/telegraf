@@ -35,7 +35,7 @@ security_mode = "None"
 ## Path to private key.pem. Required for security mode/policy != None. If key path is not supplied, self-signed cert and key will be generated.
 ## private_key = "/etc/telegraf/key.pem"
 #
-## To authenticate using a specific ID, select chosen method from 'Certificate' or 'UserName'. Else use 'Anonymous.' Defaults to 'Anonymous' if not provided.
+## To authenticate using a specific ID, select 'Certificate' or 'UserName'. Default is "Anonymous"
 ## auth_method = "Anonymous"
 #
 ## Required for auth_method = "UserName"
@@ -61,14 +61,14 @@ nodes = [
 An OPC UA node ID may resemble: "n=3,s=Temperature". In this example:
 - n=3 is indicating the `namespace` is 3
 - s=Temperature is indicting that the `identifier_type` is a string and `identifier` value is 'Temperature'
-- This example temperature node would have a value of 79.0, which would make the `data_type` a 'float'.
-To gather data from this node you would need to enter the following line into the 'nodes' property above:
+- This example temperature node has a value of 79.0, which makes the `data_type` a 'float'.
+To gather data from this node enter the following line into the 'nodes' property above:
 ```
 {name="LabelName", namespace="3", identifier_type="s", identifier="Temperature", data_type="float", description="Description of node"},
 ```
 
 
-### Example Output:
+### Example Output
 
 ```
 opcua,host=3c70aee0901e,name=Random,type=double Random=0.018158170305814902 1597820490000000000
