@@ -1,6 +1,9 @@
-OPC UA Client Input Plugin
+# OPC UA Client Input Plugin
 
-The opcua_client plugin retrieves data from OPCUA client devices
+The `opcua` plugin retrieves data from OPC UA client devices.
+
+Telegraf minimum version: Telegraf 1.16
+Plugin minimum tested version: 1.16
 
 ### Configuration:
 
@@ -58,11 +61,10 @@ nodes = [
 An OPC UA node ID may resemble: "n=3,s=Temperature". In this example:
 - n=3 is indicating the `namespace` is 3
 - s=Temperature is indicting that the `identifier_type` is a string and `identifier` value is 'Temperature'
-- This example temperature node would have a current value of 79.0, which would make the `data_type` a 'float'.
-To gather data from this node you would need to enter the following line into 'nodes' property above:
-```toml
-nodes = [
-		{name="SomeLabel", namespace="3", identifier_type="s", identifier="Temperature", data_type="float", description="Some description."},
+- This example temperature node would have a value of 79.0, which would make the `data_type` a 'float'.
+To gather data from this node you would need to enter the following line into the 'nodes' property above:
+```
+{name="LabelName", namespace="3", identifier_type="s", identifier="Temperature", data_type="float", description="Description of node"},
 ```
 
 
