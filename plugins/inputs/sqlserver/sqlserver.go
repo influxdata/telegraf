@@ -1705,12 +1705,14 @@ SELECT TOP 50
 	,CONVERT(varchar(20),qs.[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),qs.[query_plan_hash],1) as [query_plan_hash]
 	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
-	,(SUBSTRING(qt.text, qs.[statement_start_offset] / 2 + 1,
+	,SUBSTRING(
+		qt.[text],
+		qs.[statement_start_offset] / 2 + 1,
 		(CASE WHEN qs.[statement_end_offset] = -1
-			THEN LEN(CONVERT(NVARCHAR(MAX), qt.text)) * 2
+			THEN DATALENGTH(qt.[text])
 			ELSE qs.[statement_end_offset]
-		END - qs.[statement_start_offset]) / 2)
-	) AS statement_text
+		END - qs.[statement_start_offset]) / 2 + 1
+	) AS [statement_text]
 	,DB_NAME(qt.[dbid]) stmt_db_name
 	,qs.[plan_generation_num]
 	,qs.[execution_count]
@@ -1776,12 +1778,14 @@ SELECT TOP 50
 	,CONVERT(varchar(20),qs.[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),qs.[query_plan_hash],1) as [query_plan_hash]
 	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
-	,(SUBSTRING(qt.text, qs.[statement_start_offset] / 2 + 1,
+	,SUBSTRING(
+		qt.[text],
+		qs.[statement_start_offset] / 2 + 1,
 		(CASE WHEN qs.[statement_end_offset] = -1
-			THEN LEN(CONVERT(NVARCHAR(MAX), qt.text)) * 2
+			THEN DATALENGTH(qt.[text])
 			ELSE qs.[statement_end_offset]
-		END - qs.[statement_start_offset]) / 2)
-	) AS statement_text
+		END - qs.[statement_start_offset]) / 2 + 1
+	) AS [statement_text]
 	,DB_NAME(qt.[dbid]) stmt_db_name
 	,qs.[plan_generation_num]
 	,qs.[execution_count]
