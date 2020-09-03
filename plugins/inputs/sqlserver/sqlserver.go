@@ -1694,7 +1694,6 @@ SET DEADLOCK_PRIORITY -10;
 DECLARE
 	 @EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
 	,@SqlStatement AS nvarchar(max)
-
 IF @EngineEdition IN (5,8) /*Azure SQL DB, Managed Instance*/
 BEGIN
 
@@ -1739,7 +1738,6 @@ ORDER BY
 '
 
 EXEC sp_executesql @SqlStatement
-
 END
 
 ELSE IF @EngineEdition IN (2,3,4) /*Standard,Enterprise,Express*/
@@ -1770,12 +1768,11 @@ IF @MajorMinorVersion >= 1500 BEGIN
 	SET @Columns += N'
 	,qs.[total_spills]'
 END
-
 SET @SqlStatement = N'
 SELECT TOP 50
 	''sqlserver_query_stats'' AS [measurement]
 	,REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
-	,DB_NAME() as [database_name]
+	,pa.[database_name]
 	,CONVERT(varchar(20),qs.[query_hash],1) as [query_hash]
 	,CONVERT(varchar(20),qs.[query_plan_hash],1) as [query_plan_hash]
 	,QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
@@ -1797,6 +1794,9 @@ SELECT TOP 50
 	' + @Columns + N'
 FROM sys.dm_exec_query_stats as qs
 OUTER APPLY sys.dm_exec_sql_text(qs.[sql_handle]) AS qt
+CROSS APPLY (SELECT DB_NAME(CONVERT(int, value)) AS [database_name] 
+             FROM sys.dm_exec_plan_attributes(qs.plan_handle)
+             WHERE attribute = N''dbid'') AS pa
 ORDER BY
 	[total_elapsed_time] DESC
 '
