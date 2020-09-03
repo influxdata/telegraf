@@ -1231,7 +1231,7 @@ SELECT
 , DB_NAME() as [database_name]
 , s.session_id
 , ISNULL(r.request_id,0) as request_id
-, DB_NAME(s.database_id) as session_db_name
+, DB_NAME(r.database_id) as session_db_name
 , COALESCE(r.status,s.status) AS status
 , COALESCE(r.cpu_time,s.cpu_time) AS cpu_time_ms
 , COALESCE(r.total_elapsed_time,s.total_elapsed_time) AS total_elapsed_time_ms
