@@ -9,8 +9,8 @@ server.
 ```toml
 # A plugin to collect stats from the NSD DNS resolver
 [[inputs.nsd]]
-  ## Address of server to connect to, read from nsd conf default, optionally ':port'
-  ## Will lookup IP if given a hostname
+  ## Address of server to connect to, optionally ':port'. Defaults to the
+  ## address in the nsd config file.
   server = "127.0.0.1:8953"
 
   ## If running as a restricted user you can prepend sudo for additional access:
