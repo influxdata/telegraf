@@ -3,7 +3,6 @@ package nsd
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"fmt"
 	"net"
 	"os/exec"
@@ -68,27 +67,11 @@ func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server s
 
 	if Server != "" {
 		host, port, err := net.SplitHostPort(Server)
-		if err != nil { // No port was specified
-			host = Server
-			port = ""
+		if err == nil {
+			Server = host + "@" + port
 		}
 
-		resolver := net.Resolver{}
-		ctx, lookUpCancel := context.WithTimeout(context.Background(), Timeout.Duration)
-		defer lookUpCancel()
-		serverIps, err := resolver.LookupIPAddr(ctx, host)
-		if err != nil {
-			return nil, fmt.Errorf("error looking up ip for server: %s: %s", Server, err)
-		}
-		if len(serverIps) == 0 {
-			return nil, fmt.Errorf("error no ip for server: %s: %s", Server, err)
-		}
-		server := serverIps[0].IP.String()
-		if port != "" {
-			server = server + "@" + port
-		}
-
-		cmdArgs = append([]string{"-s", server}, cmdArgs...)
+		cmdArgs = append([]string{"-s", Server}, cmdArgs...)
 	}
 
 	if ConfigFile != "" {
