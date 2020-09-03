@@ -1,8 +1,8 @@
 ### External Plugins
 
-External plugins are external programs that are built outside of Telegraf that
-can run through an `execd` plugin. These external plugins allow for more flexibility
-compared to internal Telegraf plugins.  
+[External plugins](/EXTERNAL_PLUGINS.md) are external programs that are built outside 
+of Telegraf that can run through an `execd` plugin. These external plugins allow for 
+more flexibility compared to internal Telegraf plugins.  
 
 - External plugins can be written in any language (internal Telegraf plugins can only written in Go)
 - External plugins can access to libraries not written in Go
@@ -14,6 +14,8 @@ The guidelines of writing external plugins would follow those for our general [i
 [output](docs/OUTPUTS.md), [processor](docs/PROCESSORS.md), and [aggregator](docs/AGGREGATOR.md) plugins. 
 Please reference the documentation on how to create these plugins written in Go.
 
+_For listed [external plugins](/EXTERNAL_PLUGINS.md), the author of the external plugin is also responsible for the maintenance 
+and feature development of external plugins. Expect to have users open plugin issues on its respective GitHub repository._
 
 #### Execd Go Shim
 For Go plugins, there is a [Execd Go Shim](plugins/common/shim) that will make it trivial to extract an internal input, processor, or output plugin from the main Telegraf repo out to a stand-alone repo.  This shim This allows anyone to build and run it as a separate app using one of the `execd`plugins:
@@ -52,6 +54,21 @@ This is a guide to help you set up your plugin to use it with `execd`
   Telegraf is expecting to load all configs**. If Telegraf reads this config file
   it will not know which plugin it relates to. Telegraf instead uses an execd config
   block to look for this plugin. 
+  1. Add usage and development instructions in the homepage of your repository for running 
+  your plugin with its respective `execd` plugin. Please refer to 
+  [openvpn](/danielnelson/telegraf-execd-openvpn#usage) and [awsalarms](/vipinvkmenon/awsalarms#installation) 
+  for examples. Include the following steps:
+     1. How to download the release package for your platform or how to clone the binary for your external plugin
+     1. The commands to unpack or build your binary
+     1. Location to edit your `telegraf.conf`
+     1. Configuration to run your external plugin with [inputs.execd](/plugins/inputs/execd), 
+     [processors.execd](/plugins/processors/execd) or [outputs.execd](/plugins/outputs/execd)
+     1. Note that restart or reload of Telegraf is required
+  1. Submit your plugin by opening a PR to add your external plugin to the [/EXTERNAL_PLUGINS.md](/EXTERNAL_PLUGINS.md) 
+  list. Please include the plugin name, link to the plugin repository, and a short description of the plugin. 
+     
+     
+     
  
 
 
