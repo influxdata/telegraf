@@ -11,38 +11,39 @@ import (
 	"github.com/gopcua/opcua"
 	"github.com/gopcua/opcua/ua"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // OpcUA type
 type OpcUA struct {
-	Name           string   `toml:"name"`
-	Endpoint       string   `toml:"endpoint"`
-	SecurityPolicy string   `toml:"security_policy"`
-	SecurityMode   string   `toml:"security_mode"`
-	Certificate    string   `toml:"certificate"`
-	PrivateKey     string   `toml:"private_key"`
-	Username       string   `toml:"username"`
-	Password       string   `toml:"password"`
-	AuthMethod     string   `toml:"auth_method"`
-	Interval       string   `toml:"time_interval"`
-	TimeOut        int      `toml:"timeout"`
-	NodeList       []OPCTag `toml:"nodes"`
-	Nodes          []string
-	NodeData       []OPCData
-	NodeIDs        []*ua.NodeID
-	NodeIDerror    []error
-	state          ConnectionState
+	Name           string          `toml:"name"`
+	Endpoint       string          `toml:"endpoint"`
+	SecurityPolicy string          `toml:"security_policy"`
+	SecurityMode   string          `toml:"security_mode"`
+	Certificate    string          `toml:"certificate"`
+	PrivateKey     string          `toml:"private_key"`
+	Username       string          `toml:"username"`
+	Password       string          `toml:"password"`
+	AuthMethod     string          `toml:"auth_method"`
+	ConnectTimeout config.Duration `toml:"connect_timeout"`
+	RequestTimeout config.Duration `toml:"request_timeout"`
+	NodeList       []OPCTag        `toml:"nodes"`
+
+	Nodes       []string     `toml:"-"`
+	NodeData    []OPCData    `toml:"-"`
+	NodeIDs     []*ua.NodeID `toml:"-"`
+	NodeIDerror []error      `toml:"-"`
+	state       ConnectionState
 
 	// status
-	ReadSuccess  int
-	ReadError    int
-	NumberOfTags int
+	ReadSuccess  int `toml:"-"`
+	ReadError    int `toml:"-"`
+	NumberOfTags int `toml:"-"`
 
 	// internal values
 	client *opcua.Client
 	req    *ua.ReadRequest
-	ctx    context.Context
 	opts   []opcua.Option
 }
 
@@ -80,67 +81,57 @@ const (
 
 const description = `Retrieve data from OPCUA devices`
 const sampleConfig = `
-# ## Connection Configuration
-#  ##
-#  ## The plugin supports connections to PLCs via OPCUA
-#  ##
-#  ## Device name
-name = "opcua_rocks"
-#
-#  # OPC UA Endpoint URL
-endpoint = "opc.tcp://opcua.rocks:4840"
-#
-#  ## Read Timeout
-#  ## add an arbitrary timeout (seconds) to demonstrate how to stop a subscription
-#  ## with a context.
-timeout = 30
-#
-#  # Time Inteval, default = 10s
-time_interval = "5s"
-#
-#  # Security policy: None, Basic128Rsa15, Basic256, Basic256Sha256. Default: auto
-security_policy = "None"
-#
-#  # Security mode: None, Sign, SignAndEncrypt. Default: auto
-security_mode = "None"
-#
-#  # Path to cert.pem. Required for security mode/policy != None. If cert path is not supplied, self-signed cert and key will be generated.
-#  # certificate = "/etc/telegraf/cert.pem"
-#
-#  # Path to private key.pem. Required for security mode/policy != None. If key path is not supplied, self-signed cert and key will be generated.
-#  # private_key = "/etc/telegraf/key.pem"
-#
-#  # To authenticate using a specific ID, select chosen method from 'Certificate' or 'UserName'. Else use 'Anonymous.' Defaults to 'Anonymous' if not provided.
-#  # auth_method = "Anonymous"
-#
-#  # Required for auth_method = "UserName"
-#  # username = "myusername"
-#
-#  # Required for auth_method = "UserName"
-#  # password = "mypassword"
-#
-#  ## Measurements
-#  ## node id to subscribe to
-#  ## name       			- the variable name
-#  ## namespace  			- integer value 0 thru 3
-#  ## identifier_type		- s=string, i=numeric, g=guid, b=opaque
-#  ## identifier			- tag as shown in opcua browser
-#  ## data_type  			- boolean, byte, short, int, uint, uint16, int16, uint32, int32, float, double, string, datetime, number
-#  ## Template 			- {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
-nodes = [
-		{name="ProductName", namespace="0", identifier_type="i", identifier="2261", data_type="string", description="open62541 OPC UA Server"},
-		{name="ProductUri", namespace="0", identifier_type="i", identifier="2262", data_type="string", description="http://open62541.org"},
-		{name="ManufacturerName", namespace="0", identifier_type="i", identifier="2263", data_type="string", description="open62541"},
-]
-
-## Guide:
-## An OPC UA node ID may resemble: "n=3,s=Temperature"
-## In this example, n=3 is indicating the namespace is '3'.
-## s=Temperature is indicting that the identifier type is a 'string' and the indentifier value is 'Temperature'
-## This temperature node may have a current value of 79.0, which would possibly make the value a 'float'.
-## To gather data from this node you would need to enter the following line into 'nodes' property above:
-##     {name="SomeLabel", namespace="3", identifier_type="s", identifier="Temperature", data_type="float", description="Some description."},
-
+[[inputs.opcua]]
+  ## Device name
+  # name = "localhost"
+  #
+  ## OPC UA Endpoint URL
+  # endpoint = "opc.tcp://localhost:4840"
+  #
+  ## Maximum time allowed to establish a connect to the endpoint.
+  # connect_timeout = "10s"
+  #
+  ## Maximum time allowed for a request over the estabilished connection.
+  # request_timeout = "5s"
+  #
+  ## Security policy, one of "None", "Basic128Rsa15", "Basic256",
+  ## "Basic256Sha256", or "auto"
+  # security_policy = "auto"
+  #
+  ## Security mode, one of "None", "Sign", "SignAndEncrypt", or "auto"
+  # security_mode = "auto"
+  #
+  ## Path to cert.pem. Required when security mode or policy isn't "None".
+  ## If cert path is not supplied, self-signed cert and key will be generated.
+  # certificate = "/etc/telegraf/cert.pem"
+  #
+  ## Path to private key.pem. Required when security mode or policy isn't "None".
+  ## If key path is not supplied, self-signed cert and key will be generated.
+  # private_key = "/etc/telegraf/key.pem"
+  #
+  ## Authentication Method, one of "Certificate", "UserName", or "Anonymous".  To
+  ## authenticate using a specific ID, select 'Certificate' or 'UserName'
+  # auth_method = "Anonymous"
+  #
+  ## Username. Required for auth_method = "UserName"
+  # username = ""
+  #
+  ## Password. Required for auth_method = "UserName"
+  # password = ""
+  #
+  ## Node ID configuration
+  ## name       			- the variable name
+  ## namespace  			- integer value 0 thru 3
+  ## identifier_type		- s=string, i=numeric, g=guid, b=opaque
+  ## identifier			- tag as shown in opcua browser
+  ## data_type  			- boolean, byte, short, int, uint, uint16, int16,
+  ##                        uint32, int32, float, double, string, datetime, number
+  ## Example:
+  ## {name="ProductUri", namespace="0", identifier_type="i", identifier="2262", data_type="string", description="http://open62541.org"}
+  nodes = [
+    {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
+    {name="", namespace="", identifier_type="", identifier="", data_type="", description=""},
+  ]
 `
 
 // Description will appear directly above the plugin definition in the config file
@@ -156,8 +147,6 @@ func (o *OpcUA) SampleConfig() string {
 // Init will initialize all tags
 func (o *OpcUA) Init() error {
 	o.state = Disconnected
-
-	o.ctx = context.Background()
 
 	err := o.validateEndpoint()
 	if err != nil {
@@ -177,27 +166,17 @@ func (o *OpcUA) Init() error {
 }
 
 func (o *OpcUA) validateEndpoint() error {
-	//check device name
 	if o.Name == "" {
 		return fmt.Errorf("device name is empty")
 	}
-	//check device name
+
 	if o.Endpoint == "" {
-		return fmt.Errorf("device name is empty")
+		return fmt.Errorf("endpoint url is empty")
 	}
 
 	_, err := url.Parse(o.Endpoint)
 	if err != nil {
 		return fmt.Errorf("endpoint url is invalid")
-	}
-
-	if o.Interval == "" {
-		o.Interval = opcua.DefaultSubscriptionInterval.String()
-	}
-
-	_, err = time.ParseDuration(o.Interval)
-	if err != nil {
-		return fmt.Errorf("fatal error with time interval")
 	}
 
 	//search security policy type
@@ -294,7 +273,9 @@ func Connect(o *OpcUA) error {
 		}
 
 		o.client = opcua.NewClient(o.Endpoint, o.opts...)
-		if err := o.client.Connect(o.ctx); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(o.ConnectTimeout))
+		defer cancel()
+		if err := o.client.Connect(ctx); err != nil {
 			return fmt.Errorf("Error in Client Connection: %s", err)
 		}
 
@@ -336,7 +317,7 @@ func (o *OpcUA) setupOptions() error {
 		}
 	}
 
-	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password)
+	o.opts = generateClientOpts(endpoints, o.Certificate, o.PrivateKey, o.SecurityPolicy, o.SecurityMode, o.AuthMethod, o.Username, o.Password, time.Duration(o.RequestTimeout))
 
 	return nil
 }
@@ -427,9 +408,17 @@ func (o *OpcUA) Gather(acc telegraf.Accumulator) error {
 
 // Add this plugin to telegraf
 func init() {
-	inputs.Add("opcua_client", func() telegraf.Input {
+	inputs.Add("opcua", func() telegraf.Input {
 		return &OpcUA{
-			AuthMethod: "Anonymous",
+			Name:           "localhost",
+			Endpoint:       "opc.tcp://localhost:4840",
+			SecurityPolicy: "auto",
+			SecurityMode:   "auto",
+			RequestTimeout: config.Duration(5 * time.Second),
+			ConnectTimeout: config.Duration(10 * time.Second),
+			Certificate:    "/etc/telegraf/cert.pem",
+			PrivateKey:     "/etc/telegraf/key.pem",
+			AuthMethod:     "Anonymous",
 		}
 	})
 }
