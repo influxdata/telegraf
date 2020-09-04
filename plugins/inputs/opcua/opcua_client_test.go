@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/stretchr/testify/require"
 )
 
 type OPCTags struct {
@@ -16,6 +20,10 @@ type OPCTags struct {
 }
 
 func TestClient1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	var testopctags = []OPCTags{
 		{"ProductName", "0", "i", "2261", "string", "open62541 OPC UA Server"},
 		{"ProductUri", "0", "i", "2262", "string", "http://open62541.org"},
@@ -27,8 +35,9 @@ func TestClient1(t *testing.T) {
 
 	o.Name = "testing"
 	o.Endpoint = "opc.tcp://opcua.rocks:4840"
-	o.Interval = "10ms"
-	o.TimeOut = 30
+	o.AuthMethod = "Anonymous"
+	o.ConnectTimeout = config.Duration(10 * time.Second)
+	o.RequestTimeout = config.Duration(1 * time.Second)
 	o.SecurityPolicy = "None"
 	o.SecurityMode = "None"
 	for _, tags := range testopctags {
@@ -40,7 +49,7 @@ func TestClient1(t *testing.T) {
 	}
 	err = Connect(&o)
 	if err != nil {
-		t.Logf("Connect Error: %s", err)
+		t.Fatalf("Connect Error: %s", err)
 	}
 
 	for i, v := range o.NodeData {
@@ -64,4 +73,38 @@ func MapOPCTag(tags OPCTags) (out OPCTag) {
 	out.Identifier = tags.Identifier
 	out.DataType = tags.DataType
 	return out
+}
+
+func TestConfig(t *testing.T) {
+	toml := `
+[[inputs.opcua]]
+name = "localhost"
+endpoint = "opc.tcp://localhost:4840"
+connect_timeout = "10s"
+request_timeout = "5s"
+security_policy = "auto"
+security_mode = "auto"
+certificate = "/etc/telegraf/cert.pem"
+private_key = "/etc/telegraf/key.pem"
+auth_method = "Anonymous"
+username = ""
+password = ""
+nodes = [
+  {name="name", namespace="", identifier_type="", identifier="", data_type="", description=""},
+  {name="name2", namespace="", identifier_type="", identifier="", data_type="", description=""},
+]
+`
+
+	c := config.NewConfig()
+	err := c.LoadConfigData([]byte(toml))
+	require.NoError(t, err)
+
+	require.Len(t, c.Inputs, 1)
+
+	o, ok := c.Inputs[0].Input.(*OpcUA)
+	require.True(t, ok)
+
+	require.Len(t, o.NodeList, 2)
+	require.Equal(t, o.NodeList[0].Name, "name")
+	require.Equal(t, o.NodeList[1].Name, "name2")
 }
