@@ -10,20 +10,20 @@ more flexibility compared to internal Telegraf plugins.
 - Can include large dependencies that would otherwise bloat Telegraf
 
 ### External Plugin Guidelines
-The guidelines of writing external plugins would follow those for our general [input](docs/INPUTS.md), 
-[output](docs/OUTPUTS.md), [processor](docs/PROCESSORS.md), and [aggregator](docs/AGGREGATOR.md) plugins. 
+The guidelines of writing external plugins would follow those for our general [input](/docs/INPUTS.md),
+[output](/docs/OUTPUTS.md), [processor](/docs/PROCESSORS.md), and [aggregator](/docs/AGGREGATORS.md) plugins.
 Please reference the documentation on how to create these plugins written in Go.
 
-_For listed [external plugins](/EXTERNAL_PLUGINS.md), the author of the external plugin is also responsible for the maintenance 
+_For listed [external plugins](/EXTERNAL_PLUGINS.md), the author of the external plugin is also responsible for the maintenance
 and feature development of external plugins. Expect to have users open plugin issues on its respective GitHub repository._
 
 #### Execd Go Shim
-For Go plugins, there is a [Execd Go Shim](plugins/common/shim) that will make it trivial to extract an internal input, processor, or output plugin from the main Telegraf repo out to a stand-alone repo.  This shim This allows anyone to build and run it as a separate app using one of the `execd`plugins:
+For Go plugins, there is a [Execd Go Shim](/plugins/common/shim/) that will make it trivial to extract an internal input, processor, or output plugin from the main Telegraf repo out to a stand-alone repo. This shim allows anyone to build and run it as a separate app using one of the `execd`plugins:
 - [inputs.execd](/plugins/inputs/execd)
 - [processors.execd](/plugins/processors/execd)
 - [outputs.execd](/plugins/outputs/execd)
 
-Follow the [Steps to externalize a plugin](plugins/common/shim#steps-to-externalize-a-plugin) and [Steps to build and run your plugin](plugins/common/shim#steps-to-build-and-run-your-plugin) to properly with the Execd Go Shim
+Follow the [Steps to externalize a plugin](/plugins/common/shim#steps-to-externalize-a-plugin) and [Steps to build and run your plugin](/plugins/common/shim#steps-to-build-and-run-your-plugin) to properly with the Execd Go Shim
 
 #### Step-by-Step guidelines
 This is a guide to help you set up your plugin to use it with `execd`
@@ -31,8 +31,8 @@ This is a guide to help you set up your plugin to use it with `execd`
    - [Input Plugins](/docs/INPUTS.md)
    - [Processor Plugins](/docs/PROCESSORS.md)
    - [Aggregator Plugins](/docs/AGGREGATORS.md)
-   - [Output Plugins](docs/OUTPUTS.md)
-2. If your plugin is written in Go, include the steps for the [Execd Go Shim](plugins/common/shim#steps-to-build-and-run-your-plugin)
+   - [Output Plugins](/docs/OUTPUTS.md)
+2. If your plugin is written in Go, include the steps for the [Execd Go Shim](/plugins/common/shim#steps-to-build-and-run-your-plugin)
   1. Move the project to an external repo, it's recommended to preserve the path
   structure, (but not strictly necessary). eg if your plugin was at
   `plugins/inputs/cpu`, it's recommended that it also be under `plugins/inputs/cpu`
@@ -65,13 +65,4 @@ This is a guide to help you set up your plugin to use it with `execd`
      [processors.execd](/plugins/processors/execd) or [outputs.execd](/plugins/outputs/execd)
      1. Note that restart or reload of Telegraf is required
   1. Submit your plugin by opening a PR to add your external plugin to the [/EXTERNAL_PLUGINS.md](/EXTERNAL_PLUGINS.md) 
-  list. Please include the plugin name, link to the plugin repository, and a short description of the plugin. 
-     
-     
-     
- 
-
-
-
-
-
+  list. Please include the plugin name, link to the plugin repository and a short description of the plugin. 
