@@ -116,6 +116,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/nstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ntpq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nvidia_smi"
+	_ "github.com/influxdata/telegraf/plugins/inputs/opcua"
 	_ "github.com/influxdata/telegraf/plugins/inputs/openldap"
 	_ "github.com/influxdata/telegraf/plugins/inputs/openntpd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/opensmtpd"
