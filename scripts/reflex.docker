@@ -1,0 +1,5 @@
+FROM golang:1.15
+
+RUN go get github.com/cespare/reflex
+
+WORKDIR /telegraf
