@@ -1016,15 +1016,29 @@ IF SERVERPROPERTY('EngineEdition') IN (2,3,4) /*Standard,Enterpris,Express*/
 `
 
 const sqlServerRequests string = `
-SET NOCOUNT ON; 
+SET NOCOUNT ON;
+DECLARE 
+	 @SqlStatement AS nvarchar(max)
+	,@EngineEdition AS tinyint = CAST(SERVERPROPERTY('EngineEdition') AS int)
+	,@MajorMinorVersion AS int = CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),4) AS int) * 100 + CAST(PARSENAME(CAST(SERVERPROPERTY('ProductVersion') as nvarchar),3) AS int)
+
+-- 2008R2 and before doesn't have open_transaction_count in sys.dm_exec_sessions
+DECLARE @Columns as nvarchar(max) = ''
+IF @MajorMinorVersion >= 1200
+	SET @Columns = ',s.open_transaction_count as open_transaction '
+ELSE
+	SET @Columns = ',r.open_transaction_count as open_transaction'
+
+SET @SqlStatement = N'
 SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHERE blocking_session_id != 0
 create index ix_blockingSessions_1 on #blockingSessions (blocking_session_id)
-SELECT	
-'sqlserver_requests' AS [measurement]
-, REPLACE(@@SERVERNAME,'\',':') AS [sql_instance]
+SELECT 
+''sqlserver_requests'' AS [measurement]
+, REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
+, DB_NAME() as [database_name]
 , s.session_id
 , ISNULL(r.request_id,0) as request_id
-, DB_NAME(r.database_id) as session_db_name
+, DB_NAME(s.database_id) as session_db_name
 , COALESCE(r.status,s.status) AS status
 , COALESCE(r.cpu_time,s.cpu_time) AS cpu_time_ms
 , COALESCE(r.total_elapsed_time,s.total_elapsed_time) AS total_elapsed_time_ms
@@ -1037,16 +1051,16 @@ SELECT
 , r.blocking_session_id
 , s.program_name
 , s.host_name
-, s.nt_user_name
-, s.open_transaction_count  AS open_transaction
-, LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_level)
-			WHEN 0 THEN '0-Read Committed' 
-			WHEN 1 THEN '1-Read Uncommitted (NOLOCK)' 
-			WHEN 2 THEN '2-Read Committed' 
-			WHEN 3 THEN '3-Repeatable Read' 
-			WHEN 4 THEN '4-Serializable' 
-			WHEN 5 THEN '5-Snapshot' 
-			ELSE CONVERT (varchar(30), r.transaction_isolation_level) + '-UNKNOWN' 
+, s.nt_user_name '
++ @Columns + 
+N', LEFT (CASE COALESCE(r.transaction_isolation_level, s.transaction_isolation_level)
+			WHEN 0 THEN ''0-Read Committed'' 
+			WHEN 1 THEN ''1-Read Uncommitted (NOLOCK)'' 
+			WHEN 2 THEN ''2-Read Committed'' 
+			WHEN 3 THEN ''3-Repeatable Read'' 
+			WHEN 4 THEN ''4-Serializable'' 
+			WHEN 5 THEN ''5-Snapshot'' 
+			ELSE CONVERT (varchar(30), r.transaction_isolation_level) + ''-UNKNOWN'' 
 		END, 30) AS transaction_isolation_level
 , r.granted_query_memory as granted_query_memory_pages
 , r.percent_complete
@@ -1059,7 +1073,7 @@ SELECT
 				 END - r.statement_start_offset) / 2 + 1
 		   ) AS statement_text
 , qt.objectid
-, QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + '.' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
+, QUOTENAME(OBJECT_SCHEMA_NAME(qt.objectid,qt.dbid)) + ''.'' +  QUOTENAME(OBJECT_NAME(qt.objectid,qt.dbid)) as stmt_object_name
 , DB_NAME(qt.dbid) stmt_db_name
 , CONVERT(varchar(20),[query_hash],1) as [query_hash]
 , CONVERT(varchar(20),[query_plan_hash],1) as [query_plan_hash]
@@ -1068,9 +1082,12 @@ LEFT OUTER JOIN sys.dm_exec_requests AS r
 	ON s.session_id = r.session_id
 OUTER APPLY sys.dm_exec_sql_text(r.sql_handle) AS qt
 WHERE 1 = 1
-	AND (r.session_id IS NOT NULL AND (s.is_user_process = 1 OR r.status COLLATE Latin1_General_BIN NOT IN ('background', 'sleeping')))
+	AND (r.session_id IS NOT NULL AND (s.is_user_process = 1 
+	OR r.status COLLATE Latin1_General_BIN NOT IN (''background'', ''sleeping'')))
 	OR  (s.session_id IN (SELECT blocking_session_id FROM #blockingSessions))
-OPTION(MAXDOP 1)
+OPTION(MAXDOP 1)'
+
+EXEC sp_executesql @SqlStatement
 `
 
 const sqlServerVolumeSpace string = `
