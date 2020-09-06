@@ -2,7 +2,7 @@
 
 This input plugin can be used to gather vehicle positions, trip updates and
 service alerts from a GTFS-realtime feed. [GTFS-realtime](https://developers.google.com/transit/gtfs-realtime) 
-is an extension of [GTFS](https://developers.google.com/transit/gtfs).
+is an extension of the [General Transit Feed Specification](https://developers.google.com/transit/gtfs).
 
 ### Configuration
 
@@ -38,9 +38,11 @@ plugin configuration. At least one of the three must be configured.
 
 ### Metrics
 
-The following fields and tags are collected for each input type
+Metrics can be collected for each of three GTFS-realtime feed types: vehicle positions, trip updates and service alerts.
 
 #### Vehicle Positions
+
+The vehicle `position` measurement captures information about the vehicles including location and congestion level.
 
 ##### Fields 
 
@@ -48,11 +50,16 @@ The following fields and tags are collected for each input type
 
 #### Trip Updates
 
+The trip `update` measurement captures information about delays, cancellations and changed routes.
+
 ##### Fields 
 
 ##### Tags
 
 #### Service Alerts
+
+The service `alert` measurement captures information about stop moves and unforeseen events 
+affecting a station, route or the entire network.
 
 ##### Fields 
 

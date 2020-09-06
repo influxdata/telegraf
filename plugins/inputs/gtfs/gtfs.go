@@ -4,6 +4,7 @@ package gtfs
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -62,7 +63,7 @@ func (s *GTFS) SampleConfig() string {
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Amount of time allowed to complete the HTTP request
+  ## Amount of testTimestamp allowed to complete the HTTP request
   # timeout = "5s"
 `
 }
@@ -159,11 +160,15 @@ func (g *GTFS) gatherVehiclePositions(acc telegraf.Accumulator, t time.Time) err
 			"vehicle_id":    v.Vehicle.Id,
 			"vehicle_label": v.Vehicle.Label,
 			"trip_id":       v.Trip.TripId,
+			"stop_id":       v.StopId,
+			"status":        v.CurrentStatus,
+			"congestion":    v.CongestionLevel,
 			"json":          b,
 		}
 
 		tags := map[string]string{
-			"route_id": *v.Trip.RouteId,
+			"route_id":     *v.Trip.RouteId,
+			"direction_id": fmt.Sprintf("%d", v.Trip.DirectionId),
 		}
 
 		acc.AddFields("position", fields, tags, time.Unix(int64(*v.Timestamp), 0))
@@ -261,9 +266,11 @@ func (g *GTFS) newRequest(s string) (*http.Request, error) {
 		return nil, err
 	}
 
-	q := u.Query()
-	q.Set("key", g.Key)
-	u.RawQuery = q.Encode()
+	if g.Key != "" {
+		q := u.Query()
+		q.Set("key", g.Key)
+		u.RawQuery = q.Encode()
+	}
 
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
