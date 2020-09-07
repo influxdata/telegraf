@@ -83,6 +83,9 @@ services:
     image: nats
     ports:
       - "4222:4222"
+  nats-streaming:
+    image: nats-streaming
+    command: nats-streaming-server --nats_server nats://nats:4222
   openldap:
     image: cobaugh/openldap-alpine
     environment:
