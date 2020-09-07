@@ -122,6 +122,8 @@ func (p *XMLParser) ParseAsArray(nodes []*etree.Element, timestamp time.Time) ([
 			xmlTags["xml_node_name"] = e.Tag
 		}
 
+		// add default tags
+		xmlTags = mergeTwoTagMaps(xmlTags, p.DefaultTags)
 		metric, err := metric.New(p.MetricName, xmlTags, xmlFields, timestamp)
 		if err != nil {
 			return nil, err
@@ -151,6 +153,8 @@ func (p *XMLParser) ParseAsObject(nodes []*etree.Element, timestamp time.Time) (
 			xmlTags = mergeTwoTagMaps(xmlTags, tags)
 			xmlFields = mergeTwoFieldMaps(xmlFields, fields)
 		} else {
+			// add default tags
+			tags = mergeTwoTagMaps(tags, p.DefaultTags)
 			metric, err := metric.New(p.MetricName, tags, fields, timestamp)
 			if err != nil {
 				return nil, err
@@ -160,6 +164,8 @@ func (p *XMLParser) ParseAsObject(nodes []*etree.Element, timestamp time.Time) (
 	}
 
 	if p.MergeNodes == true {
+		// add default tags
+		xmlTags = mergeTwoTagMaps(xmlTags, p.DefaultTags)
 		metric, err := metric.New(p.MetricName, xmlTags, xmlFields, timestamp)
 		if err != nil {
 			return nil, err
