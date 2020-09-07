@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.]+")
+	reNameAllowedCharList = regexp.MustCompile("[^A-Za-z0-9.-]+")
 	maxDimKeyLen          = 100
 	maxMetricKeyLen       = 250
 )
