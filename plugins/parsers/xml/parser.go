@@ -72,7 +72,7 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	root := xmlDocument.FindElementsPath(path)
 
 	if len(p.Measurement) > 0 {
-		name, err := selectSingleValue(xmlDocument, p.Measurement)
+		name, err := selectSingleValue(&xmlDocument.Element, p.Measurement)
 		if err != nil {
 			return nil, err
 		}
@@ -205,19 +205,14 @@ func (p *XMLParser) ParseXmlNode(node *etree.Element) (tags map[string]string, f
 	return tags, fields
 }
 
-func selectSingleValue(doc *etree.Document, query string) (string, error) {
+func selectSingleValue(doc *etree.Element, query string) (string, error) {
 	if AttrSelector.MatchString(query) {
 		attrName := AttrSelector.FindStringSubmatch(query)[1]
 		nodePath := strings.TrimSuffix(query, fmt.Sprintf("/@%v", attrName))
 
-		path, err := etree.CompilePath(nodePath)
+		node, err := selectSingleNode(doc, nodePath)
 		if err != nil {
 			return "", err
-		}
-
-		node := doc.FindElementPath(path)
-		if node == nil {
-			return "", fmt.Errorf("Query %q must return XML object, but returns Nil", query)
 		}
 
 		attr := node.SelectAttrValue(attrName, "")
@@ -226,16 +221,10 @@ func selectSingleValue(doc *etree.Document, query string) (string, error) {
 		}
 
 		return attr, nil
-
 	} else {
-		path, err := etree.CompilePath(query)
+		node, err := selectSingleNode(doc, query)
 		if err != nil {
 			return "", err
-		}
-
-		node := doc.FindElementPath(path)
-		if node == nil {
-			return "", fmt.Errorf("Query %q must return XML object, but returns Nil", query)
 		}
 
 		if trimEmptyChars(node.Text()) == "" {
@@ -244,6 +233,20 @@ func selectSingleValue(doc *etree.Document, query string) (string, error) {
 
 		return node.Text(), nil
 	}
+}
+
+func selectSingleNode(doc *etree.Element, query string) (*etree.Element, error) {
+	path, err := etree.CompilePath(query)
+	if err != nil {
+		return nil, err
+	}
+
+	node := doc.FindElementPath(path)
+	if node == nil {
+		return nil, fmt.Errorf("Query %q must return XML object, but returns Nil", query)
+	}
+
+	return node, nil
 }
 
 func (p *XMLParser) isTag(str string) bool {
