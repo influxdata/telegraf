@@ -350,16 +350,6 @@ $(tars):
 	@mkdir -p $(pkgdir)
 	tar --owner 0 --group 0 -czvf $(pkgdir)/$@ -C $(dir $(DESTDIR)) .
 
-.PHONY: upload-nightly
-upload-nightly:
-	aws s3 sync $(pkgdir) s3://dl.influxdata.com/telegraf/nightlies/ \
-		--exclude "*" \
-		--include "*.tar.gz" \
-		--include "*.deb" \
-		--include "*.rpm" \
-		--include "*.zip" \
-		--acl public-read
-
 %amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOOS := linux
 %amd64.deb %x86_64.rpm %linux_amd64.tar.gz: export GOARCH := amd64
 

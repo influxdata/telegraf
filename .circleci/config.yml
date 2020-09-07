@@ -82,16 +82,6 @@ jobs:
       - store_artifacts:
           path: './build/dist'
           destination: 'build/dist'
-  nightly:
-    <<: [ *defaults, *go-1_14 ]
-    steps:
-      - attach_workspace:
-          at: '/go'
-      - run: 'NIGHTLY=1 make package'
-      - run: 'make upload-nightly'
-      - store_artifacts:
-          path: './build/dist'
-          destination: 'build/dist'
 
 workflows:
   version: 2
@@ -142,31 +132,3 @@ workflows:
               only: /.*/
             branches:
               ignore: /.*/
-  nightly:
-    jobs:
-      - 'deps'
-      - 'test-go-1.13':
-          requires:
-            - 'deps'
-      - 'test-go-1.13-386':
-          requires:
-            - 'deps'
-      - 'test-go-1.14':
-          requires:
-            - 'deps'
-      - 'test-go-1.14-386':
-          requires:
-            - 'deps'
-      - 'nightly':
-          requires:
-            - 'test-go-1.13'
-            - 'test-go-1.13-386'
-            - 'test-go-1.14'
-            - 'test-go-1.14-386'
-    triggers:
-      - schedule:
-          cron: "0 7 * * *"
-          filters:
-            branches:
-              only:
-                - master
