@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/MobilityData/gtfs-realtime-bindings/golang/gtfs"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"golang.org/x/sync/errgroup"
 )
 
 type GTFS struct {
@@ -115,23 +116,23 @@ func (g *GTFS) Init() error {
 
 func (g *GTFS) Gather(acc telegraf.Accumulator) error {
 	var (
-		x   errgroup.Group
-		now = time.Now()
+		work errgroup.Group
+		now  = time.Now()
 	)
 
 	if g.vehiclePositionsReq != nil {
-		x.Go(func() error { return g.gatherVehiclePositions(acc, now) })
+		work.Go(func() error { return g.gatherVehiclePositions(acc, now) })
 	}
 
 	if g.tripUpdatesReq != nil {
-		x.Go(func() error { return g.gatherTripUpdates(acc, now) })
+		work.Go(func() error { return g.gatherTripUpdates(acc, now) })
 	}
 
 	if g.serviceAlertsReq != nil {
-		x.Go(func() error { return g.gatherServiceAlerts(acc, now) })
+		work.Go(func() error { return g.gatherServiceAlerts(acc, now) })
 	}
 
-	return x.Wait()
+	return work.Wait()
 }
 
 func (g *GTFS) gatherVehiclePositions(acc telegraf.Accumulator, t time.Time) error {
@@ -241,11 +242,12 @@ func (g *GTFS) gatherServiceAlerts(acc telegraf.Accumulator, t time.Time) error 
 }
 
 func (g *GTFS) gather(req *http.Request) ([]*gtfs.FeedEntity, error) {
-	resp, err := g.client.Do(g.vehiclePositionsReq)
+	resp, err := g.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
