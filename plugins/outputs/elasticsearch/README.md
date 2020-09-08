@@ -196,6 +196,9 @@ This plugin will format the events in the following way:
   template_name = "telegraf"
   ## Set to true if you want telegraf to overwrite an existing template
   overwrite_template = false
+  ## If set to true a unique ID hash will be sent as sha256(concat(timestamp,measurement,series-hash)) string
+  ## it will enable data resend and update metric points avoiding duplicated metrics with diferent id's
+  force_document_id = false
 ```
 
 #### Permissions
@@ -232,6 +235,7 @@ Additionally, you can specify dynamic index names by using tags with the notatio
 * `manage_template`: Set to true if you want telegraf to manage its index template. If enabled it will create a recommended index template for telegraf indexes.
 * `template_name`: The template name used for telegraf indexes.
 * `overwrite_template`: Set to true if you want telegraf to overwrite an existing template.
+* `force_document_id`: Set to true will compute a unique hash from as sha256(concat(timestamp,measurement,series-hash)),enables resend or update data withoud ES duplicated documents.
 
 ### Known issues
 
