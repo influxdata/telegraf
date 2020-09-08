@@ -124,7 +124,7 @@ func (s *NetStatsConnections) Gather(acc telegraf.Accumulator) error {
                       c.None += 1
                     }
                   } else if s.RemoteConnections && netcon.Raddr.Port > 0 { //Only generate remote connectios by parameter
-                    port = strconv.Itoa(int(netcon.Raddr.Port))
+                    port = netcon.Raddr.IP + "_" + strconv.Itoa(int(netcon.Raddr.Port))
                     c, ok := connected_ports[port]
                     if !ok {
                        c = &PortData {
