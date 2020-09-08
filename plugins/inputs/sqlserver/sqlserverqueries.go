@@ -1024,10 +1024,17 @@ DECLARE
 
 -- 2008R2 and before doesn't have open_transaction_count in sys.dm_exec_sessions
 DECLARE @Columns as nvarchar(max) = ''
+DECLARE @DatabaseColumn as nvarchar(max) = ''
 IF @MajorMinorVersion >= 1200
-	SET @Columns = ',s.open_transaction_count as open_transaction '
+	BEGIN
+		SET @Columns = ',s.open_transaction_count as open_transaction '
+		SET @DatabaseColumn = ' , DB_NAME(s.database_id) as session_db_name '
+	END
 ELSE
-	SET @Columns = ',r.open_transaction_count as open_transaction'
+	BEGIN
+		SET @Columns = ',r.open_transaction_count as open_transaction '
+		SET @DatabaseColumn = ' , DB_NAME(r.database_id) as session_db_name '
+	END
 
 SET @SqlStatement = N'
 SELECT  blocking_session_id into #blockingSessions FROM sys.dm_exec_requests WHERE blocking_session_id != 0
@@ -1037,9 +1044,9 @@ SELECT
 , REPLACE(@@SERVERNAME,''\'','':'') AS [sql_instance]
 , DB_NAME() as [database_name]
 , s.session_id
-, ISNULL(r.request_id,0) as request_id
-, DB_NAME(s.database_id) as session_db_name
-, COALESCE(r.status,s.status) AS status
+, ISNULL(r.request_id,0) as request_id '
++ @DatabaseColumn +
+N' , COALESCE(r.status,s.status) AS status
 , COALESCE(r.cpu_time,s.cpu_time) AS cpu_time_ms
 , COALESCE(r.total_elapsed_time,s.total_elapsed_time) AS total_elapsed_time_ms
 , COALESCE(r.logical_reads,s.logical_reads) AS logical_reads
