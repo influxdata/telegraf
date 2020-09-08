@@ -161,7 +161,7 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 }
 
 func NewCarbon2Serializer() (Serializer, error) {
-	return carbon2.NewSerializer(), nil
+	return carbon2.NewSerializer()
 }
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool, splunkmetric_multimetric bool) (Serializer, error) {

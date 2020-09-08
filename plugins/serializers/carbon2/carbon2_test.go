@@ -2,10 +2,9 @@ package carbon2
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -30,7 +29,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s := NewSerializer()
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -49,7 +48,7 @@ func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s := NewSerializer()
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -68,7 +67,7 @@ func TestSerializeWithSpaces(t *testing.T) {
 	m, err := metric.New("cpu metric", tags, fields, now)
 	assert.NoError(t, err)
 
-	s := NewSerializer()
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -87,7 +86,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s := NewSerializer()
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -107,7 +106,7 @@ func TestSerializeMetricString(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s := NewSerializer()
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -129,7 +128,7 @@ func TestSerializeBatch(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m, m}
-	s := NewSerializer()
+	s, _ := NewSerializer()
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 	expS := []byte(`metric=cpu field=value  42 0

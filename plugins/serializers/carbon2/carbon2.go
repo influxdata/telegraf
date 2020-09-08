@@ -12,8 +12,9 @@ import (
 type Serializer struct {
 }
 
-func NewSerializer() *Serializer {
-	return &Serializer{}
+func NewSerializer() (*Serializer, error) {
+	s := &Serializer{}
+	return s, nil
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
