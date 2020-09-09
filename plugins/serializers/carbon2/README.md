@@ -20,7 +20,7 @@ The `carbon2` serializer translates the Telegraf metric format to the [Carbon2 f
   ## * "field_separate"
   ## * "metric_includes_field"
   ## * "" - defaults to "field_separate"
-  carbon2_format = ""
+  # carbon2_format = "field_separate"
 ```
 
 Standard form:
