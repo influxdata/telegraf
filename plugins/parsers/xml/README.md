@@ -9,23 +9,37 @@ This plugin using [etree package](https://github.com/beevik/etree)
 [[inputs.file]]
   files = [ "data.xml" ]
   data_format = "xml"
+  
   ##  xml_query parameter using XPath-like query for limits the list of 
   ##  analyzed nodes. Default - "//"
   xml_query = "//Node/"
-  ##  allows you to get the name for metrics from the document
-  xml_measurement = "//Node/Name"
+
   ##  xml_merge_nodes determines whether all extracted keys will be 
-  ## merged into one metric. Default - false
+  ##  merged into one metric. Default - false
   xml_merge_nodes = true
-  ##  determines whether the nodes should be parsed as array elements
-  ##  when true, each node is analyzed separately and forms its own metric
-  ##  this parameter overrides the parser behavior. Default - false
+  
+  ##  Determines whether the nodes should be parsed as array elements
+  ##  When true, each node is analyzed separately and forms its own metric
+  ##  This parameter changes the parser behavior. Default - false
   xml_array = true
-  ##  if xml_node_to_tag equals "true", the name of the node is recorded 
+  
+  ##  If xml_node_to_tag equals "true", the name of the node is recorded 
   ##  in the tags with the key "xml_node_name". Default - false
   xml_node_to_tag = true
-  ## Tag keys is an array of keys that should be added as tags.
-  ## Matching keys are no longer saved as fields.
+  
+  ##  Selected nodes or attributes will be added to each metric
+  ##  Queries can be absolute or relative - in this case, 
+  ##  query is executed relative to the current analyzed node
+  xml_tags = [
+    "//Node/Data"
+  ]
+  
+  xml_fields = [
+    "../Extra/@value"
+  ]
+  
+  ##  Tag keys is an array of keys that should be added as tags.
+  ##  Matching keys are no longer saved as fields.
   tag_keys = [
     "my_tag_1",
     "my_tag_2"
@@ -81,7 +95,7 @@ It\`s important that the XPath query must return an array of top-level nodes.
 The first situation is when your document looks like this:
 ```xml
 <Document>
-  <Name custom="custom_name">regular_name<Name>
+  <Server hosts_count="37">Server_primary</Server>
   <Data>
     <Host>
       <Name>Host_1</Name>
@@ -120,7 +134,7 @@ file,Name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598637420000000000
 Another possible situation where the node names are different, but it is still an array:
 ```xml
 <Document>
-  <Name custom="custom_name">regular_name<Name>
+  <Server hosts_count="37">Server_primary</Server>
   <Data>
     <Host_1>
       <Name>Host_1</Name>
@@ -157,42 +171,32 @@ file,Name=Host_1,xml_node_name=Host_1 Uptime=1000i,Total=15i,Current=2i 15986380
 file,Name=Host_2,xml_node_name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598638060000000000
 ```
 
-#### xml_measurement
-This parameter allows you to get the name for the metrics from the text of the node or attribute  
-For the previous example, if we want to get the name from the `Name` node:
+#### xml_tags, xml_fields
+These parameters allow you to add data to the metrics from an arbitrary place in the document  
+For the previous example, if we want to get the tag from the `Server` node 
+and the field from the `hosts_count` attribute:
 ```toml
 [[inputs.file]]
   files = [ "data.xml" ]
   data_format = "xml"
   xml_query = "//Data/*"
-  xml_measurement = "//Name"
+  xml_tags = [ "//Server" ]
+  xml_fields = [ "../../Server/@hosts_count" ]
   xml_node_to_tag = true
   xml_array = true
   tag_keys = [ "Name" ]
 ```
 Result:
 ```
-regular_name,Name=Host_1,xml_node_name=Host_1 Uptime=1000i,Total=15i,Current=2i 1598638060000000000
-regular_name,Name=Host_2,xml_node_name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598638060000000000
+file,Name=Host_1,Server=Server_primary,xml_node_name=Host_1 Current=2i,Total=15i,Uptime=1000i,hosts_count=37i 1598638060000000000
+file,Name=Host_2,Server=Server_primary,xml_node_name=Host_2 Current=4i,Total=33i,Uptime=1240i,hosts_count=37i 1598638060000000000
 ```
-Or from `custom` attribute:
-```toml
-[[inputs.file]]
-  files = [ "data.xml" ]
-  data_format = "xml"
-  xml_query = "//Data/*"
-  xml_measurement = "//Name/@custom"
-  xml_node_to_tag = true
-  xml_array = true
-  tag_keys = [ "Name" ]
-```
-```
-custom_name,Name=Host_1,xml_node_name=Host_1 Uptime=1000i,Total=15i,Current=2i 1598638060000000000
-custom_name,Name=Host_2,xml_node_name=Host_2 Uptime=1240i,Total=33i,Current=4i 1598638060000000000
-```
+  
 Note:
- - even if the request returns multiple nodes, the value is fetched only from the first
- - the syntax for getting the attribute value given in the example (`//Name/@custom`) is unique and works only in this parameter
+ - even if the query returns multiple nodes, the value is fetched only from the first
+ - аdditional tags and fields are extracted from the document and added to the metric after analyzing the current node  
+ This means that if the tag or field name matches the one already extracted, the key will be overwritten
+ - the syntax for getting the attribute value given in the example (`//Name/@custom`) is unique and works only in this parameters
 
 
 You can find more information about XPath queries in the [documentation for the etree package](https://pkg.go.dev/github.com/beevik/etree?tab=doc#Path).  
