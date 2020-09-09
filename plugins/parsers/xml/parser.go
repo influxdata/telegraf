@@ -74,15 +74,6 @@ func (p *XMLParser) Parse(b []byte) ([]telegraf.Metric, error) {
 	}
 
 	root := xmlDocument.FindElementsPath(path)
-
-	//	if len(p.Measurement) > 0 {
-	//		name, err := selectSingleValue(&xmlDocument.Element, p.Measurement)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		p.MetricName = name
-	//	}
-
 	if len(root) > 0 {
 		if p.ParseArray == true {
 			return p.ParseAsArray(root, timestamp)
