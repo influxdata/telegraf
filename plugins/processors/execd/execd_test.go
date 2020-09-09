@@ -50,9 +50,18 @@ func TestExternalProcessorWorks(t *testing.T) {
 		e.Add(m, acc)
 	}
 
-	acc.Wait(1)
-	require.NoError(t, e.Stop())
-	acc.Wait(9)
+	go func(t *testing.T) {
+		for {
+			n := acc.NMetrics()
+			if n == 10 {
+				if err := e.Stop(); err != nil {
+					fmt.Fprintf(os.Stderr, "failed to stop execd: %v", err)
+				}
+				return
+			}
+		}
+	}(t)
+	acc.Wait(10)
 
 	metrics = acc.GetTelegrafMetrics()
 	m := metrics[0]
