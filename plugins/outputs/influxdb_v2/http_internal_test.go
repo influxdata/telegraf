@@ -19,8 +19,8 @@ func TestMakeWriteURL(t *testing.T) {
 		act string
 	}{
 		{
-			url: genURL("http://localhost:9999"),
-			act: "http://localhost:9999/api/v2/write?bucket=telegraf&org=influx",
+			url: genURL("http://localhost:8086"),
+			act: "http://localhost:8086/api/v2/write?bucket=telegraf&org=influx",
 		},
 		{
 			url: genURL("unix://var/run/influxd.sock"),
@@ -28,7 +28,7 @@ func TestMakeWriteURL(t *testing.T) {
 		},
 		{
 			err: true,
-			url: genURL("udp://localhost:9999"),
+			url: genURL("udp://localhost:8086"),
 		},
 	}
 
