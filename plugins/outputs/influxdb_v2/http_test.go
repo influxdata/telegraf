@@ -31,7 +31,7 @@ func TestNewHTTPClient(t *testing.T) {
 		{
 			err: true,
 			cfg: &influxdb.HTTPConfig{
-				URL: genURL("udp://localhost:8086"),
+				URL: genURL("udp://localhost:9999"),
 			},
 		},
 		{
