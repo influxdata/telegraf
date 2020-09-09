@@ -78,6 +78,8 @@ func (p *Process) Stop() {
 		// signal our intent to shutdown and not restart the process
 		p.cancel()
 	}
+	// close stdin so the app can shut down gracefully.
+	p.Stdin.Close()
 	p.mainLoopWg.Wait()
 }
 
