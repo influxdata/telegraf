@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
@@ -99,7 +100,7 @@ type SumoLogic struct {
 	URL               string            `toml:"url"`
 	Timeout           internal.Duration `toml:"timeout"`
 	Method            string            `toml:"method"`
-	MaxRequstBodySize int               `toml:"max_request_body_size"`
+	MaxRequstBodySize config.Size       `toml:"max_request_body_size"`
 
 	SourceName     string `toml:"source_name"`
 	SourceHost     string `toml:"source_host"`
@@ -194,10 +195,10 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if l := len(reqBody); l > s.MaxRequstBodySize {
+	if l := len(reqBody); l > int(s.MaxRequstBodySize) {
 		var (
 			// Do the rounded up integer division
-			numChunks  = (l + s.MaxRequstBodySize - 1) / s.MaxRequstBodySize
+			numChunks  = (l + int(s.MaxRequstBodySize) - 1) / int(s.MaxRequstBodySize)
 			chunks     = make([][]byte, 0, numChunks)
 			numMetrics = len(metrics)
 			// Do the rounded up integer division
