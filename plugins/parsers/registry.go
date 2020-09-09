@@ -151,11 +151,12 @@ type Config struct {
 	FormUrlencodedTagKeys []string `toml:"form_urlencoded_tag_keys"`
 
 	// xml configuration
-	XMLMergeNodes  bool   `toml:"xml_merge_nodes"`
-	XMLParseArray  bool   `toml:"xml_array"`
-	XMLTagNode     bool   `toml:"xml_node_to_tag"`
-	XMLQuery       string `toml:"xml_query"`
-	XMLMeasurement string `toml:"xml_measurement"`
+	XMLMergeNodes bool     `toml:"xml_merge_nodes"`
+	XMLParseArray bool     `toml:"xml_array"`
+	XMLTagNode    bool     `toml:"xml_node_to_tag"`
+	XMLQuery      string   `toml:"xml_query"`
+	XMLTags       []string `toml:"xml_tags"`
+	XMLFields     []string `toml:"xml_fields"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -247,7 +248,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.XMLTagNode,
 			config.XMLParseArray,
 			config.XMLQuery,
-			config.XMLMeasurement,
+			config.XMLTags,
+			config.XMLFields,
 			config.DefaultTags,
 			config.TagKeys)
 	default:
@@ -364,7 +366,8 @@ func NewXMLParser(
 	xmlTagNode bool,
 	xmlParseArray bool,
 	xmlQuery string,
-	xmlMeasurement string,
+	xmlTags []string,
+	xmlFields []string,
 	defaultTags map[string]string,
 	tagKeys []string,
 ) (Parser, error) {
@@ -373,7 +376,8 @@ func NewXMLParser(
 		xmlTagNode,
 		xmlParseArray,
 		xmlQuery,
-		xmlMeasurement,
+		xmlTags,
+		xmlFields,
 		defaultTags,
 		tagKeys), nil
 }

@@ -28,7 +28,7 @@ const dataInAttrs = `
 
 const dataArray = `
 <Document>
-  <Name>measurement_name<Name>
+  <Extra value="1771">extra_tag</Extra>
   <Data>
     <Host_1>
       <Name>Host_1</Name>
@@ -140,46 +140,51 @@ func TestMultiplueNodes(t *testing.T) {
 }
 
 // Must return two metrics - one per selected top-level node
-// With name "measurement_name"
+// With extra tags and fields
 func TestArrayParsing(t *testing.T) {
 	p := XMLParser{
-		MetricName:  "xml_test",
-		ParseArray:  true,
-		TagNode:     true,
-		Query:       "//Data/*",
-		Measurement: "//Name",
-		TagKeys:     []string{"Name"},
+		MetricName: "xml_test",
+		ParseArray: true,
+		TagNode:    true,
+		Query:      "//Data/*",
+		Tags:       []string{"//Extra"},
+		Fields:     []string{"../../Extra/@value"},
+		TagKeys:    []string{"Name"},
 	}
 
 	metrics, err := p.Parse([]byte(dataArray))
 	require.NoError(t, err)
 	require.Len(t, metrics, 2)
 
-	require.Len(t, metrics[0].Tags(), 2)
-	require.Len(t, metrics[1].Tags(), 2)
-	require.Len(t, metrics[0].Fields(), 3)
-	require.Len(t, metrics[1].Fields(), 3)
+	require.Len(t, metrics[0].Tags(), 3)
+	require.Len(t, metrics[1].Tags(), 3)
+	require.Len(t, metrics[0].Fields(), 4)
+	require.Len(t, metrics[1].Fields(), 4)
 
-	require.Equal(t, metrics[0].Name(), "measurement_name")
-	require.Equal(t, metrics[1].Name(), "measurement_name")
+	require.Equal(t, metrics[0].Name(), "xml_test")
+	require.Equal(t, metrics[1].Name(), "xml_test")
 
 	require.Equal(t, metrics[0].Tags(), map[string]string{
 		"xml_node_name": "Host_1",
 		"Name":          "Host_1",
+		"Extra":         "extra_tag",
 	})
 	require.Equal(t, metrics[1].Tags(), map[string]string{
 		"xml_node_name": "Host_2",
 		"Name":          "Host_2",
+		"Extra":         "extra_tag",
 	})
 
 	require.Equal(t, metrics[0].Fields(), map[string]interface{}{
 		"Uptime":  int64(1000),
 		"Total":   int64(15),
 		"Current": int64(2),
+		"value":   int64(1771),
 	})
 	require.Equal(t, metrics[1].Fields(), map[string]interface{}{
 		"Uptime":  int64(1240),
 		"Total":   int64(33),
 		"Current": int64(4),
+		"value":   int64(1771),
 	})
 }
