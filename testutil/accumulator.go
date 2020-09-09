@@ -55,6 +55,8 @@ func (a *Accumulator) NMetrics() uint64 {
 }
 
 func (a *Accumulator) GetTelegrafMetrics() []telegraf.Metric {
+	a.Lock()
+	defer a.Unlock()
 	metrics := []telegraf.Metric{}
 	for _, m := range a.Metrics {
 		metrics = append(metrics, FromTestMetric(m))
