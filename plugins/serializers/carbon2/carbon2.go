@@ -3,24 +3,25 @@ package carbon2
 import (
 	"bytes"
 	"fmt"
-	"github.com/influxdata/telegraf"
 	"strconv"
 	"strings"
+
+	"github.com/influxdata/telegraf"
 )
 
-type serializer struct {
+type Serializer struct {
 }
 
-func NewSerializer() (*serializer, error) {
-	s := &serializer{}
+func NewSerializer() (*Serializer, error) {
+	s := &Serializer{}
 	return s, nil
 }
 
-func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	return s.createObject(metric), nil
 }
 
-func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var batch bytes.Buffer
 	for _, metric := range metrics {
 		batch.Write(s.createObject(metric))
@@ -28,7 +29,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return batch.Bytes(), nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric) []byte {
+func (s *Serializer) createObject(metric telegraf.Metric) []byte {
 	var m bytes.Buffer
 	for fieldName, fieldValue := range metric.Fields() {
 		if isNumeric(fieldValue) {
