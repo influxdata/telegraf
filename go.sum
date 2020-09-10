@@ -583,6 +583,8 @@ github.com/samjegal/fincloud-sdk-for-go v1.9.1 h1:jBE2mNFlrjeqOajGiiSC3NFnuinGWX
 github.com/samjegal/fincloud-sdk-for-go v1.9.1/go.mod h1:lI0UXOnzdn3OoujcZgSgjZAyjb5zW8CVR6BDkiocAg4=
 github.com/samjegal/fincloud-sdk-for-go v1.9.2-0.20200908165319-09c33c838d22 h1:rj6OtK4Q79IgzMjuZ4KH3CZyudJ83g3IFDpNXpDC1AI=
 github.com/samjegal/fincloud-sdk-for-go v1.9.2-0.20200908165319-09c33c838d22/go.mod h1:unAnAWQ5V/Mei1gGDHxHQR/Y6M40OmQgxv0G4sdngDE=
+github.com/samjegal/fincloud-sdk-for-go v1.9.2 h1:Xk9GBCZOL5OKbkvL/IM7Z2Y3PGpwjOLa53ARTsTcE/w=
+github.com/samjegal/fincloud-sdk-for-go v1.9.2/go.mod h1:unAnAWQ5V/Mei1gGDHxHQR/Y6M40OmQgxv0G4sdngDE=
 github.com/samjegal/go-autorest/autorest v0.0.0-20200908011700-76a89b3e2bac h1:XIQeYFzt1XWEQ3clGjBPjuJAPpGdJBUyE4ruOgt5PjA=
 github.com/samjegal/go-autorest/autorest v0.0.0-20200908011700-76a89b3e2bac/go.mod h1:JFgpikqFJ/MleTTxwepExTKnFUKKszPS8UavbQYUMuw=
 github.com/samjegal/go-autorest/autorest v0.11.5-0.20200906111652-5e286818fa7f h1:OklMXSMrIonCPo9HIS7OqMjyTfGYF8K9XzTFwZ7dBp0=
