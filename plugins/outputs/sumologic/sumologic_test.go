@@ -133,7 +133,7 @@ func TestMethod(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer()
+			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -210,7 +210,7 @@ func TestStatusCode(t *testing.T) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			serializer, err := carbon2.NewSerializer()
+			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
 			require.NoError(t, err)
 
 			tt.plugin.SetSerializer(serializer)
@@ -234,7 +234,7 @@ func TestContentType(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
-	carbon2Serializer, err := carbon2.NewSerializer()
+	carbon2Serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -336,7 +336,7 @@ func TestContentEncodingGzip(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 			})
 
-			serializer, err := carbon2.NewSerializer()
+			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
@@ -372,7 +372,7 @@ func TestDefaultUserAgent(t *testing.T) {
 			MaxRequstBodySize: Default().MaxRequstBodySize,
 		}
 
-		serializer, err := carbon2.NewSerializer()
+		serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
 		require.NoError(t, err)
 
 		plugin.SetSerializer(serializer)
@@ -555,7 +555,7 @@ func TestMaxRequestBodySize(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			serializer, err := carbon2.NewSerializer()
+			serializer, err := carbon2.NewSerializer(carbon2.Carbon2FormatFieldSeparate)
 			require.NoError(t, err)
 
 			plugin := tt.plugin()
