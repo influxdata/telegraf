@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/samjegal/fincloud-sdk-for-go/services/cloudinsight"
-	"github.com/samjegal/go-fincloud-helpers/sender"
 )
 
 // CloudInsight main structure
@@ -37,7 +36,7 @@ type CloudInsight struct {
 
 	// TODO: deprecated because replaced tag value
 	// Make dimension by custom schema. InstanceId used by server instance.
-	//InstanceId  string `toml:"instance_id"`
+	InstanceID string `toml:"instance_id"`
 
 	filter string
 
@@ -73,11 +72,15 @@ func (c *CloudInsight) Init() error {
 		return fmt.Errorf("could not read cloudinsight product name for custom metric")
 	}
 
+	if c.InstanceID == "" {
+		return fmt.Errorf("could not read instance number for cloudinsight dimension")
+	}
+
 	c.client = &cloudinsight.BaseClient{
 		Client:  autorest.NewClientWithUserAgent(cloudinsight.UserAgent()),
 		BaseURI: cloudinsight.DefaultBaseURI,
 	}
-	c.client.Sender = sender.BuildSender("fincloud")
+	//c.client.Sender = sender.BuildSender("fincloud")
 	c.authorize(c.client)
 
 	return nil
@@ -133,14 +136,14 @@ func (c *CloudInsight) Write(metrics []telegraf.Metric) error {
 
 		id := hashTagKey(m)
 		if cim, ok := cimetrics[id]; !ok {
-			cmm, err := convert(m)
+			cmm, err := c.convert(m)
 			if err != nil {
 				log.Printf("E! [outputs.cloudinsight]: could not create cloudinsight metric for %q", m.Name())
 				continue
 			}
 			cimetrics[id] = cmm
 		} else {
-			cmm, err := convert(m)
+			cmm, err := c.convert(m)
 			if err != nil {
 				log.Printf("E! [outputs.cloudinsight]: could not create cloudinsight metric for %q", m.Name())
 				continue
@@ -175,13 +178,15 @@ func (c *CloudInsight) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func convert(m telegraf.Metric) (*cloudInsightMetric, error) {
+func (c *CloudInsight) convert(m telegraf.Metric) (*cloudInsightMetric, error) {
 	dimensions := make(map[string]string, len(m.TagList()))
 	for _, tag := range m.TagList() {
 		if _, ok := dimensions[tag.Key]; !ok {
 			dimensions[tag.Key] = tag.Value
 		}
 	}
+
+	dimensions["instanceNo"] = c.InstanceID
 
 	var data []*cloudInsightData
 	for k, v := range m.Fields() {
